@@ -760,6 +760,28 @@ def _registry_field_worksheet() -> dict:
     }
 
 
+def _engine_refinement_claim_evidence_field_worksheet() -> dict:
+    return {
+        "summary": {
+            "status": "engine_refinement_claim_evidence_operator_field_worksheet_ready",
+            "field_worksheet_ready": True,
+            "operator_fill_complete": False,
+            "worksheet_field_row_count": 144,
+            "required_receipt_field_count": 66,
+            "operator_fill_pending_field_count": 108,
+            "receipt_operator_fill_pending_field_count": 36,
+            "public_benchmark_work_order_pending_field_count": 72,
+            "top_blocker_id": "public_benchmark_gate_not_ready",
+            "top_priority_bucket": "public_benchmark_work_order_apply_required",
+            "top_blocker_pending_field_count": 78,
+            "public_benchmark_work_order_apply_blocked_row_count": 8,
+            "claim_promoted": False,
+            "external_engine_calls_executed": False,
+            "external_state_mutated": False,
+        }
+    }
+
+
 def test_build_product_commercial_readiness_operator_packet_flattens_next_actions() -> None:
     payload = mod.build_product_commercial_readiness_operator_packet(
         goal_audit_packet=_goal_audit(),
@@ -770,6 +792,9 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
         production_ai_registry_promotion_operator_receipt_packet=_registry_receipt(),
         production_ai_registry_promotion_priority_packet=_registry_priority(),
         production_ai_registry_promotion_field_worksheet_packet=_registry_field_worksheet(),
+        engine_refinement_claim_evidence_field_worksheet_packet=(
+            _engine_refinement_claim_evidence_field_worksheet()
+        ),
         delta_force_closure_packet={
             "summary": {
                 "packet_ready": True,
@@ -849,6 +874,58 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
     ] == ["claim_grade_public_benchmark_ready"]
     assert summary["engine_refinement_claim_evidence_receipt_most_common_row_blocker"] == (
         "operator_placeholders_unfilled"
+    )
+    assert summary["engine_refinement_claim_evidence_operator_field_worksheet_status"] == (
+        "engine_refinement_claim_evidence_operator_field_worksheet_ready"
+    )
+    assert summary["engine_refinement_claim_evidence_operator_field_worksheet_ready"] is True
+    assert (
+        summary["engine_refinement_claim_evidence_operator_field_worksheet_operator_fill_complete"]
+        is False
+    )
+    assert summary["engine_refinement_claim_evidence_operator_field_worksheet_field_row_count"] == 144
+    assert summary["engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count"] == 108
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_field_worksheet_receipt_pending_field_count"
+        ]
+        == 36
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count"
+        ]
+        == 72
+    )
+    assert summary["engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_id"] == (
+        "public_benchmark_gate_not_ready"
+    )
+    assert (
+        summary["engine_refinement_claim_evidence_operator_field_worksheet_top_priority_bucket"]
+        == "public_benchmark_work_order_apply_required"
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_pending_field_count"
+        ]
+        == 78
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_apply_blocked_row_count"
+        ]
+        == 8
+    )
+    assert summary["engine_refinement_claim_evidence_operator_field_worksheet_claim_promoted"] is False
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_field_worksheet_external_engine_calls_executed"
+        ]
+        is False
+    )
+    assert (
+        summary["engine_refinement_claim_evidence_operator_field_worksheet_external_state_mutated"]
+        is False
     )
     assert "curated public benchmark rows" in summary[
         "engine_refinement_claim_promotion_next_required_step"

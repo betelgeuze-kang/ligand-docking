@@ -1909,6 +1909,50 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert operator_packet["engine_refinement_claim_evidence_receipt_csv"] == (
         "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
     )
+    assert operator_packet["engine_refinement_claim_evidence_operator_field_worksheet_status"] == (
+        "engine_refinement_claim_evidence_operator_field_worksheet_ready"
+    )
+    assert operator_packet["engine_refinement_claim_evidence_operator_field_worksheet_ready"] is True
+    assert (
+        operator_packet[
+            "engine_refinement_claim_evidence_operator_field_worksheet_operator_fill_complete"
+        ]
+        is False
+    )
+    assert (
+        operator_packet["engine_refinement_claim_evidence_operator_field_worksheet_field_row_count"]
+        == 144
+    )
+    assert (
+        operator_packet[
+            "engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count"
+        ]
+        == 108
+    )
+    assert (
+        operator_packet[
+            "engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count"
+        ]
+        == 72
+    )
+    assert (
+        operator_packet[
+            "engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_id"
+        ]
+        == "public_benchmark_gate_not_ready"
+    )
+    assert (
+        operator_packet[
+            "engine_refinement_claim_evidence_operator_field_worksheet_top_priority_bucket"
+        ]
+        == "public_benchmark_work_order_apply_required"
+    )
+    assert (
+        operator_packet[
+            "engine_refinement_claim_evidence_operator_field_worksheet_external_state_mutated"
+        ]
+        is False
+    )
     assert operator_packet["product_scope_breadth_evidence_receipt_ready"] is False
     assert operator_packet["product_scope_breadth_evidence_receipt_status"] == (
         "blocked_product_scope_breadth_evidence_receipt"
@@ -2332,6 +2376,28 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert handoff_bundle["engine_refinement_claim_evidence_receipt_csv"] == (
         "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
     )
+    assert handoff_bundle["engine_refinement_claim_evidence_operator_field_worksheet_status"] == (
+        "engine_refinement_claim_evidence_operator_field_worksheet_ready"
+    )
+    assert handoff_bundle["engine_refinement_claim_evidence_operator_field_worksheet_ready"] is True
+    assert (
+        handoff_bundle[
+            "engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count"
+        ]
+        == 108
+    )
+    assert (
+        handoff_bundle[
+            "engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count"
+        ]
+        == 72
+    )
+    assert (
+        handoff_bundle[
+            "engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_id"
+        ]
+        == "public_benchmark_gate_not_ready"
+    )
     assert handoff_bundle["product_scope_breadth_evidence_receipt_ready"] is False
     assert handoff_bundle["product_scope_breadth_evidence_receipt_status"] == (
         "blocked_product_scope_breadth_evidence_receipt"
@@ -2345,7 +2411,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         "config/product_scope_breadth_evidence_receipt_current.csv"
     )
     assert handoff_bundle["artifact_reference_contract_ready"] is True
-    assert handoff_bundle["artifact_reference_count"] == 38
+    assert handoff_bundle["artifact_reference_count"] == 39
     assert handoff_bundle["local_missing_artifact_reference_count"] == 0
     assert handoff_bundle["operator_return_artifact_reference_count"] >= 4
     assert handoff_bundle["operator_return_pending_artifact_reference_count"] >= 1
@@ -2385,6 +2451,14 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         row["artifact_id"] == "engine_refinement_claim_evidence_receipt_csv"
         and row["artifact_path"] == "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
         and row["reference_role"] == "local_engine_refinement_claim_receipt_template"
+        and row["required_now"] is True
+        for row in handoff_bundle["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "engine_refinement_claim_evidence_operator_field_worksheet"
+        and row["artifact_path"]
+        == "runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json"
+        and row["reference_role"] == "local_engine_refinement_claim_field_worksheet"
         and row["required_now"] is True
         for row in handoff_bundle["artifact_reference_manifest"]
     )
@@ -2693,7 +2767,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     ] == "AQP1.core_binder_01"
 
     assert completion["commercial_readiness_handoff_bundle_ready"] is True
-    assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 38
+    assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 39
     assert completion["commercial_readiness_handoff_bundle_operator_return_pending_artifact_reference_count"] == 1
     assert completion["commercial_readiness_next_action_matrix_ready"] is True
     assert completion["commercial_readiness_next_action_matrix_count"] == 6

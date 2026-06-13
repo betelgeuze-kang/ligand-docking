@@ -424,6 +424,20 @@ def _build_artifact_reference_manifest(
                 note="Operator-fill template consumed by the engine refinement claim evidence receipt gate.",
             )
         )
+    engine_field_worksheet_artifact = _text(
+        summary.get("engine_refinement_claim_evidence_operator_field_worksheet_artifact")
+    )
+    if engine_field_worksheet_artifact:
+        refs.append(
+            _artifact_reference(
+                artifact_id="engine_refinement_claim_evidence_operator_field_worksheet",
+                artifact_path=engine_field_worksheet_artifact,
+                reference_role="local_engine_refinement_claim_field_worksheet",
+                required_now=True,
+                expected_from_operator_return=False,
+                note="Local field-level worksheet for R9 engine refinement claim evidence and public benchmark work-order intake.",
+            )
+        )
     scope_receipt_artifact = _text(
         summary.get("product_scope_breadth_evidence_receipt_artifact")
     )
@@ -680,6 +694,86 @@ def build_product_commercial_readiness_handoff_bundle(
         ],
         "engine_refinement_claim_evidence_receipt_most_common_row_blocker": _text(
             operator_summary.get("engine_refinement_claim_evidence_receipt_most_common_row_blocker")
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_artifact": _text(
+            operator_summary.get("engine_refinement_claim_evidence_operator_field_worksheet_artifact")
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_status": _text(
+            operator_summary.get("engine_refinement_claim_evidence_operator_field_worksheet_status")
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_ready": bool(
+            operator_summary.get("engine_refinement_claim_evidence_operator_field_worksheet_ready")
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_operator_fill_complete": bool(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_operator_fill_complete"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_field_row_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_field_row_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_receipt_pending_field_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_receipt_pending_field_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_id": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_id"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_top_priority_bucket": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_top_priority_bucket"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_pending_field_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_pending_field_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_apply_blocked_row_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_apply_blocked_row_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_claim_promoted": bool(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_claim_promoted"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_external_engine_calls_executed": bool(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_external_engine_calls_executed"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_external_state_mutated": bool(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_external_state_mutated"
+            )
+            is True
         ),
         "engine_refinement_claim_promotion_next_required_step": _text(
             operator_summary.get("engine_refinement_claim_promotion_next_required_step")
@@ -2398,6 +2492,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields: `{';'.join(s['engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields'])}`",
         f"- engine_refinement_claim_evidence_receipt_most_common_row_blocker: `{s['engine_refinement_claim_evidence_receipt_most_common_row_blocker']}`",
         f"- engine_refinement_claim_evidence_receipt_artifact: `{s['engine_refinement_claim_evidence_receipt_artifact']}`",
+        f"- engine_refinement_claim_evidence_operator_field_worksheet_status: `{s['engine_refinement_claim_evidence_operator_field_worksheet_status']}`",
+        f"- engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count: `{s['engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count']}`",
+        f"- engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count: `{s['engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count']}`",
+        f"- engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_id: `{s['engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_id']}`",
         f"- product_scope_breadth_evidence_receipt_ready: `{s['product_scope_breadth_evidence_receipt_ready']}`",
         f"- product_scope_breadth_evidence_receipt_status: `{s['product_scope_breadth_evidence_receipt_status']}`",
         f"- product_scope_breadth_evidence_receipt_blocked_row_count: `{s['product_scope_breadth_evidence_receipt_blocked_row_count']}`",

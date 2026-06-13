@@ -1434,7 +1434,7 @@ def test_api_app_imports_with_goal_router() -> None:
         "product_commercial_readiness_handoff_bundle_ready"
     )
     assert status["commercial_readiness_handoff_bundle_ready"] is True
-    assert status["commercial_readiness_handoff_bundle_artifact_reference_count"] == 38
+    assert status["commercial_readiness_handoff_bundle_artifact_reference_count"] == 39
     assert status["commercial_readiness_handoff_bundle_local_missing_artifact_reference_count"] == 0
     assert status["operator_intake_kit_full_commercial_evidence_receipt_entry_count"] == int(
         intake_artifact.get("full_commercial_evidence_receipt_entry_count") or 0

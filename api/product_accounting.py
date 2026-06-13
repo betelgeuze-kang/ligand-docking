@@ -911,6 +911,81 @@ def commercial_engine_refinement_claim_fields(summary: dict[str, Any]) -> dict[s
         "engine_refinement_claim_evidence_receipt_most_common_row_blocker": summary.get(
             "engine_refinement_claim_evidence_receipt_most_common_row_blocker", ""
         ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_artifact": summary.get(
+            "engine_refinement_claim_evidence_operator_field_worksheet_artifact", ""
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_status": summary.get(
+            "engine_refinement_claim_evidence_operator_field_worksheet_status", ""
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_ready": bool(
+            summary.get("engine_refinement_claim_evidence_operator_field_worksheet_ready")
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_operator_fill_complete": bool(
+            summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_operator_fill_complete"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_field_row_count": int(
+            summary.get("engine_refinement_claim_evidence_operator_field_worksheet_field_row_count")
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count": int(
+            summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_receipt_pending_field_count": int(
+            summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_receipt_pending_field_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count": int(
+            summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_id": summary.get(
+            "engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_id", ""
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_top_priority_bucket": summary.get(
+            "engine_refinement_claim_evidence_operator_field_worksheet_top_priority_bucket",
+            "",
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_pending_field_count": int(
+            summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_pending_field_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_apply_blocked_row_count": int(
+            summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_apply_blocked_row_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_claim_promoted": bool(
+            summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_claim_promoted"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_external_engine_calls_executed": bool(
+            summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_external_engine_calls_executed"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_external_state_mutated": bool(
+            summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_external_state_mutated"
+            )
+            is True
+        ),
         "engine_refinement_claim_promotion_next_required_step": summary.get(
             "engine_refinement_claim_promotion_next_required_step", ""
         ),

@@ -56,6 +56,29 @@ def _operator_packet(ready: bool = True) -> dict:
             "engine_refinement_claim_evidence_receipt_most_common_row_blocker": (
                 "operator_placeholders_unfilled"
             ),
+            "engine_refinement_claim_evidence_operator_field_worksheet_artifact": (
+                "runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json"
+            ),
+            "engine_refinement_claim_evidence_operator_field_worksheet_status": (
+                "engine_refinement_claim_evidence_operator_field_worksheet_ready"
+            ),
+            "engine_refinement_claim_evidence_operator_field_worksheet_ready": True,
+            "engine_refinement_claim_evidence_operator_field_worksheet_operator_fill_complete": False,
+            "engine_refinement_claim_evidence_operator_field_worksheet_field_row_count": 144,
+            "engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count": 108,
+            "engine_refinement_claim_evidence_operator_field_worksheet_receipt_pending_field_count": 36,
+            "engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count": 72,
+            "engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_id": (
+                "public_benchmark_gate_not_ready"
+            ),
+            "engine_refinement_claim_evidence_operator_field_worksheet_top_priority_bucket": (
+                "public_benchmark_work_order_apply_required"
+            ),
+            "engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_pending_field_count": 78,
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_apply_blocked_row_count": 8,
+            "engine_refinement_claim_evidence_operator_field_worksheet_claim_promoted": False,
+            "engine_refinement_claim_evidence_operator_field_worksheet_external_engine_calls_executed": False,
+            "engine_refinement_claim_evidence_operator_field_worksheet_external_state_mutated": False,
             "engine_refinement_claim_promotion_next_required_step": (
                 "Fill and apply curated public benchmark rows, then calibrate claim-grade parameterization gates."
             ),
@@ -917,6 +940,35 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
     assert summary["engine_refinement_claim_evidence_receipt_most_common_row_blocker"] == (
         "operator_placeholders_unfilled"
     )
+    assert summary["engine_refinement_claim_evidence_operator_field_worksheet_status"] == (
+        "engine_refinement_claim_evidence_operator_field_worksheet_ready"
+    )
+    assert summary["engine_refinement_claim_evidence_operator_field_worksheet_ready"] is True
+    assert (
+        summary["engine_refinement_claim_evidence_operator_field_worksheet_operator_fill_complete"]
+        is False
+    )
+    assert summary["engine_refinement_claim_evidence_operator_field_worksheet_field_row_count"] == 144
+    assert summary["engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count"] == 108
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count"
+        ]
+        == 72
+    )
+    assert summary["engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_id"] == (
+        "public_benchmark_gate_not_ready"
+    )
+    assert (
+        summary["engine_refinement_claim_evidence_operator_field_worksheet_top_priority_bucket"]
+        == "public_benchmark_work_order_apply_required"
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_apply_blocked_row_count"
+        ]
+        == 8
+    )
     assert summary["product_scope_breadth_evidence_receipt_ready"] is False
     assert summary["product_scope_breadth_evidence_receipt_status"] == (
         "blocked_product_scope_breadth_evidence_receipt"
@@ -1343,6 +1395,14 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         row["artifact_id"] == "engine_refinement_claim_evidence_receipt_csv"
         and row["artifact_path"] == "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
         and row["reference_role"] == "local_engine_refinement_claim_receipt_template"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "engine_refinement_claim_evidence_operator_field_worksheet"
+        and row["artifact_path"]
+        == "runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json"
+        and row["reference_role"] == "local_engine_refinement_claim_field_worksheet"
         and row["required_now"] is True
         for row in summary["artifact_reference_manifest"]
     )
