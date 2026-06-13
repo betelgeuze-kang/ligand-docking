@@ -114,3 +114,16 @@ def test_remaining_work_doc_tracks_current_enabled_runner_profiles() -> None:
 
     assert "enabled runner profile 2종" not in text
     assert "API runner profile enable + evidence review" in text
+
+
+def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> None:
+    text = _doc_text()
+
+    assert "`scripts/check_independent_product_readiness.py`" in text
+    assert "`independent_product_readiness_verified`" in text
+    assert "`independent_restricted_product_ready=true`" in text
+    assert "`full_commercial_claim_promotion_ready=false`" in text
+    assert "`full_commercial_open_gap_ids=[SCI-GPCR, SCI-OPENMM]`" in text
+    assert "`scripts/verify_quality_gate.py`" in text
+    assert "`product_quality_gate_verified`" in text
+    assert "`quality_gate_ready=true`" in text

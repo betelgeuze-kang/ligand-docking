@@ -1306,6 +1306,17 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `product_release_source_of_truth_gate_ready`, `pass_count=94/94`,
   `blocker_count=0`, `stale_artifact_count=0`,
   `release_refresh_command_count=88`으로 재검증됐다.
+- `scripts/check_independent_product_readiness.py`는 현재 release/source-of-truth,
+  product readiness, operational quality, commercial-independence, capability surface,
+  release bundle, master/science-claim rollup을 read-only로 확인해
+  `independent_product_readiness_verified`,
+  `independent_restricted_product_ready=true`,
+  `full_commercial_claim_promotion_ready=false`,
+  `full_commercial_open_gap_ids=[SCI-GPCR, SCI-OPENMM]`를 출력한다.
+- `scripts/verify_quality_gate.py`는 operational quality contract를 메모리에서
+  재빌드해 `product_quality_gate_verified`, `quality_gate_ready=true`,
+  `blocker_count=0`, execution/results/external mutation/input-payload persistence
+  false, production-AI customer-facing mutation flags false를 확인한다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;
   다음은 operator webhook secret mount, 실제 pager provider delivery smoke,
