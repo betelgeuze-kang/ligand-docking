@@ -4441,6 +4441,36 @@ def build_product_goal_completion_audit(
         "product_scope_transporter_top_operator_next_verdict": _text(
             scope_intake.get("transporter_top_operator_next_verdict")
         ),
+        "product_scope_next_operator_completion_item_id": _text(
+            scope_intake.get("next_operator_completion_item_id")
+        ),
+        "product_scope_next_operator_completion_intake_mode": _text(
+            scope_intake.get("next_operator_completion_intake_mode")
+        ),
+        "product_scope_next_operator_completion_required_evidence_type": _text(
+            scope_intake.get("next_operator_completion_required_evidence_type")
+        ),
+        "product_scope_next_operator_completion_transporter_claim_safe_blocker": _text(
+            scope_intake.get("next_operator_completion_transporter_claim_safe_blocker")
+        ),
+        "product_scope_next_operator_completion_transporter_operator_next_verdict": _text(
+            scope_intake.get("next_operator_completion_transporter_operator_next_verdict")
+        ),
+        "product_scope_next_operator_completion_transporter_best_evidence_source_file": _text(
+            scope_intake.get("next_operator_completion_transporter_best_evidence_source_file")
+        ),
+        "product_scope_next_operator_completion_transporter_best_evidence_activity_type": _text(
+            scope_intake.get("next_operator_completion_transporter_best_evidence_activity_type")
+        ),
+        "product_scope_next_operator_completion_transporter_best_evidence_value": _text(
+            scope_intake.get("next_operator_completion_transporter_best_evidence_value")
+        ),
+        "product_scope_next_operator_completion_transporter_best_evidence_units": _text(
+            scope_intake.get("next_operator_completion_transporter_best_evidence_units")
+        ),
+        "product_scope_next_operator_completion_transporter_best_evidence_document_id": _text(
+            scope_intake.get("next_operator_completion_transporter_best_evidence_document_id")
+        ),
         "product_scope_transporter_target_ready_for_promotion_count": _int(
             product_scope_breadth_contract.get("transporter_target_ready_for_promotion_count")
         ),
@@ -5203,6 +5233,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_scope_evidence_intake_row_count: `{s['product_scope_evidence_intake_row_count']}`",
         f"- product_scope_evidence_intake_all_operator_packet_bindings_ready: `{s['product_scope_evidence_intake_all_operator_packet_bindings_ready']}`",
         f"- product_scope_evidence_intake_operator_packet_binding_missing_count: `{s['product_scope_evidence_intake_operator_packet_binding_missing_count']}`",
+        f"- product_scope_next_operator_completion_item_id: `{s['product_scope_next_operator_completion_item_id']}`",
+        f"- product_scope_next_operator_completion_intake_mode: `{s['product_scope_next_operator_completion_intake_mode']}`",
+        f"- product_scope_next_operator_completion_required_evidence_type: `{s['product_scope_next_operator_completion_required_evidence_type']}`",
+        f"- product_scope_next_operator_completion_transporter_claim_safe_blocker: `{s['product_scope_next_operator_completion_transporter_claim_safe_blocker']}`",
+        f"- product_scope_next_operator_completion_transporter_operator_next_verdict: `{s['product_scope_next_operator_completion_transporter_operator_next_verdict']}`",
+        f"- product_scope_next_operator_completion_transporter_best_evidence: `{s['product_scope_next_operator_completion_transporter_best_evidence_activity_type']} {s['product_scope_next_operator_completion_transporter_best_evidence_value']} {s['product_scope_next_operator_completion_transporter_best_evidence_units']} {s['product_scope_next_operator_completion_transporter_best_evidence_document_id']}`",
+        f"- product_scope_next_operator_completion_transporter_best_evidence_source_file: `{s['product_scope_next_operator_completion_transporter_best_evidence_source_file']}`",
         f"- product_scope_breadth_contract_status: `{s['product_scope_breadth_contract_status']}`",
         f"- product_scope_evidence_queue_next_operator_completion_slot_id: `{s['product_scope_evidence_queue_next_operator_completion_slot_id']}`",
         f"- product_scope_evidence_queue_next_operator_completion_required_exact_evidence_fields: `{s['product_scope_evidence_queue_next_operator_completion_required_exact_evidence_fields']}`",

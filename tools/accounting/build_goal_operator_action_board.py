@@ -735,7 +735,14 @@ def _product_goal_completion_actions(
                 f"pxr_exact_review_kcal_placeholder_count={_int(summary.get('product_scope_pxr_exact_review_kcal_placeholder_count'))}; "
                 f"pxr_exact_review_conflict_resolution_required_count={_int(summary.get('product_scope_pxr_exact_review_conflict_resolution_required_count'))}; "
                 f"top_domain={_text(summary.get('product_scope_evidence_priority_top_domain'))}; "
-                f"top_bucket={_text(summary.get('product_scope_evidence_priority_top_bucket'))}."
+                f"top_bucket={_text(summary.get('product_scope_evidence_priority_top_bucket'))}; "
+                f"transporter_top_claim_safe_blocker={_text(summary.get('product_scope_transporter_top_claim_safe_blocker'))}; "
+                f"transporter_top_operator_next_verdict={_text(summary.get('product_scope_transporter_top_operator_next_verdict'))}; "
+                f"next_operator_best_evidence="
+                f"{_text(summary.get('product_scope_next_operator_completion_transporter_best_evidence_activity_type'))}:"
+                f"{_text(summary.get('product_scope_next_operator_completion_transporter_best_evidence_value'))}"
+                f"{_text(summary.get('product_scope_next_operator_completion_transporter_best_evidence_units'))}:"
+                f"{_text(summary.get('product_scope_next_operator_completion_transporter_best_evidence_document_id'))}."
             ),
         )
         action.update(
@@ -753,6 +760,42 @@ def _product_goal_completion_actions(
                 "scope_priority_top_item_id": _text(summary.get("product_scope_evidence_priority_top_item_id")),
                 "scope_priority_top_domain": _text(summary.get("product_scope_evidence_priority_top_domain")),
                 "scope_priority_top_bucket": _text(summary.get("product_scope_evidence_priority_top_bucket")),
+                "scope_transporter_top_claim_safe_blocker": _text(
+                    summary.get("product_scope_transporter_top_claim_safe_blocker")
+                ),
+                "scope_transporter_top_operator_next_verdict": _text(
+                    summary.get("product_scope_transporter_top_operator_next_verdict")
+                ),
+                "scope_next_operator_completion_item_id": _text(
+                    summary.get("product_scope_next_operator_completion_item_id")
+                ),
+                "scope_next_operator_completion_intake_mode": _text(
+                    summary.get("product_scope_next_operator_completion_intake_mode")
+                ),
+                "scope_next_operator_completion_required_evidence_type": _text(
+                    summary.get("product_scope_next_operator_completion_required_evidence_type")
+                ),
+                "scope_next_operator_completion_transporter_claim_safe_blocker": _text(
+                    summary.get("product_scope_next_operator_completion_transporter_claim_safe_blocker")
+                ),
+                "scope_next_operator_completion_transporter_operator_next_verdict": _text(
+                    summary.get("product_scope_next_operator_completion_transporter_operator_next_verdict")
+                ),
+                "scope_next_operator_completion_transporter_best_evidence_source_file": _text(
+                    summary.get("product_scope_next_operator_completion_transporter_best_evidence_source_file")
+                ),
+                "scope_next_operator_completion_transporter_best_evidence_activity_type": _text(
+                    summary.get("product_scope_next_operator_completion_transporter_best_evidence_activity_type")
+                ),
+                "scope_next_operator_completion_transporter_best_evidence_value": _text(
+                    summary.get("product_scope_next_operator_completion_transporter_best_evidence_value")
+                ),
+                "scope_next_operator_completion_transporter_best_evidence_units": _text(
+                    summary.get("product_scope_next_operator_completion_transporter_best_evidence_units")
+                ),
+                "scope_next_operator_completion_transporter_best_evidence_document_id": _text(
+                    summary.get("product_scope_next_operator_completion_transporter_best_evidence_document_id")
+                ),
                 "scope_evidence_intake_ready": bool(summary.get("product_scope_evidence_intake_ready") is True),
                 "scope_local_crosscheck_intake_ready_count": _int(
                     summary.get("product_scope_local_crosscheck_intake_ready_count")
@@ -1731,6 +1774,54 @@ def build_action_board(
         "product_goal_scope_priority_top_item_id": _text(
             product_goal_completion_audit.get("product_scope_evidence_priority_top_item_id")
         ),
+        "product_goal_scope_transporter_top_claim_safe_blocker": _text(
+            product_goal_completion_audit.get("product_scope_transporter_top_claim_safe_blocker")
+        ),
+        "product_goal_scope_transporter_top_operator_next_verdict": _text(
+            product_goal_completion_audit.get("product_scope_transporter_top_operator_next_verdict")
+        ),
+        "product_goal_scope_next_operator_completion_item_id": _text(
+            product_goal_completion_audit.get("product_scope_next_operator_completion_item_id")
+        ),
+        "product_goal_scope_next_operator_completion_intake_mode": _text(
+            product_goal_completion_audit.get("product_scope_next_operator_completion_intake_mode")
+        ),
+        "product_goal_scope_next_operator_completion_required_evidence_type": _text(
+            product_goal_completion_audit.get("product_scope_next_operator_completion_required_evidence_type")
+        ),
+        "product_goal_scope_next_operator_completion_transporter_claim_safe_blocker": _text(
+            product_goal_completion_audit.get("product_scope_next_operator_completion_transporter_claim_safe_blocker")
+        ),
+        "product_goal_scope_next_operator_completion_transporter_operator_next_verdict": _text(
+            product_goal_completion_audit.get(
+                "product_scope_next_operator_completion_transporter_operator_next_verdict"
+            )
+        ),
+        "product_goal_scope_next_operator_completion_transporter_best_evidence_source_file": _text(
+            product_goal_completion_audit.get(
+                "product_scope_next_operator_completion_transporter_best_evidence_source_file"
+            )
+        ),
+        "product_goal_scope_next_operator_completion_transporter_best_evidence_activity_type": _text(
+            product_goal_completion_audit.get(
+                "product_scope_next_operator_completion_transporter_best_evidence_activity_type"
+            )
+        ),
+        "product_goal_scope_next_operator_completion_transporter_best_evidence_value": _text(
+            product_goal_completion_audit.get(
+                "product_scope_next_operator_completion_transporter_best_evidence_value"
+            )
+        ),
+        "product_goal_scope_next_operator_completion_transporter_best_evidence_units": _text(
+            product_goal_completion_audit.get(
+                "product_scope_next_operator_completion_transporter_best_evidence_units"
+            )
+        ),
+        "product_goal_scope_next_operator_completion_transporter_best_evidence_document_id": _text(
+            product_goal_completion_audit.get(
+                "product_scope_next_operator_completion_transporter_best_evidence_document_id"
+            )
+        ),
         "approval_reclaim_size_gb": round(sum(_float(row.get("size_gb")) for row in rows if row["status"] == "approval_required"), 3),
         "large_review_size_gb": round(sum(_float(row.get("size_gb")) for row in rows if row["status"] == "review_required"), 3),
         "large_cleanup_review_resolved_by_drilldown_count": large_cleanup_review_resolved_by_drilldown_count,
@@ -2261,6 +2352,15 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_goal_scope_breadth_evidence_receipt_status: `{s['product_goal_scope_breadth_evidence_receipt_status']}`",
         f"- product_goal_scope_breadth_evidence_receipt_artifact: `{s['product_goal_scope_breadth_evidence_receipt_artifact']}`",
         f"- product_goal_scope_priority_top_item_id: `{s['product_goal_scope_priority_top_item_id']}`",
+        f"- product_goal_scope_transporter_top_claim_safe_blocker: `{s['product_goal_scope_transporter_top_claim_safe_blocker']}`",
+        f"- product_goal_scope_transporter_top_operator_next_verdict: `{s['product_goal_scope_transporter_top_operator_next_verdict']}`",
+        f"- product_goal_scope_next_operator_completion_item_id: `{s['product_goal_scope_next_operator_completion_item_id']}`",
+        f"- product_goal_scope_next_operator_completion_intake_mode: `{s['product_goal_scope_next_operator_completion_intake_mode']}`",
+        f"- product_goal_scope_next_operator_completion_required_evidence_type: `{s['product_goal_scope_next_operator_completion_required_evidence_type']}`",
+        f"- product_goal_scope_next_operator_completion_transporter_claim_safe_blocker: `{s['product_goal_scope_next_operator_completion_transporter_claim_safe_blocker']}`",
+        f"- product_goal_scope_next_operator_completion_transporter_operator_next_verdict: `{s['product_goal_scope_next_operator_completion_transporter_operator_next_verdict']}`",
+        f"- product_goal_scope_next_operator_completion_transporter_best_evidence: `{s['product_goal_scope_next_operator_completion_transporter_best_evidence_activity_type']} {s['product_goal_scope_next_operator_completion_transporter_best_evidence_value']} {s['product_goal_scope_next_operator_completion_transporter_best_evidence_units']} {s['product_goal_scope_next_operator_completion_transporter_best_evidence_document_id']}`",
+        f"- product_goal_scope_next_operator_completion_transporter_best_evidence_source_file: `{s['product_goal_scope_next_operator_completion_transporter_best_evidence_source_file']}`",
         f"- approval_reclaim_size_gb: `{s['approval_reclaim_size_gb']}`",
         f"- large_review_size_gb: `{s['large_review_size_gb']}`",
         f"- large_cleanup_drilldown_status: `{s['large_cleanup_drilldown_status']}`",

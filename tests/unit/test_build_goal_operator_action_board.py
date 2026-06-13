@@ -913,6 +913,30 @@ def _product_goal_completion_audit() -> dict:
             "product_scope_transporter_manual_review_negative_quantitative_value_required_count": 6,
             "product_scope_transporter_manual_review_decision_placeholder_count": 11,
             "product_scope_transporter_candidate_ready_for_apply_count": 0,
+            "product_scope_transporter_top_claim_safe_blocker": (
+                "direct_pool_exists_but_named_candidate_identity_not_operator_confirmed"
+            ),
+            "product_scope_transporter_top_operator_next_verdict": (
+                "manual_match_candidate_to_exact_source_then_sync_reference_split_meta"
+            ),
+            "product_scope_next_operator_completion_item_id": "AQP1.core_binder_01",
+            "product_scope_next_operator_completion_intake_mode": "local_crosscheck_triage",
+            "product_scope_next_operator_completion_required_evidence_type": (
+                "exact_transporter_target_pair_quantitative_binder_kcal"
+            ),
+            "product_scope_next_operator_completion_transporter_claim_safe_blocker": (
+                "direct_pool_exists_but_named_candidate_identity_not_operator_confirmed"
+            ),
+            "product_scope_next_operator_completion_transporter_operator_next_verdict": (
+                "manual_match_candidate_to_exact_source_then_sync_reference_split_meta"
+            ),
+            "product_scope_next_operator_completion_transporter_best_evidence_source_file": (
+                "runs/life_science_skill_crosscheck/chembl_activity_aqp1_target_current_recheck.json"
+            ),
+            "product_scope_next_operator_completion_transporter_best_evidence_activity_type": "KD",
+            "product_scope_next_operator_completion_transporter_best_evidence_value": "174000.0",
+            "product_scope_next_operator_completion_transporter_best_evidence_units": "nM",
+            "product_scope_next_operator_completion_transporter_best_evidence_document_id": "CHEMBL6182835",
             "product_scope_pxr_exact_review_intake_ready": True,
             "product_scope_pxr_exact_review_template_row_count": 6,
             "product_scope_pxr_exact_review_kcal_placeholder_count": 6,
@@ -1144,6 +1168,32 @@ def test_goal_operator_action_board_surfaces_product_ai_goal_completion_actions(
     assert "does not require production GPU execution" in scope["parallel_lane_precondition"]
     assert scope["required_input"] == "AQP1.core_binder_01"
     assert scope["scope_priority_top_domain"] == "transporter"
+    assert scope["scope_transporter_top_claim_safe_blocker"] == (
+        "direct_pool_exists_but_named_candidate_identity_not_operator_confirmed"
+    )
+    assert scope["scope_transporter_top_operator_next_verdict"] == (
+        "manual_match_candidate_to_exact_source_then_sync_reference_split_meta"
+    )
+    assert scope["scope_next_operator_completion_item_id"] == "AQP1.core_binder_01"
+    assert scope["scope_next_operator_completion_intake_mode"] == "local_crosscheck_triage"
+    assert scope["scope_next_operator_completion_required_evidence_type"] == (
+        "exact_transporter_target_pair_quantitative_binder_kcal"
+    )
+    assert scope["scope_next_operator_completion_transporter_claim_safe_blocker"] == (
+        "direct_pool_exists_but_named_candidate_identity_not_operator_confirmed"
+    )
+    assert scope["scope_next_operator_completion_transporter_operator_next_verdict"] == (
+        "manual_match_candidate_to_exact_source_then_sync_reference_split_meta"
+    )
+    assert scope["scope_next_operator_completion_transporter_best_evidence_source_file"] == (
+        "runs/life_science_skill_crosscheck/chembl_activity_aqp1_target_current_recheck.json"
+    )
+    assert scope["scope_next_operator_completion_transporter_best_evidence_activity_type"] == "KD"
+    assert scope["scope_next_operator_completion_transporter_best_evidence_value"] == "174000.0"
+    assert scope["scope_next_operator_completion_transporter_best_evidence_units"] == "nM"
+    assert scope["scope_next_operator_completion_transporter_best_evidence_document_id"] == (
+        "CHEMBL6182835"
+    )
     assert scope["scope_evidence_intake_ready"] is True
     assert scope["scope_local_crosscheck_intake_ready_count"] == 10
     assert scope["scope_transporter_manual_review_direct_binding_required_count"] == 4
@@ -1155,6 +1205,10 @@ def test_goal_operator_action_board_surfaces_product_ai_goal_completion_actions(
     assert scope["scope_pxr_exact_review_kcal_placeholder_count"] == 6
     assert scope["scope_pxr_exact_review_conflict_resolution_required_count"] == 3
     assert "pxr_exact_review_kcal_placeholder_count=6" in scope["reason"]
+    assert "transporter_top_claim_safe_blocker=direct_pool_exists_but_named_candidate_identity_not_operator_confirmed" in scope[
+        "reason"
+    ]
+    assert "next_operator_best_evidence=KD:174000.0nM:CHEMBL6182835" in scope["reason"]
 
     receipt = by_type["resolve_full_scope_breadth_evidence_receipt"]
     assert receipt["priority"] == 2
@@ -1456,6 +1510,36 @@ def test_goal_operator_action_board_summary_points_to_primary_product_ai_action(
         summary["product_goal_scope_breadth_evidence_receipt_artifact"]
         == "runs/product_scope_breadth_evidence_receipt_current.json"
     )
+    assert summary["product_goal_scope_transporter_top_claim_safe_blocker"] == (
+        "direct_pool_exists_but_named_candidate_identity_not_operator_confirmed"
+    )
+    assert summary["product_goal_scope_transporter_top_operator_next_verdict"] == (
+        "manual_match_candidate_to_exact_source_then_sync_reference_split_meta"
+    )
+    assert summary["product_goal_scope_next_operator_completion_item_id"] == "AQP1.core_binder_01"
+    assert summary["product_goal_scope_next_operator_completion_intake_mode"] == "local_crosscheck_triage"
+    assert summary["product_goal_scope_next_operator_completion_required_evidence_type"] == (
+        "exact_transporter_target_pair_quantitative_binder_kcal"
+    )
+    assert summary["product_goal_scope_next_operator_completion_transporter_claim_safe_blocker"] == (
+        "direct_pool_exists_but_named_candidate_identity_not_operator_confirmed"
+    )
+    assert summary[
+        "product_goal_scope_next_operator_completion_transporter_operator_next_verdict"
+    ] == "manual_match_candidate_to_exact_source_then_sync_reference_split_meta"
+    assert summary[
+        "product_goal_scope_next_operator_completion_transporter_best_evidence_source_file"
+    ] == "runs/life_science_skill_crosscheck/chembl_activity_aqp1_target_current_recheck.json"
+    assert summary[
+        "product_goal_scope_next_operator_completion_transporter_best_evidence_activity_type"
+    ] == "KD"
+    assert summary[
+        "product_goal_scope_next_operator_completion_transporter_best_evidence_value"
+    ] == "174000.0"
+    assert summary["product_goal_scope_next_operator_completion_transporter_best_evidence_units"] == "nM"
+    assert summary[
+        "product_goal_scope_next_operator_completion_transporter_best_evidence_document_id"
+    ] == "CHEMBL6182835"
     assert summary[
         "product_goal_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id"
     ] == "direct_binding_evidence_missing"

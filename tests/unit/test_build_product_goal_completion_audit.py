@@ -1465,6 +1465,24 @@ def _scope_intake() -> dict:
             "transporter_negative_value_claim_blocked_count": 6,
             "transporter_top_claim_safe_blocker": "functional_assay_quantitative_but_not_direct_binding_claim_safe",
             "transporter_top_operator_next_verdict": "keep_functional_surrogate_review_only_until_direct_binding_source",
+            "next_operator_completion_item_id": "AQP1.core_binder_01",
+            "next_operator_completion_intake_mode": "local_crosscheck_triage",
+            "next_operator_completion_required_evidence_type": (
+                "exact_transporter_target_pair_quantitative_binder_kcal"
+            ),
+            "next_operator_completion_transporter_claim_safe_blocker": (
+                "functional_assay_quantitative_but_not_direct_binding_claim_safe"
+            ),
+            "next_operator_completion_transporter_operator_next_verdict": (
+                "keep_functional_surrogate_review_only_until_direct_binding_source"
+            ),
+            "next_operator_completion_transporter_best_evidence_source_file": (
+                "runs/life_science_skill_crosscheck/chembl_activity_aqp1_target_current_recheck.json"
+            ),
+            "next_operator_completion_transporter_best_evidence_activity_type": "KD",
+            "next_operator_completion_transporter_best_evidence_value": "174000.0",
+            "next_operator_completion_transporter_best_evidence_units": "nM",
+            "next_operator_completion_transporter_best_evidence_document_id": "CHEMBL6182835",
             "transporter_candidate_assignment_required_count": 7,
             "transporter_functional_quantitative_only_direct_gap_open_count": 3,
             "transporter_review_only_direct_binding_gap_count": 1,
@@ -3650,6 +3668,31 @@ def test_product_goal_completion_audit_uses_force_return_chain_for_production_ai
     assert summary["product_scope_transporter_top_claim_safe_blocker"] == (
         "functional_assay_quantitative_but_not_direct_binding_claim_safe"
     )
+    assert summary["product_scope_transporter_top_operator_next_verdict"] == (
+        "keep_functional_surrogate_review_only_until_direct_binding_source"
+    )
+    assert summary["product_scope_next_operator_completion_item_id"] == "AQP1.core_binder_01"
+    assert summary["product_scope_next_operator_completion_intake_mode"] == "local_crosscheck_triage"
+    assert summary["product_scope_next_operator_completion_required_evidence_type"] == (
+        "exact_transporter_target_pair_quantitative_binder_kcal"
+    )
+    assert summary["product_scope_next_operator_completion_transporter_claim_safe_blocker"] == (
+        "functional_assay_quantitative_but_not_direct_binding_claim_safe"
+    )
+    assert summary["product_scope_next_operator_completion_transporter_operator_next_verdict"] == (
+        "keep_functional_surrogate_review_only_until_direct_binding_source"
+    )
+    assert summary[
+        "product_scope_next_operator_completion_transporter_best_evidence_source_file"
+    ] == "runs/life_science_skill_crosscheck/chembl_activity_aqp1_target_current_recheck.json"
+    assert summary[
+        "product_scope_next_operator_completion_transporter_best_evidence_activity_type"
+    ] == "KD"
+    assert summary["product_scope_next_operator_completion_transporter_best_evidence_value"] == "174000.0"
+    assert summary["product_scope_next_operator_completion_transporter_best_evidence_units"] == "nM"
+    assert summary[
+        "product_scope_next_operator_completion_transporter_best_evidence_document_id"
+    ] == "CHEMBL6182835"
     assert summary["product_scope_transporter_candidate_assignment_required_count"] == 7
     assert summary["product_scope_transporter_functional_quantitative_only_direct_gap_open_count"] == 3
     assert summary["product_scope_transporter_review_only_direct_binding_gap_count"] == 1
