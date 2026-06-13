@@ -548,6 +548,85 @@ def commercial_scope_breadth_evidence_receipt_fields(summary: dict[str, Any]) ->
         "product_scope_breadth_evidence_receipt_most_common_row_blocker": summary.get(
             "product_scope_breadth_evidence_receipt_most_common_row_blocker", ""
         ),
+        "product_scope_breadth_evidence_operator_field_worksheet_artifact": summary.get(
+            "product_scope_breadth_evidence_operator_field_worksheet_artifact", ""
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_status": summary.get(
+            "product_scope_breadth_evidence_operator_field_worksheet_status", ""
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_ready": bool(
+            summary.get("product_scope_breadth_evidence_operator_field_worksheet_ready")
+            is True
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_operator_fill_complete": bool(
+            summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_operator_fill_complete"
+            )
+            is True
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_field_row_count": int(
+            summary.get("product_scope_breadth_evidence_operator_field_worksheet_field_row_count")
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_required_receipt_field_count": int(
+            summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_required_receipt_field_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_pending_field_count": int(
+            summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_pending_field_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_top_blocker_id": summary.get(
+            "product_scope_breadth_evidence_operator_field_worksheet_top_blocker_id", ""
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_top_blocker_pending_field_count": int(
+            summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_top_blocker_pending_field_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_top_item_id": summary.get(
+            "product_scope_breadth_evidence_operator_field_worksheet_top_item_id", ""
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_top_bucket": summary.get(
+            "product_scope_breadth_evidence_operator_field_worksheet_top_bucket", ""
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_top_required_evidence_type": summary.get(
+            "product_scope_breadth_evidence_operator_field_worksheet_top_required_evidence_type",
+            "",
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_priority_open_item_count": int(
+            summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_priority_open_item_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_priority_local_crosscheck_candidate_count": int(
+            summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_priority_local_crosscheck_candidate_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_scope_checklist_manual_review_subcheck_count": int(
+            summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_scope_checklist_manual_review_subcheck_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_claim_promoted": bool(
+            summary.get("product_scope_breadth_evidence_operator_field_worksheet_claim_promoted")
+            is True
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_external_state_mutated": bool(
+            summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_external_state_mutated"
+            )
+            is True
+        ),
     }
 
 

@@ -782,6 +782,29 @@ def _engine_refinement_claim_evidence_field_worksheet() -> dict:
     }
 
 
+def _product_scope_breadth_evidence_field_worksheet() -> dict:
+    return {
+        "summary": {
+            "status": "product_scope_breadth_evidence_operator_field_worksheet_ready",
+            "field_worksheet_ready": True,
+            "operator_fill_complete": False,
+            "receipt_field_row_count": 72,
+            "required_receipt_field_count": 66,
+            "operator_fill_pending_field_count": 36,
+            "top_blocker_id": "direct_binding_evidence_missing",
+            "top_blocker_pending_field_count": 6,
+            "top_item_id": "AQP1.core_binder_01",
+            "top_bucket": "local_crosscheck_review_present_but_exact_quant_required",
+            "top_required_evidence_type": "exact_transporter_target_pair_quantitative_binder_kcal",
+            "priority_open_item_count": 15,
+            "priority_local_crosscheck_candidate_count": 11,
+            "scope_checklist_manual_review_subcheck_count": 39,
+            "claim_promoted": False,
+            "external_state_mutated": False,
+        }
+    }
+
+
 def test_build_product_commercial_readiness_operator_packet_flattens_next_actions() -> None:
     payload = mod.build_product_commercial_readiness_operator_packet(
         goal_audit_packet=_goal_audit(),
@@ -792,6 +815,9 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
         production_ai_registry_promotion_operator_receipt_packet=_registry_receipt(),
         production_ai_registry_promotion_priority_packet=_registry_priority(),
         production_ai_registry_promotion_field_worksheet_packet=_registry_field_worksheet(),
+        product_scope_breadth_evidence_field_worksheet_packet=(
+            _product_scope_breadth_evidence_field_worksheet()
+        ),
         engine_refinement_claim_evidence_field_worksheet_packet=(
             _engine_refinement_claim_evidence_field_worksheet()
         ),
@@ -954,6 +980,52 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
     ] == ["transporter_direct_binding_evidence_ready"]
     assert summary["product_scope_breadth_evidence_receipt_most_common_row_blocker"] == (
         "operator_placeholders_unfilled"
+    )
+    assert summary["product_scope_breadth_evidence_operator_field_worksheet_status"] == (
+        "product_scope_breadth_evidence_operator_field_worksheet_ready"
+    )
+    assert summary["product_scope_breadth_evidence_operator_field_worksheet_ready"] is True
+    assert (
+        summary["product_scope_breadth_evidence_operator_field_worksheet_operator_fill_complete"]
+        is False
+    )
+    assert summary["product_scope_breadth_evidence_operator_field_worksheet_field_row_count"] == 72
+    assert (
+        summary[
+            "product_scope_breadth_evidence_operator_field_worksheet_required_receipt_field_count"
+        ]
+        == 66
+    )
+    assert summary["product_scope_breadth_evidence_operator_field_worksheet_pending_field_count"] == 36
+    assert summary["product_scope_breadth_evidence_operator_field_worksheet_top_blocker_id"] == (
+        "direct_binding_evidence_missing"
+    )
+    assert (
+        summary[
+            "product_scope_breadth_evidence_operator_field_worksheet_top_blocker_pending_field_count"
+        ]
+        == 6
+    )
+    assert summary["product_scope_breadth_evidence_operator_field_worksheet_top_item_id"] == (
+        "AQP1.core_binder_01"
+    )
+    assert summary["product_scope_breadth_evidence_operator_field_worksheet_top_bucket"] == (
+        "local_crosscheck_review_present_but_exact_quant_required"
+    )
+    assert (
+        summary["product_scope_breadth_evidence_operator_field_worksheet_priority_open_item_count"]
+        == 15
+    )
+    assert (
+        summary[
+            "product_scope_breadth_evidence_operator_field_worksheet_scope_checklist_manual_review_subcheck_count"
+        ]
+        == 39
+    )
+    assert summary["product_scope_breadth_evidence_operator_field_worksheet_claim_promoted"] is False
+    assert (
+        summary["product_scope_breadth_evidence_operator_field_worksheet_external_state_mutated"]
+        is False
     )
     assert summary["primary_full_commercial_release_blocker_id"] == (
         "R8_full_scope_claim_closure"

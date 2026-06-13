@@ -547,7 +547,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `restricted_release_allowed=true`, `full_commercial_release_allowed=false`,
   `full_commercial_release_blocker_visibility_ready=true`,
   `completion_audit_release_blocker_bottleneck_count=2`,
-  `commercial_readiness_handoff_bundle_artifact_reference_count=39`를 노출하고,
+  `commercial_readiness_handoff_bundle_artifact_reference_count=40`를 노출하고,
   `product_goal_primary_release_blocker_requirement_id=R8_full_scope_claim_closure`,
   `primary_release_blocker_action_id=product_scope_expansion:resolve_full_scope_breadth_evidence_receipt`,
   `primary_release_blocker_action_required_input=config/product_scope_breadth_evidence_receipt_current.csv`도
@@ -709,8 +709,8 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `config/product_scope_breadth_evidence_receipt_current.csv`를
   `local_scope_breadth_receipt` / `local_scope_breadth_receipt_template`
   artifact reference로 추적하며, 최신
-  `local_missing_artifact_reference_count=0`, `local_required_artifact_reference_count=35`,
-  `artifact_reference_count=39`이다. 여기에 AQP1 첫 return bundle의
+  `local_missing_artifact_reference_count=0`, `local_required_artifact_reference_count=36`,
+  `artifact_reference_count=40`이다. 여기에 AQP1 첫 return bundle의
   `local_scope_transporter_p0_return_bundle_artifact` 5종도 포함되며,
   `config/ligand_binding_reference_blind_aqp1_v1.csv`,
   `config/ligand_eval_splits_blind_aqp1_v1.csv`,
@@ -729,7 +729,20 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `diagnostic_required_pending_field_count=6`, `top_gate_id=default_residual_mode_guarded`,
   `operator_fill_complete=false`, `model_promoted=false`,
   `customer_facing_mutation_enabled=false`, `external_state_mutated=false`로
-  실제 registry promotion과 operator field handoff를 분리한다. R9 engine-refinement
+  실제 registry promotion과 operator field handoff를 분리한다. R8 full-scope
+  evidence도
+  `runs/product_scope_breadth_evidence_operator_field_worksheet_current.json`을
+  `local_scope_breadth_field_worksheet` reference로 포함하며,
+  현재 `receipt_field_row_count=72`,
+  `operator_fill_pending_field_count=36`,
+  `top_blocker_id=direct_binding_evidence_missing`,
+  `top_blocker_pending_field_count=6`, `top_item_id=AQP1.core_binder_01`,
+  `top_bucket=local_crosscheck_review_present_but_exact_quant_required`,
+  `priority_open_item_count=15`,
+  `priority_local_crosscheck_candidate_count=11`,
+  `scope_checklist_manual_review_subcheck_count=39`,
+  `claim_promoted=false`, `external_state_mutated=false`로 scope-breadth receipt
+  6개 row를 field-level operator handoff로 분리한다. R9 engine-refinement
   claim evidence도
   `runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`을
   `local_engine_refinement_claim_field_worksheet` reference로 포함하며,
@@ -768,18 +781,18 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `cameo_validation_operations_dossier_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=103`, `pass_count=103`,
-  `blocker_count=0`, `artifact_row_count=69`, `semantic_status_row_count=32`,
-  `release_refresh_command_count=94`, `stale_artifact_count=0`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=105`, `pass_count=105`,
+  `blocker_count=0`, `artifact_row_count=70`, `semantic_status_row_count=33`,
+  `release_refresh_command_count=95`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   final refresh는 마지막 `goal_release_decision_gate` 뒤에
   `goal_operator_action_board`, `goal_release_burndown_work_order`, intake kit,
   bottleneck briefing, full commercial matrix, release bundle, handoff bundle,
   privacy scan, source-of-truth gate까지 downstream 산출물을 한 번 더 재생성하고,
   refresh runner final gate는 source-of-truth, quality gate verification,
-  release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=103`,
-  `pass_count=103`, `artifact_row_count=69`, `semantic_status_row_count=32`,
-  `readme_row_count=2`, `release_refresh_command_count=94`를 exact-check해
+  release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=105`,
+  `pass_count=105`, `artifact_row_count=70`, `semantic_status_row_count=33`,
+  `readme_row_count=2`, `release_refresh_command_count=95`를 exact-check해
   downstream readiness row가 조용히 빠지는 회귀를 막고,
   `product_quality_gate_verification_current.json` final gate는
   `product_quality_gate_verified`, `quality_gate_ready=true`,
@@ -834,11 +847,13 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   readiness도 이 source-of-truth 안으로 편입됐다. 고객-facing AI report explanation/UX semantic
   readiness는 core/full decision graph 순환을 분리한 뒤 닫혔다. R8/R9 evidence
   receipt 자체도 각각 `product_scope_breadth_evidence_receipt_blocked_semantic_ready`,
+  `product_scope_breadth_evidence_operator_field_worksheet_semantic_ready`,
   `engine_refinement_claim_evidence_receipt_blocked_semantic_ready`,
   `engine_refinement_claim_evidence_priority_packet_blocked_semantic_ready`,
   `engine_refinement_claim_evidence_operator_field_worksheet_semantic_ready` row로 고정되어
-  placeholder evidence, 6/6 blocked rows, public benchmark work-order 8개 row,
-  field-level pending count 108개, approval token requirement, first-blocked diagnostics가 source-of-truth에서 직접 검증된다. production AI
+  placeholder evidence, 6/6 blocked rows, R8 field-level pending count 36개,
+  public benchmark work-order 8개 row, R9 field-level pending count 108개,
+  approval token requirement, first-blocked diagnostics가 source-of-truth에서 직접 검증된다. production AI
   checkpoint/promotion workbench는 현재 `shadow`/blocked 상태를 semantic-ready row로
   검증한다. API runner profile operator receipt, production AI registry promotion
   operator receipt, production AI registry promotion priority packet도 blocked 상태,
@@ -1404,7 +1419,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=94`, `executed_count=94`,
+  `product_release_current_refresh_verified`, `command_count=95`, `executed_count=95`,
   `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=true`,
   `final_gate_count=4`, `final_gate_blocker_count=0`이다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
@@ -1451,11 +1466,11 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 - release source-of-truth gate는 R4 preflight, R4 rollout smoke receipt artifact,
   R8 scope-breadth receipt, goal operator intake kit, commercial readiness execution
   ladder, API/bottleneck visibility, local pose sampling readiness, production AI registry promotion operator
-  receipt/priority packet/field worksheet, CAMEO official-result fetch preflight, R9 engine-refinement claim evidence priority packet/field worksheet,
+  receipt/priority packet/field worksheet, CAMEO official-result fetch preflight, R8 scope-breadth evidence field worksheet, R9 engine-refinement claim evidence priority packet/field worksheet,
   master gap closure rollup 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=103/103`,
+  `product_release_source_of_truth_gate_ready`, `pass_count=105/105`,
   `blocker_count=0`, `stale_artifact_count=0`,
-  `release_refresh_command_count=94`으로 재검증됐다.
+  `release_refresh_command_count=95`으로 재검증됐다.
 - `scripts/check_independent_product_readiness.py`는 현재 release/source-of-truth,
   product readiness, operational quality, commercial-independence, capability surface,
   release bundle, master/science-claim rollup을 read-only로 확인해

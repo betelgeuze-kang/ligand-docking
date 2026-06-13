@@ -32,6 +32,9 @@ DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_JSON = (
 DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_FIELD_WORKSHEET_JSON = (
     "runs/production_ai_registry_promotion_operator_field_worksheet_current.json"
 )
+DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_FIELD_WORKSHEET_JSON = (
+    "runs/product_scope_breadth_evidence_operator_field_worksheet_current.json"
+)
 DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_FIELD_WORKSHEET_JSON = (
     "runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json"
 )
@@ -507,6 +510,7 @@ def build_product_commercial_readiness_operator_packet(
     production_ai_registry_promotion_operator_receipt_packet: dict[str, Any] | None = None,
     production_ai_registry_promotion_priority_packet: dict[str, Any] | None = None,
     production_ai_registry_promotion_field_worksheet_packet: dict[str, Any] | None = None,
+    product_scope_breadth_evidence_field_worksheet_packet: dict[str, Any] | None = None,
     engine_refinement_claim_evidence_field_worksheet_packet: dict[str, Any] | None = None,
     goal_audit_path: str = DEFAULT_GOAL_AUDIT_JSON,
     delta_force_closure_packet_path: str = DEFAULT_DELTA_FORCE_CLOSURE_PACKET_JSON,
@@ -524,6 +528,9 @@ def build_product_commercial_readiness_operator_packet(
     production_ai_registry_promotion_field_worksheet_path: str = (
         DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_FIELD_WORKSHEET_JSON
     ),
+    product_scope_breadth_evidence_field_worksheet_path: str = (
+        DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_FIELD_WORKSHEET_JSON
+    ),
     engine_refinement_claim_evidence_field_worksheet_path: str = (
         DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_FIELD_WORKSHEET_JSON
     ),
@@ -539,6 +546,9 @@ def build_product_commercial_readiness_operator_packet(
     )
     production_ai_registry_field_worksheet = _summary(
         production_ai_registry_promotion_field_worksheet_packet or {}
+    )
+    product_scope_breadth_evidence_field_worksheet = _summary(
+        product_scope_breadth_evidence_field_worksheet_packet or {}
     )
     engine_refinement_claim_evidence_field_worksheet = _summary(
         engine_refinement_claim_evidence_field_worksheet_packet or {}
@@ -810,6 +820,61 @@ def build_product_commercial_readiness_operator_packet(
         ),
         "product_scope_breadth_evidence_receipt_most_common_row_blocker": (
             scope_receipt_diagnostics["most_common_row_blocker"]
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_artifact": (
+            product_scope_breadth_evidence_field_worksheet_path
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_status": _text(
+            product_scope_breadth_evidence_field_worksheet.get("status")
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_ready": bool(
+            product_scope_breadth_evidence_field_worksheet.get("field_worksheet_ready") is True
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_operator_fill_complete": bool(
+            product_scope_breadth_evidence_field_worksheet.get("operator_fill_complete") is True
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_field_row_count": _int(
+            product_scope_breadth_evidence_field_worksheet.get("receipt_field_row_count")
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_required_receipt_field_count": _int(
+            product_scope_breadth_evidence_field_worksheet.get("required_receipt_field_count")
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_pending_field_count": _int(
+            product_scope_breadth_evidence_field_worksheet.get("operator_fill_pending_field_count")
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_top_blocker_id": _text(
+            product_scope_breadth_evidence_field_worksheet.get("top_blocker_id")
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_top_blocker_pending_field_count": _int(
+            product_scope_breadth_evidence_field_worksheet.get("top_blocker_pending_field_count")
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_top_item_id": _text(
+            product_scope_breadth_evidence_field_worksheet.get("top_item_id")
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_top_bucket": _text(
+            product_scope_breadth_evidence_field_worksheet.get("top_bucket")
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_top_required_evidence_type": _text(
+            product_scope_breadth_evidence_field_worksheet.get("top_required_evidence_type")
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_priority_open_item_count": _int(
+            product_scope_breadth_evidence_field_worksheet.get("priority_open_item_count")
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_priority_local_crosscheck_candidate_count": _int(
+            product_scope_breadth_evidence_field_worksheet.get(
+                "priority_local_crosscheck_candidate_count"
+            )
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_scope_checklist_manual_review_subcheck_count": _int(
+            product_scope_breadth_evidence_field_worksheet.get(
+                "scope_checklist_manual_review_subcheck_count"
+            )
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_claim_promoted": bool(
+            product_scope_breadth_evidence_field_worksheet.get("claim_promoted") is True
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_external_state_mutated": bool(
+            product_scope_breadth_evidence_field_worksheet.get("external_state_mutated") is True
         ),
         "open_gap_ids": [str(item) for item in (summary.get("product_ai_architecture_open_gap_ids") or [])],
         "action_count": len(rows),
@@ -1748,6 +1813,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_scope_breadth_evidence_receipt_most_common_row_blocker: `{s['product_scope_breadth_evidence_receipt_most_common_row_blocker']}`",
         f"- product_scope_breadth_evidence_receipt_artifact: `{s['product_scope_breadth_evidence_receipt_artifact']}`",
         f"- product_scope_breadth_evidence_receipt_csv: `{s['product_scope_breadth_evidence_receipt_csv']}`",
+        f"- product_scope_breadth_evidence_operator_field_worksheet_status: `{s['product_scope_breadth_evidence_operator_field_worksheet_status']}`",
+        f"- product_scope_breadth_evidence_operator_field_worksheet_pending_field_count: `{s['product_scope_breadth_evidence_operator_field_worksheet_pending_field_count']}`",
+        f"- product_scope_breadth_evidence_operator_field_worksheet_top_blocker_id: `{s['product_scope_breadth_evidence_operator_field_worksheet_top_blocker_id']}`",
+        f"- product_scope_breadth_evidence_operator_field_worksheet_top_item_id: `{s['product_scope_breadth_evidence_operator_field_worksheet_top_item_id']}`",
         f"- primary_full_commercial_release_blocker_id: `{s['primary_full_commercial_release_blocker_id']}`",
         f"- primary_full_commercial_release_blocker_receipt_csv: `{s['primary_full_commercial_release_blocker_receipt_csv']}`",
         f"- primary_full_commercial_release_blocker_approval_token_required: `{s['primary_full_commercial_release_blocker_approval_token_required']}`",
@@ -1910,6 +1979,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_FIELD_WORKSHEET_JSON,
     )
     parser.add_argument(
+        "--product-scope-breadth-evidence-field-worksheet-json",
+        default=DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_FIELD_WORKSHEET_JSON,
+    )
+    parser.add_argument(
         "--engine-refinement-claim-evidence-field-worksheet-json",
         default=DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_FIELD_WORKSHEET_JSON,
     )
@@ -1946,6 +2019,9 @@ def main(argv: list[str] | None = None) -> None:
         production_ai_registry_promotion_field_worksheet_packet=_read_json_if_present(
             args.production_ai_registry_promotion_field_worksheet_json
         ),
+        product_scope_breadth_evidence_field_worksheet_packet=_read_json_if_present(
+            args.product_scope_breadth_evidence_field_worksheet_json
+        ),
         engine_refinement_claim_evidence_field_worksheet_packet=_read_json_if_present(
             args.engine_refinement_claim_evidence_field_worksheet_json
         ),
@@ -1964,6 +2040,9 @@ def main(argv: list[str] | None = None) -> None:
         ),
         production_ai_registry_promotion_field_worksheet_path=(
             args.production_ai_registry_promotion_field_worksheet_json
+        ),
+        product_scope_breadth_evidence_field_worksheet_path=(
+            args.product_scope_breadth_evidence_field_worksheet_json
         ),
         engine_refinement_claim_evidence_field_worksheet_path=(
             args.engine_refinement_claim_evidence_field_worksheet_json

@@ -464,6 +464,20 @@ def _build_artifact_reference_manifest(
                 note="Operator-fill template consumed by the full-scope breadth evidence receipt gate.",
             )
         )
+    scope_field_worksheet_artifact = _text(
+        summary.get("product_scope_breadth_evidence_operator_field_worksheet_artifact")
+    )
+    if scope_field_worksheet_artifact:
+        refs.append(
+            _artifact_reference(
+                artifact_id="product_scope_breadth_evidence_operator_field_worksheet",
+                artifact_path=scope_field_worksheet_artifact,
+                reference_role="local_scope_breadth_field_worksheet",
+                required_now=True,
+                expected_from_operator_return=False,
+                note="Local field-level worksheet for R8 full-scope breadth evidence receipt intake.",
+            )
+        )
     for idx, artifact in enumerate(
         _list(summary.get("product_scope_transporter_p0_return_bundle_required_artifacts")),
         start=1,
@@ -839,6 +853,92 @@ def build_product_commercial_readiness_handoff_bundle(
         ],
         "product_scope_breadth_evidence_receipt_most_common_row_blocker": _text(
             operator_summary.get("product_scope_breadth_evidence_receipt_most_common_row_blocker")
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_artifact": _text(
+            operator_summary.get("product_scope_breadth_evidence_operator_field_worksheet_artifact")
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_status": _text(
+            operator_summary.get("product_scope_breadth_evidence_operator_field_worksheet_status")
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_ready": bool(
+            operator_summary.get("product_scope_breadth_evidence_operator_field_worksheet_ready")
+            is True
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_operator_fill_complete": bool(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_operator_fill_complete"
+            )
+            is True
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_field_row_count": int(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_field_row_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_required_receipt_field_count": int(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_required_receipt_field_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_pending_field_count": int(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_pending_field_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_top_blocker_id": _text(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_top_blocker_id"
+            )
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_top_blocker_pending_field_count": int(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_top_blocker_pending_field_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_top_item_id": _text(
+            operator_summary.get("product_scope_breadth_evidence_operator_field_worksheet_top_item_id")
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_top_bucket": _text(
+            operator_summary.get("product_scope_breadth_evidence_operator_field_worksheet_top_bucket")
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_top_required_evidence_type": _text(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_top_required_evidence_type"
+            )
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_priority_open_item_count": int(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_priority_open_item_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_priority_local_crosscheck_candidate_count": int(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_priority_local_crosscheck_candidate_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_scope_checklist_manual_review_subcheck_count": int(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_scope_checklist_manual_review_subcheck_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_claim_promoted": bool(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_claim_promoted"
+            )
+            is True
+        ),
+        "product_scope_breadth_evidence_operator_field_worksheet_external_state_mutated": bool(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_field_worksheet_external_state_mutated"
+            )
+            is True
         ),
         "primary_full_commercial_release_blocker_id": _text(
             operator_summary.get("primary_full_commercial_release_blocker_id")
@@ -2506,6 +2606,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_scope_breadth_evidence_receipt_most_common_row_blocker: `{s['product_scope_breadth_evidence_receipt_most_common_row_blocker']}`",
         f"- product_scope_breadth_evidence_receipt_artifact: `{s['product_scope_breadth_evidence_receipt_artifact']}`",
         f"- product_scope_breadth_evidence_receipt_csv: `{s['product_scope_breadth_evidence_receipt_csv']}`",
+        f"- product_scope_breadth_evidence_operator_field_worksheet_status: `{s['product_scope_breadth_evidence_operator_field_worksheet_status']}`",
+        f"- product_scope_breadth_evidence_operator_field_worksheet_pending_field_count: `{s['product_scope_breadth_evidence_operator_field_worksheet_pending_field_count']}`",
+        f"- product_scope_breadth_evidence_operator_field_worksheet_top_blocker_id: `{s['product_scope_breadth_evidence_operator_field_worksheet_top_blocker_id']}`",
+        f"- product_scope_breadth_evidence_operator_field_worksheet_top_item_id: `{s['product_scope_breadth_evidence_operator_field_worksheet_top_item_id']}`",
         f"- primary_full_commercial_release_blocker_id: `{s['primary_full_commercial_release_blocker_id']}`",
         f"- primary_full_commercial_release_blocker_receipt_csv: `{s['primary_full_commercial_release_blocker_receipt_csv']}`",
         f"- primary_full_commercial_release_blocker_approval_token_required: `{s['primary_full_commercial_release_blocker_approval_token_required']}`",

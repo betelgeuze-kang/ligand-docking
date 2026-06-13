@@ -117,6 +117,35 @@ def _operator_packet(ready: bool = True) -> dict:
             "product_scope_breadth_evidence_receipt_most_common_row_blocker": (
                 "operator_placeholders_unfilled"
             ),
+            "product_scope_breadth_evidence_operator_field_worksheet_artifact": (
+                "runs/product_scope_breadth_evidence_operator_field_worksheet_current.json"
+            ),
+            "product_scope_breadth_evidence_operator_field_worksheet_status": (
+                "product_scope_breadth_evidence_operator_field_worksheet_ready"
+            ),
+            "product_scope_breadth_evidence_operator_field_worksheet_ready": True,
+            "product_scope_breadth_evidence_operator_field_worksheet_operator_fill_complete": False,
+            "product_scope_breadth_evidence_operator_field_worksheet_field_row_count": 72,
+            "product_scope_breadth_evidence_operator_field_worksheet_required_receipt_field_count": 66,
+            "product_scope_breadth_evidence_operator_field_worksheet_pending_field_count": 36,
+            "product_scope_breadth_evidence_operator_field_worksheet_top_blocker_id": (
+                "direct_binding_evidence_missing"
+            ),
+            "product_scope_breadth_evidence_operator_field_worksheet_top_blocker_pending_field_count": 6,
+            "product_scope_breadth_evidence_operator_field_worksheet_top_item_id": (
+                "AQP1.core_binder_01"
+            ),
+            "product_scope_breadth_evidence_operator_field_worksheet_top_bucket": (
+                "local_crosscheck_review_present_but_exact_quant_required"
+            ),
+            "product_scope_breadth_evidence_operator_field_worksheet_top_required_evidence_type": (
+                "exact_transporter_target_pair_quantitative_binder_kcal"
+            ),
+            "product_scope_breadth_evidence_operator_field_worksheet_priority_open_item_count": 15,
+            "product_scope_breadth_evidence_operator_field_worksheet_priority_local_crosscheck_candidate_count": 11,
+            "product_scope_breadth_evidence_operator_field_worksheet_scope_checklist_manual_review_subcheck_count": 39,
+            "product_scope_breadth_evidence_operator_field_worksheet_claim_promoted": False,
+            "product_scope_breadth_evidence_operator_field_worksheet_external_state_mutated": False,
             "primary_full_commercial_release_blocker_id": "R8_full_scope_claim_closure",
             "primary_full_commercial_release_blocker_requirement_id": (
                 "R8_full_scope_claim_closure"
@@ -994,6 +1023,25 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
     assert summary["product_scope_breadth_evidence_receipt_most_common_row_blocker"] == (
         "operator_placeholders_unfilled"
     )
+    assert summary["product_scope_breadth_evidence_operator_field_worksheet_status"] == (
+        "product_scope_breadth_evidence_operator_field_worksheet_ready"
+    )
+    assert summary["product_scope_breadth_evidence_operator_field_worksheet_ready"] is True
+    assert (
+        summary["product_scope_breadth_evidence_operator_field_worksheet_operator_fill_complete"]
+        is False
+    )
+    assert summary["product_scope_breadth_evidence_operator_field_worksheet_field_row_count"] == 72
+    assert summary["product_scope_breadth_evidence_operator_field_worksheet_pending_field_count"] == 36
+    assert summary["product_scope_breadth_evidence_operator_field_worksheet_top_blocker_id"] == (
+        "direct_binding_evidence_missing"
+    )
+    assert summary["product_scope_breadth_evidence_operator_field_worksheet_top_item_id"] == (
+        "AQP1.core_binder_01"
+    )
+    assert summary["product_scope_breadth_evidence_operator_field_worksheet_top_bucket"] == (
+        "local_crosscheck_review_present_but_exact_quant_required"
+    )
     assert summary["primary_full_commercial_release_blocker_id"] == (
         "R8_full_scope_claim_closure"
     )
@@ -1417,6 +1465,14 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         row["artifact_id"] == "product_scope_breadth_evidence_receipt_csv"
         and row["artifact_path"] == "config/product_scope_breadth_evidence_receipt_current.csv"
         and row["reference_role"] == "local_scope_breadth_receipt_template"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "product_scope_breadth_evidence_operator_field_worksheet"
+        and row["artifact_path"]
+        == "runs/product_scope_breadth_evidence_operator_field_worksheet_current.json"
+        and row["reference_role"] == "local_scope_breadth_field_worksheet"
         and row["required_now"] is True
         for row in summary["artifact_reference_manifest"]
     )
