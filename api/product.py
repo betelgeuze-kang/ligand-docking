@@ -50,6 +50,7 @@ EXTERNAL_METRIC_SCORECARD_ARTIFACT = ROOT / "runs" / "external_metric_scorecard_
 PRODUCT_TRAJECTORY_SLA_CONTRACT_ARTIFACT = ROOT / "runs" / "product_trajectory_sla_contract_current.json"
 PRODUCT_JOB_ORCHESTRATION_CONTRACT_ARTIFACT = ROOT / "runs" / "product_job_orchestration_contract_current.json"
 PRODUCT_AI_DECISION_GRAPH_ARTIFACT = ROOT / "runs" / "product_ai_decision_graph_contract_current.json"
+PRODUCT_POSE_SAMPLING_READINESS_ARTIFACT = ROOT / "runs" / "product_pose_sampling_readiness_current.json"
 PRODUCT_AI_REPORT_UX_ARTIFACT = ROOT / "runs" / "product_ai_report_ux_contract_current.json"
 CAMEO_VALIDATION_OPERATIONS_ARTIFACT = ROOT / "runs" / "cameo_validation_operations_dossier_current.json"
 CAMEO_OFFICIAL_RESULTS_ARTIFACT = ROOT / "runs" / "cameo_official_results_intake_gate_current.json"
@@ -1171,6 +1172,83 @@ async def get_product_ai_decision_graph() -> dict[str, Any]:
         "execution_enabled": False,
         "docking_results_emitted": False,
         "model_inference_executed": False,
+        "external_state_mutated": False,
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
+@router.get("/pose-sampling-readiness")
+async def get_product_pose_sampling_readiness() -> dict[str, Any]:
+    packet = _read_json_object(PRODUCT_POSE_SAMPLING_READINESS_ARTIFACT)
+    summary = _summary(packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    blockers = packet.get("blockers") if isinstance(packet.get("blockers"), list) else []
+    if not summary:
+        return {
+            "status": "missing_product_pose_sampling_readiness",
+            "artifact_path": str(PRODUCT_POSE_SAMPLING_READINESS_ARTIFACT),
+            "pose_sampling_readiness_ready": False,
+            "pose_generation_contract_ready": False,
+            "pocket_detection_ready": False,
+            "multi_start_pose_ensemble_ready": False,
+            "pose_centroid_pocket_bound_ready": False,
+            "pose_rmsd_diversity_surface_ready": False,
+            "bounded_cross_docking_induced_fit_guard_ready": False,
+            "pose_claim_boundary_guard_ready": False,
+            "check_count": 0,
+            "pass_count": 0,
+            "blocker_count": 1,
+            "pose_count": 0,
+            "requested_pose_start_count": 0,
+            "cluster_count": 0,
+            "cross_docking_pose_count": 0,
+            "pocket_method": "",
+            "max_pose_centroid_distance_a": 0.0,
+            "claim_grade_pose_accuracy_ready": False,
+            "claim_grade_induced_fit_ready": False,
+            "claim_grade_cross_docking_ready": False,
+            "checks": [],
+            "blockers": [],
+            "next_required_step": "",
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+            "claim_boundary": (
+                "Product pose-sampling readiness endpoint only; the local pose-sampling artifact is missing "
+                "or invalid. It does not run docking, generate customer poses, claim pose accuracy, upload, "
+                "email, delete, or mutate external state."
+            ),
+        }
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(PRODUCT_POSE_SAMPLING_READINESS_ARTIFACT),
+        "pose_sampling_readiness_ready": bool(summary.get("pose_sampling_readiness_ready") is True),
+        "pose_generation_contract_ready": bool(summary.get("pose_generation_contract_ready") is True),
+        "pocket_detection_ready": bool(summary.get("pocket_detection_ready") is True),
+        "multi_start_pose_ensemble_ready": bool(summary.get("multi_start_pose_ensemble_ready") is True),
+        "pose_centroid_pocket_bound_ready": bool(summary.get("pose_centroid_pocket_bound_ready") is True),
+        "pose_rmsd_diversity_surface_ready": bool(summary.get("pose_rmsd_diversity_surface_ready") is True),
+        "bounded_cross_docking_induced_fit_guard_ready": bool(
+            summary.get("bounded_cross_docking_induced_fit_guard_ready") is True
+        ),
+        "pose_claim_boundary_guard_ready": bool(summary.get("pose_claim_boundary_guard_ready") is True),
+        "check_count": int(summary.get("check_count") or 0),
+        "pass_count": int(summary.get("pass_count") or 0),
+        "blocker_count": int(summary.get("blocker_count") or 0),
+        "pose_count": int(summary.get("pose_count") or 0),
+        "requested_pose_start_count": int(summary.get("requested_pose_start_count") or 0),
+        "cluster_count": int(summary.get("cluster_count") or 0),
+        "cross_docking_pose_count": int(summary.get("cross_docking_pose_count") or 0),
+        "pocket_method": summary.get("pocket_method", ""),
+        "max_pose_centroid_distance_a": float(summary.get("max_pose_centroid_distance_a") or 0.0),
+        "claim_grade_pose_accuracy_ready": bool(summary.get("claim_grade_pose_accuracy_ready") is True),
+        "claim_grade_induced_fit_ready": bool(summary.get("claim_grade_induced_fit_ready") is True),
+        "claim_grade_cross_docking_ready": bool(summary.get("claim_grade_cross_docking_ready") is True),
+        "checks": rows,
+        "blockers": blockers,
+        "next_required_step": summary.get("next_required_step", ""),
+        "execution_enabled": False,
+        "docking_results_emitted": False,
         "external_state_mutated": False,
         "claim_boundary": summary.get("claim_boundary", ""),
     }

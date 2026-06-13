@@ -280,6 +280,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
 
     assert "product_ai_report_explanation_packet" in artifact_ids
     assert "product_ai_report_ux_contract" in artifact_ids
+    assert "product_pose_sampling_readiness" in artifact_ids
     assert "product_ai_decision_graph_contract" in artifact_ids
     assert "product_production_ai_checkpoint_readiness" in artifact_ids
     assert "product_production_ai_promotion_workbench" in artifact_ids
@@ -303,6 +304,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "self_hosted_license_distribution_audit_semantic_ready" in status_ids
     assert "product_ai_report_explanation_packet_semantic_ready" in status_ids
     assert "product_ai_report_ux_contract_semantic_ready" in status_ids
+    assert "product_pose_sampling_readiness_semantic_ready" in status_ids
     assert "product_ledger_privacy_scan" in artifact_ids
     assert "api_runner_profile_promotion_operator_receipt" in artifact_ids
     assert "product_launch_r4_preflight" in artifact_ids
@@ -728,6 +730,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_ai_decision_graph_contract"
     )
     assert "runs/product_ai_report_ux_contract_current.json" in decision_graph_spec["depends_on"]
+    assert "runs/product_pose_sampling_readiness_current.json" in decision_graph_spec["depends_on"]
+    pose_sampling_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_pose_sampling_readiness"
+    )
+    assert "core/pose_generation.py" in pose_sampling_spec["depends_on"]
+    assert "core/pocket_detection.py" in pose_sampling_spec["depends_on"]
     explanation_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_ai_report_explanation_packet"
     )
@@ -770,6 +778,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/self_hosted_license_distribution_audit_current.json" in release_bundle_spec["depends_on"]
     assert "runs/third_party_license_review_gate_current.json" in release_bundle_spec["depends_on"]
     assert "runs/product_goal_completion_audit_current.json" in release_bundle_spec["depends_on"]
+    assert "runs/product_pose_sampling_readiness_current.json" in release_bundle_spec["depends_on"]
     assert "runs/engine_refinement_claim_evidence_receipt_current.json" in release_bundle_spec["depends_on"]
     assert "runs/product_scope_breadth_evidence_receipt_current.json" in release_bundle_spec["depends_on"]
     assert "runs/product_full_commercial_blocker_evidence_matrix_current.json" in release_bundle_spec[
@@ -783,6 +792,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_ledger_privacy_scan_semantic_ready" in status_ids
     assert "python3 tools/build_product_ai_report_explanation_packet.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_ai_report_ux_contract.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_product_pose_sampling_readiness.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_residual_shadow_ab.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_residual_force_derivation_validation.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_production_ai_promotion_workbench.py" in mod.RELEASE_REFRESH_COMMANDS
@@ -894,11 +904,17 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_third_party_license_review_gate.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 deploy/product_release_bundle.py")
     )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_pose_sampling_readiness.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 deploy/product_release_bundle.py")
+    )
     decision_graph_indices = [
         index
         for index, command in enumerate(mod.RELEASE_REFRESH_COMMANDS)
         if command == "python3 tools/build_product_ai_decision_graph_contract.py"
     ]
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_pose_sampling_readiness.py") < (
+        decision_graph_indices[0]
+    )
     assert decision_graph_indices[0] < mod.RELEASE_REFRESH_COMMANDS.index(
         "python3 tools/build_product_ai_report_explanation_packet.py"
     )

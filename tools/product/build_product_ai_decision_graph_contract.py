@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_STRUCTURE_REPORT_JSON = "runs/product_structure_analysis_report_current.json"
 DEFAULT_EXECUTION_PREFLIGHT_JSON = "runs/product_execution_preflight_current.json"
 DEFAULT_CAPABILITY_JSON = "runs/product_capability_surface_contract_current.json"
+DEFAULT_POSE_SAMPLING_JSON = "runs/product_pose_sampling_readiness_current.json"
 DEFAULT_BUNDLE_JSON = "runs/product_bundle_contract_current.json"
 DEFAULT_REGISTRY_JSON = "runs/residual_model_registry_current.json"
 DEFAULT_REPORT_UX_JSON = "runs/product_ai_report_ux_contract_current.json"
@@ -168,10 +169,12 @@ def build_product_ai_decision_graph_contract(
     capability_packet: dict[str, Any],
     bundle_packet: dict[str, Any],
     registry_packet: dict[str, Any],
+    pose_sampling_packet: dict[str, Any] | None = None,
     report_ux_packet: dict[str, Any] | None = None,
     structure_report_path: str = DEFAULT_STRUCTURE_REPORT_JSON,
     execution_preflight_path: str = DEFAULT_EXECUTION_PREFLIGHT_JSON,
     capability_path: str = DEFAULT_CAPABILITY_JSON,
+    pose_sampling_path: str = DEFAULT_POSE_SAMPLING_JSON,
     bundle_path: str = DEFAULT_BUNDLE_JSON,
     registry_path: str = DEFAULT_REGISTRY_JSON,
     report_ux_path: str = DEFAULT_REPORT_UX_JSON,
@@ -179,6 +182,7 @@ def build_product_ai_decision_graph_contract(
     structure = _summary(structure_report_packet)
     preflight = _summary(execution_preflight_packet)
     capability = _summary(capability_packet)
+    pose_sampling = _summary(pose_sampling_packet or {})
     bundle = _summary(bundle_packet)
     registry = _summary(registry_packet)
     report_ux = _summary(report_ux_packet or {})
@@ -215,6 +219,11 @@ def build_product_ai_decision_graph_contract(
         and _bool(capability.get("ligand_docking_capability_ready"))
         and _text(preflight.get("status")) == "product_execution_preflight_ready"
         and _int(preflight.get("config_count")) > 0
+        and _text(pose_sampling.get("status")) == "product_pose_sampling_readiness_ready"
+        and _bool(pose_sampling.get("pose_sampling_readiness_ready"))
+        and _bool(pose_sampling.get("pose_generation_contract_ready"))
+        and _bool(pose_sampling.get("pose_claim_boundary_guard_ready"))
+        and pose_sampling.get("claim_grade_pose_accuracy_ready") is False
     )
     scoring_ready = (
         pose_ready
@@ -269,10 +278,16 @@ def build_product_ai_decision_graph_contract(
         _row(
             "pose_generation_contract",
             "ready" if pose_ready else "blocked",
-            f"{capability_path};{execution_preflight_path}",
-            f"ligand_docking={capability.get('ligand_docking_capability_ready')};preflight={preflight.get('status')};configs={preflight.get('config_count')}",
-            "ligand-docking capability and execution preflight with config evidence",
-            "The graph needs a bounded pose generation/docking contract before scoring claims.",
+            f"{capability_path};{execution_preflight_path};{pose_sampling_path}",
+            (
+                f"ligand_docking={capability.get('ligand_docking_capability_ready')};"
+                f"preflight={preflight.get('status')};configs={preflight.get('config_count')};"
+                f"pose_sampling={pose_sampling.get('status')};pose_count={pose_sampling.get('pose_count')};"
+                f"cluster_count={pose_sampling.get('cluster_count')};"
+                f"claim_grade_pose_accuracy_ready={pose_sampling.get('claim_grade_pose_accuracy_ready')}"
+            ),
+            "ligand-docking capability, execution preflight, and local pose sampling readiness with claim-grade pose accuracy blocked",
+            "The graph needs a bounded pose generation/docking contract backed by local pose sampling smoke before scoring claims.",
         ),
         _row(
             "scoring_ranking_gate",
@@ -371,6 +386,13 @@ def build_product_ai_decision_graph_contract(
         "structure_quality_node_ready": structure_ready,
         "binding_site_node_ready": binding_site_ready,
         "pose_generation_node_ready": pose_ready,
+        "pose_sampling_readiness_ready": _bool(pose_sampling.get("pose_sampling_readiness_ready")),
+        "pose_sampling_contract_status": _text(pose_sampling.get("status")),
+        "pose_sampling_pose_count": _int(pose_sampling.get("pose_count")),
+        "pose_sampling_cluster_count": _int(pose_sampling.get("cluster_count")),
+        "pose_sampling_claim_grade_pose_accuracy_ready": (
+            pose_sampling.get("claim_grade_pose_accuracy_ready") is True
+        ),
         "scoring_node_ready": scoring_ready,
         "uncertainty_abstention_node_ready": uncertainty_ready,
         "shadow_abstention_ready": shadow_abstention_ready,
@@ -458,6 +480,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--structure-report-json", default=DEFAULT_STRUCTURE_REPORT_JSON)
     parser.add_argument("--execution-preflight-json", default=DEFAULT_EXECUTION_PREFLIGHT_JSON)
     parser.add_argument("--capability-json", default=DEFAULT_CAPABILITY_JSON)
+    parser.add_argument("--pose-sampling-json", default=DEFAULT_POSE_SAMPLING_JSON)
     parser.add_argument("--bundle-json", default=DEFAULT_BUNDLE_JSON)
     parser.add_argument("--registry-json", default=DEFAULT_REGISTRY_JSON)
     parser.add_argument("--report-ux-json", default=DEFAULT_REPORT_UX_JSON)
@@ -473,12 +496,14 @@ def main(argv: list[str] | None = None) -> None:
         structure_report_packet=_read_json(args.structure_report_json),
         execution_preflight_packet=_read_json(args.execution_preflight_json),
         capability_packet=_read_json(args.capability_json),
+        pose_sampling_packet=_read_json(args.pose_sampling_json),
         bundle_packet=_read_json(args.bundle_json),
         registry_packet=_read_json(args.registry_json),
         report_ux_packet=_read_json(args.report_ux_json),
         structure_report_path=args.structure_report_json,
         execution_preflight_path=args.execution_preflight_json,
         capability_path=args.capability_json,
+        pose_sampling_path=args.pose_sampling_json,
         bundle_path=args.bundle_json,
         registry_path=args.registry_json,
         report_ux_path=args.report_ux_json,

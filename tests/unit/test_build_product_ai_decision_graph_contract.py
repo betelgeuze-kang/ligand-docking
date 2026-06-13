@@ -10,6 +10,20 @@ def _packet(summary: dict[str, object]) -> dict[str, object]:
     return {"summary": summary}
 
 
+def _pose_sampling_packet() -> dict[str, object]:
+    return _packet(
+        {
+            "status": "product_pose_sampling_readiness_ready",
+            "pose_sampling_readiness_ready": True,
+            "pose_generation_contract_ready": True,
+            "pose_claim_boundary_guard_ready": True,
+            "claim_grade_pose_accuracy_ready": False,
+            "pose_count": 6,
+            "cluster_count": 3,
+        }
+    )
+
+
 def test_product_ai_decision_graph_contract_ready_from_local_evidence() -> None:
     payload = mod.build_product_ai_decision_graph_contract(
         structure_report_packet=_packet(
@@ -34,6 +48,7 @@ def test_product_ai_decision_graph_contract_ready_from_local_evidence() -> None:
                 "ligand_docking_capability_ready": True,
             }
         ),
+        pose_sampling_packet=_pose_sampling_packet(),
         bundle_packet=_packet(
             {
                 "status": "product_bundle_contract_ready",
@@ -86,6 +101,11 @@ def test_product_ai_decision_graph_contract_ready_from_local_evidence() -> None:
     assert summary["ready_edge_count"] == 6
     assert summary["required_edge_count"] == 6
     assert summary["fail_closed_transition_ready"] is True
+    assert summary["pose_sampling_readiness_ready"] is True
+    assert summary["pose_sampling_contract_status"] == "product_pose_sampling_readiness_ready"
+    assert summary["pose_sampling_pose_count"] == 6
+    assert summary["pose_sampling_cluster_count"] == 3
+    assert summary["pose_sampling_claim_grade_pose_accuracy_ready"] is False
     assert summary["customer_report_ux_node_ready"] is True
     assert summary["viewer_interaction_surface_ready"] is True
     assert summary["customer_report_card_ready"] is True
@@ -131,6 +151,7 @@ def test_product_ai_decision_graph_accepts_guarded_active_registry_with_atom_con
                 "ligand_docking_capability_ready": True,
             }
         ),
+        pose_sampling_packet=_pose_sampling_packet(),
         bundle_packet=_packet(
             {
                 "status": "product_bundle_contract_ready",
@@ -185,6 +206,7 @@ def test_product_ai_decision_graph_contract_blocks_missing_structure() -> None:
         structure_report_packet=_packet({"status": "missing"}),
         execution_preflight_packet=_packet({}),
         capability_packet=_packet({}),
+        pose_sampling_packet=_packet({}),
         bundle_packet=_packet({}),
         registry_packet=_packet({}),
         report_ux_packet=_packet({}),
@@ -221,6 +243,7 @@ def test_product_ai_decision_graph_exposes_core_ready_before_report_ux() -> None
                 "ligand_docking_capability_ready": True,
             }
         ),
+        pose_sampling_packet=_pose_sampling_packet(),
         bundle_packet=_packet(
             {
                 "status": "product_bundle_contract_ready",

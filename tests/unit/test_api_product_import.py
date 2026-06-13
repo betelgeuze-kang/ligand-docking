@@ -65,6 +65,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "/product/commercial-readiness-handoff-bundle" in paths
     assert "/product/full-commercial-blocker-evidence-matrix" in paths
     assert "/product/goal-completion-audit" in paths
+    assert "/product/pose-sampling-readiness" in paths
     assert "/product/structure/analyze" in paths
     assert "/product/docking/jobs" in paths
     assert "/product/docking/jobs/{job_id}" in paths
@@ -111,6 +112,17 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert api_contract["status"] == "product_api_contract_ready"
     assert api_contract["api_contract_ready"] is True
     assert api_contract["blocker_count"] == 0
+
+    pose_sampling = asyncio.run(product.get_product_pose_sampling_readiness())
+    assert pose_sampling["status"] == "product_pose_sampling_readiness_ready"
+    assert pose_sampling["pose_sampling_readiness_ready"] is True
+    assert pose_sampling["pose_generation_contract_ready"] is True
+    assert pose_sampling["pose_count"] == 6
+    assert pose_sampling["cluster_count"] >= 2
+    assert pose_sampling["claim_grade_pose_accuracy_ready"] is False
+    assert pose_sampling["execution_enabled"] is False
+    assert pose_sampling["docking_results_emitted"] is False
+    assert pose_sampling["external_state_mutated"] is False
 
     operational_quality = asyncio.run(product.get_product_operational_quality())
     assert operational_quality["status"] == "product_operational_quality_contract_ready"

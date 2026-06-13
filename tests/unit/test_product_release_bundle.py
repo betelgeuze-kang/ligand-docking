@@ -30,6 +30,7 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
     assert artifacts["api_runner_profile_promotion_operator_template"]["sha256"]
     assert artifacts["api_runner_profile_promotion_operator_receipt"]["sha256"]
     assert artifacts["production_ai_registry_promotion_operator_receipt"]["sha256"]
+    assert artifacts["product_pose_sampling_readiness"]["sha256"]
     assert artifacts["systemd_api_server_unit"]["sha256"]
     assert artifacts["systemd_api_server_env_example"]["sha256"]
     assert artifacts["systemd_api_worker_unit"]["sha256"]
@@ -62,6 +63,10 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
     ]["observed"]
     assert "observed_mode=shadow" in checks[
         "production_ai_registry_promotion_operator_receipt_recorded"
+    ]["observed"]
+    assert checks["product_pose_sampling_readiness_recorded"]["passed"] is True
+    assert "claim_grade_pose_accuracy_ready=False" in checks[
+        "product_pose_sampling_readiness_recorded"
     ]["observed"]
     assert checks["viewer_vendor_assets_pinned"]["passed"] is True
     assert checks["viewer_vendor_license_notices_recorded"]["passed"] is True

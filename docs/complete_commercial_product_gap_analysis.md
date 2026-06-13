@@ -264,17 +264,26 @@
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
   `product_full_commercial_blocker_evidence_matrix_current.json`,
   `production_ai_registry_promotion_operator_receipt_current.json`,
+  `product_pose_sampling_readiness_current.json`,
   `cameo_official_result_fetch_preflight_current.json`,
   `cameo_validation_operations_dossier_current.json`의
   freshness 및 semantic-ready 상태를 함께 검증한다. 최신 full refresh 후
-  source-of-truth는 `row_count=82`, `pass_count=82`, `blocker_count=0`,
-  `artifact_row_count=56`, `semantic_status_row_count=24`,
-  `release_refresh_command_count=69`, `stale_artifact_count=0`,
+  source-of-truth는 `row_count=84`, `pass_count=84`, `blocker_count=0`,
+  `artifact_row_count=57`, `semantic_status_row_count=25`,
+  `release_refresh_command_count=70`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다. R8/R9 evidence
   receipt 자체도 `product_scope_breadth_evidence_receipt_blocked_semantic_ready`,
   `engine_refinement_claim_evidence_receipt_blocked_semantic_ready` row로 고정되어
   placeholder evidence, 6/6 blocked rows, approval token requirement, first-blocked
   diagnostics를 source-of-truth에서 직접 검증한다.
+  `product_pose_sampling_readiness_semantic_ready` row는 deterministic local
+  pocket placement, 6-start pose ensemble, RMSD diversity clustering,
+  bounded cross-docking/induced-fit guard, 그리고 claim-grade pose accuracy
+  blocked posture를 exact/min field로 검증한다. 따라서 AI decision graph의
+  `pose_generation_contract` node가 단순 capability/preflight 문구가 아니라
+  실제 local pose sampling smoke artifact에 연결되며,
+  `/product/pose-sampling-readiness` API surface도 같은 artifact를 fail-closed
+  상태로 노출한다.
   `product_ai_report_explanation_packet_semantic_ready`와
   `product_ai_report_ux_contract_semantic_ready`는 core/full decision graph 순환을
   분리한 뒤 고객-facing AI report semantic readiness 안으로 닫혔다.
@@ -344,6 +353,21 @@
 - HTVS stage2/3 + two-pass(rank → top-K 4-bead) + topo corrector + stage2 skip router 연결됨
   (`tools/run_ligand_htvs_pipeline.py`, `run_ligand_backmapping_scoring.py`).
 - composite v7 스코어 + force-residual shortlist hook 존재.
+- `tools/product/build_product_pose_sampling_readiness.py`는 `core/pose_generation.py`와
+  `core/pocket_detection.py`를 실제로 호출해 ligand-guided pocket detection,
+  deterministic 6-start local pose ensemble, RMSD clustering, bounded
+  cross-docking/induced-fit guard를 smoke-test한다. 최신
+  `runs/product_pose_sampling_readiness_current.json`은
+  `product_pose_sampling_readiness_ready`, `check_count=6`, `pass_count=6`,
+  `blocker_count=0`, `pose_count=6`, `cluster_count=6`,
+  `cross_docking_pose_count=4`이며, 동시에
+  `claim_grade_pose_accuracy_ready=false`,
+  `claim_grade_induced_fit_ready=false`,
+  `claim_grade_cross_docking_ready=false`를 유지한다.
+  이 artifact는 product AI decision graph의 `pose_generation_contract` node,
+  product release bundle의 `product_pose_sampling_readiness_recorded` check,
+  source-of-truth freshness/semantic row, 그리고
+  `/product/pose-sampling-readiness` API surface에 연결된다.
 - API runner profile promotion readiness는 green이지만, operator promotion decision은
   별도 receipt로 fail-closed 추적한다. `tools/product/build_api_runner_profile_promotion_operator_receipt.py`는
   `runs/api_runner_profile_promotion_operator_template_current.csv`의 decision/token/review
@@ -356,8 +380,12 @@
   receipt를 필수 산출물로 기록한다.
 
 **갭**
-- **포즈 생성(pose sampling)** 단계가 명시적으로 약함: 컨포머 생성, 결합 포켓 탐색,
-  유연 도킹(side-chain/backbone flexibility), 포즈 다양성/클러스터링 표준화 필요.
+- **포즈 생성(pose sampling)** 단계는 이제 local deterministic smoke와 release
+  source-of-truth 연결은 생겼지만, 아직 공개 pose RMSD/LDDT-PLI/DockQ benchmark
+  parity나 validated induced-fit/cross-target docking claim은 없다. 즉
+  컨포머 생성, 결합 포켓 탐색, 유연 도킹(side-chain/backbone flexibility),
+  포즈 다양성/클러스터링 표준화의 "기능 surface"는 보강됐고,
+  "정밀도 claim"은 계속 차단되어 있다.
 - **포켓 검출(binding site detection)** 자동화: 현재 AQP1 등에서 pocket centroid placeholder 흔적.
 - **스코어 함수 보정(calibration)**: 점수 → 결합친화도(kcal/mol) 변환의 물리적 근거/보정셋.
 

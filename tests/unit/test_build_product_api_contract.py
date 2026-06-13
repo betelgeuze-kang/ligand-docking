@@ -76,6 +76,17 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     ai_report_ux_keys = REQUIRED_STATUS_DOMAIN_KEYS["get_product_ai_report_ux"]
     assert "ligand_selection_rationale_ready" in ai_report_ux_keys
     assert "selection_rationale" in ai_report_ux_keys
+    assert EXPECTED_ROUTES["get_product_pose_sampling_readiness"] == (
+        "GET",
+        "/pose-sampling-readiness",
+    )
+    pose_sampling_keys = REQUIRED_STATUS_DOMAIN_KEYS["get_product_pose_sampling_readiness"]
+    assert "pose_sampling_readiness_ready" in pose_sampling_keys
+    assert "pose_generation_contract_ready" in pose_sampling_keys
+    assert "pose_count" in pose_sampling_keys
+    assert "cluster_count" in pose_sampling_keys
+    assert "claim_grade_pose_accuracy_ready" in pose_sampling_keys
+    assert "checks" in pose_sampling_keys
     assert EXPECTED_ROUTES["get_product_trajectory_sla_contract"] == ("GET", "/trajectory-sla-contract")
     trajectory_sla_keys = REQUIRED_STATUS_DOMAIN_KEYS["get_product_trajectory_sla_contract"]
     assert "sla_claim_tier" in trajectory_sla_keys

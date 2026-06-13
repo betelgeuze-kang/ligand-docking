@@ -591,14 +591,22 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
   `product_full_commercial_blocker_evidence_matrix_current.json`,
   `production_ai_registry_promotion_operator_receipt_current.json`,
+  `product_pose_sampling_readiness_current.json`,
   `cameo_official_result_fetch_preflight_current.json`,
   `cameo_validation_operations_dossier_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=82`, `pass_count=82`,
-  `blocker_count=0`, `artifact_row_count=56`, `semantic_status_row_count=24`,
-  `release_refresh_command_count=69`, `stale_artifact_count=0`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=84`, `pass_count=84`,
+  `blocker_count=0`, `artifact_row_count=57`, `semantic_status_row_count=25`,
+  `release_refresh_command_count=70`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
+  `product_pose_sampling_readiness_semantic_ready` row는 deterministic local
+  pocket placement, 6-start pose ensemble, RMSD diversity surface, bounded
+  cross-docking/induced-fit guard, claim-grade pose accuracy blocked posture를
+  exact/min field로 검증한다. 따라서 product AI decision graph의
+  `pose_generation_contract` node는 capability/preflight만 보지 않고 실제 local
+  pose sampling smoke artifact를 요구하며, `/product/pose-sampling-readiness`
+  API surface도 같은 artifact와 claim-grade blocked posture를 노출한다.
   API/service-boundary semantic readiness와 self-hosted license audit semantic
   readiness도 이 source-of-truth 안으로 편입됐다. 고객-facing AI report explanation/UX semantic
   readiness는 core/full decision graph 순환을 분리한 뒤 닫혔다. R8/R9 evidence
@@ -1056,13 +1064,13 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `launch_executed=false`, `external_state_mutated=false`이다.
 - `tools/run_product_release_current_refresh.py --execute`는 source-of-truth 순서에
   residual shadow/registry, product execution work-order/preflight, core/full AI decision
-  graph, AI report explanation/UX, API/service-boundary contracts, self-hosted
+  graph, local pose sampling readiness, AI report explanation/UX, API/service-boundary contracts, self-hosted
   license audit, third-party review gate, R4 preflight, scope-breadth closure checklist,
   scope-breadth evidence receipt, goal operator intake kit, goal API surface contract, bottleneck briefing,
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=69`, `executed_count=69`,
+  `product_release_current_refresh_verified`, `command_count=70`, `executed_count=70`,
   `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=true`,
   `final_gate_blocker_count=0`이다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
@@ -1098,11 +1106,11 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   release claim 밖으로 계속 분리해 유지하는 일이다.
 - release source-of-truth gate는 R4 preflight, R4 rollout smoke receipt artifact,
   R8 scope-breadth receipt, goal operator intake kit, commercial readiness execution
-  ladder, API/bottleneck visibility, production AI registry promotion operator
+  ladder, API/bottleneck visibility, local pose sampling readiness, production AI registry promotion operator
   receipt, CAMEO official-result fetch preflight, master gap closure rollup 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=82/82`,
+  `product_release_source_of_truth_gate_ready`, `pass_count=84/84`,
   `blocker_count=0`, `stale_artifact_count=0`,
-  `release_refresh_command_count=69`으로 재검증됐다.
+  `release_refresh_command_count=70`으로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;
   다음은 operator webhook secret mount, 실제 pager provider delivery smoke,

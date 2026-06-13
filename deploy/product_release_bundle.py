@@ -25,6 +25,7 @@ DEFAULT_ARTIFACTS = {
     "production_ai_registry_promotion_operator_receipt": (
         "runs/production_ai_registry_promotion_operator_receipt_current.json"
     ),
+    "product_pose_sampling_readiness": "runs/product_pose_sampling_readiness_current.json",
     "rollback_runbook": "deploy/product_rollback_runbook.md",
     "rollout_runbook": "deploy/product_rollout_runbook.md",
     "dockerfile": "Dockerfile.product",
@@ -135,6 +136,7 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
     production_ai_registry_receipt = _summary(
         _read_json(_resolve(DEFAULT_ARTIFACTS["production_ai_registry_promotion_operator_receipt"]))
     )
+    pose_sampling = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["product_pose_sampling_readiness"])))
     viewer_asset_base = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["viewer_asset_base_url_decision"])))
     license_audit = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["self_hosted_license_distribution_audit"])))
     third_party_license_review = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["third_party_license_review_gate"])))
@@ -325,6 +327,28 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
                 f"observed_mode={production_ai_registry_receipt.get('observed_registry_default_residual_mode')};"
                 f"observed_checkpoint_count="
                 f"{production_ai_registry_receipt.get('observed_registry_trained_model_checkpoint_count')}"
+            ),
+        },
+        {
+            "check": "product_pose_sampling_readiness_recorded",
+            "passed": (
+                pose_sampling.get("status") == "product_pose_sampling_readiness_ready"
+                and pose_sampling.get("pose_sampling_readiness_ready") is True
+                and pose_sampling.get("pose_generation_contract_ready") is True
+                and int(pose_sampling.get("blocker_count") or 0) == 0
+                and int(pose_sampling.get("pose_count") or 0) >= 6
+                and int(pose_sampling.get("cluster_count") or 0) >= 2
+                and pose_sampling.get("claim_grade_pose_accuracy_ready") is False
+                and pose_sampling.get("execution_enabled") is False
+                and pose_sampling.get("docking_results_emitted") is False
+                and pose_sampling.get("external_state_mutated") is False
+            ),
+            "observed": (
+                f"status={pose_sampling.get('status')};"
+                f"pose_count={pose_sampling.get('pose_count')};"
+                f"cluster_count={pose_sampling.get('cluster_count')};"
+                f"claim_grade_pose_accuracy_ready={pose_sampling.get('claim_grade_pose_accuracy_ready')};"
+                f"docking_results_emitted={pose_sampling.get('docking_results_emitted')}"
             ),
         },
         {
