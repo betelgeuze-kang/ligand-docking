@@ -224,6 +224,38 @@ def _product_scope_breadth_evidence_priority_intake_fields(
     return fields
 
 
+def _release_row_by_check(release_gate_packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    rows_by_check: dict[str, dict[str, Any]] = {}
+    for row in _rows(release_gate_packet):
+        check = _text(row.get("check"))
+        if check:
+            rows_by_check[check] = row
+    return rows_by_check
+
+
+def _current_release_field(
+    burndown_row: dict[str, Any],
+    release_rows_by_check: dict[str, dict[str, Any]],
+    *,
+    release_field: str,
+    fallback_key: str,
+) -> str:
+    checks = _split_semicolon(burndown_row.get("release_checks") or burndown_row.get("release_check"))
+    if not checks:
+        return _text(burndown_row.get(fallback_key))
+    parts: list[str] = []
+    found = False
+    for check in checks:
+        release_row = release_rows_by_check.get(check)
+        value = _text(release_row.get(release_field)) if release_row else ""
+        if value:
+            found = True
+        else:
+            value = _text(burndown_row.get(fallback_key))
+        parts.append(f"{check}={value}" if check else value)
+    return "; ".join(part for part in parts if part) if found else _text(burndown_row.get(fallback_key))
+
+
 def _matches_release_checks(burndown_row: dict[str, Any], intake_row: dict[str, Any]) -> bool:
     burndown_checks = set(_split_semicolon(burndown_row.get("release_checks") or burndown_row.get("release_check")))
     intake_checks = set(_split_semicolon(intake_row.get("release_checks")))
@@ -499,6 +531,7 @@ def build_goal_bottleneck_briefing(
     burndown_rows = _rows(burndown_packet)
     action_rows = _rows(action_board_packet)
     intake_rows = _rows(intake_kit_packet)
+    release_rows_by_check = _release_row_by_check(release_gate_packet)
     rows: list[dict[str, Any]] = []
 
     for burndown_row in sorted(burndown_rows, key=lambda row: _int(row.get("sequence"))):
@@ -559,8 +592,18 @@ def build_goal_bottleneck_briefing(
             "is_current_bottleneck": not stale_public_benchmark_block,
             "superseded_by_current_evidence": stale_public_benchmark_block,
             "release_checks": _text(burndown_row.get("release_checks") or burndown_row.get("release_check")),
-            "release_observed": _text(burndown_row.get("release_observed")),
-            "release_required": _text(burndown_row.get("release_required")),
+            "release_observed": _current_release_field(
+                burndown_row,
+                release_rows_by_check,
+                release_field="observed",
+                fallback_key="release_observed",
+            ),
+            "release_required": _current_release_field(
+                burndown_row,
+                release_rows_by_check,
+                release_field="required",
+                fallback_key="release_required",
+            ),
             "release_check_count": _int(burndown_row.get("release_check_count")),
             "requires_operator_action": (
                 False if stale_public_benchmark_block else bool(burndown_row.get("requires_operator_action") is True)

@@ -704,8 +704,15 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
   빠지지 않게 한다. 최신 source-of-truth는 `row_count=94`, `pass_count=94`,
   `blocker_count=0`, `artifact_row_count=63`, `semantic_status_row_count=29`,
-  `release_refresh_command_count=79`, `stale_artifact_count=0`,
+  `release_refresh_command_count=87`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
+  final refresh는 마지막 `goal_release_decision_gate` 뒤에
+  `goal_release_burndown_work_order`부터 intake kit, bottleneck briefing,
+  full commercial matrix, release bundle, handoff bundle, privacy scan,
+  source-of-truth gate까지 downstream 산출물을 한 번 더 재생성하고,
+  `goal_bottleneck_briefing`은 burndown row의 `release_observed`/`release_required`
+  문자열을 최신 release-decision row에서 보정해, R8/R9 completion-audit blocker
+  수가 한 사이클 전 값으로 operator-facing 병목표에 남지 않게 한다.
   최신 goal release decision과 final refresh도 self-hosted license audit 및
   third-party license review gate를 직접 읽어 `legal_advice_provided=false`,
   `hard_blocker_count=0`, `operator_review_item_count=1`, JSZip approved asset,

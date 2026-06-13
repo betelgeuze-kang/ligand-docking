@@ -804,6 +804,56 @@ def test_goal_bottleneck_briefing_does_not_attach_stale_tokens_to_blocked_until_
     assert payload["rows"][0]["operator_intake_entries"] == ""
 
 
+def test_goal_bottleneck_briefing_uses_current_release_gate_observed_fields() -> None:
+    release_gate = {
+        "summary": {"status": "goal_release_ready", "release_allowed": True},
+        "rows": [
+            {
+                "check": "goal_bottleneck_briefing_full_commercial_receipts_recorded",
+                "observed": (
+                    "goal_bottleneck_briefing_ready;"
+                    "completion_audit_release_blocker_bottleneck_count=2"
+                ),
+                "required": "goal_bottleneck_briefing_ready with R8/R9 blockers",
+            }
+        ],
+    }
+    burndown = {
+        "summary": {"status": "goal_release_burndown_work_order_ready"},
+        "rows": [
+            {
+                "sequence": 1,
+                "phase": "P1_product_execution_and_bundle_validation",
+                "lane_id": "commercial_product_release",
+                "burndown_status": "approval_required",
+                "release_checks": "goal_bottleneck_briefing_full_commercial_receipts_recorded",
+                "release_check_count": 1,
+                "release_observed": (
+                    "goal_bottleneck_briefing_ready;"
+                    "completion_audit_release_blocker_bottleneck_count=3"
+                ),
+                "release_required": "stale required text",
+                "requires_operator_action": True,
+                "source_artifact": "runs/product_execution_work_order_current.json",
+                "command": "",
+                "recommended_action": "Refresh stale observed data.",
+            }
+        ],
+    }
+
+    payload = mod.build_goal_bottleneck_briefing(
+        release_gate_packet=release_gate,
+        burndown_packet=burndown,
+        action_board_packet={"summary": {"status": "operator_actions_required"}, "rows": []},
+        intake_kit_packet={"summary": {"status": "goal_operator_intake_kit_ready"}, "rows": []},
+    )
+
+    row = payload["rows"][0]
+    assert "completion_audit_release_blocker_bottleneck_count=2" in row["release_observed"]
+    assert "completion_audit_release_blocker_bottleneck_count=3" not in row["release_observed"]
+    assert "goal_bottleneck_briefing_ready with R8/R9 blockers" in row["release_required"]
+
+
 def test_goal_bottleneck_briefing_zeroes_cleanup_sizes_when_cleanup_objective_ready() -> None:
     release = _release_gate()
     release["summary"] = {
