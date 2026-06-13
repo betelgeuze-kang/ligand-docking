@@ -125,6 +125,7 @@ PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_INTAKE_FIELDS = (
     "blocked_priority_item_count",
     "missing_gate_count",
     "missing_gate_ids",
+    "observed_registry_trained_model_checkpoint_count",
     "top_gate_id",
     "top_priority_bucket",
     "top_required_input",

@@ -86,20 +86,19 @@ def test_production_ai_registry_promotion_priority_packet_blocks_current_registr
     assert summary["operator_receipt_ready"] is False
     assert summary["operator_receipt_status"] == "blocked_production_ai_registry_promotion_operator_receipt"
     assert summary["priority_item_count"] == 4
-    assert summary["operator_input_required_count"] == 4
-    assert summary["blocked_priority_item_count"] == 4
+    assert summary["operator_input_required_count"] == 3
+    assert summary["blocked_priority_item_count"] == 3
     assert summary["required_gate_count"] == 4
     assert summary["registry_promotion_missing_gate_ids"] == [
-        "trained_model_checkpoint_count_positive",
         "default_residual_mode_guarded",
         "production_promotion_allowed",
         "customer_facing_mutation_flags",
     ]
-    assert summary["top_gate_id"] == "trained_model_checkpoint_count_positive"
-    assert summary["top_priority_bucket"] == "trained_checkpoint_registration_required"
+    assert summary["top_gate_id"] == "default_residual_mode_guarded"
+    assert summary["top_priority_bucket"] == "guarded_residual_mode_selection_required"
     assert summary["top_acceptance_artifact"] == mod.DEFAULT_REGISTRY_JSON
     assert summary["observed_registry_default_residual_mode"] == "shadow"
-    assert summary["observed_registry_trained_model_checkpoint_count"] == 0
+    assert summary["observed_registry_trained_model_checkpoint_count"] == 1
     assert summary["observed_registry_production_promotion_allowed"] is False
     assert summary["observed_registry_customer_facing_mutation_flags_ready"] is False
     assert summary["observed_checkpoint_registry_promotion_currently_satisfied"] is False
@@ -109,8 +108,8 @@ def test_production_ai_registry_promotion_priority_packet_blocks_current_registr
     assert summary["customer_facing_mutation_enabled"] is False
     assert summary["external_state_mutated"] is False
     assert payload["rows"][0]["gate_id"] == "trained_model_checkpoint_count_positive"
-    assert payload["rows"][0]["operator_input_required"] is True
-    assert payload["rows"][1]["priority_bucket"] == "blocked_until_trained_checkpoint_registered"
+    assert payload["rows"][0]["operator_input_required"] is False
+    assert payload["rows"][1]["priority_bucket"] == "guarded_residual_mode_selection_required"
     assert payload["rows"][2]["priority_bucket"] == "blocked_until_guarded_registry_ready"
     assert payload["rows"][3]["priority_bucket"] == "blocked_until_production_promotion_allowed"
     assert all(row["external_state_mutated"] is False for row in payload["rows"])

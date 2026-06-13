@@ -576,19 +576,20 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `production_ai_registry_promotion_priority_*` summary도
   `goal_bottleneck_briefing_production_ai_registry_promotion_priority_*` 키와
   `goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded`
-  row로 승격한다. top gate는
-  `trained_model_checkpoint_count_positive`, top bucket은
-  `trained_checkpoint_registration_required`, missing gate count는 4로 고정되며,
+  row로 승격한다. 현재 trained/preflight-ready checkpoint는 registry에
+  반영되어 `observed_registry_trained_model_checkpoint_count=1`이고, top gate는
+  `default_residual_mode_guarded`, top bucket은
+  `guarded_residual_mode_selection_required`, missing gate count는 3으로 고정되며,
   `tools/run_product_release_current_refresh.py --execute` final-gate verification도
   이 값을 exact check로 요구한다. 따라서 restricted/local release gate가 green이어도
-  Production AI registry promotion의 첫 운영 병목이 최종 의사결정 packet 밖으로
-  빠질 수 없다.
+  Production AI registry promotion의 첫 운영 병목인 guarded mode/operator receipt
+  선택이 최종 의사결정 packet 밖으로 빠질 수 없다.
   최신 `goal_release_decision_gate_current.json`은 원본
   `production_ai_registry_promotion_priority_packet_current.json`도
   `production_ai_registry_promotion_priority_packet_*` summary와 recorded row로 직접
   흡수하며, final refresh exact check는 `status`,
   `operator_receipt_status`, `observed_registry_default_residual_mode=shadow`,
-  `observed_registry_trained_model_checkpoint_count=0`, approval token을 고정한다.
+  `observed_registry_trained_model_checkpoint_count=1`, approval token을 고정한다.
   같은 decision gate는 R9
   `engine_refinement_claim_evidence_priority_packet_current.json`도 직접 읽어
   public benchmark work-order apply 8개 blocked row와 top blocker를 final refresh exact
@@ -823,20 +824,21 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `operator_receipt_ready=false`, `first_blocked_row_blocker=operator_placeholders_unfilled`,
   `approval_token_required=APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION`,
   `observed_registry_default_residual_mode=shadow`,
-  `observed_registry_trained_model_checkpoint_count=0`으로 fail-closed 상태를 기록하며,
+  `observed_registry_trained_model_checkpoint_count=1`으로 fail-closed 상태를 기록하며,
   registry/checkpoint-readiness artifact와 CSV 입력값이 일치하지 않으면 ready가 되지 않는다.
   `runs/production_ai_registry_promotion_priority_packet_current.json`은 같은 병목을
   operator 실행 순서로 다시 분해해
   `blocked_production_ai_registry_promotion_priority_packet`,
   `priority_packet_ready=true`, `priority_item_count=4`,
-  `operator_input_required_count=4`, `top_gate_id=trained_model_checkpoint_count_positive`,
-  `top_priority_bucket=trained_checkpoint_registration_required`,
-  `registry_promotion_missing_gate_ids=[trained_model_checkpoint_count_positive,
-  default_residual_mode_guarded, production_promotion_allowed,
+  `operator_input_required_count=3`, `top_gate_id=default_residual_mode_guarded`,
+  `top_priority_bucket=guarded_residual_mode_selection_required`,
+  `registry_promotion_missing_gate_ids=[default_residual_mode_guarded, production_promotion_allowed,
   customer_facing_mutation_flags]`를 기록한다. 따라서 Production AI promotion의 첫
-  실제 조치는 shadow registry를 바로 켜는 일이 아니라, trained production residual
-  checkpoint를 registry에 등록하고 residual registry/checkpoint-readiness/promotion
-  workbench/operator receipt를 재검증하는 일로 고정된다. 이 priority packet도
+  실제 조치는 shadow registry를 바로 켜는 일이 아니라, preflight-ready checkpoint
+  1개를 전제로 guarded default residual mode, approval token, reviewer,
+  validation-chain review를 operator receipt에 채우고 residual
+  registry/checkpoint-readiness/promotion workbench/operator receipt를 재검증하는
+  일로 고정된다. 이 priority packet도
   `model_promoted=false`, `customer_facing_mutation_enabled=false`,
   `external_state_mutated=false`로 fail-closed다.
   이 priority packet summary는 이제 goal operator intake kit, bottleneck briefing,
@@ -850,7 +852,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `production_ai_registry_promotion_priority_packet_recorded=true`,
   `operator_receipt_status=blocked_production_ai_registry_promotion_operator_receipt`,
   `observed_registry_default_residual_mode=shadow`,
-  `observed_registry_trained_model_checkpoint_count=0`을 summary와 final refresh exact
+  `observed_registry_trained_model_checkpoint_count=1`을 summary와 final refresh exact
   check에 고정한다.
   또한 최신 goal release decision은 원천
   `product_production_ai_checkpoint_readiness_current.json` 및

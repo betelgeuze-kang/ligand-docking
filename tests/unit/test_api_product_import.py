@@ -514,10 +514,10 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert registry["customer_facing_auto_correction_allowed"] is False
     assert registry["customer_facing_score_mutation_allowed"] is False
     assert registry["customer_facing_ranking_mutation_allowed"] is False
-    assert registry["trained_model_checkpoint_count"] == 0
-    assert registry["candidate_checkpoint_count"] == 0
-    assert registry["checkpoint_preflight_ready"] is False
-    assert registry["production_checkpoint_blocked"] is True
+    assert registry["trained_model_checkpoint_count"] == 1
+    assert registry["candidate_checkpoint_count"] == 1
+    assert registry["checkpoint_preflight_ready"] is True
+    assert registry["production_checkpoint_blocked"] is False
     assert registry["selected_sidecar_ready"] is True
     assert registry["selected_sidecar_status"] == "residual_production_checkpoint_sidecar_ready"
     assert registry["selected_sidecar_missing_output_fields"] == []
@@ -549,15 +549,14 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         "production_promotion_allowed",
         "customer_facing_mutation_flags",
         "default_residual_mode_guarded",
-        "trained_model_checkpoint_count_positive",
     ]
-    assert checkpoint["registry_promotion_missing_gate_count"] == 4
+    assert checkpoint["registry_promotion_missing_gate_count"] == 3
     assert checkpoint["registry_promotion_upstream_acceptance_ready"] is True
     assert checkpoint["registry_promotion_currently_satisfied"] is False
     assert checkpoint["customer_facing_auto_correction_allowed"] is False
     assert checkpoint["customer_facing_score_mutation_allowed"] is False
     assert checkpoint["customer_facing_ranking_mutation_allowed"] is False
-    assert checkpoint["trained_model_checkpoint_count"] == 0
+    assert checkpoint["trained_model_checkpoint_count"] == 1
     assert checkpoint["candidate_checkpoint_count"] == 1
     assert checkpoint["ready_checkpoint_count"] >= 1
     assert checkpoint["checkpoint_preflight_ready"] is True
@@ -702,10 +701,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert checkpoint["production_inference_actionable_blocker_required"] == (
         "production promotion, customer-facing mutation flags, guarded mode, and trained checkpoint count are ready"
     )
-    assert "Register or promote a trained preflight-ready production checkpoint" in checkpoint[
-        "production_inference_actionable_blocker_next_action"
-    ]
-    assert "trained_model_checkpoint_count_positive" in checkpoint[
+    assert "Complete the guarded production AI registry promotion operator receipt" in checkpoint[
         "production_inference_actionable_blocker_next_action"
     ]
     assert "customer-facing mutation disabled" in checkpoint[
@@ -1079,11 +1075,11 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert promotion["registry_promotion_missing_gate_ids"] == checkpoint[
         "registry_promotion_missing_gate_ids"
     ]
-    assert promotion["registry_promotion_missing_gate_count"] == 4
+    assert promotion["registry_promotion_missing_gate_count"] == 3
     assert promotion["registry_promotion_upstream_acceptance_ready"] is True
     assert promotion["registry_promotion_currently_satisfied"] is False
     assert promotion["default_residual_mode"] == "shadow"
-    assert promotion["trained_model_checkpoint_count"] == 0
+    assert promotion["trained_model_checkpoint_count"] == 1
     assert promotion["gpu_handoff_ready"] is True
     assert promotion["gpu_operator_action_required"] is True
     assert promotion["gpu_return_receipt_ready"] is True
@@ -1134,13 +1130,12 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert registry_receipt["registry_artifact_present"] is True
     assert registry_receipt["checkpoint_readiness_artifact_present"] is True
     assert registry_receipt["observed_registry_default_residual_mode"] == "shadow"
-    assert registry_receipt["observed_registry_trained_model_checkpoint_count"] == 0
+    assert registry_receipt["observed_registry_trained_model_checkpoint_count"] == 1
     assert registry_receipt["observed_checkpoint_registry_promotion_currently_satisfied"] is False
     assert registry_receipt["observed_checkpoint_registry_promotion_missing_gate_ids"] == [
         "production_promotion_allowed",
         "customer_facing_mutation_flags",
         "default_residual_mode_guarded",
-        "trained_model_checkpoint_count_positive",
     ]
     assert len(registry_receipt["receipt_rows"]) == registry_receipt["receipt_row_count"]
     assert registry_receipt["registry_edited_by_this_tool"] is False
@@ -1159,19 +1154,18 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         "blocked_production_ai_registry_promotion_operator_receipt"
     )
     assert registry_priority["priority_item_count"] == 4
-    assert registry_priority["operator_input_required_count"] == 4
-    assert registry_priority["blocked_priority_item_count"] == 4
+    assert registry_priority["operator_input_required_count"] == 3
+    assert registry_priority["blocked_priority_item_count"] == 3
     assert registry_priority["registry_promotion_missing_gate_ids"] == [
-        "trained_model_checkpoint_count_positive",
         "default_residual_mode_guarded",
         "production_promotion_allowed",
         "customer_facing_mutation_flags",
     ]
-    assert registry_priority["top_gate_id"] == "trained_model_checkpoint_count_positive"
-    assert registry_priority["top_priority_bucket"] == "trained_checkpoint_registration_required"
+    assert registry_priority["top_gate_id"] == "default_residual_mode_guarded"
+    assert registry_priority["top_priority_bucket"] == "guarded_residual_mode_selection_required"
     assert registry_priority["top_acceptance_artifact"] == "runs/residual_model_registry_current.json"
     assert registry_priority["observed_registry_default_residual_mode"] == "shadow"
-    assert registry_priority["observed_registry_trained_model_checkpoint_count"] == 0
+    assert registry_priority["observed_registry_trained_model_checkpoint_count"] == 1
     assert registry_priority["approval_token_required"] == "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
     assert len(registry_priority["priority_items"]) == registry_priority["priority_item_count"]
     assert registry_priority["priority_items"][0]["gate_id"] == "trained_model_checkpoint_count_positive"
@@ -1828,7 +1822,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         ] == "shadow"
         assert operator_packet[
             "production_ai_registry_promotion_operator_receipt_observed_registry_trained_model_checkpoint_count"
-        ] == 0
+        ] == 1
         assert operator_packet["production_ai_registry_promotion_priority_status"] == (
             "blocked_production_ai_registry_promotion_priority_packet"
         )
@@ -1838,13 +1832,13 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         ] is False
         assert operator_packet[
             "production_ai_registry_promotion_priority_operator_input_required_count"
-        ] == 4
+        ] == 3
         assert operator_packet["production_ai_registry_promotion_priority_top_gate_id"] == (
-            "trained_model_checkpoint_count_positive"
+            "default_residual_mode_guarded"
         )
         assert operator_packet[
             "production_ai_registry_promotion_priority_top_priority_bucket"
-        ] == "trained_checkpoint_registration_required"
+        ] == "guarded_residual_mode_selection_required"
         assert operator_packet["production_ai_registry_promotion_priority_model_promoted"] is False
         assert operator_packet[
             "production_ai_registry_promotion_priority_external_state_mutated"
@@ -2102,10 +2096,10 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         )
         assert execution_ladder[
             "production_ai_registry_promotion_priority_top_gate_id"
-        ] == "trained_model_checkpoint_count_positive"
+        ] == "default_residual_mode_guarded"
         assert execution_ladder[
             "production_ai_registry_promotion_priority_top_priority_bucket"
-        ] == "trained_checkpoint_registration_required"
+        ] == "guarded_residual_mode_selection_required"
         assert execution_ladder[
             "production_ai_registry_promotion_priority_model_promoted"
         ] is False
@@ -2257,10 +2251,10 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         )
         assert handoff_bundle[
             "production_ai_registry_promotion_priority_top_gate_id"
-        ] == "trained_model_checkpoint_count_positive"
+        ] == "default_residual_mode_guarded"
         assert handoff_bundle[
             "production_ai_registry_promotion_priority_top_priority_bucket"
-        ] == "trained_checkpoint_registration_required"
+        ] == "guarded_residual_mode_selection_required"
         assert any(
             row["artifact_id"] == "production_ai_registry_promotion_priority_packet"
             and row["artifact_path"]
@@ -2603,14 +2597,13 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     )
     assert completion["production_ai_promotion_ready"] is False
     assert completion["production_ai_promotion_allowed"] is False
-    assert completion["production_ai_trained_checkpoint_count"] == 0
+    assert completion["production_ai_trained_checkpoint_count"] == 1
     assert completion["production_ai_checkpoint_registry_promotion_missing_gate_ids"] == [
         "production_promotion_allowed",
         "customer_facing_mutation_flags",
         "default_residual_mode_guarded",
-        "trained_model_checkpoint_count_positive",
     ]
-    assert completion["production_ai_checkpoint_registry_promotion_missing_gate_count"] == 4
+    assert completion["production_ai_checkpoint_registry_promotion_missing_gate_count"] == 3
     assert completion["production_ai_checkpoint_registry_promotion_upstream_acceptance_ready"] is True
     assert completion["production_ai_checkpoint_registry_promotion_currently_satisfied"] is False
     assert completion["production_ai_selected_sidecar_ready"] is True

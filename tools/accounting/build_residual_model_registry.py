@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import datetime as dt
 import json
 from pathlib import Path
 from typing import Any
@@ -15,6 +17,8 @@ DEFAULT_GPCR_BREADTH_GATE_JSON = "runs/gpcr_residual_proof_breadth_gate_current.
 DEFAULT_PUBLIC_ASSIST_GATE_JSON = "runs/public_benchmark_residual_assist_comparison_gate_current.json"
 DEFAULT_CHECKPOINT_PREFLIGHT_JSON = "runs/residual_production_checkpoint_preflight_current.json"
 DEFAULT_CHECKPOINT_SIDECAR_JSON = "runs/residual_production_checkpoint_sidecar_current.json"
+DEFAULT_CHECKPOINT_WORK_ORDER_JSON = "runs/residual_production_checkpoint_work_order_current.json"
+DEFAULT_PROMOTION_OPERATOR_RECEIPT_CSV = "config/production_ai_registry_promotion_operator_receipt_current.csv"
 DEFAULT_OUT_JSON = "runs/residual_model_registry_current.json"
 DEFAULT_OUT_CSV = "runs/residual_model_registry_current.csv"
 DEFAULT_OUT_MD = "runs/residual_model_registry_current.md"
@@ -28,6 +32,20 @@ REQUIRED_OUTPUT_FIELDS = [
     "abstention_reason",
     "stage2_route_decision",
 ]
+PROMOTION_RECEIPT_ARTIFACT_ID = "residual_model_registry_guarded_promotion"
+PROMOTION_APPROVAL_TOKEN = "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+PROMOTION_DECISIONS = {"promote_guarded"}
+PROMOTION_GUARDED_MODES = {"assist", "production", "production_guarded"}
+PROMOTION_RECEIPT_REQUIRED_TRUE_FIELDS = [
+    "production_promotion_allowed",
+    "customer_facing_auto_correction_allowed",
+    "customer_facing_score_mutation_allowed",
+    "customer_facing_ranking_mutation_allowed",
+    "validation_chain_reviewed",
+    "claim_boundary_reviewed",
+    "customer_facing_mutation_policy_reviewed",
+]
+PROMOTION_RECEIPT_PLACEHOLDER_PREFIXES = ("OPERATOR_FILL", "OPERATOR_CONFIRM")
 
 COMPONENTS = [
     {
@@ -118,6 +136,57 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _int(value: Any) -> int:
+    try:
+        return int(float(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _bool_text(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    return _text(value).lower() in {"1", "true", "yes", "y"}
+
+
+def _has_placeholder(value: Any) -> bool:
+    text = _text(value)
+    return any(text.startswith(prefix) for prefix in PROMOTION_RECEIPT_PLACEHOLDER_PREFIXES)
+
+
+def _is_iso_timestamp(value: Any) -> bool:
+    text = _text(value)
+    if not text:
+        return False
+    try:
+        dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return True
+
+
+def _read_csv_if_present(path_like: str | Path) -> tuple[list[dict[str, str]], bool]:
+    path = _resolve(path_like)
+    if not path.exists():
+        return [], False
+    try:
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            return [dict(row) for row in csv.DictReader(handle)], True
+    except OSError:
+        return [], True
+
+
+def _checkpoint_value(
+    checkpoint: dict[str, Any],
+    checkpoint_work_order: dict[str, Any],
+    key: str,
+) -> Any:
+    value = checkpoint.get(key)
+    if value not in (None, "", []):
+        return value
+    return checkpoint_work_order.get(key)
+
+
 def _blocker_values(primary_blocker: str, prefix: str) -> list[str]:
     marker = f"{prefix}:"
     for item in primary_blocker.split(";"):
@@ -128,6 +197,69 @@ def _blocker_values(primary_blocker: str, prefix: str) -> list[str]:
     return []
 
 
+def _promotion_operator_approval(
+    *,
+    receipt_rows: list[dict[str, Any]],
+    receipt_present: bool,
+    ready_checkpoint_count: int,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    if not receipt_present:
+        blockers.append("operator_receipt_csv_missing")
+    if not receipt_rows:
+        blockers.append("operator_receipt_row_missing")
+
+    matching_rows = [
+        row
+        for row in receipt_rows
+        if _text(row.get("artifact_id")) == PROMOTION_RECEIPT_ARTIFACT_ID
+    ]
+    row = matching_rows[0] if matching_rows else (receipt_rows[0] if receipt_rows else {})
+    if receipt_rows and not matching_rows:
+        blockers.append("operator_receipt_artifact_id_missing_or_unrecognized")
+    if row and any(_has_placeholder(value) for value in row.values()):
+        blockers.append("operator_placeholders_unfilled")
+
+    decision = _text(row.get("operator_decision")).lower()
+    if decision not in PROMOTION_DECISIONS:
+        blockers.append("operator_decision_not_promote_guarded")
+    if _text(row.get("approval_token")) != PROMOTION_APPROVAL_TOKEN:
+        blockers.append("approval_token_missing_or_invalid")
+    for field in PROMOTION_RECEIPT_REQUIRED_TRUE_FIELDS:
+        if _bool_text(row.get(field)) is not True:
+            blockers.append(f"{field}_not_true")
+    default_mode = _text(row.get("default_residual_mode"))
+    if default_mode not in PROMOTION_GUARDED_MODES:
+        blockers.append("default_residual_mode_not_guarded")
+    row_checkpoint_count = _int(row.get("trained_model_checkpoint_count"))
+    if row_checkpoint_count <= 0:
+        blockers.append("trained_model_checkpoint_count_not_positive")
+    if ready_checkpoint_count <= 0:
+        blockers.append("ready_checkpoint_count_not_positive")
+    if row_checkpoint_count > 0 and ready_checkpoint_count > 0 and row_checkpoint_count != ready_checkpoint_count:
+        blockers.append("trained_model_checkpoint_count_does_not_match_ready_checkpoint_count")
+    if _bool_text(row.get("external_state_mutated")) is not False:
+        blockers.append("external_state_mutated_present")
+    if _text(row.get("operator_attestation")) != "reviewed_for_production_ai_registry_promotion":
+        blockers.append("operator_attestation_missing_or_unaccepted")
+    if not _text(row.get("reviewer")) or _has_placeholder(row.get("reviewer")):
+        blockers.append("reviewer_missing")
+    if not _is_iso_timestamp(row.get("reviewed_at_utc")):
+        blockers.append("reviewed_at_utc_missing_or_invalid")
+    if not _text(row.get("registry_validation_command")):
+        blockers.append("registry_validation_command_missing")
+
+    blockers = list(dict.fromkeys(blockers))
+    return {
+        "approval_ready": not blockers,
+        "blockers": blockers,
+        "blocker_count": len(blockers),
+        "operator_decision": decision,
+        "requested_default_residual_mode": default_mode,
+        "receipt_row_present": bool(row),
+    }
+
+
 def build_residual_model_registry(
     *,
     residual_shadow_packet: dict[str, Any],
@@ -136,12 +268,17 @@ def build_residual_model_registry(
     public_assist_gate_packet: dict[str, Any],
     checkpoint_preflight_packet: dict[str, Any] | None = None,
     checkpoint_sidecar_packet: dict[str, Any] | None = None,
+    checkpoint_work_order_packet: dict[str, Any] | None = None,
+    promotion_operator_receipt_rows: list[dict[str, str]] | None = None,
+    promotion_operator_receipt_present: bool = False,
     residual_shadow_path: str = DEFAULT_RESIDUAL_SHADOW_JSON,
     residual_assist_gate_path: str = DEFAULT_RESIDUAL_ASSIST_GATE_JSON,
     gpcr_breadth_gate_path: str = DEFAULT_GPCR_BREADTH_GATE_JSON,
     public_assist_gate_path: str = DEFAULT_PUBLIC_ASSIST_GATE_JSON,
     checkpoint_preflight_path: str = DEFAULT_CHECKPOINT_PREFLIGHT_JSON,
     checkpoint_sidecar_path: str = DEFAULT_CHECKPOINT_SIDECAR_JSON,
+    checkpoint_work_order_path: str = DEFAULT_CHECKPOINT_WORK_ORDER_JSON,
+    promotion_operator_receipt_csv: str = DEFAULT_PROMOTION_OPERATOR_RECEIPT_CSV,
 ) -> dict[str, Any]:
     residual = _summary(residual_shadow_packet)
     assist = _summary(residual_assist_gate_packet)
@@ -149,6 +286,7 @@ def build_residual_model_registry(
     public = _summary(public_assist_gate_packet)
     checkpoint = _summary(checkpoint_preflight_packet or {})
     sidecar = _summary(checkpoint_sidecar_packet or {})
+    checkpoint_work_order = _summary(checkpoint_work_order_packet or {})
 
     residual_mode_shadow = _text(residual.get("residual_mode")) == "shadow"
     shadow_contract_ready = (
@@ -192,22 +330,58 @@ def build_residual_model_registry(
         and required_components_present
         and output_fields_present
     )
-    ready_checkpoint_count = int(checkpoint.get("ready_checkpoint_count") or 0)
+    ready_checkpoint_count = max(
+        _int(checkpoint.get("ready_checkpoint_count")),
+        _int(checkpoint_work_order.get("ready_checkpoint_count")),
+    )
+    candidate_checkpoint_count = max(
+        _int(checkpoint.get("candidate_checkpoint_count")),
+        _int(checkpoint_work_order.get("candidate_checkpoint_count")),
+    )
+    raw_checkpoint_preflight_ready = bool(
+        checkpoint.get("checkpoint_preflight_ready") is True
+        or checkpoint.get("preflight_green") is True
+        or checkpoint_work_order.get("checkpoint_preflight_ready") is True
+    )
     checkpoint_preflight_ready = (
-        _text(checkpoint.get("status")) == "residual_production_checkpoint_preflight_ready"
-        and checkpoint.get("checkpoint_preflight_ready") is True
+        (
+            _text(checkpoint.get("status")) == "residual_production_checkpoint_preflight_ready"
+            or _text(checkpoint_work_order.get("status")) == "residual_production_checkpoint_work_order_ready"
+            or raw_checkpoint_preflight_ready
+        )
+        and raw_checkpoint_preflight_ready
         and ready_checkpoint_count > 0
     )
-    production_promotion_allowed = bool(registry_ready and checkpoint_preflight_ready)
+    promotion_operator_approval = _promotion_operator_approval(
+        receipt_rows=promotion_operator_receipt_rows or [],
+        receipt_present=promotion_operator_receipt_present,
+        ready_checkpoint_count=ready_checkpoint_count,
+    )
+    production_promotion_allowed = bool(
+        registry_ready
+        and checkpoint_preflight_ready
+        and promotion_operator_approval["approval_ready"] is True
+    )
     customer_facing_auto_correction_allowed = bool(
         production_promotion_allowed
         and ready_checkpoint_count > 0
         and checkpoint_preflight_ready
     )
-    default_residual_mode = "production_guarded" if production_promotion_allowed else "shadow"
-    checkpoint_primary_blocker = _text(checkpoint.get("primary_blocker")) or (
+    default_residual_mode = (
+        _text(promotion_operator_approval.get("requested_default_residual_mode"))
+        if production_promotion_allowed
+        else "shadow"
+    )
+    checkpoint_primary_blocker = _text(_checkpoint_value(checkpoint, checkpoint_work_order, "primary_blocker")) or (
         "none" if checkpoint_preflight_ready else "checkpoint_preflight_not_ready"
     )
+    if (
+        checkpoint_primary_blocker == "checkpoint_preflight_not_ready"
+        and checkpoint_work_order.get("checkpoint_closure_blockers")
+    ):
+        checkpoint_primary_blocker = ";".join(
+            str(item) for item in checkpoint_work_order.get("checkpoint_closure_blockers") or []
+        )
     checkpoint_missing_output_fields = _blocker_values(checkpoint_primary_blocker, "missing_output_fields")
     checkpoint_missing_adapter_output_policy_fields = _blocker_values(
         checkpoint_primary_blocker,
@@ -248,11 +422,18 @@ def build_residual_model_registry(
         "none"
         if production_promotion_allowed
         else (
+            (
+                "trained checkpoint is registered but operator promotion receipt is not ready: "
+                f"{','.join(promotion_operator_approval['blockers'])}"
+            )
+            if checkpoint_preflight_ready
+            else (
             "production checkpoint preflight is blocked: "
             f"{checkpoint_primary_blocker}"
             + (f";{selected_sidecar_detail}" if selected_sidecar_detail else "")
             if checkpoint_primary_blocker and checkpoint_primary_blocker != "none"
             else "trained checkpoints and production benchmark gates are required before production residual mode"
+            )
         )
     )
     rows = []
@@ -281,6 +462,7 @@ def build_residual_model_registry(
         "assist_mode_evidence_ready": assist_gate_ready and gpcr_breadth_ready and public_assist_ready,
         "production_promotion_allowed": production_promotion_allowed,
         "production_mode_allowed": production_promotion_allowed,
+        "registry_customer_facing_promotion_allowed": production_promotion_allowed,
         "customer_facing_auto_correction_allowed": customer_facing_auto_correction_allowed,
         "customer_facing_score_mutation_allowed": customer_facing_auto_correction_allowed,
         "customer_facing_ranking_mutation_allowed": customer_facing_auto_correction_allowed,
@@ -307,8 +489,31 @@ def build_residual_model_registry(
             sidecar.get("force_gpu_return_receipt_expected_queue_rows") or 0
         ),
         "selected_sidecar_detail": selected_sidecar_detail,
-        "candidate_checkpoint_count": int(checkpoint.get("candidate_checkpoint_count") or 0),
+        "candidate_checkpoint_count": candidate_checkpoint_count,
         "trained_model_checkpoint_count": ready_checkpoint_count,
+        "ready_checkpoint_count": ready_checkpoint_count,
+        "checkpoint_work_order_status": _text(checkpoint_work_order.get("status")),
+        "checkpoint_work_order_json": checkpoint_work_order_path if checkpoint_work_order else "",
+        "registry_promotion_operator_receipt_csv": promotion_operator_receipt_csv,
+        "registry_promotion_operator_receipt_csv_present": promotion_operator_receipt_present,
+        "registry_promotion_operator_receipt_row_present": bool(
+            promotion_operator_approval.get("receipt_row_present")
+        ),
+        "registry_promotion_operator_approval_ready": bool(
+            promotion_operator_approval.get("approval_ready") is True
+        ),
+        "registry_promotion_operator_approval_blocker_count": int(
+            promotion_operator_approval.get("blocker_count") or 0
+        ),
+        "registry_promotion_operator_approval_blockers": list(
+            promotion_operator_approval.get("blockers") or []
+        ),
+        "registry_promotion_operator_decision": _text(
+            promotion_operator_approval.get("operator_decision")
+        ),
+        "registry_promotion_operator_requested_default_residual_mode": _text(
+            promotion_operator_approval.get("requested_default_residual_mode")
+        ),
         "component_count": len(rows),
         "required_component_count": 6,
         "required_components_present": required_components_present,
@@ -325,6 +530,8 @@ def build_residual_model_registry(
             public_assist_gate_path,
             checkpoint_preflight_path,
             checkpoint_sidecar_path,
+            checkpoint_work_order_path,
+            promotion_operator_receipt_csv,
         ],
         "execution_enabled": False,
         "training_executed": False,
@@ -335,6 +542,8 @@ def build_residual_model_registry(
         "next_required_step": (
             "Product residual model layer has ready checkpoints and benchmark-bound preflight evidence; customer-facing guarded correction can be considered."
             if production_promotion_allowed
+            else "Preflight-ready checkpoint is registered; keep default residual_mode=shadow until the production AI registry promotion operator receipt is completed and approved."
+            if registry_ready and checkpoint_preflight_ready
             else "Product residual model layer is registered; keep default residual_mode=shadow and require checkpoints plus benchmark gates before customer-facing correction."
             if registry_ready
             else "Repair the missing residual layer contract input before product model layer closure."
@@ -369,6 +578,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- selected_sidecar_detail: `{s['selected_sidecar_detail']}`",
         f"- candidate_checkpoint_count: `{s['candidate_checkpoint_count']}`",
         f"- trained_model_checkpoint_count: `{s['trained_model_checkpoint_count']}`",
+        f"- ready_checkpoint_count: `{s['ready_checkpoint_count']}`",
+        f"- registry_promotion_operator_approval_ready: `{s['registry_promotion_operator_approval_ready']}`",
+        f"- registry_promotion_operator_approval_blockers: `{','.join(s['registry_promotion_operator_approval_blockers'])}`",
         f"- component_count: `{s['component_count']}` / `{s['required_component_count']}`",
         f"- required_output_fields_present: `{s['required_output_fields_present']}`",
         "",
@@ -396,6 +608,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--public-assist-gate-json", default=DEFAULT_PUBLIC_ASSIST_GATE_JSON)
     parser.add_argument("--checkpoint-preflight-json", default=DEFAULT_CHECKPOINT_PREFLIGHT_JSON)
     parser.add_argument("--checkpoint-sidecar-json", default=DEFAULT_CHECKPOINT_SIDECAR_JSON)
+    parser.add_argument("--checkpoint-work-order-json", default=DEFAULT_CHECKPOINT_WORK_ORDER_JSON)
+    parser.add_argument("--promotion-operator-receipt-csv", default=DEFAULT_PROMOTION_OPERATOR_RECEIPT_CSV)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -404,6 +618,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
+    receipt_rows, receipt_present = _read_csv_if_present(args.promotion_operator_receipt_csv)
     payload = build_residual_model_registry(
         residual_shadow_packet=_read_json_if_present(args.residual_shadow_json),
         residual_assist_gate_packet=_read_json_if_present(args.residual_assist_gate_json),
@@ -411,12 +626,17 @@ def main(argv: list[str] | None = None) -> None:
         public_assist_gate_packet=_read_json_if_present(args.public_assist_gate_json),
         checkpoint_preflight_packet=_read_json_if_present(args.checkpoint_preflight_json),
         checkpoint_sidecar_packet=_read_json_if_present(args.checkpoint_sidecar_json),
+        checkpoint_work_order_packet=_read_json_if_present(args.checkpoint_work_order_json),
+        promotion_operator_receipt_rows=receipt_rows,
+        promotion_operator_receipt_present=receipt_present,
         residual_shadow_path=args.residual_shadow_json,
         residual_assist_gate_path=args.residual_assist_gate_json,
         gpcr_breadth_gate_path=args.gpcr_breadth_gate_json,
         public_assist_gate_path=args.public_assist_gate_json,
         checkpoint_preflight_path=args.checkpoint_preflight_json,
         checkpoint_sidecar_path=args.checkpoint_sidecar_json,
+        checkpoint_work_order_path=args.checkpoint_work_order_json,
+        promotion_operator_receipt_csv=args.promotion_operator_receipt_csv,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

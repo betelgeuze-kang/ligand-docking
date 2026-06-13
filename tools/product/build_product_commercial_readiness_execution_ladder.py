@@ -893,6 +893,12 @@ def build_product_commercial_readiness_execution_ladder(
                 or []
             )
         ],
+        "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": int(
+            operator_summary.get(
+                "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count"
+            )
+            or 0
+        ),
         "production_ai_registry_promotion_priority_top_gate_id": _text(
             operator_summary.get("production_ai_registry_promotion_priority_top_gate_id")
         ),

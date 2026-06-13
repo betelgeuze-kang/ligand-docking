@@ -59,6 +59,17 @@ def _checkpoint_preflight() -> dict[str, object]:
     }
 
 
+def _checkpoint_work_order() -> dict[str, object]:
+    return {
+        "summary": {
+            "status": "residual_production_checkpoint_work_order_ready",
+            "checkpoint_preflight_ready": True,
+            "candidate_checkpoint_count": 3,
+            "ready_checkpoint_count": 2,
+        }
+    }
+
+
 def _blocked_checkpoint_preflight() -> dict[str, object]:
     return {
         "summary": {
@@ -109,6 +120,33 @@ def _build(**overrides: dict[str, object]) -> dict[str, object]:
     return mod.build_residual_model_registry(**packets)  # type: ignore[arg-type]
 
 
+def _promotion_receipt_row(**overrides: object) -> dict[str, str]:
+    row = {
+        "artifact_id": mod.PROMOTION_RECEIPT_ARTIFACT_ID,
+        "operator_decision": "promote_guarded",
+        "registry_artifact": mod.DEFAULT_OUT_JSON,
+        "checkpoint_readiness_artifact": "runs/product_production_ai_checkpoint_readiness_current.json",
+        "production_promotion_allowed": "true",
+        "customer_facing_auto_correction_allowed": "true",
+        "customer_facing_score_mutation_allowed": "true",
+        "customer_facing_ranking_mutation_allowed": "true",
+        "default_residual_mode": "production_guarded",
+        "trained_model_checkpoint_count": "2",
+        "registry_validation_command": "python3 tools/build_residual_model_registry.py",
+        "validation_chain_reviewed": "true",
+        "claim_boundary_reviewed": "true",
+        "customer_facing_mutation_policy_reviewed": "true",
+        "reviewer": "release-operator",
+        "reviewed_at_utc": "2026-06-13T00:00:00Z",
+        "approval_token": mod.PROMOTION_APPROVAL_TOKEN,
+        "external_state_mutated": "false",
+        "operator_attestation": "reviewed_for_production_ai_registry_promotion",
+        "notes": "local guarded promotion receipt",
+    }
+    row.update({key: str(value) for key, value in overrides.items()})
+    return row
+
+
 def test_residual_model_registry_ready_with_shadow_default() -> None:
     payload = _build()
 
@@ -142,22 +180,62 @@ def test_residual_model_registry_blocks_non_shadow_default() -> None:
     assert summary["residual_mode_policy_locked"] is False
 
 
-def test_residual_model_registry_promotes_only_with_checkpoint_preflight() -> None:
+def test_residual_model_registry_registers_checkpoint_without_auto_promotion() -> None:
     payload = _build(checkpoint_preflight_packet=_checkpoint_preflight())
 
     summary = payload["summary"]
     assert summary["status"] == "residual_model_registry_ready"
-    assert summary["default_residual_mode"] == "production_guarded"
-    assert summary["production_promotion_allowed"] is True
-    assert summary["production_mode_allowed"] is True
-    assert summary["customer_facing_auto_correction_allowed"] is True
-    assert summary["customer_facing_score_mutation_allowed"] is True
-    assert summary["customer_facing_ranking_mutation_allowed"] is True
+    assert summary["default_residual_mode"] == "shadow"
+    assert summary["production_promotion_allowed"] is False
+    assert summary["production_mode_allowed"] is False
+    assert summary["registry_customer_facing_promotion_allowed"] is False
+    assert summary["customer_facing_auto_correction_allowed"] is False
+    assert summary["customer_facing_score_mutation_allowed"] is False
+    assert summary["customer_facing_ranking_mutation_allowed"] is False
     assert summary["checkpoint_preflight_ready"] is True
     assert summary["production_checkpoint_blocked"] is False
     assert summary["checkpoint_primary_blocker"] == "none"
     assert summary["candidate_checkpoint_count"] == 3
     assert summary["trained_model_checkpoint_count"] == 2
+    assert summary["ready_checkpoint_count"] == 2
+    assert summary["registry_promotion_operator_approval_ready"] is False
+    assert "operator_receipt_csv_missing" in summary["registry_promotion_operator_approval_blockers"]
+    assert "Preflight-ready checkpoint is registered" in summary["next_required_step"]
+
+
+def test_residual_model_registry_reads_work_order_checkpoint_evidence() -> None:
+    payload = _build(
+        checkpoint_preflight_packet={"summary": {"status": "residual_production_checkpoint_preflight_ready", "preflight_green": True}},
+        checkpoint_work_order_packet=_checkpoint_work_order(),
+    )
+
+    summary = payload["summary"]
+    assert summary["checkpoint_preflight_ready"] is True
+    assert summary["candidate_checkpoint_count"] == 3
+    assert summary["trained_model_checkpoint_count"] == 2
+    assert summary["ready_checkpoint_count"] == 2
+    assert summary["checkpoint_work_order_status"] == "residual_production_checkpoint_work_order_ready"
+    assert summary["production_promotion_allowed"] is False
+
+
+def test_residual_model_registry_promotes_only_with_operator_receipt() -> None:
+    payload = _build(
+        checkpoint_preflight_packet=_checkpoint_preflight(),
+        promotion_operator_receipt_rows=[_promotion_receipt_row()],
+        promotion_operator_receipt_present=True,
+    )
+
+    summary = payload["summary"]
+    assert summary["default_residual_mode"] == "production_guarded"
+    assert summary["production_promotion_allowed"] is True
+    assert summary["production_mode_allowed"] is True
+    assert summary["registry_customer_facing_promotion_allowed"] is True
+    assert summary["customer_facing_auto_correction_allowed"] is True
+    assert summary["customer_facing_score_mutation_allowed"] is True
+    assert summary["customer_facing_ranking_mutation_allowed"] is True
+    assert summary["trained_model_checkpoint_count"] == 2
+    assert summary["registry_promotion_operator_approval_ready"] is True
+    assert summary["registry_promotion_operator_approval_blockers"] == []
 
 
 def test_residual_model_registry_surfaces_checkpoint_output_blockers() -> None:

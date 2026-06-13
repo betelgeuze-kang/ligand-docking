@@ -645,6 +645,9 @@ def build_goal_operator_intake_kit(
                 priority_summary.get("registry_promotion_missing_gate_count")
             ),
             "priority_missing_gate_ids": ";".join(priority_missing_gate_ids),
+            "priority_observed_registry_trained_model_checkpoint_count": _int(
+                priority_summary.get("observed_registry_trained_model_checkpoint_count")
+            ),
             "priority_top_gate_id": _text(priority_summary.get("top_gate_id")),
             "priority_top_priority_bucket": _text(priority_summary.get("top_priority_bucket")),
             "priority_top_required_input": _text(priority_summary.get("top_required_input")),
@@ -796,6 +799,11 @@ def build_goal_operator_intake_kit(
         ),
         "production_ai_registry_promotion_priority_missing_gate_ids": _text_list(
             production_ai_registry_promotion_row.get("priority_missing_gate_ids")
+        ),
+        "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": _int(
+            production_ai_registry_promotion_row.get(
+                "priority_observed_registry_trained_model_checkpoint_count"
+            )
         ),
         "production_ai_registry_promotion_priority_top_gate_id": _text(
             production_ai_registry_promotion_row.get("priority_top_gate_id")

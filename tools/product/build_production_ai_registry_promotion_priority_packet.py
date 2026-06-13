@@ -216,15 +216,25 @@ def _build_rows(
             ),
             prerequisite_gate_id="trained_model_checkpoint_count_positive",
             observed_value=f"default_residual_mode={default_mode}",
-            required_input="Set the registry default residual mode to assist, production, or production_guarded.",
+            required_input=(
+                "Set the guarded default residual mode in the production AI registry promotion operator receipt "
+                "after confirming the preflight-ready checkpoint count."
+                if checkpoint_gate
+                else "Set the registry default residual mode to assist, production, or production_guarded."
+            ),
             acceptance_artifact=DEFAULT_REGISTRY_JSON,
             verification_command=(
                 "python3 tools/build_residual_model_registry.py; "
                 "python3 tools/build_product_production_ai_checkpoint_readiness.py"
             ),
             next_operator_step=(
-                "Keep shadow mode until a trained checkpoint is registered; then select a guarded residual mode "
-                "and rerun registry readiness."
+                "Fill the guarded promotion operator receipt with a reviewed default residual mode, approval "
+                "token, reviewer, and validation-chain review, then rerun registry readiness."
+                if checkpoint_gate
+                else (
+                    "Keep shadow mode until a trained checkpoint is registered; then select a guarded residual "
+                    "mode and rerun registry readiness."
+                )
             ),
             registry_summary=registry_summary,
             checkpoint_summary=checkpoint_summary,

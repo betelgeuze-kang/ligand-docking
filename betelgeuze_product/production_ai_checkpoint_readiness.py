@@ -179,6 +179,13 @@ def _registry_promotion_next_action(
     )
     gate_list = ",".join(missing_registry_gates) or "none"
     if upstream_ready:
+        if trained_checkpoint_count > 0:
+            return (
+                "Complete the guarded production AI registry promotion operator receipt, select a guarded "
+                "default residual mode, and keep customer-facing mutation disabled until "
+                "registry_customer_facing_promotion_allowed passes. Missing registry gates: "
+                f"{gate_list}."
+            )
         return (
             "Register or promote a trained preflight-ready production checkpoint in residual_model_registry, "
             "then rerun the registry and checkpoint-readiness gates; keep customer-facing mutation disabled "

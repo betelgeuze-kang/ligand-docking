@@ -522,7 +522,6 @@ def build_goal_release_decision_gate(
         goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_missing_gate_ids")
     )
     expected_production_ai_registry_promotion_missing_gate_ids = [
-        "trained_model_checkpoint_count_positive",
         "default_residual_mode_guarded",
         "production_promotion_allowed",
         "customer_facing_mutation_flags",
@@ -531,7 +530,6 @@ def build_goal_release_decision_gate(
         "production_promotion_allowed",
         "customer_facing_mutation_flags",
         "default_residual_mode_guarded",
-        "trained_model_checkpoint_count_positive",
     ]
     goal_bottleneck_production_ai_registry_promotion_priority_recorded = (
         _text(goal_bottleneck_briefing.get("status")) == "goal_bottleneck_briefing_ready"
@@ -545,16 +543,16 @@ def build_goal_release_decision_gate(
             is False
         )
         and _int(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_operator_input_required_count"))
-        == 4
+        == 3
         and _int(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_blocked_priority_item_count"))
-        == 4
-        and _int(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_missing_gate_count")) == 4
+        == 3
+        and _int(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_missing_gate_count")) == 3
         and goal_bottleneck_production_ai_registry_promotion_priority_missing_gate_ids
         == expected_production_ai_registry_promotion_missing_gate_ids
         and _text(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_top_gate_id"))
-        == "trained_model_checkpoint_count_positive"
+        == "default_residual_mode_guarded"
         and _text(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_top_priority_bucket"))
-        == "trained_checkpoint_registration_required"
+        == "guarded_residual_mode_selection_required"
         and _text(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_top_acceptance_artifact"))
         == "runs/residual_model_registry_current.json"
         and bool(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_model_promoted") is False)
@@ -586,15 +584,15 @@ def build_goal_release_decision_gate(
         and bool(production_ai_registry_priority.get("registry_promotion_ready") is False)
         and _int(production_ai_registry_priority.get("required_gate_count")) == 4
         and _int(production_ai_registry_priority.get("priority_item_count")) == 4
-        and _int(production_ai_registry_priority.get("operator_input_required_count")) == 4
-        and _int(production_ai_registry_priority.get("blocked_priority_item_count")) == 4
-        and _int(production_ai_registry_priority.get("registry_promotion_missing_gate_count")) == 4
+        and _int(production_ai_registry_priority.get("operator_input_required_count")) == 3
+        and _int(production_ai_registry_priority.get("blocked_priority_item_count")) == 3
+        and _int(production_ai_registry_priority.get("registry_promotion_missing_gate_count")) == 3
         and production_ai_registry_priority_missing_gate_ids
         == expected_production_ai_registry_promotion_missing_gate_ids
         and _text(production_ai_registry_priority.get("top_gate_id"))
-        == "trained_model_checkpoint_count_positive"
+        == "default_residual_mode_guarded"
         and _text(production_ai_registry_priority.get("top_priority_bucket"))
-        == "trained_checkpoint_registration_required"
+        == "guarded_residual_mode_selection_required"
         and _text(production_ai_registry_priority.get("top_acceptance_artifact"))
         == "runs/residual_model_registry_current.json"
         and _text(production_ai_registry_priority.get("approval_token_required"))
@@ -617,7 +615,7 @@ def build_goal_release_decision_gate(
         and _text(production_ai_registry_priority.get("promotion_workbench_artifact"))
         == "runs/product_production_ai_promotion_workbench_current.json"
         and bool(production_ai_registry_priority.get("promotion_workbench_artifact_present") is True)
-        and _int(production_ai_registry_priority.get("observed_registry_trained_model_checkpoint_count")) == 0
+        and _int(production_ai_registry_priority.get("observed_registry_trained_model_checkpoint_count")) == 1
         and _text(production_ai_registry_priority.get("observed_registry_default_residual_mode")) == "shadow"
         and bool(production_ai_registry_priority.get("observed_registry_production_promotion_allowed") is False)
         and bool(production_ai_registry_priority.get("observed_registry_customer_facing_mutation_flags_ready") is False)
@@ -671,10 +669,10 @@ def build_goal_release_decision_gate(
         == "runs/residual_model_registry_current.json"
         and bool(production_ai_checkpoint_readiness.get("registry_promotion_upstream_acceptance_ready") is True)
         and bool(production_ai_checkpoint_readiness.get("registry_promotion_currently_satisfied") is False)
-        and _int(production_ai_checkpoint_readiness.get("registry_promotion_missing_gate_count")) == 4
+        and _int(production_ai_checkpoint_readiness.get("registry_promotion_missing_gate_count")) == 3
         and production_ai_checkpoint_readiness_missing_gate_ids
         == expected_checkpoint_registry_promotion_missing_gate_ids
-        and _int(production_ai_checkpoint_readiness.get("trained_model_checkpoint_count")) == 0
+        and _int(production_ai_checkpoint_readiness.get("trained_model_checkpoint_count")) == 1
         and _text(production_ai_checkpoint_readiness.get("default_residual_mode")) == "shadow"
         and bool(production_ai_checkpoint_readiness.get("production_ai_checkpoint_ready") is False)
         and bool(production_ai_checkpoint_readiness.get("production_ai_inference_subject_active") is False)
@@ -718,10 +716,10 @@ def build_goal_release_decision_gate(
         == "production_promotion_allowed"
         and bool(production_ai_promotion_workbench.get("registry_promotion_upstream_acceptance_ready") is True)
         and bool(production_ai_promotion_workbench.get("registry_promotion_currently_satisfied") is False)
-        and _int(production_ai_promotion_workbench.get("registry_promotion_missing_gate_count")) == 4
+        and _int(production_ai_promotion_workbench.get("registry_promotion_missing_gate_count")) == 3
         and production_ai_promotion_workbench_missing_gate_ids
         == expected_checkpoint_registry_promotion_missing_gate_ids
-        and _int(production_ai_promotion_workbench.get("trained_model_checkpoint_count")) == 0
+        and _int(production_ai_promotion_workbench.get("trained_model_checkpoint_count")) == 1
         and _text(production_ai_promotion_workbench.get("default_residual_mode")) == "shadow"
         and bool(production_ai_promotion_workbench.get("production_ai_promotion_ready") is False)
         and bool(production_ai_promotion_workbench.get("production_ai_checkpoint_ready") is False)
@@ -1525,7 +1523,7 @@ def build_goal_release_decision_gate(
                 ),
                 required=(
                     "goal_bottleneck_briefing_ready with Production AI registry promotion priority packet "
-                    "recorded and top gate trained_model_checkpoint_count_positive preserved"
+                    "recorded and top gate default_residual_mode_guarded preserved"
                 ),
                 passed=goal_bottleneck_production_ai_registry_promotion_priority_recorded,
                 reason=(

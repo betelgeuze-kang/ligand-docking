@@ -80,6 +80,8 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_cameo_validation_operations_dossier.py",
     "python3 tools/build_cameo_architecture_validation_contract.py",
     "python3 tools/build_goal_readiness_rollup.py",
+    "python3 tools/build_product_release_source_of_truth_gate.py",
+    "python3 tools/build_goal_release_decision_gate.py",
     "python3 tools/build_product_goal_completion_audit.py",
     "python3 tools/build_goal_operator_action_board.py",
     "python3 tools/build_goal_operator_intake_kit.py",
@@ -120,6 +122,8 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/public_benchmark_residual_assist_comparison_gate_current.json",
             "runs/residual_production_checkpoint_preflight_current.json",
             "runs/residual_production_checkpoint_sidecar_current.json",
+            "runs/residual_production_checkpoint_work_order_current.json",
+            "config/production_ai_registry_promotion_operator_receipt_current.csv",
         ],
     },
     {
@@ -1283,7 +1287,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "production_ai_checkpoint_ready": 0,
             "production_ai_inference_subject_active": 0,
             "production_promotion_allowed": 0,
-            "trained_model_checkpoint_count": 0,
+            "trained_model_checkpoint_count": 1,
             "production_inference_acceptance_blocked_stage_count": 1,
         },
         "required_text_exact_fields": {
@@ -1304,7 +1308,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "production_ai_checkpoint_ready": 0,
             "production_ai_inference_subject_active": 0,
             "production_promotion_allowed": 0,
-            "trained_model_checkpoint_count": 0,
+            "trained_model_checkpoint_count": 1,
             "post_return_promotion_ladder_blocked_stage_count": 2,
         },
         "required_text_exact_fields": {
@@ -1328,7 +1332,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "pass_row_count": 0,
             "blocked_row_count": 1,
             "blocker_count": 1,
-            "observed_registry_trained_model_checkpoint_count": 0,
+            "observed_registry_trained_model_checkpoint_count": 1,
             "observed_checkpoint_registry_promotion_currently_satisfied": 0,
         },
         "required_text_exact_fields": {
@@ -1356,11 +1360,11 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "registry_promotion_ready": 0,
             "operator_receipt_ready": 0,
             "priority_item_count": 4,
-            "operator_input_required_count": 4,
-            "blocked_priority_item_count": 4,
+            "operator_input_required_count": 3,
+            "blocked_priority_item_count": 3,
             "required_gate_count": 4,
-            "registry_promotion_missing_gate_count": 4,
-            "observed_registry_trained_model_checkpoint_count": 0,
+            "registry_promotion_missing_gate_count": 3,
+            "observed_registry_trained_model_checkpoint_count": 1,
             "observed_registry_production_promotion_allowed": 0,
             "observed_registry_customer_facing_mutation_flags_ready": 0,
             "observed_checkpoint_registry_promotion_currently_satisfied": 0,
@@ -1372,8 +1376,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_text_exact_fields": {
             "operator_receipt_status": "blocked_production_ai_registry_promotion_operator_receipt",
             "approval_token_required": "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION",
-            "top_gate_id": "trained_model_checkpoint_count_positive",
-            "top_priority_bucket": "trained_checkpoint_registration_required",
+            "top_gate_id": "default_residual_mode_guarded",
+            "top_priority_bucket": "guarded_residual_mode_selection_required",
             "top_acceptance_artifact": "runs/residual_model_registry_current.json",
             "observed_registry_default_residual_mode": "shadow",
         },
@@ -1536,9 +1540,10 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "full_commercial_evidence_receipt_template_required_count": 2,
             "full_commercial_evidence_receipt_template_present_count": 2,
             "full_commercial_evidence_receipt_approval_token_count": 2,
-            "production_ai_registry_promotion_priority_operator_input_required_count": 4,
-            "production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
-            "production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "production_ai_registry_promotion_priority_operator_input_required_count": 3,
+            "production_ai_registry_promotion_priority_blocked_priority_item_count": 3,
+            "production_ai_registry_promotion_priority_missing_gate_count": 3,
+            "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 1,
         },
         "required_text_exact_fields": {
             "product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
@@ -1570,10 +1575,10 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "blocked_production_ai_registry_promotion_priority_packet"
             ),
             "production_ai_registry_promotion_priority_top_gate_id": (
-                "trained_model_checkpoint_count_positive"
+                "default_residual_mode_guarded"
             ),
             "production_ai_registry_promotion_priority_top_priority_bucket": (
-                "trained_checkpoint_registration_required"
+                "guarded_residual_mode_selection_required"
             ),
         },
     },
@@ -1608,9 +1613,10 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "full_commercial_evidence_receipt_template_required_count": 2,
             "full_commercial_evidence_receipt_template_present_count": 2,
             "full_commercial_evidence_receipt_approval_token_count": 2,
-            "production_ai_registry_promotion_priority_operator_input_required_count": 4,
-            "production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
-            "production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "production_ai_registry_promotion_priority_operator_input_required_count": 3,
+            "production_ai_registry_promotion_priority_blocked_priority_item_count": 3,
+            "production_ai_registry_promotion_priority_missing_gate_count": 3,
+            "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 1,
         },
         "required_text_exact_fields": {
             "full_commercial_evidence_receipt_source_gate_statuses": (
@@ -1632,10 +1638,10 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "blocked_production_ai_registry_promotion_priority_packet"
             ),
             "production_ai_registry_promotion_priority_top_gate_id": (
-                "trained_model_checkpoint_count_positive"
+                "default_residual_mode_guarded"
             ),
             "production_ai_registry_promotion_priority_top_priority_bucket": (
-                "trained_checkpoint_registration_required"
+                "guarded_residual_mode_selection_required"
             ),
         },
     },

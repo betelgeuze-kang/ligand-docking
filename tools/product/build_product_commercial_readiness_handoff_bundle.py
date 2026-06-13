@@ -1552,6 +1552,14 @@ def build_product_commercial_readiness_handoff_bundle(
                 or []
             )
         ],
+        "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": int(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count",
+            )
+            or 0
+        ),
         "production_ai_registry_promotion_priority_top_gate_id": _text(
             _first_present(
                 ladder_summary,

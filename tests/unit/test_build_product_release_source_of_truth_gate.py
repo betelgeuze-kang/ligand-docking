@@ -26,6 +26,12 @@ def _accuracy_payload() -> dict:
     }
 
 
+def _last_refresh_index(command: str) -> int:
+    return len(mod.RELEASE_REFRESH_COMMANDS) - 1 - list(
+        reversed(mod.RELEASE_REFRESH_COMMANDS)
+    ).index(command)
+
+
 def _refresh_release_decision_ready() -> dict:
     return {
         "summary": {
@@ -114,33 +120,33 @@ def _refresh_release_decision_ready() -> dict:
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_template_required_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_template_present_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_token_count": 2,
-            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_operator_input_required_count": 4,
-            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
-            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_operator_input_required_count": 3,
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_blocked_priority_item_count": 3,
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count": 3,
             "production_ai_registry_promotion_priority_required_gate_count": 4,
             "production_ai_registry_promotion_priority_priority_item_count": 4,
-            "production_ai_registry_promotion_priority_operator_input_required_count": 4,
-            "production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
-            "production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "production_ai_registry_promotion_priority_operator_input_required_count": 3,
+            "production_ai_registry_promotion_priority_blocked_priority_item_count": 3,
+            "production_ai_registry_promotion_priority_missing_gate_count": 3,
             "production_ai_registry_promotion_priority_approval_token_count": 1,
-            "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 0,
+            "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 1,
             "production_ai_checkpoint_readiness_check_count": 8,
             "production_ai_checkpoint_readiness_pass_check_count": 7,
             "production_ai_checkpoint_readiness_fail_check_count": 1,
             "production_ai_checkpoint_readiness_production_inference_acceptance_stage_count": 8,
             "production_ai_checkpoint_readiness_production_inference_acceptance_ready_stage_count": 7,
             "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_count": 1,
-            "production_ai_checkpoint_readiness_registry_promotion_missing_gate_count": 4,
+            "production_ai_checkpoint_readiness_registry_promotion_missing_gate_count": 3,
             "production_ai_checkpoint_readiness_candidate_checkpoint_count": 1,
             "production_ai_checkpoint_readiness_ready_checkpoint_count": 1,
-            "production_ai_checkpoint_readiness_trained_model_checkpoint_count": 0,
+            "production_ai_checkpoint_readiness_trained_model_checkpoint_count": 1,
             "production_ai_promotion_workbench_post_return_ladder_stage_count": 10,
             "production_ai_promotion_workbench_post_return_ladder_ready_stage_count": 8,
             "production_ai_promotion_workbench_post_return_ladder_blocked_stage_count": 2,
-            "production_ai_promotion_workbench_registry_promotion_missing_gate_count": 4,
+            "production_ai_promotion_workbench_registry_promotion_missing_gate_count": 3,
             "production_ai_promotion_workbench_candidate_checkpoint_count": 1,
             "production_ai_promotion_workbench_ready_checkpoint_count": 1,
-            "production_ai_promotion_workbench_trained_model_checkpoint_count": 0,
+            "production_ai_promotion_workbench_trained_model_checkpoint_count": 1,
             "accuracy_parity_scorecard_row_count": 5,
             "accuracy_parity_scorecard_pass_row_count": 4,
             "accuracy_parity_scorecard_blocked_row_count": 1,
@@ -205,10 +211,10 @@ def _refresh_release_decision_ready() -> dict:
                 "blocked_production_ai_registry_promotion_priority_packet"
             ),
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id": (
-                "trained_model_checkpoint_count_positive"
+                "default_residual_mode_guarded"
             ),
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_priority_bucket": (
-                "trained_checkpoint_registration_required"
+                "guarded_residual_mode_selection_required"
             ),
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_acceptance_artifact": (
                 "runs/residual_model_registry_current.json"
@@ -217,10 +223,10 @@ def _refresh_release_decision_ready() -> dict:
                 "blocked_production_ai_registry_promotion_priority_packet"
             ),
             "production_ai_registry_promotion_priority_top_gate_id": (
-                "trained_model_checkpoint_count_positive"
+                "default_residual_mode_guarded"
             ),
             "production_ai_registry_promotion_priority_top_priority_bucket": (
-                "trained_checkpoint_registration_required"
+                "guarded_residual_mode_selection_required"
             ),
             "production_ai_registry_promotion_priority_top_acceptance_artifact": (
                 "runs/residual_model_registry_current.json"
@@ -263,7 +269,7 @@ def _refresh_release_decision_ready() -> dict:
             ),
             "production_ai_checkpoint_readiness_registry_promotion_missing_gate_ids": (
                 "production_promotion_allowed;customer_facing_mutation_flags;"
-                "default_residual_mode_guarded;trained_model_checkpoint_count_positive"
+                "default_residual_mode_guarded"
             ),
             "production_ai_checkpoint_readiness_default_residual_mode": "shadow",
             "production_ai_promotion_workbench_status": (
@@ -286,7 +292,7 @@ def _refresh_release_decision_ready() -> dict:
             ),
             "production_ai_promotion_workbench_registry_promotion_missing_gate_ids": (
                 "production_promotion_allowed;customer_facing_mutation_flags;"
-                "default_residual_mode_guarded;trained_model_checkpoint_count_positive"
+                "default_residual_mode_guarded"
             ),
             "production_ai_promotion_workbench_default_residual_mode": "shadow",
             "cameo_official_result_fetch_preflight_status": (
@@ -680,16 +686,16 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     )
     assert release_row["required_int_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count"
-    ] == 4
+    ] == 3
     assert release_row["required_int_exact_fields"][
         "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count"
-    ] == 0
+    ] == 1
     assert release_row["required_int_exact_fields"][
         "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_count"
     ] == 1
     assert release_row["required_int_exact_fields"][
         "production_ai_checkpoint_readiness_trained_model_checkpoint_count"
-    ] == 0
+    ] == 1
     assert release_row["required_int_exact_fields"][
         "production_ai_promotion_workbench_post_return_ladder_blocked_stage_count"
     ] == 2
@@ -722,7 +728,7 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     ] == 8
     assert release_row["required_text_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id"
-    ] == "trained_model_checkpoint_count_positive"
+    ] == "default_residual_mode_guarded"
     assert release_row["required_text_exact_fields"][
         "production_ai_registry_promotion_priority_operator_receipt_status"
     ] == "blocked_production_ai_registry_promotion_operator_receipt"
@@ -751,7 +757,7 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
         "production_ai_checkpoint_readiness_registry_promotion_missing_gate_ids"
     ] == (
         "production_promotion_allowed;customer_facing_mutation_flags;"
-        "default_residual_mode_guarded;trained_model_checkpoint_count_positive"
+        "default_residual_mode_guarded"
     )
     assert release_row["required_text_exact_fields"][
         "production_ai_promotion_workbench_blocked_stage_ids"
@@ -977,9 +983,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "full_commercial_evidence_receipt_template_required_count": 2,
         "full_commercial_evidence_receipt_template_present_count": 2,
         "full_commercial_evidence_receipt_approval_token_count": 2,
-        "production_ai_registry_promotion_priority_operator_input_required_count": 4,
-        "production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
-        "production_ai_registry_promotion_priority_missing_gate_count": 4,
+        "production_ai_registry_promotion_priority_operator_input_required_count": 3,
+        "production_ai_registry_promotion_priority_blocked_priority_item_count": 3,
+        "production_ai_registry_promotion_priority_missing_gate_count": 3,
+        "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 1,
     }
     assert intake_kit_status_spec["required_true_fields"] == [
         "production_ai_registry_promotion_priority_packet_ready"
@@ -1004,7 +1011,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     ] == "blocked_production_ai_registry_promotion_priority_packet"
     assert intake_kit_status_spec["required_text_exact_fields"][
         "production_ai_registry_promotion_priority_top_gate_id"
-    ] == "trained_model_checkpoint_count_positive"
+    ] == "default_residual_mode_guarded"
     bottleneck_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -1021,9 +1028,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "full_commercial_evidence_receipt_template_required_count": 2,
         "full_commercial_evidence_receipt_template_present_count": 2,
         "full_commercial_evidence_receipt_approval_token_count": 2,
-        "production_ai_registry_promotion_priority_operator_input_required_count": 4,
-        "production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
-        "production_ai_registry_promotion_priority_missing_gate_count": 4,
+        "production_ai_registry_promotion_priority_operator_input_required_count": 3,
+        "production_ai_registry_promotion_priority_blocked_priority_item_count": 3,
+        "production_ai_registry_promotion_priority_missing_gate_count": 3,
+        "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 1,
     }
     assert bottleneck_status_spec["required_text_exact_fields"][
         "full_commercial_evidence_receipt_required_inputs"
@@ -1039,7 +1047,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     ] == "blocked_production_ai_registry_promotion_priority_packet"
     assert bottleneck_status_spec["required_text_exact_fields"][
         "production_ai_registry_promotion_priority_top_gate_id"
-    ] == "trained_model_checkpoint_count_positive"
+    ] == "default_residual_mode_guarded"
     full_matrix_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -1207,7 +1215,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "pass_row_count": 0,
         "blocked_row_count": 1,
         "blocker_count": 1,
-        "observed_registry_trained_model_checkpoint_count": 0,
+        "observed_registry_trained_model_checkpoint_count": 1,
         "observed_checkpoint_registry_promotion_currently_satisfied": 0,
     }
     assert registry_receipt_spec["required_text_exact_fields"][
@@ -1242,10 +1250,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert registry_priority_status_spec["required_int_exact_fields"][
         "operator_input_required_count"
-    ] == 4
+    ] == 3
     assert registry_priority_status_spec["required_text_exact_fields"][
         "top_gate_id"
-    ] == "trained_model_checkpoint_count_positive"
+    ] == "default_residual_mode_guarded"
     commercial_operator_packet_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -1557,7 +1565,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_full_commercial_blocker_evidence_matrix.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_full_commercial_blocker_evidence_matrix.py") < (
-        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_release_source_of_truth_gate.py")
+        _last_refresh_index("python3 tools/build_product_release_source_of_truth_gate.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_shadow_ab.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_model_registry.py")
@@ -1648,10 +1656,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         decision_graph_indices[1]
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_api_surface_contract.py") < (
-        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_release_source_of_truth_gate.py")
+        _last_refresh_index("python3 tools/build_product_release_source_of_truth_gate.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_api_surface_contract.py") < (
-        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_release_decision_gate.py")
+        _last_refresh_index("python3 tools/build_goal_release_decision_gate.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_bottleneck_briefing.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_ledger_privacy_scan.py")
@@ -1684,7 +1692,16 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_master_gap_closure_rollup.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_master_gap_closure_rollup.py") < (
+        _last_refresh_index("python3 tools/build_product_release_source_of_truth_gate.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_readiness_rollup.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_release_source_of_truth_gate.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_release_source_of_truth_gate.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_release_decision_gate.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_release_decision_gate.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_goal_completion_audit.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_engine_refinement_tier_readiness.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_engine_refinement_claim_evidence_receipt.py")

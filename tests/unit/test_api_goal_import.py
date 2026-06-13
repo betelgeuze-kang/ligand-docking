@@ -578,7 +578,7 @@ def test_api_app_imports_with_goal_router() -> None:
     ] == "shadow"
     assert status[
         "production_ai_registry_promotion_operator_receipt_observed_registry_trained_model_checkpoint_count"
-    ] == 0
+    ] == 1
     assert (
         status[
             "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_currently_satisfied"
@@ -596,17 +596,17 @@ def test_api_app_imports_with_goal_router() -> None:
     )
     assert status["production_ai_registry_promotion_priority_packet_ready"] is True
     assert status["production_ai_registry_promotion_priority_registry_promotion_ready"] is False
-    assert status["production_ai_registry_promotion_priority_operator_input_required_count"] == 4
-    assert status["production_ai_registry_promotion_priority_blocked_priority_item_count"] == 4
-    assert status["production_ai_registry_promotion_priority_missing_gate_count"] == 4
-    assert "trained_model_checkpoint_count_positive" in status[
+    assert status["production_ai_registry_promotion_priority_operator_input_required_count"] == 3
+    assert status["production_ai_registry_promotion_priority_blocked_priority_item_count"] == 3
+    assert status["production_ai_registry_promotion_priority_missing_gate_count"] == 3
+    assert "default_residual_mode_guarded" in status[
         "production_ai_registry_promotion_priority_missing_gate_ids"
     ]
     assert status["production_ai_registry_promotion_priority_top_gate_id"] == (
-        "trained_model_checkpoint_count_positive"
+        "default_residual_mode_guarded"
     )
     assert status["production_ai_registry_promotion_priority_top_priority_bucket"] == (
-        "trained_checkpoint_registration_required"
+        "guarded_residual_mode_selection_required"
     )
     assert status["production_ai_registry_promotion_priority_top_acceptance_artifact"] == (
         "runs/residual_model_registry_current.json"

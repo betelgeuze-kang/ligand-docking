@@ -133,33 +133,33 @@ FINAL_GATE_SPECS = [
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_template_required_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_template_present_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_token_count": 2,
-            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_operator_input_required_count": 4,
-            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
-            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_operator_input_required_count": 3,
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_blocked_priority_item_count": 3,
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count": 3,
             "production_ai_registry_promotion_priority_required_gate_count": 4,
             "production_ai_registry_promotion_priority_priority_item_count": 4,
-            "production_ai_registry_promotion_priority_operator_input_required_count": 4,
-            "production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
-            "production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "production_ai_registry_promotion_priority_operator_input_required_count": 3,
+            "production_ai_registry_promotion_priority_blocked_priority_item_count": 3,
+            "production_ai_registry_promotion_priority_missing_gate_count": 3,
             "production_ai_registry_promotion_priority_approval_token_count": 1,
-            "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 0,
+            "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 1,
             "production_ai_checkpoint_readiness_check_count": 8,
             "production_ai_checkpoint_readiness_pass_check_count": 7,
             "production_ai_checkpoint_readiness_fail_check_count": 1,
             "production_ai_checkpoint_readiness_production_inference_acceptance_stage_count": 8,
             "production_ai_checkpoint_readiness_production_inference_acceptance_ready_stage_count": 7,
             "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_count": 1,
-            "production_ai_checkpoint_readiness_registry_promotion_missing_gate_count": 4,
+            "production_ai_checkpoint_readiness_registry_promotion_missing_gate_count": 3,
             "production_ai_checkpoint_readiness_candidate_checkpoint_count": 1,
             "production_ai_checkpoint_readiness_ready_checkpoint_count": 1,
-            "production_ai_checkpoint_readiness_trained_model_checkpoint_count": 0,
+            "production_ai_checkpoint_readiness_trained_model_checkpoint_count": 1,
             "production_ai_promotion_workbench_post_return_ladder_stage_count": 10,
             "production_ai_promotion_workbench_post_return_ladder_ready_stage_count": 8,
             "production_ai_promotion_workbench_post_return_ladder_blocked_stage_count": 2,
-            "production_ai_promotion_workbench_registry_promotion_missing_gate_count": 4,
+            "production_ai_promotion_workbench_registry_promotion_missing_gate_count": 3,
             "production_ai_promotion_workbench_candidate_checkpoint_count": 1,
             "production_ai_promotion_workbench_ready_checkpoint_count": 1,
-            "production_ai_promotion_workbench_trained_model_checkpoint_count": 0,
+            "production_ai_promotion_workbench_trained_model_checkpoint_count": 1,
             "accuracy_parity_scorecard_row_count": 5,
             "accuracy_parity_scorecard_pass_row_count": 4,
             "accuracy_parity_scorecard_blocked_row_count": 1,
@@ -263,10 +263,10 @@ FINAL_GATE_SPECS = [
                 "blocked_production_ai_registry_promotion_priority_packet"
             ),
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id": (
-                "trained_model_checkpoint_count_positive"
+                "default_residual_mode_guarded"
             ),
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_priority_bucket": (
-                "trained_checkpoint_registration_required"
+                "guarded_residual_mode_selection_required"
             ),
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_acceptance_artifact": (
                 "runs/residual_model_registry_current.json"
@@ -275,10 +275,10 @@ FINAL_GATE_SPECS = [
                 "blocked_production_ai_registry_promotion_priority_packet"
             ),
             "production_ai_registry_promotion_priority_top_gate_id": (
-                "trained_model_checkpoint_count_positive"
+                "default_residual_mode_guarded"
             ),
             "production_ai_registry_promotion_priority_top_priority_bucket": (
-                "trained_checkpoint_registration_required"
+                "guarded_residual_mode_selection_required"
             ),
             "production_ai_registry_promotion_priority_top_acceptance_artifact": (
                 "runs/residual_model_registry_current.json"
@@ -321,7 +321,7 @@ FINAL_GATE_SPECS = [
             ),
             "production_ai_checkpoint_readiness_registry_promotion_missing_gate_ids": (
                 "production_promotion_allowed;customer_facing_mutation_flags;"
-                "default_residual_mode_guarded;trained_model_checkpoint_count_positive"
+                "default_residual_mode_guarded"
             ),
             "production_ai_checkpoint_readiness_default_residual_mode": "shadow",
             "production_ai_promotion_workbench_status": (
@@ -344,7 +344,7 @@ FINAL_GATE_SPECS = [
             ),
             "production_ai_promotion_workbench_registry_promotion_missing_gate_ids": (
                 "production_promotion_allowed;customer_facing_mutation_flags;"
-                "default_residual_mode_guarded;trained_model_checkpoint_count_positive"
+                "default_residual_mode_guarded"
             ),
             "production_ai_promotion_workbench_default_residual_mode": "shadow",
             "accuracy_parity_scorecard_status": "blocked_accuracy_parity",

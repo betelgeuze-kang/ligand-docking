@@ -17,7 +17,7 @@ def test_product_production_ai_promotion_workbench_surfaces_blocked_ladder_witho
     assert summary["production_ai_promotion_ready"] is False
     assert summary["production_ai_checkpoint_ready"] is False
     assert summary["default_residual_mode"] == "shadow"
-    assert summary["trained_model_checkpoint_count"] == 0
+    assert summary["trained_model_checkpoint_count"] == 1
     assert summary["gpu_handoff_ready"] is True
     assert summary["gpu_return_receipt_ready"] is True
     assert summary["gpu_receipt_expected_queue_rows"] == 0
@@ -36,13 +36,12 @@ def test_product_production_ai_promotion_workbench_surfaces_blocked_ladder_witho
         "production_promotion_allowed",
         "customer_facing_mutation_flags",
         "default_residual_mode_guarded",
-        "trained_model_checkpoint_count_positive",
     ]
-    assert summary["registry_promotion_missing_gate_count"] == 4
+    assert summary["registry_promotion_missing_gate_count"] == 3
     assert summary["registry_promotion_upstream_acceptance_ready"] is True
     assert summary["registry_promotion_currently_satisfied"] is False
-    assert "Register or promote a trained preflight-ready production checkpoint" in summary["next_required_step"]
-    assert "trained_model_checkpoint_count_positive" in summary["next_required_step"]
+    assert "Complete the guarded production AI registry promotion operator receipt" in summary["next_required_step"]
+    assert "trained_model_checkpoint_count_positive" not in summary["next_required_step"]
     assert "generate_ligand_trajectory_engine.py" in summary["force_gpu_worker_full_regeneration_command"]
     assert "build_residual_force_gpu_worker_return_receipt.py" in summary[
         "force_gpu_worker_post_return_validation_command"
@@ -63,6 +62,6 @@ def test_product_production_ai_promotion_workbench_surfaces_blocked_ladder_witho
     assert rows_by_stage["production_checkpoint_preflight"]["observed_ready_key"] == "preflight_green"
     assert rows_by_stage["production_checkpoint_preflight"]["ready_key_alias_used"] is True
     assert rows_by_stage["production_checkpoint_preflight"]["observed_value"] is True
-    assert "Register or promote a trained preflight-ready production checkpoint" in rows_by_stage[
+    assert "Complete the guarded production AI registry promotion operator receipt" in rows_by_stage[
         "residual_model_registry"
     ]["next_action"]

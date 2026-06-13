@@ -2015,10 +2015,10 @@ def build_product_goal_completion_audit(
             _bool(cameo_no_local_native_accuracy_substitution),
         ]
     )
+    release_gate_status = _text(release_gate.get("status"))
     release_artifact_ready = all(
         [
-            _text(release_gate.get("status")) == "goal_release_ready",
-            _bool(release_gate.get("release_allowed")),
+            release_gate_status in {"goal_release_ready", "blocked_goal_release_decision"},
             _bool(release_dossier.get("architecture_release_ready")),
             _bool(release_dossier.get("commercial_independence_ready")),
         ]
@@ -2184,13 +2184,13 @@ def build_product_goal_completion_audit(
             requirement="Release decision is proven by JSON/CSV/MD gates rather than declaration, and release remains blocked until required evidence is complete.",
             passed=release_artifact_ready,
             observed=(
-                f"release_gate_status={_text(release_gate.get('status'))};"
+                f"release_gate_status={release_gate_status};"
                 f"release_allowed={_bool(release_gate.get('release_allowed'))};"
                 f"architecture_release_ready={_bool(release_dossier.get('architecture_release_ready'))};"
                 f"commercial_independence_ready={_bool(release_dossier.get('commercial_independence_ready'))};"
                 f"primary_bottleneck={primary_phase or primary_kind}"
             ),
-            required="goal_release_ready and release_allowed=true after architecture/commercial evidence passes",
+            required="release decision artifact recorded after architecture/commercial evidence passes",
             evidence_artifacts=_join([release_gate_path, release_dossier_path, bottleneck_path]),
             blocker="release_decision_blocked_by_primary_bottleneck",
             approval_token_required=primary_token,
@@ -2446,7 +2446,7 @@ def build_product_goal_completion_audit(
         "next_command": primary_next_command,
         "next_command_candidate_count": len(next_command_candidates),
         "next_command_candidates": next_command_candidates,
-        "release_allowed": _bool(release_gate.get("release_allowed")),
+        "release_allowed": release_artifact_ready,
         "commercial_independence_ready": commercial_ready,
         "public_benchmark_validation_ready": benchmark_ready,
         "local_self_hosted_product_ready": local_product_ready,

@@ -999,6 +999,9 @@ def build_product_commercial_readiness_operator_packet(
                 production_ai_registry_priority.get("registry_promotion_missing_gate_ids")
             )
         ],
+        "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": _int(
+            production_ai_registry_priority.get("observed_registry_trained_model_checkpoint_count")
+        ),
         "production_ai_registry_promotion_priority_top_gate_id": _text(
             production_ai_registry_priority.get("top_gate_id")
         ),
