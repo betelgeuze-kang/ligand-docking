@@ -805,6 +805,24 @@ def _product_scope_breadth_evidence_field_worksheet() -> dict:
     }
 
 
+def _product_scope_breadth_evidence_staging_apply() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_product_scope_breadth_evidence_operator_staging_apply",
+            "candidate_receipt_ready": False,
+            "candidate_blocked_row_count": 6,
+            "candidate_pass_row_count": 0,
+            "staging_placeholder_row_count": 6,
+            "field_worksheet_pending_field_count": 36,
+            "candidate_first_blocked_scope_blocker_id": "direct_binding_evidence_missing",
+            "candidate_most_common_row_blocker": "operator_placeholders_unfilled",
+            "live_copy_allowed": False,
+            "canonical_receipt_written": False,
+            "external_state_mutated": False,
+        }
+    }
+
+
 def test_build_product_commercial_readiness_operator_packet_flattens_next_actions() -> None:
     payload = mod.build_product_commercial_readiness_operator_packet(
         goal_audit_packet=_goal_audit(),
@@ -817,6 +835,9 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
         production_ai_registry_promotion_field_worksheet_packet=_registry_field_worksheet(),
         product_scope_breadth_evidence_field_worksheet_packet=(
             _product_scope_breadth_evidence_field_worksheet()
+        ),
+        product_scope_breadth_evidence_staging_apply_packet=(
+            _product_scope_breadth_evidence_staging_apply()
         ),
         engine_refinement_claim_evidence_field_worksheet_packet=(
             _engine_refinement_claim_evidence_field_worksheet()
@@ -1025,6 +1046,44 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
     assert summary["product_scope_breadth_evidence_operator_field_worksheet_claim_promoted"] is False
     assert (
         summary["product_scope_breadth_evidence_operator_field_worksheet_external_state_mutated"]
+        is False
+    )
+    assert summary["product_scope_breadth_evidence_operator_staging_apply_status"] == (
+        "blocked_product_scope_breadth_evidence_operator_staging_apply"
+    )
+    assert (
+        summary["product_scope_breadth_evidence_operator_staging_apply_candidate_receipt_ready"]
+        is False
+    )
+    assert (
+        summary["product_scope_breadth_evidence_operator_staging_apply_candidate_blocked_row_count"]
+        == 6
+    )
+    assert (
+        summary["product_scope_breadth_evidence_operator_staging_apply_staging_placeholder_row_count"]
+        == 6
+    )
+    assert (
+        summary[
+            "product_scope_breadth_evidence_operator_staging_apply_field_worksheet_pending_field_count"
+        ]
+        == 36
+    )
+    assert (
+        summary["product_scope_breadth_evidence_operator_staging_apply_first_blocked_scope_blocker_id"]
+        == "direct_binding_evidence_missing"
+    )
+    assert (
+        summary["product_scope_breadth_evidence_operator_staging_apply_most_common_row_blocker"]
+        == "operator_placeholders_unfilled"
+    )
+    assert summary["product_scope_breadth_evidence_operator_staging_apply_live_copy_allowed"] is False
+    assert (
+        summary["product_scope_breadth_evidence_operator_staging_apply_canonical_receipt_written"]
+        is False
+    )
+    assert (
+        summary["product_scope_breadth_evidence_operator_staging_apply_external_state_mutated"]
         is False
     )
     assert summary["primary_full_commercial_release_blocker_id"] == (

@@ -146,6 +146,26 @@ def _operator_packet(ready: bool = True) -> dict:
             "product_scope_breadth_evidence_operator_field_worksheet_scope_checklist_manual_review_subcheck_count": 39,
             "product_scope_breadth_evidence_operator_field_worksheet_claim_promoted": False,
             "product_scope_breadth_evidence_operator_field_worksheet_external_state_mutated": False,
+            "product_scope_breadth_evidence_operator_staging_apply_artifact": (
+                "runs/product_scope_breadth_evidence_operator_staging_apply_current.json"
+            ),
+            "product_scope_breadth_evidence_operator_staging_apply_status": (
+                "blocked_product_scope_breadth_evidence_operator_staging_apply"
+            ),
+            "product_scope_breadth_evidence_operator_staging_apply_candidate_receipt_ready": False,
+            "product_scope_breadth_evidence_operator_staging_apply_candidate_blocked_row_count": 6,
+            "product_scope_breadth_evidence_operator_staging_apply_candidate_pass_row_count": 0,
+            "product_scope_breadth_evidence_operator_staging_apply_staging_placeholder_row_count": 6,
+            "product_scope_breadth_evidence_operator_staging_apply_field_worksheet_pending_field_count": 36,
+            "product_scope_breadth_evidence_operator_staging_apply_first_blocked_scope_blocker_id": (
+                "direct_binding_evidence_missing"
+            ),
+            "product_scope_breadth_evidence_operator_staging_apply_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "product_scope_breadth_evidence_operator_staging_apply_live_copy_allowed": False,
+            "product_scope_breadth_evidence_operator_staging_apply_canonical_receipt_written": False,
+            "product_scope_breadth_evidence_operator_staging_apply_external_state_mutated": False,
             "primary_full_commercial_release_blocker_id": "R8_full_scope_claim_closure",
             "primary_full_commercial_release_blocker_requirement_id": (
                 "R8_full_scope_claim_closure"
@@ -1042,6 +1062,34 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
     assert summary["product_scope_breadth_evidence_operator_field_worksheet_top_bucket"] == (
         "local_crosscheck_review_present_but_exact_quant_required"
     )
+    assert summary["product_scope_breadth_evidence_operator_staging_apply_status"] == (
+        "blocked_product_scope_breadth_evidence_operator_staging_apply"
+    )
+    assert (
+        summary["product_scope_breadth_evidence_operator_staging_apply_candidate_receipt_ready"]
+        is False
+    )
+    assert (
+        summary["product_scope_breadth_evidence_operator_staging_apply_candidate_blocked_row_count"]
+        == 6
+    )
+    assert (
+        summary["product_scope_breadth_evidence_operator_staging_apply_staging_placeholder_row_count"]
+        == 6
+    )
+    assert (
+        summary["product_scope_breadth_evidence_operator_staging_apply_field_worksheet_pending_field_count"]
+        == 36
+    )
+    assert (
+        summary["product_scope_breadth_evidence_operator_staging_apply_first_blocked_scope_blocker_id"]
+        == "direct_binding_evidence_missing"
+    )
+    assert summary["product_scope_breadth_evidence_operator_staging_apply_live_copy_allowed"] is False
+    assert (
+        summary["product_scope_breadth_evidence_operator_staging_apply_canonical_receipt_written"]
+        is False
+    )
     assert summary["primary_full_commercial_release_blocker_id"] == (
         "R8_full_scope_claim_closure"
     )
@@ -1473,6 +1521,14 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         and row["artifact_path"]
         == "runs/product_scope_breadth_evidence_operator_field_worksheet_current.json"
         and row["reference_role"] == "local_scope_breadth_field_worksheet"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "product_scope_breadth_evidence_operator_staging_apply"
+        and row["artifact_path"]
+        == "runs/product_scope_breadth_evidence_operator_staging_apply_current.json"
+        and row["reference_role"] == "local_scope_breadth_staging_apply_preview"
         and row["required_now"] is True
         for row in summary["artifact_reference_manifest"]
     )

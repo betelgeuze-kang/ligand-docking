@@ -1271,6 +1271,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_scope_breadth_closure_checklist" in artifact_ids
     assert "product_scope_breadth_evidence_receipt" in artifact_ids
     assert "product_scope_breadth_evidence_operator_field_worksheet" in artifact_ids
+    assert "product_scope_breadth_evidence_operator_staging_apply" in artifact_ids
     assert "goal_operator_intake_kit" in artifact_ids
     assert "goal_api_surface_contract" in artifact_ids
     assert "goal_bottleneck_briefing" in artifact_ids
@@ -1319,6 +1320,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "cameo_official_result_fetch_preflight_blocked_semantic_ready" in status_ids
     assert "product_scope_breadth_evidence_receipt_blocked_semantic_ready" in status_ids
     assert "product_scope_breadth_evidence_operator_field_worksheet_semantic_ready" in status_ids
+    assert "product_scope_breadth_evidence_operator_staging_apply_blocked_semantic_ready" in status_ids
     assert "engine_refinement_claim_evidence_receipt_blocked_semantic_ready" in status_ids
     assert "product_full_commercial_blocker_evidence_matrix_semantic_ready" in status_ids
     assert "goal_operator_action_board_primary_release_blocker_semantic_ready" in status_ids
@@ -1506,6 +1508,24 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert scope_field_worksheet_status_spec["required_text_exact_fields"]["top_item_id"] == (
         "AQP1.core_binder_01"
     )
+    scope_staging_apply_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "product_scope_breadth_evidence_operator_staging_apply_blocked_semantic_ready"
+    )
+    assert scope_staging_apply_status_spec["required_int_exact_fields"][
+        "candidate_blocked_row_count"
+    ] == 6
+    assert scope_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_pending_field_count"
+    ] == 36
+    assert scope_staging_apply_status_spec["required_text_exact_fields"][
+        "candidate_first_blocked_scope_blocker_id"
+    ] == "direct_binding_evidence_missing"
+    assert scope_staging_apply_status_spec["required_text_exact_fields"][
+        "candidate_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
     engine_receipt_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -1743,6 +1763,20 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/product_scope_breadth_closure_checklist_current.json" in scope_field_worksheet_spec[
         "depends_on"
     ]
+    scope_staging_apply_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "product_scope_breadth_evidence_operator_staging_apply"
+    )
+    assert scope_staging_apply_spec["builder_command"] == (
+        "python3 tools/build_product_scope_breadth_evidence_operator_staging_apply.py"
+    )
+    assert "config/product_scope_breadth_evidence_receipt_current.csv" in scope_staging_apply_spec[
+        "depends_on"
+    ]
+    assert "runs/product_scope_breadth_evidence_operator_field_worksheet_current.json" in (
+        scope_staging_apply_spec["depends_on"]
+    )
     intake_kit_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_operator_intake_kit"
     )
@@ -1753,6 +1787,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/product_scope_breadth_evidence_priority_packet_current.json" in intake_kit_spec["depends_on"]
     assert "runs/product_scope_breadth_evidence_receipt_current.json" in intake_kit_spec["depends_on"]
     assert "runs/product_scope_breadth_evidence_operator_field_worksheet_current.json" in intake_kit_spec[
+        "depends_on"
+    ]
+    assert "runs/product_scope_breadth_evidence_operator_staging_apply_current.json" in intake_kit_spec[
         "depends_on"
     ]
     assert "config/product_scope_breadth_evidence_receipt_current.csv" in intake_kit_spec["depends_on"]
@@ -1780,6 +1817,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/product_scope_breadth_evidence_operator_field_worksheet_current.json" in full_commercial_matrix_spec[
         "depends_on"
     ]
+    assert "runs/product_scope_breadth_evidence_operator_staging_apply_current.json" in (
+        full_commercial_matrix_spec["depends_on"]
+    )
     assert "runs/engine_refinement_claim_evidence_receipt_current.json" in full_commercial_matrix_spec["depends_on"]
     assert "runs/product_goal_completion_audit_current.json" in full_commercial_matrix_spec["depends_on"]
     assert "runs/goal_bottleneck_briefing_current.json" in full_commercial_matrix_spec["depends_on"]
@@ -1835,6 +1875,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert (
         "runs/product_scope_breadth_evidence_operator_field_worksheet_current.json"
+        in commercial_operator_packet_spec["depends_on"]
+    )
+    assert (
+        "runs/product_scope_breadth_evidence_operator_staging_apply_current.json"
         in commercial_operator_packet_spec["depends_on"]
     )
     assert (
@@ -2082,6 +2126,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "python3 tools/build_product_scope_breadth_evidence_operator_field_worksheet.py"
         in mod.RELEASE_REFRESH_COMMANDS
     )
+    assert (
+        "python3 tools/build_product_scope_breadth_evidence_operator_staging_apply.py"
+        in mod.RELEASE_REFRESH_COMMANDS
+    )
     assert "python3 tools/build_product_job_orchestration_contract.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_goal_operator_intake_kit.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_goal_api_surface_contract.py" in mod.RELEASE_REFRESH_COMMANDS
@@ -2111,6 +2159,11 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index(
         "python3 tools/build_product_scope_breadth_evidence_operator_field_worksheet.py"
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_product_scope_breadth_evidence_operator_staging_apply.py"
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_product_scope_breadth_evidence_operator_staging_apply.py"
     ) < mod.RELEASE_REFRESH_COMMANDS.index(
         "python3 tools/build_aqp1_direct_binding_external_evidence_operator_fill_guide.py"
     )

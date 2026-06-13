@@ -1985,6 +1985,30 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         operator_packet["product_scope_breadth_evidence_operator_field_worksheet_top_item_id"]
         == "AQP1.core_binder_01"
     )
+    assert operator_packet["product_scope_breadth_evidence_operator_staging_apply_status"] == (
+        "blocked_product_scope_breadth_evidence_operator_staging_apply"
+    )
+    assert (
+        operator_packet["product_scope_breadth_evidence_operator_staging_apply_candidate_receipt_ready"]
+        is False
+    )
+    assert (
+        operator_packet["product_scope_breadth_evidence_operator_staging_apply_candidate_blocked_row_count"]
+        == 6
+    )
+    assert (
+        operator_packet[
+            "product_scope_breadth_evidence_operator_staging_apply_field_worksheet_pending_field_count"
+        ]
+        == 36
+    )
+    assert (
+        operator_packet[
+            "product_scope_breadth_evidence_operator_staging_apply_first_blocked_scope_blocker_id"
+        ]
+        == "direct_binding_evidence_missing"
+    )
+    assert operator_packet["product_scope_breadth_evidence_operator_staging_apply_live_copy_allowed"] is False
     assert operator_packet["execution_enabled"] is False
     assert operator_packet["checkpoint_promoted"] is False
 
@@ -2450,8 +2474,20 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         handoff_bundle["product_scope_breadth_evidence_operator_field_worksheet_top_item_id"]
         == "AQP1.core_binder_01"
     )
+    assert handoff_bundle["product_scope_breadth_evidence_operator_staging_apply_status"] == (
+        "blocked_product_scope_breadth_evidence_operator_staging_apply"
+    )
+    assert (
+        handoff_bundle["product_scope_breadth_evidence_operator_staging_apply_candidate_receipt_ready"]
+        is False
+    )
+    assert (
+        handoff_bundle["product_scope_breadth_evidence_operator_staging_apply_candidate_blocked_row_count"]
+        == 6
+    )
+    assert handoff_bundle["product_scope_breadth_evidence_operator_staging_apply_live_copy_allowed"] is False
     assert handoff_bundle["artifact_reference_contract_ready"] is True
-    assert handoff_bundle["artifact_reference_count"] == 40
+    assert handoff_bundle["artifact_reference_count"] == 41
     assert handoff_bundle["local_missing_artifact_reference_count"] == 0
     assert handoff_bundle["operator_return_artifact_reference_count"] >= 4
     assert handoff_bundle["operator_return_pending_artifact_reference_count"] >= 1
@@ -2521,6 +2557,14 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         and row["artifact_path"]
         == "runs/product_scope_breadth_evidence_operator_field_worksheet_current.json"
         and row["reference_role"] == "local_scope_breadth_field_worksheet"
+        and row["required_now"] is True
+        for row in handoff_bundle["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "product_scope_breadth_evidence_operator_staging_apply"
+        and row["artifact_path"]
+        == "runs/product_scope_breadth_evidence_operator_staging_apply_current.json"
+        and row["reference_role"] == "local_scope_breadth_staging_apply_preview"
         and row["required_now"] is True
         for row in handoff_bundle["artifact_reference_manifest"]
     )
@@ -2815,7 +2859,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     ] == "AQP1.core_binder_01"
 
     assert completion["commercial_readiness_handoff_bundle_ready"] is True
-    assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 40
+    assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 41
     assert completion["commercial_readiness_handoff_bundle_operator_return_pending_artifact_reference_count"] == 1
     assert completion["commercial_readiness_next_action_matrix_ready"] is True
     assert completion["commercial_readiness_next_action_matrix_count"] == 6

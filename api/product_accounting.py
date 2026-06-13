@@ -627,6 +627,68 @@ def commercial_scope_breadth_evidence_receipt_fields(summary: dict[str, Any]) ->
             )
             is True
         ),
+        "product_scope_breadth_evidence_operator_staging_apply_artifact": summary.get(
+            "product_scope_breadth_evidence_operator_staging_apply_artifact", ""
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_status": summary.get(
+            "product_scope_breadth_evidence_operator_staging_apply_status", ""
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_candidate_receipt_ready": bool(
+            summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_candidate_receipt_ready"
+            )
+            is True
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_candidate_blocked_row_count": int(
+            summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_candidate_blocked_row_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_candidate_pass_row_count": int(
+            summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_candidate_pass_row_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_staging_placeholder_row_count": int(
+            summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_staging_placeholder_row_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_field_worksheet_pending_field_count": int(
+            summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_field_worksheet_pending_field_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_first_blocked_scope_blocker_id": summary.get(
+            "product_scope_breadth_evidence_operator_staging_apply_first_blocked_scope_blocker_id",
+            "",
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_most_common_row_blocker": summary.get(
+            "product_scope_breadth_evidence_operator_staging_apply_most_common_row_blocker",
+            "",
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_live_copy_allowed": bool(
+            summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_live_copy_allowed"
+            )
+            is True
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_canonical_receipt_written": bool(
+            summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_canonical_receipt_written"
+            )
+            is True
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_external_state_mutated": bool(
+            summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_external_state_mutated"
+            )
+            is True
+        ),
     }
 
 

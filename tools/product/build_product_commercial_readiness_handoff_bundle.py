@@ -478,6 +478,20 @@ def _build_artifact_reference_manifest(
                 note="Local field-level worksheet for R8 full-scope breadth evidence receipt intake.",
             )
         )
+    scope_staging_apply_artifact = _text(
+        summary.get("product_scope_breadth_evidence_operator_staging_apply_artifact")
+    )
+    if scope_staging_apply_artifact:
+        refs.append(
+            _artifact_reference(
+                artifact_id="product_scope_breadth_evidence_operator_staging_apply",
+                artifact_path=scope_staging_apply_artifact,
+                reference_role="local_scope_breadth_staging_apply_preview",
+                required_now=True,
+                expected_from_operator_return=False,
+                note="Local preview gate for validating an operator-filled R8 scope-breadth receipt before canonical copy.",
+            )
+        )
     for idx, artifact in enumerate(
         _list(summary.get("product_scope_transporter_p0_return_bundle_required_artifacts")),
         start=1,
@@ -937,6 +951,70 @@ def build_product_commercial_readiness_handoff_bundle(
         "product_scope_breadth_evidence_operator_field_worksheet_external_state_mutated": bool(
             operator_summary.get(
                 "product_scope_breadth_evidence_operator_field_worksheet_external_state_mutated"
+            )
+            is True
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_artifact": _text(
+            operator_summary.get("product_scope_breadth_evidence_operator_staging_apply_artifact")
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_status": _text(
+            operator_summary.get("product_scope_breadth_evidence_operator_staging_apply_status")
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_candidate_receipt_ready": bool(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_candidate_receipt_ready"
+            )
+            is True
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_candidate_blocked_row_count": int(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_candidate_blocked_row_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_candidate_pass_row_count": int(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_candidate_pass_row_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_staging_placeholder_row_count": int(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_staging_placeholder_row_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_field_worksheet_pending_field_count": int(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_field_worksheet_pending_field_count"
+            )
+            or 0
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_first_blocked_scope_blocker_id": _text(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_first_blocked_scope_blocker_id"
+            )
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_most_common_row_blocker": _text(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_most_common_row_blocker"
+            )
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_live_copy_allowed": bool(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_live_copy_allowed"
+            )
+            is True
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_canonical_receipt_written": bool(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_canonical_receipt_written"
+            )
+            is True
+        ),
+        "product_scope_breadth_evidence_operator_staging_apply_external_state_mutated": bool(
+            operator_summary.get(
+                "product_scope_breadth_evidence_operator_staging_apply_external_state_mutated"
             )
             is True
         ),
@@ -2610,6 +2688,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_scope_breadth_evidence_operator_field_worksheet_pending_field_count: `{s['product_scope_breadth_evidence_operator_field_worksheet_pending_field_count']}`",
         f"- product_scope_breadth_evidence_operator_field_worksheet_top_blocker_id: `{s['product_scope_breadth_evidence_operator_field_worksheet_top_blocker_id']}`",
         f"- product_scope_breadth_evidence_operator_field_worksheet_top_item_id: `{s['product_scope_breadth_evidence_operator_field_worksheet_top_item_id']}`",
+        f"- product_scope_breadth_evidence_operator_staging_apply_status: `{s['product_scope_breadth_evidence_operator_staging_apply_status']}`",
+        f"- product_scope_breadth_evidence_operator_staging_apply_candidate_receipt_ready: `{s['product_scope_breadth_evidence_operator_staging_apply_candidate_receipt_ready']}`",
+        f"- product_scope_breadth_evidence_operator_staging_apply_candidate_blocked_row_count: `{s['product_scope_breadth_evidence_operator_staging_apply_candidate_blocked_row_count']}`",
+        f"- product_scope_breadth_evidence_operator_staging_apply_live_copy_allowed: `{s['product_scope_breadth_evidence_operator_staging_apply_live_copy_allowed']}`",
         f"- primary_full_commercial_release_blocker_id: `{s['primary_full_commercial_release_blocker_id']}`",
         f"- primary_full_commercial_release_blocker_receipt_csv: `{s['primary_full_commercial_release_blocker_receipt_csv']}`",
         f"- primary_full_commercial_release_blocker_approval_token_required: `{s['primary_full_commercial_release_blocker_approval_token_required']}`",
