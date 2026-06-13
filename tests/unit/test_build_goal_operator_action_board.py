@@ -582,6 +582,22 @@ def _goal_release_decision_gate() -> dict:
             "goal_api_surface_blocker_count": 0,
             "goal_api_surface_missing_endpoint_count": 0,
             "goal_api_surface_missing_status_key_count": 0,
+            "primary_full_commercial_release_blocker_id": "R8_full_scope_claim_closure",
+            "primary_full_commercial_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+            "primary_full_commercial_release_blocker_tier": "full_commercial_scope",
+            "primary_full_commercial_release_blocker_blocked_row_count": 6,
+            "primary_full_commercial_release_blocker_first_blocked_evidence_row_id": (
+                "direct_binding_evidence_missing"
+            ),
+            "primary_full_commercial_release_blocker_receipt_csv": (
+                "config/product_scope_breadth_evidence_receipt_current.csv"
+            ),
+            "primary_full_commercial_release_blocker_approval_token_required": (
+                "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+            ),
+            "primary_full_commercial_release_blocker_next_required_step": (
+                "Replace placeholder receipt rows with reviewed local evidence."
+            ),
             "product_full_commercial_blocker_evidence_matrix_r8_blocked_row_count": 6,
             "product_full_commercial_blocker_evidence_matrix_r8_first_blocked_evidence_row_id": (
                 "direct_binding_evidence_missing"
@@ -1217,6 +1233,24 @@ def test_goal_operator_action_board_summary_points_to_primary_product_ai_action(
     )
     assert "full-scope evidence receipt rows" in summary[
         "primary_release_blocker_action_recommended_action"
+    ]
+    assert summary["primary_full_commercial_release_blocker_id"] == "R8_full_scope_claim_closure"
+    assert summary["primary_full_commercial_release_blocker_requirement_id"] == (
+        "R8_full_scope_claim_closure"
+    )
+    assert summary["primary_full_commercial_release_blocker_tier"] == "full_commercial_scope"
+    assert summary["primary_full_commercial_release_blocker_blocked_row_count"] == 6
+    assert summary["primary_full_commercial_release_blocker_first_blocked_evidence_row_id"] == (
+        "direct_binding_evidence_missing"
+    )
+    assert summary["primary_full_commercial_release_blocker_receipt_csv"] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv"
+    )
+    assert summary["primary_full_commercial_release_blocker_approval_token_required"] == (
+        "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+    )
+    assert "placeholder receipt rows" in summary[
+        "primary_full_commercial_release_blocker_next_required_step"
     ]
     assert summary["product_full_commercial_blocker_evidence_matrix_r8_blocked_row_count"] == 6
     assert summary[

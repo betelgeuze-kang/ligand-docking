@@ -181,6 +181,22 @@ def _intake_kit() -> dict:
             "primary_action_recommended_action": (
                 "Run the full regeneration command on a GPU worker, return the identity-locked manifest and summary."
             ),
+            "primary_full_commercial_release_blocker_id": "R8_full_scope_claim_closure",
+            "primary_full_commercial_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+            "primary_full_commercial_release_blocker_tier": "full_commercial_scope",
+            "primary_full_commercial_release_blocker_blocked_row_count": 6,
+            "primary_full_commercial_release_blocker_first_blocked_evidence_row_id": (
+                "direct_binding_evidence_missing"
+            ),
+            "primary_full_commercial_release_blocker_receipt_csv": (
+                "config/product_scope_breadth_evidence_receipt_current.csv"
+            ),
+            "primary_full_commercial_release_blocker_approval_token_required": (
+                "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+            ),
+            "primary_full_commercial_release_blocker_next_required_step": (
+                "Replace placeholder receipt rows with reviewed local evidence."
+            ),
             "full_commercial_evidence_receipt_entry_count": 2,
             "full_commercial_evidence_receipt_operator_input_required_count": 2,
             "full_commercial_evidence_receipt_current_action_required_count": 2,
@@ -617,6 +633,24 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
     assert summary["completion_audit_goal_complete"] is False
     assert summary["completion_audit_release_blocker_fail_count"] == 2
     assert summary["completion_audit_release_blocker_bottleneck_count"] == 2
+    assert summary["primary_full_commercial_release_blocker_id"] == "R8_full_scope_claim_closure"
+    assert summary["primary_full_commercial_release_blocker_requirement_id"] == (
+        "R8_full_scope_claim_closure"
+    )
+    assert summary["primary_full_commercial_release_blocker_tier"] == "full_commercial_scope"
+    assert summary["primary_full_commercial_release_blocker_blocked_row_count"] == 6
+    assert summary["primary_full_commercial_release_blocker_first_blocked_evidence_row_id"] == (
+        "direct_binding_evidence_missing"
+    )
+    assert summary["primary_full_commercial_release_blocker_receipt_csv"] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv"
+    )
+    assert summary["primary_full_commercial_release_blocker_approval_token_required"] == (
+        "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+    )
+    assert "placeholder receipt rows" in summary[
+        "primary_full_commercial_release_blocker_next_required_step"
+    ]
     assert summary["full_commercial_evidence_receipt_entry_count"] == 2
     assert summary["full_commercial_evidence_receipt_operator_input_required_count"] == 2
     assert summary["full_commercial_evidence_receipt_current_action_required_count"] == 2

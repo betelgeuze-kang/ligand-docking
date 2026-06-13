@@ -938,6 +938,30 @@ def build_goal_operator_intake_kit(
         "primary_release_blocker_action_recommended_action": _text(
             action_board_summary.get("primary_release_blocker_action_recommended_action")
         ),
+        "primary_full_commercial_release_blocker_id": _text(
+            action_board_summary.get("primary_full_commercial_release_blocker_id")
+        ),
+        "primary_full_commercial_release_blocker_requirement_id": _text(
+            action_board_summary.get("primary_full_commercial_release_blocker_requirement_id")
+        ),
+        "primary_full_commercial_release_blocker_tier": _text(
+            action_board_summary.get("primary_full_commercial_release_blocker_tier")
+        ),
+        "primary_full_commercial_release_blocker_blocked_row_count": _int(
+            action_board_summary.get("primary_full_commercial_release_blocker_blocked_row_count")
+        ),
+        "primary_full_commercial_release_blocker_first_blocked_evidence_row_id": _text(
+            action_board_summary.get("primary_full_commercial_release_blocker_first_blocked_evidence_row_id")
+        ),
+        "primary_full_commercial_release_blocker_receipt_csv": _text(
+            action_board_summary.get("primary_full_commercial_release_blocker_receipt_csv")
+        ),
+        "primary_full_commercial_release_blocker_approval_token_required": _text(
+            action_board_summary.get("primary_full_commercial_release_blocker_approval_token_required")
+        ),
+        "primary_full_commercial_release_blocker_next_required_step": _text(
+            action_board_summary.get("primary_full_commercial_release_blocker_next_required_step")
+        ),
         "product_full_commercial_blocker_evidence_matrix_r8_blocked_row_count": _int(
             action_board_summary.get("product_full_commercial_blocker_evidence_matrix_r8_blocked_row_count")
         ),
@@ -1033,6 +1057,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- primary_release_blocker_action_id: `{s['primary_release_blocker_action_id']}`",
         f"- primary_release_blocker_action_status: `{s['primary_release_blocker_action_status']}`",
         f"- primary_release_blocker_action_required_input: `{s['primary_release_blocker_action_required_input']}`",
+        f"- primary_full_commercial_release_blocker_id: `{s['primary_full_commercial_release_blocker_id']}`",
+        f"- primary_full_commercial_release_blocker_requirement_id: `{s['primary_full_commercial_release_blocker_requirement_id']}`",
+        f"- primary_full_commercial_release_blocker_tier: `{s['primary_full_commercial_release_blocker_tier']}`",
+        f"- primary_full_commercial_release_blocker_blocked_row_count: `{s['primary_full_commercial_release_blocker_blocked_row_count']}`",
+        f"- primary_full_commercial_release_blocker_first_blocked_evidence_row_id: `{s['primary_full_commercial_release_blocker_first_blocked_evidence_row_id']}`",
+        f"- primary_full_commercial_release_blocker_receipt_csv: `{s['primary_full_commercial_release_blocker_receipt_csv']}`",
+        f"- primary_full_commercial_release_blocker_approval_token_required: `{s['primary_full_commercial_release_blocker_approval_token_required']}`",
         f"- product_full_commercial_blocker_evidence_matrix_r8_blocked_row_count: `{s['product_full_commercial_blocker_evidence_matrix_r8_blocked_row_count']}`",
         f"- product_full_commercial_blocker_evidence_matrix_r8_first_blocked_evidence_row_id: `{s['product_full_commercial_blocker_evidence_matrix_r8_first_blocked_evidence_row_id']}`",
         f"- product_full_commercial_blocker_evidence_matrix_r8_receipt_csv: `{s['product_full_commercial_blocker_evidence_matrix_r8_receipt_csv']}`",

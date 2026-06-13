@@ -116,6 +116,17 @@ FULL_COMMERCIAL_EVIDENCE_RECEIPT_INTAKE_FIELDS = (
     "approval_tokens",
 )
 
+PRIMARY_FULL_COMMERCIAL_RELEASE_BLOCKER_INTAKE_FIELDS = (
+    "id",
+    "requirement_id",
+    "tier",
+    "blocked_row_count",
+    "first_blocked_evidence_row_id",
+    "receipt_csv",
+    "approval_token_required",
+    "next_required_step",
+)
+
 PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_INTAKE_FIELDS = (
     "source_json",
     "status",
@@ -173,6 +184,17 @@ def _full_commercial_evidence_receipt_intake_fields(intake: dict[str, Any]) -> d
                 if isinstance(value, list)
                 else _unique([value])
             )
+        else:
+            fields[source_key] = _text(intake.get(source_key))
+    return fields
+
+
+def _primary_full_commercial_release_blocker_intake_fields(intake: dict[str, Any]) -> dict[str, Any]:
+    fields: dict[str, Any] = {}
+    for suffix in PRIMARY_FULL_COMMERCIAL_RELEASE_BLOCKER_INTAKE_FIELDS:
+        source_key = f"primary_full_commercial_release_blocker_{suffix}"
+        if suffix.endswith("_count"):
+            fields[source_key] = _int(intake.get(source_key))
         else:
             fields[source_key] = _text(intake.get(source_key))
     return fields
@@ -874,6 +896,7 @@ def build_goal_bottleneck_briefing(
         "operator_intake_kit_release_burndown_linked_entry_count": _int(
             intake.get("release_burndown_linked_entry_count")
         ),
+        **_primary_full_commercial_release_blocker_intake_fields(intake),
         **_full_commercial_evidence_receipt_intake_fields(intake),
         **_product_scope_breadth_evidence_priority_intake_fields(intake),
         **_production_ai_registry_promotion_priority_intake_fields(intake),
@@ -1087,6 +1110,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- cleanup_ligand_heavy_candidate_size_gb: `{s['cleanup_ligand_heavy_candidate_size_gb']}`",
         f"- protected_cleanup_payload_size_gb: `{s['protected_cleanup_payload_size_gb']}`",
         f"- approval_tokens_required: `{';'.join(s['approval_tokens_required'])}`",
+        f"- primary_full_commercial_release_blocker_id: `{s['primary_full_commercial_release_blocker_id']}`",
+        f"- primary_full_commercial_release_blocker_requirement_id: `{s['primary_full_commercial_release_blocker_requirement_id']}`",
+        f"- primary_full_commercial_release_blocker_tier: `{s['primary_full_commercial_release_blocker_tier']}`",
+        f"- primary_full_commercial_release_blocker_blocked_row_count: `{s['primary_full_commercial_release_blocker_blocked_row_count']}`",
+        f"- primary_full_commercial_release_blocker_first_blocked_evidence_row_id: `{s['primary_full_commercial_release_blocker_first_blocked_evidence_row_id']}`",
+        f"- primary_full_commercial_release_blocker_receipt_csv: `{s['primary_full_commercial_release_blocker_receipt_csv']}`",
+        f"- primary_full_commercial_release_blocker_approval_token_required: `{s['primary_full_commercial_release_blocker_approval_token_required']}`",
         f"- production_ai_registry_promotion_priority_status: `{s['production_ai_registry_promotion_priority_status']}`",
         f"- production_ai_registry_promotion_priority_top_gate_id: `{s['production_ai_registry_promotion_priority_top_gate_id']}`",
         f"- production_ai_registry_promotion_priority_top_required_input: `{s['production_ai_registry_promotion_priority_top_required_input']}`",
