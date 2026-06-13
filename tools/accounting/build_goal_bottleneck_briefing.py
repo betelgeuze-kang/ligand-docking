@@ -103,6 +103,38 @@ def _join(values: list[Any]) -> str:
     return ";".join(_unique(values))
 
 
+FULL_COMMERCIAL_EVIDENCE_RECEIPT_INTAKE_FIELDS = (
+    "entry_count",
+    "operator_input_required_count",
+    "current_action_required_count",
+    "template_required_count",
+    "template_present_count",
+    "approval_token_count",
+    "entry_ids",
+    "source_gate_statuses",
+    "required_inputs",
+    "approval_tokens",
+)
+
+
+def _full_commercial_evidence_receipt_intake_fields(intake: dict[str, Any]) -> dict[str, Any]:
+    fields: dict[str, Any] = {}
+    for suffix in FULL_COMMERCIAL_EVIDENCE_RECEIPT_INTAKE_FIELDS:
+        source_key = f"full_commercial_evidence_receipt_{suffix}"
+        if suffix.endswith("_count"):
+            fields[source_key] = _int(intake.get(source_key))
+        elif suffix == "entry_ids":
+            value = intake.get(source_key)
+            fields[source_key] = (
+                [str(item) for item in value if str(item).strip()]
+                if isinstance(value, list)
+                else _unique([value])
+            )
+        else:
+            fields[source_key] = _text(intake.get(source_key))
+    return fields
+
+
 def _matches_release_checks(burndown_row: dict[str, Any], intake_row: dict[str, Any]) -> bool:
     burndown_checks = set(_split_semicolon(burndown_row.get("release_checks") or burndown_row.get("release_check")))
     intake_checks = set(_split_semicolon(intake_row.get("release_checks")))
@@ -710,6 +742,7 @@ def build_goal_bottleneck_briefing(
         "operator_intake_kit_release_burndown_linked_entry_count": _int(
             intake.get("release_burndown_linked_entry_count")
         ),
+        **_full_commercial_evidence_receipt_intake_fields(intake),
         "public_benchmark_work_order_status": _text(public_benchmark_work_order.get("status")),
         "public_benchmark_work_order_json": public_benchmark_work_order_path,
         "public_benchmark_open_suite_count": _int(public_benchmark_work_order.get("open_suite_count")),

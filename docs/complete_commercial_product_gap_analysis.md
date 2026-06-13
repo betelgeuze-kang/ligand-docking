@@ -183,7 +183,15 @@
   `product_full_commercial_blocker_evidence_matrix_*` summary와
   `product_full_commercial_blocker_evidence_matrix_recorded` row로 노출해,
   restricted release source-of-truth가 green이어도 full commercial R8/R9 receipt
-  미완료가 decision packet에서 사라지지 않는다. 최신 decision summary는
+  미완료가 decision packet에서 사라지지 않는다. 같은 decision gate는
+  `goal_bottleneck_briefing_current.json`의 `full_commercial_evidence_receipt_*`
+  summary도 `goal_bottleneck_briefing_full_commercial_evidence_receipt_*` 키와
+  `goal_bottleneck_briefing_full_commercial_receipts_recorded` row로 흡수해,
+  operator handoff receipt 묶음 자체가 최종 packet에서 누락되지 않게 한다.
+  `tools/run_product_release_current_refresh.py --execute`의 final-gate verification도
+  이 decision linkage를 exact field로 요구해 final refresh green 상태에서 해당
+  summary가 조용히 빠지는 회귀를 막는다.
+  최신 decision summary는
   `release_allowed=true`, `restricted_release_allowed=true`와 별개로
   `full_commercial_release_allowed=false`,
   `full_commercial_release_blocker_ids=[R8_full_scope_claim_closure,
@@ -230,8 +238,10 @@
   포함한다. 같은 manifest summary는 R8/R9 receipt 묶음을
   `full_commercial_evidence_receipt_*` 필드로 집계해 entry count 2, template present
   2/2, approval token 2개, source gate statuses, required input CSVs를 직접 노출하고
-  `/goal/status`도 이를 `operator_intake_kit_full_commercial_evidence_receipt_*` 키로
-  전달한다.
+  `goal_bottleneck_briefing_current.json`도 같은 summary를 흡수해 R8/R9
+  completion-audit 병목에서 operator receipt handoff가 누락되지 않게 한다.
+  `/goal/status`도 이를 `operator_intake_kit_full_commercial_evidence_receipt_*` 및
+  `bottleneck_briefing_full_commercial_evidence_receipt_*` 키로 전달한다.
   같은 R8 receipt 상태는
   `runs/product_commercial_readiness_operator_packet_current.json`과
   `runs/product_commercial_readiness_handoff_bundle_current.json` summary의

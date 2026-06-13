@@ -26,6 +26,37 @@ def _accuracy_payload() -> dict:
     }
 
 
+def _refresh_release_decision_ready() -> dict:
+    return {
+        "summary": {
+            "status": "goal_release_ready",
+            "release_allowed": True,
+            "blocker_count": 0,
+            "goal_bottleneck_briefing_full_commercial_receipts_recorded": True,
+            "source_goal_bottleneck_briefing_status": "goal_bottleneck_briefing_ready",
+            "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 2,
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 2,
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_operator_input_required_count": 2,
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_current_action_required_count": 2,
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_template_required_count": 2,
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_template_present_count": 2,
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_token_count": 2,
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": (
+                "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
+                "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"
+            ),
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_required_inputs": (
+                "config/product_scope_breadth_evidence_receipt_current.csv;"
+                "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+            ),
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_tokens": (
+                "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT;"
+                "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+            ),
+        }
+    }
+
+
 def test_release_source_of_truth_gate_blocks_stale_artifact_and_readme_drift(tmp_path: Path) -> None:
     artifact = tmp_path / "runs" / "operator_packet.json"
     dependency = tmp_path / "runs" / "goal_audit.json"
@@ -127,7 +158,7 @@ def test_product_release_current_refresh_blocks_if_final_gate_is_blocked(tmp_pat
     )
     _write_json(
         tmp_path / "runs" / "goal_release_decision_gate_current.json",
-        {"summary": {"status": "goal_release_ready", "release_allowed": True, "blocker_count": 0}},
+        _refresh_release_decision_ready(),
     )
 
     monkeypatch.setattr(
@@ -164,7 +195,7 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     )
     _write_json(
         tmp_path / "runs" / "goal_release_decision_gate_current.json",
-        {"summary": {"status": "goal_release_ready", "release_allowed": True, "blocker_count": 0}},
+        _refresh_release_decision_ready(),
     )
 
     monkeypatch.setattr(
@@ -228,7 +259,7 @@ def test_product_release_current_refresh_uses_command_timeout_hint(tmp_path: Pat
     )
     _write_json(
         tmp_path / "runs" / "goal_release_decision_gate_current.json",
-        {"summary": {"status": "goal_release_ready", "release_allowed": True, "blocker_count": 0}},
+        _refresh_release_decision_ready(),
     )
 
     payload = refresh_mod.run_product_release_current_refresh(
@@ -345,6 +376,26 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     ] == (
         "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
         "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"
+    )
+    bottleneck_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "goal_bottleneck_briefing_semantic_ready"
+    )
+    assert bottleneck_status_spec["required_int_exact_fields"] == {
+        "completion_audit_release_blocker_bottleneck_count": 2,
+        "full_commercial_evidence_receipt_entry_count": 2,
+        "full_commercial_evidence_receipt_operator_input_required_count": 2,
+        "full_commercial_evidence_receipt_current_action_required_count": 2,
+        "full_commercial_evidence_receipt_template_required_count": 2,
+        "full_commercial_evidence_receipt_template_present_count": 2,
+        "full_commercial_evidence_receipt_approval_token_count": 2,
+    }
+    assert bottleneck_status_spec["required_text_exact_fields"][
+        "full_commercial_evidence_receipt_required_inputs"
+    ] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv;"
+        "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
     )
     full_matrix_status_spec = next(
         spec

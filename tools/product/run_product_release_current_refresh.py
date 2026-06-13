@@ -36,8 +36,35 @@ FINAL_GATE_SPECS = [
         "gate_id": "goal_release_decision_gate",
         "artifact_path": "runs/goal_release_decision_gate_current.json",
         "required_status": "goal_release_ready",
-        "required_true_fields": ["release_allowed"],
+        "required_true_fields": [
+            "release_allowed",
+            "goal_bottleneck_briefing_full_commercial_receipts_recorded",
+        ],
         "required_zero_fields": ["blocker_count"],
+        "required_int_exact_fields": {
+            "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 2,
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 2,
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_operator_input_required_count": 2,
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_current_action_required_count": 2,
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_template_required_count": 2,
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_template_present_count": 2,
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_token_count": 2,
+        },
+        "required_text_exact_fields": {
+            "source_goal_bottleneck_briefing_status": "goal_bottleneck_briefing_ready",
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": (
+                "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
+                "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"
+            ),
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_required_inputs": (
+                "config/product_scope_breadth_evidence_receipt_current.csv;"
+                "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+            ),
+            "goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_tokens": (
+                "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT;"
+                "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+            ),
+        },
     },
 ]
 
@@ -99,6 +126,13 @@ def _summary(packet: dict[str, Any]) -> dict[str, Any]:
     return summary if isinstance(summary, dict) else packet
 
 
+def _int(value: Any) -> int:
+    try:
+        return int(float(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 def _verify_final_gate(spec: dict[str, Any], *, root: Path) -> dict[str, Any]:
     artifact_path = str(spec["artifact_path"])
     packet = _read_json_if_present(artifact_path, root=root)
@@ -106,10 +140,33 @@ def _verify_final_gate(spec: dict[str, Any], *, root: Path) -> dict[str, Any]:
     required_status = str(spec["required_status"])
     required_true_fields = [str(item) for item in spec.get("required_true_fields") or []]
     required_zero_fields = [str(item) for item in spec.get("required_zero_fields") or []]
+    required_int_exact_fields = {
+        str(field): _int(expected)
+        for field, expected in (spec.get("required_int_exact_fields") or {}).items()
+    }
+    required_text_exact_fields = {
+        str(field): str(expected)
+        for field, expected in (spec.get("required_text_exact_fields") or {}).items()
+    }
     missing_true_fields = [field for field in required_true_fields if summary.get(field) is not True]
-    nonzero_fields = [field for field in required_zero_fields if int(summary.get(field) or 0) != 0]
+    nonzero_fields = [field for field in required_zero_fields if _int(summary.get(field)) != 0]
+    failed_int_exact_fields = [
+        field for field, expected in required_int_exact_fields.items() if _int(summary.get(field)) != expected
+    ]
+    failed_text_exact_fields = [
+        field
+        for field, expected in required_text_exact_fields.items()
+        if str(summary.get(field, "") or "") != expected
+    ]
     observed_status = str(summary.get("status", "") or "missing")
-    passed = bool(summary) and observed_status == required_status and not missing_true_fields and not nonzero_fields
+    passed = bool(summary) and observed_status == required_status and not any(
+        [
+            missing_true_fields,
+            nonzero_fields,
+            failed_int_exact_fields,
+            failed_text_exact_fields,
+        ]
+    )
     return {
         "gate_id": str(spec["gate_id"]),
         "artifact_path": artifact_path,
@@ -121,13 +178,21 @@ def _verify_final_gate(spec: dict[str, Any], *, root: Path) -> dict[str, Any]:
         "missing_true_fields": missing_true_fields,
         "required_zero_fields": required_zero_fields,
         "nonzero_fields": nonzero_fields,
+        "required_int_exact_fields": required_int_exact_fields,
+        "failed_int_exact_fields": failed_int_exact_fields,
+        "required_text_exact_fields": required_text_exact_fields,
+        "failed_text_exact_fields": failed_text_exact_fields,
         "observed": (
             f"status={observed_status};missing_true_fields={len(missing_true_fields)};"
-            f"nonzero_fields={len(nonzero_fields)}"
+            f"nonzero_fields={len(nonzero_fields)};"
+            f"failed_int_exact_fields={len(failed_int_exact_fields)};"
+            f"failed_text_exact_fields={len(failed_text_exact_fields)}"
         ),
         "required": (
             f"status={required_status};true={','.join(required_true_fields) or 'none'};"
-            f"zero={','.join(required_zero_fields) or 'none'}"
+            f"zero={','.join(required_zero_fields) or 'none'};"
+            f"int_exact={','.join(required_int_exact_fields) or 'none'};"
+            f"text_exact={','.join(required_text_exact_fields) or 'none'}"
         ),
         "release_blocker": not passed,
         "execution_enabled": False,
@@ -147,7 +212,7 @@ def run_product_release_current_refresh(
     command_timeout_seconds: int = DEFAULT_COMMAND_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
     root_path = Path(root)
-    commands = list(commands or RELEASE_REFRESH_COMMANDS)
+    commands = list(RELEASE_REFRESH_COMMANDS if commands is None else commands)
     rows: list[dict[str, Any]] = []
     failed = False
     for index, command in enumerate(commands, start=1):

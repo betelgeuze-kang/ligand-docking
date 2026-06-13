@@ -338,6 +338,54 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status[
         "operator_intake_kit_full_commercial_evidence_receipt_approval_tokens"
     ] == intake_artifact.get("full_commercial_evidence_receipt_approval_tokens")
+    assert status["bottleneck_briefing_full_commercial_evidence_receipt_entry_count"] == int(
+        bottlenecks_artifact.get("full_commercial_evidence_receipt_entry_count") or 0
+    )
+    assert status[
+        "bottleneck_briefing_full_commercial_evidence_receipt_operator_input_required_count"
+    ] == int(
+        bottlenecks_artifact.get(
+            "full_commercial_evidence_receipt_operator_input_required_count"
+        )
+        or 0
+    )
+    assert status[
+        "bottleneck_briefing_full_commercial_evidence_receipt_current_action_required_count"
+    ] == int(
+        bottlenecks_artifact.get("full_commercial_evidence_receipt_current_action_required_count")
+        or 0
+    )
+    assert status[
+        "bottleneck_briefing_full_commercial_evidence_receipt_template_required_count"
+    ] == int(
+        bottlenecks_artifact.get("full_commercial_evidence_receipt_template_required_count")
+        or 0
+    )
+    assert status[
+        "bottleneck_briefing_full_commercial_evidence_receipt_template_present_count"
+    ] == int(
+        bottlenecks_artifact.get("full_commercial_evidence_receipt_template_present_count")
+        or 0
+    )
+    assert status[
+        "bottleneck_briefing_full_commercial_evidence_receipt_approval_token_count"
+    ] == int(
+        bottlenecks_artifact.get("full_commercial_evidence_receipt_approval_token_count")
+        or 0
+    )
+    assert status["bottleneck_briefing_full_commercial_evidence_receipt_entry_ids"] == (
+        bottlenecks_artifact.get("full_commercial_evidence_receipt_entry_ids")
+    )
+    assert status[
+        "bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses"
+    ] == bottlenecks_artifact.get("full_commercial_evidence_receipt_source_gate_statuses")
+    assert status[
+        "bottleneck_briefing_full_commercial_evidence_receipt_required_inputs"
+    ] == bottlenecks_artifact.get("full_commercial_evidence_receipt_required_inputs")
+    assert status[
+        "bottleneck_briefing_full_commercial_evidence_receipt_approval_tokens"
+    ] == bottlenecks_artifact.get("full_commercial_evidence_receipt_approval_tokens")
+    assert status["bottleneck_briefing_full_commercial_evidence_receipt_entry_count"] == 2
     assert status["operator_intake_kit_full_commercial_evidence_receipt_entry_count"] == 2
     assert (
         "blocked_product_scope_breadth_evidence_receipt"

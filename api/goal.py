@@ -461,6 +461,16 @@ async def get_goal_status() -> dict[str, Any]:
             "operator_intake_kit_full_commercial_evidence_receipt_source_gate_statuses": "",
             "operator_intake_kit_full_commercial_evidence_receipt_required_inputs": "",
             "operator_intake_kit_full_commercial_evidence_receipt_approval_tokens": "",
+            "bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 0,
+            "bottleneck_briefing_full_commercial_evidence_receipt_operator_input_required_count": 0,
+            "bottleneck_briefing_full_commercial_evidence_receipt_current_action_required_count": 0,
+            "bottleneck_briefing_full_commercial_evidence_receipt_template_required_count": 0,
+            "bottleneck_briefing_full_commercial_evidence_receipt_template_present_count": 0,
+            "bottleneck_briefing_full_commercial_evidence_receipt_approval_token_count": 0,
+            "bottleneck_briefing_full_commercial_evidence_receipt_entry_ids": [],
+            "bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": "",
+            "bottleneck_briefing_full_commercial_evidence_receipt_required_inputs": "",
+            "bottleneck_briefing_full_commercial_evidence_receipt_approval_tokens": "",
             **_production_ai_registry_promotion_receipt_fields({}),
             **_cameo_official_result_fetch_preflight_fields({}, []),
             **_evidence_receipt_fields(
@@ -782,6 +792,36 @@ async def get_goal_status() -> dict[str, Any]:
             "full_commercial_evidence_receipt_required_inputs", ""
         ),
         "operator_intake_kit_full_commercial_evidence_receipt_approval_tokens": intake.get(
+            "full_commercial_evidence_receipt_approval_tokens", ""
+        ),
+        "bottleneck_briefing_full_commercial_evidence_receipt_entry_count": _int(
+            bottlenecks.get("full_commercial_evidence_receipt_entry_count")
+        ),
+        "bottleneck_briefing_full_commercial_evidence_receipt_operator_input_required_count": _int(
+            bottlenecks.get("full_commercial_evidence_receipt_operator_input_required_count")
+        ),
+        "bottleneck_briefing_full_commercial_evidence_receipt_current_action_required_count": _int(
+            bottlenecks.get("full_commercial_evidence_receipt_current_action_required_count")
+        ),
+        "bottleneck_briefing_full_commercial_evidence_receipt_template_required_count": _int(
+            bottlenecks.get("full_commercial_evidence_receipt_template_required_count")
+        ),
+        "bottleneck_briefing_full_commercial_evidence_receipt_template_present_count": _int(
+            bottlenecks.get("full_commercial_evidence_receipt_template_present_count")
+        ),
+        "bottleneck_briefing_full_commercial_evidence_receipt_approval_token_count": _int(
+            bottlenecks.get("full_commercial_evidence_receipt_approval_token_count")
+        ),
+        "bottleneck_briefing_full_commercial_evidence_receipt_entry_ids": _string_list(
+            bottlenecks.get("full_commercial_evidence_receipt_entry_ids")
+        ),
+        "bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": bottlenecks.get(
+            "full_commercial_evidence_receipt_source_gate_statuses", ""
+        ),
+        "bottleneck_briefing_full_commercial_evidence_receipt_required_inputs": bottlenecks.get(
+            "full_commercial_evidence_receipt_required_inputs", ""
+        ),
+        "bottleneck_briefing_full_commercial_evidence_receipt_approval_tokens": bottlenecks.get(
             "full_commercial_evidence_receipt_approval_tokens", ""
         ),
         "operator_template_missing_count": _int(intake.get("template_missing_count")),

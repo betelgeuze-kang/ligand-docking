@@ -181,6 +181,28 @@ def _intake_kit() -> dict:
             "primary_action_recommended_action": (
                 "Run the full regeneration command on a GPU worker, return the identity-locked manifest and summary."
             ),
+            "full_commercial_evidence_receipt_entry_count": 2,
+            "full_commercial_evidence_receipt_operator_input_required_count": 2,
+            "full_commercial_evidence_receipt_current_action_required_count": 2,
+            "full_commercial_evidence_receipt_template_required_count": 2,
+            "full_commercial_evidence_receipt_template_present_count": 2,
+            "full_commercial_evidence_receipt_approval_token_count": 2,
+            "full_commercial_evidence_receipt_entry_ids": [
+                "product_scope_breadth_evidence_receipt",
+                "engine_refinement_claim_evidence_receipt",
+            ],
+            "full_commercial_evidence_receipt_source_gate_statuses": (
+                "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
+                "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"
+            ),
+            "full_commercial_evidence_receipt_required_inputs": (
+                "config/product_scope_breadth_evidence_receipt_current.csv;"
+                "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+            ),
+            "full_commercial_evidence_receipt_approval_tokens": (
+                "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT;"
+                "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+            ),
         },
         "rows": [
             {
@@ -506,6 +528,25 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
     assert summary["completion_audit_goal_complete"] is False
     assert summary["completion_audit_release_blocker_fail_count"] == 2
     assert summary["completion_audit_release_blocker_bottleneck_count"] == 2
+    assert summary["full_commercial_evidence_receipt_entry_count"] == 2
+    assert summary["full_commercial_evidence_receipt_operator_input_required_count"] == 2
+    assert summary["full_commercial_evidence_receipt_current_action_required_count"] == 2
+    assert summary["full_commercial_evidence_receipt_template_required_count"] == 2
+    assert summary["full_commercial_evidence_receipt_template_present_count"] == 2
+    assert summary["full_commercial_evidence_receipt_approval_token_count"] == 2
+    assert summary["full_commercial_evidence_receipt_entry_ids"] == [
+        "product_scope_breadth_evidence_receipt",
+        "engine_refinement_claim_evidence_receipt",
+    ]
+    assert "blocked_product_scope_breadth_evidence_receipt" in summary[
+        "full_commercial_evidence_receipt_source_gate_statuses"
+    ]
+    assert "config/engine_refinement_claim_promotion_evidence_receipt_current.csv" in summary[
+        "full_commercial_evidence_receipt_required_inputs"
+    ]
+    assert "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT" in summary[
+        "full_commercial_evidence_receipt_approval_tokens"
+    ]
     assert summary["bottleneck_count"] == 2
     assert summary["current_bottleneck_count"] == 2
     assert summary["kind_counts"]["scientific_scope_evidence_required"] == 1

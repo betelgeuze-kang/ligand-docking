@@ -24,6 +24,7 @@ DEFAULT_PROTECTED_CLEANUP_POLICY_DECISION_GATE_JSON = "runs/protected_cleanup_po
 DEFAULT_CLEANUP_POSTCHECK_CONTRACT_JSON = "runs/cleanup_postcheck_contract_current.json"
 DEFAULT_CLEANUP_COMPLETION_GATE_JSON = "runs/cleanup_completion_gate_current.json"
 DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON = "runs/goal_api_surface_contract_current.json"
+DEFAULT_GOAL_BOTTLENECK_BRIEFING_JSON = "runs/goal_bottleneck_briefing_current.json"
 DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON = "runs/product_ai_architecture_gap_closure_current.json"
 DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON = "runs/product_ai_architecture_execution_backlog_current.json"
 DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON = "runs/product_release_source_of_truth_gate_current.json"
@@ -166,6 +167,7 @@ def build_goal_release_decision_gate(
     cleanup_postcheck_contract_packet: dict[str, Any] | None = None,
     cleanup_completion_gate_packet: dict[str, Any] | None = None,
     goal_api_surface_contract_packet: dict[str, Any] | None = None,
+    goal_bottleneck_briefing_packet: dict[str, Any] | None = None,
     product_ai_architecture_gap_packet: dict[str, Any] | None = None,
     product_ai_execution_backlog_packet: dict[str, Any] | None = None,
     product_release_source_of_truth_packet: dict[str, Any] | None = None,
@@ -188,6 +190,7 @@ def build_goal_release_decision_gate(
     cleanup_postcheck_contract_path: str = DEFAULT_CLEANUP_POSTCHECK_CONTRACT_JSON,
     cleanup_completion_gate_path: str = DEFAULT_CLEANUP_COMPLETION_GATE_JSON,
     goal_api_surface_contract_path: str = DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON,
+    goal_bottleneck_briefing_path: str = DEFAULT_GOAL_BOTTLENECK_BRIEFING_JSON,
     product_ai_architecture_gap_path: str = DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON,
     product_ai_execution_backlog_path: str = DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON,
     product_release_source_of_truth_path: str = DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON,
@@ -215,6 +218,35 @@ def build_goal_release_decision_gate(
     cleanup_postcheck = _summary(cleanup_postcheck_contract_packet or {})
     cleanup_completion = _summary(cleanup_completion_gate_packet or {})
     goal_api_surface = _summary(goal_api_surface_contract_packet or {})
+    goal_bottleneck_briefing = _summary(goal_bottleneck_briefing_packet or {})
+    goal_bottleneck_briefing_gate_present = goal_bottleneck_briefing_packet is not None
+    goal_bottleneck_full_commercial_receipts_recorded = (
+        _text(goal_bottleneck_briefing.get("status")) == "goal_bottleneck_briefing_ready"
+        and _int(goal_bottleneck_briefing.get("completion_audit_release_blocker_bottleneck_count")) == 2
+        and _int(goal_bottleneck_briefing.get("full_commercial_evidence_receipt_entry_count")) == 2
+        and _int(goal_bottleneck_briefing.get("full_commercial_evidence_receipt_operator_input_required_count")) == 2
+        and _int(goal_bottleneck_briefing.get("full_commercial_evidence_receipt_current_action_required_count")) == 2
+        and _int(goal_bottleneck_briefing.get("full_commercial_evidence_receipt_template_required_count")) == 2
+        and _int(goal_bottleneck_briefing.get("full_commercial_evidence_receipt_template_present_count")) == 2
+        and _int(goal_bottleneck_briefing.get("full_commercial_evidence_receipt_approval_token_count")) == 2
+        and _text(goal_bottleneck_briefing.get("full_commercial_evidence_receipt_source_gate_statuses"))
+        == (
+            "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
+            "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"
+        )
+        and _text(goal_bottleneck_briefing.get("full_commercial_evidence_receipt_required_inputs"))
+        == (
+            "config/product_scope_breadth_evidence_receipt_current.csv;"
+            "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+        )
+        and _text(goal_bottleneck_briefing.get("full_commercial_evidence_receipt_approval_tokens"))
+        == (
+            "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT;"
+            "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+        )
+        and bool(goal_bottleneck_briefing.get("execution_enabled") is False)
+        and bool(goal_bottleneck_briefing.get("external_state_mutated") is False)
+    )
     release_source_of_truth = _summary(product_release_source_of_truth_packet or {})
     release_source_of_truth_gate_present = product_release_source_of_truth_packet is not None
     release_source_of_truth_ready = (
@@ -639,6 +671,36 @@ def build_goal_release_decision_gate(
             reason="The top-level local API must expose a verified read-only goal status surface before release can be claimed.",
         ),
     ]
+    if goal_bottleneck_briefing_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="goal_bottleneck_briefing_full_commercial_receipts_recorded",
+                artifact_path=goal_bottleneck_briefing_path,
+                observed=(
+                    f"{_text(goal_bottleneck_briefing.get('status')) or 'missing'};"
+                    f"completion_audit_release_blocker_bottleneck_count={_int(goal_bottleneck_briefing.get('completion_audit_release_blocker_bottleneck_count'))};"
+                    f"full_commercial_evidence_receipt_entry_count={_int(goal_bottleneck_briefing.get('full_commercial_evidence_receipt_entry_count'))};"
+                    f"full_commercial_evidence_receipt_operator_input_required_count={_int(goal_bottleneck_briefing.get('full_commercial_evidence_receipt_operator_input_required_count'))};"
+                    f"full_commercial_evidence_receipt_current_action_required_count={_int(goal_bottleneck_briefing.get('full_commercial_evidence_receipt_current_action_required_count'))};"
+                    f"full_commercial_evidence_receipt_template_required_count={_int(goal_bottleneck_briefing.get('full_commercial_evidence_receipt_template_required_count'))};"
+                    f"full_commercial_evidence_receipt_template_present_count={_int(goal_bottleneck_briefing.get('full_commercial_evidence_receipt_template_present_count'))};"
+                    f"full_commercial_evidence_receipt_approval_token_count={_int(goal_bottleneck_briefing.get('full_commercial_evidence_receipt_approval_token_count'))};"
+                    f"full_commercial_evidence_receipt_source_gate_statuses={_text(goal_bottleneck_briefing.get('full_commercial_evidence_receipt_source_gate_statuses'))};"
+                    f"full_commercial_evidence_receipt_required_inputs={_text(goal_bottleneck_briefing.get('full_commercial_evidence_receipt_required_inputs'))};"
+                    f"full_commercial_evidence_receipt_approval_tokens={_text(goal_bottleneck_briefing.get('full_commercial_evidence_receipt_approval_tokens'))}"
+                ),
+                required=(
+                    "goal_bottleneck_briefing_ready with R8/R9 completion blockers and full-commercial receipt "
+                    "operator handoff summary recorded"
+                ),
+                passed=goal_bottleneck_full_commercial_receipts_recorded,
+                reason=(
+                    "The final release decision must preserve the bottleneck briefing's R8/R9 receipt "
+                    "handoff summary, not only the downstream matrix diagnostics."
+                ),
+            )
+        )
     if release_source_of_truth_gate_present:
         rows.append(
             _row(
@@ -826,6 +888,8 @@ def build_goal_release_decision_gate(
         next_required_items.append("product release evidence rollup")
     if not goal_api_surface_ready:
         next_required_items.append("goal API surface contract")
+    if goal_bottleneck_briefing_gate_present and not goal_bottleneck_full_commercial_receipts_recorded:
+        next_required_items.append("goal bottleneck full-commercial receipt briefing")
     if release_source_of_truth_gate_present and not release_source_of_truth_ready:
         next_required_items.append("product release source-of-truth gate")
     if full_commercial_matrix_gate_present and not full_commercial_matrix_recorded:
@@ -920,6 +984,43 @@ def build_goal_release_decision_gate(
         "source_goal_rollup_status": _text(rollup.get("status")),
         "source_goal_api_surface_contract_status": _text(goal_api_surface.get("status")),
         "goal_api_surface_ready": goal_api_surface_ready,
+        "goal_bottleneck_briefing_gate_present": goal_bottleneck_briefing_gate_present,
+        "source_goal_bottleneck_briefing_status": _text(goal_bottleneck_briefing.get("status")),
+        "goal_bottleneck_briefing_full_commercial_receipts_recorded": (
+            goal_bottleneck_full_commercial_receipts_recorded
+            if goal_bottleneck_briefing_gate_present
+            else None
+        ),
+        "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": _int(
+            goal_bottleneck_briefing.get("completion_audit_release_blocker_bottleneck_count")
+        ),
+        "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": _int(
+            goal_bottleneck_briefing.get("full_commercial_evidence_receipt_entry_count")
+        ),
+        "goal_bottleneck_briefing_full_commercial_evidence_receipt_operator_input_required_count": _int(
+            goal_bottleneck_briefing.get("full_commercial_evidence_receipt_operator_input_required_count")
+        ),
+        "goal_bottleneck_briefing_full_commercial_evidence_receipt_current_action_required_count": _int(
+            goal_bottleneck_briefing.get("full_commercial_evidence_receipt_current_action_required_count")
+        ),
+        "goal_bottleneck_briefing_full_commercial_evidence_receipt_template_required_count": _int(
+            goal_bottleneck_briefing.get("full_commercial_evidence_receipt_template_required_count")
+        ),
+        "goal_bottleneck_briefing_full_commercial_evidence_receipt_template_present_count": _int(
+            goal_bottleneck_briefing.get("full_commercial_evidence_receipt_template_present_count")
+        ),
+        "goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_token_count": _int(
+            goal_bottleneck_briefing.get("full_commercial_evidence_receipt_approval_token_count")
+        ),
+        "goal_bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": _text(
+            goal_bottleneck_briefing.get("full_commercial_evidence_receipt_source_gate_statuses")
+        ),
+        "goal_bottleneck_briefing_full_commercial_evidence_receipt_required_inputs": _text(
+            goal_bottleneck_briefing.get("full_commercial_evidence_receipt_required_inputs")
+        ),
+        "goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_tokens": _text(
+            goal_bottleneck_briefing.get("full_commercial_evidence_receipt_approval_tokens")
+        ),
         "product_release_source_of_truth_gate_present": release_source_of_truth_gate_present,
         "product_release_source_of_truth_status": _text(release_source_of_truth.get("status")),
         "product_release_source_of_truth_ready": release_source_of_truth_ready if release_source_of_truth_gate_present else None,
@@ -1200,6 +1301,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- blocker_count: `{s['blocker_count']}`",
         f"- source_goal_api_surface_contract_status: `{s['source_goal_api_surface_contract_status']}`",
         f"- goal_api_surface_ready: `{s['goal_api_surface_ready']}`",
+        f"- goal_bottleneck_briefing_gate_present: `{s['goal_bottleneck_briefing_gate_present']}`",
+        f"- source_goal_bottleneck_briefing_status: `{s['source_goal_bottleneck_briefing_status']}`",
+        f"- goal_bottleneck_briefing_full_commercial_receipts_recorded: `{s['goal_bottleneck_briefing_full_commercial_receipts_recorded']}`",
+        f"- goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count: `{s['goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count']}`",
+        f"- goal_bottleneck_briefing_full_commercial_evidence_receipt_template_present_count: `{s['goal_bottleneck_briefing_full_commercial_evidence_receipt_template_present_count']}`",
+        f"- goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_token_count: `{s['goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_token_count']}`",
+        f"- goal_bottleneck_briefing_full_commercial_evidence_receipt_required_inputs: `{s['goal_bottleneck_briefing_full_commercial_evidence_receipt_required_inputs']}`",
         f"- product_release_source_of_truth_gate_present: `{s['product_release_source_of_truth_gate_present']}`",
         f"- product_release_source_of_truth_status: `{s['product_release_source_of_truth_status']}`",
         f"- product_release_source_of_truth_ready: `{s['product_release_source_of_truth_ready']}`",
@@ -1334,6 +1442,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--cleanup-postcheck-contract-json", default=DEFAULT_CLEANUP_POSTCHECK_CONTRACT_JSON)
     parser.add_argument("--cleanup-completion-gate-json", default=DEFAULT_CLEANUP_COMPLETION_GATE_JSON)
     parser.add_argument("--goal-api-surface-contract-json", default=DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON)
+    parser.add_argument("--goal-bottleneck-briefing-json", default=DEFAULT_GOAL_BOTTLENECK_BRIEFING_JSON)
     parser.add_argument("--product-ai-architecture-gap-json", default=DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON)
     parser.add_argument("--product-ai-execution-backlog-json", default=DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON)
     parser.add_argument("--product-release-source-of-truth-json", default=DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON)
@@ -1374,6 +1483,7 @@ def main(argv: list[str] | None = None) -> None:
         cleanup_postcheck_contract_packet=_read_json_if_present(args.cleanup_postcheck_contract_json),
         cleanup_completion_gate_packet=_read_json_if_present(args.cleanup_completion_gate_json),
         goal_api_surface_contract_packet=_read_json_if_present(args.goal_api_surface_contract_json),
+        goal_bottleneck_briefing_packet=_read_json_if_present(args.goal_bottleneck_briefing_json),
         product_ai_architecture_gap_packet=_read_json_if_present(args.product_ai_architecture_gap_json),
         product_ai_execution_backlog_packet=_read_json_if_present(args.product_ai_execution_backlog_json),
         product_release_source_of_truth_packet=_read_json_if_present(args.product_release_source_of_truth_json),
@@ -1404,6 +1514,7 @@ def main(argv: list[str] | None = None) -> None:
         cleanup_postcheck_contract_path=args.cleanup_postcheck_contract_json,
         cleanup_completion_gate_path=args.cleanup_completion_gate_json,
         goal_api_surface_contract_path=args.goal_api_surface_contract_json,
+        goal_bottleneck_briefing_path=args.goal_bottleneck_briefing_json,
         product_ai_architecture_gap_path=args.product_ai_architecture_gap_json,
         product_ai_execution_backlog_path=args.product_ai_execution_backlog_json,
         product_release_source_of_truth_path=args.product_release_source_of_truth_json,

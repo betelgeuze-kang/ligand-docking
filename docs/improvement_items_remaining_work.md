@@ -505,6 +505,17 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `product_full_commercial_blocker_evidence_matrix_*` 요약 키와
   `product_full_commercial_blocker_evidence_matrix_recorded` row로 기록해,
   최종 release decision packet에서도 R8/R9 evidence receipt 병목이 숨지 않는다.
+  같은 decision gate는 `goal_bottleneck_briefing_current.json`의
+  `full_commercial_evidence_receipt_*` summary도
+  `goal_bottleneck_briefing_full_commercial_evidence_receipt_*` 키와
+  `goal_bottleneck_briefing_full_commercial_receipts_recorded` row로 흡수해,
+  matrix 진단뿐 아니라 operator handoff receipt 묶음 자체도 최종 decision packet에
+  남긴다. `tools/run_product_release_current_refresh.py --execute`의 final-gate
+  verification도 `goal_release_decision_gate_current.json`에서 이
+  `goal_bottleneck_briefing_full_commercial_receipts_recorded=true`, entry count 2,
+  template present 2/2, approval token 2개, source gate status, required input CSV,
+  approval token 문자열을 exact check로 요구하므로, final refresh가 green이어도 이
+  decision linkage가 조용히 빠지는 상태를 허용하지 않는다.
   최신 decision summary는 restricted/local release surface를
   `release_allowed=true`, `restricted_release_allowed=true`로 유지하면서도
   `full_commercial_release_allowed=false`,
@@ -549,8 +560,14 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   복사한다. intake kit summary는 R8/R9 receipt 묶음을
   `full_commercial_evidence_receipt_*` 필드로 별도 집계해 entry count 2,
   template present 2/2, approval token 2개, 두 source gate status, 두 required input
-  CSV를 한 번 더 고정한다. `/goal/status`도 같은 값을
-  `operator_intake_kit_full_commercial_evidence_receipt_*` 필드로 전달한다.
+  CSV를 한 번 더 고정한다. `runs/goal_bottleneck_briefing_current.json`도 같은
+  summary를 흡수해 R8/R9 completion-audit 병목 브리핑에서 operator handoff
+  receipt 묶음이 사라지지 않게 하며, source-of-truth의
+  `goal_bottleneck_briefing_semantic_ready` row는 entry count 2, template present
+  2/2, approval token 2개, 두 source gate status, 두 required input CSV를 exact
+  field로 검증한다. `/goal/status`도 같은 값을
+  `operator_intake_kit_full_commercial_evidence_receipt_*` 및
+  `bottleneck_briefing_full_commercial_evidence_receipt_*` 필드로 전달한다.
   같은 R8 receipt 상태는
   `runs/product_commercial_readiness_operator_packet_current.json`과
   `runs/product_commercial_readiness_handoff_bundle_current.json` summary의
