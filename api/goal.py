@@ -20,6 +20,7 @@ PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT = ROOT / "runs" / "product_goal_completio
 PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT = (
     ROOT / "runs" / "product_commercial_readiness_handoff_bundle_current.json"
 )
+PRODUCT_RELEASE_BUNDLE_ARTIFACT = ROOT / "runs" / "product_release_bundle_current.json"
 PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT = (
     ROOT / "runs" / "product_full_commercial_blocker_evidence_matrix_current.json"
 )
@@ -1425,6 +1426,80 @@ def _license_legal_boundary_release_fields(release: dict[str, Any]) -> dict[str,
     }
 
 
+def _product_release_bundle_fields(bundle: dict[str, Any]) -> dict[str, Any]:
+    policy = bundle.get("operator_promotion_policy")
+    policy = policy if isinstance(policy, dict) else {}
+    checks = bundle.get("checks")
+    checks = [row for row in checks if isinstance(row, dict)] if isinstance(checks, list) else []
+    failed_check_ids = [
+        str(row.get("check") or "").strip()
+        for row in checks
+        if row.get("passed") is not True and str(row.get("check") or "").strip()
+    ]
+    approval_tokens = _string_list(policy.get("approval_tokens_required"))
+    must_review_fields = _string_list(policy.get("must_review_fields"))
+    required_before_execution = _string_list(policy.get("required_before_execution"))
+    expected_tokens = (
+        "APPROVE_PRODUCT_ROLLOUT",
+        "APPROVE_HOSTED_PRODUCT_API_EXPOSURE",
+        "MODEL_REGISTRY_SIGNING_KEY",
+        "API_RESULT_MANIFEST_SIGNING_KEY",
+    )
+    expected_review_fields = ("target", "action", "impact", "risk", "rollback", "verification")
+    guard_missing_reasons: list[str] = []
+    if bundle.get("status") != "release_bundle_ready_for_operator_review":
+        guard_missing_reasons.append("bundle_status_not_ready")
+    if bundle.get("release_bundle_ready") is not True:
+        guard_missing_reasons.append("bundle_ready_flag_not_true")
+    if _int(bundle.get("blocker_count")) != 0:
+        guard_missing_reasons.append("blockers_present")
+    if _int(bundle.get("check_count")) == 0 or _int(bundle.get("pass_count")) != _int(
+        bundle.get("check_count")
+    ):
+        guard_missing_reasons.append("checks_not_all_passed")
+    if failed_check_ids:
+        guard_missing_reasons.append("failed_checks_present")
+    if _int(bundle.get("artifact_count")) < 1:
+        guard_missing_reasons.append("artifacts_missing")
+    if policy.get("status") != "operator_approval_required":
+        guard_missing_reasons.append("operator_policy_not_approval_required")
+    if policy.get("external_state_mutation_allowed") is True:
+        guard_missing_reasons.append("external_state_mutation_allowed")
+    if any(token not in approval_tokens for token in expected_tokens):
+        guard_missing_reasons.append("approval_tokens_missing")
+    if any(field not in must_review_fields for field in expected_review_fields):
+        guard_missing_reasons.append("must_review_fields_missing")
+    if len(required_before_execution) < 1:
+        guard_missing_reasons.append("required_before_execution_missing")
+    return {
+        "product_release_bundle_status": bundle.get("status", ""),
+        "product_release_bundle_ready": bool(bundle.get("release_bundle_ready") is True),
+        "product_release_bundle_artifact_path": str(PRODUCT_RELEASE_BUNDLE_ARTIFACT),
+        "product_release_bundle_release_id": bundle.get("release_id", ""),
+        "product_release_bundle_bundle_version": bundle.get("bundle_version", ""),
+        "product_release_bundle_artifact_count": _int(bundle.get("artifact_count")),
+        "product_release_bundle_check_count": _int(bundle.get("check_count")),
+        "product_release_bundle_pass_count": _int(bundle.get("pass_count")),
+        "product_release_bundle_blocker_count": _int(bundle.get("blocker_count")),
+        "product_release_bundle_failed_check_ids": failed_check_ids,
+        "product_release_bundle_operator_policy_status": policy.get("status", ""),
+        "product_release_bundle_operator_policy_approval_tokens_required": approval_tokens,
+        "product_release_bundle_operator_policy_must_review_fields": must_review_fields,
+        "product_release_bundle_operator_policy_required_before_execution": (
+            required_before_execution
+        ),
+        "product_release_bundle_operator_policy_external_state_mutation_allowed": bool(
+            policy.get("external_state_mutation_allowed") is True
+        ),
+        "product_release_bundle_operator_review_guard_ready": (
+            not guard_missing_reasons
+        ),
+        "product_release_bundle_operator_review_guard_missing_reasons": (
+            guard_missing_reasons
+        ),
+    }
+
+
 def _evidence_receipt_fields(
     *,
     prefix: str,
@@ -1492,6 +1567,7 @@ async def get_goal_status() -> dict[str, Any]:
     api_contract_packet = _read_json_object(GOAL_API_SURFACE_CONTRACT_ARTIFACT)
     product_goal_completion_packet = _read_json_object(PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT)
     handoff_packet = _read_json_object(PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT)
+    product_release_bundle_packet = _read_json_object(PRODUCT_RELEASE_BUNDLE_ARTIFACT)
     full_commercial_matrix_packet = _read_json_object(
         PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT
     )
@@ -1515,6 +1591,7 @@ async def get_goal_status() -> dict[str, Any]:
     api_contract = _summary(api_contract_packet)
     product_goal_completion = _summary(product_goal_completion_packet)
     handoff = _summary(handoff_packet)
+    product_release_bundle = _summary(product_release_bundle_packet)
     full_commercial_matrix = _summary(full_commercial_matrix_packet)
     scope_receipt = _summary(scope_receipt_packet)
     engine_receipt = _summary(engine_receipt_packet)
@@ -1820,6 +1897,7 @@ async def get_goal_status() -> dict[str, Any]:
             **_product_launch_r4_preflight_fields({}),
             **_deploy_ops_legal_gap_closure_fields({}),
             **_license_legal_boundary_release_fields({}),
+            **_product_release_bundle_fields({}),
             **_evidence_receipt_fields(
                 prefix="product_scope_breadth_evidence_receipt",
                 receipt={},
@@ -2271,6 +2349,7 @@ async def get_goal_status() -> dict[str, Any]:
         **_product_launch_r4_preflight_fields(product_launch_r4_preflight),
         **_deploy_ops_legal_gap_closure_fields(deploy_ops_legal),
         **_license_legal_boundary_release_fields(release),
+        **_product_release_bundle_fields(product_release_bundle),
         **_evidence_receipt_fields(
             prefix="product_scope_breadth_evidence_receipt",
             receipt=scope_receipt,

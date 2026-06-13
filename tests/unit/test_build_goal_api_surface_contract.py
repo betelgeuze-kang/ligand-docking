@@ -19,6 +19,7 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         "GOAL_API_SURFACE_CONTRACT_ARTIFACT = 'runs/goal_api_surface_contract_current.json'\n"
         "PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT = 'runs/product_goal_completion_audit_current.json'\n"
         "PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT = 'runs/product_commercial_readiness_handoff_bundle_current.json'\n"
+        "PRODUCT_RELEASE_BUNDLE_ARTIFACT = 'runs/product_release_bundle_current.json'\n"
         "PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT = 'runs/product_full_commercial_blocker_evidence_matrix_current.json'\n"
         "PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_ARTIFACT = 'runs/product_scope_breadth_evidence_receipt_current.json'\n"
         "ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_ARTIFACT = 'runs/engine_refinement_claim_evidence_receipt_current.json'\n"
@@ -406,6 +407,23 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         '"third_party_license_review_gate_external_state_mutated": False,'
         '"third_party_license_review_gate_boundary_guard_ready": True,'
         '"third_party_license_review_gate_boundary_guard_missing_reasons": [],'
+        '"product_release_bundle_status": "release_bundle_ready_for_operator_review",'
+        '"product_release_bundle_ready": True,'
+        '"product_release_bundle_artifact_path": PRODUCT_RELEASE_BUNDLE_ARTIFACT,'
+        '"product_release_bundle_release_id": "product_release_current",'
+        '"product_release_bundle_bundle_version": "1",'
+        '"product_release_bundle_artifact_count": 34,'
+        '"product_release_bundle_check_count": 26,'
+        '"product_release_bundle_pass_count": 26,'
+        '"product_release_bundle_blocker_count": 0,'
+        '"product_release_bundle_failed_check_ids": [],'
+        '"product_release_bundle_operator_policy_status": "operator_approval_required",'
+        '"product_release_bundle_operator_policy_approval_tokens_required": ["APPROVE_PRODUCT_ROLLOUT", "APPROVE_HOSTED_PRODUCT_API_EXPOSURE", "MODEL_REGISTRY_SIGNING_KEY", "API_RESULT_MANIFEST_SIGNING_KEY"],'
+        '"product_release_bundle_operator_policy_must_review_fields": ["target", "action", "impact", "risk", "rollback", "verification"],'
+        '"product_release_bundle_operator_policy_required_before_execution": ["Review this release bundle manifest and artifact hashes."],'
+        '"product_release_bundle_operator_policy_external_state_mutation_allowed": False,'
+        '"product_release_bundle_operator_review_guard_ready": True,'
+        '"product_release_bundle_operator_review_guard_missing_reasons": [],'
         '"refine_tier_public_benchmark_work_order_apply_write_guard_ready": True,'
         '"refine_tier_public_benchmark_work_order_apply_write_guard_missing_reasons": [],'
         '"product_scope_breadth_evidence_receipt_status": "blocked_product_scope_breadth_evidence_receipt",'

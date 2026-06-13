@@ -16,6 +16,14 @@ def _artifact_summary(name: str) -> dict:
     return summary if isinstance(summary, dict) else {}
 
 
+def _artifact_payload(name: str) -> dict:
+    path = ROOT / "runs" / name
+    if not path.is_file():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return payload if isinstance(payload, dict) else {}
+
+
 def _assert_receipt_fields(
     *,
     status: dict,
@@ -543,6 +551,103 @@ def _assert_license_legal_boundary_fields(*, observed: dict, artifact: dict) -> 
     )
 
 
+def _assert_product_release_bundle_fields(*, observed: dict, artifact: dict) -> None:
+    policy = artifact.get("operator_promotion_policy")
+    policy = policy if isinstance(policy, dict) else {}
+    checks = artifact.get("checks")
+    checks = [row for row in checks if isinstance(row, dict)] if isinstance(checks, list) else []
+    failed_check_ids = [
+        str(row.get("check") or "").strip()
+        for row in checks
+        if row.get("passed") is not True and str(row.get("check") or "").strip()
+    ]
+    approval_tokens = policy.get("approval_tokens_required") or []
+    must_review_fields = policy.get("must_review_fields") or []
+    required_before_execution = policy.get("required_before_execution") or []
+
+    assert observed["product_release_bundle_status"] == artifact.get("status", "")
+    assert observed["product_release_bundle_ready"] is (
+        artifact.get("release_bundle_ready") is True
+    )
+    assert observed["product_release_bundle_artifact_path"].endswith(
+        "runs/product_release_bundle_current.json"
+    )
+    assert observed["product_release_bundle_release_id"] == artifact.get("release_id", "")
+    assert observed["product_release_bundle_bundle_version"] == artifact.get(
+        "bundle_version", ""
+    )
+    assert observed["product_release_bundle_artifact_count"] == int(
+        artifact.get("artifact_count") or 0
+    )
+    assert observed["product_release_bundle_check_count"] == int(
+        artifact.get("check_count") or 0
+    )
+    assert observed["product_release_bundle_pass_count"] == int(
+        artifact.get("pass_count") or 0
+    )
+    assert observed["product_release_bundle_blocker_count"] == int(
+        artifact.get("blocker_count") or 0
+    )
+    assert observed["product_release_bundle_failed_check_ids"] == failed_check_ids
+    assert observed["product_release_bundle_operator_policy_status"] == policy.get(
+        "status", ""
+    )
+    assert observed[
+        "product_release_bundle_operator_policy_approval_tokens_required"
+    ] == approval_tokens
+    assert observed["product_release_bundle_operator_policy_must_review_fields"] == (
+        must_review_fields
+    )
+    assert observed[
+        "product_release_bundle_operator_policy_required_before_execution"
+    ] == required_before_execution
+    assert observed[
+        "product_release_bundle_operator_policy_external_state_mutation_allowed"
+    ] is (policy.get("external_state_mutation_allowed") is True)
+
+    guard_missing_reasons = []
+    if artifact.get("status") != "release_bundle_ready_for_operator_review":
+        guard_missing_reasons.append("bundle_status_not_ready")
+    if artifact.get("release_bundle_ready") is not True:
+        guard_missing_reasons.append("bundle_ready_flag_not_true")
+    if int(artifact.get("blocker_count") or 0) != 0:
+        guard_missing_reasons.append("blockers_present")
+    if int(artifact.get("check_count") or 0) == 0 or int(
+        artifact.get("pass_count") or 0
+    ) != int(artifact.get("check_count") or 0):
+        guard_missing_reasons.append("checks_not_all_passed")
+    if failed_check_ids:
+        guard_missing_reasons.append("failed_checks_present")
+    if int(artifact.get("artifact_count") or 0) < 1:
+        guard_missing_reasons.append("artifacts_missing")
+    if policy.get("status") != "operator_approval_required":
+        guard_missing_reasons.append("operator_policy_not_approval_required")
+    if policy.get("external_state_mutation_allowed") is True:
+        guard_missing_reasons.append("external_state_mutation_allowed")
+    for token in (
+        "APPROVE_PRODUCT_ROLLOUT",
+        "APPROVE_HOSTED_PRODUCT_API_EXPOSURE",
+        "MODEL_REGISTRY_SIGNING_KEY",
+        "API_RESULT_MANIFEST_SIGNING_KEY",
+    ):
+        if token not in approval_tokens:
+            guard_missing_reasons.append("approval_tokens_missing")
+            break
+    for field in ("target", "action", "impact", "risk", "rollback", "verification"):
+        if field not in must_review_fields:
+            guard_missing_reasons.append("must_review_fields_missing")
+            break
+    if len(required_before_execution) < 1:
+        guard_missing_reasons.append("required_before_execution_missing")
+    assert observed["product_release_bundle_operator_review_guard_ready"] is (
+        not guard_missing_reasons
+    )
+    assert (
+        observed["product_release_bundle_operator_review_guard_missing_reasons"]
+        == guard_missing_reasons
+    )
+
+
 def test_api_app_imports_with_goal_router() -> None:
     from api.main import app
     from api.goal import (
@@ -575,6 +680,7 @@ def test_api_app_imports_with_goal_router() -> None:
     api_contract_artifact = _artifact_summary("goal_api_surface_contract_current.json")
     product_goal_completion_artifact = _artifact_summary("product_goal_completion_audit_current.json")
     handoff_artifact = _artifact_summary("product_commercial_readiness_handoff_bundle_current.json")
+    product_release_bundle_artifact = _artifact_payload("product_release_bundle_current.json")
     cameo_fetch_artifact = _artifact_summary("cameo_official_result_fetch_preflight_current.json")
     rollout_smoke_receipt_artifact = _artifact_summary(
         "product_rollout_execution_smoke_receipt_current.json"
@@ -1519,6 +1625,10 @@ def test_api_app_imports_with_goal_router() -> None:
     _assert_license_legal_boundary_fields(
         observed=status,
         artifact=release_artifact,
+    )
+    _assert_product_release_bundle_fields(
+        observed=status,
+        artifact=product_release_bundle_artifact,
     )
     _assert_receipt_fields(
         status=status,
