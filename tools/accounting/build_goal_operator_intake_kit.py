@@ -57,6 +57,9 @@ from tools.product.build_production_ai_registry_promotion_operator_receipt impor
     DEFAULT_OUT_JSON as DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_RECEIPT_JSON,
     DEFAULT_RECEIPT_CSV as DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_RECEIPT_CSV,
 )
+from tools.product.build_production_ai_registry_promotion_priority_packet import (
+    DEFAULT_OUT_JSON as DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_JSON,
+)
 from tools.build_goal_api_surface_contract import DEFAULT_OUT_JSON as DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON
 from tools.build_goal_release_burndown_work_order import DEFAULT_OUT_JSON as DEFAULT_RELEASE_BURNDOWN_JSON
 from tools.build_product_execution_approval_gate import (
@@ -250,6 +253,7 @@ CATALOG: list[dict[str, Any]] = [
         "template_path": DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_RECEIPT_CSV,
         "intake_path": DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_RECEIPT_CSV,
         "related_source_json": DEFAULT_PRODUCT_GOAL_COMPLETION_AUDIT_JSON,
+        "priority_source_json": DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_JSON,
         "approval_token_required": PRODUCTION_AI_REGISTRY_PROMOTION_APPROVAL_TOKEN,
         "release_checks": "production_ai_checkpoint_actionable_operator_completion_packet_ready",
         "recommended_action": (
@@ -397,6 +401,11 @@ def _summary(packet: dict[str, Any]) -> dict[str, Any]:
     return summary if isinstance(summary, dict) else {}
 
 
+def _summary_or_payload(packet: dict[str, Any]) -> dict[str, Any]:
+    summary = _summary(packet)
+    return summary if summary else packet
+
+
 def _rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
     return [row for row in packet.get("rows", []) or [] if isinstance(row, dict)]
 
@@ -441,6 +450,12 @@ def _unique_text(values: list[Any]) -> str:
 
 def _token_set(value: Any) -> set[str]:
     return {part.strip() for part in _text(value).split(";") if part.strip()}
+
+
+def _text_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [_text(item) for item in value if _text(item)]
+    return [part.strip() for part in _text(value).replace(",", ";").split(";") if part.strip()]
 
 
 def _source_status(source_packets: dict[str, dict[str, Any]], source_gate_json: str) -> str:
@@ -569,6 +584,9 @@ def build_goal_operator_intake_kit(
         source_status = _source_status(source_packets, source_gate_json)
         related_source_json = _text(entry.get("related_source_json"))
         related_source_status = _source_status(source_packets, related_source_json)
+        priority_source_json = _text(entry.get("priority_source_json"))
+        priority_summary = _summary_or_payload(source_packets.get(priority_source_json, {}))
+        priority_missing_gate_ids = _text_list(priority_summary.get("registry_promotion_missing_gate_ids"))
         copied_template_path = ""
         copied = False
         if copy_templates:
@@ -597,6 +615,31 @@ def build_goal_operator_intake_kit(
             "source_gate_status": source_status,
             "related_source_json": related_source_json,
             "related_source_status": related_source_status,
+            "priority_source_json": priority_source_json,
+            "priority_status": _text(priority_summary.get("status")),
+            "priority_packet_ready": bool(priority_summary.get("priority_packet_ready") is True),
+            "priority_registry_promotion_ready": bool(
+                priority_summary.get("registry_promotion_ready") is True
+            ),
+            "priority_operator_input_required_count": _int(
+                priority_summary.get("operator_input_required_count")
+            ),
+            "priority_blocked_item_count": _int(priority_summary.get("blocked_priority_item_count")),
+            "priority_missing_gate_count": _int(
+                priority_summary.get("registry_promotion_missing_gate_count")
+            ),
+            "priority_missing_gate_ids": ";".join(priority_missing_gate_ids),
+            "priority_top_gate_id": _text(priority_summary.get("top_gate_id")),
+            "priority_top_priority_bucket": _text(priority_summary.get("top_priority_bucket")),
+            "priority_top_required_input": _text(priority_summary.get("top_required_input")),
+            "priority_top_acceptance_artifact": _text(priority_summary.get("top_acceptance_artifact")),
+            "priority_top_verification_command": _text(priority_summary.get("top_verification_command")),
+            "priority_top_next_operator_step": _text(priority_summary.get("top_next_operator_step")),
+            "priority_model_promoted": bool(priority_summary.get("model_promoted") is True),
+            "priority_customer_facing_mutation_enabled": bool(
+                priority_summary.get("customer_facing_mutation_enabled") is True
+            ),
+            "priority_external_state_mutated": bool(priority_summary.get("external_state_mutated") is True),
             "source_action_count": len(matched),
             "source_action_statuses": _unique_text([action.get("status") for action in matched]),
             "source_artifacts": _unique_text([artifact for action in matched for artifact in _split_artifacts(action.get("artifact_path"))]),
@@ -643,6 +686,10 @@ def build_goal_operator_intake_kit(
     full_commercial_receipt_rows = [
         row for row in rows if row["kit_entry_id"] in FULL_COMMERCIAL_EVIDENCE_RECEIPT_ENTRY_IDS
     ]
+    production_ai_registry_promotion_row = next(
+        (row for row in rows if row["kit_entry_id"] == "production_ai_registry_promotion"),
+        {},
+    )
     template_rows = [row for row in rows if row["template_required"]]
     missing_template_rows = [row for row in template_rows if not row["template_present"]]
     copied_template_rows = [row for row in template_rows if row["kit_template_copied"]]
@@ -709,6 +756,57 @@ def build_goal_operator_intake_kit(
         ),
         "full_commercial_evidence_receipt_approval_tokens": _unique_text(
             [row["approval_token_required"] for row in full_commercial_receipt_rows]
+        ),
+        "production_ai_registry_promotion_priority_source_json": _text(
+            production_ai_registry_promotion_row.get("priority_source_json")
+        ),
+        "production_ai_registry_promotion_priority_status": _text(
+            production_ai_registry_promotion_row.get("priority_status")
+        ),
+        "production_ai_registry_promotion_priority_packet_ready": bool(
+            production_ai_registry_promotion_row.get("priority_packet_ready") is True
+        ),
+        "production_ai_registry_promotion_priority_registry_promotion_ready": bool(
+            production_ai_registry_promotion_row.get("priority_registry_promotion_ready") is True
+        ),
+        "production_ai_registry_promotion_priority_operator_input_required_count": _int(
+            production_ai_registry_promotion_row.get("priority_operator_input_required_count")
+        ),
+        "production_ai_registry_promotion_priority_blocked_priority_item_count": _int(
+            production_ai_registry_promotion_row.get("priority_blocked_item_count")
+        ),
+        "production_ai_registry_promotion_priority_missing_gate_count": _int(
+            production_ai_registry_promotion_row.get("priority_missing_gate_count")
+        ),
+        "production_ai_registry_promotion_priority_missing_gate_ids": _text_list(
+            production_ai_registry_promotion_row.get("priority_missing_gate_ids")
+        ),
+        "production_ai_registry_promotion_priority_top_gate_id": _text(
+            production_ai_registry_promotion_row.get("priority_top_gate_id")
+        ),
+        "production_ai_registry_promotion_priority_top_priority_bucket": _text(
+            production_ai_registry_promotion_row.get("priority_top_priority_bucket")
+        ),
+        "production_ai_registry_promotion_priority_top_required_input": _text(
+            production_ai_registry_promotion_row.get("priority_top_required_input")
+        ),
+        "production_ai_registry_promotion_priority_top_acceptance_artifact": _text(
+            production_ai_registry_promotion_row.get("priority_top_acceptance_artifact")
+        ),
+        "production_ai_registry_promotion_priority_top_verification_command": _text(
+            production_ai_registry_promotion_row.get("priority_top_verification_command")
+        ),
+        "production_ai_registry_promotion_priority_top_next_operator_step": _text(
+            production_ai_registry_promotion_row.get("priority_top_next_operator_step")
+        ),
+        "production_ai_registry_promotion_priority_model_promoted": bool(
+            production_ai_registry_promotion_row.get("priority_model_promoted") is True
+        ),
+        "production_ai_registry_promotion_priority_customer_facing_mutation_enabled": bool(
+            production_ai_registry_promotion_row.get("priority_customer_facing_mutation_enabled") is True
+        ),
+        "production_ai_registry_promotion_priority_external_state_mutated": bool(
+            production_ai_registry_promotion_row.get("priority_external_state_mutated") is True
         ),
         "primary_action_id": primary_action_id,
         "top_action_id": _text(action_board_summary.get("top_action_id")) or primary_action_id,
@@ -827,6 +925,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- full_commercial_evidence_receipt_template_present_count: `{s['full_commercial_evidence_receipt_template_present_count']}` / `{s['full_commercial_evidence_receipt_template_required_count']}`",
         f"- full_commercial_evidence_receipt_source_gate_statuses: `{s['full_commercial_evidence_receipt_source_gate_statuses']}`",
         f"- full_commercial_evidence_receipt_required_inputs: `{s['full_commercial_evidence_receipt_required_inputs']}`",
+        f"- production_ai_registry_promotion_priority_status: `{s['production_ai_registry_promotion_priority_status']}`",
+        f"- production_ai_registry_promotion_priority_top_gate_id: `{s['production_ai_registry_promotion_priority_top_gate_id']}`",
+        f"- production_ai_registry_promotion_priority_top_required_input: `{s['production_ai_registry_promotion_priority_top_required_input']}`",
         f"- approval_required_count: `{s['approval_required_count']}`",
         f"- official_results_required_count: `{s['official_results_required_count']}`",
         f"- policy_decision_required_count: `{s['policy_decision_required_count']}`",
@@ -876,6 +977,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--production-ai-registry-promotion-receipt-json",
         default=DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_RECEIPT_JSON,
     )
+    parser.add_argument(
+        "--production-ai-registry-promotion-priority-json",
+        default=DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_JSON,
+    )
     parser.add_argument("--product-commercial-independence-json", default=DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON)
     parser.add_argument("--product-license-gate-json", default=DEFAULT_PRODUCT_LICENSE_GATE_JSON)
     parser.add_argument("--production-ai-gpu-return-intake-json", default=DEFAULT_PRODUCTION_AI_GPU_RETURN_INTAKE_JSON)
@@ -920,6 +1025,9 @@ def main(argv: list[str] | None = None) -> None:
         ),
         DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_RECEIPT_JSON: _read_json_if_present(
             args.production_ai_registry_promotion_receipt_json
+        ),
+        DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_JSON: _read_json_if_present(
+            args.production_ai_registry_promotion_priority_json
         ),
         DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON: _read_json_if_present(args.product_commercial_independence_json),
         DEFAULT_PRODUCT_LICENSE_GATE_JSON: _read_json_if_present(args.product_license_gate_json),

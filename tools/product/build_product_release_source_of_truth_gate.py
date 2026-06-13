@@ -1525,7 +1525,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "artifact_path": "runs/goal_operator_intake_kit_current/manifest.json",
         "builder_command": "python3 tools/build_goal_operator_intake_kit.py",
         "required_status": "goal_operator_intake_kit_ready",
-        "required_true_fields": [],
+        "required_true_fields": [
+            "production_ai_registry_promotion_priority_packet_ready",
+        ],
         "required_int_exact_fields": {
             "product_goal_release_blocker_fail_count": 2,
             "full_commercial_evidence_receipt_entry_count": 2,
@@ -1534,6 +1536,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "full_commercial_evidence_receipt_template_required_count": 2,
             "full_commercial_evidence_receipt_template_present_count": 2,
             "full_commercial_evidence_receipt_approval_token_count": 2,
+            "production_ai_registry_promotion_priority_operator_input_required_count": 4,
+            "production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
+            "production_ai_registry_promotion_priority_missing_gate_count": 4,
         },
         "required_text_exact_fields": {
             "product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
@@ -1557,6 +1562,18 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "full_commercial_evidence_receipt_approval_tokens": (
                 "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT;"
                 "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+            ),
+            "production_ai_registry_promotion_priority_source_json": (
+                "runs/production_ai_registry_promotion_priority_packet_current.json"
+            ),
+            "production_ai_registry_promotion_priority_status": (
+                "blocked_production_ai_registry_promotion_priority_packet"
+            ),
+            "production_ai_registry_promotion_priority_top_gate_id": (
+                "trained_model_checkpoint_count_positive"
+            ),
+            "production_ai_registry_promotion_priority_top_priority_bucket": (
+                "trained_checkpoint_registration_required"
             ),
         },
     },

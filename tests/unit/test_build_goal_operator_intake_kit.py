@@ -152,6 +152,31 @@ def _source_packets() -> dict[str, dict]:
                 "external_state_mutated": False,
             }
         },
+        mod.DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_JSON: {
+            "status": "blocked_production_ai_registry_promotion_priority_packet",
+            "priority_packet_ready": True,
+            "registry_promotion_ready": False,
+            "operator_input_required_count": 4,
+            "blocked_priority_item_count": 4,
+            "registry_promotion_missing_gate_count": 4,
+            "registry_promotion_missing_gate_ids": [
+                "trained_model_checkpoint_count_positive",
+                "default_residual_mode_guarded",
+                "production_promotion_allowed",
+                "customer_facing_mutation_flags",
+            ],
+            "top_gate_id": "trained_model_checkpoint_count_positive",
+            "top_priority_bucket": "trained_checkpoint_registration_required",
+            "top_required_input": (
+                "Register a trained production residual checkpoint that passes checkpoint preflight."
+            ),
+            "top_acceptance_artifact": "runs/residual_model_registry_current.json",
+            "top_verification_command": "python3 tools/build_residual_model_registry.py",
+            "top_next_operator_step": "Return or register a trained checkpoint.",
+            "model_promoted": False,
+            "customer_facing_mutation_enabled": False,
+            "external_state_mutated": False,
+        },
         mod.DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON: {
             "summary": {
                 "status": "blocked_product_commercial_independence_gate",
@@ -342,6 +367,50 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
         mod.PRODUCTION_AI_REGISTRY_PROMOTION_APPROVAL_TOKEN
     )
     assert by_id["production_ai_registry_promotion"]["operator_input_required_now"] is False
+    assert by_id["production_ai_registry_promotion"]["priority_source_json"] == (
+        mod.DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_JSON
+    )
+    assert by_id["production_ai_registry_promotion"]["priority_status"] == (
+        "blocked_production_ai_registry_promotion_priority_packet"
+    )
+    assert by_id["production_ai_registry_promotion"]["priority_packet_ready"] is True
+    assert by_id["production_ai_registry_promotion"]["priority_registry_promotion_ready"] is False
+    assert by_id["production_ai_registry_promotion"]["priority_operator_input_required_count"] == 4
+    assert by_id["production_ai_registry_promotion"]["priority_blocked_item_count"] == 4
+    assert by_id["production_ai_registry_promotion"]["priority_missing_gate_count"] == 4
+    assert "trained_model_checkpoint_count_positive" in by_id[
+        "production_ai_registry_promotion"
+    ]["priority_missing_gate_ids"]
+    assert by_id["production_ai_registry_promotion"]["priority_top_gate_id"] == (
+        "trained_model_checkpoint_count_positive"
+    )
+    assert by_id["production_ai_registry_promotion"]["priority_top_priority_bucket"] == (
+        "trained_checkpoint_registration_required"
+    )
+    assert by_id["production_ai_registry_promotion"]["priority_model_promoted"] is False
+    assert by_id["production_ai_registry_promotion"]["priority_external_state_mutated"] is False
+    assert summary["production_ai_registry_promotion_priority_status"] == (
+        "blocked_production_ai_registry_promotion_priority_packet"
+    )
+    assert summary["production_ai_registry_promotion_priority_packet_ready"] is True
+    assert summary["production_ai_registry_promotion_priority_registry_promotion_ready"] is False
+    assert summary["production_ai_registry_promotion_priority_operator_input_required_count"] == 4
+    assert summary["production_ai_registry_promotion_priority_blocked_priority_item_count"] == 4
+    assert summary["production_ai_registry_promotion_priority_missing_gate_count"] == 4
+    assert summary["production_ai_registry_promotion_priority_missing_gate_ids"] == [
+        "trained_model_checkpoint_count_positive",
+        "default_residual_mode_guarded",
+        "production_promotion_allowed",
+        "customer_facing_mutation_flags",
+    ]
+    assert summary["production_ai_registry_promotion_priority_top_gate_id"] == (
+        "trained_model_checkpoint_count_positive"
+    )
+    assert summary["production_ai_registry_promotion_priority_top_priority_bucket"] == (
+        "trained_checkpoint_registration_required"
+    )
+    assert summary["production_ai_registry_promotion_priority_model_promoted"] is False
+    assert summary["production_ai_registry_promotion_priority_external_state_mutated"] is False
     assert summary["primary_action_id"] == "product_ai_production:return_gpu_force_regeneration_receipt"
     assert summary["top_action_id"] == summary["primary_action_id"]
     assert summary["primary_action_priority"] == 0
@@ -591,6 +660,9 @@ def test_goal_operator_intake_kit_surfaces_registry_promotion_receipt_for_curren
     assert registry["operator_input_required_now"] is True
     assert registry["source_gate_status"] == "blocked_production_ai_registry_promotion_operator_receipt"
     assert registry["related_source_json"] == mod.DEFAULT_PRODUCT_GOAL_COMPLETION_AUDIT_JSON
+    assert registry["priority_source_json"] == mod.DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_JSON
+    assert registry["priority_top_gate_id"] == "trained_model_checkpoint_count_positive"
+    assert registry["priority_top_priority_bucket"] == "trained_checkpoint_registration_required"
     assert registry["template_path"] == "config/production_ai_registry_promotion_operator_receipt_current.csv"
     assert registry["intake_path"] == "config/production_ai_registry_promotion_operator_receipt_current.csv"
     assert registry["approval_token_required"] == mod.PRODUCTION_AI_REGISTRY_PROMOTION_APPROVAL_TOKEN
@@ -709,6 +781,8 @@ def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_
                 str(source_paths[mod.DEFAULT_API_RUNNER_PROFILE_PROMOTION_RECEIPT_JSON]),
                 "--production-ai-registry-promotion-receipt-json",
                 str(source_paths[mod.DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_RECEIPT_JSON]),
+                "--production-ai-registry-promotion-priority-json",
+                str(source_paths[mod.DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_JSON]),
                 "--product-commercial-independence-json",
                 str(source_paths[mod.DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON]),
                 "--product-license-gate-json",
