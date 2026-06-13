@@ -902,6 +902,15 @@ async def get_goal_status() -> dict[str, Any]:
     release_full_commercial_blocker_ids = _string_list(
         release.get("full_commercial_release_blocker_ids")
     ) or list(full_commercial_release_blocker_ids)
+    action_full_commercial_blocker_ids = _string_list(
+        actions.get("full_commercial_release_blocker_ids")
+    )
+    intake_full_commercial_blocker_ids = _string_list(
+        intake.get("full_commercial_release_blocker_ids")
+    )
+    bottleneck_full_commercial_blocker_ids = _string_list(
+        bottlenecks.get("full_commercial_release_blocker_ids")
+    )
     missing_full_commercial_release_blocker_ids = [
         blocker_id
         for blocker_id in FULL_COMMERCIAL_RELEASE_BLOCKER_IDS
@@ -910,6 +919,24 @@ async def get_goal_status() -> dict[str, Any]:
     full_commercial_release_blocker_visibility_ready = (
         not missing_full_commercial_release_blocker_ids
         and len(release_full_commercial_blocker_ids) >= len(FULL_COMMERCIAL_RELEASE_BLOCKER_IDS)
+    )
+    downstream_full_commercial_blocker_surfaces = {
+        "operator_action_board": action_full_commercial_blocker_ids,
+        "operator_intake_kit": intake_full_commercial_blocker_ids,
+        "bottleneck_briefing": bottleneck_full_commercial_blocker_ids,
+    }
+    release_full_commercial_blocker_set = set(release_full_commercial_blocker_ids)
+    full_commercial_release_blocker_downstream_missing_surfaces = [
+        surface_id
+        for surface_id, surface_blocker_ids in downstream_full_commercial_blocker_surfaces.items()
+        if (
+            len(surface_blocker_ids) != len(release_full_commercial_blocker_ids)
+            or set(surface_blocker_ids) != release_full_commercial_blocker_set
+        )
+    ]
+    full_commercial_release_blocker_downstream_visibility_ready = (
+        full_commercial_release_blocker_visibility_ready
+        and not full_commercial_release_blocker_downstream_missing_surfaces
     )
     active_bottleneck_primary = (
         _int(bottlenecks.get("current_bottleneck_count") or bottlenecks.get("bottleneck_count")) > 0
@@ -940,6 +967,18 @@ async def get_goal_status() -> dict[str, Any]:
             "full_commercial_release_blocker_count": 0,
             "missing_full_commercial_release_blocker_ids": list(FULL_COMMERCIAL_RELEASE_BLOCKER_IDS),
             "full_commercial_release_blocker_visibility_ready": False,
+            "operator_action_board_full_commercial_release_blocker_ids": [],
+            "operator_action_board_full_commercial_release_blocker_count": 0,
+            "operator_intake_kit_full_commercial_release_blocker_ids": [],
+            "operator_intake_kit_full_commercial_release_blocker_count": 0,
+            "bottleneck_briefing_full_commercial_release_blocker_ids": [],
+            "bottleneck_briefing_full_commercial_release_blocker_count": 0,
+            "full_commercial_release_blocker_downstream_visibility_ready": False,
+            "full_commercial_release_blocker_downstream_missing_surfaces": [
+                "operator_action_board",
+                "operator_intake_kit",
+                "bottleneck_briefing",
+            ],
             "restricted_release_allowed": False,
             "full_commercial_release_allowed": False,
             "primary_full_commercial_release_blocker_id": "",
@@ -1199,6 +1238,24 @@ async def get_goal_status() -> dict[str, Any]:
         "full_commercial_release_blocker_count": len(release_full_commercial_blocker_ids),
         "missing_full_commercial_release_blocker_ids": missing_full_commercial_release_blocker_ids,
         "full_commercial_release_blocker_visibility_ready": full_commercial_release_blocker_visibility_ready,
+        "operator_action_board_full_commercial_release_blocker_ids": action_full_commercial_blocker_ids,
+        "operator_action_board_full_commercial_release_blocker_count": len(
+            action_full_commercial_blocker_ids
+        ),
+        "operator_intake_kit_full_commercial_release_blocker_ids": intake_full_commercial_blocker_ids,
+        "operator_intake_kit_full_commercial_release_blocker_count": len(
+            intake_full_commercial_blocker_ids
+        ),
+        "bottleneck_briefing_full_commercial_release_blocker_ids": bottleneck_full_commercial_blocker_ids,
+        "bottleneck_briefing_full_commercial_release_blocker_count": len(
+            bottleneck_full_commercial_blocker_ids
+        ),
+        "full_commercial_release_blocker_downstream_visibility_ready": (
+            full_commercial_release_blocker_downstream_visibility_ready
+        ),
+        "full_commercial_release_blocker_downstream_missing_surfaces": (
+            full_commercial_release_blocker_downstream_missing_surfaces
+        ),
         "primary_full_commercial_release_blocker_id": release.get(
             "primary_full_commercial_release_blocker_id", ""
         ),

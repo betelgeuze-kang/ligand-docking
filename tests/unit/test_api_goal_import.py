@@ -291,6 +291,26 @@ def test_api_app_imports_with_goal_router() -> None:
     )
     assert status["missing_full_commercial_release_blocker_ids"] == []
     assert status["full_commercial_release_blocker_visibility_ready"] is True
+    assert status["operator_action_board_full_commercial_release_blocker_ids"] == actions_artifact.get(
+        "full_commercial_release_blocker_ids"
+    )
+    assert status["operator_action_board_full_commercial_release_blocker_count"] == int(
+        actions_artifact.get("full_commercial_release_blocker_count") or 0
+    )
+    assert status["operator_intake_kit_full_commercial_release_blocker_ids"] == intake_artifact.get(
+        "full_commercial_release_blocker_ids"
+    )
+    assert status["operator_intake_kit_full_commercial_release_blocker_count"] == int(
+        intake_artifact.get("full_commercial_release_blocker_count") or 0
+    )
+    assert status["bottleneck_briefing_full_commercial_release_blocker_ids"] == (
+        bottlenecks_artifact.get("full_commercial_release_blocker_ids")
+    )
+    assert status["bottleneck_briefing_full_commercial_release_blocker_count"] == int(
+        bottlenecks_artifact.get("full_commercial_release_blocker_count") or 0
+    )
+    assert status["full_commercial_release_blocker_downstream_visibility_ready"] is True
+    assert status["full_commercial_release_blocker_downstream_missing_surfaces"] == []
     assert status["primary_full_commercial_release_blocker_id"] == release_artifact.get(
         "primary_full_commercial_release_blocker_id"
     )
