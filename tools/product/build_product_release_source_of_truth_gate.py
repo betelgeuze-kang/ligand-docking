@@ -34,6 +34,12 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_scope_breadth_closure_checklist.py",
     "python3 tools/build_product_scope_breadth_evidence_receipt.py",
     "python3 tools/build_product_scope_breadth_evidence_priority_packet.py",
+    "python3 tools/build_aqp1_direct_binding_external_evidence_operator_fill_guide.py",
+    "python3 tools/build_aqp1_direct_binding_external_evidence_operator_worksheet.py",
+    (
+        "python3 tools/build_aqp1_direct_binding_external_evidence_operator_staging_apply.py "
+        "--mode preview --staging-csv runs/aqp1_direct_binding_external_evidence_intake_supplement_current.csv"
+    ),
     "python3 tools/build_product_operational_quality_contract.py",
     "python3 scripts/verify_quality_gate.py --quiet --out-json runs/product_quality_gate_verification_current.json",
     "python3 tools/build_api_runner_profile_promotion_readiness.py",
@@ -804,11 +810,63 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "artifact_id": "aqp1_direct_binding_external_evidence_operator_fill_guide",
+        "artifact_path": "runs/aqp1_direct_binding_external_evidence_operator_fill_guide_current.json",
+        "builder_command": (
+            "python3 tools/build_aqp1_direct_binding_external_evidence_operator_fill_guide.py"
+        ),
+        "depends_on": [
+            "tools/product/build_aqp1_direct_binding_external_evidence_operator_fill_guide.py",
+            "tools/build_aqp1_direct_binding_external_evidence_operator_fill_guide.py",
+            "runs/aqp1_direct_binding_procurement_packet_current.json",
+            "runs/aqp1_operator_validation_candidate_packet_current.json",
+            "runs/aqp1_functional_kcal_surrogate_packet_current.json",
+        ],
+    },
+    {
+        "artifact_id": "aqp1_direct_binding_external_evidence_operator_worksheet",
+        "artifact_path": "runs/aqp1_direct_binding_external_evidence_operator_worksheet_current.json",
+        "builder_command": (
+            "python3 tools/build_aqp1_direct_binding_external_evidence_operator_worksheet.py"
+        ),
+        "depends_on": [
+            "tools/product/build_aqp1_direct_binding_external_evidence_operator_worksheet.py",
+            "tools/build_aqp1_direct_binding_external_evidence_operator_worksheet.py",
+            "runs/aqp1_direct_binding_external_evidence_operator_fill_guide_current.json",
+            "runs/aqp1_direct_binding_external_evidence_intake_supplement_current.csv",
+            "runs/aqp1_direct_binding_procurement_packet_current.json",
+            "runs/aqp1_operator_validation_candidate_packet_current.json",
+            "runs/aqp1_functional_kcal_surrogate_packet_current.json",
+        ],
+    },
+    {
+        "artifact_id": "aqp1_direct_binding_external_evidence_operator_staging_apply",
+        "artifact_path": "runs/aqp1_direct_binding_external_evidence_operator_staging_apply_current.json",
+        "builder_command": (
+            "python3 tools/build_aqp1_direct_binding_external_evidence_operator_staging_apply.py "
+            "--mode preview --staging-csv runs/aqp1_direct_binding_external_evidence_intake_supplement_current.csv"
+        ),
+        "depends_on": [
+            "tools/product/build_aqp1_direct_binding_external_evidence_operator_staging_apply.py",
+            "tools/build_aqp1_direct_binding_external_evidence_operator_staging_apply.py",
+            "runs/aqp1_direct_binding_external_evidence_operator_worksheet_current.json",
+            "runs/aqp1_direct_binding_external_evidence_intake_supplement_example_current.csv",
+            "runs/aqp1_direct_binding_external_evidence_intake_supplement_current.csv",
+            "runs/aqp1_direct_binding_procurement_packet_current.json",
+            "runs/aqp1_operator_validation_candidate_packet_current.json",
+            "runs/aqp1_functional_kcal_surrogate_packet_current.json",
+        ],
+    },
+    {
         "artifact_id": "product_commercial_readiness_operator_packet",
         "artifact_path": "runs/product_commercial_readiness_operator_packet_current.json",
         "builder_command": "python3 tools/build_product_commercial_readiness_operator_packet.py",
         "depends_on": [
             "runs/product_goal_completion_audit_current.json",
+            "runs/aqp1_direct_binding_procurement_packet_current.json",
+            "runs/aqp1_direct_binding_external_evidence_operator_fill_guide_current.json",
+            "runs/aqp1_direct_binding_external_evidence_operator_worksheet_current.json",
+            "runs/aqp1_direct_binding_external_evidence_operator_staging_apply_current.json",
             "runs/production_ai_registry_promotion_operator_receipt_current.json",
             "runs/production_ai_registry_promotion_priority_packet_current.json",
             "config/production_ai_registry_promotion_operator_receipt_current.csv",

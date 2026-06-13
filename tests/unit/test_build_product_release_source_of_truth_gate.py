@@ -1273,6 +1273,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "goal_api_surface_contract" in artifact_ids
     assert "goal_bottleneck_briefing" in artifact_ids
     assert "product_full_commercial_blocker_evidence_matrix" in artifact_ids
+    assert "aqp1_direct_binding_external_evidence_operator_fill_guide" in artifact_ids
+    assert "aqp1_direct_binding_external_evidence_operator_worksheet" in artifact_ids
+    assert "aqp1_direct_binding_external_evidence_operator_staging_apply" in artifact_ids
     assert "product_commercial_readiness_execution_ladder" in artifact_ids
     assert "product_rollout_execution_smoke_receipt" in artifact_ids
     assert "deploy_ops_legal_gap_closure" in artifact_ids
@@ -1282,6 +1285,19 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/build_production_ai_registry_promotion_operator_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
     assert (
         "python3 tools/product/build_production_ai_registry_promotion_priority_packet.py"
+        in mod.RELEASE_REFRESH_COMMANDS
+    )
+    assert (
+        "python3 tools/build_aqp1_direct_binding_external_evidence_operator_fill_guide.py"
+        in mod.RELEASE_REFRESH_COMMANDS
+    )
+    assert (
+        "python3 tools/build_aqp1_direct_binding_external_evidence_operator_worksheet.py"
+        in mod.RELEASE_REFRESH_COMMANDS
+    )
+    assert (
+        "python3 tools/build_aqp1_direct_binding_external_evidence_operator_staging_apply.py "
+        "--mode preview --staging-csv runs/aqp1_direct_binding_external_evidence_intake_supplement_current.csv"
         in mod.RELEASE_REFRESH_COMMANDS
     )
     assert "product_release_bundle_semantic_ready" in status_ids
@@ -1690,12 +1706,52 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/engine_refinement_claim_evidence_receipt_current.json" in full_commercial_matrix_spec["depends_on"]
     assert "runs/product_goal_completion_audit_current.json" in full_commercial_matrix_spec["depends_on"]
     assert "runs/goal_bottleneck_briefing_current.json" in full_commercial_matrix_spec["depends_on"]
+    aqp1_fill_guide_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "aqp1_direct_binding_external_evidence_operator_fill_guide"
+    )
+    assert "runs/aqp1_direct_binding_procurement_packet_current.json" in aqp1_fill_guide_spec[
+        "depends_on"
+    ]
+    aqp1_worksheet_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "aqp1_direct_binding_external_evidence_operator_worksheet"
+    )
+    assert "runs/aqp1_direct_binding_external_evidence_operator_fill_guide_current.json" in aqp1_worksheet_spec[
+        "depends_on"
+    ]
+    aqp1_staging_apply_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "aqp1_direct_binding_external_evidence_operator_staging_apply"
+    )
+    assert "runs/aqp1_direct_binding_external_evidence_operator_worksheet_current.json" in aqp1_staging_apply_spec[
+        "depends_on"
+    ]
     commercial_operator_packet_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
         if spec["artifact_id"] == "product_commercial_readiness_operator_packet"
     )
     assert "runs/product_goal_completion_audit_current.json" in commercial_operator_packet_spec["depends_on"]
+    assert (
+        "runs/aqp1_direct_binding_procurement_packet_current.json"
+        in commercial_operator_packet_spec["depends_on"]
+    )
+    assert (
+        "runs/aqp1_direct_binding_external_evidence_operator_fill_guide_current.json"
+        in commercial_operator_packet_spec["depends_on"]
+    )
+    assert (
+        "runs/aqp1_direct_binding_external_evidence_operator_worksheet_current.json"
+        in commercial_operator_packet_spec["depends_on"]
+    )
+    assert (
+        "runs/aqp1_direct_binding_external_evidence_operator_staging_apply_current.json"
+        in commercial_operator_packet_spec["depends_on"]
+    )
     assert (
         "runs/production_ai_registry_promotion_operator_receipt_current.json"
         in commercial_operator_packet_spec["depends_on"]

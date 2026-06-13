@@ -174,6 +174,42 @@ def _operator_packet(ready: bool = True) -> dict:
             "product_scope_transporter_p0_operator_validation_candidate_claim_safe_ready": False,
             "product_scope_transporter_p0_operator_validation_candidate_placeholder_count": 6,
             "product_scope_transporter_p0_operator_validation_candidate_required_decision_field_count": 6,
+            "product_scope_transporter_p0_external_operator_artifacts": [
+                "runs/aqp1_direct_binding_external_evidence_operator_fill_guide_current.json",
+                "runs/aqp1_direct_binding_external_evidence_operator_worksheet_current.json",
+                "runs/aqp1_direct_binding_external_evidence_operator_staging_apply_current.json",
+            ],
+            "product_scope_transporter_p0_external_operator_fill_guide_artifact": (
+                "runs/aqp1_direct_binding_external_evidence_operator_fill_guide_current.json"
+            ),
+            "product_scope_transporter_p0_external_operator_fill_guide_status": (
+                "aqp1_direct_binding_external_evidence_operator_fill_guide_ready"
+            ),
+            "product_scope_transporter_p0_external_operator_fill_guide_ready": True,
+            "product_scope_transporter_p0_external_operator_fill_guide_row_count": 3,
+            "product_scope_transporter_p0_external_operator_worksheet_artifact": (
+                "runs/aqp1_direct_binding_external_evidence_operator_worksheet_current.json"
+            ),
+            "product_scope_transporter_p0_external_operator_worksheet_status": (
+                "aqp1_direct_binding_external_evidence_operator_worksheet_ready"
+            ),
+            "product_scope_transporter_p0_external_operator_worksheet_ready": True,
+            "product_scope_transporter_p0_external_operator_worksheet_field_row_count": 42,
+            "product_scope_transporter_p0_external_operator_worksheet_pending_field_count": 19,
+            "product_scope_transporter_p0_external_operator_worksheet_validation_error_count": 0,
+            "product_scope_transporter_p0_external_operator_worksheet_supplement_csv": (
+                "runs/aqp1_direct_binding_external_evidence_intake_supplement_current.csv"
+            ),
+            "product_scope_transporter_p0_external_operator_staging_apply_artifact": (
+                "runs/aqp1_direct_binding_external_evidence_operator_staging_apply_current.json"
+            ),
+            "product_scope_transporter_p0_external_operator_staging_apply_status": (
+                "blocked_aqp1_operator_staging_apply"
+            ),
+            "product_scope_transporter_p0_external_operator_staging_apply_mode": "preview",
+            "product_scope_transporter_p0_external_operator_staging_apply_live_apply_allowed": False,
+            "product_scope_transporter_p0_external_operator_staging_apply_validation_error_count": 2,
+            "product_scope_transporter_p0_external_operator_staging_apply_claim_safe_approved_count": 0,
             "action_count": 4,
             "blocked_action_count": 4,
             "parallelizable_action_count": 2,
@@ -1141,6 +1177,42 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         row["artifact_id"] == "first_parallelizable_action_direct_binding_procurement_packet"
         and row["artifact_path"] == "runs/aqp1_direct_binding_procurement_packet_current.json"
         and row["reference_role"] == "local_parallel_direct_binding_procurement_packet"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert summary[
+        "product_scope_transporter_p0_external_operator_fill_guide_ready"
+    ] is True
+    assert summary[
+        "product_scope_transporter_p0_external_operator_worksheet_pending_field_count"
+    ] == 19
+    assert summary[
+        "product_scope_transporter_p0_external_operator_staging_apply_live_apply_allowed"
+    ] is False
+    assert any(
+        row["artifact_id"] == "product_scope_transporter_p0_external_operator_fill_guide"
+        and row["artifact_path"]
+        == "runs/aqp1_direct_binding_external_evidence_operator_fill_guide_current.json"
+        and row["reference_role"]
+        == "local_scope_transporter_p0_external_operator_fill_guide"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "product_scope_transporter_p0_external_operator_worksheet"
+        and row["artifact_path"]
+        == "runs/aqp1_direct_binding_external_evidence_operator_worksheet_current.json"
+        and row["reference_role"]
+        == "local_scope_transporter_p0_external_operator_worksheet"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "product_scope_transporter_p0_external_operator_staging_apply"
+        and row["artifact_path"]
+        == "runs/aqp1_direct_binding_external_evidence_operator_staging_apply_current.json"
+        and row["reference_role"]
+        == "local_scope_transporter_p0_external_operator_staging_apply"
         and row["required_now"] is True
         for row in summary["artifact_reference_manifest"]
     )

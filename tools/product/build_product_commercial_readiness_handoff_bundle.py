@@ -326,6 +326,38 @@ def _build_artifact_reference_manifest(
                 note="Local direct-binding procurement contract for the first parallel AQP1 evidence lane.",
             )
         )
+    for artifact_id, key, role, note in [
+        (
+            "product_scope_transporter_p0_external_operator_fill_guide",
+            "product_scope_transporter_p0_external_operator_fill_guide_artifact",
+            "local_scope_transporter_p0_external_operator_fill_guide",
+            "Local AQP1 external direct-binding fill guide for the first R8 transporter evidence lane.",
+        ),
+        (
+            "product_scope_transporter_p0_external_operator_worksheet",
+            "product_scope_transporter_p0_external_operator_worksheet_artifact",
+            "local_scope_transporter_p0_external_operator_worksheet",
+            "Local field-level AQP1 operator worksheet for exact direct-binding evidence capture.",
+        ),
+        (
+            "product_scope_transporter_p0_external_operator_staging_apply",
+            "product_scope_transporter_p0_external_operator_staging_apply_artifact",
+            "local_scope_transporter_p0_external_operator_staging_apply",
+            "Local guarded AQP1 staging preview proving no live claim-safe apply is authorized yet.",
+        ),
+    ]:
+        artifact_path = _text(summary.get(key))
+        if artifact_path:
+            refs.append(
+                _artifact_reference(
+                    artifact_id=artifact_id,
+                    artifact_path=artifact_path,
+                    reference_role=role,
+                    required_now=True,
+                    expected_from_operator_return=False,
+                    note=note,
+                )
+            )
     delta_force_closure_artifact = _text(
         summary.get("delta_force_closure_acceptance_packet_artifact")
     )
@@ -855,6 +887,109 @@ def build_product_commercial_readiness_handoff_bundle(
         "product_scope_transporter_p0_operator_validation_candidate_required_decision_field_count": int(
             operator_summary.get(
                 "product_scope_transporter_p0_operator_validation_candidate_required_decision_field_count"
+            )
+            or 0
+        ),
+        "product_scope_transporter_p0_external_operator_artifacts": [
+            str(item)
+            for item in (
+                operator_summary.get(
+                    "product_scope_transporter_p0_external_operator_artifacts"
+                )
+                or []
+            )
+        ],
+        "product_scope_transporter_p0_external_operator_fill_guide_artifact": _text(
+            operator_summary.get(
+                "product_scope_transporter_p0_external_operator_fill_guide_artifact"
+            )
+        ),
+        "product_scope_transporter_p0_external_operator_fill_guide_status": _text(
+            operator_summary.get(
+                "product_scope_transporter_p0_external_operator_fill_guide_status"
+            )
+        ),
+        "product_scope_transporter_p0_external_operator_fill_guide_ready": bool(
+            operator_summary.get(
+                "product_scope_transporter_p0_external_operator_fill_guide_ready"
+            )
+            is True
+        ),
+        "product_scope_transporter_p0_external_operator_fill_guide_row_count": int(
+            operator_summary.get(
+                "product_scope_transporter_p0_external_operator_fill_guide_row_count"
+            )
+            or 0
+        ),
+        "product_scope_transporter_p0_external_operator_worksheet_artifact": _text(
+            operator_summary.get(
+                "product_scope_transporter_p0_external_operator_worksheet_artifact"
+            )
+        ),
+        "product_scope_transporter_p0_external_operator_worksheet_status": _text(
+            operator_summary.get(
+                "product_scope_transporter_p0_external_operator_worksheet_status"
+            )
+        ),
+        "product_scope_transporter_p0_external_operator_worksheet_ready": bool(
+            operator_summary.get(
+                "product_scope_transporter_p0_external_operator_worksheet_ready"
+            )
+            is True
+        ),
+        "product_scope_transporter_p0_external_operator_worksheet_field_row_count": int(
+            operator_summary.get(
+                "product_scope_transporter_p0_external_operator_worksheet_field_row_count"
+            )
+            or 0
+        ),
+        "product_scope_transporter_p0_external_operator_worksheet_pending_field_count": int(
+            operator_summary.get(
+                "product_scope_transporter_p0_external_operator_worksheet_pending_field_count"
+            )
+            or 0
+        ),
+        "product_scope_transporter_p0_external_operator_worksheet_validation_error_count": int(
+            operator_summary.get(
+                "product_scope_transporter_p0_external_operator_worksheet_validation_error_count"
+            )
+            or 0
+        ),
+        "product_scope_transporter_p0_external_operator_worksheet_supplement_csv": _text(
+            operator_summary.get(
+                "product_scope_transporter_p0_external_operator_worksheet_supplement_csv"
+            )
+        ),
+        "product_scope_transporter_p0_external_operator_staging_apply_artifact": _text(
+            operator_summary.get(
+                "product_scope_transporter_p0_external_operator_staging_apply_artifact"
+            )
+        ),
+        "product_scope_transporter_p0_external_operator_staging_apply_status": _text(
+            operator_summary.get(
+                "product_scope_transporter_p0_external_operator_staging_apply_status"
+            )
+        ),
+        "product_scope_transporter_p0_external_operator_staging_apply_mode": _text(
+            operator_summary.get(
+                "product_scope_transporter_p0_external_operator_staging_apply_mode"
+            )
+        ),
+        "product_scope_transporter_p0_external_operator_staging_apply_live_apply_allowed": bool(
+            operator_summary.get(
+                "product_scope_transporter_p0_external_operator_staging_apply_live_apply_allowed"
+            )
+            is True
+        ),
+        "product_scope_transporter_p0_external_operator_staging_apply_validation_error_count": int(
+            operator_summary.get(
+                "product_scope_transporter_p0_external_operator_staging_apply_validation_error_count"
+            )
+            or 0
+        ),
+        "product_scope_transporter_p0_external_operator_staging_apply_claim_safe_approved_count": int(
+            operator_summary.get(
+                "product_scope_transporter_p0_external_operator_staging_apply_claim_safe_approved_count"
             )
             or 0
         ),

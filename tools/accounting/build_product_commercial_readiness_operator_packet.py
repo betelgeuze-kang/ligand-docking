@@ -14,6 +14,15 @@ DEFAULT_GOAL_AUDIT_JSON = "runs/product_goal_completion_audit_current.json"
 DEFAULT_DELTA_FORCE_CLOSURE_PACKET_JSON = "runs/residual_delta_force_closure_acceptance_packet_current.json"
 DEFAULT_SCOPE_CLOSURE_PACKET_JSON = "runs/product_scope_closure_acceptance_packet_current.json"
 DEFAULT_AQP1_DIRECT_BINDING_PROCUREMENT_JSON = "runs/aqp1_direct_binding_procurement_packet_current.json"
+DEFAULT_AQP1_EXTERNAL_OPERATOR_FILL_GUIDE_JSON = (
+    "runs/aqp1_direct_binding_external_evidence_operator_fill_guide_current.json"
+)
+DEFAULT_AQP1_EXTERNAL_OPERATOR_WORKSHEET_JSON = (
+    "runs/aqp1_direct_binding_external_evidence_operator_worksheet_current.json"
+)
+DEFAULT_AQP1_EXTERNAL_OPERATOR_STAGING_APPLY_JSON = (
+    "runs/aqp1_direct_binding_external_evidence_operator_staging_apply_current.json"
+)
 DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_OPERATOR_RECEIPT_JSON = (
     "runs/production_ai_registry_promotion_operator_receipt_current.json"
 )
@@ -486,12 +495,18 @@ def build_product_commercial_readiness_operator_packet(
     delta_force_closure_packet: dict[str, Any] | None = None,
     scope_closure_packet: dict[str, Any] | None = None,
     aqp1_direct_binding_procurement_packet: dict[str, Any] | None = None,
+    aqp1_external_operator_fill_guide_packet: dict[str, Any] | None = None,
+    aqp1_external_operator_worksheet_packet: dict[str, Any] | None = None,
+    aqp1_external_operator_staging_apply_packet: dict[str, Any] | None = None,
     production_ai_registry_promotion_operator_receipt_packet: dict[str, Any] | None = None,
     production_ai_registry_promotion_priority_packet: dict[str, Any] | None = None,
     goal_audit_path: str = DEFAULT_GOAL_AUDIT_JSON,
     delta_force_closure_packet_path: str = DEFAULT_DELTA_FORCE_CLOSURE_PACKET_JSON,
     scope_closure_packet_path: str = DEFAULT_SCOPE_CLOSURE_PACKET_JSON,
     aqp1_direct_binding_procurement_path: str = DEFAULT_AQP1_DIRECT_BINDING_PROCUREMENT_JSON,
+    aqp1_external_operator_fill_guide_path: str = DEFAULT_AQP1_EXTERNAL_OPERATOR_FILL_GUIDE_JSON,
+    aqp1_external_operator_worksheet_path: str = DEFAULT_AQP1_EXTERNAL_OPERATOR_WORKSHEET_JSON,
+    aqp1_external_operator_staging_apply_path: str = DEFAULT_AQP1_EXTERNAL_OPERATOR_STAGING_APPLY_JSON,
     production_ai_registry_promotion_operator_receipt_path: str = (
         DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_OPERATOR_RECEIPT_JSON
     ),
@@ -508,6 +523,9 @@ def build_product_commercial_readiness_operator_packet(
     production_ai_registry_priority = _summary(
         production_ai_registry_promotion_priority_packet or {}
     )
+    aqp1_external_fill_guide = _summary(aqp1_external_operator_fill_guide_packet or {})
+    aqp1_external_worksheet = _summary(aqp1_external_operator_worksheet_packet or {})
+    aqp1_external_staging_apply = _summary(aqp1_external_operator_staging_apply_packet or {})
     raw_rows = summary.get("commercial_readiness_next_action_matrix")
     source_rows = [dict(row) for row in (raw_rows or []) if isinstance(row, dict)]
     rows = [
@@ -1479,6 +1497,73 @@ def build_product_commercial_readiness_operator_packet(
                     "product_scope_transporter_p0_operator_validation_candidate_required_decision_field_count"
                 )
             ),
+            "product_scope_transporter_p0_external_operator_artifacts": [
+                aqp1_external_operator_fill_guide_path,
+                aqp1_external_operator_worksheet_path,
+                aqp1_external_operator_staging_apply_path,
+            ],
+            "product_scope_transporter_p0_external_operator_fill_guide_artifact": (
+                aqp1_external_operator_fill_guide_path
+            ),
+            "product_scope_transporter_p0_external_operator_fill_guide_status": _text(
+                aqp1_external_fill_guide.get("status")
+            ),
+            "product_scope_transporter_p0_external_operator_fill_guide_ready": bool(
+                aqp1_external_fill_guide.get("status")
+                == "aqp1_direct_binding_external_evidence_operator_fill_guide_ready"
+            ),
+            "product_scope_transporter_p0_external_operator_fill_guide_row_count": _int(
+                aqp1_external_fill_guide.get("operator_fill_row_count")
+            ),
+            "product_scope_transporter_p0_external_operator_fill_guide_next_required_step": _text(
+                aqp1_external_fill_guide.get("next_required_step")
+            ),
+            "product_scope_transporter_p0_external_operator_worksheet_artifact": (
+                aqp1_external_operator_worksheet_path
+            ),
+            "product_scope_transporter_p0_external_operator_worksheet_status": _text(
+                aqp1_external_worksheet.get("status")
+            ),
+            "product_scope_transporter_p0_external_operator_worksheet_ready": bool(
+                aqp1_external_worksheet.get("status")
+                == "aqp1_direct_binding_external_evidence_operator_worksheet_ready"
+            ),
+            "product_scope_transporter_p0_external_operator_worksheet_field_row_count": _int(
+                aqp1_external_worksheet.get("worksheet_field_row_count")
+            ),
+            "product_scope_transporter_p0_external_operator_worksheet_pending_field_count": _int(
+                aqp1_external_worksheet.get("operator_fill_pending_field_count")
+            ),
+            "product_scope_transporter_p0_external_operator_worksheet_validation_error_count": _int(
+                aqp1_external_worksheet.get("validation_error_count")
+            ),
+            "product_scope_transporter_p0_external_operator_worksheet_supplement_csv": _text(
+                aqp1_external_worksheet.get("supplement_csv")
+            ),
+            "product_scope_transporter_p0_external_operator_worksheet_next_required_step": _text(
+                aqp1_external_worksheet.get("next_required_step")
+            ),
+            "product_scope_transporter_p0_external_operator_staging_apply_artifact": (
+                aqp1_external_operator_staging_apply_path
+            ),
+            "product_scope_transporter_p0_external_operator_staging_apply_status": _text(
+                aqp1_external_staging_apply.get("status")
+            ),
+            "product_scope_transporter_p0_external_operator_staging_apply_mode": _text(
+                aqp1_external_staging_apply.get("mode")
+            ),
+            "product_scope_transporter_p0_external_operator_staging_apply_live_apply_allowed": bool(
+                aqp1_external_staging_apply.get("live_apply_allowed") is True
+            ),
+            "product_scope_transporter_p0_external_operator_staging_apply_validation_error_count": _int(
+                aqp1_external_staging_apply.get("validation_error_count")
+            ),
+            "product_scope_transporter_p0_external_operator_staging_apply_claim_safe_approved_count": _int(
+                aqp1_external_staging_apply.get("staging_claim_safe_approved_count")
+            ),
+            "product_scope_transporter_p0_external_operator_staging_apply_next_required_step": _text(
+                aqp1_external_staging_apply.get("next_required_step")
+            ),
         }
     )
     goal_scope_aliases = {
@@ -1654,6 +1739,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--scope-closure-packet-json", default=DEFAULT_SCOPE_CLOSURE_PACKET_JSON)
     parser.add_argument("--aqp1-direct-binding-procurement-json", default=DEFAULT_AQP1_DIRECT_BINDING_PROCUREMENT_JSON)
     parser.add_argument(
+        "--aqp1-external-operator-fill-guide-json",
+        default=DEFAULT_AQP1_EXTERNAL_OPERATOR_FILL_GUIDE_JSON,
+    )
+    parser.add_argument(
+        "--aqp1-external-operator-worksheet-json",
+        default=DEFAULT_AQP1_EXTERNAL_OPERATOR_WORKSHEET_JSON,
+    )
+    parser.add_argument(
+        "--aqp1-external-operator-staging-apply-json",
+        default=DEFAULT_AQP1_EXTERNAL_OPERATOR_STAGING_APPLY_JSON,
+    )
+    parser.add_argument(
         "--production-ai-registry-promotion-operator-receipt-json",
         default=DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_OPERATOR_RECEIPT_JSON,
     )
@@ -1676,6 +1773,15 @@ def main(argv: list[str] | None = None) -> None:
         aqp1_direct_binding_procurement_packet=_read_json_if_present(
             args.aqp1_direct_binding_procurement_json
         ),
+        aqp1_external_operator_fill_guide_packet=_read_json_if_present(
+            args.aqp1_external_operator_fill_guide_json
+        ),
+        aqp1_external_operator_worksheet_packet=_read_json_if_present(
+            args.aqp1_external_operator_worksheet_json
+        ),
+        aqp1_external_operator_staging_apply_packet=_read_json_if_present(
+            args.aqp1_external_operator_staging_apply_json
+        ),
         production_ai_registry_promotion_operator_receipt_packet=_read_json_if_present(
             args.production_ai_registry_promotion_operator_receipt_json
         ),
@@ -1686,6 +1792,9 @@ def main(argv: list[str] | None = None) -> None:
         delta_force_closure_packet_path=args.delta_force_closure_packet_json,
         scope_closure_packet_path=args.scope_closure_packet_json,
         aqp1_direct_binding_procurement_path=args.aqp1_direct_binding_procurement_json,
+        aqp1_external_operator_fill_guide_path=args.aqp1_external_operator_fill_guide_json,
+        aqp1_external_operator_worksheet_path=args.aqp1_external_operator_worksheet_json,
+        aqp1_external_operator_staging_apply_path=args.aqp1_external_operator_staging_apply_json,
         production_ai_registry_promotion_operator_receipt_path=(
             args.production_ai_registry_promotion_operator_receipt_json
         ),

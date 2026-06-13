@@ -624,6 +624,42 @@ def _aqp1_procurement() -> dict:
     }
 
 
+def _aqp1_external_fill_guide() -> dict:
+    return {
+        "summary": {
+            "status": "aqp1_direct_binding_external_evidence_operator_fill_guide_ready",
+            "operator_fill_row_count": 3,
+            "next_required_step": "Fill exact AQP1 direct-binding evidence rows.",
+        }
+    }
+
+
+def _aqp1_external_worksheet() -> dict:
+    return {
+        "summary": {
+            "status": "aqp1_direct_binding_external_evidence_operator_worksheet_ready",
+            "worksheet_field_row_count": 42,
+            "operator_fill_pending_field_count": 19,
+            "validation_error_count": 0,
+            "supplement_csv": "runs/aqp1_direct_binding_external_evidence_intake_supplement_current.csv",
+            "next_required_step": "Complete every operator_fill_pending field.",
+        }
+    }
+
+
+def _aqp1_external_staging_apply() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_aqp1_operator_staging_apply",
+            "mode": "preview",
+            "live_apply_allowed": False,
+            "validation_error_count": 2,
+            "staging_claim_safe_approved_count": 0,
+            "next_required_step": "Replace illustrative placeholders with verified direct Kd/Ki.",
+        }
+    }
+
+
 def _registry_receipt() -> dict:
     return {
         "summary": {
@@ -699,6 +735,9 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
     payload = mod.build_product_commercial_readiness_operator_packet(
         goal_audit_packet=_goal_audit(),
         aqp1_direct_binding_procurement_packet=_aqp1_procurement(),
+        aqp1_external_operator_fill_guide_packet=_aqp1_external_fill_guide(),
+        aqp1_external_operator_worksheet_packet=_aqp1_external_worksheet(),
+        aqp1_external_operator_staging_apply_packet=_aqp1_external_staging_apply(),
         production_ai_registry_promotion_operator_receipt_packet=_registry_receipt(),
         production_ai_registry_promotion_priority_packet=_registry_priority(),
         delta_force_closure_packet={
@@ -959,6 +998,32 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
     assert "functional_quantitative_surrogate_is_review_only" in summary[
         "first_parallelizable_action_next_slot_source_modality_guardrails"
     ]
+    assert summary["product_scope_transporter_p0_external_operator_artifacts"] == [
+        "runs/aqp1_direct_binding_external_evidence_operator_fill_guide_current.json",
+        "runs/aqp1_direct_binding_external_evidence_operator_worksheet_current.json",
+        "runs/aqp1_direct_binding_external_evidence_operator_staging_apply_current.json",
+    ]
+    assert summary[
+        "product_scope_transporter_p0_external_operator_fill_guide_ready"
+    ] is True
+    assert summary[
+        "product_scope_transporter_p0_external_operator_fill_guide_row_count"
+    ] == 3
+    assert summary[
+        "product_scope_transporter_p0_external_operator_worksheet_pending_field_count"
+    ] == 19
+    assert summary[
+        "product_scope_transporter_p0_external_operator_worksheet_supplement_csv"
+    ] == "runs/aqp1_direct_binding_external_evidence_intake_supplement_current.csv"
+    assert summary[
+        "product_scope_transporter_p0_external_operator_staging_apply_live_apply_allowed"
+    ] is False
+    assert summary[
+        "product_scope_transporter_p0_external_operator_staging_apply_validation_error_count"
+    ] == 2
+    assert summary[
+        "product_goal_scope_transporter_p0_external_operator_worksheet_pending_field_count"
+    ] == 19
     assert summary["first_action_id"] == "production_gpu_execution_environment"
     assert summary["first_artifact"] == "runs/rocm_environment_manifest_current.json"
     assert summary["first_execution_command"] == "python3 tools/build_rocm_environment_manifest.py"

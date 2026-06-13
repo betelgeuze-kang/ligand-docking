@@ -2318,7 +2318,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         "config/product_scope_breadth_evidence_receipt_current.csv"
     )
     assert handoff_bundle["artifact_reference_contract_ready"] is True
-    assert handoff_bundle["artifact_reference_count"] == 34
+    assert handoff_bundle["artifact_reference_count"] == 37
     assert handoff_bundle["local_missing_artifact_reference_count"] == 0
     assert handoff_bundle["operator_return_artifact_reference_count"] >= 4
     assert handoff_bundle["operator_return_pending_artifact_reference_count"] >= 1
@@ -2666,7 +2666,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     ] == "AQP1.core_binder_01"
 
     assert completion["commercial_readiness_handoff_bundle_ready"] is True
-    assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 34
+    assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 37
     assert completion["commercial_readiness_handoff_bundle_operator_return_pending_artifact_reference_count"] == 1
     assert completion["commercial_readiness_next_action_matrix_ready"] is True
     assert completion["commercial_readiness_next_action_matrix_count"] == 6
