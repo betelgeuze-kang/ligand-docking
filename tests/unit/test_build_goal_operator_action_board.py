@@ -1180,7 +1180,19 @@ def test_goal_operator_action_board_surfaces_accuracy_ligand_ranking_action() ->
 
     summary = payload["summary"]
     assert summary["product_accuracy_parity_action_count"] == 1
+    assert summary["product_accuracy_parity_ligand_ranking_action_id"] == (
+        "product_accuracy_parity:repair_ligand_ranking_parity"
+    )
     assert summary["product_accuracy_parity_ligand_ranking_action_present"] is True
+    assert summary["product_accuracy_parity_ligand_ranking_required_input"] == (
+        "ACCURACY:ligand_ranking"
+    )
+    assert summary["product_accuracy_parity_ligand_ranking_artifact_path"] == (
+        "runs/accuracy_parity_scorecard_current.json"
+    )
+    assert "Schrodinger-class ligand-ranking claim" in summary[
+        "product_accuracy_parity_ligand_ranking_recommended_action"
+    ]
     assert summary["product_accuracy_parity_scorecard_status"] == "blocked_accuracy_parity"
     assert summary["product_accuracy_parity_ligand_ranking_status"] == "blocked"
     assert summary["product_accuracy_parity_ligand_ranking_blocker_count"] == 4

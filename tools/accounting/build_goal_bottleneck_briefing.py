@@ -910,6 +910,21 @@ def build_goal_bottleneck_briefing(
         "science_claim_promotion_gap_closure_current_next_action": _text(
             intake.get("science_claim_promotion_gap_closure_current_next_action")
         ),
+        "product_accuracy_parity_ligand_ranking_action_id": _text(
+            intake.get("product_accuracy_parity_ligand_ranking_action_id")
+        ),
+        "product_accuracy_parity_ligand_ranking_action_present": bool(
+            intake.get("product_accuracy_parity_ligand_ranking_action_present") is True
+        ),
+        "product_accuracy_parity_ligand_ranking_required_input": _text(
+            intake.get("product_accuracy_parity_ligand_ranking_required_input")
+        ),
+        "product_accuracy_parity_ligand_ranking_artifact_path": _text(
+            intake.get("product_accuracy_parity_ligand_ranking_artifact_path")
+        ),
+        "product_accuracy_parity_ligand_ranking_recommended_action": _text(
+            intake.get("product_accuracy_parity_ligand_ranking_recommended_action")
+        ),
         "accuracy_parity_ligand_ranking_status": _text(
             intake.get("accuracy_parity_ligand_ranking_status")
         ),

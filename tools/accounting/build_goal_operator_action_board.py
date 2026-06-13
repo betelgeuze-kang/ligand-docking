@@ -1388,10 +1388,25 @@ def build_action_board(
         "product_accuracy_parity_action_count": sum(
             1 for row in rows if row["lane_id"] == "product_accuracy_parity"
         ),
+        "product_accuracy_parity_ligand_ranking_action_id": (
+            f"{_text(accuracy_ligand_action.get('lane_id'))}:"
+            f"{_text(accuracy_ligand_action.get('action_type'))}"
+            if accuracy_ligand_action
+            else ""
+        ),
         "product_accuracy_parity_ligand_ranking_action_present": any(
             row["lane_id"] == "product_accuracy_parity"
             and row["action_type"] == "repair_ligand_ranking_parity"
             for row in rows
+        ),
+        "product_accuracy_parity_ligand_ranking_required_input": _text(
+            accuracy_ligand_action.get("required_input")
+        ),
+        "product_accuracy_parity_ligand_ranking_artifact_path": _text(
+            accuracy_ligand_action.get("artifact_path")
+        ),
+        "product_accuracy_parity_ligand_ranking_recommended_action": _text(
+            accuracy_ligand_action.get("recommended_action")
         ),
         "product_accuracy_parity_scorecard_status": _text(
             accuracy_scorecard_summary.get("status")

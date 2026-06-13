@@ -1318,6 +1318,15 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["product_accuracy_parity_ligand_ranking_action_present"] is (
         actions_artifact.get("product_accuracy_parity_ligand_ranking_action_present") is True
     )
+    assert status["product_accuracy_parity_ligand_ranking_required_input"] == (
+        actions_artifact.get("product_accuracy_parity_ligand_ranking_required_input")
+    )
+    assert status["product_accuracy_parity_ligand_ranking_artifact_path"] == (
+        actions_artifact.get("product_accuracy_parity_ligand_ranking_artifact_path")
+    )
+    assert status["product_accuracy_parity_ligand_ranking_recommended_action"] == (
+        actions_artifact.get("product_accuracy_parity_ligand_ranking_recommended_action")
+    )
     assert status["product_accuracy_parity_scorecard_status"] == actions_artifact.get(
         "product_accuracy_parity_scorecard_status"
     )

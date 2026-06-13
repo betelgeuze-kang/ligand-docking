@@ -2042,6 +2042,9 @@ async def get_goal_status() -> dict[str, Any]:
             "product_accuracy_parity_action_count": 0,
             "product_accuracy_parity_ligand_ranking_action_id": "",
             "product_accuracy_parity_ligand_ranking_action_present": False,
+            "product_accuracy_parity_ligand_ranking_required_input": "",
+            "product_accuracy_parity_ligand_ranking_artifact_path": "",
+            "product_accuracy_parity_ligand_ranking_recommended_action": "",
             "product_accuracy_parity_scorecard_status": "",
             "product_accuracy_parity_ligand_ranking_action_status": "",
             "product_accuracy_parity_ligand_ranking_blocker_count": 0,
@@ -2452,12 +2455,24 @@ async def get_goal_status() -> dict[str, Any]:
             actions.get("product_accuracy_parity_action_count")
         ),
         "product_accuracy_parity_ligand_ranking_action_id": (
-            "product_accuracy_parity:repair_ligand_ranking_parity"
-            if actions.get("product_accuracy_parity_ligand_ranking_action_present") is True
-            else ""
+            actions.get("product_accuracy_parity_ligand_ranking_action_id")
+            or (
+                "product_accuracy_parity:repair_ligand_ranking_parity"
+                if actions.get("product_accuracy_parity_ligand_ranking_action_present") is True
+                else ""
+            )
         ),
         "product_accuracy_parity_ligand_ranking_action_present": bool(
             actions.get("product_accuracy_parity_ligand_ranking_action_present") is True
+        ),
+        "product_accuracy_parity_ligand_ranking_required_input": actions.get(
+            "product_accuracy_parity_ligand_ranking_required_input", ""
+        ),
+        "product_accuracy_parity_ligand_ranking_artifact_path": actions.get(
+            "product_accuracy_parity_ligand_ranking_artifact_path", ""
+        ),
+        "product_accuracy_parity_ligand_ranking_recommended_action": actions.get(
+            "product_accuracy_parity_ligand_ranking_recommended_action", ""
         ),
         "product_accuracy_parity_scorecard_status": actions.get(
             "product_accuracy_parity_scorecard_status", ""

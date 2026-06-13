@@ -55,6 +55,17 @@ def _action_board() -> dict:
                 "ACCURACY:ligand_ranking",
             ],
             "full_commercial_release_next_required_step": "Fill the R8/R9 receipt CSVs.",
+            "product_accuracy_parity_ligand_ranking_action_id": (
+                "product_accuracy_parity:repair_ligand_ranking_parity"
+            ),
+            "product_accuracy_parity_ligand_ranking_action_present": True,
+            "product_accuracy_parity_ligand_ranking_required_input": "ACCURACY:ligand_ranking",
+            "product_accuracy_parity_ligand_ranking_artifact_path": (
+                "runs/accuracy_parity_scorecard_current.json"
+            ),
+            "product_accuracy_parity_ligand_ranking_recommended_action": (
+                "Repair DRD2/HTR2A/OPRM1 pose-supported ranking."
+            ),
             "science_claim_promotion_gap_closure_open_gap_ids": [
                 "SCI-GPCR",
                 "SCI-OPENMM",
@@ -562,6 +573,16 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
         "science_claim_promotion_gap_closure_current_next_action"
     ]
     assert summary["accuracy_parity_ligand_ranking_status"] == "blocked"
+    assert summary["product_accuracy_parity_ligand_ranking_action_id"] == (
+        "product_accuracy_parity:repair_ligand_ranking_parity"
+    )
+    assert summary["product_accuracy_parity_ligand_ranking_action_present"] is True
+    assert summary["product_accuracy_parity_ligand_ranking_required_input"] == (
+        "ACCURACY:ligand_ranking"
+    )
+    assert summary["product_accuracy_parity_ligand_ranking_artifact_path"] == (
+        "runs/accuracy_parity_scorecard_current.json"
+    )
     assert summary["accuracy_parity_ligand_ranking_pr_auc"] == 0.15749
     assert summary["accuracy_parity_ligand_ranking_pr_auc_ci_low"] == 0.001347
     assert summary["accuracy_parity_ligand_ranking_topk_hit_rate"] == 0.1
