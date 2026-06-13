@@ -409,6 +409,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         for spec in mod.DEFAULT_STATUS_SPECS
         if spec["artifact_id"] == "goal_bottleneck_briefing_semantic_ready"
     )
+    assert bottleneck_status_spec["required_true_fields"] == [
+        "production_ai_registry_promotion_priority_packet_ready"
+    ]
     assert bottleneck_status_spec["required_int_exact_fields"] == {
         "completion_audit_release_blocker_bottleneck_count": 2,
         "full_commercial_evidence_receipt_entry_count": 2,
@@ -417,6 +420,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "full_commercial_evidence_receipt_template_required_count": 2,
         "full_commercial_evidence_receipt_template_present_count": 2,
         "full_commercial_evidence_receipt_approval_token_count": 2,
+        "production_ai_registry_promotion_priority_operator_input_required_count": 4,
+        "production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
+        "production_ai_registry_promotion_priority_missing_gate_count": 4,
     }
     assert bottleneck_status_spec["required_text_exact_fields"][
         "full_commercial_evidence_receipt_required_inputs"
@@ -424,6 +430,15 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "config/product_scope_breadth_evidence_receipt_current.csv;"
         "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
     )
+    assert bottleneck_status_spec["required_text_exact_fields"][
+        "production_ai_registry_promotion_priority_source_json"
+    ] == "runs/production_ai_registry_promotion_priority_packet_current.json"
+    assert bottleneck_status_spec["required_text_exact_fields"][
+        "production_ai_registry_promotion_priority_status"
+    ] == "blocked_production_ai_registry_promotion_priority_packet"
+    assert bottleneck_status_spec["required_text_exact_fields"][
+        "production_ai_registry_promotion_priority_top_gate_id"
+    ] == "trained_model_checkpoint_count_positive"
     full_matrix_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS

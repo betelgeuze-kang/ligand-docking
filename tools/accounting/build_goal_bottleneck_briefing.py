@@ -116,6 +116,26 @@ FULL_COMMERCIAL_EVIDENCE_RECEIPT_INTAKE_FIELDS = (
     "approval_tokens",
 )
 
+PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_INTAKE_FIELDS = (
+    "source_json",
+    "status",
+    "packet_ready",
+    "registry_promotion_ready",
+    "operator_input_required_count",
+    "blocked_priority_item_count",
+    "missing_gate_count",
+    "missing_gate_ids",
+    "top_gate_id",
+    "top_priority_bucket",
+    "top_required_input",
+    "top_acceptance_artifact",
+    "top_verification_command",
+    "top_next_operator_step",
+    "model_promoted",
+    "customer_facing_mutation_enabled",
+    "external_state_mutated",
+)
+
 
 def _full_commercial_evidence_receipt_intake_fields(intake: dict[str, Any]) -> dict[str, Any]:
     fields: dict[str, Any] = {}
@@ -124,6 +144,32 @@ def _full_commercial_evidence_receipt_intake_fields(intake: dict[str, Any]) -> d
         if suffix.endswith("_count"):
             fields[source_key] = _int(intake.get(source_key))
         elif suffix == "entry_ids":
+            value = intake.get(source_key)
+            fields[source_key] = (
+                [str(item) for item in value if str(item).strip()]
+                if isinstance(value, list)
+                else _unique([value])
+            )
+        else:
+            fields[source_key] = _text(intake.get(source_key))
+    return fields
+
+
+def _production_ai_registry_promotion_priority_intake_fields(intake: dict[str, Any]) -> dict[str, Any]:
+    fields: dict[str, Any] = {}
+    for suffix in PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_INTAKE_FIELDS:
+        source_key = f"production_ai_registry_promotion_priority_{suffix}"
+        if suffix.endswith("_count"):
+            fields[source_key] = _int(intake.get(source_key))
+        elif suffix in {
+            "packet_ready",
+            "registry_promotion_ready",
+            "model_promoted",
+            "customer_facing_mutation_enabled",
+            "external_state_mutated",
+        }:
+            fields[source_key] = bool(intake.get(source_key) is True)
+        elif suffix == "missing_gate_ids":
             value = intake.get(source_key)
             fields[source_key] = (
                 [str(item) for item in value if str(item).strip()]
@@ -743,6 +789,7 @@ def build_goal_bottleneck_briefing(
             intake.get("release_burndown_linked_entry_count")
         ),
         **_full_commercial_evidence_receipt_intake_fields(intake),
+        **_production_ai_registry_promotion_priority_intake_fields(intake),
         "public_benchmark_work_order_status": _text(public_benchmark_work_order.get("status")),
         "public_benchmark_work_order_json": public_benchmark_work_order_path,
         "public_benchmark_open_suite_count": _int(public_benchmark_work_order.get("open_suite_count")),
@@ -953,6 +1000,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- cleanup_ligand_heavy_candidate_size_gb: `{s['cleanup_ligand_heavy_candidate_size_gb']}`",
         f"- protected_cleanup_payload_size_gb: `{s['protected_cleanup_payload_size_gb']}`",
         f"- approval_tokens_required: `{';'.join(s['approval_tokens_required'])}`",
+        f"- production_ai_registry_promotion_priority_status: `{s['production_ai_registry_promotion_priority_status']}`",
+        f"- production_ai_registry_promotion_priority_top_gate_id: `{s['production_ai_registry_promotion_priority_top_gate_id']}`",
+        f"- production_ai_registry_promotion_priority_top_required_input: `{s['production_ai_registry_promotion_priority_top_required_input']}`",
         f"- public_benchmark_work_order_status: `{s['public_benchmark_work_order_status']}`",
         f"- public_benchmark_open_suite_count: `{s['public_benchmark_open_suite_count']}`",
         f"- public_benchmark_materialization_required_suite_count: `{s['public_benchmark_materialization_required_suite_count']}`",

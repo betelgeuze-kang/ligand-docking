@@ -607,6 +607,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
   `product_full_commercial_blocker_evidence_matrix_current.json`,
   `production_ai_registry_promotion_operator_receipt_current.json`,
+  `production_ai_registry_promotion_priority_packet_current.json`,
   `product_pose_sampling_readiness_current.json`,
   `refine_tier_public_benchmark_readiness_current.json`,
   `refine_tier_public_benchmark_work_order_apply_current.json`,
@@ -637,7 +638,12 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   checkpoint/promotion workbench는 현재 `shadow`/blocked 상태를 semantic-ready row로
   검증한다. API runner profile operator receipt, production AI registry promotion
   operator receipt, production AI registry promotion priority packet도 blocked 상태,
-  첫 row blocker, 첫 priority gate를 semantic-ready row로 검증한다.
+  첫 row blocker, 첫 priority gate를 semantic-ready row로 검증한다. 같은 priority
+  top gate는 `goal_operator_intake_kit_current/manifest.json` summary와
+  `goal_bottleneck_briefing_current.json` summary에도
+  `production_ai_registry_promotion_priority_*` 필드로 흡수되며, source-of-truth의
+  intake-kit/bottleneck semantic rows가 packet ready, 4개 missing gate, top gate
+  `trained_model_checkpoint_count_positive`를 exact field로 검증한다.
   최신 goal API surface contract는 `check_count=9`,
   `pass_count=9`, `missing_full_commercial_visibility_token_count=0`이다.
   source-of-truth의 `goal_api_surface_contract_semantic_ready` row도
@@ -757,12 +763,12 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   workbench/operator receipt를 재검증하는 일로 고정된다. 이 priority packet도
   `model_promoted=false`, `customer_facing_mutation_enabled=false`,
   `external_state_mutated=false`로 fail-closed다.
-  이 priority packet summary는 이제 상용 readiness operator packet, execution
-  ladder, handoff bundle, `/goal/status`까지
+  이 priority packet summary는 이제 goal operator intake kit, bottleneck briefing,
+  상용 readiness operator packet, execution ladder, handoff bundle, `/goal/status`까지
   `production_ai_registry_promotion_priority_*` 필드로 전파된다. release bundle과
   source-of-truth gate도 같은 artifact를 required/depends-on 항목으로 추적해,
-  Production AI registry promotion의 첫 gate가 상위 handoff나 최종 릴리즈
-  freshness 검사 밖으로 빠지지 않는다.
+  Production AI registry promotion의 첫 gate가 operator intake, 병목 브리핑,
+  상위 handoff, 최종 릴리즈 freshness 검사 밖으로 빠지지 않는다.
   `/product/commercial-readiness-operator-packet`,
   `/product/commercial-readiness-execution-ladder`,
   `/product/commercial-readiness-handoff-bundle`,

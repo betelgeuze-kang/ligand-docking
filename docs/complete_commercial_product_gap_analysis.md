@@ -250,7 +250,10 @@
   `full_commercial_evidence_receipt_*` 필드로 집계해 entry count 2, template present
   2/2, approval token 2개, source gate statuses, required input CSVs를 직접 노출하고
   `goal_bottleneck_briefing_current.json`도 같은 summary를 흡수해 R8/R9
-  completion-audit 병목에서 operator receipt handoff가 누락되지 않게 한다.
+  completion-audit 병목에서 operator receipt handoff가 누락되지 않게 한다. 같은
+  intake/bottleneck summaries는 Production AI registry promotion priority의
+  `trained_model_checkpoint_count_positive` top gate도
+  `production_ai_registry_promotion_priority_*` 필드로 전달한다.
   `/goal/status`도 이를 `operator_intake_kit_full_commercial_evidence_receipt_*` 및
   `bottleneck_briefing_full_commercial_evidence_receipt_*` 키로 전달한다.
   같은 R8 receipt 상태는
@@ -464,8 +467,9 @@
   promotion의 첫 운영 조치는 trained production residual checkpoint를 registry에
   등록하고 residual registry/checkpoint-readiness/promotion workbench/operator receipt를
   재검증하는 일이며, guarded mode, production promotion policy, customer-facing mutation
-  flags는 그 뒤의 fail-closed gate로 남는다. 이 priority packet summary는 상용
-  readiness operator packet, execution ladder, handoff bundle, `/goal/status`까지
+  flags는 그 뒤의 fail-closed gate로 남는다. 이 priority packet summary는
+  goal operator intake kit, bottleneck briefing, 상용 readiness operator packet,
+  execution ladder, handoff bundle, `/goal/status`까지
   `production_ai_registry_promotion_priority_*` 필드로 전파되며, release bundle과
   source-of-truth gate의 required/depends-on artifact로도 고정된다.
   `/product/commercial-readiness-operator-packet`,

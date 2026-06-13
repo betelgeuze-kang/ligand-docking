@@ -203,6 +203,44 @@ def _intake_kit() -> dict:
                 "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT;"
                 "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
             ),
+            "production_ai_registry_promotion_priority_source_json": (
+                "runs/production_ai_registry_promotion_priority_packet_current.json"
+            ),
+            "production_ai_registry_promotion_priority_status": (
+                "blocked_production_ai_registry_promotion_priority_packet"
+            ),
+            "production_ai_registry_promotion_priority_packet_ready": True,
+            "production_ai_registry_promotion_priority_registry_promotion_ready": False,
+            "production_ai_registry_promotion_priority_operator_input_required_count": 4,
+            "production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
+            "production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "production_ai_registry_promotion_priority_missing_gate_ids": [
+                "trained_model_checkpoint_count_positive",
+                "default_residual_mode_guarded",
+                "production_promotion_allowed",
+                "customer_facing_mutation_flags",
+            ],
+            "production_ai_registry_promotion_priority_top_gate_id": (
+                "trained_model_checkpoint_count_positive"
+            ),
+            "production_ai_registry_promotion_priority_top_priority_bucket": (
+                "trained_checkpoint_registration_required"
+            ),
+            "production_ai_registry_promotion_priority_top_required_input": (
+                "Register a trained production residual checkpoint."
+            ),
+            "production_ai_registry_promotion_priority_top_acceptance_artifact": (
+                "runs/residual_model_registry_current.json"
+            ),
+            "production_ai_registry_promotion_priority_top_verification_command": (
+                "python3 tools/build_residual_model_registry.py"
+            ),
+            "production_ai_registry_promotion_priority_top_next_operator_step": (
+                "Return or register a trained checkpoint."
+            ),
+            "production_ai_registry_promotion_priority_model_promoted": False,
+            "production_ai_registry_promotion_priority_customer_facing_mutation_enabled": False,
+            "production_ai_registry_promotion_priority_external_state_mutated": False,
         },
         "rows": [
             {
@@ -408,6 +446,12 @@ def test_goal_bottleneck_briefing_links_release_blockers_to_intake_and_actions()
     assert summary["cleanup_ligand_heavy_candidate_size_gb"] == 6.011
     assert summary["protected_cleanup_payload_size_gb"] == 396.794
     assert summary["operator_intake_kit_release_burndown_linked_entry_count"] == 4
+    assert summary["production_ai_registry_promotion_priority_status"] == (
+        "blocked_production_ai_registry_promotion_priority_packet"
+    )
+    assert summary["production_ai_registry_promotion_priority_top_gate_id"] == (
+        "trained_model_checkpoint_count_positive"
+    )
     assert summary["primary_action_id"] == "product_ai_production:return_gpu_force_regeneration_receipt"
     assert summary["top_action_id"] == summary["primary_action_id"]
     assert summary["primary_action_priority"] == 0
@@ -547,6 +591,28 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
     assert "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT" in summary[
         "full_commercial_evidence_receipt_approval_tokens"
     ]
+    assert summary["production_ai_registry_promotion_priority_status"] == (
+        "blocked_production_ai_registry_promotion_priority_packet"
+    )
+    assert summary["production_ai_registry_promotion_priority_packet_ready"] is True
+    assert summary["production_ai_registry_promotion_priority_registry_promotion_ready"] is False
+    assert summary["production_ai_registry_promotion_priority_operator_input_required_count"] == 4
+    assert summary["production_ai_registry_promotion_priority_blocked_priority_item_count"] == 4
+    assert summary["production_ai_registry_promotion_priority_missing_gate_count"] == 4
+    assert summary["production_ai_registry_promotion_priority_missing_gate_ids"] == [
+        "trained_model_checkpoint_count_positive",
+        "default_residual_mode_guarded",
+        "production_promotion_allowed",
+        "customer_facing_mutation_flags",
+    ]
+    assert summary["production_ai_registry_promotion_priority_top_gate_id"] == (
+        "trained_model_checkpoint_count_positive"
+    )
+    assert summary["production_ai_registry_promotion_priority_top_priority_bucket"] == (
+        "trained_checkpoint_registration_required"
+    )
+    assert summary["production_ai_registry_promotion_priority_model_promoted"] is False
+    assert summary["production_ai_registry_promotion_priority_external_state_mutated"] is False
     assert summary["bottleneck_count"] == 2
     assert summary["current_bottleneck_count"] == 2
     assert summary["kind_counts"]["scientific_scope_evidence_required"] == 1
