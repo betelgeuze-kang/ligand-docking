@@ -741,10 +741,25 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `observed_registry_default_residual_mode=shadow`,
   `observed_registry_trained_model_checkpoint_count=0`으로 fail-closed 상태를 기록하며,
   registry/checkpoint-readiness artifact와 CSV 입력값이 일치하지 않으면 ready가 되지 않는다.
+  `runs/production_ai_registry_promotion_priority_packet_current.json`은 같은 병목을
+  operator 실행 순서로 다시 분해해
+  `blocked_production_ai_registry_promotion_priority_packet`,
+  `priority_packet_ready=true`, `priority_item_count=4`,
+  `operator_input_required_count=4`, `top_gate_id=trained_model_checkpoint_count_positive`,
+  `top_priority_bucket=trained_checkpoint_registration_required`,
+  `registry_promotion_missing_gate_ids=[trained_model_checkpoint_count_positive,
+  default_residual_mode_guarded, production_promotion_allowed,
+  customer_facing_mutation_flags]`를 기록한다. 따라서 Production AI promotion의 첫
+  실제 조치는 shadow registry를 바로 켜는 일이 아니라, trained production residual
+  checkpoint를 registry에 등록하고 residual registry/checkpoint-readiness/promotion
+  workbench/operator receipt를 재검증하는 일로 고정된다. 이 priority packet도
+  `model_promoted=false`, `customer_facing_mutation_enabled=false`,
+  `external_state_mutated=false`로 fail-closed다.
   `/product/commercial-readiness-operator-packet`,
   `/product/commercial-readiness-execution-ladder`,
   `/product/commercial-readiness-handoff-bundle`,
-  `/product/production-ai-registry-promotion-operator-receipt`은
+  `/product/production-ai-registry-promotion-operator-receipt`,
+  `/product/production-ai-registry-promotion-priority`는
   `production_ai_registry_promotion_*` alias, completion packet,
   `production_ai_registry_promotion_operator_receipt_*` status/token/observed blocker
   fields를 그대로 전달한다. `/goal/status`도 같은
@@ -1131,11 +1146,11 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 - release source-of-truth gate는 R4 preflight, R4 rollout smoke receipt artifact,
   R8 scope-breadth receipt, goal operator intake kit, commercial readiness execution
   ladder, API/bottleneck visibility, local pose sampling readiness, production AI registry promotion operator
-  receipt, CAMEO official-result fetch preflight, R9 engine-refinement claim evidence priority packet,
+  receipt/priority packet, CAMEO official-result fetch preflight, R9 engine-refinement claim evidence priority packet,
   master gap closure rollup 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=92/92`,
+  `product_release_source_of_truth_gate_ready`, `pass_count=94/94`,
   `blocker_count=0`, `stale_artifact_count=0`,
-  `release_refresh_command_count=75`으로 재검증됐다.
+  `release_refresh_command_count=76`으로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;
   다음은 operator webhook secret mount, 실제 pager provider delivery smoke,
@@ -1739,9 +1754,9 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
    force derivation validation은 ready지만, product checkpoint/promotion은
    `default_residual_mode=shadow`, `production_promotion_allowed=false`,
    `trained_model_checkpoint_count=0`으로 registry guarded promotion에서 멈춰 있다.
-   다음은 residual registry promotion, goal completion audit 재검증, validated
-   runner profile evidence/operator approval, 고객 요청 경로의 score/ranking
-   mutation policy 검증.
+   priority packet 기준 첫 조치는 `trained_model_checkpoint_count_positive`를
+   만족시키는 trained checkpoint 등록이며, 이후 guarded mode, production promotion
+   policy, customer-facing mutation flags를 순서대로 재검증해야 한다.
 3. **License 결정 + LICENSE 파일 작성** — LICENSE/source hash 일치,
    license decision/work-order/commercial gate, self-hosted license audit, release
    bundle linkage는 1차 완료. 다음은 법률 최종 확인과 JSZip dual-license

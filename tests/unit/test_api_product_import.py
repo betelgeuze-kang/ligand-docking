@@ -56,6 +56,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "/product/production-ai-gpu-return-intake" in paths
     assert "/product/production-ai-promotion-workbench" in paths
     assert "/product/production-ai-registry-promotion-operator-receipt" in paths
+    assert "/product/production-ai-registry-promotion-priority" in paths
     assert "/product/scope-breadth-contract" in paths
     assert "/product/scope-claim-guard" in paths
     assert "/product/scope-evidence-priority" in paths
@@ -1148,6 +1149,39 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert registry_receipt["docking_results_emitted"] is False
     assert registry_receipt["external_state_mutated"] is False
     assert registry_receipt["model_promoted"] is False
+
+    registry_priority = asyncio.run(product.get_product_production_ai_registry_promotion_priority())
+    assert registry_priority["status"] == "blocked_production_ai_registry_promotion_priority_packet"
+    assert registry_priority["priority_packet_ready"] is True
+    assert registry_priority["registry_promotion_ready"] is False
+    assert registry_priority["operator_receipt_ready"] is False
+    assert registry_priority["operator_receipt_status"] == (
+        "blocked_production_ai_registry_promotion_operator_receipt"
+    )
+    assert registry_priority["priority_item_count"] == 4
+    assert registry_priority["operator_input_required_count"] == 4
+    assert registry_priority["blocked_priority_item_count"] == 4
+    assert registry_priority["registry_promotion_missing_gate_ids"] == [
+        "trained_model_checkpoint_count_positive",
+        "default_residual_mode_guarded",
+        "production_promotion_allowed",
+        "customer_facing_mutation_flags",
+    ]
+    assert registry_priority["top_gate_id"] == "trained_model_checkpoint_count_positive"
+    assert registry_priority["top_priority_bucket"] == "trained_checkpoint_registration_required"
+    assert registry_priority["top_acceptance_artifact"] == "runs/residual_model_registry_current.json"
+    assert registry_priority["observed_registry_default_residual_mode"] == "shadow"
+    assert registry_priority["observed_registry_trained_model_checkpoint_count"] == 0
+    assert registry_priority["approval_token_required"] == "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+    assert len(registry_priority["priority_items"]) == registry_priority["priority_item_count"]
+    assert registry_priority["priority_items"][0]["gate_id"] == "trained_model_checkpoint_count_positive"
+    assert registry_priority["registry_edited_by_this_tool"] is False
+    assert registry_priority["checkpoint_created_by_this_tool"] is False
+    assert registry_priority["execution_enabled"] is False
+    assert registry_priority["docking_results_emitted"] is False
+    assert registry_priority["external_state_mutated"] is False
+    assert registry_priority["model_promoted"] is False
+    assert registry_priority["customer_facing_mutation_enabled"] is False
 
     scope_breadth = asyncio.run(product.get_product_scope_breadth_contract())
     assert scope_breadth["status"] == "blocked_product_scope_breadth_contract"
@@ -2495,15 +2529,14 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     completion = asyncio.run(product.get_product_goal_completion_audit())
     assert completion["status"] == "blocked_product_goal_completion_audit"
     assert completion["goal_complete"] is False
-    assert completion["fail_count"] == 3
+    assert completion["fail_count"] == 2
     assert [row["requirement_id"] for row in completion["requirements"] if row["status"] == "fail"] == [
-        "R5_release_decision_artifacts",
         "R8_full_scope_claim_closure",
         "R9_engine_refinement_claim_promotion",
     ]
     assert completion["approval_tokens_required"] == ["APPROVE_PRODUCT_DOCKING_EXECUTION"]
-    assert completion["release_allowed"] is False
-    assert completion["release_artifact_ready"] is False
+    assert completion["release_allowed"] is True
+    assert completion["release_artifact_ready"] is True
     assert completion["local_self_hosted_product_ready"] is True
 
     assert completion["product_ai_architecture_ready"] is True

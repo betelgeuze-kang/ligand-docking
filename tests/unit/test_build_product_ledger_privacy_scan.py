@@ -21,6 +21,7 @@ def test_product_ledger_privacy_scan_defaults_include_goal_and_commercial_readin
     assert "runs/goal_bottleneck_briefing_current.json" in DEFAULT_SCAN_GLOBS
     assert "runs/product_full_commercial_blocker_evidence_matrix_current.json" in DEFAULT_SCAN_GLOBS
     assert "runs/production_ai_registry_promotion_operator_receipt_current.json" in DEFAULT_SCAN_GLOBS
+    assert "runs/production_ai_registry_promotion_priority_packet_current.json" in DEFAULT_SCAN_GLOBS
 
 
 def test_product_ledger_privacy_scan_passes_hash_only_redactions(tmp_path: Path) -> None:

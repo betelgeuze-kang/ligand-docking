@@ -138,6 +138,9 @@ PRODUCT_PRODUCTION_AI_GPU_RETURN_INTAKE_ARTIFACT = (
 PRODUCTION_AI_REGISTRY_PROMOTION_OPERATOR_RECEIPT_ARTIFACT = (
     ROOT / "runs" / "production_ai_registry_promotion_operator_receipt_current.json"
 )
+PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_ARTIFACT = (
+    ROOT / "runs" / "production_ai_registry_promotion_priority_packet_current.json"
+)
 RESIDUAL_MODEL_REGISTRY_ARTIFACT = ROOT / "runs" / "residual_model_registry_current.json"
 RESIDUAL_PRODUCTION_CHECKPOINT_WORK_ORDER_ARTIFACT = (
     ROOT / "runs" / "residual_production_checkpoint_work_order_current.json"
@@ -4514,6 +4517,160 @@ async def get_product_production_ai_registry_promotion_operator_receipt() -> dic
         "docking_results_emitted": False,
         "external_state_mutated": False,
         "model_promoted": False,
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
+@router.get("/production-ai-registry-promotion-priority")
+async def get_product_production_ai_registry_promotion_priority() -> dict[str, Any]:
+    packet = _read_json_object(PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_ARTIFACT)
+    summary = _summary(packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    if not summary:
+        return {
+            "status": "missing_production_ai_registry_promotion_priority_packet",
+            "artifact_path": str(PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_ARTIFACT),
+            "priority_packet_ready": False,
+            "registry_promotion_ready": False,
+            "operator_receipt_ready": False,
+            "operator_receipt_status": "",
+            "priority_item_count": 0,
+            "operator_input_required_count": 0,
+            "blocked_priority_item_count": 0,
+            "required_gate_count": 0,
+            "registry_promotion_missing_gate_ids": [],
+            "registry_promotion_missing_gate_count": 0,
+            "observed_checkpoint_registry_promotion_missing_gate_ids": [],
+            "observed_workbench_registry_promotion_missing_gate_ids": [],
+            "top_gate_id": "",
+            "top_priority_bucket": "",
+            "top_required_input": "",
+            "top_acceptance_artifact": "",
+            "top_verification_command": "",
+            "top_next_operator_step": "",
+            "operator_receipt_csv": "",
+            "operator_receipt_csv_present": False,
+            "operator_receipt_artifact": "",
+            "operator_receipt_artifact_present": False,
+            "residual_registry_artifact": "",
+            "residual_registry_artifact_present": False,
+            "checkpoint_readiness_artifact": "",
+            "checkpoint_readiness_artifact_present": False,
+            "promotion_workbench_artifact": "",
+            "promotion_workbench_artifact_present": False,
+            "observed_registry_default_residual_mode": "",
+            "observed_registry_trained_model_checkpoint_count": 0,
+            "observed_registry_production_promotion_allowed": False,
+            "observed_registry_customer_facing_mutation_flags_ready": False,
+            "observed_checkpoint_registry_promotion_currently_satisfied": False,
+            "approval_token_required": "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION",
+            "approval_token_count": 0,
+            "blocker_count": 1,
+            "blockers": ["production_ai_registry_promotion_priority_packet_missing"],
+            "source_artifacts": [],
+            "top_priority_items": [],
+            "priority_items": [],
+            "next_required_step": (
+                "Run python3 tools/product/build_production_ai_registry_promotion_priority_packet.py."
+            ),
+            "registry_edited_by_this_tool": False,
+            "checkpoint_created_by_this_tool": False,
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "model_promoted": False,
+            "customer_facing_mutation_enabled": False,
+            "external_state_mutated": False,
+            "claim_boundary": (
+                "Production AI registry promotion priority endpoint only; the local priority packet is missing. "
+                "It does not edit the registry, create checkpoints, enable customer-facing mutation, promote "
+                "models, run GPU jobs, deploy, upload, email, delete, commit, push, or mutate external state."
+            ),
+        }
+    sorted_rows = sorted(
+        [row for row in rows if isinstance(row, dict)],
+        key=lambda row: int(row.get("priority") or 999999),
+    )
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_ARTIFACT),
+        "priority_packet_ready": bool(summary.get("priority_packet_ready") is True),
+        "registry_promotion_ready": bool(summary.get("registry_promotion_ready") is True),
+        "operator_receipt_ready": bool(summary.get("operator_receipt_ready") is True),
+        "operator_receipt_status": summary.get("operator_receipt_status", ""),
+        "priority_item_count": int(summary.get("priority_item_count") or 0),
+        "operator_input_required_count": int(summary.get("operator_input_required_count") or 0),
+        "blocked_priority_item_count": int(summary.get("blocked_priority_item_count") or 0),
+        "required_gate_count": int(summary.get("required_gate_count") or 0),
+        "registry_promotion_missing_gate_ids": list(
+            summary.get("registry_promotion_missing_gate_ids") or []
+        ),
+        "registry_promotion_missing_gate_count": int(
+            summary.get("registry_promotion_missing_gate_count") or 0
+        ),
+        "observed_checkpoint_registry_promotion_missing_gate_ids": list(
+            summary.get("observed_checkpoint_registry_promotion_missing_gate_ids") or []
+        ),
+        "observed_workbench_registry_promotion_missing_gate_ids": list(
+            summary.get("observed_workbench_registry_promotion_missing_gate_ids") or []
+        ),
+        "top_gate_id": summary.get("top_gate_id", ""),
+        "top_priority_bucket": summary.get("top_priority_bucket", ""),
+        "top_required_input": summary.get("top_required_input", ""),
+        "top_acceptance_artifact": summary.get("top_acceptance_artifact", ""),
+        "top_verification_command": summary.get("top_verification_command", ""),
+        "top_next_operator_step": summary.get("top_next_operator_step", ""),
+        "operator_receipt_csv": summary.get("operator_receipt_csv", ""),
+        "operator_receipt_csv_present": bool(summary.get("operator_receipt_csv_present") is True),
+        "operator_receipt_artifact": summary.get("operator_receipt_artifact", ""),
+        "operator_receipt_artifact_present": bool(
+            summary.get("operator_receipt_artifact_present") is True
+        ),
+        "residual_registry_artifact": summary.get("residual_registry_artifact", ""),
+        "residual_registry_artifact_present": bool(
+            summary.get("residual_registry_artifact_present") is True
+        ),
+        "checkpoint_readiness_artifact": summary.get("checkpoint_readiness_artifact", ""),
+        "checkpoint_readiness_artifact_present": bool(
+            summary.get("checkpoint_readiness_artifact_present") is True
+        ),
+        "promotion_workbench_artifact": summary.get("promotion_workbench_artifact", ""),
+        "promotion_workbench_artifact_present": bool(
+            summary.get("promotion_workbench_artifact_present") is True
+        ),
+        "observed_registry_default_residual_mode": summary.get(
+            "observed_registry_default_residual_mode", ""
+        ),
+        "observed_registry_trained_model_checkpoint_count": int(
+            summary.get("observed_registry_trained_model_checkpoint_count") or 0
+        ),
+        "observed_registry_production_promotion_allowed": bool(
+            summary.get("observed_registry_production_promotion_allowed") is True
+        ),
+        "observed_registry_customer_facing_mutation_flags_ready": bool(
+            summary.get("observed_registry_customer_facing_mutation_flags_ready") is True
+        ),
+        "observed_checkpoint_registry_promotion_currently_satisfied": bool(
+            summary.get("observed_checkpoint_registry_promotion_currently_satisfied") is True
+        ),
+        "approval_token_required": summary.get(
+            "approval_token_required", "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+        ),
+        "approval_token_count": int(summary.get("approval_token_count") or 0),
+        "blocker_count": int(summary.get("blocker_count") or 0),
+        "blockers": list(summary.get("blockers") or []),
+        "source_artifacts": list(summary.get("source_artifacts") or []),
+        "top_priority_items": sorted_rows[:2],
+        "priority_items": sorted_rows,
+        "next_required_step": summary.get("next_required_step", ""),
+        "registry_edited_by_this_tool": bool(summary.get("registry_edited_by_this_tool") is True),
+        "checkpoint_created_by_this_tool": bool(
+            summary.get("checkpoint_created_by_this_tool") is True
+        ),
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "model_promoted": False,
+        "customer_facing_mutation_enabled": False,
+        "external_state_mutated": False,
         "claim_boundary": summary.get("claim_boundary", ""),
     }
 

@@ -312,6 +312,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_job_orchestration_contract" in artifact_ids
     assert "api_runner_profile_promotion_operator_receipt" in artifact_ids
     assert "product_launch_r4_preflight" in artifact_ids
+    assert "production_ai_registry_promotion_priority_packet" in artifact_ids
     assert "engine_refinement_claim_promotion_action_board" in artifact_ids
     assert "engine_refinement_claim_evidence_receipt" in artifact_ids
     assert "product_scope_breadth_closure_checklist" in artifact_ids
@@ -327,12 +328,17 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "master_gap_closure_rollup" in artifact_ids
     assert "python3 tools/build_api_runner_profile_promotion_operator_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_production_ai_registry_promotion_operator_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert (
+        "python3 tools/product/build_production_ai_registry_promotion_priority_packet.py"
+        in mod.RELEASE_REFRESH_COMMANDS
+    )
     assert "product_release_bundle_semantic_ready" in status_ids
     assert "product_goal_completion_audit_full_commercial_release_blockers_semantic_ready" in status_ids
     assert "api_runner_profile_promotion_operator_receipt_blocked_semantic_ready" in status_ids
     assert "product_production_ai_checkpoint_shadow_blocked_semantic_ready" in status_ids
     assert "product_production_ai_promotion_workbench_shadow_blocked_semantic_ready" in status_ids
     assert "production_ai_registry_promotion_operator_receipt_blocked_semantic_ready" in status_ids
+    assert "production_ai_registry_promotion_priority_packet_blocked_semantic_ready" in status_ids
     assert "cameo_validation_operations_dossier_current_bottleneck_semantic_ready" in status_ids
     assert "cameo_official_result_fetch_preflight" in artifact_ids
     assert "cameo_official_result_fetch_preflight_blocked_semantic_ready" in status_ids
@@ -587,6 +593,28 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/product_production_ai_checkpoint_readiness_current.json" in registry_receipt_artifact_spec[
         "depends_on"
     ]
+    registry_priority_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "production_ai_registry_promotion_priority_packet"
+    )
+    assert "runs/production_ai_registry_promotion_operator_receipt_current.json" in registry_priority_spec[
+        "depends_on"
+    ]
+    assert "runs/product_production_ai_promotion_workbench_current.json" in registry_priority_spec[
+        "depends_on"
+    ]
+    registry_priority_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "production_ai_registry_promotion_priority_packet_blocked_semantic_ready"
+    )
+    assert registry_priority_status_spec["required_int_exact_fields"][
+        "operator_input_required_count"
+    ] == 4
+    assert registry_priority_status_spec["required_text_exact_fields"][
+        "top_gate_id"
+    ] == "trained_model_checkpoint_count_positive"
     goal_action_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_operator_action_board"
     )
@@ -613,6 +641,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert "runs/goal_operator_action_board_current.json" in intake_kit_spec["depends_on"]
     assert "runs/production_ai_registry_promotion_operator_receipt_current.json" in intake_kit_spec["depends_on"]
+    assert "runs/production_ai_registry_promotion_priority_packet_current.json" in intake_kit_spec["depends_on"]
     assert "config/production_ai_registry_promotion_operator_receipt_current.csv" in intake_kit_spec["depends_on"]
     assert "runs/product_scope_breadth_evidence_receipt_current.json" in intake_kit_spec["depends_on"]
     assert "config/product_scope_breadth_evidence_receipt_current.csv" in intake_kit_spec["depends_on"]
@@ -776,6 +805,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/goal_bottleneck_briefing_current.json" in privacy_scan_spec["depends_on"]
     assert "runs/product_full_commercial_blocker_evidence_matrix_current.json" in privacy_scan_spec["depends_on"]
     assert "runs/production_ai_registry_promotion_operator_receipt_current.json" in privacy_scan_spec["depends_on"]
+    assert "runs/production_ai_registry_promotion_priority_packet_current.json" in privacy_scan_spec["depends_on"]
     release_bundle_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_release_bundle"
     )
@@ -898,6 +928,14 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_production_ai_checkpoint_readiness.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_production_ai_promotion_workbench.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_production_ai_promotion_workbench.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_production_ai_registry_promotion_operator_receipt.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_production_ai_registry_promotion_operator_receipt.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index(
+            "python3 tools/product/build_production_ai_registry_promotion_priority_packet.py"
+        )
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_execution_work_order.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_execution_preflight.py")

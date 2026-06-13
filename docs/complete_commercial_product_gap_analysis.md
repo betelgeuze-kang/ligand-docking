@@ -276,6 +276,7 @@
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
   `product_full_commercial_blocker_evidence_matrix_current.json`,
   `production_ai_registry_promotion_operator_receipt_current.json`,
+  `production_ai_registry_promotion_priority_packet_current.json`,
   `product_pose_sampling_readiness_current.json`,
   `refine_tier_public_benchmark_readiness_current.json`,
   `refine_tier_public_benchmark_work_order_apply_current.json`,
@@ -283,9 +284,9 @@
   `cameo_official_result_fetch_preflight_current.json`,
   `cameo_validation_operations_dossier_current.json`의
   freshness 및 semantic-ready 상태를 함께 검증한다. 최신 full refresh 후
-  source-of-truth는 `row_count=92`, `pass_count=92`, `blocker_count=0`,
-  `artifact_row_count=62`, `semantic_status_row_count=28`,
-  `release_refresh_command_count=75`, `stale_artifact_count=0`,
+  source-of-truth는 `row_count=94`, `pass_count=94`, `blocker_count=0`,
+  `artifact_row_count=63`, `semantic_status_row_count=29`,
+  `release_refresh_command_count=76`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   `/product/self-hosted-license-distribution-audit` API surface도 같은 audit의
   hard blocker/operator review 경계를 직접 노출한다. R8/R9 evidence
@@ -455,10 +456,20 @@
   `observed_registry_default_residual_mode=shadow`,
   `observed_registry_trained_model_checkpoint_count=0`을 기록하며,
   CSV 값과 residual registry/checkpoint-readiness artifact가 어긋나면 ready가 되지 않는다.
+  `runs/production_ai_registry_promotion_priority_packet_current.json`은 이 receipt 병목을
+  4개 gate로 분해해 `blocked_production_ai_registry_promotion_priority_packet`,
+  `priority_packet_ready=true`, `priority_item_count=4`,
+  `operator_input_required_count=4`, `top_gate_id=trained_model_checkpoint_count_positive`,
+  `top_priority_bucket=trained_checkpoint_registration_required`를 기록한다. 즉 Production AI
+  promotion의 첫 운영 조치는 trained production residual checkpoint를 registry에
+  등록하고 residual registry/checkpoint-readiness/promotion workbench/operator receipt를
+  재검증하는 일이며, guarded mode, production promotion policy, customer-facing mutation
+  flags는 그 뒤의 fail-closed gate로 남는다.
   `/product/commercial-readiness-operator-packet`,
   `/product/commercial-readiness-execution-ladder`,
   `/product/commercial-readiness-handoff-bundle`,
-  `/product/production-ai-registry-promotion-operator-receipt`도
+  `/product/production-ai-registry-promotion-operator-receipt`,
+  `/product/production-ai-registry-promotion-priority`도
   `production_ai_registry_promotion_*` alias, completion packet,
   `production_ai_registry_promotion_operator_receipt_*` status/token/observed blocker
   fields를 전달한다. `/goal/status`도 같은

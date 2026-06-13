@@ -106,6 +106,19 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "top_blocker_id" in engine_priority_keys
     assert "top_required_input" in engine_priority_keys
     assert "priority_items" in engine_priority_keys
+    assert EXPECTED_ROUTES["get_product_production_ai_registry_promotion_priority"] == (
+        "GET",
+        "/production-ai-registry-promotion-priority",
+    )
+    production_ai_priority_keys = REQUIRED_STATUS_DOMAIN_KEYS[
+        "get_product_production_ai_registry_promotion_priority"
+    ]
+    assert "priority_packet_ready" in production_ai_priority_keys
+    assert "registry_promotion_missing_gate_ids" in production_ai_priority_keys
+    assert "top_gate_id" in production_ai_priority_keys
+    assert "top_priority_bucket" in production_ai_priority_keys
+    assert "priority_items" in production_ai_priority_keys
+    assert "customer_facing_mutation_enabled" in production_ai_priority_keys
     assert EXPECTED_ROUTES["get_product_api_runner_profile_promotion_operator_receipt"] == (
         "GET",
         "/api-runner-profile-promotion-operator-receipt",
