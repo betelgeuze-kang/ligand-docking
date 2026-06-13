@@ -516,9 +516,17 @@ def build_product_release_operations_dossier(
         if blocked_stage_count == 0 and approval_required_stage_count == 0 and pilot_delivery_ready
         else "blocked_product_release_operations_dossier"
     )
+    release_allowed = (
+        status == "product_release_operations_dossier_ready"
+        and approval_authorized
+        and bundle_assembled
+        and bundle_validation_passed
+        and delivery_ready_claim_allowed
+    )
     summary = {
         "packet_type": "product_release_operations_dossier",
         "status": status,
+        "release_allowed": release_allowed,
         "target_id": target_id,
         "family": family,
         "bundle_tag": bundle_tag,
@@ -635,6 +643,7 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "# Product Release Operations Dossier",
         "",
         f"- status: `{s['status']}`",
+        f"- release_allowed: `{s['release_allowed']}`",
         f"- target_id: `{s['target_id']}`",
         f"- family: `{s['family']}`",
         f"- bundle_tag: `{s['bundle_tag']}`",

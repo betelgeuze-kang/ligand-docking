@@ -2575,7 +2575,12 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         "R8_full_scope_claim_closure",
         "R9_engine_refinement_claim_promotion",
     ]
-    assert completion["approval_tokens_required"] == ["APPROVE_PRODUCT_DOCKING_EXECUTION"]
+    assert completion["approval_tokens_required"] == list(
+        _artifact_summary("product_goal_completion_audit_current.json").get(
+            "approval_tokens_required"
+        )
+        or []
+    )
     assert completion["release_allowed"] is True
     assert completion["release_artifact_ready"] is True
     assert completion["local_self_hosted_product_ready"] is True

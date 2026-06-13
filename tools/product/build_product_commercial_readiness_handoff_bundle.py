@@ -566,6 +566,9 @@ def build_product_commercial_readiness_handoff_bundle(
         "engine_refinement_claim_evidence_receipt_ready": bool(
             operator_summary.get("engine_refinement_claim_evidence_receipt_ready") is True
         ),
+        "engine_refinement_claim_evidence_receipt_status": _text(
+            operator_summary.get("engine_refinement_claim_evidence_receipt_status")
+        ),
         "engine_refinement_claim_evidence_receipt_blocked_row_count": int(
             operator_summary.get("engine_refinement_claim_evidence_receipt_blocked_row_count") or 0
         ),
@@ -574,6 +577,45 @@ def build_product_commercial_readiness_handoff_bundle(
         ),
         "engine_refinement_claim_evidence_receipt_csv": _text(
             operator_summary.get("engine_refinement_claim_evidence_receipt_csv")
+        ),
+        "engine_refinement_claim_evidence_receipt_first_blocked_blocker_id": _text(
+            operator_summary.get("engine_refinement_claim_evidence_receipt_first_blocked_blocker_id")
+        ),
+        "engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact"
+            )
+        ),
+        "engine_refinement_claim_evidence_receipt_first_blocked_expected_evidence_status": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_receipt_first_blocked_expected_evidence_status"
+            )
+        ),
+        "engine_refinement_claim_evidence_receipt_first_blocked_observed_evidence_status": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_receipt_first_blocked_observed_evidence_status"
+            )
+        ),
+        "engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields": [
+            str(item)
+            for item in (
+                operator_summary.get(
+                    "engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields"
+                )
+                or []
+            )
+        ],
+        "engine_refinement_claim_evidence_receipt_first_blocked_row_blockers": [
+            str(item)
+            for item in (
+                operator_summary.get(
+                    "engine_refinement_claim_evidence_receipt_first_blocked_row_blockers"
+                )
+                or []
+            )
+        ],
+        "engine_refinement_claim_evidence_receipt_most_common_row_blocker": _text(
+            operator_summary.get("engine_refinement_claim_evidence_receipt_most_common_row_blocker")
         ),
         "engine_refinement_claim_promotion_next_required_step": _text(
             operator_summary.get("engine_refinement_claim_promotion_next_required_step")
@@ -598,6 +640,47 @@ def build_product_commercial_readiness_handoff_bundle(
         ),
         "product_scope_breadth_evidence_receipt_csv": _text(
             operator_summary.get("product_scope_breadth_evidence_receipt_csv")
+        ),
+        "product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id": _text(
+            operator_summary.get(
+                "product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id"
+            )
+        ),
+        "product_scope_breadth_evidence_receipt_first_blocked_evidence_artifact": _text(
+            operator_summary.get(
+                "product_scope_breadth_evidence_receipt_first_blocked_evidence_artifact"
+            )
+        ),
+        "product_scope_breadth_evidence_receipt_first_blocked_expected_evidence_status": _text(
+            operator_summary.get(
+                "product_scope_breadth_evidence_receipt_first_blocked_expected_evidence_status"
+            )
+        ),
+        "product_scope_breadth_evidence_receipt_first_blocked_observed_evidence_status": _text(
+            operator_summary.get(
+                "product_scope_breadth_evidence_receipt_first_blocked_observed_evidence_status"
+            )
+        ),
+        "product_scope_breadth_evidence_receipt_first_blocked_missing_true_fields": [
+            str(item)
+            for item in (
+                operator_summary.get(
+                    "product_scope_breadth_evidence_receipt_first_blocked_missing_true_fields"
+                )
+                or []
+            )
+        ],
+        "product_scope_breadth_evidence_receipt_first_blocked_row_blockers": [
+            str(item)
+            for item in (
+                operator_summary.get(
+                    "product_scope_breadth_evidence_receipt_first_blocked_row_blockers"
+                )
+                or []
+            )
+        ],
+        "product_scope_breadth_evidence_receipt_most_common_row_blocker": _text(
+            operator_summary.get("product_scope_breadth_evidence_receipt_most_common_row_blocker")
         ),
         "artifact_count": len(artifact_rows),
         "ready_artifact_count": len(artifact_rows) - len(blocked_artifacts),
@@ -1792,11 +1875,20 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- engine_refinement_claim_promotion_blocker_count: `{s['engine_refinement_claim_promotion_blocker_count']}`",
         f"- engine_refinement_claim_promotion_action_board_csv: `{s['engine_refinement_claim_promotion_action_board_csv']}`",
         f"- engine_refinement_claim_evidence_receipt_ready: `{s['engine_refinement_claim_evidence_receipt_ready']}`",
+        f"- engine_refinement_claim_evidence_receipt_status: `{s['engine_refinement_claim_evidence_receipt_status']}`",
+        f"- engine_refinement_claim_evidence_receipt_first_blocked_blocker_id: `{s['engine_refinement_claim_evidence_receipt_first_blocked_blocker_id']}`",
+        f"- engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact: `{s['engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact']}`",
+        f"- engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields: `{';'.join(s['engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields'])}`",
+        f"- engine_refinement_claim_evidence_receipt_most_common_row_blocker: `{s['engine_refinement_claim_evidence_receipt_most_common_row_blocker']}`",
         f"- engine_refinement_claim_evidence_receipt_artifact: `{s['engine_refinement_claim_evidence_receipt_artifact']}`",
         f"- product_scope_breadth_evidence_receipt_ready: `{s['product_scope_breadth_evidence_receipt_ready']}`",
         f"- product_scope_breadth_evidence_receipt_status: `{s['product_scope_breadth_evidence_receipt_status']}`",
         f"- product_scope_breadth_evidence_receipt_blocked_row_count: `{s['product_scope_breadth_evidence_receipt_blocked_row_count']}`",
         f"- product_scope_breadth_evidence_receipt_required_scope_blocker_count: `{s['product_scope_breadth_evidence_receipt_required_scope_blocker_count']}`",
+        f"- product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id: `{s['product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id']}`",
+        f"- product_scope_breadth_evidence_receipt_first_blocked_evidence_artifact: `{s['product_scope_breadth_evidence_receipt_first_blocked_evidence_artifact']}`",
+        f"- product_scope_breadth_evidence_receipt_first_blocked_missing_true_fields: `{';'.join(s['product_scope_breadth_evidence_receipt_first_blocked_missing_true_fields'])}`",
+        f"- product_scope_breadth_evidence_receipt_most_common_row_blocker: `{s['product_scope_breadth_evidence_receipt_most_common_row_blocker']}`",
         f"- product_scope_breadth_evidence_receipt_artifact: `{s['product_scope_breadth_evidence_receipt_artifact']}`",
         f"- product_scope_breadth_evidence_receipt_csv: `{s['product_scope_breadth_evidence_receipt_csv']}`",
         f"- artifact_count: `{s['artifact_count']}`",

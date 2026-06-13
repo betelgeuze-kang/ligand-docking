@@ -412,6 +412,33 @@ def commercial_scope_breadth_evidence_receipt_fields(summary: dict[str, Any]) ->
         "product_scope_breadth_evidence_receipt_csv": summary.get(
             "product_scope_breadth_evidence_receipt_csv", ""
         ),
+        "product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id": summary.get(
+            "product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id", ""
+        ),
+        "product_scope_breadth_evidence_receipt_first_blocked_evidence_artifact": summary.get(
+            "product_scope_breadth_evidence_receipt_first_blocked_evidence_artifact", ""
+        ),
+        "product_scope_breadth_evidence_receipt_first_blocked_expected_evidence_status": summary.get(
+            "product_scope_breadth_evidence_receipt_first_blocked_expected_evidence_status",
+            "",
+        ),
+        "product_scope_breadth_evidence_receipt_first_blocked_observed_evidence_status": summary.get(
+            "product_scope_breadth_evidence_receipt_first_blocked_observed_evidence_status",
+            "",
+        ),
+        "product_scope_breadth_evidence_receipt_first_blocked_missing_true_fields": list(
+            summary.get(
+                "product_scope_breadth_evidence_receipt_first_blocked_missing_true_fields"
+            )
+            or []
+        ),
+        "product_scope_breadth_evidence_receipt_first_blocked_row_blockers": list(
+            summary.get("product_scope_breadth_evidence_receipt_first_blocked_row_blockers")
+            or []
+        ),
+        "product_scope_breadth_evidence_receipt_most_common_row_blocker": summary.get(
+            "product_scope_breadth_evidence_receipt_most_common_row_blocker", ""
+        ),
     }
 
 
@@ -435,6 +462,9 @@ def commercial_engine_refinement_claim_fields(summary: dict[str, Any]) -> dict[s
         "engine_refinement_claim_evidence_receipt_ready": bool(
             summary.get("engine_refinement_claim_evidence_receipt_ready") is True
         ),
+        "engine_refinement_claim_evidence_receipt_status": summary.get(
+            "engine_refinement_claim_evidence_receipt_status", ""
+        ),
         "engine_refinement_claim_evidence_receipt_blocked_row_count": int(
             summary.get("engine_refinement_claim_evidence_receipt_blocked_row_count") or 0
         ),
@@ -443,6 +473,33 @@ def commercial_engine_refinement_claim_fields(summary: dict[str, Any]) -> dict[s
         ),
         "engine_refinement_claim_evidence_receipt_csv": summary.get(
             "engine_refinement_claim_evidence_receipt_csv", ""
+        ),
+        "engine_refinement_claim_evidence_receipt_first_blocked_blocker_id": summary.get(
+            "engine_refinement_claim_evidence_receipt_first_blocked_blocker_id", ""
+        ),
+        "engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact": summary.get(
+            "engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact", ""
+        ),
+        "engine_refinement_claim_evidence_receipt_first_blocked_expected_evidence_status": summary.get(
+            "engine_refinement_claim_evidence_receipt_first_blocked_expected_evidence_status",
+            "",
+        ),
+        "engine_refinement_claim_evidence_receipt_first_blocked_observed_evidence_status": summary.get(
+            "engine_refinement_claim_evidence_receipt_first_blocked_observed_evidence_status",
+            "",
+        ),
+        "engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields": list(
+            summary.get(
+                "engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields"
+            )
+            or []
+        ),
+        "engine_refinement_claim_evidence_receipt_first_blocked_row_blockers": list(
+            summary.get("engine_refinement_claim_evidence_receipt_first_blocked_row_blockers")
+            or []
+        ),
+        "engine_refinement_claim_evidence_receipt_most_common_row_blocker": summary.get(
+            "engine_refinement_claim_evidence_receipt_most_common_row_blocker", ""
         ),
         "engine_refinement_claim_promotion_next_required_step": summary.get(
             "engine_refinement_claim_promotion_next_required_step", ""

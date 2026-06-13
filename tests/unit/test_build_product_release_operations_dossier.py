@@ -375,6 +375,7 @@ def test_product_release_operations_dossier_consolidates_blocked_current_lane() 
     assert summary["license_file_creation_work_order_artifact"] == "runs/product_license_file_creation_work_order_current.json"
     assert summary["approval_tokens_required"] == ["APPROVE_PRODUCT_DOCKING_EXECUTION", "APPROVE_PRODUCT_LICENSE_FILE_CREATION"]
     assert summary["authorized_for_execution"] is False
+    assert summary["release_allowed"] is False
     assert summary["bundle_assembled"] is False
     assert summary["bundle_validation_passed"] is False
     assert summary["delivery_ready_claim_allowed"] is False
@@ -421,6 +422,7 @@ def test_product_release_operations_dossier_ready_when_bundle_and_pilot_are_read
     )
 
     assert payload["summary"]["status"] == "product_release_operations_dossier_ready"
+    assert payload["summary"]["release_allowed"] is True
     assert payload["summary"]["blocked_stage_count"] == 0
     assert payload["summary"]["approval_required_stage_count"] == 0
     assert payload["summary"]["restricted_commercial_scope_claim_ready"] is True

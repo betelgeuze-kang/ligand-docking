@@ -544,15 +544,40 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "engine_refinement_claim_promotion_blocker_count" in operator_packet_keys
     assert "engine_refinement_claim_promotion_action_board_csv" in operator_packet_keys
     assert "engine_refinement_claim_evidence_receipt_ready" in operator_packet_keys
+    assert "engine_refinement_claim_evidence_receipt_status" in operator_packet_keys
     assert "engine_refinement_claim_evidence_receipt_blocked_row_count" in operator_packet_keys
     assert "engine_refinement_claim_evidence_receipt_artifact" in operator_packet_keys
     assert "engine_refinement_claim_evidence_receipt_csv" in operator_packet_keys
+    assert (
+        "engine_refinement_claim_evidence_receipt_first_blocked_blocker_id"
+        in operator_packet_keys
+    )
+    assert (
+        "engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields"
+        in operator_packet_keys
+    )
+    assert (
+        "engine_refinement_claim_evidence_receipt_most_common_row_blocker"
+        in operator_packet_keys
+    )
     assert "product_scope_breadth_evidence_receipt_ready" in operator_packet_keys
     assert "product_scope_breadth_evidence_receipt_status" in operator_packet_keys
     assert "product_scope_breadth_evidence_receipt_blocked_row_count" in operator_packet_keys
     assert "product_scope_breadth_evidence_receipt_required_scope_blocker_count" in operator_packet_keys
     assert "product_scope_breadth_evidence_receipt_artifact" in operator_packet_keys
     assert "product_scope_breadth_evidence_receipt_csv" in operator_packet_keys
+    assert (
+        "product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id"
+        in operator_packet_keys
+    )
+    assert (
+        "product_scope_breadth_evidence_receipt_first_blocked_missing_true_fields"
+        in operator_packet_keys
+    )
+    assert (
+        "product_scope_breadth_evidence_receipt_most_common_row_blocker"
+        in operator_packet_keys
+    )
     assert "checkpoint_promoted" in operator_packet_keys
     assert EXPECTED_ROUTES["get_product_commercial_readiness_operator_packet_freshness"] == (
         "GET",
@@ -736,15 +761,40 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "engine_refinement_claim_promotion_blocker_count" in handoff_bundle_keys
     assert "engine_refinement_claim_promotion_action_board_csv" in handoff_bundle_keys
     assert "engine_refinement_claim_evidence_receipt_ready" in handoff_bundle_keys
+    assert "engine_refinement_claim_evidence_receipt_status" in handoff_bundle_keys
     assert "engine_refinement_claim_evidence_receipt_blocked_row_count" in handoff_bundle_keys
     assert "engine_refinement_claim_evidence_receipt_artifact" in handoff_bundle_keys
     assert "engine_refinement_claim_evidence_receipt_csv" in handoff_bundle_keys
+    assert (
+        "engine_refinement_claim_evidence_receipt_first_blocked_blocker_id"
+        in handoff_bundle_keys
+    )
+    assert (
+        "engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields"
+        in handoff_bundle_keys
+    )
+    assert (
+        "engine_refinement_claim_evidence_receipt_most_common_row_blocker"
+        in handoff_bundle_keys
+    )
     assert "product_scope_breadth_evidence_receipt_ready" in handoff_bundle_keys
     assert "product_scope_breadth_evidence_receipt_status" in handoff_bundle_keys
     assert "product_scope_breadth_evidence_receipt_blocked_row_count" in handoff_bundle_keys
     assert "product_scope_breadth_evidence_receipt_required_scope_blocker_count" in handoff_bundle_keys
     assert "product_scope_breadth_evidence_receipt_artifact" in handoff_bundle_keys
     assert "product_scope_breadth_evidence_receipt_csv" in handoff_bundle_keys
+    assert (
+        "product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id"
+        in handoff_bundle_keys
+    )
+    assert (
+        "product_scope_breadth_evidence_receipt_first_blocked_missing_true_fields"
+        in handoff_bundle_keys
+    )
+    assert (
+        "product_scope_breadth_evidence_receipt_most_common_row_blocker"
+        in handoff_bundle_keys
+    )
     assert "artifact_reference_contract_ready" in handoff_bundle_keys
     assert "artifact_reference_count" in handoff_bundle_keys
     assert "artifact_reference_manifest" in handoff_bundle_keys
