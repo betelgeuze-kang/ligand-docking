@@ -464,7 +464,10 @@
   promotion의 첫 운영 조치는 trained production residual checkpoint를 registry에
   등록하고 residual registry/checkpoint-readiness/promotion workbench/operator receipt를
   재검증하는 일이며, guarded mode, production promotion policy, customer-facing mutation
-  flags는 그 뒤의 fail-closed gate로 남는다.
+  flags는 그 뒤의 fail-closed gate로 남는다. 이 priority packet summary는 상용
+  readiness operator packet, execution ladder, handoff bundle, `/goal/status`까지
+  `production_ai_registry_promotion_priority_*` 필드로 전파되며, release bundle과
+  source-of-truth gate의 required/depends-on artifact로도 고정된다.
   `/product/commercial-readiness-operator-packet`,
   `/product/commercial-readiness-execution-ladder`,
   `/product/commercial-readiness-handoff-bundle`,

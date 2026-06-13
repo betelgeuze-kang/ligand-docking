@@ -755,6 +755,12 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   workbench/operator receipt를 재검증하는 일로 고정된다. 이 priority packet도
   `model_promoted=false`, `customer_facing_mutation_enabled=false`,
   `external_state_mutated=false`로 fail-closed다.
+  이 priority packet summary는 이제 상용 readiness operator packet, execution
+  ladder, handoff bundle, `/goal/status`까지
+  `production_ai_registry_promotion_priority_*` 필드로 전파된다. release bundle과
+  source-of-truth gate도 같은 artifact를 required/depends-on 항목으로 추적해,
+  Production AI registry promotion의 첫 gate가 상위 handoff나 최종 릴리즈
+  freshness 검사 밖으로 빠지지 않는다.
   `/product/commercial-readiness-operator-packet`,
   `/product/commercial-readiness-execution-ladder`,
   `/product/commercial-readiness-handoff-bundle`,
@@ -1756,7 +1762,9 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
    `trained_model_checkpoint_count=0`으로 registry guarded promotion에서 멈춰 있다.
    priority packet 기준 첫 조치는 `trained_model_checkpoint_count_positive`를
    만족시키는 trained checkpoint 등록이며, 이후 guarded mode, production promotion
-   policy, customer-facing mutation flags를 순서대로 재검증해야 한다.
+   policy, customer-facing mutation flags를 순서대로 재검증해야 한다. 이 priority
+   상태는 commercial readiness handoff, `/goal/status`, release bundle
+   source-of-truth dependency에도 고정되어 있다.
 3. **License 결정 + LICENSE 파일 작성** — LICENSE/source hash 일치,
    license decision/work-order/commercial gate, self-hosted license audit, release
    bundle linkage는 1차 완료. 다음은 법률 최종 확인과 JSZip dual-license

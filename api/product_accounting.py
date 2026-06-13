@@ -227,6 +227,63 @@ def commercial_production_ai_registry_promotion_fields(summary: dict[str, Any]) 
             )
             is True
         ),
+        "production_ai_registry_promotion_priority_artifact": summary.get(
+            "production_ai_registry_promotion_priority_artifact", ""
+        ),
+        "production_ai_registry_promotion_priority_status": summary.get(
+            "production_ai_registry_promotion_priority_status", ""
+        ),
+        "production_ai_registry_promotion_priority_packet_ready": bool(
+            summary.get("production_ai_registry_promotion_priority_packet_ready") is True
+        ),
+        "production_ai_registry_promotion_priority_registry_promotion_ready": bool(
+            summary.get("production_ai_registry_promotion_priority_registry_promotion_ready")
+            is True
+        ),
+        "production_ai_registry_promotion_priority_operator_input_required_count": int(
+            summary.get("production_ai_registry_promotion_priority_operator_input_required_count")
+            or 0
+        ),
+        "production_ai_registry_promotion_priority_blocked_priority_item_count": int(
+            summary.get("production_ai_registry_promotion_priority_blocked_priority_item_count")
+            or 0
+        ),
+        "production_ai_registry_promotion_priority_missing_gate_count": int(
+            summary.get("production_ai_registry_promotion_priority_missing_gate_count") or 0
+        ),
+        "production_ai_registry_promotion_priority_missing_gate_ids": list(
+            summary.get("production_ai_registry_promotion_priority_missing_gate_ids") or []
+        ),
+        "production_ai_registry_promotion_priority_top_gate_id": summary.get(
+            "production_ai_registry_promotion_priority_top_gate_id", ""
+        ),
+        "production_ai_registry_promotion_priority_top_priority_bucket": summary.get(
+            "production_ai_registry_promotion_priority_top_priority_bucket", ""
+        ),
+        "production_ai_registry_promotion_priority_top_required_input": summary.get(
+            "production_ai_registry_promotion_priority_top_required_input", ""
+        ),
+        "production_ai_registry_promotion_priority_top_acceptance_artifact": summary.get(
+            "production_ai_registry_promotion_priority_top_acceptance_artifact", ""
+        ),
+        "production_ai_registry_promotion_priority_top_verification_command": summary.get(
+            "production_ai_registry_promotion_priority_top_verification_command", ""
+        ),
+        "production_ai_registry_promotion_priority_top_next_operator_step": summary.get(
+            "production_ai_registry_promotion_priority_top_next_operator_step", ""
+        ),
+        "production_ai_registry_promotion_priority_model_promoted": bool(
+            summary.get("production_ai_registry_promotion_priority_model_promoted") is True
+        ),
+        "production_ai_registry_promotion_priority_customer_facing_mutation_enabled": bool(
+            summary.get(
+                "production_ai_registry_promotion_priority_customer_facing_mutation_enabled"
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_priority_external_state_mutated": bool(
+            summary.get("production_ai_registry_promotion_priority_external_state_mutated") is True
+        ),
     }
 
 

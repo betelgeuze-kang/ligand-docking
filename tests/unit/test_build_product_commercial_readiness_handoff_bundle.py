@@ -545,6 +545,42 @@ def _ladder(ready: bool = True) -> dict:
             ],
             "production_ai_registry_promotion_operator_receipt_registry_edited_by_this_tool": False,
             "production_ai_registry_promotion_operator_receipt_checkpoint_created_by_this_tool": False,
+            "production_ai_registry_promotion_priority_artifact": (
+                "runs/production_ai_registry_promotion_priority_packet_current.json"
+            ),
+            "production_ai_registry_promotion_priority_status": (
+                "blocked_production_ai_registry_promotion_priority_packet"
+            ),
+            "production_ai_registry_promotion_priority_packet_ready": True,
+            "production_ai_registry_promotion_priority_registry_promotion_ready": False,
+            "production_ai_registry_promotion_priority_operator_input_required_count": 4,
+            "production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
+            "production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "production_ai_registry_promotion_priority_missing_gate_ids": [
+                "trained_model_checkpoint_count_positive",
+                "default_residual_mode_guarded",
+            ],
+            "production_ai_registry_promotion_priority_top_gate_id": (
+                "trained_model_checkpoint_count_positive"
+            ),
+            "production_ai_registry_promotion_priority_top_priority_bucket": (
+                "trained_checkpoint_registration_required"
+            ),
+            "production_ai_registry_promotion_priority_top_required_input": (
+                "Register a trained production residual checkpoint."
+            ),
+            "production_ai_registry_promotion_priority_top_acceptance_artifact": (
+                "runs/residual_model_registry_current.json"
+            ),
+            "production_ai_registry_promotion_priority_top_verification_command": (
+                "python3 tools/build_residual_model_registry.py"
+            ),
+            "production_ai_registry_promotion_priority_top_next_operator_step": (
+                "Register checkpoint, then rerun registry readiness."
+            ),
+            "production_ai_registry_promotion_priority_model_promoted": False,
+            "production_ai_registry_promotion_priority_customer_facing_mutation_enabled": False,
+            "production_ai_registry_promotion_priority_external_state_mutated": False,
             "first_operator_completion_worker_runtime_receipt_contract_ready": True,
             "first_operator_completion_worker_runtime_receipt_contract": {
                 "manifest_ready": True,
@@ -817,6 +853,20 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
     assert summary[
         "production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode"
     ] == "shadow"
+    assert summary["production_ai_registry_promotion_priority_status"] == (
+        "blocked_production_ai_registry_promotion_priority_packet"
+    )
+    assert summary["production_ai_registry_promotion_priority_packet_ready"] is True
+    assert summary["production_ai_registry_promotion_priority_registry_promotion_ready"] is False
+    assert summary["production_ai_registry_promotion_priority_operator_input_required_count"] == 4
+    assert summary["production_ai_registry_promotion_priority_top_gate_id"] == (
+        "trained_model_checkpoint_count_positive"
+    )
+    assert summary["production_ai_registry_promotion_priority_top_priority_bucket"] == (
+        "trained_checkpoint_registration_required"
+    )
+    assert summary["production_ai_registry_promotion_priority_model_promoted"] is False
+    assert summary["production_ai_registry_promotion_priority_external_state_mutated"] is False
     assert summary["delta_force_closure_acceptance_packet_ready"] is True
     assert summary["delta_force_closure_ready"] is False
     assert summary["delta_force_closure_first_blocked_output_field"] == "delta_force"
@@ -955,6 +1005,13 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         row["artifact_id"] == "production_ai_registry_promotion_operator_receipt"
         and row["artifact_path"] == "runs/production_ai_registry_promotion_operator_receipt_current.json"
         and row["reference_role"] == "local_production_ai_registry_promotion_receipt"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "production_ai_registry_promotion_priority_packet"
+        and row["artifact_path"] == "runs/production_ai_registry_promotion_priority_packet_current.json"
+        and row["reference_role"] == "local_production_ai_registry_promotion_priority"
         and row["required_now"] is True
         for row in summary["artifact_reference_manifest"]
     )

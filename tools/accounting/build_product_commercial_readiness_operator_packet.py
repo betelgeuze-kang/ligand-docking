@@ -17,6 +17,9 @@ DEFAULT_AQP1_DIRECT_BINDING_PROCUREMENT_JSON = "runs/aqp1_direct_binding_procure
 DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_OPERATOR_RECEIPT_JSON = (
     "runs/production_ai_registry_promotion_operator_receipt_current.json"
 )
+DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_JSON = (
+    "runs/production_ai_registry_promotion_priority_packet_current.json"
+)
 DEFAULT_OUT_JSON = "runs/product_commercial_readiness_operator_packet_current.json"
 DEFAULT_OUT_CSV = "runs/product_commercial_readiness_operator_packet_current.csv"
 DEFAULT_OUT_MD = "runs/product_commercial_readiness_operator_packet_current.md"
@@ -452,6 +455,7 @@ def build_product_commercial_readiness_operator_packet(
     scope_closure_packet: dict[str, Any] | None = None,
     aqp1_direct_binding_procurement_packet: dict[str, Any] | None = None,
     production_ai_registry_promotion_operator_receipt_packet: dict[str, Any] | None = None,
+    production_ai_registry_promotion_priority_packet: dict[str, Any] | None = None,
     goal_audit_path: str = DEFAULT_GOAL_AUDIT_JSON,
     delta_force_closure_packet_path: str = DEFAULT_DELTA_FORCE_CLOSURE_PACKET_JSON,
     scope_closure_packet_path: str = DEFAULT_SCOPE_CLOSURE_PACKET_JSON,
@@ -459,12 +463,18 @@ def build_product_commercial_readiness_operator_packet(
     production_ai_registry_promotion_operator_receipt_path: str = (
         DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_OPERATOR_RECEIPT_JSON
     ),
+    production_ai_registry_promotion_priority_path: str = (
+        DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_JSON
+    ),
 ) -> dict[str, Any]:
     summary = _summary(goal_audit_packet)
     delta_force_closure = _summary(delta_force_closure_packet or {})
     scope_closure = _summary(scope_closure_packet or {})
     production_ai_registry_receipt = _summary(
         production_ai_registry_promotion_operator_receipt_packet or {}
+    )
+    production_ai_registry_priority = _summary(
+        production_ai_registry_promotion_priority_packet or {}
     )
     raw_rows = summary.get("commercial_readiness_next_action_matrix")
     source_rows = [dict(row) for row in (raw_rows or []) if isinstance(row, dict)]
@@ -962,6 +972,60 @@ def build_product_commercial_readiness_operator_packet(
         "production_ai_registry_promotion_operator_receipt_checkpoint_created_by_this_tool": bool(
             production_ai_registry_receipt.get("checkpoint_created_by_this_tool") is True
         ),
+        "production_ai_registry_promotion_priority_artifact": (
+            production_ai_registry_promotion_priority_path
+        ),
+        "production_ai_registry_promotion_priority_status": _text(
+            production_ai_registry_priority.get("status")
+        ),
+        "production_ai_registry_promotion_priority_packet_ready": bool(
+            production_ai_registry_priority.get("priority_packet_ready") is True
+        ),
+        "production_ai_registry_promotion_priority_registry_promotion_ready": bool(
+            production_ai_registry_priority.get("registry_promotion_ready") is True
+        ),
+        "production_ai_registry_promotion_priority_operator_input_required_count": _int(
+            production_ai_registry_priority.get("operator_input_required_count")
+        ),
+        "production_ai_registry_promotion_priority_blocked_priority_item_count": _int(
+            production_ai_registry_priority.get("blocked_priority_item_count")
+        ),
+        "production_ai_registry_promotion_priority_missing_gate_count": _int(
+            production_ai_registry_priority.get("registry_promotion_missing_gate_count")
+        ),
+        "production_ai_registry_promotion_priority_missing_gate_ids": [
+            str(item)
+            for item in _list(
+                production_ai_registry_priority.get("registry_promotion_missing_gate_ids")
+            )
+        ],
+        "production_ai_registry_promotion_priority_top_gate_id": _text(
+            production_ai_registry_priority.get("top_gate_id")
+        ),
+        "production_ai_registry_promotion_priority_top_priority_bucket": _text(
+            production_ai_registry_priority.get("top_priority_bucket")
+        ),
+        "production_ai_registry_promotion_priority_top_required_input": _text(
+            production_ai_registry_priority.get("top_required_input")
+        ),
+        "production_ai_registry_promotion_priority_top_acceptance_artifact": _text(
+            production_ai_registry_priority.get("top_acceptance_artifact")
+        ),
+        "production_ai_registry_promotion_priority_top_verification_command": _text(
+            production_ai_registry_priority.get("top_verification_command")
+        ),
+        "production_ai_registry_promotion_priority_top_next_operator_step": _text(
+            production_ai_registry_priority.get("top_next_operator_step")
+        ),
+        "production_ai_registry_promotion_priority_model_promoted": bool(
+            production_ai_registry_priority.get("model_promoted") is True
+        ),
+        "production_ai_registry_promotion_priority_customer_facing_mutation_enabled": bool(
+            production_ai_registry_priority.get("customer_facing_mutation_enabled") is True
+        ),
+        "production_ai_registry_promotion_priority_external_state_mutated": bool(
+            production_ai_registry_priority.get("external_state_mutated") is True
+        ),
         "production_ai_return_bundle_required_artifact_count": _int(
             production_ai_return.get("return_bundle_required_artifact_count")
         ),
@@ -1242,6 +1306,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--production-ai-registry-promotion-operator-receipt-json",
         default=DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_OPERATOR_RECEIPT_JSON,
     )
+    parser.add_argument(
+        "--production-ai-registry-promotion-priority-json",
+        default=DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_JSON,
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -1260,12 +1328,18 @@ def main(argv: list[str] | None = None) -> None:
         production_ai_registry_promotion_operator_receipt_packet=_read_json_if_present(
             args.production_ai_registry_promotion_operator_receipt_json
         ),
+        production_ai_registry_promotion_priority_packet=_read_json_if_present(
+            args.production_ai_registry_promotion_priority_json
+        ),
         goal_audit_path=args.goal_audit_json,
         delta_force_closure_packet_path=args.delta_force_closure_packet_json,
         scope_closure_packet_path=args.scope_closure_packet_json,
         aqp1_direct_binding_procurement_path=args.aqp1_direct_binding_procurement_json,
         production_ai_registry_promotion_operator_receipt_path=(
             args.production_ai_registry_promotion_operator_receipt_json
+        ),
+        production_ai_registry_promotion_priority_path=(
+            args.production_ai_registry_promotion_priority_json
         ),
     )
     _write_json(args.out_json, payload)

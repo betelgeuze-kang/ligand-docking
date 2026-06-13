@@ -30,6 +30,7 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
     assert artifacts["api_runner_profile_promotion_operator_template"]["sha256"]
     assert artifacts["api_runner_profile_promotion_operator_receipt"]["sha256"]
     assert artifacts["production_ai_registry_promotion_operator_receipt"]["sha256"]
+    assert artifacts["production_ai_registry_promotion_priority_packet"]["sha256"]
     assert artifacts["product_pose_sampling_readiness"]["sha256"]
     assert artifacts["systemd_api_server_unit"]["sha256"]
     assert artifacts["systemd_api_server_env_example"]["sha256"]
@@ -63,6 +64,10 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
     ]["observed"]
     assert "observed_mode=shadow" in checks[
         "production_ai_registry_promotion_operator_receipt_recorded"
+    ]["observed"]
+    assert checks["production_ai_registry_promotion_priority_packet_recorded"]["passed"] is True
+    assert "top_gate_id=trained_model_checkpoint_count_positive" in checks[
+        "production_ai_registry_promotion_priority_packet_recorded"
     ]["observed"]
     assert checks["product_pose_sampling_readiness_recorded"]["passed"] is True
     assert "claim_grade_pose_accuracy_ready=False" in checks[

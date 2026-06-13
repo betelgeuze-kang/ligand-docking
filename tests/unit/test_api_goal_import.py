@@ -289,7 +289,7 @@ def test_api_app_imports_with_goal_router() -> None:
         "product_commercial_readiness_handoff_bundle_ready"
     )
     assert status["commercial_readiness_handoff_bundle_ready"] is True
-    assert status["commercial_readiness_handoff_bundle_artifact_reference_count"] == 28
+    assert status["commercial_readiness_handoff_bundle_artifact_reference_count"] == 29
     assert status["commercial_readiness_handoff_bundle_local_missing_artifact_reference_count"] == 0
     assert status["operator_intake_kit_full_commercial_evidence_receipt_entry_count"] == int(
         intake_artifact.get("full_commercial_evidence_receipt_entry_count") or 0
@@ -433,6 +433,34 @@ def test_api_app_imports_with_goal_router() -> None:
     assert "default_residual_mode_guarded" in status[
         "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_missing_gate_ids"
     ]
+    assert status["production_ai_registry_promotion_priority_status"] == (
+        handoff_artifact.get("production_ai_registry_promotion_priority_status")
+    )
+    assert status["production_ai_registry_promotion_priority_status"] == (
+        "blocked_production_ai_registry_promotion_priority_packet"
+    )
+    assert status["production_ai_registry_promotion_priority_packet_ready"] is True
+    assert status["production_ai_registry_promotion_priority_registry_promotion_ready"] is False
+    assert status["production_ai_registry_promotion_priority_operator_input_required_count"] == 4
+    assert status["production_ai_registry_promotion_priority_blocked_priority_item_count"] == 4
+    assert status["production_ai_registry_promotion_priority_missing_gate_count"] == 4
+    assert "trained_model_checkpoint_count_positive" in status[
+        "production_ai_registry_promotion_priority_missing_gate_ids"
+    ]
+    assert status["production_ai_registry_promotion_priority_top_gate_id"] == (
+        "trained_model_checkpoint_count_positive"
+    )
+    assert status["production_ai_registry_promotion_priority_top_priority_bucket"] == (
+        "trained_checkpoint_registration_required"
+    )
+    assert status["production_ai_registry_promotion_priority_top_acceptance_artifact"] == (
+        "runs/residual_model_registry_current.json"
+    )
+    assert status["production_ai_registry_promotion_priority_model_promoted"] is False
+    assert status[
+        "production_ai_registry_promotion_priority_customer_facing_mutation_enabled"
+    ] is False
+    assert status["production_ai_registry_promotion_priority_external_state_mutated"] is False
     assert status["cameo_official_result_fetch_preflight_status"] == cameo_fetch_artifact.get(
         "status"
     )

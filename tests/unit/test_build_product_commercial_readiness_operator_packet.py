@@ -526,11 +526,40 @@ def _registry_receipt() -> dict:
     }
 
 
+def _registry_priority() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_production_ai_registry_promotion_priority_packet",
+            "priority_packet_ready": True,
+            "registry_promotion_ready": False,
+            "operator_input_required_count": 4,
+            "blocked_priority_item_count": 4,
+            "registry_promotion_missing_gate_count": 4,
+            "registry_promotion_missing_gate_ids": [
+                "trained_model_checkpoint_count_positive",
+                "default_residual_mode_guarded",
+                "production_promotion_allowed",
+                "customer_facing_mutation_flags",
+            ],
+            "top_gate_id": "trained_model_checkpoint_count_positive",
+            "top_priority_bucket": "trained_checkpoint_registration_required",
+            "top_required_input": "Register a trained production residual checkpoint.",
+            "top_acceptance_artifact": "runs/residual_model_registry_current.json",
+            "top_verification_command": "python3 tools/build_residual_model_registry.py",
+            "top_next_operator_step": "Register checkpoint, then rerun registry readiness.",
+            "model_promoted": False,
+            "customer_facing_mutation_enabled": False,
+            "external_state_mutated": False,
+        }
+    }
+
+
 def test_build_product_commercial_readiness_operator_packet_flattens_next_actions() -> None:
     payload = mod.build_product_commercial_readiness_operator_packet(
         goal_audit_packet=_goal_audit(),
         aqp1_direct_binding_procurement_packet=_aqp1_procurement(),
         production_ai_registry_promotion_operator_receipt_packet=_registry_receipt(),
+        production_ai_registry_promotion_priority_packet=_registry_priority(),
         delta_force_closure_packet={
             "summary": {
                 "packet_ready": True,
@@ -855,6 +884,25 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
         ]
         is False
     )
+    assert summary["production_ai_registry_promotion_priority_status"] == (
+        "blocked_production_ai_registry_promotion_priority_packet"
+    )
+    assert summary["production_ai_registry_promotion_priority_packet_ready"] is True
+    assert summary["production_ai_registry_promotion_priority_registry_promotion_ready"] is False
+    assert summary["production_ai_registry_promotion_priority_operator_input_required_count"] == 4
+    assert summary["production_ai_registry_promotion_priority_missing_gate_count"] == 4
+    assert summary["production_ai_registry_promotion_priority_top_gate_id"] == (
+        "trained_model_checkpoint_count_positive"
+    )
+    assert summary["production_ai_registry_promotion_priority_top_priority_bucket"] == (
+        "trained_checkpoint_registration_required"
+    )
+    assert summary["production_ai_registry_promotion_priority_top_acceptance_artifact"] == (
+        "runs/residual_model_registry_current.json"
+    )
+    assert summary["production_ai_registry_promotion_priority_model_promoted"] is False
+    assert summary["production_ai_registry_promotion_priority_customer_facing_mutation_enabled"] is False
+    assert summary["production_ai_registry_promotion_priority_external_state_mutated"] is False
     assert summary["delta_force_closure_acceptance_packet_artifact"] == (
         "runs/unit_delta_force_closure.json"
     )

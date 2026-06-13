@@ -497,6 +497,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/product_launch_r4_preflight_current.json",
             "runs/product_goal_completion_audit_current.json",
             "runs/production_ai_registry_promotion_operator_receipt_current.json",
+            "runs/production_ai_registry_promotion_priority_packet_current.json",
             "runs/api_runner_profile_promotion_operator_receipt_current.json",
             "runs/product_pose_sampling_readiness_current.json",
             "runs/engine_refinement_claim_evidence_receipt_current.json",
@@ -777,6 +778,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "depends_on": [
             "runs/product_goal_completion_audit_current.json",
             "runs/production_ai_registry_promotion_operator_receipt_current.json",
+            "runs/production_ai_registry_promotion_priority_packet_current.json",
             "config/production_ai_registry_promotion_operator_receipt_current.csv",
         ],
     },

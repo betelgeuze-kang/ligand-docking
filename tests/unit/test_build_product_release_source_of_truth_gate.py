@@ -615,6 +615,14 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert registry_priority_status_spec["required_text_exact_fields"][
         "top_gate_id"
     ] == "trained_model_checkpoint_count_positive"
+    commercial_operator_packet_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "product_commercial_readiness_operator_packet"
+    )
+    assert "runs/production_ai_registry_promotion_priority_packet_current.json" in commercial_operator_packet_spec[
+        "depends_on"
+    ]
     goal_action_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_operator_action_board"
     )
@@ -812,6 +820,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/self_hosted_license_distribution_audit_current.json" in release_bundle_spec["depends_on"]
     assert "runs/third_party_license_review_gate_current.json" in release_bundle_spec["depends_on"]
     assert "runs/product_goal_completion_audit_current.json" in release_bundle_spec["depends_on"]
+    assert "runs/production_ai_registry_promotion_priority_packet_current.json" in release_bundle_spec[
+        "depends_on"
+    ]
     assert "runs/product_pose_sampling_readiness_current.json" in release_bundle_spec["depends_on"]
     assert "runs/product_trajectory_sla_contract_current.json" in release_bundle_spec["depends_on"]
     assert "runs/engine_refinement_claim_evidence_receipt_current.json" in release_bundle_spec["depends_on"]

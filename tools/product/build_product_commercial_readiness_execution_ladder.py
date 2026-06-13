@@ -855,6 +855,85 @@ def build_product_commercial_readiness_execution_ladder(
             )
             is True
         ),
+        "production_ai_registry_promotion_priority_artifact": _text(
+            operator_summary.get("production_ai_registry_promotion_priority_artifact")
+        ),
+        "production_ai_registry_promotion_priority_status": _text(
+            operator_summary.get("production_ai_registry_promotion_priority_status")
+        ),
+        "production_ai_registry_promotion_priority_packet_ready": bool(
+            operator_summary.get("production_ai_registry_promotion_priority_packet_ready") is True
+        ),
+        "production_ai_registry_promotion_priority_registry_promotion_ready": bool(
+            operator_summary.get(
+                "production_ai_registry_promotion_priority_registry_promotion_ready"
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_priority_operator_input_required_count": int(
+            operator_summary.get(
+                "production_ai_registry_promotion_priority_operator_input_required_count"
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_priority_blocked_priority_item_count": int(
+            operator_summary.get(
+                "production_ai_registry_promotion_priority_blocked_priority_item_count"
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_priority_missing_gate_count": int(
+            operator_summary.get("production_ai_registry_promotion_priority_missing_gate_count")
+            or 0
+        ),
+        "production_ai_registry_promotion_priority_missing_gate_ids": [
+            str(item)
+            for item in (
+                operator_summary.get("production_ai_registry_promotion_priority_missing_gate_ids")
+                or []
+            )
+        ],
+        "production_ai_registry_promotion_priority_top_gate_id": _text(
+            operator_summary.get("production_ai_registry_promotion_priority_top_gate_id")
+        ),
+        "production_ai_registry_promotion_priority_top_priority_bucket": _text(
+            operator_summary.get(
+                "production_ai_registry_promotion_priority_top_priority_bucket"
+            )
+        ),
+        "production_ai_registry_promotion_priority_top_required_input": _text(
+            operator_summary.get("production_ai_registry_promotion_priority_top_required_input")
+        ),
+        "production_ai_registry_promotion_priority_top_acceptance_artifact": _text(
+            operator_summary.get(
+                "production_ai_registry_promotion_priority_top_acceptance_artifact"
+            )
+        ),
+        "production_ai_registry_promotion_priority_top_verification_command": _text(
+            operator_summary.get(
+                "production_ai_registry_promotion_priority_top_verification_command"
+            )
+        ),
+        "production_ai_registry_promotion_priority_top_next_operator_step": _text(
+            operator_summary.get(
+                "production_ai_registry_promotion_priority_top_next_operator_step"
+            )
+        ),
+        "production_ai_registry_promotion_priority_model_promoted": bool(
+            operator_summary.get("production_ai_registry_promotion_priority_model_promoted") is True
+        ),
+        "production_ai_registry_promotion_priority_customer_facing_mutation_enabled": bool(
+            operator_summary.get(
+                "production_ai_registry_promotion_priority_customer_facing_mutation_enabled"
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_priority_external_state_mutated": bool(
+            operator_summary.get(
+                "production_ai_registry_promotion_priority_external_state_mutated"
+            )
+            is True
+        ),
         "all_preconditions_satisfied": all(row["precondition_satisfied"] for row in ladder_rows) if ladder_rows else False,
         "next_required_step": (
             _text(first.get("next_action"))

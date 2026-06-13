@@ -432,6 +432,20 @@ def _build_artifact_reference_manifest(
                 note="Local fail-closed receipt proving whether guarded production AI registry promotion has been operator-reviewed.",
             )
         )
+    registry_priority_artifact = _text(
+        summary.get("production_ai_registry_promotion_priority_artifact")
+    )
+    if registry_priority_artifact:
+        refs.append(
+            _artifact_reference(
+                artifact_id="production_ai_registry_promotion_priority_packet",
+                artifact_path=registry_priority_artifact,
+                reference_role="local_production_ai_registry_promotion_priority",
+                required_now=True,
+                expected_from_operator_return=False,
+                note="Local priority packet ordering the guarded production AI registry promotion gates.",
+            )
+        )
     registry_receipt_csv = _text(
         summary.get("production_ai_registry_promotion_operator_receipt_csv")
     )
@@ -1470,6 +1484,137 @@ def build_product_commercial_readiness_handoff_bundle(
                 ladder_summary,
                 operator_summary,
                 "production_ai_registry_promotion_operator_receipt_checkpoint_created_by_this_tool",
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_priority_artifact": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_artifact",
+            )
+        ),
+        "production_ai_registry_promotion_priority_status": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_status",
+            )
+        ),
+        "production_ai_registry_promotion_priority_packet_ready": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_packet_ready",
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_priority_registry_promotion_ready": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_registry_promotion_ready",
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_priority_operator_input_required_count": int(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_operator_input_required_count",
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_priority_blocked_priority_item_count": int(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_blocked_priority_item_count",
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_priority_missing_gate_count": int(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_missing_gate_count",
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_priority_missing_gate_ids": [
+            str(item)
+            for item in (
+                _first_present(
+                    ladder_summary,
+                    operator_summary,
+                    "production_ai_registry_promotion_priority_missing_gate_ids",
+                )
+                or []
+            )
+        ],
+        "production_ai_registry_promotion_priority_top_gate_id": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_top_gate_id",
+            )
+        ),
+        "production_ai_registry_promotion_priority_top_priority_bucket": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_top_priority_bucket",
+            )
+        ),
+        "production_ai_registry_promotion_priority_top_required_input": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_top_required_input",
+            )
+        ),
+        "production_ai_registry_promotion_priority_top_acceptance_artifact": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_top_acceptance_artifact",
+            )
+        ),
+        "production_ai_registry_promotion_priority_top_verification_command": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_top_verification_command",
+            )
+        ),
+        "production_ai_registry_promotion_priority_top_next_operator_step": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_top_next_operator_step",
+            )
+        ),
+        "production_ai_registry_promotion_priority_model_promoted": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_model_promoted",
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_priority_customer_facing_mutation_enabled": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_customer_facing_mutation_enabled",
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_priority_external_state_mutated": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_external_state_mutated",
             )
             is True
         ),

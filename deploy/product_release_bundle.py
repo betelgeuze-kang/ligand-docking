@@ -25,6 +25,9 @@ DEFAULT_ARTIFACTS = {
     "production_ai_registry_promotion_operator_receipt": (
         "runs/production_ai_registry_promotion_operator_receipt_current.json"
     ),
+    "production_ai_registry_promotion_priority_packet": (
+        "runs/production_ai_registry_promotion_priority_packet_current.json"
+    ),
     "product_pose_sampling_readiness": "runs/product_pose_sampling_readiness_current.json",
     "rollback_runbook": "deploy/product_rollback_runbook.md",
     "rollout_runbook": "deploy/product_rollout_runbook.md",
@@ -135,6 +138,9 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
     )
     production_ai_registry_receipt = _summary(
         _read_json(_resolve(DEFAULT_ARTIFACTS["production_ai_registry_promotion_operator_receipt"]))
+    )
+    production_ai_registry_priority = _summary(
+        _read_json(_resolve(DEFAULT_ARTIFACTS["production_ai_registry_promotion_priority_packet"]))
     )
     pose_sampling = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["product_pose_sampling_readiness"])))
     viewer_asset_base = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["viewer_asset_base_url_decision"])))
@@ -327,6 +333,32 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
                 f"observed_mode={production_ai_registry_receipt.get('observed_registry_default_residual_mode')};"
                 f"observed_checkpoint_count="
                 f"{production_ai_registry_receipt.get('observed_registry_trained_model_checkpoint_count')}"
+            ),
+        },
+        {
+            "check": "production_ai_registry_promotion_priority_packet_recorded",
+            "passed": (
+                production_ai_registry_priority.get("status")
+                in {
+                    "blocked_production_ai_registry_promotion_priority_packet",
+                    "production_ai_registry_promotion_priority_packet_ready",
+                }
+                and production_ai_registry_priority.get("priority_packet_ready") is True
+                and production_ai_registry_priority.get("approval_token_required")
+                == "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+                and production_ai_registry_priority.get("model_promoted") is False
+                and production_ai_registry_priority.get("customer_facing_mutation_enabled") is False
+                and production_ai_registry_priority.get("external_state_mutated") is False
+                and int(production_ai_registry_priority.get("priority_item_count") or 0) >= 4
+            ),
+            "observed": (
+                f"priority_status={production_ai_registry_priority.get('status')};"
+                f"priority_ready={production_ai_registry_priority.get('priority_packet_ready')};"
+                f"registry_promotion_ready={production_ai_registry_priority.get('registry_promotion_ready')};"
+                f"top_gate_id={production_ai_registry_priority.get('top_gate_id')};"
+                f"top_priority_bucket={production_ai_registry_priority.get('top_priority_bucket')};"
+                f"missing_gate_count="
+                f"{production_ai_registry_priority.get('registry_promotion_missing_gate_count')}"
             ),
         },
         {
