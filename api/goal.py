@@ -128,6 +128,10 @@ def _int(value: Any) -> int:
         return 0
 
 
+def _dict_get(value: Any, key: str) -> Any:
+    return value.get(key) if isinstance(value, dict) else None
+
+
 def _float(value: Any) -> float:
     try:
         return float(value or 0.0)
@@ -1112,6 +1116,14 @@ async def get_goal_status() -> dict[str, Any]:
             "full_commercial_blocker_evidence_matrix_first_blocked_acceptance_artifact": "",
             "full_commercial_blocker_evidence_matrix_scope_receipt_most_common_row_blocker": "",
             "full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker": "",
+            "full_commercial_blocker_evidence_matrix_r8_blocked_row_count": 0,
+            "full_commercial_blocker_evidence_matrix_r8_first_blocked_evidence_row_id": "",
+            "full_commercial_blocker_evidence_matrix_r8_receipt_csv": "",
+            "full_commercial_blocker_evidence_matrix_r8_approval_token_required": "",
+            "full_commercial_blocker_evidence_matrix_r9_blocked_row_count": 0,
+            "full_commercial_blocker_evidence_matrix_r9_first_blocked_evidence_row_id": "",
+            "full_commercial_blocker_evidence_matrix_r9_receipt_csv": "",
+            "full_commercial_blocker_evidence_matrix_r9_approval_token_required": "",
             "product_quality_gate_verification_status": "",
             "product_quality_gate_verification_recorded": False,
             "product_quality_gate_verification_ready": False,
@@ -1500,6 +1512,60 @@ async def get_goal_status() -> dict[str, Any]:
         ),
         "full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker": (
             full_commercial_matrix.get("engine_receipt_most_common_row_blocker", "")
+        ),
+        "full_commercial_blocker_evidence_matrix_r8_blocked_row_count": _int(
+            _dict_get(
+                full_commercial_matrix.get("release_blocker_blocked_row_counts"),
+                "R8_full_scope_claim_closure",
+            )
+        ),
+        "full_commercial_blocker_evidence_matrix_r8_first_blocked_evidence_row_id": (
+            _dict_get(
+                full_commercial_matrix.get("release_blocker_first_blocked_evidence_row_ids"),
+                "R8_full_scope_claim_closure",
+            )
+            or ""
+        ),
+        "full_commercial_blocker_evidence_matrix_r8_receipt_csv": (
+            _dict_get(
+                full_commercial_matrix.get("release_blocker_receipt_csvs"),
+                "R8_full_scope_claim_closure",
+            )
+            or ""
+        ),
+        "full_commercial_blocker_evidence_matrix_r8_approval_token_required": (
+            _dict_get(
+                full_commercial_matrix.get("release_blocker_approval_tokens_required"),
+                "R8_full_scope_claim_closure",
+            )
+            or ""
+        ),
+        "full_commercial_blocker_evidence_matrix_r9_blocked_row_count": _int(
+            _dict_get(
+                full_commercial_matrix.get("release_blocker_blocked_row_counts"),
+                "R9_engine_refinement_claim_promotion",
+            )
+        ),
+        "full_commercial_blocker_evidence_matrix_r9_first_blocked_evidence_row_id": (
+            _dict_get(
+                full_commercial_matrix.get("release_blocker_first_blocked_evidence_row_ids"),
+                "R9_engine_refinement_claim_promotion",
+            )
+            or ""
+        ),
+        "full_commercial_blocker_evidence_matrix_r9_receipt_csv": (
+            _dict_get(
+                full_commercial_matrix.get("release_blocker_receipt_csvs"),
+                "R9_engine_refinement_claim_promotion",
+            )
+            or ""
+        ),
+        "full_commercial_blocker_evidence_matrix_r9_approval_token_required": (
+            _dict_get(
+                full_commercial_matrix.get("release_blocker_approval_tokens_required"),
+                "R9_engine_refinement_claim_promotion",
+            )
+            or ""
         ),
         "product_quality_gate_verification_status": release.get(
             "product_quality_gate_verification_status", ""

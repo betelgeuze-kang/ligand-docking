@@ -1015,6 +1015,48 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker"] == (
         full_matrix_artifact.get("engine_receipt_most_common_row_blocker")
     )
+    assert status["full_commercial_blocker_evidence_matrix_r8_blocked_row_count"] == int(
+        (full_matrix_artifact.get("release_blocker_blocked_row_counts") or {}).get(
+            "R8_full_scope_claim_closure"
+        )
+        or 0
+    )
+    assert status["full_commercial_blocker_evidence_matrix_r8_first_blocked_evidence_row_id"] == (
+        (full_matrix_artifact.get("release_blocker_first_blocked_evidence_row_ids") or {}).get(
+            "R8_full_scope_claim_closure"
+        )
+    )
+    assert status["full_commercial_blocker_evidence_matrix_r8_receipt_csv"] == (
+        (full_matrix_artifact.get("release_blocker_receipt_csvs") or {}).get(
+            "R8_full_scope_claim_closure"
+        )
+    )
+    assert status["full_commercial_blocker_evidence_matrix_r8_approval_token_required"] == (
+        (full_matrix_artifact.get("release_blocker_approval_tokens_required") or {}).get(
+            "R8_full_scope_claim_closure"
+        )
+    )
+    assert status["full_commercial_blocker_evidence_matrix_r9_blocked_row_count"] == int(
+        (full_matrix_artifact.get("release_blocker_blocked_row_counts") or {}).get(
+            "R9_engine_refinement_claim_promotion"
+        )
+        or 0
+    )
+    assert status["full_commercial_blocker_evidence_matrix_r9_first_blocked_evidence_row_id"] == (
+        (full_matrix_artifact.get("release_blocker_first_blocked_evidence_row_ids") or {}).get(
+            "R9_engine_refinement_claim_promotion"
+        )
+    )
+    assert status["full_commercial_blocker_evidence_matrix_r9_receipt_csv"] == (
+        (full_matrix_artifact.get("release_blocker_receipt_csvs") or {}).get(
+            "R9_engine_refinement_claim_promotion"
+        )
+    )
+    assert status["full_commercial_blocker_evidence_matrix_r9_approval_token_required"] == (
+        (full_matrix_artifact.get("release_blocker_approval_tokens_required") or {}).get(
+            "R9_engine_refinement_claim_promotion"
+        )
+    )
     assert status["goal_completion_audit_goal_complete"] == readiness_artifact.get(
         "goal_completion_audit_goal_complete"
     )
