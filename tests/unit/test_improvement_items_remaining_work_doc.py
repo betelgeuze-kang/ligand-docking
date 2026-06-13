@@ -48,8 +48,11 @@ def test_remaining_work_doc_tracks_current_release_metrics() -> None:
     assert f"`goal_release_blocker_count={action_board['goal_release_blocker_count']}`" in text
 
     assert "`artifact_count=28`" not in text
+    assert "`artifact_count=31`" not in text
     assert "`check_count=21`" not in text
+    assert "`check_count=24`" not in text
     assert "`pass_count=21`" not in text
+    assert "`pass_count=24`" not in text
     assert "`command_count=76`" not in text
     assert "`executed_count=76`" not in text
     assert "`release_refresh_command_count=79`" not in text

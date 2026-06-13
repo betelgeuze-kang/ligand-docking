@@ -1227,8 +1227,8 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   product launch R4 preflight, product scope-breadth evidence receipt,
   product full-commercial blocker evidence matrix
   artifact를 하나의 release bundle manifest로 묶고 operator promotion policy를
-  `operator_approval_required`로 고정한다. 최신 상태는 `artifact_count=31`,
-  `check_count=24`, `pass_count=24`, `blocker_count=0`이다.
+  `operator_approval_required`로 고정한다. 최신 상태는 `artifact_count=33`,
+  `check_count=25`, `pass_count=25`, `blocker_count=0`이다.
 - `deploy/docker-compose.product.yml`, `deploy/k8s/configmap.yaml`,
   `deploy/systemd/api-server.env.example`, `deploy/systemd/api-worker.env.example`은
   `PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED=1`을 product deployment default로
@@ -1331,7 +1331,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   gate, API runner profile promotion readiness gate/operator template, rollout
   execution readiness gate, product launch R4 preflight, product scope-breadth
   evidence receipt, product full-commercial blocker evidence matrix를 포함해
-  `artifact_count=31`, `check_count=24`, `pass_count=24`,
+  `artifact_count=33`, `check_count=25`, `pass_count=25`,
   `blocker_count=0` 상태다.
 
 ### H. Viewer 외부 의존성

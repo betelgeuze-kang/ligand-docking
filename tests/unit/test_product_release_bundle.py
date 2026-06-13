@@ -14,9 +14,9 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
     assert payload["bundle_version"] == "product_release_bundle_manifest_v1"
     assert payload["status"] == "release_bundle_ready_for_operator_review"
     assert payload["release_bundle_ready"] is True
-    assert payload["artifact_count"] == 31
-    assert payload["check_count"] == 24
-    assert payload["pass_count"] == 24
+    assert payload["artifact_count"] == 33
+    assert payload["check_count"] == 25
+    assert payload["pass_count"] == 25
     assert payload["blocker_count"] == 0
     assert payload["operator_promotion_policy"]["status"] == "operator_approval_required"
     assert payload["operator_promotion_policy"]["external_state_mutation_allowed"] is False
@@ -46,6 +46,8 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
     assert artifacts["third_party_license_review_gate"]["sha256"]
     assert artifacts["product_rollout_execution_readiness"]["sha256"]
     assert artifacts["product_launch_r4_preflight"]["sha256"]
+    assert artifacts["independent_product_readiness_script"]["sha256"]
+    assert artifacts["product_quality_gate_verifier_script"]["sha256"]
     assert artifacts["engine_refinement_claim_promotion_action_board"]["sha256"]
     assert artifacts["engine_refinement_claim_evidence_receipt"]["sha256"]
     assert artifacts["product_scope_breadth_evidence_receipt"]["sha256"]
@@ -87,6 +89,13 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
     assert checks["systemd_api_server_worker_units_recorded"]["passed"] is True
     assert checks["product_rollout_execution_readiness_recorded"]["passed"] is True
     assert checks["product_launch_r4_preflight_recorded"]["passed"] is True
+    assert checks["product_readiness_verification_scripts_recorded"]["passed"] is True
+    assert "scripts/check_independent_product_readiness.py" in checks[
+        "product_readiness_verification_scripts_recorded"
+    ]["observed"]
+    assert "scripts/verify_quality_gate.py" in checks[
+        "product_readiness_verification_scripts_recorded"
+    ]["observed"]
     assert checks["engine_refinement_claim_promotion_action_board_recorded"]["passed"] is True
     assert checks["engine_refinement_claim_evidence_receipt_recorded"]["passed"] is True
     assert "receipt_ready=False" in checks["engine_refinement_claim_evidence_receipt_recorded"]["observed"]

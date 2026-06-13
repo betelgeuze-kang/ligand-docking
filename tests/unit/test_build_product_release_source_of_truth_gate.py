@@ -1512,6 +1512,8 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert "runs/self_hosted_license_distribution_audit_current.json" in release_bundle_spec["depends_on"]
     assert "runs/third_party_license_review_gate_current.json" in release_bundle_spec["depends_on"]
+    assert "scripts/check_independent_product_readiness.py" in release_bundle_spec["depends_on"]
+    assert "scripts/verify_quality_gate.py" in release_bundle_spec["depends_on"]
     assert "runs/product_goal_completion_audit_current.json" in release_bundle_spec["depends_on"]
     assert "runs/production_ai_registry_promotion_priority_packet_current.json" in release_bundle_spec[
         "depends_on"

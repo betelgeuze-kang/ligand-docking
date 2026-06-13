@@ -45,6 +45,8 @@ DEFAULT_ARTIFACTS = {
     "third_party_license_review_gate": "runs/third_party_license_review_gate_current.json",
     "product_rollout_execution_readiness": "runs/product_rollout_execution_readiness_current.json",
     "product_launch_r4_preflight": "runs/product_launch_r4_preflight_current.json",
+    "independent_product_readiness_script": "scripts/check_independent_product_readiness.py",
+    "product_quality_gate_verifier_script": "scripts/verify_quality_gate.py",
     "engine_refinement_claim_promotion_action_board": "runs/engine_refinement_claim_promotion_action_board_current.csv",
     "engine_refinement_claim_evidence_receipt": "runs/engine_refinement_claim_evidence_receipt_current.json",
     "product_scope_breadth_evidence_receipt": "runs/product_scope_breadth_evidence_receipt_current.json",
@@ -148,6 +150,12 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
     third_party_license_review = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["third_party_license_review_gate"])))
     rollout_execution_readiness = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["product_rollout_execution_readiness"])))
     launch_r4_preflight = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["product_launch_r4_preflight"])))
+    independent_product_readiness_script = _read_text(
+        _resolve(DEFAULT_ARTIFACTS["independent_product_readiness_script"])
+    )
+    product_quality_gate_verifier_script = _read_text(
+        _resolve(DEFAULT_ARTIFACTS["product_quality_gate_verifier_script"])
+    )
     engine_action_board_text = _read_text(_resolve(DEFAULT_ARTIFACTS["engine_refinement_claim_promotion_action_board"]))
     engine_claim_evidence_receipt = _summary(
         _read_json(_resolve(DEFAULT_ARTIFACTS["engine_refinement_claim_evidence_receipt"]))
@@ -491,6 +499,27 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
                 f"blocker_count={launch_r4_preflight.get('blocker_count')};"
                 f"authorized_for_external_mutation={launch_r4_preflight.get('authorized_for_external_mutation')};"
                 f"launch_executed={launch_r4_preflight.get('launch_executed')}"
+            ),
+        },
+        {
+            "check": "product_readiness_verification_scripts_recorded",
+            "passed": (
+                artifacts["independent_product_readiness_script"]["present"]
+                and artifacts["product_quality_gate_verifier_script"]["present"]
+                and "build_independent_product_readiness" in independent_product_readiness_script
+                and "independent_restricted_product_ready" in independent_product_readiness_script
+                and "full_commercial_claim_promotion_ready" in independent_product_readiness_script
+                and "full_commercial_open_gap_ids" in independent_product_readiness_script
+                and "build_quality_gate_verification" in product_quality_gate_verifier_script
+                and "quality_gate_ready" in product_quality_gate_verifier_script
+                and "execution_enabled" in product_quality_gate_verifier_script
+                and "external_state_mutated" in product_quality_gate_verifier_script
+            ),
+            "observed": (
+                f"independent_script={DEFAULT_ARTIFACTS['independent_product_readiness_script']};"
+                f"quality_script={DEFAULT_ARTIFACTS['product_quality_gate_verifier_script']};"
+                f"independent_sha256={artifacts['independent_product_readiness_script']['sha256']};"
+                f"quality_sha256={artifacts['product_quality_gate_verifier_script']['sha256']}"
             ),
         },
         {

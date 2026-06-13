@@ -509,6 +509,8 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/self_hosted_license_distribution_audit_current.json",
             "runs/third_party_license_review_gate_current.json",
             "runs/product_launch_r4_preflight_current.json",
+            "scripts/check_independent_product_readiness.py",
+            "scripts/verify_quality_gate.py",
             "runs/product_goal_completion_audit_current.json",
             "runs/production_ai_registry_promotion_operator_receipt_current.json",
             "runs/production_ai_registry_promotion_priority_packet_current.json",
@@ -1063,6 +1065,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_true_fields": [
             "release_bundle_ready",
         ],
+        "required_int_exact_fields": {
+            "artifact_count": 33,
+            "check_count": 25,
+            "pass_count": 25,
+            "blocker_count": 0,
+        },
     },
     {
         "artifact_id": "product_pose_sampling_readiness_semantic_ready",
