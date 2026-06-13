@@ -23,6 +23,7 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         "PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_ARTIFACT = 'runs/product_scope_breadth_evidence_receipt_current.json'\n"
         "ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_ARTIFACT = 'runs/engine_refinement_claim_evidence_receipt_current.json'\n"
         "CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_ARTIFACT = 'runs/cameo_official_result_fetch_preflight_current.json'\n"
+        "PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_ARTIFACT = 'runs/product_rollout_execution_smoke_receipt_current.json'\n"
         "FULL_COMMERCIAL_RELEASE_BLOCKER_IDS = ('R8_full_scope_claim_closure', 'R9_engine_refinement_claim_promotion', 'MASTER:SCI-CLAIM', 'ACCURACY:ligand_ranking')\n"
         "FULL_COMMERCIAL_EVIDENCE_RECEIPT_STATUS_KEYS = ('product_scope_breadth_evidence_receipt_status', 'engine_refinement_claim_evidence_receipt_status')\n"
         '@router.get("/status")\n'
@@ -286,6 +287,28 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         '"cameo_official_result_fetch_preflight_external_state_mutated": False,'
         '"cameo_official_result_fetch_preflight_blocker_count": 2,'
         '"cameo_official_result_fetch_preflight_blockers": ["operator_decision_missing", "operator_fetch_csv_missing"],'
+        '"product_rollout_execution_smoke_receipt_status": "product_rollout_execution_smoke_receipt_ready",'
+        '"product_rollout_execution_smoke_receipt_ready": True,'
+        '"product_rollout_execution_smoke_receipt_artifact_path": PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_ARTIFACT,'
+        '"product_rollout_execution_smoke_receipt_receipt_csv": "runs/product_rollout_execution_smoke_receipt_operator_intake.csv",'
+        '"product_rollout_execution_smoke_receipt_receipt_csv_present": True,'
+        '"product_rollout_execution_smoke_receipt_receipt_row_count": 1,'
+        '"product_rollout_execution_smoke_receipt_ready_receipt_row_count": 1,'
+        '"product_rollout_execution_smoke_receipt_target_environment": "k8s",'
+        '"product_rollout_execution_smoke_receipt_source_rollout_execution_readiness_status": "product_rollout_execution_readiness_ready",'
+        '"product_rollout_execution_smoke_receipt_source_authorized_for_separate_operator_execution": True,'
+        '"product_rollout_execution_smoke_receipt_source_rollout_executed": False,'
+        '"product_rollout_execution_smoke_receipt_rollout_executed": True,'
+        '"product_rollout_execution_smoke_receipt_external_state_mutated": True,'
+        '"product_rollout_execution_smoke_receipt_image_pushed": True,'
+        '"product_rollout_execution_smoke_receipt_service_restarted": True,'
+        '"product_rollout_execution_smoke_receipt_pager_provider_contacted": True,'
+        '"product_rollout_execution_smoke_receipt_ingress_certificate_verified_live": True,'
+        '"product_rollout_execution_smoke_receipt_blocker_count": 0,'
+        '"product_rollout_execution_smoke_receipt_blockers": [],'
+        '"product_rollout_execution_smoke_receipt_next_required_step": "Attach the rollout smoke receipt",'
+        '"product_rollout_execution_smoke_receipt_operator_receipt_guard_ready": True,'
+        '"product_rollout_execution_smoke_receipt_operator_receipt_guard_missing_reasons": [],'
         '"refine_tier_public_benchmark_work_order_apply_write_guard_ready": True,'
         '"refine_tier_public_benchmark_work_order_apply_write_guard_missing_reasons": [],'
         '"product_scope_breadth_evidence_receipt_status": "blocked_product_scope_breadth_evidence_receipt",'

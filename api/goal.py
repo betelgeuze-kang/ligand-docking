@@ -32,6 +32,9 @@ ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_ARTIFACT = (
 CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_ARTIFACT = (
     ROOT / "runs" / "cameo_official_result_fetch_preflight_current.json"
 )
+PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_ARTIFACT = (
+    ROOT / "runs" / "product_rollout_execution_smoke_receipt_current.json"
+)
 
 FULL_COMMERCIAL_RELEASE_BLOCKER_IDS = (
     "R8_full_scope_claim_closure",
@@ -898,6 +901,102 @@ def _cameo_official_result_fetch_preflight_fields(
     }
 
 
+def _product_rollout_execution_smoke_receipt_fields(receipt: dict[str, Any]) -> dict[str, Any]:
+    guard_missing_reasons: list[str] = []
+    if receipt.get("status") != "product_rollout_execution_smoke_receipt_ready":
+        guard_missing_reasons.append("receipt_not_ready")
+    if receipt.get("rollout_execution_smoke_receipt_ready") is not True:
+        guard_missing_reasons.append("ready_flag_not_true")
+    if receipt.get("receipt_csv_present") is not True:
+        guard_missing_reasons.append("receipt_csv_missing")
+    if _int(receipt.get("receipt_row_count")) < 1:
+        guard_missing_reasons.append("receipt_row_missing")
+    if receipt.get("source_authorized_for_separate_operator_execution") is not True:
+        guard_missing_reasons.append("source_preflight_not_authorized")
+    if receipt.get("source_rollout_executed") is True:
+        guard_missing_reasons.append("source_preflight_executed_rollout")
+    if receipt.get("rollout_executed") is not True:
+        guard_missing_reasons.append("rollout_execution_not_recorded")
+    if receipt.get("external_state_mutated") is not True:
+        guard_missing_reasons.append("external_mutation_not_recorded")
+    if receipt.get("image_pushed") is not True:
+        guard_missing_reasons.append("image_push_not_recorded")
+    if receipt.get("service_restarted") is not True:
+        guard_missing_reasons.append("service_restart_not_recorded")
+    if receipt.get("pager_provider_contacted") is not True:
+        guard_missing_reasons.append("pager_contact_not_recorded")
+    if receipt.get("ingress_certificate_verified_live") is not True:
+        guard_missing_reasons.append("ingress_certificate_not_verified")
+    if _int(receipt.get("blocker_count")) != 0:
+        guard_missing_reasons.append("blockers_present")
+    return {
+        "product_rollout_execution_smoke_receipt_status": receipt.get("status", ""),
+        "product_rollout_execution_smoke_receipt_ready": bool(
+            receipt.get("rollout_execution_smoke_receipt_ready") is True
+        ),
+        "product_rollout_execution_smoke_receipt_artifact_path": str(
+            PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_ARTIFACT
+        ),
+        "product_rollout_execution_smoke_receipt_receipt_csv": receipt.get(
+            "receipt_csv", ""
+        ),
+        "product_rollout_execution_smoke_receipt_receipt_csv_present": bool(
+            receipt.get("receipt_csv_present") is True
+        ),
+        "product_rollout_execution_smoke_receipt_receipt_row_count": _int(
+            receipt.get("receipt_row_count")
+        ),
+        "product_rollout_execution_smoke_receipt_ready_receipt_row_count": _int(
+            receipt.get("ready_receipt_row_count")
+        ),
+        "product_rollout_execution_smoke_receipt_target_environment": receipt.get(
+            "target_environment", ""
+        ),
+        "product_rollout_execution_smoke_receipt_source_rollout_execution_readiness_status": (
+            receipt.get("source_rollout_execution_readiness_status", "")
+        ),
+        "product_rollout_execution_smoke_receipt_source_authorized_for_separate_operator_execution": bool(
+            receipt.get("source_authorized_for_separate_operator_execution") is True
+        ),
+        "product_rollout_execution_smoke_receipt_source_rollout_executed": bool(
+            receipt.get("source_rollout_executed") is True
+        ),
+        "product_rollout_execution_smoke_receipt_rollout_executed": bool(
+            receipt.get("rollout_executed") is True
+        ),
+        "product_rollout_execution_smoke_receipt_external_state_mutated": bool(
+            receipt.get("external_state_mutated") is True
+        ),
+        "product_rollout_execution_smoke_receipt_image_pushed": bool(
+            receipt.get("image_pushed") is True
+        ),
+        "product_rollout_execution_smoke_receipt_service_restarted": bool(
+            receipt.get("service_restarted") is True
+        ),
+        "product_rollout_execution_smoke_receipt_pager_provider_contacted": bool(
+            receipt.get("pager_provider_contacted") is True
+        ),
+        "product_rollout_execution_smoke_receipt_ingress_certificate_verified_live": bool(
+            receipt.get("ingress_certificate_verified_live") is True
+        ),
+        "product_rollout_execution_smoke_receipt_blocker_count": _int(
+            receipt.get("blocker_count")
+        ),
+        "product_rollout_execution_smoke_receipt_blockers": _string_list(
+            receipt.get("blockers")
+        ),
+        "product_rollout_execution_smoke_receipt_next_required_step": receipt.get(
+            "next_required_step", ""
+        ),
+        "product_rollout_execution_smoke_receipt_operator_receipt_guard_ready": (
+            not guard_missing_reasons
+        ),
+        "product_rollout_execution_smoke_receipt_operator_receipt_guard_missing_reasons": (
+            guard_missing_reasons
+        ),
+    }
+
+
 def _evidence_receipt_fields(
     *,
     prefix: str,
@@ -971,6 +1070,9 @@ async def get_goal_status() -> dict[str, Any]:
     scope_receipt_packet = _read_json_object(PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_ARTIFACT)
     engine_receipt_packet = _read_json_object(ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_ARTIFACT)
     cameo_fetch_packet = _read_json_object(CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_ARTIFACT)
+    rollout_smoke_receipt_packet = _read_json_object(
+        PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_ARTIFACT
+    )
 
     readiness = _summary(readiness_packet)
     actions = _summary(action_packet)
@@ -985,6 +1087,7 @@ async def get_goal_status() -> dict[str, Any]:
     scope_receipt = _summary(scope_receipt_packet)
     engine_receipt = _summary(engine_receipt_packet)
     cameo_fetch = _summary(cameo_fetch_packet)
+    rollout_smoke_receipt = _summary(rollout_smoke_receipt_packet)
     intake_rows = _rows(intake_packet)
     bottleneck_rows = _rows(bottleneck_packet)
     full_commercial_release_blocker_ids = [
@@ -1279,6 +1382,7 @@ async def get_goal_status() -> dict[str, Any]:
             "bottleneck_briefing_product_scope_breadth_evidence_priority_external_state_mutated": False,
             **_production_ai_registry_promotion_receipt_fields({}),
             **_cameo_official_result_fetch_preflight_fields({}, []),
+            **_product_rollout_execution_smoke_receipt_fields({}),
             **_evidence_receipt_fields(
                 prefix="product_scope_breadth_evidence_receipt",
                 receipt={},
@@ -1726,6 +1830,7 @@ async def get_goal_status() -> dict[str, Any]:
         ),
         **_production_ai_registry_promotion_receipt_fields(handoff),
         **_cameo_official_result_fetch_preflight_fields(cameo_fetch, intake_rows),
+        **_product_rollout_execution_smoke_receipt_fields(rollout_smoke_receipt),
         **_evidence_receipt_fields(
             prefix="product_scope_breadth_evidence_receipt",
             receipt=scope_receipt,

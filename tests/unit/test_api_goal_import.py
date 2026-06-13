@@ -258,6 +258,9 @@ def test_api_app_imports_with_goal_router() -> None:
     product_goal_completion_artifact = _artifact_summary("product_goal_completion_audit_current.json")
     handoff_artifact = _artifact_summary("product_commercial_readiness_handoff_bundle_current.json")
     cameo_fetch_artifact = _artifact_summary("cameo_official_result_fetch_preflight_current.json")
+    rollout_smoke_receipt_artifact = _artifact_summary(
+        "product_rollout_execution_smoke_receipt_current.json"
+    )
     scope_receipt_artifact = _artifact_summary("product_scope_breadth_evidence_receipt_current.json")
     engine_receipt_artifact = _artifact_summary(
         "engine_refinement_claim_evidence_receipt_current.json"
@@ -1075,6 +1078,114 @@ def test_api_app_imports_with_goal_router() -> None:
     assert "operator_fetch_csv_missing" in status[
         "cameo_official_result_fetch_preflight_blockers"
     ]
+    assert status["product_rollout_execution_smoke_receipt_status"] == (
+        rollout_smoke_receipt_artifact.get("status")
+    )
+    assert status["product_rollout_execution_smoke_receipt_ready"] is (
+        rollout_smoke_receipt_artifact.get("rollout_execution_smoke_receipt_ready") is True
+    )
+    assert status["product_rollout_execution_smoke_receipt_artifact_path"].endswith(
+        "runs/product_rollout_execution_smoke_receipt_current.json"
+    )
+    assert status["product_rollout_execution_smoke_receipt_receipt_csv"] == (
+        rollout_smoke_receipt_artifact.get("receipt_csv")
+    )
+    assert status["product_rollout_execution_smoke_receipt_receipt_csv_present"] is (
+        rollout_smoke_receipt_artifact.get("receipt_csv_present") is True
+    )
+    assert status["product_rollout_execution_smoke_receipt_receipt_row_count"] == int(
+        rollout_smoke_receipt_artifact.get("receipt_row_count") or 0
+    )
+    assert status["product_rollout_execution_smoke_receipt_ready_receipt_row_count"] == int(
+        rollout_smoke_receipt_artifact.get("ready_receipt_row_count") or 0
+    )
+    assert status["product_rollout_execution_smoke_receipt_target_environment"] == (
+        rollout_smoke_receipt_artifact.get("target_environment")
+    )
+    assert status[
+        "product_rollout_execution_smoke_receipt_source_rollout_execution_readiness_status"
+    ] == rollout_smoke_receipt_artifact.get("source_rollout_execution_readiness_status")
+    assert status[
+        "product_rollout_execution_smoke_receipt_source_authorized_for_separate_operator_execution"
+    ] is (
+        rollout_smoke_receipt_artifact.get(
+            "source_authorized_for_separate_operator_execution"
+        )
+        is True
+    )
+    assert status["product_rollout_execution_smoke_receipt_source_rollout_executed"] is (
+        rollout_smoke_receipt_artifact.get("source_rollout_executed") is True
+    )
+    assert status["product_rollout_execution_smoke_receipt_rollout_executed"] is (
+        rollout_smoke_receipt_artifact.get("rollout_executed") is True
+    )
+    assert status["product_rollout_execution_smoke_receipt_external_state_mutated"] is (
+        rollout_smoke_receipt_artifact.get("external_state_mutated") is True
+    )
+    assert status["product_rollout_execution_smoke_receipt_image_pushed"] is (
+        rollout_smoke_receipt_artifact.get("image_pushed") is True
+    )
+    assert status["product_rollout_execution_smoke_receipt_service_restarted"] is (
+        rollout_smoke_receipt_artifact.get("service_restarted") is True
+    )
+    assert status["product_rollout_execution_smoke_receipt_pager_provider_contacted"] is (
+        rollout_smoke_receipt_artifact.get("pager_provider_contacted") is True
+    )
+    assert status[
+        "product_rollout_execution_smoke_receipt_ingress_certificate_verified_live"
+    ] is (
+        rollout_smoke_receipt_artifact.get("ingress_certificate_verified_live") is True
+    )
+    assert status["product_rollout_execution_smoke_receipt_blocker_count"] == int(
+        rollout_smoke_receipt_artifact.get("blocker_count") or 0
+    )
+    assert status["product_rollout_execution_smoke_receipt_blockers"] == (
+        rollout_smoke_receipt_artifact.get("blockers") or []
+    )
+    assert status["product_rollout_execution_smoke_receipt_next_required_step"] == (
+        rollout_smoke_receipt_artifact.get("next_required_step")
+    )
+    rollout_guard_missing_reasons = []
+    if rollout_smoke_receipt_artifact.get("status") != "product_rollout_execution_smoke_receipt_ready":
+        rollout_guard_missing_reasons.append("receipt_not_ready")
+    if rollout_smoke_receipt_artifact.get("rollout_execution_smoke_receipt_ready") is not True:
+        rollout_guard_missing_reasons.append("ready_flag_not_true")
+    if rollout_smoke_receipt_artifact.get("receipt_csv_present") is not True:
+        rollout_guard_missing_reasons.append("receipt_csv_missing")
+    if int(rollout_smoke_receipt_artifact.get("receipt_row_count") or 0) < 1:
+        rollout_guard_missing_reasons.append("receipt_row_missing")
+    if (
+        rollout_smoke_receipt_artifact.get(
+            "source_authorized_for_separate_operator_execution"
+        )
+        is not True
+    ):
+        rollout_guard_missing_reasons.append("source_preflight_not_authorized")
+    if rollout_smoke_receipt_artifact.get("source_rollout_executed") is True:
+        rollout_guard_missing_reasons.append("source_preflight_executed_rollout")
+    if rollout_smoke_receipt_artifact.get("rollout_executed") is not True:
+        rollout_guard_missing_reasons.append("rollout_execution_not_recorded")
+    if rollout_smoke_receipt_artifact.get("external_state_mutated") is not True:
+        rollout_guard_missing_reasons.append("external_mutation_not_recorded")
+    if rollout_smoke_receipt_artifact.get("image_pushed") is not True:
+        rollout_guard_missing_reasons.append("image_push_not_recorded")
+    if rollout_smoke_receipt_artifact.get("service_restarted") is not True:
+        rollout_guard_missing_reasons.append("service_restart_not_recorded")
+    if rollout_smoke_receipt_artifact.get("pager_provider_contacted") is not True:
+        rollout_guard_missing_reasons.append("pager_contact_not_recorded")
+    if rollout_smoke_receipt_artifact.get("ingress_certificate_verified_live") is not True:
+        rollout_guard_missing_reasons.append("ingress_certificate_not_verified")
+    if int(rollout_smoke_receipt_artifact.get("blocker_count") or 0) != 0:
+        rollout_guard_missing_reasons.append("blockers_present")
+    assert status["product_rollout_execution_smoke_receipt_operator_receipt_guard_ready"] is (
+        not rollout_guard_missing_reasons
+    )
+    assert (
+        status[
+            "product_rollout_execution_smoke_receipt_operator_receipt_guard_missing_reasons"
+        ]
+        == rollout_guard_missing_reasons
+    )
     _assert_receipt_fields(
         status=status,
         prefix="product_scope_breadth_evidence_receipt",
