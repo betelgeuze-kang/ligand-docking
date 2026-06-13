@@ -16,6 +16,11 @@
   R4 preflight, operator-provided rollout smoke receipt, 7/7 AI architecture gap, production-guarded promotion accounting.
 - **아직 닫히지 않은 것:** full-commercial science claim promotion은 `SCI-CLAIM`으로 남아 있으며,
   세부적으로 GPCR broad-family claim과 OpenMM full all-atom/MM-GBSA/FEP+ claim boundary가 open이다.
+  최신 release decision과 `/goal/status`는 이 세부 원인을
+  `science_claim_promotion_gap_closure_open_gap_ids=[SCI-GPCR, SCI-OPENMM]`,
+  `science_claim_promotion_gap_closure_current_primary_open_gap_id=SCI-GPCR`,
+  `science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status=blocked_ci_low_oprm1`
+  로 직접 노출한다.
 - **닫히지 않은 것(제품 역량):** 과학 엔진 정밀도(가장 큰 진짜 갭), hosted/SaaS 운영 성숙도,
   범용 claim 확장, 외부 표준 벤치마크, 제품 UX.
 - **핵심 보정:** accounting이 green이라는 것은 "회계상 닫힘 + fail-closed 유지"를 의미하며,
@@ -554,7 +559,10 @@ abstention 사유가 결과 번들에 명시.
   분리해 직접 노출한다. 따라서
   `deploy_ops_legal_gap_closure_current.json`은 `deploy_ops_legal_gap_closure_complete`,
   `open_gap_ids=[]`이고, `master_gap_closure_rollup_current.json`의 open gap은
-  `SCI-CLAIM` 하나다.
+  `SCI-CLAIM` 하나다. `goal_release_decision_gate_current.json`은 이 master gap을
+  한 줄로만 보존하지 않고, `science_claim_promotion_gap_closure_*` summary와
+  `science_claim_promotion_gap_closure_recorded` row로 GPCR/OpenMM 세부 open gap,
+  primary `SCI-GPCR`, `blocked_ci_low_oprm1` claim-promotion status를 함께 보존한다.
 
 **갭**
 - 실제 docking/MD 실행과 future rollout mutation은 여전히 explicit operator approval
@@ -585,7 +593,9 @@ durable queue → worker 실행 → signed 결과 번들 회수까지 무인 동
   `product_rollout_execution_smoke_receipt_ready`이며,
   `/product/rollout-execution-smoke-receipt`로도 조회된다. deploy/ops/legal rollup은 닫혔다.
   master full-commercial rollup은 GPCR broad-family와 OpenMM full all-atom/MM-GBSA/FEP+
-  science claim promotion(`SCI-CLAIM`) 때문에 pending이다.
+  science claim promotion(`SCI-CLAIM`) 때문에 pending이다. release decision final-gate
+  verification은 `SCI-GPCR` primary open gap과 `blocked_ci_low_oprm1` 상태를 exact
+  check로 요구한다.
 
 **갭**
 - 실제 pager provider delivery, ingress certificate(TLS) smoke, operator-approved rollout

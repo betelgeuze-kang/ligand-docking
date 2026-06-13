@@ -166,7 +166,11 @@
   별도 operator receipt로 검증됐으며 builder 자체는 read-only다.
 - `runs/science_claim_promotion_gap_closure_current.json`은 GPCR broad-family claim
   promotion을 `SCI-GPCR` open으로 유지한다. CI-low/OPRM1 gate가 clear되기 전에는
-  restricted GPCR evidence를 broad-family claim으로 승격하지 않는다.
+  restricted GPCR evidence를 broad-family claim으로 승격하지 않는다. 최신
+  `goal_release_decision_gate_current.json`과 `/goal/status`도
+  `science_claim_promotion_gap_closure_*` 키로 이 세부 open gap을 직접 노출해,
+  master rollup의 `SCI-CLAIM` 한 줄 뒤에 `SCI-GPCR`/`SCI-OPENMM` 원인이 숨지
+  않게 한다.
 - `runs/product_rollout_execution_smoke_receipt_current.json`은 별도 R4-approved operator
   실행 receipt를 read-only로 검증해 `product_rollout_execution_smoke_receipt_ready`,
   `receipt_csv_present=true`, `rollout_executed=true`, `external_state_mutated=true`를
@@ -1135,7 +1139,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=70`, `executed_count=70`,
+  `product_release_current_refresh_verified`, `command_count=76`, `executed_count=76`,
   `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=true`,
   `final_gate_blocker_count=0`이다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
@@ -1145,7 +1149,13 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   OpenMM full all-atom/MM-GBSA/FEP+ claim boundary 때문에
   `blocked_science_claim_promotion_gap_closure`, `open_gap_ids=[SCI-GPCR, SCI-OPENMM]`이며,
   `runs/master_gap_closure_rollup_current.json`은
-  `blocked_master_gap_closure_rollup`, `open_gap_ids=[SCI-CLAIM]`다.
+  `blocked_master_gap_closure_rollup`, `open_gap_ids=[SCI-CLAIM]`다. 같은 세부
+  open-gap 상태는 release decision final-gate exact check와 `/goal/status`의
+  `science_claim_promotion_gap_closure_open_gap_ids`,
+  `science_claim_promotion_gap_closure_current_primary_open_gap_id`,
+  `science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status`에도
+  고정되어 restricted release green 상태에서도 full-commercial science claim 병목이
+  API/decision surface 밖으로 빠지지 않는다.
 
 **병목 원인**
 - hosted/상용 SaaS화 자체가 productization roadmap에 없음.

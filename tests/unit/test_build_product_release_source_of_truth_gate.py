@@ -46,6 +46,7 @@ def _refresh_release_decision_ready() -> dict:
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_operator_input_required_count": 4,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "science_claim_promotion_gap_closure_open_gap_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
                 "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"
@@ -72,6 +73,13 @@ def _refresh_release_decision_ready() -> dict:
             ),
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_acceptance_artifact": (
                 "runs/residual_model_registry_current.json"
+            ),
+            "science_claim_promotion_gap_closure_status": (
+                "blocked_science_claim_promotion_gap_closure"
+            ),
+            "science_claim_promotion_gap_closure_current_primary_open_gap_id": "SCI-GPCR",
+            "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status": (
+                "blocked_ci_low_oprm1"
             ),
         }
     }
@@ -246,6 +254,15 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_text_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id"
     ] == "trained_model_checkpoint_count_positive"
+    assert release_row["required_int_exact_fields"][
+        "science_claim_promotion_gap_closure_open_gap_count"
+    ] == 2
+    assert release_row["required_text_exact_fields"][
+        "science_claim_promotion_gap_closure_current_primary_open_gap_id"
+    ] == "SCI-GPCR"
+    assert release_row["required_text_exact_fields"][
+        "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status"
+    ] == "blocked_ci_low_oprm1"
 
 
 def test_product_release_current_refresh_blocks_timed_out_command(tmp_path: Path, monkeypatch) -> None:

@@ -176,6 +176,26 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["full_commercial_release_next_required_step"] == release_artifact.get(
         "full_commercial_release_next_required_step"
     )
+    assert status["science_claim_promotion_gap_closure_status"] == release_artifact.get(
+        "science_claim_promotion_gap_closure_status"
+    )
+    assert status["science_claim_promotion_gap_closure_recorded"] is (
+        release_artifact.get("science_claim_promotion_gap_closure_recorded") is True
+    )
+    assert status["science_claim_promotion_gap_closure_open_gap_count"] == int(
+        release_artifact.get("science_claim_promotion_gap_closure_open_gap_count") or 0
+    )
+    assert status["science_claim_promotion_gap_closure_open_gap_ids"] == release_artifact.get(
+        "science_claim_promotion_gap_closure_open_gap_ids"
+    )
+    assert status["science_claim_promotion_gap_closure_current_primary_open_gap_id"] == (
+        release_artifact.get("science_claim_promotion_gap_closure_current_primary_open_gap_id")
+    )
+    assert status[
+        "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status"
+    ] == release_artifact.get(
+        "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status"
+    )
     assert status["product_goal_release_blocker_fail_count"] == int(
         actions_artifact.get("product_goal_release_blocker_fail_count") or 0
     )
@@ -645,6 +665,12 @@ def test_api_app_imports_with_goal_router() -> None:
     )
     assert release["primary_full_commercial_release_blocker_id"] == release_artifact.get(
         "primary_full_commercial_release_blocker_id"
+    )
+    assert release["science_claim_promotion_gap_closure_open_gap_ids"] == release_artifact.get(
+        "science_claim_promotion_gap_closure_open_gap_ids"
+    )
+    assert release["science_claim_promotion_gap_closure_current_primary_open_gap_id"] == (
+        release_artifact.get("science_claim_promotion_gap_closure_current_primary_open_gap_id")
     )
     assert release["blocker_count"] == int(release_artifact.get("blocker_count") or 0)
     assert len(release["checks"]) == int(release_artifact.get("check_count") or 0)

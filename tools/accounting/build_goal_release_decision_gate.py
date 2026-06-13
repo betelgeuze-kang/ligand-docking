@@ -35,6 +35,7 @@ DEFAULT_PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON = (
 DEFAULT_PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_JSON = (
     "runs/product_rollout_execution_smoke_receipt_current.json"
 )
+DEFAULT_SCIENCE_CLAIM_PROMOTION_GAP_CLOSURE_JSON = "runs/science_claim_promotion_gap_closure_current.json"
 DEFAULT_MASTER_GAP_CLOSURE_ROLLUP_JSON = "runs/master_gap_closure_rollup_current.json"
 DEFAULT_OUT_JSON = "runs/goal_release_decision_gate_current.json"
 DEFAULT_OUT_CSV = "runs/goal_release_decision_gate_current.csv"
@@ -99,6 +100,13 @@ def _primary_backlog_detail(backlog_packet: dict[str, Any]) -> str:
         f"primary_backlog_observed={_text(primary.get('observed'))};"
         f"primary_backlog_next_action={_text(primary.get('next_action'))}"
     )
+
+
+def _row_by_id(rows: list[dict[str, Any]], key: str, row_id: str) -> dict[str, Any]:
+    for row in rows:
+        if _text(row.get(key)) == row_id:
+            return row
+    return {}
 
 
 def _text(value: Any) -> str:
@@ -183,6 +191,7 @@ def build_goal_release_decision_gate(
     api_customer_flow_release_evidence_packet: dict[str, Any] | None = None,
     product_full_commercial_blocker_evidence_matrix_packet: dict[str, Any] | None = None,
     product_rollout_execution_smoke_receipt_packet: dict[str, Any] | None = None,
+    science_claim_promotion_gap_packet: dict[str, Any] | None = None,
     master_gap_closure_rollup_packet: dict[str, Any] | None = None,
     product_pilot_path: str = DEFAULT_PRODUCT_PILOT_JSON,
     product_architecture_path: str = DEFAULT_PRODUCT_ARCHITECTURE_JSON,
@@ -210,6 +219,7 @@ def build_goal_release_decision_gate(
     product_rollout_execution_smoke_receipt_path: str = (
         DEFAULT_PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_JSON
     ),
+    science_claim_promotion_gap_path: str = DEFAULT_SCIENCE_CLAIM_PROMOTION_GAP_CLOSURE_JSON,
     master_gap_closure_rollup_path: str = DEFAULT_MASTER_GAP_CLOSURE_ROLLUP_JSON,
 ) -> dict[str, Any]:
     product = _summary(product_pilot_packet)
@@ -346,6 +356,26 @@ def build_goal_release_decision_gate(
         _text(rollout_smoke.get("status")) == "product_rollout_execution_smoke_receipt_ready"
         and bool(rollout_smoke.get("rollout_executed") is True)
         and bool(rollout_smoke.get("external_state_mutated") is True)
+    )
+    science_claim_gap = _summary(science_claim_promotion_gap_packet or {})
+    science_claim_gap_rows = _rows(science_claim_promotion_gap_packet or {})
+    science_claim_gap_gate_present = science_claim_promotion_gap_packet is not None
+    science_claim_open_gap_ids = _text_list(science_claim_gap.get("open_gap_ids"))
+    science_claim_primary_open_gap_id = _text(science_claim_gap.get("current_primary_open_gap_id"))
+    science_claim_primary_open_gap = _row_by_id(
+        science_claim_gap_rows,
+        "gap_id",
+        science_claim_primary_open_gap_id,
+    )
+    science_claim_gap_recorded = (
+        _text(science_claim_gap.get("status"))
+        in {
+            "blocked_science_claim_promotion_gap_closure",
+            "science_claim_promotion_gap_closure_complete",
+        }
+        and _int(science_claim_gap.get("gap_count")) >= 1
+        and bool(science_claim_gap.get("execution_enabled") is False)
+        and bool(science_claim_gap.get("external_state_mutated") is False)
     )
     master_gap_rollup = _summary(master_gap_closure_rollup_packet or {})
     master_gap_rollup_gate_present = master_gap_closure_rollup_packet is not None
@@ -867,6 +897,31 @@ def build_goal_release_decision_gate(
                 reason="The final release decision must not hide full-commercial SCI-CLAIM or DEPLOY-OPS rollup gaps while restricted release evidence is green.",
             )
         )
+    if science_claim_gap_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="science_claim_promotion_gap_closure_recorded",
+                artifact_path=science_claim_promotion_gap_path,
+                observed=(
+                    f"{_text(science_claim_gap.get('status')) or 'missing'};"
+                    f"all_gaps_closed={_bool_text(bool(science_claim_gap.get('all_gaps_closed') is True))};"
+                    f"claim_promotion_allowed={_bool_text(bool(science_claim_gap.get('claim_promotion_allowed') is True))};"
+                    f"open_gap_count={_int(science_claim_gap.get('open_gap_count'))};"
+                    f"open_gap_ids={';'.join(science_claim_open_gap_ids)};"
+                    f"current_primary_open_gap_id={science_claim_primary_open_gap_id};"
+                    f"primary_open_gap_area={_text(science_claim_primary_open_gap.get('area'))};"
+                    f"primary_open_gap_claim_promotion_status={_text(science_claim_primary_open_gap.get('claim_promotion_status'))};"
+                    f"primary_open_gap_evidence={_text(science_claim_primary_open_gap.get('evidence'))}"
+                ),
+                required="science claim promotion gap closure recorded with SCI-GPCR/SCI-OPENMM open-gap visibility",
+                passed=science_claim_gap_recorded,
+                reason=(
+                    "The final release decision must preserve the science-claim sub-gaps underneath "
+                    "MASTER:SCI-CLAIM, not only the collapsed master rollup id."
+                ),
+            )
+        )
     if api_customer_flow_gate_present:
         rows.append(
             _row(
@@ -983,6 +1038,8 @@ def build_goal_release_decision_gate(
         next_required_items.append("R4 rollout execution smoke receipt")
     if master_gap_rollup_gate_present and not master_gap_rollup_recorded:
         next_required_items.append("master gap closure rollup")
+    if science_claim_gap_gate_present and not science_claim_gap_recorded:
+        next_required_items.append("science claim promotion gap closure")
     if api_customer_flow_gate_present and not api_customer_flow_ready:
         next_required_items.append("API customer-flow release evidence")
     if product_ai_architecture_gate_present and not product_ai_architecture_ready:
@@ -1258,6 +1315,42 @@ def build_goal_release_decision_gate(
         "master_gap_closure_rollup_current_primary_open_gap_id": _text(
             master_gap_rollup.get("current_primary_open_gap_id")
         ),
+        "science_claim_promotion_gap_closure_gate_present": science_claim_gap_gate_present,
+        "science_claim_promotion_gap_closure_status": _text(science_claim_gap.get("status")),
+        "science_claim_promotion_gap_closure_recorded": (
+            science_claim_gap_recorded if science_claim_gap_gate_present else None
+        ),
+        "science_claim_promotion_gap_closure_all_gaps_closed": (
+            bool(science_claim_gap.get("all_gaps_closed") is True)
+            if science_claim_gap_gate_present
+            else None
+        ),
+        "science_claim_promotion_gap_closure_claim_promotion_allowed": bool(
+            science_claim_gap.get("claim_promotion_allowed") is True
+        ),
+        "science_claim_promotion_gap_closure_open_gap_count": _int(
+            science_claim_gap.get("open_gap_count")
+        ),
+        "science_claim_promotion_gap_closure_open_gap_ids": science_claim_open_gap_ids,
+        "science_claim_promotion_gap_closure_current_primary_open_gap_id": science_claim_primary_open_gap_id,
+        "science_claim_promotion_gap_closure_current_next_action": _text(
+            science_claim_gap.get("current_next_action")
+        ),
+        "science_claim_promotion_gap_closure_primary_open_gap_area": _text(
+            science_claim_primary_open_gap.get("area")
+        ),
+        "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status": _text(
+            science_claim_primary_open_gap.get("claim_promotion_status")
+        ),
+        "science_claim_promotion_gap_closure_primary_open_gap_evidence": _text(
+            science_claim_primary_open_gap.get("evidence")
+        ),
+        "science_claim_promotion_gap_closure_primary_open_gap_next_action": _text(
+            science_claim_primary_open_gap.get("next_action")
+        ),
+        "science_claim_promotion_gap_closure_primary_open_gap_release_blocker": bool(
+            science_claim_primary_open_gap.get("release_blocker") is True
+        ),
         "api_customer_flow_release_evidence_gate_present": api_customer_flow_gate_present,
         "api_customer_flow_release_evidence_status": _text(api_customer_flow.get("status")),
         "api_customer_flow_release_evidence_ready": api_customer_flow_ready if api_customer_flow_gate_present else None,
@@ -1491,6 +1584,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- master_gap_closure_rollup_open_gap_count: `{s['master_gap_closure_rollup_open_gap_count']}`",
         f"- master_gap_closure_rollup_open_gap_ids: `{';'.join(s['master_gap_closure_rollup_open_gap_ids'])}`",
         f"- master_gap_closure_rollup_current_primary_open_gap_id: `{s['master_gap_closure_rollup_current_primary_open_gap_id']}`",
+        f"- science_claim_promotion_gap_closure_gate_present: `{s['science_claim_promotion_gap_closure_gate_present']}`",
+        f"- science_claim_promotion_gap_closure_status: `{s['science_claim_promotion_gap_closure_status']}`",
+        f"- science_claim_promotion_gap_closure_recorded: `{s['science_claim_promotion_gap_closure_recorded']}`",
+        f"- science_claim_promotion_gap_closure_open_gap_count: `{s['science_claim_promotion_gap_closure_open_gap_count']}`",
+        f"- science_claim_promotion_gap_closure_open_gap_ids: `{';'.join(s['science_claim_promotion_gap_closure_open_gap_ids'])}`",
+        f"- science_claim_promotion_gap_closure_current_primary_open_gap_id: `{s['science_claim_promotion_gap_closure_current_primary_open_gap_id']}`",
+        f"- science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status: `{s['science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status']}`",
         f"- api_customer_flow_release_evidence_gate_present: `{s['api_customer_flow_release_evidence_gate_present']}`",
         f"- api_customer_flow_release_evidence_status: `{s['api_customer_flow_release_evidence_status']}`",
         f"- api_customer_flow_release_evidence_ready: `{s['api_customer_flow_release_evidence_ready']}`",
@@ -1602,6 +1702,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_JSON,
     )
     parser.add_argument(
+        "--science-claim-promotion-gap-json",
+        default=DEFAULT_SCIENCE_CLAIM_PROMOTION_GAP_CLOSURE_JSON,
+    )
+    parser.add_argument(
         "--master-gap-closure-rollup-json",
         default=DEFAULT_MASTER_GAP_CLOSURE_ROLLUP_JSON,
     )
@@ -1642,6 +1746,9 @@ def main(argv: list[str] | None = None) -> None:
         product_rollout_execution_smoke_receipt_packet=_read_json_if_present(
             args.product_rollout_execution_smoke_receipt_json
         ),
+        science_claim_promotion_gap_packet=_read_json_if_present(
+            args.science_claim_promotion_gap_json
+        ),
         master_gap_closure_rollup_packet=_read_json_if_present(
             args.master_gap_closure_rollup_json
         ),
@@ -1671,6 +1778,7 @@ def main(argv: list[str] | None = None) -> None:
         product_rollout_execution_smoke_receipt_path=(
             args.product_rollout_execution_smoke_receipt_json
         ),
+        science_claim_promotion_gap_path=args.science_claim_promotion_gap_json,
         master_gap_closure_rollup_path=args.master_gap_closure_rollup_json,
     )
     _write_json(args.out_json, payload)

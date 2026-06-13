@@ -475,6 +475,19 @@ async def get_goal_status() -> dict[str, Any]:
             "primary_full_commercial_release_blocker_id": "",
             "primary_full_commercial_release_blocker": "",
             "full_commercial_release_next_required_step": "",
+            "science_claim_promotion_gap_closure_status": "",
+            "science_claim_promotion_gap_closure_recorded": False,
+            "science_claim_promotion_gap_closure_all_gaps_closed": False,
+            "science_claim_promotion_gap_closure_claim_promotion_allowed": False,
+            "science_claim_promotion_gap_closure_open_gap_count": 0,
+            "science_claim_promotion_gap_closure_open_gap_ids": [],
+            "science_claim_promotion_gap_closure_current_primary_open_gap_id": "",
+            "science_claim_promotion_gap_closure_current_next_action": "",
+            "science_claim_promotion_gap_closure_primary_open_gap_area": "",
+            "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status": "",
+            "science_claim_promotion_gap_closure_primary_open_gap_evidence": "",
+            "science_claim_promotion_gap_closure_primary_open_gap_next_action": "",
+            "science_claim_promotion_gap_closure_primary_open_gap_release_blocker": False,
             "product_goal_release_blocker_fail_count": 0,
             "product_goal_release_blocker_requirement_ids": [],
             "product_goal_primary_release_blocker_requirement_id": "",
@@ -633,6 +646,45 @@ async def get_goal_status() -> dict[str, Any]:
         ),
         "full_commercial_release_next_required_step": release.get(
             "full_commercial_release_next_required_step", ""
+        ),
+        "science_claim_promotion_gap_closure_status": release.get(
+            "science_claim_promotion_gap_closure_status", ""
+        ),
+        "science_claim_promotion_gap_closure_recorded": bool(
+            release.get("science_claim_promotion_gap_closure_recorded") is True
+        ),
+        "science_claim_promotion_gap_closure_all_gaps_closed": bool(
+            release.get("science_claim_promotion_gap_closure_all_gaps_closed") is True
+        ),
+        "science_claim_promotion_gap_closure_claim_promotion_allowed": bool(
+            release.get("science_claim_promotion_gap_closure_claim_promotion_allowed") is True
+        ),
+        "science_claim_promotion_gap_closure_open_gap_count": _int(
+            release.get("science_claim_promotion_gap_closure_open_gap_count")
+        ),
+        "science_claim_promotion_gap_closure_open_gap_ids": _string_list(
+            release.get("science_claim_promotion_gap_closure_open_gap_ids")
+        ),
+        "science_claim_promotion_gap_closure_current_primary_open_gap_id": release.get(
+            "science_claim_promotion_gap_closure_current_primary_open_gap_id", ""
+        ),
+        "science_claim_promotion_gap_closure_current_next_action": release.get(
+            "science_claim_promotion_gap_closure_current_next_action", ""
+        ),
+        "science_claim_promotion_gap_closure_primary_open_gap_area": release.get(
+            "science_claim_promotion_gap_closure_primary_open_gap_area", ""
+        ),
+        "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status": release.get(
+            "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status", ""
+        ),
+        "science_claim_promotion_gap_closure_primary_open_gap_evidence": release.get(
+            "science_claim_promotion_gap_closure_primary_open_gap_evidence", ""
+        ),
+        "science_claim_promotion_gap_closure_primary_open_gap_next_action": release.get(
+            "science_claim_promotion_gap_closure_primary_open_gap_next_action", ""
+        ),
+        "science_claim_promotion_gap_closure_primary_open_gap_release_blocker": bool(
+            release.get("science_claim_promotion_gap_closure_primary_open_gap_release_blocker") is True
         ),
         "product_goal_release_blocker_fail_count": _int(
             actions.get("product_goal_release_blocker_fail_count")

@@ -54,6 +54,7 @@ FINAL_GATE_SPECS = [
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_operator_input_required_count": 4,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "science_claim_promotion_gap_closure_open_gap_count": 2,
         },
         "required_text_exact_fields": {
             "source_goal_bottleneck_briefing_status": "goal_bottleneck_briefing_ready",
@@ -83,6 +84,13 @@ FINAL_GATE_SPECS = [
             ),
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_acceptance_artifact": (
                 "runs/residual_model_registry_current.json"
+            ),
+            "science_claim_promotion_gap_closure_status": (
+                "blocked_science_claim_promotion_gap_closure"
+            ),
+            "science_claim_promotion_gap_closure_current_primary_open_gap_id": "SCI-GPCR",
+            "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status": (
+                "blocked_ci_low_oprm1"
             ),
         },
     },

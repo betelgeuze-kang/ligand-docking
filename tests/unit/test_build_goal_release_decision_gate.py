@@ -591,6 +591,61 @@ def _blocked_master_gap_rollup() -> dict:
     }
 
 
+def _blocked_science_claim_gap() -> dict:
+    return {
+        "rows": [
+            {
+                "gap_id": "SCI-GPCR",
+                "area": "GPCR broad family",
+                "status": "open",
+                "claim_promotion_status": "blocked_ci_low_oprm1",
+                "claim_promotion_allowed": False,
+                "evidence": "runs/gpcr_conditional_prior_promotion_gate_current.json",
+                "next_action": (
+                    "Maintain conditional prior gate and keep broad-family claim promotion "
+                    "blocked until CI-low and OPRM1 gates clear."
+                ),
+                "release_blocker": True,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            },
+            {
+                "gap_id": "SCI-OPENMM",
+                "area": "OpenMM restricted vs full physics",
+                "status": "open",
+                "claim_promotion_status": "restricted_2bead_only",
+                "claim_promotion_allowed": False,
+                "evidence": (
+                    "runs/wetlab_openmm_claim_promotion_boundary_current.json; "
+                    "runs/accuracy_parity_scorecard_current.json"
+                ),
+                "next_action": (
+                    "Maintain restricted 2-bead OpenMM lane; full all-atom/MM-GBSA/FEP+ "
+                    "remain unimplemented."
+                ),
+                "release_blocker": True,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            },
+        ],
+        "summary": {
+            "status": "blocked_science_claim_promotion_gap_closure",
+            "all_gaps_closed": False,
+            "claim_promotion_allowed": False,
+            "gap_count": 5,
+            "open_gap_count": 2,
+            "open_gap_ids": ["SCI-GPCR", "SCI-OPENMM"],
+            "current_primary_open_gap_id": "SCI-GPCR",
+            "current_next_action": (
+                "Maintain conditional prior gate and keep broad-family claim promotion "
+                "blocked until CI-low and OPRM1 gates clear."
+            ),
+            "execution_enabled": False,
+            "external_state_mutated": False,
+        },
+    }
+
+
 def _blocked_api_customer_flow() -> dict:
     return {
         "summary": {
@@ -1026,6 +1081,7 @@ def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_
         goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
         product_release_source_of_truth_packet=_ready_source_of_truth(),
         product_rollout_execution_smoke_receipt_packet=_blocked_rollout_smoke_receipt(),
+        science_claim_promotion_gap_packet=_blocked_science_claim_gap(),
         master_gap_closure_rollup_packet=_blocked_master_gap_rollup(),
     )
 
@@ -1042,6 +1098,18 @@ def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_
     assert summary["master_gap_closure_rollup_gate_present"] is True
     assert summary["master_gap_closure_rollup_status"] == "blocked_master_gap_closure_rollup"
     assert summary["master_gap_closure_rollup_open_gap_ids"] == ["SCI-CLAIM", "DEPLOY-OPS"]
+    assert summary["science_claim_promotion_gap_closure_gate_present"] is True
+    assert summary[
+        "science_claim_promotion_gap_closure_status"
+    ] == "blocked_science_claim_promotion_gap_closure"
+    assert summary["science_claim_promotion_gap_closure_open_gap_ids"] == [
+        "SCI-GPCR",
+        "SCI-OPENMM",
+    ]
+    assert summary["science_claim_promotion_gap_closure_current_primary_open_gap_id"] == "SCI-GPCR"
+    assert summary[
+        "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status"
+    ] == "blocked_ci_low_oprm1"
     smoke_row = next(
         row
         for row in payload["rows"]
@@ -1050,12 +1118,21 @@ def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_
     master_row = next(
         row for row in payload["rows"] if row["check"] == "master_gap_closure_rollup_recorded"
     )
+    science_claim_row = next(
+        row
+        for row in payload["rows"]
+        if row["check"] == "science_claim_promotion_gap_closure_recorded"
+    )
     assert smoke_row["status"] == "pass"
     assert smoke_row["release_blocker"] is False
     assert "rollout_executed=false" in smoke_row["observed"]
     assert master_row["status"] == "pass"
     assert master_row["release_blocker"] is False
     assert "open_gap_ids=SCI-CLAIM;DEPLOY-OPS" in master_row["observed"]
+    assert science_claim_row["status"] == "pass"
+    assert science_claim_row["release_blocker"] is False
+    assert "open_gap_ids=SCI-GPCR;SCI-OPENMM" in science_claim_row["observed"]
+    assert "primary_open_gap_claim_promotion_status=blocked_ci_low_oprm1" in science_claim_row["observed"]
 
 
 def test_goal_release_decision_gate_blocks_missing_api_customer_flow_release_evidence() -> None:
@@ -1473,6 +1550,7 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
         "api_customer_flow": tmp_path / "api_customer_flow.json",
         "full_commercial_matrix": tmp_path / "full_commercial_matrix.json",
         "rollout_smoke_receipt": tmp_path / "rollout_smoke_receipt.json",
+        "science_claim_gap": tmp_path / "science_claim_gap.json",
         "master_gap_rollup": tmp_path / "master_gap_rollup.json",
     }
     paths["product"].write_text(json.dumps(_blocked_product()) + "\n", encoding="utf-8")
@@ -1501,6 +1579,10 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     )
     paths["rollout_smoke_receipt"].write_text(
         json.dumps(_blocked_rollout_smoke_receipt()) + "\n",
+        encoding="utf-8",
+    )
+    paths["science_claim_gap"].write_text(
+        json.dumps(_blocked_science_claim_gap()) + "\n",
         encoding="utf-8",
     )
     paths["master_gap_rollup"].write_text(
@@ -1551,6 +1633,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
             str(paths["full_commercial_matrix"]),
             "--product-rollout-execution-smoke-receipt-json",
             str(paths["rollout_smoke_receipt"]),
+            "--science-claim-promotion-gap-json",
+            str(paths["science_claim_gap"]),
             "--master-gap-closure-rollup-json",
             str(paths["master_gap_rollup"]),
             "--out-json",
@@ -1577,6 +1661,13 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
         "blocked_product_rollout_execution_smoke_receipt"
     )
     assert summary["master_gap_closure_rollup_status"] == "blocked_master_gap_closure_rollup"
+    assert summary[
+        "science_claim_promotion_gap_closure_status"
+    ] == "blocked_science_claim_promotion_gap_closure"
+    assert summary["science_claim_promotion_gap_closure_open_gap_ids"] == [
+        "SCI-GPCR",
+        "SCI-OPENMM",
+    ]
     assert summary["release_blocked_by_public_benchmark"] is True
     assert summary["cameo_live_validation_required_for_product_release"] is False
     assert out_csv.read_text(encoding="utf-8").startswith("lane_id,check,")
@@ -1589,3 +1680,5 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     assert "product_full_commercial_blocker_evidence_matrix_status" in md_text
     assert "product_rollout_execution_smoke_receipt_status" in md_text
     assert "master_gap_closure_rollup_status" in md_text
+    assert "science_claim_promotion_gap_closure_status" in md_text
+    assert "SCI-OPENMM" in md_text
