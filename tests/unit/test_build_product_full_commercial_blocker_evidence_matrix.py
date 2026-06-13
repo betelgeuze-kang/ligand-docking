@@ -104,6 +104,28 @@ def test_full_commercial_blocker_evidence_matrix_surfaces_r8_r9_blocked_receipts
     ]
     assert summary["matrix_row_count"] == 2
     assert summary["blocked_matrix_row_count"] == 2
+    assert summary["release_blocker_row_counts"] == {
+        "R8_full_scope_claim_closure": 1,
+        "R9_engine_refinement_claim_promotion": 1,
+    }
+    assert summary["release_blocker_blocked_row_counts"] == {
+        "R8_full_scope_claim_closure": 1,
+        "R9_engine_refinement_claim_promotion": 1,
+    }
+    assert summary["release_blocker_first_blocked_evidence_row_ids"] == {
+        "R8_full_scope_claim_closure": "direct_binding_evidence_missing",
+        "R9_engine_refinement_claim_promotion": "public_benchmark_gate_not_ready",
+    }
+    assert summary["release_blocker_receipt_csvs"] == {
+        "R8_full_scope_claim_closure": "config/product_scope_breadth_evidence_receipt_current.csv",
+        "R9_engine_refinement_claim_promotion": (
+            "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+        ),
+    }
+    assert summary["release_blocker_approval_tokens_required"] == {
+        "R8_full_scope_claim_closure": "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT",
+        "R9_engine_refinement_claim_promotion": "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT",
+    }
     assert summary["first_blocked_release_blocker_id"] == "R8_full_scope_claim_closure"
     assert summary["first_blocked_evidence_row_id"] == "direct_binding_evidence_missing"
     assert summary["first_blocked_evidence_artifact"] == "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
@@ -186,6 +208,18 @@ def test_full_commercial_blocker_evidence_matrix_passes_when_both_receipts_are_r
     assert summary["full_commercial_blocker_evidence_matrix_ready"] is True
     assert summary["full_commercial_evidence_receipts_ready"] is True
     assert summary["blocked_matrix_row_count"] == 0
+    assert summary["release_blocker_pass_row_counts"] == {
+        "R8_full_scope_claim_closure": 1,
+        "R9_engine_refinement_claim_promotion": 1,
+    }
+    assert summary["release_blocker_blocked_row_counts"] == {
+        "R8_full_scope_claim_closure": 0,
+        "R9_engine_refinement_claim_promotion": 0,
+    }
+    assert summary["release_blocker_first_blocked_evidence_row_ids"] == {
+        "R8_full_scope_claim_closure": "",
+        "R9_engine_refinement_claim_promotion": "",
+    }
     assert summary["first_blocked_release_blocker_id"] == ""
     assert summary["first_blocked_row_blockers"] == ""
     assert summary["blocker_count"] == 0

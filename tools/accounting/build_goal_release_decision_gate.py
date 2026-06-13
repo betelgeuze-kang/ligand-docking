@@ -167,6 +167,10 @@ def _int(value: Any) -> int:
         return 0
 
 
+def _dict_get(value: Any, key: str) -> Any:
+    return value.get(key) if isinstance(value, dict) else None
+
+
 def _float(value: Any) -> float:
     try:
         return float(value or 0.0)
@@ -3731,6 +3735,54 @@ def build_goal_release_decision_gate(
         "product_full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker": _text(
             full_commercial_matrix.get("engine_receipt_most_common_row_blocker")
         ),
+        "product_full_commercial_blocker_evidence_matrix_r8_blocked_row_count": _int(
+            _dict_get(
+                full_commercial_matrix.get("release_blocker_blocked_row_counts"),
+                "R8_full_scope_claim_closure",
+            )
+        ),
+        "product_full_commercial_blocker_evidence_matrix_r8_first_blocked_evidence_row_id": _text(
+            _dict_get(
+                full_commercial_matrix.get("release_blocker_first_blocked_evidence_row_ids"),
+                "R8_full_scope_claim_closure",
+            )
+        ),
+        "product_full_commercial_blocker_evidence_matrix_r8_receipt_csv": _text(
+            _dict_get(
+                full_commercial_matrix.get("release_blocker_receipt_csvs"),
+                "R8_full_scope_claim_closure",
+            )
+        ),
+        "product_full_commercial_blocker_evidence_matrix_r8_approval_token_required": _text(
+            _dict_get(
+                full_commercial_matrix.get("release_blocker_approval_tokens_required"),
+                "R8_full_scope_claim_closure",
+            )
+        ),
+        "product_full_commercial_blocker_evidence_matrix_r9_blocked_row_count": _int(
+            _dict_get(
+                full_commercial_matrix.get("release_blocker_blocked_row_counts"),
+                "R9_engine_refinement_claim_promotion",
+            )
+        ),
+        "product_full_commercial_blocker_evidence_matrix_r9_first_blocked_evidence_row_id": _text(
+            _dict_get(
+                full_commercial_matrix.get("release_blocker_first_blocked_evidence_row_ids"),
+                "R9_engine_refinement_claim_promotion",
+            )
+        ),
+        "product_full_commercial_blocker_evidence_matrix_r9_receipt_csv": _text(
+            _dict_get(
+                full_commercial_matrix.get("release_blocker_receipt_csvs"),
+                "R9_engine_refinement_claim_promotion",
+            )
+        ),
+        "product_full_commercial_blocker_evidence_matrix_r9_approval_token_required": _text(
+            _dict_get(
+                full_commercial_matrix.get("release_blocker_approval_tokens_required"),
+                "R9_engine_refinement_claim_promotion",
+            )
+        ),
         "product_rollout_execution_smoke_receipt_gate_present": rollout_smoke_gate_present,
         "product_rollout_execution_smoke_receipt_status": _text(rollout_smoke.get("status")),
         "product_rollout_execution_smoke_receipt_ready": (
@@ -4270,6 +4322,14 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_full_commercial_blocker_evidence_matrix_first_blocked_row_blockers: `{s['product_full_commercial_blocker_evidence_matrix_first_blocked_row_blockers']}`",
         f"- product_full_commercial_blocker_evidence_matrix_scope_receipt_most_common_row_blocker: `{s['product_full_commercial_blocker_evidence_matrix_scope_receipt_most_common_row_blocker']}`",
         f"- product_full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker: `{s['product_full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_r8_blocked_row_count: `{s['product_full_commercial_blocker_evidence_matrix_r8_blocked_row_count']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_r8_first_blocked_evidence_row_id: `{s['product_full_commercial_blocker_evidence_matrix_r8_first_blocked_evidence_row_id']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_r8_receipt_csv: `{s['product_full_commercial_blocker_evidence_matrix_r8_receipt_csv']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_r8_approval_token_required: `{s['product_full_commercial_blocker_evidence_matrix_r8_approval_token_required']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_r9_blocked_row_count: `{s['product_full_commercial_blocker_evidence_matrix_r9_blocked_row_count']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_r9_first_blocked_evidence_row_id: `{s['product_full_commercial_blocker_evidence_matrix_r9_first_blocked_evidence_row_id']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_r9_receipt_csv: `{s['product_full_commercial_blocker_evidence_matrix_r9_receipt_csv']}`",
+        f"- product_full_commercial_blocker_evidence_matrix_r9_approval_token_required: `{s['product_full_commercial_blocker_evidence_matrix_r9_approval_token_required']}`",
         f"- product_rollout_execution_smoke_receipt_gate_present: `{s['product_rollout_execution_smoke_receipt_gate_present']}`",
         f"- product_rollout_execution_smoke_receipt_status: `{s['product_rollout_execution_smoke_receipt_status']}`",
         f"- product_rollout_execution_smoke_receipt_ready: `{s['product_rollout_execution_smoke_receipt_ready']}`",

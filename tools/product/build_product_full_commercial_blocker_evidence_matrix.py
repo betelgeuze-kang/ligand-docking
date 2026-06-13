@@ -173,6 +173,32 @@ def _receipt_matrix_rows(
     return rows
 
 
+def _release_blocker_rollups(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    rollups: dict[str, dict[str, Any]] = {}
+    for release_blocker_id in EXPECTED_RELEASE_BLOCKER_IDS:
+        blocker_rows = [row for row in rows if row.get("release_blocker_id") == release_blocker_id]
+        blocked_rows = [row for row in blocker_rows if row.get("row_status") != "pass"]
+        first_blocked = blocked_rows[0] if blocked_rows else {}
+        first_row = blocker_rows[0] if blocker_rows else {}
+        rollups[release_blocker_id] = {
+            "row_count": len(blocker_rows),
+            "pass_row_count": len(blocker_rows) - len(blocked_rows),
+            "blocked_row_count": len(blocked_rows),
+            "receipt_csv": _text(first_row.get("receipt_csv")),
+            "receipt_json": _text(first_row.get("receipt_json")),
+            "receipt_status": _text(first_row.get("receipt_status")),
+            "receipt_ready": bool(first_row.get("receipt_ready") is True),
+            "approval_token_required": _text(first_row.get("approval_token_required")),
+            "post_return_acceptance_artifact": _text(first_row.get("post_return_acceptance_artifact")),
+            "first_blocked_evidence_row_id": _text(first_blocked.get("evidence_row_id")),
+            "first_blocked_expected_evidence_status": _text(first_blocked.get("expected_evidence_status")),
+            "first_blocked_observed_evidence_status": _text(first_blocked.get("observed_evidence_status")),
+            "first_blocked_row_blockers": _text(first_blocked.get("row_blockers")),
+            "next_required_step": _text(first_blocked.get("next_required_step") or first_row.get("next_required_step")),
+        }
+    return rollups
+
+
 def build_product_full_commercial_blocker_evidence_matrix(
     *,
     scope_receipt_json: str | Path = DEFAULT_SCOPE_RECEIPT_JSON,
@@ -269,6 +295,7 @@ def build_product_full_commercial_blocker_evidence_matrix_from_packets(
     ]
     ready_receipt_ids = sorted(set(ready_receipts))
     required_tokens = sorted({_text(row.get("approval_token_required")) for row in rows if _text(row.get("approval_token_required"))})
+    release_blocker_rollups = _release_blocker_rollups(rows)
 
     blockers: list[str] = []
     if not scope_present:
@@ -332,6 +359,48 @@ def build_product_full_commercial_blocker_evidence_matrix_from_packets(
         "matrix_row_count": len(rows),
         "pass_matrix_row_count": len(rows) - len(blocked_rows),
         "blocked_matrix_row_count": len(blocked_rows),
+        "release_blocker_row_counts": {
+            key: int(value["row_count"]) for key, value in release_blocker_rollups.items()
+        },
+        "release_blocker_pass_row_counts": {
+            key: int(value["pass_row_count"]) for key, value in release_blocker_rollups.items()
+        },
+        "release_blocker_blocked_row_counts": {
+            key: int(value["blocked_row_count"]) for key, value in release_blocker_rollups.items()
+        },
+        "release_blocker_receipt_csvs": {
+            key: value["receipt_csv"] for key, value in release_blocker_rollups.items()
+        },
+        "release_blocker_receipt_jsons": {
+            key: value["receipt_json"] for key, value in release_blocker_rollups.items()
+        },
+        "release_blocker_receipt_statuses": {
+            key: value["receipt_status"] for key, value in release_blocker_rollups.items()
+        },
+        "release_blocker_receipt_ready": {
+            key: bool(value["receipt_ready"] is True) for key, value in release_blocker_rollups.items()
+        },
+        "release_blocker_approval_tokens_required": {
+            key: value["approval_token_required"] for key, value in release_blocker_rollups.items()
+        },
+        "release_blocker_acceptance_artifacts": {
+            key: value["post_return_acceptance_artifact"] for key, value in release_blocker_rollups.items()
+        },
+        "release_blocker_first_blocked_evidence_row_ids": {
+            key: value["first_blocked_evidence_row_id"] for key, value in release_blocker_rollups.items()
+        },
+        "release_blocker_first_blocked_expected_evidence_statuses": {
+            key: value["first_blocked_expected_evidence_status"] for key, value in release_blocker_rollups.items()
+        },
+        "release_blocker_first_blocked_observed_evidence_statuses": {
+            key: value["first_blocked_observed_evidence_status"] for key, value in release_blocker_rollups.items()
+        },
+        "release_blocker_first_blocked_row_blockers": {
+            key: value["first_blocked_row_blockers"] for key, value in release_blocker_rollups.items()
+        },
+        "release_blocker_next_required_steps": {
+            key: value["next_required_step"] for key, value in release_blocker_rollups.items()
+        },
         "ready_receipt_count": len(ready_receipt_ids),
         "blocked_receipt_count": len(EXPECTED_RELEASE_BLOCKER_IDS) - len(ready_receipt_ids),
         "approval_token_count": len(required_tokens),
@@ -378,8 +447,26 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"- engine_receipt_most_common_row_blocker: `{summary['engine_receipt_most_common_row_blocker']}`",
         f"- approval_tokens_required: `{';'.join(summary['approval_tokens_required'])}`",
         "",
-        "## Blockers",
+        "## Release Blockers",
+        "",
+        "| release blocker | rows pass/total | receipt CSV | first blocked row | token |",
+        "| --- | --- | --- | --- | --- |",
     ]
+    for release_blocker_id in EXPECTED_RELEASE_BLOCKER_IDS:
+        row_count = summary["release_blocker_row_counts"].get(release_blocker_id, 0)
+        pass_count = summary["release_blocker_pass_row_counts"].get(release_blocker_id, 0)
+        lines.append(
+            f"| `{release_blocker_id}` | `{pass_count}/{row_count}` | "
+            f"`{summary['release_blocker_receipt_csvs'].get(release_blocker_id, '')}` | "
+            f"`{summary['release_blocker_first_blocked_evidence_row_ids'].get(release_blocker_id, '')}` | "
+            f"`{summary['release_blocker_approval_tokens_required'].get(release_blocker_id, '')}` |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Blockers",
+        ]
+    )
     lines.extend(f"- `{blocker}`" for blocker in summary["blockers"])
     if not summary["blockers"]:
         lines.append("- none")

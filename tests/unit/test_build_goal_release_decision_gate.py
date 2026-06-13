@@ -662,6 +662,26 @@ def _blocked_full_commercial_matrix() -> dict:
             ],
             "matrix_row_count": 12,
             "blocked_matrix_row_count": 12,
+            "release_blocker_blocked_row_counts": {
+                "R8_full_scope_claim_closure": 6,
+                "R9_engine_refinement_claim_promotion": 6,
+            },
+            "release_blocker_first_blocked_evidence_row_ids": {
+                "R8_full_scope_claim_closure": "direct_binding_evidence_missing",
+                "R9_engine_refinement_claim_promotion": "public_benchmark_gate_not_ready",
+            },
+            "release_blocker_receipt_csvs": {
+                "R8_full_scope_claim_closure": "config/product_scope_breadth_evidence_receipt_current.csv",
+                "R9_engine_refinement_claim_promotion": (
+                    "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+                ),
+            },
+            "release_blocker_approval_tokens_required": {
+                "R8_full_scope_claim_closure": "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT",
+                "R9_engine_refinement_claim_promotion": (
+                    "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+                ),
+            },
             "approval_token_count": 2,
             "first_blocked_release_blocker_id": "R8_full_scope_claim_closure",
             "first_blocked_evidence_row_id": "direct_binding_evidence_missing",
@@ -1977,6 +1997,26 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
     )
     assert summary["product_full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker"] == (
         "operator_placeholders_unfilled"
+    )
+    assert summary["product_full_commercial_blocker_evidence_matrix_r8_blocked_row_count"] == 6
+    assert summary[
+        "product_full_commercial_blocker_evidence_matrix_r8_first_blocked_evidence_row_id"
+    ] == "direct_binding_evidence_missing"
+    assert summary["product_full_commercial_blocker_evidence_matrix_r8_receipt_csv"] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv"
+    )
+    assert summary["product_full_commercial_blocker_evidence_matrix_r8_approval_token_required"] == (
+        "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+    )
+    assert summary["product_full_commercial_blocker_evidence_matrix_r9_blocked_row_count"] == 6
+    assert summary[
+        "product_full_commercial_blocker_evidence_matrix_r9_first_blocked_evidence_row_id"
+    ] == "public_benchmark_gate_not_ready"
+    assert summary["product_full_commercial_blocker_evidence_matrix_r9_receipt_csv"] == (
+        "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+    )
+    assert summary["product_full_commercial_blocker_evidence_matrix_r9_approval_token_required"] == (
+        "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
     )
     assert summary["goal_bottleneck_briefing_gate_present"] is True
     assert summary["source_goal_bottleneck_briefing_status"] == "goal_bottleneck_briefing_ready"
