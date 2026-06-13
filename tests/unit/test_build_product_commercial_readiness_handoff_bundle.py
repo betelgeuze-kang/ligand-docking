@@ -864,6 +864,39 @@ def _ladder(ready: bool = True) -> dict:
             "production_ai_registry_promotion_operator_field_worksheet_next_required_step": (
                 "Fill every operator_fill_pending field."
             ),
+            "production_ai_registry_promotion_operator_staging_apply_artifact": (
+                "runs/production_ai_registry_promotion_operator_staging_apply_current.json"
+            ),
+            "production_ai_registry_promotion_operator_staging_apply_status": (
+                "blocked_production_ai_registry_promotion_operator_staging_apply"
+            ),
+            "production_ai_registry_promotion_operator_staging_apply_mode": "preview",
+            "production_ai_registry_promotion_operator_staging_apply_candidate_receipt_ready": False,
+            "production_ai_registry_promotion_operator_staging_apply_candidate_blocked_row_count": 1,
+            "production_ai_registry_promotion_operator_staging_apply_candidate_pass_row_count": 0,
+            "production_ai_registry_promotion_operator_staging_apply_staging_placeholder_row_count": 1,
+            "production_ai_registry_promotion_operator_staging_apply_field_worksheet_pending_field_count": 13,
+            "production_ai_registry_promotion_operator_staging_apply_field_worksheet_diagnostic_pending_field_count": 6,
+            "production_ai_registry_promotion_operator_staging_apply_first_blocked_artifact_id": (
+                "residual_model_registry_guarded_promotion"
+            ),
+            "production_ai_registry_promotion_operator_staging_apply_first_blocked_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "production_ai_registry_promotion_operator_staging_apply_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "production_ai_registry_promotion_operator_staging_apply_observed_registry_default_residual_mode": (
+                "shadow"
+            ),
+            "production_ai_registry_promotion_operator_staging_apply_observed_registry_trained_model_checkpoint_count": 1,
+            "production_ai_registry_promotion_operator_staging_apply_live_copy_allowed": False,
+            "production_ai_registry_promotion_operator_staging_apply_canonical_receipt_written": False,
+            "production_ai_registry_promotion_operator_staging_apply_registry_edited_by_this_tool": False,
+            "production_ai_registry_promotion_operator_staging_apply_checkpoint_created_by_this_tool": False,
+            "production_ai_registry_promotion_operator_staging_apply_model_promoted": False,
+            "production_ai_registry_promotion_operator_staging_apply_customer_facing_mutation_enabled": False,
+            "production_ai_registry_promotion_operator_staging_apply_external_state_mutated": False,
             "first_operator_completion_worker_runtime_receipt_contract_ready": True,
             "first_operator_completion_worker_runtime_receipt_contract": {
                 "manifest_ready": True,
@@ -1329,6 +1362,39 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
     assert summary[
         "production_ai_registry_promotion_operator_field_worksheet_external_state_mutated"
     ] is False
+    assert summary["production_ai_registry_promotion_operator_staging_apply_status"] == (
+        "blocked_production_ai_registry_promotion_operator_staging_apply"
+    )
+    assert (
+        summary[
+            "production_ai_registry_promotion_operator_staging_apply_candidate_receipt_ready"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "production_ai_registry_promotion_operator_staging_apply_candidate_blocked_row_count"
+        ]
+        == 1
+    )
+    assert (
+        summary[
+            "production_ai_registry_promotion_operator_staging_apply_staging_placeholder_row_count"
+        ]
+        == 1
+    )
+    assert summary[
+        "production_ai_registry_promotion_operator_staging_apply_first_blocked_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    assert summary[
+        "production_ai_registry_promotion_operator_staging_apply_live_copy_allowed"
+    ] is False
+    assert (
+        summary[
+            "production_ai_registry_promotion_operator_staging_apply_external_state_mutated"
+        ]
+        is False
+    )
     assert summary["delta_force_closure_acceptance_packet_ready"] is True
     assert summary["delta_force_closure_ready"] is False
     assert summary["delta_force_closure_first_blocked_output_field"] == "delta_force"
@@ -1428,6 +1494,15 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         == "runs/production_ai_registry_promotion_operator_field_worksheet_current.json"
         and row["reference_role"]
         == "local_production_ai_registry_promotion_field_worksheet"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "production_ai_registry_promotion_operator_staging_apply"
+        and row["artifact_path"]
+        == "runs/production_ai_registry_promotion_operator_staging_apply_current.json"
+        and row["reference_role"]
+        == "local_production_ai_registry_promotion_staging_apply_preview"
         and row["required_now"] is True
         for row in summary["artifact_reference_manifest"]
     )

@@ -552,6 +552,20 @@ def _build_artifact_reference_manifest(
                 note="Local field-level worksheet for the guarded production AI registry promotion receipt.",
             )
         )
+    registry_staging_apply_artifact = _text(
+        summary.get("production_ai_registry_promotion_operator_staging_apply_artifact")
+    )
+    if registry_staging_apply_artifact:
+        refs.append(
+            _artifact_reference(
+                artifact_id="production_ai_registry_promotion_operator_staging_apply",
+                artifact_path=registry_staging_apply_artifact,
+                reference_role="local_production_ai_registry_promotion_staging_apply_preview",
+                required_now=True,
+                expected_from_operator_return=False,
+                note="Local preview gate for validating guarded registry promotion receipt before canonical copy.",
+            )
+        )
     registry_receipt_csv = _text(
         summary.get("production_ai_registry_promotion_operator_receipt_csv")
     )
@@ -2491,6 +2505,167 @@ def build_product_commercial_readiness_handoff_bundle(
                 "production_ai_registry_promotion_operator_field_worksheet_next_required_step",
             )
         ),
+        "production_ai_registry_promotion_operator_staging_apply_artifact": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_artifact",
+            )
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_status": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_status",
+            )
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_mode": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_mode",
+            )
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_candidate_receipt_ready": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_candidate_receipt_ready",
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_candidate_blocked_row_count": int(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_candidate_blocked_row_count",
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_candidate_pass_row_count": int(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_candidate_pass_row_count",
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_staging_placeholder_row_count": int(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_staging_placeholder_row_count",
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_field_worksheet_pending_field_count": int(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_field_worksheet_pending_field_count",
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_field_worksheet_diagnostic_pending_field_count": int(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_field_worksheet_diagnostic_pending_field_count",
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_first_blocked_artifact_id": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_first_blocked_artifact_id",
+            )
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_first_blocked_row_blocker": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_first_blocked_row_blocker",
+            )
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_most_common_row_blocker": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_most_common_row_blocker",
+            )
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_observed_registry_default_residual_mode": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_observed_registry_default_residual_mode",
+            )
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_observed_registry_trained_model_checkpoint_count": int(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_observed_registry_trained_model_checkpoint_count",
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_live_copy_allowed": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_live_copy_allowed",
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_canonical_receipt_written": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_canonical_receipt_written",
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_registry_edited_by_this_tool": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_registry_edited_by_this_tool",
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_checkpoint_created_by_this_tool": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_checkpoint_created_by_this_tool",
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_model_promoted": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_model_promoted",
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_customer_facing_mutation_enabled": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_customer_facing_mutation_enabled",
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_external_state_mutated": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_operator_staging_apply_external_state_mutated",
+            )
+            is True
+        ),
         "delta_force_closure_acceptance_packet_artifact": _text(
             operator_summary.get("delta_force_closure_acceptance_packet_artifact")
         ),
@@ -2741,6 +2916,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- production_ai_registry_promotion_operator_field_worksheet_pending_field_count: `{s['production_ai_registry_promotion_operator_field_worksheet_pending_field_count']}`",
         f"- production_ai_registry_promotion_operator_field_worksheet_diagnostic_pending_field_count: `{s['production_ai_registry_promotion_operator_field_worksheet_diagnostic_pending_field_count']}`",
         f"- production_ai_registry_promotion_operator_field_worksheet_top_gate_id: `{s['production_ai_registry_promotion_operator_field_worksheet_top_gate_id']}`",
+        f"- production_ai_registry_promotion_operator_staging_apply_status: `{s['production_ai_registry_promotion_operator_staging_apply_status']}`",
+        f"- production_ai_registry_promotion_operator_staging_apply_candidate_receipt_ready: `{s['production_ai_registry_promotion_operator_staging_apply_candidate_receipt_ready']}`",
+        f"- production_ai_registry_promotion_operator_staging_apply_candidate_blocked_row_count: `{s['production_ai_registry_promotion_operator_staging_apply_candidate_blocked_row_count']}`",
+        f"- production_ai_registry_promotion_operator_staging_apply_first_blocked_row_blocker: `{s['production_ai_registry_promotion_operator_staging_apply_first_blocked_row_blocker']}`",
+        f"- production_ai_registry_promotion_operator_staging_apply_live_copy_allowed: `{s['production_ai_registry_promotion_operator_staging_apply_live_copy_allowed']}`",
+        f"- production_ai_registry_promotion_operator_staging_apply_external_state_mutated: `{s['production_ai_registry_promotion_operator_staging_apply_external_state_mutated']}`",
         f"- first_operator_completion_worker_runtime_receipt_contract_ready: `{s['first_operator_completion_worker_runtime_receipt_contract_ready']}`",
         f"- first_operator_completion_worker_runtime_receipt_required_fields_or_columns: `{';'.join(s['first_operator_completion_worker_runtime_receipt_required_fields_or_columns'])}`",
         f"- first_operator_completion_worker_runtime_receipt_post_environment_next_artifact: `{s['first_operator_completion_worker_runtime_receipt_post_environment_next_artifact']}`",

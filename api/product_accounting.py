@@ -393,6 +393,111 @@ def commercial_production_ai_registry_promotion_fields(summary: dict[str, Any]) 
             "production_ai_registry_promotion_operator_field_worksheet_next_required_step",
             "",
         ),
+        "production_ai_registry_promotion_operator_staging_apply_artifact": summary.get(
+            "production_ai_registry_promotion_operator_staging_apply_artifact", ""
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_status": summary.get(
+            "production_ai_registry_promotion_operator_staging_apply_status", ""
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_mode": summary.get(
+            "production_ai_registry_promotion_operator_staging_apply_mode", ""
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_candidate_receipt_ready": bool(
+            summary.get(
+                "production_ai_registry_promotion_operator_staging_apply_candidate_receipt_ready"
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_candidate_blocked_row_count": int(
+            summary.get(
+                "production_ai_registry_promotion_operator_staging_apply_candidate_blocked_row_count"
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_candidate_pass_row_count": int(
+            summary.get(
+                "production_ai_registry_promotion_operator_staging_apply_candidate_pass_row_count"
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_staging_placeholder_row_count": int(
+            summary.get(
+                "production_ai_registry_promotion_operator_staging_apply_staging_placeholder_row_count"
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_field_worksheet_pending_field_count": int(
+            summary.get(
+                "production_ai_registry_promotion_operator_staging_apply_field_worksheet_pending_field_count"
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_field_worksheet_diagnostic_pending_field_count": int(
+            summary.get(
+                "production_ai_registry_promotion_operator_staging_apply_field_worksheet_diagnostic_pending_field_count"
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_first_blocked_artifact_id": summary.get(
+            "production_ai_registry_promotion_operator_staging_apply_first_blocked_artifact_id",
+            "",
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_first_blocked_row_blocker": summary.get(
+            "production_ai_registry_promotion_operator_staging_apply_first_blocked_row_blocker",
+            "",
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_most_common_row_blocker": summary.get(
+            "production_ai_registry_promotion_operator_staging_apply_most_common_row_blocker",
+            "",
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_observed_registry_default_residual_mode": summary.get(
+            "production_ai_registry_promotion_operator_staging_apply_observed_registry_default_residual_mode",
+            "",
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_observed_registry_trained_model_checkpoint_count": int(
+            summary.get(
+                "production_ai_registry_promotion_operator_staging_apply_observed_registry_trained_model_checkpoint_count"
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_live_copy_allowed": bool(
+            summary.get("production_ai_registry_promotion_operator_staging_apply_live_copy_allowed")
+            is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_canonical_receipt_written": bool(
+            summary.get(
+                "production_ai_registry_promotion_operator_staging_apply_canonical_receipt_written"
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_registry_edited_by_this_tool": bool(
+            summary.get(
+                "production_ai_registry_promotion_operator_staging_apply_registry_edited_by_this_tool"
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_checkpoint_created_by_this_tool": bool(
+            summary.get(
+                "production_ai_registry_promotion_operator_staging_apply_checkpoint_created_by_this_tool"
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_model_promoted": bool(
+            summary.get("production_ai_registry_promotion_operator_staging_apply_model_promoted")
+            is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_customer_facing_mutation_enabled": bool(
+            summary.get(
+                "production_ai_registry_promotion_operator_staging_apply_customer_facing_mutation_enabled"
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_external_state_mutated": bool(
+            summary.get(
+                "production_ai_registry_promotion_operator_staging_apply_external_state_mutated"
+            )
+            is True
+        ),
     }
 
 

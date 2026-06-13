@@ -1266,6 +1266,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_launch_r4_preflight" in artifact_ids
     assert "production_ai_registry_promotion_priority_packet" in artifact_ids
     assert "production_ai_registry_promotion_operator_field_worksheet" in artifact_ids
+    assert "production_ai_registry_promotion_operator_staging_apply" in artifact_ids
     assert "engine_refinement_claim_promotion_action_board" in artifact_ids
     assert "engine_refinement_claim_evidence_receipt" in artifact_ids
     assert "product_scope_breadth_closure_checklist" in artifact_ids
@@ -1295,6 +1296,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         in mod.RELEASE_REFRESH_COMMANDS
     )
     assert (
+        "python3 tools/build_production_ai_registry_promotion_operator_staging_apply.py"
+        in mod.RELEASE_REFRESH_COMMANDS
+    )
+    assert (
         "python3 tools/build_aqp1_direct_binding_external_evidence_operator_fill_guide.py"
         in mod.RELEASE_REFRESH_COMMANDS
     )
@@ -1315,6 +1320,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "production_ai_registry_promotion_operator_receipt_blocked_semantic_ready" in status_ids
     assert "production_ai_registry_promotion_priority_packet_blocked_semantic_ready" in status_ids
     assert "production_ai_registry_promotion_operator_field_worksheet_semantic_ready" in status_ids
+    assert "production_ai_registry_promotion_operator_staging_apply_blocked_semantic_ready" in status_ids
     assert "cameo_validation_operations_dossier_current_bottleneck_semantic_ready" in status_ids
     assert "cameo_official_result_fetch_preflight" in artifact_ids
     assert "cameo_official_result_fetch_preflight_blocked_semantic_ready" in status_ids
@@ -1714,6 +1720,38 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert registry_field_worksheet_status_spec["required_text_exact_fields"][
         "top_gate_id"
     ] == "default_residual_mode_guarded"
+    registry_staging_apply_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "production_ai_registry_promotion_operator_staging_apply"
+    )
+    assert registry_staging_apply_spec["builder_command"] == (
+        "python3 tools/build_production_ai_registry_promotion_operator_staging_apply.py"
+    )
+    assert "runs/production_ai_registry_promotion_operator_field_worksheet_current.json" in (
+        registry_staging_apply_spec["depends_on"]
+    )
+    assert "config/production_ai_registry_promotion_operator_receipt_current.csv" in (
+        registry_staging_apply_spec["depends_on"]
+    )
+    registry_staging_apply_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "production_ai_registry_promotion_operator_staging_apply_blocked_semantic_ready"
+    )
+    assert registry_staging_apply_status_spec["required_int_exact_fields"][
+        "candidate_blocked_row_count"
+    ] == 1
+    assert registry_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_pending_field_count"
+    ] == 13
+    assert registry_staging_apply_status_spec["required_text_exact_fields"][
+        "candidate_first_blocked_artifact_id"
+    ] == "residual_model_registry_guarded_promotion"
+    assert registry_staging_apply_status_spec["required_text_exact_fields"][
+        "candidate_first_blocked_row_blocker"
+    ] == "operator_placeholders_unfilled"
     commercial_operator_packet_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -1725,6 +1763,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/production_ai_registry_promotion_operator_field_worksheet_current.json" in commercial_operator_packet_spec[
         "depends_on"
     ]
+    assert "runs/production_ai_registry_promotion_operator_staging_apply_current.json" in (
+        commercial_operator_packet_spec["depends_on"]
+    )
     goal_action_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_operator_action_board"
     )
@@ -2143,6 +2184,21 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/build_deploy_ops_legal_gap_closure.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_science_claim_promotion_gap_closure.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_master_gap_closure_rollup.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_production_ai_registry_promotion_operator_receipt.py"
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/product/build_production_ai_registry_promotion_priority_packet.py"
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/product/build_production_ai_registry_promotion_priority_packet.py"
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_production_ai_registry_promotion_operator_field_worksheet.py"
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_production_ai_registry_promotion_operator_field_worksheet.py"
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_production_ai_registry_promotion_operator_staging_apply.py"
+    )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_scope_breadth_closure_checklist.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_scope_breadth_evidence_receipt.py")
     )

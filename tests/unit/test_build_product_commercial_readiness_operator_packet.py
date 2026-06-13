@@ -760,6 +760,33 @@ def _registry_field_worksheet() -> dict:
     }
 
 
+def _registry_staging_apply() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_production_ai_registry_promotion_operator_staging_apply",
+            "mode": "preview",
+            "candidate_receipt_ready": False,
+            "candidate_blocked_row_count": 1,
+            "candidate_pass_row_count": 0,
+            "staging_placeholder_row_count": 1,
+            "field_worksheet_pending_field_count": 13,
+            "field_worksheet_diagnostic_required_pending_field_count": 6,
+            "candidate_first_blocked_artifact_id": "residual_model_registry_guarded_promotion",
+            "candidate_first_blocked_row_blocker": "operator_placeholders_unfilled",
+            "candidate_most_common_row_blocker": "operator_placeholders_unfilled",
+            "candidate_observed_registry_default_residual_mode": "shadow",
+            "candidate_observed_registry_trained_model_checkpoint_count": 1,
+            "live_copy_allowed": False,
+            "canonical_receipt_written": False,
+            "registry_edited_by_this_tool": False,
+            "checkpoint_created_by_this_tool": False,
+            "model_promoted": False,
+            "customer_facing_mutation_enabled": False,
+            "external_state_mutated": False,
+        }
+    }
+
+
 def _engine_refinement_claim_evidence_field_worksheet() -> dict:
     return {
         "summary": {
@@ -833,6 +860,7 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
         production_ai_registry_promotion_operator_receipt_packet=_registry_receipt(),
         production_ai_registry_promotion_priority_packet=_registry_priority(),
         production_ai_registry_promotion_field_worksheet_packet=_registry_field_worksheet(),
+        production_ai_registry_promotion_staging_apply_packet=_registry_staging_apply(),
         product_scope_breadth_evidence_field_worksheet_packet=(
             _product_scope_breadth_evidence_field_worksheet()
         ),
@@ -1467,6 +1495,57 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
     ]
     assert summary[
         "production_ai_registry_promotion_operator_field_worksheet_external_state_mutated"
+    ] is False
+    assert summary["production_ai_registry_promotion_operator_staging_apply_status"] == (
+        "blocked_production_ai_registry_promotion_operator_staging_apply"
+    )
+    assert (
+        summary[
+            "production_ai_registry_promotion_operator_staging_apply_candidate_receipt_ready"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "production_ai_registry_promotion_operator_staging_apply_candidate_blocked_row_count"
+        ]
+        == 1
+    )
+    assert (
+        summary[
+            "production_ai_registry_promotion_operator_staging_apply_staging_placeholder_row_count"
+        ]
+        == 1
+    )
+    assert (
+        summary[
+            "production_ai_registry_promotion_operator_staging_apply_field_worksheet_pending_field_count"
+        ]
+        == 13
+    )
+    assert summary[
+        "production_ai_registry_promotion_operator_staging_apply_first_blocked_artifact_id"
+    ] == "residual_model_registry_guarded_promotion"
+    assert summary[
+        "production_ai_registry_promotion_operator_staging_apply_first_blocked_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    assert summary[
+        "production_ai_registry_promotion_operator_staging_apply_observed_registry_default_residual_mode"
+    ] == "shadow"
+    assert (
+        summary[
+            "production_ai_registry_promotion_operator_staging_apply_observed_registry_trained_model_checkpoint_count"
+        ]
+        == 1
+    )
+    assert summary[
+        "production_ai_registry_promotion_operator_staging_apply_live_copy_allowed"
+    ] is False
+    assert summary[
+        "production_ai_registry_promotion_operator_staging_apply_canonical_receipt_written"
+    ] is False
+    assert summary[
+        "production_ai_registry_promotion_operator_staging_apply_external_state_mutated"
     ] is False
     assert summary["delta_force_closure_acceptance_packet_artifact"] == (
         "runs/unit_delta_force_closure.json"

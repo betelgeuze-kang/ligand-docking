@@ -32,6 +32,9 @@ DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_JSON = (
 DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_FIELD_WORKSHEET_JSON = (
     "runs/production_ai_registry_promotion_operator_field_worksheet_current.json"
 )
+DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_STAGING_APPLY_JSON = (
+    "runs/production_ai_registry_promotion_operator_staging_apply_current.json"
+)
 DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_FIELD_WORKSHEET_JSON = (
     "runs/product_scope_breadth_evidence_operator_field_worksheet_current.json"
 )
@@ -513,6 +516,7 @@ def build_product_commercial_readiness_operator_packet(
     production_ai_registry_promotion_operator_receipt_packet: dict[str, Any] | None = None,
     production_ai_registry_promotion_priority_packet: dict[str, Any] | None = None,
     production_ai_registry_promotion_field_worksheet_packet: dict[str, Any] | None = None,
+    production_ai_registry_promotion_staging_apply_packet: dict[str, Any] | None = None,
     product_scope_breadth_evidence_field_worksheet_packet: dict[str, Any] | None = None,
     product_scope_breadth_evidence_staging_apply_packet: dict[str, Any] | None = None,
     engine_refinement_claim_evidence_field_worksheet_packet: dict[str, Any] | None = None,
@@ -531,6 +535,9 @@ def build_product_commercial_readiness_operator_packet(
     ),
     production_ai_registry_promotion_field_worksheet_path: str = (
         DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_FIELD_WORKSHEET_JSON
+    ),
+    production_ai_registry_promotion_staging_apply_path: str = (
+        DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_STAGING_APPLY_JSON
     ),
     product_scope_breadth_evidence_field_worksheet_path: str = (
         DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_FIELD_WORKSHEET_JSON
@@ -553,6 +560,9 @@ def build_product_commercial_readiness_operator_packet(
     )
     production_ai_registry_field_worksheet = _summary(
         production_ai_registry_promotion_field_worksheet_packet or {}
+    )
+    production_ai_registry_staging_apply = _summary(
+        production_ai_registry_promotion_staging_apply_packet or {}
     )
     product_scope_breadth_evidence_field_worksheet = _summary(
         product_scope_breadth_evidence_field_worksheet_packet or {}
@@ -1420,6 +1430,75 @@ def build_product_commercial_readiness_operator_packet(
         "production_ai_registry_promotion_operator_field_worksheet_next_required_step": _text(
             production_ai_registry_field_worksheet.get("next_required_step")
         ),
+        "production_ai_registry_promotion_operator_staging_apply_artifact": (
+            production_ai_registry_promotion_staging_apply_path
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_status": _text(
+            production_ai_registry_staging_apply.get("status")
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_mode": _text(
+            production_ai_registry_staging_apply.get("mode")
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_candidate_receipt_ready": bool(
+            production_ai_registry_staging_apply.get("candidate_receipt_ready") is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_candidate_blocked_row_count": _int(
+            production_ai_registry_staging_apply.get("candidate_blocked_row_count")
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_candidate_pass_row_count": _int(
+            production_ai_registry_staging_apply.get("candidate_pass_row_count")
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_staging_placeholder_row_count": _int(
+            production_ai_registry_staging_apply.get("staging_placeholder_row_count")
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_field_worksheet_pending_field_count": _int(
+            production_ai_registry_staging_apply.get("field_worksheet_pending_field_count")
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_field_worksheet_diagnostic_pending_field_count": _int(
+            production_ai_registry_staging_apply.get(
+                "field_worksheet_diagnostic_required_pending_field_count"
+            )
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_first_blocked_artifact_id": _text(
+            production_ai_registry_staging_apply.get("candidate_first_blocked_artifact_id")
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_first_blocked_row_blocker": _text(
+            production_ai_registry_staging_apply.get("candidate_first_blocked_row_blocker")
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_most_common_row_blocker": _text(
+            production_ai_registry_staging_apply.get("candidate_most_common_row_blocker")
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_observed_registry_default_residual_mode": _text(
+            production_ai_registry_staging_apply.get(
+                "candidate_observed_registry_default_residual_mode"
+            )
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_observed_registry_trained_model_checkpoint_count": _int(
+            production_ai_registry_staging_apply.get(
+                "candidate_observed_registry_trained_model_checkpoint_count"
+            )
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_live_copy_allowed": bool(
+            production_ai_registry_staging_apply.get("live_copy_allowed") is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_canonical_receipt_written": bool(
+            production_ai_registry_staging_apply.get("canonical_receipt_written") is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_registry_edited_by_this_tool": bool(
+            production_ai_registry_staging_apply.get("registry_edited_by_this_tool") is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_checkpoint_created_by_this_tool": bool(
+            production_ai_registry_staging_apply.get("checkpoint_created_by_this_tool") is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_model_promoted": bool(
+            production_ai_registry_staging_apply.get("model_promoted") is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_customer_facing_mutation_enabled": bool(
+            production_ai_registry_staging_apply.get("customer_facing_mutation_enabled") is True
+        ),
+        "production_ai_registry_promotion_operator_staging_apply_external_state_mutated": bool(
+            production_ai_registry_staging_apply.get("external_state_mutated") is True
+        ),
         "production_ai_return_bundle_required_artifact_count": _int(
             production_ai_return.get("return_bundle_required_artifact_count")
         ),
@@ -1943,6 +2022,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- field_worksheet_pending_field_count: `{s['production_ai_registry_promotion_operator_field_worksheet_pending_field_count']}`",
         f"- field_worksheet_diagnostic_pending_field_count: `{s['production_ai_registry_promotion_operator_field_worksheet_diagnostic_pending_field_count']}`",
         f"- field_worksheet_top_gate_id: `{s['production_ai_registry_promotion_operator_field_worksheet_top_gate_id']}`",
+        f"- staging_apply_status: `{s['production_ai_registry_promotion_operator_staging_apply_status']}`",
+        f"- staging_apply_candidate_receipt_ready: `{s['production_ai_registry_promotion_operator_staging_apply_candidate_receipt_ready']}`",
+        f"- staging_apply_candidate_blocked_row_count: `{s['production_ai_registry_promotion_operator_staging_apply_candidate_blocked_row_count']}`",
+        f"- staging_apply_staging_placeholder_row_count: `{s['production_ai_registry_promotion_operator_staging_apply_staging_placeholder_row_count']}`",
+        f"- staging_apply_first_blocked_row_blocker: `{s['production_ai_registry_promotion_operator_staging_apply_first_blocked_row_blocker']}`",
+        f"- staging_apply_live_copy_allowed: `{s['production_ai_registry_promotion_operator_staging_apply_live_copy_allowed']}`",
+        f"- staging_apply_external_state_mutated: `{s['production_ai_registry_promotion_operator_staging_apply_external_state_mutated']}`",
         "",
         "## Production AI Return Completion Packet",
         "",
@@ -2029,6 +2115,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_FIELD_WORKSHEET_JSON,
     )
     parser.add_argument(
+        "--production-ai-registry-promotion-staging-apply-json",
+        default=DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_STAGING_APPLY_JSON,
+    )
+    parser.add_argument(
         "--product-scope-breadth-evidence-field-worksheet-json",
         default=DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_FIELD_WORKSHEET_JSON,
     )
@@ -2073,6 +2163,9 @@ def main(argv: list[str] | None = None) -> None:
         production_ai_registry_promotion_field_worksheet_packet=_read_json_if_present(
             args.production_ai_registry_promotion_field_worksheet_json
         ),
+        production_ai_registry_promotion_staging_apply_packet=_read_json_if_present(
+            args.production_ai_registry_promotion_staging_apply_json
+        ),
         product_scope_breadth_evidence_field_worksheet_packet=_read_json_if_present(
             args.product_scope_breadth_evidence_field_worksheet_json
         ),
@@ -2097,6 +2190,9 @@ def main(argv: list[str] | None = None) -> None:
         ),
         production_ai_registry_promotion_field_worksheet_path=(
             args.production_ai_registry_promotion_field_worksheet_json
+        ),
+        production_ai_registry_promotion_staging_apply_path=(
+            args.production_ai_registry_promotion_staging_apply_json
         ),
         product_scope_breadth_evidence_field_worksheet_path=(
             args.product_scope_breadth_evidence_field_worksheet_json
