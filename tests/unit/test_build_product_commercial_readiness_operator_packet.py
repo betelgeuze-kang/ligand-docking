@@ -731,6 +731,35 @@ def _registry_priority() -> dict:
     }
 
 
+def _registry_field_worksheet() -> dict:
+    return {
+        "summary": {
+            "status": "production_ai_registry_promotion_operator_field_worksheet_ready",
+            "field_worksheet_ready": True,
+            "operator_fill_complete": False,
+            "worksheet_field_row_count": 20,
+            "required_receipt_field_count": 19,
+            "operator_fill_pending_field_count": 13,
+            "diagnostic_required_field_count": 6,
+            "diagnostic_required_pending_field_count": 6,
+            "pending_field_names": [
+                "operator_decision",
+                "production_promotion_allowed",
+                "default_residual_mode",
+            ],
+            "top_gate_id": "trained_model_checkpoint_count_positive",
+            "top_required_input": "Register a trained production residual checkpoint.",
+            "approval_token_required": "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION",
+            "observed_registry_default_residual_mode": "shadow",
+            "observed_registry_trained_model_checkpoint_count": 0,
+            "model_promoted": False,
+            "customer_facing_mutation_enabled": False,
+            "external_state_mutated": False,
+            "next_required_step": "Fill every operator_fill_pending field.",
+        }
+    }
+
+
 def test_build_product_commercial_readiness_operator_packet_flattens_next_actions() -> None:
     payload = mod.build_product_commercial_readiness_operator_packet(
         goal_audit_packet=_goal_audit(),
@@ -740,6 +769,7 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
         aqp1_external_operator_staging_apply_packet=_aqp1_external_staging_apply(),
         production_ai_registry_promotion_operator_receipt_packet=_registry_receipt(),
         production_ai_registry_promotion_priority_packet=_registry_priority(),
+        production_ai_registry_promotion_field_worksheet_packet=_registry_field_worksheet(),
         delta_force_closure_packet={
             "summary": {
                 "packet_ready": True,
@@ -1205,6 +1235,31 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
     assert summary["production_ai_registry_promotion_priority_model_promoted"] is False
     assert summary["production_ai_registry_promotion_priority_customer_facing_mutation_enabled"] is False
     assert summary["production_ai_registry_promotion_priority_external_state_mutated"] is False
+    assert summary["production_ai_registry_promotion_operator_field_worksheet_status"] == (
+        "production_ai_registry_promotion_operator_field_worksheet_ready"
+    )
+    assert summary["production_ai_registry_promotion_operator_field_worksheet_ready"] is True
+    assert (
+        summary[
+            "production_ai_registry_promotion_operator_field_worksheet_operator_fill_complete"
+        ]
+        is False
+    )
+    assert summary[
+        "production_ai_registry_promotion_operator_field_worksheet_pending_field_count"
+    ] == 13
+    assert summary[
+        "production_ai_registry_promotion_operator_field_worksheet_diagnostic_pending_field_count"
+    ] == 6
+    assert summary[
+        "production_ai_registry_promotion_operator_field_worksheet_top_gate_id"
+    ] == "trained_model_checkpoint_count_positive"
+    assert "default_residual_mode" in summary[
+        "production_ai_registry_promotion_operator_field_worksheet_pending_field_names"
+    ]
+    assert summary[
+        "production_ai_registry_promotion_operator_field_worksheet_external_state_mutated"
+    ] is False
     assert summary["delta_force_closure_acceptance_packet_artifact"] == (
         "runs/unit_delta_force_closure.json"
     )

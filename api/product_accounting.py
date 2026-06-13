@@ -306,6 +306,93 @@ def commercial_production_ai_registry_promotion_fields(summary: dict[str, Any]) 
         "production_ai_registry_promotion_priority_external_state_mutated": bool(
             summary.get("production_ai_registry_promotion_priority_external_state_mutated") is True
         ),
+        "production_ai_registry_promotion_operator_field_worksheet_artifact": summary.get(
+            "production_ai_registry_promotion_operator_field_worksheet_artifact", ""
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_status": summary.get(
+            "production_ai_registry_promotion_operator_field_worksheet_status", ""
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_ready": bool(
+            summary.get("production_ai_registry_promotion_operator_field_worksheet_ready") is True
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_operator_fill_complete": bool(
+            summary.get(
+                "production_ai_registry_promotion_operator_field_worksheet_operator_fill_complete"
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_field_row_count": int(
+            summary.get("production_ai_registry_promotion_operator_field_worksheet_field_row_count")
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_required_field_count": int(
+            summary.get(
+                "production_ai_registry_promotion_operator_field_worksheet_required_field_count"
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_pending_field_count": int(
+            summary.get(
+                "production_ai_registry_promotion_operator_field_worksheet_pending_field_count"
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_diagnostic_required_field_count": int(
+            summary.get(
+                "production_ai_registry_promotion_operator_field_worksheet_diagnostic_required_field_count"
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_diagnostic_pending_field_count": int(
+            summary.get(
+                "production_ai_registry_promotion_operator_field_worksheet_diagnostic_pending_field_count"
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_pending_field_names": list(
+            summary.get("production_ai_registry_promotion_operator_field_worksheet_pending_field_names")
+            or []
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_top_gate_id": summary.get(
+            "production_ai_registry_promotion_operator_field_worksheet_top_gate_id", ""
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_top_required_input": summary.get(
+            "production_ai_registry_promotion_operator_field_worksheet_top_required_input", ""
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_approval_token_required": summary.get(
+            "production_ai_registry_promotion_operator_field_worksheet_approval_token_required",
+            "",
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_observed_registry_default_residual_mode": summary.get(
+            "production_ai_registry_promotion_operator_field_worksheet_observed_registry_default_residual_mode",
+            "",
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_observed_registry_trained_model_checkpoint_count": int(
+            summary.get(
+                "production_ai_registry_promotion_operator_field_worksheet_observed_registry_trained_model_checkpoint_count"
+            )
+            or 0
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_model_promoted": bool(
+            summary.get("production_ai_registry_promotion_operator_field_worksheet_model_promoted")
+            is True
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_customer_facing_mutation_enabled": bool(
+            summary.get(
+                "production_ai_registry_promotion_operator_field_worksheet_customer_facing_mutation_enabled"
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_external_state_mutated": bool(
+            summary.get(
+                "production_ai_registry_promotion_operator_field_worksheet_external_state_mutated"
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_next_required_step": summary.get(
+            "production_ai_registry_promotion_operator_field_worksheet_next_required_step",
+            "",
+        ),
     }
 
 

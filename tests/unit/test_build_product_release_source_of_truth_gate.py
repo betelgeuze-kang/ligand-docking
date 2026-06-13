@@ -1265,6 +1265,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "api_runner_profile_promotion_operator_receipt" in artifact_ids
     assert "product_launch_r4_preflight" in artifact_ids
     assert "production_ai_registry_promotion_priority_packet" in artifact_ids
+    assert "production_ai_registry_promotion_operator_field_worksheet" in artifact_ids
     assert "engine_refinement_claim_promotion_action_board" in artifact_ids
     assert "engine_refinement_claim_evidence_receipt" in artifact_ids
     assert "product_scope_breadth_closure_checklist" in artifact_ids
@@ -1288,6 +1289,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         in mod.RELEASE_REFRESH_COMMANDS
     )
     assert (
+        "python3 tools/build_production_ai_registry_promotion_operator_field_worksheet.py"
+        in mod.RELEASE_REFRESH_COMMANDS
+    )
+    assert (
         "python3 tools/build_aqp1_direct_binding_external_evidence_operator_fill_guide.py"
         in mod.RELEASE_REFRESH_COMMANDS
     )
@@ -1307,6 +1312,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_production_ai_promotion_workbench_shadow_blocked_semantic_ready" in status_ids
     assert "production_ai_registry_promotion_operator_receipt_blocked_semantic_ready" in status_ids
     assert "production_ai_registry_promotion_priority_packet_blocked_semantic_ready" in status_ids
+    assert "production_ai_registry_promotion_operator_field_worksheet_semantic_ready" in status_ids
     assert "cameo_validation_operations_dossier_current_bottleneck_semantic_ready" in status_ids
     assert "cameo_official_result_fetch_preflight" in artifact_ids
     assert "cameo_official_result_fetch_preflight_blocked_semantic_ready" in status_ids
@@ -1643,12 +1649,40 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert registry_priority_status_spec["required_text_exact_fields"][
         "top_gate_id"
     ] == "default_residual_mode_guarded"
+    registry_field_worksheet_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "production_ai_registry_promotion_operator_field_worksheet"
+    )
+    assert "runs/production_ai_registry_promotion_priority_packet_current.json" in registry_field_worksheet_spec[
+        "depends_on"
+    ]
+    assert "runs/production_ai_registry_promotion_operator_receipt_current.json" in registry_field_worksheet_spec[
+        "depends_on"
+    ]
+    registry_field_worksheet_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "production_ai_registry_promotion_operator_field_worksheet_semantic_ready"
+    )
+    assert registry_field_worksheet_status_spec["required_int_exact_fields"][
+        "operator_fill_pending_field_count"
+    ] == 13
+    assert registry_field_worksheet_status_spec["required_int_exact_fields"][
+        "diagnostic_required_pending_field_count"
+    ] == 6
+    assert registry_field_worksheet_status_spec["required_text_exact_fields"][
+        "top_gate_id"
+    ] == "default_residual_mode_guarded"
     commercial_operator_packet_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
         if spec["artifact_id"] == "product_commercial_readiness_operator_packet"
     )
     assert "runs/production_ai_registry_promotion_priority_packet_current.json" in commercial_operator_packet_spec[
+        "depends_on"
+    ]
+    assert "runs/production_ai_registry_promotion_operator_field_worksheet_current.json" in commercial_operator_packet_spec[
         "depends_on"
     ]
     goal_action_spec = next(
@@ -2041,6 +2075,18 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.RELEASE_REFRESH_COMMANDS.index(
             "python3 tools/product/build_production_ai_registry_promotion_priority_packet.py"
         )
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/product/build_production_ai_registry_promotion_priority_packet.py"
+    ) < (
+        mod.RELEASE_REFRESH_COMMANDS.index(
+            "python3 tools/build_production_ai_registry_promotion_operator_field_worksheet.py"
+        )
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_production_ai_registry_promotion_operator_field_worksheet.py"
+    ) < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_scope_breadth_contract.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_execution_work_order.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_execution_preflight.py")

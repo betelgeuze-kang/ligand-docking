@@ -756,6 +756,42 @@ def _ladder(ready: bool = True) -> dict:
             "production_ai_registry_promotion_priority_model_promoted": False,
             "production_ai_registry_promotion_priority_customer_facing_mutation_enabled": False,
             "production_ai_registry_promotion_priority_external_state_mutated": False,
+            "production_ai_registry_promotion_operator_field_worksheet_artifact": (
+                "runs/production_ai_registry_promotion_operator_field_worksheet_current.json"
+            ),
+            "production_ai_registry_promotion_operator_field_worksheet_status": (
+                "production_ai_registry_promotion_operator_field_worksheet_ready"
+            ),
+            "production_ai_registry_promotion_operator_field_worksheet_ready": True,
+            "production_ai_registry_promotion_operator_field_worksheet_operator_fill_complete": False,
+            "production_ai_registry_promotion_operator_field_worksheet_field_row_count": 20,
+            "production_ai_registry_promotion_operator_field_worksheet_required_field_count": 19,
+            "production_ai_registry_promotion_operator_field_worksheet_pending_field_count": 13,
+            "production_ai_registry_promotion_operator_field_worksheet_diagnostic_required_field_count": 6,
+            "production_ai_registry_promotion_operator_field_worksheet_diagnostic_pending_field_count": 6,
+            "production_ai_registry_promotion_operator_field_worksheet_pending_field_names": [
+                "operator_decision",
+                "default_residual_mode",
+            ],
+            "production_ai_registry_promotion_operator_field_worksheet_top_gate_id": (
+                "trained_model_checkpoint_count_positive"
+            ),
+            "production_ai_registry_promotion_operator_field_worksheet_top_required_input": (
+                "Register a trained production residual checkpoint."
+            ),
+            "production_ai_registry_promotion_operator_field_worksheet_approval_token_required": (
+                "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+            ),
+            "production_ai_registry_promotion_operator_field_worksheet_observed_registry_default_residual_mode": (
+                "shadow"
+            ),
+            "production_ai_registry_promotion_operator_field_worksheet_observed_registry_trained_model_checkpoint_count": 0,
+            "production_ai_registry_promotion_operator_field_worksheet_model_promoted": False,
+            "production_ai_registry_promotion_operator_field_worksheet_customer_facing_mutation_enabled": False,
+            "production_ai_registry_promotion_operator_field_worksheet_external_state_mutated": False,
+            "production_ai_registry_promotion_operator_field_worksheet_next_required_step": (
+                "Fill every operator_fill_pending field."
+            ),
             "first_operator_completion_worker_runtime_receipt_contract_ready": True,
             "first_operator_completion_worker_runtime_receipt_contract": {
                 "manifest_ready": True,
@@ -1123,6 +1159,28 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
     )
     assert summary["production_ai_registry_promotion_priority_model_promoted"] is False
     assert summary["production_ai_registry_promotion_priority_external_state_mutated"] is False
+    assert summary["production_ai_registry_promotion_operator_field_worksheet_status"] == (
+        "production_ai_registry_promotion_operator_field_worksheet_ready"
+    )
+    assert summary["production_ai_registry_promotion_operator_field_worksheet_ready"] is True
+    assert (
+        summary[
+            "production_ai_registry_promotion_operator_field_worksheet_operator_fill_complete"
+        ]
+        is False
+    )
+    assert summary[
+        "production_ai_registry_promotion_operator_field_worksheet_pending_field_count"
+    ] == 13
+    assert summary[
+        "production_ai_registry_promotion_operator_field_worksheet_diagnostic_pending_field_count"
+    ] == 6
+    assert summary[
+        "production_ai_registry_promotion_operator_field_worksheet_top_gate_id"
+    ] == "trained_model_checkpoint_count_positive"
+    assert summary[
+        "production_ai_registry_promotion_operator_field_worksheet_external_state_mutated"
+    ] is False
     assert summary["delta_force_closure_acceptance_packet_ready"] is True
     assert summary["delta_force_closure_ready"] is False
     assert summary["delta_force_closure_first_blocked_output_field"] == "delta_force"
@@ -1213,6 +1271,15 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         == "runs/aqp1_direct_binding_external_evidence_operator_staging_apply_current.json"
         and row["reference_role"]
         == "local_scope_transporter_p0_external_operator_staging_apply"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "production_ai_registry_promotion_operator_field_worksheet"
+        and row["artifact_path"]
+        == "runs/production_ai_registry_promotion_operator_field_worksheet_current.json"
+        and row["reference_role"]
+        == "local_production_ai_registry_promotion_field_worksheet"
         and row["required_now"] is True
         for row in summary["artifact_reference_manifest"]
     )

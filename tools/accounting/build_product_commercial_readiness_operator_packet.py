@@ -29,6 +29,9 @@ DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_OPERATOR_RECEIPT_JSON = (
 DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_JSON = (
     "runs/production_ai_registry_promotion_priority_packet_current.json"
 )
+DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_FIELD_WORKSHEET_JSON = (
+    "runs/production_ai_registry_promotion_operator_field_worksheet_current.json"
+)
 DEFAULT_OUT_JSON = "runs/product_commercial_readiness_operator_packet_current.json"
 DEFAULT_OUT_CSV = "runs/product_commercial_readiness_operator_packet_current.csv"
 DEFAULT_OUT_MD = "runs/product_commercial_readiness_operator_packet_current.md"
@@ -500,6 +503,7 @@ def build_product_commercial_readiness_operator_packet(
     aqp1_external_operator_staging_apply_packet: dict[str, Any] | None = None,
     production_ai_registry_promotion_operator_receipt_packet: dict[str, Any] | None = None,
     production_ai_registry_promotion_priority_packet: dict[str, Any] | None = None,
+    production_ai_registry_promotion_field_worksheet_packet: dict[str, Any] | None = None,
     goal_audit_path: str = DEFAULT_GOAL_AUDIT_JSON,
     delta_force_closure_packet_path: str = DEFAULT_DELTA_FORCE_CLOSURE_PACKET_JSON,
     scope_closure_packet_path: str = DEFAULT_SCOPE_CLOSURE_PACKET_JSON,
@@ -513,6 +517,9 @@ def build_product_commercial_readiness_operator_packet(
     production_ai_registry_promotion_priority_path: str = (
         DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_JSON
     ),
+    production_ai_registry_promotion_field_worksheet_path: str = (
+        DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_FIELD_WORKSHEET_JSON
+    ),
 ) -> dict[str, Any]:
     summary = _summary(goal_audit_packet)
     delta_force_closure = _summary(delta_force_closure_packet or {})
@@ -522,6 +529,9 @@ def build_product_commercial_readiness_operator_packet(
     )
     production_ai_registry_priority = _summary(
         production_ai_registry_promotion_priority_packet or {}
+    )
+    production_ai_registry_field_worksheet = _summary(
+        production_ai_registry_promotion_field_worksheet_packet or {}
     )
     aqp1_external_fill_guide = _summary(aqp1_external_operator_fill_guide_packet or {})
     aqp1_external_worksheet = _summary(aqp1_external_operator_worksheet_packet or {})
@@ -1170,6 +1180,67 @@ def build_product_commercial_readiness_operator_packet(
         "production_ai_registry_promotion_priority_external_state_mutated": bool(
             production_ai_registry_priority.get("external_state_mutated") is True
         ),
+        "production_ai_registry_promotion_operator_field_worksheet_artifact": (
+            production_ai_registry_promotion_field_worksheet_path
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_status": _text(
+            production_ai_registry_field_worksheet.get("status")
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_ready": bool(
+            production_ai_registry_field_worksheet.get("field_worksheet_ready") is True
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_operator_fill_complete": bool(
+            production_ai_registry_field_worksheet.get("operator_fill_complete") is True
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_field_row_count": _int(
+            production_ai_registry_field_worksheet.get("worksheet_field_row_count")
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_required_field_count": _int(
+            production_ai_registry_field_worksheet.get("required_receipt_field_count")
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_pending_field_count": _int(
+            production_ai_registry_field_worksheet.get("operator_fill_pending_field_count")
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_diagnostic_required_field_count": _int(
+            production_ai_registry_field_worksheet.get("diagnostic_required_field_count")
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_diagnostic_pending_field_count": _int(
+            production_ai_registry_field_worksheet.get("diagnostic_required_pending_field_count")
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_pending_field_names": [
+            str(item)
+            for item in _list(production_ai_registry_field_worksheet.get("pending_field_names"))
+        ],
+        "production_ai_registry_promotion_operator_field_worksheet_top_gate_id": _text(
+            production_ai_registry_field_worksheet.get("top_gate_id")
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_top_required_input": _text(
+            production_ai_registry_field_worksheet.get("top_required_input")
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_approval_token_required": _text(
+            production_ai_registry_field_worksheet.get("approval_token_required")
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_observed_registry_default_residual_mode": _text(
+            production_ai_registry_field_worksheet.get("observed_registry_default_residual_mode")
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_observed_registry_trained_model_checkpoint_count": _int(
+            production_ai_registry_field_worksheet.get(
+                "observed_registry_trained_model_checkpoint_count"
+            )
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_model_promoted": bool(
+            production_ai_registry_field_worksheet.get("model_promoted") is True
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_customer_facing_mutation_enabled": bool(
+            production_ai_registry_field_worksheet.get("customer_facing_mutation_enabled")
+            is True
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_external_state_mutated": bool(
+            production_ai_registry_field_worksheet.get("external_state_mutated") is True
+        ),
+        "production_ai_registry_promotion_operator_field_worksheet_next_required_step": _text(
+            production_ai_registry_field_worksheet.get("next_required_step")
+        ),
         "production_ai_return_bundle_required_artifact_count": _int(
             production_ai_return.get("return_bundle_required_artifact_count")
         ),
@@ -1677,6 +1748,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- receipt_first_blocked_row_blocker: `{s['production_ai_registry_promotion_operator_receipt_first_blocked_row_blocker']}`",
         f"- receipt_observed_registry_default_residual_mode: `{s['production_ai_registry_promotion_operator_receipt_observed_registry_default_residual_mode']}`",
         f"- receipt_observed_registry_trained_model_checkpoint_count: `{s['production_ai_registry_promotion_operator_receipt_observed_registry_trained_model_checkpoint_count']}`",
+        f"- field_worksheet_status: `{s['production_ai_registry_promotion_operator_field_worksheet_status']}`",
+        f"- field_worksheet_pending_field_count: `{s['production_ai_registry_promotion_operator_field_worksheet_pending_field_count']}`",
+        f"- field_worksheet_diagnostic_pending_field_count: `{s['production_ai_registry_promotion_operator_field_worksheet_diagnostic_pending_field_count']}`",
+        f"- field_worksheet_top_gate_id: `{s['production_ai_registry_promotion_operator_field_worksheet_top_gate_id']}`",
         "",
         "## Production AI Return Completion Packet",
         "",
@@ -1758,6 +1833,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--production-ai-registry-promotion-priority-json",
         default=DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_JSON,
     )
+    parser.add_argument(
+        "--production-ai-registry-promotion-field-worksheet-json",
+        default=DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_FIELD_WORKSHEET_JSON,
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -1788,6 +1867,9 @@ def main(argv: list[str] | None = None) -> None:
         production_ai_registry_promotion_priority_packet=_read_json_if_present(
             args.production_ai_registry_promotion_priority_json
         ),
+        production_ai_registry_promotion_field_worksheet_packet=_read_json_if_present(
+            args.production_ai_registry_promotion_field_worksheet_json
+        ),
         goal_audit_path=args.goal_audit_json,
         delta_force_closure_packet_path=args.delta_force_closure_packet_json,
         scope_closure_packet_path=args.scope_closure_packet_json,
@@ -1800,6 +1882,9 @@ def main(argv: list[str] | None = None) -> None:
         ),
         production_ai_registry_promotion_priority_path=(
             args.production_ai_registry_promotion_priority_json
+        ),
+        production_ai_registry_promotion_field_worksheet_path=(
+            args.production_ai_registry_promotion_field_worksheet_json
         ),
     )
     _write_json(args.out_json, payload)
