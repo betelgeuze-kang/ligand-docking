@@ -112,6 +112,11 @@ def _refresh_release_decision_ready() -> dict:
             "engine_refinement_claim_evidence_receipt_recorded": True,
             "engine_refinement_claim_evidence_priority_packet_recorded": True,
             "engine_refinement_claim_evidence_priority_packet_ready": True,
+            "product_quality_gate_verification_recorded": True,
+            "product_quality_gate_verification_ready": True,
+            "product_quality_gate_verification_blocker_count": 0,
+            "product_quality_gate_verification_execution_enabled": False,
+            "product_quality_gate_verification_external_state_mutated": False,
             "source_goal_bottleneck_briefing_status": "goal_bottleneck_briefing_ready",
             "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 2,
@@ -192,6 +197,8 @@ def _refresh_release_decision_ready() -> dict:
             "science_claim_promotion_gap_closure_open_gap_count": 2,
             "science_claim_promotion_gap_closure_closed_gap_count": 3,
             "science_claim_promotion_gap_closure_release_blocker_row_count": 2,
+            "product_quality_gate_verification_check_count": 4,
+            "product_quality_gate_verification_pass_count": 4,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
                 "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"
@@ -339,6 +346,10 @@ def _refresh_release_decision_ready() -> dict:
             ),
             "third_party_license_review_gate_source_license_audit_status": (
                 "self_hosted_license_distribution_audit_recorded"
+            ),
+            "product_quality_gate_verification_status": "product_quality_gate_verified",
+            "product_quality_gate_verification_source_contract_status": (
+                "product_operational_quality_contract_ready"
             ),
             "accuracy_parity_scorecard_status": "blocked_accuracy_parity",
             "accuracy_parity_scorecard_current_broad_accuracy_parity_estimate_pct": "40-50",
@@ -720,6 +731,9 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
         "production_ai_promotion_workbench_production_ai_promotion_ready"
         in release_row["required_zero_fields"]
     )
+    assert "product_quality_gate_verification_blocker_count" in release_row["required_zero_fields"]
+    assert "product_quality_gate_verification_execution_enabled" in release_row["required_zero_fields"]
+    assert "product_quality_gate_verification_external_state_mutated" in release_row["required_zero_fields"]
     assert "accuracy_parity_scorecard_recorded" in release_row["required_true_fields"]
     assert (
         "api_runner_profile_promotion_operator_receipt_recorded"
@@ -734,6 +748,8 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
         "engine_refinement_claim_evidence_priority_packet_recorded"
         in release_row["required_true_fields"]
     )
+    assert "product_quality_gate_verification_recorded" in release_row["required_true_fields"]
+    assert "product_quality_gate_verification_ready" in release_row["required_true_fields"]
     assert release_row["required_int_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count"
     ] == 3
@@ -776,6 +792,18 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_int_exact_fields"][
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_blocked_row_count"
     ] == 8
+    assert release_row["required_int_exact_fields"][
+        "product_quality_gate_verification_check_count"
+    ] == 4
+    assert release_row["required_int_exact_fields"][
+        "product_quality_gate_verification_pass_count"
+    ] == 4
+    assert release_row["required_text_exact_fields"][
+        "product_quality_gate_verification_status"
+    ] == "product_quality_gate_verified"
+    assert release_row["required_text_exact_fields"][
+        "product_quality_gate_verification_source_contract_status"
+    ] == "product_operational_quality_contract_ready"
     assert release_row["required_text_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id"
     ] == "default_residual_mode_guarded"

@@ -95,6 +95,8 @@ FINAL_GATE_SPECS = [
             "engine_refinement_claim_evidence_receipt_recorded",
             "engine_refinement_claim_evidence_priority_packet_recorded",
             "engine_refinement_claim_evidence_priority_packet_ready",
+            "product_quality_gate_verification_recorded",
+            "product_quality_gate_verification_ready",
         ],
         "required_zero_fields": [
             "blocker_count",
@@ -137,6 +139,9 @@ FINAL_GATE_SPECS = [
             "master_gap_closure_rollup_claim_promotion_allowed",
             "science_claim_promotion_gap_closure_all_gaps_closed",
             "science_claim_promotion_gap_closure_claim_promotion_allowed",
+            "product_quality_gate_verification_blocker_count",
+            "product_quality_gate_verification_execution_enabled",
+            "product_quality_gate_verification_external_state_mutated",
         ],
         "required_int_exact_fields": {
             "cameo_official_result_fetch_preflight_blocked_row_count": 1,
@@ -218,8 +223,14 @@ FINAL_GATE_SPECS = [
             "science_claim_promotion_gap_closure_open_gap_count": 2,
             "science_claim_promotion_gap_closure_closed_gap_count": 3,
             "science_claim_promotion_gap_closure_release_blocker_row_count": 2,
+            "product_quality_gate_verification_check_count": 4,
+            "product_quality_gate_verification_pass_count": 4,
         },
         "required_text_exact_fields": {
+            "product_quality_gate_verification_status": "product_quality_gate_verified",
+            "product_quality_gate_verification_source_contract_status": (
+                "product_operational_quality_contract_ready"
+            ),
             "cameo_official_result_fetch_preflight_status": (
                 "blocked_cameo_official_result_fetch_preflight"
             ),

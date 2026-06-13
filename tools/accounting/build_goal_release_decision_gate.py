@@ -44,6 +44,7 @@ DEFAULT_PRODUCT_PRODUCTION_AI_PROMOTION_WORKBENCH_JSON = (
 DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON = "runs/product_ai_architecture_gap_closure_current.json"
 DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON = "runs/product_ai_architecture_execution_backlog_current.json"
 DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON = "runs/product_release_source_of_truth_gate_current.json"
+DEFAULT_PRODUCT_QUALITY_GATE_VERIFICATION_JSON = "runs/product_quality_gate_verification_current.json"
 DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON = "runs/api_customer_flow_release_evidence_current.json"
 DEFAULT_API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_JSON = (
     "runs/api_runner_profile_promotion_operator_receipt_current.json"
@@ -223,6 +224,7 @@ def build_goal_release_decision_gate(
     product_ai_architecture_gap_packet: dict[str, Any] | None = None,
     product_ai_execution_backlog_packet: dict[str, Any] | None = None,
     product_release_source_of_truth_packet: dict[str, Any] | None = None,
+    product_quality_gate_verification_packet: dict[str, Any] | None = None,
     api_customer_flow_release_evidence_packet: dict[str, Any] | None = None,
     api_runner_profile_promotion_operator_receipt_packet: dict[str, Any] | None = None,
     product_scope_breadth_evidence_receipt_packet: dict[str, Any] | None = None,
@@ -264,6 +266,7 @@ def build_goal_release_decision_gate(
     product_ai_architecture_gap_path: str = DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON,
     product_ai_execution_backlog_path: str = DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON,
     product_release_source_of_truth_path: str = DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON,
+    product_quality_gate_verification_path: str = DEFAULT_PRODUCT_QUALITY_GATE_VERIFICATION_JSON,
     api_customer_flow_release_evidence_path: str = DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON,
     api_runner_profile_promotion_operator_receipt_path: str = (
         DEFAULT_API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_JSON
@@ -736,6 +739,19 @@ def build_goal_release_decision_gate(
         _text(release_source_of_truth.get("status")) == "product_release_source_of_truth_gate_ready"
         and bool(release_source_of_truth.get("release_source_of_truth_ready") is True)
         and _int(release_source_of_truth.get("blocker_count")) == 0
+    )
+    product_quality_gate = _summary(product_quality_gate_verification_packet or {})
+    product_quality_gate_present = product_quality_gate_verification_packet is not None
+    product_quality_gate_verified = (
+        _text(product_quality_gate.get("status")) == "product_quality_gate_verified"
+        and bool(product_quality_gate.get("quality_gate_ready") is True)
+        and _int(product_quality_gate.get("blocker_count")) == 0
+        and _int(product_quality_gate.get("check_count")) == 4
+        and _int(product_quality_gate.get("pass_count")) == 4
+        and _text(product_quality_gate.get("source_contract_status"))
+        == "product_operational_quality_contract_ready"
+        and bool(product_quality_gate.get("execution_enabled") is False)
+        and bool(product_quality_gate.get("external_state_mutated") is False)
     )
     api_customer_flow = _summary(api_customer_flow_release_evidence_packet or {})
     api_customer_flow_gate_present = api_customer_flow_release_evidence_packet is not None
@@ -1710,6 +1726,36 @@ def build_goal_release_decision_gate(
                 reason="Release must fail when any current artifact is stale against its source dependencies or README metrics drift from current JSON evidence.",
             )
         )
+    if product_quality_gate_present:
+        rows.append(
+            _row(
+                lane_id="goal_release",
+                check="product_quality_gate_verification_recorded",
+                artifact_path=product_quality_gate_verification_path,
+                observed=(
+                    f"{_text(product_quality_gate.get('status')) or 'missing'};"
+                    f"quality_gate_ready={_bool_text(bool(product_quality_gate.get('quality_gate_ready') is True))};"
+                    f"source_contract_status={_text(product_quality_gate.get('source_contract_status'))};"
+                    f"check_count={_int(product_quality_gate.get('check_count'))};"
+                    f"pass_count={_int(product_quality_gate.get('pass_count'))};"
+                    f"source_contract_check_count={_int(product_quality_gate.get('source_contract_check_count'))};"
+                    f"source_contract_pass_count={_int(product_quality_gate.get('source_contract_pass_count'))};"
+                    f"blocker_count={_int(product_quality_gate.get('blocker_count'))};"
+                    f"execution_enabled={_bool_text(bool(product_quality_gate.get('execution_enabled') is True))};"
+                    f"external_state_mutated={_bool_text(bool(product_quality_gate.get('external_state_mutated') is True))}"
+                ),
+                required=(
+                    "product_quality_gate_verified with quality_gate_ready=true, zero blockers, "
+                    "4/4 verification checks, product_operational_quality_contract_ready source, "
+                    "and no execution or external mutation"
+                ),
+                passed=product_quality_gate_verified,
+                reason=(
+                    "The final release decision must directly preserve the operational quality verifier "
+                    "receipt, not only the source-of-truth or release-bundle rollup that references it."
+                ),
+            )
+        )
     if full_commercial_matrix_gate_present:
         rows.append(
             _row(
@@ -2092,6 +2138,8 @@ def build_goal_release_decision_gate(
         next_required_items.append("Production AI promotion workbench")
     if release_source_of_truth_gate_present and not release_source_of_truth_ready:
         next_required_items.append("product release source-of-truth gate")
+    if product_quality_gate_present and not product_quality_gate_verified:
+        next_required_items.append("product quality gate verification receipt")
     if full_commercial_matrix_gate_present and not full_commercial_matrix_recorded:
         next_required_items.append("full-commercial blocker evidence matrix")
     if rollout_smoke_gate_present and not rollout_smoke_recorded:
@@ -3042,6 +3090,38 @@ def build_goal_release_decision_gate(
         "product_release_source_of_truth_readme_drift_count": _int(
             release_source_of_truth.get("readme_drift_count")
         ),
+        "product_quality_gate_verification_gate_present": product_quality_gate_present,
+        "product_quality_gate_verification_status": _text(product_quality_gate.get("status")),
+        "product_quality_gate_verification_recorded": (
+            product_quality_gate_verified if product_quality_gate_present else None
+        ),
+        "product_quality_gate_verification_ready": bool(
+            product_quality_gate.get("quality_gate_ready") is True
+        ),
+        "product_quality_gate_verification_source_contract_status": _text(
+            product_quality_gate.get("source_contract_status")
+        ),
+        "product_quality_gate_verification_check_count": _int(
+            product_quality_gate.get("check_count")
+        ),
+        "product_quality_gate_verification_pass_count": _int(
+            product_quality_gate.get("pass_count")
+        ),
+        "product_quality_gate_verification_source_contract_check_count": _int(
+            product_quality_gate.get("source_contract_check_count")
+        ),
+        "product_quality_gate_verification_source_contract_pass_count": _int(
+            product_quality_gate.get("source_contract_pass_count")
+        ),
+        "product_quality_gate_verification_blocker_count": _int(
+            product_quality_gate.get("blocker_count")
+        ),
+        "product_quality_gate_verification_execution_enabled": bool(
+            product_quality_gate.get("execution_enabled") is True
+        ),
+        "product_quality_gate_verification_external_state_mutated": bool(
+            product_quality_gate.get("external_state_mutated") is True
+        ),
         "product_full_commercial_blocker_evidence_matrix_gate_present": full_commercial_matrix_gate_present,
         "product_full_commercial_blocker_evidence_matrix_status": _text(
             full_commercial_matrix.get("status")
@@ -3563,6 +3643,16 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_release_source_of_truth_blocker_count: `{s['product_release_source_of_truth_blocker_count']}`",
         f"- product_release_source_of_truth_stale_artifact_count: `{s['product_release_source_of_truth_stale_artifact_count']}`",
         f"- product_release_source_of_truth_readme_drift_count: `{s['product_release_source_of_truth_readme_drift_count']}`",
+        f"- product_quality_gate_verification_gate_present: `{s['product_quality_gate_verification_gate_present']}`",
+        f"- product_quality_gate_verification_status: `{s['product_quality_gate_verification_status']}`",
+        f"- product_quality_gate_verification_recorded: `{s['product_quality_gate_verification_recorded']}`",
+        f"- product_quality_gate_verification_ready: `{s['product_quality_gate_verification_ready']}`",
+        f"- product_quality_gate_verification_source_contract_status: `{s['product_quality_gate_verification_source_contract_status']}`",
+        f"- product_quality_gate_verification_check_count: `{s['product_quality_gate_verification_check_count']}`",
+        f"- product_quality_gate_verification_pass_count: `{s['product_quality_gate_verification_pass_count']}`",
+        f"- product_quality_gate_verification_blocker_count: `{s['product_quality_gate_verification_blocker_count']}`",
+        f"- product_quality_gate_verification_execution_enabled: `{s['product_quality_gate_verification_execution_enabled']}`",
+        f"- product_quality_gate_verification_external_state_mutated: `{s['product_quality_gate_verification_external_state_mutated']}`",
         f"- product_full_commercial_blocker_evidence_matrix_gate_present: `{s['product_full_commercial_blocker_evidence_matrix_gate_present']}`",
         f"- product_full_commercial_blocker_evidence_matrix_status: `{s['product_full_commercial_blocker_evidence_matrix_status']}`",
         f"- product_full_commercial_blocker_evidence_matrix_ready: `{s['product_full_commercial_blocker_evidence_matrix_ready']}`",
@@ -3758,6 +3848,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--product-ai-architecture-gap-json", default=DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON)
     parser.add_argument("--product-ai-execution-backlog-json", default=DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON)
     parser.add_argument("--product-release-source-of-truth-json", default=DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON)
+    parser.add_argument(
+        "--product-quality-gate-verification-json",
+        default=DEFAULT_PRODUCT_QUALITY_GATE_VERIFICATION_JSON,
+    )
     parser.add_argument("--api-customer-flow-release-evidence-json", default=DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON)
     parser.add_argument(
         "--api-runner-profile-promotion-operator-receipt-json",
@@ -3841,6 +3935,9 @@ def main(argv: list[str] | None = None) -> None:
         product_ai_architecture_gap_packet=_read_json_if_present(args.product_ai_architecture_gap_json),
         product_ai_execution_backlog_packet=_read_json_if_present(args.product_ai_execution_backlog_json),
         product_release_source_of_truth_packet=_read_json_if_present(args.product_release_source_of_truth_json),
+        product_quality_gate_verification_packet=_read_json_if_present(
+            args.product_quality_gate_verification_json
+        ),
         api_customer_flow_release_evidence_packet=_read_json_if_present(
             args.api_customer_flow_release_evidence_json
         ),
@@ -3902,6 +3999,7 @@ def main(argv: list[str] | None = None) -> None:
         product_ai_architecture_gap_path=args.product_ai_architecture_gap_json,
         product_ai_execution_backlog_path=args.product_ai_execution_backlog_json,
         product_release_source_of_truth_path=args.product_release_source_of_truth_json,
+        product_quality_gate_verification_path=args.product_quality_gate_verification_json,
         api_customer_flow_release_evidence_path=args.api_customer_flow_release_evidence_json,
         api_runner_profile_promotion_operator_receipt_path=(
             args.api_runner_profile_promotion_operator_receipt_json

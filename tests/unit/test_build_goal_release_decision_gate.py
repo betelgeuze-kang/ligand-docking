@@ -531,6 +531,40 @@ def _ready_source_of_truth() -> dict:
     }
 
 
+def _blocked_product_quality_gate_verification() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_product_quality_gate_verification",
+            "quality_gate_ready": False,
+            "source_contract_status": "blocked_product_operational_quality_contract",
+            "check_count": 4,
+            "pass_count": 3,
+            "source_contract_check_count": 6,
+            "source_contract_pass_count": 5,
+            "blocker_count": 1,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+        }
+    }
+
+
+def _ready_product_quality_gate_verification() -> dict:
+    return {
+        "summary": {
+            "status": "product_quality_gate_verified",
+            "quality_gate_ready": True,
+            "source_contract_status": "product_operational_quality_contract_ready",
+            "check_count": 4,
+            "pass_count": 4,
+            "source_contract_check_count": 6,
+            "source_contract_pass_count": 6,
+            "blocker_count": 0,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+        }
+    }
+
+
 def _blocked_full_commercial_matrix() -> dict:
     return {
         "summary": {
@@ -1508,15 +1542,66 @@ def test_goal_release_decision_gate_passes_ready_current_source_of_truth() -> No
         cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
         goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
         product_release_source_of_truth_packet=_ready_source_of_truth(),
+        product_quality_gate_verification_packet=_ready_product_quality_gate_verification(),
     )
 
     summary = payload["summary"]
     assert summary["status"] == "goal_release_ready"
     assert summary["release_allowed"] is True
     assert summary["product_release_source_of_truth_ready"] is True
+    assert summary["product_quality_gate_verification_gate_present"] is True
+    assert summary["product_quality_gate_verification_status"] == "product_quality_gate_verified"
+    assert summary["product_quality_gate_verification_recorded"] is True
+    assert summary["product_quality_gate_verification_ready"] is True
+    assert summary["product_quality_gate_verification_source_contract_status"] == (
+        "product_operational_quality_contract_ready"
+    )
+    assert summary["product_quality_gate_verification_check_count"] == 4
+    assert summary["product_quality_gate_verification_pass_count"] == 4
+    assert summary["product_quality_gate_verification_blocker_count"] == 0
+    assert summary["product_quality_gate_verification_execution_enabled"] is False
+    assert summary["product_quality_gate_verification_external_state_mutated"] is False
     assert next(row for row in payload["rows"] if row["check"] == "product_release_source_of_truth_ready")[
         "status"
     ] == "pass"
+    quality_row = next(
+        row for row in payload["rows"] if row["check"] == "product_quality_gate_verification_recorded"
+    )
+    assert quality_row["status"] == "pass"
+    assert quality_row["release_blocker"] is False
+    assert "source_contract_status=product_operational_quality_contract_ready" in quality_row["observed"]
+
+
+def test_goal_release_decision_gate_blocks_failed_quality_gate_verification() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_ready_cameo_validation(),
+        cameo_capability_packet=_ready_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+        product_release_source_of_truth_packet=_ready_source_of_truth(),
+        product_quality_gate_verification_packet=_blocked_product_quality_gate_verification(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_goal_release_decision"
+    assert summary["release_allowed"] is False
+    assert summary["product_quality_gate_verification_recorded"] is False
+    assert summary["product_quality_gate_verification_blocker_count"] == 1
+    assert "product quality gate verification receipt" in summary["next_required_step"]
+    quality_row = next(
+        row for row in payload["rows"] if row["check"] == "product_quality_gate_verification_recorded"
+    )
+    assert quality_row["status"] == "fail"
+    assert quality_row["release_blocker"] is True
+    assert "pass_count=3" in quality_row["observed"]
 
 
 def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_blocking_restricted_release() -> None:

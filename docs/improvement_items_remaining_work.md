@@ -719,6 +719,19 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `product_quality_gate_verification_current.json` final gate는
   `product_quality_gate_verified`, `quality_gate_ready=true`,
   `check_count=4`, `pass_count=4`, `blocker_count=0`을 직접 검증한다.
+  최신 `goal_release_decision_gate_current.json`도 같은 receipt를 직접 읽어
+  `product_quality_gate_verification_recorded=true`,
+  `product_quality_gate_verification_ready=true`,
+  `product_quality_gate_verification_status=product_quality_gate_verified`,
+  `product_quality_gate_verification_source_contract_status=product_operational_quality_contract_ready`,
+  `product_quality_gate_verification_check_count=4`,
+  `product_quality_gate_verification_pass_count=4`,
+  `product_quality_gate_verification_blocker_count=0`,
+  `product_quality_gate_verification_execution_enabled=false`,
+  `product_quality_gate_verification_external_state_mutated=false`를 노출하고,
+  `/goal/status`는 이 필드를 release decision에서 그대로 전파한다. 따라서
+  operational quality verifier가 release bundle/source-of-truth/final refresh 안에만
+  머물지 않고 operator-facing decision surface에서도 직접 확인된다.
   action board echo는
   `goal_release_decision_gate_status=goal_release_ready`,
   `goal_release_allowed=true`, `goal_release_blocker_count=0`이어야 하므로

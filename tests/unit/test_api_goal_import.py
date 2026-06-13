@@ -328,6 +328,33 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["api_runner_profile_promotion_operator_receipt_status"] == release_artifact.get(
         "api_runner_profile_promotion_operator_receipt_status", ""
     )
+    assert status["product_quality_gate_verification_status"] == release_artifact.get(
+        "product_quality_gate_verification_status", ""
+    )
+    assert status["product_quality_gate_verification_recorded"] is (
+        release_artifact.get("product_quality_gate_verification_recorded") is True
+    )
+    assert status["product_quality_gate_verification_ready"] is (
+        release_artifact.get("product_quality_gate_verification_ready") is True
+    )
+    assert status["product_quality_gate_verification_source_contract_status"] == release_artifact.get(
+        "product_quality_gate_verification_source_contract_status", ""
+    )
+    assert status["product_quality_gate_verification_check_count"] == int(
+        release_artifact.get("product_quality_gate_verification_check_count") or 0
+    )
+    assert status["product_quality_gate_verification_pass_count"] == int(
+        release_artifact.get("product_quality_gate_verification_pass_count") or 0
+    )
+    assert status["product_quality_gate_verification_blocker_count"] == int(
+        release_artifact.get("product_quality_gate_verification_blocker_count") or 0
+    )
+    assert status["product_quality_gate_verification_execution_enabled"] is (
+        release_artifact.get("product_quality_gate_verification_execution_enabled") is True
+    )
+    assert status["product_quality_gate_verification_external_state_mutated"] is (
+        release_artifact.get("product_quality_gate_verification_external_state_mutated") is True
+    )
     assert status["api_runner_profile_promotion_operator_receipt_recorded"] is (
         release_artifact.get("api_runner_profile_promotion_operator_receipt_recorded") is True
     )

@@ -806,6 +806,15 @@ async def get_goal_status() -> dict[str, Any]:
             "full_commercial_blocker_evidence_matrix_first_blocked_acceptance_artifact": "",
             "full_commercial_blocker_evidence_matrix_scope_receipt_most_common_row_blocker": "",
             "full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker": "",
+            "product_quality_gate_verification_status": "",
+            "product_quality_gate_verification_recorded": False,
+            "product_quality_gate_verification_ready": False,
+            "product_quality_gate_verification_source_contract_status": "",
+            "product_quality_gate_verification_check_count": 0,
+            "product_quality_gate_verification_pass_count": 0,
+            "product_quality_gate_verification_blocker_count": 0,
+            "product_quality_gate_verification_execution_enabled": False,
+            "product_quality_gate_verification_external_state_mutated": False,
             **_mutation_flags(),
             "claim_boundary": CLAIM_BOUNDARY,
         }
@@ -1182,6 +1191,33 @@ async def get_goal_status() -> dict[str, Any]:
         ),
         "full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker": (
             full_commercial_matrix.get("engine_receipt_most_common_row_blocker", "")
+        ),
+        "product_quality_gate_verification_status": release.get(
+            "product_quality_gate_verification_status", ""
+        ),
+        "product_quality_gate_verification_recorded": bool(
+            release.get("product_quality_gate_verification_recorded") is True
+        ),
+        "product_quality_gate_verification_ready": bool(
+            release.get("product_quality_gate_verification_ready") is True
+        ),
+        "product_quality_gate_verification_source_contract_status": release.get(
+            "product_quality_gate_verification_source_contract_status", ""
+        ),
+        "product_quality_gate_verification_check_count": _int(
+            release.get("product_quality_gate_verification_check_count")
+        ),
+        "product_quality_gate_verification_pass_count": _int(
+            release.get("product_quality_gate_verification_pass_count")
+        ),
+        "product_quality_gate_verification_blocker_count": _int(
+            release.get("product_quality_gate_verification_blocker_count")
+        ),
+        "product_quality_gate_verification_execution_enabled": bool(
+            release.get("product_quality_gate_verification_execution_enabled") is True
+        ),
+        "product_quality_gate_verification_external_state_mutated": bool(
+            release.get("product_quality_gate_verification_external_state_mutated") is True
         ),
         "official_results_required_bottleneck_count": _int(
             bottlenecks.get("official_results_required_bottleneck_count")
