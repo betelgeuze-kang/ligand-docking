@@ -742,7 +742,15 @@ def _product_goal_completion_actions(
                 f"{_text(summary.get('product_scope_next_operator_completion_transporter_best_evidence_activity_type'))}:"
                 f"{_text(summary.get('product_scope_next_operator_completion_transporter_best_evidence_value'))}"
                 f"{_text(summary.get('product_scope_next_operator_completion_transporter_best_evidence_units'))}:"
-                f"{_text(summary.get('product_scope_next_operator_completion_transporter_best_evidence_document_id'))}."
+                f"{_text(summary.get('product_scope_next_operator_completion_transporter_best_evidence_document_id'))}; "
+                f"return_bundle_blockers={_int(summary.get('product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_blocker_count'))}; "
+                f"return_bundle_next_artifact={_text(summary.get('product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_id'))}:"
+                f"{_text(summary.get('product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_path'))}; "
+                f"operator_validation_candidate="
+                f"{_text(summary.get('product_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier'))}:"
+                f"{_text(summary.get('product_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol'))}:"
+                f"{_text(summary.get('product_scope_transporter_p0_operator_validation_candidate_status'))}; "
+                f"operator_validation_placeholder_count={_int(summary.get('product_scope_transporter_p0_operator_validation_candidate_placeholder_count'))}."
             ),
         )
         action.update(
@@ -795,6 +803,87 @@ def _product_goal_completion_actions(
                 ),
                 "scope_next_operator_completion_transporter_best_evidence_document_id": _text(
                     summary.get("product_scope_next_operator_completion_transporter_best_evidence_document_id")
+                ),
+                "scope_transporter_p0_return_bundle_required_artifact_count": _int(
+                    summary.get(
+                        "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_required_artifact_count"
+                    )
+                ),
+                "scope_transporter_p0_return_bundle_blocker_count": _int(
+                    summary.get(
+                        "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_blocker_count"
+                    )
+                ),
+                "scope_transporter_p0_return_bundle_next_artifact_id": _text(
+                    summary.get(
+                        "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_id"
+                    )
+                ),
+                "scope_transporter_p0_return_bundle_next_artifact_path": _text(
+                    summary.get(
+                        "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_path"
+                    )
+                ),
+                "scope_transporter_p0_return_bundle_next_artifact_failed_check_ids": ";".join(
+                    str(item)
+                    for item in _list(
+                        summary.get(
+                            "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_failed_check_ids"
+                        )
+                    )
+                ),
+                "scope_transporter_p0_operator_validation_candidate_ready": bool(
+                    summary.get("product_scope_transporter_p0_operator_validation_candidate_ready") is True
+                ),
+                "scope_transporter_p0_operator_validation_candidate_status": _text(
+                    summary.get("product_scope_transporter_p0_operator_validation_candidate_status")
+                ),
+                "scope_transporter_p0_operator_validation_candidate_id": _text(
+                    summary.get("product_scope_transporter_p0_operator_validation_candidate_id")
+                ),
+                "scope_transporter_p0_operator_validation_candidate_target_id": _text(
+                    summary.get("product_scope_transporter_p0_operator_validation_candidate_target_id")
+                ),
+                "scope_transporter_p0_operator_validation_candidate_ligand_external_identifier": _text(
+                    summary.get(
+                        "product_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier"
+                    )
+                ),
+                "scope_transporter_p0_operator_validation_candidate_ligand_name": _text(
+                    summary.get("product_scope_transporter_p0_operator_validation_candidate_ligand_name")
+                ),
+                "scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol": _text(
+                    summary.get(
+                        "product_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol"
+                    )
+                ),
+                "scope_transporter_p0_operator_validation_candidate_source_locator": _text(
+                    summary.get("product_scope_transporter_p0_operator_validation_candidate_source_locator")
+                ),
+                "scope_transporter_p0_operator_validation_candidate_blocker": _text(
+                    summary.get("product_scope_transporter_p0_operator_validation_candidate_blocker")
+                ),
+                "scope_transporter_p0_operator_validation_candidate_required_decision_fields": ";".join(
+                    str(item)
+                    for item in _list(
+                        summary.get(
+                            "product_scope_transporter_p0_operator_validation_candidate_required_decision_fields"
+                        )
+                    )
+                ),
+                "scope_transporter_p0_operator_validation_candidate_required_decision_field_count": _int(
+                    summary.get(
+                        "product_scope_transporter_p0_operator_validation_candidate_required_decision_field_count"
+                    )
+                ),
+                "scope_transporter_p0_operator_validation_candidate_placeholder_count": _int(
+                    summary.get("product_scope_transporter_p0_operator_validation_candidate_placeholder_count")
+                ),
+                "scope_transporter_p0_operator_validation_candidate_validation_blockers": ";".join(
+                    str(item)
+                    for item in _list(
+                        summary.get("product_scope_transporter_p0_operator_validation_candidate_validation_blockers")
+                    )
                 ),
                 "scope_evidence_intake_ready": bool(summary.get("product_scope_evidence_intake_ready") is True),
                 "scope_local_crosscheck_intake_ready_count": _int(
@@ -1822,6 +1911,56 @@ def build_action_board(
                 "product_scope_next_operator_completion_transporter_best_evidence_document_id"
             )
         ),
+        "product_goal_scope_transporter_p0_return_bundle_required_artifact_count": _int(
+            product_goal_completion_audit.get(
+                "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_required_artifact_count"
+            )
+        ),
+        "product_goal_scope_transporter_p0_return_bundle_blocker_count": _int(
+            product_goal_completion_audit.get(
+                "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_blocker_count"
+            )
+        ),
+        "product_goal_scope_transporter_p0_return_bundle_next_artifact_id": _text(
+            product_goal_completion_audit.get(
+                "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_id"
+            )
+        ),
+        "product_goal_scope_transporter_p0_return_bundle_next_artifact_path": _text(
+            product_goal_completion_audit.get(
+                "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_path"
+            )
+        ),
+        "product_goal_scope_transporter_p0_operator_validation_candidate_ready": bool(
+            product_goal_completion_audit.get("product_scope_transporter_p0_operator_validation_candidate_ready")
+            is True
+        ),
+        "product_goal_scope_transporter_p0_operator_validation_candidate_status": _text(
+            product_goal_completion_audit.get("product_scope_transporter_p0_operator_validation_candidate_status")
+        ),
+        "product_goal_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier": _text(
+            product_goal_completion_audit.get(
+                "product_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier"
+            )
+        ),
+        "product_goal_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol": _text(
+            product_goal_completion_audit.get(
+                "product_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol"
+            )
+        ),
+        "product_goal_scope_transporter_p0_operator_validation_candidate_blocker": _text(
+            product_goal_completion_audit.get("product_scope_transporter_p0_operator_validation_candidate_blocker")
+        ),
+        "product_goal_scope_transporter_p0_operator_validation_candidate_required_decision_field_count": _int(
+            product_goal_completion_audit.get(
+                "product_scope_transporter_p0_operator_validation_candidate_required_decision_field_count"
+            )
+        ),
+        "product_goal_scope_transporter_p0_operator_validation_candidate_placeholder_count": _int(
+            product_goal_completion_audit.get(
+                "product_scope_transporter_p0_operator_validation_candidate_placeholder_count"
+            )
+        ),
         "approval_reclaim_size_gb": round(sum(_float(row.get("size_gb")) for row in rows if row["status"] == "approval_required"), 3),
         "large_review_size_gb": round(sum(_float(row.get("size_gb")) for row in rows if row["status"] == "review_required"), 3),
         "large_cleanup_review_resolved_by_drilldown_count": large_cleanup_review_resolved_by_drilldown_count,
@@ -2361,6 +2500,15 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_goal_scope_next_operator_completion_transporter_operator_next_verdict: `{s['product_goal_scope_next_operator_completion_transporter_operator_next_verdict']}`",
         f"- product_goal_scope_next_operator_completion_transporter_best_evidence: `{s['product_goal_scope_next_operator_completion_transporter_best_evidence_activity_type']} {s['product_goal_scope_next_operator_completion_transporter_best_evidence_value']} {s['product_goal_scope_next_operator_completion_transporter_best_evidence_units']} {s['product_goal_scope_next_operator_completion_transporter_best_evidence_document_id']}`",
         f"- product_goal_scope_next_operator_completion_transporter_best_evidence_source_file: `{s['product_goal_scope_next_operator_completion_transporter_best_evidence_source_file']}`",
+        f"- product_goal_scope_transporter_p0_return_bundle_blocker_count: `{s['product_goal_scope_transporter_p0_return_bundle_blocker_count']}`",
+        f"- product_goal_scope_transporter_p0_return_bundle_next_artifact_id: `{s['product_goal_scope_transporter_p0_return_bundle_next_artifact_id']}`",
+        f"- product_goal_scope_transporter_p0_return_bundle_next_artifact_path: `{s['product_goal_scope_transporter_p0_return_bundle_next_artifact_path']}`",
+        f"- product_goal_scope_transporter_p0_operator_validation_candidate_ready: `{s['product_goal_scope_transporter_p0_operator_validation_candidate_ready']}`",
+        f"- product_goal_scope_transporter_p0_operator_validation_candidate_status: `{s['product_goal_scope_transporter_p0_operator_validation_candidate_status']}`",
+        f"- product_goal_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier: `{s['product_goal_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier']}`",
+        f"- product_goal_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol: `{s['product_goal_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol']}`",
+        f"- product_goal_scope_transporter_p0_operator_validation_candidate_blocker: `{s['product_goal_scope_transporter_p0_operator_validation_candidate_blocker']}`",
+        f"- product_goal_scope_transporter_p0_operator_validation_candidate_placeholder_count: `{s['product_goal_scope_transporter_p0_operator_validation_candidate_placeholder_count']}`",
         f"- approval_reclaim_size_gb: `{s['approval_reclaim_size_gb']}`",
         f"- large_review_size_gb: `{s['large_review_size_gb']}`",
         f"- large_cleanup_drilldown_status: `{s['large_cleanup_drilldown_status']}`",

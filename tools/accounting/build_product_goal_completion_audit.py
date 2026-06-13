@@ -1785,6 +1785,31 @@ def build_product_goal_completion_audit(
     ]
     production_ai_promotion_workbench = _summary(production_ai_promotion_workbench_packet or {})
     product_scope_breadth_contract = _summary(product_scope_breadth_contract_packet or {})
+    raw_next_slot_completion_packet = product_scope_breadth_contract.get(
+        "transporter_p0_evidence_acquisition_next_slot_completion_packet"
+    )
+    next_slot_completion_packet = (
+        raw_next_slot_completion_packet if isinstance(raw_next_slot_completion_packet, dict) else {}
+    )
+    raw_operator_validation_candidate = next_slot_completion_packet.get("operator_validation_candidate")
+    operator_validation_candidate = (
+        raw_operator_validation_candidate if isinstance(raw_operator_validation_candidate, dict) else {}
+    )
+    operator_validation_required_decision_fields_text = _text(
+        operator_validation_candidate.get("required_operator_decision_fields")
+        or next_slot_completion_packet.get("operator_validation_candidate_required_operator_decision_fields")
+        or next_slot_completion_packet.get("required_operator_decision_fields")
+    )
+    operator_validation_required_decision_fields = [
+        part.strip()
+        for part in operator_validation_required_decision_fields_text.replace(",", ";").split(";")
+        if part.strip()
+    ]
+    operator_validation_placeholder_count = sum(
+        1
+        for field in operator_validation_required_decision_fields
+        if _text(operator_validation_candidate.get(field)).startswith("OPERATOR_FILL")
+    )
     raw_scope_acceptance_matrix = (
         (product_scope_breadth_contract_packet or {}).get("scope_acceptance_matrix")
         if isinstance(product_scope_breadth_contract_packet or {}, dict)
@@ -4006,10 +4031,80 @@ def build_product_goal_completion_audit(
             )
         ),
         "product_scope_transporter_p0_evidence_acquisition_next_slot_completion_packet": dict(
-            product_scope_breadth_contract.get(
-                "transporter_p0_evidence_acquisition_next_slot_completion_packet"
+            next_slot_completion_packet
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_ready": _bool(
+            next_slot_completion_packet.get("operator_validation_candidate_ready")
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_status": _text(
+            next_slot_completion_packet.get("operator_validation_candidate_status")
+            or operator_validation_candidate.get("candidate_status")
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_id": _text(
+            operator_validation_candidate.get("candidate_id")
+            or next_slot_completion_packet.get("operator_validation_candidate_id")
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_target_id": _text(
+            operator_validation_candidate.get("target_id")
+            or operator_validation_candidate.get("candidate_target_id")
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier": _text(
+            next_slot_completion_packet.get("operator_validation_candidate_ligand_external_identifier")
+            or operator_validation_candidate.get("candidate_ligand_external_identifier")
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_ligand_name": _text(
+            operator_validation_candidate.get("candidate_ligand_name")
+            or operator_validation_candidate.get("ligand_name")
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_standard_type": _text(
+            operator_validation_candidate.get("candidate_standard_type")
+            or operator_validation_candidate.get("candidate_raw_standard_type")
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_standard_value_nM": _text(
+            operator_validation_candidate.get("candidate_standard_value_nM")
+            or operator_validation_candidate.get("candidate_raw_standard_value_nM")
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_document_chembl_id": _text(
+            operator_validation_candidate.get("candidate_document_chembl_id")
+            or operator_validation_candidate.get("candidate_raw_document_chembl_id")
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_source_locator": _text(
+            operator_validation_candidate.get("candidate_source_locator")
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol": _text(
+            next_slot_completion_packet.get("operator_validation_candidate_reference_binding_kcal_mol")
+            or operator_validation_candidate.get("candidate_reference_binding_kcal_mol")
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_blocker": _text(
+            next_slot_completion_packet.get("operator_validation_candidate_blocker")
+            or operator_validation_candidate.get("candidate_blocker")
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_claim_safe_ready": _bool(
+            next_slot_completion_packet.get("operator_validation_candidate_claim_safe_ready")
+            or operator_validation_candidate.get("candidate_claim_safe_ready")
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_required_decision_fields": (
+            operator_validation_required_decision_fields
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_required_decision_field_count": len(
+            operator_validation_required_decision_fields
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_placeholder_count": (
+            operator_validation_placeholder_count
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_validation_blockers": [
+            part.strip()
+            for part in _text(
+                operator_validation_candidate.get("validation_blockers")
+                or next_slot_completion_packet.get("operator_validation_candidate_validation_blockers")
             )
-            or {}
+            .replace(",", ";")
+            .split(";")
+            if part.strip()
+        ],
+        "product_scope_transporter_p0_operator_validation_candidate_public_recheck_observed": _text(
+            next_slot_completion_packet.get("operator_validation_candidate_public_recheck_observed")
+            or operator_validation_candidate.get("candidate_public_recheck_observed")
         ),
         "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_required_artifacts": [
             str(item)
@@ -5205,6 +5300,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_blocker_count: `{s['product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_blocker_count']}`",
         f"- product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_id: `{s['product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_id']}`",
         f"- product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_path: `{s['product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_path']}`",
+        f"- product_scope_transporter_p0_operator_validation_candidate_ready: `{s['product_scope_transporter_p0_operator_validation_candidate_ready']}`",
+        f"- product_scope_transporter_p0_operator_validation_candidate_status: `{s['product_scope_transporter_p0_operator_validation_candidate_status']}`",
+        f"- product_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier: `{s['product_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier']}`",
+        f"- product_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol: `{s['product_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol']}`",
+        f"- product_scope_transporter_p0_operator_validation_candidate_blocker: `{s['product_scope_transporter_p0_operator_validation_candidate_blocker']}`",
+        f"- product_scope_transporter_p0_operator_validation_candidate_required_decision_fields: `{';'.join(s['product_scope_transporter_p0_operator_validation_candidate_required_decision_fields'])}`",
+        f"- product_scope_transporter_p0_operator_validation_candidate_placeholder_count: `{s['product_scope_transporter_p0_operator_validation_candidate_placeholder_count']}`",
         f"- product_scope_transporter_p0_evidence_acquisition_next_slot_source_modality_guard_ready: `{s['product_scope_transporter_p0_evidence_acquisition_next_slot_source_modality_guard_ready']}`",
         f"- product_scope_transporter_p0_evidence_acquisition_next_slot_source_modality: `{s['product_scope_transporter_p0_evidence_acquisition_next_slot_source_modality']}`",
         f"- product_scope_transporter_p0_evidence_acquisition_next_slot_source_modality_direct_binding_claim_allowed: `{s['product_scope_transporter_p0_evidence_acquisition_next_slot_source_modality_direct_binding_claim_allowed']}`",

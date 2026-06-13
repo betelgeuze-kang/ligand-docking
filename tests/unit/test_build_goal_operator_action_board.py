@@ -937,6 +937,50 @@ def _product_goal_completion_audit() -> dict:
             "product_scope_next_operator_completion_transporter_best_evidence_value": "174000.0",
             "product_scope_next_operator_completion_transporter_best_evidence_units": "nM",
             "product_scope_next_operator_completion_transporter_best_evidence_document_id": "CHEMBL6182835",
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_required_artifact_count": 5,
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_blocker_count": 5,
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_id": (
+                "operator_review_row"
+            ),
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_path": (
+                "runs/transporter_manual_review_intake_template_current.csv"
+            ),
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_failed_check_ids": [
+                "next_slot_required_missing_fields",
+                "operator_review_row_not_operator_verified",
+            ],
+            "product_scope_transporter_p0_operator_validation_candidate_ready": True,
+            "product_scope_transporter_p0_operator_validation_candidate_status": "operator_validation_required",
+            "product_scope_transporter_p0_operator_validation_candidate_id": (
+                "aqp1_chembl20_direct_like_kd_operator_validation"
+            ),
+            "product_scope_transporter_p0_operator_validation_candidate_target_id": "AQP1",
+            "product_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier": "CHEMBL20",
+            "product_scope_transporter_p0_operator_validation_candidate_ligand_name": "acetazolamide",
+            "product_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol": "-5.13",
+            "product_scope_transporter_p0_operator_validation_candidate_source_locator": (
+                "https://www.ebi.ac.uk/chembl/api/data/activity.json?"
+                "target_chembl_id=CHEMBL4523210&molecule_chembl_id=CHEMBL20"
+            ),
+            "product_scope_transporter_p0_operator_validation_candidate_blocker": (
+                "data_validity_outside_typical_range_and_assay_origin_unknown"
+            ),
+            "product_scope_transporter_p0_operator_validation_candidate_required_decision_fields": [
+                "operator_target_match_confirmed",
+                "operator_assay_origin_confirmed",
+                "operator_data_validity_accepted",
+                "operator_endpoint_is_direct_binding",
+                "operator_source_locator_verified",
+                "operator_claim_safe_decision",
+            ],
+            "product_scope_transporter_p0_operator_validation_candidate_required_decision_field_count": 6,
+            "product_scope_transporter_p0_operator_validation_candidate_placeholder_count": 6,
+            "product_scope_transporter_p0_operator_validation_candidate_validation_blockers": [
+                "assay_origin_unknown",
+                "data_validity_outside_typical_range",
+                "source_locator_requires_operator_verification",
+                "direct_binding_claim_requires_exact_target_pair_source",
+            ],
             "product_scope_pxr_exact_review_intake_ready": True,
             "product_scope_pxr_exact_review_template_row_count": 6,
             "product_scope_pxr_exact_review_kcal_placeholder_count": 6,
@@ -1194,6 +1238,46 @@ def test_goal_operator_action_board_surfaces_product_ai_goal_completion_actions(
     assert scope["scope_next_operator_completion_transporter_best_evidence_document_id"] == (
         "CHEMBL6182835"
     )
+    assert scope["scope_transporter_p0_return_bundle_required_artifact_count"] == 5
+    assert scope["scope_transporter_p0_return_bundle_blocker_count"] == 5
+    assert scope["scope_transporter_p0_return_bundle_next_artifact_id"] == "operator_review_row"
+    assert scope["scope_transporter_p0_return_bundle_next_artifact_path"] == (
+        "runs/transporter_manual_review_intake_template_current.csv"
+    )
+    assert scope["scope_transporter_p0_return_bundle_next_artifact_failed_check_ids"] == (
+        "next_slot_required_missing_fields;operator_review_row_not_operator_verified"
+    )
+    assert scope["scope_transporter_p0_operator_validation_candidate_ready"] is True
+    assert scope["scope_transporter_p0_operator_validation_candidate_status"] == (
+        "operator_validation_required"
+    )
+    assert scope["scope_transporter_p0_operator_validation_candidate_id"] == (
+        "aqp1_chembl20_direct_like_kd_operator_validation"
+    )
+    assert scope["scope_transporter_p0_operator_validation_candidate_target_id"] == "AQP1"
+    assert scope[
+        "scope_transporter_p0_operator_validation_candidate_ligand_external_identifier"
+    ] == "CHEMBL20"
+    assert scope["scope_transporter_p0_operator_validation_candidate_ligand_name"] == (
+        "acetazolamide"
+    )
+    assert scope[
+        "scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol"
+    ] == "-5.13"
+    assert "molecule_chembl_id=CHEMBL20" in scope[
+        "scope_transporter_p0_operator_validation_candidate_source_locator"
+    ]
+    assert scope["scope_transporter_p0_operator_validation_candidate_blocker"] == (
+        "data_validity_outside_typical_range_and_assay_origin_unknown"
+    )
+    assert "operator_claim_safe_decision" in scope[
+        "scope_transporter_p0_operator_validation_candidate_required_decision_fields"
+    ]
+    assert scope["scope_transporter_p0_operator_validation_candidate_required_decision_field_count"] == 6
+    assert scope["scope_transporter_p0_operator_validation_candidate_placeholder_count"] == 6
+    assert "source_locator_requires_operator_verification" in scope[
+        "scope_transporter_p0_operator_validation_candidate_validation_blockers"
+    ]
     assert scope["scope_evidence_intake_ready"] is True
     assert scope["scope_local_crosscheck_intake_ready_count"] == 10
     assert scope["scope_transporter_manual_review_direct_binding_required_count"] == 4
@@ -1209,6 +1293,13 @@ def test_goal_operator_action_board_surfaces_product_ai_goal_completion_actions(
         "reason"
     ]
     assert "next_operator_best_evidence=KD:174000.0nM:CHEMBL6182835" in scope["reason"]
+    assert "return_bundle_next_artifact=operator_review_row:runs/transporter_manual_review_intake_template_current.csv" in scope[
+        "reason"
+    ]
+    assert "operator_validation_candidate=CHEMBL20:-5.13:operator_validation_required" in scope[
+        "reason"
+    ]
+    assert "operator_validation_placeholder_count=6" in scope["reason"]
 
     receipt = by_type["resolve_full_scope_breadth_evidence_receipt"]
     assert receipt["priority"] == 2
@@ -1540,6 +1631,33 @@ def test_goal_operator_action_board_summary_points_to_primary_product_ai_action(
     assert summary[
         "product_goal_scope_next_operator_completion_transporter_best_evidence_document_id"
     ] == "CHEMBL6182835"
+    assert summary["product_goal_scope_transporter_p0_return_bundle_required_artifact_count"] == 5
+    assert summary["product_goal_scope_transporter_p0_return_bundle_blocker_count"] == 5
+    assert summary["product_goal_scope_transporter_p0_return_bundle_next_artifact_id"] == (
+        "operator_review_row"
+    )
+    assert summary["product_goal_scope_transporter_p0_return_bundle_next_artifact_path"] == (
+        "runs/transporter_manual_review_intake_template_current.csv"
+    )
+    assert summary["product_goal_scope_transporter_p0_operator_validation_candidate_ready"] is True
+    assert summary["product_goal_scope_transporter_p0_operator_validation_candidate_status"] == (
+        "operator_validation_required"
+    )
+    assert summary[
+        "product_goal_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier"
+    ] == "CHEMBL20"
+    assert summary[
+        "product_goal_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol"
+    ] == "-5.13"
+    assert summary["product_goal_scope_transporter_p0_operator_validation_candidate_blocker"] == (
+        "data_validity_outside_typical_range_and_assay_origin_unknown"
+    )
+    assert summary[
+        "product_goal_scope_transporter_p0_operator_validation_candidate_required_decision_field_count"
+    ] == 6
+    assert summary[
+        "product_goal_scope_transporter_p0_operator_validation_candidate_placeholder_count"
+    ] == 6
     assert summary[
         "product_goal_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id"
     ] == "direct_binding_evidence_missing"

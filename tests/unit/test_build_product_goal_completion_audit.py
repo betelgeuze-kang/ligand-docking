@@ -1712,6 +1712,53 @@ def _scope_contract() -> dict:
                 "next_slot_source_modality_required_upgrade": (
                     "exact target-pair direct/claim-safe binding kcal/mol"
                 ),
+                "operator_validation_candidate_ready": True,
+                "operator_validation_candidate_status": "operator_validation_required",
+                "operator_validation_candidate_ligand_external_identifier": "CHEMBL20",
+                "operator_validation_candidate_reference_binding_kcal_mol": "-5.13",
+                "operator_validation_candidate_blocker": (
+                    "data_validity_outside_typical_range_and_assay_origin_unknown"
+                ),
+                "operator_validation_candidate_claim_safe_ready": False,
+                "operator_validation_candidate_public_recheck_observed": (
+                    "receipt_ready=True;raw_activity_verified=True;target_match=True"
+                ),
+                "operator_validation_candidate": {
+                    "candidate_id": "aqp1_chembl20_direct_like_kd_operator_validation",
+                    "candidate_status": "operator_validation_required",
+                    "candidate_target_id": "AQP1",
+                    "candidate_ligand_external_identifier": "CHEMBL20",
+                    "candidate_ligand_name": "acetazolamide",
+                    "candidate_standard_type": "Kd",
+                    "candidate_standard_value_nM": "174000.0",
+                    "candidate_document_chembl_id": "CHEMBL6182835",
+                    "candidate_source_locator": (
+                        "https://www.ebi.ac.uk/chembl/api/data/activity.json?"
+                        "target_chembl_id=CHEMBL4523210&molecule_chembl_id=CHEMBL20"
+                    ),
+                    "candidate_reference_binding_kcal_mol": "-5.13",
+                    "candidate_blocker": "data_validity_outside_typical_range_and_assay_origin_unknown",
+                    "candidate_claim_safe_ready": False,
+                    "required_operator_decision_fields": (
+                        "operator_target_match_confirmed;operator_assay_origin_confirmed;"
+                        "operator_data_validity_accepted;operator_endpoint_is_direct_binding;"
+                        "operator_source_locator_verified;operator_claim_safe_decision"
+                    ),
+                    "operator_target_match_confirmed": "OPERATOR_FILL_TRUE_OR_FALSE",
+                    "operator_assay_origin_confirmed": "OPERATOR_FILL_TRUE_OR_FALSE",
+                    "operator_data_validity_accepted": "OPERATOR_FILL_TRUE_OR_FALSE",
+                    "operator_endpoint_is_direct_binding": "OPERATOR_FILL_TRUE_OR_FALSE",
+                    "operator_source_locator_verified": "OPERATOR_FILL_TRUE_OR_FALSE",
+                    "operator_claim_safe_decision": "OPERATOR_FILL_APPROVE_CLAIM_SAFE_OR_KEEP_BLOCKED",
+                    "validation_blockers": (
+                        "assay_origin_unknown;data_validity_outside_typical_range;"
+                        "source_locator_requires_operator_verification;"
+                        "direct_binding_claim_requires_exact_target_pair_source"
+                    ),
+                    "candidate_public_recheck_observed": (
+                        "receipt_ready=True;raw_activity_verified=True;target_match=True"
+                    ),
+                },
             },
             "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_public_direct_binding_recheck_source_count": 6,
             "transporter_p0_evidence_acquisition_aqp1_binding_source_modality_public_direct_binding_recheck_result": (
@@ -3515,6 +3562,49 @@ def test_product_goal_completion_audit_uses_force_return_chain_for_production_ai
     assert summary[
         "product_scope_transporter_p0_evidence_acquisition_next_slot_completion_packet"
     ]["candidate_ligand_id"] == "aqp1_bacopaside_ii_review_seed"
+    assert summary["product_scope_transporter_p0_operator_validation_candidate_ready"] is True
+    assert summary["product_scope_transporter_p0_operator_validation_candidate_status"] == (
+        "operator_validation_required"
+    )
+    assert summary["product_scope_transporter_p0_operator_validation_candidate_id"] == (
+        "aqp1_chembl20_direct_like_kd_operator_validation"
+    )
+    assert summary["product_scope_transporter_p0_operator_validation_candidate_target_id"] == "AQP1"
+    assert summary[
+        "product_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier"
+    ] == "CHEMBL20"
+    assert summary["product_scope_transporter_p0_operator_validation_candidate_ligand_name"] == (
+        "acetazolamide"
+    )
+    assert summary["product_scope_transporter_p0_operator_validation_candidate_standard_type"] == "Kd"
+    assert summary[
+        "product_scope_transporter_p0_operator_validation_candidate_standard_value_nM"
+    ] == "174000.0"
+    assert summary[
+        "product_scope_transporter_p0_operator_validation_candidate_document_chembl_id"
+    ] == "CHEMBL6182835"
+    assert "molecule_chembl_id=CHEMBL20" in summary[
+        "product_scope_transporter_p0_operator_validation_candidate_source_locator"
+    ]
+    assert summary[
+        "product_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol"
+    ] == "-5.13"
+    assert summary["product_scope_transporter_p0_operator_validation_candidate_blocker"] == (
+        "data_validity_outside_typical_range_and_assay_origin_unknown"
+    )
+    assert summary["product_scope_transporter_p0_operator_validation_candidate_claim_safe_ready"] is False
+    assert summary[
+        "product_scope_transporter_p0_operator_validation_candidate_required_decision_field_count"
+    ] == 6
+    assert summary[
+        "product_scope_transporter_p0_operator_validation_candidate_placeholder_count"
+    ] == 6
+    assert "operator_claim_safe_decision" in summary[
+        "product_scope_transporter_p0_operator_validation_candidate_required_decision_fields"
+    ]
+    assert "source_locator_requires_operator_verification" in summary[
+        "product_scope_transporter_p0_operator_validation_candidate_validation_blockers"
+    ]
     assert summary[
         "product_scope_transporter_p0_evidence_acquisition_aqp1_binding_source_modality_public_direct_binding_recheck_source_count"
     ] == 6
