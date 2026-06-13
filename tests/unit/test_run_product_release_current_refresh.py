@@ -528,3 +528,24 @@ def test_refresh_final_gate_blocks_stale_action_board_release_decision_echo(
     assert action_board_row["missing_true_fields"] == ["goal_release_allowed"]
     assert action_board_row["nonzero_fields"] == ["goal_release_blocker_count"]
     assert action_board_row["failed_text_exact_fields"] == ["goal_release_decision_gate_status"]
+
+
+def test_run_command_routes_tier_alpha_smoke_in_process(tmp_path: Path, monkeypatch) -> None:
+    observed: dict[str, object] = {}
+
+    def fake_tier_alpha(command: str, *, cwd: Path) -> dict:
+        observed["command"] = command
+        observed["cwd"] = cwd
+        return {"returncode": 0, "timed_out": False}
+
+    monkeypatch.setattr(mod, "_run_tier_alpha_smoke_in_process", fake_tier_alpha)
+
+    result = mod._run_command(
+        "python3 tools/product/run_tier_alpha_adrb2_dispatch_smoke.py --timeout-seconds 420",
+        cwd=tmp_path,
+        timeout_seconds=450,
+    )
+
+    assert result == {"returncode": 0, "timed_out": False}
+    assert observed["cwd"] == tmp_path
+    assert str(observed["command"]).endswith("--timeout-seconds 420")

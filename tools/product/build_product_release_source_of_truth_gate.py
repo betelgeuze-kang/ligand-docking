@@ -38,7 +38,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 scripts/verify_quality_gate.py --quiet --out-json runs/product_quality_gate_verification_current.json",
     "python3 tools/build_api_runner_profile_promotion_readiness.py",
     "python3 tools/build_api_runner_profile_promotion_operator_receipt.py",
-    "python3 tools/gpcr_replay/run_tier_alpha_adrb2_dispatch_smoke.py --timeout-seconds 420",
+    "python3 tools/product/run_tier_alpha_adrb2_dispatch_smoke.py --timeout-seconds 420",
     "python3 tools/build_api_docking_dispatch_e2e_evidence.py",
     "python3 tools/build_product_job_orchestration_contract.py",
     "python3 tools/product/build_restricted_unattended_execution_readiness.py",
@@ -258,9 +258,9 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
     {
         "artifact_id": "tier_alpha_adrb2_dispatch_smoke",
         "artifact_path": "runs/tier_alpha_adrb2_dispatch_smoke_current.json",
-        "builder_command": "python3 tools/gpcr_replay/run_tier_alpha_adrb2_dispatch_smoke.py --timeout-seconds 420",
+        "builder_command": "python3 tools/product/run_tier_alpha_adrb2_dispatch_smoke.py --timeout-seconds 420",
         "depends_on": [
-            "tools/gpcr_replay/run_tier_alpha_adrb2_dispatch_smoke.py",
+            "tools/product/run_tier_alpha_adrb2_dispatch_smoke.py",
             "api/worker.py",
             "api/docking_dispatch.py",
             "api/validated_runner.py",

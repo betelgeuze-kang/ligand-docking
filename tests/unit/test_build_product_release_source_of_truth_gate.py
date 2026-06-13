@@ -1212,7 +1212,7 @@ def test_product_release_current_refresh_uses_command_timeout_hint(tmp_path: Pat
 
 def test_release_refresh_uses_stable_tier_alpha_smoke_timeout_budget() -> None:
     command = (
-        "python3 tools/gpcr_replay/run_tier_alpha_adrb2_dispatch_smoke.py "
+        "python3 tools/product/run_tier_alpha_adrb2_dispatch_smoke.py "
         "--timeout-seconds 420"
     )
     tier_alpha_spec = next(

@@ -8,6 +8,7 @@ import os
 import signal
 import shlex
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,17 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/product_release_current_refresh_plan_current.json"
 DEFAULT_OUT_MD = "runs/product_release_current_refresh_plan_current.md"
 DEFAULT_COMMAND_TIMEOUT_SECONDS = 420
+TIER_ALPHA_SMOKE_SCRIPT = "tools/product/run_tier_alpha_adrb2_dispatch_smoke.py"
+TIER_ALPHA_SMOKE_ENV_KEYS = [
+    "BETELGEUZE_REPO_ROOT",
+    "RESULTS_STORAGE_PATH",
+    "API_JOB_STORE_PATH",
+    "API_VALIDATED_RUNNER_ENABLED",
+    "API_VALIDATED_RUNNER_PROFILES_PATH",
+    "API_VALIDATED_RUNNER_TIMEOUT_SECONDS",
+    "API_RESULT_MANIFEST_SIGNING_KEY",
+    "API_RESULT_MANIFEST_KEY_ID",
+]
 
 CLAIM_BOUNDARY = (
     "Product release current refresh runner only; it executes the listed local artifact builders and local release "
@@ -620,7 +632,69 @@ def _write_json(path_like: str | Path, payload: dict[str, Any], *, root: Path = 
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _command_option(parts: list[str], option: str, default: str = "") -> str:
+    prefix = f"{option}="
+    for index, part in enumerate(parts):
+        if part == option and index + 1 < len(parts):
+            return str(parts[index + 1])
+        if part.startswith(prefix):
+            return str(part.split("=", 1)[1])
+    return default
+
+
+def _is_tier_alpha_smoke_command(command: str) -> bool:
+    parts = shlex.split(command)
+    return len(parts) >= 2 and Path(parts[1]).as_posix() == TIER_ALPHA_SMOKE_SCRIPT
+
+
+def _reload_api_config_if_loaded() -> None:
+    if "api.config" not in sys.modules:
+        return
+    import importlib
+
+    import api.config as config_mod
+
+    importlib.reload(config_mod)
+
+
+def _run_tier_alpha_smoke_in_process(command: str, *, cwd: Path) -> dict[str, Any]:
+    from tools.product import run_tier_alpha_adrb2_dispatch_smoke as smoke_mod
+
+    parts = shlex.split(command)
+    timeout_seconds = max(30, int(_command_option(parts, "--timeout-seconds", "1800")))
+    runner_timeout_arg = _command_option(parts, "--runner-timeout-seconds", "0")
+    runner_timeout_seconds = int(runner_timeout_arg or "0")
+    workspace = _command_option(parts, "--workspace", smoke_mod.DEFAULT_WORKSPACE)
+    job_id = _command_option(parts, "--job-id", "")
+    out_json = _command_option(parts, "--out-json", smoke_mod.DEFAULT_OUT_JSON)
+
+    previous_env = {key: os.environ.get(key) for key in TIER_ALPHA_SMOKE_ENV_KEYS}
+    try:
+        payload = smoke_mod.run_tier_alpha_adrb2_dispatch_smoke(
+            workspace=workspace,
+            job_id=job_id or None,
+            timeout_seconds=timeout_seconds,
+            runner_timeout_seconds=runner_timeout_seconds if runner_timeout_seconds > 0 else None,
+        )
+        _write_json(out_json, payload, root=cwd)
+        status = str((payload.get("summary") or {}).get("status", "") or "")
+        print(json.dumps({"status": status, "job_id": payload.get("job_id", ""), "out_json": str(_resolve(out_json, root=cwd))}))
+        return {"returncode": 0 if status == "tier_alpha_adrb2_dispatch_smoke_pass" else 1, "timed_out": False}
+    except Exception as exc:
+        print(json.dumps({"status": "tier_alpha_adrb2_dispatch_smoke_failed", "error": str(exc)}))
+        return {"returncode": 1, "timed_out": False}
+    finally:
+        for key, value in previous_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        _reload_api_config_if_loaded()
+
+
 def _run_command(command: str, *, cwd: Path, timeout_seconds: int) -> dict[str, Any]:
+    if _is_tier_alpha_smoke_command(command):
+        return _run_tier_alpha_smoke_in_process(command, cwd=cwd)
     proc = subprocess.Popen(shlex.split(command), cwd=cwd, start_new_session=True)
     try:
         returncode = proc.wait(timeout=max(1, int(timeout_seconds)))
