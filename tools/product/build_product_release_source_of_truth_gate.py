@@ -35,6 +35,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_scope_breadth_evidence_receipt.py",
     "python3 tools/build_product_scope_breadth_evidence_priority_packet.py",
     "python3 tools/build_product_operational_quality_contract.py",
+    "python3 scripts/verify_quality_gate.py --quiet --out-json runs/product_quality_gate_verification_current.json",
     "python3 tools/build_api_runner_profile_promotion_readiness.py",
     "python3 tools/build_api_runner_profile_promotion_operator_receipt.py",
     "python3 tools/gpcr_replay/run_tier_alpha_adrb2_dispatch_smoke.py --timeout-seconds 180",
@@ -220,6 +221,19 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "betelgeuze_product/docking_request.py",
             "runs/residual_model_registry_current.json",
             "runs/product_production_ai_promotion_workbench_current.json",
+        ],
+    },
+    {
+        "artifact_id": "product_quality_gate_verification",
+        "artifact_path": "runs/product_quality_gate_verification_current.json",
+        "builder_command": (
+            "python3 scripts/verify_quality_gate.py --quiet --out-json "
+            "runs/product_quality_gate_verification_current.json"
+        ),
+        "depends_on": [
+            "scripts/verify_quality_gate.py",
+            "betelgeuze_product/operational_quality.py",
+            "betelgeuze_product/docking_request.py",
         ],
     },
     {
@@ -511,6 +525,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/product_launch_r4_preflight_current.json",
             "scripts/check_independent_product_readiness.py",
             "scripts/verify_quality_gate.py",
+            "runs/product_quality_gate_verification_current.json",
             "runs/product_goal_completion_audit_current.json",
             "runs/production_ai_registry_promotion_operator_receipt_current.json",
             "runs/production_ai_registry_promotion_priority_packet_current.json",
@@ -1058,6 +1073,28 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "artifact_id": "product_quality_gate_verification_semantic_ready",
+        "artifact_path": "runs/product_quality_gate_verification_current.json",
+        "builder_command": (
+            "python3 scripts/verify_quality_gate.py --quiet --out-json "
+            "runs/product_quality_gate_verification_current.json"
+        ),
+        "required_status": "product_quality_gate_verified",
+        "required_true_fields": [
+            "quality_gate_ready",
+        ],
+        "required_int_exact_fields": {
+            "check_count": 4,
+            "pass_count": 4,
+            "blocker_count": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+        },
+        "required_text_exact_fields": {
+            "source_contract_status": "product_operational_quality_contract_ready",
+        },
+    },
+    {
         "artifact_id": "product_release_bundle_semantic_ready",
         "artifact_path": "runs/product_release_bundle_current.json",
         "builder_command": "python3 deploy/product_release_bundle.py",
@@ -1066,9 +1103,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "release_bundle_ready",
         ],
         "required_int_exact_fields": {
-            "artifact_count": 33,
-            "check_count": 25,
-            "pass_count": 25,
+            "artifact_count": 34,
+            "check_count": 26,
+            "pass_count": 26,
             "blocker_count": 0,
         },
     },

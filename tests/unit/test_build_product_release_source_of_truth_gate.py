@@ -1514,6 +1514,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/third_party_license_review_gate_current.json" in release_bundle_spec["depends_on"]
     assert "scripts/check_independent_product_readiness.py" in release_bundle_spec["depends_on"]
     assert "scripts/verify_quality_gate.py" in release_bundle_spec["depends_on"]
+    assert "runs/product_quality_gate_verification_current.json" in release_bundle_spec["depends_on"]
     assert "runs/product_goal_completion_audit_current.json" in release_bundle_spec["depends_on"]
     assert "runs/production_ai_registry_promotion_priority_packet_current.json" in release_bundle_spec[
         "depends_on"
@@ -1525,6 +1526,22 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/product_full_commercial_blocker_evidence_matrix_current.json" in release_bundle_spec[
         "depends_on"
     ]
+    quality_gate_verification_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_quality_gate_verification"
+    )
+    assert quality_gate_verification_spec["builder_command"] == (
+        "python3 scripts/verify_quality_gate.py --quiet --out-json "
+        "runs/product_quality_gate_verification_current.json"
+    )
+    assert "scripts/verify_quality_gate.py" in quality_gate_verification_spec["depends_on"]
+    quality_gate_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "product_quality_gate_verification_semantic_ready"
+    )
+    assert quality_gate_status_spec["required_status"] == "product_quality_gate_verified"
+    assert quality_gate_status_spec["required_int_exact_fields"]["blocker_count"] == 0
+    assert quality_gate_verification_spec["builder_command"] in mod.RELEASE_REFRESH_COMMANDS
     evidence_receipt_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "engine_refinement_claim_evidence_receipt"
     )

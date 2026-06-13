@@ -694,6 +694,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `product_full_commercial_blocker_evidence_matrix_current.json`,
   `production_ai_registry_promotion_operator_receipt_current.json`,
   `production_ai_registry_promotion_priority_packet_current.json`,
+  `product_quality_gate_verification_current.json`,
   `product_pose_sampling_readiness_current.json`,
   `refine_tier_public_benchmark_readiness_current.json`,
   `refine_tier_public_benchmark_work_order_apply_current.json`,
@@ -702,9 +703,9 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `cameo_validation_operations_dossier_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=94`, `pass_count=94`,
-  `blocker_count=0`, `artifact_row_count=63`, `semantic_status_row_count=29`,
-  `release_refresh_command_count=88`, `stale_artifact_count=0`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=96`, `pass_count=96`,
+  `blocker_count=0`, `artifact_row_count=64`, `semantic_status_row_count=30`,
+  `release_refresh_command_count=89`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   final refresh는 마지막 `goal_release_decision_gate` 뒤에
   `goal_operator_action_board`, `goal_release_burndown_work_order`, intake kit,
@@ -1224,11 +1225,12 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   enablement work order, API runner profile promotion readiness gate/operator template,
   rollback/rollout runbook, Docker/K8s/compose artifact hash, systemd API server/worker
   unit/env example, viewer vendor manifest/notice, viewer asset base URL decision,
-  product launch R4 preflight, product scope-breadth evidence receipt,
+  product launch R4 preflight, product quality gate verification receipt,
+  product scope-breadth evidence receipt,
   product full-commercial blocker evidence matrix
   artifact를 하나의 release bundle manifest로 묶고 operator promotion policy를
-  `operator_approval_required`로 고정한다. 최신 상태는 `artifact_count=33`,
-  `check_count=25`, `pass_count=25`, `blocker_count=0`이다.
+  `operator_approval_required`로 고정한다. 최신 상태는 `artifact_count=34`,
+  `check_count=26`, `pass_count=26`, `blocker_count=0`이다.
 - `deploy/docker-compose.product.yml`, `deploy/k8s/configmap.yaml`,
   `deploy/systemd/api-server.env.example`, `deploy/systemd/api-worker.env.example`은
   `PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED=1`을 product deployment default로
@@ -1254,7 +1256,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=88`, `executed_count=88`,
+  `product_release_current_refresh_verified`, `command_count=89`, `executed_count=89`,
   `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=true`,
   `final_gate_count=3`, `final_gate_blocker_count=0`이다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
@@ -1303,9 +1305,9 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   ladder, API/bottleneck visibility, local pose sampling readiness, production AI registry promotion operator
   receipt/priority packet, CAMEO official-result fetch preflight, R9 engine-refinement claim evidence priority packet,
   master gap closure rollup 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=94/94`,
+  `product_release_source_of_truth_gate_ready`, `pass_count=96/96`,
   `blocker_count=0`, `stale_artifact_count=0`,
-  `release_refresh_command_count=88`으로 재검증됐다.
+  `release_refresh_command_count=89`으로 재검증됐다.
 - `scripts/check_independent_product_readiness.py`는 현재 release/source-of-truth,
   product readiness, operational quality, commercial-independence, capability surface,
   release bundle, master/science-claim rollup을 read-only로 확인해
@@ -1316,7 +1318,10 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 - `scripts/verify_quality_gate.py`는 operational quality contract를 메모리에서
   재빌드해 `product_quality_gate_verified`, `quality_gate_ready=true`,
   `blocker_count=0`, execution/results/external mutation/input-payload persistence
-  false, production-AI customer-facing mutation flags false를 확인한다.
+  false, production-AI customer-facing mutation flags false를 확인한다. 최신
+  `runs/product_quality_gate_verification_current.json`은 release bundle artifact와
+  source-of-truth semantic-ready row에 포함되어, 품질 게이트 검증 결과가 operator
+  handoff 밖으로 빠지지 않게 한다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;
   다음은 operator webhook secret mount, 실제 pager provider delivery smoke,
@@ -1329,9 +1334,10 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `hard_blocker_count=0`, `operator_review_item_count=1`).
 - release bundle은 systemd API server/worker units와 third-party license review
   gate, API runner profile promotion readiness gate/operator template, rollout
-  execution readiness gate, product launch R4 preflight, product scope-breadth
+  execution readiness gate, product launch R4 preflight, product quality gate
+  verification receipt, product scope-breadth
   evidence receipt, product full-commercial blocker evidence matrix를 포함해
-  `artifact_count=33`, `check_count=25`, `pass_count=25`,
+  `artifact_count=34`, `check_count=26`, `pass_count=26`,
   `blocker_count=0` 상태다.
 
 ### H. Viewer 외부 의존성

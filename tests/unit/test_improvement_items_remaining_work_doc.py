@@ -49,13 +49,19 @@ def test_remaining_work_doc_tracks_current_release_metrics() -> None:
 
     assert "`artifact_count=28`" not in text
     assert "`artifact_count=31`" not in text
+    assert "`artifact_count=33`" not in text
     assert "`check_count=21`" not in text
     assert "`check_count=24`" not in text
+    assert "`check_count=25`" not in text
     assert "`pass_count=21`" not in text
     assert "`pass_count=24`" not in text
+    assert "`pass_count=25`" not in text
     assert "`command_count=76`" not in text
+    assert "`command_count=88`" not in text
     assert "`executed_count=76`" not in text
+    assert "`executed_count=88`" not in text
     assert "`release_refresh_command_count=79`" not in text
+    assert "`release_refresh_command_count=88`" not in text
     assert "`final_gate_count=2`" not in text
 
 
@@ -130,3 +136,4 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`scripts/verify_quality_gate.py`" in text
     assert "`product_quality_gate_verified`" in text
     assert "`quality_gate_ready=true`" in text
+    assert "`runs/product_quality_gate_verification_current.json`" in text

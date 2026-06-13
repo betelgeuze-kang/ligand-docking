@@ -47,6 +47,7 @@ DEFAULT_ARTIFACTS = {
     "product_launch_r4_preflight": "runs/product_launch_r4_preflight_current.json",
     "independent_product_readiness_script": "scripts/check_independent_product_readiness.py",
     "product_quality_gate_verifier_script": "scripts/verify_quality_gate.py",
+    "product_quality_gate_verification": "runs/product_quality_gate_verification_current.json",
     "engine_refinement_claim_promotion_action_board": "runs/engine_refinement_claim_promotion_action_board_current.csv",
     "engine_refinement_claim_evidence_receipt": "runs/engine_refinement_claim_evidence_receipt_current.json",
     "product_scope_breadth_evidence_receipt": "runs/product_scope_breadth_evidence_receipt_current.json",
@@ -155,6 +156,9 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
     )
     product_quality_gate_verifier_script = _read_text(
         _resolve(DEFAULT_ARTIFACTS["product_quality_gate_verifier_script"])
+    )
+    product_quality_gate_verification = _summary(
+        _read_json(_resolve(DEFAULT_ARTIFACTS["product_quality_gate_verification"]))
     )
     engine_action_board_text = _read_text(_resolve(DEFAULT_ARTIFACTS["engine_refinement_claim_promotion_action_board"]))
     engine_claim_evidence_receipt = _summary(
@@ -520,6 +524,25 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
                 f"quality_script={DEFAULT_ARTIFACTS['product_quality_gate_verifier_script']};"
                 f"independent_sha256={artifacts['independent_product_readiness_script']['sha256']};"
                 f"quality_sha256={artifacts['product_quality_gate_verifier_script']['sha256']}"
+            ),
+        },
+        {
+            "check": "product_quality_gate_verification_recorded",
+            "passed": (
+                artifacts["product_quality_gate_verification"]["present"]
+                and product_quality_gate_verification.get("status") == "product_quality_gate_verified"
+                and product_quality_gate_verification.get("quality_gate_ready") is True
+                and int(product_quality_gate_verification.get("blocker_count") or 0) == 0
+                and product_quality_gate_verification.get("execution_enabled") is False
+                and product_quality_gate_verification.get("external_state_mutated") is False
+            ),
+            "observed": (
+                f"status={product_quality_gate_verification.get('status')};"
+                f"quality_gate_ready={product_quality_gate_verification.get('quality_gate_ready')};"
+                f"check_count={product_quality_gate_verification.get('check_count')};"
+                f"pass_count={product_quality_gate_verification.get('pass_count')};"
+                f"blocker_count={product_quality_gate_verification.get('blocker_count')};"
+                f"sha256={artifacts['product_quality_gate_verification']['sha256']}"
             ),
         },
         {
