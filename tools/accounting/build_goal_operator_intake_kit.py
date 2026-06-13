@@ -448,6 +448,13 @@ def _int(value: Any) -> int:
         return 0
 
 
+def _float(value: Any) -> float:
+    try:
+        return float(value or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _split_artifacts(value: Any) -> list[str]:
     return [part.strip() for part in _text(value).split(";") if part.strip()]
 
@@ -938,6 +945,39 @@ def build_goal_operator_intake_kit(
         "primary_release_blocker_action_recommended_action": _text(
             action_board_summary.get("primary_release_blocker_action_recommended_action")
         ),
+        "full_commercial_release_allowed": bool(
+            action_board_summary.get("full_commercial_release_allowed") is True
+        ),
+        "full_commercial_release_blocker_count": _int(
+            action_board_summary.get("full_commercial_release_blocker_count")
+        ),
+        "full_commercial_release_blocker_ids": _text_list(
+            action_board_summary.get("full_commercial_release_blocker_ids")
+        ),
+        "full_commercial_release_next_required_step": _text(
+            action_board_summary.get("full_commercial_release_next_required_step")
+        ),
+        "science_claim_promotion_gap_closure_open_gap_ids": _text_list(
+            action_board_summary.get("science_claim_promotion_gap_closure_open_gap_ids")
+        ),
+        "science_claim_promotion_gap_closure_current_next_action": _text(
+            action_board_summary.get("science_claim_promotion_gap_closure_current_next_action")
+        ),
+        "accuracy_parity_ligand_ranking_status": _text(
+            action_board_summary.get("accuracy_parity_ligand_ranking_status")
+        ),
+        "accuracy_parity_ligand_ranking_pr_auc": _float(
+            action_board_summary.get("accuracy_parity_ligand_ranking_pr_auc")
+        ),
+        "accuracy_parity_ligand_ranking_pr_auc_ci_low": _float(
+            action_board_summary.get("accuracy_parity_ligand_ranking_pr_auc_ci_low")
+        ),
+        "accuracy_parity_ligand_ranking_topk_hit_rate": _float(
+            action_board_summary.get("accuracy_parity_ligand_ranking_topk_hit_rate")
+        ),
+        "accuracy_parity_ligand_ranking_next_required_step": _text(
+            action_board_summary.get("accuracy_parity_ligand_ranking_next_required_step")
+        ),
         "primary_full_commercial_release_blocker_id": _text(
             action_board_summary.get("primary_full_commercial_release_blocker_id")
         ),
@@ -1057,6 +1097,17 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- primary_release_blocker_action_id: `{s['primary_release_blocker_action_id']}`",
         f"- primary_release_blocker_action_status: `{s['primary_release_blocker_action_status']}`",
         f"- primary_release_blocker_action_required_input: `{s['primary_release_blocker_action_required_input']}`",
+        f"- full_commercial_release_allowed: `{s['full_commercial_release_allowed']}`",
+        f"- full_commercial_release_blocker_count: `{s['full_commercial_release_blocker_count']}`",
+        f"- full_commercial_release_blocker_ids: `{';'.join(s['full_commercial_release_blocker_ids'])}`",
+        f"- full_commercial_release_next_required_step: `{s['full_commercial_release_next_required_step']}`",
+        f"- science_claim_promotion_gap_closure_open_gap_ids: `{';'.join(s['science_claim_promotion_gap_closure_open_gap_ids'])}`",
+        f"- science_claim_promotion_gap_closure_current_next_action: `{s['science_claim_promotion_gap_closure_current_next_action']}`",
+        f"- accuracy_parity_ligand_ranking_status: `{s['accuracy_parity_ligand_ranking_status']}`",
+        f"- accuracy_parity_ligand_ranking_pr_auc: `{s['accuracy_parity_ligand_ranking_pr_auc']}`",
+        f"- accuracy_parity_ligand_ranking_pr_auc_ci_low: `{s['accuracy_parity_ligand_ranking_pr_auc_ci_low']}`",
+        f"- accuracy_parity_ligand_ranking_topk_hit_rate: `{s['accuracy_parity_ligand_ranking_topk_hit_rate']}`",
+        f"- accuracy_parity_ligand_ranking_next_required_step: `{s['accuracy_parity_ligand_ranking_next_required_step']}`",
         f"- primary_full_commercial_release_blocker_id: `{s['primary_full_commercial_release_blocker_id']}`",
         f"- primary_full_commercial_release_blocker_requirement_id: `{s['primary_full_commercial_release_blocker_requirement_id']}`",
         f"- primary_full_commercial_release_blocker_tier: `{s['primary_full_commercial_release_blocker_tier']}`",

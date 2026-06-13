@@ -896,6 +896,35 @@ def build_goal_bottleneck_briefing(
         "operator_intake_kit_release_burndown_linked_entry_count": _int(
             intake.get("release_burndown_linked_entry_count")
         ),
+        "full_commercial_release_allowed": bool(intake.get("full_commercial_release_allowed") is True),
+        "full_commercial_release_blocker_count": _int(intake.get("full_commercial_release_blocker_count")),
+        "full_commercial_release_blocker_ids": [
+            str(item) for item in (intake.get("full_commercial_release_blocker_ids") or [])
+        ],
+        "full_commercial_release_next_required_step": _text(
+            intake.get("full_commercial_release_next_required_step")
+        ),
+        "science_claim_promotion_gap_closure_open_gap_ids": [
+            str(item) for item in (intake.get("science_claim_promotion_gap_closure_open_gap_ids") or [])
+        ],
+        "science_claim_promotion_gap_closure_current_next_action": _text(
+            intake.get("science_claim_promotion_gap_closure_current_next_action")
+        ),
+        "accuracy_parity_ligand_ranking_status": _text(
+            intake.get("accuracy_parity_ligand_ranking_status")
+        ),
+        "accuracy_parity_ligand_ranking_pr_auc": _float(
+            intake.get("accuracy_parity_ligand_ranking_pr_auc")
+        ),
+        "accuracy_parity_ligand_ranking_pr_auc_ci_low": _float(
+            intake.get("accuracy_parity_ligand_ranking_pr_auc_ci_low")
+        ),
+        "accuracy_parity_ligand_ranking_topk_hit_rate": _float(
+            intake.get("accuracy_parity_ligand_ranking_topk_hit_rate")
+        ),
+        "accuracy_parity_ligand_ranking_next_required_step": _text(
+            intake.get("accuracy_parity_ligand_ranking_next_required_step")
+        ),
         **_primary_full_commercial_release_blocker_intake_fields(intake),
         **_full_commercial_evidence_receipt_intake_fields(intake),
         **_product_scope_breadth_evidence_priority_intake_fields(intake),
@@ -1110,6 +1139,17 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- cleanup_ligand_heavy_candidate_size_gb: `{s['cleanup_ligand_heavy_candidate_size_gb']}`",
         f"- protected_cleanup_payload_size_gb: `{s['protected_cleanup_payload_size_gb']}`",
         f"- approval_tokens_required: `{';'.join(s['approval_tokens_required'])}`",
+        f"- full_commercial_release_allowed: `{s['full_commercial_release_allowed']}`",
+        f"- full_commercial_release_blocker_count: `{s['full_commercial_release_blocker_count']}`",
+        f"- full_commercial_release_blocker_ids: `{';'.join(s['full_commercial_release_blocker_ids'])}`",
+        f"- full_commercial_release_next_required_step: `{s['full_commercial_release_next_required_step']}`",
+        f"- science_claim_promotion_gap_closure_open_gap_ids: `{';'.join(s['science_claim_promotion_gap_closure_open_gap_ids'])}`",
+        f"- science_claim_promotion_gap_closure_current_next_action: `{s['science_claim_promotion_gap_closure_current_next_action']}`",
+        f"- accuracy_parity_ligand_ranking_status: `{s['accuracy_parity_ligand_ranking_status']}`",
+        f"- accuracy_parity_ligand_ranking_pr_auc: `{s['accuracy_parity_ligand_ranking_pr_auc']}`",
+        f"- accuracy_parity_ligand_ranking_pr_auc_ci_low: `{s['accuracy_parity_ligand_ranking_pr_auc_ci_low']}`",
+        f"- accuracy_parity_ligand_ranking_topk_hit_rate: `{s['accuracy_parity_ligand_ranking_topk_hit_rate']}`",
+        f"- accuracy_parity_ligand_ranking_next_required_step: `{s['accuracy_parity_ligand_ranking_next_required_step']}`",
         f"- primary_full_commercial_release_blocker_id: `{s['primary_full_commercial_release_blocker_id']}`",
         f"- primary_full_commercial_release_blocker_requirement_id: `{s['primary_full_commercial_release_blocker_requirement_id']}`",
         f"- primary_full_commercial_release_blocker_tier: `{s['primary_full_commercial_release_blocker_tier']}`",

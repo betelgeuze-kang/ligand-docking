@@ -46,6 +46,29 @@ def _action_board() -> dict:
             "primary_release_blocker_action_recommended_action": (
                 "Fill the full-scope evidence receipt rows with local evidence artifacts."
             ),
+            "full_commercial_release_allowed": False,
+            "full_commercial_release_blocker_count": 4,
+            "full_commercial_release_blocker_ids": [
+                "R8_full_scope_claim_closure",
+                "R9_engine_refinement_claim_promotion",
+                "MASTER:SCI-CLAIM",
+                "ACCURACY:ligand_ranking",
+            ],
+            "full_commercial_release_next_required_step": "Fill the R8/R9 receipt CSVs.",
+            "science_claim_promotion_gap_closure_open_gap_ids": [
+                "SCI-GPCR",
+                "SCI-OPENMM",
+            ],
+            "science_claim_promotion_gap_closure_current_next_action": (
+                "Maintain conditional prior gate and keep broad-family claim promotion blocked."
+            ),
+            "accuracy_parity_ligand_ranking_status": "blocked",
+            "accuracy_parity_ligand_ranking_pr_auc": 0.15749,
+            "accuracy_parity_ligand_ranking_pr_auc_ci_low": 0.001347,
+            "accuracy_parity_ligand_ranking_topk_hit_rate": 0.1,
+            "accuracy_parity_ligand_ranking_next_required_step": (
+                "Repair DRD2/HTR2A/OPRM1 pose-supported ranking."
+            ),
             "primary_full_commercial_release_blocker_id": "R8_full_scope_claim_closure",
             "primary_full_commercial_release_blocker_requirement_id": "R8_full_scope_claim_closure",
             "primary_full_commercial_release_blocker_tier": "full_commercial_scope",
@@ -521,6 +544,29 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     ]
     assert "full-scope evidence receipt rows" in summary[
         "primary_release_blocker_action_recommended_action"
+    ]
+    assert summary["full_commercial_release_allowed"] is False
+    assert summary["full_commercial_release_blocker_count"] == 4
+    assert summary["full_commercial_release_blocker_ids"] == [
+        "R8_full_scope_claim_closure",
+        "R9_engine_refinement_claim_promotion",
+        "MASTER:SCI-CLAIM",
+        "ACCURACY:ligand_ranking",
+    ]
+    assert "R8/R9 receipt CSVs" in summary["full_commercial_release_next_required_step"]
+    assert summary["science_claim_promotion_gap_closure_open_gap_ids"] == [
+        "SCI-GPCR",
+        "SCI-OPENMM",
+    ]
+    assert "broad-family claim promotion" in summary[
+        "science_claim_promotion_gap_closure_current_next_action"
+    ]
+    assert summary["accuracy_parity_ligand_ranking_status"] == "blocked"
+    assert summary["accuracy_parity_ligand_ranking_pr_auc"] == 0.15749
+    assert summary["accuracy_parity_ligand_ranking_pr_auc_ci_low"] == 0.001347
+    assert summary["accuracy_parity_ligand_ranking_topk_hit_rate"] == 0.1
+    assert "DRD2/HTR2A/OPRM1" in summary[
+        "accuracy_parity_ligand_ranking_next_required_step"
     ]
     assert summary["primary_full_commercial_release_blocker_id"] == "R8_full_scope_claim_closure"
     assert summary["primary_full_commercial_release_blocker_requirement_id"] == (
