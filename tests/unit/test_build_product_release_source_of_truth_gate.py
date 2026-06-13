@@ -476,6 +476,23 @@ def _refresh_action_board_ready() -> dict:
     }
 
 
+def _refresh_quality_gate_ready() -> dict:
+    spec = next(
+        spec
+        for spec in refresh_mod.FINAL_GATE_SPECS
+        if spec["gate_id"] == "product_quality_gate_verification"
+    )
+    return {
+        "summary": {
+            "status": spec["required_status"],
+            **{field: True for field in spec.get("required_true_fields", [])},
+            **{field: 0 for field in spec.get("required_zero_fields", [])},
+            **dict(spec.get("required_int_exact_fields", {})),
+            **dict(spec.get("required_text_exact_fields", {})),
+        }
+    }
+
+
 def test_release_source_of_truth_gate_blocks_stale_artifact_and_readme_drift(tmp_path: Path) -> None:
     artifact = tmp_path / "runs" / "operator_packet.json"
     dependency = tmp_path / "runs" / "goal_audit.json"
@@ -580,6 +597,10 @@ def test_product_release_current_refresh_blocks_if_final_gate_is_blocked(tmp_pat
         _refresh_release_decision_ready(),
     )
     _write_json(
+        tmp_path / "runs" / "product_quality_gate_verification_current.json",
+        _refresh_quality_gate_ready(),
+    )
+    _write_json(
         tmp_path / "runs" / "goal_operator_action_board_current.json",
         _refresh_action_board_ready(),
     )
@@ -625,6 +646,10 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     _write_json(
         tmp_path / "runs" / "goal_release_decision_gate_current.json",
         _refresh_release_decision_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "product_quality_gate_verification_current.json",
+        _refresh_quality_gate_ready(),
     )
     _write_json(
         tmp_path / "runs" / "goal_operator_action_board_current.json",
@@ -898,6 +923,10 @@ def test_product_release_current_refresh_uses_command_timeout_hint(tmp_path: Pat
     _write_json(
         tmp_path / "runs" / "goal_release_decision_gate_current.json",
         _refresh_release_decision_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "product_quality_gate_verification_current.json",
+        _refresh_quality_gate_ready(),
     )
     _write_json(
         tmp_path / "runs" / "goal_operator_action_board_current.json",

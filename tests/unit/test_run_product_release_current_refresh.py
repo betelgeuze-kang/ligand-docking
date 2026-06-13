@@ -33,6 +33,25 @@ def _goal_release_decision_spec() -> dict:
     )
 
 
+def _quality_gate_spec() -> dict:
+    return next(
+        spec for spec in mod.FINAL_GATE_SPECS if spec["gate_id"] == "product_quality_gate_verification"
+    )
+
+
+def _quality_gate_ready() -> dict:
+    spec = _quality_gate_spec()
+    return {
+        "summary": {
+            "status": spec["required_status"],
+            **{field: True for field in spec.get("required_true_fields", [])},
+            **{field: 0 for field in spec.get("required_zero_fields", [])},
+            **dict(spec.get("required_int_exact_fields", {})),
+            **dict(spec.get("required_text_exact_fields", {})),
+        }
+    }
+
+
 def _goal_operator_action_board_spec() -> dict:
     return next(
         spec for spec in mod.FINAL_GATE_SPECS if spec["gate_id"] == "goal_operator_action_board"
@@ -89,6 +108,10 @@ def test_refresh_final_gate_requires_release_decision_bottleneck_receipt_linkage
         _release_decision_ready(),
     )
     _write_json(
+        tmp_path / "runs" / "product_quality_gate_verification_current.json",
+        _quality_gate_ready(),
+    )
+    _write_json(
         tmp_path / "runs" / "goal_operator_action_board_current.json",
         _action_board_ready(),
     )
@@ -106,6 +129,7 @@ def test_refresh_final_gate_requires_release_decision_bottleneck_receipt_linkage
     assert summary["status"] == "product_release_current_refresh_verified"
     assert summary["final_gate_verification_ready"] is True
     assert summary["final_gate_blocker_count"] == 0
+    assert summary["final_gate_count"] == 4
     assert decision_row["status"] == "pass"
     assert "goal_bottleneck_briefing_full_commercial_receipts_recorded" in decision_row[
         "required_true_fields"
@@ -129,6 +153,10 @@ def test_refresh_final_gate_blocks_missing_release_decision_bottleneck_receipt_l
     _write_json(
         tmp_path / "runs" / "goal_release_decision_gate_current.json",
         _release_decision_ready(bottleneck_recorded=False),
+    )
+    _write_json(
+        tmp_path / "runs" / "product_quality_gate_verification_current.json",
+        _quality_gate_ready(),
     )
     _write_json(
         tmp_path / "runs" / "goal_operator_action_board_current.json",
@@ -166,6 +194,10 @@ def test_refresh_final_gate_blocks_source_of_truth_coverage_drift(tmp_path: Path
         _release_decision_ready(),
     )
     _write_json(
+        tmp_path / "runs" / "product_quality_gate_verification_current.json",
+        _quality_gate_ready(),
+    )
+    _write_json(
         tmp_path / "runs" / "goal_operator_action_board_current.json",
         _action_board_ready(),
     )
@@ -187,6 +219,43 @@ def test_refresh_final_gate_blocks_source_of_truth_coverage_drift(tmp_path: Path
     assert source_row["failed_int_exact_fields"] == ["row_count"]
 
 
+def test_refresh_final_gate_blocks_quality_gate_verification_drift(tmp_path: Path) -> None:
+    quality_payload = _quality_gate_ready()
+    quality_payload["summary"]["pass_count"] -= 1
+    _write_json(
+        tmp_path / "runs" / "product_release_source_of_truth_gate_current.json",
+        _source_of_truth_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "product_quality_gate_verification_current.json",
+        quality_payload,
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_release_decision_gate_current.json",
+        _release_decision_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_operator_action_board_current.json",
+        _action_board_ready(),
+    )
+
+    payload = mod.run_product_release_current_refresh(
+        execute=True,
+        root=tmp_path,
+        commands=[],
+    )
+
+    summary = payload["summary"]
+    quality_row = next(
+        row for row in payload["verification_rows"] if row["gate_id"] == "product_quality_gate_verification"
+    )
+    assert summary["status"] == "blocked_product_release_current_refresh"
+    assert summary["final_gate_verification_ready"] is False
+    assert summary["final_gate_blocker_count"] == 1
+    assert quality_row["status"] == "fail"
+    assert quality_row["failed_int_exact_fields"] == ["pass_count"]
+
+
 def test_refresh_final_gate_blocks_stale_action_board_release_decision_echo(
     tmp_path: Path,
 ) -> None:
@@ -197,6 +266,10 @@ def test_refresh_final_gate_blocks_stale_action_board_release_decision_echo(
     _write_json(
         tmp_path / "runs" / "goal_release_decision_gate_current.json",
         _release_decision_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "product_quality_gate_verification_current.json",
+        _quality_gate_ready(),
     )
     _write_json(
         tmp_path / "runs" / "goal_operator_action_board_current.json",

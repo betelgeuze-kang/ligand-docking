@@ -711,11 +711,14 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `goal_operator_action_board`, `goal_release_burndown_work_order`, intake kit,
   bottleneck briefing, full commercial matrix, release bundle, handoff bundle,
   privacy scan, source-of-truth gate까지 downstream 산출물을 한 번 더 재생성하고,
-  refresh runner final gate는 source-of-truth, release decision, action board
-  3개 surface를 검증한다. source-of-truth final gate는 `row_count=96`,
+  refresh runner final gate는 source-of-truth, quality gate verification,
+  release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=96`,
   `pass_count=96`, `artifact_row_count=64`, `semantic_status_row_count=30`,
   `readme_row_count=2`, `release_refresh_command_count=89`를 exact-check해
-  품질 receipt나 downstream readiness row가 조용히 빠지는 회귀를 막는다.
+  downstream readiness row가 조용히 빠지는 회귀를 막고,
+  `product_quality_gate_verification_current.json` final gate는
+  `product_quality_gate_verified`, `quality_gate_ready=true`,
+  `check_count=4`, `pass_count=4`, `blocker_count=0`을 직접 검증한다.
   action board echo는
   `goal_release_decision_gate_status=goal_release_ready`,
   `goal_release_allowed=true`, `goal_release_blocker_count=0`이어야 하므로
@@ -1262,7 +1265,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   최신 실행 결과는
   `product_release_current_refresh_verified`, `command_count=89`, `executed_count=89`,
   `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=true`,
-  `final_gate_count=3`, `final_gate_blocker_count=0`이다.
+  `final_gate_count=4`, `final_gate_blocker_count=0`이다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
   rollout smoke receipt를 분리한 뒤 `deploy_ops_legal_gap_closure_complete`,
   `closed_gap_count=6`, `open_gap_ids=[]`로 닫혔다.

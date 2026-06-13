@@ -41,6 +41,20 @@ FINAL_GATE_SPECS = [
         },
     },
     {
+        "gate_id": "product_quality_gate_verification",
+        "artifact_path": "runs/product_quality_gate_verification_current.json",
+        "required_status": "product_quality_gate_verified",
+        "required_true_fields": ["quality_gate_ready"],
+        "required_zero_fields": ["blocker_count", "execution_enabled", "external_state_mutated"],
+        "required_int_exact_fields": {
+            "check_count": 4,
+            "pass_count": 4,
+        },
+        "required_text_exact_fields": {
+            "source_contract_status": "product_operational_quality_contract_ready",
+        },
+    },
+    {
         "gate_id": "goal_release_decision_gate",
         "artifact_path": "runs/goal_release_decision_gate_current.json",
         "required_status": "goal_release_ready",

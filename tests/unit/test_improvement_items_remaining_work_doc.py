@@ -68,6 +68,7 @@ def test_remaining_work_doc_tracks_current_release_metrics() -> None:
     assert "`release_refresh_command_count=79`" not in text
     assert "`release_refresh_command_count=88`" not in text
     assert "`final_gate_count=2`" not in text
+    assert "`final_gate_count=3`" not in text
 
 
 def test_remaining_work_doc_tracks_current_third_party_license_review_gate() -> None:
