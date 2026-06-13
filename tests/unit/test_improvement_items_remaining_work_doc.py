@@ -28,6 +28,8 @@ def _payload(path: str) -> dict:
 def test_remaining_work_doc_tracks_current_release_metrics() -> None:
     text = _doc_text()
     bundle = product_release_bundle.build_release_bundle(release_id="doc-metric-check")
+    refresh = _summary("runs/product_release_current_refresh_plan_current.json")
+    action_board = _summary("runs/goal_operator_action_board_current.json")
     command_count = len(source_of_truth.RELEASE_REFRESH_COMMANDS)
 
     assert f"`artifact_count={bundle['artifact_count']}`" in text
@@ -36,6 +38,14 @@ def test_remaining_work_doc_tracks_current_release_metrics() -> None:
     assert f"`product_release_current_refresh_verified`, `command_count={command_count}`" in text
     assert f"`executed_count={command_count}`" in text
     assert f"`release_refresh_command_count={command_count}`" in text
+    assert f"`final_gate_count={refresh['final_gate_count']}`" in text
+    assert f"`final_gate_blocker_count={refresh['final_gate_blocker_count']}`" in text
+    assert (
+        f"`goal_release_decision_gate_status={action_board['goal_release_decision_gate_status']}`"
+        in text
+    )
+    assert f"`goal_release_allowed={str(action_board['goal_release_allowed']).lower()}`" in text
+    assert f"`goal_release_blocker_count={action_board['goal_release_blocker_count']}`" in text
 
     assert "`artifact_count=28`" not in text
     assert "`check_count=21`" not in text
@@ -43,6 +53,7 @@ def test_remaining_work_doc_tracks_current_release_metrics() -> None:
     assert "`command_count=76`" not in text
     assert "`executed_count=76`" not in text
     assert "`release_refresh_command_count=79`" not in text
+    assert "`final_gate_count=2`" not in text
 
 
 def test_remaining_work_doc_tracks_current_third_party_license_review_gate() -> None:

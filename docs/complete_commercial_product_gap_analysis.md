@@ -371,7 +371,10 @@
   privacy scan, source-of-truth gate까지 downstream 산출물을 재생성하고, bottleneck briefing
   builder는 burndown의 observed/required 문자열을 최신 release-decision row로 보정해
   R8/R9 release blocker count가 이전 cycle 값으로 operator-facing 병목표에
-  남지 않도록 한다.
+  남지 않도록 한다. refresh runner final gate도 source-of-truth, release decision,
+  action board 3개 surface를 검증하며 action board echo는
+  `goal_release_decision_gate_status=goal_release_ready`,
+  `goal_release_allowed=true`, `goal_release_blocker_count=0`이어야 한다.
   `/product/self-hosted-license-distribution-audit` API surface도 같은 audit의
   hard blocker/operator review 경계를 직접 노출한다. R8/R9 evidence
   receipt 자체도 `product_scope_breadth_evidence_receipt_blocked_semantic_ready`,
