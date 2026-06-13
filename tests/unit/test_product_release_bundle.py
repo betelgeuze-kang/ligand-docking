@@ -14,6 +14,9 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
     assert payload["bundle_version"] == "product_release_bundle_manifest_v1"
     assert payload["status"] == "release_bundle_ready_for_operator_review"
     assert payload["release_bundle_ready"] is True
+    assert payload["artifact_count"] == 31
+    assert payload["check_count"] == 24
+    assert payload["pass_count"] == 24
     assert payload["blocker_count"] == 0
     assert payload["operator_promotion_policy"]["status"] == "operator_approval_required"
     assert payload["operator_promotion_policy"]["external_state_mutation_allowed"] is False
@@ -66,7 +69,10 @@ def test_release_bundle_links_required_artifacts_and_policy() -> None:
         "production_ai_registry_promotion_operator_receipt_recorded"
     ]["observed"]
     assert checks["production_ai_registry_promotion_priority_packet_recorded"]["passed"] is True
-    assert "top_gate_id=trained_model_checkpoint_count_positive" in checks[
+    assert "top_gate_id=default_residual_mode_guarded" in checks[
+        "production_ai_registry_promotion_priority_packet_recorded"
+    ]["observed"]
+    assert "top_priority_bucket=guarded_residual_mode_selection_required" in checks[
         "production_ai_registry_promotion_priority_packet_recorded"
     ]["observed"]
     assert checks["product_pose_sampling_readiness_recorded"]["passed"] is True

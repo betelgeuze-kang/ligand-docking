@@ -1221,8 +1221,8 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   product launch R4 preflight, product scope-breadth evidence receipt,
   product full-commercial blocker evidence matrix
   artifact를 하나의 release bundle manifest로 묶고 operator promotion policy를
-  `operator_approval_required`로 고정한다. 최신 상태는 `artifact_count=28`,
-  `check_count=21`, `pass_count=21`, `blocker_count=0`이다.
+  `operator_approval_required`로 고정한다. 최신 상태는 `artifact_count=31`,
+  `check_count=24`, `pass_count=24`, `blocker_count=0`이다.
 - `deploy/docker-compose.product.yml`, `deploy/k8s/configmap.yaml`,
   `deploy/systemd/api-server.env.example`, `deploy/systemd/api-worker.env.example`은
   `PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED=1`을 product deployment default로
@@ -1248,7 +1248,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=76`, `executed_count=76`,
+  `product_release_current_refresh_verified`, `command_count=87`, `executed_count=87`,
   `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=true`,
   `final_gate_blocker_count=0`이다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
@@ -1299,7 +1299,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   master gap closure rollup 포함 refresh 이후
   `product_release_source_of_truth_gate_ready`, `pass_count=94/94`,
   `blocker_count=0`, `stale_artifact_count=0`,
-  `release_refresh_command_count=79`으로 재검증됐다.
+  `release_refresh_command_count=87`으로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;
   다음은 operator webhook secret mount, 실제 pager provider delivery smoke,
@@ -1314,7 +1314,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   gate, API runner profile promotion readiness gate/operator template, rollout
   execution readiness gate, product launch R4 preflight, product scope-breadth
   evidence receipt, product full-commercial blocker evidence matrix를 포함해
-  `artifact_count=28`, `check_count=21`,
+  `artifact_count=31`, `check_count=24`, `pass_count=24`,
   `blocker_count=0` 상태다.
 
 ### H. Viewer 외부 의존성
@@ -1352,9 +1352,9 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 - `tools/product/build_third_party_license_review_gate.py`와
   `runs/third_party_license_review_gate_current.json`은 JSZip dual-license path를
   operator/legal-review intake로 추적한다. 최신 상태는
-  `blocked_third_party_license_review_gate`, `expected_review_asset_count=1`,
-  `review_csv_present=false`, `missing_review_asset_count=1`, `blocker_count=2`
-  (`operator_review_csv_missing`, `missing_review_row:jszip`)이다.
+  `third_party_license_review_gate_ready`, `expected_review_asset_count=1`,
+  `review_csv_present=true`, `approved_review_asset_count=1`,
+  `missing_review_asset_count=0`, `blocker_count=0`이다.
   `legal_advice_provided=false`, `asset_modified=false`,
   `external_state_mutated=false`.
 - customer reverse proxy/CDN/subpath 배포 중 표준 same-directory bundle은 override
