@@ -229,6 +229,51 @@ REQUIRED_STATUS_RESPONSE_KEYS = {
     "claim_boundary",
 }
 
+_COMMERCIAL_FULL_SCOPE_OPERATOR_PRODUCT_SCOPE_KEYS = {
+    "product_scope_next_operator_completion_item_id",
+    "product_scope_next_operator_completion_intake_mode",
+    "product_scope_next_operator_completion_required_evidence_type",
+    "product_scope_next_operator_completion_transporter_best_evidence_activity_type",
+    "product_scope_next_operator_completion_transporter_best_evidence_value",
+    "product_scope_next_operator_completion_transporter_best_evidence_units",
+    "product_scope_next_operator_completion_transporter_best_evidence_document_id",
+    "product_scope_next_operator_completion_transporter_best_evidence_source_file",
+    "product_scope_next_operator_completion_transporter_claim_safe_blocker",
+    "product_scope_next_operator_completion_transporter_operator_next_verdict",
+    "product_scope_transporter_p0_evidence_acquisition_next_slot_id",
+    "product_scope_transporter_p0_evidence_acquisition_next_slot_completion_packet_ready",
+    "product_scope_transporter_p0_evidence_acquisition_next_slot_operator_review_artifact",
+    "product_scope_transporter_p0_return_bundle_required_artifact_count",
+    "product_scope_transporter_p0_return_bundle_required_artifacts",
+    "product_scope_transporter_p0_return_bundle_blocker_count",
+    "product_scope_transporter_p0_return_bundle_next_artifact_id",
+    "product_scope_transporter_p0_return_bundle_next_artifact_path",
+    "product_scope_transporter_p0_return_bundle_next_artifact_failed_check_ids",
+    "product_scope_transporter_p0_operator_validation_candidate_ready",
+    "product_scope_transporter_p0_operator_validation_candidate_status",
+    "product_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier",
+    "product_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol",
+    "product_scope_transporter_p0_operator_validation_candidate_blocker",
+    "product_scope_transporter_p0_operator_validation_candidate_claim_safe_ready",
+    "product_scope_transporter_p0_operator_validation_candidate_placeholder_count",
+    "product_scope_transporter_p0_operator_validation_candidate_required_decision_field_count",
+}
+
+COMMERCIAL_FULL_SCOPE_OPERATOR_HANDOFF_KEYS = {
+    "primary_full_commercial_release_blocker_id",
+    "primary_full_commercial_release_blocker_requirement_id",
+    "primary_full_commercial_release_blocker_tier",
+    "primary_full_commercial_release_blocker",
+    "primary_full_commercial_release_blocker_blocked_row_count",
+    "primary_full_commercial_release_blocker_first_blocked_evidence_row_id",
+    "primary_full_commercial_release_blocker_receipt_csv",
+    "primary_full_commercial_release_blocker_approval_token_required",
+    "primary_full_commercial_release_blocker_next_required_step",
+} | _COMMERCIAL_FULL_SCOPE_OPERATOR_PRODUCT_SCOPE_KEYS | {
+    key.replace("product_scope_", "product_goal_scope_", 1)
+    for key in _COMMERCIAL_FULL_SCOPE_OPERATOR_PRODUCT_SCOPE_KEYS
+}
+
 REQUIRED_STATUS_DOMAIN_KEYS = {
     "get_product_capabilities": {
         "structure_analysis_capability_ready",
@@ -2652,6 +2697,7 @@ REQUIRED_STATUS_DOMAIN_KEYS = {
         "product_scope_breadth_evidence_receipt_first_blocked_missing_true_fields",
         "product_scope_breadth_evidence_receipt_first_blocked_row_blockers",
         "product_scope_breadth_evidence_receipt_most_common_row_blocker",
+        *COMMERCIAL_FULL_SCOPE_OPERATOR_HANDOFF_KEYS,
         "operator_input_total_count",
         "operator_completion_packet_ready_count",
         "release_blocker_action_ids",
@@ -3106,6 +3152,7 @@ REQUIRED_STATUS_DOMAIN_KEYS = {
         "product_scope_breadth_evidence_receipt_first_blocked_missing_true_fields",
         "product_scope_breadth_evidence_receipt_first_blocked_row_blockers",
         "product_scope_breadth_evidence_receipt_most_common_row_blocker",
+        *COMMERCIAL_FULL_SCOPE_OPERATOR_HANDOFF_KEYS,
         "artifact_reference_contract_ready",
         "artifact_reference_count",
         "artifact_reference_manifest",

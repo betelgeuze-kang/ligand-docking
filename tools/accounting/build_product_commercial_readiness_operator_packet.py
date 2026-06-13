@@ -29,6 +29,7 @@ CLAIM_BOUNDARY = (
     "into human handoff rows. It does not run docking, run GPU jobs, fill scientific evidence, promote checkpoints, "
     "widen product claims, upload, submit, email, delete, or mutate external state."
 )
+TRANSPORTER_NEXT_SLOT_ACTION_ID = "transporter_next_slot_exact_evidence"
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -578,6 +579,22 @@ def build_product_commercial_readiness_operator_packet(
         {},
     )
     production_ai_registry_packet = _dict(production_ai_registry_raw.get("operator_completion_packet"))
+    transporter_scope_raw = next(
+        (
+            row
+            for row in rows
+            if _text(row.get("action_id")) == TRANSPORTER_NEXT_SLOT_ACTION_ID
+        ),
+        {},
+    )
+    transporter_scope = next(
+        (
+            row
+            for row in csv_rows
+            if _text(row.get("action_id")) == TRANSPORTER_NEXT_SLOT_ACTION_ID
+        ),
+        {},
+    )
     engine_receipt_diagnostics = _receipt_diagnostics(
         summary,
         prefix="engine_refinement_claim_evidence_receipt",
@@ -1274,6 +1291,203 @@ def build_product_commercial_readiness_operator_packet(
         "scope_widened": False,
         "checkpoint_promoted": False,
     }
+    primary_requirement_id = _text(summary.get("primary_release_blocker_requirement_id"))
+    scope_receipt_csv = _text(summary.get("product_scope_breadth_evidence_receipt_csv"))
+    scope_next_item_id = _text(summary.get("product_scope_next_operator_completion_item_id"))
+    scope_next_required_evidence = _text(
+        summary.get("product_scope_next_operator_completion_required_evidence_type")
+    )
+    transporter_return_required_artifacts = (
+        _list(
+            summary.get(
+                "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_required_artifacts"
+            )
+        )
+        or _list(transporter_scope.get("return_bundle_required_artifacts"))
+        or _list(transporter_scope_raw.get("return_bundle_required_artifacts"))
+    )
+    transporter_return_failed_checks = (
+        _list(transporter_scope.get("return_bundle_next_artifact_failed_check_ids"))
+        or _list(transporter_scope_raw.get("return_bundle_next_artifact_failed_check_ids"))
+    )
+    transporter_completion_packet = _dict(
+        summary.get("product_scope_transporter_p0_evidence_acquisition_next_slot_completion_packet")
+    )
+    out_summary.update(
+        {
+            "primary_full_commercial_release_blocker_id": primary_requirement_id,
+            "primary_full_commercial_release_blocker_requirement_id": primary_requirement_id,
+            "primary_full_commercial_release_blocker_tier": _text(
+                summary.get("primary_release_blocker_tier")
+            ),
+            "primary_full_commercial_release_blocker": _text(
+                summary.get("primary_release_blocker")
+            ),
+            "primary_full_commercial_release_blocker_blocked_row_count": _int(
+                summary.get("product_scope_breadth_evidence_receipt_blocked_row_count")
+            ),
+            "primary_full_commercial_release_blocker_first_blocked_evidence_row_id": (
+                scope_receipt_diagnostics["first_blocked_id"]
+            ),
+            "primary_full_commercial_release_blocker_receipt_csv": scope_receipt_csv,
+            "primary_full_commercial_release_blocker_approval_token_required": _text(
+                summary.get("product_scope_breadth_evidence_receipt_approval_token_required")
+            )
+            or "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT",
+            "primary_full_commercial_release_blocker_next_required_step": _text(
+                summary.get("product_scope_breadth_evidence_receipt_next_required_step")
+            )
+            or _text(summary.get("product_scope_evidence_priority_next_required_step"))
+            or _text(summary.get("primary_release_blocker_next_command")),
+            "product_scope_next_operator_completion_item_id": scope_next_item_id,
+            "product_scope_next_operator_completion_intake_mode": _text(
+                summary.get("product_scope_next_operator_completion_intake_mode")
+            ),
+            "product_scope_next_operator_completion_required_evidence_type": (
+                scope_next_required_evidence
+            ),
+            "product_scope_next_operator_completion_transporter_best_evidence_activity_type": _text(
+                summary.get(
+                    "product_scope_next_operator_completion_transporter_best_evidence_activity_type"
+                )
+            ),
+            "product_scope_next_operator_completion_transporter_best_evidence_value": _text(
+                summary.get(
+                    "product_scope_next_operator_completion_transporter_best_evidence_value"
+                )
+            ),
+            "product_scope_next_operator_completion_transporter_best_evidence_units": _text(
+                summary.get(
+                    "product_scope_next_operator_completion_transporter_best_evidence_units"
+                )
+            ),
+            "product_scope_next_operator_completion_transporter_best_evidence_document_id": _text(
+                summary.get(
+                    "product_scope_next_operator_completion_transporter_best_evidence_document_id"
+                )
+            ),
+            "product_scope_next_operator_completion_transporter_best_evidence_source_file": _text(
+                summary.get(
+                    "product_scope_next_operator_completion_transporter_best_evidence_source_file"
+                )
+            ),
+            "product_scope_next_operator_completion_transporter_claim_safe_blocker": _text(
+                summary.get(
+                    "product_scope_next_operator_completion_transporter_claim_safe_blocker"
+                )
+            ),
+            "product_scope_next_operator_completion_transporter_operator_next_verdict": _text(
+                summary.get(
+                    "product_scope_next_operator_completion_transporter_operator_next_verdict"
+                )
+            ),
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_id": (
+                _text(
+                    summary.get(
+                        "product_scope_transporter_p0_evidence_acquisition_next_slot_id"
+                    )
+                )
+                or scope_next_item_id
+                or _text(transporter_scope_raw.get("next_slot_id"))
+            ),
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_completion_packet_ready": bool(
+                summary.get(
+                    "product_scope_transporter_p0_evidence_acquisition_next_slot_completion_packet_ready"
+                )
+                is True
+                or bool(transporter_completion_packet)
+            ),
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_operator_review_artifact": _text(
+                summary.get(
+                    "product_scope_transporter_p0_evidence_acquisition_next_slot_operator_review_artifact"
+                )
+            )
+            or _text(transporter_scope.get("operator_review_artifact")),
+            "product_scope_transporter_p0_return_bundle_required_artifact_count": _int(
+                summary.get(
+                    "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_required_artifact_count"
+                )
+            )
+            or _int(transporter_scope.get("return_bundle_required_artifact_count")),
+            "product_scope_transporter_p0_return_bundle_required_artifacts": (
+                transporter_return_required_artifacts
+            ),
+            "product_scope_transporter_p0_return_bundle_blocker_count": _int(
+                summary.get(
+                    "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_blocker_count"
+                )
+            ),
+            "product_scope_transporter_p0_return_bundle_next_artifact_id": _text(
+                summary.get(
+                    "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_id"
+                )
+            )
+            or _text(transporter_scope.get("return_bundle_next_artifact_id")),
+            "product_scope_transporter_p0_return_bundle_next_artifact_path": _text(
+                summary.get(
+                    "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_path"
+                )
+            )
+            or _text(transporter_scope.get("return_bundle_next_artifact_path")),
+            "product_scope_transporter_p0_return_bundle_next_artifact_failed_check_ids": (
+                transporter_return_failed_checks
+            ),
+            "product_scope_transporter_p0_operator_validation_candidate_ready": bool(
+                summary.get("product_scope_transporter_p0_operator_validation_candidate_ready")
+                is True
+                or transporter_scope.get("operator_validation_candidate_ready") is True
+            ),
+            "product_scope_transporter_p0_operator_validation_candidate_status": _text(
+                summary.get("product_scope_transporter_p0_operator_validation_candidate_status")
+            )
+            or _text(transporter_scope.get("operator_validation_candidate_status")),
+            "product_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier": _text(
+                summary.get(
+                    "product_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier"
+                )
+            )
+            or _text(
+                transporter_scope.get("operator_validation_candidate_ligand_external_identifier")
+            ),
+            "product_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol": _text(
+                summary.get(
+                    "product_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol"
+                )
+            )
+            or _text(
+                transporter_scope.get("operator_validation_candidate_reference_binding_kcal_mol")
+            ),
+            "product_scope_transporter_p0_operator_validation_candidate_blocker": _text(
+                summary.get("product_scope_transporter_p0_operator_validation_candidate_blocker")
+            )
+            or _text(transporter_scope.get("operator_validation_candidate_blocker")),
+            "product_scope_transporter_p0_operator_validation_candidate_claim_safe_ready": bool(
+                summary.get(
+                    "product_scope_transporter_p0_operator_validation_candidate_claim_safe_ready"
+                )
+                is True
+                or transporter_scope.get("operator_validation_candidate_claim_safe_ready")
+                is True
+            ),
+            "product_scope_transporter_p0_operator_validation_candidate_placeholder_count": _int(
+                summary.get(
+                    "product_scope_transporter_p0_operator_validation_candidate_placeholder_count"
+                )
+            ),
+            "product_scope_transporter_p0_operator_validation_candidate_required_decision_field_count": _int(
+                summary.get(
+                    "product_scope_transporter_p0_operator_validation_candidate_required_decision_field_count"
+                )
+            ),
+        }
+    )
+    goal_scope_aliases = {
+        key.replace("product_scope_", "product_goal_scope_", 1): value
+        for key, value in out_summary.items()
+        if key.startswith("product_scope_next_operator_completion_")
+        or key.startswith("product_scope_transporter_p0_")
+    }
+    out_summary.update(goal_scope_aliases)
     return {"summary": out_summary, "rows": csv_rows, "operator_completion_packets": rows}
 
 
@@ -1306,6 +1520,18 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_scope_breadth_evidence_receipt_most_common_row_blocker: `{s['product_scope_breadth_evidence_receipt_most_common_row_blocker']}`",
         f"- product_scope_breadth_evidence_receipt_artifact: `{s['product_scope_breadth_evidence_receipt_artifact']}`",
         f"- product_scope_breadth_evidence_receipt_csv: `{s['product_scope_breadth_evidence_receipt_csv']}`",
+        f"- primary_full_commercial_release_blocker_id: `{s['primary_full_commercial_release_blocker_id']}`",
+        f"- primary_full_commercial_release_blocker_receipt_csv: `{s['primary_full_commercial_release_blocker_receipt_csv']}`",
+        f"- primary_full_commercial_release_blocker_approval_token_required: `{s['primary_full_commercial_release_blocker_approval_token_required']}`",
+        f"- product_scope_next_operator_completion_item_id: `{s['product_scope_next_operator_completion_item_id']}`",
+        f"- product_scope_next_operator_completion_required_evidence_type: `{s['product_scope_next_operator_completion_required_evidence_type']}`",
+        f"- product_scope_transporter_p0_operator_validation_candidate_status: `{s['product_scope_transporter_p0_operator_validation_candidate_status']}`",
+        f"- product_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier: `{s['product_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier']}`",
+        f"- product_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol: `{s['product_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol']}`",
+        f"- product_scope_transporter_p0_operator_validation_candidate_blocker: `{s['product_scope_transporter_p0_operator_validation_candidate_blocker']}`",
+        f"- product_scope_transporter_p0_return_bundle_next_artifact_id: `{s['product_scope_transporter_p0_return_bundle_next_artifact_id']}`",
+        f"- product_scope_transporter_p0_return_bundle_next_artifact_path: `{s['product_scope_transporter_p0_return_bundle_next_artifact_path']}`",
+        f"- product_scope_transporter_p0_return_bundle_required_artifacts: `{';'.join(s['product_scope_transporter_p0_return_bundle_required_artifacts'])}`",
         f"- goal_audit_sha256: `{s['goal_audit_sha256']}`",
         f"- commercial_readiness_matrix_sha256: `{s['commercial_readiness_matrix_sha256']}`",
         f"- source_fingerprint_ready: `{s['source_fingerprint_ready']}`",

@@ -464,6 +464,307 @@ def commercial_scope_breadth_evidence_receipt_fields(summary: dict[str, Any]) ->
     }
 
 
+def commercial_full_scope_operator_handoff_fields(summary: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "primary_full_commercial_release_blocker_id": summary.get(
+            "primary_full_commercial_release_blocker_id", ""
+        ),
+        "primary_full_commercial_release_blocker_requirement_id": summary.get(
+            "primary_full_commercial_release_blocker_requirement_id", ""
+        ),
+        "primary_full_commercial_release_blocker_tier": summary.get(
+            "primary_full_commercial_release_blocker_tier", ""
+        ),
+        "primary_full_commercial_release_blocker": summary.get(
+            "primary_full_commercial_release_blocker", ""
+        ),
+        "primary_full_commercial_release_blocker_blocked_row_count": int(
+            summary.get("primary_full_commercial_release_blocker_blocked_row_count") or 0
+        ),
+        "primary_full_commercial_release_blocker_first_blocked_evidence_row_id": summary.get(
+            "primary_full_commercial_release_blocker_first_blocked_evidence_row_id", ""
+        ),
+        "primary_full_commercial_release_blocker_receipt_csv": summary.get(
+            "primary_full_commercial_release_blocker_receipt_csv", ""
+        ),
+        "primary_full_commercial_release_blocker_approval_token_required": summary.get(
+            "primary_full_commercial_release_blocker_approval_token_required", ""
+        ),
+        "primary_full_commercial_release_blocker_next_required_step": summary.get(
+            "primary_full_commercial_release_blocker_next_required_step", ""
+        ),
+        "product_scope_next_operator_completion_item_id": summary.get(
+            "product_scope_next_operator_completion_item_id", ""
+        ),
+        "product_scope_next_operator_completion_intake_mode": summary.get(
+            "product_scope_next_operator_completion_intake_mode", ""
+        ),
+        "product_scope_next_operator_completion_required_evidence_type": summary.get(
+            "product_scope_next_operator_completion_required_evidence_type", ""
+        ),
+        "product_scope_next_operator_completion_transporter_best_evidence_activity_type": summary.get(
+            "product_scope_next_operator_completion_transporter_best_evidence_activity_type",
+            "",
+        ),
+        "product_scope_next_operator_completion_transporter_best_evidence_value": summary.get(
+            "product_scope_next_operator_completion_transporter_best_evidence_value", ""
+        ),
+        "product_scope_next_operator_completion_transporter_best_evidence_units": summary.get(
+            "product_scope_next_operator_completion_transporter_best_evidence_units", ""
+        ),
+        "product_scope_next_operator_completion_transporter_best_evidence_document_id": summary.get(
+            "product_scope_next_operator_completion_transporter_best_evidence_document_id",
+            "",
+        ),
+        "product_scope_next_operator_completion_transporter_best_evidence_source_file": summary.get(
+            "product_scope_next_operator_completion_transporter_best_evidence_source_file",
+            "",
+        ),
+        "product_scope_next_operator_completion_transporter_claim_safe_blocker": summary.get(
+            "product_scope_next_operator_completion_transporter_claim_safe_blocker", ""
+        ),
+        "product_scope_next_operator_completion_transporter_operator_next_verdict": summary.get(
+            "product_scope_next_operator_completion_transporter_operator_next_verdict", ""
+        ),
+        "product_scope_transporter_p0_evidence_acquisition_next_slot_id": summary.get(
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_id", ""
+        ),
+        "product_scope_transporter_p0_evidence_acquisition_next_slot_completion_packet_ready": bool(
+            summary.get(
+                "product_scope_transporter_p0_evidence_acquisition_next_slot_completion_packet_ready"
+            )
+            is True
+        ),
+        "product_scope_transporter_p0_evidence_acquisition_next_slot_operator_review_artifact": summary.get(
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_operator_review_artifact",
+            "",
+        ),
+        "product_scope_transporter_p0_return_bundle_required_artifact_count": int(
+            summary.get("product_scope_transporter_p0_return_bundle_required_artifact_count")
+            or 0
+        ),
+        "product_scope_transporter_p0_return_bundle_required_artifacts": list(
+            summary.get("product_scope_transporter_p0_return_bundle_required_artifacts") or []
+        ),
+        "product_scope_transporter_p0_return_bundle_blocker_count": int(
+            summary.get("product_scope_transporter_p0_return_bundle_blocker_count") or 0
+        ),
+        "product_scope_transporter_p0_return_bundle_next_artifact_id": summary.get(
+            "product_scope_transporter_p0_return_bundle_next_artifact_id", ""
+        ),
+        "product_scope_transporter_p0_return_bundle_next_artifact_path": summary.get(
+            "product_scope_transporter_p0_return_bundle_next_artifact_path", ""
+        ),
+        "product_scope_transporter_p0_return_bundle_next_artifact_failed_check_ids": list(
+            summary.get(
+                "product_scope_transporter_p0_return_bundle_next_artifact_failed_check_ids"
+            )
+            or []
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_ready": bool(
+            summary.get("product_scope_transporter_p0_operator_validation_candidate_ready")
+            is True
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_status": summary.get(
+            "product_scope_transporter_p0_operator_validation_candidate_status", ""
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier": summary.get(
+            "product_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier",
+            "",
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol": summary.get(
+            "product_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol",
+            "",
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_blocker": summary.get(
+            "product_scope_transporter_p0_operator_validation_candidate_blocker", ""
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_claim_safe_ready": bool(
+            summary.get(
+                "product_scope_transporter_p0_operator_validation_candidate_claim_safe_ready"
+            )
+            is True
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_placeholder_count": int(
+            summary.get("product_scope_transporter_p0_operator_validation_candidate_placeholder_count")
+            or 0
+        ),
+        "product_scope_transporter_p0_operator_validation_candidate_required_decision_field_count": int(
+            summary.get(
+                "product_scope_transporter_p0_operator_validation_candidate_required_decision_field_count"
+            )
+            or 0
+        ),
+        "product_goal_scope_next_operator_completion_item_id": summary.get(
+            "product_goal_scope_next_operator_completion_item_id",
+            summary.get("product_scope_next_operator_completion_item_id", ""),
+        ),
+        "product_goal_scope_next_operator_completion_intake_mode": summary.get(
+            "product_goal_scope_next_operator_completion_intake_mode",
+            summary.get("product_scope_next_operator_completion_intake_mode", ""),
+        ),
+        "product_goal_scope_next_operator_completion_required_evidence_type": summary.get(
+            "product_goal_scope_next_operator_completion_required_evidence_type",
+            summary.get("product_scope_next_operator_completion_required_evidence_type", ""),
+        ),
+        "product_goal_scope_next_operator_completion_transporter_best_evidence_activity_type": summary.get(
+            "product_goal_scope_next_operator_completion_transporter_best_evidence_activity_type",
+            summary.get(
+                "product_scope_next_operator_completion_transporter_best_evidence_activity_type",
+                "",
+            ),
+        ),
+        "product_goal_scope_next_operator_completion_transporter_best_evidence_value": summary.get(
+            "product_goal_scope_next_operator_completion_transporter_best_evidence_value",
+            summary.get("product_scope_next_operator_completion_transporter_best_evidence_value", ""),
+        ),
+        "product_goal_scope_next_operator_completion_transporter_best_evidence_units": summary.get(
+            "product_goal_scope_next_operator_completion_transporter_best_evidence_units",
+            summary.get("product_scope_next_operator_completion_transporter_best_evidence_units", ""),
+        ),
+        "product_goal_scope_next_operator_completion_transporter_best_evidence_document_id": summary.get(
+            "product_goal_scope_next_operator_completion_transporter_best_evidence_document_id",
+            summary.get(
+                "product_scope_next_operator_completion_transporter_best_evidence_document_id",
+                "",
+            ),
+        ),
+        "product_goal_scope_next_operator_completion_transporter_best_evidence_source_file": summary.get(
+            "product_goal_scope_next_operator_completion_transporter_best_evidence_source_file",
+            summary.get(
+                "product_scope_next_operator_completion_transporter_best_evidence_source_file",
+                "",
+            ),
+        ),
+        "product_goal_scope_next_operator_completion_transporter_claim_safe_blocker": summary.get(
+            "product_goal_scope_next_operator_completion_transporter_claim_safe_blocker",
+            summary.get("product_scope_next_operator_completion_transporter_claim_safe_blocker", ""),
+        ),
+        "product_goal_scope_next_operator_completion_transporter_operator_next_verdict": summary.get(
+            "product_goal_scope_next_operator_completion_transporter_operator_next_verdict",
+            summary.get(
+                "product_scope_next_operator_completion_transporter_operator_next_verdict",
+                "",
+            ),
+        ),
+        "product_goal_scope_transporter_p0_evidence_acquisition_next_slot_id": summary.get(
+            "product_goal_scope_transporter_p0_evidence_acquisition_next_slot_id",
+            summary.get("product_scope_transporter_p0_evidence_acquisition_next_slot_id", ""),
+        ),
+        "product_goal_scope_transporter_p0_evidence_acquisition_next_slot_completion_packet_ready": bool(
+            summary.get(
+                "product_goal_scope_transporter_p0_evidence_acquisition_next_slot_completion_packet_ready"
+            )
+            is True
+            or summary.get(
+                "product_scope_transporter_p0_evidence_acquisition_next_slot_completion_packet_ready"
+            )
+            is True
+        ),
+        "product_goal_scope_transporter_p0_evidence_acquisition_next_slot_operator_review_artifact": summary.get(
+            "product_goal_scope_transporter_p0_evidence_acquisition_next_slot_operator_review_artifact",
+            summary.get(
+                "product_scope_transporter_p0_evidence_acquisition_next_slot_operator_review_artifact",
+                "",
+            ),
+        ),
+        "product_goal_scope_transporter_p0_return_bundle_required_artifact_count": int(
+            summary.get(
+                "product_goal_scope_transporter_p0_return_bundle_required_artifact_count",
+                summary.get("product_scope_transporter_p0_return_bundle_required_artifact_count"),
+            )
+            or 0
+        ),
+        "product_goal_scope_transporter_p0_return_bundle_required_artifacts": list(
+            summary.get(
+                "product_goal_scope_transporter_p0_return_bundle_required_artifacts",
+                summary.get("product_scope_transporter_p0_return_bundle_required_artifacts"),
+            )
+            or []
+        ),
+        "product_goal_scope_transporter_p0_return_bundle_blocker_count": int(
+            summary.get(
+                "product_goal_scope_transporter_p0_return_bundle_blocker_count",
+                summary.get("product_scope_transporter_p0_return_bundle_blocker_count"),
+            )
+            or 0
+        ),
+        "product_goal_scope_transporter_p0_return_bundle_next_artifact_id": summary.get(
+            "product_goal_scope_transporter_p0_return_bundle_next_artifact_id",
+            summary.get("product_scope_transporter_p0_return_bundle_next_artifact_id", ""),
+        ),
+        "product_goal_scope_transporter_p0_return_bundle_next_artifact_path": summary.get(
+            "product_goal_scope_transporter_p0_return_bundle_next_artifact_path",
+            summary.get("product_scope_transporter_p0_return_bundle_next_artifact_path", ""),
+        ),
+        "product_goal_scope_transporter_p0_return_bundle_next_artifact_failed_check_ids": list(
+            summary.get(
+                "product_goal_scope_transporter_p0_return_bundle_next_artifact_failed_check_ids",
+                summary.get(
+                    "product_scope_transporter_p0_return_bundle_next_artifact_failed_check_ids"
+                ),
+            )
+            or []
+        ),
+        "product_goal_scope_transporter_p0_operator_validation_candidate_ready": bool(
+            summary.get("product_goal_scope_transporter_p0_operator_validation_candidate_ready")
+            is True
+            or summary.get("product_scope_transporter_p0_operator_validation_candidate_ready")
+            is True
+        ),
+        "product_goal_scope_transporter_p0_operator_validation_candidate_status": summary.get(
+            "product_goal_scope_transporter_p0_operator_validation_candidate_status",
+            summary.get("product_scope_transporter_p0_operator_validation_candidate_status", ""),
+        ),
+        "product_goal_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier": summary.get(
+            "product_goal_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier",
+            summary.get(
+                "product_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier",
+                "",
+            ),
+        ),
+        "product_goal_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol": summary.get(
+            "product_goal_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol",
+            summary.get(
+                "product_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol",
+                "",
+            ),
+        ),
+        "product_goal_scope_transporter_p0_operator_validation_candidate_blocker": summary.get(
+            "product_goal_scope_transporter_p0_operator_validation_candidate_blocker",
+            summary.get("product_scope_transporter_p0_operator_validation_candidate_blocker", ""),
+        ),
+        "product_goal_scope_transporter_p0_operator_validation_candidate_claim_safe_ready": bool(
+            summary.get(
+                "product_goal_scope_transporter_p0_operator_validation_candidate_claim_safe_ready"
+            )
+            is True
+            or summary.get(
+                "product_scope_transporter_p0_operator_validation_candidate_claim_safe_ready"
+            )
+            is True
+        ),
+        "product_goal_scope_transporter_p0_operator_validation_candidate_placeholder_count": int(
+            summary.get(
+                "product_goal_scope_transporter_p0_operator_validation_candidate_placeholder_count",
+                summary.get(
+                    "product_scope_transporter_p0_operator_validation_candidate_placeholder_count"
+                ),
+            )
+            or 0
+        ),
+        "product_goal_scope_transporter_p0_operator_validation_candidate_required_decision_field_count": int(
+            summary.get(
+                "product_goal_scope_transporter_p0_operator_validation_candidate_required_decision_field_count",
+                summary.get(
+                    "product_scope_transporter_p0_operator_validation_candidate_required_decision_field_count"
+                ),
+            )
+            or 0
+        ),
+    }
+
+
 def commercial_engine_refinement_claim_fields(summary: dict[str, Any]) -> dict[str, Any]:
     return {
         "engine_refinement_claim_promotion_ready": bool(

@@ -595,6 +595,37 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
         "product_scope_breadth_evidence_receipt_most_common_row_blocker"
         in operator_packet_keys
     )
+    assert "primary_full_commercial_release_blocker_id" in operator_packet_keys
+    assert "primary_full_commercial_release_blocker_receipt_csv" in operator_packet_keys
+    assert (
+        "primary_full_commercial_release_blocker_approval_token_required"
+        in operator_packet_keys
+    )
+    assert "product_scope_next_operator_completion_item_id" in operator_packet_keys
+    assert (
+        "product_scope_next_operator_completion_required_evidence_type"
+        in operator_packet_keys
+    )
+    assert (
+        "product_scope_next_operator_completion_transporter_best_evidence_document_id"
+        in operator_packet_keys
+    )
+    assert (
+        "product_scope_transporter_p0_return_bundle_required_artifact_count"
+        in operator_packet_keys
+    )
+    assert (
+        "product_scope_transporter_p0_return_bundle_next_artifact_path"
+        in operator_packet_keys
+    )
+    assert (
+        "product_scope_transporter_p0_operator_validation_candidate_status"
+        in operator_packet_keys
+    )
+    assert (
+        "product_goal_scope_transporter_p0_return_bundle_next_artifact_path"
+        in operator_packet_keys
+    )
     assert "checkpoint_promoted" in operator_packet_keys
     assert EXPECTED_ROUTES["get_product_commercial_readiness_operator_packet_freshness"] == (
         "GET",
@@ -827,6 +858,37 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     )
     assert (
         "product_scope_breadth_evidence_receipt_most_common_row_blocker"
+        in handoff_bundle_keys
+    )
+    assert "primary_full_commercial_release_blocker_id" in handoff_bundle_keys
+    assert "primary_full_commercial_release_blocker_receipt_csv" in handoff_bundle_keys
+    assert (
+        "primary_full_commercial_release_blocker_approval_token_required"
+        in handoff_bundle_keys
+    )
+    assert "product_scope_next_operator_completion_item_id" in handoff_bundle_keys
+    assert (
+        "product_scope_next_operator_completion_required_evidence_type"
+        in handoff_bundle_keys
+    )
+    assert (
+        "product_scope_next_operator_completion_transporter_best_evidence_document_id"
+        in handoff_bundle_keys
+    )
+    assert (
+        "product_scope_transporter_p0_return_bundle_required_artifact_count"
+        in handoff_bundle_keys
+    )
+    assert (
+        "product_scope_transporter_p0_return_bundle_next_artifact_path"
+        in handoff_bundle_keys
+    )
+    assert (
+        "product_scope_transporter_p0_operator_validation_candidate_status"
+        in handoff_bundle_keys
+    )
+    assert (
+        "product_goal_scope_transporter_p0_return_bundle_next_artifact_path"
         in handoff_bundle_keys
     )
     assert "artifact_reference_contract_ready" in handoff_bundle_keys

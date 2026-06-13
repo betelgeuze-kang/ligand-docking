@@ -95,6 +95,79 @@ def _goal_audit() -> dict:
             "product_scope_breadth_evidence_receipt_most_common_row_blocker": (
                 "operator_placeholders_unfilled"
             ),
+            "primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+            "primary_release_blocker_tier": "full_commercial_scope",
+            "primary_release_blocker": "full_scope_claim_closure_not_ready",
+            "primary_release_blocker_next_command": (
+                "python3 tools/build_transporter_manual_review_intake_template.py"
+            ),
+            "product_scope_breadth_evidence_receipt_approval_token_required": (
+                "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+            ),
+            "product_scope_breadth_evidence_receipt_next_required_step": (
+                "Fill the full-scope evidence receipt rows."
+            ),
+            "product_scope_next_operator_completion_intake_mode": "local_crosscheck_triage",
+            "product_scope_next_operator_completion_item_id": "AQP1.core_binder_01",
+            "product_scope_next_operator_completion_required_evidence_type": (
+                "exact_transporter_target_pair_quantitative_binder_kcal"
+            ),
+            "product_scope_next_operator_completion_transporter_best_evidence_activity_type": "KD",
+            "product_scope_next_operator_completion_transporter_best_evidence_value": "174000.0",
+            "product_scope_next_operator_completion_transporter_best_evidence_units": "nM",
+            "product_scope_next_operator_completion_transporter_best_evidence_document_id": (
+                "CHEMBL6182835"
+            ),
+            "product_scope_next_operator_completion_transporter_best_evidence_source_file": (
+                "runs/life_science_skill_crosscheck/chembl_activity_aqp1_target_current_recheck.json"
+            ),
+            "product_scope_next_operator_completion_transporter_claim_safe_blocker": (
+                "direct_pool_exists_but_named_candidate_identity_not_operator_confirmed"
+            ),
+            "product_scope_next_operator_completion_transporter_operator_next_verdict": (
+                "manual_match_candidate_to_exact_source_then_sync_reference_split_meta"
+            ),
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_id": (
+                "AQP1.core_binder_01"
+            ),
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_completion_packet_ready": True,
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_completion_packet": {
+                "slot_id": "AQP1.core_binder_01"
+            },
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_operator_review_artifact": (
+                "runs/transporter_manual_review_intake_template_current.csv"
+            ),
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_required_artifact_count": 5,
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_required_artifacts": [
+                "runs/transporter_manual_review_intake_template_current.csv",
+                "config/ligand_binding_reference_blind_aqp1_v1.csv",
+                "config/ligand_eval_splits_blind_aqp1_v1.csv",
+                "runs/transporter_binder_promotion_gate_current.json",
+                "runs/product_scope_breadth_contract_current.json",
+            ],
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_blocker_count": 5,
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_id": (
+                "operator_review_row"
+            ),
+            "product_scope_transporter_p0_evidence_acquisition_next_slot_return_bundle_next_artifact_path": (
+                "runs/transporter_manual_review_intake_template_current.csv"
+            ),
+            "product_scope_transporter_p0_operator_validation_candidate_ready": True,
+            "product_scope_transporter_p0_operator_validation_candidate_status": (
+                "operator_validation_required"
+            ),
+            "product_scope_transporter_p0_operator_validation_candidate_ligand_external_identifier": (
+                "CHEMBL20"
+            ),
+            "product_scope_transporter_p0_operator_validation_candidate_reference_binding_kcal_mol": (
+                "-5.13"
+            ),
+            "product_scope_transporter_p0_operator_validation_candidate_blocker": (
+                "data_validity_outside_typical_range_and_assay_origin_unknown"
+            ),
+            "product_scope_transporter_p0_operator_validation_candidate_claim_safe_ready": False,
+            "product_scope_transporter_p0_operator_validation_candidate_placeholder_count": 6,
+            "product_scope_transporter_p0_operator_validation_candidate_required_decision_field_count": 6,
             "product_ai_architecture_open_gap_ids": [
                 "production_ai_inference_checkpoint",
                 "scope_breadth_expansion",
@@ -358,6 +431,21 @@ def _goal_audit() -> dict:
                         ],
                         "source_signal": "https://pubmed.ncbi.nlm.nih.gov/27474162/",
                     },
+                    "return_bundle_required_artifacts": [
+                        "runs/transporter_manual_review_intake_template_current.csv",
+                        "config/ligand_binding_reference_blind_aqp1_v1.csv",
+                        "config/ligand_eval_splits_blind_aqp1_v1.csv",
+                        "runs/transporter_binder_promotion_gate_current.json",
+                        "runs/product_scope_breadth_contract_current.json",
+                    ],
+                    "return_bundle_required_artifact_count": 5,
+                    "return_bundle_next_artifact_id": "operator_review_row",
+                    "return_bundle_next_artifact_path": (
+                        "runs/transporter_manual_review_intake_template_current.csv"
+                    ),
+                    "return_bundle_next_artifact_failed_check_ids": [
+                        "next_slot_required_missing_fields"
+                    ],
                     "next_action": "Acquire exact transporter evidence.",
                     "execution_command": "python3 tools/build_product_scope_breadth_contract.py",
                     "validation_command": "python3 tools/build_product_scope_breadth_contract.py",
@@ -720,6 +808,51 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
     ] == ["transporter_direct_binding_evidence_ready"]
     assert summary["product_scope_breadth_evidence_receipt_most_common_row_blocker"] == (
         "operator_placeholders_unfilled"
+    )
+    assert summary["primary_full_commercial_release_blocker_id"] == (
+        "R8_full_scope_claim_closure"
+    )
+    assert summary["primary_full_commercial_release_blocker_tier"] == "full_commercial_scope"
+    assert summary["primary_full_commercial_release_blocker_receipt_csv"] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv"
+    )
+    assert summary["primary_full_commercial_release_blocker_approval_token_required"] == (
+        "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+    )
+    assert summary["product_scope_next_operator_completion_item_id"] == "AQP1.core_binder_01"
+    assert summary["product_scope_next_operator_completion_required_evidence_type"] == (
+        "exact_transporter_target_pair_quantitative_binder_kcal"
+    )
+    assert (
+        summary["product_scope_next_operator_completion_transporter_best_evidence_value"]
+        == "174000.0"
+    )
+    assert summary[
+        "product_scope_next_operator_completion_transporter_best_evidence_document_id"
+    ] == "CHEMBL6182835"
+    assert (
+        summary["product_scope_transporter_p0_evidence_acquisition_next_slot_completion_packet_ready"]
+        is True
+    )
+    assert summary["product_scope_transporter_p0_return_bundle_required_artifact_count"] == 5
+    assert "config/ligand_binding_reference_blind_aqp1_v1.csv" in summary[
+        "product_scope_transporter_p0_return_bundle_required_artifacts"
+    ]
+    assert summary["product_scope_transporter_p0_return_bundle_blocker_count"] == 5
+    assert summary["product_scope_transporter_p0_return_bundle_next_artifact_id"] == (
+        "operator_review_row"
+    )
+    assert summary["product_scope_transporter_p0_return_bundle_next_artifact_path"] == (
+        "runs/transporter_manual_review_intake_template_current.csv"
+    )
+    assert "next_slot_required_missing_fields" in summary[
+        "product_scope_transporter_p0_return_bundle_next_artifact_failed_check_ids"
+    ]
+    assert summary["product_goal_scope_transporter_p0_operator_validation_candidate_status"] == (
+        "operator_validation_required"
+    )
+    assert summary["product_goal_scope_transporter_p0_return_bundle_next_artifact_path"] == (
+        "runs/transporter_manual_review_intake_template_current.csv"
     )
     assert summary["open_gap_ids"] == [
         "production_ai_inference_checkpoint",
