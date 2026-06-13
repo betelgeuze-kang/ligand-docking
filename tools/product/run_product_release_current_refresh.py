@@ -95,6 +95,12 @@ FINAL_GATE_SPECS = [
             "engine_refinement_claim_evidence_receipt_recorded",
             "engine_refinement_claim_evidence_priority_packet_recorded",
             "engine_refinement_claim_evidence_priority_packet_ready",
+            "refine_tier_public_benchmark_recorded",
+            "refine_tier_public_benchmark_input_csv_present",
+            "refine_tier_public_benchmark_operator_work_order_ready",
+            "refine_tier_public_benchmark_work_order_apply_recorded",
+            "refine_tier_public_benchmark_work_order_apply_aggregate_readiness_required",
+            "refine_tier_public_benchmark_work_order_apply_work_order_csv_present",
             "product_quality_gate_verification_recorded",
             "product_quality_gate_verification_ready",
             "product_pose_sampling_readiness_recorded",
@@ -150,6 +156,25 @@ FINAL_GATE_SPECS = [
             "master_gap_closure_rollup_claim_promotion_allowed",
             "science_claim_promotion_gap_closure_all_gaps_closed",
             "science_claim_promotion_gap_closure_claim_promotion_allowed",
+            "refine_tier_public_benchmark_claim_grade_public_benchmark_ready",
+            "refine_tier_public_benchmark_benchmark_metric_surface_ready",
+            "refine_tier_public_benchmark_row_count",
+            "refine_tier_public_benchmark_valid_row_count",
+            "refine_tier_public_benchmark_pose_metric_row_count",
+            "refine_tier_public_benchmark_pose_metric_pass_count",
+            "refine_tier_public_benchmark_free_energy_pair_count",
+            "refine_tier_public_benchmark_external_state_mutated",
+            "refine_tier_public_benchmark_work_order_apply_apply_ready",
+            "refine_tier_public_benchmark_work_order_apply_valid_intake_row_count",
+            "refine_tier_public_benchmark_work_order_apply_duplicate_benchmark_id_count",
+            "refine_tier_public_benchmark_work_order_apply_candidate_intake_written",
+            "refine_tier_public_benchmark_work_order_apply_candidate_readiness_checked",
+            "refine_tier_public_benchmark_work_order_apply_candidate_claim_grade_public_benchmark_ready",
+            "refine_tier_public_benchmark_work_order_apply_intake_written",
+            "refine_tier_public_benchmark_work_order_apply_write_intake_requested",
+            "refine_tier_public_benchmark_work_order_apply_approval_token_present",
+            "refine_tier_public_benchmark_work_order_apply_approval_token_accepted",
+            "refine_tier_public_benchmark_work_order_apply_external_state_mutated",
             "product_quality_gate_verification_blocker_count",
             "product_quality_gate_verification_execution_enabled",
             "product_quality_gate_verification_external_state_mutated",
@@ -242,6 +267,14 @@ FINAL_GATE_SPECS = [
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_row_count": 8,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_blocked_row_count": 8,
             "engine_refinement_claim_evidence_priority_packet_approval_token_count": 1,
+            "refine_tier_public_benchmark_blocker_count": 6,
+            "refine_tier_public_benchmark_min_total_rows_required": 8,
+            "refine_tier_public_benchmark_min_pose_rows_required": 5,
+            "refine_tier_public_benchmark_min_free_energy_pairs_required": 5,
+            "refine_tier_public_benchmark_work_order_row_count": 8,
+            "refine_tier_public_benchmark_work_order_apply_work_order_row_count": 8,
+            "refine_tier_public_benchmark_work_order_apply_blocked_row_count": 8,
+            "refine_tier_public_benchmark_work_order_apply_blocker_count": 1,
             "master_gap_closure_rollup_open_gap_count": 1,
             "master_gap_closure_rollup_closed_gap_count": 8,
             "master_gap_closure_rollup_release_blocker_row_count": 1,
@@ -539,6 +572,27 @@ FINAL_GATE_SPECS = [
             ),
             "engine_refinement_claim_evidence_priority_packet_approval_token_required": (
                 "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+            ),
+            "refine_tier_public_benchmark_status": (
+                "blocked_refine_tier_public_benchmark_readiness"
+            ),
+            "refine_tier_public_benchmark_input_csv": (
+                "config/refine_tier_public_benchmark_intake_current.csv"
+            ),
+            "refine_tier_public_benchmark_work_order_csv": (
+                "runs/refine_tier_public_benchmark_work_order_current.csv"
+            ),
+            "refine_tier_public_benchmark_write_intake_approval_token_required": (
+                "APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE"
+            ),
+            "refine_tier_public_benchmark_work_order_apply_status": (
+                "blocked_refine_tier_public_benchmark_work_order_apply"
+            ),
+            "refine_tier_public_benchmark_work_order_apply_work_order_csv": (
+                "runs/refine_tier_public_benchmark_work_order_current.csv"
+            ),
+            "refine_tier_public_benchmark_work_order_apply_target_intake_csv": (
+                "config/refine_tier_public_benchmark_intake_current.csv"
             ),
         },
     },

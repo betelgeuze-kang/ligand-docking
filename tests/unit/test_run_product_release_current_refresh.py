@@ -159,6 +159,31 @@ def test_refresh_final_gate_requires_release_decision_bottleneck_receipt_linkage
     assert decision_row["required_text_exact_fields"][
         "product_ledger_privacy_scan_status"
     ] == "product_ledger_privacy_scan_ready"
+    assert "refine_tier_public_benchmark_recorded" in decision_row["required_true_fields"]
+    assert (
+        "refine_tier_public_benchmark_work_order_apply_recorded"
+        in decision_row["required_true_fields"]
+    )
+    assert (
+        "refine_tier_public_benchmark_claim_grade_public_benchmark_ready"
+        in decision_row["required_zero_fields"]
+    )
+    assert (
+        "refine_tier_public_benchmark_work_order_apply_intake_written"
+        in decision_row["required_zero_fields"]
+    )
+    assert decision_row["required_int_exact_fields"][
+        "refine_tier_public_benchmark_blocker_count"
+    ] == 6
+    assert decision_row["required_int_exact_fields"][
+        "refine_tier_public_benchmark_work_order_apply_blocked_row_count"
+    ] == 8
+    assert decision_row["required_text_exact_fields"][
+        "refine_tier_public_benchmark_status"
+    ] == "blocked_refine_tier_public_benchmark_readiness"
+    assert decision_row["required_text_exact_fields"][
+        "refine_tier_public_benchmark_work_order_apply_status"
+    ] == "blocked_refine_tier_public_benchmark_work_order_apply"
     assert decision_row["required_text_exact_fields"][
         "goal_bottleneck_briefing_full_commercial_evidence_receipt_required_inputs"
     ] == (
@@ -366,6 +391,61 @@ def test_refresh_final_gate_blocks_ledger_privacy_scan_release_decision_drift(
     ]
     assert decision_row["failed_int_equal_fields"] == []
     assert decision_row["failed_int_exact_fields"] == []
+
+
+def test_refresh_final_gate_blocks_refine_tier_public_benchmark_drift(
+    tmp_path: Path,
+) -> None:
+    decision_payload = _release_decision_ready()
+    decision_payload["summary"][
+        "refine_tier_public_benchmark_work_order_apply_intake_written"
+    ] = True
+    decision_payload["summary"][
+        "refine_tier_public_benchmark_work_order_apply_blocked_row_count"
+    ] = 7
+    decision_payload["summary"][
+        "refine_tier_public_benchmark_status"
+    ] = "refine_tier_public_benchmark_ready"
+    _write_json(
+        tmp_path / "runs" / "product_release_source_of_truth_gate_current.json",
+        _source_of_truth_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "product_quality_gate_verification_current.json",
+        _quality_gate_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_release_decision_gate_current.json",
+        decision_payload,
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_operator_action_board_current.json",
+        _action_board_ready(),
+    )
+
+    payload = mod.run_product_release_current_refresh(
+        execute=True,
+        root=tmp_path,
+        commands=[],
+    )
+
+    summary = payload["summary"]
+    decision_row = next(
+        row for row in payload["verification_rows"] if row["gate_id"] == "goal_release_decision_gate"
+    )
+    assert summary["status"] == "blocked_product_release_current_refresh"
+    assert summary["final_gate_verification_ready"] is False
+    assert summary["final_gate_blocker_count"] == 1
+    assert decision_row["status"] == "fail"
+    assert decision_row["nonzero_fields"] == [
+        "refine_tier_public_benchmark_work_order_apply_intake_written"
+    ]
+    assert decision_row["failed_int_exact_fields"] == [
+        "refine_tier_public_benchmark_work_order_apply_blocked_row_count"
+    ]
+    assert decision_row["failed_text_exact_fields"] == [
+        "refine_tier_public_benchmark_status"
+    ]
 
 
 def test_refresh_final_gate_blocks_ledger_privacy_scan_pass_count_mismatch(

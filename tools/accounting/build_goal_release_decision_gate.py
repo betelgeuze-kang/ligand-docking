@@ -60,6 +60,12 @@ DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON = (
 DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_JSON = (
     "runs/engine_refinement_claim_evidence_priority_packet_current.json"
 )
+DEFAULT_REFINE_TIER_PUBLIC_BENCHMARK_READINESS_JSON = (
+    "runs/refine_tier_public_benchmark_readiness_current.json"
+)
+DEFAULT_REFINE_TIER_PUBLIC_BENCHMARK_WORK_ORDER_APPLY_JSON = (
+    "runs/refine_tier_public_benchmark_work_order_apply_current.json"
+)
 DEFAULT_PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON = (
     "runs/product_full_commercial_blocker_evidence_matrix_current.json"
 )
@@ -234,6 +240,8 @@ def build_goal_release_decision_gate(
     product_scope_breadth_evidence_receipt_packet: dict[str, Any] | None = None,
     engine_refinement_claim_evidence_receipt_packet: dict[str, Any] | None = None,
     engine_refinement_claim_evidence_priority_packet: dict[str, Any] | None = None,
+    refine_tier_public_benchmark_readiness_packet: dict[str, Any] | None = None,
+    refine_tier_public_benchmark_work_order_apply_packet: dict[str, Any] | None = None,
     product_full_commercial_blocker_evidence_matrix_packet: dict[str, Any] | None = None,
     product_rollout_execution_smoke_receipt_packet: dict[str, Any] | None = None,
     accuracy_parity_scorecard_packet: dict[str, Any] | None = None,
@@ -285,6 +293,12 @@ def build_goal_release_decision_gate(
     ),
     engine_refinement_claim_evidence_priority_packet_path: str = (
         DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_JSON
+    ),
+    refine_tier_public_benchmark_readiness_path: str = (
+        DEFAULT_REFINE_TIER_PUBLIC_BENCHMARK_READINESS_JSON
+    ),
+    refine_tier_public_benchmark_work_order_apply_path: str = (
+        DEFAULT_REFINE_TIER_PUBLIC_BENCHMARK_WORK_ORDER_APPLY_JSON
     ),
     product_full_commercial_blocker_evidence_matrix_path: str = (
         DEFAULT_PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON
@@ -497,6 +511,70 @@ def build_goal_release_decision_gate(
         and _text(engine_refinement_priority.get("approval_token_required"))
         == "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
         and bool(engine_refinement_priority.get("external_state_mutated") is False)
+    )
+    refine_tier_public_benchmark = _summary(refine_tier_public_benchmark_readiness_packet or {})
+    refine_tier_public_benchmark_gate_present = (
+        refine_tier_public_benchmark_readiness_packet is not None
+    )
+    refine_tier_public_benchmark_recorded = (
+        _text(refine_tier_public_benchmark.get("status"))
+        == "blocked_refine_tier_public_benchmark_readiness"
+        and bool(refine_tier_public_benchmark.get("input_csv_present") is True)
+        and bool(refine_tier_public_benchmark.get("claim_grade_public_benchmark_ready") is False)
+        and bool(refine_tier_public_benchmark.get("benchmark_metric_surface_ready") is False)
+        and _int(refine_tier_public_benchmark.get("row_count")) == 0
+        and _int(refine_tier_public_benchmark.get("valid_row_count")) == 0
+        and _int(refine_tier_public_benchmark.get("pose_metric_row_count")) == 0
+        and _int(refine_tier_public_benchmark.get("pose_metric_pass_count")) == 0
+        and _int(refine_tier_public_benchmark.get("free_energy_pair_count")) == 0
+        and _int(refine_tier_public_benchmark.get("blocker_count")) == 6
+        and _int(refine_tier_public_benchmark.get("min_total_rows_required")) == 8
+        and _int(refine_tier_public_benchmark.get("min_pose_rows_required")) == 5
+        and _int(refine_tier_public_benchmark.get("min_free_energy_pairs_required")) == 5
+        and bool(refine_tier_public_benchmark.get("operator_work_order_ready") is True)
+        and _int(refine_tier_public_benchmark.get("work_order_row_count")) == 8
+        and _text(refine_tier_public_benchmark.get("input_csv"))
+        == "config/refine_tier_public_benchmark_intake_current.csv"
+        and _text(refine_tier_public_benchmark.get("work_order_csv"))
+        == "runs/refine_tier_public_benchmark_work_order_current.csv"
+        and _text(refine_tier_public_benchmark.get("write_intake_approval_token_required"))
+        == "APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE"
+        and bool(refine_tier_public_benchmark.get("external_state_mutated") is False)
+    )
+    refine_tier_public_benchmark_work_order_apply = _summary(
+        refine_tier_public_benchmark_work_order_apply_packet or {}
+    )
+    refine_tier_public_benchmark_work_order_apply_gate_present = (
+        refine_tier_public_benchmark_work_order_apply_packet is not None
+    )
+    refine_tier_public_benchmark_work_order_apply_recorded = (
+        _text(refine_tier_public_benchmark_work_order_apply.get("status"))
+        == "blocked_refine_tier_public_benchmark_work_order_apply"
+        and bool(refine_tier_public_benchmark_work_order_apply.get("aggregate_readiness_required") is True)
+        and bool(refine_tier_public_benchmark_work_order_apply.get("apply_ready") is False)
+        and bool(refine_tier_public_benchmark_work_order_apply.get("work_order_csv_present") is True)
+        and _int(refine_tier_public_benchmark_work_order_apply.get("work_order_row_count")) == 8
+        and _int(refine_tier_public_benchmark_work_order_apply.get("blocked_row_count")) == 8
+        and _int(refine_tier_public_benchmark_work_order_apply.get("valid_intake_row_count")) == 0
+        and _int(refine_tier_public_benchmark_work_order_apply.get("blocker_count")) == 1
+        and _int(refine_tier_public_benchmark_work_order_apply.get("duplicate_benchmark_id_count")) == 0
+        and bool(refine_tier_public_benchmark_work_order_apply.get("candidate_intake_written") is False)
+        and bool(refine_tier_public_benchmark_work_order_apply.get("candidate_readiness_checked") is False)
+        and bool(
+            refine_tier_public_benchmark_work_order_apply.get(
+                "candidate_claim_grade_public_benchmark_ready"
+            )
+            is False
+        )
+        and bool(refine_tier_public_benchmark_work_order_apply.get("intake_written") is False)
+        and bool(refine_tier_public_benchmark_work_order_apply.get("write_intake_requested") is False)
+        and bool(refine_tier_public_benchmark_work_order_apply.get("approval_token_present") is False)
+        and bool(refine_tier_public_benchmark_work_order_apply.get("approval_token_accepted") is False)
+        and _text(refine_tier_public_benchmark_work_order_apply.get("target_intake_csv"))
+        == "config/refine_tier_public_benchmark_intake_current.csv"
+        and _text(refine_tier_public_benchmark_work_order_apply.get("work_order_csv"))
+        == "runs/refine_tier_public_benchmark_work_order_current.csv"
+        and bool(refine_tier_public_benchmark_work_order_apply.get("external_state_mutated") is False)
     )
     goal_bottleneck_briefing = _summary(goal_bottleneck_briefing_packet or {})
     goal_bottleneck_briefing_gate_present = goal_bottleneck_briefing_packet is not None
@@ -1546,6 +1624,90 @@ def build_goal_release_decision_gate(
                 ),
             )
         )
+    if refine_tier_public_benchmark_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="refine_tier_public_benchmark_fail_closed_recorded",
+                artifact_path=refine_tier_public_benchmark_readiness_path,
+                observed=(
+                    f"{_text(refine_tier_public_benchmark.get('status')) or 'missing'};"
+                    f"input_csv_present="
+                    f"{_bool_text(bool(refine_tier_public_benchmark.get('input_csv_present') is True))};"
+                    f"claim_grade_public_benchmark_ready="
+                    f"{_bool_text(bool(refine_tier_public_benchmark.get('claim_grade_public_benchmark_ready') is True))};"
+                    f"benchmark_metric_surface_ready="
+                    f"{_bool_text(bool(refine_tier_public_benchmark.get('benchmark_metric_surface_ready') is True))};"
+                    f"row_count={_int(refine_tier_public_benchmark.get('row_count'))};"
+                    f"valid_row_count={_int(refine_tier_public_benchmark.get('valid_row_count'))};"
+                    f"pose_metric_pass_count="
+                    f"{_int(refine_tier_public_benchmark.get('pose_metric_pass_count'))};"
+                    f"free_energy_pair_count="
+                    f"{_int(refine_tier_public_benchmark.get('free_energy_pair_count'))};"
+                    f"blocker_count={_int(refine_tier_public_benchmark.get('blocker_count'))};"
+                    f"operator_work_order_ready="
+                    f"{_bool_text(bool(refine_tier_public_benchmark.get('operator_work_order_ready') is True))};"
+                    f"work_order_row_count="
+                    f"{_int(refine_tier_public_benchmark.get('work_order_row_count'))};"
+                    f"write_intake_approval_token_required="
+                    f"{_text(refine_tier_public_benchmark.get('write_intake_approval_token_required'))};"
+                    f"external_state_mutated="
+                    f"{_bool_text(bool(refine_tier_public_benchmark.get('external_state_mutated') is True))}"
+                ),
+                required=(
+                    "blocked_refine_tier_public_benchmark_readiness with empty tracked intake, "
+                    "8-row operator work order ready, claim-grade benchmark blocked, approval token "
+                    "required for intake writes, and no external mutation"
+                ),
+                passed=refine_tier_public_benchmark_recorded,
+                reason=(
+                    "The final release decision must preserve the original public pose/free-energy "
+                    "benchmark gate, not only the priority packet that summarizes the next R9 operator step."
+                ),
+            )
+        )
+    if refine_tier_public_benchmark_work_order_apply_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="refine_tier_public_benchmark_work_order_apply_fail_closed_recorded",
+                artifact_path=refine_tier_public_benchmark_work_order_apply_path,
+                observed=(
+                    f"{_text(refine_tier_public_benchmark_work_order_apply.get('status')) or 'missing'};"
+                    f"aggregate_readiness_required="
+                    f"{_bool_text(bool(refine_tier_public_benchmark_work_order_apply.get('aggregate_readiness_required') is True))};"
+                    f"apply_ready="
+                    f"{_bool_text(bool(refine_tier_public_benchmark_work_order_apply.get('apply_ready') is True))};"
+                    f"work_order_csv_present="
+                    f"{_bool_text(bool(refine_tier_public_benchmark_work_order_apply.get('work_order_csv_present') is True))};"
+                    f"work_order_row_count="
+                    f"{_int(refine_tier_public_benchmark_work_order_apply.get('work_order_row_count'))};"
+                    f"blocked_row_count="
+                    f"{_int(refine_tier_public_benchmark_work_order_apply.get('blocked_row_count'))};"
+                    f"valid_intake_row_count="
+                    f"{_int(refine_tier_public_benchmark_work_order_apply.get('valid_intake_row_count'))};"
+                    f"candidate_intake_written="
+                    f"{_bool_text(bool(refine_tier_public_benchmark_work_order_apply.get('candidate_intake_written') is True))};"
+                    f"intake_written="
+                    f"{_bool_text(bool(refine_tier_public_benchmark_work_order_apply.get('intake_written') is True))};"
+                    f"write_intake_requested="
+                    f"{_bool_text(bool(refine_tier_public_benchmark_work_order_apply.get('write_intake_requested') is True))};"
+                    f"approval_token_present="
+                    f"{_bool_text(bool(refine_tier_public_benchmark_work_order_apply.get('approval_token_present') is True))};"
+                    f"external_state_mutated="
+                    f"{_bool_text(bool(refine_tier_public_benchmark_work_order_apply.get('external_state_mutated') is True))}"
+                ),
+                required=(
+                    "blocked_refine_tier_public_benchmark_work_order_apply with 8 blocked placeholder "
+                    "rows, no candidate/tracked intake write, no approval token use, and no external mutation"
+                ),
+                passed=refine_tier_public_benchmark_work_order_apply_recorded,
+                reason=(
+                    "The final release decision must preserve the guarded apply step so public benchmark "
+                    "intake cannot be silently written without operator approval."
+                ),
+            )
+        )
     if goal_bottleneck_briefing_gate_present:
         rows.append(
             _row(
@@ -2256,6 +2418,13 @@ def build_goal_release_decision_gate(
         next_required_items.append("engine refinement claim evidence receipt")
     if engine_refinement_priority_gate_present and not engine_refinement_priority_recorded:
         next_required_items.append("engine refinement claim evidence priority packet")
+    if refine_tier_public_benchmark_gate_present and not refine_tier_public_benchmark_recorded:
+        next_required_items.append("refine-tier public benchmark readiness fail-closed receipt")
+    if (
+        refine_tier_public_benchmark_work_order_apply_gate_present
+        and not refine_tier_public_benchmark_work_order_apply_recorded
+    ):
+        next_required_items.append("refine-tier public benchmark work-order apply fail-closed receipt")
     if goal_bottleneck_briefing_gate_present and not goal_bottleneck_full_commercial_receipts_recorded:
         next_required_items.append("goal bottleneck full-commercial receipt briefing")
     if (
@@ -2790,6 +2959,144 @@ def build_goal_release_decision_gate(
         ),
         "engine_refinement_claim_evidence_priority_packet_external_state_mutated": bool(
             engine_refinement_priority.get("external_state_mutated") is True
+        ),
+        "refine_tier_public_benchmark_gate_present": refine_tier_public_benchmark_gate_present,
+        "refine_tier_public_benchmark_status": _text(
+            refine_tier_public_benchmark.get("status")
+        ),
+        "refine_tier_public_benchmark_recorded": (
+            refine_tier_public_benchmark_recorded
+            if refine_tier_public_benchmark_gate_present
+            else None
+        ),
+        "refine_tier_public_benchmark_input_csv": _text(
+            refine_tier_public_benchmark.get("input_csv")
+        ),
+        "refine_tier_public_benchmark_input_csv_present": bool(
+            refine_tier_public_benchmark.get("input_csv_present") is True
+        ),
+        "refine_tier_public_benchmark_claim_grade_public_benchmark_ready": bool(
+            refine_tier_public_benchmark.get("claim_grade_public_benchmark_ready") is True
+        ),
+        "refine_tier_public_benchmark_benchmark_metric_surface_ready": bool(
+            refine_tier_public_benchmark.get("benchmark_metric_surface_ready") is True
+        ),
+        "refine_tier_public_benchmark_row_count": _int(
+            refine_tier_public_benchmark.get("row_count")
+        ),
+        "refine_tier_public_benchmark_valid_row_count": _int(
+            refine_tier_public_benchmark.get("valid_row_count")
+        ),
+        "refine_tier_public_benchmark_pose_metric_row_count": _int(
+            refine_tier_public_benchmark.get("pose_metric_row_count")
+        ),
+        "refine_tier_public_benchmark_pose_metric_pass_count": _int(
+            refine_tier_public_benchmark.get("pose_metric_pass_count")
+        ),
+        "refine_tier_public_benchmark_free_energy_pair_count": _int(
+            refine_tier_public_benchmark.get("free_energy_pair_count")
+        ),
+        "refine_tier_public_benchmark_blocker_count": _int(
+            refine_tier_public_benchmark.get("blocker_count")
+        ),
+        "refine_tier_public_benchmark_min_total_rows_required": _int(
+            refine_tier_public_benchmark.get("min_total_rows_required")
+        ),
+        "refine_tier_public_benchmark_min_pose_rows_required": _int(
+            refine_tier_public_benchmark.get("min_pose_rows_required")
+        ),
+        "refine_tier_public_benchmark_min_free_energy_pairs_required": _int(
+            refine_tier_public_benchmark.get("min_free_energy_pairs_required")
+        ),
+        "refine_tier_public_benchmark_operator_work_order_ready": bool(
+            refine_tier_public_benchmark.get("operator_work_order_ready") is True
+        ),
+        "refine_tier_public_benchmark_work_order_csv": _text(
+            refine_tier_public_benchmark.get("work_order_csv")
+        ),
+        "refine_tier_public_benchmark_work_order_row_count": _int(
+            refine_tier_public_benchmark.get("work_order_row_count")
+        ),
+        "refine_tier_public_benchmark_write_intake_approval_token_required": _text(
+            refine_tier_public_benchmark.get("write_intake_approval_token_required")
+        ),
+        "refine_tier_public_benchmark_external_state_mutated": bool(
+            refine_tier_public_benchmark.get("external_state_mutated") is True
+        ),
+        "refine_tier_public_benchmark_next_required_step": _text(
+            refine_tier_public_benchmark.get("next_required_step")
+        ),
+        "refine_tier_public_benchmark_work_order_apply_gate_present": (
+            refine_tier_public_benchmark_work_order_apply_gate_present
+        ),
+        "refine_tier_public_benchmark_work_order_apply_status": _text(
+            refine_tier_public_benchmark_work_order_apply.get("status")
+        ),
+        "refine_tier_public_benchmark_work_order_apply_recorded": (
+            refine_tier_public_benchmark_work_order_apply_recorded
+            if refine_tier_public_benchmark_work_order_apply_gate_present
+            else None
+        ),
+        "refine_tier_public_benchmark_work_order_apply_aggregate_readiness_required": bool(
+            refine_tier_public_benchmark_work_order_apply.get("aggregate_readiness_required")
+            is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_apply_ready": bool(
+            refine_tier_public_benchmark_work_order_apply.get("apply_ready") is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_work_order_csv": _text(
+            refine_tier_public_benchmark_work_order_apply.get("work_order_csv")
+        ),
+        "refine_tier_public_benchmark_work_order_apply_work_order_csv_present": bool(
+            refine_tier_public_benchmark_work_order_apply.get("work_order_csv_present") is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_work_order_row_count": _int(
+            refine_tier_public_benchmark_work_order_apply.get("work_order_row_count")
+        ),
+        "refine_tier_public_benchmark_work_order_apply_blocked_row_count": _int(
+            refine_tier_public_benchmark_work_order_apply.get("blocked_row_count")
+        ),
+        "refine_tier_public_benchmark_work_order_apply_valid_intake_row_count": _int(
+            refine_tier_public_benchmark_work_order_apply.get("valid_intake_row_count")
+        ),
+        "refine_tier_public_benchmark_work_order_apply_blocker_count": _int(
+            refine_tier_public_benchmark_work_order_apply.get("blocker_count")
+        ),
+        "refine_tier_public_benchmark_work_order_apply_duplicate_benchmark_id_count": _int(
+            refine_tier_public_benchmark_work_order_apply.get("duplicate_benchmark_id_count")
+        ),
+        "refine_tier_public_benchmark_work_order_apply_candidate_intake_written": bool(
+            refine_tier_public_benchmark_work_order_apply.get("candidate_intake_written") is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_candidate_readiness_checked": bool(
+            refine_tier_public_benchmark_work_order_apply.get("candidate_readiness_checked") is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_candidate_claim_grade_public_benchmark_ready": bool(
+            refine_tier_public_benchmark_work_order_apply.get(
+                "candidate_claim_grade_public_benchmark_ready"
+            )
+            is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_intake_written": bool(
+            refine_tier_public_benchmark_work_order_apply.get("intake_written") is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_write_intake_requested": bool(
+            refine_tier_public_benchmark_work_order_apply.get("write_intake_requested") is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_approval_token_present": bool(
+            refine_tier_public_benchmark_work_order_apply.get("approval_token_present") is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_approval_token_accepted": bool(
+            refine_tier_public_benchmark_work_order_apply.get("approval_token_accepted") is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_target_intake_csv": _text(
+            refine_tier_public_benchmark_work_order_apply.get("target_intake_csv")
+        ),
+        "refine_tier_public_benchmark_work_order_apply_external_state_mutated": bool(
+            refine_tier_public_benchmark_work_order_apply.get("external_state_mutated") is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_next_required_step": _text(
+            refine_tier_public_benchmark_work_order_apply.get("next_required_step")
         ),
         "goal_bottleneck_briefing_gate_present": goal_bottleneck_briefing_gate_present,
         "source_goal_bottleneck_briefing_status": _text(goal_bottleneck_briefing.get("status")),
@@ -3861,6 +4168,20 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- engine_refinement_claim_evidence_priority_packet_top_required_input: `{s['engine_refinement_claim_evidence_priority_packet_top_required_input']}`",
         f"- engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_blocked_row_count: `{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_blocked_row_count']}`",
         f"- engine_refinement_claim_evidence_priority_packet_approval_token_required: `{s['engine_refinement_claim_evidence_priority_packet_approval_token_required']}`",
+        f"- refine_tier_public_benchmark_recorded: `{s['refine_tier_public_benchmark_recorded']}`",
+        f"- refine_tier_public_benchmark_status: `{s['refine_tier_public_benchmark_status']}`",
+        f"- refine_tier_public_benchmark_claim_grade_public_benchmark_ready: `{s['refine_tier_public_benchmark_claim_grade_public_benchmark_ready']}`",
+        f"- refine_tier_public_benchmark_row_count: `{s['refine_tier_public_benchmark_row_count']}`",
+        f"- refine_tier_public_benchmark_valid_row_count: `{s['refine_tier_public_benchmark_valid_row_count']}`",
+        f"- refine_tier_public_benchmark_blocker_count: `{s['refine_tier_public_benchmark_blocker_count']}`",
+        f"- refine_tier_public_benchmark_operator_work_order_ready: `{s['refine_tier_public_benchmark_operator_work_order_ready']}`",
+        f"- refine_tier_public_benchmark_work_order_row_count: `{s['refine_tier_public_benchmark_work_order_row_count']}`",
+        f"- refine_tier_public_benchmark_write_intake_approval_token_required: `{s['refine_tier_public_benchmark_write_intake_approval_token_required']}`",
+        f"- refine_tier_public_benchmark_work_order_apply_recorded: `{s['refine_tier_public_benchmark_work_order_apply_recorded']}`",
+        f"- refine_tier_public_benchmark_work_order_apply_status: `{s['refine_tier_public_benchmark_work_order_apply_status']}`",
+        f"- refine_tier_public_benchmark_work_order_apply_blocked_row_count: `{s['refine_tier_public_benchmark_work_order_apply_blocked_row_count']}`",
+        f"- refine_tier_public_benchmark_work_order_apply_intake_written: `{s['refine_tier_public_benchmark_work_order_apply_intake_written']}`",
+        f"- refine_tier_public_benchmark_work_order_apply_external_state_mutated: `{s['refine_tier_public_benchmark_work_order_apply_external_state_mutated']}`",
         f"- goal_bottleneck_briefing_gate_present: `{s['goal_bottleneck_briefing_gate_present']}`",
         f"- source_goal_bottleneck_briefing_status: `{s['source_goal_bottleneck_briefing_status']}`",
         f"- goal_bottleneck_briefing_full_commercial_receipts_recorded: `{s['goal_bottleneck_briefing_full_commercial_receipts_recorded']}`",
@@ -4159,6 +4480,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_JSON,
     )
     parser.add_argument(
+        "--refine-tier-public-benchmark-readiness-json",
+        default=DEFAULT_REFINE_TIER_PUBLIC_BENCHMARK_READINESS_JSON,
+    )
+    parser.add_argument(
+        "--refine-tier-public-benchmark-work-order-apply-json",
+        default=DEFAULT_REFINE_TIER_PUBLIC_BENCHMARK_WORK_ORDER_APPLY_JSON,
+    )
+    parser.add_argument(
         "--product-full-commercial-blocker-evidence-matrix-json",
         default=DEFAULT_PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON,
     )
@@ -4248,6 +4577,12 @@ def main(argv: list[str] | None = None) -> None:
         engine_refinement_claim_evidence_priority_packet=_read_json_if_present(
             args.engine_refinement_claim_evidence_priority_packet_json
         ),
+        refine_tier_public_benchmark_readiness_packet=_read_json_if_present(
+            args.refine_tier_public_benchmark_readiness_json
+        ),
+        refine_tier_public_benchmark_work_order_apply_packet=_read_json_if_present(
+            args.refine_tier_public_benchmark_work_order_apply_json
+        ),
         product_full_commercial_blocker_evidence_matrix_packet=_read_json_if_present(
             args.product_full_commercial_blocker_evidence_matrix_json
         ),
@@ -4309,6 +4644,12 @@ def main(argv: list[str] | None = None) -> None:
         ),
         engine_refinement_claim_evidence_priority_packet_path=(
             args.engine_refinement_claim_evidence_priority_packet_json
+        ),
+        refine_tier_public_benchmark_readiness_path=(
+            args.refine_tier_public_benchmark_readiness_json
+        ),
+        refine_tier_public_benchmark_work_order_apply_path=(
+            args.refine_tier_public_benchmark_work_order_apply_json
         ),
         product_full_commercial_blocker_evidence_matrix_path=(
             args.product_full_commercial_blocker_evidence_matrix_json

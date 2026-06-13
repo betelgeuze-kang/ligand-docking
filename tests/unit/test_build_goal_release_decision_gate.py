@@ -780,6 +780,62 @@ def _blocked_engine_refinement_priority_packet() -> dict:
     }
 
 
+def _refine_tier_public_benchmark_fail_closed() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_refine_tier_public_benchmark_readiness",
+            "input_csv": "config/refine_tier_public_benchmark_intake_current.csv",
+            "input_csv_present": True,
+            "claim_grade_public_benchmark_ready": False,
+            "benchmark_metric_surface_ready": False,
+            "row_count": 0,
+            "valid_row_count": 0,
+            "pose_metric_row_count": 0,
+            "pose_metric_pass_count": 0,
+            "free_energy_pair_count": 0,
+            "blocker_count": 6,
+            "min_total_rows_required": 8,
+            "min_pose_rows_required": 5,
+            "min_free_energy_pairs_required": 5,
+            "operator_work_order_ready": True,
+            "work_order_csv": "runs/refine_tier_public_benchmark_work_order_current.csv",
+            "work_order_row_count": 8,
+            "write_intake_approval_token_required": (
+                "APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE"
+            ),
+            "external_state_mutated": False,
+            "next_required_step": "Fill the work-order CSV from reviewed public provenance.",
+        }
+    }
+
+
+def _refine_tier_public_benchmark_work_order_apply_fail_closed() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_refine_tier_public_benchmark_work_order_apply",
+            "aggregate_readiness_required": True,
+            "apply_ready": False,
+            "work_order_csv": "runs/refine_tier_public_benchmark_work_order_current.csv",
+            "work_order_csv_present": True,
+            "work_order_row_count": 8,
+            "blocked_row_count": 8,
+            "valid_intake_row_count": 0,
+            "blocker_count": 1,
+            "duplicate_benchmark_id_count": 0,
+            "candidate_intake_written": False,
+            "candidate_readiness_checked": False,
+            "candidate_claim_grade_public_benchmark_ready": False,
+            "intake_written": False,
+            "write_intake_requested": False,
+            "approval_token_present": False,
+            "approval_token_accepted": False,
+            "target_intake_csv": "config/refine_tier_public_benchmark_intake_current.csv",
+            "external_state_mutated": False,
+            "next_required_step": "Fill or repair blocked work-order rows.",
+        }
+    }
+
+
 def _full_commercial_bottleneck_briefing() -> dict:
     return {
         "summary": {
@@ -1865,6 +1921,12 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
         product_scope_breadth_evidence_receipt_packet=_blocked_product_scope_receipt(),
         engine_refinement_claim_evidence_receipt_packet=_blocked_engine_refinement_receipt(),
         engine_refinement_claim_evidence_priority_packet=_blocked_engine_refinement_priority_packet(),
+        refine_tier_public_benchmark_readiness_packet=(
+            _refine_tier_public_benchmark_fail_closed()
+        ),
+        refine_tier_public_benchmark_work_order_apply_packet=(
+            _refine_tier_public_benchmark_work_order_apply_fail_closed()
+        ),
         product_full_commercial_blocker_evidence_matrix_packet=_blocked_full_commercial_matrix(),
     )
 
@@ -2108,6 +2170,26 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
     assert summary["engine_refinement_claim_evidence_priority_packet_approval_token_required"] == (
         "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
     )
+    assert summary["refine_tier_public_benchmark_recorded"] is True
+    assert summary["refine_tier_public_benchmark_status"] == (
+        "blocked_refine_tier_public_benchmark_readiness"
+    )
+    assert summary["refine_tier_public_benchmark_claim_grade_public_benchmark_ready"] is False
+    assert summary["refine_tier_public_benchmark_row_count"] == 0
+    assert summary["refine_tier_public_benchmark_valid_row_count"] == 0
+    assert summary["refine_tier_public_benchmark_blocker_count"] == 6
+    assert summary["refine_tier_public_benchmark_operator_work_order_ready"] is True
+    assert summary["refine_tier_public_benchmark_work_order_row_count"] == 8
+    assert summary["refine_tier_public_benchmark_write_intake_approval_token_required"] == (
+        "APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE"
+    )
+    assert summary["refine_tier_public_benchmark_work_order_apply_recorded"] is True
+    assert summary["refine_tier_public_benchmark_work_order_apply_status"] == (
+        "blocked_refine_tier_public_benchmark_work_order_apply"
+    )
+    assert summary["refine_tier_public_benchmark_work_order_apply_blocked_row_count"] == 8
+    assert summary["refine_tier_public_benchmark_work_order_apply_intake_written"] is False
+    assert summary["refine_tier_public_benchmark_work_order_apply_external_state_mutated"] is False
     matrix_row = next(
         row
         for row in payload["rows"]
@@ -2142,6 +2224,16 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
         row
         for row in payload["rows"]
         if row["check"] == "engine_refinement_claim_evidence_priority_packet_recorded"
+    )
+    benchmark_row = next(
+        row
+        for row in payload["rows"]
+        if row["check"] == "refine_tier_public_benchmark_fail_closed_recorded"
+    )
+    benchmark_apply_row = next(
+        row
+        for row in payload["rows"]
+        if row["check"] == "refine_tier_public_benchmark_work_order_apply_fail_closed_recorded"
     )
     assert bottleneck_row["status"] == "pass"
     assert bottleneck_row["release_blocker"] is False
@@ -2183,6 +2275,14 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
     assert engine_priority_row["release_blocker"] is False
     assert "top_blocker_id=public_benchmark_gate_not_ready" in engine_priority_row["observed"]
     assert "public_benchmark_work_order_apply_blocked_row_count=8" in engine_priority_row["observed"]
+    assert benchmark_row["status"] == "pass"
+    assert benchmark_row["release_blocker"] is False
+    assert "claim_grade_public_benchmark_ready=false" in benchmark_row["observed"]
+    assert "write_intake_approval_token_required=APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE" in benchmark_row["observed"]
+    assert benchmark_apply_row["status"] == "pass"
+    assert benchmark_apply_row["release_blocker"] is False
+    assert "blocked_row_count=8" in benchmark_apply_row["observed"]
+    assert "intake_written=false" in benchmark_apply_row["observed"]
 
 
 def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_blocking_restricted_release() -> None:

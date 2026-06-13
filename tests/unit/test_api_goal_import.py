@@ -139,6 +139,67 @@ def _assert_scope_priority_fields(*, status: dict, prefix: str, artifact: dict) 
     )
 
 
+def _assert_refine_tier_public_benchmark_fields(
+    *, observed: dict, artifact: dict
+) -> None:
+    bool_fields = [
+        "refine_tier_public_benchmark_gate_present",
+        "refine_tier_public_benchmark_recorded",
+        "refine_tier_public_benchmark_input_csv_present",
+        "refine_tier_public_benchmark_claim_grade_public_benchmark_ready",
+        "refine_tier_public_benchmark_benchmark_metric_surface_ready",
+        "refine_tier_public_benchmark_operator_work_order_ready",
+        "refine_tier_public_benchmark_external_state_mutated",
+        "refine_tier_public_benchmark_work_order_apply_gate_present",
+        "refine_tier_public_benchmark_work_order_apply_recorded",
+        "refine_tier_public_benchmark_work_order_apply_aggregate_readiness_required",
+        "refine_tier_public_benchmark_work_order_apply_apply_ready",
+        "refine_tier_public_benchmark_work_order_apply_work_order_csv_present",
+        "refine_tier_public_benchmark_work_order_apply_candidate_intake_written",
+        "refine_tier_public_benchmark_work_order_apply_candidate_readiness_checked",
+        "refine_tier_public_benchmark_work_order_apply_candidate_claim_grade_public_benchmark_ready",
+        "refine_tier_public_benchmark_work_order_apply_intake_written",
+        "refine_tier_public_benchmark_work_order_apply_write_intake_requested",
+        "refine_tier_public_benchmark_work_order_apply_approval_token_present",
+        "refine_tier_public_benchmark_work_order_apply_approval_token_accepted",
+        "refine_tier_public_benchmark_work_order_apply_external_state_mutated",
+    ]
+    int_fields = [
+        "refine_tier_public_benchmark_row_count",
+        "refine_tier_public_benchmark_valid_row_count",
+        "refine_tier_public_benchmark_pose_metric_row_count",
+        "refine_tier_public_benchmark_pose_metric_pass_count",
+        "refine_tier_public_benchmark_free_energy_pair_count",
+        "refine_tier_public_benchmark_blocker_count",
+        "refine_tier_public_benchmark_min_total_rows_required",
+        "refine_tier_public_benchmark_min_pose_rows_required",
+        "refine_tier_public_benchmark_min_free_energy_pairs_required",
+        "refine_tier_public_benchmark_work_order_row_count",
+        "refine_tier_public_benchmark_work_order_apply_work_order_row_count",
+        "refine_tier_public_benchmark_work_order_apply_blocked_row_count",
+        "refine_tier_public_benchmark_work_order_apply_valid_intake_row_count",
+        "refine_tier_public_benchmark_work_order_apply_blocker_count",
+        "refine_tier_public_benchmark_work_order_apply_duplicate_benchmark_id_count",
+    ]
+    text_fields = [
+        "refine_tier_public_benchmark_status",
+        "refine_tier_public_benchmark_input_csv",
+        "refine_tier_public_benchmark_work_order_csv",
+        "refine_tier_public_benchmark_write_intake_approval_token_required",
+        "refine_tier_public_benchmark_next_required_step",
+        "refine_tier_public_benchmark_work_order_apply_status",
+        "refine_tier_public_benchmark_work_order_apply_work_order_csv",
+        "refine_tier_public_benchmark_work_order_apply_target_intake_csv",
+        "refine_tier_public_benchmark_work_order_apply_next_required_step",
+    ]
+    for field in bool_fields:
+        assert observed[field] is (artifact.get(field) is True)
+    for field in int_fields:
+        assert observed[field] == int(artifact.get(field) or 0)
+    for field in text_fields:
+        assert observed[field] == artifact.get(field, "")
+
+
 def test_api_app_imports_with_goal_router() -> None:
     from api.main import app
 
@@ -418,6 +479,10 @@ def test_api_app_imports_with_goal_router() -> None:
     )
     assert status["product_ledger_privacy_scan_external_state_mutated"] is (
         release_artifact.get("product_ledger_privacy_scan_external_state_mutated") is True
+    )
+    _assert_refine_tier_public_benchmark_fields(
+        observed=status,
+        artifact=release_artifact,
     )
     assert status["api_runner_profile_promotion_operator_receipt_recorded"] is (
         release_artifact.get("api_runner_profile_promotion_operator_receipt_recorded") is True
@@ -1039,6 +1104,10 @@ def test_api_app_imports_with_goal_router() -> None:
     )
     assert release["product_ledger_privacy_scan_leak_count"] == int(
         release_artifact.get("product_ledger_privacy_scan_leak_count") or 0
+    )
+    _assert_refine_tier_public_benchmark_fields(
+        observed=release,
+        artifact=release_artifact,
     )
     assert release["blocker_count"] == int(release_artifact.get("blocker_count") or 0)
     assert len(release["checks"]) == int(release_artifact.get("check_count") or 0)

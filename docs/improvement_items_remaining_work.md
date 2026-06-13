@@ -828,6 +828,16 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `claim_grade_public_benchmark_ready=false`, `blocker_count=6`,
   `operator_work_order_ready=true`, `work_order_row_count=8`로 실제 curated
   benchmark row 입력만 아직 없음을 명확히 드러낸다.
+  최신 `goal_release_decision_gate_current.json`, `/goal/status`,
+  `/goal/release-decision`도 이 원본 readiness를 직접 노출해
+  `refine_tier_public_benchmark_recorded=true`,
+  `refine_tier_public_benchmark_status=blocked_refine_tier_public_benchmark_readiness`,
+  `row_count=0`, `valid_row_count=0`, `pose_metric_pass_count=0`,
+  `free_energy_pair_count=0`, `blocker_count=6`,
+  `write_intake_approval_token_required=APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE`,
+  `external_state_mutated=false`를 고정한다. final refresh는 이 값들을
+  true/zero/exact/text check로 재검증해 curated public benchmark가 아직
+  입력되지 않았다는 fail-closed 상태가 drift되면 release를 차단한다.
   같은 blocker/work-order 상태는 engine readiness summary에도
   `public_benchmark_blockers`, `public_benchmark_next_required_step`로 반영된다.
   같은 builder는 `runs/refine_tier_public_benchmark_work_order_current.csv`에
@@ -844,6 +854,15 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `runs/refine_tier_public_benchmark_work_order_apply_current.json`은
   `blocked_refine_tier_public_benchmark_work_order_apply`, `work_order_row_count=8`,
   `blocked_row_count=8`, `candidate_intake_written=false`, `intake_written=false`이다.
+  같은 apply artifact도 release/API 표면에
+  `refine_tier_public_benchmark_work_order_apply_recorded=true`,
+  `aggregate_readiness_required=true`, `apply_ready=false`,
+  `blocked_row_count=8`, `valid_intake_row_count=0`,
+  `candidate_intake_written=false`, `candidate_readiness_checked=false`,
+  `write_intake_requested=false`, `approval_token_present=false`,
+  `approval_token_accepted=false`, `external_state_mutated=false`로 직접 올라오며,
+  final refresh exact/zero/text check가 승인 없는 intake write나 candidate mutation을
+  자동 차단한다.
   다음 S-class 작업은 metal/cofactor calibrated parameterization 및 coverage expansion,
   charged-residue formal protonation-state assignment, calibrated atom-level charge/torsion/improper parameterization,
   solvent/FEP public-pair calibration,

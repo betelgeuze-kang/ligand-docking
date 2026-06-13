@@ -448,6 +448,165 @@ def _ledger_privacy_scan_release_fields(release: dict[str, Any]) -> dict[str, An
     }
 
 
+def _refine_tier_public_benchmark_release_fields(release: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "refine_tier_public_benchmark_gate_present": bool(
+            release.get("refine_tier_public_benchmark_gate_present") is True
+        ),
+        "refine_tier_public_benchmark_status": release.get(
+            "refine_tier_public_benchmark_status", ""
+        ),
+        "refine_tier_public_benchmark_recorded": bool(
+            release.get("refine_tier_public_benchmark_recorded") is True
+        ),
+        "refine_tier_public_benchmark_input_csv": release.get(
+            "refine_tier_public_benchmark_input_csv", ""
+        ),
+        "refine_tier_public_benchmark_input_csv_present": bool(
+            release.get("refine_tier_public_benchmark_input_csv_present") is True
+        ),
+        "refine_tier_public_benchmark_claim_grade_public_benchmark_ready": bool(
+            release.get("refine_tier_public_benchmark_claim_grade_public_benchmark_ready")
+            is True
+        ),
+        "refine_tier_public_benchmark_benchmark_metric_surface_ready": bool(
+            release.get("refine_tier_public_benchmark_benchmark_metric_surface_ready") is True
+        ),
+        "refine_tier_public_benchmark_row_count": _int(
+            release.get("refine_tier_public_benchmark_row_count")
+        ),
+        "refine_tier_public_benchmark_valid_row_count": _int(
+            release.get("refine_tier_public_benchmark_valid_row_count")
+        ),
+        "refine_tier_public_benchmark_pose_metric_row_count": _int(
+            release.get("refine_tier_public_benchmark_pose_metric_row_count")
+        ),
+        "refine_tier_public_benchmark_pose_metric_pass_count": _int(
+            release.get("refine_tier_public_benchmark_pose_metric_pass_count")
+        ),
+        "refine_tier_public_benchmark_free_energy_pair_count": _int(
+            release.get("refine_tier_public_benchmark_free_energy_pair_count")
+        ),
+        "refine_tier_public_benchmark_blocker_count": _int(
+            release.get("refine_tier_public_benchmark_blocker_count")
+        ),
+        "refine_tier_public_benchmark_min_total_rows_required": _int(
+            release.get("refine_tier_public_benchmark_min_total_rows_required")
+        ),
+        "refine_tier_public_benchmark_min_pose_rows_required": _int(
+            release.get("refine_tier_public_benchmark_min_pose_rows_required")
+        ),
+        "refine_tier_public_benchmark_min_free_energy_pairs_required": _int(
+            release.get("refine_tier_public_benchmark_min_free_energy_pairs_required")
+        ),
+        "refine_tier_public_benchmark_operator_work_order_ready": bool(
+            release.get("refine_tier_public_benchmark_operator_work_order_ready") is True
+        ),
+        "refine_tier_public_benchmark_work_order_csv": release.get(
+            "refine_tier_public_benchmark_work_order_csv", ""
+        ),
+        "refine_tier_public_benchmark_work_order_row_count": _int(
+            release.get("refine_tier_public_benchmark_work_order_row_count")
+        ),
+        "refine_tier_public_benchmark_write_intake_approval_token_required": release.get(
+            "refine_tier_public_benchmark_write_intake_approval_token_required", ""
+        ),
+        "refine_tier_public_benchmark_external_state_mutated": bool(
+            release.get("refine_tier_public_benchmark_external_state_mutated") is True
+        ),
+        "refine_tier_public_benchmark_next_required_step": release.get(
+            "refine_tier_public_benchmark_next_required_step", ""
+        ),
+        "refine_tier_public_benchmark_work_order_apply_gate_present": bool(
+            release.get("refine_tier_public_benchmark_work_order_apply_gate_present") is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_status": release.get(
+            "refine_tier_public_benchmark_work_order_apply_status", ""
+        ),
+        "refine_tier_public_benchmark_work_order_apply_recorded": bool(
+            release.get("refine_tier_public_benchmark_work_order_apply_recorded") is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_aggregate_readiness_required": bool(
+            release.get(
+                "refine_tier_public_benchmark_work_order_apply_aggregate_readiness_required"
+            )
+            is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_apply_ready": bool(
+            release.get("refine_tier_public_benchmark_work_order_apply_apply_ready") is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_work_order_csv": release.get(
+            "refine_tier_public_benchmark_work_order_apply_work_order_csv", ""
+        ),
+        "refine_tier_public_benchmark_work_order_apply_work_order_csv_present": bool(
+            release.get(
+                "refine_tier_public_benchmark_work_order_apply_work_order_csv_present"
+            )
+            is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_work_order_row_count": _int(
+            release.get("refine_tier_public_benchmark_work_order_apply_work_order_row_count")
+        ),
+        "refine_tier_public_benchmark_work_order_apply_blocked_row_count": _int(
+            release.get("refine_tier_public_benchmark_work_order_apply_blocked_row_count")
+        ),
+        "refine_tier_public_benchmark_work_order_apply_valid_intake_row_count": _int(
+            release.get("refine_tier_public_benchmark_work_order_apply_valid_intake_row_count")
+        ),
+        "refine_tier_public_benchmark_work_order_apply_blocker_count": _int(
+            release.get("refine_tier_public_benchmark_work_order_apply_blocker_count")
+        ),
+        "refine_tier_public_benchmark_work_order_apply_duplicate_benchmark_id_count": _int(
+            release.get(
+                "refine_tier_public_benchmark_work_order_apply_duplicate_benchmark_id_count"
+            )
+        ),
+        "refine_tier_public_benchmark_work_order_apply_candidate_intake_written": bool(
+            release.get(
+                "refine_tier_public_benchmark_work_order_apply_candidate_intake_written"
+            )
+            is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_candidate_readiness_checked": bool(
+            release.get(
+                "refine_tier_public_benchmark_work_order_apply_candidate_readiness_checked"
+            )
+            is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_candidate_claim_grade_public_benchmark_ready": bool(
+            release.get(
+                "refine_tier_public_benchmark_work_order_apply_candidate_claim_grade_public_benchmark_ready"
+            )
+            is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_intake_written": bool(
+            release.get("refine_tier_public_benchmark_work_order_apply_intake_written") is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_write_intake_requested": bool(
+            release.get("refine_tier_public_benchmark_work_order_apply_write_intake_requested")
+            is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_approval_token_present": bool(
+            release.get("refine_tier_public_benchmark_work_order_apply_approval_token_present")
+            is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_approval_token_accepted": bool(
+            release.get("refine_tier_public_benchmark_work_order_apply_approval_token_accepted")
+            is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_target_intake_csv": release.get(
+            "refine_tier_public_benchmark_work_order_apply_target_intake_csv", ""
+        ),
+        "refine_tier_public_benchmark_work_order_apply_external_state_mutated": bool(
+            release.get("refine_tier_public_benchmark_work_order_apply_external_state_mutated")
+            is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_next_required_step": release.get(
+            "refine_tier_public_benchmark_work_order_apply_next_required_step", ""
+        ),
+    }
+
+
 def _bottleneck_id(row: dict[str, Any]) -> str:
     return str(row.get("bottleneck_id") or row.get("requirement_id") or row.get("phase") or "").strip()
 
@@ -821,6 +980,7 @@ async def get_goal_status() -> dict[str, Any]:
             **_api_runner_profile_receipt_release_fields({}),
             **_pose_sampling_release_fields({}),
             **_ledger_privacy_scan_release_fields({}),
+            **_refine_tier_public_benchmark_release_fields({}),
             "product_goal_release_blocker_fail_count": 0,
             "product_goal_release_blocker_requirement_ids": [],
             "product_goal_primary_release_blocker_requirement_id": "",
@@ -1136,6 +1296,7 @@ async def get_goal_status() -> dict[str, Any]:
         **_api_runner_profile_receipt_release_fields(release),
         **_pose_sampling_release_fields(release),
         **_ledger_privacy_scan_release_fields(release),
+        **_refine_tier_public_benchmark_release_fields(release),
         "product_goal_release_blocker_fail_count": _int(
             actions.get("product_goal_release_blocker_fail_count")
             or intake.get("product_goal_release_blocker_fail_count")
@@ -1730,6 +1891,7 @@ async def get_goal_release_decision() -> dict[str, Any]:
             **_api_runner_profile_receipt_release_fields({}),
             **_pose_sampling_release_fields({}),
             **_ledger_privacy_scan_release_fields({}),
+            **_refine_tier_public_benchmark_release_fields({}),
             **_mutation_flags(),
             "claim_boundary": CLAIM_BOUNDARY,
         }
@@ -1739,6 +1901,7 @@ async def get_goal_release_decision() -> dict[str, Any]:
         **_api_runner_profile_receipt_release_fields(summary),
         **_pose_sampling_release_fields(summary),
         **_ledger_privacy_scan_release_fields(summary),
+        **_refine_tier_public_benchmark_release_fields(summary),
         "artifact_path": str(GOAL_RELEASE_DECISION_ARTIFACT),
         "checks": _rows(packet),
         "blockers": _blockers(packet),

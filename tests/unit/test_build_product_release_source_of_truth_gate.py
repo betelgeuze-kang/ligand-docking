@@ -207,6 +207,39 @@ def _refresh_release_decision_ready() -> dict:
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_row_count": 8,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_blocked_row_count": 8,
             "engine_refinement_claim_evidence_priority_packet_approval_token_count": 1,
+            "refine_tier_public_benchmark_recorded": True,
+            "refine_tier_public_benchmark_input_csv_present": True,
+            "refine_tier_public_benchmark_operator_work_order_ready": True,
+            "refine_tier_public_benchmark_work_order_apply_recorded": True,
+            "refine_tier_public_benchmark_work_order_apply_aggregate_readiness_required": True,
+            "refine_tier_public_benchmark_work_order_apply_work_order_csv_present": True,
+            "refine_tier_public_benchmark_claim_grade_public_benchmark_ready": False,
+            "refine_tier_public_benchmark_benchmark_metric_surface_ready": False,
+            "refine_tier_public_benchmark_row_count": 0,
+            "refine_tier_public_benchmark_valid_row_count": 0,
+            "refine_tier_public_benchmark_pose_metric_row_count": 0,
+            "refine_tier_public_benchmark_pose_metric_pass_count": 0,
+            "refine_tier_public_benchmark_free_energy_pair_count": 0,
+            "refine_tier_public_benchmark_blocker_count": 6,
+            "refine_tier_public_benchmark_min_total_rows_required": 8,
+            "refine_tier_public_benchmark_min_pose_rows_required": 5,
+            "refine_tier_public_benchmark_min_free_energy_pairs_required": 5,
+            "refine_tier_public_benchmark_work_order_row_count": 8,
+            "refine_tier_public_benchmark_external_state_mutated": False,
+            "refine_tier_public_benchmark_work_order_apply_apply_ready": False,
+            "refine_tier_public_benchmark_work_order_apply_work_order_row_count": 8,
+            "refine_tier_public_benchmark_work_order_apply_blocked_row_count": 8,
+            "refine_tier_public_benchmark_work_order_apply_valid_intake_row_count": 0,
+            "refine_tier_public_benchmark_work_order_apply_blocker_count": 1,
+            "refine_tier_public_benchmark_work_order_apply_duplicate_benchmark_id_count": 0,
+            "refine_tier_public_benchmark_work_order_apply_candidate_intake_written": False,
+            "refine_tier_public_benchmark_work_order_apply_candidate_readiness_checked": False,
+            "refine_tier_public_benchmark_work_order_apply_candidate_claim_grade_public_benchmark_ready": False,
+            "refine_tier_public_benchmark_work_order_apply_intake_written": False,
+            "refine_tier_public_benchmark_work_order_apply_write_intake_requested": False,
+            "refine_tier_public_benchmark_work_order_apply_approval_token_present": False,
+            "refine_tier_public_benchmark_work_order_apply_approval_token_accepted": False,
+            "refine_tier_public_benchmark_work_order_apply_external_state_mutated": False,
             "cameo_official_result_fetch_preflight_blocked_row_count": 1,
             "cameo_official_result_fetch_preflight_blocker_count": 2,
             "cameo_official_result_fetch_preflight_awaiting_operator_fetch_approval_row_count": 1,
@@ -484,6 +517,27 @@ def _refresh_release_decision_ready() -> dict:
             ),
             "engine_refinement_claim_evidence_priority_packet_approval_token_required": (
                 "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+            ),
+            "refine_tier_public_benchmark_status": (
+                "blocked_refine_tier_public_benchmark_readiness"
+            ),
+            "refine_tier_public_benchmark_input_csv": (
+                "config/refine_tier_public_benchmark_intake_current.csv"
+            ),
+            "refine_tier_public_benchmark_work_order_csv": (
+                "runs/refine_tier_public_benchmark_work_order_current.csv"
+            ),
+            "refine_tier_public_benchmark_write_intake_approval_token_required": (
+                "APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE"
+            ),
+            "refine_tier_public_benchmark_work_order_apply_status": (
+                "blocked_refine_tier_public_benchmark_work_order_apply"
+            ),
+            "refine_tier_public_benchmark_work_order_apply_work_order_csv": (
+                "runs/refine_tier_public_benchmark_work_order_current.csv"
+            ),
+            "refine_tier_public_benchmark_work_order_apply_target_intake_csv": (
+                "config/refine_tier_public_benchmark_intake_current.csv"
             ),
             "science_claim_promotion_gap_closure_status": (
                 "blocked_science_claim_promotion_gap_closure"
@@ -787,6 +841,28 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert "product_ledger_privacy_scan_invalid_json_count" in release_row["required_zero_fields"]
     assert "product_ledger_privacy_scan_execution_enabled" in release_row["required_zero_fields"]
     assert "product_ledger_privacy_scan_external_state_mutated" in release_row["required_zero_fields"]
+    assert (
+        "refine_tier_public_benchmark_claim_grade_public_benchmark_ready"
+        in release_row["required_zero_fields"]
+    )
+    assert (
+        "refine_tier_public_benchmark_benchmark_metric_surface_ready"
+        in release_row["required_zero_fields"]
+    )
+    assert "refine_tier_public_benchmark_row_count" in release_row["required_zero_fields"]
+    assert "refine_tier_public_benchmark_valid_row_count" in release_row["required_zero_fields"]
+    assert (
+        "refine_tier_public_benchmark_work_order_apply_apply_ready"
+        in release_row["required_zero_fields"]
+    )
+    assert (
+        "refine_tier_public_benchmark_work_order_apply_intake_written"
+        in release_row["required_zero_fields"]
+    )
+    assert (
+        "refine_tier_public_benchmark_work_order_apply_external_state_mutated"
+        in release_row["required_zero_fields"]
+    )
     assert "accuracy_parity_scorecard_recorded" in release_row["required_true_fields"]
     assert (
         "api_runner_profile_promotion_operator_receipt_recorded"
@@ -799,6 +875,27 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     )
     assert (
         "engine_refinement_claim_evidence_priority_packet_recorded"
+        in release_row["required_true_fields"]
+    )
+    assert "refine_tier_public_benchmark_recorded" in release_row["required_true_fields"]
+    assert (
+        "refine_tier_public_benchmark_input_csv_present"
+        in release_row["required_true_fields"]
+    )
+    assert (
+        "refine_tier_public_benchmark_operator_work_order_ready"
+        in release_row["required_true_fields"]
+    )
+    assert (
+        "refine_tier_public_benchmark_work_order_apply_recorded"
+        in release_row["required_true_fields"]
+    )
+    assert (
+        "refine_tier_public_benchmark_work_order_apply_aggregate_readiness_required"
+        in release_row["required_true_fields"]
+    )
+    assert (
+        "refine_tier_public_benchmark_work_order_apply_work_order_csv_present"
         in release_row["required_true_fields"]
     )
     assert "product_quality_gate_verification_recorded" in release_row["required_true_fields"]
@@ -857,6 +954,30 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_int_exact_fields"][
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_blocked_row_count"
     ] == 8
+    assert release_row["required_int_exact_fields"][
+        "refine_tier_public_benchmark_blocker_count"
+    ] == 6
+    assert release_row["required_int_exact_fields"][
+        "refine_tier_public_benchmark_min_total_rows_required"
+    ] == 8
+    assert release_row["required_int_exact_fields"][
+        "refine_tier_public_benchmark_min_pose_rows_required"
+    ] == 5
+    assert release_row["required_int_exact_fields"][
+        "refine_tier_public_benchmark_min_free_energy_pairs_required"
+    ] == 5
+    assert release_row["required_int_exact_fields"][
+        "refine_tier_public_benchmark_work_order_row_count"
+    ] == 8
+    assert release_row["required_int_exact_fields"][
+        "refine_tier_public_benchmark_work_order_apply_work_order_row_count"
+    ] == 8
+    assert release_row["required_int_exact_fields"][
+        "refine_tier_public_benchmark_work_order_apply_blocked_row_count"
+    ] == 8
+    assert release_row["required_int_exact_fields"][
+        "refine_tier_public_benchmark_work_order_apply_blocker_count"
+    ] == 1
     assert release_row["required_int_exact_fields"][
         "product_quality_gate_verification_check_count"
     ] == 4
@@ -972,6 +1093,27 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_text_exact_fields"][
         "engine_refinement_claim_evidence_priority_packet_top_priority_bucket"
     ] == "public_benchmark_work_order_apply_required"
+    assert release_row["required_text_exact_fields"][
+        "refine_tier_public_benchmark_status"
+    ] == "blocked_refine_tier_public_benchmark_readiness"
+    assert release_row["required_text_exact_fields"][
+        "refine_tier_public_benchmark_input_csv"
+    ] == "config/refine_tier_public_benchmark_intake_current.csv"
+    assert release_row["required_text_exact_fields"][
+        "refine_tier_public_benchmark_work_order_csv"
+    ] == "runs/refine_tier_public_benchmark_work_order_current.csv"
+    assert release_row["required_text_exact_fields"][
+        "refine_tier_public_benchmark_write_intake_approval_token_required"
+    ] == "APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE"
+    assert release_row["required_text_exact_fields"][
+        "refine_tier_public_benchmark_work_order_apply_status"
+    ] == "blocked_refine_tier_public_benchmark_work_order_apply"
+    assert release_row["required_text_exact_fields"][
+        "refine_tier_public_benchmark_work_order_apply_work_order_csv"
+    ] == "runs/refine_tier_public_benchmark_work_order_current.csv"
+    assert release_row["required_text_exact_fields"][
+        "refine_tier_public_benchmark_work_order_apply_target_intake_csv"
+    ] == "config/refine_tier_public_benchmark_intake_current.csv"
     assert release_row["required_int_exact_fields"][
         "science_claim_promotion_gap_closure_open_gap_count"
     ] == 2
