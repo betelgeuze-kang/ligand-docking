@@ -156,6 +156,15 @@ def _string_list(value: Any) -> list[str]:
     return []
 
 
+def _delimited_string_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value if str(item).strip()]
+    if isinstance(value, str) and value.strip():
+        normalized = value.replace(";", ",")
+        return [part.strip() for part in normalized.split(",") if part.strip()]
+    return []
+
+
 def _accuracy_parity_release_fields(release: dict[str, Any]) -> dict[str, Any]:
     return {
         "accuracy_parity_scorecard_gate_present": bool(
@@ -1207,6 +1216,215 @@ def _deploy_ops_legal_gap_closure_fields(deploy: dict[str, Any]) -> dict[str, An
     }
 
 
+def _license_legal_boundary_release_fields(release: dict[str, Any]) -> dict[str, Any]:
+    audit_guard_missing_reasons: list[str] = []
+    if release.get("self_hosted_license_distribution_audit_gate_present") is not True:
+        audit_guard_missing_reasons.append("audit_gate_not_present")
+    if release.get("self_hosted_license_distribution_audit_recorded") is not True:
+        audit_guard_missing_reasons.append("audit_not_recorded")
+    if release.get("self_hosted_license_distribution_audit_status") != (
+        "self_hosted_license_distribution_audit_recorded"
+    ):
+        audit_guard_missing_reasons.append("audit_status_not_recorded")
+    if release.get(
+        "self_hosted_license_distribution_audit_product_license_hash_matches_approved_source"
+    ) is not True:
+        audit_guard_missing_reasons.append("product_license_hash_mismatch")
+    if _int(release.get("self_hosted_license_distribution_audit_hard_blocker_count")) != 0:
+        audit_guard_missing_reasons.append("hard_blockers_present")
+    if _int(release.get("self_hosted_license_distribution_audit_operator_review_item_count")) < 1:
+        audit_guard_missing_reasons.append("operator_review_boundary_missing")
+    if release.get(
+        "self_hosted_license_distribution_audit_third_party_license_review_gate_ready"
+    ) is not True:
+        audit_guard_missing_reasons.append("third_party_review_gate_not_ready")
+    if _int(
+        release.get(
+            "self_hosted_license_distribution_audit_third_party_license_review_gate_blocker_count"
+        )
+    ) != 0:
+        audit_guard_missing_reasons.append("third_party_review_blockers_present")
+    if release.get("self_hosted_license_distribution_audit_legal_advice_provided") is True:
+        audit_guard_missing_reasons.append("legal_advice_claimed")
+    if release.get("self_hosted_license_distribution_audit_external_state_mutated") is True:
+        audit_guard_missing_reasons.append("audit_mutated_external_state")
+
+    third_party_guard_missing_reasons: list[str] = []
+    if release.get("third_party_license_review_gate_present") is not True:
+        third_party_guard_missing_reasons.append("review_gate_not_present")
+    if release.get("third_party_license_review_gate_recorded") is not True:
+        third_party_guard_missing_reasons.append("review_gate_not_recorded")
+    if release.get("third_party_license_review_gate_ready") is not True:
+        third_party_guard_missing_reasons.append("review_gate_not_ready")
+    if release.get("third_party_license_review_gate_status") != "third_party_license_review_gate_ready":
+        third_party_guard_missing_reasons.append("review_gate_status_not_ready")
+    if release.get("third_party_license_review_gate_review_csv_present") is not True:
+        third_party_guard_missing_reasons.append("review_csv_missing")
+    if not release.get("third_party_license_review_gate_review_csv"):
+        third_party_guard_missing_reasons.append("review_csv_path_missing")
+    if not release.get("third_party_license_review_gate_operator_template_csv"):
+        third_party_guard_missing_reasons.append("operator_template_missing")
+    if not release.get("third_party_license_review_gate_approval_token_required"):
+        third_party_guard_missing_reasons.append("approval_token_missing")
+    if _int(release.get("third_party_license_review_gate_review_row_count")) < 1:
+        third_party_guard_missing_reasons.append("review_row_missing")
+    if _int(release.get("third_party_license_review_gate_blocker_count")) != 0:
+        third_party_guard_missing_reasons.append("review_blockers_present")
+    if _int(release.get("third_party_license_review_gate_missing_review_asset_count")) != 0:
+        third_party_guard_missing_reasons.append("missing_review_assets_present")
+    if _int(release.get("third_party_license_review_gate_deferred_review_asset_count")) != 0:
+        third_party_guard_missing_reasons.append("deferred_review_assets_present")
+    if release.get("third_party_license_review_gate_asset_modified") is True:
+        third_party_guard_missing_reasons.append("asset_modified")
+    if release.get("third_party_license_review_gate_legal_advice_provided") is True:
+        third_party_guard_missing_reasons.append("legal_advice_claimed")
+    if release.get("third_party_license_review_gate_external_state_mutated") is True:
+        third_party_guard_missing_reasons.append("review_mutated_external_state")
+
+    return {
+        "self_hosted_license_distribution_audit_gate_present": bool(
+            release.get("self_hosted_license_distribution_audit_gate_present") is True
+        ),
+        "self_hosted_license_distribution_audit_status": release.get(
+            "self_hosted_license_distribution_audit_status", ""
+        ),
+        "self_hosted_license_distribution_audit_recorded": bool(
+            release.get("self_hosted_license_distribution_audit_recorded") is True
+        ),
+        "self_hosted_license_distribution_audit_product_license_path": release.get(
+            "self_hosted_license_distribution_audit_product_license_path", ""
+        ),
+        "self_hosted_license_distribution_audit_approved_license_text_source": release.get(
+            "self_hosted_license_distribution_audit_approved_license_text_source", ""
+        ),
+        "self_hosted_license_distribution_audit_product_license_hash_matches_approved_source": bool(
+            release.get(
+                "self_hosted_license_distribution_audit_product_license_hash_matches_approved_source"
+            )
+            is True
+        ),
+        "self_hosted_license_distribution_audit_spdx_license_id": release.get(
+            "self_hosted_license_distribution_audit_spdx_license_id", ""
+        ),
+        "self_hosted_license_distribution_audit_copyright_holder": release.get(
+            "self_hosted_license_distribution_audit_copyright_holder", ""
+        ),
+        "self_hosted_license_distribution_audit_hard_blocker_count": _int(
+            release.get("self_hosted_license_distribution_audit_hard_blocker_count")
+        ),
+        "self_hosted_license_distribution_audit_operator_review_item_count": _int(
+            release.get("self_hosted_license_distribution_audit_operator_review_item_count")
+        ),
+        "self_hosted_license_distribution_audit_third_party_dual_license_assets": _string_list(
+            release.get("self_hosted_license_distribution_audit_third_party_dual_license_assets")
+        ),
+        "self_hosted_license_distribution_audit_third_party_license_review_gate_status": release.get(
+            "self_hosted_license_distribution_audit_third_party_license_review_gate_status",
+            "",
+        ),
+        "self_hosted_license_distribution_audit_third_party_license_review_gate_ready": bool(
+            release.get(
+                "self_hosted_license_distribution_audit_third_party_license_review_gate_ready"
+            )
+            is True
+        ),
+        "self_hosted_license_distribution_audit_third_party_license_review_gate_blocker_count": _int(
+            release.get(
+                "self_hosted_license_distribution_audit_third_party_license_review_gate_blocker_count"
+            )
+        ),
+        "self_hosted_license_distribution_audit_viewer_third_party_notice_path": release.get(
+            "self_hosted_license_distribution_audit_viewer_third_party_notice_path", ""
+        ),
+        "self_hosted_license_distribution_audit_legal_advice_provided": bool(
+            release.get("self_hosted_license_distribution_audit_legal_advice_provided")
+            is True
+        ),
+        "self_hosted_license_distribution_audit_external_state_mutated": bool(
+            release.get("self_hosted_license_distribution_audit_external_state_mutated")
+            is True
+        ),
+        "self_hosted_license_distribution_audit_boundary_guard_ready": (
+            not audit_guard_missing_reasons
+        ),
+        "self_hosted_license_distribution_audit_boundary_guard_missing_reasons": (
+            audit_guard_missing_reasons
+        ),
+        "third_party_license_review_gate_present": bool(
+            release.get("third_party_license_review_gate_present") is True
+        ),
+        "third_party_license_review_gate_status": release.get(
+            "third_party_license_review_gate_status", ""
+        ),
+        "third_party_license_review_gate_recorded": bool(
+            release.get("third_party_license_review_gate_recorded") is True
+        ),
+        "third_party_license_review_gate_ready": bool(
+            release.get("third_party_license_review_gate_ready") is True
+        ),
+        "third_party_license_review_gate_review_csv": release.get(
+            "third_party_license_review_gate_review_csv", ""
+        ),
+        "third_party_license_review_gate_review_csv_present": bool(
+            release.get("third_party_license_review_gate_review_csv_present") is True
+        ),
+        "third_party_license_review_gate_operator_template_csv": release.get(
+            "third_party_license_review_gate_operator_template_csv", ""
+        ),
+        "third_party_license_review_gate_approval_token_required": release.get(
+            "third_party_license_review_gate_approval_token_required", ""
+        ),
+        "third_party_license_review_gate_review_row_count": _int(
+            release.get("third_party_license_review_gate_review_row_count")
+        ),
+        "third_party_license_review_gate_expected_review_asset_count": _int(
+            release.get("third_party_license_review_gate_expected_review_asset_count")
+        ),
+        "third_party_license_review_gate_approved_review_asset_count": _int(
+            release.get("third_party_license_review_gate_approved_review_asset_count")
+        ),
+        "third_party_license_review_gate_missing_review_asset_count": _int(
+            release.get("third_party_license_review_gate_missing_review_asset_count")
+        ),
+        "third_party_license_review_gate_deferred_review_asset_count": _int(
+            release.get("third_party_license_review_gate_deferred_review_asset_count")
+        ),
+        "third_party_license_review_gate_blocker_count": _int(
+            release.get("third_party_license_review_gate_blocker_count")
+        ),
+        "third_party_license_review_gate_approved_assets": _string_list(
+            release.get("third_party_license_review_gate_approved_assets")
+        ),
+        "third_party_license_review_gate_allowed_license_paths": _delimited_string_list(
+            release.get("third_party_license_review_gate_allowed_license_paths")
+        ),
+        "third_party_license_review_gate_source_license_audit_status": release.get(
+            "third_party_license_review_gate_source_license_audit_status", ""
+        ),
+        "third_party_license_review_gate_source_hard_blocker_count": _int(
+            release.get("third_party_license_review_gate_source_hard_blocker_count")
+        ),
+        "third_party_license_review_gate_source_operator_review_item_count": _int(
+            release.get("third_party_license_review_gate_source_operator_review_item_count")
+        ),
+        "third_party_license_review_gate_asset_modified": bool(
+            release.get("third_party_license_review_gate_asset_modified") is True
+        ),
+        "third_party_license_review_gate_legal_advice_provided": bool(
+            release.get("third_party_license_review_gate_legal_advice_provided") is True
+        ),
+        "third_party_license_review_gate_external_state_mutated": bool(
+            release.get("third_party_license_review_gate_external_state_mutated") is True
+        ),
+        "third_party_license_review_gate_boundary_guard_ready": (
+            not third_party_guard_missing_reasons
+        ),
+        "third_party_license_review_gate_boundary_guard_missing_reasons": (
+            third_party_guard_missing_reasons
+        ),
+    }
+
+
 def _evidence_receipt_fields(
     *,
     prefix: str,
@@ -1601,6 +1819,7 @@ async def get_goal_status() -> dict[str, Any]:
             **_product_rollout_execution_smoke_receipt_fields({}),
             **_product_launch_r4_preflight_fields({}),
             **_deploy_ops_legal_gap_closure_fields({}),
+            **_license_legal_boundary_release_fields({}),
             **_evidence_receipt_fields(
                 prefix="product_scope_breadth_evidence_receipt",
                 receipt={},
@@ -2051,6 +2270,7 @@ async def get_goal_status() -> dict[str, Any]:
         **_product_rollout_execution_smoke_receipt_fields(rollout_smoke_receipt),
         **_product_launch_r4_preflight_fields(product_launch_r4_preflight),
         **_deploy_ops_legal_gap_closure_fields(deploy_ops_legal),
+        **_license_legal_boundary_release_fields(release),
         **_evidence_receipt_fields(
             prefix="product_scope_breadth_evidence_receipt",
             receipt=scope_receipt,
