@@ -97,6 +97,16 @@ def test_production_ai_registry_promotion_priority_packet_blocks_current_registr
     assert summary["top_gate_id"] == "default_residual_mode_guarded"
     assert summary["top_priority_bucket"] == "guarded_residual_mode_selection_required"
     assert summary["top_acceptance_artifact"] == mod.DEFAULT_REGISTRY_JSON
+    assert summary["top_verification_command"] == mod.REGISTRY_PROMOTION_RECHECK_COMMAND
+    assert "build_product_production_ai_promotion_workbench.py" in summary[
+        "top_verification_command"
+    ]
+    assert "build_production_ai_registry_promotion_operator_receipt.py" in summary[
+        "top_verification_command"
+    ]
+    assert "build_production_ai_registry_promotion_priority_packet.py" in summary[
+        "top_verification_command"
+    ]
     assert summary["observed_registry_default_residual_mode"] == "shadow"
     assert summary["observed_registry_trained_model_checkpoint_count"] == 1
     assert summary["observed_registry_production_promotion_allowed"] is False
@@ -112,6 +122,8 @@ def test_production_ai_registry_promotion_priority_packet_blocks_current_registr
     assert "No new checkpoint registration is required" in payload["rows"][0]["required_input"]
     assert "already satisfied" in payload["rows"][0]["next_operator_step"]
     assert payload["rows"][1]["priority_bucket"] == "guarded_residual_mode_selection_required"
+    assert payload["rows"][1]["verification_command"] == mod.REGISTRY_PROMOTION_RECHECK_COMMAND
+    assert "operator receipt" in payload["rows"][1]["next_operator_step"]
     assert payload["rows"][2]["priority_bucket"] == "blocked_until_guarded_registry_ready"
     assert payload["rows"][3]["priority_bucket"] == "blocked_until_production_promotion_allowed"
     assert all(row["external_state_mutated"] is False for row in payload["rows"])

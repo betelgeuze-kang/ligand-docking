@@ -43,6 +43,14 @@ CLAIM_BOUNDARY = (
     "promote models, run GPU jobs, deploy, upload, email, delete, commit, push, or mutate external state."
 )
 
+REGISTRY_PROMOTION_RECHECK_COMMAND = (
+    "python3 tools/build_residual_model_registry.py; "
+    "python3 tools/build_product_production_ai_checkpoint_readiness.py; "
+    "python3 tools/build_product_production_ai_promotion_workbench.py; "
+    "python3 tools/build_production_ai_registry_promotion_operator_receipt.py; "
+    "python3 tools/product/build_production_ai_registry_promotion_priority_packet.py"
+)
+
 
 def _resolve(path_like: str | Path, *, root: Path = ROOT) -> Path:
     path = Path(path_like)
@@ -195,12 +203,7 @@ def _build_rows(
                 )
             ),
             acceptance_artifact=DEFAULT_REGISTRY_JSON,
-            verification_command=(
-                "python3 tools/build_residual_model_registry.py; "
-                "python3 tools/build_product_production_ai_checkpoint_readiness.py; "
-                "python3 tools/build_product_production_ai_promotion_workbench.py; "
-                "python3 tools/build_production_ai_registry_promotion_operator_receipt.py"
-            ),
+            verification_command=REGISTRY_PROMOTION_RECHECK_COMMAND,
             next_operator_step=(
                 "Checkpoint count is already satisfied; proceed to the guarded default residual mode receipt "
                 "without creating or promoting a new checkpoint."
@@ -233,17 +236,16 @@ def _build_rows(
                 else "Set the registry default residual mode to assist, production, or production_guarded."
             ),
             acceptance_artifact=DEFAULT_REGISTRY_JSON,
-            verification_command=(
-                "python3 tools/build_residual_model_registry.py; "
-                "python3 tools/build_product_production_ai_checkpoint_readiness.py"
-            ),
+            verification_command=REGISTRY_PROMOTION_RECHECK_COMMAND,
             next_operator_step=(
                 "Fill the guarded promotion operator receipt with a reviewed default residual mode, approval "
-                "token, reviewer, and validation-chain review, then rerun registry readiness."
+                "token, reviewer, and validation-chain review, then rerun registry readiness, promotion "
+                "workbench, operator receipt, and this priority packet."
                 if checkpoint_gate
                 else (
                     "Keep shadow mode until a trained checkpoint is registered; then select a guarded residual "
-                    "mode and rerun registry readiness."
+                    "mode and rerun registry readiness, promotion workbench, operator receipt, and this "
+                    "priority packet."
                 )
             ),
             registry_summary=registry_summary,

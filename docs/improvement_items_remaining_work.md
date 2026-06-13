@@ -946,6 +946,10 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   일로 고정된다. 이 priority packet도
   `model_promoted=false`, `customer_facing_mutation_enabled=false`,
   `external_state_mutated=false`로 fail-closed다.
+  최신 `top_verification_command`는
+  `python3 tools/build_residual_model_registry.py; python3 tools/build_product_production_ai_checkpoint_readiness.py; python3 tools/build_product_production_ai_promotion_workbench.py; python3 tools/build_production_ai_registry_promotion_operator_receipt.py; python3 tools/product/build_production_ai_registry_promotion_priority_packet.py`로
+  registry/checkpoint/workbench/operator receipt/priority packet 재검증을 한 번에
+  고정한다.
   이 priority packet summary는 이제 goal operator intake kit, bottleneck briefing,
   goal release decision gate, 상용 readiness operator packet, execution ladder,
   handoff bundle, `/goal/status`까지
