@@ -901,6 +901,38 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["production_ai_registry_promotion_priority_status"] == (
         handoff_artifact.get("production_ai_registry_promotion_priority_status")
     )
+    assert status[
+        "operator_intake_kit_production_ai_registry_promotion_priority_top_gate_id"
+    ] == intake_artifact.get("production_ai_registry_promotion_priority_top_gate_id")
+    assert status[
+        "operator_intake_kit_production_ai_registry_promotion_priority_top_priority_bucket"
+    ] == intake_artifact.get("production_ai_registry_promotion_priority_top_priority_bucket")
+    assert status[
+        "operator_intake_kit_production_ai_registry_promotion_priority_missing_gate_count"
+    ] == int(intake_artifact.get("production_ai_registry_promotion_priority_missing_gate_count") or 0)
+    assert status[
+        "bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id"
+    ] == bottlenecks_artifact.get("production_ai_registry_promotion_priority_top_gate_id")
+    assert status[
+        "bottleneck_briefing_production_ai_registry_promotion_priority_top_priority_bucket"
+    ] == bottlenecks_artifact.get("production_ai_registry_promotion_priority_top_priority_bucket")
+    assert status[
+        "bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count"
+    ] == int(
+        bottlenecks_artifact.get("production_ai_registry_promotion_priority_missing_gate_count")
+        or 0
+    )
+    assert status[
+        "commercial_readiness_handoff_bundle_production_ai_registry_promotion_priority_top_gate_id"
+    ] == handoff_artifact.get("production_ai_registry_promotion_priority_top_gate_id")
+    assert status[
+        "commercial_readiness_handoff_bundle_production_ai_registry_promotion_priority_top_priority_bucket"
+    ] == handoff_artifact.get("production_ai_registry_promotion_priority_top_priority_bucket")
+    assert status[
+        "commercial_readiness_handoff_bundle_production_ai_registry_promotion_priority_missing_gate_count"
+    ] == int(handoff_artifact.get("production_ai_registry_promotion_priority_missing_gate_count") or 0)
+    assert status["production_ai_registry_promotion_priority_downstream_visibility_ready"] is True
+    assert status["production_ai_registry_promotion_priority_downstream_missing_surfaces"] == []
     assert status["production_ai_registry_promotion_priority_status"] == (
         "blocked_production_ai_registry_promotion_priority_packet"
     )

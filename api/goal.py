@@ -938,6 +938,52 @@ async def get_goal_status() -> dict[str, Any]:
         full_commercial_release_blocker_visibility_ready
         and not full_commercial_release_blocker_downstream_missing_surfaces
     )
+    production_ai_registry_priority_surfaces = {
+        "operator_intake_kit": {
+            "top_gate_id": intake.get(
+                "production_ai_registry_promotion_priority_top_gate_id", ""
+            ),
+            "top_priority_bucket": intake.get(
+                "production_ai_registry_promotion_priority_top_priority_bucket", ""
+            ),
+            "missing_gate_count": _int(
+                intake.get("production_ai_registry_promotion_priority_missing_gate_count")
+            ),
+        },
+        "bottleneck_briefing": {
+            "top_gate_id": bottlenecks.get(
+                "production_ai_registry_promotion_priority_top_gate_id", ""
+            ),
+            "top_priority_bucket": bottlenecks.get(
+                "production_ai_registry_promotion_priority_top_priority_bucket", ""
+            ),
+            "missing_gate_count": _int(
+                bottlenecks.get("production_ai_registry_promotion_priority_missing_gate_count")
+            ),
+        },
+        "commercial_readiness_handoff_bundle": {
+            "top_gate_id": handoff.get(
+                "production_ai_registry_promotion_priority_top_gate_id", ""
+            ),
+            "top_priority_bucket": handoff.get(
+                "production_ai_registry_promotion_priority_top_priority_bucket", ""
+            ),
+            "missing_gate_count": _int(
+                handoff.get("production_ai_registry_promotion_priority_missing_gate_count")
+            ),
+        },
+    }
+    production_ai_registry_priority_canonical = production_ai_registry_priority_surfaces[
+        "commercial_readiness_handoff_bundle"
+    ]
+    production_ai_registry_promotion_priority_downstream_missing_surfaces = [
+        surface_id
+        for surface_id, surface_values in production_ai_registry_priority_surfaces.items()
+        if surface_values != production_ai_registry_priority_canonical
+    ]
+    production_ai_registry_promotion_priority_downstream_visibility_ready = bool(
+        production_ai_registry_priority_canonical.get("top_gate_id")
+    ) and not production_ai_registry_promotion_priority_downstream_missing_surfaces
     active_bottleneck_primary = (
         _int(bottlenecks.get("current_bottleneck_count") or bottlenecks.get("bottleneck_count")) > 0
         and bool(bottlenecks.get("primary_action_id"))
@@ -1074,6 +1120,21 @@ async def get_goal_status() -> dict[str, Any]:
             ),
             "commercial_readiness_handoff_bundle_artifact_reference_count": 0,
             "commercial_readiness_handoff_bundle_local_missing_artifact_reference_count": 0,
+            "operator_intake_kit_production_ai_registry_promotion_priority_top_gate_id": "",
+            "operator_intake_kit_production_ai_registry_promotion_priority_top_priority_bucket": "",
+            "operator_intake_kit_production_ai_registry_promotion_priority_missing_gate_count": 0,
+            "bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id": "",
+            "bottleneck_briefing_production_ai_registry_promotion_priority_top_priority_bucket": "",
+            "bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count": 0,
+            "commercial_readiness_handoff_bundle_production_ai_registry_promotion_priority_top_gate_id": "",
+            "commercial_readiness_handoff_bundle_production_ai_registry_promotion_priority_top_priority_bucket": "",
+            "commercial_readiness_handoff_bundle_production_ai_registry_promotion_priority_missing_gate_count": 0,
+            "production_ai_registry_promotion_priority_downstream_visibility_ready": False,
+            "production_ai_registry_promotion_priority_downstream_missing_surfaces": [
+                "operator_intake_kit",
+                "bottleneck_briefing",
+                "commercial_readiness_handoff_bundle",
+            ],
             "operator_intake_kit_full_commercial_evidence_receipt_entry_count": 0,
             "operator_intake_kit_full_commercial_evidence_receipt_operator_input_required_count": 0,
             "operator_intake_kit_full_commercial_evidence_receipt_current_action_required_count": 0,
@@ -1529,6 +1590,45 @@ async def get_goal_status() -> dict[str, Any]:
         ),
         "commercial_readiness_handoff_bundle_local_missing_artifact_reference_count": _int(
             handoff.get("local_missing_artifact_reference_count")
+        ),
+        "operator_intake_kit_production_ai_registry_promotion_priority_top_gate_id": (
+            production_ai_registry_priority_surfaces["operator_intake_kit"]["top_gate_id"]
+        ),
+        "operator_intake_kit_production_ai_registry_promotion_priority_top_priority_bucket": (
+            production_ai_registry_priority_surfaces["operator_intake_kit"]["top_priority_bucket"]
+        ),
+        "operator_intake_kit_production_ai_registry_promotion_priority_missing_gate_count": (
+            production_ai_registry_priority_surfaces["operator_intake_kit"]["missing_gate_count"]
+        ),
+        "bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id": (
+            production_ai_registry_priority_surfaces["bottleneck_briefing"]["top_gate_id"]
+        ),
+        "bottleneck_briefing_production_ai_registry_promotion_priority_top_priority_bucket": (
+            production_ai_registry_priority_surfaces["bottleneck_briefing"]["top_priority_bucket"]
+        ),
+        "bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count": (
+            production_ai_registry_priority_surfaces["bottleneck_briefing"]["missing_gate_count"]
+        ),
+        "commercial_readiness_handoff_bundle_production_ai_registry_promotion_priority_top_gate_id": (
+            production_ai_registry_priority_surfaces["commercial_readiness_handoff_bundle"][
+                "top_gate_id"
+            ]
+        ),
+        "commercial_readiness_handoff_bundle_production_ai_registry_promotion_priority_top_priority_bucket": (
+            production_ai_registry_priority_surfaces["commercial_readiness_handoff_bundle"][
+                "top_priority_bucket"
+            ]
+        ),
+        "commercial_readiness_handoff_bundle_production_ai_registry_promotion_priority_missing_gate_count": (
+            production_ai_registry_priority_surfaces["commercial_readiness_handoff_bundle"][
+                "missing_gate_count"
+            ]
+        ),
+        "production_ai_registry_promotion_priority_downstream_visibility_ready": (
+            production_ai_registry_promotion_priority_downstream_visibility_ready
+        ),
+        "production_ai_registry_promotion_priority_downstream_missing_surfaces": (
+            production_ai_registry_promotion_priority_downstream_missing_surfaces
         ),
         **_production_ai_registry_promotion_receipt_fields(handoff),
         **_cameo_official_result_fetch_preflight_fields(cameo_fetch, intake_rows),
