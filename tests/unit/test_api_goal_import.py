@@ -982,6 +982,25 @@ def test_api_app_imports_with_goal_router() -> None:
         "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH"
     )
     assert status["cameo_official_result_fetch_preflight_kit_status"] == "approval_required"
+    cameo_fetch_intake_entry = next(
+        row
+        for row in intake_kit["entries"]
+        if row.get("kit_entry_id") == "cameo_official_result_fetch_preflight"
+    )
+    assert status["cameo_official_result_fetch_preflight_intake_link_ready"] is True
+    assert status["cameo_official_result_fetch_preflight_intake_link_missing_reasons"] == []
+    assert status["cameo_official_result_fetch_preflight_intake_source_gate_status"] == (
+        cameo_fetch_intake_entry.get("source_gate_status")
+    )
+    assert status["cameo_official_result_fetch_preflight_operator_template_csv"] == (
+        cameo_fetch_intake_entry.get("template_path")
+    )
+    assert status["cameo_official_result_fetch_preflight_operator_intake_csv"] == (
+        cameo_fetch_intake_entry.get("intake_path")
+    )
+    assert status["cameo_official_result_fetch_preflight_approval_token_required"] == (
+        cameo_fetch_intake_entry.get("approval_token_required")
+    )
     assert status["cameo_official_result_fetch_preflight_operator_fetch_csv_present"] is False
     assert (
         status[

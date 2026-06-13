@@ -746,6 +746,52 @@ def _cameo_official_result_fetch_preflight_fields(
         or intake_row.get("source_gate_status")
         or ""
     )
+    operator_template_csv = (
+        fetch.get("operator_template_csv") or intake_row.get("template_path") or ""
+    )
+    operator_intake_csv = (
+        fetch.get("operator_fetch_csv") or intake_row.get("intake_path") or ""
+    )
+    kit_template_path = intake_row.get("kit_template_path", "")
+    approval_token_required = (
+        fetch.get("fetch_approval_token_required")
+        or intake_row.get("approval_token_required")
+        or ""
+    )
+    intake_link_missing_reasons = []
+    if not intake_row:
+        intake_link_missing_reasons.append("intake_entry_missing")
+    if (
+        status
+        and intake_row.get("source_gate_status")
+        and intake_row.get("source_gate_status") != status
+    ):
+        intake_link_missing_reasons.append("source_gate_status_mismatch")
+    if operator_template_csv and intake_row.get("template_path") != operator_template_csv:
+        intake_link_missing_reasons.append("operator_template_mismatch")
+    if operator_intake_csv and intake_row.get("intake_path") != operator_intake_csv:
+        intake_link_missing_reasons.append("operator_intake_mismatch")
+    if (
+        approval_token_required
+        and intake_row.get("approval_token_required") != approval_token_required
+    ):
+        intake_link_missing_reasons.append("approval_token_mismatch")
+    if not (
+        intake_row.get("template_present") is True
+        and intake_row.get("kit_template_copied") is True
+        and kit_template_path
+        and operator_template_csv
+        and Path(kit_template_path).name == Path(operator_template_csv).name
+    ):
+        intake_link_missing_reasons.append("kit_template_copy_mismatch")
+    intake_link_ready = bool(
+        status
+        and operator_template_csv
+        and operator_intake_csv
+        and approval_token_required
+        and intake_row.get("kit_status") == "approval_required"
+        and not intake_link_missing_reasons
+    )
     return {
         "cameo_official_result_fetch_preflight_status": status,
         "cameo_official_result_fetch_preflight_ready": bool(
@@ -755,26 +801,19 @@ def _cameo_official_result_fetch_preflight_fields(
         "cameo_official_result_fetch_preflight_artifact_path": str(
             CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_ARTIFACT
         ),
-        "cameo_official_result_fetch_preflight_operator_template_csv": (
-            fetch.get("operator_template_csv")
-            or intake_row.get("template_path")
-            or ""
-        ),
-        "cameo_official_result_fetch_preflight_operator_intake_csv": (
-            fetch.get("operator_fetch_csv")
-            or intake_row.get("intake_path")
-            or ""
-        ),
-        "cameo_official_result_fetch_preflight_kit_template_path": intake_row.get(
-            "kit_template_path", ""
-        ),
-        "cameo_official_result_fetch_preflight_approval_token_required": (
-            fetch.get("fetch_approval_token_required")
-            or intake_row.get("approval_token_required")
-            or ""
-        ),
+        "cameo_official_result_fetch_preflight_operator_template_csv": operator_template_csv,
+        "cameo_official_result_fetch_preflight_operator_intake_csv": operator_intake_csv,
+        "cameo_official_result_fetch_preflight_kit_template_path": kit_template_path,
+        "cameo_official_result_fetch_preflight_approval_token_required": approval_token_required,
         "cameo_official_result_fetch_preflight_kit_status": intake_row.get(
             "kit_status", ""
+        ),
+        "cameo_official_result_fetch_preflight_intake_link_ready": intake_link_ready,
+        "cameo_official_result_fetch_preflight_intake_link_missing_reasons": (
+            intake_link_missing_reasons
+        ),
+        "cameo_official_result_fetch_preflight_intake_source_gate_status": intake_row.get(
+            "source_gate_status", ""
         ),
         "cameo_official_result_fetch_preflight_operator_fetch_csv_present": bool(
             fetch.get("operator_fetch_csv_present") is True
