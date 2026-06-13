@@ -582,6 +582,26 @@ def _goal_release_decision_gate() -> dict:
             "goal_api_surface_blocker_count": 0,
             "goal_api_surface_missing_endpoint_count": 0,
             "goal_api_surface_missing_status_key_count": 0,
+            "product_full_commercial_blocker_evidence_matrix_r8_blocked_row_count": 6,
+            "product_full_commercial_blocker_evidence_matrix_r8_first_blocked_evidence_row_id": (
+                "direct_binding_evidence_missing"
+            ),
+            "product_full_commercial_blocker_evidence_matrix_r8_receipt_csv": (
+                "config/product_scope_breadth_evidence_receipt_current.csv"
+            ),
+            "product_full_commercial_blocker_evidence_matrix_r8_approval_token_required": (
+                "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+            ),
+            "product_full_commercial_blocker_evidence_matrix_r9_blocked_row_count": 6,
+            "product_full_commercial_blocker_evidence_matrix_r9_first_blocked_evidence_row_id": (
+                "public_benchmark_gate_not_ready"
+            ),
+            "product_full_commercial_blocker_evidence_matrix_r9_receipt_csv": (
+                "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+            ),
+            "product_full_commercial_blocker_evidence_matrix_r9_approval_token_required": (
+                "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+            ),
         }
     }
 
@@ -1161,6 +1181,7 @@ def test_goal_operator_action_board_summary_points_to_primary_product_ai_action(
         transition_cleanup_preflight_packet={},
         ligand_cleanup_preflight_packet={},
         cleanup_completion_gate_packet=_cleanup_completion_gate_ready(),
+        goal_release_decision_gate_packet=_goal_release_decision_gate(),
     )
 
     summary = payload["summary"]
@@ -1197,6 +1218,26 @@ def test_goal_operator_action_board_summary_points_to_primary_product_ai_action(
     assert "full-scope evidence receipt rows" in summary[
         "primary_release_blocker_action_recommended_action"
     ]
+    assert summary["product_full_commercial_blocker_evidence_matrix_r8_blocked_row_count"] == 6
+    assert summary[
+        "product_full_commercial_blocker_evidence_matrix_r8_first_blocked_evidence_row_id"
+    ] == "direct_binding_evidence_missing"
+    assert summary["product_full_commercial_blocker_evidence_matrix_r8_receipt_csv"] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv"
+    )
+    assert summary["product_full_commercial_blocker_evidence_matrix_r8_approval_token_required"] == (
+        "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+    )
+    assert summary["product_full_commercial_blocker_evidence_matrix_r9_blocked_row_count"] == 6
+    assert summary[
+        "product_full_commercial_blocker_evidence_matrix_r9_first_blocked_evidence_row_id"
+    ] == "public_benchmark_gate_not_ready"
+    assert summary["product_full_commercial_blocker_evidence_matrix_r9_receipt_csv"] == (
+        "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+    )
+    assert summary["product_full_commercial_blocker_evidence_matrix_r9_approval_token_required"] == (
+        "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+    )
     assert summary["product_goal_engine_refinement_claim_promotion_blocker_count"] == 6
     assert summary["product_goal_engine_refinement_claim_promotion_action_row_count"] == 6
     assert (
