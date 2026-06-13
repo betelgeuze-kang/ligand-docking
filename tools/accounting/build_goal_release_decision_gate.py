@@ -29,6 +29,9 @@ DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON = "runs/product_ai_architecture_gap_clo
 DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON = "runs/product_ai_architecture_execution_backlog_current.json"
 DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON = "runs/product_release_source_of_truth_gate_current.json"
 DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON = "runs/api_customer_flow_release_evidence_current.json"
+DEFAULT_API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_JSON = (
+    "runs/api_runner_profile_promotion_operator_receipt_current.json"
+)
 DEFAULT_PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON = (
     "runs/product_full_commercial_blocker_evidence_matrix_current.json"
 )
@@ -190,6 +193,7 @@ def build_goal_release_decision_gate(
     product_ai_execution_backlog_packet: dict[str, Any] | None = None,
     product_release_source_of_truth_packet: dict[str, Any] | None = None,
     api_customer_flow_release_evidence_packet: dict[str, Any] | None = None,
+    api_runner_profile_promotion_operator_receipt_packet: dict[str, Any] | None = None,
     product_full_commercial_blocker_evidence_matrix_packet: dict[str, Any] | None = None,
     product_rollout_execution_smoke_receipt_packet: dict[str, Any] | None = None,
     accuracy_parity_scorecard_packet: dict[str, Any] | None = None,
@@ -215,6 +219,9 @@ def build_goal_release_decision_gate(
     product_ai_execution_backlog_path: str = DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON,
     product_release_source_of_truth_path: str = DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON,
     api_customer_flow_release_evidence_path: str = DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON,
+    api_runner_profile_promotion_operator_receipt_path: str = (
+        DEFAULT_API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_JSON
+    ),
     product_full_commercial_blocker_evidence_matrix_path: str = (
         DEFAULT_PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON
     ),
@@ -240,6 +247,30 @@ def build_goal_release_decision_gate(
     cleanup_postcheck = _summary(cleanup_postcheck_contract_packet or {})
     cleanup_completion = _summary(cleanup_completion_gate_packet or {})
     goal_api_surface = _summary(goal_api_surface_contract_packet or {})
+    api_runner_profile_receipt = _summary(api_runner_profile_promotion_operator_receipt_packet or {})
+    api_runner_profile_receipt_gate_present = (
+        api_runner_profile_promotion_operator_receipt_packet is not None
+    )
+    api_runner_profile_first_blocked_row_blockers = _text_list(
+        api_runner_profile_receipt.get("first_blocked_row_blockers")
+    )
+    api_runner_profile_blockers = _text_list(api_runner_profile_receipt.get("blockers"))
+    api_runner_profile_receipt_recorded = (
+        _text(api_runner_profile_receipt.get("status"))
+        in {
+            "blocked_api_runner_profile_promotion_operator_receipt",
+            "api_runner_profile_promotion_operator_receipt_ready",
+        }
+        and _text(api_runner_profile_receipt.get("readiness_status"))
+        == "api_runner_profile_promotion_ready"
+        and _int(api_runner_profile_receipt.get("profile_count")) >= 1
+        and _int(api_runner_profile_receipt.get("receipt_row_count")) >= 1
+        and _text(api_runner_profile_receipt.get("approval_token_required"))
+        == "APPROVE_API_RUNNER_PROFILE_PROMOTION"
+        and bool(api_runner_profile_receipt.get("profile_enabled_by_this_tool") is False)
+        and bool(api_runner_profile_receipt.get("runner_executed") is False)
+        and bool(api_runner_profile_receipt.get("external_state_mutated") is False)
+    )
     goal_bottleneck_briefing = _summary(goal_bottleneck_briefing_packet or {})
     goal_bottleneck_briefing_gate_present = goal_bottleneck_briefing_packet is not None
     goal_bottleneck_full_commercial_receipts_recorded = (
@@ -791,6 +822,41 @@ def build_goal_release_decision_gate(
             reason="The top-level local API must expose a verified read-only goal status surface before release can be claimed.",
         ),
     ]
+    if api_runner_profile_receipt_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="api_runner_profile_promotion_operator_receipt_recorded",
+                artifact_path=api_runner_profile_promotion_operator_receipt_path,
+                observed=(
+                    f"{_text(api_runner_profile_receipt.get('status')) or 'missing'};"
+                    f"readiness_status={_text(api_runner_profile_receipt.get('readiness_status'))};"
+                    f"operator_receipt_ready="
+                    f"{_bool_text(bool(api_runner_profile_receipt.get('operator_receipt_ready') is True))};"
+                    f"profile_count={_int(api_runner_profile_receipt.get('profile_count'))};"
+                    f"receipt_row_count={_int(api_runner_profile_receipt.get('receipt_row_count'))};"
+                    f"blocked_row_count={_int(api_runner_profile_receipt.get('blocked_row_count'))};"
+                    f"first_blocked_profile_id={_text(api_runner_profile_receipt.get('first_blocked_profile_id'))};"
+                    f"first_blocked_row_blocker={_text(api_runner_profile_receipt.get('first_blocked_row_blocker'))};"
+                    f"approval_token_required={_text(api_runner_profile_receipt.get('approval_token_required'))};"
+                    f"profile_enabled_by_this_tool="
+                    f"{_bool_text(bool(api_runner_profile_receipt.get('profile_enabled_by_this_tool') is True))};"
+                    f"runner_executed={_bool_text(bool(api_runner_profile_receipt.get('runner_executed') is True))};"
+                    f"external_state_mutated="
+                    f"{_bool_text(bool(api_runner_profile_receipt.get('external_state_mutated') is True))}"
+                ),
+                required=(
+                    "API runner profile promotion operator receipt recorded with approval token, "
+                    "blocked-row detail, and no profile execution/mutation by this gate"
+                ),
+                passed=api_runner_profile_receipt_recorded,
+                reason=(
+                    "The final release decision must preserve that validated runner profiles are "
+                    "promotion-ready but still require an explicit operator receipt before profile "
+                    "promotion or runner execution can occur."
+                ),
+            )
+        )
     if goal_bottleneck_briefing_gate_present:
         rows.append(
             _row(
@@ -1103,6 +1169,8 @@ def build_goal_release_decision_gate(
         next_required_items.append("product release evidence rollup")
     if not goal_api_surface_ready:
         next_required_items.append("goal API surface contract")
+    if api_runner_profile_receipt_gate_present and not api_runner_profile_receipt_recorded:
+        next_required_items.append("API runner profile promotion operator receipt")
     if goal_bottleneck_briefing_gate_present and not goal_bottleneck_full_commercial_receipts_recorded:
         next_required_items.append("goal bottleneck full-commercial receipt briefing")
     if (
@@ -1208,6 +1276,67 @@ def build_goal_release_decision_gate(
         "source_goal_rollup_status": _text(rollup.get("status")),
         "source_goal_api_surface_contract_status": _text(goal_api_surface.get("status")),
         "goal_api_surface_ready": goal_api_surface_ready,
+        "api_runner_profile_promotion_operator_receipt_gate_present": api_runner_profile_receipt_gate_present,
+        "api_runner_profile_promotion_operator_receipt_status": _text(
+            api_runner_profile_receipt.get("status")
+        ),
+        "api_runner_profile_promotion_operator_receipt_recorded": (
+            api_runner_profile_receipt_recorded
+            if api_runner_profile_receipt_gate_present
+            else None
+        ),
+        "api_runner_profile_promotion_operator_receipt_ready": bool(
+            api_runner_profile_receipt.get("operator_receipt_ready") is True
+        ),
+        "api_runner_profile_promotion_operator_receipt_readiness_status": _text(
+            api_runner_profile_receipt.get("readiness_status")
+        ),
+        "api_runner_profile_promotion_operator_receipt_profile_count": _int(
+            api_runner_profile_receipt.get("profile_count")
+        ),
+        "api_runner_profile_promotion_operator_receipt_receipt_row_count": _int(
+            api_runner_profile_receipt.get("receipt_row_count")
+        ),
+        "api_runner_profile_promotion_operator_receipt_pass_row_count": _int(
+            api_runner_profile_receipt.get("pass_row_count")
+        ),
+        "api_runner_profile_promotion_operator_receipt_blocked_row_count": _int(
+            api_runner_profile_receipt.get("blocked_row_count")
+        ),
+        "api_runner_profile_promotion_operator_receipt_blocker_count": _int(
+            api_runner_profile_receipt.get("blocker_count")
+        ),
+        "api_runner_profile_promotion_operator_receipt_blockers": api_runner_profile_blockers,
+        "api_runner_profile_promotion_operator_receipt_first_blocked_profile_id": _text(
+            api_runner_profile_receipt.get("first_blocked_profile_id")
+        ),
+        "api_runner_profile_promotion_operator_receipt_first_blocked_row_blocker": _text(
+            api_runner_profile_receipt.get("first_blocked_row_blocker")
+        ),
+        "api_runner_profile_promotion_operator_receipt_first_blocked_row_blockers": (
+            api_runner_profile_first_blocked_row_blockers
+        ),
+        "api_runner_profile_promotion_operator_receipt_most_common_row_blocker": _text(
+            api_runner_profile_receipt.get("most_common_row_blocker")
+        ),
+        "api_runner_profile_promotion_operator_receipt_approval_token_required": _text(
+            api_runner_profile_receipt.get("approval_token_required")
+        ),
+        "api_runner_profile_promotion_operator_receipt_operator_template_csv": _text(
+            api_runner_profile_receipt.get("operator_template_csv")
+        ),
+        "api_runner_profile_promotion_operator_receipt_next_required_step": _text(
+            api_runner_profile_receipt.get("next_required_step")
+        ),
+        "api_runner_profile_promotion_operator_receipt_profile_enabled_by_this_tool": bool(
+            api_runner_profile_receipt.get("profile_enabled_by_this_tool") is True
+        ),
+        "api_runner_profile_promotion_operator_receipt_runner_executed": bool(
+            api_runner_profile_receipt.get("runner_executed") is True
+        ),
+        "api_runner_profile_promotion_operator_receipt_external_state_mutated": bool(
+            api_runner_profile_receipt.get("external_state_mutated") is True
+        ),
         "goal_bottleneck_briefing_gate_present": goal_bottleneck_briefing_gate_present,
         "source_goal_bottleneck_briefing_status": _text(goal_bottleneck_briefing.get("status")),
         "goal_bottleneck_briefing_full_commercial_receipts_recorded": (
@@ -1683,6 +1812,16 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- blocker_count: `{s['blocker_count']}`",
         f"- source_goal_api_surface_contract_status: `{s['source_goal_api_surface_contract_status']}`",
         f"- goal_api_surface_ready: `{s['goal_api_surface_ready']}`",
+        f"- api_runner_profile_promotion_operator_receipt_gate_present: `{s['api_runner_profile_promotion_operator_receipt_gate_present']}`",
+        f"- api_runner_profile_promotion_operator_receipt_status: `{s['api_runner_profile_promotion_operator_receipt_status']}`",
+        f"- api_runner_profile_promotion_operator_receipt_recorded: `{s['api_runner_profile_promotion_operator_receipt_recorded']}`",
+        f"- api_runner_profile_promotion_operator_receipt_ready: `{s['api_runner_profile_promotion_operator_receipt_ready']}`",
+        f"- api_runner_profile_promotion_operator_receipt_profile_count: `{s['api_runner_profile_promotion_operator_receipt_profile_count']}`",
+        f"- api_runner_profile_promotion_operator_receipt_blocked_row_count: `{s['api_runner_profile_promotion_operator_receipt_blocked_row_count']}`",
+        f"- api_runner_profile_promotion_operator_receipt_first_blocked_profile_id: `{s['api_runner_profile_promotion_operator_receipt_first_blocked_profile_id']}`",
+        f"- api_runner_profile_promotion_operator_receipt_first_blocked_row_blocker: `{s['api_runner_profile_promotion_operator_receipt_first_blocked_row_blocker']}`",
+        f"- api_runner_profile_promotion_operator_receipt_approval_token_required: `{s['api_runner_profile_promotion_operator_receipt_approval_token_required']}`",
+        f"- api_runner_profile_promotion_operator_receipt_runner_executed: `{s['api_runner_profile_promotion_operator_receipt_runner_executed']}`",
         f"- goal_bottleneck_briefing_gate_present: `{s['goal_bottleneck_briefing_gate_present']}`",
         f"- source_goal_bottleneck_briefing_status: `{s['source_goal_bottleneck_briefing_status']}`",
         f"- goal_bottleneck_briefing_full_commercial_receipts_recorded: `{s['goal_bottleneck_briefing_full_commercial_receipts_recorded']}`",
@@ -1856,6 +1995,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--product-release-source-of-truth-json", default=DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON)
     parser.add_argument("--api-customer-flow-release-evidence-json", default=DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON)
     parser.add_argument(
+        "--api-runner-profile-promotion-operator-receipt-json",
+        default=DEFAULT_API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_JSON,
+    )
+    parser.add_argument(
         "--product-full-commercial-blocker-evidence-matrix-json",
         default=DEFAULT_PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON,
     )
@@ -1906,6 +2049,9 @@ def main(argv: list[str] | None = None) -> None:
         api_customer_flow_release_evidence_packet=_read_json_if_present(
             args.api_customer_flow_release_evidence_json
         ),
+        api_runner_profile_promotion_operator_receipt_packet=_read_json_if_present(
+            args.api_runner_profile_promotion_operator_receipt_json
+        ),
         product_full_commercial_blocker_evidence_matrix_packet=_read_json_if_present(
             args.product_full_commercial_blocker_evidence_matrix_json
         ),
@@ -1941,6 +2087,9 @@ def main(argv: list[str] | None = None) -> None:
         product_ai_execution_backlog_path=args.product_ai_execution_backlog_json,
         product_release_source_of_truth_path=args.product_release_source_of_truth_json,
         api_customer_flow_release_evidence_path=args.api_customer_flow_release_evidence_json,
+        api_runner_profile_promotion_operator_receipt_path=(
+            args.api_runner_profile_promotion_operator_receipt_json
+        ),
         product_full_commercial_blocker_evidence_matrix_path=(
             args.product_full_commercial_blocker_evidence_matrix_json
         ),

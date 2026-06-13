@@ -429,7 +429,10 @@
   `most_common_row_blocker=operator_decision_missing`으로 남겨 실제 profile edit/runner execution과 readiness
   accounting을 분리한다. release bundle, source-of-truth, goal operator intake kit,
   `/product/api-runner-profile-promotion-operator-receipt` API surface는 이 receipt를
-  필수 산출물로 기록한다.
+  필수 산출물로 기록한다. 최신 release decision과 `/goal/status`도
+  `api_runner_profile_promotion_operator_receipt_*` 키를 노출하고 final refresh가
+  blocked receipt의 profile/row/blocker/token 값을 exact check로 요구하므로,
+  validated runner promotion approval 병목이 restricted release green 뒤로 숨지 않는다.
 
 **갭**
 - **포즈 생성(pose sampling)** 단계는 이제 local deterministic smoke와 release

@@ -36,6 +36,7 @@ def _refresh_release_decision_ready() -> dict:
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded": True,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_packet_ready": True,
             "accuracy_parity_scorecard_recorded": True,
+            "api_runner_profile_promotion_operator_receipt_recorded": True,
             "source_goal_bottleneck_briefing_status": "goal_bottleneck_briefing_ready",
             "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 2,
@@ -53,6 +54,11 @@ def _refresh_release_decision_ready() -> dict:
             "accuracy_parity_scorecard_top_blocker_count": 4,
             "accuracy_parity_ligand_ranking_blocker_count": 4,
             "accuracy_parity_ligand_ranking_positive_count": 13,
+            "api_runner_profile_promotion_operator_receipt_profile_count": 4,
+            "api_runner_profile_promotion_operator_receipt_receipt_row_count": 4,
+            "api_runner_profile_promotion_operator_receipt_pass_row_count": 0,
+            "api_runner_profile_promotion_operator_receipt_blocked_row_count": 4,
+            "api_runner_profile_promotion_operator_receipt_blocker_count": 1,
             "science_claim_promotion_gap_closure_open_gap_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
@@ -87,6 +93,21 @@ def _refresh_release_decision_ready() -> dict:
             "accuracy_parity_ligand_ranking_status": "blocked",
             "accuracy_parity_ligand_ranking_score_col_used": (
                 "binding_score_composite_v7_residual_active"
+            ),
+            "api_runner_profile_promotion_operator_receipt_status": (
+                "blocked_api_runner_profile_promotion_operator_receipt"
+            ),
+            "api_runner_profile_promotion_operator_receipt_readiness_status": (
+                "api_runner_profile_promotion_ready"
+            ),
+            "api_runner_profile_promotion_operator_receipt_first_blocked_profile_id": (
+                "backmapping_scoring.example"
+            ),
+            "api_runner_profile_promotion_operator_receipt_first_blocked_row_blocker": (
+                "operator_decision_missing"
+            ),
+            "api_runner_profile_promotion_operator_receipt_approval_token_required": (
+                "APPROVE_API_RUNNER_PROFILE_PROMOTION"
             ),
             "science_claim_promotion_gap_closure_status": (
                 "blocked_science_claim_promotion_gap_closure"
@@ -263,6 +284,10 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
         in release_row["required_true_fields"]
     )
     assert "accuracy_parity_scorecard_recorded" in release_row["required_true_fields"]
+    assert (
+        "api_runner_profile_promotion_operator_receipt_recorded"
+        in release_row["required_true_fields"]
+    )
     assert release_row["required_int_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count"
     ] == 4
@@ -272,6 +297,9 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_int_exact_fields"][
         "accuracy_parity_ligand_ranking_positive_count"
     ] == 13
+    assert release_row["required_int_exact_fields"][
+        "api_runner_profile_promotion_operator_receipt_blocked_row_count"
+    ] == 4
     assert release_row["required_text_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id"
     ] == "trained_model_checkpoint_count_positive"
@@ -281,6 +309,9 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_text_exact_fields"][
         "accuracy_parity_ligand_ranking_score_col_used"
     ] == "binding_score_composite_v7_residual_active"
+    assert release_row["required_text_exact_fields"][
+        "api_runner_profile_promotion_operator_receipt_first_blocked_profile_id"
+    ] == "backmapping_scoring.example"
     assert release_row["required_int_exact_fields"][
         "science_claim_promotion_gap_closure_open_gap_count"
     ] == 2

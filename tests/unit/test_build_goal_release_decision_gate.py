@@ -710,6 +710,40 @@ def _blocked_accuracy_parity_scorecard() -> dict:
     }
 
 
+def _blocked_api_runner_profile_operator_receipt() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_api_runner_profile_promotion_operator_receipt",
+            "readiness_status": "api_runner_profile_promotion_ready",
+            "operator_receipt_ready": False,
+            "profile_count": 4,
+            "receipt_row_count": 4,
+            "pass_row_count": 0,
+            "blocked_row_count": 4,
+            "blocker_count": 1,
+            "blockers": ["blocked_receipt_rows_present"],
+            "first_blocked_profile_id": "backmapping_scoring.example",
+            "first_blocked_row_blocker": "operator_decision_missing",
+            "first_blocked_row_blockers": [
+                "operator_decision_missing",
+                "approval_token_invalid",
+                "input_contract_reviewed_not_true",
+                "output_contract_reviewed_not_true",
+            ],
+            "most_common_row_blocker": "operator_decision_missing",
+            "approval_token_required": "APPROVE_API_RUNNER_PROFILE_PROMOTION",
+            "operator_template_csv": "runs/api_runner_profile_promotion_operator_template_current.csv",
+            "next_required_step": (
+                "Fill the operator receipt with approve/hold decisions and "
+                "APPROVE_API_RUNNER_PROFILE_PROMOTION."
+            ),
+            "profile_enabled_by_this_tool": False,
+            "runner_executed": False,
+            "external_state_mutated": False,
+        }
+    }
+
+
 def _blocked_api_customer_flow() -> dict:
     return {
         "summary": {
@@ -1144,6 +1178,9 @@ def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_
         cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
         goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
         product_release_source_of_truth_packet=_ready_source_of_truth(),
+        api_runner_profile_promotion_operator_receipt_packet=(
+            _blocked_api_runner_profile_operator_receipt()
+        ),
         product_rollout_execution_smoke_receipt_packet=_blocked_rollout_smoke_receipt(),
         accuracy_parity_scorecard_packet=_blocked_accuracy_parity_scorecard(),
         science_claim_promotion_gap_packet=_blocked_science_claim_gap(),
@@ -1190,6 +1227,21 @@ def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_
     assert summary["accuracy_parity_ligand_ranking_score_col_used"] == (
         "binding_score_composite_v7_residual_active"
     )
+    assert summary["api_runner_profile_promotion_operator_receipt_gate_present"] is True
+    assert summary["api_runner_profile_promotion_operator_receipt_recorded"] is True
+    assert summary["api_runner_profile_promotion_operator_receipt_status"] == (
+        "blocked_api_runner_profile_promotion_operator_receipt"
+    )
+    assert summary["api_runner_profile_promotion_operator_receipt_ready"] is False
+    assert summary["api_runner_profile_promotion_operator_receipt_profile_count"] == 4
+    assert summary["api_runner_profile_promotion_operator_receipt_blocked_row_count"] == 4
+    assert summary["api_runner_profile_promotion_operator_receipt_first_blocked_profile_id"] == (
+        "backmapping_scoring.example"
+    )
+    assert summary["api_runner_profile_promotion_operator_receipt_first_blocked_row_blocker"] == (
+        "operator_decision_missing"
+    )
+    assert summary["api_runner_profile_promotion_operator_receipt_runner_executed"] is False
     assert "ACCURACY:ligand_ranking" in summary["full_commercial_release_blocker_ids"]
     smoke_row = next(
         row
@@ -1207,6 +1259,11 @@ def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_
     accuracy_row = next(
         row for row in payload["rows"] if row["check"] == "accuracy_parity_scorecard_recorded"
     )
+    api_runner_receipt_row = next(
+        row
+        for row in payload["rows"]
+        if row["check"] == "api_runner_profile_promotion_operator_receipt_recorded"
+    )
     assert smoke_row["status"] == "pass"
     assert smoke_row["release_blocker"] is False
     assert "rollout_executed=false" in smoke_row["observed"]
@@ -1223,6 +1280,11 @@ def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_
     assert "ligand_ranking_pr_auc_ci_low=0.001347" in accuracy_row["observed"]
     assert "ligand_ranking_topk_hit_rate=0.1" in accuracy_row["observed"]
     assert "ranking_pr_auc_ci_low_below_threshold" in accuracy_row["observed"]
+    assert api_runner_receipt_row["status"] == "pass"
+    assert api_runner_receipt_row["release_blocker"] is False
+    assert "first_blocked_profile_id=backmapping_scoring.example" in api_runner_receipt_row["observed"]
+    assert "first_blocked_row_blocker=operator_decision_missing" in api_runner_receipt_row["observed"]
+    assert "runner_executed=false" in api_runner_receipt_row["observed"]
 
 
 def test_goal_release_decision_gate_blocks_missing_api_customer_flow_release_evidence() -> None:
@@ -1638,6 +1700,7 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
         "product_ai_backlog": tmp_path / "product_ai_backlog.json",
         "source_of_truth": tmp_path / "source_of_truth.json",
         "api_customer_flow": tmp_path / "api_customer_flow.json",
+        "api_runner_profile_receipt": tmp_path / "api_runner_profile_receipt.json",
         "full_commercial_matrix": tmp_path / "full_commercial_matrix.json",
         "rollout_smoke_receipt": tmp_path / "rollout_smoke_receipt.json",
         "accuracy_parity": tmp_path / "accuracy_parity.json",
@@ -1664,6 +1727,10 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     paths["product_ai_backlog"].write_text(json.dumps(_ready_product_ai_backlog()) + "\n", encoding="utf-8")
     paths["source_of_truth"].write_text(json.dumps(_ready_source_of_truth()) + "\n", encoding="utf-8")
     paths["api_customer_flow"].write_text(json.dumps(_ready_api_customer_flow()) + "\n", encoding="utf-8")
+    paths["api_runner_profile_receipt"].write_text(
+        json.dumps(_blocked_api_runner_profile_operator_receipt()) + "\n",
+        encoding="utf-8",
+    )
     paths["full_commercial_matrix"].write_text(
         json.dumps(_blocked_full_commercial_matrix()) + "\n",
         encoding="utf-8",
@@ -1724,6 +1791,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
             str(paths["source_of_truth"]),
             "--api-customer-flow-release-evidence-json",
             str(paths["api_customer_flow"]),
+            "--api-runner-profile-promotion-operator-receipt-json",
+            str(paths["api_runner_profile_receipt"]),
             "--product-full-commercial-blocker-evidence-matrix-json",
             str(paths["full_commercial_matrix"]),
             "--product-rollout-execution-smoke-receipt-json",
@@ -1762,6 +1831,13 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     assert summary["accuracy_parity_ligand_ranking_score_col_used"] == (
         "binding_score_composite_v7_residual_active"
     )
+    assert summary["api_runner_profile_promotion_operator_receipt_status"] == (
+        "blocked_api_runner_profile_promotion_operator_receipt"
+    )
+    assert summary["api_runner_profile_promotion_operator_receipt_recorded"] is True
+    assert summary["api_runner_profile_promotion_operator_receipt_first_blocked_profile_id"] == (
+        "backmapping_scoring.example"
+    )
     assert summary["master_gap_closure_rollup_status"] == "blocked_master_gap_closure_rollup"
     assert summary[
         "science_claim_promotion_gap_closure_status"
@@ -1783,6 +1859,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     assert "product_rollout_execution_smoke_receipt_status" in md_text
     assert "accuracy_parity_scorecard_status" in md_text
     assert "ranking_pr_auc_ci_low_below_threshold" in md_text
+    assert "api_runner_profile_promotion_operator_receipt_status" in md_text
+    assert "backmapping_scoring.example" in md_text
     assert "master_gap_closure_rollup_status" in md_text
     assert "science_claim_promotion_gap_closure_status" in md_text
     assert "SCI-OPENMM" in md_text

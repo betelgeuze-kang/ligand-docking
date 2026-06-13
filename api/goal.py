@@ -232,6 +232,76 @@ def _accuracy_parity_release_fields(release: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _api_runner_profile_receipt_release_fields(release: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "api_runner_profile_promotion_operator_receipt_gate_present": bool(
+            release.get("api_runner_profile_promotion_operator_receipt_gate_present") is True
+        ),
+        "api_runner_profile_promotion_operator_receipt_status": release.get(
+            "api_runner_profile_promotion_operator_receipt_status", ""
+        ),
+        "api_runner_profile_promotion_operator_receipt_recorded": bool(
+            release.get("api_runner_profile_promotion_operator_receipt_recorded") is True
+        ),
+        "api_runner_profile_promotion_operator_receipt_ready": bool(
+            release.get("api_runner_profile_promotion_operator_receipt_ready") is True
+        ),
+        "api_runner_profile_promotion_operator_receipt_readiness_status": release.get(
+            "api_runner_profile_promotion_operator_receipt_readiness_status", ""
+        ),
+        "api_runner_profile_promotion_operator_receipt_profile_count": _int(
+            release.get("api_runner_profile_promotion_operator_receipt_profile_count")
+        ),
+        "api_runner_profile_promotion_operator_receipt_receipt_row_count": _int(
+            release.get("api_runner_profile_promotion_operator_receipt_receipt_row_count")
+        ),
+        "api_runner_profile_promotion_operator_receipt_pass_row_count": _int(
+            release.get("api_runner_profile_promotion_operator_receipt_pass_row_count")
+        ),
+        "api_runner_profile_promotion_operator_receipt_blocked_row_count": _int(
+            release.get("api_runner_profile_promotion_operator_receipt_blocked_row_count")
+        ),
+        "api_runner_profile_promotion_operator_receipt_blocker_count": _int(
+            release.get("api_runner_profile_promotion_operator_receipt_blocker_count")
+        ),
+        "api_runner_profile_promotion_operator_receipt_blockers": _string_list(
+            release.get("api_runner_profile_promotion_operator_receipt_blockers")
+        ),
+        "api_runner_profile_promotion_operator_receipt_first_blocked_profile_id": release.get(
+            "api_runner_profile_promotion_operator_receipt_first_blocked_profile_id", ""
+        ),
+        "api_runner_profile_promotion_operator_receipt_first_blocked_row_blocker": release.get(
+            "api_runner_profile_promotion_operator_receipt_first_blocked_row_blocker", ""
+        ),
+        "api_runner_profile_promotion_operator_receipt_first_blocked_row_blockers": _string_list(
+            release.get("api_runner_profile_promotion_operator_receipt_first_blocked_row_blockers")
+        ),
+        "api_runner_profile_promotion_operator_receipt_most_common_row_blocker": release.get(
+            "api_runner_profile_promotion_operator_receipt_most_common_row_blocker", ""
+        ),
+        "api_runner_profile_promotion_operator_receipt_approval_token_required": release.get(
+            "api_runner_profile_promotion_operator_receipt_approval_token_required", ""
+        ),
+        "api_runner_profile_promotion_operator_receipt_operator_template_csv": release.get(
+            "api_runner_profile_promotion_operator_receipt_operator_template_csv", ""
+        ),
+        "api_runner_profile_promotion_operator_receipt_next_required_step": release.get(
+            "api_runner_profile_promotion_operator_receipt_next_required_step", ""
+        ),
+        "api_runner_profile_promotion_operator_receipt_profile_enabled_by_this_tool": bool(
+            release.get("api_runner_profile_promotion_operator_receipt_profile_enabled_by_this_tool")
+            is True
+        ),
+        "api_runner_profile_promotion_operator_receipt_runner_executed": bool(
+            release.get("api_runner_profile_promotion_operator_receipt_runner_executed") is True
+        ),
+        "api_runner_profile_promotion_operator_receipt_external_state_mutated": bool(
+            release.get("api_runner_profile_promotion_operator_receipt_external_state_mutated")
+            is True
+        ),
+    }
+
+
 def _bottleneck_id(row: dict[str, Any]) -> str:
     return str(row.get("bottleneck_id") or row.get("requirement_id") or row.get("phase") or "").strip()
 
@@ -580,6 +650,7 @@ async def get_goal_status() -> dict[str, Any]:
             "science_claim_promotion_gap_closure_primary_open_gap_next_action": "",
             "science_claim_promotion_gap_closure_primary_open_gap_release_blocker": False,
             **_accuracy_parity_release_fields({}),
+            **_api_runner_profile_receipt_release_fields({}),
             "product_goal_release_blocker_fail_count": 0,
             "product_goal_release_blocker_requirement_ids": [],
             "product_goal_primary_release_blocker_requirement_id": "",
@@ -779,6 +850,7 @@ async def get_goal_status() -> dict[str, Any]:
             release.get("science_claim_promotion_gap_closure_primary_open_gap_release_blocker") is True
         ),
         **_accuracy_parity_release_fields(release),
+        **_api_runner_profile_receipt_release_fields(release),
         "product_goal_release_blocker_fail_count": _int(
             actions.get("product_goal_release_blocker_fail_count")
             or intake.get("product_goal_release_blocker_fail_count")
@@ -1221,12 +1293,14 @@ async def get_goal_release_decision() -> dict[str, Any]:
             "artifact_path": str(GOAL_RELEASE_DECISION_ARTIFACT),
             "release_allowed": False,
             **_accuracy_parity_release_fields({}),
+            **_api_runner_profile_receipt_release_fields({}),
             **_mutation_flags(),
             "claim_boundary": CLAIM_BOUNDARY,
         }
     return {
         **summary,
         **_accuracy_parity_release_fields(summary),
+        **_api_runner_profile_receipt_release_fields(summary),
         "artifact_path": str(GOAL_RELEASE_DECISION_ARTIFACT),
         "checks": _rows(packet),
         "blockers": _blockers(packet),

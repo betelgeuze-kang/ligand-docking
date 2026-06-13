@@ -42,6 +42,7 @@ FINAL_GATE_SPECS = [
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded",
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_packet_ready",
             "accuracy_parity_scorecard_recorded",
+            "api_runner_profile_promotion_operator_receipt_recorded",
         ],
         "required_zero_fields": ["blocker_count"],
         "required_int_exact_fields": {
@@ -61,6 +62,11 @@ FINAL_GATE_SPECS = [
             "accuracy_parity_scorecard_top_blocker_count": 4,
             "accuracy_parity_ligand_ranking_blocker_count": 4,
             "accuracy_parity_ligand_ranking_positive_count": 13,
+            "api_runner_profile_promotion_operator_receipt_profile_count": 4,
+            "api_runner_profile_promotion_operator_receipt_receipt_row_count": 4,
+            "api_runner_profile_promotion_operator_receipt_pass_row_count": 0,
+            "api_runner_profile_promotion_operator_receipt_blocked_row_count": 4,
+            "api_runner_profile_promotion_operator_receipt_blocker_count": 1,
             "science_claim_promotion_gap_closure_open_gap_count": 2,
         },
         "required_text_exact_fields": {
@@ -98,6 +104,21 @@ FINAL_GATE_SPECS = [
             "accuracy_parity_ligand_ranking_status": "blocked",
             "accuracy_parity_ligand_ranking_score_col_used": (
                 "binding_score_composite_v7_residual_active"
+            ),
+            "api_runner_profile_promotion_operator_receipt_status": (
+                "blocked_api_runner_profile_promotion_operator_receipt"
+            ),
+            "api_runner_profile_promotion_operator_receipt_readiness_status": (
+                "api_runner_profile_promotion_ready"
+            ),
+            "api_runner_profile_promotion_operator_receipt_first_blocked_profile_id": (
+                "backmapping_scoring.example"
+            ),
+            "api_runner_profile_promotion_operator_receipt_first_blocked_row_blocker": (
+                "operator_decision_missing"
+            ),
+            "api_runner_profile_promotion_operator_receipt_approval_token_required": (
+                "APPROVE_API_RUNNER_PROFILE_PROMOTION"
             ),
             "science_claim_promotion_gap_closure_status": (
                 "blocked_science_claim_promotion_gap_closure"

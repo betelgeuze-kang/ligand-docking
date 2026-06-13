@@ -220,6 +220,31 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["accuracy_parity_ligand_ranking_score_col_used"] == release_artifact.get(
         "accuracy_parity_ligand_ranking_score_col_used", ""
     )
+    assert status["api_runner_profile_promotion_operator_receipt_status"] == release_artifact.get(
+        "api_runner_profile_promotion_operator_receipt_status", ""
+    )
+    assert status["api_runner_profile_promotion_operator_receipt_recorded"] is (
+        release_artifact.get("api_runner_profile_promotion_operator_receipt_recorded") is True
+    )
+    assert status["api_runner_profile_promotion_operator_receipt_profile_count"] == int(
+        release_artifact.get("api_runner_profile_promotion_operator_receipt_profile_count") or 0
+    )
+    assert status["api_runner_profile_promotion_operator_receipt_blocked_row_count"] == int(
+        release_artifact.get("api_runner_profile_promotion_operator_receipt_blocked_row_count") or 0
+    )
+    assert status["api_runner_profile_promotion_operator_receipt_first_blocked_profile_id"] == (
+        release_artifact.get(
+            "api_runner_profile_promotion_operator_receipt_first_blocked_profile_id", ""
+        )
+    )
+    assert status["api_runner_profile_promotion_operator_receipt_first_blocked_row_blocker"] == (
+        release_artifact.get(
+            "api_runner_profile_promotion_operator_receipt_first_blocked_row_blocker", ""
+        )
+    )
+    assert status["api_runner_profile_promotion_operator_receipt_runner_executed"] is (
+        release_artifact.get("api_runner_profile_promotion_operator_receipt_runner_executed") is True
+    )
     assert status["product_goal_release_blocker_fail_count"] == int(
         actions_artifact.get("product_goal_release_blocker_fail_count") or 0
     )
@@ -701,6 +726,14 @@ def test_api_app_imports_with_goal_router() -> None:
     )
     assert release["accuracy_parity_ligand_ranking_status"] == release_artifact.get(
         "accuracy_parity_ligand_ranking_status", ""
+    )
+    assert release["api_runner_profile_promotion_operator_receipt_status"] == (
+        release_artifact.get("api_runner_profile_promotion_operator_receipt_status", "")
+    )
+    assert release["api_runner_profile_promotion_operator_receipt_first_blocked_profile_id"] == (
+        release_artifact.get(
+            "api_runner_profile_promotion_operator_receipt_first_blocked_profile_id", ""
+        )
     )
     assert release["blocker_count"] == int(release_artifact.get("blocker_count") or 0)
     assert len(release["checks"]) == int(release_artifact.get("check_count") or 0)

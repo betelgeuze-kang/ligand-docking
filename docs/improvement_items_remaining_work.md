@@ -263,6 +263,12 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   release bundle, source-of-truth refresh/freshness, goal operator intake kit,
   `/product/api-runner-profile-promotion-operator-receipt` API surface에 연결되어,
   `promotion_ready=true`와 실제 operator-approved promotion decision을 분리한다.
+  최신 `goal_release_decision_gate_current.json`과 `/goal/status`도
+  `api_runner_profile_promotion_operator_receipt_*` 키로 이 상태를 노출하며,
+  final refresh는 `status=blocked_api_runner_profile_promotion_operator_receipt`,
+  `profile_count=4`, `blocked_row_count=4`,
+  `first_blocked_profile_id=backmapping_scoring.example`,
+  `approval_token_required=APPROVE_API_RUNNER_PROFILE_PROMOTION`을 exact check로 고정한다.
 - `api/main.py`의 legacy `jobs = {}` in-memory dict은 제거됨.
   현재는 `api/job_store.py`의 `SQLiteJobStore`와
   `api/config.py`의 `api_job_store_path` 기본값
