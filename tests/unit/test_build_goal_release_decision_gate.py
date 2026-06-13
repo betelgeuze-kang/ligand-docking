@@ -543,6 +543,48 @@ def _blocked_engine_refinement_receipt() -> dict:
     }
 
 
+def _blocked_engine_refinement_priority_packet() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_engine_refinement_claim_evidence_priority_packet",
+            "priority_packet_ready": True,
+            "priority_item_count": 6,
+            "operator_input_required_count": 6,
+            "blocked_priority_item_count": 6,
+            "required_blocker_count": 6,
+            "missing_required_blocker_count": 0,
+            "blocker_count": 1,
+            "claim_evidence_receipt_status": "blocked_engine_refinement_claim_evidence_receipt",
+            "claim_evidence_receipt_ready": False,
+            "claim_promotion_allowed": False,
+            "public_benchmark_status": "blocked_refine_tier_public_benchmark_readiness",
+            "public_benchmark_gate_ready": False,
+            "public_benchmark_work_order_present": True,
+            "public_benchmark_work_order_row_count": 8,
+            "public_benchmark_work_order_apply_status": (
+                "blocked_refine_tier_public_benchmark_work_order_apply"
+            ),
+            "public_benchmark_work_order_apply_ready": False,
+            "public_benchmark_work_order_apply_blocked_row_count": 8,
+            "top_blocker_id": "public_benchmark_gate_not_ready",
+            "top_priority_bucket": "public_benchmark_work_order_apply_required",
+            "top_required_input": "runs/refine_tier_public_benchmark_work_order_current.csv",
+            "top_acceptance_artifact": "runs/refine_tier_public_benchmark_readiness_current.json",
+            "top_verification_command": (
+                "python3 tools/product/apply_refine_tier_public_benchmark_work_order.py; "
+                "python3 tools/product/build_refine_tier_public_benchmark_readiness.py; "
+                "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py"
+            ),
+            "top_next_operator_step": (
+                "Fill and validate 8 public benchmark work-order rows; current apply blocked rows=8."
+            ),
+            "approval_token_required": "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT",
+            "approval_token_count": 1,
+            "external_state_mutated": False,
+        }
+    }
+
+
 def _full_commercial_bottleneck_briefing() -> dict:
     return {
         "summary": {
@@ -1132,6 +1174,7 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
         product_release_source_of_truth_packet=_ready_source_of_truth(),
         product_scope_breadth_evidence_receipt_packet=_blocked_product_scope_receipt(),
         engine_refinement_claim_evidence_receipt_packet=_blocked_engine_refinement_receipt(),
+        engine_refinement_claim_evidence_priority_packet=_blocked_engine_refinement_priority_packet(),
         product_full_commercial_blocker_evidence_matrix_packet=_blocked_full_commercial_matrix(),
     )
 
@@ -1317,6 +1360,27 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
     assert summary["engine_refinement_claim_evidence_receipt_approval_token_required"] == (
         "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
     )
+    assert summary["engine_refinement_claim_evidence_priority_packet_recorded"] is True
+    assert summary["engine_refinement_claim_evidence_priority_packet_status"] == (
+        "blocked_engine_refinement_claim_evidence_priority_packet"
+    )
+    assert summary["engine_refinement_claim_evidence_priority_packet_priority_item_count"] == 6
+    assert summary["engine_refinement_claim_evidence_priority_packet_operator_input_required_count"] == 6
+    assert summary["engine_refinement_claim_evidence_priority_packet_top_blocker_id"] == (
+        "public_benchmark_gate_not_ready"
+    )
+    assert summary["engine_refinement_claim_evidence_priority_packet_top_priority_bucket"] == (
+        "public_benchmark_work_order_apply_required"
+    )
+    assert summary["engine_refinement_claim_evidence_priority_packet_top_required_input"] == (
+        "runs/refine_tier_public_benchmark_work_order_current.csv"
+    )
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_blocked_row_count"
+    ] == 8
+    assert summary["engine_refinement_claim_evidence_priority_packet_approval_token_required"] == (
+        "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+    )
     matrix_row = next(
         row
         for row in payload["rows"]
@@ -1346,6 +1410,11 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
         row
         for row in payload["rows"]
         if row["check"] == "engine_refinement_claim_evidence_receipt_recorded"
+    )
+    engine_priority_row = next(
+        row
+        for row in payload["rows"]
+        if row["check"] == "engine_refinement_claim_evidence_priority_packet_recorded"
     )
     assert bottleneck_row["status"] == "pass"
     assert bottleneck_row["release_blocker"] is False
@@ -1383,6 +1452,10 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
     assert engine_receipt_row["release_blocker"] is False
     assert "first_blocked_blocker_id=public_benchmark_gate_not_ready" in engine_receipt_row["observed"]
     assert "approval_token_required=APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT" in engine_receipt_row["observed"]
+    assert engine_priority_row["status"] == "pass"
+    assert engine_priority_row["release_blocker"] is False
+    assert "top_blocker_id=public_benchmark_gate_not_ready" in engine_priority_row["observed"]
+    assert "public_benchmark_work_order_apply_blocked_row_count=8" in engine_priority_row["observed"]
 
 
 def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_blocking_restricted_release() -> None:
@@ -1926,6 +1999,7 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
         "api_runner_profile_receipt": tmp_path / "api_runner_profile_receipt.json",
         "product_scope_receipt": tmp_path / "product_scope_receipt.json",
         "engine_refinement_receipt": tmp_path / "engine_refinement_receipt.json",
+        "engine_refinement_priority": tmp_path / "engine_refinement_priority.json",
         "full_commercial_matrix": tmp_path / "full_commercial_matrix.json",
         "rollout_smoke_receipt": tmp_path / "rollout_smoke_receipt.json",
         "accuracy_parity": tmp_path / "accuracy_parity.json",
@@ -1966,6 +2040,10 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     )
     paths["engine_refinement_receipt"].write_text(
         json.dumps(_blocked_engine_refinement_receipt()) + "\n",
+        encoding="utf-8",
+    )
+    paths["engine_refinement_priority"].write_text(
+        json.dumps(_blocked_engine_refinement_priority_packet()) + "\n",
         encoding="utf-8",
     )
     paths["full_commercial_matrix"].write_text(
@@ -2036,6 +2114,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
             str(paths["product_scope_receipt"]),
             "--engine-refinement-claim-evidence-receipt-json",
             str(paths["engine_refinement_receipt"]),
+            "--engine-refinement-claim-evidence-priority-packet-json",
+            str(paths["engine_refinement_priority"]),
             "--product-full-commercial-blocker-evidence-matrix-json",
             str(paths["full_commercial_matrix"]),
             "--product-rollout-execution-smoke-receipt-json",
@@ -2100,6 +2180,15 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     assert summary["engine_refinement_claim_evidence_receipt_first_blocked_blocker_id"] == (
         "public_benchmark_gate_not_ready"
     )
+    assert summary["engine_refinement_claim_evidence_priority_packet_status"] == (
+        "blocked_engine_refinement_claim_evidence_priority_packet"
+    )
+    assert summary["engine_refinement_claim_evidence_priority_packet_top_blocker_id"] == (
+        "public_benchmark_gate_not_ready"
+    )
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_blocked_row_count"
+    ] == 8
     assert summary["master_gap_closure_rollup_status"] == "blocked_master_gap_closure_rollup"
     assert summary[
         "science_claim_promotion_gap_closure_status"
@@ -2128,6 +2217,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     assert "product_scope_breadth_evidence_receipt_status" in md_text
     assert "engine_refinement_claim_evidence_receipt_status" in md_text
     assert "public_benchmark_gate_not_ready" in md_text
+    assert "engine_refinement_claim_evidence_priority_packet_status" in md_text
+    assert "public_benchmark_work_order_apply_required" in md_text
     assert "master_gap_closure_rollup_status" in md_text
     assert "science_claim_promotion_gap_closure_status" in md_text
     assert "SCI-OPENMM" in md_text

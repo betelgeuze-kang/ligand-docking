@@ -477,6 +477,11 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `top_priority_bucket=public_benchmark_work_order_apply_required`,
   `public_benchmark_work_order_apply_blocked_row_count=8`을 노출해,
   R9의 첫 수동 입력이 공개 benchmark work-order 8개 row 검증임을 숨기지 않는다.
+  최신 `runs/goal_release_decision_gate_current.json`도 이 priority packet을
+  `engine_refinement_claim_evidence_priority_packet_*` summary와 recorded row로 직접
+  흡수하며, final refresh exact check가 `top_blocker_id=public_benchmark_gate_not_ready`,
+  `top_priority_bucket=public_benchmark_work_order_apply_required`, work-order row 8개,
+  apply blocked row 8개, approval token을 고정한다.
   이 receipt artifact는 `engine_refinement_tier_readiness`,
   `product_launch_r4_preflight`, `product_goal_completion_audit`,
   `goal_operator_action_board`, `goal_operator_intake_kit`,
@@ -574,6 +579,10 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   흡수하며, final refresh exact check는 `status`,
   `operator_receipt_status`, `observed_registry_default_residual_mode=shadow`,
   `observed_registry_trained_model_checkpoint_count=0`, approval token을 고정한다.
+  같은 decision gate는 R9
+  `engine_refinement_claim_evidence_priority_packet_current.json`도 직접 읽어
+  public benchmark work-order apply 8개 blocked row와 top blocker를 final refresh exact
+  check에 고정한다.
   최신 decision summary는 restricted/local release surface를
   `release_allowed=true`, `restricted_release_allowed=true`로 유지하면서도
   `full_commercial_release_allowed=false`,

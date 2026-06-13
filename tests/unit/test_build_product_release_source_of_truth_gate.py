@@ -41,6 +41,8 @@ def _refresh_release_decision_ready() -> dict:
             "api_runner_profile_promotion_operator_receipt_recorded": True,
             "product_scope_breadth_evidence_receipt_recorded": True,
             "engine_refinement_claim_evidence_receipt_recorded": True,
+            "engine_refinement_claim_evidence_priority_packet_recorded": True,
+            "engine_refinement_claim_evidence_priority_packet_ready": True,
             "source_goal_bottleneck_briefing_status": "goal_bottleneck_briefing_ready",
             "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 2,
@@ -80,6 +82,15 @@ def _refresh_release_decision_ready() -> dict:
             "engine_refinement_claim_evidence_receipt_blocked_row_count": 6,
             "engine_refinement_claim_evidence_receipt_blocker_count": 1,
             "engine_refinement_claim_evidence_receipt_required_blocker_count": 6,
+            "engine_refinement_claim_evidence_priority_packet_priority_item_count": 6,
+            "engine_refinement_claim_evidence_priority_packet_operator_input_required_count": 6,
+            "engine_refinement_claim_evidence_priority_packet_blocked_priority_item_count": 6,
+            "engine_refinement_claim_evidence_priority_packet_required_blocker_count": 6,
+            "engine_refinement_claim_evidence_priority_packet_missing_required_blocker_count": 0,
+            "engine_refinement_claim_evidence_priority_packet_blocker_count": 1,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_row_count": 8,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_blocked_row_count": 8,
+            "engine_refinement_claim_evidence_priority_packet_approval_token_count": 1,
             "science_claim_promotion_gap_closure_open_gap_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
@@ -191,6 +202,33 @@ def _refresh_release_decision_ready() -> dict:
                 "operator_placeholders_unfilled"
             ),
             "engine_refinement_claim_evidence_receipt_approval_token_required": (
+                "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_status": (
+                "blocked_engine_refinement_claim_evidence_priority_packet"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_claim_evidence_receipt_status": (
+                "blocked_engine_refinement_claim_evidence_receipt"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_top_blocker_id": (
+                "public_benchmark_gate_not_ready"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_top_priority_bucket": (
+                "public_benchmark_work_order_apply_required"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_top_required_input": (
+                "runs/refine_tier_public_benchmark_work_order_current.csv"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_top_acceptance_artifact": (
+                "runs/refine_tier_public_benchmark_readiness_current.json"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_status": (
+                "blocked_refine_tier_public_benchmark_readiness"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_status": (
+                "blocked_refine_tier_public_benchmark_work_order_apply"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_approval_token_required": (
                 "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
             ),
             "science_claim_promotion_gap_closure_status": (
@@ -381,6 +419,10 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
         "engine_refinement_claim_evidence_receipt_recorded"
         in release_row["required_true_fields"]
     )
+    assert (
+        "engine_refinement_claim_evidence_priority_packet_recorded"
+        in release_row["required_true_fields"]
+    )
     assert release_row["required_int_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count"
     ] == 4
@@ -402,6 +444,9 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_int_exact_fields"][
         "engine_refinement_claim_evidence_receipt_required_blocker_count"
     ] == 6
+    assert release_row["required_int_exact_fields"][
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_blocked_row_count"
+    ] == 8
     assert release_row["required_text_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id"
     ] == "trained_model_checkpoint_count_positive"
@@ -426,6 +471,9 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_text_exact_fields"][
         "engine_refinement_claim_evidence_receipt_first_blocked_blocker_id"
     ] == "public_benchmark_gate_not_ready"
+    assert release_row["required_text_exact_fields"][
+        "engine_refinement_claim_evidence_priority_packet_top_priority_bucket"
+    ] == "public_benchmark_work_order_apply_required"
     assert release_row["required_int_exact_fields"][
         "science_claim_promotion_gap_closure_open_gap_count"
     ] == 2

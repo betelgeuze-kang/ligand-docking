@@ -41,6 +41,9 @@ DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_JSON = (
 DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON = (
     "runs/engine_refinement_claim_evidence_receipt_current.json"
 )
+DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_JSON = (
+    "runs/engine_refinement_claim_evidence_priority_packet_current.json"
+)
 DEFAULT_PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON = (
     "runs/product_full_commercial_blocker_evidence_matrix_current.json"
 )
@@ -206,6 +209,7 @@ def build_goal_release_decision_gate(
     api_runner_profile_promotion_operator_receipt_packet: dict[str, Any] | None = None,
     product_scope_breadth_evidence_receipt_packet: dict[str, Any] | None = None,
     engine_refinement_claim_evidence_receipt_packet: dict[str, Any] | None = None,
+    engine_refinement_claim_evidence_priority_packet: dict[str, Any] | None = None,
     product_full_commercial_blocker_evidence_matrix_packet: dict[str, Any] | None = None,
     product_rollout_execution_smoke_receipt_packet: dict[str, Any] | None = None,
     accuracy_parity_scorecard_packet: dict[str, Any] | None = None,
@@ -242,6 +246,9 @@ def build_goal_release_decision_gate(
     ),
     engine_refinement_claim_evidence_receipt_path: str = (
         DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON
+    ),
+    engine_refinement_claim_evidence_priority_packet_path: str = (
+        DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_JSON
     ),
     product_full_commercial_blocker_evidence_matrix_path: str = (
         DEFAULT_PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON
@@ -327,6 +334,46 @@ def build_goal_release_decision_gate(
         and _text(engine_refinement_receipt.get("approval_token_required"))
         == "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
         and bool(engine_refinement_receipt.get("external_state_mutated") is False)
+    )
+    engine_refinement_priority = _summary(engine_refinement_claim_evidence_priority_packet or {})
+    engine_refinement_priority_gate_present = (
+        engine_refinement_claim_evidence_priority_packet is not None
+    )
+    engine_refinement_priority_recorded = (
+        _text(engine_refinement_priority.get("status"))
+        in {
+            "blocked_engine_refinement_claim_evidence_priority_packet",
+            "engine_refinement_claim_evidence_priority_packet_ready",
+        }
+        and bool(engine_refinement_priority.get("priority_packet_ready") is True)
+        and _int(engine_refinement_priority.get("priority_item_count")) == 6
+        and _int(engine_refinement_priority.get("operator_input_required_count")) == 6
+        and _int(engine_refinement_priority.get("blocked_priority_item_count")) == 6
+        and _int(engine_refinement_priority.get("required_blocker_count")) == 6
+        and _int(engine_refinement_priority.get("missing_required_blocker_count")) == 0
+        and _text(engine_refinement_priority.get("claim_evidence_receipt_status"))
+        == "blocked_engine_refinement_claim_evidence_receipt"
+        and bool(engine_refinement_priority.get("claim_evidence_receipt_ready") is False)
+        and bool(engine_refinement_priority.get("claim_promotion_allowed") is False)
+        and _text(engine_refinement_priority.get("public_benchmark_status"))
+        == "blocked_refine_tier_public_benchmark_readiness"
+        and bool(engine_refinement_priority.get("public_benchmark_gate_ready") is False)
+        and bool(engine_refinement_priority.get("public_benchmark_work_order_present") is True)
+        and _int(engine_refinement_priority.get("public_benchmark_work_order_row_count")) == 8
+        and _text(engine_refinement_priority.get("public_benchmark_work_order_apply_status"))
+        == "blocked_refine_tier_public_benchmark_work_order_apply"
+        and bool(engine_refinement_priority.get("public_benchmark_work_order_apply_ready") is False)
+        and _int(engine_refinement_priority.get("public_benchmark_work_order_apply_blocked_row_count")) == 8
+        and _text(engine_refinement_priority.get("top_blocker_id")) == "public_benchmark_gate_not_ready"
+        and _text(engine_refinement_priority.get("top_priority_bucket"))
+        == "public_benchmark_work_order_apply_required"
+        and _text(engine_refinement_priority.get("top_required_input"))
+        == "runs/refine_tier_public_benchmark_work_order_current.csv"
+        and _text(engine_refinement_priority.get("top_acceptance_artifact"))
+        == "runs/refine_tier_public_benchmark_readiness_current.json"
+        and _text(engine_refinement_priority.get("approval_token_required"))
+        == "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+        and bool(engine_refinement_priority.get("external_state_mutated") is False)
     )
     goal_bottleneck_briefing = _summary(goal_bottleneck_briefing_packet or {})
     goal_bottleneck_briefing_gate_present = goal_bottleneck_briefing_packet is not None
@@ -1047,6 +1094,56 @@ def build_goal_release_decision_gate(
                 ),
             )
         )
+    if engine_refinement_priority_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="engine_refinement_claim_evidence_priority_packet_recorded",
+                artifact_path=engine_refinement_claim_evidence_priority_packet_path,
+                observed=(
+                    f"{_text(engine_refinement_priority.get('status')) or 'missing'};"
+                    f"priority_packet_ready="
+                    f"{_bool_text(bool(engine_refinement_priority.get('priority_packet_ready') is True))};"
+                    f"claim_evidence_receipt_status="
+                    f"{_text(engine_refinement_priority.get('claim_evidence_receipt_status'))};"
+                    f"claim_evidence_receipt_ready="
+                    f"{_bool_text(bool(engine_refinement_priority.get('claim_evidence_receipt_ready') is True))};"
+                    f"claim_promotion_allowed="
+                    f"{_bool_text(bool(engine_refinement_priority.get('claim_promotion_allowed') is True))};"
+                    f"priority_item_count={_int(engine_refinement_priority.get('priority_item_count'))};"
+                    f"operator_input_required_count="
+                    f"{_int(engine_refinement_priority.get('operator_input_required_count'))};"
+                    f"blocked_priority_item_count="
+                    f"{_int(engine_refinement_priority.get('blocked_priority_item_count'))};"
+                    f"required_blocker_count={_int(engine_refinement_priority.get('required_blocker_count'))};"
+                    f"top_blocker_id={_text(engine_refinement_priority.get('top_blocker_id'))};"
+                    f"top_priority_bucket={_text(engine_refinement_priority.get('top_priority_bucket'))};"
+                    f"top_required_input={_text(engine_refinement_priority.get('top_required_input'))};"
+                    f"top_acceptance_artifact={_text(engine_refinement_priority.get('top_acceptance_artifact'))};"
+                    f"public_benchmark_status="
+                    f"{_text(engine_refinement_priority.get('public_benchmark_status'))};"
+                    f"public_benchmark_work_order_row_count="
+                    f"{_int(engine_refinement_priority.get('public_benchmark_work_order_row_count'))};"
+                    f"public_benchmark_work_order_apply_status="
+                    f"{_text(engine_refinement_priority.get('public_benchmark_work_order_apply_status'))};"
+                    f"public_benchmark_work_order_apply_blocked_row_count="
+                    f"{_int(engine_refinement_priority.get('public_benchmark_work_order_apply_blocked_row_count'))};"
+                    f"approval_token_required="
+                    f"{_text(engine_refinement_priority.get('approval_token_required'))};"
+                    f"external_state_mutated="
+                    f"{_bool_text(bool(engine_refinement_priority.get('external_state_mutated') is True))}"
+                ),
+                required=(
+                    "R9 engine refinement claim evidence priority packet recorded with the top "
+                    "public-benchmark work-order blocker and approval token"
+                ),
+                passed=engine_refinement_priority_recorded,
+                reason=(
+                    "The final release decision must preserve the first R9 manual operator step: "
+                    "fill and validate the public benchmark work-order rows before any claim promotion."
+                ),
+            )
+        )
     if goal_bottleneck_briefing_gate_present:
         rows.append(
             _row(
@@ -1421,6 +1518,8 @@ def build_goal_release_decision_gate(
         next_required_items.append("product scope breadth evidence receipt")
     if engine_refinement_receipt_gate_present and not engine_refinement_receipt_recorded:
         next_required_items.append("engine refinement claim evidence receipt")
+    if engine_refinement_priority_gate_present and not engine_refinement_priority_recorded:
+        next_required_items.append("engine refinement claim evidence priority packet")
     if goal_bottleneck_briefing_gate_present and not goal_bottleneck_full_commercial_receipts_recorded:
         next_required_items.append("goal bottleneck full-commercial receipt briefing")
     if (
@@ -1693,6 +1792,93 @@ def build_goal_release_decision_gate(
         ),
         "engine_refinement_claim_evidence_receipt_external_state_mutated": bool(
             engine_refinement_receipt.get("external_state_mutated") is True
+        ),
+        "engine_refinement_claim_evidence_priority_packet_gate_present": (
+            engine_refinement_priority_gate_present
+        ),
+        "engine_refinement_claim_evidence_priority_packet_status": _text(
+            engine_refinement_priority.get("status")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_recorded": (
+            engine_refinement_priority_recorded if engine_refinement_priority_gate_present else None
+        ),
+        "engine_refinement_claim_evidence_priority_packet_ready": bool(
+            engine_refinement_priority.get("priority_packet_ready") is True
+        ),
+        "engine_refinement_claim_evidence_priority_packet_claim_evidence_receipt_status": _text(
+            engine_refinement_priority.get("claim_evidence_receipt_status")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_claim_evidence_receipt_ready": bool(
+            engine_refinement_priority.get("claim_evidence_receipt_ready") is True
+        ),
+        "engine_refinement_claim_evidence_priority_packet_claim_promotion_allowed": bool(
+            engine_refinement_priority.get("claim_promotion_allowed") is True
+        ),
+        "engine_refinement_claim_evidence_priority_packet_priority_item_count": _int(
+            engine_refinement_priority.get("priority_item_count")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_operator_input_required_count": _int(
+            engine_refinement_priority.get("operator_input_required_count")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_blocked_priority_item_count": _int(
+            engine_refinement_priority.get("blocked_priority_item_count")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_required_blocker_count": _int(
+            engine_refinement_priority.get("required_blocker_count")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_missing_required_blocker_count": _int(
+            engine_refinement_priority.get("missing_required_blocker_count")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_blocker_count": _int(
+            engine_refinement_priority.get("blocker_count")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_top_blocker_id": _text(
+            engine_refinement_priority.get("top_blocker_id")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_top_priority_bucket": _text(
+            engine_refinement_priority.get("top_priority_bucket")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_top_required_input": _text(
+            engine_refinement_priority.get("top_required_input")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_top_acceptance_artifact": _text(
+            engine_refinement_priority.get("top_acceptance_artifact")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_top_verification_command": _text(
+            engine_refinement_priority.get("top_verification_command")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_top_next_operator_step": _text(
+            engine_refinement_priority.get("top_next_operator_step")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_status": _text(
+            engine_refinement_priority.get("public_benchmark_status")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_gate_ready": bool(
+            engine_refinement_priority.get("public_benchmark_gate_ready") is True
+        ),
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_present": bool(
+            engine_refinement_priority.get("public_benchmark_work_order_present") is True
+        ),
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_row_count": _int(
+            engine_refinement_priority.get("public_benchmark_work_order_row_count")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_status": _text(
+            engine_refinement_priority.get("public_benchmark_work_order_apply_status")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_ready": bool(
+            engine_refinement_priority.get("public_benchmark_work_order_apply_ready") is True
+        ),
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_blocked_row_count": _int(
+            engine_refinement_priority.get("public_benchmark_work_order_apply_blocked_row_count")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_approval_token_required": _text(
+            engine_refinement_priority.get("approval_token_required")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_approval_token_count": _int(
+            engine_refinement_priority.get("approval_token_count")
+        ),
+        "engine_refinement_claim_evidence_priority_packet_external_state_mutated": bool(
+            engine_refinement_priority.get("external_state_mutated") is True
         ),
         "goal_bottleneck_briefing_gate_present": goal_bottleneck_briefing_gate_present,
         "source_goal_bottleneck_briefing_status": _text(goal_bottleneck_briefing.get("status")),
@@ -2325,6 +2511,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- engine_refinement_claim_evidence_receipt_first_blocked_blocker_id: `{s['engine_refinement_claim_evidence_receipt_first_blocked_blocker_id']}`",
         f"- engine_refinement_claim_evidence_receipt_most_common_row_blocker: `{s['engine_refinement_claim_evidence_receipt_most_common_row_blocker']}`",
         f"- engine_refinement_claim_evidence_receipt_approval_token_required: `{s['engine_refinement_claim_evidence_receipt_approval_token_required']}`",
+        f"- engine_refinement_claim_evidence_priority_packet_recorded: `{s['engine_refinement_claim_evidence_priority_packet_recorded']}`",
+        f"- engine_refinement_claim_evidence_priority_packet_status: `{s['engine_refinement_claim_evidence_priority_packet_status']}`",
+        f"- engine_refinement_claim_evidence_priority_packet_top_blocker_id: `{s['engine_refinement_claim_evidence_priority_packet_top_blocker_id']}`",
+        f"- engine_refinement_claim_evidence_priority_packet_top_priority_bucket: `{s['engine_refinement_claim_evidence_priority_packet_top_priority_bucket']}`",
+        f"- engine_refinement_claim_evidence_priority_packet_top_required_input: `{s['engine_refinement_claim_evidence_priority_packet_top_required_input']}`",
+        f"- engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_blocked_row_count: `{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_blocked_row_count']}`",
+        f"- engine_refinement_claim_evidence_priority_packet_approval_token_required: `{s['engine_refinement_claim_evidence_priority_packet_approval_token_required']}`",
         f"- goal_bottleneck_briefing_gate_present: `{s['goal_bottleneck_briefing_gate_present']}`",
         f"- source_goal_bottleneck_briefing_status: `{s['source_goal_bottleneck_briefing_status']}`",
         f"- goal_bottleneck_briefing_full_commercial_receipts_recorded: `{s['goal_bottleneck_briefing_full_commercial_receipts_recorded']}`",
@@ -2522,6 +2715,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON,
     )
     parser.add_argument(
+        "--engine-refinement-claim-evidence-priority-packet-json",
+        default=DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_JSON,
+    )
+    parser.add_argument(
         "--product-full-commercial-blocker-evidence-matrix-json",
         default=DEFAULT_PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON,
     )
@@ -2584,6 +2781,9 @@ def main(argv: list[str] | None = None) -> None:
         engine_refinement_claim_evidence_receipt_packet=_read_json_if_present(
             args.engine_refinement_claim_evidence_receipt_json
         ),
+        engine_refinement_claim_evidence_priority_packet=_read_json_if_present(
+            args.engine_refinement_claim_evidence_priority_packet_json
+        ),
         product_full_commercial_blocker_evidence_matrix_packet=_read_json_if_present(
             args.product_full_commercial_blocker_evidence_matrix_json
         ),
@@ -2630,6 +2830,9 @@ def main(argv: list[str] | None = None) -> None:
         ),
         engine_refinement_claim_evidence_receipt_path=(
             args.engine_refinement_claim_evidence_receipt_json
+        ),
+        engine_refinement_claim_evidence_priority_packet_path=(
+            args.engine_refinement_claim_evidence_priority_packet_json
         ),
         product_full_commercial_blocker_evidence_matrix_path=(
             args.product_full_commercial_blocker_evidence_matrix_json

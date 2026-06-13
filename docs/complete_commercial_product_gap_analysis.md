@@ -152,6 +152,11 @@
   `public_benchmark_work_order_apply_blocked_row_count=8`을 노출한다. 즉 R9 claim
   promotion의 첫 실제 수동 단계는 `runs/refine_tier_public_benchmark_work_order_current.csv`
   8개 row를 public provenance/pose/free-energy 값으로 채우고 apply gate를 통과시키는 것이다.
+  최신 `runs/goal_release_decision_gate_current.json`도 이 priority packet을
+  `engine_refinement_claim_evidence_priority_packet_*` summary와 recorded row로 직접
+  흡수하며, final refresh exact check가 `top_blocker_id=public_benchmark_gate_not_ready`,
+  `top_priority_bucket=public_benchmark_work_order_apply_required`, work-order row 8개,
+  apply blocked row 8개, approval token을 고정한다.
   이 receipt 상태는 engine readiness, R4 preflight, goal audit, goal operator intake kit,
   operator packet, handoff, release bundle, release source-of-truth freshness에 연결되어
   claim-grade 증거 수집/승인 상태가 숨지 않는다.
@@ -237,6 +242,10 @@
   흡수하며, final refresh exact check는 `status`,
   `operator_receipt_status`, `observed_registry_default_residual_mode=shadow`,
   `observed_registry_trained_model_checkpoint_count=0`, approval token을 고정한다.
+  같은 decision gate는 R9
+  `engine_refinement_claim_evidence_priority_packet_current.json`도 직접 읽어
+  public benchmark work-order apply 8개 blocked row와 top blocker를 final refresh exact
+  check에 고정한다.
   최신 decision summary는
   `release_allowed=true`, `restricted_release_allowed=true`와 별개로
   `full_commercial_release_allowed=false`,
