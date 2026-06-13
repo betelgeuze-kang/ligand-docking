@@ -793,13 +793,47 @@ def build_goal_release_decision_gate(
         "gap_id",
         science_claim_primary_open_gap_id,
     )
+    science_claim_closed_gap_ids = _text_list(science_claim_gap.get("closed_gap_ids"))
+    science_claim_open_rows = [
+        row for row in science_claim_gap_rows if _text(row.get("status")) == "open"
+    ]
+    science_claim_closed_rows = [
+        row for row in science_claim_gap_rows if _text(row.get("status")) == "closed"
+    ]
+    science_claim_release_blocker_rows = [
+        row for row in science_claim_gap_rows if bool(row.get("release_blocker") is True)
+    ]
+    science_claim_gpcr_gap = _row_by_id(science_claim_gap_rows, "gap_id", "SCI-GPCR")
+    science_claim_openmm_gap = _row_by_id(science_claim_gap_rows, "gap_id", "SCI-OPENMM")
+    expected_science_claim_open_gap_ids = ["SCI-GPCR", "SCI-OPENMM"]
+    expected_science_claim_closed_gap_ids = ["SCI-TRANS", "SCI-CA2-PXR", "SCI-WETLAB"]
     science_claim_gap_recorded = (
-        _text(science_claim_gap.get("status"))
-        in {
-            "blocked_science_claim_promotion_gap_closure",
-            "science_claim_promotion_gap_closure_complete",
-        }
-        and _int(science_claim_gap.get("gap_count")) >= 1
+        _text(science_claim_gap.get("status")) == "blocked_science_claim_promotion_gap_closure"
+        and bool(science_claim_gap.get("all_gaps_closed") is False)
+        and bool(science_claim_gap.get("claim_promotion_allowed") is False)
+        and _int(science_claim_gap.get("gap_count")) == 5
+        and _int(science_claim_gap.get("closed_gap_count")) == 3
+        and _int(science_claim_gap.get("open_gap_count")) == 2
+        and science_claim_open_gap_ids == expected_science_claim_open_gap_ids
+        and science_claim_closed_gap_ids == expected_science_claim_closed_gap_ids
+        and science_claim_primary_open_gap_id == "SCI-GPCR"
+        and len(science_claim_open_rows) == 2
+        and len(science_claim_closed_rows) == 3
+        and len(science_claim_release_blocker_rows) == 2
+        and _text(science_claim_gpcr_gap.get("claim_promotion_status")) == "blocked_ci_low_oprm1"
+        and _text(science_claim_gpcr_gap.get("evidence"))
+        == "runs/gpcr_conditional_prior_promotion_gate_current.json"
+        and bool(science_claim_gpcr_gap.get("claim_promotion_allowed") is False)
+        and bool(science_claim_gpcr_gap.get("release_blocker") is True)
+        and bool(science_claim_gpcr_gap.get("execution_enabled") is False)
+        and bool(science_claim_gpcr_gap.get("external_state_mutated") is False)
+        and _text(science_claim_openmm_gap.get("claim_promotion_status")) == "restricted_2bead_only"
+        and _text(science_claim_openmm_gap.get("evidence"))
+        == "runs/wetlab_openmm_claim_promotion_boundary_current.json; runs/accuracy_parity_scorecard_current.json"
+        and bool(science_claim_openmm_gap.get("claim_promotion_allowed") is False)
+        and bool(science_claim_openmm_gap.get("release_blocker") is True)
+        and bool(science_claim_openmm_gap.get("execution_enabled") is False)
+        and bool(science_claim_openmm_gap.get("external_state_mutated") is False)
         and bool(science_claim_gap.get("execution_enabled") is False)
         and bool(science_claim_gap.get("external_state_mutated") is False)
     )
@@ -842,16 +876,48 @@ def build_goal_release_decision_gate(
         and not bool(accuracy_parity.get("overall_commercial_tool_accuracy_parity_allowed") is True)
     )
     master_gap_rollup = _summary(master_gap_closure_rollup_packet or {})
+    master_gap_rows = _rows(master_gap_closure_rollup_packet or {})
     master_gap_rollup_gate_present = master_gap_closure_rollup_packet is not None
     master_gap_open_ids = [
         _text(item)
         for item in (master_gap_rollup.get("open_gap_ids") or [])
         if _text(item)
     ]
+    master_gap_closed_ids = _text_list(master_gap_rollup.get("closed_gap_ids"))
+    master_gap_science_claim_row = _row_by_id(master_gap_rows, "gap_id", "SCI-CLAIM")
+    master_gap_release_blocker_rows = [
+        row for row in master_gap_rows if bool(row.get("release_blocker") is True)
+    ]
+    expected_master_gap_closed_ids = [
+        "COMMERCIAL",
+        "PRODUCT-AI",
+        "DATA-SCIENCE",
+        "INFRA",
+        "DEPLOY-OPS",
+        "STORAGE",
+        "TOOLS",
+        "API-RUNNER",
+    ]
     master_gap_rollup_recorded = (
-        _text(master_gap_rollup.get("status"))
-        in {"blocked_master_gap_closure_rollup", "master_gap_closure_rollup_complete"}
-        and _int(master_gap_rollup.get("gap_count")) >= 1
+        _text(master_gap_rollup.get("status")) == "blocked_master_gap_closure_rollup"
+        and bool(master_gap_rollup.get("all_gaps_closed") is False)
+        and bool(master_gap_rollup.get("claim_promotion_allowed") is False)
+        and _int(master_gap_rollup.get("gap_count")) == 9
+        and _int(master_gap_rollup.get("closed_gap_count")) == 8
+        and _int(master_gap_rollup.get("open_gap_count")) == 1
+        and master_gap_open_ids == ["SCI-CLAIM"]
+        and master_gap_closed_ids == expected_master_gap_closed_ids
+        and _text(master_gap_rollup.get("current_primary_open_gap_id")) == "SCI-CLAIM"
+        and len(master_gap_rows) == 9
+        and len(master_gap_release_blocker_rows) == 1
+        and _text(master_gap_science_claim_row.get("status")) == "open"
+        and _text(master_gap_science_claim_row.get("rollup_status"))
+        == "blocked_science_claim_promotion_gap_closure"
+        and _text(master_gap_science_claim_row.get("evidence"))
+        == "runs/science_claim_promotion_gap_closure_current.json"
+        and bool(master_gap_science_claim_row.get("release_blocker") is True)
+        and bool(master_gap_science_claim_row.get("execution_enabled") is False)
+        and bool(master_gap_science_claim_row.get("external_state_mutated") is False)
         and bool(master_gap_rollup.get("execution_enabled") is False)
         and bool(master_gap_rollup.get("external_state_mutated") is False)
     )
@@ -1704,13 +1770,23 @@ def build_goal_release_decision_gate(
                 observed=(
                     f"{_text(master_gap_rollup.get('status')) or 'missing'};"
                     f"all_gaps_closed={_bool_text(bool(master_gap_rollup.get('all_gaps_closed') is True))};"
+                    f"claim_promotion_allowed={_bool_text(bool(master_gap_rollup.get('claim_promotion_allowed') is True))};"
                     f"open_gap_count={_int(master_gap_rollup.get('open_gap_count'))};"
                     f"open_gap_ids={';'.join(master_gap_open_ids)};"
-                    f"current_primary_open_gap_id={_text(master_gap_rollup.get('current_primary_open_gap_id'))}"
+                    f"closed_gap_count={_int(master_gap_rollup.get('closed_gap_count'))};"
+                    f"closed_gap_ids={';'.join(master_gap_closed_ids)};"
+                    f"release_blocker_row_count={len(master_gap_release_blocker_rows)};"
+                    f"current_primary_open_gap_id={_text(master_gap_rollup.get('current_primary_open_gap_id'))};"
+                    f"science_claim_rollup_status={_text(master_gap_science_claim_row.get('rollup_status'))};"
+                    f"science_claim_evidence={_text(master_gap_science_claim_row.get('evidence'))};"
+                    f"science_claim_release_blocker={_bool_text(bool(master_gap_science_claim_row.get('release_blocker') is True))}"
                 ),
-                required="master gap closure rollup recorded with full-commercial open gap visibility",
+                required=(
+                    "master gap closure rollup recorded with SCI-CLAIM as the sole open "
+                    "full-commercial rollup gap and all other master gaps closed"
+                ),
                 passed=master_gap_rollup_recorded,
-                reason="The final release decision must not hide full-commercial SCI-CLAIM or DEPLOY-OPS rollup gaps while restricted release evidence is green.",
+                reason="The final release decision must not hide the full-commercial SCI-CLAIM blocker while restricted release evidence is green.",
             )
         )
     if accuracy_parity_gate_present:
@@ -1758,12 +1834,24 @@ def build_goal_release_decision_gate(
                     f"claim_promotion_allowed={_bool_text(bool(science_claim_gap.get('claim_promotion_allowed') is True))};"
                     f"open_gap_count={_int(science_claim_gap.get('open_gap_count'))};"
                     f"open_gap_ids={';'.join(science_claim_open_gap_ids)};"
+                    f"closed_gap_count={_int(science_claim_gap.get('closed_gap_count'))};"
+                    f"closed_gap_ids={';'.join(science_claim_closed_gap_ids)};"
+                    f"release_blocker_row_count={len(science_claim_release_blocker_rows)};"
                     f"current_primary_open_gap_id={science_claim_primary_open_gap_id};"
                     f"primary_open_gap_area={_text(science_claim_primary_open_gap.get('area'))};"
                     f"primary_open_gap_claim_promotion_status={_text(science_claim_primary_open_gap.get('claim_promotion_status'))};"
-                    f"primary_open_gap_evidence={_text(science_claim_primary_open_gap.get('evidence'))}"
+                    f"primary_open_gap_evidence={_text(science_claim_primary_open_gap.get('evidence'))};"
+                    f"gpcr_claim_promotion_status={_text(science_claim_gpcr_gap.get('claim_promotion_status'))};"
+                    f"gpcr_evidence={_text(science_claim_gpcr_gap.get('evidence'))};"
+                    f"gpcr_release_blocker={_bool_text(bool(science_claim_gpcr_gap.get('release_blocker') is True))};"
+                    f"openmm_claim_promotion_status={_text(science_claim_openmm_gap.get('claim_promotion_status'))};"
+                    f"openmm_evidence={_text(science_claim_openmm_gap.get('evidence'))};"
+                    f"openmm_release_blocker={_bool_text(bool(science_claim_openmm_gap.get('release_blocker') is True))}"
                 ),
-                required="science claim promotion gap closure recorded with SCI-GPCR/SCI-OPENMM open-gap visibility",
+                required=(
+                    "science claim promotion gap closure recorded with SCI-GPCR and "
+                    "SCI-OPENMM as release-blocking open rows and all closed row ids preserved"
+                ),
                 passed=science_claim_gap_recorded,
                 reason=(
                     "The final release decision must preserve the science-claim sub-gaps underneath "
@@ -3031,15 +3119,39 @@ def build_goal_release_decision_gate(
         ),
         "master_gap_closure_rollup_gate_present": master_gap_rollup_gate_present,
         "master_gap_closure_rollup_status": _text(master_gap_rollup.get("status")),
+        "master_gap_closure_rollup_recorded": (
+            master_gap_rollup_recorded if master_gap_rollup_gate_present else None
+        ),
         "master_gap_closure_rollup_all_gaps_closed": (
             bool(master_gap_rollup.get("all_gaps_closed") is True)
             if master_gap_rollup_gate_present
             else None
         ),
+        "master_gap_closure_rollup_claim_promotion_allowed": bool(
+            master_gap_rollup.get("claim_promotion_allowed") is True
+        ),
         "master_gap_closure_rollup_open_gap_count": _int(master_gap_rollup.get("open_gap_count")),
         "master_gap_closure_rollup_open_gap_ids": master_gap_open_ids,
+        "master_gap_closure_rollup_open_gap_ids_joined": ";".join(master_gap_open_ids),
+        "master_gap_closure_rollup_closed_gap_count": _int(
+            master_gap_rollup.get("closed_gap_count")
+        ),
+        "master_gap_closure_rollup_closed_gap_ids": master_gap_closed_ids,
+        "master_gap_closure_rollup_closed_gap_ids_joined": ";".join(master_gap_closed_ids),
+        "master_gap_closure_rollup_release_blocker_row_count": len(
+            master_gap_release_blocker_rows
+        ),
         "master_gap_closure_rollup_current_primary_open_gap_id": _text(
             master_gap_rollup.get("current_primary_open_gap_id")
+        ),
+        "master_gap_closure_rollup_science_claim_rollup_status": _text(
+            master_gap_science_claim_row.get("rollup_status")
+        ),
+        "master_gap_closure_rollup_science_claim_evidence": _text(
+            master_gap_science_claim_row.get("evidence")
+        ),
+        "master_gap_closure_rollup_science_claim_release_blocker": bool(
+            master_gap_science_claim_row.get("release_blocker") is True
         ),
         "accuracy_parity_scorecard_gate_present": accuracy_parity_gate_present,
         "accuracy_parity_scorecard_status": _text(accuracy_parity.get("status")),
@@ -3123,6 +3235,19 @@ def build_goal_release_decision_gate(
             science_claim_gap.get("open_gap_count")
         ),
         "science_claim_promotion_gap_closure_open_gap_ids": science_claim_open_gap_ids,
+        "science_claim_promotion_gap_closure_open_gap_ids_joined": ";".join(
+            science_claim_open_gap_ids
+        ),
+        "science_claim_promotion_gap_closure_closed_gap_count": _int(
+            science_claim_gap.get("closed_gap_count")
+        ),
+        "science_claim_promotion_gap_closure_closed_gap_ids": science_claim_closed_gap_ids,
+        "science_claim_promotion_gap_closure_closed_gap_ids_joined": ";".join(
+            science_claim_closed_gap_ids
+        ),
+        "science_claim_promotion_gap_closure_release_blocker_row_count": len(
+            science_claim_release_blocker_rows
+        ),
         "science_claim_promotion_gap_closure_current_primary_open_gap_id": science_claim_primary_open_gap_id,
         "science_claim_promotion_gap_closure_current_next_action": _text(
             science_claim_gap.get("current_next_action")
@@ -3141,6 +3266,24 @@ def build_goal_release_decision_gate(
         ),
         "science_claim_promotion_gap_closure_primary_open_gap_release_blocker": bool(
             science_claim_primary_open_gap.get("release_blocker") is True
+        ),
+        "science_claim_promotion_gap_closure_gpcr_claim_promotion_status": _text(
+            science_claim_gpcr_gap.get("claim_promotion_status")
+        ),
+        "science_claim_promotion_gap_closure_gpcr_evidence": _text(
+            science_claim_gpcr_gap.get("evidence")
+        ),
+        "science_claim_promotion_gap_closure_gpcr_release_blocker": bool(
+            science_claim_gpcr_gap.get("release_blocker") is True
+        ),
+        "science_claim_promotion_gap_closure_openmm_claim_promotion_status": _text(
+            science_claim_openmm_gap.get("claim_promotion_status")
+        ),
+        "science_claim_promotion_gap_closure_openmm_evidence": _text(
+            science_claim_openmm_gap.get("evidence")
+        ),
+        "science_claim_promotion_gap_closure_openmm_release_blocker": bool(
+            science_claim_openmm_gap.get("release_blocker") is True
         ),
         "api_customer_flow_release_evidence_gate_present": api_customer_flow_gate_present,
         "api_customer_flow_release_evidence_status": _text(api_customer_flow.get("status")),
@@ -3449,10 +3592,18 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_rollout_execution_smoke_receipt_ingress_certificate_verified_live: `{s['product_rollout_execution_smoke_receipt_ingress_certificate_verified_live']}`",
         f"- master_gap_closure_rollup_gate_present: `{s['master_gap_closure_rollup_gate_present']}`",
         f"- master_gap_closure_rollup_status: `{s['master_gap_closure_rollup_status']}`",
+        f"- master_gap_closure_rollup_recorded: `{s['master_gap_closure_rollup_recorded']}`",
         f"- master_gap_closure_rollup_all_gaps_closed: `{s['master_gap_closure_rollup_all_gaps_closed']}`",
+        f"- master_gap_closure_rollup_claim_promotion_allowed: `{s['master_gap_closure_rollup_claim_promotion_allowed']}`",
         f"- master_gap_closure_rollup_open_gap_count: `{s['master_gap_closure_rollup_open_gap_count']}`",
         f"- master_gap_closure_rollup_open_gap_ids: `{';'.join(s['master_gap_closure_rollup_open_gap_ids'])}`",
+        f"- master_gap_closure_rollup_closed_gap_count: `{s['master_gap_closure_rollup_closed_gap_count']}`",
+        f"- master_gap_closure_rollup_closed_gap_ids: `{';'.join(s['master_gap_closure_rollup_closed_gap_ids'])}`",
+        f"- master_gap_closure_rollup_release_blocker_row_count: `{s['master_gap_closure_rollup_release_blocker_row_count']}`",
         f"- master_gap_closure_rollup_current_primary_open_gap_id: `{s['master_gap_closure_rollup_current_primary_open_gap_id']}`",
+        f"- master_gap_closure_rollup_science_claim_rollup_status: `{s['master_gap_closure_rollup_science_claim_rollup_status']}`",
+        f"- master_gap_closure_rollup_science_claim_evidence: `{s['master_gap_closure_rollup_science_claim_evidence']}`",
+        f"- master_gap_closure_rollup_science_claim_release_blocker: `{s['master_gap_closure_rollup_science_claim_release_blocker']}`",
         f"- accuracy_parity_scorecard_gate_present: `{s['accuracy_parity_scorecard_gate_present']}`",
         f"- accuracy_parity_scorecard_status: `{s['accuracy_parity_scorecard_status']}`",
         f"- accuracy_parity_scorecard_recorded: `{s['accuracy_parity_scorecard_recorded']}`",
@@ -3473,8 +3624,17 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- science_claim_promotion_gap_closure_recorded: `{s['science_claim_promotion_gap_closure_recorded']}`",
         f"- science_claim_promotion_gap_closure_open_gap_count: `{s['science_claim_promotion_gap_closure_open_gap_count']}`",
         f"- science_claim_promotion_gap_closure_open_gap_ids: `{';'.join(s['science_claim_promotion_gap_closure_open_gap_ids'])}`",
+        f"- science_claim_promotion_gap_closure_closed_gap_count: `{s['science_claim_promotion_gap_closure_closed_gap_count']}`",
+        f"- science_claim_promotion_gap_closure_closed_gap_ids: `{';'.join(s['science_claim_promotion_gap_closure_closed_gap_ids'])}`",
+        f"- science_claim_promotion_gap_closure_release_blocker_row_count: `{s['science_claim_promotion_gap_closure_release_blocker_row_count']}`",
         f"- science_claim_promotion_gap_closure_current_primary_open_gap_id: `{s['science_claim_promotion_gap_closure_current_primary_open_gap_id']}`",
         f"- science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status: `{s['science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status']}`",
+        f"- science_claim_promotion_gap_closure_gpcr_claim_promotion_status: `{s['science_claim_promotion_gap_closure_gpcr_claim_promotion_status']}`",
+        f"- science_claim_promotion_gap_closure_gpcr_evidence: `{s['science_claim_promotion_gap_closure_gpcr_evidence']}`",
+        f"- science_claim_promotion_gap_closure_gpcr_release_blocker: `{s['science_claim_promotion_gap_closure_gpcr_release_blocker']}`",
+        f"- science_claim_promotion_gap_closure_openmm_claim_promotion_status: `{s['science_claim_promotion_gap_closure_openmm_claim_promotion_status']}`",
+        f"- science_claim_promotion_gap_closure_openmm_evidence: `{s['science_claim_promotion_gap_closure_openmm_evidence']}`",
+        f"- science_claim_promotion_gap_closure_openmm_release_blocker: `{s['science_claim_promotion_gap_closure_openmm_release_blocker']}`",
         f"- api_customer_flow_release_evidence_gate_present: `{s['api_customer_flow_release_evidence_gate_present']}`",
         f"- api_customer_flow_release_evidence_status: `{s['api_customer_flow_release_evidence_status']}`",
         f"- api_customer_flow_release_evidence_ready: `{s['api_customer_flow_release_evidence_ready']}`",

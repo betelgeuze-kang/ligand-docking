@@ -92,6 +92,15 @@ def _refresh_release_decision_ready() -> dict:
             "production_ai_promotion_workbench_execution_enabled": False,
             "production_ai_promotion_workbench_external_state_mutated": False,
             "accuracy_parity_scorecard_recorded": True,
+            "master_gap_closure_rollup_recorded": True,
+            "master_gap_closure_rollup_all_gaps_closed": False,
+            "master_gap_closure_rollup_claim_promotion_allowed": False,
+            "master_gap_closure_rollup_science_claim_release_blocker": True,
+            "science_claim_promotion_gap_closure_recorded": True,
+            "science_claim_promotion_gap_closure_all_gaps_closed": False,
+            "science_claim_promotion_gap_closure_claim_promotion_allowed": False,
+            "science_claim_promotion_gap_closure_gpcr_release_blocker": True,
+            "science_claim_promotion_gap_closure_openmm_release_blocker": True,
             "api_runner_profile_promotion_operator_receipt_recorded": True,
             "product_scope_breadth_evidence_receipt_recorded": True,
             "engine_refinement_claim_evidence_receipt_recorded": True,
@@ -171,7 +180,12 @@ def _refresh_release_decision_ready() -> dict:
             "third_party_license_review_gate_approved_review_asset_count": 1,
             "third_party_license_review_gate_source_hard_blocker_count": 0,
             "third_party_license_review_gate_source_operator_review_item_count": 1,
+            "master_gap_closure_rollup_open_gap_count": 1,
+            "master_gap_closure_rollup_closed_gap_count": 8,
+            "master_gap_closure_rollup_release_blocker_row_count": 1,
             "science_claim_promotion_gap_closure_open_gap_count": 2,
+            "science_claim_promotion_gap_closure_closed_gap_count": 3,
+            "science_claim_promotion_gap_closure_release_blocker_row_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
                 "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"
@@ -327,6 +341,18 @@ def _refresh_release_decision_ready() -> dict:
             "accuracy_parity_ligand_ranking_score_col_used": (
                 "binding_score_composite_v7_residual_active"
             ),
+            "master_gap_closure_rollup_status": "blocked_master_gap_closure_rollup",
+            "master_gap_closure_rollup_open_gap_ids_joined": "SCI-CLAIM",
+            "master_gap_closure_rollup_closed_gap_ids_joined": (
+                "COMMERCIAL;PRODUCT-AI;DATA-SCIENCE;INFRA;DEPLOY-OPS;STORAGE;TOOLS;API-RUNNER"
+            ),
+            "master_gap_closure_rollup_current_primary_open_gap_id": "SCI-CLAIM",
+            "master_gap_closure_rollup_science_claim_rollup_status": (
+                "blocked_science_claim_promotion_gap_closure"
+            ),
+            "master_gap_closure_rollup_science_claim_evidence": (
+                "runs/science_claim_promotion_gap_closure_current.json"
+            ),
             "api_runner_profile_promotion_operator_receipt_status": (
                 "blocked_api_runner_profile_promotion_operator_receipt"
             ),
@@ -408,9 +434,26 @@ def _refresh_release_decision_ready() -> dict:
             "science_claim_promotion_gap_closure_status": (
                 "blocked_science_claim_promotion_gap_closure"
             ),
+            "science_claim_promotion_gap_closure_open_gap_ids_joined": "SCI-GPCR;SCI-OPENMM",
+            "science_claim_promotion_gap_closure_closed_gap_ids_joined": (
+                "SCI-TRANS;SCI-CA2-PXR;SCI-WETLAB"
+            ),
             "science_claim_promotion_gap_closure_current_primary_open_gap_id": "SCI-GPCR",
             "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status": (
                 "blocked_ci_low_oprm1"
+            ),
+            "science_claim_promotion_gap_closure_gpcr_claim_promotion_status": (
+                "blocked_ci_low_oprm1"
+            ),
+            "science_claim_promotion_gap_closure_gpcr_evidence": (
+                "runs/gpcr_conditional_prior_promotion_gate_current.json"
+            ),
+            "science_claim_promotion_gap_closure_openmm_claim_promotion_status": (
+                "restricted_2bead_only"
+            ),
+            "science_claim_promotion_gap_closure_openmm_evidence": (
+                "runs/wetlab_openmm_claim_promotion_boundary_current.json; "
+                "runs/accuracy_parity_scorecard_current.json"
             ),
         }
     }
@@ -719,6 +762,25 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_text_exact_fields"][
         "accuracy_parity_ligand_ranking_score_col_used"
     ] == "binding_score_composite_v7_residual_active"
+    assert release_row["required_true_fields"].count("master_gap_closure_rollup_recorded") == 1
+    assert release_row["required_true_fields"].count(
+        "science_claim_promotion_gap_closure_gpcr_release_blocker"
+    ) == 1
+    assert release_row["required_zero_fields"].count(
+        "science_claim_promotion_gap_closure_claim_promotion_allowed"
+    ) == 1
+    assert release_row["required_int_exact_fields"][
+        "master_gap_closure_rollup_open_gap_count"
+    ] == 1
+    assert release_row["required_int_exact_fields"][
+        "master_gap_closure_rollup_release_blocker_row_count"
+    ] == 1
+    assert release_row["required_text_exact_fields"][
+        "master_gap_closure_rollup_open_gap_ids_joined"
+    ] == "SCI-CLAIM"
+    assert release_row["required_text_exact_fields"][
+        "master_gap_closure_rollup_science_claim_rollup_status"
+    ] == "blocked_science_claim_promotion_gap_closure"
     assert release_row["required_text_exact_fields"][
         "api_runner_profile_promotion_operator_receipt_first_blocked_profile_id"
     ] == "backmapping_scoring.example"
@@ -734,12 +796,24 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_int_exact_fields"][
         "science_claim_promotion_gap_closure_open_gap_count"
     ] == 2
+    assert release_row["required_int_exact_fields"][
+        "science_claim_promotion_gap_closure_closed_gap_count"
+    ] == 3
+    assert release_row["required_int_exact_fields"][
+        "science_claim_promotion_gap_closure_release_blocker_row_count"
+    ] == 2
+    assert release_row["required_text_exact_fields"][
+        "science_claim_promotion_gap_closure_open_gap_ids_joined"
+    ] == "SCI-GPCR;SCI-OPENMM"
     assert release_row["required_text_exact_fields"][
         "science_claim_promotion_gap_closure_current_primary_open_gap_id"
     ] == "SCI-GPCR"
     assert release_row["required_text_exact_fields"][
-        "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status"
+        "science_claim_promotion_gap_closure_gpcr_claim_promotion_status"
     ] == "blocked_ci_low_oprm1"
+    assert release_row["required_text_exact_fields"][
+        "science_claim_promotion_gap_closure_openmm_claim_promotion_status"
+    ] == "restricted_2bead_only"
 
 
 def test_product_release_current_refresh_blocks_timed_out_command(tmp_path: Path, monkeypatch) -> None:

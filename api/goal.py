@@ -636,12 +636,28 @@ async def get_goal_status() -> dict[str, Any]:
             "primary_full_commercial_release_blocker_id": "",
             "primary_full_commercial_release_blocker": "",
             "full_commercial_release_next_required_step": "",
+            "master_gap_closure_rollup_status": "",
+            "master_gap_closure_rollup_recorded": False,
+            "master_gap_closure_rollup_all_gaps_closed": False,
+            "master_gap_closure_rollup_claim_promotion_allowed": False,
+            "master_gap_closure_rollup_open_gap_count": 0,
+            "master_gap_closure_rollup_open_gap_ids": [],
+            "master_gap_closure_rollup_closed_gap_count": 0,
+            "master_gap_closure_rollup_closed_gap_ids": [],
+            "master_gap_closure_rollup_release_blocker_row_count": 0,
+            "master_gap_closure_rollup_current_primary_open_gap_id": "",
+            "master_gap_closure_rollup_science_claim_rollup_status": "",
+            "master_gap_closure_rollup_science_claim_evidence": "",
+            "master_gap_closure_rollup_science_claim_release_blocker": False,
             "science_claim_promotion_gap_closure_status": "",
             "science_claim_promotion_gap_closure_recorded": False,
             "science_claim_promotion_gap_closure_all_gaps_closed": False,
             "science_claim_promotion_gap_closure_claim_promotion_allowed": False,
             "science_claim_promotion_gap_closure_open_gap_count": 0,
             "science_claim_promotion_gap_closure_open_gap_ids": [],
+            "science_claim_promotion_gap_closure_closed_gap_count": 0,
+            "science_claim_promotion_gap_closure_closed_gap_ids": [],
+            "science_claim_promotion_gap_closure_release_blocker_row_count": 0,
             "science_claim_promotion_gap_closure_current_primary_open_gap_id": "",
             "science_claim_promotion_gap_closure_current_next_action": "",
             "science_claim_promotion_gap_closure_primary_open_gap_area": "",
@@ -649,6 +665,12 @@ async def get_goal_status() -> dict[str, Any]:
             "science_claim_promotion_gap_closure_primary_open_gap_evidence": "",
             "science_claim_promotion_gap_closure_primary_open_gap_next_action": "",
             "science_claim_promotion_gap_closure_primary_open_gap_release_blocker": False,
+            "science_claim_promotion_gap_closure_gpcr_claim_promotion_status": "",
+            "science_claim_promotion_gap_closure_gpcr_evidence": "",
+            "science_claim_promotion_gap_closure_gpcr_release_blocker": False,
+            "science_claim_promotion_gap_closure_openmm_claim_promotion_status": "",
+            "science_claim_promotion_gap_closure_openmm_evidence": "",
+            "science_claim_promotion_gap_closure_openmm_release_blocker": False,
             **_accuracy_parity_release_fields({}),
             **_api_runner_profile_receipt_release_fields({}),
             "product_goal_release_blocker_fail_count": 0,
@@ -810,6 +832,43 @@ async def get_goal_status() -> dict[str, Any]:
         "full_commercial_release_next_required_step": release.get(
             "full_commercial_release_next_required_step", ""
         ),
+        "master_gap_closure_rollup_status": release.get("master_gap_closure_rollup_status", ""),
+        "master_gap_closure_rollup_recorded": bool(
+            release.get("master_gap_closure_rollup_recorded") is True
+        ),
+        "master_gap_closure_rollup_all_gaps_closed": bool(
+            release.get("master_gap_closure_rollup_all_gaps_closed") is True
+        ),
+        "master_gap_closure_rollup_claim_promotion_allowed": bool(
+            release.get("master_gap_closure_rollup_claim_promotion_allowed") is True
+        ),
+        "master_gap_closure_rollup_open_gap_count": _int(
+            release.get("master_gap_closure_rollup_open_gap_count")
+        ),
+        "master_gap_closure_rollup_open_gap_ids": _string_list(
+            release.get("master_gap_closure_rollup_open_gap_ids")
+        ),
+        "master_gap_closure_rollup_closed_gap_count": _int(
+            release.get("master_gap_closure_rollup_closed_gap_count")
+        ),
+        "master_gap_closure_rollup_closed_gap_ids": _string_list(
+            release.get("master_gap_closure_rollup_closed_gap_ids")
+        ),
+        "master_gap_closure_rollup_release_blocker_row_count": _int(
+            release.get("master_gap_closure_rollup_release_blocker_row_count")
+        ),
+        "master_gap_closure_rollup_current_primary_open_gap_id": release.get(
+            "master_gap_closure_rollup_current_primary_open_gap_id", ""
+        ),
+        "master_gap_closure_rollup_science_claim_rollup_status": release.get(
+            "master_gap_closure_rollup_science_claim_rollup_status", ""
+        ),
+        "master_gap_closure_rollup_science_claim_evidence": release.get(
+            "master_gap_closure_rollup_science_claim_evidence", ""
+        ),
+        "master_gap_closure_rollup_science_claim_release_blocker": bool(
+            release.get("master_gap_closure_rollup_science_claim_release_blocker") is True
+        ),
         "science_claim_promotion_gap_closure_status": release.get(
             "science_claim_promotion_gap_closure_status", ""
         ),
@@ -827,6 +886,15 @@ async def get_goal_status() -> dict[str, Any]:
         ),
         "science_claim_promotion_gap_closure_open_gap_ids": _string_list(
             release.get("science_claim_promotion_gap_closure_open_gap_ids")
+        ),
+        "science_claim_promotion_gap_closure_closed_gap_count": _int(
+            release.get("science_claim_promotion_gap_closure_closed_gap_count")
+        ),
+        "science_claim_promotion_gap_closure_closed_gap_ids": _string_list(
+            release.get("science_claim_promotion_gap_closure_closed_gap_ids")
+        ),
+        "science_claim_promotion_gap_closure_release_blocker_row_count": _int(
+            release.get("science_claim_promotion_gap_closure_release_blocker_row_count")
         ),
         "science_claim_promotion_gap_closure_current_primary_open_gap_id": release.get(
             "science_claim_promotion_gap_closure_current_primary_open_gap_id", ""
@@ -848,6 +916,24 @@ async def get_goal_status() -> dict[str, Any]:
         ),
         "science_claim_promotion_gap_closure_primary_open_gap_release_blocker": bool(
             release.get("science_claim_promotion_gap_closure_primary_open_gap_release_blocker") is True
+        ),
+        "science_claim_promotion_gap_closure_gpcr_claim_promotion_status": release.get(
+            "science_claim_promotion_gap_closure_gpcr_claim_promotion_status", ""
+        ),
+        "science_claim_promotion_gap_closure_gpcr_evidence": release.get(
+            "science_claim_promotion_gap_closure_gpcr_evidence", ""
+        ),
+        "science_claim_promotion_gap_closure_gpcr_release_blocker": bool(
+            release.get("science_claim_promotion_gap_closure_gpcr_release_blocker") is True
+        ),
+        "science_claim_promotion_gap_closure_openmm_claim_promotion_status": release.get(
+            "science_claim_promotion_gap_closure_openmm_claim_promotion_status", ""
+        ),
+        "science_claim_promotion_gap_closure_openmm_evidence": release.get(
+            "science_claim_promotion_gap_closure_openmm_evidence", ""
+        ),
+        "science_claim_promotion_gap_closure_openmm_release_blocker": bool(
+            release.get("science_claim_promotion_gap_closure_openmm_release_blocker") is True
         ),
         **_accuracy_parity_release_fields(release),
         **_api_runner_profile_receipt_release_fields(release),

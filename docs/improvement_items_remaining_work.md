@@ -180,6 +180,9 @@ surface 밖으로 빠지지 않는다.
   `science_claim_promotion_gap_closure_*` 키로 이 세부 open gap을 직접 노출해,
   master rollup의 `SCI-CLAIM` 한 줄 뒤에 `SCI-GPCR`/`SCI-OPENMM` 원인이 숨지
   않게 한다.
+  최신 final refresh exact check는 `SCI-GPCR`/`SCI-OPENMM` open row의
+  claim-promotion status/evidence/release-blocker flag, closed science gap 3개,
+  그리고 master rollup의 단일 open gap `SCI-CLAIM`/closed gap 8개를 함께 고정한다.
 - `runs/accuracy_parity_scorecard_current.json`의 ligand-ranking blocker도 최신
   `goal_release_decision_gate_current.json`과 `/goal/status`의
   `accuracy_parity_scorecard_*`/`accuracy_parity_ligand_ranking_*` 키로 전파된다.
@@ -1224,6 +1227,10 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status`에도
   고정되어 restricted release green 상태에서도 full-commercial science claim 병목이
   API/decision surface 밖으로 빠지지 않는다.
+  최신 release decision/final refresh는 추가로 `SCI-GPCR`/`SCI-OPENMM` row별
+  claim-promotion status/evidence/release-blocker flag, science closed gap count 3,
+  master closed gap count 8, master `SCI-CLAIM` release-blocker row count 1을
+  exact-check해 rollup 축약으로 병목이 흐려지는 회귀를 막는다.
 
 **병목 원인**
 - hosted/상용 SaaS화 자체가 productization roadmap에 없음.

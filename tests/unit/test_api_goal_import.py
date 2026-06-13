@@ -176,6 +176,33 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["full_commercial_release_next_required_step"] == release_artifact.get(
         "full_commercial_release_next_required_step"
     )
+    assert status["master_gap_closure_rollup_status"] == release_artifact.get(
+        "master_gap_closure_rollup_status"
+    )
+    assert status["master_gap_closure_rollup_recorded"] is (
+        release_artifact.get("master_gap_closure_rollup_recorded") is True
+    )
+    assert status["master_gap_closure_rollup_open_gap_count"] == int(
+        release_artifact.get("master_gap_closure_rollup_open_gap_count") or 0
+    )
+    assert status["master_gap_closure_rollup_open_gap_ids"] == release_artifact.get(
+        "master_gap_closure_rollup_open_gap_ids"
+    )
+    assert status["master_gap_closure_rollup_closed_gap_count"] == int(
+        release_artifact.get("master_gap_closure_rollup_closed_gap_count") or 0
+    )
+    assert status["master_gap_closure_rollup_closed_gap_ids"] == release_artifact.get(
+        "master_gap_closure_rollup_closed_gap_ids"
+    )
+    assert status["master_gap_closure_rollup_release_blocker_row_count"] == int(
+        release_artifact.get("master_gap_closure_rollup_release_blocker_row_count") or 0
+    )
+    assert status["master_gap_closure_rollup_science_claim_rollup_status"] == release_artifact.get(
+        "master_gap_closure_rollup_science_claim_rollup_status"
+    )
+    assert status["master_gap_closure_rollup_science_claim_release_blocker"] is (
+        release_artifact.get("master_gap_closure_rollup_science_claim_release_blocker") is True
+    )
     assert status["science_claim_promotion_gap_closure_status"] == release_artifact.get(
         "science_claim_promotion_gap_closure_status"
     )
@@ -188,6 +215,15 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["science_claim_promotion_gap_closure_open_gap_ids"] == release_artifact.get(
         "science_claim_promotion_gap_closure_open_gap_ids"
     )
+    assert status["science_claim_promotion_gap_closure_closed_gap_count"] == int(
+        release_artifact.get("science_claim_promotion_gap_closure_closed_gap_count") or 0
+    )
+    assert status["science_claim_promotion_gap_closure_closed_gap_ids"] == release_artifact.get(
+        "science_claim_promotion_gap_closure_closed_gap_ids"
+    )
+    assert status["science_claim_promotion_gap_closure_release_blocker_row_count"] == int(
+        release_artifact.get("science_claim_promotion_gap_closure_release_blocker_row_count") or 0
+    )
     assert status["science_claim_promotion_gap_closure_current_primary_open_gap_id"] == (
         release_artifact.get("science_claim_promotion_gap_closure_current_primary_open_gap_id")
     )
@@ -195,6 +231,18 @@ def test_api_app_imports_with_goal_router() -> None:
         "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status"
     ] == release_artifact.get(
         "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status"
+    )
+    assert status["science_claim_promotion_gap_closure_gpcr_claim_promotion_status"] == (
+        release_artifact.get("science_claim_promotion_gap_closure_gpcr_claim_promotion_status")
+    )
+    assert status["science_claim_promotion_gap_closure_gpcr_release_blocker"] is (
+        release_artifact.get("science_claim_promotion_gap_closure_gpcr_release_blocker") is True
+    )
+    assert status["science_claim_promotion_gap_closure_openmm_claim_promotion_status"] == (
+        release_artifact.get("science_claim_promotion_gap_closure_openmm_claim_promotion_status")
+    )
+    assert status["science_claim_promotion_gap_closure_openmm_release_blocker"] is (
+        release_artifact.get("science_claim_promotion_gap_closure_openmm_release_blocker") is True
     )
     assert status["accuracy_parity_scorecard_status"] == release_artifact.get(
         "accuracy_parity_scorecard_status", ""
@@ -715,11 +763,23 @@ def test_api_app_imports_with_goal_router() -> None:
     assert release["primary_full_commercial_release_blocker_id"] == release_artifact.get(
         "primary_full_commercial_release_blocker_id"
     )
+    assert release["master_gap_closure_rollup_open_gap_ids"] == release_artifact.get(
+        "master_gap_closure_rollup_open_gap_ids"
+    )
+    assert release["master_gap_closure_rollup_science_claim_rollup_status"] == (
+        release_artifact.get("master_gap_closure_rollup_science_claim_rollup_status")
+    )
     assert release["science_claim_promotion_gap_closure_open_gap_ids"] == release_artifact.get(
         "science_claim_promotion_gap_closure_open_gap_ids"
     )
+    assert release["science_claim_promotion_gap_closure_closed_gap_ids"] == release_artifact.get(
+        "science_claim_promotion_gap_closure_closed_gap_ids"
+    )
     assert release["science_claim_promotion_gap_closure_current_primary_open_gap_id"] == (
         release_artifact.get("science_claim_promotion_gap_closure_current_primary_open_gap_id")
+    )
+    assert release["science_claim_promotion_gap_closure_openmm_claim_promotion_status"] == (
+        release_artifact.get("science_claim_promotion_gap_closure_openmm_claim_promotion_status")
     )
     assert release["accuracy_parity_scorecard_status"] == release_artifact.get(
         "accuracy_parity_scorecard_status", ""

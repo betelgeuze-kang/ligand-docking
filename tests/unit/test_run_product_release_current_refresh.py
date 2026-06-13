@@ -23,34 +23,24 @@ def _source_of_truth_ready() -> dict:
     }
 
 
+def _goal_release_decision_spec() -> dict:
+    return next(
+        spec for spec in mod.FINAL_GATE_SPECS if spec["gate_id"] == "goal_release_decision_gate"
+    )
+
+
 def _release_decision_ready(*, bottleneck_recorded: bool = True) -> dict:
+    spec = _goal_release_decision_spec()
+    summary = {
+        "status": spec["required_status"],
+        **{field: True for field in spec.get("required_true_fields", [])},
+        **{field: 0 for field in spec.get("required_zero_fields", [])},
+        **dict(spec.get("required_int_exact_fields", {})),
+        **dict(spec.get("required_text_exact_fields", {})),
+    }
+    summary["goal_bottleneck_briefing_full_commercial_receipts_recorded"] = bottleneck_recorded
     return {
-        "summary": {
-            "status": "goal_release_ready",
-            "release_allowed": True,
-            "blocker_count": 0,
-            "goal_bottleneck_briefing_full_commercial_receipts_recorded": bottleneck_recorded,
-            "source_goal_bottleneck_briefing_status": "goal_bottleneck_briefing_ready",
-            "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 2,
-            "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 2,
-            "goal_bottleneck_briefing_full_commercial_evidence_receipt_operator_input_required_count": 2,
-            "goal_bottleneck_briefing_full_commercial_evidence_receipt_current_action_required_count": 2,
-            "goal_bottleneck_briefing_full_commercial_evidence_receipt_template_required_count": 2,
-            "goal_bottleneck_briefing_full_commercial_evidence_receipt_template_present_count": 2,
-            "goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_token_count": 2,
-            "goal_bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": (
-                "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
-                "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"
-            ),
-            "goal_bottleneck_briefing_full_commercial_evidence_receipt_required_inputs": (
-                "config/product_scope_breadth_evidence_receipt_current.csv;"
-                "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
-            ),
-            "goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_tokens": (
-                "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT;"
-                "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
-            ),
-        }
+        "summary": summary
     }
 
 

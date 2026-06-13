@@ -63,6 +63,11 @@ FINAL_GATE_SPECS = [
             "production_ai_promotion_workbench_ready",
             "production_ai_promotion_workbench_registry_promotion_upstream_acceptance_ready",
             "accuracy_parity_scorecard_recorded",
+            "master_gap_closure_rollup_recorded",
+            "master_gap_closure_rollup_science_claim_release_blocker",
+            "science_claim_promotion_gap_closure_recorded",
+            "science_claim_promotion_gap_closure_gpcr_release_blocker",
+            "science_claim_promotion_gap_closure_openmm_release_blocker",
             "api_runner_profile_promotion_operator_receipt_recorded",
             "product_scope_breadth_evidence_receipt_recorded",
             "engine_refinement_claim_evidence_receipt_recorded",
@@ -106,6 +111,10 @@ FINAL_GATE_SPECS = [
             "production_ai_promotion_workbench_docking_results_emitted",
             "production_ai_promotion_workbench_execution_enabled",
             "production_ai_promotion_workbench_external_state_mutated",
+            "master_gap_closure_rollup_all_gaps_closed",
+            "master_gap_closure_rollup_claim_promotion_allowed",
+            "science_claim_promotion_gap_closure_all_gaps_closed",
+            "science_claim_promotion_gap_closure_claim_promotion_allowed",
         ],
         "required_int_exact_fields": {
             "cameo_official_result_fetch_preflight_blocked_row_count": 1,
@@ -181,7 +190,12 @@ FINAL_GATE_SPECS = [
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_row_count": 8,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_blocked_row_count": 8,
             "engine_refinement_claim_evidence_priority_packet_approval_token_count": 1,
+            "master_gap_closure_rollup_open_gap_count": 1,
+            "master_gap_closure_rollup_closed_gap_count": 8,
+            "master_gap_closure_rollup_release_blocker_row_count": 1,
             "science_claim_promotion_gap_closure_open_gap_count": 2,
+            "science_claim_promotion_gap_closure_closed_gap_count": 3,
+            "science_claim_promotion_gap_closure_release_blocker_row_count": 2,
         },
         "required_text_exact_fields": {
             "cameo_official_result_fetch_preflight_status": (
@@ -340,6 +354,39 @@ FINAL_GATE_SPECS = [
             "accuracy_parity_ligand_ranking_score_col_used": (
                 "binding_score_composite_v7_residual_active"
             ),
+            "master_gap_closure_rollup_status": "blocked_master_gap_closure_rollup",
+            "master_gap_closure_rollup_open_gap_ids_joined": "SCI-CLAIM",
+            "master_gap_closure_rollup_closed_gap_ids_joined": (
+                "COMMERCIAL;PRODUCT-AI;DATA-SCIENCE;INFRA;DEPLOY-OPS;STORAGE;TOOLS;API-RUNNER"
+            ),
+            "master_gap_closure_rollup_current_primary_open_gap_id": "SCI-CLAIM",
+            "master_gap_closure_rollup_science_claim_rollup_status": (
+                "blocked_science_claim_promotion_gap_closure"
+            ),
+            "master_gap_closure_rollup_science_claim_evidence": (
+                "runs/science_claim_promotion_gap_closure_current.json"
+            ),
+            "science_claim_promotion_gap_closure_status": (
+                "blocked_science_claim_promotion_gap_closure"
+            ),
+            "science_claim_promotion_gap_closure_open_gap_ids_joined": "SCI-GPCR;SCI-OPENMM",
+            "science_claim_promotion_gap_closure_closed_gap_ids_joined": (
+                "SCI-TRANS;SCI-CA2-PXR;SCI-WETLAB"
+            ),
+            "science_claim_promotion_gap_closure_current_primary_open_gap_id": "SCI-GPCR",
+            "science_claim_promotion_gap_closure_gpcr_claim_promotion_status": (
+                "blocked_ci_low_oprm1"
+            ),
+            "science_claim_promotion_gap_closure_gpcr_evidence": (
+                "runs/gpcr_conditional_prior_promotion_gate_current.json"
+            ),
+            "science_claim_promotion_gap_closure_openmm_claim_promotion_status": (
+                "restricted_2bead_only"
+            ),
+            "science_claim_promotion_gap_closure_openmm_evidence": (
+                "runs/wetlab_openmm_claim_promotion_boundary_current.json; "
+                "runs/accuracy_parity_scorecard_current.json"
+            ),
             "api_runner_profile_promotion_operator_receipt_status": (
                 "blocked_api_runner_profile_promotion_operator_receipt"
             ),
@@ -417,13 +464,6 @@ FINAL_GATE_SPECS = [
             ),
             "engine_refinement_claim_evidence_priority_packet_approval_token_required": (
                 "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
-            ),
-            "science_claim_promotion_gap_closure_status": (
-                "blocked_science_claim_promotion_gap_closure"
-            ),
-            "science_claim_promotion_gap_closure_current_primary_open_gap_id": "SCI-GPCR",
-            "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status": (
-                "blocked_ci_low_oprm1"
             ),
         },
     },

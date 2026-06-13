@@ -21,6 +21,9 @@
   `science_claim_promotion_gap_closure_current_primary_open_gap_id=SCI-GPCR`,
   `science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status=blocked_ci_low_oprm1`
   로 직접 노출한다.
+  최신 final refresh exact check는 `SCI-GPCR`/`SCI-OPENMM` row별
+  claim-promotion status, evidence, release-blocker flag와 master rollup의 단일
+  open gap `SCI-CLAIM`, science closed gap 3개, master closed gap 8개를 함께 요구한다.
 - **정확도 parity 병목:** 최신 release decision과 `/goal/status`는
   `accuracy_parity_scorecard_status=blocked_accuracy_parity`,
   `accuracy_parity_ligand_ranking_status=blocked`,
@@ -622,6 +625,9 @@ abstention 사유가 결과 번들에 명시.
   한 줄로만 보존하지 않고, `science_claim_promotion_gap_closure_*` summary와
   `science_claim_promotion_gap_closure_recorded` row로 GPCR/OpenMM 세부 open gap,
   primary `SCI-GPCR`, `blocked_ci_low_oprm1` claim-promotion status를 함께 보존한다.
+  최신 final refresh는 이 상태를 exact-check해 `SCI-GPCR`/`SCI-OPENMM`
+  release-blocker row 2개와 master `SCI-CLAIM` release-blocker row 1개가
+  restricted release green 뒤로 사라지지 않게 한다.
 
 **갭**
 - 실제 docking/MD 실행과 future rollout mutation은 여전히 explicit operator approval
@@ -653,8 +659,9 @@ durable queue → worker 실행 → signed 결과 번들 회수까지 무인 동
   `/product/rollout-execution-smoke-receipt`로도 조회된다. deploy/ops/legal rollup은 닫혔다.
   master full-commercial rollup은 GPCR broad-family와 OpenMM full all-atom/MM-GBSA/FEP+
   science claim promotion(`SCI-CLAIM`) 때문에 pending이다. release decision final-gate
-  verification은 `SCI-GPCR` primary open gap과 `blocked_ci_low_oprm1` 상태를 exact
-  check로 요구한다.
+  verification은 `SCI-GPCR` primary open gap, `blocked_ci_low_oprm1`,
+  `SCI-OPENMM`의 `restricted_2bead_only`, science closed gap count 3,
+  master closed gap count 8을 exact check로 요구한다.
 
 **갭**
 - 실제 pager provider delivery, ingress certificate(TLS) smoke, operator-approved rollout

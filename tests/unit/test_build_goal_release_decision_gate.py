@@ -924,12 +924,107 @@ def _blocked_rollout_smoke_receipt() -> dict:
 
 def _blocked_master_gap_rollup() -> dict:
     return {
+        "rows": [
+            {
+                "gap_id": "COMMERCIAL",
+                "status": "closed",
+                "rollup_status": "commercial_gap_closure_complete",
+                "evidence": "runs/commercial_gap_closure_status_current.json",
+                "release_blocker": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            },
+            {
+                "gap_id": "PRODUCT-AI",
+                "status": "closed",
+                "rollup_status": "product_ai_architecture_gap_closure_complete",
+                "evidence": "runs/product_ai_architecture_gap_closure_current.json",
+                "release_blocker": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            },
+            {
+                "gap_id": "DATA-SCIENCE",
+                "status": "closed",
+                "rollup_status": "data_science_expansion_gap_closure_complete",
+                "evidence": "runs/data_science_expansion_gap_closure_current.json",
+                "release_blocker": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            },
+            {
+                "gap_id": "INFRA",
+                "status": "closed",
+                "rollup_status": "product_infrastructure_gap_closure_complete",
+                "evidence": "runs/product_infrastructure_gap_closure_current.json",
+                "release_blocker": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            },
+            {
+                "gap_id": "SCI-CLAIM",
+                "status": "open",
+                "rollup_status": "blocked_science_claim_promotion_gap_closure",
+                "evidence": "runs/science_claim_promotion_gap_closure_current.json",
+                "release_blocker": True,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            },
+            {
+                "gap_id": "DEPLOY-OPS",
+                "status": "closed",
+                "rollup_status": "deploy_ops_legal_gap_closure_complete",
+                "evidence": "runs/deploy_ops_legal_gap_closure_current.json",
+                "release_blocker": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            },
+            {
+                "gap_id": "STORAGE",
+                "status": "closed",
+                "rollup_status": "storage_cleanup_gap_closure_complete",
+                "evidence": "runs/storage_cleanup_gap_closure_current.json",
+                "release_blocker": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            },
+            {
+                "gap_id": "TOOLS",
+                "status": "closed",
+                "rollup_status": "tools_refactor_gap_closure_complete",
+                "evidence": "runs/tools_refactor_gap_closure_current.json",
+                "release_blocker": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            },
+            {
+                "gap_id": "API-RUNNER",
+                "status": "closed",
+                "rollup_status": "api_runner_profile_promotion_ready",
+                "evidence": "runs/api_runner_profile_promotion_readiness_current.json",
+                "release_blocker": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            },
+        ],
         "summary": {
             "status": "blocked_master_gap_closure_rollup",
             "all_gaps_closed": False,
+            "claim_promotion_allowed": False,
             "gap_count": 9,
-            "open_gap_count": 2,
-            "open_gap_ids": ["SCI-CLAIM", "DEPLOY-OPS"],
+            "closed_gap_count": 8,
+            "closed_gap_ids": [
+                "COMMERCIAL",
+                "PRODUCT-AI",
+                "DATA-SCIENCE",
+                "INFRA",
+                "DEPLOY-OPS",
+                "STORAGE",
+                "TOOLS",
+                "API-RUNNER",
+            ],
+            "open_gap_count": 1,
+            "open_gap_ids": ["SCI-CLAIM"],
             "current_primary_open_gap_id": "SCI-CLAIM",
             "execution_enabled": False,
             "external_state_mutated": False,
@@ -973,12 +1068,50 @@ def _blocked_science_claim_gap() -> dict:
                 "execution_enabled": False,
                 "external_state_mutated": False,
             },
+            {
+                "gap_id": "SCI-TRANS",
+                "area": "Transporter AQP1/GLUT1",
+                "status": "closed",
+                "claim_promotion_status": "functional_surrogate_only",
+                "claim_promotion_allowed": False,
+                "evidence": "runs/transporter_claim_promotion_boundary_current.json",
+                "release_blocker": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            },
+            {
+                "gap_id": "SCI-CA2-PXR",
+                "area": "CA2/PXR packet replacement",
+                "status": "closed",
+                "claim_promotion_status": "review_only_until_workbook_applied",
+                "claim_promotion_allowed": False,
+                "evidence": (
+                    "runs/ca2_packet_replacement_readiness_current.json; "
+                    "runs/pxr_packet_replacement_readiness_current.json"
+                ),
+                "release_blocker": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            },
+            {
+                "gap_id": "SCI-WETLAB",
+                "area": "Wetlab prospective translation",
+                "status": "closed",
+                "claim_promotion_status": "simulation_packet_only",
+                "claim_promotion_allowed": False,
+                "evidence": "runs/wetlab_openmm_claim_promotion_boundary_current.json",
+                "release_blocker": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            },
         ],
         "summary": {
             "status": "blocked_science_claim_promotion_gap_closure",
             "all_gaps_closed": False,
             "claim_promotion_allowed": False,
             "gap_count": 5,
+            "closed_gap_count": 3,
+            "closed_gap_ids": ["SCI-TRANS", "SCI-CA2-PXR", "SCI-WETLAB"],
             "open_gap_count": 2,
             "open_gap_ids": ["SCI-GPCR", "SCI-OPENMM"],
             "current_primary_open_gap_id": "SCI-GPCR",
@@ -1777,19 +1910,58 @@ def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_
     assert summary["product_rollout_execution_smoke_receipt_rollout_executed"] is False
     assert summary["master_gap_closure_rollup_gate_present"] is True
     assert summary["master_gap_closure_rollup_status"] == "blocked_master_gap_closure_rollup"
-    assert summary["master_gap_closure_rollup_open_gap_ids"] == ["SCI-CLAIM", "DEPLOY-OPS"]
+    assert summary["master_gap_closure_rollup_recorded"] is True
+    assert summary["master_gap_closure_rollup_open_gap_count"] == 1
+    assert summary["master_gap_closure_rollup_open_gap_ids"] == ["SCI-CLAIM"]
+    assert summary["master_gap_closure_rollup_open_gap_ids_joined"] == "SCI-CLAIM"
+    assert summary["master_gap_closure_rollup_closed_gap_count"] == 8
+    assert summary["master_gap_closure_rollup_closed_gap_ids_joined"] == (
+        "COMMERCIAL;PRODUCT-AI;DATA-SCIENCE;INFRA;DEPLOY-OPS;STORAGE;TOOLS;API-RUNNER"
+    )
+    assert summary["master_gap_closure_rollup_release_blocker_row_count"] == 1
+    assert summary["master_gap_closure_rollup_science_claim_rollup_status"] == (
+        "blocked_science_claim_promotion_gap_closure"
+    )
+    assert summary["master_gap_closure_rollup_science_claim_evidence"] == (
+        "runs/science_claim_promotion_gap_closure_current.json"
+    )
+    assert summary["master_gap_closure_rollup_science_claim_release_blocker"] is True
     assert summary["science_claim_promotion_gap_closure_gate_present"] is True
     assert summary[
         "science_claim_promotion_gap_closure_status"
     ] == "blocked_science_claim_promotion_gap_closure"
+    assert summary["science_claim_promotion_gap_closure_recorded"] is True
     assert summary["science_claim_promotion_gap_closure_open_gap_ids"] == [
         "SCI-GPCR",
         "SCI-OPENMM",
     ]
+    assert summary["science_claim_promotion_gap_closure_open_gap_ids_joined"] == (
+        "SCI-GPCR;SCI-OPENMM"
+    )
+    assert summary["science_claim_promotion_gap_closure_closed_gap_count"] == 3
+    assert summary["science_claim_promotion_gap_closure_closed_gap_ids_joined"] == (
+        "SCI-TRANS;SCI-CA2-PXR;SCI-WETLAB"
+    )
+    assert summary["science_claim_promotion_gap_closure_release_blocker_row_count"] == 2
     assert summary["science_claim_promotion_gap_closure_current_primary_open_gap_id"] == "SCI-GPCR"
     assert summary[
         "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status"
     ] == "blocked_ci_low_oprm1"
+    assert summary["science_claim_promotion_gap_closure_gpcr_claim_promotion_status"] == (
+        "blocked_ci_low_oprm1"
+    )
+    assert summary["science_claim_promotion_gap_closure_gpcr_evidence"] == (
+        "runs/gpcr_conditional_prior_promotion_gate_current.json"
+    )
+    assert summary["science_claim_promotion_gap_closure_gpcr_release_blocker"] is True
+    assert summary["science_claim_promotion_gap_closure_openmm_claim_promotion_status"] == (
+        "restricted_2bead_only"
+    )
+    assert summary["science_claim_promotion_gap_closure_openmm_evidence"] == (
+        "runs/wetlab_openmm_claim_promotion_boundary_current.json; "
+        "runs/accuracy_parity_scorecard_current.json"
+    )
+    assert summary["science_claim_promotion_gap_closure_openmm_release_blocker"] is True
     assert summary["accuracy_parity_scorecard_gate_present"] is True
     assert summary["accuracy_parity_scorecard_status"] == "blocked_accuracy_parity"
     assert summary["accuracy_parity_scorecard_recorded"] is True
@@ -1847,11 +2019,21 @@ def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_
     assert "rollout_executed=false" in smoke_row["observed"]
     assert master_row["status"] == "pass"
     assert master_row["release_blocker"] is False
-    assert "open_gap_ids=SCI-CLAIM;DEPLOY-OPS" in master_row["observed"]
+    assert "open_gap_ids=SCI-CLAIM" in master_row["observed"]
+    assert "closed_gap_count=8" in master_row["observed"]
+    assert "release_blocker_row_count=1" in master_row["observed"]
+    assert "science_claim_rollup_status=blocked_science_claim_promotion_gap_closure" in master_row["observed"]
+    assert "science_claim_release_blocker=true" in master_row["observed"]
     assert science_claim_row["status"] == "pass"
     assert science_claim_row["release_blocker"] is False
     assert "open_gap_ids=SCI-GPCR;SCI-OPENMM" in science_claim_row["observed"]
+    assert "closed_gap_count=3" in science_claim_row["observed"]
+    assert "release_blocker_row_count=2" in science_claim_row["observed"]
     assert "primary_open_gap_claim_promotion_status=blocked_ci_low_oprm1" in science_claim_row["observed"]
+    assert "gpcr_claim_promotion_status=blocked_ci_low_oprm1" in science_claim_row["observed"]
+    assert "gpcr_release_blocker=true" in science_claim_row["observed"]
+    assert "openmm_claim_promotion_status=restricted_2bead_only" in science_claim_row["observed"]
+    assert "openmm_release_blocker=true" in science_claim_row["observed"]
     assert accuracy_row["status"] == "pass"
     assert accuracy_row["release_blocker"] is False
     assert "ligand_ranking_pr_auc=0.15749" in accuracy_row["observed"]
@@ -2532,13 +2714,29 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_blocked_row_count"
     ] == 8
     assert summary["master_gap_closure_rollup_status"] == "blocked_master_gap_closure_rollup"
+    assert summary["master_gap_closure_rollup_recorded"] is True
+    assert summary["master_gap_closure_rollup_open_gap_ids"] == ["SCI-CLAIM"]
+    assert summary["master_gap_closure_rollup_closed_gap_count"] == 8
+    assert summary["master_gap_closure_rollup_release_blocker_row_count"] == 1
+    assert summary["master_gap_closure_rollup_science_claim_rollup_status"] == (
+        "blocked_science_claim_promotion_gap_closure"
+    )
     assert summary[
         "science_claim_promotion_gap_closure_status"
     ] == "blocked_science_claim_promotion_gap_closure"
+    assert summary["science_claim_promotion_gap_closure_recorded"] is True
     assert summary["science_claim_promotion_gap_closure_open_gap_ids"] == [
         "SCI-GPCR",
         "SCI-OPENMM",
     ]
+    assert summary["science_claim_promotion_gap_closure_closed_gap_count"] == 3
+    assert summary["science_claim_promotion_gap_closure_release_blocker_row_count"] == 2
+    assert summary["science_claim_promotion_gap_closure_gpcr_claim_promotion_status"] == (
+        "blocked_ci_low_oprm1"
+    )
+    assert summary["science_claim_promotion_gap_closure_openmm_claim_promotion_status"] == (
+        "restricted_2bead_only"
+    )
     assert summary["release_blocked_by_public_benchmark"] is True
     assert summary["cameo_live_validation_required_for_product_release"] is False
     assert out_csv.read_text(encoding="utf-8").startswith("lane_id,check,")
@@ -2570,5 +2768,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     assert "engine_refinement_claim_evidence_priority_packet_status" in md_text
     assert "public_benchmark_work_order_apply_required" in md_text
     assert "master_gap_closure_rollup_status" in md_text
+    assert "master_gap_closure_rollup_science_claim_rollup_status" in md_text
     assert "science_claim_promotion_gap_closure_status" in md_text
+    assert "science_claim_promotion_gap_closure_gpcr_claim_promotion_status" in md_text
+    assert "science_claim_promotion_gap_closure_openmm_claim_promotion_status" in md_text
     assert "SCI-OPENMM" in md_text
