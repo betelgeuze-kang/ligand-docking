@@ -531,6 +531,17 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   template present 2/2, approval token 2개, source gate status, required input CSV,
   approval token 문자열을 exact check로 요구하므로, final refresh가 green이어도 이
   decision linkage가 조용히 빠지는 상태를 허용하지 않는다.
+  같은 release decision packet은 bottleneck briefing의
+  `production_ai_registry_promotion_priority_*` summary도
+  `goal_bottleneck_briefing_production_ai_registry_promotion_priority_*` 키와
+  `goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded`
+  row로 승격한다. top gate는
+  `trained_model_checkpoint_count_positive`, top bucket은
+  `trained_checkpoint_registration_required`, missing gate count는 4로 고정되며,
+  `tools/run_product_release_current_refresh.py --execute` final-gate verification도
+  이 값을 exact check로 요구한다. 따라서 restricted/local release gate가 green이어도
+  Production AI registry promotion의 첫 운영 병목이 최종 의사결정 packet 밖으로
+  빠질 수 없다.
   최신 decision summary는 restricted/local release surface를
   `release_allowed=true`, `restricted_release_allowed=true`로 유지하면서도
   `full_commercial_release_allowed=false`,
@@ -764,7 +775,8 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `model_promoted=false`, `customer_facing_mutation_enabled=false`,
   `external_state_mutated=false`로 fail-closed다.
   이 priority packet summary는 이제 goal operator intake kit, bottleneck briefing,
-  상용 readiness operator packet, execution ladder, handoff bundle, `/goal/status`까지
+  goal release decision gate, 상용 readiness operator packet, execution ladder,
+  handoff bundle, `/goal/status`까지
   `production_ai_registry_promotion_priority_*` 필드로 전파된다. release bundle과
   source-of-truth gate도 같은 artifact를 required/depends-on 항목으로 추적해,
   Production AI registry promotion의 첫 gate가 operator intake, 병목 브리핑,

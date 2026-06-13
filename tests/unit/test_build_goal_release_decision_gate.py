@@ -510,6 +510,49 @@ def _full_commercial_bottleneck_briefing() -> dict:
                 "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT;"
                 "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
             ),
+            "production_ai_registry_promotion_priority_source_json": (
+                "runs/production_ai_registry_promotion_priority_packet_current.json"
+            ),
+            "production_ai_registry_promotion_priority_status": (
+                "blocked_production_ai_registry_promotion_priority_packet"
+            ),
+            "production_ai_registry_promotion_priority_packet_ready": True,
+            "production_ai_registry_promotion_priority_registry_promotion_ready": False,
+            "production_ai_registry_promotion_priority_operator_input_required_count": 4,
+            "production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
+            "production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "production_ai_registry_promotion_priority_missing_gate_ids": [
+                "trained_model_checkpoint_count_positive",
+                "default_residual_mode_guarded",
+                "production_promotion_allowed",
+                "customer_facing_mutation_flags",
+            ],
+            "production_ai_registry_promotion_priority_top_gate_id": (
+                "trained_model_checkpoint_count_positive"
+            ),
+            "production_ai_registry_promotion_priority_top_priority_bucket": (
+                "trained_checkpoint_registration_required"
+            ),
+            "production_ai_registry_promotion_priority_top_required_input": (
+                "Register a trained production residual checkpoint that passes checkpoint preflight in "
+                "runs/residual_model_registry_current.json."
+            ),
+            "production_ai_registry_promotion_priority_top_acceptance_artifact": (
+                "runs/residual_model_registry_current.json"
+            ),
+            "production_ai_registry_promotion_priority_top_verification_command": (
+                "python3 tools/build_residual_model_registry.py; "
+                "python3 tools/build_product_production_ai_checkpoint_readiness.py; "
+                "python3 tools/build_product_production_ai_promotion_workbench.py; "
+                "python3 tools/build_production_ai_registry_promotion_operator_receipt.py"
+            ),
+            "production_ai_registry_promotion_priority_top_next_operator_step": (
+                "Return or register a trained checkpoint, rerun residual registry and checkpoint-readiness "
+                "gates, then rebuild the operator receipt."
+            ),
+            "production_ai_registry_promotion_priority_model_promoted": False,
+            "production_ai_registry_promotion_priority_customer_facing_mutation_enabled": False,
+            "production_ai_registry_promotion_priority_external_state_mutated": False,
             "execution_enabled": False,
             "external_state_mutated": False,
         }
@@ -882,6 +925,54 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
     assert "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT" in summary[
         "goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_tokens"
     ]
+    assert summary["goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded"] is True
+    assert summary[
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_source_json"
+    ] == "runs/production_ai_registry_promotion_priority_packet_current.json"
+    assert summary[
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_status"
+    ] == "blocked_production_ai_registry_promotion_priority_packet"
+    assert summary[
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_packet_ready"
+    ] is True
+    assert summary[
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_registry_promotion_ready"
+    ] is False
+    assert summary[
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_operator_input_required_count"
+    ] == 4
+    assert summary[
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_blocked_priority_item_count"
+    ] == 4
+    assert summary[
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count"
+    ] == 4
+    assert summary[
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_ids"
+    ] == [
+        "trained_model_checkpoint_count_positive",
+        "default_residual_mode_guarded",
+        "production_promotion_allowed",
+        "customer_facing_mutation_flags",
+    ]
+    assert summary[
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id"
+    ] == "trained_model_checkpoint_count_positive"
+    assert summary[
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_priority_bucket"
+    ] == "trained_checkpoint_registration_required"
+    assert summary[
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_acceptance_artifact"
+    ] == "runs/residual_model_registry_current.json"
+    assert summary[
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_model_promoted"
+    ] is False
+    assert summary[
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_customer_facing_mutation_enabled"
+    ] is False
+    assert summary[
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_external_state_mutated"
+    ] is False
     matrix_row = next(
         row
         for row in payload["rows"]
@@ -892,10 +983,26 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
         for row in payload["rows"]
         if row["check"] == "goal_bottleneck_briefing_full_commercial_receipts_recorded"
     )
+    production_ai_priority_row = next(
+        row
+        for row in payload["rows"]
+        if row["check"] == "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded"
+    )
     assert bottleneck_row["status"] == "pass"
     assert bottleneck_row["release_blocker"] is False
     assert "full_commercial_evidence_receipt_entry_count=2" in bottleneck_row["observed"]
     assert "full_commercial_evidence_receipt_approval_token_count=2" in bottleneck_row["observed"]
+    assert production_ai_priority_row["status"] == "pass"
+    assert production_ai_priority_row["release_blocker"] is False
+    assert "production_ai_registry_promotion_priority_missing_gate_count=4" in production_ai_priority_row["observed"]
+    assert (
+        "production_ai_registry_promotion_priority_top_gate_id=trained_model_checkpoint_count_positive"
+        in production_ai_priority_row["observed"]
+    )
+    assert (
+        "production_ai_registry_promotion_priority_model_promoted=false"
+        in production_ai_priority_row["observed"]
+    )
     assert matrix_row["status"] == "pass"
     assert matrix_row["release_blocker"] is False
     assert "first_blocked_evidence_row_id=direct_binding_evidence_missing" in matrix_row["observed"]
@@ -1462,6 +1569,10 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     )
     assert summary["source_goal_bottleneck_briefing_status"] == "goal_bottleneck_briefing_ready"
     assert summary["goal_bottleneck_briefing_full_commercial_receipts_recorded"] is True
+    assert summary["goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded"] is True
+    assert summary[
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id"
+    ] == "trained_model_checkpoint_count_positive"
     assert summary["product_rollout_execution_smoke_receipt_status"] == (
         "blocked_product_rollout_execution_smoke_receipt"
     )
@@ -1473,6 +1584,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     assert "Goal Release Decision Gate" in md_text
     assert "cameo_live_validation_required_for_product_release" in md_text
     assert "goal_bottleneck_briefing_full_commercial_receipts_recorded" in md_text
+    assert "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded" in md_text
+    assert "trained_model_checkpoint_count_positive" in md_text
     assert "product_full_commercial_blocker_evidence_matrix_status" in md_text
     assert "product_rollout_execution_smoke_receipt_status" in md_text
     assert "master_gap_closure_rollup_status" in md_text

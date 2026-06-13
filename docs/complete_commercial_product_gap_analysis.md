@@ -202,6 +202,14 @@
   `tools/run_product_release_current_refresh.py --execute`의 final-gate verification도
   이 decision linkage를 exact field로 요구해 final refresh green 상태에서 해당
   summary가 조용히 빠지는 회귀를 막는다.
+  같은 decision gate는 bottleneck briefing의
+  `production_ai_registry_promotion_priority_*` summary도
+  `goal_bottleneck_briefing_production_ai_registry_promotion_priority_*` 키와
+  `goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded`
+  row로 보존한다. top gate는 `trained_model_checkpoint_count_positive`, top bucket은
+  `trained_checkpoint_registration_required`, missing gate count는 4로 final-gate
+  exact check에 묶여, restricted/local release가 green이어도 Production AI registry
+  promotion의 첫 운영 병목이 최종 decision packet에서 빠지지 않는다.
   최신 decision summary는
   `release_allowed=true`, `restricted_release_allowed=true`와 별개로
   `full_commercial_release_allowed=false`,
@@ -468,8 +476,8 @@
   등록하고 residual registry/checkpoint-readiness/promotion workbench/operator receipt를
   재검증하는 일이며, guarded mode, production promotion policy, customer-facing mutation
   flags는 그 뒤의 fail-closed gate로 남는다. 이 priority packet summary는
-  goal operator intake kit, bottleneck briefing, 상용 readiness operator packet,
-  execution ladder, handoff bundle, `/goal/status`까지
+  goal operator intake kit, bottleneck briefing, goal release decision gate,
+  상용 readiness operator packet, execution ladder, handoff bundle, `/goal/status`까지
   `production_ai_registry_promotion_priority_*` 필드로 전파되며, release bundle과
   source-of-truth gate의 required/depends-on artifact로도 고정된다.
   `/product/commercial-readiness-operator-packet`,

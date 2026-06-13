@@ -39,6 +39,8 @@ FINAL_GATE_SPECS = [
         "required_true_fields": [
             "release_allowed",
             "goal_bottleneck_briefing_full_commercial_receipts_recorded",
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded",
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_packet_ready",
         ],
         "required_zero_fields": ["blocker_count"],
         "required_int_exact_fields": {
@@ -49,6 +51,9 @@ FINAL_GATE_SPECS = [
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_template_required_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_template_present_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_token_count": 2,
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_operator_input_required_count": 4,
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count": 4,
         },
         "required_text_exact_fields": {
             "source_goal_bottleneck_briefing_status": "goal_bottleneck_briefing_ready",
@@ -63,6 +68,21 @@ FINAL_GATE_SPECS = [
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_tokens": (
                 "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT;"
                 "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+            ),
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_source_json": (
+                "runs/production_ai_registry_promotion_priority_packet_current.json"
+            ),
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_status": (
+                "blocked_production_ai_registry_promotion_priority_packet"
+            ),
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id": (
+                "trained_model_checkpoint_count_positive"
+            ),
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_priority_bucket": (
+                "trained_checkpoint_registration_required"
+            ),
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_acceptance_artifact": (
+                "runs/residual_model_registry_current.json"
             ),
         },
     },

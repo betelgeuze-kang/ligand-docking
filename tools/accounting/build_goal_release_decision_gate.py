@@ -105,6 +105,15 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _text_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [_text(item) for item in value if _text(item)]
+    if isinstance(value, tuple):
+        return [_text(item) for item in value if _text(item)]
+    text = _text(value)
+    return [text] if text else []
+
+
 def _int(value: Any) -> int:
     try:
         return int(float(value or 0))
@@ -246,6 +255,46 @@ def build_goal_release_decision_gate(
         )
         and bool(goal_bottleneck_briefing.get("execution_enabled") is False)
         and bool(goal_bottleneck_briefing.get("external_state_mutated") is False)
+    )
+    goal_bottleneck_production_ai_registry_promotion_priority_missing_gate_ids = _text_list(
+        goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_missing_gate_ids")
+    )
+    expected_production_ai_registry_promotion_missing_gate_ids = [
+        "trained_model_checkpoint_count_positive",
+        "default_residual_mode_guarded",
+        "production_promotion_allowed",
+        "customer_facing_mutation_flags",
+    ]
+    goal_bottleneck_production_ai_registry_promotion_priority_recorded = (
+        _text(goal_bottleneck_briefing.get("status")) == "goal_bottleneck_briefing_ready"
+        and _text(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_source_json"))
+        == "runs/production_ai_registry_promotion_priority_packet_current.json"
+        and _text(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_status"))
+        == "blocked_production_ai_registry_promotion_priority_packet"
+        and bool(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_packet_ready") is True)
+        and bool(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_registry_promotion_ready")
+            is False
+        )
+        and _int(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_operator_input_required_count"))
+        == 4
+        and _int(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_blocked_priority_item_count"))
+        == 4
+        and _int(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_missing_gate_count")) == 4
+        and goal_bottleneck_production_ai_registry_promotion_priority_missing_gate_ids
+        == expected_production_ai_registry_promotion_missing_gate_ids
+        and _text(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_top_gate_id"))
+        == "trained_model_checkpoint_count_positive"
+        and _text(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_top_priority_bucket"))
+        == "trained_checkpoint_registration_required"
+        and _text(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_top_acceptance_artifact"))
+        == "runs/residual_model_registry_current.json"
+        and bool(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_model_promoted") is False)
+        and bool(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_customer_facing_mutation_enabled")
+            is False
+        )
+        and bool(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_external_state_mutated") is False)
     )
     release_source_of_truth = _summary(product_release_source_of_truth_packet or {})
     release_source_of_truth_gate_present = product_release_source_of_truth_packet is not None
@@ -701,6 +750,37 @@ def build_goal_release_decision_gate(
                 ),
             )
         )
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded",
+                artifact_path=goal_bottleneck_briefing_path,
+                observed=(
+                    f"{_text(goal_bottleneck_briefing.get('status')) or 'missing'};"
+                    f"production_ai_registry_promotion_priority_status={_text(goal_bottleneck_briefing.get('production_ai_registry_promotion_priority_status'))};"
+                    f"production_ai_registry_promotion_priority_packet_ready={_bool_text(bool(goal_bottleneck_briefing.get('production_ai_registry_promotion_priority_packet_ready') is True))};"
+                    f"production_ai_registry_promotion_priority_registry_promotion_ready={_bool_text(bool(goal_bottleneck_briefing.get('production_ai_registry_promotion_priority_registry_promotion_ready') is True))};"
+                    f"production_ai_registry_promotion_priority_operator_input_required_count={_int(goal_bottleneck_briefing.get('production_ai_registry_promotion_priority_operator_input_required_count'))};"
+                    f"production_ai_registry_promotion_priority_blocked_priority_item_count={_int(goal_bottleneck_briefing.get('production_ai_registry_promotion_priority_blocked_priority_item_count'))};"
+                    f"production_ai_registry_promotion_priority_missing_gate_count={_int(goal_bottleneck_briefing.get('production_ai_registry_promotion_priority_missing_gate_count'))};"
+                    f"production_ai_registry_promotion_priority_missing_gate_ids={';'.join(goal_bottleneck_production_ai_registry_promotion_priority_missing_gate_ids)};"
+                    f"production_ai_registry_promotion_priority_top_gate_id={_text(goal_bottleneck_briefing.get('production_ai_registry_promotion_priority_top_gate_id'))};"
+                    f"production_ai_registry_promotion_priority_top_priority_bucket={_text(goal_bottleneck_briefing.get('production_ai_registry_promotion_priority_top_priority_bucket'))};"
+                    f"production_ai_registry_promotion_priority_model_promoted={_bool_text(bool(goal_bottleneck_briefing.get('production_ai_registry_promotion_priority_model_promoted') is True))};"
+                    f"production_ai_registry_promotion_priority_customer_facing_mutation_enabled={_bool_text(bool(goal_bottleneck_briefing.get('production_ai_registry_promotion_priority_customer_facing_mutation_enabled') is True))};"
+                    f"production_ai_registry_promotion_priority_external_state_mutated={_bool_text(bool(goal_bottleneck_briefing.get('production_ai_registry_promotion_priority_external_state_mutated') is True))}"
+                ),
+                required=(
+                    "goal_bottleneck_briefing_ready with Production AI registry promotion priority packet "
+                    "recorded and top gate trained_model_checkpoint_count_positive preserved"
+                ),
+                passed=goal_bottleneck_production_ai_registry_promotion_priority_recorded,
+                reason=(
+                    "The final release decision must preserve the bottleneck briefing's Production AI registry "
+                    "promotion top gate so model-promotion work cannot disappear behind restricted-release readiness."
+                ),
+            )
+        )
     if release_source_of_truth_gate_present:
         rows.append(
             _row(
@@ -890,6 +970,11 @@ def build_goal_release_decision_gate(
         next_required_items.append("goal API surface contract")
     if goal_bottleneck_briefing_gate_present and not goal_bottleneck_full_commercial_receipts_recorded:
         next_required_items.append("goal bottleneck full-commercial receipt briefing")
+    if (
+        goal_bottleneck_briefing_gate_present
+        and not goal_bottleneck_production_ai_registry_promotion_priority_recorded
+    ):
+        next_required_items.append("goal bottleneck Production AI registry promotion priority briefing")
     if release_source_of_truth_gate_present and not release_source_of_truth_ready:
         next_required_items.append("product release source-of-truth gate")
     if full_commercial_matrix_gate_present and not full_commercial_matrix_recorded:
@@ -1020,6 +1105,63 @@ def build_goal_release_decision_gate(
         ),
         "goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_tokens": _text(
             goal_bottleneck_briefing.get("full_commercial_evidence_receipt_approval_tokens")
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded": (
+            goal_bottleneck_production_ai_registry_promotion_priority_recorded
+            if goal_bottleneck_briefing_gate_present
+            else None
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_source_json": _text(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_source_json")
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_status": _text(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_status")
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_packet_ready": bool(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_packet_ready") is True
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_registry_promotion_ready": bool(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_registry_promotion_ready") is True
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_operator_input_required_count": _int(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_operator_input_required_count")
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_blocked_priority_item_count": _int(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_blocked_priority_item_count")
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count": _int(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_missing_gate_count")
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_ids": (
+            goal_bottleneck_production_ai_registry_promotion_priority_missing_gate_ids
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id": _text(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_top_gate_id")
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_priority_bucket": _text(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_top_priority_bucket")
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_required_input": _text(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_top_required_input")
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_acceptance_artifact": _text(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_top_acceptance_artifact")
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_verification_command": _text(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_top_verification_command")
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_next_operator_step": _text(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_top_next_operator_step")
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_model_promoted": bool(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_model_promoted") is True
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_customer_facing_mutation_enabled": bool(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_customer_facing_mutation_enabled")
+            is True
+        ),
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_external_state_mutated": bool(
+            goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_external_state_mutated") is True
         ),
         "product_release_source_of_truth_gate_present": release_source_of_truth_gate_present,
         "product_release_source_of_truth_status": _text(release_source_of_truth.get("status")),
@@ -1308,6 +1450,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- goal_bottleneck_briefing_full_commercial_evidence_receipt_template_present_count: `{s['goal_bottleneck_briefing_full_commercial_evidence_receipt_template_present_count']}`",
         f"- goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_token_count: `{s['goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_token_count']}`",
         f"- goal_bottleneck_briefing_full_commercial_evidence_receipt_required_inputs: `{s['goal_bottleneck_briefing_full_commercial_evidence_receipt_required_inputs']}`",
+        f"- goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded: `{s['goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded']}`",
+        f"- goal_bottleneck_briefing_production_ai_registry_promotion_priority_status: `{s['goal_bottleneck_briefing_production_ai_registry_promotion_priority_status']}`",
+        f"- goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id: `{s['goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id']}`",
+        f"- goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count: `{s['goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count']}`",
         f"- product_release_source_of_truth_gate_present: `{s['product_release_source_of_truth_gate_present']}`",
         f"- product_release_source_of_truth_status: `{s['product_release_source_of_truth_status']}`",
         f"- product_release_source_of_truth_ready: `{s['product_release_source_of_truth_ready']}`",

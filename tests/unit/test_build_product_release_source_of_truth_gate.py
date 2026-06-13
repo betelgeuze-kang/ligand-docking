@@ -33,6 +33,8 @@ def _refresh_release_decision_ready() -> dict:
             "release_allowed": True,
             "blocker_count": 0,
             "goal_bottleneck_briefing_full_commercial_receipts_recorded": True,
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded": True,
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_packet_ready": True,
             "source_goal_bottleneck_briefing_status": "goal_bottleneck_briefing_ready",
             "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 2,
@@ -41,6 +43,9 @@ def _refresh_release_decision_ready() -> dict:
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_template_required_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_template_present_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_token_count": 2,
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_operator_input_required_count": 4,
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count": 4,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
                 "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"
@@ -52,6 +57,21 @@ def _refresh_release_decision_ready() -> dict:
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_approval_tokens": (
                 "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT;"
                 "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+            ),
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_source_json": (
+                "runs/production_ai_registry_promotion_priority_packet_current.json"
+            ),
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_status": (
+                "blocked_production_ai_registry_promotion_priority_packet"
+            ),
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id": (
+                "trained_model_checkpoint_count_positive"
+            ),
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_priority_bucket": (
+                "trained_checkpoint_registration_required"
+            ),
+            "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_acceptance_artifact": (
+                "runs/residual_model_registry_current.json"
             ),
         }
     }
@@ -213,6 +233,19 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert payload["summary"]["status"] == "product_release_current_refresh_verified"
     assert payload["summary"]["final_gate_verification_ready"] is True
     assert payload["summary"]["final_gate_blocker_count"] == 0
+    release_row = next(
+        row for row in payload["verification_rows"] if row["gate_id"] == "goal_release_decision_gate"
+    )
+    assert (
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded"
+        in release_row["required_true_fields"]
+    )
+    assert release_row["required_int_exact_fields"][
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count"
+    ] == 4
+    assert release_row["required_text_exact_fields"][
+        "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id"
+    ] == "trained_model_checkpoint_count_positive"
 
 
 def test_product_release_current_refresh_blocks_timed_out_command(tmp_path: Path, monkeypatch) -> None:
