@@ -137,6 +137,28 @@ PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_INTAKE_FIELDS = (
     "external_state_mutated",
 )
 
+PRODUCT_SCOPE_BREADTH_EVIDENCE_PRIORITY_INTAKE_FIELDS = (
+    "source_json",
+    "status",
+    "packet_ready",
+    "scope_promotion_allowed",
+    "authoritative_apply_allowed",
+    "queue_item_count",
+    "open_item_count",
+    "scientific_evidence_request_count",
+    "local_crosscheck_candidate_count",
+    "external_primary_exact_evidence_required_count",
+    "review_only_keep_blocked_count",
+    "top_item_id",
+    "top_domain",
+    "top_bucket",
+    "top_required_evidence_type",
+    "top_review_template_artifact",
+    "top_apply_gate_artifact",
+    "top_next_step",
+    "external_state_mutated",
+)
+
 
 def _full_commercial_evidence_receipt_intake_fields(intake: dict[str, Any]) -> dict[str, Any]:
     fields: dict[str, Any] = {}
@@ -177,6 +199,26 @@ def _production_ai_registry_promotion_priority_intake_fields(intake: dict[str, A
                 if isinstance(value, list)
                 else _unique([value])
             )
+        else:
+            fields[source_key] = _text(intake.get(source_key))
+    return fields
+
+
+def _product_scope_breadth_evidence_priority_intake_fields(
+    intake: dict[str, Any]
+) -> dict[str, Any]:
+    fields: dict[str, Any] = {}
+    for suffix in PRODUCT_SCOPE_BREADTH_EVIDENCE_PRIORITY_INTAKE_FIELDS:
+        source_key = f"product_scope_breadth_evidence_priority_{suffix}"
+        if suffix.endswith("_count"):
+            fields[source_key] = _int(intake.get(source_key))
+        elif suffix in {
+            "packet_ready",
+            "scope_promotion_allowed",
+            "authoritative_apply_allowed",
+            "external_state_mutated",
+        }:
+            fields[source_key] = bool(intake.get(source_key) is True)
         else:
             fields[source_key] = _text(intake.get(source_key))
     return fields
@@ -790,6 +832,7 @@ def build_goal_bottleneck_briefing(
             intake.get("release_burndown_linked_entry_count")
         ),
         **_full_commercial_evidence_receipt_intake_fields(intake),
+        **_product_scope_breadth_evidence_priority_intake_fields(intake),
         **_production_ai_registry_promotion_priority_intake_fields(intake),
         "public_benchmark_work_order_status": _text(public_benchmark_work_order.get("status")),
         "public_benchmark_work_order_json": public_benchmark_work_order_path,

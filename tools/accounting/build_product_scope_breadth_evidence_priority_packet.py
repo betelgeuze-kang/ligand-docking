@@ -312,6 +312,7 @@ def build_payload(
     top_row = rows[0] if rows else {}
     summary = {
         "packet_type": "product_scope_breadth_evidence_priority_packet",
+        "status": "product_scope_breadth_evidence_priority_packet_ready",
         "priority_packet_ready": True,
         "queue_item_count": len(rows),
         "source_queue_item_count": _int(queue_summary.get("queue_item_count")),
@@ -356,6 +357,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
     lines = [
         "# Product Scope Breadth Evidence Priority Packet",
         "",
+        f"- status: `{s['status']}`",
         f"- priority_packet_ready: `{s['priority_packet_ready']}`",
         f"- queue_item_count: `{s['queue_item_count']}`",
         f"- scientific_evidence_request_count: `{s['scientific_evidence_request_count']}`",

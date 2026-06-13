@@ -651,6 +651,23 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   field로 검증한다. `/goal/status`도 같은 값을
   `operator_intake_kit_full_commercial_evidence_receipt_*` 및
   `bottleneck_briefing_full_commercial_evidence_receipt_*` 필드로 전달한다.
+  `runs/product_scope_breadth_evidence_priority_packet_current.json`은 같은 R8
+  blocker를 15개 open item으로 분해하고
+  `product_scope_breadth_evidence_priority_packet_ready`,
+  `scientific_evidence_request_count=11`, `local_crosscheck_candidate_count=11`,
+  `review_only_keep_blocked_count=1`을 기록한다. 현재 첫 실제 조치는
+  `top_item_id=AQP1.core_binder_01`,
+  `top_domain=transporter`,
+  `top_bucket=local_crosscheck_review_present_but_exact_quant_required`,
+  `top_required_evidence_type=exact_transporter_target_pair_quantitative_binder_kcal`
+  이며, `runs/transporter_manual_review_intake_template_current.json`과
+  `runs/transporter_binder_promotion_gate_current.json`을 통해 local crosscheck를
+  exact transporter target-pair quantitative binder kcal evidence로 검토하는 일이다.
+  이 priority packet summary는 goal operator intake kit, bottleneck briefing,
+  source-of-truth exact semantic checks, `/goal/status`까지
+  `product_scope_breadth_evidence_priority_*` 필드로 전파되어 R8 첫 evidence task가
+  receipt/matrix 뒤로 숨지 않는다. scope promotion과 authoritative apply는 계속
+  false이고 external mutation도 발생하지 않는다.
   같은 R8 receipt 상태는
   `runs/product_commercial_readiness_operator_packet_current.json`과
   `runs/product_commercial_readiness_handoff_bundle_current.json` summary의
@@ -670,6 +687,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `third_party_license_review_gate_current.json`,
   `product_scope_breadth_closure_checklist_current.json`,
   `product_scope_breadth_evidence_receipt_current.json`,
+  `product_scope_breadth_evidence_priority_packet_current.json`,
   `goal_operator_intake_kit_current/manifest.json`,
   `product_commercial_readiness_execution_ladder_current.json`,
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
@@ -686,7 +704,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
   빠지지 않게 한다. 최신 source-of-truth는 `row_count=94`, `pass_count=94`,
   `blocker_count=0`, `artifact_row_count=63`, `semantic_status_row_count=29`,
-  `release_refresh_command_count=76`, `stale_artifact_count=0`,
+  `release_refresh_command_count=79`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   최신 goal release decision과 final refresh도 self-hosted license audit 및
   third-party license review gate를 직접 읽어 `legal_advice_provided=false`,
@@ -715,8 +733,8 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   top gate는 `goal_operator_intake_kit_current/manifest.json` summary와
   `goal_bottleneck_briefing_current.json` summary에도
   `production_ai_registry_promotion_priority_*` 필드로 흡수되며, source-of-truth의
-  intake-kit/bottleneck semantic rows가 packet ready, 4개 missing gate, top gate
-  `trained_model_checkpoint_count_positive`를 exact field로 검증한다.
+  intake-kit/bottleneck semantic rows가 packet ready, 3개 missing gate, top gate
+  `default_residual_mode_guarded`를 exact field로 검증한다.
   최신 goal API surface contract는 `check_count=9`,
   `pass_count=9`, `missing_full_commercial_visibility_token_count=0`이다.
   source-of-truth의 `goal_api_surface_contract_semantic_ready` row도
@@ -783,7 +801,9 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `delta_force_derivation_validation_ready=true`,
   `default_residual_mode=shadow`,
   `production_promotion_allowed=false`,
-  `trained_model_checkpoint_count=0`을 기록한다.
+  `trained_model_checkpoint_count=1`을 기록한다. 따라서 trained/preflight-ready
+  checkpoint 등록 부재는 더 이상 첫 병목이 아니며, guarded registry promotion
+  operator receipt가 다음 경계다.
 - ROCm/HIP 환경은 `rocm_environment_manifest_ready`이며,
   `torch_version=2.6.0+rocm6.1`, `torch_hip_version=6.1.40091-a8dbc0c19`,
   `visible_device_count=1`, AMD GPU detected로 기록되어 있다.
@@ -792,13 +812,13 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   actionable blocker는 `registry_customer_facing_promotion_allowed`이며,
   observed 값은 `default_residual_mode=shadow`,
   `production_promotion_allowed=false`, customer-facing score/ranking mutation
-  disabled, `trained_model_checkpoint_count=0`이다.
+  disabled, `trained_model_checkpoint_count=1`이다.
   `first_failed_next_action`과
   `production_inference_actionable_blocker_next_action`은 이제 이미 ready인
   ROCm/GPU receipt/training/preflight를 다시 요구하지 않고,
   `production_promotion_allowed`, `customer_facing_mutation_flags`,
-  `default_residual_mode_guarded`, `trained_model_checkpoint_count_positive`를
-  남은 registry gate로 직접 지목한다. 같은 정보는
+  `default_residual_mode_guarded`를 남은 registry gate로 직접 지목한다.
+  `trained_model_checkpoint_count_positive`는 만족된 gate로 보존된다. 같은 정보는
   `registry_promotion_missing_gate_ids`, `registry_promotion_missing_gate_count`,
   `registry_promotion_upstream_acceptance_ready`,
   `registry_promotion_currently_satisfied` 구조화 필드로도 고정되어,
@@ -858,7 +878,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `product_production_ai_checkpoint_readiness_current.json` 및
   `product_production_ai_promotion_workbench_current.json`도 직접 읽어
   upstream 7/8 acceptance ready, `registry_guarded_promotion_acceptance` blocked
-  stage, trained checkpoint count 0, `default_residual_mode=shadow`,
+  stage, trained checkpoint count 1, `default_residual_mode=shadow`,
   residual registry/product-goal blocked stages, no promotion/no mutation을 summary/row와
   final refresh exact check로 고정한다.
   `/product/commercial-readiness-operator-packet`,
@@ -1270,7 +1290,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   master gap closure rollup 포함 refresh 이후
   `product_release_source_of_truth_gate_ready`, `pass_count=94/94`,
   `blocker_count=0`, `stale_artifact_count=0`,
-  `release_refresh_command_count=76`으로 재검증됐다.
+  `release_refresh_command_count=79`으로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;
   다음은 operator webhook secret mount, 실제 pager provider delivery smoke,
@@ -1881,10 +1901,11 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 2. **Production AI 고객 실행 경계** — ROCm/HIP GPU execution environment와
    force derivation validation은 ready지만, product checkpoint/promotion은
    `default_residual_mode=shadow`, `production_promotion_allowed=false`,
-   `trained_model_checkpoint_count=0`으로 registry guarded promotion에서 멈춰 있다.
-   priority packet 기준 첫 조치는 `trained_model_checkpoint_count_positive`를
-   만족시키는 trained checkpoint 등록이며, 이후 guarded mode, production promotion
-   policy, customer-facing mutation flags를 순서대로 재검증해야 한다. 이 priority
+   `trained_model_checkpoint_count=1`로 registry guarded promotion에서 멈춰 있다.
+   priority packet 기준 첫 조치는 더 이상 checkpoint 등록이 아니라
+   `default_residual_mode_guarded`를 만족시키는 guarded promotion operator
+   receipt 작성이며, 이후 production promotion policy, customer-facing mutation
+   flags를 순서대로 재검증해야 한다. 이 priority
    상태는 commercial readiness handoff, `/goal/status`, release bundle
    source-of-truth dependency에도 고정되어 있다.
 3. **License 결정 + LICENSE 파일 작성** — LICENSE/source hash 일치,

@@ -203,6 +203,39 @@ def _intake_kit() -> dict:
                 "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT;"
                 "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
             ),
+            "product_scope_breadth_evidence_priority_source_json": (
+                "runs/product_scope_breadth_evidence_priority_packet_current.json"
+            ),
+            "product_scope_breadth_evidence_priority_status": (
+                "product_scope_breadth_evidence_priority_packet_ready"
+            ),
+            "product_scope_breadth_evidence_priority_packet_ready": True,
+            "product_scope_breadth_evidence_priority_scope_promotion_allowed": False,
+            "product_scope_breadth_evidence_priority_authoritative_apply_allowed": False,
+            "product_scope_breadth_evidence_priority_queue_item_count": 15,
+            "product_scope_breadth_evidence_priority_open_item_count": 15,
+            "product_scope_breadth_evidence_priority_scientific_evidence_request_count": 11,
+            "product_scope_breadth_evidence_priority_local_crosscheck_candidate_count": 11,
+            "product_scope_breadth_evidence_priority_external_primary_exact_evidence_required_count": 0,
+            "product_scope_breadth_evidence_priority_review_only_keep_blocked_count": 1,
+            "product_scope_breadth_evidence_priority_top_item_id": "AQP1.core_binder_01",
+            "product_scope_breadth_evidence_priority_top_domain": "transporter",
+            "product_scope_breadth_evidence_priority_top_bucket": (
+                "local_crosscheck_review_present_but_exact_quant_required"
+            ),
+            "product_scope_breadth_evidence_priority_top_required_evidence_type": (
+                "exact_transporter_target_pair_quantitative_binder_kcal"
+            ),
+            "product_scope_breadth_evidence_priority_top_review_template_artifact": (
+                "runs/transporter_manual_review_intake_template_current.json"
+            ),
+            "product_scope_breadth_evidence_priority_top_apply_gate_artifact": (
+                "runs/transporter_binder_promotion_gate_current.json"
+            ),
+            "product_scope_breadth_evidence_priority_top_next_step": (
+                "Review local crosscheck files, capture exact evidence if present."
+            ),
+            "product_scope_breadth_evidence_priority_external_state_mutated": False,
             "production_ai_registry_promotion_priority_source_json": (
                 "runs/production_ai_registry_promotion_priority_packet_current.json"
             ),
@@ -211,23 +244,23 @@ def _intake_kit() -> dict:
             ),
             "production_ai_registry_promotion_priority_packet_ready": True,
             "production_ai_registry_promotion_priority_registry_promotion_ready": False,
-            "production_ai_registry_promotion_priority_operator_input_required_count": 4,
-            "production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
-            "production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "production_ai_registry_promotion_priority_operator_input_required_count": 3,
+            "production_ai_registry_promotion_priority_blocked_priority_item_count": 3,
+            "production_ai_registry_promotion_priority_missing_gate_count": 3,
             "production_ai_registry_promotion_priority_missing_gate_ids": [
-                "trained_model_checkpoint_count_positive",
                 "default_residual_mode_guarded",
                 "production_promotion_allowed",
                 "customer_facing_mutation_flags",
             ],
+            "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 1,
             "production_ai_registry_promotion_priority_top_gate_id": (
-                "trained_model_checkpoint_count_positive"
+                "default_residual_mode_guarded"
             ),
             "production_ai_registry_promotion_priority_top_priority_bucket": (
-                "trained_checkpoint_registration_required"
+                "guarded_residual_mode_selection_required"
             ),
             "production_ai_registry_promotion_priority_top_required_input": (
-                "Register a trained production residual checkpoint."
+                "Set the guarded default residual mode in the production AI registry promotion operator receipt."
             ),
             "production_ai_registry_promotion_priority_top_acceptance_artifact": (
                 "runs/residual_model_registry_current.json"
@@ -236,7 +269,7 @@ def _intake_kit() -> dict:
                 "python3 tools/build_residual_model_registry.py"
             ),
             "production_ai_registry_promotion_priority_top_next_operator_step": (
-                "Return or register a trained checkpoint."
+                "Fill the guarded promotion operator receipt."
             ),
             "production_ai_registry_promotion_priority_model_promoted": False,
             "production_ai_registry_promotion_priority_customer_facing_mutation_enabled": False,
@@ -450,7 +483,19 @@ def test_goal_bottleneck_briefing_links_release_blockers_to_intake_and_actions()
         "blocked_production_ai_registry_promotion_priority_packet"
     )
     assert summary["production_ai_registry_promotion_priority_top_gate_id"] == (
-        "trained_model_checkpoint_count_positive"
+        "default_residual_mode_guarded"
+    )
+    assert summary["product_scope_breadth_evidence_priority_status"] == (
+        "product_scope_breadth_evidence_priority_packet_ready"
+    )
+    assert summary["product_scope_breadth_evidence_priority_packet_ready"] is True
+    assert summary["product_scope_breadth_evidence_priority_top_item_id"] == "AQP1.core_binder_01"
+    assert summary["product_scope_breadth_evidence_priority_top_domain"] == "transporter"
+    assert summary["product_scope_breadth_evidence_priority_top_bucket"] == (
+        "local_crosscheck_review_present_but_exact_quant_required"
+    )
+    assert summary["product_scope_breadth_evidence_priority_top_required_evidence_type"] == (
+        "exact_transporter_target_pair_quantitative_binder_kcal"
     )
     assert summary["primary_action_id"] == "product_ai_production:return_gpu_force_regeneration_receipt"
     assert summary["top_action_id"] == summary["primary_action_id"]
@@ -596,21 +641,26 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
     )
     assert summary["production_ai_registry_promotion_priority_packet_ready"] is True
     assert summary["production_ai_registry_promotion_priority_registry_promotion_ready"] is False
-    assert summary["production_ai_registry_promotion_priority_operator_input_required_count"] == 4
-    assert summary["production_ai_registry_promotion_priority_blocked_priority_item_count"] == 4
-    assert summary["production_ai_registry_promotion_priority_missing_gate_count"] == 4
+    assert summary["production_ai_registry_promotion_priority_operator_input_required_count"] == 3
+    assert summary["production_ai_registry_promotion_priority_blocked_priority_item_count"] == 3
+    assert summary["production_ai_registry_promotion_priority_missing_gate_count"] == 3
     assert summary["production_ai_registry_promotion_priority_missing_gate_ids"] == [
-        "trained_model_checkpoint_count_positive",
         "default_residual_mode_guarded",
         "production_promotion_allowed",
         "customer_facing_mutation_flags",
     ]
+    assert summary[
+        "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count"
+    ] == 1
     assert summary["production_ai_registry_promotion_priority_top_gate_id"] == (
-        "trained_model_checkpoint_count_positive"
+        "default_residual_mode_guarded"
     )
     assert summary["production_ai_registry_promotion_priority_top_priority_bucket"] == (
-        "trained_checkpoint_registration_required"
+        "guarded_residual_mode_selection_required"
     )
+    assert summary["product_scope_breadth_evidence_priority_open_item_count"] == 15
+    assert summary["product_scope_breadth_evidence_priority_top_item_id"] == "AQP1.core_binder_01"
+    assert summary["product_scope_breadth_evidence_priority_authoritative_apply_allowed"] is False
     assert summary["production_ai_registry_promotion_priority_model_promoted"] is False
     assert summary["production_ai_registry_promotion_priority_external_state_mutated"] is False
     assert summary["bottleneck_count"] == 2

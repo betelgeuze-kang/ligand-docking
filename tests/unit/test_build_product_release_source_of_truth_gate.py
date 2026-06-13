@@ -987,10 +987,27 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "production_ai_registry_promotion_priority_blocked_priority_item_count": 3,
         "production_ai_registry_promotion_priority_missing_gate_count": 3,
         "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 1,
+        "product_scope_breadth_evidence_priority_open_item_count": 15,
+        "product_scope_breadth_evidence_priority_scientific_evidence_request_count": 11,
+        "product_scope_breadth_evidence_priority_local_crosscheck_candidate_count": 11,
+        "product_scope_breadth_evidence_priority_review_only_keep_blocked_count": 1,
     }
     assert intake_kit_status_spec["required_true_fields"] == [
+        "product_scope_breadth_evidence_priority_packet_ready",
         "production_ai_registry_promotion_priority_packet_ready"
     ]
+    assert intake_kit_status_spec["required_text_exact_fields"][
+        "product_scope_breadth_evidence_priority_source_json"
+    ] == "runs/product_scope_breadth_evidence_priority_packet_current.json"
+    assert intake_kit_status_spec["required_text_exact_fields"][
+        "product_scope_breadth_evidence_priority_status"
+    ] == "product_scope_breadth_evidence_priority_packet_ready"
+    assert intake_kit_status_spec["required_text_exact_fields"][
+        "product_scope_breadth_evidence_priority_top_item_id"
+    ] == "AQP1.core_binder_01"
+    assert intake_kit_status_spec["required_text_exact_fields"][
+        "product_scope_breadth_evidence_priority_top_bucket"
+    ] == "local_crosscheck_review_present_but_exact_quant_required"
     assert intake_kit_status_spec["required_text_exact_fields"][
         "full_commercial_evidence_receipt_required_inputs"
     ] == (
@@ -1018,6 +1035,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         if spec["artifact_id"] == "goal_bottleneck_briefing_semantic_ready"
     )
     assert bottleneck_status_spec["required_true_fields"] == [
+        "product_scope_breadth_evidence_priority_packet_ready",
         "production_ai_registry_promotion_priority_packet_ready"
     ]
     assert bottleneck_status_spec["required_int_exact_fields"] == {
@@ -1032,7 +1050,17 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "production_ai_registry_promotion_priority_blocked_priority_item_count": 3,
         "production_ai_registry_promotion_priority_missing_gate_count": 3,
         "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 1,
+        "product_scope_breadth_evidence_priority_open_item_count": 15,
+        "product_scope_breadth_evidence_priority_scientific_evidence_request_count": 11,
+        "product_scope_breadth_evidence_priority_local_crosscheck_candidate_count": 11,
+        "product_scope_breadth_evidence_priority_review_only_keep_blocked_count": 1,
     }
+    assert bottleneck_status_spec["required_text_exact_fields"][
+        "product_scope_breadth_evidence_priority_source_json"
+    ] == "runs/product_scope_breadth_evidence_priority_packet_current.json"
+    assert bottleneck_status_spec["required_text_exact_fields"][
+        "product_scope_breadth_evidence_priority_top_item_id"
+    ] == "AQP1.core_binder_01"
     assert bottleneck_status_spec["required_text_exact_fields"][
         "full_commercial_evidence_receipt_required_inputs"
     ] == (
@@ -1290,6 +1318,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/production_ai_registry_promotion_operator_receipt_current.json" in intake_kit_spec["depends_on"]
     assert "runs/production_ai_registry_promotion_priority_packet_current.json" in intake_kit_spec["depends_on"]
     assert "config/production_ai_registry_promotion_operator_receipt_current.csv" in intake_kit_spec["depends_on"]
+    assert "runs/product_scope_breadth_evidence_priority_packet_current.json" in intake_kit_spec["depends_on"]
     assert "runs/product_scope_breadth_evidence_receipt_current.json" in intake_kit_spec["depends_on"]
     assert "config/product_scope_breadth_evidence_receipt_current.csv" in intake_kit_spec["depends_on"]
     goal_api_surface_spec = next(
@@ -1520,6 +1549,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/build_product_ledger_privacy_scan.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_scope_breadth_closure_checklist.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_scope_breadth_evidence_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_product_scope_breadth_evidence_priority_packet.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_job_orchestration_contract.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_goal_operator_intake_kit.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_goal_api_surface_contract.py" in mod.RELEASE_REFRESH_COMMANDS
@@ -1537,6 +1567,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_scope_breadth_evidence_receipt.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_scope_breadth_evidence_receipt.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_scope_breadth_evidence_priority_packet.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_scope_breadth_evidence_priority_packet.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 deploy/product_release_bundle.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index(

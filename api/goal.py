@@ -728,6 +728,20 @@ async def get_goal_status() -> dict[str, Any]:
             "operator_intake_kit_full_commercial_evidence_receipt_source_gate_statuses": "",
             "operator_intake_kit_full_commercial_evidence_receipt_required_inputs": "",
             "operator_intake_kit_full_commercial_evidence_receipt_approval_tokens": "",
+            "operator_intake_kit_product_scope_breadth_evidence_priority_status": "",
+            "operator_intake_kit_product_scope_breadth_evidence_priority_packet_ready": False,
+            "operator_intake_kit_product_scope_breadth_evidence_priority_open_item_count": 0,
+            "operator_intake_kit_product_scope_breadth_evidence_priority_scientific_evidence_request_count": 0,
+            "operator_intake_kit_product_scope_breadth_evidence_priority_top_item_id": "",
+            "operator_intake_kit_product_scope_breadth_evidence_priority_top_domain": "",
+            "operator_intake_kit_product_scope_breadth_evidence_priority_top_bucket": "",
+            "operator_intake_kit_product_scope_breadth_evidence_priority_top_required_evidence_type": "",
+            "operator_intake_kit_product_scope_breadth_evidence_priority_top_review_template_artifact": "",
+            "operator_intake_kit_product_scope_breadth_evidence_priority_top_apply_gate_artifact": "",
+            "operator_intake_kit_product_scope_breadth_evidence_priority_top_next_step": "",
+            "operator_intake_kit_product_scope_breadth_evidence_priority_scope_promotion_allowed": False,
+            "operator_intake_kit_product_scope_breadth_evidence_priority_authoritative_apply_allowed": False,
+            "operator_intake_kit_product_scope_breadth_evidence_priority_external_state_mutated": False,
             "bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 0,
             "bottleneck_briefing_full_commercial_evidence_receipt_operator_input_required_count": 0,
             "bottleneck_briefing_full_commercial_evidence_receipt_current_action_required_count": 0,
@@ -738,6 +752,20 @@ async def get_goal_status() -> dict[str, Any]:
             "bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": "",
             "bottleneck_briefing_full_commercial_evidence_receipt_required_inputs": "",
             "bottleneck_briefing_full_commercial_evidence_receipt_approval_tokens": "",
+            "bottleneck_briefing_product_scope_breadth_evidence_priority_status": "",
+            "bottleneck_briefing_product_scope_breadth_evidence_priority_packet_ready": False,
+            "bottleneck_briefing_product_scope_breadth_evidence_priority_open_item_count": 0,
+            "bottleneck_briefing_product_scope_breadth_evidence_priority_scientific_evidence_request_count": 0,
+            "bottleneck_briefing_product_scope_breadth_evidence_priority_top_item_id": "",
+            "bottleneck_briefing_product_scope_breadth_evidence_priority_top_domain": "",
+            "bottleneck_briefing_product_scope_breadth_evidence_priority_top_bucket": "",
+            "bottleneck_briefing_product_scope_breadth_evidence_priority_top_required_evidence_type": "",
+            "bottleneck_briefing_product_scope_breadth_evidence_priority_top_review_template_artifact": "",
+            "bottleneck_briefing_product_scope_breadth_evidence_priority_top_apply_gate_artifact": "",
+            "bottleneck_briefing_product_scope_breadth_evidence_priority_top_next_step": "",
+            "bottleneck_briefing_product_scope_breadth_evidence_priority_scope_promotion_allowed": False,
+            "bottleneck_briefing_product_scope_breadth_evidence_priority_authoritative_apply_allowed": False,
+            "bottleneck_briefing_product_scope_breadth_evidence_priority_external_state_mutated": False,
             **_production_ai_registry_promotion_receipt_fields({}),
             **_cameo_official_result_fetch_preflight_fields({}, []),
             **_evidence_receipt_fields(
@@ -1204,6 +1232,48 @@ async def get_goal_status() -> dict[str, Any]:
         "operator_intake_kit_full_commercial_evidence_receipt_approval_tokens": intake.get(
             "full_commercial_evidence_receipt_approval_tokens", ""
         ),
+        "operator_intake_kit_product_scope_breadth_evidence_priority_status": intake.get(
+            "product_scope_breadth_evidence_priority_status", ""
+        ),
+        "operator_intake_kit_product_scope_breadth_evidence_priority_packet_ready": bool(
+            intake.get("product_scope_breadth_evidence_priority_packet_ready") is True
+        ),
+        "operator_intake_kit_product_scope_breadth_evidence_priority_open_item_count": _int(
+            intake.get("product_scope_breadth_evidence_priority_open_item_count")
+        ),
+        "operator_intake_kit_product_scope_breadth_evidence_priority_scientific_evidence_request_count": _int(
+            intake.get("product_scope_breadth_evidence_priority_scientific_evidence_request_count")
+        ),
+        "operator_intake_kit_product_scope_breadth_evidence_priority_top_item_id": intake.get(
+            "product_scope_breadth_evidence_priority_top_item_id", ""
+        ),
+        "operator_intake_kit_product_scope_breadth_evidence_priority_top_domain": intake.get(
+            "product_scope_breadth_evidence_priority_top_domain", ""
+        ),
+        "operator_intake_kit_product_scope_breadth_evidence_priority_top_bucket": intake.get(
+            "product_scope_breadth_evidence_priority_top_bucket", ""
+        ),
+        "operator_intake_kit_product_scope_breadth_evidence_priority_top_required_evidence_type": intake.get(
+            "product_scope_breadth_evidence_priority_top_required_evidence_type", ""
+        ),
+        "operator_intake_kit_product_scope_breadth_evidence_priority_top_review_template_artifact": intake.get(
+            "product_scope_breadth_evidence_priority_top_review_template_artifact", ""
+        ),
+        "operator_intake_kit_product_scope_breadth_evidence_priority_top_apply_gate_artifact": intake.get(
+            "product_scope_breadth_evidence_priority_top_apply_gate_artifact", ""
+        ),
+        "operator_intake_kit_product_scope_breadth_evidence_priority_top_next_step": intake.get(
+            "product_scope_breadth_evidence_priority_top_next_step", ""
+        ),
+        "operator_intake_kit_product_scope_breadth_evidence_priority_scope_promotion_allowed": bool(
+            intake.get("product_scope_breadth_evidence_priority_scope_promotion_allowed") is True
+        ),
+        "operator_intake_kit_product_scope_breadth_evidence_priority_authoritative_apply_allowed": bool(
+            intake.get("product_scope_breadth_evidence_priority_authoritative_apply_allowed") is True
+        ),
+        "operator_intake_kit_product_scope_breadth_evidence_priority_external_state_mutated": bool(
+            intake.get("product_scope_breadth_evidence_priority_external_state_mutated") is True
+        ),
         "bottleneck_briefing_full_commercial_evidence_receipt_entry_count": _int(
             bottlenecks.get("full_commercial_evidence_receipt_entry_count")
         ),
@@ -1233,6 +1303,48 @@ async def get_goal_status() -> dict[str, Any]:
         ),
         "bottleneck_briefing_full_commercial_evidence_receipt_approval_tokens": bottlenecks.get(
             "full_commercial_evidence_receipt_approval_tokens", ""
+        ),
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_status": bottlenecks.get(
+            "product_scope_breadth_evidence_priority_status", ""
+        ),
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_packet_ready": bool(
+            bottlenecks.get("product_scope_breadth_evidence_priority_packet_ready") is True
+        ),
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_open_item_count": _int(
+            bottlenecks.get("product_scope_breadth_evidence_priority_open_item_count")
+        ),
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_scientific_evidence_request_count": _int(
+            bottlenecks.get("product_scope_breadth_evidence_priority_scientific_evidence_request_count")
+        ),
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_top_item_id": bottlenecks.get(
+            "product_scope_breadth_evidence_priority_top_item_id", ""
+        ),
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_top_domain": bottlenecks.get(
+            "product_scope_breadth_evidence_priority_top_domain", ""
+        ),
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_top_bucket": bottlenecks.get(
+            "product_scope_breadth_evidence_priority_top_bucket", ""
+        ),
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_top_required_evidence_type": bottlenecks.get(
+            "product_scope_breadth_evidence_priority_top_required_evidence_type", ""
+        ),
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_top_review_template_artifact": bottlenecks.get(
+            "product_scope_breadth_evidence_priority_top_review_template_artifact", ""
+        ),
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_top_apply_gate_artifact": bottlenecks.get(
+            "product_scope_breadth_evidence_priority_top_apply_gate_artifact", ""
+        ),
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_top_next_step": bottlenecks.get(
+            "product_scope_breadth_evidence_priority_top_next_step", ""
+        ),
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_scope_promotion_allowed": bool(
+            bottlenecks.get("product_scope_breadth_evidence_priority_scope_promotion_allowed") is True
+        ),
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_authoritative_apply_allowed": bool(
+            bottlenecks.get("product_scope_breadth_evidence_priority_authoritative_apply_allowed") is True
+        ),
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_external_state_mutated": bool(
+            bottlenecks.get("product_scope_breadth_evidence_priority_external_state_mutated") is True
         ),
         "operator_template_missing_count": _int(intake.get("template_missing_count")),
         "all_required_templates_present": bool(intake.get("all_required_templates_present") is True),

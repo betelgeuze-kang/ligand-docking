@@ -64,6 +64,7 @@ def test_scope_breadth_evidence_priority_packet_classifies_local_and_external_ro
     payload = mod.build_payload(queue_payload=_queue(), crosscheck_dir=crosscheck)
 
     summary = payload["summary"]
+    assert summary["status"] == "product_scope_breadth_evidence_priority_packet_ready"
     assert summary["queue_item_count"] == 4
     assert summary["source_queue_item_count"] == 4
     assert summary["scientific_evidence_request_count"] == 3

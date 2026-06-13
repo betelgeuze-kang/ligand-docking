@@ -33,6 +33,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_scope_breadth_contract.py",
     "python3 tools/build_product_scope_breadth_closure_checklist.py",
     "python3 tools/build_product_scope_breadth_evidence_receipt.py",
+    "python3 tools/build_product_scope_breadth_evidence_priority_packet.py",
     "python3 tools/build_product_operational_quality_contract.py",
     "python3 tools/build_api_runner_profile_promotion_readiness.py",
     "python3 tools/build_api_runner_profile_promotion_operator_receipt.py",
@@ -726,6 +727,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/production_ai_registry_promotion_operator_receipt_current.json",
             "runs/production_ai_registry_promotion_priority_packet_current.json",
             "config/production_ai_registry_promotion_operator_receipt_current.csv",
+            "runs/product_scope_breadth_evidence_priority_packet_current.json",
             "runs/product_scope_breadth_evidence_receipt_current.json",
             "config/product_scope_breadth_evidence_receipt_current.csv",
             "runs/engine_refinement_claim_evidence_receipt_current.json",
@@ -1530,6 +1532,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "builder_command": "python3 tools/build_goal_operator_intake_kit.py",
         "required_status": "goal_operator_intake_kit_ready",
         "required_true_fields": [
+            "product_scope_breadth_evidence_priority_packet_ready",
             "production_ai_registry_promotion_priority_packet_ready",
         ],
         "required_int_exact_fields": {
@@ -1544,8 +1547,26 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "production_ai_registry_promotion_priority_blocked_priority_item_count": 3,
             "production_ai_registry_promotion_priority_missing_gate_count": 3,
             "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 1,
+            "product_scope_breadth_evidence_priority_open_item_count": 15,
+            "product_scope_breadth_evidence_priority_scientific_evidence_request_count": 11,
+            "product_scope_breadth_evidence_priority_local_crosscheck_candidate_count": 11,
+            "product_scope_breadth_evidence_priority_review_only_keep_blocked_count": 1,
         },
         "required_text_exact_fields": {
+            "product_scope_breadth_evidence_priority_source_json": (
+                "runs/product_scope_breadth_evidence_priority_packet_current.json"
+            ),
+            "product_scope_breadth_evidence_priority_status": (
+                "product_scope_breadth_evidence_priority_packet_ready"
+            ),
+            "product_scope_breadth_evidence_priority_top_item_id": "AQP1.core_binder_01",
+            "product_scope_breadth_evidence_priority_top_domain": "transporter",
+            "product_scope_breadth_evidence_priority_top_bucket": (
+                "local_crosscheck_review_present_but_exact_quant_required"
+            ),
+            "product_scope_breadth_evidence_priority_top_required_evidence_type": (
+                "exact_transporter_target_pair_quantitative_binder_kcal"
+            ),
             "product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
             "product_goal_primary_release_blocker_tier": "full_commercial_scope",
             "product_goal_primary_release_blocker": "full_scope_claim_closure_not_ready",
@@ -1603,6 +1624,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "builder_command": "python3 tools/build_goal_bottleneck_briefing.py",
         "required_status": "goal_bottleneck_briefing_ready",
         "required_true_fields": [
+            "product_scope_breadth_evidence_priority_packet_ready",
             "production_ai_registry_promotion_priority_packet_ready",
         ],
         "required_int_exact_fields": {
@@ -1617,8 +1639,26 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "production_ai_registry_promotion_priority_blocked_priority_item_count": 3,
             "production_ai_registry_promotion_priority_missing_gate_count": 3,
             "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 1,
+            "product_scope_breadth_evidence_priority_open_item_count": 15,
+            "product_scope_breadth_evidence_priority_scientific_evidence_request_count": 11,
+            "product_scope_breadth_evidence_priority_local_crosscheck_candidate_count": 11,
+            "product_scope_breadth_evidence_priority_review_only_keep_blocked_count": 1,
         },
         "required_text_exact_fields": {
+            "product_scope_breadth_evidence_priority_source_json": (
+                "runs/product_scope_breadth_evidence_priority_packet_current.json"
+            ),
+            "product_scope_breadth_evidence_priority_status": (
+                "product_scope_breadth_evidence_priority_packet_ready"
+            ),
+            "product_scope_breadth_evidence_priority_top_item_id": "AQP1.core_binder_01",
+            "product_scope_breadth_evidence_priority_top_domain": "transporter",
+            "product_scope_breadth_evidence_priority_top_bucket": (
+                "local_crosscheck_review_present_but_exact_quant_required"
+            ),
+            "product_scope_breadth_evidence_priority_top_required_evidence_type": (
+                "exact_transporter_target_pair_quantitative_binder_kcal"
+            ),
             "full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
                 "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"

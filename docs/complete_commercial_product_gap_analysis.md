@@ -315,10 +315,20 @@
   `goal_bottleneck_briefing_current.json`도 같은 summary를 흡수해 R8/R9
   completion-audit 병목에서 operator receipt handoff가 누락되지 않게 한다. 같은
   intake/bottleneck summaries는 Production AI registry promotion priority의
-  `trained_model_checkpoint_count_positive` top gate도
+  `default_residual_mode_guarded` top gate도
   `production_ai_registry_promotion_priority_*` 필드로 전달한다.
   `/goal/status`도 이를 `operator_intake_kit_full_commercial_evidence_receipt_*` 및
   `bottleneck_briefing_full_commercial_evidence_receipt_*` 키로 전달한다.
+  같은 intake/bottleneck summaries와 `/goal/status`는 이제
+  `product_scope_breadth_evidence_priority_*` 필드도 전달한다. 현재 R8 priority
+  packet의 첫 item은 `AQP1.core_binder_01`, domain `transporter`,
+  bucket `local_crosscheck_review_present_but_exact_quant_required`,
+  required evidence
+  `exact_transporter_target_pair_quantitative_binder_kcal`이며,
+  `runs/transporter_manual_review_intake_template_current.json` 검토와
+  `runs/transporter_binder_promotion_gate_current.json` 재검증이 다음 operator
+  단계다. 따라서 R8 full-scope blocker는 receipt/matrix뿐 아니라 "가장 먼저
+  봐야 할 분자 evidence task"까지 상위 상태 API에 고정된다.
   같은 R8 receipt 상태는
   `runs/product_commercial_readiness_operator_packet_current.json`과
   `runs/product_commercial_readiness_handoff_bundle_current.json` summary의
@@ -337,6 +347,7 @@
   `third_party_license_review_gate_current.json`,
   `product_scope_breadth_closure_checklist_current.json`,
   `product_scope_breadth_evidence_receipt_current.json`,
+  `product_scope_breadth_evidence_priority_packet_current.json`,
   `goal_operator_intake_kit_current/manifest.json`,
   `product_commercial_readiness_execution_ladder_current.json`,
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
@@ -352,7 +363,7 @@
   freshness 및 semantic-ready 상태를 함께 검증한다. 최신 full refresh 후
   source-of-truth는 `row_count=94`, `pass_count=94`, `blocker_count=0`,
   `artifact_row_count=63`, `semantic_status_row_count=29`,
-  `release_refresh_command_count=76`, `stale_artifact_count=0`,
+  `release_refresh_command_count=79`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   `/product/self-hosted-license-distribution-audit` API surface도 같은 audit의
   hard blocker/operator review 경계를 직접 노출한다. R8/R9 evidence
@@ -502,15 +513,15 @@
   checkpoint sidecar/preflight는 ready이고, checkpoint-readiness acceptance matrix는
   `8`개 stage 중 `7`개 ready다.
 - production AI 자체는 아직 `default_residual_mode=shadow`,
-  `production_promotion_allowed=false`, `trained_model_checkpoint_count=0`으로
+  `production_promotion_allowed=false`, `trained_model_checkpoint_count=1`로
   registry guarded promotion에서 blocked다.
 - checkpoint readiness와 promotion workbench의 next-action은 이 상태를
   `production_promotion_allowed`, `customer_facing_mutation_flags`,
-  `default_residual_mode_guarded`, `trained_model_checkpoint_count_positive`가
-  남은 registry gate라는 형태로 노출한다. ROCm/GPU receipt/training/preflight는
-  현재 ready인 하위 gate로 남고, operator-facing 다음 행동은 trained production
-  checkpoint를 registry에 등록/승격한 뒤 registry와 checkpoint-readiness gate를
-  재실행하는 것이다. 이 정보는
+  `default_residual_mode_guarded`가 남은 registry gate라는 형태로 노출한다.
+  `trained_model_checkpoint_count_positive`는 이미 satisfied gate로 남고,
+  ROCm/GPU receipt/training/preflight는 현재 ready인 하위 gate로 남는다.
+  operator-facing 다음 행동은 guarded default residual mode를 operator receipt에
+  승인 기록한 뒤 registry와 checkpoint-readiness gate를 재실행하는 것이다. 이 정보는
   `registry_promotion_missing_gate_ids` 및
   `production_ai_checkpoint_registry_promotion_missing_gate_ids`로도 노출되어
   product API contract, goal completion audit, `/goal/status`에서 구조화된 병목으로
@@ -556,7 +567,7 @@
   `product_production_ai_checkpoint_readiness_current.json`과
   `product_production_ai_promotion_workbench_current.json` 원천도 직접 요구한다.
   그래서 upstream 7/8 acceptance ready, `registry_guarded_promotion_acceptance`,
-  trained checkpoint count 0, `default_residual_mode=shadow`, residual
+  trained checkpoint count 1, `default_residual_mode=shadow`, residual
   registry/product-goal blocked stages, no promotion/no mutation 상태가 최종 gate에서
   빠지지 않는다.
   `/product/commercial-readiness-operator-packet`,

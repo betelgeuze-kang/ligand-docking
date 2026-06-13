@@ -709,6 +709,9 @@ def build_goal_operator_intake_kit(
         (row for row in rows if row["kit_entry_id"] == "production_ai_registry_promotion"),
         {},
     )
+    scope_breadth_priority_summary = _summary_or_payload(
+        source_packets.get(DEFAULT_PRODUCT_SCOPE_EVIDENCE_PRIORITY_JSON, {})
+    )
     template_rows = [row for row in rows if row["template_required"]]
     missing_template_rows = [row for row in template_rows if not row["template_present"]]
     copied_template_rows = [row for row in template_rows if row["kit_template_copied"]]
@@ -775,6 +778,61 @@ def build_goal_operator_intake_kit(
         ),
         "full_commercial_evidence_receipt_approval_tokens": _unique_text(
             [row["approval_token_required"] for row in full_commercial_receipt_rows]
+        ),
+        "product_scope_breadth_evidence_priority_source_json": DEFAULT_PRODUCT_SCOPE_EVIDENCE_PRIORITY_JSON,
+        "product_scope_breadth_evidence_priority_status": _text(
+            scope_breadth_priority_summary.get("status")
+        ),
+        "product_scope_breadth_evidence_priority_packet_ready": bool(
+            scope_breadth_priority_summary.get("priority_packet_ready") is True
+        ),
+        "product_scope_breadth_evidence_priority_scope_promotion_allowed": bool(
+            scope_breadth_priority_summary.get("scope_promotion_allowed") is True
+        ),
+        "product_scope_breadth_evidence_priority_authoritative_apply_allowed": bool(
+            scope_breadth_priority_summary.get("authoritative_apply_allowed") is True
+        ),
+        "product_scope_breadth_evidence_priority_queue_item_count": _int(
+            scope_breadth_priority_summary.get("queue_item_count")
+        ),
+        "product_scope_breadth_evidence_priority_open_item_count": _int(
+            scope_breadth_priority_summary.get("open_item_count")
+        ),
+        "product_scope_breadth_evidence_priority_scientific_evidence_request_count": _int(
+            scope_breadth_priority_summary.get("scientific_evidence_request_count")
+        ),
+        "product_scope_breadth_evidence_priority_local_crosscheck_candidate_count": _int(
+            scope_breadth_priority_summary.get("local_crosscheck_candidate_count")
+        ),
+        "product_scope_breadth_evidence_priority_external_primary_exact_evidence_required_count": _int(
+            scope_breadth_priority_summary.get("external_primary_exact_evidence_required_count")
+        ),
+        "product_scope_breadth_evidence_priority_review_only_keep_blocked_count": _int(
+            scope_breadth_priority_summary.get("review_only_keep_blocked_count")
+        ),
+        "product_scope_breadth_evidence_priority_top_item_id": _text(
+            scope_breadth_priority_summary.get("top_item_id")
+        ),
+        "product_scope_breadth_evidence_priority_top_domain": _text(
+            scope_breadth_priority_summary.get("top_domain")
+        ),
+        "product_scope_breadth_evidence_priority_top_bucket": _text(
+            scope_breadth_priority_summary.get("top_bucket")
+        ),
+        "product_scope_breadth_evidence_priority_top_required_evidence_type": _text(
+            scope_breadth_priority_summary.get("top_required_evidence_type")
+        ),
+        "product_scope_breadth_evidence_priority_top_review_template_artifact": _text(
+            scope_breadth_priority_summary.get("top_review_template_artifact")
+        ),
+        "product_scope_breadth_evidence_priority_top_apply_gate_artifact": _text(
+            scope_breadth_priority_summary.get("top_apply_gate_artifact")
+        ),
+        "product_scope_breadth_evidence_priority_top_next_step": _text(
+            scope_breadth_priority_summary.get("top_next_step")
+        ),
+        "product_scope_breadth_evidence_priority_external_state_mutated": bool(
+            scope_breadth_priority_summary.get("external_state_mutated") is True
         ),
         "production_ai_registry_promotion_priority_source_json": _text(
             production_ai_registry_promotion_row.get("priority_source_json")

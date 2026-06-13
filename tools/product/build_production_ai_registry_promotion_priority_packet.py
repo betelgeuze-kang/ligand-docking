@@ -186,8 +186,13 @@ def _build_rows(
             prerequisite_gate_id="",
             observed_value=f"trained_model_checkpoint_count={checkpoint_count}",
             required_input=(
-                "Register a trained production residual checkpoint that passes checkpoint preflight in "
-                "runs/residual_model_registry_current.json."
+                "No new checkpoint registration is required for this gate; preserve the current "
+                "preflight-ready checkpoint evidence and continue to guarded registry mode review."
+                if checkpoint_gate
+                else (
+                    "Register a trained production residual checkpoint that passes checkpoint preflight in "
+                    "runs/residual_model_registry_current.json."
+                )
             ),
             acceptance_artifact=DEFAULT_REGISTRY_JSON,
             verification_command=(
@@ -197,8 +202,13 @@ def _build_rows(
                 "python3 tools/build_production_ai_registry_promotion_operator_receipt.py"
             ),
             next_operator_step=(
-                "Return or register a trained checkpoint, rerun residual registry and checkpoint-readiness gates, "
-                "then rebuild the operator receipt."
+                "Checkpoint count is already satisfied; proceed to the guarded default residual mode receipt "
+                "without creating or promoting a new checkpoint."
+                if checkpoint_gate
+                else (
+                    "Return or register a trained checkpoint, rerun residual registry and checkpoint-readiness "
+                    "gates, then rebuild the operator receipt."
+                )
             ),
             registry_summary=registry_summary,
             checkpoint_summary=checkpoint_summary,

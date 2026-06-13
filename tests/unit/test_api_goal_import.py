@@ -84,6 +84,61 @@ def _assert_receipt_fields(
     )
 
 
+def _assert_scope_priority_fields(*, status: dict, prefix: str, artifact: dict) -> None:
+    status_prefix = f"{prefix}_product_scope_breadth_evidence_priority"
+
+    assert status[f"{status_prefix}_status"] == artifact.get(
+        "product_scope_breadth_evidence_priority_status"
+    )
+    assert status[f"{status_prefix}_packet_ready"] is (
+        artifact.get("product_scope_breadth_evidence_priority_packet_ready") is True
+    )
+    assert status[f"{status_prefix}_open_item_count"] == int(
+        artifact.get("product_scope_breadth_evidence_priority_open_item_count") or 0
+    )
+    assert status[f"{status_prefix}_scientific_evidence_request_count"] == int(
+        artifact.get(
+            "product_scope_breadth_evidence_priority_scientific_evidence_request_count"
+        )
+        or 0
+    )
+    assert status[f"{status_prefix}_top_item_id"] == artifact.get(
+        "product_scope_breadth_evidence_priority_top_item_id"
+    )
+    assert status[f"{status_prefix}_top_domain"] == artifact.get(
+        "product_scope_breadth_evidence_priority_top_domain"
+    )
+    assert status[f"{status_prefix}_top_bucket"] == artifact.get(
+        "product_scope_breadth_evidence_priority_top_bucket"
+    )
+    assert status[f"{status_prefix}_top_required_evidence_type"] == artifact.get(
+        "product_scope_breadth_evidence_priority_top_required_evidence_type"
+    )
+    assert status[f"{status_prefix}_top_review_template_artifact"] == artifact.get(
+        "product_scope_breadth_evidence_priority_top_review_template_artifact"
+    )
+    assert status[f"{status_prefix}_top_apply_gate_artifact"] == artifact.get(
+        "product_scope_breadth_evidence_priority_top_apply_gate_artifact"
+    )
+    assert status[f"{status_prefix}_top_next_step"] == artifact.get(
+        "product_scope_breadth_evidence_priority_top_next_step"
+    )
+    assert status[f"{status_prefix}_scope_promotion_allowed"] is (
+        artifact.get("product_scope_breadth_evidence_priority_scope_promotion_allowed")
+        is True
+    )
+    assert status[f"{status_prefix}_authoritative_apply_allowed"] is (
+        artifact.get(
+            "product_scope_breadth_evidence_priority_authoritative_apply_allowed"
+        )
+        is True
+    )
+    assert status[f"{status_prefix}_external_state_mutated"] is (
+        artifact.get("product_scope_breadth_evidence_priority_external_state_mutated")
+        is True
+    )
+
+
 def test_api_app_imports_with_goal_router() -> None:
     from api.main import app
 
@@ -554,6 +609,58 @@ def test_api_app_imports_with_goal_router() -> None:
             "operator_intake_kit_full_commercial_evidence_receipt_source_gate_statuses"
         ]
     )
+    _assert_scope_priority_fields(
+        status=status,
+        prefix="operator_intake_kit",
+        artifact=intake_artifact,
+    )
+    _assert_scope_priority_fields(
+        status=status,
+        prefix="bottleneck_briefing",
+        artifact=bottlenecks_artifact,
+    )
+    assert status[
+        "operator_intake_kit_product_scope_breadth_evidence_priority_status"
+    ] == "product_scope_breadth_evidence_priority_packet_ready"
+    assert status[
+        "operator_intake_kit_product_scope_breadth_evidence_priority_packet_ready"
+    ] is True
+    assert status[
+        "operator_intake_kit_product_scope_breadth_evidence_priority_top_item_id"
+    ] == "AQP1.core_binder_01"
+    assert status[
+        "operator_intake_kit_product_scope_breadth_evidence_priority_top_domain"
+    ] == "transporter"
+    assert status[
+        "operator_intake_kit_product_scope_breadth_evidence_priority_top_bucket"
+    ] == "local_crosscheck_review_present_but_exact_quant_required"
+    assert status[
+        "operator_intake_kit_product_scope_breadth_evidence_priority_top_required_evidence_type"
+    ] == "exact_transporter_target_pair_quantitative_binder_kcal"
+    assert status[
+        "operator_intake_kit_product_scope_breadth_evidence_priority_scope_promotion_allowed"
+    ] is False
+    assert status[
+        "operator_intake_kit_product_scope_breadth_evidence_priority_authoritative_apply_allowed"
+    ] is False
+    assert status[
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_top_item_id"
+    ] == "AQP1.core_binder_01"
+    assert status[
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_top_domain"
+    ] == "transporter"
+    assert status[
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_top_bucket"
+    ] == "local_crosscheck_review_present_but_exact_quant_required"
+    assert status[
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_top_required_evidence_type"
+    ] == "exact_transporter_target_pair_quantitative_binder_kcal"
+    assert status[
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_scope_promotion_allowed"
+    ] is False
+    assert status[
+        "bottleneck_briefing_product_scope_breadth_evidence_priority_authoritative_apply_allowed"
+    ] is False
     assert status["production_ai_registry_promotion_operator_receipt_status"] == (
         handoff_artifact.get("production_ai_registry_promotion_operator_receipt_status")
     )

@@ -109,11 +109,35 @@ def test_production_ai_registry_promotion_priority_packet_blocks_current_registr
     assert summary["external_state_mutated"] is False
     assert payload["rows"][0]["gate_id"] == "trained_model_checkpoint_count_positive"
     assert payload["rows"][0]["operator_input_required"] is False
+    assert "No new checkpoint registration is required" in payload["rows"][0]["required_input"]
+    assert "already satisfied" in payload["rows"][0]["next_operator_step"]
     assert payload["rows"][1]["priority_bucket"] == "guarded_residual_mode_selection_required"
     assert payload["rows"][2]["priority_bucket"] == "blocked_until_guarded_registry_ready"
     assert payload["rows"][3]["priority_bucket"] == "blocked_until_production_promotion_allowed"
     assert all(row["external_state_mutated"] is False for row in payload["rows"])
     assert all(row["model_promoted"] is False for row in payload["rows"])
+
+
+def test_production_ai_registry_promotion_priority_packet_keeps_checkpoint_repair_when_missing(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / mod.DEFAULT_OPERATOR_RECEIPT_CSV).parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / mod.DEFAULT_OPERATOR_RECEIPT_CSV).write_text("artifact_id\n", encoding="utf-8")
+    _write_json(tmp_path / mod.DEFAULT_OPERATOR_RECEIPT_JSON, _operator_receipt_summary())
+    _write_json(tmp_path / mod.DEFAULT_REGISTRY_JSON, _registry_summary())
+    _write_json(tmp_path / mod.DEFAULT_CHECKPOINT_READINESS_JSON, _checkpoint_summary())
+    _write_json(tmp_path / mod.DEFAULT_PROMOTION_WORKBENCH_JSON, _workbench_summary())
+
+    payload = mod.build_production_ai_registry_promotion_priority_packet(root=tmp_path)
+    summary = payload["summary"]
+    checkpoint_row = payload["rows"][0]
+
+    assert summary["top_gate_id"] == "trained_model_checkpoint_count_positive"
+    assert summary["top_priority_bucket"] == "trained_checkpoint_registration_required"
+    assert checkpoint_row["gate_satisfied"] is False
+    assert checkpoint_row["operator_input_required"] is True
+    assert "Register a trained production residual checkpoint" in checkpoint_row["required_input"]
+    assert "Return or register a trained checkpoint" in checkpoint_row["next_operator_step"]
 
 
 def test_production_ai_registry_promotion_priority_packet_ready_when_all_gates_match(
