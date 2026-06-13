@@ -20,6 +20,8 @@ def test_product_ledger_privacy_scan_defaults_include_goal_and_commercial_readin
     assert "runs/goal_api_surface_contract_current.json" in DEFAULT_SCAN_GLOBS
     assert "runs/goal_bottleneck_briefing_current.json" in DEFAULT_SCAN_GLOBS
     assert "runs/product_full_commercial_blocker_evidence_matrix_current.json" in DEFAULT_SCAN_GLOBS
+    assert "runs/product_scope_breadth_evidence_priority_packet_current.json" in DEFAULT_SCAN_GLOBS
+    assert "runs/engine_refinement_claim_evidence_priority_packet_current.json" in DEFAULT_SCAN_GLOBS
     assert "runs/production_ai_registry_promotion_operator_receipt_current.json" in DEFAULT_SCAN_GLOBS
     assert "runs/production_ai_registry_promotion_priority_packet_current.json" in DEFAULT_SCAN_GLOBS
 

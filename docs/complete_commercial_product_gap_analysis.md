@@ -395,7 +395,10 @@
   `goal_operator_intake_kit`, `goal_release_burndown_work_order`,
   `goal_api_surface_contract`,
   `goal_bottleneck_briefing`, `product_full_commercial_blocker_evidence_matrix`,
-  `production_ai_registry_promotion_operator_receipt`
+  `product_scope_breadth_evidence_priority_packet`,
+  `engine_refinement_claim_evidence_priority_packet`,
+  `production_ai_registry_promotion_operator_receipt`,
+  `production_ai_registry_promotion_priority_packet`
   JSON도 scan 대상과 source-of-truth dependency로 포함한다.
   따라서 R8/R9 상위 API/병목 visibility surface에 raw molecular payload가 섞이면
   release privacy gate에서 fail-closed로 드러난다. 최신 scan은 `leak_count=0`이다.

@@ -1480,6 +1480,8 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/goal_api_surface_contract_current.json" in privacy_scan_spec["depends_on"]
     assert "runs/goal_bottleneck_briefing_current.json" in privacy_scan_spec["depends_on"]
     assert "runs/product_full_commercial_blocker_evidence_matrix_current.json" in privacy_scan_spec["depends_on"]
+    assert "runs/product_scope_breadth_evidence_priority_packet_current.json" in privacy_scan_spec["depends_on"]
+    assert "runs/engine_refinement_claim_evidence_priority_packet_current.json" in privacy_scan_spec["depends_on"]
     assert "runs/production_ai_registry_promotion_operator_receipt_current.json" in privacy_scan_spec["depends_on"]
     assert "runs/production_ai_registry_promotion_priority_packet_current.json" in privacy_scan_spec["depends_on"]
     release_bundle_spec = next(

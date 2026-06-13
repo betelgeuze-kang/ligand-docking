@@ -37,6 +37,8 @@ DEFAULT_SCAN_GLOBS = [
     "runs/goal_api_surface_contract_current.json",
     "runs/goal_bottleneck_briefing_current.json",
     "runs/product_full_commercial_blocker_evidence_matrix_current.json",
+    "runs/product_scope_breadth_evidence_priority_packet_current.json",
+    "runs/engine_refinement_claim_evidence_priority_packet_current.json",
     "runs/production_ai_registry_promotion_operator_receipt_current.json",
     "runs/production_ai_registry_promotion_priority_packet_current.json",
 ]

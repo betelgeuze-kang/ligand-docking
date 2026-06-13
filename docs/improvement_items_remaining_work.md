@@ -754,6 +754,8 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `goal_release_burndown_work_order`,
   `goal_api_surface_contract`, `goal_bottleneck_briefing`,
   `product_full_commercial_blocker_evidence_matrix`,
+  `product_scope_breadth_evidence_priority_packet`,
+  `engine_refinement_claim_evidence_priority_packet`,
   `production_ai_registry_promotion_operator_receipt`,
   `production_ai_registry_promotion_priority_packet`)를 scan 대상 및
   source-of-truth dependency로 포함해, R8/R9 상위 API/병목 surface에 raw molecular
