@@ -56,6 +56,9 @@ PRODUCT_JOB_ORCHESTRATION_CONTRACT_ARTIFACT = ROOT / "runs" / "product_job_orche
 API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_ARTIFACT = (
     ROOT / "runs" / "api_runner_profile_promotion_operator_receipt_current.json"
 )
+API_RUNNER_PROFILE_PROMOTION_OPERATOR_STAGING_APPLY_ARTIFACT = (
+    ROOT / "runs" / "api_runner_profile_promotion_operator_staging_apply_current.json"
+)
 PRODUCT_AI_DECISION_GRAPH_ARTIFACT = ROOT / "runs" / "product_ai_decision_graph_contract_current.json"
 PRODUCT_POSE_SAMPLING_READINESS_ARTIFACT = ROOT / "runs" / "product_pose_sampling_readiness_current.json"
 PRODUCT_AI_REPORT_UX_ARTIFACT = ROOT / "runs" / "product_ai_report_ux_contract_current.json"
@@ -1649,6 +1652,168 @@ async def get_product_api_runner_profile_promotion_operator_receipt() -> dict[st
         "next_required_step": summary.get("next_required_step", ""),
         "execution_enabled": False,
         "docking_results_emitted": False,
+        "external_state_mutated": bool(summary.get("external_state_mutated") is True),
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
+@router.get("/api-runner-profile-promotion-operator-staging-apply")
+async def get_product_api_runner_profile_promotion_operator_staging_apply() -> dict[str, Any]:
+    packet = _read_json_object(API_RUNNER_PROFILE_PROMOTION_OPERATOR_STAGING_APPLY_ARTIFACT)
+    summary = _summary(packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    if not summary:
+        return {
+            "status": "missing_api_runner_profile_promotion_operator_staging_apply",
+            "artifact_path": str(API_RUNNER_PROFILE_PROMOTION_OPERATOR_STAGING_APPLY_ARTIFACT),
+            "mode": "preview",
+            "staging_operator_template_csv": "",
+            "staging_operator_template_csv_present": False,
+            "staging_row_count": 0,
+            "staging_missing_required_column_count": 0,
+            "live_operator_template_csv": "",
+            "live_operator_template_csv_present": False,
+            "live_operator_template_row_count": 0,
+            "candidate_operator_template_csv": "",
+            "candidate_operator_template_written": False,
+            "candidate_operator_receipt_ready": False,
+            "candidate_operator_receipt_status": "",
+            "candidate_profile_count": 0,
+            "candidate_pass_row_count": 0,
+            "candidate_blocked_row_count": 0,
+            "candidate_first_blocked_profile_id": "",
+            "candidate_first_blocked_row_blocker": "",
+            "candidate_most_common_row_blocker": "",
+            "candidate_approved_profile_count": 0,
+            "candidate_promote_decision_count": 0,
+            "candidate_keep_enabled_decision_count": 0,
+            "accuracy_parity_status": "",
+            "accuracy_parity_gate_ready": False,
+            "overall_commercial_tool_accuracy_parity_allowed": False,
+            "schrodinger_class_claim_allowed": False,
+            "science_claim_status": "",
+            "science_claim_gate_ready": False,
+            "science_claim_promotion_allowed": False,
+            "science_claim_open_gap_count": 0,
+            "science_claim_open_gap_ids": [],
+            "broad_promotion_gate_required": False,
+            "broad_promotion_gate_ready": False,
+            "broad_commercial_profile_promotion_allowed": False,
+            "approval_token_required": "",
+            "approval_token_present": False,
+            "approval_token_accepted": False,
+            "live_copy_allowed": False,
+            "write_canonical_operator_template_requested": False,
+            "canonical_operator_template_written": False,
+            "profile_json_edited_by_this_tool": False,
+            "profile_enabled_by_this_tool": False,
+            "runner_executed": False,
+            "docking_results_emitted": False,
+            "blocker_count": 1,
+            "blockers": ["api_runner_profile_promotion_operator_staging_apply_missing"],
+            "staging_rows": [],
+            "next_required_step": "",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_boundary": (
+                "API runner profile promotion operator staging apply endpoint only; the local staging artifact is "
+                "missing or invalid. It does not edit profile JSON, enable profiles, run scientific runners, "
+                "emit results, upload, delete, commit, push, or mutate external state."
+            ),
+        }
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(API_RUNNER_PROFILE_PROMOTION_OPERATOR_STAGING_APPLY_ARTIFACT),
+        "mode": summary.get("mode", "preview"),
+        "staging_operator_template_csv": summary.get("staging_operator_template_csv", ""),
+        "staging_operator_template_csv_present": bool(
+            summary.get("staging_operator_template_csv_present") is True
+        ),
+        "staging_row_count": int(summary.get("staging_row_count") or 0),
+        "staging_missing_required_column_count": int(
+            summary.get("staging_missing_required_column_count") or 0
+        ),
+        "live_operator_template_csv": summary.get("live_operator_template_csv", ""),
+        "live_operator_template_csv_present": bool(
+            summary.get("live_operator_template_csv_present") is True
+        ),
+        "live_operator_template_row_count": int(
+            summary.get("live_operator_template_row_count") or 0
+        ),
+        "candidate_operator_template_csv": summary.get("candidate_operator_template_csv", ""),
+        "candidate_operator_template_written": bool(
+            summary.get("candidate_operator_template_written") is True
+        ),
+        "candidate_operator_receipt_ready": bool(
+            summary.get("candidate_operator_receipt_ready") is True
+        ),
+        "candidate_operator_receipt_status": summary.get("candidate_operator_receipt_status", ""),
+        "candidate_profile_count": int(summary.get("candidate_profile_count") or 0),
+        "candidate_pass_row_count": int(summary.get("candidate_pass_row_count") or 0),
+        "candidate_blocked_row_count": int(summary.get("candidate_blocked_row_count") or 0),
+        "candidate_first_blocked_profile_id": summary.get(
+            "candidate_first_blocked_profile_id", ""
+        ),
+        "candidate_first_blocked_row_blocker": summary.get(
+            "candidate_first_blocked_row_blocker", ""
+        ),
+        "candidate_most_common_row_blocker": summary.get(
+            "candidate_most_common_row_blocker", ""
+        ),
+        "candidate_approved_profile_count": int(
+            summary.get("candidate_approved_profile_count") or 0
+        ),
+        "candidate_promote_decision_count": int(
+            summary.get("candidate_promote_decision_count") or 0
+        ),
+        "candidate_keep_enabled_decision_count": int(
+            summary.get("candidate_keep_enabled_decision_count") or 0
+        ),
+        "accuracy_parity_status": summary.get("accuracy_parity_status", ""),
+        "accuracy_parity_gate_ready": bool(summary.get("accuracy_parity_gate_ready") is True),
+        "overall_commercial_tool_accuracy_parity_allowed": bool(
+            summary.get("overall_commercial_tool_accuracy_parity_allowed") is True
+        ),
+        "schrodinger_class_claim_allowed": bool(
+            summary.get("schrodinger_class_claim_allowed") is True
+        ),
+        "science_claim_status": summary.get("science_claim_status", ""),
+        "science_claim_gate_ready": bool(summary.get("science_claim_gate_ready") is True),
+        "science_claim_promotion_allowed": bool(
+            summary.get("science_claim_promotion_allowed") is True
+        ),
+        "science_claim_open_gap_count": int(summary.get("science_claim_open_gap_count") or 0),
+        "science_claim_open_gap_ids": list(summary.get("science_claim_open_gap_ids") or []),
+        "broad_promotion_gate_required": bool(
+            summary.get("broad_promotion_gate_required") is True
+        ),
+        "broad_promotion_gate_ready": bool(summary.get("broad_promotion_gate_ready") is True),
+        "broad_commercial_profile_promotion_allowed": bool(
+            summary.get("broad_commercial_profile_promotion_allowed") is True
+        ),
+        "approval_token_required": summary.get("approval_token_required", ""),
+        "approval_token_present": bool(summary.get("approval_token_present") is True),
+        "approval_token_accepted": bool(summary.get("approval_token_accepted") is True),
+        "live_copy_allowed": bool(summary.get("live_copy_allowed") is True),
+        "write_canonical_operator_template_requested": bool(
+            summary.get("write_canonical_operator_template_requested") is True
+        ),
+        "canonical_operator_template_written": bool(
+            summary.get("canonical_operator_template_written") is True
+        ),
+        "profile_json_edited_by_this_tool": bool(
+            summary.get("profile_json_edited_by_this_tool") is True
+        ),
+        "profile_enabled_by_this_tool": bool(
+            summary.get("profile_enabled_by_this_tool") is True
+        ),
+        "runner_executed": bool(summary.get("runner_executed") is True),
+        "docking_results_emitted": bool(summary.get("docking_results_emitted") is True),
+        "blocker_count": int(summary.get("blocker_count") or 0),
+        "blockers": list(summary.get("blockers") or []),
+        "staging_rows": rows,
+        "next_required_step": summary.get("next_required_step", ""),
+        "execution_enabled": False,
         "external_state_mutated": bool(summary.get("external_state_mutated") is True),
         "claim_boundary": summary.get("claim_boundary", ""),
     }

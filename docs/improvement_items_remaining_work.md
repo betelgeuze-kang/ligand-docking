@@ -287,6 +287,27 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `profile_count=4`, `blocked_row_count=4`,
   `first_blocked_profile_id=backmapping_scoring.example`,
   `approval_token_required=APPROVE_API_RUNNER_PROFILE_PROMOTION`을 exact check로 고정한다.
+- `tools/product/build_api_runner_profile_promotion_operator_staging_apply.py`는 위
+  receipt 앞단에 operator staging preview를 추가한다. 이 preview는
+  `runs/api_runner_profile_promotion_operator_template_current.csv`를 후보 receipt로
+  재판정하고, 동시에 `runs/accuracy_parity_scorecard_current.json`의
+  `overall_commercial_tool_accuracy_parity_allowed`/`schrodinger_class_claim_allowed`,
+  `runs/science_claim_promotion_gap_closure_current.json`의
+  `claim_promotion_allowed`/`all_gaps_closed`를 함께 노출한다. 따라서 "상용제품 대비
+  정확도 차이가 없으면 승격 가능"이라는 판단은 이제 `candidate_operator_receipt_ready=true`
+  + `accuracy_parity_gate_ready=true` + `science_claim_gate_ready=true` +
+  explicit approval token의 조합으로 fail-closed 확인된다. 현재 기본값은
+  `runs/api_runner_profile_promotion_operator_staging_apply_current.json`에서
+  `blocked_api_runner_profile_promotion_operator_staging_apply`,
+  `candidate_operator_receipt_ready=false`, `candidate_blocked_row_count=4`,
+  `candidate_first_blocked_profile_id=backmapping_scoring.example`,
+  `candidate_most_common_row_blocker=operator_decision_missing`,
+  `accuracy_parity_gate_ready=false`, `science_claim_gate_ready=false`,
+  `broad_commercial_profile_promotion_allowed=false`, `live_copy_allowed=false`,
+  `canonical_operator_template_written=false`, `profile_enabled_by_this_tool=false`,
+  `runner_executed=false`, `external_state_mutated=false`로 고정된다. 이 artifact는
+  source-of-truth refresh/freshness, `/product/api-runner-profile-promotion-operator-staging-apply`
+  API surface에 연결되어 operator decision과 benchmark/science gate의 차이를 숨기지 않는다.
 - `api/main.py`의 legacy `jobs = {}` in-memory dict은 제거됨.
   현재는 `api/job_store.py`의 `SQLiteJobStore`와
   `api/config.py`의 `api_job_store_path` 기본값

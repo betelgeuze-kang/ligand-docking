@@ -37,6 +37,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "/product/job-orchestration-contract" in paths
     assert "/product/trajectory-sla-contract" in paths
     assert "/product/api-runner-profile-promotion-operator-receipt" in paths
+    assert "/product/api-runner-profile-promotion-operator-staging-apply" in paths
     assert "/product/ai-decision-graph" in paths
     assert "/product/ai-report-ux" in paths
     assert "/product/cameo-live-validation" in paths
@@ -2540,7 +2541,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     )
     assert handoff_bundle["product_scope_breadth_evidence_operator_staging_apply_live_copy_allowed"] is False
     assert handoff_bundle["artifact_reference_contract_ready"] is True
-    assert handoff_bundle["artifact_reference_count"] == 42
+    assert handoff_bundle["artifact_reference_count"] == 43
     assert handoff_bundle["local_missing_artifact_reference_count"] == 0
     assert handoff_bundle["operator_return_artifact_reference_count"] >= 4
     assert handoff_bundle["operator_return_pending_artifact_reference_count"] >= 1
@@ -2921,7 +2922,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     ] == "AQP1.core_binder_01"
 
     assert completion["commercial_readiness_handoff_bundle_ready"] is True
-    assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 42
+    assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 43
     assert completion["commercial_readiness_handoff_bundle_operator_return_pending_artifact_reference_count"] == 1
     assert completion["commercial_readiness_next_action_matrix_ready"] is True
     assert completion["commercial_readiness_next_action_matrix_count"] == 6

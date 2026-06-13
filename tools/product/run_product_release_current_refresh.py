@@ -42,12 +42,12 @@ FINAL_GATE_SPECS = [
         "required_true_fields": ["release_source_of_truth_ready"],
         "required_zero_fields": ["blocker_count", "stale_artifact_count", "readme_drift_count"],
         "required_int_exact_fields": {
-            "row_count": 111,
-            "artifact_row_count": 73,
-            "semantic_status_row_count": 36,
+            "row_count": 113,
+            "artifact_row_count": 74,
+            "semantic_status_row_count": 37,
             "readme_row_count": 2,
-            "pass_count": 111,
-            "release_refresh_command_count": 98,
+            "pass_count": 113,
+            "release_refresh_command_count": 99,
         },
     },
     {

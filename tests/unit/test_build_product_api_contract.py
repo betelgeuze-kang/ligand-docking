@@ -137,6 +137,19 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "runner_executed" in api_runner_receipt_keys
     assert "profile_promoted" in api_runner_receipt_keys
     assert "receipt_rows" in api_runner_receipt_keys
+    assert EXPECTED_ROUTES["get_product_api_runner_profile_promotion_operator_staging_apply"] == (
+        "GET",
+        "/api-runner-profile-promotion-operator-staging-apply",
+    )
+    api_runner_staging_keys = REQUIRED_STATUS_DOMAIN_KEYS[
+        "get_product_api_runner_profile_promotion_operator_staging_apply"
+    ]
+    assert "candidate_operator_receipt_ready" in api_runner_staging_keys
+    assert "accuracy_parity_gate_ready" in api_runner_staging_keys
+    assert "science_claim_gate_ready" in api_runner_staging_keys
+    assert "broad_commercial_profile_promotion_allowed" in api_runner_staging_keys
+    assert "live_copy_allowed" in api_runner_staging_keys
+    assert "canonical_operator_template_written" in api_runner_staging_keys
     assert EXPECTED_ROUTES["get_product_pose_sampling_readiness"] == (
         "GET",
         "/pose-sampling-readiness",
