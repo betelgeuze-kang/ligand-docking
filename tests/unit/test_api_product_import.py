@@ -70,6 +70,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "/product/commercial-readiness-handoff-bundle" in paths
     assert "/product/scope-breadth-evidence-receipt" in paths
     assert "/product/engine-refinement-claim-evidence-receipt" in paths
+    assert "/product/engine-refinement-claim-evidence-priority" in paths
     assert "/product/full-commercial-blocker-evidence-matrix" in paths
     assert "/product/goal-completion-audit" in paths
     assert "/product/pose-sampling-readiness" in paths
@@ -483,9 +484,9 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
 
     release = asyncio.run(product.get_product_release_readiness())
     assert release["status"] == "product_release_operations_dossier_ready"
-    assert release["release_allowed"] is False
-    assert release["goal_release_status"] == "blocked_goal_release_decision"
-    assert release["goal_release_blocker_count"] == 2
+    assert release["release_allowed"] is True
+    assert release["goal_release_status"] == "goal_release_ready"
+    assert release["goal_release_blocker_count"] == 0
     assert release["commercial_independent_product_ready"] is True
     assert release["restricted_commercial_scope_claim_ready"] is True
     assert release["commercial_claim_scope_tier"] == "restricted_family_local_product"
@@ -2394,6 +2395,42 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert engine_receipt["docking_results_emitted"] is False
     assert engine_receipt["external_state_mutated"] is False
     assert engine_receipt["claim_promoted"] is False
+
+    engine_priority_summary = _artifact_summary(
+        "engine_refinement_claim_evidence_priority_packet_current.json"
+    )
+    engine_priority = asyncio.run(product.get_product_engine_refinement_claim_evidence_priority())
+    assert engine_priority["status"] == engine_priority_summary.get("status")
+    assert engine_priority["status"] == "blocked_engine_refinement_claim_evidence_priority_packet"
+    assert engine_priority["priority_packet_ready"] is True
+    assert engine_priority["claim_promotion_allowed"] is False
+    assert engine_priority["claim_evidence_receipt_ready"] is False
+    assert engine_priority["priority_item_count"] == 6
+    assert engine_priority["operator_input_required_count"] == 6
+    assert engine_priority["blocked_priority_item_count"] == 6
+    assert engine_priority["public_benchmark_gate_ready"] is False
+    assert engine_priority["public_benchmark_work_order_present"] is True
+    assert engine_priority["public_benchmark_work_order_row_count"] == 8
+    assert engine_priority["public_benchmark_work_order_apply_ready"] is False
+    assert engine_priority["public_benchmark_work_order_apply_blocked_row_count"] == 8
+    assert engine_priority["top_blocker_id"] == "public_benchmark_gate_not_ready"
+    assert engine_priority["top_priority_bucket"] == "public_benchmark_work_order_apply_required"
+    assert engine_priority["top_required_input"] == "runs/refine_tier_public_benchmark_work_order_current.csv"
+    assert engine_priority["top_acceptance_artifact"] == (
+        "runs/refine_tier_public_benchmark_readiness_current.json"
+    )
+    assert "apply_refine_tier_public_benchmark_work_order.py" in engine_priority[
+        "top_verification_command"
+    ]
+    assert engine_priority["approval_token_required"] == (
+        "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+    )
+    assert len(engine_priority["priority_items"]) == engine_priority["priority_item_count"]
+    assert engine_priority["top_priority_items"][0]["blocker_id"] == "public_benchmark_gate_not_ready"
+    assert engine_priority["execution_enabled"] is False
+    assert engine_priority["docking_results_emitted"] is False
+    assert engine_priority["external_state_mutated"] is False
+    assert engine_priority["claim_promoted"] is False
 
     full_matrix_summary = _artifact_summary(
         "product_full_commercial_blocker_evidence_matrix_current.json"

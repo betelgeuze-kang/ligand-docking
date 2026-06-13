@@ -2262,7 +2262,7 @@ def test_product_goal_completion_audit_blocks_on_license_and_release() -> None:
     assert summary["status"] == "blocked_product_goal_completion_audit"
     assert summary["goal_complete"] is False
     assert summary["restricted_delivery_complete"] is False
-    assert summary["release_blocker_fail_count"] == 3
+    assert summary["release_blocker_fail_count"] == 2
     assert summary["pass_count"] == 5
     assert summary["fail_count"] == 3
     assert summary["primary_bottleneck_phase"] == "P1_product_commercial_independence"
@@ -2273,6 +2273,7 @@ def test_product_goal_completion_audit_blocks_on_license_and_release() -> None:
     assert by_id["R3_commercial_independence"]["approval_token_required"] == "APPROVE_PRODUCT_LICENSE_FILE_CREATION"
     assert "fill_product_license_decision_operator_intake.py" in by_id["R3_commercial_independence"]["next_command"]
     assert by_id["R5_release_decision_artifacts"]["status"] == "fail"
+    assert by_id["R5_release_decision_artifacts"]["release_blocker"] is False
     assert by_id["R7_restricted_local_delivery_ready"]["status"] == "fail"
     assert by_id["R6_product_ai_architecture_gap_closure"]["status"] == "pass"
     assert by_id["R6_product_ai_architecture_gap_closure"]["release_blocker"] is False

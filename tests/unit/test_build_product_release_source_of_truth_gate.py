@@ -794,6 +794,20 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert "config/engine_refinement_claim_promotion_evidence_receipt_current.csv" in evidence_receipt_spec["depends_on"]
     assert "runs/engine_refinement_claim_promotion_action_board_current.csv" in evidence_receipt_spec["depends_on"]
+    priority_packet_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "engine_refinement_claim_evidence_priority_packet"
+    )
+    assert "runs/engine_refinement_claim_evidence_receipt_current.json" in priority_packet_spec["depends_on"]
+    assert "runs/refine_tier_public_benchmark_readiness_current.json" in priority_packet_spec["depends_on"]
+    assert "runs/refine_tier_public_benchmark_work_order_current.csv" in priority_packet_spec["depends_on"]
+    assert "runs/refine_tier_public_benchmark_work_order_apply_current.json" in priority_packet_spec["depends_on"]
+    goal_audit_spec = next(
+        spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_goal_completion_audit"
+    )
+    assert "runs/engine_refinement_claim_evidence_priority_packet_current.json" in goal_audit_spec["depends_on"]
+    assert "engine_refinement_claim_evidence_priority_packet_blocked_semantic_ready" in status_ids
     assert "product_ledger_privacy_scan_semantic_ready" in status_ids
     assert "python3 tools/build_product_ai_report_explanation_packet.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_ai_report_ux_contract.py" in mod.RELEASE_REFRESH_COMMANDS
@@ -818,7 +832,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/build_third_party_license_review_gate.py" in mod.RELEASE_REFRESH_COMMANDS
     assert mod.RELEASE_REFRESH_COMMANDS.count("python3 tools/build_product_ai_decision_graph_contract.py") == 2
     assert "python3 tools/product/build_engine_refinement_tier_readiness.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/product/build_refine_tier_public_benchmark_readiness.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/product/apply_refine_tier_public_benchmark_work_order.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_product_launch_r4_preflight.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_ledger_privacy_scan.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_scope_breadth_closure_checklist.py" in mod.RELEASE_REFRESH_COMMANDS
@@ -841,6 +858,19 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_scope_breadth_evidence_receipt.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 deploy/product_release_bundle.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/product/build_refine_tier_public_benchmark_readiness.py"
+    ) < mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_engine_refinement_tier_readiness.py")
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/product/apply_refine_tier_public_benchmark_work_order.py"
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py"
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py"
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py"
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_goal_completion_audit.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_operator_action_board.py")

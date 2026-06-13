@@ -129,6 +129,16 @@
   `runs/engine_refinement_claim_evidence_receipt_current.json`이
   `blocked_engine_refinement_claim_evidence_receipt`,
   `claim_promotion_evidence_receipt_ready=false`, `blocked_row_count=6`으로 남는다.
+  `runs/engine_refinement_claim_evidence_priority_packet_current.json`은 이 receipt,
+  action board, refine-tier public benchmark readiness/work-order/apply gate를 묶어
+  `blocked_engine_refinement_claim_evidence_priority_packet`,
+  `priority_packet_ready=true`, `priority_item_count=6`,
+  `operator_input_required_count=6`,
+  `top_blocker_id=public_benchmark_gate_not_ready`,
+  `top_priority_bucket=public_benchmark_work_order_apply_required`,
+  `public_benchmark_work_order_apply_blocked_row_count=8`을 노출한다. 즉 R9 claim
+  promotion의 첫 실제 수동 단계는 `runs/refine_tier_public_benchmark_work_order_current.csv`
+  8개 row를 public provenance/pose/free-energy 값으로 채우고 apply gate를 통과시키는 것이다.
   이 receipt 상태는 engine readiness, R4 preflight, goal audit, goal operator intake kit,
   operator packet, handoff, release bundle, release source-of-truth freshness에 연결되어
   claim-grade 증거 수집/승인 상태가 숨지 않는다.
@@ -267,19 +277,23 @@
   `product_full_commercial_blocker_evidence_matrix_current.json`,
   `production_ai_registry_promotion_operator_receipt_current.json`,
   `product_pose_sampling_readiness_current.json`,
+  `refine_tier_public_benchmark_readiness_current.json`,
+  `refine_tier_public_benchmark_work_order_apply_current.json`,
+  `engine_refinement_claim_evidence_priority_packet_current.json`,
   `cameo_official_result_fetch_preflight_current.json`,
   `cameo_validation_operations_dossier_current.json`의
   freshness 및 semantic-ready 상태를 함께 검증한다. 최신 full refresh 후
-  source-of-truth는 `row_count=84`, `pass_count=84`, `blocker_count=0`,
-  `artifact_row_count=57`, `semantic_status_row_count=25`,
-  `release_refresh_command_count=70`, `stale_artifact_count=0`,
+  source-of-truth는 `row_count=92`, `pass_count=92`, `blocker_count=0`,
+  `artifact_row_count=62`, `semantic_status_row_count=28`,
+  `release_refresh_command_count=75`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   `/product/self-hosted-license-distribution-audit` API surface도 같은 audit의
   hard blocker/operator review 경계를 직접 노출한다. R8/R9 evidence
   receipt 자체도 `product_scope_breadth_evidence_receipt_blocked_semantic_ready`,
-  `engine_refinement_claim_evidence_receipt_blocked_semantic_ready` row로 고정되어
-  placeholder evidence, 6/6 blocked rows, approval token requirement, first-blocked
-  diagnostics를 source-of-truth에서 직접 검증한다.
+  `engine_refinement_claim_evidence_receipt_blocked_semantic_ready`,
+  `engine_refinement_claim_evidence_priority_packet_blocked_semantic_ready` row로 고정되어
+  placeholder evidence, 6/6 blocked rows, public benchmark work-order 8개 row,
+  approval token requirement, first-blocked diagnostics를 source-of-truth에서 직접 검증한다.
   `product_pose_sampling_readiness_semantic_ready` row는 deterministic local
   pocket placement, 6-start pose ensemble, RMSD diversity clustering,
   bounded cross-docking/induced-fit guard, 그리고 claim-grade pose accuracy

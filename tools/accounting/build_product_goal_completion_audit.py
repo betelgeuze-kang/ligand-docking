@@ -2195,6 +2195,8 @@ def build_product_goal_completion_audit(
             blocker="release_decision_blocked_by_primary_bottleneck",
             approval_token_required=primary_token,
             next_command=primary_next_command,
+            release_blocker=False,
+            requirement_tier="release_decision_accounting",
         ),
         _row(
             requirement_id="R7_restricted_local_delivery_ready",

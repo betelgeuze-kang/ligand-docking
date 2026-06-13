@@ -437,6 +437,20 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `runs/engine_refinement_claim_evidence_receipt_current.json`은 placeholder evidence를
   fail-closed로 판정해 `blocked_engine_refinement_claim_evidence_receipt`,
   `claim_promotion_evidence_receipt_ready=false`, `blocked_row_count=6`을 기록한다.
+  `tools/product/build_engine_refinement_claim_evidence_priority_packet.py`는 이 receipt와
+  `runs/engine_refinement_claim_promotion_action_board_current.csv`,
+  `runs/refine_tier_public_benchmark_readiness_current.json`,
+  `runs/refine_tier_public_benchmark_work_order_current.csv`,
+  `runs/refine_tier_public_benchmark_work_order_apply_current.json`을 합쳐 R9 operator
+  evidence 우선순위를 별도 packet으로 고정한다. 최신
+  `runs/engine_refinement_claim_evidence_priority_packet_current.json`은
+  `blocked_engine_refinement_claim_evidence_priority_packet`,
+  `priority_packet_ready=true`, `priority_item_count=6`,
+  `operator_input_required_count=6`,
+  `top_blocker_id=public_benchmark_gate_not_ready`,
+  `top_priority_bucket=public_benchmark_work_order_apply_required`,
+  `public_benchmark_work_order_apply_blocked_row_count=8`을 노출해,
+  R9의 첫 수동 입력이 공개 benchmark work-order 8개 row 검증임을 숨기지 않는다.
   이 receipt artifact는 `engine_refinement_tier_readiness`,
   `product_launch_r4_preflight`, `product_goal_completion_audit`,
   `goal_operator_action_board`, `goal_operator_intake_kit`,
@@ -594,13 +608,16 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `product_full_commercial_blocker_evidence_matrix_current.json`,
   `production_ai_registry_promotion_operator_receipt_current.json`,
   `product_pose_sampling_readiness_current.json`,
+  `refine_tier_public_benchmark_readiness_current.json`,
+  `refine_tier_public_benchmark_work_order_apply_current.json`,
+  `engine_refinement_claim_evidence_priority_packet_current.json`,
   `cameo_official_result_fetch_preflight_current.json`,
   `cameo_validation_operations_dossier_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=84`, `pass_count=84`,
-  `blocker_count=0`, `artifact_row_count=57`, `semantic_status_row_count=25`,
-  `release_refresh_command_count=70`, `stale_artifact_count=0`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=92`, `pass_count=92`,
+  `blocker_count=0`, `artifact_row_count=62`, `semantic_status_row_count=28`,
+  `release_refresh_command_count=75`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   `product_pose_sampling_readiness_semantic_ready` row는 deterministic local
   pocket placement, 6-start pose ensemble, RMSD diversity surface, bounded
@@ -613,9 +630,10 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   readiness도 이 source-of-truth 안으로 편입됐다. 고객-facing AI report explanation/UX semantic
   readiness는 core/full decision graph 순환을 분리한 뒤 닫혔다. R8/R9 evidence
   receipt 자체도 각각 `product_scope_breadth_evidence_receipt_blocked_semantic_ready`,
-  `engine_refinement_claim_evidence_receipt_blocked_semantic_ready` row로 고정되어
-  placeholder evidence, 6/6 blocked rows, approval token requirement, first-blocked
-  diagnostics가 source-of-truth에서 직접 검증된다. production AI
+  `engine_refinement_claim_evidence_receipt_blocked_semantic_ready`,
+  `engine_refinement_claim_evidence_priority_packet_blocked_semantic_ready` row로 고정되어
+  placeholder evidence, 6/6 blocked rows, public benchmark work-order 8개 row,
+  approval token requirement, first-blocked diagnostics가 source-of-truth에서 직접 검증된다. production AI
   checkpoint/promotion workbench는 현재 `shadow`/blocked 상태를 semantic-ready row로
   검증한다. API runner profile operator receipt와 production AI registry promotion
   operator receipt도 blocked 상태와 첫 row blocker를 semantic-ready row로 검증한다.
@@ -1113,10 +1131,11 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 - release source-of-truth gate는 R4 preflight, R4 rollout smoke receipt artifact,
   R8 scope-breadth receipt, goal operator intake kit, commercial readiness execution
   ladder, API/bottleneck visibility, local pose sampling readiness, production AI registry promotion operator
-  receipt, CAMEO official-result fetch preflight, master gap closure rollup 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=84/84`,
+  receipt, CAMEO official-result fetch preflight, R9 engine-refinement claim evidence priority packet,
+  master gap closure rollup 포함 refresh 이후
+  `product_release_source_of_truth_gate_ready`, `pass_count=92/92`,
   `blocker_count=0`, `stale_artifact_count=0`,
-  `release_refresh_command_count=70`으로 재검증됐다.
+  `release_refresh_command_count=75`으로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;
   다음은 operator webhook secret mount, 실제 pager provider delivery smoke,

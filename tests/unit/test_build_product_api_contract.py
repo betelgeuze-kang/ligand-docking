@@ -94,6 +94,18 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "official_results_fetched" in cameo_fetch_keys
     assert "native_local_accuracy_used" in cameo_fetch_keys
     assert "fetch_rows" in cameo_fetch_keys
+    assert EXPECTED_ROUTES["get_product_engine_refinement_claim_evidence_priority"] == (
+        "GET",
+        "/engine-refinement-claim-evidence-priority",
+    )
+    engine_priority_keys = REQUIRED_STATUS_DOMAIN_KEYS[
+        "get_product_engine_refinement_claim_evidence_priority"
+    ]
+    assert "priority_packet_ready" in engine_priority_keys
+    assert "public_benchmark_work_order_apply_blocked_row_count" in engine_priority_keys
+    assert "top_blocker_id" in engine_priority_keys
+    assert "top_required_input" in engine_priority_keys
+    assert "priority_items" in engine_priority_keys
     assert EXPECTED_ROUTES["get_product_api_runner_profile_promotion_operator_receipt"] == (
         "GET",
         "/api-runner-profile-promotion-operator-receipt",

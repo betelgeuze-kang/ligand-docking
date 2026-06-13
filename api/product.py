@@ -104,6 +104,9 @@ PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT = (
 ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_ARTIFACT = (
     ROOT / "runs" / "engine_refinement_claim_evidence_receipt_current.json"
 )
+ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_ARTIFACT = (
+    ROOT / "runs" / "engine_refinement_claim_evidence_priority_packet_current.json"
+)
 PRODUCT_SCOPE_BREADTH_CONTRACT_ARTIFACT = ROOT / "runs" / "product_scope_breadth_contract_current.json"
 PRODUCT_SCOPE_CLAIM_GUARD_ARTIFACT = ROOT / "runs" / "product_scope_breadth_closure_checklist_current.json"
 PRODUCT_SCOPE_EVIDENCE_PRIORITY_ARTIFACT = (
@@ -7152,6 +7155,115 @@ async def get_product_engine_refinement_claim_evidence_receipt() -> dict[str, An
         "blockers": list(summary.get("blockers") or []),
         "receipt_rows": rows,
         "required_columns": required_columns,
+        "next_required_step": summary.get("next_required_step", ""),
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": False,
+        "claim_promoted": False,
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
+@router.get("/engine-refinement-claim-evidence-priority")
+async def get_product_engine_refinement_claim_evidence_priority() -> dict[str, Any]:
+    packet = _read_json_object(ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_ARTIFACT)
+    summary = _summary(packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    if not summary:
+        return {
+            "status": "missing_engine_refinement_claim_evidence_priority_packet",
+            "artifact_path": str(ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_ARTIFACT),
+            "priority_packet_ready": False,
+            "claim_promotion_allowed": False,
+            "claim_evidence_receipt_ready": False,
+            "claim_evidence_receipt_status": "",
+            "priority_item_count": 0,
+            "operator_input_required_count": 0,
+            "blocked_priority_item_count": 0,
+            "required_blocker_count": 0,
+            "missing_required_blocker_count": 0,
+            "missing_required_blockers": [],
+            "public_benchmark_gate_ready": False,
+            "public_benchmark_status": "",
+            "public_benchmark_work_order_present": False,
+            "public_benchmark_work_order_row_count": 0,
+            "public_benchmark_work_order_apply_status": "",
+            "public_benchmark_work_order_apply_ready": False,
+            "public_benchmark_work_order_apply_blocked_row_count": 0,
+            "top_blocker_id": "",
+            "top_priority_bucket": "",
+            "top_required_input": "",
+            "top_acceptance_artifact": "",
+            "top_verification_command": "",
+            "top_next_operator_step": "",
+            "approval_token_required": "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT",
+            "approval_token_count": 0,
+            "blocker_count": 1,
+            "blockers": ["engine_refinement_claim_evidence_priority_packet_missing"],
+            "source_artifacts": [],
+            "top_priority_items": [],
+            "priority_items": [],
+            "next_required_step": (
+                "Run python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py."
+            ),
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+            "claim_promoted": False,
+            "claim_boundary": (
+                "Engine refinement claim evidence priority endpoint only; the local priority packet is missing. "
+                "It does not download data, run docking or MD, approve tokens, promote claims, or mutate external state."
+            ),
+        }
+    sorted_rows = sorted(
+        [row for row in rows if isinstance(row, dict)],
+        key=lambda row: int(row.get("priority") or 999999),
+    )
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_ARTIFACT),
+        "priority_packet_ready": bool(summary.get("priority_packet_ready") is True),
+        "claim_promotion_allowed": bool(summary.get("claim_promotion_allowed") is True),
+        "claim_evidence_receipt_ready": bool(summary.get("claim_evidence_receipt_ready") is True),
+        "claim_evidence_receipt_status": summary.get("claim_evidence_receipt_status", ""),
+        "priority_item_count": int(summary.get("priority_item_count") or 0),
+        "operator_input_required_count": int(summary.get("operator_input_required_count") or 0),
+        "blocked_priority_item_count": int(summary.get("blocked_priority_item_count") or 0),
+        "required_blocker_count": int(summary.get("required_blocker_count") or 0),
+        "missing_required_blocker_count": int(summary.get("missing_required_blocker_count") or 0),
+        "missing_required_blockers": list(summary.get("missing_required_blockers") or []),
+        "public_benchmark_gate_ready": bool(summary.get("public_benchmark_gate_ready") is True),
+        "public_benchmark_status": summary.get("public_benchmark_status", ""),
+        "public_benchmark_work_order_present": bool(
+            summary.get("public_benchmark_work_order_present") is True
+        ),
+        "public_benchmark_work_order_row_count": int(
+            summary.get("public_benchmark_work_order_row_count") or 0
+        ),
+        "public_benchmark_work_order_apply_status": summary.get(
+            "public_benchmark_work_order_apply_status", ""
+        ),
+        "public_benchmark_work_order_apply_ready": bool(
+            summary.get("public_benchmark_work_order_apply_ready") is True
+        ),
+        "public_benchmark_work_order_apply_blocked_row_count": int(
+            summary.get("public_benchmark_work_order_apply_blocked_row_count") or 0
+        ),
+        "top_blocker_id": summary.get("top_blocker_id", ""),
+        "top_priority_bucket": summary.get("top_priority_bucket", ""),
+        "top_required_input": summary.get("top_required_input", ""),
+        "top_acceptance_artifact": summary.get("top_acceptance_artifact", ""),
+        "top_verification_command": summary.get("top_verification_command", ""),
+        "top_next_operator_step": summary.get("top_next_operator_step", ""),
+        "approval_token_required": summary.get(
+            "approval_token_required", "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+        ),
+        "approval_token_count": int(summary.get("approval_token_count") or 0),
+        "blocker_count": int(summary.get("blocker_count") or 0),
+        "blockers": list(summary.get("blockers") or []),
+        "source_artifacts": list(summary.get("source_artifacts") or []),
+        "top_priority_items": sorted_rows[:3],
+        "priority_items": sorted_rows,
         "next_required_step": summary.get("next_required_step", ""),
         "execution_enabled": False,
         "docking_results_emitted": False,
