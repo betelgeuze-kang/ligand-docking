@@ -350,6 +350,10 @@
   CAMEO official-result fetch preflight도 release decision summary/row와 final refresh
   exact check로 승격되어 operator fetch CSV, approval token, blocked row count,
   no-network/no-fetch/no-local-native 상태가 최종 release gate에서 빠지지 않는다.
+  self-hosted license audit과 third-party license review gate도 같은 방식으로
+  release decision summary/row와 final refresh exact check에 고정되어 LICENSE hash
+  match, `ProprietaryRef-Betelgeuze`, `legal_advice_provided=false`, JSZip approved
+  asset, review CSV/template, approval token, no asset/external mutation이 빠지지 않는다.
   `product_pose_sampling_readiness_semantic_ready` row는 deterministic local
   pocket placement, 6-start pose ensemble, RMSD diversity clustering,
   bounded cross-docking/induced-fit guard, 그리고 claim-grade pose accuracy
@@ -731,7 +735,10 @@ durable queue → worker 실행 → signed 결과 번들 회수까지 무인 동
 ### J. 법무 / 라이선스 / 정리 (P3)
 
 **현황**
-- LICENSE ↔ proprietary license hash 일치, third-party(JSZip dual-license) review gate, `legal_advice_provided=false` 유지.
+- LICENSE ↔ proprietary license hash 일치, third-party(JSZip dual-license) review gate,
+  `legal_advice_provided=false` 유지. 최신 release decision/final refresh가
+  self-hosted license audit 및 JSZip review CSV/template/approval token/no mutation
+  조건을 직접 요구한다.
 - storage cleanup scaffold(`delete_executed=false`), tools/ 서브패키지 리팩토링 batch2 완료.
 
 **갭**

@@ -677,6 +677,11 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `blocker_count=0`, `artifact_row_count=63`, `semantic_status_row_count=29`,
   `release_refresh_command_count=76`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
+  최신 goal release decision과 final refresh도 self-hosted license audit 및
+  third-party license review gate를 직접 읽어 `legal_advice_provided=false`,
+  `hard_blocker_count=0`, `operator_review_item_count=1`, JSZip approved asset,
+  operator review CSV/approval token, no asset/external mutation을 exact check로
+  요구한다.
   `product_pose_sampling_readiness_semantic_ready` row는 deterministic local
   pocket placement, 6-start pose ensemble, RMSD diversity surface, bounded
   cross-docking/induced-fit guard, claim-grade pose accuracy blocked posture를
@@ -1810,6 +1815,11 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 - release bundle은 `self_hosted_license_distribution_audit_recorded` 체크로 이 감사
   산출물을 포함하며, `/product/self-hosted-license-distribution-audit` API surface도
   hard blocker와 operator/legal review 경계를 직접 노출한다.
+- 최신 goal release decision은 같은 audit을 직접 summary/row로 승격하고, final
+  refresh는 `self_hosted_license_distribution_audit_recorded`,
+  `product_license_hash_matches_approved_source=true`,
+  `third_party_license_review_gate_ready=true`, `legal_advice_provided=false`,
+  `external_state_mutated=false`를 필수 조건으로 검증한다.
 - `license_decision.py`의 APPROVAL_TOKEN 기반 write path는 유지된다.
 - `license_options.py`가 operator-selectable license path 요약 제공
   (proprietary, source-available, enterprise EULA 등).
@@ -1822,6 +1832,9 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   현재 third-party license review gate는 operator CSV 기준
   `third_party_license_review_gate_ready`, `blocker_count=0`이다.
   단 `legal_advice_provided=false`라서 최종 법률 판단은 여전히 기술 영역 밖이다.
+- final refresh는 JSZip approved asset, allowed license path set, review CSV,
+  operator template CSV, `APPROVE_THIRD_PARTY_LICENSE_REVIEW`,
+  `asset_modified=false`, `external_state_mutated=false`를 exact check로 요구한다.
 
 **필요 작업**
 - product LICENSE와 approved source hash 일치 검증은 1차 완료.

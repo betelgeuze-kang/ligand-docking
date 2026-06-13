@@ -39,6 +39,11 @@ FINAL_GATE_SPECS = [
         "required_true_fields": [
             "release_allowed",
             "cameo_official_result_fetch_preflight_recorded",
+            "self_hosted_license_distribution_audit_recorded",
+            "self_hosted_license_distribution_audit_product_license_hash_matches_approved_source",
+            "self_hosted_license_distribution_audit_third_party_license_review_gate_ready",
+            "third_party_license_review_gate_recorded",
+            "third_party_license_review_gate_ready",
             "goal_bottleneck_briefing_full_commercial_receipts_recorded",
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded",
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_packet_ready",
@@ -58,11 +63,27 @@ FINAL_GATE_SPECS = [
             "cameo_official_result_fetch_preflight_native_local_accuracy_used",
             "cameo_official_result_fetch_preflight_outbound_email_enabled",
             "cameo_official_result_fetch_preflight_external_state_mutated",
+            "self_hosted_license_distribution_audit_hard_blocker_count",
+            "self_hosted_license_distribution_audit_legal_advice_provided",
+            "self_hosted_license_distribution_audit_third_party_license_review_gate_blocker_count",
+            "self_hosted_license_distribution_audit_external_state_mutated",
+            "third_party_license_review_gate_blocker_count",
+            "third_party_license_review_gate_missing_review_asset_count",
+            "third_party_license_review_gate_deferred_review_asset_count",
+            "third_party_license_review_gate_legal_advice_provided",
+            "third_party_license_review_gate_asset_modified",
+            "third_party_license_review_gate_external_state_mutated",
         ],
         "required_int_exact_fields": {
             "cameo_official_result_fetch_preflight_blocked_row_count": 1,
             "cameo_official_result_fetch_preflight_blocker_count": 2,
             "cameo_official_result_fetch_preflight_awaiting_operator_fetch_approval_row_count": 1,
+            "self_hosted_license_distribution_audit_operator_review_item_count": 1,
+            "third_party_license_review_gate_expected_review_asset_count": 1,
+            "third_party_license_review_gate_review_row_count": 1,
+            "third_party_license_review_gate_approved_review_asset_count": 1,
+            "third_party_license_review_gate_source_hard_blocker_count": 0,
+            "third_party_license_review_gate_source_operator_review_item_count": 1,
             "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_operator_input_required_count": 2,
@@ -124,6 +145,39 @@ FINAL_GATE_SPECS = [
             ),
             "cameo_official_result_fetch_preflight_fetch_approval_token_required": (
                 "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH"
+            ),
+            "self_hosted_license_distribution_audit_status": (
+                "self_hosted_license_distribution_audit_recorded"
+            ),
+            "self_hosted_license_distribution_audit_product_license_path": "LICENSE",
+            "self_hosted_license_distribution_audit_approved_license_text_source": "LICENSE",
+            "self_hosted_license_distribution_audit_spdx_license_id": (
+                "ProprietaryRef-Betelgeuze"
+            ),
+            "self_hosted_license_distribution_audit_copyright_holder": "JIHOON KANG",
+            "self_hosted_license_distribution_audit_third_party_license_review_gate_status": (
+                "third_party_license_review_gate_ready"
+            ),
+            "self_hosted_license_distribution_audit_third_party_dual_license_assets": "jszip",
+            "self_hosted_license_distribution_audit_viewer_third_party_notice_path": (
+                "viewer/vendor/THIRD_PARTY_NOTICES.md"
+            ),
+            "third_party_license_review_gate_status": "third_party_license_review_gate_ready",
+            "third_party_license_review_gate_approved_assets": "jszip",
+            "third_party_license_review_gate_allowed_license_paths": (
+                "GPL-3.0-or-later;MIT;remove_or_replace_asset"
+            ),
+            "third_party_license_review_gate_review_csv": (
+                "runs/third_party_license_review_operator_intake.csv"
+            ),
+            "third_party_license_review_gate_operator_template_csv": (
+                "runs/third_party_license_review_operator_template_current.csv"
+            ),
+            "third_party_license_review_gate_approval_token_required": (
+                "APPROVE_THIRD_PARTY_LICENSE_REVIEW"
+            ),
+            "third_party_license_review_gate_source_license_audit_status": (
+                "self_hosted_license_distribution_audit_recorded"
             ),
             "source_goal_bottleneck_briefing_status": "goal_bottleneck_briefing_ready",
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": (

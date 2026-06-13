@@ -184,6 +184,59 @@ def _blocked_cameo_official_result_fetch_preflight() -> dict:
     }
 
 
+def _self_hosted_license_distribution_audit() -> dict:
+    return {
+        "summary": {
+            "status": "self_hosted_license_distribution_audit_recorded",
+            "product_license_path": "LICENSE",
+            "product_license_sha256": "license-hash",
+            "approved_license_text_source": "LICENSE",
+            "approved_license_text_source_sha256": "license-hash",
+            "spdx_license_id": "ProprietaryRef-Betelgeuze",
+            "copyright_holder": "JIHOON KANG",
+            "hard_blocker_count": 0,
+            "operator_review_item_count": 1,
+            "legal_advice_provided": False,
+            "third_party_license_review_gate_status": "third_party_license_review_gate_ready",
+            "third_party_license_review_gate_ready": True,
+            "third_party_license_review_gate_blocker_count": 0,
+            "third_party_dual_license_assets": ["jszip"],
+            "viewer_third_party_notice_path": "viewer/vendor/THIRD_PARTY_NOTICES.md",
+            "external_state_mutated": False,
+        }
+    }
+
+
+def _third_party_license_review_gate() -> dict:
+    return {
+        "summary": {
+            "status": "third_party_license_review_gate_ready",
+            "allowed_license_paths": [
+                "GPL-3.0-or-later",
+                "MIT",
+                "remove_or_replace_asset",
+            ],
+            "approval_token_required": "APPROVE_THIRD_PARTY_LICENSE_REVIEW",
+            "approved_assets": ["jszip"],
+            "approved_review_asset_count": 1,
+            "asset_modified": False,
+            "blocker_count": 0,
+            "deferred_review_asset_count": 0,
+            "expected_review_asset_count": 1,
+            "external_state_mutated": False,
+            "legal_advice_provided": False,
+            "missing_review_asset_count": 0,
+            "operator_template_csv": "runs/third_party_license_review_operator_template_current.csv",
+            "review_csv": "runs/third_party_license_review_operator_intake.csv",
+            "review_csv_present": True,
+            "review_row_count": 1,
+            "source_hard_blocker_count": 0,
+            "source_license_audit_status": "self_hosted_license_distribution_audit_recorded",
+            "source_operator_review_item_count": 1,
+        }
+    }
+
+
 def _blocked_rollup() -> dict:
     return {"summary": {"status": "blocked_goal_readiness"}}
 
@@ -968,6 +1021,8 @@ def test_goal_release_decision_gate_blocks_current_incomplete_goal() -> None:
         product_pilot_packet=_blocked_product(),
         product_architecture_packet=_blocked_product_architecture(),
         product_commercial_independence_packet=_blocked_product_independence(),
+        self_hosted_license_distribution_audit_packet=_self_hosted_license_distribution_audit(),
+        third_party_license_review_gate_packet=_third_party_license_review_gate(),
         cameo_validation_packet=_blocked_cameo_validation(),
         cameo_capability_packet=_blocked_cameo_capability(),
         cameo_official_result_fetch_preflight_packet=(
@@ -1086,6 +1141,46 @@ def test_goal_release_decision_gate_blocks_current_incomplete_goal() -> None:
     assert summary["cleanup_completion_transition_approval_gated_reclaim_size_gb"] == 43.206
     assert summary["cleanup_completion_ligand_heavy_candidate_size_gb"] == 6.011
     assert summary["product_commercial_independence_ready"] is False
+    assert summary["self_hosted_license_distribution_audit_recorded"] is True
+    assert summary["self_hosted_license_distribution_audit_status"] == (
+        "self_hosted_license_distribution_audit_recorded"
+    )
+    assert summary["self_hosted_license_distribution_audit_product_license_path"] == "LICENSE"
+    assert (
+        summary["self_hosted_license_distribution_audit_product_license_hash_matches_approved_source"]
+        is True
+    )
+    assert summary["self_hosted_license_distribution_audit_spdx_license_id"] == (
+        "ProprietaryRef-Betelgeuze"
+    )
+    assert summary["self_hosted_license_distribution_audit_hard_blocker_count"] == 0
+    assert summary["self_hosted_license_distribution_audit_operator_review_item_count"] == 1
+    assert summary["self_hosted_license_distribution_audit_legal_advice_provided"] is False
+    assert summary["self_hosted_license_distribution_audit_third_party_dual_license_assets"] == "jszip"
+    assert summary["third_party_license_review_gate_recorded"] is True
+    assert summary["third_party_license_review_gate_status"] == "third_party_license_review_gate_ready"
+    assert summary["third_party_license_review_gate_approved_assets"] == "jszip"
+    assert summary["third_party_license_review_gate_expected_review_asset_count"] == 1
+    assert summary["third_party_license_review_gate_blocker_count"] == 0
+    assert summary["third_party_license_review_gate_legal_advice_provided"] is False
+    assert summary["third_party_license_review_gate_asset_modified"] is False
+    assert summary["third_party_license_review_gate_approval_token_required"] == (
+        "APPROVE_THIRD_PARTY_LICENSE_REVIEW"
+    )
+    license_audit_row = next(
+        row
+        for row in payload["rows"]
+        if row["check"] == "self_hosted_license_distribution_audit_recorded"
+    )
+    third_party_license_row = next(
+        row for row in payload["rows"] if row["check"] == "third_party_license_review_gate_recorded"
+    )
+    assert license_audit_row["status"] == "pass"
+    assert license_audit_row["release_blocker"] is False
+    assert "third_party_dual_license_assets=jszip" in license_audit_row["observed"]
+    assert third_party_license_row["status"] == "pass"
+    assert third_party_license_row["release_blocker"] is False
+    assert "approved_assets=jszip" in third_party_license_row["observed"]
     assert summary["execution_enabled"] is False
     assert summary["delete_executed"] is False
     assert summary["external_state_mutated"] is False
@@ -2026,6 +2121,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
         "product": tmp_path / "product.json",
         "product_architecture": tmp_path / "product_architecture.json",
         "product_independence": tmp_path / "product_independence.json",
+        "self_hosted_license_audit": tmp_path / "self_hosted_license_audit.json",
+        "third_party_license_review": tmp_path / "third_party_license_review.json",
         "cameo_validation": tmp_path / "cameo_validation.json",
         "cameo_capability": tmp_path / "cameo_capability.json",
         "cameo_fetch_preflight": tmp_path / "cameo_fetch_preflight.json",
@@ -2055,6 +2152,14 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     paths["product"].write_text(json.dumps(_blocked_product()) + "\n", encoding="utf-8")
     paths["product_architecture"].write_text(json.dumps(_blocked_product_architecture()) + "\n", encoding="utf-8")
     paths["product_independence"].write_text(json.dumps(_blocked_product_independence()) + "\n", encoding="utf-8")
+    paths["self_hosted_license_audit"].write_text(
+        json.dumps(_self_hosted_license_distribution_audit()) + "\n",
+        encoding="utf-8",
+    )
+    paths["third_party_license_review"].write_text(
+        json.dumps(_third_party_license_review_gate()) + "\n",
+        encoding="utf-8",
+    )
     paths["cameo_validation"].write_text(json.dumps(_blocked_cameo_validation()) + "\n", encoding="utf-8")
     paths["cameo_capability"].write_text(json.dumps(_blocked_cameo_capability()) + "\n", encoding="utf-8")
     paths["cameo_fetch_preflight"].write_text(
@@ -2128,6 +2233,10 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
             str(paths["product_architecture"]),
             "--product-commercial-independence-json",
             str(paths["product_independence"]),
+            "--self-hosted-license-distribution-audit-json",
+            str(paths["self_hosted_license_audit"]),
+            "--third-party-license-review-gate-json",
+            str(paths["third_party_license_review"]),
             "--cameo-validation-json",
             str(paths["cameo_validation"]),
             "--cameo-capability-json",
@@ -2194,6 +2303,14 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     )
     assert summary["cameo_official_result_fetch_preflight_fetch_approval_token_required"] == (
         "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH"
+    )
+    assert summary["self_hosted_license_distribution_audit_recorded"] is True
+    assert summary["self_hosted_license_distribution_audit_product_license_path"] == "LICENSE"
+    assert summary["self_hosted_license_distribution_audit_third_party_dual_license_assets"] == "jszip"
+    assert summary["third_party_license_review_gate_recorded"] is True
+    assert summary["third_party_license_review_gate_approved_assets"] == "jszip"
+    assert summary["third_party_license_review_gate_approval_token_required"] == (
+        "APPROVE_THIRD_PARTY_LICENSE_REVIEW"
     )
     assert summary["product_full_commercial_blocker_evidence_matrix_status"] == (
         "blocked_product_full_commercial_blocker_evidence_matrix"
@@ -2263,6 +2380,9 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     assert "cameo_live_validation_required_for_product_release" in md_text
     assert "cameo_official_result_fetch_preflight_status" in md_text
     assert "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH" in md_text
+    assert "self_hosted_license_distribution_audit_recorded" in md_text
+    assert "third_party_license_review_gate_recorded" in md_text
+    assert "APPROVE_THIRD_PARTY_LICENSE_REVIEW" in md_text
     assert "goal_bottleneck_briefing_full_commercial_receipts_recorded" in md_text
     assert "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded" in md_text
     assert "trained_model_checkpoint_count_positive" in md_text

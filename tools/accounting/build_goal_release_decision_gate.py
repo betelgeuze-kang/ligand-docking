@@ -12,6 +12,10 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PRODUCT_PILOT_JSON = "runs/product_pilot_packet_contract_current.json"
 DEFAULT_PRODUCT_ARCHITECTURE_JSON = "runs/product_architecture_contract_current.json"
 DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON = "runs/product_commercial_independence_gate_current.json"
+DEFAULT_SELF_HOSTED_LICENSE_DISTRIBUTION_AUDIT_JSON = (
+    "runs/self_hosted_license_distribution_audit_current.json"
+)
+DEFAULT_THIRD_PARTY_LICENSE_REVIEW_GATE_JSON = "runs/third_party_license_review_gate_current.json"
 DEFAULT_CAMEO_VALIDATION_JSON = "runs/cameo_validation_readiness_gate_current.json"
 DEFAULT_CAMEO_CAPABILITY_JSON = "runs/cameo_capability_preflight_current.json"
 DEFAULT_CAMEO_PUBLIC_REGISTRATION_APPROVAL_GATE_JSON = "runs/cameo_public_registration_approval_gate_current.json"
@@ -191,6 +195,8 @@ def build_goal_release_decision_gate(
     product_pilot_packet: dict[str, Any],
     product_architecture_packet: dict[str, Any] | None = None,
     product_commercial_independence_packet: dict[str, Any] | None = None,
+    self_hosted_license_distribution_audit_packet: dict[str, Any] | None = None,
+    third_party_license_review_gate_packet: dict[str, Any] | None = None,
     cameo_validation_packet: dict[str, Any],
     cameo_capability_packet: dict[str, Any],
     cameo_public_registration_approval_gate_packet: dict[str, Any] | None = None,
@@ -222,6 +228,8 @@ def build_goal_release_decision_gate(
     product_pilot_path: str = DEFAULT_PRODUCT_PILOT_JSON,
     product_architecture_path: str = DEFAULT_PRODUCT_ARCHITECTURE_JSON,
     product_commercial_independence_path: str = DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON,
+    self_hosted_license_distribution_audit_path: str = DEFAULT_SELF_HOSTED_LICENSE_DISTRIBUTION_AUDIT_JSON,
+    third_party_license_review_gate_path: str = DEFAULT_THIRD_PARTY_LICENSE_REVIEW_GATE_JSON,
     cameo_validation_path: str = DEFAULT_CAMEO_VALIDATION_JSON,
     cameo_capability_path: str = DEFAULT_CAMEO_CAPABILITY_JSON,
     cameo_public_registration_approval_gate_path: str = DEFAULT_CAMEO_PUBLIC_REGISTRATION_APPROVAL_GATE_JSON,
@@ -268,6 +276,73 @@ def build_goal_release_decision_gate(
     product = _summary(product_pilot_packet)
     product_architecture = _summary(product_architecture_packet or {})
     product_independence = _summary(product_commercial_independence_packet or {})
+    self_hosted_license_audit = _summary(self_hosted_license_distribution_audit_packet or {})
+    self_hosted_license_audit_gate_present = self_hosted_license_distribution_audit_packet is not None
+    self_hosted_license_audit_dual_license_assets = _text_list(
+        self_hosted_license_audit.get("third_party_dual_license_assets")
+    )
+    self_hosted_license_audit_hashes_match = bool(
+        _text(self_hosted_license_audit.get("product_license_sha256"))
+        and _text(self_hosted_license_audit.get("product_license_sha256"))
+        == _text(self_hosted_license_audit.get("approved_license_text_source_sha256"))
+    )
+    self_hosted_license_audit_recorded = (
+        _text(self_hosted_license_audit.get("status"))
+        == "self_hosted_license_distribution_audit_recorded"
+        and _text(self_hosted_license_audit.get("product_license_path")) == "LICENSE"
+        and _text(self_hosted_license_audit.get("approved_license_text_source")) == "LICENSE"
+        and self_hosted_license_audit_hashes_match
+        and _text(self_hosted_license_audit.get("spdx_license_id")) == "ProprietaryRef-Betelgeuze"
+        and _text(self_hosted_license_audit.get("copyright_holder")) == "JIHOON KANG"
+        and _int(self_hosted_license_audit.get("hard_blocker_count")) == 0
+        and _int(self_hosted_license_audit.get("operator_review_item_count")) == 1
+        and bool(self_hosted_license_audit.get("legal_advice_provided") is False)
+        and _text(self_hosted_license_audit.get("third_party_license_review_gate_status"))
+        == "third_party_license_review_gate_ready"
+        and bool(self_hosted_license_audit.get("third_party_license_review_gate_ready") is True)
+        and _int(self_hosted_license_audit.get("third_party_license_review_gate_blocker_count")) == 0
+        and self_hosted_license_audit_dual_license_assets == ["jszip"]
+        and _text(self_hosted_license_audit.get("viewer_third_party_notice_path"))
+        == "viewer/vendor/THIRD_PARTY_NOTICES.md"
+        and bool(self_hosted_license_audit.get("external_state_mutated") is False)
+    )
+    third_party_license_review = _summary(third_party_license_review_gate_packet or {})
+    third_party_license_review_gate_present = third_party_license_review_gate_packet is not None
+    third_party_license_review_approved_assets = _text_list(
+        third_party_license_review.get("approved_assets")
+    )
+    third_party_license_review_allowed_license_paths = _text_list(
+        third_party_license_review.get("allowed_license_paths")
+    )
+    third_party_license_review_ready = (
+        _text(third_party_license_review.get("status")) == "third_party_license_review_gate_ready"
+    )
+    third_party_license_review_recorded = (
+        third_party_license_review_ready
+        and third_party_license_review_approved_assets == ["jszip"]
+        and third_party_license_review_allowed_license_paths
+        == ["GPL-3.0-or-later", "MIT", "remove_or_replace_asset"]
+        and _int(third_party_license_review.get("expected_review_asset_count")) == 1
+        and _int(third_party_license_review.get("review_row_count")) == 1
+        and _int(third_party_license_review.get("approved_review_asset_count")) == 1
+        and _int(third_party_license_review.get("missing_review_asset_count")) == 0
+        and _int(third_party_license_review.get("deferred_review_asset_count")) == 0
+        and _int(third_party_license_review.get("blocker_count")) == 0
+        and _text(third_party_license_review.get("review_csv"))
+        == "runs/third_party_license_review_operator_intake.csv"
+        and bool(third_party_license_review.get("review_csv_present") is True)
+        and _text(third_party_license_review.get("operator_template_csv"))
+        == "runs/third_party_license_review_operator_template_current.csv"
+        and _text(third_party_license_review.get("approval_token_required"))
+        == "APPROVE_THIRD_PARTY_LICENSE_REVIEW"
+        and _text(third_party_license_review.get("source_license_audit_status"))
+        == "self_hosted_license_distribution_audit_recorded"
+        and _int(third_party_license_review.get("source_hard_blocker_count")) == 0
+        and _int(third_party_license_review.get("source_operator_review_item_count")) == 1
+        and bool(third_party_license_review.get("legal_advice_provided") is False)
+        and bool(third_party_license_review.get("asset_modified") is False)
+        and bool(third_party_license_review.get("external_state_mutated") is False)
+    )
     cameo_validation = _summary(cameo_validation_packet)
     cameo_capability = _summary(cameo_capability_packet)
     cameo_registration_gate = _summary(cameo_public_registration_approval_gate_packet or {})
@@ -1516,6 +1591,100 @@ def build_goal_release_decision_gate(
                 ).strip(),
             )
         )
+    if self_hosted_license_audit_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="self_hosted_license_distribution_audit_recorded",
+                artifact_path=self_hosted_license_distribution_audit_path,
+                observed=(
+                    f"{_text(self_hosted_license_audit.get('status')) or 'missing'};"
+                    f"product_license_path={_text(self_hosted_license_audit.get('product_license_path'))};"
+                    f"approved_license_text_source="
+                    f"{_text(self_hosted_license_audit.get('approved_license_text_source'))};"
+                    f"license_hashes_match={_bool_text(self_hosted_license_audit_hashes_match)};"
+                    f"spdx_license_id={_text(self_hosted_license_audit.get('spdx_license_id'))};"
+                    f"hard_blocker_count={_int(self_hosted_license_audit.get('hard_blocker_count'))};"
+                    f"operator_review_item_count="
+                    f"{_int(self_hosted_license_audit.get('operator_review_item_count'))};"
+                    f"third_party_license_review_gate_status="
+                    f"{_text(self_hosted_license_audit.get('third_party_license_review_gate_status'))};"
+                    f"third_party_license_review_gate_ready="
+                    f"{_bool_text(bool(self_hosted_license_audit.get('third_party_license_review_gate_ready') is True))};"
+                    f"third_party_license_review_gate_blocker_count="
+                    f"{_int(self_hosted_license_audit.get('third_party_license_review_gate_blocker_count'))};"
+                    f"third_party_dual_license_assets={';'.join(self_hosted_license_audit_dual_license_assets)};"
+                    f"viewer_third_party_notice_path="
+                    f"{_text(self_hosted_license_audit.get('viewer_third_party_notice_path'))};"
+                    f"legal_advice_provided="
+                    f"{_bool_text(bool(self_hosted_license_audit.get('legal_advice_provided') is True))};"
+                    f"external_state_mutated="
+                    f"{_bool_text(bool(self_hosted_license_audit.get('external_state_mutated') is True))}"
+                ),
+                required=(
+                    "self-hosted license audit recorded with matching product license hash, "
+                    "ProprietaryRef-Betelgeuze metadata, zero hard blockers, JSZip review linkage, "
+                    "no legal advice claim, and no external mutation"
+                ),
+                passed=self_hosted_license_audit_recorded,
+                reason=(
+                    "The final release decision must preserve the technical license-distribution audit "
+                    "boundary and the operator/legal review item instead of collapsing license readiness "
+                    "into commercial-independence status alone."
+                ),
+            )
+        )
+    if third_party_license_review_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="third_party_license_review_gate_recorded",
+                artifact_path=third_party_license_review_gate_path,
+                observed=(
+                    f"{_text(third_party_license_review.get('status')) or 'missing'};"
+                    f"approved_assets={';'.join(third_party_license_review_approved_assets)};"
+                    f"allowed_license_paths={';'.join(third_party_license_review_allowed_license_paths)};"
+                    f"expected_review_asset_count="
+                    f"{_int(third_party_license_review.get('expected_review_asset_count'))};"
+                    f"review_row_count={_int(third_party_license_review.get('review_row_count'))};"
+                    f"approved_review_asset_count="
+                    f"{_int(third_party_license_review.get('approved_review_asset_count'))};"
+                    f"missing_review_asset_count="
+                    f"{_int(third_party_license_review.get('missing_review_asset_count'))};"
+                    f"deferred_review_asset_count="
+                    f"{_int(third_party_license_review.get('deferred_review_asset_count'))};"
+                    f"blocker_count={_int(third_party_license_review.get('blocker_count'))};"
+                    f"review_csv={_text(third_party_license_review.get('review_csv'))};"
+                    f"review_csv_present="
+                    f"{_bool_text(bool(third_party_license_review.get('review_csv_present') is True))};"
+                    f"operator_template_csv="
+                    f"{_text(third_party_license_review.get('operator_template_csv'))};"
+                    f"approval_token_required="
+                    f"{_text(third_party_license_review.get('approval_token_required'))};"
+                    f"source_license_audit_status="
+                    f"{_text(third_party_license_review.get('source_license_audit_status'))};"
+                    f"source_hard_blocker_count="
+                    f"{_int(third_party_license_review.get('source_hard_blocker_count'))};"
+                    f"source_operator_review_item_count="
+                    f"{_int(third_party_license_review.get('source_operator_review_item_count'))};"
+                    f"legal_advice_provided="
+                    f"{_bool_text(bool(third_party_license_review.get('legal_advice_provided') is True))};"
+                    f"asset_modified="
+                    f"{_bool_text(bool(third_party_license_review.get('asset_modified') is True))};"
+                    f"external_state_mutated="
+                    f"{_bool_text(bool(third_party_license_review.get('external_state_mutated') is True))}"
+                ),
+                required=(
+                    "third-party license review gate ready for JSZip with operator intake, approval token, "
+                    "zero blockers, no asset mutation, no legal advice claim, and no external mutation"
+                ),
+                passed=third_party_license_review_recorded,
+                reason=(
+                    "The final release decision must keep JSZip dual-license redistribution review visible "
+                    "as an operator/legal boundary even when the technical review gate is ready."
+                ),
+            )
+        )
 
     blocker_count = sum(1 for row in rows if row["release_blocker"])
     product_release_ready = (
@@ -1615,6 +1784,10 @@ def build_goal_release_decision_gate(
         next_required_items.append("API customer-flow release evidence")
     if product_ai_architecture_gate_present and not product_ai_architecture_ready:
         next_required_items.append("product AI architecture gap closure")
+    if self_hosted_license_audit_gate_present and not self_hosted_license_audit_recorded:
+        next_required_items.append("self-hosted license distribution audit")
+    if third_party_license_review_gate_present and not third_party_license_review_recorded:
+        next_required_items.append("third-party license review gate")
     next_required_step = (
         "Release gate is clear; archive the evidence packet before customer-facing or public benchmark claims."
         if release_allowed
@@ -1690,6 +1863,115 @@ def build_goal_release_decision_gate(
         "product_architecture_cameo_registration_approval_tokens_required": product_architecture_cameo_registration_tokens,
         "source_product_commercial_independence_status": _text(product_independence.get("status")),
         "product_commercial_independence_ready": product_commercial_independence_ready,
+        "self_hosted_license_distribution_audit_gate_present": self_hosted_license_audit_gate_present,
+        "self_hosted_license_distribution_audit_status": _text(
+            self_hosted_license_audit.get("status")
+        ),
+        "self_hosted_license_distribution_audit_recorded": (
+            self_hosted_license_audit_recorded if self_hosted_license_audit_gate_present else None
+        ),
+        "self_hosted_license_distribution_audit_product_license_path": _text(
+            self_hosted_license_audit.get("product_license_path")
+        ),
+        "self_hosted_license_distribution_audit_approved_license_text_source": _text(
+            self_hosted_license_audit.get("approved_license_text_source")
+        ),
+        "self_hosted_license_distribution_audit_product_license_hash_matches_approved_source": (
+            self_hosted_license_audit_hashes_match
+        ),
+        "self_hosted_license_distribution_audit_spdx_license_id": _text(
+            self_hosted_license_audit.get("spdx_license_id")
+        ),
+        "self_hosted_license_distribution_audit_copyright_holder": _text(
+            self_hosted_license_audit.get("copyright_holder")
+        ),
+        "self_hosted_license_distribution_audit_hard_blocker_count": _int(
+            self_hosted_license_audit.get("hard_blocker_count")
+        ),
+        "self_hosted_license_distribution_audit_operator_review_item_count": _int(
+            self_hosted_license_audit.get("operator_review_item_count")
+        ),
+        "self_hosted_license_distribution_audit_legal_advice_provided": bool(
+            self_hosted_license_audit.get("legal_advice_provided") is True
+        ),
+        "self_hosted_license_distribution_audit_third_party_license_review_gate_status": _text(
+            self_hosted_license_audit.get("third_party_license_review_gate_status")
+        ),
+        "self_hosted_license_distribution_audit_third_party_license_review_gate_ready": bool(
+            self_hosted_license_audit.get("third_party_license_review_gate_ready") is True
+        ),
+        "self_hosted_license_distribution_audit_third_party_license_review_gate_blocker_count": _int(
+            self_hosted_license_audit.get("third_party_license_review_gate_blocker_count")
+        ),
+        "self_hosted_license_distribution_audit_third_party_dual_license_assets": (
+            ";".join(self_hosted_license_audit_dual_license_assets)
+        ),
+        "self_hosted_license_distribution_audit_viewer_third_party_notice_path": _text(
+            self_hosted_license_audit.get("viewer_third_party_notice_path")
+        ),
+        "self_hosted_license_distribution_audit_external_state_mutated": bool(
+            self_hosted_license_audit.get("external_state_mutated") is True
+        ),
+        "third_party_license_review_gate_present": third_party_license_review_gate_present,
+        "third_party_license_review_gate_status": _text(third_party_license_review.get("status")),
+        "third_party_license_review_gate_ready": third_party_license_review_ready,
+        "third_party_license_review_gate_recorded": (
+            third_party_license_review_recorded if third_party_license_review_gate_present else None
+        ),
+        "third_party_license_review_gate_approved_assets": (
+            ";".join(third_party_license_review_approved_assets)
+        ),
+        "third_party_license_review_gate_allowed_license_paths": (
+            ";".join(third_party_license_review_allowed_license_paths)
+        ),
+        "third_party_license_review_gate_expected_review_asset_count": _int(
+            third_party_license_review.get("expected_review_asset_count")
+        ),
+        "third_party_license_review_gate_review_row_count": _int(
+            third_party_license_review.get("review_row_count")
+        ),
+        "third_party_license_review_gate_approved_review_asset_count": _int(
+            third_party_license_review.get("approved_review_asset_count")
+        ),
+        "third_party_license_review_gate_missing_review_asset_count": _int(
+            third_party_license_review.get("missing_review_asset_count")
+        ),
+        "third_party_license_review_gate_deferred_review_asset_count": _int(
+            third_party_license_review.get("deferred_review_asset_count")
+        ),
+        "third_party_license_review_gate_blocker_count": _int(
+            third_party_license_review.get("blocker_count")
+        ),
+        "third_party_license_review_gate_review_csv": _text(
+            third_party_license_review.get("review_csv")
+        ),
+        "third_party_license_review_gate_review_csv_present": bool(
+            third_party_license_review.get("review_csv_present") is True
+        ),
+        "third_party_license_review_gate_operator_template_csv": _text(
+            third_party_license_review.get("operator_template_csv")
+        ),
+        "third_party_license_review_gate_approval_token_required": _text(
+            third_party_license_review.get("approval_token_required")
+        ),
+        "third_party_license_review_gate_source_license_audit_status": _text(
+            third_party_license_review.get("source_license_audit_status")
+        ),
+        "third_party_license_review_gate_source_hard_blocker_count": _int(
+            third_party_license_review.get("source_hard_blocker_count")
+        ),
+        "third_party_license_review_gate_source_operator_review_item_count": _int(
+            third_party_license_review.get("source_operator_review_item_count")
+        ),
+        "third_party_license_review_gate_legal_advice_provided": bool(
+            third_party_license_review.get("legal_advice_provided") is True
+        ),
+        "third_party_license_review_gate_asset_modified": bool(
+            third_party_license_review.get("asset_modified") is True
+        ),
+        "third_party_license_review_gate_external_state_mutated": bool(
+            third_party_license_review.get("external_state_mutated") is True
+        ),
         "source_cameo_validation_status": _text(cameo_validation.get("status")),
         "source_cameo_capability_status": _text(cameo_capability.get("status")),
         "source_cameo_public_registration_approval_gate_status": _text(cameo_registration_gate.get("status")),
@@ -2602,6 +2884,24 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- cameo_official_result_fetch_preflight_official_results_fetched: `{s['cameo_official_result_fetch_preflight_official_results_fetched']}`",
         f"- cameo_official_result_fetch_preflight_native_local_accuracy_used: `{s['cameo_official_result_fetch_preflight_native_local_accuracy_used']}`",
         f"- product_commercial_independence_ready: `{s['product_commercial_independence_ready']}`",
+        f"- self_hosted_license_distribution_audit_recorded: `{s['self_hosted_license_distribution_audit_recorded']}`",
+        f"- self_hosted_license_distribution_audit_status: `{s['self_hosted_license_distribution_audit_status']}`",
+        f"- self_hosted_license_distribution_audit_product_license_path: `{s['self_hosted_license_distribution_audit_product_license_path']}`",
+        f"- self_hosted_license_distribution_audit_product_license_hash_matches_approved_source: `{s['self_hosted_license_distribution_audit_product_license_hash_matches_approved_source']}`",
+        f"- self_hosted_license_distribution_audit_spdx_license_id: `{s['self_hosted_license_distribution_audit_spdx_license_id']}`",
+        f"- self_hosted_license_distribution_audit_hard_blocker_count: `{s['self_hosted_license_distribution_audit_hard_blocker_count']}`",
+        f"- self_hosted_license_distribution_audit_operator_review_item_count: `{s['self_hosted_license_distribution_audit_operator_review_item_count']}`",
+        f"- self_hosted_license_distribution_audit_legal_advice_provided: `{s['self_hosted_license_distribution_audit_legal_advice_provided']}`",
+        f"- self_hosted_license_distribution_audit_third_party_license_review_gate_status: `{s['self_hosted_license_distribution_audit_third_party_license_review_gate_status']}`",
+        f"- self_hosted_license_distribution_audit_third_party_dual_license_assets: `{s['self_hosted_license_distribution_audit_third_party_dual_license_assets']}`",
+        f"- third_party_license_review_gate_recorded: `{s['third_party_license_review_gate_recorded']}`",
+        f"- third_party_license_review_gate_status: `{s['third_party_license_review_gate_status']}`",
+        f"- third_party_license_review_gate_approved_assets: `{s['third_party_license_review_gate_approved_assets']}`",
+        f"- third_party_license_review_gate_expected_review_asset_count: `{s['third_party_license_review_gate_expected_review_asset_count']}`",
+        f"- third_party_license_review_gate_blocker_count: `{s['third_party_license_review_gate_blocker_count']}`",
+        f"- third_party_license_review_gate_legal_advice_provided: `{s['third_party_license_review_gate_legal_advice_provided']}`",
+        f"- third_party_license_review_gate_asset_modified: `{s['third_party_license_review_gate_asset_modified']}`",
+        f"- third_party_license_review_gate_approval_token_required: `{s['third_party_license_review_gate_approval_token_required']}`",
         f"- cameo_architecture_validation_ready: `{s['cameo_architecture_validation_ready']}`",
         f"- cleanup_objective_ready: `{s['cleanup_objective_ready']}`",
         f"- blocker_count: `{s['blocker_count']}`",
@@ -2801,6 +3101,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--product-pilot-json", default=DEFAULT_PRODUCT_PILOT_JSON)
     parser.add_argument("--product-architecture-json", default=DEFAULT_PRODUCT_ARCHITECTURE_JSON)
     parser.add_argument("--product-commercial-independence-json", default=DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON)
+    parser.add_argument(
+        "--self-hosted-license-distribution-audit-json",
+        default=DEFAULT_SELF_HOSTED_LICENSE_DISTRIBUTION_AUDIT_JSON,
+    )
+    parser.add_argument(
+        "--third-party-license-review-gate-json",
+        default=DEFAULT_THIRD_PARTY_LICENSE_REVIEW_GATE_JSON,
+    )
     parser.add_argument("--cameo-validation-json", default=DEFAULT_CAMEO_VALIDATION_JSON)
     parser.add_argument("--cameo-capability-json", default=DEFAULT_CAMEO_CAPABILITY_JSON)
     parser.add_argument("--cameo-public-registration-approval-gate-json", default=DEFAULT_CAMEO_PUBLIC_REGISTRATION_APPROVAL_GATE_JSON)
@@ -2874,6 +3182,12 @@ def main(argv: list[str] | None = None) -> None:
         product_pilot_packet=_read_json_if_present(args.product_pilot_json),
         product_architecture_packet=_read_json_if_present(args.product_architecture_json),
         product_commercial_independence_packet=_read_json_if_present(args.product_commercial_independence_json),
+        self_hosted_license_distribution_audit_packet=_read_json_if_present(
+            args.self_hosted_license_distribution_audit_json
+        ),
+        third_party_license_review_gate_packet=_read_json_if_present(
+            args.third_party_license_review_gate_json
+        ),
         cameo_validation_packet=_read_json_if_present(args.cameo_validation_json),
         cameo_capability_packet=_read_json_if_present(args.cameo_capability_json),
         cameo_public_registration_approval_gate_packet=_read_json_if_present(args.cameo_public_registration_approval_gate_json),
@@ -2929,6 +3243,8 @@ def main(argv: list[str] | None = None) -> None:
         product_pilot_path=args.product_pilot_json,
         product_architecture_path=args.product_architecture_json,
         product_commercial_independence_path=args.product_commercial_independence_json,
+        self_hosted_license_distribution_audit_path=args.self_hosted_license_distribution_audit_json,
+        third_party_license_review_gate_path=args.third_party_license_review_gate_json,
         cameo_validation_path=args.cameo_validation_json,
         cameo_capability_path=args.cameo_capability_json,
         cameo_public_registration_approval_gate_path=args.cameo_public_registration_approval_gate_json,
