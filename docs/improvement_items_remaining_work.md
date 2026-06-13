@@ -190,6 +190,13 @@ surface 밖으로 빠지지 않는다.
   `schrodinger_class_claim_allowed=false`, `ligand_ranking_status=blocked`이며,
   PR-AUC/CI-low/top-k가 threshold 아래라 broad GPCR ligand-ranking/Schrodinger-class
   claim promotion은 계속 차단된다.
+  최신 `goal_operator_action_board_current.json`은 이를
+  `product_accuracy_parity:repair_ligand_ranking_parity` action으로도 노출하고,
+  `goal_operator_intake_kit_current/manifest.json`의
+  `accuracy_ligand_ranking_repair` entry 및 `/goal/status`의
+  `product_accuracy_parity_ligand_ranking_action_id`로 전파한다. 따라서
+  `ACCURACY:ligand_ranking` blocker는 release decision의 목록 안에만 머물지 않고
+  operator-facing 수리 작업으로 추적된다.
 - `runs/product_rollout_execution_smoke_receipt_current.json`은 별도 R4-approved operator
   실행 receipt를 read-only로 검증해 `product_rollout_execution_smoke_receipt_ready`,
   `receipt_csv_present=true`, `rollout_executed=true`, `external_state_mutated=true`를

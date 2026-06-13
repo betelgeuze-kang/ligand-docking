@@ -686,6 +686,18 @@ async def get_goal_status() -> dict[str, Any]:
             "primary_release_blocker_action_required_input": "",
             "primary_release_blocker_action_artifact_path": "",
             "primary_release_blocker_action_recommended_action": "",
+            "product_accuracy_parity_action_count": 0,
+            "product_accuracy_parity_ligand_ranking_action_id": "",
+            "product_accuracy_parity_ligand_ranking_action_present": False,
+            "product_accuracy_parity_scorecard_status": "",
+            "product_accuracy_parity_ligand_ranking_action_status": "",
+            "product_accuracy_parity_ligand_ranking_blocker_count": 0,
+            "product_accuracy_parity_ligand_ranking_blockers": [],
+            "product_accuracy_parity_ligand_ranking_pr_auc": 0.0,
+            "product_accuracy_parity_ligand_ranking_pr_auc_ci_low": 0.0,
+            "product_accuracy_parity_ligand_ranking_topk_hit_rate": 0.0,
+            "product_accuracy_parity_ligand_ranking_next_required_step": "",
+            "product_accuracy_parity_scorecard_json": "",
             "product_goal_completion_audit_artifact_path": str(PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT),
             "production_ai_checkpoint_registry_promotion_required_gate_ids": [],
             "production_ai_checkpoint_registry_promotion_missing_gate_ids": [],
@@ -974,6 +986,44 @@ async def get_goal_status() -> dict[str, Any]:
             "primary_release_blocker_action_recommended_action"
         )
         or intake.get("primary_release_blocker_action_recommended_action", ""),
+        "product_accuracy_parity_action_count": _int(
+            actions.get("product_accuracy_parity_action_count")
+        ),
+        "product_accuracy_parity_ligand_ranking_action_id": (
+            "product_accuracy_parity:repair_ligand_ranking_parity"
+            if actions.get("product_accuracy_parity_ligand_ranking_action_present") is True
+            else ""
+        ),
+        "product_accuracy_parity_ligand_ranking_action_present": bool(
+            actions.get("product_accuracy_parity_ligand_ranking_action_present") is True
+        ),
+        "product_accuracy_parity_scorecard_status": actions.get(
+            "product_accuracy_parity_scorecard_status", ""
+        ),
+        "product_accuracy_parity_ligand_ranking_action_status": actions.get(
+            "product_accuracy_parity_ligand_ranking_status", ""
+        ),
+        "product_accuracy_parity_ligand_ranking_blocker_count": _int(
+            actions.get("product_accuracy_parity_ligand_ranking_blocker_count")
+        ),
+        "product_accuracy_parity_ligand_ranking_blockers": _string_list(
+            actions.get("product_accuracy_parity_ligand_ranking_blockers")
+        ),
+        "product_accuracy_parity_ligand_ranking_pr_auc": _float(
+            actions.get("product_accuracy_parity_ligand_ranking_pr_auc")
+        ),
+        "product_accuracy_parity_ligand_ranking_pr_auc_ci_low": _float(
+            actions.get("product_accuracy_parity_ligand_ranking_pr_auc_ci_low")
+        ),
+        "product_accuracy_parity_ligand_ranking_topk_hit_rate": _float(
+            actions.get("product_accuracy_parity_ligand_ranking_topk_hit_rate")
+        ),
+        "product_accuracy_parity_ligand_ranking_next_required_step": actions.get(
+            "product_accuracy_parity_ligand_ranking_next_required_step", ""
+        ),
+        "product_accuracy_parity_scorecard_json": actions.get(
+            "product_accuracy_parity_scorecard_json", ""
+        ),
         "product_goal_completion_audit_artifact_path": str(PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT),
         "production_ai_checkpoint_registry_promotion_required_gate_ids": _string_list(
             product_goal_completion.get("production_ai_checkpoint_registry_promotion_required_gate_ids")

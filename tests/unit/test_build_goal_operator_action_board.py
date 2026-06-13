@@ -664,6 +664,59 @@ def _engine_refinement_claim_action_rows() -> list[dict[str, str]]:
     ]
 
 
+def _blocked_accuracy_parity_scorecard() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_accuracy_parity",
+            "top_blockers": [
+                "ligand_ranking:claim_promotion_not_allowed",
+                "ligand_ranking:ranking_pr_auc_below_threshold",
+                "ligand_ranking:ranking_pr_auc_ci_low_below_threshold",
+                "ligand_ranking:topk_hit_rate_below_threshold",
+            ],
+        },
+        "rows": [
+            {
+                "axis": "ligand_ranking",
+                "comparator": "Schrodinger Glide/FEP+ class ranking",
+                "status": "blocked",
+                "claim_scope": "broad GPCR ligand ranking/docking parity",
+                "commercial_parity_claim_allowed": False,
+                "claim_promotion_allowed": False,
+                "source_artifacts": [
+                    "runs/gpcr_ranking_summary.json",
+                    "runs/gpcr_core_rank_diagnostics_current.json",
+                ],
+                "metrics": {
+                    "ranking_pr_auc": 0.15749,
+                    "ranking_pr_auc_ci_low": 0.001347,
+                    "ranking_topk_hit_rate": 0.1,
+                    "positive_count": 13,
+                    "ranking_score_col_used": "binding_score_composite_v7_residual_active",
+                    "core_claim_safe": False,
+                    "core_primary_blocker_task": "gpcr_smoke",
+                },
+                "thresholds": {
+                    "ranking_pr_auc_min": 0.55,
+                    "ranking_pr_auc_ci_low_min": 0.45,
+                    "ranking_topk_hit_rate_min": 0.5,
+                    "requires_pose_supported_decoy_resistance": True,
+                },
+                "blockers": [
+                    "claim_promotion_not_allowed",
+                    "ranking_pr_auc_below_threshold",
+                    "ranking_pr_auc_ci_low_below_threshold",
+                    "topk_hit_rate_below_threshold",
+                ],
+                "next_required_step": (
+                    "Repair DRD2/HTR2A/OPRM1 pose-supported ranking, rebuild hard decoys, "
+                    "then rerun guarded 100k review before any Schrodinger-class ligand-ranking claim."
+                ),
+            }
+        ],
+    }
+
+
 def _product_goal_completion_audit() -> dict:
     return {
         "summary": {
@@ -1048,6 +1101,51 @@ def test_goal_operator_action_board_surfaces_engine_refinement_claim_actions() -
     assert public["required_input"] == "public_benchmark_gate_not_ready"
     assert public["claim_blocker_gate_or_artifact"] == "runs/refine_tier_public_benchmark_readiness_current.json"
     assert "insufficient_total_rows" in public["claim_blocker_blocking_signals"]
+
+
+def test_goal_operator_action_board_surfaces_accuracy_ligand_ranking_action() -> None:
+    payload = mod.build_action_board(
+        rollup_packet={},
+        product_preflight_packet={},
+        product_bundle_contract_packet={},
+        product_delivery_evidence_packet={},
+        cameo_input_kit_packet={},
+        cameo_input_validation_packet={},
+        cameo_repair_preflight_packet={},
+        transition_cleanup_preflight_packet={},
+        ligand_cleanup_preflight_packet={},
+        cleanup_completion_gate_packet=_cleanup_completion_gate_ready(),
+        accuracy_parity_scorecard_packet=_blocked_accuracy_parity_scorecard(),
+        accuracy_parity_scorecard_path="runs/accuracy_parity_scorecard_current.json",
+    )
+
+    summary = payload["summary"]
+    assert summary["product_accuracy_parity_action_count"] == 1
+    assert summary["product_accuracy_parity_ligand_ranking_action_present"] is True
+    assert summary["product_accuracy_parity_scorecard_status"] == "blocked_accuracy_parity"
+    assert summary["product_accuracy_parity_ligand_ranking_status"] == "blocked"
+    assert summary["product_accuracy_parity_ligand_ranking_blocker_count"] == 4
+    assert summary["product_accuracy_parity_ligand_ranking_pr_auc"] == 0.15749
+    assert summary["product_accuracy_parity_ligand_ranking_pr_auc_ci_low"] == 0.001347
+    assert summary["product_accuracy_parity_ligand_ranking_topk_hit_rate"] == 0.1
+    assert summary["parallel_product_action_ids"] == [
+        "product_accuracy_parity:repair_ligand_ranking_parity"
+    ]
+
+    action = payload["rows"][0]
+    assert action["lane_id"] == "product_accuracy_parity"
+    assert action["action_type"] == "repair_ligand_ranking_parity"
+    assert action["status"] == "required"
+    assert action["required_input"] == "ACCURACY:ligand_ranking"
+    assert action["artifact_path"] == "runs/accuracy_parity_scorecard_current.json"
+    assert action["accuracy_parity_ligand_ranking_blocker_count"] == 4
+    assert action["accuracy_parity_ligand_ranking_pr_auc_threshold"] == 0.55
+    assert action["accuracy_parity_ligand_ranking_pr_auc_ci_low_threshold"] == 0.45
+    assert action["accuracy_parity_ligand_ranking_topk_hit_rate_threshold"] == 0.5
+    assert action["accuracy_parity_ligand_ranking_positive_count"] == 13
+    assert action["accuracy_parity_ligand_ranking_core_claim_safe"] is False
+    assert "ranking_pr_auc=0.15749" in action["reason"]
+    assert "Schrodinger-class ligand-ranking claim" in action["recommended_action"]
 
 
 def test_goal_operator_action_board_summary_points_to_primary_product_ai_action() -> None:

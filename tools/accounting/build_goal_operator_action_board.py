@@ -61,6 +61,7 @@ DEFAULT_PRODUCT_GOAL_COMPLETION_AUDIT_JSON = "runs/product_goal_completion_audit
 DEFAULT_ENGINE_REFINEMENT_CLAIM_ACTION_BOARD_CSV = (
     "runs/engine_refinement_claim_promotion_action_board_current.csv"
 )
+DEFAULT_ACCURACY_PARITY_SCORECARD_JSON = "runs/accuracy_parity_scorecard_current.json"
 
 CLAIM_BOUNDARY = (
     "Goal operator action board only; it consolidates approval tokens, blocked CAMEO operator inputs, and cleanup review rows "
@@ -878,6 +879,99 @@ def _engine_refinement_claim_actions(
     return actions
 
 
+def _accuracy_ligand_ranking_action(
+    *,
+    accuracy_scorecard: dict[str, Any],
+    accuracy_scorecard_path: str,
+) -> list[dict[str, Any]]:
+    summary = _summary(accuracy_scorecard)
+    ligand_row = next(
+        (row for row in _rows(accuracy_scorecard) if _text(row.get("axis")) == "ligand_ranking"),
+        {},
+    )
+    if not ligand_row:
+        return []
+
+    metrics = _dict(ligand_row.get("metrics"))
+    thresholds = _dict(ligand_row.get("thresholds"))
+    blockers = [str(item) for item in (ligand_row.get("blockers") or []) if str(item)]
+    row_status = _text(ligand_row.get("status"))
+    claim_allowed = ligand_row.get("claim_promotion_allowed") is True
+    parity_allowed = ligand_row.get("commercial_parity_claim_allowed") is True
+    if row_status == "pass" and claim_allowed and parity_allowed and not blockers:
+        return []
+
+    pr_auc = _float(metrics.get("ranking_pr_auc"))
+    ci_low = _float(metrics.get("ranking_pr_auc_ci_low"))
+    topk = _float(metrics.get("ranking_topk_hit_rate"))
+    pr_auc_min = _float(thresholds.get("ranking_pr_auc_min"))
+    ci_low_min = _float(thresholds.get("ranking_pr_auc_ci_low_min"))
+    topk_min = _float(thresholds.get("ranking_topk_hit_rate_min"))
+    source_artifacts = [
+        str(item) for item in (ligand_row.get("source_artifacts") or []) if str(item)
+    ]
+    action = _action(
+        priority=2,
+        lane_id="product_accuracy_parity",
+        action_type="repair_ligand_ranking_parity",
+        status="required",
+        required_input="ACCURACY:ligand_ranking",
+        artifact_path=accuracy_scorecard_path,
+        recommended_action=_text(ligand_row.get("next_required_step"))
+        or _text(summary.get("next_required_step")),
+        reason=(
+            f"accuracy_scorecard_status={_text(summary.get('status')) or 'missing'}; "
+            f"ligand_ranking_status={row_status or 'missing'}; "
+            f"claim_promotion_allowed={claim_allowed}; "
+            f"commercial_parity_claim_allowed={parity_allowed}; "
+            f"blockers={';'.join(blockers)}; "
+            f"ranking_pr_auc={pr_auc};threshold={pr_auc_min}; "
+            f"ranking_pr_auc_ci_low={ci_low};threshold={ci_low_min}; "
+            f"ranking_topk_hit_rate={topk};threshold={topk_min}."
+        ),
+    )
+    action.update(
+        {
+            "parallelizable_with_primary_action": True,
+            "parallel_primary_action_id": "",
+            "parallel_lane_precondition": (
+                "Can be worked independently of product execution, scope receipt, and engine-refinement "
+                "public-benchmark receipt work; it only repairs ligand-ranking evidence before any "
+                "Schrodinger-class claim."
+            ),
+            "accuracy_parity_scorecard_status": _text(summary.get("status")),
+            "accuracy_parity_ligand_ranking_status": row_status,
+            "accuracy_parity_ligand_ranking_claim_scope": _text(ligand_row.get("claim_scope")),
+            "accuracy_parity_ligand_ranking_comparator": _text(ligand_row.get("comparator")),
+            "accuracy_parity_ligand_ranking_blocker_count": len(blockers),
+            "accuracy_parity_ligand_ranking_blockers": ";".join(blockers),
+            "accuracy_parity_ligand_ranking_pr_auc": pr_auc,
+            "accuracy_parity_ligand_ranking_pr_auc_threshold": pr_auc_min,
+            "accuracy_parity_ligand_ranking_pr_auc_ci_low": ci_low,
+            "accuracy_parity_ligand_ranking_pr_auc_ci_low_threshold": ci_low_min,
+            "accuracy_parity_ligand_ranking_topk_hit_rate": topk,
+            "accuracy_parity_ligand_ranking_topk_hit_rate_threshold": topk_min,
+            "accuracy_parity_ligand_ranking_positive_count": _int(
+                metrics.get("positive_count")
+            ),
+            "accuracy_parity_ligand_ranking_score_col_used": _text(
+                metrics.get("ranking_score_col_used")
+            ),
+            "accuracy_parity_ligand_ranking_core_claim_safe": bool(
+                metrics.get("core_claim_safe") is True
+            ),
+            "accuracy_parity_ligand_ranking_core_primary_blocker_task": _text(
+                metrics.get("core_primary_blocker_task")
+            ),
+            "accuracy_parity_ligand_ranking_source_artifacts": ";".join(source_artifacts),
+            "accuracy_parity_ligand_ranking_next_required_step": _text(
+                ligand_row.get("next_required_step")
+            ),
+        }
+    )
+    return [action]
+
+
 def _drilldown_surface_paths(drilldown_packet: dict[str, Any]) -> set[str]:
     summary = _summary(drilldown_packet)
     if summary.get("status") != "large_cleanup_surface_drilldown_ready":
@@ -1038,6 +1132,7 @@ def build_action_board(
     cleanup_completion_gate_packet: dict[str, Any] | None = None,
     goal_operator_intake_kit_packet: dict[str, Any] | None = None,
     engine_refinement_claim_action_board_rows: list[dict[str, Any]] | None = None,
+    accuracy_parity_scorecard_packet: dict[str, Any] | None = None,
     rollup_path: str = DEFAULT_ROLLUP_JSON,
     product_preflight_path: str = DEFAULT_PRODUCT_PREFLIGHT_JSON,
     product_bundle_contract_path: str = DEFAULT_PRODUCT_BUNDLE_CONTRACT_JSON,
@@ -1072,6 +1167,7 @@ def build_action_board(
     cleanup_completion_gate_path: str = DEFAULT_CLEANUP_COMPLETION_GATE_JSON,
     goal_operator_intake_kit_path: str = DEFAULT_GOAL_OPERATOR_INTAKE_KIT_JSON,
     engine_refinement_claim_action_board_path: str = DEFAULT_ENGINE_REFINEMENT_CLAIM_ACTION_BOARD_CSV,
+    accuracy_parity_scorecard_path: str = DEFAULT_ACCURACY_PARITY_SCORECARD_JSON,
 ) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     cleanup_completion_gate_packet = cleanup_completion_gate_packet or {}
@@ -1091,6 +1187,12 @@ def build_action_board(
         _engine_refinement_claim_actions(
             action_board_rows=engine_refinement_claim_action_board_rows or [],
             action_board_path=engine_refinement_claim_action_board_path,
+        )
+    )
+    rows.extend(
+        _accuracy_ligand_ranking_action(
+            accuracy_scorecard=accuracy_parity_scorecard_packet or {},
+            accuracy_scorecard_path=accuracy_parity_scorecard_path,
         )
     )
     rows.extend(
@@ -1215,17 +1317,36 @@ def build_action_board(
     product_cli_status = product_cli_status_packet or {}
     product_goal_completion_audit = _summary(product_goal_completion_audit_packet or {})
     primary_release_blocker_action = _primary_release_blocker_action(rows, product_goal_completion_audit)
+    for row in rows:
+        if row.get("parallelizable_with_primary_action") is True and not _text(
+            row.get("parallel_primary_action_id")
+        ):
+            row["parallel_primary_action_id"] = (
+                f"{_text(primary_action.get('lane_id'))}:{_text(primary_action.get('action_type'))}"
+                if primary_action
+                else ""
+            )
     parallel_product_actions = [
         row
         for row in rows
         if row.get("parallelizable_with_primary_action") is True
-        and _text(row.get("lane_id")) in {"product_scope_expansion"}
+        and _text(row.get("lane_id")) in {"product_accuracy_parity", "product_scope_expansion"}
     ]
     parallel_product_actions = sorted(
         parallel_product_actions,
         key=lambda row: (_int(row.get("priority")), _text(row.get("lane_id")), _text(row.get("action_type"))),
     )
     first_parallel_product_action = parallel_product_actions[0] if parallel_product_actions else {}
+    accuracy_ligand_action = next(
+        (
+            row
+            for row in rows
+            if row["lane_id"] == "product_accuracy_parity"
+            and row["action_type"] == "repair_ligand_ranking_parity"
+        ),
+        {},
+    )
+    accuracy_scorecard_summary = _summary(accuracy_parity_scorecard_packet or {})
     summary = {
         "packet_type": "goal_operator_action_board",
         "status": "operator_actions_required" if rows else "goal_operator_actions_clear",
@@ -1264,6 +1385,44 @@ def build_action_board(
             else ""
         ),
         "product_engine_refinement_claim_blocker_count": len(engine_refinement_claim_action_board_rows or []),
+        "product_accuracy_parity_action_count": sum(
+            1 for row in rows if row["lane_id"] == "product_accuracy_parity"
+        ),
+        "product_accuracy_parity_ligand_ranking_action_present": any(
+            row["lane_id"] == "product_accuracy_parity"
+            and row["action_type"] == "repair_ligand_ranking_parity"
+            for row in rows
+        ),
+        "product_accuracy_parity_scorecard_status": _text(
+            accuracy_scorecard_summary.get("status")
+        ),
+        "product_accuracy_parity_ligand_ranking_status": _text(
+            accuracy_ligand_action.get("accuracy_parity_ligand_ranking_status")
+        ),
+        "product_accuracy_parity_ligand_ranking_blocker_count": _int(
+            accuracy_ligand_action.get("accuracy_parity_ligand_ranking_blocker_count")
+        ),
+        "product_accuracy_parity_ligand_ranking_blockers": [
+            str(item)
+            for item in _list(
+                accuracy_ligand_action.get("accuracy_parity_ligand_ranking_blockers")
+            )
+        ],
+        "product_accuracy_parity_ligand_ranking_pr_auc": _float(
+            accuracy_ligand_action.get("accuracy_parity_ligand_ranking_pr_auc")
+        ),
+        "product_accuracy_parity_ligand_ranking_pr_auc_ci_low": _float(
+            accuracy_ligand_action.get("accuracy_parity_ligand_ranking_pr_auc_ci_low")
+        ),
+        "product_accuracy_parity_ligand_ranking_topk_hit_rate": _float(
+            accuracy_ligand_action.get("accuracy_parity_ligand_ranking_topk_hit_rate")
+        ),
+        "product_accuracy_parity_ligand_ranking_next_required_step": _text(
+            accuracy_ligand_action.get("accuracy_parity_ligand_ranking_next_required_step")
+        ),
+        "product_accuracy_parity_scorecard_json": (
+            accuracy_parity_scorecard_path if accuracy_parity_scorecard_packet else ""
+        ),
         "parallel_product_action_count": len(parallel_product_actions),
         "parallel_product_action_ids": [
             f"{_text(row.get('lane_id'))}:{_text(row.get('action_type'))}"
@@ -1851,6 +2010,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_engine_refinement_action_count: `{s['product_engine_refinement_action_count']}`",
         f"- product_engine_refinement_action_board_csv: `{s['product_engine_refinement_action_board_csv']}`",
         f"- product_engine_refinement_claim_blocker_count: `{s['product_engine_refinement_claim_blocker_count']}`",
+        f"- product_accuracy_parity_action_count: `{s['product_accuracy_parity_action_count']}`",
+        f"- product_accuracy_parity_ligand_ranking_action_present: `{s['product_accuracy_parity_ligand_ranking_action_present']}`",
+        f"- product_accuracy_parity_ligand_ranking_status: `{s['product_accuracy_parity_ligand_ranking_status']}`",
+        f"- product_accuracy_parity_scorecard_json: `{s['product_accuracy_parity_scorecard_json']}`",
         f"- product_goal_completion_audit_status: `{s['product_goal_completion_audit_status']}`",
         f"- product_goal_complete: `{s['product_goal_complete']}`",
         f"- product_goal_primary_bottleneck_kind: `{s['product_goal_primary_bottleneck_kind']}`",
@@ -2172,6 +2335,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--engine-refinement-claim-action-board-csv",
         default=DEFAULT_ENGINE_REFINEMENT_CLAIM_ACTION_BOARD_CSV,
     )
+    parser.add_argument("--accuracy-parity-scorecard-json", default=DEFAULT_ACCURACY_PARITY_SCORECARD_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -2220,6 +2384,7 @@ def main(argv: list[str] | None = None) -> None:
         engine_refinement_claim_action_board_rows=_read_csv_if_present(
             args.engine_refinement_claim_action_board_csv
         ),
+        accuracy_parity_scorecard_packet=_read_json_if_present(args.accuracy_parity_scorecard_json),
         rollup_path=args.rollup_json,
         product_preflight_path=args.product_preflight_json,
         product_bundle_contract_path=args.product_bundle_contract_json,
@@ -2254,6 +2419,7 @@ def main(argv: list[str] | None = None) -> None:
         cleanup_completion_gate_path=args.cleanup_completion_gate_json,
         goal_operator_intake_kit_path=args.goal_operator_intake_kit_json,
         engine_refinement_claim_action_board_path=args.engine_refinement_claim_action_board_csv,
+        accuracy_parity_scorecard_path=args.accuracy_parity_scorecard_json,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

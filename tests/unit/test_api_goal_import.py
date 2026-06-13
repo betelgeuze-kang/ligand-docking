@@ -328,6 +328,42 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["primary_release_blocker_action_recommended_action"] == actions_artifact.get(
         "primary_release_blocker_action_recommended_action"
     )
+    assert status["product_accuracy_parity_action_count"] == int(
+        actions_artifact.get("product_accuracy_parity_action_count") or 0
+    )
+    assert status["product_accuracy_parity_ligand_ranking_action_id"] == (
+        "product_accuracy_parity:repair_ligand_ranking_parity"
+    )
+    assert status["product_accuracy_parity_ligand_ranking_action_present"] is (
+        actions_artifact.get("product_accuracy_parity_ligand_ranking_action_present") is True
+    )
+    assert status["product_accuracy_parity_scorecard_status"] == actions_artifact.get(
+        "product_accuracy_parity_scorecard_status"
+    )
+    assert status["product_accuracy_parity_ligand_ranking_action_status"] == actions_artifact.get(
+        "product_accuracy_parity_ligand_ranking_status"
+    )
+    assert status["product_accuracy_parity_ligand_ranking_blocker_count"] == int(
+        actions_artifact.get("product_accuracy_parity_ligand_ranking_blocker_count") or 0
+    )
+    assert status["product_accuracy_parity_ligand_ranking_blockers"] == actions_artifact.get(
+        "product_accuracy_parity_ligand_ranking_blockers"
+    )
+    assert status["product_accuracy_parity_ligand_ranking_pr_auc"] == float(
+        actions_artifact.get("product_accuracy_parity_ligand_ranking_pr_auc") or 0.0
+    )
+    assert status["product_accuracy_parity_ligand_ranking_pr_auc_ci_low"] == float(
+        actions_artifact.get("product_accuracy_parity_ligand_ranking_pr_auc_ci_low") or 0.0
+    )
+    assert status["product_accuracy_parity_ligand_ranking_topk_hit_rate"] == float(
+        actions_artifact.get("product_accuracy_parity_ligand_ranking_topk_hit_rate") or 0.0
+    )
+    assert status["product_accuracy_parity_ligand_ranking_next_required_step"] == actions_artifact.get(
+        "product_accuracy_parity_ligand_ranking_next_required_step"
+    )
+    assert status["product_accuracy_parity_scorecard_json"] == actions_artifact.get(
+        "product_accuracy_parity_scorecard_json"
+    )
     assert status["production_ai_checkpoint_registry_promotion_required_gate_ids"] == (
         product_goal_completion_artifact.get(
             "production_ai_checkpoint_registry_promotion_required_gate_ids"

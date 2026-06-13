@@ -326,7 +326,7 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     summary = payload["summary"]
     by_id = {row["kit_entry_id"]: row for row in payload["rows"]}
     assert summary["status"] == "goal_operator_intake_kit_ready"
-    assert summary["entry_count"] == 18
+    assert summary["entry_count"] == 19
     assert summary["source_action_count"] == 9
     assert summary["release_burndown_source_row_count"] == 8
     assert summary["release_burndown_linked_entry_count"] == 12
@@ -606,6 +606,13 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     assert by_id["engine_refinement_claim_evidence_receipt"]["approval_token_required"] == (
         mod.ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_APPROVAL_TOKEN
     )
+    assert by_id["accuracy_ligand_ranking_repair"]["kit_status"] == "not_surfaced"
+    assert by_id["accuracy_ligand_ranking_repair"]["current_action_surfaced"] is False
+    assert by_id["accuracy_ligand_ranking_repair"]["operator_input_required"] is False
+    assert by_id["accuracy_ligand_ranking_repair"]["template_required"] is False
+    assert by_id["accuracy_ligand_ranking_repair"]["source_gate_json"] == (
+        mod.DEFAULT_ACCURACY_PARITY_SCORECARD_JSON
+    )
     assert by_id["protected_cleanup_policy"]["kit_status"] == "policy_decision_required"
     assert by_id["protected_cleanup_policy"]["operator_input_required_now"] is True
     assert by_id["protected_cleanup_policy"]["release_burndown_status"] == "policy_decision_required"
@@ -614,6 +621,43 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     assert by_id["goal_api_status_surface"]["kit_status"] == "ready"
     assert by_id["goal_api_status_surface"]["api_endpoints"] == "/goal/status;/goal/api-contract"
     assert by_id["goal_api_status_surface"]["release_burndown_surfaced"] is False
+
+
+def test_goal_operator_intake_kit_surfaces_accuracy_ligand_ranking_action(tmp_path: Path) -> None:
+    action_board = _action_board()
+    action_board["rows"].append(
+        {
+            "lane_id": "product_accuracy_parity",
+            "action_type": "repair_ligand_ranking_parity",
+            "status": "required",
+            "required_input": "ACCURACY:ligand_ranking",
+            "artifact_path": mod.DEFAULT_ACCURACY_PARITY_SCORECARD_JSON,
+            "approval_token": "",
+        }
+    )
+    action_board["summary"]["action_count"] = len(action_board["rows"])
+
+    source_packets = _source_packets()
+    source_packets[mod.DEFAULT_ACCURACY_PARITY_SCORECARD_JSON] = {
+        "summary": {"status": "blocked_accuracy_parity"}
+    }
+    payload = mod.build_goal_operator_intake_kit(
+        action_board_packet=action_board,
+        release_burndown_packet=_release_burndown(),
+        source_packets=source_packets,
+        out_dir=tmp_path / "kit",
+    )
+
+    by_id = {row["kit_entry_id"]: row for row in payload["rows"]}
+    accuracy = by_id["accuracy_ligand_ranking_repair"]
+    assert accuracy["kit_status"] == "operator_input_required"
+    assert accuracy["current_action_surfaced"] is True
+    assert accuracy["operator_input_required"] is True
+    assert accuracy["operator_input_required_now"] is True
+    assert accuracy["source_gate_status"] == "blocked_accuracy_parity"
+    assert accuracy["source_artifacts"] == mod.DEFAULT_ACCURACY_PARITY_SCORECARD_JSON
+    assert accuracy["input_kind"] == "ligand_ranking_parity_repair_action"
+    assert "PR-AUC" in accuracy["recommended_action"]
 
 
 def test_goal_operator_intake_kit_surfaces_registry_promotion_receipt_for_current_action(tmp_path: Path) -> None:

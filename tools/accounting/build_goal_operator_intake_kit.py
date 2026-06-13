@@ -34,6 +34,7 @@ from tools.build_cleanup_execution_approval_gate import (
     DEFAULT_TEMPLATE_CSV as DEFAULT_CLEANUP_APPROVAL_TEMPLATE_CSV,
 )
 from tools.build_goal_operator_action_board import (
+    DEFAULT_ACCURACY_PARITY_SCORECARD_JSON,
     DEFAULT_ENGINE_REFINEMENT_CLAIM_ACTION_BOARD_CSV,
     DEFAULT_OUT_JSON as DEFAULT_ACTION_BOARD_JSON,
 )
@@ -304,6 +305,21 @@ CATALOG: list[dict[str, Any]] = [
         "recommended_action": (
             "Replace placeholder full-scope blocker receipt rows with local evidence JSON paths, reviewed "
             "provenance/license flags, zero external mutation, and the scope-breadth evidence receipt approval token."
+        ),
+    },
+    {
+        "kit_entry_id": "accuracy_ligand_ranking_repair",
+        "lane_id": "product_accuracy_parity",
+        "action_types": ["repair_ligand_ranking_parity"],
+        "input_kind": "ligand_ranking_parity_repair_action",
+        "source_gate_json": DEFAULT_ACCURACY_PARITY_SCORECARD_JSON,
+        "template_path": "",
+        "intake_path": "",
+        "template_required": False,
+        "release_checks": "accuracy_parity_scorecard_recorded",
+        "recommended_action": (
+            "Repair GPCR ligand-ranking parity by addressing PR-AUC, CI-low, top-k hit-rate, and "
+            "claim-promotion blockers before any Schrodinger-class ligand-ranking claim."
         ),
     },
     {
@@ -1003,6 +1019,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--engine-refinement-claim-evidence-receipt-json",
         default=DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON,
     )
+    parser.add_argument("--accuracy-parity-scorecard-json", default=DEFAULT_ACCURACY_PARITY_SCORECARD_JSON)
     parser.add_argument("--goal-api-surface-contract-json", default=DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON)
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
@@ -1050,6 +1067,9 @@ def main(argv: list[str] | None = None) -> None:
         DEFAULT_PROTECTED_POLICY_GATE_JSON: _read_json_if_present(args.protected_policy_gate_json),
         DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON: _read_json_if_present(
             args.engine_refinement_claim_evidence_receipt_json
+        ),
+        DEFAULT_ACCURACY_PARITY_SCORECARD_JSON: _read_json_if_present(
+            args.accuracy_parity_scorecard_json
         ),
         DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON: _read_json_if_present(args.goal_api_surface_contract_json),
     }

@@ -202,6 +202,13 @@
   `ranking_pr_auc=0.15749`, `ranking_pr_auc_ci_low=0.001347`,
   `ranking_topk_hit_rate=0.1`로 threshold(`0.55/0.45/0.5`) 아래다. 이 때문에
   Schrodinger-class ligand-ranking claim은 full-commercial blocker로 남는다.
+  같은 blocker는 이제 `goal_operator_action_board_current.json`의
+  `product_accuracy_parity:repair_ligand_ranking_parity` action,
+  `goal_operator_intake_kit_current/manifest.json`의
+  `accuracy_ligand_ranking_repair` entry, 그리고 `/goal/status`의
+  `product_accuracy_parity_ligand_ranking_action_id`에도 연결된다. 즉
+  `ACCURACY:ligand_ranking`은 단순 scorecard 진단이 아니라 현재 operator-facing
+  정밀도 수리 작업으로 추적된다.
 - `tools/accounting/build_goal_bottleneck_briefing.py`와 `/goal/status`는 release
   burndown이 clear여도 `product_goal_completion_audit`의 R8/R9 release blockers를
   active 병목으로 우선 노출한다. 따라서 restricted release가 green인 상태에서도
