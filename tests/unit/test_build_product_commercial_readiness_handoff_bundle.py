@@ -79,6 +79,57 @@ def _operator_packet(ready: bool = True) -> dict:
             "engine_refinement_claim_evidence_operator_field_worksheet_claim_promoted": False,
             "engine_refinement_claim_evidence_operator_field_worksheet_external_engine_calls_executed": False,
             "engine_refinement_claim_evidence_operator_field_worksheet_external_state_mutated": False,
+            "engine_refinement_claim_evidence_operator_staging_apply_artifact": (
+                "runs/engine_refinement_claim_evidence_operator_staging_apply_current.json"
+            ),
+            "engine_refinement_claim_evidence_operator_staging_apply_status": (
+                "blocked_engine_refinement_claim_evidence_operator_staging_apply"
+            ),
+            "engine_refinement_claim_evidence_operator_staging_apply_mode": "preview",
+            "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_ready": False,
+            "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_status": (
+                "blocked_engine_refinement_claim_evidence_receipt"
+            ),
+            "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_blocked_row_count": 6,
+            "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_pass_row_count": 0,
+            "engine_refinement_claim_evidence_operator_staging_apply_staging_receipt_placeholder_row_count": 6,
+            "engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_work_order_ready": False,
+            "engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_work_order_status": (
+                "blocked_refine_tier_public_benchmark_work_order_apply"
+            ),
+            "engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_blocked_row_count": 8,
+            "engine_refinement_claim_evidence_operator_staging_apply_staging_public_benchmark_work_order_placeholder_row_count": 8,
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_pending_field_count": 108,
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_receipt_pending_field_count": 36,
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_work_order_pending_field_count": 72,
+            "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_blocker_id": (
+                "public_benchmark_gate_not_ready"
+            ),
+            "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_evidence_artifact": (
+                "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+            ),
+            "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_expected_evidence_status": (
+                "refine_tier_public_benchmark_ready"
+            ),
+            "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_observed_evidence_status": (
+                "missing"
+            ),
+            "engine_refinement_claim_evidence_operator_staging_apply_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_top_blocker_id": (
+                "public_benchmark_gate_not_ready"
+            ),
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_top_priority_bucket": (
+                "public_benchmark_work_order_apply_required"
+            ),
+            "engine_refinement_claim_evidence_operator_staging_apply_live_copy_allowed": False,
+            "engine_refinement_claim_evidence_operator_staging_apply_public_benchmark_intake_write_allowed": False,
+            "engine_refinement_claim_evidence_operator_staging_apply_canonical_receipt_written": False,
+            "engine_refinement_claim_evidence_operator_staging_apply_public_benchmark_intake_written": False,
+            "engine_refinement_claim_evidence_operator_staging_apply_claim_promoted": False,
+            "engine_refinement_claim_evidence_operator_staging_apply_external_engine_calls_executed": False,
+            "engine_refinement_claim_evidence_operator_staging_apply_external_state_mutated": False,
             "engine_refinement_claim_promotion_next_required_step": (
                 "Fill and apply curated public benchmark rows, then calibrate claim-grade parameterization gates."
             ),
@@ -1051,6 +1102,43 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         ]
         == 8
     )
+    assert summary["engine_refinement_claim_evidence_operator_staging_apply_status"] == (
+        "blocked_engine_refinement_claim_evidence_operator_staging_apply"
+    )
+    assert summary["engine_refinement_claim_evidence_operator_staging_apply_mode"] == "preview"
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_ready"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_blocked_row_count"
+        ]
+        == 6
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_blocked_row_count"
+        ]
+        == 8
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_pending_field_count"
+        ]
+        == 108
+    )
+    assert summary[
+        "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_blocker_id"
+    ] == "public_benchmark_gate_not_ready"
+    assert summary[
+        "engine_refinement_claim_evidence_operator_staging_apply_live_copy_allowed"
+    ] is False
+    assert summary[
+        "engine_refinement_claim_evidence_operator_staging_apply_public_benchmark_intake_write_allowed"
+    ] is False
     assert summary["product_scope_breadth_evidence_receipt_ready"] is False
     assert summary["product_scope_breadth_evidence_receipt_status"] == (
         "blocked_product_scope_breadth_evidence_receipt"
@@ -1574,6 +1662,14 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         and row["artifact_path"]
         == "runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json"
         and row["reference_role"] == "local_engine_refinement_claim_field_worksheet"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "engine_refinement_claim_evidence_operator_staging_apply"
+        and row["artifact_path"]
+        == "runs/engine_refinement_claim_evidence_operator_staging_apply_current.json"
+        and row["reference_role"] == "local_engine_refinement_claim_staging_apply_preview"
         and row["required_now"] is True
         for row in summary["artifact_reference_manifest"]
     )

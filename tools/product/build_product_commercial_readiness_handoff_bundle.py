@@ -438,6 +438,20 @@ def _build_artifact_reference_manifest(
                 note="Local field-level worksheet for R9 engine refinement claim evidence and public benchmark work-order intake.",
             )
         )
+    engine_staging_apply_artifact = _text(
+        summary.get("engine_refinement_claim_evidence_operator_staging_apply_artifact")
+    )
+    if engine_staging_apply_artifact:
+        refs.append(
+            _artifact_reference(
+                artifact_id="engine_refinement_claim_evidence_operator_staging_apply",
+                artifact_path=engine_staging_apply_artifact,
+                reference_role="local_engine_refinement_claim_staging_apply_preview",
+                required_now=True,
+                expected_from_operator_return=False,
+                note="Local preview gate for validating R9 claim-evidence receipt and public benchmark work-order rows before canonical writes.",
+            )
+        )
     scope_receipt_artifact = _text(
         summary.get("product_scope_breadth_evidence_receipt_artifact")
     )
@@ -814,6 +828,162 @@ def build_product_commercial_readiness_handoff_bundle(
         "engine_refinement_claim_evidence_operator_field_worksheet_external_state_mutated": bool(
             operator_summary.get(
                 "engine_refinement_claim_evidence_operator_field_worksheet_external_state_mutated"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_artifact": _text(
+            operator_summary.get("engine_refinement_claim_evidence_operator_staging_apply_artifact")
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_status": _text(
+            operator_summary.get("engine_refinement_claim_evidence_operator_staging_apply_status")
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_mode": _text(
+            operator_summary.get("engine_refinement_claim_evidence_operator_staging_apply_mode")
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_ready": bool(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_ready"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_status": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_status"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_blocked_row_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_blocked_row_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_pass_row_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_pass_row_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_staging_receipt_placeholder_row_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_staging_receipt_placeholder_row_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_work_order_ready": bool(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_work_order_ready"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_work_order_status": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_work_order_status"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_blocked_row_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_blocked_row_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_staging_public_benchmark_work_order_placeholder_row_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_staging_public_benchmark_work_order_placeholder_row_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_pending_field_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_pending_field_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_receipt_pending_field_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_receipt_pending_field_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_work_order_pending_field_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_work_order_pending_field_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_blocker_id": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_blocker_id"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_evidence_artifact": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_evidence_artifact"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_expected_evidence_status": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_expected_evidence_status"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_observed_evidence_status": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_observed_evidence_status"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_most_common_row_blocker": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_most_common_row_blocker"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_top_blocker_id": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_top_blocker_id"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_top_priority_bucket": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_top_priority_bucket"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_live_copy_allowed": bool(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_live_copy_allowed"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_public_benchmark_intake_write_allowed": bool(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_public_benchmark_intake_write_allowed"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_canonical_receipt_written": bool(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_canonical_receipt_written"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_public_benchmark_intake_written": bool(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_public_benchmark_intake_written"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_claim_promoted": bool(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_claim_promoted"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_external_engine_calls_executed": bool(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_external_engine_calls_executed"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_external_state_mutated": bool(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_external_state_mutated"
             )
             is True
         ),
@@ -2849,6 +3019,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count: `{s['engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count']}`",
         f"- engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count: `{s['engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count']}`",
         f"- engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_id: `{s['engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_id']}`",
+        f"- engine_refinement_claim_evidence_operator_staging_apply_status: `{s['engine_refinement_claim_evidence_operator_staging_apply_status']}`",
+        f"- engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_ready: `{s['engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_ready']}`",
+        f"- engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_blocked_row_count: `{s['engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_blocked_row_count']}`",
+        f"- engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_blocked_row_count: `{s['engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_blocked_row_count']}`",
+        f"- engine_refinement_claim_evidence_operator_staging_apply_live_copy_allowed: `{s['engine_refinement_claim_evidence_operator_staging_apply_live_copy_allowed']}`",
+        f"- engine_refinement_claim_evidence_operator_staging_apply_public_benchmark_intake_write_allowed: `{s['engine_refinement_claim_evidence_operator_staging_apply_public_benchmark_intake_write_allowed']}`",
         f"- product_scope_breadth_evidence_receipt_ready: `{s['product_scope_breadth_evidence_receipt_ready']}`",
         f"- product_scope_breadth_evidence_receipt_status: `{s['product_scope_breadth_evidence_receipt_status']}`",
         f"- product_scope_breadth_evidence_receipt_blocked_row_count: `{s['product_scope_breadth_evidence_receipt_blocked_row_count']}`",

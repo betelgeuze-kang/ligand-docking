@@ -44,6 +44,9 @@ DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_STAGING_APPLY_JSON = (
 DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_FIELD_WORKSHEET_JSON = (
     "runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json"
 )
+DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_STAGING_APPLY_JSON = (
+    "runs/engine_refinement_claim_evidence_operator_staging_apply_current.json"
+)
 DEFAULT_OUT_JSON = "runs/product_commercial_readiness_operator_packet_current.json"
 DEFAULT_OUT_CSV = "runs/product_commercial_readiness_operator_packet_current.csv"
 DEFAULT_OUT_MD = "runs/product_commercial_readiness_operator_packet_current.md"
@@ -520,6 +523,7 @@ def build_product_commercial_readiness_operator_packet(
     product_scope_breadth_evidence_field_worksheet_packet: dict[str, Any] | None = None,
     product_scope_breadth_evidence_staging_apply_packet: dict[str, Any] | None = None,
     engine_refinement_claim_evidence_field_worksheet_packet: dict[str, Any] | None = None,
+    engine_refinement_claim_evidence_staging_apply_packet: dict[str, Any] | None = None,
     goal_audit_path: str = DEFAULT_GOAL_AUDIT_JSON,
     delta_force_closure_packet_path: str = DEFAULT_DELTA_FORCE_CLOSURE_PACKET_JSON,
     scope_closure_packet_path: str = DEFAULT_SCOPE_CLOSURE_PACKET_JSON,
@@ -548,6 +552,9 @@ def build_product_commercial_readiness_operator_packet(
     engine_refinement_claim_evidence_field_worksheet_path: str = (
         DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_FIELD_WORKSHEET_JSON
     ),
+    engine_refinement_claim_evidence_staging_apply_path: str = (
+        DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_STAGING_APPLY_JSON
+    ),
 ) -> dict[str, Any]:
     summary = _summary(goal_audit_packet)
     delta_force_closure = _summary(delta_force_closure_packet or {})
@@ -572,6 +579,9 @@ def build_product_commercial_readiness_operator_packet(
     )
     engine_refinement_claim_evidence_field_worksheet = _summary(
         engine_refinement_claim_evidence_field_worksheet_packet or {}
+    )
+    engine_refinement_claim_evidence_staging_apply = _summary(
+        engine_refinement_claim_evidence_staging_apply_packet or {}
     )
     aqp1_external_fill_guide = _summary(aqp1_external_operator_fill_guide_packet or {})
     aqp1_external_worksheet = _summary(aqp1_external_operator_worksheet_packet or {})
@@ -794,6 +804,136 @@ def build_product_commercial_readiness_operator_packet(
         ),
         "engine_refinement_claim_evidence_operator_field_worksheet_external_state_mutated": bool(
             engine_refinement_claim_evidence_field_worksheet.get("external_state_mutated")
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_artifact": (
+            engine_refinement_claim_evidence_staging_apply_path
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_status": _text(
+            engine_refinement_claim_evidence_staging_apply.get("status")
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_mode": _text(
+            engine_refinement_claim_evidence_staging_apply.get("mode")
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_ready": bool(
+            engine_refinement_claim_evidence_staging_apply.get("candidate_receipt_ready")
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_status": _text(
+            engine_refinement_claim_evidence_staging_apply.get("candidate_receipt_status")
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_blocked_row_count": _int(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "candidate_receipt_blocked_row_count"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_pass_row_count": _int(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "candidate_receipt_pass_row_count"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_staging_receipt_placeholder_row_count": _int(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "staging_receipt_placeholder_row_count"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_work_order_ready": bool(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "candidate_public_benchmark_work_order_ready"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_work_order_status": _text(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "candidate_public_benchmark_work_order_status"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_blocked_row_count": _int(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "candidate_public_benchmark_blocked_row_count"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_staging_public_benchmark_work_order_placeholder_row_count": _int(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "staging_public_benchmark_work_order_placeholder_row_count"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_pending_field_count": _int(
+            engine_refinement_claim_evidence_staging_apply.get("field_worksheet_pending_field_count")
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_receipt_pending_field_count": _int(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "field_worksheet_receipt_pending_field_count"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_work_order_pending_field_count": _int(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "field_worksheet_work_order_pending_field_count"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_blocker_id": _text(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "candidate_first_blocked_blocker_id"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_evidence_artifact": _text(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "candidate_first_blocked_evidence_artifact"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_expected_evidence_status": _text(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "candidate_first_blocked_expected_evidence_status"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_observed_evidence_status": _text(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "candidate_first_blocked_observed_evidence_status"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_most_common_row_blocker": _text(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "candidate_most_common_row_blocker"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_top_blocker_id": _text(
+            engine_refinement_claim_evidence_staging_apply.get("field_worksheet_top_blocker_id")
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_top_priority_bucket": _text(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "field_worksheet_top_priority_bucket"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_live_copy_allowed": bool(
+            engine_refinement_claim_evidence_staging_apply.get("live_copy_allowed") is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_public_benchmark_intake_write_allowed": bool(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "public_benchmark_intake_write_allowed"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_canonical_receipt_written": bool(
+            engine_refinement_claim_evidence_staging_apply.get("canonical_receipt_written")
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_public_benchmark_intake_written": bool(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "public_benchmark_intake_written"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_claim_promoted": bool(
+            engine_refinement_claim_evidence_staging_apply.get("claim_promoted") is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_external_engine_calls_executed": bool(
+            engine_refinement_claim_evidence_staging_apply.get(
+                "external_engine_calls_executed"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_external_state_mutated": bool(
+            engine_refinement_claim_evidence_staging_apply.get("external_state_mutated")
             is True
         ),
         "engine_refinement_claim_promotion_next_required_step": _text(
@@ -1928,6 +2068,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count: `{s['engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count']}`",
         f"- engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count: `{s['engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count']}`",
         f"- engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_id: `{s['engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_id']}`",
+        f"- engine_refinement_claim_evidence_operator_staging_apply_status: `{s['engine_refinement_claim_evidence_operator_staging_apply_status']}`",
+        f"- engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_ready: `{s['engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_ready']}`",
+        f"- engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_blocked_row_count: `{s['engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_blocked_row_count']}`",
+        f"- engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_blocked_row_count: `{s['engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_blocked_row_count']}`",
+        f"- engine_refinement_claim_evidence_operator_staging_apply_live_copy_allowed: `{s['engine_refinement_claim_evidence_operator_staging_apply_live_copy_allowed']}`",
+        f"- engine_refinement_claim_evidence_operator_staging_apply_public_benchmark_intake_write_allowed: `{s['engine_refinement_claim_evidence_operator_staging_apply_public_benchmark_intake_write_allowed']}`",
         f"- product_scope_breadth_evidence_receipt_ready: `{s['product_scope_breadth_evidence_receipt_ready']}`",
         f"- product_scope_breadth_evidence_receipt_status: `{s['product_scope_breadth_evidence_receipt_status']}`",
         f"- product_scope_breadth_evidence_receipt_blocked_row_count: `{s['product_scope_breadth_evidence_receipt_blocked_row_count']}`",
@@ -2130,6 +2276,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--engine-refinement-claim-evidence-field-worksheet-json",
         default=DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_FIELD_WORKSHEET_JSON,
     )
+    parser.add_argument(
+        "--engine-refinement-claim-evidence-staging-apply-json",
+        default=DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_STAGING_APPLY_JSON,
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -2175,6 +2325,9 @@ def main(argv: list[str] | None = None) -> None:
         engine_refinement_claim_evidence_field_worksheet_packet=_read_json_if_present(
             args.engine_refinement_claim_evidence_field_worksheet_json
         ),
+        engine_refinement_claim_evidence_staging_apply_packet=_read_json_if_present(
+            args.engine_refinement_claim_evidence_staging_apply_json
+        ),
         goal_audit_path=args.goal_audit_json,
         delta_force_closure_packet_path=args.delta_force_closure_packet_json,
         scope_closure_packet_path=args.scope_closure_packet_json,
@@ -2202,6 +2355,9 @@ def main(argv: list[str] | None = None) -> None:
         ),
         engine_refinement_claim_evidence_field_worksheet_path=(
             args.engine_refinement_claim_evidence_field_worksheet_json
+        ),
+        engine_refinement_claim_evidence_staging_apply_path=(
+            args.engine_refinement_claim_evidence_staging_apply_json
         ),
     )
     _write_json(args.out_json, payload)

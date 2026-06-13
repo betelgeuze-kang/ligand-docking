@@ -1269,6 +1269,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "production_ai_registry_promotion_operator_staging_apply" in artifact_ids
     assert "engine_refinement_claim_promotion_action_board" in artifact_ids
     assert "engine_refinement_claim_evidence_receipt" in artifact_ids
+    assert "engine_refinement_claim_evidence_operator_staging_apply" in artifact_ids
     assert "product_scope_breadth_closure_checklist" in artifact_ids
     assert "product_scope_breadth_evidence_receipt" in artifact_ids
     assert "product_scope_breadth_evidence_operator_field_worksheet" in artifact_ids
@@ -1312,6 +1313,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "--mode preview --staging-csv runs/aqp1_direct_binding_external_evidence_intake_supplement_current.csv"
         in mod.RELEASE_REFRESH_COMMANDS
     )
+    assert (
+        "python3 tools/build_engine_refinement_claim_evidence_operator_staging_apply.py"
+        in mod.RELEASE_REFRESH_COMMANDS
+    )
     assert "product_release_bundle_semantic_ready" in status_ids
     assert "product_goal_completion_audit_full_commercial_release_blockers_semantic_ready" in status_ids
     assert "api_runner_profile_promotion_operator_receipt_blocked_semantic_ready" in status_ids
@@ -1328,6 +1333,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_scope_breadth_evidence_operator_field_worksheet_semantic_ready" in status_ids
     assert "product_scope_breadth_evidence_operator_staging_apply_blocked_semantic_ready" in status_ids
     assert "engine_refinement_claim_evidence_receipt_blocked_semantic_ready" in status_ids
+    assert "engine_refinement_claim_evidence_operator_staging_apply_blocked_semantic_ready" in status_ids
     assert "product_full_commercial_blocker_evidence_matrix_semantic_ready" in status_ids
     assert "goal_operator_action_board_primary_release_blocker_semantic_ready" in status_ids
     assert "goal_operator_intake_kit_primary_release_blocker_semantic_ready" in status_ids
@@ -1558,6 +1564,33 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert engine_receipt_status_spec["required_text_exact_fields"][
         "most_common_row_blocker"
     ] == "operator_placeholders_unfilled"
+    engine_staging_apply_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "engine_refinement_claim_evidence_operator_staging_apply_blocked_semantic_ready"
+    )
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "candidate_receipt_blocked_row_count"
+    ] == 6
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "candidate_public_benchmark_blocked_row_count"
+    ] == 8
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_pending_field_count"
+    ] == 108
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "public_benchmark_intake_write_allowed"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_text_exact_fields"][
+        "candidate_first_blocked_blocker_id"
+    ] == "public_benchmark_gate_not_ready"
+    assert engine_staging_apply_status_spec["required_text_exact_fields"][
+        "candidate_public_benchmark_work_order_status"
+    ] == "blocked_refine_tier_public_benchmark_work_order_apply"
+    assert engine_staging_apply_status_spec["required_text_exact_fields"][
+        "candidate_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
     runner_receipt_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -1766,6 +1799,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/production_ai_registry_promotion_operator_staging_apply_current.json" in (
         commercial_operator_packet_spec["depends_on"]
     )
+    assert "runs/engine_refinement_claim_evidence_operator_staging_apply_current.json" in (
+        commercial_operator_packet_spec["depends_on"]
+    )
     goal_action_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_operator_action_board"
     )
@@ -1834,6 +1870,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "depends_on"
     ]
     assert "config/product_scope_breadth_evidence_receipt_current.csv" in intake_kit_spec["depends_on"]
+    assert "runs/engine_refinement_claim_evidence_operator_staging_apply_current.json" in intake_kit_spec[
+        "depends_on"
+    ]
     goal_api_surface_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_api_surface_contract"
     )
@@ -1862,6 +1901,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         full_commercial_matrix_spec["depends_on"]
     )
     assert "runs/engine_refinement_claim_evidence_receipt_current.json" in full_commercial_matrix_spec["depends_on"]
+    assert "runs/engine_refinement_claim_evidence_operator_staging_apply_current.json" in (
+        full_commercial_matrix_spec["depends_on"]
+    )
     assert "runs/product_goal_completion_audit_current.json" in full_commercial_matrix_spec["depends_on"]
     assert "runs/goal_bottleneck_briefing_current.json" in full_commercial_matrix_spec["depends_on"]
     aqp1_fill_guide_spec = next(
@@ -1920,6 +1962,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert (
         "runs/product_scope_breadth_evidence_operator_staging_apply_current.json"
+        in commercial_operator_packet_spec["depends_on"]
+    )
+    assert (
+        "runs/engine_refinement_claim_evidence_operator_staging_apply_current.json"
         in commercial_operator_packet_spec["depends_on"]
     )
     assert (
@@ -2066,6 +2112,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/product_pose_sampling_readiness_current.json" in release_bundle_spec["depends_on"]
     assert "runs/product_trajectory_sla_contract_current.json" in release_bundle_spec["depends_on"]
     assert "runs/engine_refinement_claim_evidence_receipt_current.json" in release_bundle_spec["depends_on"]
+    assert "runs/engine_refinement_claim_evidence_operator_staging_apply_current.json" in release_bundle_spec[
+        "depends_on"
+    ]
     assert "runs/product_scope_breadth_evidence_receipt_current.json" in release_bundle_spec["depends_on"]
     assert "runs/product_full_commercial_blocker_evidence_matrix_current.json" in release_bundle_spec[
         "depends_on"
@@ -2120,12 +2169,36 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/refine_tier_public_benchmark_work_order_apply_current.json" in field_worksheet_spec[
         "depends_on"
     ]
+    staging_apply_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "engine_refinement_claim_evidence_operator_staging_apply"
+    )
+    assert staging_apply_spec["builder_command"] == (
+        "python3 tools/build_engine_refinement_claim_evidence_operator_staging_apply.py"
+    )
+    assert "config/engine_refinement_claim_promotion_evidence_receipt_current.csv" in staging_apply_spec[
+        "depends_on"
+    ]
+    assert "runs/engine_refinement_claim_evidence_receipt_current.json" in staging_apply_spec[
+        "depends_on"
+    ]
+    assert "runs/engine_refinement_claim_evidence_priority_packet_current.json" in staging_apply_spec[
+        "depends_on"
+    ]
+    assert "runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json" in staging_apply_spec[
+        "depends_on"
+    ]
+    assert "runs/refine_tier_public_benchmark_work_order_apply_current.json" in staging_apply_spec[
+        "depends_on"
+    ]
     goal_audit_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_goal_completion_audit"
     )
     assert "runs/engine_refinement_claim_evidence_priority_packet_current.json" in goal_audit_spec["depends_on"]
     assert "engine_refinement_claim_evidence_priority_packet_blocked_semantic_ready" in status_ids
     assert "engine_refinement_claim_evidence_operator_field_worksheet_semantic_ready" in status_ids
+    assert "engine_refinement_claim_evidence_operator_staging_apply_blocked_semantic_ready" in status_ids
     assert "product_ledger_privacy_scan_semantic_ready" in status_ids
     assert "python3 tools/build_product_ai_report_explanation_packet.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_product_ai_report_ux_contract.py" in mod.RELEASE_REFRESH_COMMANDS
@@ -2240,6 +2313,11 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py"
     ) < mod.RELEASE_REFRESH_COMMANDS.index(
         "python3 tools/build_engine_refinement_claim_evidence_operator_field_worksheet.py"
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_engine_refinement_claim_evidence_operator_field_worksheet.py"
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_engine_refinement_claim_evidence_operator_staging_apply.py"
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_goal_completion_audit.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_operator_action_board.py")
@@ -2435,6 +2513,13 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_engine_refinement_claim_evidence_receipt.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_engine_refinement_claim_evidence_receipt.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index(
+            "python3 tools/build_engine_refinement_claim_evidence_operator_staging_apply.py"
+        )
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_engine_refinement_claim_evidence_operator_staging_apply.py"
+    ) < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_product_launch_r4_preflight.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_goal_completion_audit.py") < (
