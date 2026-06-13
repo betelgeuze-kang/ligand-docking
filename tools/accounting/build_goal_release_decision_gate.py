@@ -171,6 +171,18 @@ def _dict_get(value: Any, key: str) -> Any:
     return value.get(key) if isinstance(value, dict) else None
 
 
+def _full_commercial_blocker_tier(blocker_id: str) -> str:
+    if blocker_id == "R8_full_scope_claim_closure":
+        return "full_commercial_scope"
+    if blocker_id == "R9_engine_refinement_claim_promotion":
+        return "full_commercial_science_claim"
+    if blocker_id.startswith("MASTER:"):
+        return "full_commercial_master_rollup"
+    if blocker_id.startswith("ACCURACY:"):
+        return "full_commercial_accuracy_parity"
+    return ""
+
+
 def _float(value: Any) -> float:
     try:
         return float(value or 0.0)
@@ -2387,6 +2399,37 @@ def build_goal_release_decision_gate(
         _text(full_commercial_matrix.get("first_blocked_release_blocker_id"))
         or (f"MASTER:{master_gap_open_ids[0]}" if master_gap_open_ids else "")
     )
+    primary_full_commercial_release_blocker_requirement_id = primary_full_commercial_release_blocker_id
+    primary_full_commercial_release_blocker_blocked_row_count = _int(
+        _dict_get(
+            full_commercial_matrix.get("release_blocker_blocked_row_counts"),
+            primary_full_commercial_release_blocker_id,
+        )
+    )
+    primary_full_commercial_release_blocker_first_blocked_evidence_row_id = _text(
+        _dict_get(
+            full_commercial_matrix.get("release_blocker_first_blocked_evidence_row_ids"),
+            primary_full_commercial_release_blocker_id,
+        )
+    )
+    primary_full_commercial_release_blocker_receipt_csv = _text(
+        _dict_get(
+            full_commercial_matrix.get("release_blocker_receipt_csvs"),
+            primary_full_commercial_release_blocker_id,
+        )
+    )
+    primary_full_commercial_release_blocker_approval_token_required = _text(
+        _dict_get(
+            full_commercial_matrix.get("release_blocker_approval_tokens_required"),
+            primary_full_commercial_release_blocker_id,
+        )
+    )
+    primary_full_commercial_release_blocker_next_required_step = _text(
+        _dict_get(
+            full_commercial_matrix.get("release_blocker_next_required_steps"),
+            primary_full_commercial_release_blocker_id,
+        )
+    ) or _text(full_commercial_matrix.get("next_required_step"))
     full_commercial_release_allowed = (
         release_allowed
         and (
@@ -2492,10 +2535,31 @@ def build_goal_release_decision_gate(
         "full_commercial_release_blocker_count": len(full_commercial_release_blocker_ids),
         "full_commercial_release_blocker_ids": full_commercial_release_blocker_ids,
         "primary_full_commercial_release_blocker_id": primary_full_commercial_release_blocker_id,
+        "primary_full_commercial_release_blocker_requirement_id": (
+            primary_full_commercial_release_blocker_requirement_id
+        ),
+        "primary_full_commercial_release_blocker_tier": _full_commercial_blocker_tier(
+            primary_full_commercial_release_blocker_id
+        ),
         "primary_full_commercial_release_blocker": _text(
             full_commercial_matrix.get("first_blocked_evidence_row_id")
         )
         or _text(master_gap_rollup.get("current_primary_open_gap_id")),
+        "primary_full_commercial_release_blocker_blocked_row_count": (
+            primary_full_commercial_release_blocker_blocked_row_count
+        ),
+        "primary_full_commercial_release_blocker_first_blocked_evidence_row_id": (
+            primary_full_commercial_release_blocker_first_blocked_evidence_row_id
+        ),
+        "primary_full_commercial_release_blocker_receipt_csv": (
+            primary_full_commercial_release_blocker_receipt_csv
+        ),
+        "primary_full_commercial_release_blocker_approval_token_required": (
+            primary_full_commercial_release_blocker_approval_token_required
+        ),
+        "primary_full_commercial_release_blocker_next_required_step": (
+            primary_full_commercial_release_blocker_next_required_step
+        ),
         "full_commercial_release_next_required_step": (
             "Full-commercial release is clear."
             if full_commercial_release_allowed
@@ -4126,7 +4190,14 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- full_commercial_release_blocker_count: `{s['full_commercial_release_blocker_count']}`",
         f"- full_commercial_release_blocker_ids: `{';'.join(s['full_commercial_release_blocker_ids'])}`",
         f"- primary_full_commercial_release_blocker_id: `{s['primary_full_commercial_release_blocker_id']}`",
+        f"- primary_full_commercial_release_blocker_requirement_id: `{s['primary_full_commercial_release_blocker_requirement_id']}`",
+        f"- primary_full_commercial_release_blocker_tier: `{s['primary_full_commercial_release_blocker_tier']}`",
         f"- primary_full_commercial_release_blocker: `{s['primary_full_commercial_release_blocker']}`",
+        f"- primary_full_commercial_release_blocker_blocked_row_count: `{s['primary_full_commercial_release_blocker_blocked_row_count']}`",
+        f"- primary_full_commercial_release_blocker_first_blocked_evidence_row_id: `{s['primary_full_commercial_release_blocker_first_blocked_evidence_row_id']}`",
+        f"- primary_full_commercial_release_blocker_receipt_csv: `{s['primary_full_commercial_release_blocker_receipt_csv']}`",
+        f"- primary_full_commercial_release_blocker_approval_token_required: `{s['primary_full_commercial_release_blocker_approval_token_required']}`",
+        f"- primary_full_commercial_release_blocker_next_required_step: `{s['primary_full_commercial_release_blocker_next_required_step']}`",
         f"- commercial_independent_product_ready: `{s['commercial_independent_product_ready']}`",
         f"- product_architecture_local_surface_ready: `{s['product_architecture_local_surface_ready']}`",
         f"- product_architecture_release_ready: `{s['product_architecture_release_ready']}`",

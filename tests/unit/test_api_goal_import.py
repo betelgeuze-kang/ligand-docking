@@ -1,11 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
-
-import pytest
-
-TestClient = pytest.importorskip("fastapi.testclient").TestClient
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -202,6 +199,16 @@ def _assert_refine_tier_public_benchmark_fields(
 
 def test_api_app_imports_with_goal_router() -> None:
     from api.main import app
+    from api.goal import (
+        get_goal_actions,
+        get_goal_api_contract,
+        get_goal_bottlenecks,
+        get_goal_burndown,
+        get_goal_operator_intake_kit,
+        get_goal_readiness,
+        get_goal_release_decision,
+        get_goal_status,
+    )
 
     paths = {route.path for route in app.routes}
     assert "/goal/status" in paths
@@ -231,15 +238,14 @@ def test_api_app_imports_with_goal_router() -> None:
         "product_full_commercial_blocker_evidence_matrix_current.json"
     )
 
-    client = TestClient(app)
-    status = client.get("/goal/status").json()
-    readiness = client.get("/goal/readiness").json()
-    actions = client.get("/goal/actions").json()
-    intake_kit = client.get("/goal/operator-intake-kit").json()
-    release = client.get("/goal/release-decision").json()
-    burndown = client.get("/goal/burndown").json()
-    bottlenecks = client.get("/goal/bottlenecks").json()
-    api_contract = client.get("/goal/api-contract").json()
+    status = asyncio.run(get_goal_status())
+    readiness = asyncio.run(get_goal_readiness())
+    actions = asyncio.run(get_goal_actions())
+    intake_kit = asyncio.run(get_goal_operator_intake_kit())
+    release = asyncio.run(get_goal_release_decision())
+    burndown = asyncio.run(get_goal_burndown())
+    bottlenecks = asyncio.run(get_goal_bottlenecks())
+    api_contract = asyncio.run(get_goal_api_contract())
 
     assert status["status"] == release_artifact.get("status")
     assert status["release_allowed"] is (release_artifact.get("release_allowed") is True)
@@ -288,8 +294,29 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["primary_full_commercial_release_blocker_id"] == release_artifact.get(
         "primary_full_commercial_release_blocker_id"
     )
+    assert status["primary_full_commercial_release_blocker_requirement_id"] == release_artifact.get(
+        "primary_full_commercial_release_blocker_requirement_id"
+    )
+    assert status["primary_full_commercial_release_blocker_tier"] == release_artifact.get(
+        "primary_full_commercial_release_blocker_tier"
+    )
     assert status["primary_full_commercial_release_blocker"] == release_artifact.get(
         "primary_full_commercial_release_blocker"
+    )
+    assert status["primary_full_commercial_release_blocker_blocked_row_count"] == int(
+        release_artifact.get("primary_full_commercial_release_blocker_blocked_row_count") or 0
+    )
+    assert status["primary_full_commercial_release_blocker_first_blocked_evidence_row_id"] == (
+        release_artifact.get("primary_full_commercial_release_blocker_first_blocked_evidence_row_id")
+    )
+    assert status["primary_full_commercial_release_blocker_receipt_csv"] == release_artifact.get(
+        "primary_full_commercial_release_blocker_receipt_csv"
+    )
+    assert status["primary_full_commercial_release_blocker_approval_token_required"] == (
+        release_artifact.get("primary_full_commercial_release_blocker_approval_token_required")
+    )
+    assert status["primary_full_commercial_release_blocker_next_required_step"] == (
+        release_artifact.get("primary_full_commercial_release_blocker_next_required_step")
     )
     assert status["full_commercial_release_next_required_step"] == release_artifact.get(
         "full_commercial_release_next_required_step"
@@ -1105,6 +1132,12 @@ def test_api_app_imports_with_goal_router() -> None:
     )
     assert release["primary_full_commercial_release_blocker_id"] == release_artifact.get(
         "primary_full_commercial_release_blocker_id"
+    )
+    assert release["primary_full_commercial_release_blocker_requirement_id"] == (
+        release_artifact.get("primary_full_commercial_release_blocker_requirement_id")
+    )
+    assert release["primary_full_commercial_release_blocker_receipt_csv"] == release_artifact.get(
+        "primary_full_commercial_release_blocker_receipt_csv"
     )
     assert release["master_gap_closure_rollup_open_gap_ids"] == release_artifact.get(
         "master_gap_closure_rollup_open_gap_ids"

@@ -943,7 +943,14 @@ async def get_goal_status() -> dict[str, Any]:
             "restricted_release_allowed": False,
             "full_commercial_release_allowed": False,
             "primary_full_commercial_release_blocker_id": "",
+            "primary_full_commercial_release_blocker_requirement_id": "",
+            "primary_full_commercial_release_blocker_tier": "",
             "primary_full_commercial_release_blocker": "",
+            "primary_full_commercial_release_blocker_blocked_row_count": 0,
+            "primary_full_commercial_release_blocker_first_blocked_evidence_row_id": "",
+            "primary_full_commercial_release_blocker_receipt_csv": "",
+            "primary_full_commercial_release_blocker_approval_token_required": "",
+            "primary_full_commercial_release_blocker_next_required_step": "",
             "full_commercial_release_next_required_step": "",
             "master_gap_closure_rollup_status": "",
             "master_gap_closure_rollup_recorded": False,
@@ -1195,8 +1202,29 @@ async def get_goal_status() -> dict[str, Any]:
         "primary_full_commercial_release_blocker_id": release.get(
             "primary_full_commercial_release_blocker_id", ""
         ),
+        "primary_full_commercial_release_blocker_requirement_id": release.get(
+            "primary_full_commercial_release_blocker_requirement_id", ""
+        ),
+        "primary_full_commercial_release_blocker_tier": release.get(
+            "primary_full_commercial_release_blocker_tier", ""
+        ),
         "primary_full_commercial_release_blocker": release.get(
             "primary_full_commercial_release_blocker", ""
+        ),
+        "primary_full_commercial_release_blocker_blocked_row_count": _int(
+            release.get("primary_full_commercial_release_blocker_blocked_row_count")
+        ),
+        "primary_full_commercial_release_blocker_first_blocked_evidence_row_id": release.get(
+            "primary_full_commercial_release_blocker_first_blocked_evidence_row_id", ""
+        ),
+        "primary_full_commercial_release_blocker_receipt_csv": release.get(
+            "primary_full_commercial_release_blocker_receipt_csv", ""
+        ),
+        "primary_full_commercial_release_blocker_approval_token_required": release.get(
+            "primary_full_commercial_release_blocker_approval_token_required", ""
+        ),
+        "primary_full_commercial_release_blocker_next_required_step": release.get(
+            "primary_full_commercial_release_blocker_next_required_step", ""
         ),
         "full_commercial_release_next_required_step": release.get(
             "full_commercial_release_next_required_step", ""

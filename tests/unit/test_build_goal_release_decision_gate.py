@@ -1961,7 +1961,24 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
         "R9_engine_refinement_claim_promotion",
     ]
     assert summary["primary_full_commercial_release_blocker_id"] == "R8_full_scope_claim_closure"
+    assert summary["primary_full_commercial_release_blocker_requirement_id"] == (
+        "R8_full_scope_claim_closure"
+    )
+    assert summary["primary_full_commercial_release_blocker_tier"] == "full_commercial_scope"
     assert summary["primary_full_commercial_release_blocker"] == "direct_binding_evidence_missing"
+    assert summary["primary_full_commercial_release_blocker_blocked_row_count"] == 6
+    assert summary["primary_full_commercial_release_blocker_first_blocked_evidence_row_id"] == (
+        "direct_binding_evidence_missing"
+    )
+    assert summary["primary_full_commercial_release_blocker_receipt_csv"] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv"
+    )
+    assert summary["primary_full_commercial_release_blocker_approval_token_required"] == (
+        "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+    )
+    assert summary["primary_full_commercial_release_blocker_next_required_step"].startswith(
+        "Fill the R8/R9 receipt CSVs"
+    )
     assert summary["full_commercial_release_next_required_step"].startswith("Fill the R8/R9 receipt CSVs")
     assert summary["product_full_commercial_blocker_evidence_matrix_gate_present"] is True
     assert summary["product_full_commercial_blocker_evidence_matrix_status"] == (
