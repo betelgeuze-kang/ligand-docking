@@ -16,9 +16,13 @@ def _doc_text() -> str:
 
 
 def _summary(path: str) -> dict:
-    payload = json.loads((ROOT / path).read_text(encoding="utf-8"))
+    payload = _payload(path)
     summary = payload.get("summary")
     return summary if isinstance(summary, dict) else payload
+
+
+def _payload(path: str) -> dict:
+    return json.loads((ROOT / path).read_text(encoding="utf-8"))
 
 
 def test_remaining_work_doc_tracks_current_release_metrics() -> None:
@@ -81,3 +85,21 @@ def test_remaining_work_doc_tracks_current_production_ai_priority_bottleneck() -
     assert f"`{priority['top_priority_bucket']}`" in text
     assert "trained/preflight-ready checkpoint는 registry에" in text
     assert "`trained_model_checkpoint_count_positive`는 만족된 gate로 보존된다" in text
+
+
+def test_remaining_work_doc_tracks_current_enabled_runner_profiles() -> None:
+    text = _doc_text()
+    payload = _payload("runs/api_runner_profile_enablement_work_order_current.json")
+    summary = payload.get("summary", payload)
+    enabled_profiles = sorted(
+        row["profile_id"]
+        for row in payload.get("rows", [])
+        if isinstance(row, dict) and row.get("enabled") is True
+    )
+
+    assert f"enabled runner profile {summary['enabled_profile_count']}종" in text
+    for profile_id in enabled_profiles:
+        assert f"`{profile_id}`" in text
+
+    assert "enabled runner profile 2종" not in text
+    assert "API runner profile enable + evidence review" in text

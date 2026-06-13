@@ -37,7 +37,7 @@
 |---|---|---|---|
 | P0 | HTVS↔4bead↔topo↔cascade E2E + 2-pass rank_pct | CLOSED | `tools/run_ligand_htvs_pipeline.py` stage2/3 플래그, `tools/run_ligand_backmapping_scoring.py` two-pass, `tools/product/engine_refinement_config.py` |
 | P0 | rank_pct 2-pass scoring | CLOSED | pass1 2bead → rank → pass2 top-K 4bead + `summarize_topo_correction` |
-| P1 | API runner profile enable + operator approval | CLOSED | `ligand_htvs_pipeline_default.json`, `backmapping_scoring.production.json` + evidence (enabled, reviewed) |
+| P1 | API runner profile enable + evidence review | CLOSED | `ligand_htvs_pipeline_default.json`, `backmapping_scoring.production.json`, `ligand_topk_delivery.production.json` + evidence (enabled, reviewed) |
 | P1 | ledger → worker auto dispatch | CLOSED | `api/docking_dispatch.py`, `api/product.py` submit hook |
 | P2 | GPCR residual shadow→assist + production_guarded | CLOSED | `--residual-assist-mode` wired, `core/score_residual.py` guarded abstention |
 | P2 | 4-bead blind gate + GPU checkpoint CI fixtures | CLOSED | `config/ligand_htvs_blind_gpcr_adrb2_4bead_v1.json`, `ci_contract_fixture_packets.py` checkpoint stubs |
@@ -230,7 +230,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 
 **현재 상태**
 - HTVS stage2/3 production config, two-pass 4-bead cascade, topo corrector, stage2 skip router가 상용 경로에 연결됨.
-- enabled runner profile 2종 (`ligand_htvs_pipeline_default`, `backmapping_scoring.production`) + evidence reviewed.
+- enabled runner profile 3종 (`ligand_htvs_pipeline_default`, `backmapping_scoring.production`, `ligand_topk_delivery.production`) + evidence reviewed.
 - `api/docking_dispatch.py`가 ledger → SQLite worker queue 자동 enqueue를 수행 (`API_VALIDATED_RUNNER_ENABLED=1` 필요).
 - `api/tasks.py`는 `runner_profile_id`가 없는 일반 simulation 요청에는 계속
   fail-closed로 동작한다.
