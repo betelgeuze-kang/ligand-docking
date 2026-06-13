@@ -216,13 +216,22 @@
   blocker matrix와 `/goal/status`도 이 first-blocked diagnostics를
   `full_commercial_blocker_evidence_matrix_first_blocked_*` 및
   `full_commercial_blocker_evidence_matrix_*_most_common_row_blocker` 필드로 전달한다.
+  `/goal/status`는 matrix 요약과 별도로
+  `product_scope_breadth_evidence_receipt_*` 및
+  `engine_refinement_claim_evidence_receipt_*` 직접 필드도 제공해, R8/R9 receipt
+  status, CSV, approval token, row counts, first-blocked diagnostics, required
+  blocker 목록을 goal API contract 안에 고정한다.
   `product_goal_completion_audit`의 `R8_full_scope_claim_closure` row는 이 receipt를
   evidence artifact와 observed field로 직접 사용하며, `goal_operator_action_board`는
   `resolve_full_scope_breadth_evidence_receipt` action을 노출한다.
   `goal_operator_intake_kit_current/manifest.json`은
   `product_scope_breadth_evidence_receipt` entry와 copied template으로
   `config/product_scope_breadth_evidence_receipt_current.csv`를 operator handoff에
-  포함한다.
+  포함한다. 같은 manifest summary는 R8/R9 receipt 묶음을
+  `full_commercial_evidence_receipt_*` 필드로 집계해 entry count 2, template present
+  2/2, approval token 2개, source gate statuses, required input CSVs를 직접 노출하고
+  `/goal/status`도 이를 `operator_intake_kit_full_commercial_evidence_receipt_*` 키로
+  전달한다.
   같은 R8 receipt 상태는
   `runs/product_commercial_readiness_operator_packet_current.json`과
   `runs/product_commercial_readiness_handoff_bundle_current.json` summary의
@@ -245,12 +254,17 @@
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
   `product_full_commercial_blocker_evidence_matrix_current.json`,
   `production_ai_registry_promotion_operator_receipt_current.json`,
+  `cameo_official_result_fetch_preflight_current.json`,
   `cameo_validation_operations_dossier_current.json`의
   freshness 및 semantic-ready 상태를 함께 검증한다. 최신 full refresh 후
-  source-of-truth는 `row_count=78`, `pass_count=78`, `blocker_count=0`,
-  `artifact_row_count=55`, `semantic_status_row_count=21`,
+  source-of-truth는 `row_count=82`, `pass_count=82`, `blocker_count=0`,
+  `artifact_row_count=56`, `semantic_status_row_count=24`,
   `release_refresh_command_count=69`, `stale_artifact_count=0`,
-  `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
+  `semantic_status_blocker_count=0`, `readme_drift_count=0`이다. R8/R9 evidence
+  receipt 자체도 `product_scope_breadth_evidence_receipt_blocked_semantic_ready`,
+  `engine_refinement_claim_evidence_receipt_blocked_semantic_ready` row로 고정되어
+  placeholder evidence, 6/6 blocked rows, approval token requirement, first-blocked
+  diagnostics를 source-of-truth에서 직접 검증한다.
   `product_ai_report_explanation_packet_semantic_ready`와
   `product_ai_report_ux_contract_semantic_ready`는 core/full decision graph 순환을
   분리한 뒤 고객-facing AI report semantic readiness 안으로 닫혔다.
@@ -533,7 +547,14 @@ durable queue → worker 실행 → signed 결과 번들 회수까지 무인 동
 
 **구현 방향**
 1. 공개 벤치마크 하니스(CASF-2016 scoring/ranking/docking power, PDBbind core set) 연결.
-2. CAMEO 공식 결과 intake(외부 schedule 의존, operator approval 토큰).
+2. CAMEO 공식 결과 intake(외부 schedule 의존, operator approval 토큰). 현재
+   `goal_operator_intake_kit_current/manifest.json`은
+   `cameo_official_result_fetch_preflight` entry로
+   `runs/cameo_official_result_fetch_operator_approval_template_current.csv`,
+   `runs/cameo_official_result_fetch_operator_approval_intake.csv`,
+   `APPROVE_CAMEO_OFFICIAL_RESULT_FETCH`를 operator handoff에 노출한다. 같은
+   preflight status/template/intake/token/no-network flags는 `/goal/status`의
+   `cameo_official_result_fetch_preflight_*` keys에서도 확인된다.
 3. GPCR CI-low: feature/data engineering + 100k 재실행으로 ≥ 0.45 + top20 안정화.
 
 **완료 정의**: 공개 표준에서 재현 가능한 수치 리포트 + CI-low 임계치 통과로 scorer/router claim 승격.

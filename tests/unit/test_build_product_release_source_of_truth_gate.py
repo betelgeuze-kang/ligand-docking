@@ -297,6 +297,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_production_ai_promotion_workbench_shadow_blocked_semantic_ready" in status_ids
     assert "production_ai_registry_promotion_operator_receipt_blocked_semantic_ready" in status_ids
     assert "cameo_validation_operations_dossier_current_bottleneck_semantic_ready" in status_ids
+    assert "cameo_official_result_fetch_preflight" in artifact_ids
+    assert "cameo_official_result_fetch_preflight_blocked_semantic_ready" in status_ids
+    assert "product_scope_breadth_evidence_receipt_blocked_semantic_ready" in status_ids
+    assert "engine_refinement_claim_evidence_receipt_blocked_semantic_ready" in status_ids
     assert "product_full_commercial_blocker_evidence_matrix_semantic_ready" in status_ids
     assert "goal_operator_action_board_primary_release_blocker_semantic_ready" in status_ids
     assert "goal_operator_intake_kit_primary_release_blocker_semantic_ready" in status_ids
@@ -316,6 +320,32 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "missing_full_commercial_visibility_token_count": 0,
         "missing_fail_closed_flag_count": 0,
     }
+    intake_kit_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "goal_operator_intake_kit_primary_release_blocker_semantic_ready"
+    )
+    assert intake_kit_status_spec["required_int_exact_fields"] == {
+        "product_goal_release_blocker_fail_count": 2,
+        "full_commercial_evidence_receipt_entry_count": 2,
+        "full_commercial_evidence_receipt_operator_input_required_count": 2,
+        "full_commercial_evidence_receipt_current_action_required_count": 2,
+        "full_commercial_evidence_receipt_template_required_count": 2,
+        "full_commercial_evidence_receipt_template_present_count": 2,
+        "full_commercial_evidence_receipt_approval_token_count": 2,
+    }
+    assert intake_kit_status_spec["required_text_exact_fields"][
+        "full_commercial_evidence_receipt_required_inputs"
+    ] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv;"
+        "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+    )
+    assert intake_kit_status_spec["required_text_exact_fields"][
+        "full_commercial_evidence_receipt_source_gate_statuses"
+    ] == (
+        "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
+        "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"
+    )
     full_matrix_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -332,6 +362,58 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     ] == "R8_full_scope_claim_closure"
     assert full_matrix_status_spec["required_text_exact_fields"][
         "scope_receipt_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    scope_receipt_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "product_scope_breadth_evidence_receipt_blocked_semantic_ready"
+    )
+    assert scope_receipt_status_spec["required_int_exact_fields"] == {
+        "full_scope_evidence_receipt_ready": 0,
+        "receipt_row_count": 6,
+        "pass_row_count": 0,
+        "blocked_row_count": 6,
+        "blocker_count": 1,
+        "evidence_artifact_present_count": 0,
+        "evidence_status_verified_count": 0,
+        "required_scope_blocker_count": 6,
+        "missing_required_scope_blocker_count": 0,
+        "external_state_mutated": 0,
+    }
+    assert scope_receipt_status_spec["required_text_exact_fields"][
+        "approval_token_required"
+    ] == "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+    assert scope_receipt_status_spec["required_text_exact_fields"][
+        "first_blocked_scope_blocker_id"
+    ] == "direct_binding_evidence_missing"
+    assert scope_receipt_status_spec["required_text_exact_fields"][
+        "most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    engine_receipt_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "engine_refinement_claim_evidence_receipt_blocked_semantic_ready"
+    )
+    assert engine_receipt_status_spec["required_int_exact_fields"] == {
+        "claim_promotion_evidence_receipt_ready": 0,
+        "receipt_row_count": 6,
+        "pass_row_count": 0,
+        "blocked_row_count": 6,
+        "blocker_count": 1,
+        "evidence_artifact_present_count": 0,
+        "evidence_status_verified_count": 0,
+        "required_blocker_count": 6,
+        "missing_required_blocker_count": 0,
+        "external_state_mutated": 0,
+    }
+    assert engine_receipt_status_spec["required_text_exact_fields"][
+        "approval_token_required"
+    ] == "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+    assert engine_receipt_status_spec["required_text_exact_fields"][
+        "first_blocked_blocker_id"
+    ] == "public_benchmark_gate_not_ready"
+    assert engine_receipt_status_spec["required_text_exact_fields"][
+        "most_common_row_blocker"
     ] == "operator_placeholders_unfilled"
     runner_receipt_status_spec = next(
         spec
@@ -369,6 +451,37 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert cameo_operations_status_spec["required_text_exact_fields"][
         "first_approval_required_stage_id"
     ] == "public_registration_and_email"
+    cameo_fetch_artifact_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "cameo_official_result_fetch_preflight"
+    )
+    assert "betelgeuze_cameo/official_result_fetch_preflight.py" in cameo_fetch_artifact_spec[
+        "depends_on"
+    ]
+    assert "runs/cameo_official_result_fetch_operator_approval_template_current.csv" in cameo_fetch_artifact_spec[
+        "depends_on"
+    ]
+    assert "runs/cameo_official_result_fetch_operator_approval_intake.csv" not in cameo_fetch_artifact_spec[
+        "depends_on"
+    ]
+    cameo_fetch_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "cameo_official_result_fetch_preflight_blocked_semantic_ready"
+    )
+    assert cameo_fetch_status_spec["required_int_exact_fields"][
+        "operator_fetch_csv_present"
+    ] == 0
+    assert cameo_fetch_status_spec["required_int_exact_fields"][
+        "network_request_opened"
+    ] == 0
+    assert cameo_fetch_status_spec["required_text_exact_fields"][
+        "operator_fetch_csv"
+    ] == "runs/cameo_official_result_fetch_operator_approval_intake.csv"
+    assert cameo_fetch_status_spec["required_text_exact_fields"][
+        "fetch_approval_token_required"
+    ] == "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH"
     checkpoint_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS

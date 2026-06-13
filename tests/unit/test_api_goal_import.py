@@ -19,6 +19,71 @@ def _artifact_summary(name: str) -> dict:
     return summary if isinstance(summary, dict) else {}
 
 
+def _assert_receipt_fields(
+    *,
+    status: dict,
+    prefix: str,
+    artifact: dict,
+    path_suffix: str,
+    ready_key: str,
+    first_blocked_id_source_key: str,
+    first_blocked_id_status_key: str,
+    required_blocker_count_key: str,
+    required_blockers_key: str,
+) -> None:
+    assert status[f"{prefix}_status"] == artifact.get("status")
+    assert status[f"{prefix}_ready"] is (artifact.get(ready_key) is True)
+    assert status[f"{prefix}_artifact_path"].endswith(path_suffix)
+    assert status[f"{prefix}_csv"] == artifact.get("receipt_csv")
+    assert status[f"{prefix}_csv_present"] is (artifact.get("receipt_csv_present") is True)
+    assert status[f"{prefix}_approval_token_required"] == artifact.get(
+        "approval_token_required"
+    )
+    assert status[f"{prefix}_receipt_row_count"] == int(
+        artifact.get("receipt_row_count") or 0
+    )
+    assert status[f"{prefix}_pass_row_count"] == int(artifact.get("pass_row_count") or 0)
+    assert status[f"{prefix}_blocked_row_count"] == int(
+        artifact.get("blocked_row_count") or 0
+    )
+    assert status[f"{prefix}_blocker_count"] == int(artifact.get("blocker_count") or 0)
+    assert status[f"{prefix}_evidence_artifact_present_count"] == int(
+        artifact.get("evidence_artifact_present_count") or 0
+    )
+    assert status[f"{prefix}_evidence_status_verified_count"] == int(
+        artifact.get("evidence_status_verified_count") or 0
+    )
+    assert status[f"{prefix}_{first_blocked_id_status_key}"] == artifact.get(
+        first_blocked_id_source_key
+    )
+    assert status[f"{prefix}_first_blocked_evidence_artifact"] == artifact.get(
+        "first_blocked_evidence_artifact"
+    )
+    assert status[f"{prefix}_first_blocked_expected_evidence_status"] == artifact.get(
+        "first_blocked_expected_evidence_status"
+    )
+    assert status[f"{prefix}_first_blocked_observed_evidence_status"] == artifact.get(
+        "first_blocked_observed_evidence_status"
+    )
+    assert status[f"{prefix}_first_blocked_missing_true_fields"] == artifact.get(
+        "first_blocked_missing_true_fields"
+    )
+    assert status[f"{prefix}_first_blocked_row_blockers"] == artifact.get(
+        "first_blocked_row_blockers"
+    )
+    assert status[f"{prefix}_most_common_row_blocker"] == artifact.get(
+        "most_common_row_blocker"
+    )
+    assert status[f"{prefix}_required_blocker_count"] == int(
+        artifact.get(required_blocker_count_key) or 0
+    )
+    assert status[f"{prefix}_required_blockers"] == artifact.get(required_blockers_key)
+    assert status[f"{prefix}_next_required_step"] == artifact.get("next_required_step")
+    assert status[f"{prefix}_external_state_mutated"] is (
+        artifact.get("external_state_mutated") is True
+    )
+
+
 def test_api_app_imports_with_goal_router() -> None:
     from api.main import app
 
@@ -41,6 +106,11 @@ def test_api_app_imports_with_goal_router() -> None:
     api_contract_artifact = _artifact_summary("goal_api_surface_contract_current.json")
     product_goal_completion_artifact = _artifact_summary("product_goal_completion_audit_current.json")
     handoff_artifact = _artifact_summary("product_commercial_readiness_handoff_bundle_current.json")
+    cameo_fetch_artifact = _artifact_summary("cameo_official_result_fetch_preflight_current.json")
+    scope_receipt_artifact = _artifact_summary("product_scope_breadth_evidence_receipt_current.json")
+    engine_receipt_artifact = _artifact_summary(
+        "engine_refinement_claim_evidence_receipt_current.json"
+    )
     full_matrix_artifact = _artifact_summary(
         "product_full_commercial_blocker_evidence_matrix_current.json"
     )
@@ -221,6 +291,66 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["commercial_readiness_handoff_bundle_ready"] is True
     assert status["commercial_readiness_handoff_bundle_artifact_reference_count"] == 28
     assert status["commercial_readiness_handoff_bundle_local_missing_artifact_reference_count"] == 0
+    assert status["operator_intake_kit_full_commercial_evidence_receipt_entry_count"] == int(
+        intake_artifact.get("full_commercial_evidence_receipt_entry_count") or 0
+    )
+    assert status[
+        "operator_intake_kit_full_commercial_evidence_receipt_operator_input_required_count"
+    ] == int(
+        intake_artifact.get(
+            "full_commercial_evidence_receipt_operator_input_required_count"
+        )
+        or 0
+    )
+    assert status[
+        "operator_intake_kit_full_commercial_evidence_receipt_current_action_required_count"
+    ] == int(
+        intake_artifact.get("full_commercial_evidence_receipt_current_action_required_count")
+        or 0
+    )
+    assert status[
+        "operator_intake_kit_full_commercial_evidence_receipt_template_required_count"
+    ] == int(
+        intake_artifact.get("full_commercial_evidence_receipt_template_required_count")
+        or 0
+    )
+    assert status[
+        "operator_intake_kit_full_commercial_evidence_receipt_template_present_count"
+    ] == int(
+        intake_artifact.get("full_commercial_evidence_receipt_template_present_count")
+        or 0
+    )
+    assert status[
+        "operator_intake_kit_full_commercial_evidence_receipt_approval_token_count"
+    ] == int(
+        intake_artifact.get("full_commercial_evidence_receipt_approval_token_count")
+        or 0
+    )
+    assert status["operator_intake_kit_full_commercial_evidence_receipt_entry_ids"] == (
+        intake_artifact.get("full_commercial_evidence_receipt_entry_ids")
+    )
+    assert status[
+        "operator_intake_kit_full_commercial_evidence_receipt_source_gate_statuses"
+    ] == intake_artifact.get("full_commercial_evidence_receipt_source_gate_statuses")
+    assert status[
+        "operator_intake_kit_full_commercial_evidence_receipt_required_inputs"
+    ] == intake_artifact.get("full_commercial_evidence_receipt_required_inputs")
+    assert status[
+        "operator_intake_kit_full_commercial_evidence_receipt_approval_tokens"
+    ] == intake_artifact.get("full_commercial_evidence_receipt_approval_tokens")
+    assert status["operator_intake_kit_full_commercial_evidence_receipt_entry_count"] == 2
+    assert (
+        "blocked_product_scope_breadth_evidence_receipt"
+        in status[
+            "operator_intake_kit_full_commercial_evidence_receipt_source_gate_statuses"
+        ]
+    )
+    assert (
+        "blocked_engine_refinement_claim_evidence_receipt"
+        in status[
+            "operator_intake_kit_full_commercial_evidence_receipt_source_gate_statuses"
+        ]
+    )
     assert status["production_ai_registry_promotion_operator_receipt_status"] == (
         handoff_artifact.get("production_ai_registry_promotion_operator_receipt_status")
     )
@@ -254,6 +384,97 @@ def test_api_app_imports_with_goal_router() -> None:
     )
     assert "default_residual_mode_guarded" in status[
         "production_ai_registry_promotion_operator_receipt_observed_checkpoint_registry_promotion_missing_gate_ids"
+    ]
+    assert status["cameo_official_result_fetch_preflight_status"] == cameo_fetch_artifact.get(
+        "status"
+    )
+    assert status["cameo_official_result_fetch_preflight_status"] == (
+        "blocked_cameo_official_result_fetch_preflight"
+    )
+    assert status["cameo_official_result_fetch_preflight_ready"] is False
+    assert status["cameo_official_result_fetch_preflight_artifact_path"].endswith(
+        "runs/cameo_official_result_fetch_preflight_current.json"
+    )
+    assert status["cameo_official_result_fetch_preflight_operator_template_csv"] == (
+        cameo_fetch_artifact.get("operator_template_csv")
+    )
+    assert status["cameo_official_result_fetch_preflight_operator_intake_csv"] == (
+        cameo_fetch_artifact.get("operator_fetch_csv")
+    )
+    assert status["cameo_official_result_fetch_preflight_kit_template_path"] == (
+        "runs/goal_operator_intake_kit_current/templates/"
+        "cameo_official_result_fetch_operator_approval_template_current.csv"
+    )
+    assert status["cameo_official_result_fetch_preflight_approval_token_required"] == (
+        "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH"
+    )
+    assert status["cameo_official_result_fetch_preflight_kit_status"] == "approval_required"
+    assert status["cameo_official_result_fetch_preflight_operator_fetch_csv_present"] is False
+    assert (
+        status[
+            "cameo_official_result_fetch_preflight_authorized_for_separate_operator_fetch"
+        ]
+        is False
+    )
+    assert status["cameo_official_result_fetch_preflight_network_request_opened"] is False
+    assert status["cameo_official_result_fetch_preflight_official_results_fetched"] is False
+    assert status["cameo_official_result_fetch_preflight_native_local_accuracy_used"] is False
+    assert status["cameo_official_result_fetch_preflight_external_state_mutated"] is False
+    assert status["cameo_official_result_fetch_preflight_blocker_count"] == int(
+        cameo_fetch_artifact.get("blocker_count") or 0
+    )
+    assert "operator_fetch_csv_missing" in status[
+        "cameo_official_result_fetch_preflight_blockers"
+    ]
+    _assert_receipt_fields(
+        status=status,
+        prefix="product_scope_breadth_evidence_receipt",
+        artifact=scope_receipt_artifact,
+        path_suffix="runs/product_scope_breadth_evidence_receipt_current.json",
+        ready_key="full_scope_evidence_receipt_ready",
+        first_blocked_id_source_key="first_blocked_scope_blocker_id",
+        first_blocked_id_status_key="first_blocked_scope_blocker_id",
+        required_blocker_count_key="required_scope_blocker_count",
+        required_blockers_key="required_scope_blockers",
+    )
+    assert status["product_scope_breadth_evidence_receipt_status"] == (
+        "blocked_product_scope_breadth_evidence_receipt"
+    )
+    assert status["product_scope_breadth_evidence_receipt_blocked_row_count"] == 6
+    assert status["product_scope_breadth_evidence_receipt_pass_row_count"] == 0
+    assert status["product_scope_breadth_evidence_receipt_approval_token_required"] == (
+        "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+    )
+    assert status["product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id"] == (
+        "direct_binding_evidence_missing"
+    )
+    assert "operator_placeholders_unfilled" in status[
+        "product_scope_breadth_evidence_receipt_first_blocked_row_blockers"
+    ]
+    _assert_receipt_fields(
+        status=status,
+        prefix="engine_refinement_claim_evidence_receipt",
+        artifact=engine_receipt_artifact,
+        path_suffix="runs/engine_refinement_claim_evidence_receipt_current.json",
+        ready_key="claim_promotion_evidence_receipt_ready",
+        first_blocked_id_source_key="first_blocked_blocker_id",
+        first_blocked_id_status_key="first_blocked_blocker_id",
+        required_blocker_count_key="required_blocker_count",
+        required_blockers_key="required_blockers",
+    )
+    assert status["engine_refinement_claim_evidence_receipt_status"] == (
+        "blocked_engine_refinement_claim_evidence_receipt"
+    )
+    assert status["engine_refinement_claim_evidence_receipt_blocked_row_count"] == 6
+    assert status["engine_refinement_claim_evidence_receipt_pass_row_count"] == 0
+    assert status["engine_refinement_claim_evidence_receipt_approval_token_required"] == (
+        "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+    )
+    assert status["engine_refinement_claim_evidence_receipt_first_blocked_blocker_id"] == (
+        "public_benchmark_gate_not_ready"
+    )
+    assert "operator_placeholders_unfilled" in status[
+        "engine_refinement_claim_evidence_receipt_first_blocked_row_blockers"
     ]
     assert status["full_commercial_blocker_evidence_matrix_status"] == full_matrix_artifact.get(
         "status"

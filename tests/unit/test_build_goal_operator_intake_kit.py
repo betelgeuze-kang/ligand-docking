@@ -125,6 +125,14 @@ def _action_board() -> dict:
 def _source_packets() -> dict[str, dict]:
     return {
         mod.DEFAULT_CAMEO_OFFICIAL_RESULTS_GATE_JSON: {"summary": {"status": "blocked_cameo_official_results_intake"}},
+        mod.DEFAULT_CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_JSON: {
+            "summary": {
+                "status": "blocked_cameo_official_result_fetch_preflight",
+                "operator_fetch_csv_present": False,
+                "fetch_approval_token_required": mod.CAMEO_OFFICIAL_RESULT_FETCH_APPROVAL_TOKEN,
+                "external_state_mutated": False,
+            }
+        },
         mod.DEFAULT_CAMEO_REGISTRATION_GATE_JSON: {"summary": {"status": "blocked_cameo_public_registration_approval_gate"}},
         mod.DEFAULT_PRODUCT_EXECUTION_GATE_JSON: {"summary": {"status": "blocked_product_execution_operator_approval_gate"}},
         mod.DEFAULT_API_RUNNER_PROFILE_PROMOTION_RECEIPT_JSON: {
@@ -293,13 +301,35 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     summary = payload["summary"]
     by_id = {row["kit_entry_id"]: row for row in payload["rows"]}
     assert summary["status"] == "goal_operator_intake_kit_ready"
-    assert summary["entry_count"] == 17
+    assert summary["entry_count"] == 18
     assert summary["source_action_count"] == 9
     assert summary["release_burndown_source_row_count"] == 8
-    assert summary["release_burndown_linked_entry_count"] == 11
-    assert summary["operator_input_required_count"] == 16
+    assert summary["release_burndown_linked_entry_count"] == 12
+    assert summary["operator_input_required_count"] == 17
     assert summary["current_action_required_count"] == 12
-    assert summary["deferred_operator_input_count"] == 4
+    assert summary["deferred_operator_input_count"] == 5
+    assert summary["full_commercial_evidence_receipt_entry_count"] == 2
+    assert summary["full_commercial_evidence_receipt_operator_input_required_count"] == 2
+    assert summary["full_commercial_evidence_receipt_current_action_required_count"] == 2
+    assert summary["full_commercial_evidence_receipt_template_required_count"] == 2
+    assert summary["full_commercial_evidence_receipt_template_present_count"] == 2
+    assert summary["full_commercial_evidence_receipt_approval_token_count"] == 2
+    assert summary["full_commercial_evidence_receipt_entry_ids"] == [
+        "product_scope_breadth_evidence_receipt",
+        "engine_refinement_claim_evidence_receipt",
+    ]
+    assert summary["full_commercial_evidence_receipt_source_gate_statuses"] == (
+        "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
+        "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"
+    )
+    assert summary["full_commercial_evidence_receipt_required_inputs"] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv;"
+        "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+    )
+    assert summary["full_commercial_evidence_receipt_approval_tokens"] == (
+        "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT;"
+        "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+    )
     assert by_id["production_ai_registry_promotion"]["kit_status"] == "approval_required"
     assert by_id["production_ai_registry_promotion"]["template_required"] is True
     assert by_id["production_ai_registry_promotion"]["template_path"] == (
@@ -360,6 +390,7 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     assert summary["goal_api_status_endpoint"] == "/goal/status"
     assert summary["goal_api_contract_endpoint"] == "/goal/api-contract"
     assert "APPROVE_API_DEPENDENCY_INSTALL" in summary["approval_tokens"]
+    assert mod.CAMEO_OFFICIAL_RESULT_FETCH_APPROVAL_TOKEN in summary["approval_tokens"]
     assert mod.API_RUNNER_PROFILE_PROMOTION_APPROVAL_TOKEN in summary["approval_tokens"]
     assert mod.PRODUCTION_AI_REGISTRY_PROMOTION_APPROVAL_TOKEN in summary["approval_tokens"]
     assert mod.PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_APPROVAL_TOKEN in summary["approval_tokens"]
@@ -380,6 +411,23 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     assert by_id["cameo_official_results"]["release_burndown_surfaced"] is True
     assert by_id["cameo_official_results"]["release_sequence"] == "3"
     assert by_id["cameo_official_results"]["release_burndown_status"] == "official_results_required"
+    assert by_id["cameo_official_result_fetch_preflight"]["kit_status"] == "approval_required"
+    assert by_id["cameo_official_result_fetch_preflight"]["current_action_surfaced"] is False
+    assert by_id["cameo_official_result_fetch_preflight"]["operator_input_required"] is True
+    assert by_id["cameo_official_result_fetch_preflight"]["operator_input_required_now"] is False
+    assert by_id["cameo_official_result_fetch_preflight"]["source_gate_status"] == (
+        "blocked_cameo_official_result_fetch_preflight"
+    )
+    assert by_id["cameo_official_result_fetch_preflight"]["template_path"] == (
+        "runs/cameo_official_result_fetch_operator_approval_template_current.csv"
+    )
+    assert by_id["cameo_official_result_fetch_preflight"]["intake_path"] == (
+        "runs/cameo_official_result_fetch_operator_approval_intake.csv"
+    )
+    assert by_id["cameo_official_result_fetch_preflight"]["approval_token_required"] == (
+        mod.CAMEO_OFFICIAL_RESULT_FETCH_APPROVAL_TOKEN
+    )
+    assert by_id["cameo_official_result_fetch_preflight"]["release_sequence"] == "3"
     assert by_id["cameo_api_dependency_install"]["template_required"] is False
     assert by_id["cameo_api_dependency_install"]["kit_status"] == "approval_required"
     assert by_id["cameo_api_dependency_install"]["release_sequence"] == "4"
@@ -604,6 +652,7 @@ def test_goal_operator_intake_kit_blocks_when_required_template_is_missing(tmp_p
 def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_path: Path) -> None:
     template_names = [
         "cameo_official.csv",
+        "cameo_official_result_fetch.csv",
         "cameo_registration.csv",
         "product_execution.csv",
         "api_runner_profile_promotion.csv",
@@ -650,6 +699,8 @@ def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_
                 str(release_burndown),
                 "--cameo-official-results-gate-json",
                 str(source_paths[mod.DEFAULT_CAMEO_OFFICIAL_RESULTS_GATE_JSON]),
+                "--cameo-official-result-fetch-preflight-json",
+                str(source_paths[mod.DEFAULT_CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_JSON]),
                 "--cameo-registration-gate-json",
                 str(source_paths[mod.DEFAULT_CAMEO_REGISTRATION_GATE_JSON]),
                 "--product-execution-gate-json",
@@ -692,13 +743,16 @@ def test_goal_operator_intake_kit_tool_writes_manifest_and_copies_templates(tmp_
         mod.CATALOG = original_catalog
 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
-    assert payload["summary"]["template_copied_count"] == 14
-    assert payload["summary"]["release_burndown_linked_entry_count"] == 11
+    assert payload["summary"]["template_copied_count"] == 15
+    assert payload["summary"]["release_burndown_linked_entry_count"] == 12
     assert payload["summary"]["goal_api_surface_contract_status"] == "goal_api_surface_contract_ready"
     assert out_csv.read_text(encoding="utf-8").startswith("kit_entry_id,lane_id,")
     md = out_md.read_text(encoding="utf-8")
     assert "Goal Operator Intake Kit" in md
     assert "release sequence" in md
+    assert (out_dir / "templates" / "cameo_official_result_fetch.csv").read_text(
+        encoding="utf-8"
+    ).startswith("field")
     assert (out_dir / "templates" / "product_license.csv").read_text(encoding="utf-8").startswith("field")
     assert (out_dir / "templates" / "gpu_return_summary.json").read_text(encoding="utf-8").startswith("field")
     assert (out_dir / "templates" / "production_ai_registry_promotion.csv").read_text(

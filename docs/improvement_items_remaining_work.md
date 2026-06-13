@@ -532,7 +532,11 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `full_commercial_blocker_evidence_matrix_first_blocked_*`,
   `full_commercial_blocker_evidence_matrix_scope_receipt_most_common_row_blocker`,
   `full_commercial_blocker_evidence_matrix_engine_receipt_most_common_row_blocker`로도
-  전파된다.
+  전파된다. `/goal/status`는 이제 matrix 요약과 별도로
+  `product_scope_breadth_evidence_receipt_*` 및
+  `engine_refinement_claim_evidence_receipt_*` 필드도 직접 노출해, 두 receipt의
+  status, CSV, approval token, row counts, first-blocked evidence/status/blockers,
+  required blocker 목록이 상위 goal API에서 빠지지 않게 한다.
   `runs/product_goal_completion_audit_current.json`의 `R8_full_scope_claim_closure`
   row도 이 receipt를 evidence artifact와 observed field로 직접 흡수해,
   scope contract가 green처럼 보이더라도 `full_scope_evidence_receipt_ready=false`면
@@ -542,7 +546,11 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `runs/goal_operator_intake_kit_current/manifest.json`은
   `product_scope_breadth_evidence_receipt` entry로
   `config/product_scope_breadth_evidence_receipt_current.csv`를 operator template에
-  복사한다.
+  복사한다. intake kit summary는 R8/R9 receipt 묶음을
+  `full_commercial_evidence_receipt_*` 필드로 별도 집계해 entry count 2,
+  template present 2/2, approval token 2개, 두 source gate status, 두 required input
+  CSV를 한 번 더 고정한다. `/goal/status`도 같은 값을
+  `operator_intake_kit_full_commercial_evidence_receipt_*` 필드로 전달한다.
   같은 R8 receipt 상태는
   `runs/product_commercial_readiness_operator_packet_current.json`과
   `runs/product_commercial_readiness_handoff_bundle_current.json` summary의
@@ -566,16 +574,21 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `goal_api_surface_contract_current.json`, `goal_bottleneck_briefing_current.json`,
   `product_full_commercial_blocker_evidence_matrix_current.json`,
   `production_ai_registry_promotion_operator_receipt_current.json`,
+  `cameo_official_result_fetch_preflight_current.json`,
   `cameo_validation_operations_dossier_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=78`, `pass_count=78`,
-  `blocker_count=0`, `artifact_row_count=55`, `semantic_status_row_count=21`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=82`, `pass_count=82`,
+  `blocker_count=0`, `artifact_row_count=56`, `semantic_status_row_count=24`,
   `release_refresh_command_count=69`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   API/service-boundary semantic readiness와 self-hosted license audit semantic
   readiness도 이 source-of-truth 안으로 편입됐다. 고객-facing AI report explanation/UX semantic
-  readiness는 core/full decision graph 순환을 분리한 뒤 닫혔다. production AI
+  readiness는 core/full decision graph 순환을 분리한 뒤 닫혔다. R8/R9 evidence
+  receipt 자체도 각각 `product_scope_breadth_evidence_receipt_blocked_semantic_ready`,
+  `engine_refinement_claim_evidence_receipt_blocked_semantic_ready` row로 고정되어
+  placeholder evidence, 6/6 blocked rows, approval token requirement, first-blocked
+  diagnostics가 source-of-truth에서 직접 검증된다. production AI
   checkpoint/promotion workbench는 현재 `shadow`/blocked 상태를 semantic-ready row로
   검증한다. API runner profile operator receipt와 production AI registry promotion
   operator receipt도 blocked 상태와 첫 row blocker를 semantic-ready row로 검증한다.
@@ -584,6 +597,11 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   source-of-truth의 `goal_api_surface_contract_semantic_ready` row도
   `missing_status_key_count=0`, `missing_full_commercial_visibility_token_count=0`,
   `missing_fail_closed_flag_count=0`, `blocker_count=0`을 exact field로 검증한다.
+  같은 source-of-truth는 CAMEO official-result fetch preflight도
+  `blocked_cameo_official_result_fetch_preflight` semantic-ready row로 직접 검증해
+  `operator_fetch_csv_present=false`, `network_request_opened=false`,
+  `official_results_fetched=false`,
+  `fetch_approval_token_required=APPROVE_CAMEO_OFFICIAL_RESULT_FETCH`가 drift하지 않게 한다.
   `product_ledger_privacy_scan_current.json`도 goal-facing JSON artifacts
   (`goal_readiness_rollup`, `goal_operator_action_board`, `goal_operator_intake_kit`,
   `goal_release_burndown_work_order`,
@@ -770,6 +788,15 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `authorized_for_separate_operator_fetch=false`,
   `network_request_opened=false`, `official_results_fetched=false`,
   `native_local_accuracy_used=false`, `external_state_mutated=false`다.
+  `runs/goal_operator_intake_kit_current/manifest.json`도
+  `cameo_official_result_fetch_preflight` entry를 추가로 노출하며,
+  `runs/cameo_official_result_fetch_operator_approval_template_current.csv`를
+  kit template으로 복사하고 expected intake
+  `runs/cameo_official_result_fetch_operator_approval_intake.csv`와
+  `APPROVE_CAMEO_OFFICIAL_RESULT_FETCH` 토큰을 함께 표시한다. `/goal/status`도
+  `cameo_official_result_fetch_preflight_*` keys로 preflight status,
+  template/intake path, approval token, blocked flags, no-network/no-fetch 상태를
+  직접 노출한다.
 - `runs/cameo_validation_operations_dossier_current.json`은
   `stage_count=10`, `blocked_stage_count=1`, `approval_required_stage_count=1`,
   `official_result_fetch_preflight_ready=false`,
@@ -1018,7 +1045,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=61`, `executed_count=61`,
+  `product_release_current_refresh_verified`, `command_count=69`, `executed_count=69`,
   `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=true`,
   `final_gate_blocker_count=0`이다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
@@ -1055,8 +1082,8 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 - release source-of-truth gate는 R4 preflight, R4 rollout smoke receipt artifact,
   R8 scope-breadth receipt, goal operator intake kit, commercial readiness execution
   ladder, API/bottleneck visibility, production AI registry promotion operator
-  receipt, master gap closure rollup 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=78/78`,
+  receipt, CAMEO official-result fetch preflight, master gap closure rollup 포함 refresh 이후
+  `product_release_source_of_truth_gate_ready`, `pass_count=82/82`,
   `blocker_count=0`, `stale_artifact_count=0`,
   `release_refresh_command_count=69`으로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.

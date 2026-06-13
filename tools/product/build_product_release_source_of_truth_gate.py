@@ -555,6 +555,18 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "artifact_id": "cameo_official_result_fetch_preflight",
+        "artifact_path": "runs/cameo_official_result_fetch_preflight_current.json",
+        "builder_command": "python3 tools/build_cameo_official_result_fetch_preflight.py",
+        "depends_on": [
+            "betelgeuze_cameo/official_result_fetch_preflight.py",
+            "tools/cameo/build_cameo_official_result_fetch_preflight.py",
+            "tools/accounting/build_cameo_official_result_fetch_preflight.py",
+            "tools/build_cameo_official_result_fetch_preflight.py",
+            "runs/cameo_official_result_fetch_operator_approval_template_current.csv",
+        ],
+    },
+    {
         "artifact_id": "goal_readiness_rollup",
         "artifact_path": "runs/goal_readiness_rollup_current.json",
         "builder_command": "python3 tools/build_goal_readiness_rollup.py",
@@ -1032,6 +1044,32 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         },
     },
     {
+        "artifact_id": "cameo_official_result_fetch_preflight_blocked_semantic_ready",
+        "artifact_path": "runs/cameo_official_result_fetch_preflight_current.json",
+        "builder_command": "python3 tools/build_cameo_official_result_fetch_preflight.py",
+        "required_status": "blocked_cameo_official_result_fetch_preflight",
+        "required_true_fields": [
+            "operations_surface_ready",
+            "receiver_smoke_ready",
+        ],
+        "required_int_exact_fields": {
+            "operator_fetch_csv_present": 0,
+            "authorized_for_separate_operator_fetch": 0,
+            "network_request_opened": 0,
+            "official_results_fetched": 0,
+            "native_local_accuracy_used": 0,
+            "external_state_mutated": 0,
+            "blocker_count": 2,
+            "blocked_row_count": 1,
+            "awaiting_operator_fetch_approval_row_count": 1,
+        },
+        "required_text_exact_fields": {
+            "operator_fetch_csv": "runs/cameo_official_result_fetch_operator_approval_intake.csv",
+            "operator_template_csv": "runs/cameo_official_result_fetch_operator_approval_template_current.csv",
+            "fetch_approval_token_required": "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH",
+        },
+    },
+    {
         "artifact_id": "product_production_ai_checkpoint_shadow_blocked_semantic_ready",
         "artifact_path": "runs/product_production_ai_checkpoint_readiness_current.json",
         "builder_command": "python3 tools/build_product_production_ai_checkpoint_readiness.py",
@@ -1105,6 +1143,69 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         },
     },
     {
+        "artifact_id": "product_scope_breadth_evidence_receipt_blocked_semantic_ready",
+        "artifact_path": "runs/product_scope_breadth_evidence_receipt_current.json",
+        "builder_command": "python3 tools/build_product_scope_breadth_evidence_receipt.py",
+        "required_status": "blocked_product_scope_breadth_evidence_receipt",
+        "required_true_fields": [
+            "receipt_csv_present",
+            "scope_checklist_present",
+        ],
+        "required_int_exact_fields": {
+            "full_scope_evidence_receipt_ready": 0,
+            "receipt_row_count": 6,
+            "pass_row_count": 0,
+            "blocked_row_count": 6,
+            "blocker_count": 1,
+            "evidence_artifact_present_count": 0,
+            "evidence_status_verified_count": 0,
+            "required_scope_blocker_count": 6,
+            "missing_required_scope_blocker_count": 0,
+            "external_state_mutated": 0,
+        },
+        "required_text_exact_fields": {
+            "approval_token_required": "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT",
+            "receipt_csv": "config/product_scope_breadth_evidence_receipt_current.csv",
+            "first_blocked_scope_blocker_id": "direct_binding_evidence_missing",
+            "first_blocked_evidence_artifact": "OPERATOR_FILL_LOCAL_EVIDENCE_JSON",
+            "first_blocked_expected_evidence_status": (
+                "product_scope_transporter_direct_binding_evidence_ready"
+            ),
+            "first_blocked_observed_evidence_status": "missing",
+            "most_common_row_blocker": "operator_placeholders_unfilled",
+        },
+    },
+    {
+        "artifact_id": "engine_refinement_claim_evidence_receipt_blocked_semantic_ready",
+        "artifact_path": "runs/engine_refinement_claim_evidence_receipt_current.json",
+        "builder_command": "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py",
+        "required_status": "blocked_engine_refinement_claim_evidence_receipt",
+        "required_true_fields": [
+            "receipt_csv_present",
+        ],
+        "required_int_exact_fields": {
+            "claim_promotion_evidence_receipt_ready": 0,
+            "receipt_row_count": 6,
+            "pass_row_count": 0,
+            "blocked_row_count": 6,
+            "blocker_count": 1,
+            "evidence_artifact_present_count": 0,
+            "evidence_status_verified_count": 0,
+            "required_blocker_count": 6,
+            "missing_required_blocker_count": 0,
+            "external_state_mutated": 0,
+        },
+        "required_text_exact_fields": {
+            "approval_token_required": "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT",
+            "receipt_csv": "config/engine_refinement_claim_promotion_evidence_receipt_current.csv",
+            "first_blocked_blocker_id": "public_benchmark_gate_not_ready",
+            "first_blocked_evidence_artifact": "OPERATOR_FILL_LOCAL_EVIDENCE_JSON",
+            "first_blocked_expected_evidence_status": "refine_tier_public_benchmark_ready",
+            "first_blocked_observed_evidence_status": "missing",
+            "most_common_row_blocker": "operator_placeholders_unfilled",
+        },
+    },
+    {
         "artifact_id": "product_full_commercial_blocker_evidence_matrix_semantic_ready",
         "artifact_path": "runs/product_full_commercial_blocker_evidence_matrix_current.json",
         "builder_command": "python3 tools/build_product_full_commercial_blocker_evidence_matrix.py",
@@ -1160,6 +1261,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_true_fields": [],
         "required_int_exact_fields": {
             "product_goal_release_blocker_fail_count": 2,
+            "full_commercial_evidence_receipt_entry_count": 2,
+            "full_commercial_evidence_receipt_operator_input_required_count": 2,
+            "full_commercial_evidence_receipt_current_action_required_count": 2,
+            "full_commercial_evidence_receipt_template_required_count": 2,
+            "full_commercial_evidence_receipt_template_present_count": 2,
+            "full_commercial_evidence_receipt_approval_token_count": 2,
         },
         "required_text_exact_fields": {
             "product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
@@ -1172,6 +1279,18 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "config/product_scope_breadth_evidence_receipt_current.csv"
             ),
             "primary_release_blocker_action_status": "required",
+            "full_commercial_evidence_receipt_source_gate_statuses": (
+                "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
+                "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"
+            ),
+            "full_commercial_evidence_receipt_required_inputs": (
+                "config/product_scope_breadth_evidence_receipt_current.csv;"
+                "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+            ),
+            "full_commercial_evidence_receipt_approval_tokens": (
+                "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT;"
+                "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+            ),
         },
     },
     {

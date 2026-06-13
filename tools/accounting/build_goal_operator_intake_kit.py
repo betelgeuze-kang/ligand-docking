@@ -13,12 +13,20 @@ from tools.build_cameo_official_results_intake_gate import (
     DEFAULT_RESULTS_CSV as DEFAULT_CAMEO_OFFICIAL_RESULTS_INTAKE_CSV,
     DEFAULT_TEMPLATE_CSV as DEFAULT_CAMEO_OFFICIAL_RESULTS_TEMPLATE_CSV,
 )
+from tools.build_cameo_official_result_fetch_preflight import (
+    DEFAULT_OPERATOR_FETCH_CSV as DEFAULT_CAMEO_OFFICIAL_RESULT_FETCH_INTAKE_CSV,
+    DEFAULT_OUT_JSON as DEFAULT_CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_JSON,
+    DEFAULT_TEMPLATE_CSV as DEFAULT_CAMEO_OFFICIAL_RESULT_FETCH_TEMPLATE_CSV,
+)
 from tools.build_cameo_public_registration_approval_gate import (
     DEFAULT_OPERATOR_APPROVAL_CSV as DEFAULT_CAMEO_REGISTRATION_INTAKE_CSV,
     DEFAULT_OUT_JSON as DEFAULT_CAMEO_REGISTRATION_GATE_JSON,
     DEFAULT_TEMPLATE_CSV as DEFAULT_CAMEO_REGISTRATION_TEMPLATE_CSV,
     OUTBOUND_EMAIL_APPROVAL_TOKEN,
     REGISTRATION_APPROVAL_TOKEN,
+)
+from betelgeuze_cameo.official_result_fetch_preflight import (
+    FETCH_APPROVAL_TOKEN as CAMEO_OFFICIAL_RESULT_FETCH_APPROVAL_TOKEN,
 )
 from tools.build_cleanup_execution_approval_gate import (
     DEFAULT_OPERATOR_APPROVAL_CSV as DEFAULT_CLEANUP_APPROVAL_INTAKE_CSV,
@@ -95,6 +103,10 @@ DEFAULT_TRANSPORTER_MANUAL_REVIEW_TEMPLATE_CSV = "runs/transporter_manual_review
 DEFAULT_TRANSPORTER_MANUAL_REVIEW_INTAKE_CSV = "runs/transporter_manual_review_intake_template_current.csv"
 DEFAULT_PXR_EXACT_REVIEW_TEMPLATE_CSV = "runs/pxr_exact_evidence_review_intake_template_current.csv"
 DEFAULT_PXR_EXACT_REVIEW_INTAKE_CSV = "runs/pxr_exact_evidence_review_intake_template_current.csv"
+FULL_COMMERCIAL_EVIDENCE_RECEIPT_ENTRY_IDS = (
+    "product_scope_breadth_evidence_receipt",
+    "engine_refinement_claim_evidence_receipt",
+)
 
 CLAIM_BOUNDARY = (
     "Goal operator intake kit only; it consolidates existing operator templates, expected intake paths, approval tokens, "
@@ -117,6 +129,21 @@ CATALOG: list[dict[str, Any]] = [
         "official_result_required": True,
         "release_checks": "official_cameo_validation_evidence_ready;official_cameo_results_used",
         "recommended_action": "Fill the intake CSV from official CAMEO assessment output only.",
+    },
+    {
+        "kit_entry_id": "cameo_official_result_fetch_preflight",
+        "lane_id": "cameo_validation",
+        "action_types": [],
+        "input_kind": "official_result_fetch_approval_intake",
+        "source_gate_json": DEFAULT_CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_JSON,
+        "template_path": DEFAULT_CAMEO_OFFICIAL_RESULT_FETCH_TEMPLATE_CSV,
+        "intake_path": DEFAULT_CAMEO_OFFICIAL_RESULT_FETCH_INTAKE_CSV,
+        "approval_token_required": CAMEO_OFFICIAL_RESULT_FETCH_APPROVAL_TOKEN,
+        "release_checks": "official_cameo_validation_evidence_ready;official_cameo_results_used",
+        "recommended_action": (
+            "Fill the official-result fetch approval CSV with an HTTPS result URL, official record id, model-1 "
+            "candidate id, and approval token before any separate operator-run retrieval step."
+        ),
     },
     {
         "kit_entry_id": "cameo_api_dependency_install",
@@ -613,6 +640,9 @@ def build_goal_operator_intake_kit(
 
     goal_api_surface = _summary(source_packets.get(DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON, {}))
     product_commercial = _summary(source_packets.get(DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON, {}))
+    full_commercial_receipt_rows = [
+        row for row in rows if row["kit_entry_id"] in FULL_COMMERCIAL_EVIDENCE_RECEIPT_ENTRY_IDS
+    ]
     template_rows = [row for row in rows if row["template_required"]]
     missing_template_rows = [row for row in template_rows if not row["template_present"]]
     copied_template_rows = [row for row in template_rows if row["kit_template_copied"]]
@@ -645,6 +675,40 @@ def build_goal_operator_intake_kit(
         "current_action_required_count": sum(1 for row in rows if row["operator_input_required_now"]),
         "deferred_operator_input_count": sum(
             1 for row in rows if row["operator_input_required"] and not row["operator_input_required_now"]
+        ),
+        "full_commercial_evidence_receipt_entry_count": len(full_commercial_receipt_rows),
+        "full_commercial_evidence_receipt_operator_input_required_count": sum(
+            1 for row in full_commercial_receipt_rows if row["operator_input_required"]
+        ),
+        "full_commercial_evidence_receipt_current_action_required_count": sum(
+            1 for row in full_commercial_receipt_rows if row["operator_input_required_now"]
+        ),
+        "full_commercial_evidence_receipt_template_required_count": sum(
+            1 for row in full_commercial_receipt_rows if row["template_required"]
+        ),
+        "full_commercial_evidence_receipt_template_present_count": sum(
+            1 for row in full_commercial_receipt_rows if row["template_present"]
+        ),
+        "full_commercial_evidence_receipt_approval_token_count": len(
+            {
+                token
+                for row in full_commercial_receipt_rows
+                for token in _text(row.get("approval_token_required")).split(";")
+                if token
+            }
+        ),
+        "full_commercial_evidence_receipt_entry_ids": list(FULL_COMMERCIAL_EVIDENCE_RECEIPT_ENTRY_IDS),
+        "full_commercial_evidence_receipt_source_gate_statuses": _unique_text(
+            [
+                f"{row['kit_entry_id']}={row['source_gate_status']}"
+                for row in full_commercial_receipt_rows
+            ]
+        ),
+        "full_commercial_evidence_receipt_required_inputs": _unique_text(
+            [row["intake_path"] for row in full_commercial_receipt_rows]
+        ),
+        "full_commercial_evidence_receipt_approval_tokens": _unique_text(
+            [row["approval_token_required"] for row in full_commercial_receipt_rows]
         ),
         "primary_action_id": primary_action_id,
         "top_action_id": _text(action_board_summary.get("top_action_id")) or primary_action_id,
@@ -757,6 +821,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- primary_release_blocker_action_id: `{s['primary_release_blocker_action_id']}`",
         f"- primary_release_blocker_action_status: `{s['primary_release_blocker_action_status']}`",
         f"- primary_release_blocker_action_required_input: `{s['primary_release_blocker_action_required_input']}`",
+        f"- full_commercial_evidence_receipt_entry_count: `{s['full_commercial_evidence_receipt_entry_count']}`",
+        f"- full_commercial_evidence_receipt_operator_input_required_count: `{s['full_commercial_evidence_receipt_operator_input_required_count']}`",
+        f"- full_commercial_evidence_receipt_current_action_required_count: `{s['full_commercial_evidence_receipt_current_action_required_count']}`",
+        f"- full_commercial_evidence_receipt_template_present_count: `{s['full_commercial_evidence_receipt_template_present_count']}` / `{s['full_commercial_evidence_receipt_template_required_count']}`",
+        f"- full_commercial_evidence_receipt_source_gate_statuses: `{s['full_commercial_evidence_receipt_source_gate_statuses']}`",
+        f"- full_commercial_evidence_receipt_required_inputs: `{s['full_commercial_evidence_receipt_required_inputs']}`",
         f"- approval_required_count: `{s['approval_required_count']}`",
         f"- official_results_required_count: `{s['official_results_required_count']}`",
         f"- policy_decision_required_count: `{s['policy_decision_required_count']}`",
@@ -792,6 +862,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--action-board-json", default=DEFAULT_ACTION_BOARD_JSON)
     parser.add_argument("--release-burndown-json", default=DEFAULT_RELEASE_BURNDOWN_JSON)
     parser.add_argument("--cameo-official-results-gate-json", default=DEFAULT_CAMEO_OFFICIAL_RESULTS_GATE_JSON)
+    parser.add_argument(
+        "--cameo-official-result-fetch-preflight-json",
+        default=DEFAULT_CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_JSON,
+    )
     parser.add_argument("--cameo-registration-gate-json", default=DEFAULT_CAMEO_REGISTRATION_GATE_JSON)
     parser.add_argument("--product-execution-gate-json", default=DEFAULT_PRODUCT_EXECUTION_GATE_JSON)
     parser.add_argument(
@@ -836,6 +910,9 @@ def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     source_packets = {
         DEFAULT_CAMEO_OFFICIAL_RESULTS_GATE_JSON: _read_json_if_present(args.cameo_official_results_gate_json),
+        DEFAULT_CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_JSON: _read_json_if_present(
+            args.cameo_official_result_fetch_preflight_json
+        ),
         DEFAULT_CAMEO_REGISTRATION_GATE_JSON: _read_json_if_present(args.cameo_registration_gate_json),
         DEFAULT_PRODUCT_EXECUTION_GATE_JSON: _read_json_if_present(args.product_execution_gate_json),
         DEFAULT_API_RUNNER_PROFILE_PROMOTION_RECEIPT_JSON: _read_json_if_present(
