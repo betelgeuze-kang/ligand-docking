@@ -119,13 +119,27 @@ def test_license_file_creation_work_order_blocks_when_license_text_source_file_i
     assert any(blocker["code"] == "license_text_source_file_ready_not_ready" for blocker in payload["blockers"])
 
 
-def test_license_file_creation_work_order_blocks_when_license_already_present() -> None:
+def test_license_file_creation_work_order_reviews_when_license_already_present(tmp_path: Path) -> None:
+    license_text = tmp_path / "product-license-template.txt"
+    license_text.write_text("Operator approved existing license text.\n", encoding="utf-8")
+    license_decision = _license_decision_ready(str(license_text))
+    license_decision["summary"]["license_present"] = True
+
     payload = build_product_license_file_creation_work_order(
-        license_decision_gate_packet=_license_decision_ready(),
+        license_decision_gate_packet=license_decision,
         commercial_independence_gate_packet=_commercial_gate_with_license_present(),
     )
 
-    assert payload["summary"]["status"] == "blocked_product_license_file_creation_work_order"
-    failed = {row["check"] for row in payload["rows"] if row["status"] == "fail"}
-    assert {"license_not_already_present", "commercial_gate_only_license_blocked"} <= failed
+    summary = payload["summary"]
+    assert summary["status"] == "product_license_file_creation_work_order_ready"
+    assert summary["license_file_creation_review_ready"] is True
+    assert summary["license_present"] is True
+    assert summary["commercial_independence_ready"] is True
+    assert summary["license_review_state_ready"] is True
+    assert summary["license_file_write_command_template"] == ""
+    assert summary["license_review_manifest_ready"] is True
+    assert all(row["status"] == "pass" for row in payload["rows"])
+    create_item = next(row for row in payload["work_items"] if row["step"] == "create_or_review_license_file")
+    assert create_item["status"] == "ready_for_existing_license_review"
+    assert create_item["command_template"] == ""
     assert payload["summary"]["license_file_written"] is False

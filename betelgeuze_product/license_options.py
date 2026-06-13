@@ -130,6 +130,15 @@ def _only_license_blocker(commercial_packet: dict[str, Any]) -> bool:
     )
 
 
+def _commercial_independence_ready(commercial_packet: dict[str, Any]) -> bool:
+    commercial = _summary(commercial_packet)
+    return (
+        _text(commercial.get("status")) == "product_commercial_independence_gate_ready"
+        and _int(commercial.get("blocker_count")) == 0
+        and _bool(commercial.get("license_present"))
+    )
+
+
 def build_product_license_decision_packet(
     *,
     commercial_independence_gate_packet: dict[str, Any],
@@ -141,7 +150,9 @@ def build_product_license_decision_packet(
     license_decision = _summary(license_decision_gate_packet)
     license_present = _bool(commercial.get("license_present")) or _bool(license_decision.get("license_present"))
     commercial_only_license_blocked = _only_license_blocker(commercial_independence_gate_packet)
+    commercial_independence_ready = _commercial_independence_ready(commercial_independence_gate_packet)
     authorized = _bool(license_decision.get("authorized_for_license_file_creation_review"))
+    license_decision_ready = _text(license_decision.get("status")) == "product_license_decision_gate_ready"
     operator_intake_present = _bool(license_decision.get("operator_intake_csv_present"))
     operator_intake_fill_command_template = (
         "python3 tools/fill_product_license_decision_operator_intake.py "
@@ -199,7 +210,7 @@ def build_product_license_decision_packet(
                 "reason": "A license artifact is already present; use the commercial-independence gate rather than creating a new file.",
             }
         )
-    if not commercial_only_license_blocked:
+    if not commercial_only_license_blocked and not commercial_independence_ready:
         blockers.append(
             {
                 "code": "commercial_gate_not_license_only",
@@ -207,17 +218,39 @@ def build_product_license_decision_packet(
                 "reason": "License decision packet is intended for the current state where license_file_present is the only commercial-independence blocker.",
             }
         )
+    if commercial_independence_ready and not license_decision_ready:
+        blockers.append(
+            {
+                "code": "license_decision_gate_not_ready",
+                "severity": "hard",
+                "reason": "Commercial independence is ready, but the license-decision gate is not ready.",
+            }
+        )
 
-    status = "product_license_decision_packet_ready" if commercial_only_license_blocked and not license_present else "blocked_product_license_decision_packet"
+    hard_blocker_count = sum(1 for blocker in blockers if blocker.get("severity") == "hard")
+    review_item_count = sum(1 for blocker in blockers if blocker.get("severity") == "review")
+    status = (
+        "product_license_decision_packet_ready"
+        if hard_blocker_count == 0
+        and (
+            (commercial_only_license_blocked and not license_present)
+            or (commercial_independence_ready and license_decision_ready and license_present)
+        )
+        else "blocked_product_license_decision_packet"
+    )
     summary = {
         "packet_type": "product_license_decision_packet",
         "status": status,
         "option_count": len(rows),
         "ready_local_license_text_source_candidate_count": ready_local_source_count,
-        "blocker_count": len(blockers),
+        "blocker_count": hard_blocker_count,
+        "hard_blocker_count": hard_blocker_count,
+        "review_item_count": review_item_count,
         "commercial_gate_status": _text(commercial.get("status")),
         "commercial_gate_only_license_blocked": commercial_only_license_blocked,
+        "commercial_independence_ready": commercial_independence_ready,
         "license_decision_gate_status": _text(license_decision.get("status")),
+        "license_decision_gate_ready": license_decision_ready,
         "license_decision_authorized_for_file_creation_review": authorized,
         "operator_intake_csv_present": operator_intake_present,
         "operator_template_csv": operator_template_csv,

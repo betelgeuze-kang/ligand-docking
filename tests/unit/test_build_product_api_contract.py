@@ -260,6 +260,25 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "third_party_license_review_gate_ready" in license_audit_keys
     assert "legal_advice_provided" in license_audit_keys
     assert "operator_review_items" in license_audit_keys
+    assert EXPECTED_ROUTES["get_product_license_options"] == ("GET", "/license-options")
+    license_options_keys = REQUIRED_STATUS_DOMAIN_KEYS["get_product_license_options"]
+    assert "option_count" in license_options_keys
+    assert "blocker_count" in license_options_keys
+    assert "hard_blocker_count" in license_options_keys
+    assert "review_item_count" in license_options_keys
+    assert "commercial_independence_ready" in license_options_keys
+    assert "license_decision_gate_ready" in license_options_keys
+    assert "license_decision_authorized_for_file_creation_review" in license_options_keys
+    assert "approval_token_required" in license_options_keys
+    assert "license_present" in license_options_keys
+    assert "options" in license_options_keys
+    assert "blockers" in license_options_keys
+    assert EXPECTED_ROUTES["get_product_license_file_work_order"] == ("GET", "/license-file-work-order")
+    license_work_order_keys = REQUIRED_STATUS_DOMAIN_KEYS["get_product_license_file_work_order"]
+    assert "commercial_independence_ready" in license_work_order_keys
+    assert "license_review_state_ready" in license_work_order_keys
+    assert "license_review_manifest_ready" in license_work_order_keys
+    assert "authorized_for_license_file_creation_review" in license_work_order_keys
     assert "evidence_queue_next_operator_completion_aqp1_review_sidecar_ready" in scope_breadth_keys
     assert "evidence_queue_next_operator_completion_aqp1_review_candidate_name" in scope_breadth_keys
     assert (

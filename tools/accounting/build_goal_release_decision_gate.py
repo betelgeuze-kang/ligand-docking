@@ -339,11 +339,18 @@ def build_goal_release_decision_gate(
         and _text(self_hosted_license_audit.get("product_license_sha256"))
         == _text(self_hosted_license_audit.get("approved_license_text_source_sha256"))
     )
+    self_hosted_license_audit_approved_source = _text(
+        self_hosted_license_audit.get("approved_license_text_source")
+    )
+    self_hosted_license_audit_source_ready = self_hosted_license_audit_approved_source in {
+        "LICENSE",
+        "legal/proprietary-license-betelgeuze.txt",
+    }
     self_hosted_license_audit_recorded = (
         _text(self_hosted_license_audit.get("status"))
         == "self_hosted_license_distribution_audit_recorded"
         and _text(self_hosted_license_audit.get("product_license_path")) == "LICENSE"
-        and _text(self_hosted_license_audit.get("approved_license_text_source")) == "LICENSE"
+        and self_hosted_license_audit_source_ready
         and self_hosted_license_audit_hashes_match
         and _text(self_hosted_license_audit.get("spdx_license_id")) == "ProprietaryRef-Betelgeuze"
         and _text(self_hosted_license_audit.get("copyright_holder")) == "JIHOON KANG"

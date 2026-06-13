@@ -2318,7 +2318,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         "config/product_scope_breadth_evidence_receipt_current.csv"
     )
     assert handoff_bundle["artifact_reference_contract_ready"] is True
-    assert handoff_bundle["artifact_reference_count"] == 29
+    assert handoff_bundle["artifact_reference_count"] == 34
     assert handoff_bundle["local_missing_artifact_reference_count"] == 0
     assert handoff_bundle["operator_return_artifact_reference_count"] >= 4
     assert handoff_bundle["operator_return_pending_artifact_reference_count"] >= 1
@@ -2372,6 +2372,13 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         row["artifact_id"] == "product_scope_breadth_evidence_receipt_csv"
         and row["artifact_path"] == "config/product_scope_breadth_evidence_receipt_current.csv"
         and row["reference_role"] == "local_scope_breadth_receipt_template"
+        and row["required_now"] is True
+        for row in handoff_bundle["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "product_scope_transporter_p0_return_bundle_required_artifact_2"
+        and row["artifact_path"] == "config/ligand_binding_reference_blind_aqp1_v1.csv"
+        and row["reference_role"] == "local_scope_transporter_p0_return_bundle_artifact"
         and row["required_now"] is True
         for row in handoff_bundle["artifact_reference_manifest"]
     )
@@ -2659,7 +2666,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     ] == "AQP1.core_binder_01"
 
     assert completion["commercial_readiness_handoff_bundle_ready"] is True
-    assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 29
+    assert completion["commercial_readiness_handoff_bundle_artifact_reference_count"] == 34
     assert completion["commercial_readiness_handoff_bundle_operator_return_pending_artifact_reference_count"] == 1
     assert completion["commercial_readiness_next_action_matrix_ready"] is True
     assert completion["commercial_readiness_next_action_matrix_count"] == 6

@@ -71,6 +71,8 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- missing_required_field_count: `{s['missing_required_field_count']}`",
         f"- license_present: `{s['license_present']}`",
         f"- commercial_gate_only_license_blocked: `{s['commercial_gate_only_license_blocked']}`",
+        f"- commercial_independence_ready: `{s['commercial_independence_ready']}`",
+        f"- license_review_state_ready: `{s['license_review_state_ready']}`",
         f"- license_file_written: `{s['license_file_written']}`",
         f"- external_state_mutated: `{s['external_state_mutated']}`",
         "",

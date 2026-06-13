@@ -10,8 +10,9 @@ REQUIRED_FIELDS = ("decision", "approval_token", "spdx_license_id", "license_tex
 
 CLAIM_BOUNDARY = (
     "Product license decision gate only; it validates operator-supplied license decision metadata before a separate "
-    "license-file creation step can be reviewed. It does not choose a license, write a LICENSE file, alter dependency "
-    "files, run docking, assemble bundles, upload, send email, delete data, or mutate external state."
+    "license-file creation or existing-license review step can be reviewed. It does not choose a license, write a "
+    "LICENSE file, alter dependency files, run docking, assemble bundles, upload, send email, delete data, or mutate "
+    "external state."
 )
 
 
@@ -84,6 +85,15 @@ def _commercial_gate_only_license_blocked(commercial_gate_packet: dict[str, Any]
     )
 
 
+def _commercial_independence_ready(commercial_gate_packet: dict[str, Any]) -> bool:
+    summary = _summary(commercial_gate_packet)
+    return (
+        _text(summary.get("status")) == "product_commercial_independence_gate_ready"
+        and _int(summary.get("blocker_count")) == 0
+        and _bool(summary.get("license_present"))
+    )
+
+
 def build_product_license_decision_gate(
     *,
     commercial_independence_gate_packet: dict[str, Any],
@@ -92,6 +102,11 @@ def build_product_license_decision_gate(
     commercial = _summary(commercial_independence_gate_packet)
     license_present = _bool(commercial.get("license_present"))
     only_license_blocker_remaining = _commercial_gate_only_license_blocked(commercial_independence_gate_packet)
+    commercial_independence_ready = _commercial_independence_ready(commercial_independence_gate_packet)
+    license_review_state_ready = (
+        (not license_present and only_license_blocker_remaining)
+        or (license_present and commercial_independence_ready)
+    )
     csv_present, intake = _read_intake(operator_intake_csv)
     decision = _text(intake.get("decision"))
     approval_token = _text(intake.get("approval_token"))
@@ -105,8 +120,7 @@ def build_product_license_decision_gate(
     approval_token_ready = approval_token == APPROVAL_TOKEN
     metadata_ready = not missing_fields
     authorized = (
-        not license_present
-        and only_license_blocker_remaining
+        license_review_state_ready
         and csv_present
         and decision_ready
         and approval_token_ready
@@ -115,18 +129,22 @@ def build_product_license_decision_gate(
 
     rows = [
         _row(
-            "license_not_already_present",
-            not license_present,
-            f"license_present={license_present}",
-            "license_present=false",
-            "This gate is only for approving a future LICENSE file creation step.",
+            "license_review_state_ready",
+            license_review_state_ready,
+            (
+                f"license_present={license_present};"
+                f"commercial_independence_ready={commercial_independence_ready};"
+                f"commercial_gate_only_license_blocked={only_license_blocker_remaining}"
+            ),
+            "license missing with only license_file_present blocked, or existing LICENSE already satisfies commercial independence",
+            "License metadata review is valid for either the missing-license creation path or the already-present approved LICENSE path.",
         ),
         _row(
             "commercial_gate_only_license_blocked",
-            only_license_blocker_remaining,
+            only_license_blocker_remaining or commercial_independence_ready,
             f"status={_text(commercial.get('status')) or 'missing'};blocker_count={_int(commercial.get('blocker_count'))}",
-            "blocked_product_commercial_independence_gate with only license_file_present failing",
-            "License decision review should happen after dependency/deployment commercial-independence blockers are cleared.",
+            "blocked_product_commercial_independence_gate with only license_file_present failing, or product_commercial_independence_gate_ready with LICENSE present",
+            "License decision review should happen only after dependency/deployment commercial-independence blockers are cleared or the existing LICENSE is already accepted.",
         ),
         _row(
             "operator_intake_csv_present",
@@ -177,12 +195,18 @@ def build_product_license_decision_gate(
         "missing_required_fields": missing_fields,
         "license_present": license_present,
         "commercial_gate_only_license_blocked": only_license_blocker_remaining,
+        "commercial_independence_ready": commercial_independence_ready,
+        "license_review_state_ready": license_review_state_ready,
         "license_file_written": False,
         "execution_enabled": False,
         "external_state_mutated": False,
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
-            "Create/review a LICENSE file from the approved metadata in a separate explicit step."
+            (
+                "Review the existing LICENSE against the approved metadata; do not overwrite it."
+                if license_present
+                else "Create/review a LICENSE file from the approved metadata in a separate explicit step."
+            )
             if authorized
             else "Fill the product license operator intake CSV with decision, exact approval token, SPDX/source, holder, and year."
         ),

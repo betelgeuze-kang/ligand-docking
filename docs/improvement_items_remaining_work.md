@@ -547,7 +547,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `restricted_release_allowed=true`, `full_commercial_release_allowed=false`,
   `full_commercial_release_blocker_visibility_ready=true`,
   `completion_audit_release_blocker_bottleneck_count=2`,
-  `commercial_readiness_handoff_bundle_artifact_reference_count=29`를 노출하고,
+  `commercial_readiness_handoff_bundle_artifact_reference_count=34`를 노출하고,
   `product_goal_primary_release_blocker_requirement_id=R8_full_scope_claim_closure`,
   `primary_release_blocker_action_id=product_scope_expansion:resolve_full_scope_breadth_evidence_receipt`,
   `primary_release_blocker_action_required_input=config/product_scope_breadth_evidence_receipt_current.csv`도
@@ -610,6 +610,15 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `primary_full_commercial_release_blocker_id=R8_full_scope_claim_closure`,
   `primary_full_commercial_release_blocker=direct_binding_evidence_missing`을
   별도로 노출한다.
+  commercial-readiness operator packet/handoff surface는 같은 R8 blocker를
+  `primary_full_commercial_release_blocker_id=R8_full_scope_claim_closure`,
+  `primary_full_commercial_release_blocker=full_scope_claim_closure_not_ready`,
+  `primary_full_commercial_release_blocker_receipt_csv=config/product_scope_breadth_evidence_receipt_current.csv`
+  로 들고, 첫 transporter P0 return 별칭도
+  `product_scope_next_operator_completion_item_id=AQP1.core_binder_01`,
+  `product_scope_transporter_p0_return_bundle_next_artifact_path=runs/transporter_manual_review_intake_template_current.csv`,
+  `product_goal_scope_transporter_p0_operator_validation_candidate_status=operator_validation_required`
+  로 고정한다.
   `tools/product/build_product_scope_breadth_evidence_receipt.py`와
   `config/product_scope_breadth_evidence_receipt_current.csv`는 R8 full-scope
   blocker 6종(`direct_binding_evidence_missing`,
@@ -700,7 +709,14 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `config/product_scope_breadth_evidence_receipt_current.csv`를
   `local_scope_breadth_receipt` / `local_scope_breadth_receipt_template`
   artifact reference로 추적하며, 최신
-  `local_missing_artifact_reference_count=0`, `artifact_reference_count=29`이다.
+  `local_missing_artifact_reference_count=0`, `local_required_artifact_reference_count=30`,
+  `artifact_reference_count=34`이다. 여기에 AQP1 첫 return bundle의
+  `local_scope_transporter_p0_return_bundle_artifact` 5종도 포함되며,
+  `config/ligand_binding_reference_blind_aqp1_v1.csv`,
+  `config/ligand_eval_splits_blind_aqp1_v1.csv`,
+  `config/ligand_meta_blind_aqp1_v1.csv`,
+  `runs/transporter_binder_promotion_gate_current.json`까지 handoff manifest에서
+  required-local artifact로 빠지지 않는다.
   `product_release_source_of_truth_gate_current.json`은 이제
   `product_api_contract_current.json`,
   `product_service_boundary_contract_current.json`,
@@ -1986,6 +2002,12 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 - `license_decision.py`의 APPROVAL_TOKEN 기반 write path는 유지된다.
 - `license_options.py`가 operator-selectable license path 요약 제공
   (proprietary, source-available, enterprise EULA 등).
+- `runs/product_license_decision_packet_current.json`은 이미 승인된 LICENSE가 있는
+  현재 상태를 `product_license_decision_packet_ready`, `hard_blocker_count=0`,
+  `review_item_count=1`, `commercial_independence_ready=true`,
+  `license_decision_gate_ready=true`, `license_present=true`로 기록한다.
+  `license_already_present`는 hard blocker가 아니라 별도 LICENSE file-creation
+  review item이다.
 
 **병목 원인**
 - LICENSE 파일 생성/일관성 검증은 1차 완료됐지만, license 결정의 법적 충분성은

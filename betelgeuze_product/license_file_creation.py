@@ -10,8 +10,9 @@ from betelgeuze_product.license_decision import APPROVAL_TOKEN
 
 CLAIM_BOUNDARY = (
     "Product license file creation work order only; it validates that operator-approved license metadata is ready for "
-    "a separate LICENSE file creation/review step. It does not choose a license, write a LICENSE file, alter dependency "
-    "files, run docking, assemble bundles, upload, send email, delete data, or mutate external state."
+    "a separate LICENSE file creation/review step or existing-LICENSE review. It does not choose a license, write a "
+    "LICENSE file, alter dependency files, run docking, assemble bundles, upload, send email, delete data, or mutate "
+    "external state."
 )
 
 
@@ -72,6 +73,15 @@ def _commercial_gate_only_license_blocked(commercial_gate_packet: dict[str, Any]
         _text(summary.get("status")) == "blocked_product_commercial_independence_gate"
         and _int(summary.get("blocker_count")) == 1
         and failing_checks == {"license_file_present"}
+    )
+
+
+def _commercial_independence_ready(commercial_gate_packet: dict[str, Any]) -> bool:
+    summary = _summary(commercial_gate_packet)
+    return (
+        _text(summary.get("status")) == "product_commercial_independence_gate_ready"
+        and _int(summary.get("blocker_count")) == 0
+        and _bool(summary.get("license_present"))
     )
 
 
@@ -155,6 +165,11 @@ def build_product_license_file_creation_work_order(
     authorized = _bool(license_decision.get("authorized_for_license_file_creation_review"))
     license_present = _bool(commercial.get("license_present")) or _bool(license_decision.get("license_present"))
     commercial_only_license_blocked = _commercial_gate_only_license_blocked(commercial_independence_gate_packet)
+    commercial_independence_ready = _commercial_independence_ready(commercial_independence_gate_packet)
+    license_review_state_ready = (
+        (not license_present and commercial_only_license_blocked)
+        or (license_present and commercial_independence_ready)
+    )
     spdx_license_id = _text(license_decision.get("spdx_license_id"))
     license_text_source = _text(license_decision.get("license_text_source"))
     copyright_holder = _text(license_decision.get("copyright_holder"))
@@ -213,18 +228,22 @@ def build_product_license_file_creation_work_order(
             "The LICENSE creation command reads license_text_source as a local file, so the source must be present before review can be ready.",
         ),
         _row(
-            "license_not_already_present",
-            not license_present,
-            f"license_present={license_present}",
-            "license_present=false",
-            "This work order is for creating a missing license artifact, not overwriting an existing one.",
+            "license_review_state_ready",
+            license_review_state_ready,
+            (
+                f"license_present={license_present};"
+                f"commercial_independence_ready={commercial_independence_ready};"
+                f"commercial_gate_only_license_blocked={commercial_only_license_blocked}"
+            ),
+            "license missing with only license_file_present blocked, or existing LICENSE already satisfies commercial independence",
+            "This work order can review a missing-license creation step or the already-present approved LICENSE without overwriting it.",
         ),
         _row(
             "commercial_gate_only_license_blocked",
-            commercial_only_license_blocked,
+            commercial_only_license_blocked or commercial_independence_ready,
             f"status={_text(commercial.get('status')) or 'missing'};blocker_count={_int(commercial.get('blocker_count'))}",
-            "blocked_product_commercial_independence_gate with only license_file_present failing",
-            "The separate LICENSE creation step should only be used when license_file_present is the remaining commercial-independence blocker.",
+            "blocked_product_commercial_independence_gate with only license_file_present failing, or product_commercial_independence_gate_ready with LICENSE present",
+            "The separate LICENSE review step should only be used when license_file_present is the remaining commercial-independence blocker or the current LICENSE is already accepted.",
         ),
     ]
     blockers = [_blocker(row) for row in rows if row["status"] != "pass"]
@@ -248,11 +267,13 @@ def build_product_license_file_creation_work_order(
         "license_review_manifest_ready": ready,
         "license_review_manifest": review_manifest,
         "license_review_manifest_fingerprint_sha256": review_manifest_fingerprint_sha256,
-        "license_file_write_command_template": write_command_template if ready else "",
+        "license_file_write_command_template": write_command_template if ready and not license_present else "",
         "license_decision_gate_status": _text(license_decision.get("status")),
         "authorized_for_license_file_creation_review": authorized,
         "license_present": license_present,
         "commercial_gate_only_license_blocked": commercial_only_license_blocked,
+        "commercial_independence_ready": commercial_independence_ready,
+        "license_review_state_ready": license_review_state_ready,
         "blocker_count": len(blockers),
         "check_count": len(rows),
         "license_file_written": False,
@@ -262,7 +283,11 @@ def build_product_license_file_creation_work_order(
         "external_state_mutated": False,
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
-            f"Create/review `{target_license_path}` from the approved license_text_source, then rerun the commercial-independence and release gates."
+            (
+                f"Review existing `{target_license_path}` against the approved license_text_source, then rerun the release gates."
+                if license_present
+                else f"Create/review `{target_license_path}` from the approved license_text_source, then rerun the commercial-independence and release gates."
+            )
             if ready
             else "Authorize the product license decision metadata before any LICENSE file creation step."
         ),
@@ -270,7 +295,11 @@ def build_product_license_file_creation_work_order(
     work_items = [
         {
             "step": "create_or_review_license_file",
-            "status": "ready_for_separate_operator_step" if ready else "blocked",
+            "status": (
+                "ready_for_existing_license_review"
+                if ready and license_present
+                else ("ready_for_separate_operator_step" if ready else "blocked")
+            ),
             "target_license_path": target_license_path,
             "spdx_license_id": spdx_license_id,
             "license_text_source": license_text_source,
@@ -279,7 +308,7 @@ def build_product_license_file_creation_work_order(
             "effective_year": effective_year,
             "license_review_manifest_fingerprint_sha256": review_manifest_fingerprint_sha256,
             "approval_token_required": APPROVAL_TOKEN,
-            "command_template": write_command_template if ready else "",
+            "command_template": write_command_template if ready and not license_present else "",
             "license_file_written": False,
             "external_state_mutated": False,
         },

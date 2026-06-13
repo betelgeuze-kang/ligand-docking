@@ -88,6 +88,7 @@ def test_remaining_work_doc_tracks_current_full_commercial_bottleneck_matrix() -
     matrix = _summary("runs/product_full_commercial_blocker_evidence_matrix_current.json")
     audit = _summary("runs/product_goal_completion_audit_current.json")
     bottleneck = _summary("runs/goal_bottleneck_briefing_current.json")
+    handoff = _summary("runs/product_commercial_readiness_handoff_bundle_current.json")
 
     assert f"`{matrix['status']}`" in text
     assert f"`release_blocker_visibility_ready={str(matrix['release_blocker_visibility_ready']).lower()}`" in text
@@ -97,8 +98,55 @@ def test_remaining_work_doc_tracks_current_full_commercial_bottleneck_matrix() -
     assert f"`release_blocker_fail_count={audit['release_blocker_fail_count']}`" in text
     assert f"`primary_release_blocker_requirement_id={audit['primary_release_blocker_requirement_id']}`" in text
     assert f"`completion_audit_release_blocker_bottleneck_count={bottleneck['completion_audit_release_blocker_bottleneck_count']}`" in text
+    assert (
+        f"`commercial_readiness_handoff_bundle_artifact_reference_count="
+        f"{audit['commercial_readiness_handoff_bundle_artifact_reference_count']}`"
+        in text
+    )
+    assert f"`artifact_reference_count={handoff['artifact_reference_count']}`" in text
+    assert f"`local_required_artifact_reference_count={handoff['local_required_artifact_reference_count']}`" in text
+    assert (
+        f"`product_scope_next_operator_completion_item_id="
+        f"{handoff['product_scope_next_operator_completion_item_id']}`"
+        in text
+    )
+    assert (
+        f"`product_scope_transporter_p0_return_bundle_next_artifact_path="
+        f"{handoff['product_scope_transporter_p0_return_bundle_next_artifact_path']}`"
+        in text
+    )
+    assert (
+        f"`product_goal_scope_transporter_p0_operator_validation_candidate_status="
+        f"{handoff['product_goal_scope_transporter_p0_operator_validation_candidate_status']}`"
+        in text
+    )
+    assert "`local_scope_transporter_p0_return_bundle_artifact`" in text
+    assert "`config/ligand_binding_reference_blind_aqp1_v1.csv`" in text
 
     assert "`completion_audit_release_blocker_bottleneck_count=3`" not in text
+    assert "`commercial_readiness_handoff_bundle_artifact_reference_count=29`" not in text
+    assert "`artifact_reference_count=29`" not in text
+
+
+def test_remaining_work_doc_tracks_current_license_decision_packet() -> None:
+    text = _doc_text()
+    license_packet = _summary("runs/product_license_decision_packet_current.json")
+
+    assert f"`{license_packet['status']}`" in text
+    assert f"`hard_blocker_count={license_packet['hard_blocker_count']}`" in text
+    assert f"`review_item_count={license_packet['review_item_count']}`" in text
+    assert (
+        f"`commercial_independence_ready="
+        f"{str(license_packet['commercial_independence_ready']).lower()}`"
+        in text
+    )
+    assert (
+        f"`license_decision_gate_ready="
+        f"{str(license_packet['license_decision_gate_ready']).lower()}`"
+        in text
+    )
+    assert f"`license_present={str(license_packet['license_present']).lower()}`" in text
+    assert "`license_already_present`" in text
 
 
 def test_remaining_work_doc_tracks_current_production_ai_priority_bottleneck() -> None:

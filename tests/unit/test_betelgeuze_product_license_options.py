@@ -28,6 +28,27 @@ def _license_gate() -> dict:
     }
 
 
+def _ready_commercial_with_license() -> dict:
+    return {
+        "summary": {
+            "status": "product_commercial_independence_gate_ready",
+            "blocker_count": 0,
+            "license_present": True,
+        },
+        "rows": [{"check": "license_file_present", "status": "pass"}],
+    }
+
+
+def _ready_license_gate() -> dict:
+    return {
+        "summary": {
+            "status": "product_license_decision_gate_ready",
+            "operator_intake_csv_present": True,
+            "authorized_for_license_file_creation_review": True,
+        }
+    }
+
+
 def test_product_license_decision_packet_lists_options_without_writing_license() -> None:
     payload = build_product_license_decision_packet(
         commercial_independence_gate_packet=_commercial_only_license_blocked(),
@@ -37,7 +58,11 @@ def test_product_license_decision_packet_lists_options_without_writing_license()
     summary = payload["summary"]
     assert summary["status"] == "product_license_decision_packet_ready"
     assert summary["option_count"] >= 5
+    assert summary["blocker_count"] == 0
+    assert summary["hard_blocker_count"] == 0
+    assert summary["review_item_count"] == 0
     assert summary["commercial_gate_only_license_blocked"] is True
+    assert summary["commercial_independence_ready"] is False
     assert summary["license_file_written"] is False
     assert summary["legal_advice_provided"] is False
     assert summary["external_state_mutated"] is False
@@ -59,6 +84,25 @@ def test_product_license_decision_packet_lists_options_without_writing_license()
     assert rows["MIT"]["operator_intake_fill_command_local_source_example"] == ""
 
 
+def test_product_license_decision_packet_ready_when_license_already_authorized() -> None:
+    payload = build_product_license_decision_packet(
+        commercial_independence_gate_packet=_ready_commercial_with_license(),
+        license_decision_gate_packet=_ready_license_gate(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "product_license_decision_packet_ready"
+    assert summary["blocker_count"] == 0
+    assert summary["hard_blocker_count"] == 0
+    assert summary["review_item_count"] == 1
+    assert summary["commercial_independence_ready"] is True
+    assert summary["license_decision_gate_ready"] is True
+    assert summary["license_decision_authorized_for_file_creation_review"] is True
+    assert summary["license_present"] is True
+    assert any(blocker["code"] == "license_already_present" for blocker in payload["blockers"])
+    assert "separate LICENSE file creation review" in summary["next_required_step"]
+
+
 def test_product_license_decision_packet_blocks_when_commercial_gate_has_other_blockers() -> None:
     commercial = {
         "summary": {"status": "blocked_product_commercial_independence_gate", "blocker_count": 2, "license_present": False},
@@ -73,6 +117,8 @@ def test_product_license_decision_packet_blocks_when_commercial_gate_has_other_b
     )
 
     assert payload["summary"]["status"] == "blocked_product_license_decision_packet"
+    assert payload["summary"]["blocker_count"] == 1
+    assert payload["summary"]["hard_blocker_count"] == 1
     assert payload["summary"]["commercial_gate_only_license_blocked"] is False
     assert any(blocker["code"] == "commercial_gate_not_license_only" for blocker in payload["blockers"])
 
