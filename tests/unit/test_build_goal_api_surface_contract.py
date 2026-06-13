@@ -23,7 +23,7 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         "PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_ARTIFACT = 'runs/product_scope_breadth_evidence_receipt_current.json'\n"
         "ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_ARTIFACT = 'runs/engine_refinement_claim_evidence_receipt_current.json'\n"
         "CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_ARTIFACT = 'runs/cameo_official_result_fetch_preflight_current.json'\n"
-        "FULL_COMMERCIAL_RELEASE_BLOCKER_IDS = ('R8_full_scope_claim_closure', 'R9_engine_refinement_claim_promotion')\n"
+        "FULL_COMMERCIAL_RELEASE_BLOCKER_IDS = ('R8_full_scope_claim_closure', 'R9_engine_refinement_claim_promotion', 'MASTER:SCI-CLAIM', 'ACCURACY:ligand_ranking')\n"
         "FULL_COMMERCIAL_EVIDENCE_RECEIPT_STATUS_KEYS = ('product_scope_breadth_evidence_receipt_status', 'engine_refinement_claim_evidence_receipt_status')\n"
         '@router.get("/status")\n'
         "async def get_goal_status():\n"
@@ -58,8 +58,8 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         '"completion_audit_release_blocker_bottleneck_count": 2,'
         '"irreducible_external_return_bottleneck_count": 2,'
         '"expected_full_commercial_release_blocker_ids": list(FULL_COMMERCIAL_RELEASE_BLOCKER_IDS),'
-        '"full_commercial_release_blocker_ids": ["R8_full_scope_claim_closure", "R9_engine_refinement_claim_promotion"],'
-        '"full_commercial_release_blocker_count": 2,'
+        '"full_commercial_release_blocker_ids": ["R8_full_scope_claim_closure", "R9_engine_refinement_claim_promotion", "MASTER:SCI-CLAIM", "ACCURACY:ligand_ranking"],'
+        '"full_commercial_release_blocker_count": 4,'
         '"missing_full_commercial_release_blocker_ids": [],'
         '"full_commercial_release_blocker_visibility_ready": True,'
         '"primary_full_commercial_release_blocker_id": "R8_full_scope_claim_closure",'

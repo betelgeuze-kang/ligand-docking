@@ -51,6 +51,8 @@ REQUIRED_FULL_COMMERCIAL_VISIBILITY_TOKENS = {
     "FULL_COMMERCIAL_RELEASE_BLOCKER_IDS",
     "R8_full_scope_claim_closure",
     "R9_engine_refinement_claim_promotion",
+    "MASTER:SCI-CLAIM",
+    "ACCURACY:ligand_ranking",
     "full_commercial_release_blocker_visibility_ready",
     "missing_full_commercial_release_blocker_ids",
     "restricted_release_allowed",

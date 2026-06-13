@@ -157,6 +157,8 @@ def test_api_app_imports_with_goal_router() -> None:
     expected_full_commercial_blockers = [
         "R8_full_scope_claim_closure",
         "R9_engine_refinement_claim_promotion",
+        "MASTER:SCI-CLAIM",
+        "ACCURACY:ligand_ranking",
     ]
     assert status["expected_full_commercial_release_blocker_ids"] == expected_full_commercial_blockers
     assert status["full_commercial_release_blocker_ids"] == release_artifact.get(

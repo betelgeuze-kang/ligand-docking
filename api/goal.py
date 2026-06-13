@@ -36,6 +36,8 @@ CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_ARTIFACT = (
 FULL_COMMERCIAL_RELEASE_BLOCKER_IDS = (
     "R8_full_scope_claim_closure",
     "R9_engine_refinement_claim_promotion",
+    "MASTER:SCI-CLAIM",
+    "ACCURACY:ligand_ranking",
 )
 
 FULL_COMMERCIAL_EVIDENCE_RECEIPT_STATUS_KEYS = (
@@ -596,11 +598,11 @@ async def get_goal_status() -> dict[str, Any]:
     missing_full_commercial_release_blocker_ids = [
         blocker_id
         for blocker_id in FULL_COMMERCIAL_RELEASE_BLOCKER_IDS
-        if blocker_id not in full_commercial_release_blocker_ids
+        if blocker_id not in release_full_commercial_blocker_ids
     ]
     full_commercial_release_blocker_visibility_ready = (
         not missing_full_commercial_release_blocker_ids
-        and len(full_commercial_release_blocker_ids) >= len(FULL_COMMERCIAL_RELEASE_BLOCKER_IDS)
+        and len(release_full_commercial_blocker_ids) >= len(FULL_COMMERCIAL_RELEASE_BLOCKER_IDS)
     )
     active_bottleneck_primary = (
         _int(bottlenecks.get("current_bottleneck_count") or bottlenecks.get("bottleneck_count")) > 0

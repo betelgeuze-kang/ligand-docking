@@ -212,6 +212,8 @@
   `full_commercial_release_blocker_visibility_ready`,
   `completion_audit_release_blocker_bottleneck_count`, 그리고
   `commercial_readiness_handoff_bundle_artifact_reference_count=29`를 함께 노출한다.
+  current expected blocker set은 R8/R9뿐 아니라 `MASTER:SCI-CLAIM`과
+  `ACCURACY:ligand_ranking`까지 포함한다.
   또한 `product_goal_primary_release_blocker_requirement_id`,
   `product_goal_primary_release_blocker`, `primary_release_blocker_action_id`,
   `primary_release_blocker_action_required_input`을 goal operator action board/intake
@@ -253,10 +255,10 @@
   `release_allowed=true`, `restricted_release_allowed=true`와 별개로
   `full_commercial_release_allowed=false`,
   `full_commercial_release_blocker_ids=[R8_full_scope_claim_closure,
-  R9_engine_refinement_claim_promotion, MASTER:SCI-CLAIM]`,
+  R9_engine_refinement_claim_promotion, MASTER:SCI-CLAIM, ACCURACY:ligand_ranking]`,
   `primary_full_commercial_release_blocker_id=R8_full_scope_claim_closure`를 노출한다.
-  `goal_api_surface_contract_current.json`은 이 R8/R9 + primary release blocker action +
-  commercial handoff visibility를
+  `goal_api_surface_contract_current.json`은 이 R8/R9/SCI-CLAIM/ACCURACY blocker set +
+  primary release blocker action + commercial handoff visibility를
   `goal_full_commercial_bottleneck_visibility_present` check로 고정하며 최신
   `check_count=9`, `pass_count=9`, `missing_full_commercial_visibility_token_count=0`이다.
   source-of-truth의 `goal_api_surface_contract_semantic_ready` row도

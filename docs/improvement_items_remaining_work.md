@@ -528,7 +528,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   bottleneck briefing이 있으면 intake/action board의 오래된 primary action보다 이
   full-commercial 병목 primary를 우선 표시한다. 또한 `/goal/status`는
   `full_commercial_release_blocker_ids=[R8_full_scope_claim_closure,
-  R9_engine_refinement_claim_promotion, MASTER:SCI-CLAIM]`,
+  R9_engine_refinement_claim_promotion, MASTER:SCI-CLAIM, ACCURACY:ligand_ranking]`,
   `restricted_release_allowed=true`, `full_commercial_release_allowed=false`,
   `full_commercial_release_blocker_visibility_ready=true`,
   `completion_audit_release_blocker_bottleneck_count=2`,
@@ -537,7 +537,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `primary_release_blocker_action_id=product_scope_expansion:resolve_full_scope_breadth_evidence_receipt`,
   `primary_release_blocker_action_required_input=config/product_scope_breadth_evidence_receipt_current.csv`도
   action board/intake kit에서 끌어와 노출한다. `goal_api_surface_contract_current.json`은 이
-  R8/R9 + primary release blocker action + commercial handoff visibility를
+  R8/R9/SCI-CLAIM/ACCURACY blocker set + primary release blocker action + commercial handoff visibility를
   `goal_full_commercial_bottleneck_visibility_present` check로 고정한다.
   `tools/product/build_product_full_commercial_blocker_evidence_matrix.py`는 같은
   R8/R9 release blocker를 `runs/product_full_commercial_blocker_evidence_matrix_current.json`
@@ -590,7 +590,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `release_allowed=true`, `restricted_release_allowed=true`로 유지하면서도
   `full_commercial_release_allowed=false`,
   `full_commercial_release_blocker_ids=[R8_full_scope_claim_closure,
-  R9_engine_refinement_claim_promotion, MASTER:SCI-CLAIM]`,
+  R9_engine_refinement_claim_promotion, MASTER:SCI-CLAIM, ACCURACY:ligand_ranking]`,
   `primary_full_commercial_release_blocker_id=R8_full_scope_claim_closure`,
   `primary_full_commercial_release_blocker=direct_binding_evidence_missing`을
   별도로 노출한다.
