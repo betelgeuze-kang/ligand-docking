@@ -35,6 +35,7 @@ def _refresh_release_decision_ready() -> dict:
             "goal_bottleneck_briefing_full_commercial_receipts_recorded": True,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded": True,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_packet_ready": True,
+            "accuracy_parity_scorecard_recorded": True,
             "source_goal_bottleneck_briefing_status": "goal_bottleneck_briefing_ready",
             "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 2,
@@ -46,6 +47,12 @@ def _refresh_release_decision_ready() -> dict:
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_operator_input_required_count": 4,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "accuracy_parity_scorecard_row_count": 5,
+            "accuracy_parity_scorecard_pass_row_count": 4,
+            "accuracy_parity_scorecard_blocked_row_count": 1,
+            "accuracy_parity_scorecard_top_blocker_count": 4,
+            "accuracy_parity_ligand_ranking_blocker_count": 4,
+            "accuracy_parity_ligand_ranking_positive_count": 13,
             "science_claim_promotion_gap_closure_open_gap_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
@@ -73,6 +80,13 @@ def _refresh_release_decision_ready() -> dict:
             ),
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_acceptance_artifact": (
                 "runs/residual_model_registry_current.json"
+            ),
+            "accuracy_parity_scorecard_status": "blocked_accuracy_parity",
+            "accuracy_parity_scorecard_current_broad_accuracy_parity_estimate_pct": "40-50",
+            "accuracy_parity_scorecard_current_broad_commercial_platform_estimate_pct": "35-45",
+            "accuracy_parity_ligand_ranking_status": "blocked",
+            "accuracy_parity_ligand_ranking_score_col_used": (
+                "binding_score_composite_v7_residual_active"
             ),
             "science_claim_promotion_gap_closure_status": (
                 "blocked_science_claim_promotion_gap_closure"
@@ -248,12 +262,25 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded"
         in release_row["required_true_fields"]
     )
+    assert "accuracy_parity_scorecard_recorded" in release_row["required_true_fields"]
     assert release_row["required_int_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count"
     ] == 4
+    assert release_row["required_int_exact_fields"][
+        "accuracy_parity_scorecard_top_blocker_count"
+    ] == 4
+    assert release_row["required_int_exact_fields"][
+        "accuracy_parity_ligand_ranking_positive_count"
+    ] == 13
     assert release_row["required_text_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id"
     ] == "trained_model_checkpoint_count_positive"
+    assert release_row["required_text_exact_fields"][
+        "accuracy_parity_scorecard_status"
+    ] == "blocked_accuracy_parity"
+    assert release_row["required_text_exact_fields"][
+        "accuracy_parity_ligand_ranking_score_col_used"
+    ] == "binding_score_composite_v7_residual_active"
     assert release_row["required_int_exact_fields"][
         "science_claim_promotion_gap_closure_open_gap_count"
     ] == 2

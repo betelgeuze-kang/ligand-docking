@@ -35,6 +35,7 @@ DEFAULT_PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON = (
 DEFAULT_PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_JSON = (
     "runs/product_rollout_execution_smoke_receipt_current.json"
 )
+DEFAULT_ACCURACY_PARITY_SCORECARD_JSON = "runs/accuracy_parity_scorecard_current.json"
 DEFAULT_SCIENCE_CLAIM_PROMOTION_GAP_CLOSURE_JSON = "runs/science_claim_promotion_gap_closure_current.json"
 DEFAULT_MASTER_GAP_CLOSURE_ROLLUP_JSON = "runs/master_gap_closure_rollup_current.json"
 DEFAULT_OUT_JSON = "runs/goal_release_decision_gate_current.json"
@@ -191,6 +192,7 @@ def build_goal_release_decision_gate(
     api_customer_flow_release_evidence_packet: dict[str, Any] | None = None,
     product_full_commercial_blocker_evidence_matrix_packet: dict[str, Any] | None = None,
     product_rollout_execution_smoke_receipt_packet: dict[str, Any] | None = None,
+    accuracy_parity_scorecard_packet: dict[str, Any] | None = None,
     science_claim_promotion_gap_packet: dict[str, Any] | None = None,
     master_gap_closure_rollup_packet: dict[str, Any] | None = None,
     product_pilot_path: str = DEFAULT_PRODUCT_PILOT_JSON,
@@ -219,6 +221,7 @@ def build_goal_release_decision_gate(
     product_rollout_execution_smoke_receipt_path: str = (
         DEFAULT_PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_JSON
     ),
+    accuracy_parity_scorecard_path: str = DEFAULT_ACCURACY_PARITY_SCORECARD_JSON,
     science_claim_promotion_gap_path: str = DEFAULT_SCIENCE_CLAIM_PROMOTION_GAP_CLOSURE_JSON,
     master_gap_closure_rollup_path: str = DEFAULT_MASTER_GAP_CLOSURE_ROLLUP_JSON,
 ) -> dict[str, Any]:
@@ -376,6 +379,44 @@ def build_goal_release_decision_gate(
         and _int(science_claim_gap.get("gap_count")) >= 1
         and bool(science_claim_gap.get("execution_enabled") is False)
         and bool(science_claim_gap.get("external_state_mutated") is False)
+    )
+    accuracy_parity = _summary(accuracy_parity_scorecard_packet or {})
+    accuracy_parity_rows = _rows(accuracy_parity_scorecard_packet or {})
+    accuracy_parity_claim_boundary = (
+        accuracy_parity_scorecard_packet.get("claim_boundary")
+        if isinstance(accuracy_parity_scorecard_packet, dict)
+        else {}
+    )
+    if not isinstance(accuracy_parity_claim_boundary, dict):
+        accuracy_parity_claim_boundary = {}
+    accuracy_parity_gate_present = accuracy_parity_scorecard_packet is not None
+    accuracy_parity_top_blockers = _text_list(accuracy_parity.get("top_blockers"))
+    accuracy_ligand_ranking = _row_by_id(accuracy_parity_rows, "axis", "ligand_ranking")
+    accuracy_ligand_metrics = accuracy_ligand_ranking.get("metrics")
+    if not isinstance(accuracy_ligand_metrics, dict):
+        accuracy_ligand_metrics = {}
+    accuracy_ligand_thresholds = accuracy_ligand_ranking.get("thresholds")
+    if not isinstance(accuracy_ligand_thresholds, dict):
+        accuracy_ligand_thresholds = {}
+    accuracy_ligand_blockers = _text_list(accuracy_ligand_ranking.get("blockers"))
+    accuracy_parity_rows_accounted = (
+        _int(accuracy_parity.get("pass_row_count"))
+        + _int(accuracy_parity.get("restricted_pass_row_count"))
+        + _int(accuracy_parity.get("blocked_row_count"))
+        + _int(accuracy_parity.get("missing_row_count"))
+    )
+    accuracy_parity_scorecard_recorded = (
+        _text(accuracy_parity.get("status")) in {"blocked_accuracy_parity", "green"}
+        and _int(accuracy_parity.get("row_count")) >= 1
+        and accuracy_parity_rows_accounted == _int(accuracy_parity.get("row_count"))
+        and bool(accuracy_parity_claim_boundary.get("fake_pass_allowed") is False)
+        and bool(accuracy_parity_claim_boundary.get("threshold_relaxation_allowed") is False)
+        and bool(accuracy_parity_claim_boundary.get("scorecard_rows_must_map_to_frozen_artifacts") is True)
+        and bool(accuracy_ligand_ranking)
+    )
+    accuracy_parity_full_commercial_blocked = (
+        accuracy_parity_gate_present
+        and not bool(accuracy_parity.get("overall_commercial_tool_accuracy_parity_allowed") is True)
     )
     master_gap_rollup = _summary(master_gap_closure_rollup_packet or {})
     master_gap_rollup_gate_present = master_gap_closure_rollup_packet is not None
@@ -897,6 +938,39 @@ def build_goal_release_decision_gate(
                 reason="The final release decision must not hide full-commercial SCI-CLAIM or DEPLOY-OPS rollup gaps while restricted release evidence is green.",
             )
         )
+    if accuracy_parity_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="accuracy_parity_scorecard_recorded",
+                artifact_path=accuracy_parity_scorecard_path,
+                observed=(
+                    f"{_text(accuracy_parity.get('status')) or 'missing'};"
+                    f"overall_commercial_tool_accuracy_parity_allowed="
+                    f"{_bool_text(bool(accuracy_parity.get('overall_commercial_tool_accuracy_parity_allowed') is True))};"
+                    f"schrodinger_class_claim_allowed="
+                    f"{_bool_text(bool(accuracy_parity.get('schrodinger_class_claim_allowed') is True))};"
+                    f"row_count={_int(accuracy_parity.get('row_count'))};"
+                    f"pass_row_count={_int(accuracy_parity.get('pass_row_count'))};"
+                    f"blocked_row_count={_int(accuracy_parity.get('blocked_row_count'))};"
+                    f"top_blockers={';'.join(accuracy_parity_top_blockers)};"
+                    f"ligand_ranking_status={_text(accuracy_ligand_ranking.get('status'))};"
+                    f"ligand_ranking_pr_auc={_float(accuracy_ligand_metrics.get('ranking_pr_auc'))};"
+                    f"ligand_ranking_pr_auc_ci_low={_float(accuracy_ligand_metrics.get('ranking_pr_auc_ci_low'))};"
+                    f"ligand_ranking_topk_hit_rate={_float(accuracy_ligand_metrics.get('ranking_topk_hit_rate'))};"
+                    f"ligand_ranking_blockers={';'.join(accuracy_ligand_blockers)}"
+                ),
+                required=(
+                    "accuracy parity scorecard recorded with frozen-row claim boundary and "
+                    "ligand_ranking Schrodinger-class blocker visibility"
+                ),
+                passed=accuracy_parity_scorecard_recorded,
+                reason=(
+                    "The final release decision must preserve the broad GPCR ligand-ranking/Schrodinger-class "
+                    "parity blocker instead of allowing it to disappear behind restricted local delivery readiness."
+                ),
+            )
+        )
     if science_claim_gap_gate_present:
         rows.append(
             _row(
@@ -997,6 +1071,8 @@ def build_goal_release_decision_gate(
         full_commercial_release_blocker_ids.extend(
             f"MASTER:{gap_id}" for gap_id in master_gap_open_ids if f"MASTER:{gap_id}" not in full_commercial_release_blocker_ids
         )
+    if accuracy_parity_full_commercial_blocked:
+        full_commercial_release_blocker_ids.append("ACCURACY:ligand_ranking")
     full_commercial_release_blocker_ids = list(dict.fromkeys(full_commercial_release_blocker_ids))
     primary_full_commercial_release_blocker_id = (
         _text(full_commercial_matrix.get("first_blocked_release_blocker_id"))
@@ -1009,6 +1085,10 @@ def build_goal_release_decision_gate(
             or bool(full_commercial_matrix.get("full_commercial_blocker_evidence_matrix_ready") is True)
         )
         and (not master_gap_rollup_gate_present or bool(master_gap_rollup.get("all_gaps_closed") is True))
+        and (
+            not accuracy_parity_gate_present
+            or bool(accuracy_parity.get("overall_commercial_tool_accuracy_parity_allowed") is True)
+        )
     )
     next_required_items: list[str] = []
     if not product_bundle_validated or not product_ready or not product_claim_allowed:
@@ -1038,6 +1118,8 @@ def build_goal_release_decision_gate(
         next_required_items.append("R4 rollout execution smoke receipt")
     if master_gap_rollup_gate_present and not master_gap_rollup_recorded:
         next_required_items.append("master gap closure rollup")
+    if accuracy_parity_gate_present and not accuracy_parity_scorecard_recorded:
+        next_required_items.append("accuracy parity scorecard")
     if science_claim_gap_gate_present and not science_claim_gap_recorded:
         next_required_items.append("science claim promotion gap closure")
     if api_customer_flow_gate_present and not api_customer_flow_ready:
@@ -1315,6 +1397,71 @@ def build_goal_release_decision_gate(
         "master_gap_closure_rollup_current_primary_open_gap_id": _text(
             master_gap_rollup.get("current_primary_open_gap_id")
         ),
+        "accuracy_parity_scorecard_gate_present": accuracy_parity_gate_present,
+        "accuracy_parity_scorecard_status": _text(accuracy_parity.get("status")),
+        "accuracy_parity_scorecard_recorded": (
+            accuracy_parity_scorecard_recorded if accuracy_parity_gate_present else None
+        ),
+        "accuracy_parity_scorecard_row_count": _int(accuracy_parity.get("row_count")),
+        "accuracy_parity_scorecard_pass_row_count": _int(accuracy_parity.get("pass_row_count")),
+        "accuracy_parity_scorecard_restricted_pass_row_count": _int(
+            accuracy_parity.get("restricted_pass_row_count")
+        ),
+        "accuracy_parity_scorecard_blocked_row_count": _int(accuracy_parity.get("blocked_row_count")),
+        "accuracy_parity_scorecard_missing_row_count": _int(accuracy_parity.get("missing_row_count")),
+        "accuracy_parity_scorecard_top_blocker_count": len(accuracy_parity_top_blockers),
+        "accuracy_parity_scorecard_top_blockers": accuracy_parity_top_blockers,
+        "accuracy_parity_scorecard_overall_commercial_tool_accuracy_parity_allowed": bool(
+            accuracy_parity.get("overall_commercial_tool_accuracy_parity_allowed") is True
+        ),
+        "accuracy_parity_scorecard_schrodinger_class_claim_allowed": bool(
+            accuracy_parity.get("schrodinger_class_claim_allowed") is True
+        ),
+        "accuracy_parity_scorecard_openmm_class_claim_allowed": bool(
+            accuracy_parity.get("openmm_class_claim_allowed") is True
+        ),
+        "accuracy_parity_scorecard_current_broad_accuracy_parity_estimate_pct": _text(
+            accuracy_parity.get("current_broad_accuracy_parity_estimate_pct")
+        ),
+        "accuracy_parity_scorecard_current_broad_commercial_platform_estimate_pct": _text(
+            accuracy_parity.get("current_broad_commercial_platform_estimate_pct")
+        ),
+        "accuracy_parity_ligand_ranking_status": _text(accuracy_ligand_ranking.get("status")),
+        "accuracy_parity_ligand_ranking_claim_promotion_allowed": bool(
+            accuracy_ligand_ranking.get("claim_promotion_allowed") is True
+        ),
+        "accuracy_parity_ligand_ranking_commercial_parity_claim_allowed": bool(
+            accuracy_ligand_ranking.get("commercial_parity_claim_allowed") is True
+        ),
+        "accuracy_parity_ligand_ranking_blocker_count": len(accuracy_ligand_blockers),
+        "accuracy_parity_ligand_ranking_blockers": accuracy_ligand_blockers,
+        "accuracy_parity_ligand_ranking_pr_auc": _float(
+            accuracy_ligand_metrics.get("ranking_pr_auc")
+        ),
+        "accuracy_parity_ligand_ranking_pr_auc_ci_low": _float(
+            accuracy_ligand_metrics.get("ranking_pr_auc_ci_low")
+        ),
+        "accuracy_parity_ligand_ranking_topk_hit_rate": _float(
+            accuracy_ligand_metrics.get("ranking_topk_hit_rate")
+        ),
+        "accuracy_parity_ligand_ranking_positive_count": _int(
+            accuracy_ligand_metrics.get("positive_count")
+        ),
+        "accuracy_parity_ligand_ranking_score_col_used": _text(
+            accuracy_ligand_metrics.get("ranking_score_col_used")
+        ),
+        "accuracy_parity_ligand_ranking_pr_auc_threshold": _float(
+            accuracy_ligand_thresholds.get("ranking_pr_auc_min")
+        ),
+        "accuracy_parity_ligand_ranking_pr_auc_ci_low_threshold": _float(
+            accuracy_ligand_thresholds.get("ranking_pr_auc_ci_low_min")
+        ),
+        "accuracy_parity_ligand_ranking_topk_hit_rate_threshold": _float(
+            accuracy_ligand_thresholds.get("ranking_topk_hit_rate_min")
+        ),
+        "accuracy_parity_ligand_ranking_next_required_step": _text(
+            accuracy_ligand_ranking.get("next_required_step")
+        ),
         "science_claim_promotion_gap_closure_gate_present": science_claim_gap_gate_present,
         "science_claim_promotion_gap_closure_status": _text(science_claim_gap.get("status")),
         "science_claim_promotion_gap_closure_recorded": (
@@ -1584,6 +1731,21 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- master_gap_closure_rollup_open_gap_count: `{s['master_gap_closure_rollup_open_gap_count']}`",
         f"- master_gap_closure_rollup_open_gap_ids: `{';'.join(s['master_gap_closure_rollup_open_gap_ids'])}`",
         f"- master_gap_closure_rollup_current_primary_open_gap_id: `{s['master_gap_closure_rollup_current_primary_open_gap_id']}`",
+        f"- accuracy_parity_scorecard_gate_present: `{s['accuracy_parity_scorecard_gate_present']}`",
+        f"- accuracy_parity_scorecard_status: `{s['accuracy_parity_scorecard_status']}`",
+        f"- accuracy_parity_scorecard_recorded: `{s['accuracy_parity_scorecard_recorded']}`",
+        f"- accuracy_parity_scorecard_row_count: `{s['accuracy_parity_scorecard_row_count']}`",
+        f"- accuracy_parity_scorecard_pass_row_count: `{s['accuracy_parity_scorecard_pass_row_count']}`",
+        f"- accuracy_parity_scorecard_blocked_row_count: `{s['accuracy_parity_scorecard_blocked_row_count']}`",
+        f"- accuracy_parity_scorecard_top_blocker_count: `{s['accuracy_parity_scorecard_top_blocker_count']}`",
+        f"- accuracy_parity_scorecard_top_blockers: `{';'.join(s['accuracy_parity_scorecard_top_blockers'])}`",
+        f"- accuracy_parity_scorecard_schrodinger_class_claim_allowed: `{s['accuracy_parity_scorecard_schrodinger_class_claim_allowed']}`",
+        f"- accuracy_parity_ligand_ranking_status: `{s['accuracy_parity_ligand_ranking_status']}`",
+        f"- accuracy_parity_ligand_ranking_pr_auc: `{s['accuracy_parity_ligand_ranking_pr_auc']}`",
+        f"- accuracy_parity_ligand_ranking_pr_auc_ci_low: `{s['accuracy_parity_ligand_ranking_pr_auc_ci_low']}`",
+        f"- accuracy_parity_ligand_ranking_topk_hit_rate: `{s['accuracy_parity_ligand_ranking_topk_hit_rate']}`",
+        f"- accuracy_parity_ligand_ranking_blocker_count: `{s['accuracy_parity_ligand_ranking_blocker_count']}`",
+        f"- accuracy_parity_ligand_ranking_blockers: `{';'.join(s['accuracy_parity_ligand_ranking_blockers'])}`",
         f"- science_claim_promotion_gap_closure_gate_present: `{s['science_claim_promotion_gap_closure_gate_present']}`",
         f"- science_claim_promotion_gap_closure_status: `{s['science_claim_promotion_gap_closure_status']}`",
         f"- science_claim_promotion_gap_closure_recorded: `{s['science_claim_promotion_gap_closure_recorded']}`",
@@ -1702,6 +1864,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_JSON,
     )
     parser.add_argument(
+        "--accuracy-parity-scorecard-json",
+        default=DEFAULT_ACCURACY_PARITY_SCORECARD_JSON,
+    )
+    parser.add_argument(
         "--science-claim-promotion-gap-json",
         default=DEFAULT_SCIENCE_CLAIM_PROMOTION_GAP_CLOSURE_JSON,
     )
@@ -1746,6 +1912,9 @@ def main(argv: list[str] | None = None) -> None:
         product_rollout_execution_smoke_receipt_packet=_read_json_if_present(
             args.product_rollout_execution_smoke_receipt_json
         ),
+        accuracy_parity_scorecard_packet=_read_json_if_present(
+            args.accuracy_parity_scorecard_json
+        ),
         science_claim_promotion_gap_packet=_read_json_if_present(
             args.science_claim_promotion_gap_json
         ),
@@ -1778,6 +1947,7 @@ def main(argv: list[str] | None = None) -> None:
         product_rollout_execution_smoke_receipt_path=(
             args.product_rollout_execution_smoke_receipt_json
         ),
+        accuracy_parity_scorecard_path=args.accuracy_parity_scorecard_json,
         science_claim_promotion_gap_path=args.science_claim_promotion_gap_json,
         master_gap_closure_rollup_path=args.master_gap_closure_rollup_json,
     )

@@ -41,6 +41,7 @@ FINAL_GATE_SPECS = [
             "goal_bottleneck_briefing_full_commercial_receipts_recorded",
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded",
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_packet_ready",
+            "accuracy_parity_scorecard_recorded",
         ],
         "required_zero_fields": ["blocker_count"],
         "required_int_exact_fields": {
@@ -54,6 +55,12 @@ FINAL_GATE_SPECS = [
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_operator_input_required_count": 4,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "accuracy_parity_scorecard_row_count": 5,
+            "accuracy_parity_scorecard_pass_row_count": 4,
+            "accuracy_parity_scorecard_blocked_row_count": 1,
+            "accuracy_parity_scorecard_top_blocker_count": 4,
+            "accuracy_parity_ligand_ranking_blocker_count": 4,
+            "accuracy_parity_ligand_ranking_positive_count": 13,
             "science_claim_promotion_gap_closure_open_gap_count": 2,
         },
         "required_text_exact_fields": {
@@ -84,6 +91,13 @@ FINAL_GATE_SPECS = [
             ),
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_acceptance_artifact": (
                 "runs/residual_model_registry_current.json"
+            ),
+            "accuracy_parity_scorecard_status": "blocked_accuracy_parity",
+            "accuracy_parity_scorecard_current_broad_accuracy_parity_estimate_pct": "40-50",
+            "accuracy_parity_scorecard_current_broad_commercial_platform_estimate_pct": "35-45",
+            "accuracy_parity_ligand_ranking_status": "blocked",
+            "accuracy_parity_ligand_ranking_score_col_used": (
+                "binding_score_composite_v7_residual_active"
             ),
             "science_claim_promotion_gap_closure_status": (
                 "blocked_science_claim_promotion_gap_closure"

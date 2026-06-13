@@ -646,6 +646,70 @@ def _blocked_science_claim_gap() -> dict:
     }
 
 
+def _blocked_accuracy_parity_scorecard() -> dict:
+    return {
+        "claim_boundary": {
+            "commercial_tool_accuracy_parity_allowed": False,
+            "fake_pass_allowed": False,
+            "scorecard_rows_must_map_to_frozen_artifacts": True,
+            "threshold_relaxation_allowed": False,
+        },
+        "rows": [
+            {
+                "axis": "ligand_ranking",
+                "status": "blocked",
+                "claim_scope": "broad GPCR ligand ranking/docking parity",
+                "comparator": "Schrodinger Glide/FEP+ class ranking",
+                "claim_promotion_allowed": False,
+                "commercial_parity_claim_allowed": False,
+                "blockers": [
+                    "claim_promotion_not_allowed",
+                    "ranking_pr_auc_below_threshold",
+                    "ranking_pr_auc_ci_low_below_threshold",
+                    "topk_hit_rate_below_threshold",
+                ],
+                "metrics": {
+                    "ranking_pr_auc": 0.15749,
+                    "ranking_pr_auc_ci_low": 0.001347,
+                    "ranking_topk_hit_rate": 0.1,
+                    "positive_count": 13,
+                    "ranking_score_col_used": "binding_score_composite_v7_residual_active",
+                    "core_claim_safe": False,
+                },
+                "thresholds": {
+                    "ranking_pr_auc_min": 0.55,
+                    "ranking_pr_auc_ci_low_min": 0.45,
+                    "ranking_topk_hit_rate_min": 0.5,
+                    "requires_pose_supported_decoy_resistance": True,
+                },
+                "next_required_step": (
+                    "Repair DRD2/HTR2A/OPRM1 pose-supported ranking, rebuild hard decoys, "
+                    "then rerun guarded 100k review before any Schrodinger-class ligand-ranking claim."
+                ),
+            }
+        ],
+        "summary": {
+            "status": "blocked_accuracy_parity",
+            "row_count": 5,
+            "pass_row_count": 4,
+            "restricted_pass_row_count": 0,
+            "blocked_row_count": 1,
+            "missing_row_count": 0,
+            "overall_commercial_tool_accuracy_parity_allowed": False,
+            "schrodinger_class_claim_allowed": False,
+            "openmm_class_claim_allowed": True,
+            "current_broad_accuracy_parity_estimate_pct": "40-50",
+            "current_broad_commercial_platform_estimate_pct": "35-45",
+            "top_blockers": [
+                "ligand_ranking:claim_promotion_not_allowed",
+                "ligand_ranking:ranking_pr_auc_below_threshold",
+                "ligand_ranking:ranking_pr_auc_ci_low_below_threshold",
+                "ligand_ranking:topk_hit_rate_below_threshold",
+            ],
+        },
+    }
+
+
 def _blocked_api_customer_flow() -> dict:
     return {
         "summary": {
@@ -1081,6 +1145,7 @@ def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_
         goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
         product_release_source_of_truth_packet=_ready_source_of_truth(),
         product_rollout_execution_smoke_receipt_packet=_blocked_rollout_smoke_receipt(),
+        accuracy_parity_scorecard_packet=_blocked_accuracy_parity_scorecard(),
         science_claim_promotion_gap_packet=_blocked_science_claim_gap(),
         master_gap_closure_rollup_packet=_blocked_master_gap_rollup(),
     )
@@ -1110,6 +1175,22 @@ def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_
     assert summary[
         "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status"
     ] == "blocked_ci_low_oprm1"
+    assert summary["accuracy_parity_scorecard_gate_present"] is True
+    assert summary["accuracy_parity_scorecard_status"] == "blocked_accuracy_parity"
+    assert summary["accuracy_parity_scorecard_recorded"] is True
+    assert summary["accuracy_parity_scorecard_row_count"] == 5
+    assert summary["accuracy_parity_scorecard_blocked_row_count"] == 1
+    assert summary["accuracy_parity_scorecard_top_blocker_count"] == 4
+    assert summary["accuracy_parity_scorecard_schrodinger_class_claim_allowed"] is False
+    assert summary["accuracy_parity_ligand_ranking_status"] == "blocked"
+    assert summary["accuracy_parity_ligand_ranking_blocker_count"] == 4
+    assert summary["accuracy_parity_ligand_ranking_pr_auc"] == 0.15749
+    assert summary["accuracy_parity_ligand_ranking_pr_auc_ci_low"] == 0.001347
+    assert summary["accuracy_parity_ligand_ranking_topk_hit_rate"] == 0.1
+    assert summary["accuracy_parity_ligand_ranking_score_col_used"] == (
+        "binding_score_composite_v7_residual_active"
+    )
+    assert "ACCURACY:ligand_ranking" in summary["full_commercial_release_blocker_ids"]
     smoke_row = next(
         row
         for row in payload["rows"]
@@ -1123,6 +1204,9 @@ def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_
         for row in payload["rows"]
         if row["check"] == "science_claim_promotion_gap_closure_recorded"
     )
+    accuracy_row = next(
+        row for row in payload["rows"] if row["check"] == "accuracy_parity_scorecard_recorded"
+    )
     assert smoke_row["status"] == "pass"
     assert smoke_row["release_blocker"] is False
     assert "rollout_executed=false" in smoke_row["observed"]
@@ -1133,6 +1217,12 @@ def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_
     assert science_claim_row["release_blocker"] is False
     assert "open_gap_ids=SCI-GPCR;SCI-OPENMM" in science_claim_row["observed"]
     assert "primary_open_gap_claim_promotion_status=blocked_ci_low_oprm1" in science_claim_row["observed"]
+    assert accuracy_row["status"] == "pass"
+    assert accuracy_row["release_blocker"] is False
+    assert "ligand_ranking_pr_auc=0.15749" in accuracy_row["observed"]
+    assert "ligand_ranking_pr_auc_ci_low=0.001347" in accuracy_row["observed"]
+    assert "ligand_ranking_topk_hit_rate=0.1" in accuracy_row["observed"]
+    assert "ranking_pr_auc_ci_low_below_threshold" in accuracy_row["observed"]
 
 
 def test_goal_release_decision_gate_blocks_missing_api_customer_flow_release_evidence() -> None:
@@ -1550,6 +1640,7 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
         "api_customer_flow": tmp_path / "api_customer_flow.json",
         "full_commercial_matrix": tmp_path / "full_commercial_matrix.json",
         "rollout_smoke_receipt": tmp_path / "rollout_smoke_receipt.json",
+        "accuracy_parity": tmp_path / "accuracy_parity.json",
         "science_claim_gap": tmp_path / "science_claim_gap.json",
         "master_gap_rollup": tmp_path / "master_gap_rollup.json",
     }
@@ -1579,6 +1670,10 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     )
     paths["rollout_smoke_receipt"].write_text(
         json.dumps(_blocked_rollout_smoke_receipt()) + "\n",
+        encoding="utf-8",
+    )
+    paths["accuracy_parity"].write_text(
+        json.dumps(_blocked_accuracy_parity_scorecard()) + "\n",
         encoding="utf-8",
     )
     paths["science_claim_gap"].write_text(
@@ -1633,6 +1728,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
             str(paths["full_commercial_matrix"]),
             "--product-rollout-execution-smoke-receipt-json",
             str(paths["rollout_smoke_receipt"]),
+            "--accuracy-parity-scorecard-json",
+            str(paths["accuracy_parity"]),
             "--science-claim-promotion-gap-json",
             str(paths["science_claim_gap"]),
             "--master-gap-closure-rollup-json",
@@ -1660,6 +1757,11 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     assert summary["product_rollout_execution_smoke_receipt_status"] == (
         "blocked_product_rollout_execution_smoke_receipt"
     )
+    assert summary["accuracy_parity_scorecard_status"] == "blocked_accuracy_parity"
+    assert summary["accuracy_parity_scorecard_recorded"] is True
+    assert summary["accuracy_parity_ligand_ranking_score_col_used"] == (
+        "binding_score_composite_v7_residual_active"
+    )
     assert summary["master_gap_closure_rollup_status"] == "blocked_master_gap_closure_rollup"
     assert summary[
         "science_claim_promotion_gap_closure_status"
@@ -1679,6 +1781,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     assert "trained_model_checkpoint_count_positive" in md_text
     assert "product_full_commercial_blocker_evidence_matrix_status" in md_text
     assert "product_rollout_execution_smoke_receipt_status" in md_text
+    assert "accuracy_parity_scorecard_status" in md_text
+    assert "ranking_pr_auc_ci_low_below_threshold" in md_text
     assert "master_gap_closure_rollup_status" in md_text
     assert "science_claim_promotion_gap_closure_status" in md_text
     assert "SCI-OPENMM" in md_text

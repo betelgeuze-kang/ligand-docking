@@ -108,6 +108,15 @@
 `current_next_action=Maintain conditional prior gate and keep broad-family claim promotion blocked until CI-low and OPRM1 gates clear.`다.
 검증: `tests/unit/test_build_science_claim_promotion_gap_closure.py`, `tools/accounting/build_science_claim_promotion_gap_closure.py`, `tools/product/ci_contract_fixture_packets.py` `write_science_claim_promotion_closure_packets()`.
 
+2026-06-13 추가 확인: 최신 `goal_release_decision_gate_current.json`과 `/goal/status`는
+`accuracy_parity_scorecard_*` 및 `accuracy_parity_ligand_ranking_*` 키로
+`blocked_accuracy_parity`, `schrodinger_class_claim_allowed=false`,
+`ligand_ranking_status=blocked`, `ranking_pr_auc=0.15749`,
+`ranking_pr_auc_ci_low=0.001347`, `ranking_topk_hit_rate=0.1`,
+`top_blocker_count=4`를 직접 노출한다. 따라서 restricted release가 green이어도
+Schrodinger-class/broad GPCR ligand-ranking parity 미달이 full-commercial blocker
+surface 밖으로 빠지지 않는다.
+
 ---
 
 ## 1g) 배포·운영·법무 경계 클로저 (2026-06-06, 2026-06-13 재확인) — READINESS CLOSED / R4 RECEIPT CLOSED
@@ -171,6 +180,13 @@
   `science_claim_promotion_gap_closure_*` 키로 이 세부 open gap을 직접 노출해,
   master rollup의 `SCI-CLAIM` 한 줄 뒤에 `SCI-GPCR`/`SCI-OPENMM` 원인이 숨지
   않게 한다.
+- `runs/accuracy_parity_scorecard_current.json`의 ligand-ranking blocker도 최신
+  `goal_release_decision_gate_current.json`과 `/goal/status`의
+  `accuracy_parity_scorecard_*`/`accuracy_parity_ligand_ranking_*` 키로 전파된다.
+  현재 posture는 `blocked_accuracy_parity`, `overall_commercial_tool_accuracy_parity_allowed=false`,
+  `schrodinger_class_claim_allowed=false`, `ligand_ranking_status=blocked`이며,
+  PR-AUC/CI-low/top-k가 threshold 아래라 broad GPCR ligand-ranking/Schrodinger-class
+  claim promotion은 계속 차단된다.
 - `runs/product_rollout_execution_smoke_receipt_current.json`은 별도 R4-approved operator
   실행 receipt를 read-only로 검증해 `product_rollout_execution_smoke_receipt_ready`,
   `receipt_csv_present=true`, `rollout_executed=true`, `external_state_mutated=true`를

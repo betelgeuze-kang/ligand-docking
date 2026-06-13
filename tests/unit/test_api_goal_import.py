@@ -196,6 +196,30 @@ def test_api_app_imports_with_goal_router() -> None:
     ] == release_artifact.get(
         "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status"
     )
+    assert status["accuracy_parity_scorecard_status"] == release_artifact.get(
+        "accuracy_parity_scorecard_status", ""
+    )
+    assert status["accuracy_parity_scorecard_recorded"] is (
+        release_artifact.get("accuracy_parity_scorecard_recorded") is True
+    )
+    assert status["accuracy_parity_scorecard_top_blocker_count"] == int(
+        release_artifact.get("accuracy_parity_scorecard_top_blocker_count") or 0
+    )
+    assert status["accuracy_parity_scorecard_top_blockers"] == release_artifact.get(
+        "accuracy_parity_scorecard_top_blockers", []
+    )
+    assert status["accuracy_parity_ligand_ranking_status"] == release_artifact.get(
+        "accuracy_parity_ligand_ranking_status", ""
+    )
+    assert status["accuracy_parity_ligand_ranking_blocker_count"] == int(
+        release_artifact.get("accuracy_parity_ligand_ranking_blocker_count") or 0
+    )
+    assert status["accuracy_parity_ligand_ranking_blockers"] == release_artifact.get(
+        "accuracy_parity_ligand_ranking_blockers", []
+    )
+    assert status["accuracy_parity_ligand_ranking_score_col_used"] == release_artifact.get(
+        "accuracy_parity_ligand_ranking_score_col_used", ""
+    )
     assert status["product_goal_release_blocker_fail_count"] == int(
         actions_artifact.get("product_goal_release_blocker_fail_count") or 0
     )
@@ -671,6 +695,12 @@ def test_api_app_imports_with_goal_router() -> None:
     )
     assert release["science_claim_promotion_gap_closure_current_primary_open_gap_id"] == (
         release_artifact.get("science_claim_promotion_gap_closure_current_primary_open_gap_id")
+    )
+    assert release["accuracy_parity_scorecard_status"] == release_artifact.get(
+        "accuracy_parity_scorecard_status", ""
+    )
+    assert release["accuracy_parity_ligand_ranking_status"] == release_artifact.get(
+        "accuracy_parity_ligand_ranking_status", ""
     )
     assert release["blocker_count"] == int(release_artifact.get("blocker_count") or 0)
     assert len(release["checks"]) == int(release_artifact.get("check_count") or 0)

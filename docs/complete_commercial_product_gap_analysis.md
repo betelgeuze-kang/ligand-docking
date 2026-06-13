@@ -21,6 +21,14 @@
   `science_claim_promotion_gap_closure_current_primary_open_gap_id=SCI-GPCR`,
   `science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status=blocked_ci_low_oprm1`
   로 직접 노출한다.
+- **정확도 parity 병목:** 최신 release decision과 `/goal/status`는
+  `accuracy_parity_scorecard_status=blocked_accuracy_parity`,
+  `accuracy_parity_ligand_ranking_status=blocked`,
+  `accuracy_parity_ligand_ranking_pr_auc=0.15749`,
+  `accuracy_parity_ligand_ranking_pr_auc_ci_low=0.001347`,
+  `accuracy_parity_ligand_ranking_topk_hit_rate=0.1`도 직접 노출한다.
+  즉 restricted local delivery green은 Schrodinger-class/broad GPCR ligand-ranking
+  parity 완성을 의미하지 않는다.
 - **닫히지 않은 것(제품 역량):** 과학 엔진 정밀도(가장 큰 진짜 갭), hosted/SaaS 운영 성숙도,
   범용 claim 확장, 외부 표준 벤치마크, 제품 UX.
 - **핵심 보정:** accounting이 green이라는 것은 "회계상 닫힘 + fail-closed 유지"를 의미하며,
@@ -178,6 +186,14 @@
   `product_full_commercial_blocker_evidence_matrix_recorded` check를 포함해,
   restricted release bundle review에서도 full commercial science claim 미완료가
   명시적으로 보인다.
+  2026-06-13 기준 최종 release decision과 `/goal/status`는
+  `accuracy_parity_scorecard_*` 및 `accuracy_parity_ligand_ranking_*` 키도 함께
+  내보낸다. 현재 scorecard는 `blocked_accuracy_parity`, `pass_row_count=4`,
+  `blocked_row_count=1`, `top_blocker_count=4`이며 ligand-ranking row는
+  `claim_promotion_allowed=false`, `commercial_parity_claim_allowed=false`,
+  `ranking_pr_auc=0.15749`, `ranking_pr_auc_ci_low=0.001347`,
+  `ranking_topk_hit_rate=0.1`로 threshold(`0.55/0.45/0.5`) 아래다. 이 때문에
+  Schrodinger-class ligand-ranking claim은 full-commercial blocker로 남는다.
 - `tools/accounting/build_goal_bottleneck_briefing.py`와 `/goal/status`는 release
   burndown이 clear여도 `product_goal_completion_audit`의 R8/R9 release blockers를
   active 병목으로 우선 노출한다. 따라서 restricted release가 green인 상태에서도

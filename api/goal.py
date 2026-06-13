@@ -141,6 +141,97 @@ def _string_list(value: Any) -> list[str]:
     return []
 
 
+def _accuracy_parity_release_fields(release: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "accuracy_parity_scorecard_gate_present": bool(
+            release.get("accuracy_parity_scorecard_gate_present") is True
+        ),
+        "accuracy_parity_scorecard_status": release.get("accuracy_parity_scorecard_status", ""),
+        "accuracy_parity_scorecard_recorded": bool(
+            release.get("accuracy_parity_scorecard_recorded") is True
+        ),
+        "accuracy_parity_scorecard_row_count": _int(
+            release.get("accuracy_parity_scorecard_row_count")
+        ),
+        "accuracy_parity_scorecard_pass_row_count": _int(
+            release.get("accuracy_parity_scorecard_pass_row_count")
+        ),
+        "accuracy_parity_scorecard_restricted_pass_row_count": _int(
+            release.get("accuracy_parity_scorecard_restricted_pass_row_count")
+        ),
+        "accuracy_parity_scorecard_blocked_row_count": _int(
+            release.get("accuracy_parity_scorecard_blocked_row_count")
+        ),
+        "accuracy_parity_scorecard_missing_row_count": _int(
+            release.get("accuracy_parity_scorecard_missing_row_count")
+        ),
+        "accuracy_parity_scorecard_top_blocker_count": _int(
+            release.get("accuracy_parity_scorecard_top_blocker_count")
+        ),
+        "accuracy_parity_scorecard_top_blockers": _string_list(
+            release.get("accuracy_parity_scorecard_top_blockers")
+        ),
+        "accuracy_parity_scorecard_overall_commercial_tool_accuracy_parity_allowed": bool(
+            release.get("accuracy_parity_scorecard_overall_commercial_tool_accuracy_parity_allowed")
+            is True
+        ),
+        "accuracy_parity_scorecard_schrodinger_class_claim_allowed": bool(
+            release.get("accuracy_parity_scorecard_schrodinger_class_claim_allowed") is True
+        ),
+        "accuracy_parity_scorecard_openmm_class_claim_allowed": bool(
+            release.get("accuracy_parity_scorecard_openmm_class_claim_allowed") is True
+        ),
+        "accuracy_parity_scorecard_current_broad_accuracy_parity_estimate_pct": release.get(
+            "accuracy_parity_scorecard_current_broad_accuracy_parity_estimate_pct", ""
+        ),
+        "accuracy_parity_scorecard_current_broad_commercial_platform_estimate_pct": release.get(
+            "accuracy_parity_scorecard_current_broad_commercial_platform_estimate_pct", ""
+        ),
+        "accuracy_parity_ligand_ranking_status": release.get(
+            "accuracy_parity_ligand_ranking_status", ""
+        ),
+        "accuracy_parity_ligand_ranking_claim_promotion_allowed": bool(
+            release.get("accuracy_parity_ligand_ranking_claim_promotion_allowed") is True
+        ),
+        "accuracy_parity_ligand_ranking_commercial_parity_claim_allowed": bool(
+            release.get("accuracy_parity_ligand_ranking_commercial_parity_claim_allowed") is True
+        ),
+        "accuracy_parity_ligand_ranking_blocker_count": _int(
+            release.get("accuracy_parity_ligand_ranking_blocker_count")
+        ),
+        "accuracy_parity_ligand_ranking_blockers": _string_list(
+            release.get("accuracy_parity_ligand_ranking_blockers")
+        ),
+        "accuracy_parity_ligand_ranking_pr_auc": _float(
+            release.get("accuracy_parity_ligand_ranking_pr_auc")
+        ),
+        "accuracy_parity_ligand_ranking_pr_auc_ci_low": _float(
+            release.get("accuracy_parity_ligand_ranking_pr_auc_ci_low")
+        ),
+        "accuracy_parity_ligand_ranking_topk_hit_rate": _float(
+            release.get("accuracy_parity_ligand_ranking_topk_hit_rate")
+        ),
+        "accuracy_parity_ligand_ranking_positive_count": _int(
+            release.get("accuracy_parity_ligand_ranking_positive_count")
+        ),
+        "accuracy_parity_ligand_ranking_score_col_used": release.get(
+            "accuracy_parity_ligand_ranking_score_col_used", ""
+        ),
+        "accuracy_parity_ligand_ranking_pr_auc_threshold": _float(
+            release.get("accuracy_parity_ligand_ranking_pr_auc_threshold")
+        ),
+        "accuracy_parity_ligand_ranking_pr_auc_ci_low_threshold": _float(
+            release.get("accuracy_parity_ligand_ranking_pr_auc_ci_low_threshold")
+        ),
+        "accuracy_parity_ligand_ranking_topk_hit_rate_threshold": _float(
+            release.get("accuracy_parity_ligand_ranking_topk_hit_rate_threshold")
+        ),
+        "accuracy_parity_ligand_ranking_next_required_step": release.get(
+            "accuracy_parity_ligand_ranking_next_required_step", ""
+        ),
+    }
+
+
 def _bottleneck_id(row: dict[str, Any]) -> str:
     return str(row.get("bottleneck_id") or row.get("requirement_id") or row.get("phase") or "").strip()
 
@@ -488,6 +579,7 @@ async def get_goal_status() -> dict[str, Any]:
             "science_claim_promotion_gap_closure_primary_open_gap_evidence": "",
             "science_claim_promotion_gap_closure_primary_open_gap_next_action": "",
             "science_claim_promotion_gap_closure_primary_open_gap_release_blocker": False,
+            **_accuracy_parity_release_fields({}),
             "product_goal_release_blocker_fail_count": 0,
             "product_goal_release_blocker_requirement_ids": [],
             "product_goal_primary_release_blocker_requirement_id": "",
@@ -686,6 +778,7 @@ async def get_goal_status() -> dict[str, Any]:
         "science_claim_promotion_gap_closure_primary_open_gap_release_blocker": bool(
             release.get("science_claim_promotion_gap_closure_primary_open_gap_release_blocker") is True
         ),
+        **_accuracy_parity_release_fields(release),
         "product_goal_release_blocker_fail_count": _int(
             actions.get("product_goal_release_blocker_fail_count")
             or intake.get("product_goal_release_blocker_fail_count")
@@ -1127,11 +1220,13 @@ async def get_goal_release_decision() -> dict[str, Any]:
             "status": "missing_goal_release_decision_gate",
             "artifact_path": str(GOAL_RELEASE_DECISION_ARTIFACT),
             "release_allowed": False,
+            **_accuracy_parity_release_fields({}),
             **_mutation_flags(),
             "claim_boundary": CLAIM_BOUNDARY,
         }
     return {
         **summary,
+        **_accuracy_parity_release_fields(summary),
         "artifact_path": str(GOAL_RELEASE_DECISION_ARTIFACT),
         "checks": _rows(packet),
         "blockers": _blockers(packet),
