@@ -165,6 +165,8 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         '"api_runner_profile_promotion_operator_receipt_profile_enabled_by_this_tool": False,'
         '"api_runner_profile_promotion_operator_receipt_runner_executed": False,'
         '"api_runner_profile_promotion_operator_receipt_external_state_mutated": False,'
+        '"api_runner_profile_promotion_operator_receipt_fail_closed_guard_ready": True,'
+        '"api_runner_profile_promotion_operator_receipt_fail_closed_guard_missing_reasons": [],'
         '"product_goal_release_blocker_fail_count": 2,'
         '"product_goal_release_blocker_requirement_ids": ["R8_full_scope_claim_closure", "R9_engine_refinement_claim_promotion"],'
         '"product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",'

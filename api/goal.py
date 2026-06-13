@@ -239,6 +239,28 @@ def _accuracy_parity_release_fields(release: dict[str, Any]) -> dict[str, Any]:
 
 
 def _api_runner_profile_receipt_release_fields(release: dict[str, Any]) -> dict[str, Any]:
+    fail_closed_guard_missing_reasons: list[str] = []
+    if release.get("api_runner_profile_promotion_operator_receipt_gate_present") is not True:
+        fail_closed_guard_missing_reasons.append("gate_not_present")
+    if release.get("api_runner_profile_promotion_operator_receipt_recorded") is not True:
+        fail_closed_guard_missing_reasons.append("receipt_not_recorded")
+    if not release.get("api_runner_profile_promotion_operator_receipt_operator_template_csv"):
+        fail_closed_guard_missing_reasons.append("operator_template_missing")
+    if not release.get("api_runner_profile_promotion_operator_receipt_approval_token_required"):
+        fail_closed_guard_missing_reasons.append("approval_token_required_missing")
+    for field, reason in [
+        (
+            "api_runner_profile_promotion_operator_receipt_profile_enabled_by_this_tool",
+            "profile_enabled_by_this_tool",
+        ),
+        ("api_runner_profile_promotion_operator_receipt_runner_executed", "runner_executed"),
+        (
+            "api_runner_profile_promotion_operator_receipt_external_state_mutated",
+            "external_state_mutated",
+        ),
+    ]:
+        if release.get(field) is True:
+            fail_closed_guard_missing_reasons.append(reason)
     return {
         "api_runner_profile_promotion_operator_receipt_gate_present": bool(
             release.get("api_runner_profile_promotion_operator_receipt_gate_present") is True
@@ -304,6 +326,12 @@ def _api_runner_profile_receipt_release_fields(release: dict[str, Any]) -> dict[
         "api_runner_profile_promotion_operator_receipt_external_state_mutated": bool(
             release.get("api_runner_profile_promotion_operator_receipt_external_state_mutated")
             is True
+        ),
+        "api_runner_profile_promotion_operator_receipt_fail_closed_guard_ready": (
+            not fail_closed_guard_missing_reasons
+        ),
+        "api_runner_profile_promotion_operator_receipt_fail_closed_guard_missing_reasons": (
+            fail_closed_guard_missing_reasons
         ),
     }
 

@@ -219,6 +219,8 @@ REQUIRED_STATUS_KEYS = {
     "api_runner_profile_promotion_operator_receipt_profile_enabled_by_this_tool",
     "api_runner_profile_promotion_operator_receipt_runner_executed",
     "api_runner_profile_promotion_operator_receipt_external_state_mutated",
+    "api_runner_profile_promotion_operator_receipt_fail_closed_guard_ready",
+    "api_runner_profile_promotion_operator_receipt_fail_closed_guard_missing_reasons",
     "product_goal_release_blocker_fail_count",
     "product_goal_release_blocker_requirement_ids",
     "product_goal_primary_release_blocker_requirement_id",

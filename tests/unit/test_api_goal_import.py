@@ -581,6 +581,35 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["api_runner_profile_promotion_operator_receipt_runner_executed"] is (
         release_artifact.get("api_runner_profile_promotion_operator_receipt_runner_executed") is True
     )
+    api_runner_guard_missing_reasons = []
+    if release_artifact.get("api_runner_profile_promotion_operator_receipt_gate_present") is not True:
+        api_runner_guard_missing_reasons.append("gate_not_present")
+    if release_artifact.get("api_runner_profile_promotion_operator_receipt_recorded") is not True:
+        api_runner_guard_missing_reasons.append("receipt_not_recorded")
+    if not release_artifact.get("api_runner_profile_promotion_operator_receipt_operator_template_csv"):
+        api_runner_guard_missing_reasons.append("operator_template_missing")
+    if not release_artifact.get("api_runner_profile_promotion_operator_receipt_approval_token_required"):
+        api_runner_guard_missing_reasons.append("approval_token_required_missing")
+    for field, reason in [
+        (
+            "api_runner_profile_promotion_operator_receipt_profile_enabled_by_this_tool",
+            "profile_enabled_by_this_tool",
+        ),
+        ("api_runner_profile_promotion_operator_receipt_runner_executed", "runner_executed"),
+        (
+            "api_runner_profile_promotion_operator_receipt_external_state_mutated",
+            "external_state_mutated",
+        ),
+    ]:
+        if release_artifact.get(field) is True:
+            api_runner_guard_missing_reasons.append(reason)
+    assert status["api_runner_profile_promotion_operator_receipt_fail_closed_guard_ready"] is (
+        not api_runner_guard_missing_reasons
+    )
+    assert (
+        status["api_runner_profile_promotion_operator_receipt_fail_closed_guard_missing_reasons"]
+        == api_runner_guard_missing_reasons
+    )
     assert status["product_goal_release_blocker_fail_count"] == int(
         actions_artifact.get("product_goal_release_blocker_fail_count") or 0
     )
