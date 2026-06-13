@@ -35,6 +35,8 @@ def _refresh_release_decision_ready() -> dict:
             "goal_bottleneck_briefing_full_commercial_receipts_recorded": True,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded": True,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_packet_ready": True,
+            "production_ai_registry_promotion_priority_packet_recorded": True,
+            "production_ai_registry_promotion_priority_packet_ready": True,
             "accuracy_parity_scorecard_recorded": True,
             "api_runner_profile_promotion_operator_receipt_recorded": True,
             "product_scope_breadth_evidence_receipt_recorded": True,
@@ -50,6 +52,13 @@ def _refresh_release_decision_ready() -> dict:
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_operator_input_required_count": 4,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "production_ai_registry_promotion_priority_required_gate_count": 4,
+            "production_ai_registry_promotion_priority_priority_item_count": 4,
+            "production_ai_registry_promotion_priority_operator_input_required_count": 4,
+            "production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
+            "production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "production_ai_registry_promotion_priority_approval_token_count": 1,
+            "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 0,
             "accuracy_parity_scorecard_row_count": 5,
             "accuracy_parity_scorecard_pass_row_count": 4,
             "accuracy_parity_scorecard_blocked_row_count": 1,
@@ -98,6 +107,33 @@ def _refresh_release_decision_ready() -> dict:
             ),
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_acceptance_artifact": (
                 "runs/residual_model_registry_current.json"
+            ),
+            "production_ai_registry_promotion_priority_packet_status": (
+                "blocked_production_ai_registry_promotion_priority_packet"
+            ),
+            "production_ai_registry_promotion_priority_top_gate_id": (
+                "trained_model_checkpoint_count_positive"
+            ),
+            "production_ai_registry_promotion_priority_top_priority_bucket": (
+                "trained_checkpoint_registration_required"
+            ),
+            "production_ai_registry_promotion_priority_top_acceptance_artifact": (
+                "runs/residual_model_registry_current.json"
+            ),
+            "production_ai_registry_promotion_priority_approval_token_required": (
+                "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+            ),
+            "production_ai_registry_promotion_priority_operator_receipt_artifact": (
+                "runs/production_ai_registry_promotion_operator_receipt_current.json"
+            ),
+            "production_ai_registry_promotion_priority_operator_receipt_csv": (
+                "config/production_ai_registry_promotion_operator_receipt_current.csv"
+            ),
+            "production_ai_registry_promotion_priority_operator_receipt_status": (
+                "blocked_production_ai_registry_promotion_operator_receipt"
+            ),
+            "production_ai_registry_promotion_priority_observed_registry_default_residual_mode": (
+                "shadow"
             ),
             "accuracy_parity_scorecard_status": "blocked_accuracy_parity",
             "accuracy_parity_scorecard_current_broad_accuracy_parity_estimate_pct": "40-50",
@@ -331,6 +367,10 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded"
         in release_row["required_true_fields"]
     )
+    assert (
+        "production_ai_registry_promotion_priority_packet_recorded"
+        in release_row["required_true_fields"]
+    )
     assert "accuracy_parity_scorecard_recorded" in release_row["required_true_fields"]
     assert (
         "api_runner_profile_promotion_operator_receipt_recorded"
@@ -344,6 +384,9 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_int_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count"
     ] == 4
+    assert release_row["required_int_exact_fields"][
+        "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count"
+    ] == 0
     assert release_row["required_int_exact_fields"][
         "accuracy_parity_scorecard_top_blocker_count"
     ] == 4
@@ -362,6 +405,12 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_text_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id"
     ] == "trained_model_checkpoint_count_positive"
+    assert release_row["required_text_exact_fields"][
+        "production_ai_registry_promotion_priority_operator_receipt_status"
+    ] == "blocked_production_ai_registry_promotion_operator_receipt"
+    assert release_row["required_text_exact_fields"][
+        "production_ai_registry_promotion_priority_observed_registry_default_residual_mode"
+    ] == "shadow"
     assert release_row["required_text_exact_fields"][
         "accuracy_parity_scorecard_status"
     ] == "blocked_accuracy_parity"

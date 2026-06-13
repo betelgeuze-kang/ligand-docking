@@ -231,6 +231,12 @@
   `trained_checkpoint_registration_required`, missing gate count는 4로 final-gate
   exact check에 묶여, restricted/local release가 green이어도 Production AI registry
   promotion의 첫 운영 병목이 최종 decision packet에서 빠지지 않는다.
+  최신 `goal_release_decision_gate_current.json`은 원본
+  `production_ai_registry_promotion_priority_packet_current.json`도
+  `production_ai_registry_promotion_priority_packet_*` summary와 recorded row로 직접
+  흡수하며, final refresh exact check는 `status`,
+  `operator_receipt_status`, `observed_registry_default_residual_mode=shadow`,
+  `observed_registry_trained_model_checkpoint_count=0`, approval token을 고정한다.
   최신 decision summary는
   `release_allowed=true`, `restricted_release_allowed=true`와 별개로
   `full_commercial_release_allowed=false`,
@@ -509,6 +515,12 @@
   상용 readiness operator packet, execution ladder, handoff bundle, `/goal/status`까지
   `production_ai_registry_promotion_priority_*` 필드로 전파되며, release bundle과
   source-of-truth gate의 required/depends-on artifact로도 고정된다.
+  최신 goal release decision도 원본 priority packet을 직접 읽어
+  `production_ai_registry_promotion_priority_packet_recorded=true`,
+  `operator_receipt_status=blocked_production_ai_registry_promotion_operator_receipt`,
+  `observed_registry_default_residual_mode=shadow`,
+  `observed_registry_trained_model_checkpoint_count=0`을 summary와 final refresh exact
+  check에 고정한다.
   `/product/commercial-readiness-operator-packet`,
   `/product/commercial-readiness-execution-ladder`,
   `/product/commercial-readiness-handoff-bundle`,

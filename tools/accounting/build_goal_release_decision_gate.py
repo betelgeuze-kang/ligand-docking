@@ -25,6 +25,9 @@ DEFAULT_CLEANUP_POSTCHECK_CONTRACT_JSON = "runs/cleanup_postcheck_contract_curre
 DEFAULT_CLEANUP_COMPLETION_GATE_JSON = "runs/cleanup_completion_gate_current.json"
 DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON = "runs/goal_api_surface_contract_current.json"
 DEFAULT_GOAL_BOTTLENECK_BRIEFING_JSON = "runs/goal_bottleneck_briefing_current.json"
+DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_PACKET_JSON = (
+    "runs/production_ai_registry_promotion_priority_packet_current.json"
+)
 DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON = "runs/product_ai_architecture_gap_closure_current.json"
 DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON = "runs/product_ai_architecture_execution_backlog_current.json"
 DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON = "runs/product_release_source_of_truth_gate_current.json"
@@ -195,6 +198,7 @@ def build_goal_release_decision_gate(
     cleanup_completion_gate_packet: dict[str, Any] | None = None,
     goal_api_surface_contract_packet: dict[str, Any] | None = None,
     goal_bottleneck_briefing_packet: dict[str, Any] | None = None,
+    production_ai_registry_promotion_priority_packet: dict[str, Any] | None = None,
     product_ai_architecture_gap_packet: dict[str, Any] | None = None,
     product_ai_execution_backlog_packet: dict[str, Any] | None = None,
     product_release_source_of_truth_packet: dict[str, Any] | None = None,
@@ -223,6 +227,9 @@ def build_goal_release_decision_gate(
     cleanup_completion_gate_path: str = DEFAULT_CLEANUP_COMPLETION_GATE_JSON,
     goal_api_surface_contract_path: str = DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON,
     goal_bottleneck_briefing_path: str = DEFAULT_GOAL_BOTTLENECK_BRIEFING_JSON,
+    production_ai_registry_promotion_priority_packet_path: str = (
+        DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_PACKET_JSON
+    ),
     product_ai_architecture_gap_path: str = DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON,
     product_ai_execution_backlog_path: str = DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON,
     product_release_source_of_truth_path: str = DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON,
@@ -389,6 +396,71 @@ def build_goal_release_decision_gate(
             is False
         )
         and bool(goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_external_state_mutated") is False)
+    )
+    production_ai_registry_priority = _summary(
+        production_ai_registry_promotion_priority_packet or {}
+    )
+    production_ai_registry_priority_gate_present = (
+        production_ai_registry_promotion_priority_packet is not None
+    )
+    production_ai_registry_priority_missing_gate_ids = _text_list(
+        production_ai_registry_priority.get("registry_promotion_missing_gate_ids")
+    )
+    production_ai_registry_priority_observed_checkpoint_missing_gate_ids = _text_list(
+        production_ai_registry_priority.get("observed_checkpoint_registry_promotion_missing_gate_ids")
+    )
+    production_ai_registry_priority_recorded = (
+        _text(production_ai_registry_priority.get("status"))
+        in {
+            "blocked_production_ai_registry_promotion_priority_packet",
+            "production_ai_registry_promotion_priority_packet_ready",
+        }
+        and bool(production_ai_registry_priority.get("priority_packet_ready") is True)
+        and bool(production_ai_registry_priority.get("registry_promotion_ready") is False)
+        and _int(production_ai_registry_priority.get("required_gate_count")) == 4
+        and _int(production_ai_registry_priority.get("priority_item_count")) == 4
+        and _int(production_ai_registry_priority.get("operator_input_required_count")) == 4
+        and _int(production_ai_registry_priority.get("blocked_priority_item_count")) == 4
+        and _int(production_ai_registry_priority.get("registry_promotion_missing_gate_count")) == 4
+        and production_ai_registry_priority_missing_gate_ids
+        == expected_production_ai_registry_promotion_missing_gate_ids
+        and _text(production_ai_registry_priority.get("top_gate_id"))
+        == "trained_model_checkpoint_count_positive"
+        and _text(production_ai_registry_priority.get("top_priority_bucket"))
+        == "trained_checkpoint_registration_required"
+        and _text(production_ai_registry_priority.get("top_acceptance_artifact"))
+        == "runs/residual_model_registry_current.json"
+        and _text(production_ai_registry_priority.get("approval_token_required"))
+        == "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+        and _text(production_ai_registry_priority.get("operator_receipt_artifact"))
+        == "runs/production_ai_registry_promotion_operator_receipt_current.json"
+        and bool(production_ai_registry_priority.get("operator_receipt_artifact_present") is True)
+        and _text(production_ai_registry_priority.get("operator_receipt_csv"))
+        == "config/production_ai_registry_promotion_operator_receipt_current.csv"
+        and bool(production_ai_registry_priority.get("operator_receipt_csv_present") is True)
+        and _text(production_ai_registry_priority.get("operator_receipt_status"))
+        == "blocked_production_ai_registry_promotion_operator_receipt"
+        and bool(production_ai_registry_priority.get("operator_receipt_ready") is False)
+        and _text(production_ai_registry_priority.get("residual_registry_artifact"))
+        == "runs/residual_model_registry_current.json"
+        and bool(production_ai_registry_priority.get("residual_registry_artifact_present") is True)
+        and _text(production_ai_registry_priority.get("checkpoint_readiness_artifact"))
+        == "runs/product_production_ai_checkpoint_readiness_current.json"
+        and bool(production_ai_registry_priority.get("checkpoint_readiness_artifact_present") is True)
+        and _text(production_ai_registry_priority.get("promotion_workbench_artifact"))
+        == "runs/product_production_ai_promotion_workbench_current.json"
+        and bool(production_ai_registry_priority.get("promotion_workbench_artifact_present") is True)
+        and _int(production_ai_registry_priority.get("observed_registry_trained_model_checkpoint_count")) == 0
+        and _text(production_ai_registry_priority.get("observed_registry_default_residual_mode")) == "shadow"
+        and bool(production_ai_registry_priority.get("observed_registry_production_promotion_allowed") is False)
+        and bool(production_ai_registry_priority.get("observed_registry_customer_facing_mutation_flags_ready") is False)
+        and bool(production_ai_registry_priority.get("observed_checkpoint_registry_promotion_currently_satisfied") is False)
+        and bool(production_ai_registry_priority.get("model_promoted") is False)
+        and bool(production_ai_registry_priority.get("customer_facing_mutation_enabled") is False)
+        and bool(production_ai_registry_priority.get("registry_edited_by_this_tool") is False)
+        and bool(production_ai_registry_priority.get("checkpoint_created_by_this_tool") is False)
+        and bool(production_ai_registry_priority.get("execution_enabled") is False)
+        and bool(production_ai_registry_priority.get("external_state_mutated") is False)
     )
     release_source_of_truth = _summary(product_release_source_of_truth_packet or {})
     release_source_of_truth_gate_present = product_release_source_of_truth_packet is not None
@@ -1036,6 +1108,62 @@ def build_goal_release_decision_gate(
                 ),
             )
         )
+    if production_ai_registry_priority_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="production_ai_registry_promotion_priority_packet_recorded",
+                artifact_path=production_ai_registry_promotion_priority_packet_path,
+                observed=(
+                    f"{_text(production_ai_registry_priority.get('status')) or 'missing'};"
+                    f"priority_packet_ready="
+                    f"{_bool_text(bool(production_ai_registry_priority.get('priority_packet_ready') is True))};"
+                    f"registry_promotion_ready="
+                    f"{_bool_text(bool(production_ai_registry_priority.get('registry_promotion_ready') is True))};"
+                    f"priority_item_count={_int(production_ai_registry_priority.get('priority_item_count'))};"
+                    f"operator_input_required_count="
+                    f"{_int(production_ai_registry_priority.get('operator_input_required_count'))};"
+                    f"blocked_priority_item_count="
+                    f"{_int(production_ai_registry_priority.get('blocked_priority_item_count'))};"
+                    f"missing_gate_count="
+                    f"{_int(production_ai_registry_priority.get('registry_promotion_missing_gate_count'))};"
+                    f"missing_gate_ids={';'.join(production_ai_registry_priority_missing_gate_ids)};"
+                    f"top_gate_id={_text(production_ai_registry_priority.get('top_gate_id'))};"
+                    f"top_priority_bucket={_text(production_ai_registry_priority.get('top_priority_bucket'))};"
+                    f"observed_registry_trained_model_checkpoint_count="
+                    f"{_int(production_ai_registry_priority.get('observed_registry_trained_model_checkpoint_count'))};"
+                    f"observed_registry_default_residual_mode="
+                    f"{_text(production_ai_registry_priority.get('observed_registry_default_residual_mode'))};"
+                    f"observed_registry_production_promotion_allowed="
+                    f"{_bool_text(bool(production_ai_registry_priority.get('observed_registry_production_promotion_allowed') is True))};"
+                    f"observed_registry_customer_facing_mutation_flags_ready="
+                    f"{_bool_text(bool(production_ai_registry_priority.get('observed_registry_customer_facing_mutation_flags_ready') is True))};"
+                    f"operator_receipt_status="
+                    f"{_text(production_ai_registry_priority.get('operator_receipt_status'))};"
+                    f"operator_receipt_artifact="
+                    f"{_text(production_ai_registry_priority.get('operator_receipt_artifact'))};"
+                    f"operator_receipt_csv={_text(production_ai_registry_priority.get('operator_receipt_csv'))};"
+                    f"approval_token_required="
+                    f"{_text(production_ai_registry_priority.get('approval_token_required'))};"
+                    f"model_promoted={_bool_text(bool(production_ai_registry_priority.get('model_promoted') is True))};"
+                    f"registry_edited_by_this_tool="
+                    f"{_bool_text(bool(production_ai_registry_priority.get('registry_edited_by_this_tool') is True))};"
+                    f"checkpoint_created_by_this_tool="
+                    f"{_bool_text(bool(production_ai_registry_priority.get('checkpoint_created_by_this_tool') is True))};"
+                    f"external_state_mutated="
+                    f"{_bool_text(bool(production_ai_registry_priority.get('external_state_mutated') is True))}"
+                ),
+                required=(
+                    "Production AI registry promotion priority packet recorded with observed registry gates, "
+                    "operator receipt inputs, approval token, and no tool-side promotion"
+                ),
+                passed=production_ai_registry_priority_recorded,
+                reason=(
+                    "The final release decision must preserve the direct registry/checkpoint/customer-mutation "
+                    "promotion blockers, not only the bottleneck-briefing rollup."
+                ),
+            )
+        )
     if release_source_of_truth_gate_present:
         rows.append(
             _row(
@@ -1300,6 +1428,11 @@ def build_goal_release_decision_gate(
         and not goal_bottleneck_production_ai_registry_promotion_priority_recorded
     ):
         next_required_items.append("goal bottleneck Production AI registry promotion priority briefing")
+    if (
+        production_ai_registry_priority_gate_present
+        and not production_ai_registry_priority_recorded
+    ):
+        next_required_items.append("Production AI registry promotion priority packet")
     if release_source_of_truth_gate_present and not release_source_of_truth_ready:
         next_required_items.append("product release source-of-truth gate")
     if full_commercial_matrix_gate_present and not full_commercial_matrix_recorded:
@@ -1654,6 +1787,138 @@ def build_goal_release_decision_gate(
         ),
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_external_state_mutated": bool(
             goal_bottleneck_briefing.get("production_ai_registry_promotion_priority_external_state_mutated") is True
+        ),
+        "production_ai_registry_promotion_priority_packet_gate_present": (
+            production_ai_registry_priority_gate_present
+        ),
+        "production_ai_registry_promotion_priority_packet_status": _text(
+            production_ai_registry_priority.get("status")
+        ),
+        "production_ai_registry_promotion_priority_packet_recorded": (
+            production_ai_registry_priority_recorded
+            if production_ai_registry_priority_gate_present
+            else None
+        ),
+        "production_ai_registry_promotion_priority_packet_ready": bool(
+            production_ai_registry_priority.get("priority_packet_ready") is True
+        ),
+        "production_ai_registry_promotion_priority_registry_promotion_ready": bool(
+            production_ai_registry_priority.get("registry_promotion_ready") is True
+        ),
+        "production_ai_registry_promotion_priority_required_gate_count": _int(
+            production_ai_registry_priority.get("required_gate_count")
+        ),
+        "production_ai_registry_promotion_priority_priority_item_count": _int(
+            production_ai_registry_priority.get("priority_item_count")
+        ),
+        "production_ai_registry_promotion_priority_operator_input_required_count": _int(
+            production_ai_registry_priority.get("operator_input_required_count")
+        ),
+        "production_ai_registry_promotion_priority_blocked_priority_item_count": _int(
+            production_ai_registry_priority.get("blocked_priority_item_count")
+        ),
+        "production_ai_registry_promotion_priority_missing_gate_count": _int(
+            production_ai_registry_priority.get("registry_promotion_missing_gate_count")
+        ),
+        "production_ai_registry_promotion_priority_missing_gate_ids": (
+            production_ai_registry_priority_missing_gate_ids
+        ),
+        "production_ai_registry_promotion_priority_top_gate_id": _text(
+            production_ai_registry_priority.get("top_gate_id")
+        ),
+        "production_ai_registry_promotion_priority_top_priority_bucket": _text(
+            production_ai_registry_priority.get("top_priority_bucket")
+        ),
+        "production_ai_registry_promotion_priority_top_acceptance_artifact": _text(
+            production_ai_registry_priority.get("top_acceptance_artifact")
+        ),
+        "production_ai_registry_promotion_priority_top_required_input": _text(
+            production_ai_registry_priority.get("top_required_input")
+        ),
+        "production_ai_registry_promotion_priority_top_verification_command": _text(
+            production_ai_registry_priority.get("top_verification_command")
+        ),
+        "production_ai_registry_promotion_priority_top_next_operator_step": _text(
+            production_ai_registry_priority.get("top_next_operator_step")
+        ),
+        "production_ai_registry_promotion_priority_approval_token_required": _text(
+            production_ai_registry_priority.get("approval_token_required")
+        ),
+        "production_ai_registry_promotion_priority_approval_token_count": _int(
+            production_ai_registry_priority.get("approval_token_count")
+        ),
+        "production_ai_registry_promotion_priority_operator_receipt_artifact": _text(
+            production_ai_registry_priority.get("operator_receipt_artifact")
+        ),
+        "production_ai_registry_promotion_priority_operator_receipt_artifact_present": bool(
+            production_ai_registry_priority.get("operator_receipt_artifact_present") is True
+        ),
+        "production_ai_registry_promotion_priority_operator_receipt_csv": _text(
+            production_ai_registry_priority.get("operator_receipt_csv")
+        ),
+        "production_ai_registry_promotion_priority_operator_receipt_csv_present": bool(
+            production_ai_registry_priority.get("operator_receipt_csv_present") is True
+        ),
+        "production_ai_registry_promotion_priority_operator_receipt_status": _text(
+            production_ai_registry_priority.get("operator_receipt_status")
+        ),
+        "production_ai_registry_promotion_priority_operator_receipt_ready": bool(
+            production_ai_registry_priority.get("operator_receipt_ready") is True
+        ),
+        "production_ai_registry_promotion_priority_residual_registry_artifact": _text(
+            production_ai_registry_priority.get("residual_registry_artifact")
+        ),
+        "production_ai_registry_promotion_priority_residual_registry_artifact_present": bool(
+            production_ai_registry_priority.get("residual_registry_artifact_present") is True
+        ),
+        "production_ai_registry_promotion_priority_checkpoint_readiness_artifact": _text(
+            production_ai_registry_priority.get("checkpoint_readiness_artifact")
+        ),
+        "production_ai_registry_promotion_priority_checkpoint_readiness_artifact_present": bool(
+            production_ai_registry_priority.get("checkpoint_readiness_artifact_present") is True
+        ),
+        "production_ai_registry_promotion_priority_promotion_workbench_artifact": _text(
+            production_ai_registry_priority.get("promotion_workbench_artifact")
+        ),
+        "production_ai_registry_promotion_priority_promotion_workbench_artifact_present": bool(
+            production_ai_registry_priority.get("promotion_workbench_artifact_present") is True
+        ),
+        "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": _int(
+            production_ai_registry_priority.get("observed_registry_trained_model_checkpoint_count")
+        ),
+        "production_ai_registry_promotion_priority_observed_registry_default_residual_mode": _text(
+            production_ai_registry_priority.get("observed_registry_default_residual_mode")
+        ),
+        "production_ai_registry_promotion_priority_observed_registry_production_promotion_allowed": bool(
+            production_ai_registry_priority.get("observed_registry_production_promotion_allowed") is True
+        ),
+        "production_ai_registry_promotion_priority_observed_registry_customer_facing_mutation_flags_ready": bool(
+            production_ai_registry_priority.get("observed_registry_customer_facing_mutation_flags_ready") is True
+        ),
+        "production_ai_registry_promotion_priority_observed_checkpoint_registry_promotion_currently_satisfied": bool(
+            production_ai_registry_priority.get("observed_checkpoint_registry_promotion_currently_satisfied")
+            is True
+        ),
+        "production_ai_registry_promotion_priority_observed_checkpoint_registry_promotion_missing_gate_ids": (
+            production_ai_registry_priority_observed_checkpoint_missing_gate_ids
+        ),
+        "production_ai_registry_promotion_priority_model_promoted": bool(
+            production_ai_registry_priority.get("model_promoted") is True
+        ),
+        "production_ai_registry_promotion_priority_customer_facing_mutation_enabled": bool(
+            production_ai_registry_priority.get("customer_facing_mutation_enabled") is True
+        ),
+        "production_ai_registry_promotion_priority_registry_edited_by_this_tool": bool(
+            production_ai_registry_priority.get("registry_edited_by_this_tool") is True
+        ),
+        "production_ai_registry_promotion_priority_checkpoint_created_by_this_tool": bool(
+            production_ai_registry_priority.get("checkpoint_created_by_this_tool") is True
+        ),
+        "production_ai_registry_promotion_priority_execution_enabled": bool(
+            production_ai_registry_priority.get("execution_enabled") is True
+        ),
+        "production_ai_registry_promotion_priority_external_state_mutated": bool(
+            production_ai_registry_priority.get("external_state_mutated") is True
         ),
         "product_release_source_of_truth_gate_present": release_source_of_truth_gate_present,
         "product_release_source_of_truth_status": _text(release_source_of_truth.get("status")),
@@ -2071,6 +2336,14 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- goal_bottleneck_briefing_production_ai_registry_promotion_priority_status: `{s['goal_bottleneck_briefing_production_ai_registry_promotion_priority_status']}`",
         f"- goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id: `{s['goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id']}`",
         f"- goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count: `{s['goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count']}`",
+        f"- production_ai_registry_promotion_priority_packet_recorded: `{s['production_ai_registry_promotion_priority_packet_recorded']}`",
+        f"- production_ai_registry_promotion_priority_packet_status: `{s['production_ai_registry_promotion_priority_packet_status']}`",
+        f"- production_ai_registry_promotion_priority_top_gate_id: `{s['production_ai_registry_promotion_priority_top_gate_id']}`",
+        f"- production_ai_registry_promotion_priority_missing_gate_count: `{s['production_ai_registry_promotion_priority_missing_gate_count']}`",
+        f"- production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count: `{s['production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count']}`",
+        f"- production_ai_registry_promotion_priority_observed_registry_default_residual_mode: `{s['production_ai_registry_promotion_priority_observed_registry_default_residual_mode']}`",
+        f"- production_ai_registry_promotion_priority_operator_receipt_status: `{s['production_ai_registry_promotion_priority_operator_receipt_status']}`",
+        f"- production_ai_registry_promotion_priority_approval_token_required: `{s['production_ai_registry_promotion_priority_approval_token_required']}`",
         f"- product_release_source_of_truth_gate_present: `{s['product_release_source_of_truth_gate_present']}`",
         f"- product_release_source_of_truth_status: `{s['product_release_source_of_truth_status']}`",
         f"- product_release_source_of_truth_ready: `{s['product_release_source_of_truth_ready']}`",
@@ -2228,6 +2501,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--cleanup-completion-gate-json", default=DEFAULT_CLEANUP_COMPLETION_GATE_JSON)
     parser.add_argument("--goal-api-surface-contract-json", default=DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON)
     parser.add_argument("--goal-bottleneck-briefing-json", default=DEFAULT_GOAL_BOTTLENECK_BRIEFING_JSON)
+    parser.add_argument(
+        "--production-ai-registry-promotion-priority-packet-json",
+        default=DEFAULT_PRODUCTION_AI_REGISTRY_PROMOTION_PRIORITY_PACKET_JSON,
+    )
     parser.add_argument("--product-ai-architecture-gap-json", default=DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON)
     parser.add_argument("--product-ai-execution-backlog-json", default=DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON)
     parser.add_argument("--product-release-source-of-truth-json", default=DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON)
@@ -2289,6 +2566,9 @@ def main(argv: list[str] | None = None) -> None:
         cleanup_completion_gate_packet=_read_json_if_present(args.cleanup_completion_gate_json),
         goal_api_surface_contract_packet=_read_json_if_present(args.goal_api_surface_contract_json),
         goal_bottleneck_briefing_packet=_read_json_if_present(args.goal_bottleneck_briefing_json),
+        production_ai_registry_promotion_priority_packet=_read_json_if_present(
+            args.production_ai_registry_promotion_priority_packet_json
+        ),
         product_ai_architecture_gap_packet=_read_json_if_present(args.product_ai_architecture_gap_json),
         product_ai_execution_backlog_packet=_read_json_if_present(args.product_ai_execution_backlog_json),
         product_release_source_of_truth_packet=_read_json_if_present(args.product_release_source_of_truth_json),
@@ -2335,6 +2615,9 @@ def main(argv: list[str] | None = None) -> None:
         cleanup_completion_gate_path=args.cleanup_completion_gate_json,
         goal_api_surface_contract_path=args.goal_api_surface_contract_json,
         goal_bottleneck_briefing_path=args.goal_bottleneck_briefing_json,
+        production_ai_registry_promotion_priority_packet_path=(
+            args.production_ai_registry_promotion_priority_packet_json
+        ),
         product_ai_architecture_gap_path=args.product_ai_architecture_gap_json,
         product_ai_execution_backlog_path=args.product_ai_execution_backlog_json,
         product_release_source_of_truth_path=args.product_release_source_of_truth_json,

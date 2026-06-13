@@ -568,6 +568,12 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   이 값을 exact check로 요구한다. 따라서 restricted/local release gate가 green이어도
   Production AI registry promotion의 첫 운영 병목이 최종 의사결정 packet 밖으로
   빠질 수 없다.
+  최신 `goal_release_decision_gate_current.json`은 원본
+  `production_ai_registry_promotion_priority_packet_current.json`도
+  `production_ai_registry_promotion_priority_packet_*` summary와 recorded row로 직접
+  흡수하며, final refresh exact check는 `status`,
+  `operator_receipt_status`, `observed_registry_default_residual_mode=shadow`,
+  `observed_registry_trained_model_checkpoint_count=0`, approval token을 고정한다.
   최신 decision summary는 restricted/local release surface를
   `release_allowed=true`, `restricted_release_allowed=true`로 유지하면서도
   `full_commercial_release_allowed=false`,
@@ -812,6 +818,12 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   source-of-truth gate도 같은 artifact를 required/depends-on 항목으로 추적해,
   Production AI registry promotion의 첫 gate가 operator intake, 병목 브리핑,
   상위 handoff, 최종 릴리즈 freshness 검사 밖으로 빠지지 않는다.
+  최신 goal release decision도 원본 priority packet을 직접 읽어
+  `production_ai_registry_promotion_priority_packet_recorded=true`,
+  `operator_receipt_status=blocked_production_ai_registry_promotion_operator_receipt`,
+  `observed_registry_default_residual_mode=shadow`,
+  `observed_registry_trained_model_checkpoint_count=0`을 summary와 final refresh exact
+  check에 고정한다.
   `/product/commercial-readiness-operator-packet`,
   `/product/commercial-readiness-execution-ladder`,
   `/product/commercial-readiness-handoff-bundle`,

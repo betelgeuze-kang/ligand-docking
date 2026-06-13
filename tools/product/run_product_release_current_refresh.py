@@ -41,6 +41,8 @@ FINAL_GATE_SPECS = [
             "goal_bottleneck_briefing_full_commercial_receipts_recorded",
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded",
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_packet_ready",
+            "production_ai_registry_promotion_priority_packet_recorded",
+            "production_ai_registry_promotion_priority_packet_ready",
             "accuracy_parity_scorecard_recorded",
             "api_runner_profile_promotion_operator_receipt_recorded",
             "product_scope_breadth_evidence_receipt_recorded",
@@ -58,6 +60,13 @@ FINAL_GATE_SPECS = [
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_operator_input_required_count": 4,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "production_ai_registry_promotion_priority_required_gate_count": 4,
+            "production_ai_registry_promotion_priority_priority_item_count": 4,
+            "production_ai_registry_promotion_priority_operator_input_required_count": 4,
+            "production_ai_registry_promotion_priority_blocked_priority_item_count": 4,
+            "production_ai_registry_promotion_priority_missing_gate_count": 4,
+            "production_ai_registry_promotion_priority_approval_token_count": 1,
+            "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 0,
             "accuracy_parity_scorecard_row_count": 5,
             "accuracy_parity_scorecard_pass_row_count": 4,
             "accuracy_parity_scorecard_blocked_row_count": 1,
@@ -109,6 +118,33 @@ FINAL_GATE_SPECS = [
             ),
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_acceptance_artifact": (
                 "runs/residual_model_registry_current.json"
+            ),
+            "production_ai_registry_promotion_priority_packet_status": (
+                "blocked_production_ai_registry_promotion_priority_packet"
+            ),
+            "production_ai_registry_promotion_priority_top_gate_id": (
+                "trained_model_checkpoint_count_positive"
+            ),
+            "production_ai_registry_promotion_priority_top_priority_bucket": (
+                "trained_checkpoint_registration_required"
+            ),
+            "production_ai_registry_promotion_priority_top_acceptance_artifact": (
+                "runs/residual_model_registry_current.json"
+            ),
+            "production_ai_registry_promotion_priority_approval_token_required": (
+                "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+            ),
+            "production_ai_registry_promotion_priority_operator_receipt_artifact": (
+                "runs/production_ai_registry_promotion_operator_receipt_current.json"
+            ),
+            "production_ai_registry_promotion_priority_operator_receipt_csv": (
+                "config/production_ai_registry_promotion_operator_receipt_current.csv"
+            ),
+            "production_ai_registry_promotion_priority_operator_receipt_status": (
+                "blocked_production_ai_registry_promotion_operator_receipt"
+            ),
+            "production_ai_registry_promotion_priority_observed_registry_default_residual_mode": (
+                "shadow"
             ),
             "accuracy_parity_scorecard_status": "blocked_accuracy_parity",
             "accuracy_parity_scorecard_current_broad_accuracy_parity_estimate_pct": "40-50",
