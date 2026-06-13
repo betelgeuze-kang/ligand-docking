@@ -667,7 +667,11 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   2/2, approval token 2개, 두 source gate status, 두 required input CSV를 exact
   field로 검증한다. `/goal/status`도 같은 값을
   `operator_intake_kit_full_commercial_evidence_receipt_*` 및
-  `bottleneck_briefing_full_commercial_evidence_receipt_*` 필드로 전달한다.
+  `bottleneck_briefing_full_commercial_evidence_receipt_*` 필드로 전달하며,
+  handoff chain의 first-blocked diagnostics는
+  `operator_intake_kit_product_goal_*_evidence_receipt_first_blocked_*`와
+  `bottleneck_briefing_product_goal_*_evidence_receipt_first_blocked_*` API 키로
+  별도 고정된다.
   `runs/product_scope_breadth_evidence_priority_packet_current.json`은 같은 R8
   blocker를 15개 open item으로 분해하고
   `product_scope_breadth_evidence_priority_packet_ready`,

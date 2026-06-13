@@ -1483,6 +1483,65 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status[
         "operator_intake_kit_full_commercial_evidence_receipt_approval_tokens"
     ] == intake_artifact.get("full_commercial_evidence_receipt_approval_tokens")
+    for source_key, status_key in [
+        (
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id",
+            "operator_intake_kit_product_goal_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id",
+        ),
+        (
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_evidence_artifact",
+            "operator_intake_kit_product_goal_scope_breadth_evidence_receipt_first_blocked_evidence_artifact",
+        ),
+        (
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_expected_evidence_status",
+            "operator_intake_kit_product_goal_scope_breadth_evidence_receipt_first_blocked_expected_evidence_status",
+        ),
+        (
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_observed_evidence_status",
+            "operator_intake_kit_product_goal_scope_breadth_evidence_receipt_first_blocked_observed_evidence_status",
+        ),
+        (
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_missing_true_fields",
+            "operator_intake_kit_product_goal_scope_breadth_evidence_receipt_first_blocked_missing_true_fields",
+        ),
+        (
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_row_blockers",
+            "operator_intake_kit_product_goal_scope_breadth_evidence_receipt_first_blocked_row_blockers",
+        ),
+        (
+            "product_goal_scope_breadth_evidence_receipt_most_common_row_blocker",
+            "operator_intake_kit_product_goal_scope_breadth_evidence_receipt_most_common_row_blocker",
+        ),
+        (
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_blocker_id",
+            "operator_intake_kit_product_goal_engine_refinement_claim_evidence_receipt_first_blocked_blocker_id",
+        ),
+        (
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact",
+            "operator_intake_kit_product_goal_engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact",
+        ),
+        (
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_expected_evidence_status",
+            "operator_intake_kit_product_goal_engine_refinement_claim_evidence_receipt_first_blocked_expected_evidence_status",
+        ),
+        (
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_observed_evidence_status",
+            "operator_intake_kit_product_goal_engine_refinement_claim_evidence_receipt_first_blocked_observed_evidence_status",
+        ),
+        (
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields",
+            "operator_intake_kit_product_goal_engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields",
+        ),
+        (
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_row_blockers",
+            "operator_intake_kit_product_goal_engine_refinement_claim_evidence_receipt_first_blocked_row_blockers",
+        ),
+        (
+            "product_goal_engine_refinement_claim_evidence_receipt_most_common_row_blocker",
+            "operator_intake_kit_product_goal_engine_refinement_claim_evidence_receipt_most_common_row_blocker",
+        ),
+    ]:
+        assert status[status_key] == intake_artifact.get(source_key)
     assert status["bottleneck_briefing_full_commercial_evidence_receipt_entry_count"] == int(
         bottlenecks_artifact.get("full_commercial_evidence_receipt_entry_count") or 0
     )
@@ -1530,6 +1589,65 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status[
         "bottleneck_briefing_full_commercial_evidence_receipt_approval_tokens"
     ] == bottlenecks_artifact.get("full_commercial_evidence_receipt_approval_tokens")
+    for source_key, status_key in [
+        (
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id",
+            "bottleneck_briefing_product_goal_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id",
+        ),
+        (
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_evidence_artifact",
+            "bottleneck_briefing_product_goal_scope_breadth_evidence_receipt_first_blocked_evidence_artifact",
+        ),
+        (
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_expected_evidence_status",
+            "bottleneck_briefing_product_goal_scope_breadth_evidence_receipt_first_blocked_expected_evidence_status",
+        ),
+        (
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_observed_evidence_status",
+            "bottleneck_briefing_product_goal_scope_breadth_evidence_receipt_first_blocked_observed_evidence_status",
+        ),
+        (
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_missing_true_fields",
+            "bottleneck_briefing_product_goal_scope_breadth_evidence_receipt_first_blocked_missing_true_fields",
+        ),
+        (
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_row_blockers",
+            "bottleneck_briefing_product_goal_scope_breadth_evidence_receipt_first_blocked_row_blockers",
+        ),
+        (
+            "product_goal_scope_breadth_evidence_receipt_most_common_row_blocker",
+            "bottleneck_briefing_product_goal_scope_breadth_evidence_receipt_most_common_row_blocker",
+        ),
+        (
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_blocker_id",
+            "bottleneck_briefing_product_goal_engine_refinement_claim_evidence_receipt_first_blocked_blocker_id",
+        ),
+        (
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact",
+            "bottleneck_briefing_product_goal_engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact",
+        ),
+        (
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_expected_evidence_status",
+            "bottleneck_briefing_product_goal_engine_refinement_claim_evidence_receipt_first_blocked_expected_evidence_status",
+        ),
+        (
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_observed_evidence_status",
+            "bottleneck_briefing_product_goal_engine_refinement_claim_evidence_receipt_first_blocked_observed_evidence_status",
+        ),
+        (
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields",
+            "bottleneck_briefing_product_goal_engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields",
+        ),
+        (
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_row_blockers",
+            "bottleneck_briefing_product_goal_engine_refinement_claim_evidence_receipt_first_blocked_row_blockers",
+        ),
+        (
+            "product_goal_engine_refinement_claim_evidence_receipt_most_common_row_blocker",
+            "bottleneck_briefing_product_goal_engine_refinement_claim_evidence_receipt_most_common_row_blocker",
+        ),
+    ]:
+        assert status[status_key] == bottlenecks_artifact.get(source_key)
     assert status["bottleneck_briefing_full_commercial_evidence_receipt_entry_count"] == 2
     assert status["operator_intake_kit_full_commercial_evidence_receipt_entry_count"] == 2
     assert (
