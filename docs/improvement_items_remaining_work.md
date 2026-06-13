@@ -498,7 +498,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `restricted_release_allowed=true`, `full_commercial_release_allowed=false`,
   `full_commercial_release_blocker_visibility_ready=true`,
   `completion_audit_release_blocker_bottleneck_count=2`,
-  `commercial_readiness_handoff_bundle_artifact_reference_count=28`를 노출하고,
+  `commercial_readiness_handoff_bundle_artifact_reference_count=29`를 노출하고,
   `product_goal_primary_release_blocker_requirement_id=R8_full_scope_claim_closure`,
   `primary_release_blocker_action_id=product_scope_expansion:resolve_full_scope_breadth_evidence_receipt`,
   `primary_release_blocker_action_required_input=config/product_scope_breadth_evidence_receipt_current.csv`도
@@ -594,7 +594,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `config/product_scope_breadth_evidence_receipt_current.csv`를
   `local_scope_breadth_receipt` / `local_scope_breadth_receipt_template`
   artifact reference로 추적하며, 최신
-  `local_missing_artifact_reference_count=0`, `artifact_reference_count=28`이다.
+  `local_missing_artifact_reference_count=0`, `artifact_reference_count=29`이다.
   `product_release_source_of_truth_gate_current.json`은 이제
   `product_api_contract_current.json`,
   `product_service_boundary_contract_current.json`,
@@ -615,9 +615,9 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `cameo_validation_operations_dossier_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=92`, `pass_count=92`,
-  `blocker_count=0`, `artifact_row_count=62`, `semantic_status_row_count=28`,
-  `release_refresh_command_count=75`, `stale_artifact_count=0`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=94`, `pass_count=94`,
+  `blocker_count=0`, `artifact_row_count=63`, `semantic_status_row_count=29`,
+  `release_refresh_command_count=76`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   `product_pose_sampling_readiness_semantic_ready` row는 deterministic local
   pocket placement, 6-start pose ensemble, RMSD diversity surface, bounded
@@ -635,8 +635,9 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   placeholder evidence, 6/6 blocked rows, public benchmark work-order 8개 row,
   approval token requirement, first-blocked diagnostics가 source-of-truth에서 직접 검증된다. production AI
   checkpoint/promotion workbench는 현재 `shadow`/blocked 상태를 semantic-ready row로
-  검증한다. API runner profile operator receipt와 production AI registry promotion
-  operator receipt도 blocked 상태와 첫 row blocker를 semantic-ready row로 검증한다.
+  검증한다. API runner profile operator receipt, production AI registry promotion
+  operator receipt, production AI registry promotion priority packet도 blocked 상태,
+  첫 row blocker, 첫 priority gate를 semantic-ready row로 검증한다.
   최신 goal API surface contract는 `check_count=9`,
   `pass_count=9`, `missing_full_commercial_visibility_token_count=0`이다.
   source-of-truth의 `goal_api_surface_contract_semantic_ready` row도
@@ -652,7 +653,8 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `goal_release_burndown_work_order`,
   `goal_api_surface_contract`, `goal_bottleneck_briefing`,
   `product_full_commercial_blocker_evidence_matrix`,
-  `production_ai_registry_promotion_operator_receipt`)를 scan 대상 및
+  `production_ai_registry_promotion_operator_receipt`,
+  `production_ai_registry_promotion_priority_packet`)를 scan 대상 및
   source-of-truth dependency로 포함해, R8/R9 상위 API/병목 surface에 raw molecular
   payload가 섞이면 release gate에서 숨지 않게 한다. 최신 scan은 `leak_count=0`이다.
   `tools/product/build_refine_tier_public_benchmark_readiness.py`는 curated 공개

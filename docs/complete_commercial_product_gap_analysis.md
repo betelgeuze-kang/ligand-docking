@@ -182,7 +182,7 @@
   `restricted_release_allowed`, `full_commercial_release_allowed`,
   `full_commercial_release_blocker_visibility_ready`,
   `completion_audit_release_blocker_bottleneck_count`, 그리고
-  `commercial_readiness_handoff_bundle_artifact_reference_count=28`를 함께 노출한다.
+  `commercial_readiness_handoff_bundle_artifact_reference_count=29`를 함께 노출한다.
   또한 `product_goal_primary_release_blocker_requirement_id`,
   `product_goal_primary_release_blocker`, `primary_release_blocker_action_id`,
   `primary_release_blocker_action_required_input`을 goal operator action board/intake
@@ -263,7 +263,7 @@
   handoff bundle의 artifact reference manifest는
   `product_scope_breadth_evidence_receipt` JSON과 CSV를 필수 local
   scope-breadth receipt evidence로 추적하며
-  `local_missing_artifact_reference_count=0`, `artifact_reference_count=28`이다.
+  `local_missing_artifact_reference_count=0`, `artifact_reference_count=29`이다.
 - `product_release_source_of_truth_gate_current.json`은
   `product_api_contract_current.json`,
   `product_service_boundary_contract_current.json`,
