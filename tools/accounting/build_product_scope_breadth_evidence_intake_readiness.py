@@ -96,6 +96,13 @@ def _unique(values: list[str]) -> list[str]:
     return result
 
 
+def _text_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [_text(item) for item in value if _text(item)]
+    text = _text(value)
+    return [text] if text else []
+
+
 def _triage_by_item(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {_text(row.get("item_id")): row for row in _rows(packet) if _text(row.get("item_id"))}
 
@@ -189,6 +196,10 @@ def build_payload(
                 "priority": _int(source_row.get("priority")),
                 "domain": _text(source_row.get("domain")),
                 "item_id": item_id,
+                "target_id": _text(source_row.get("target_id")),
+                "target_promotion_status": _text(source_row.get("target_promotion_status")),
+                "target_ready_for_promotion": source_row.get("target_ready_for_promotion") is True,
+                "target_blocked_for_promotion": source_row.get("target_blocked_for_promotion") is True,
                 "candidate_or_check": _text(source_row.get("candidate_or_check")),
                 "evidence_priority_bucket": _text(source_row.get("evidence_priority_bucket")),
                 "intake_mode": mode,
@@ -325,6 +336,16 @@ def build_payload(
         "top_unbound_item_id": unbound_rows[0]["item_id"] if unbound_rows else "",
         "top_unbound_required_evidence_type": unbound_rows[0]["required_evidence_type"] if unbound_rows else "",
         "next_operator_completion_item_id": _text(next_operator_row.get("item_id")),
+        "next_operator_completion_target_id": _text(next_operator_row.get("target_id")),
+        "next_operator_completion_target_promotion_status": _text(
+            next_operator_row.get("target_promotion_status")
+        ),
+        "next_operator_completion_target_ready_for_promotion": (
+            next_operator_row.get("target_ready_for_promotion") is True
+        ),
+        "next_operator_completion_target_blocked_for_promotion": (
+            next_operator_row.get("target_blocked_for_promotion") is True
+        ),
         "next_operator_completion_domain": _text(next_operator_row.get("domain")),
         "next_operator_completion_candidate_or_check": _text(next_operator_row.get("candidate_or_check")),
         "next_operator_completion_intake_mode": _text(next_operator_row.get("intake_mode")),
@@ -366,6 +387,30 @@ def build_payload(
         ),
         "next_operator_completion_transporter_best_evidence_document_id": _text(
             next_operator_row.get("transporter_best_evidence_document_id")
+        ),
+        "transporter_target_ready_for_promotion_ids": _text_list(
+            source_summary.get("transporter_target_ready_for_promotion_ids")
+        ),
+        "transporter_target_blocked_for_promotion_ids": _text_list(
+            source_summary.get("transporter_target_blocked_for_promotion_ids")
+        ),
+        "transporter_priority_target_ready_item_count": _int(
+            source_summary.get("transporter_priority_target_ready_item_count")
+        ),
+        "transporter_priority_target_blocked_item_count": _int(
+            source_summary.get("transporter_priority_target_blocked_item_count")
+        ),
+        "transporter_primary_blocker_target_id": _text(
+            source_summary.get("transporter_primary_blocker_target_id")
+        ),
+        "transporter_primary_blocker_packet_step": _text(
+            source_summary.get("transporter_primary_blocker_packet_step")
+        ),
+        "transporter_primary_blocker_candidate_name": _text(
+            source_summary.get("transporter_primary_blocker_candidate_name")
+        ),
+        "transporter_primary_blocker_signal": _text(
+            source_summary.get("transporter_primary_blocker_signal")
         ),
         "transporter_triage_packet_ready": transporter_triage_summary.get("triage_packet_ready") is True,
         "transporter_operator_review_evidence_matrix_ready": (
@@ -546,6 +591,14 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- guardrail_item_count: `{s['guardrail_item_count']}`",
         f"- all_operator_packet_bindings_ready: `{s['all_operator_packet_bindings_ready']}`",
         f"- operator_packet_binding_missing_count: `{s['operator_packet_binding_missing_count']}`",
+        f"- next_operator_completion_target_id: `{s['next_operator_completion_target_id'] or '-'}`",
+        f"- next_operator_completion_target_promotion_status: `{s['next_operator_completion_target_promotion_status'] or '-'}`",
+        f"- next_operator_completion_target_blocked_for_promotion: `{s['next_operator_completion_target_blocked_for_promotion']}`",
+        f"- transporter_target_ready_for_promotion_ids: `{';'.join(s['transporter_target_ready_for_promotion_ids']) or '-'}`",
+        f"- transporter_target_blocked_for_promotion_ids: `{';'.join(s['transporter_target_blocked_for_promotion_ids']) or '-'}`",
+        f"- transporter_primary_blocker_target_id: `{s['transporter_primary_blocker_target_id'] or '-'}`",
+        f"- transporter_primary_blocker_packet_step: `{s['transporter_primary_blocker_packet_step'] or '-'}`",
+        f"- transporter_primary_blocker_candidate_name: `{s['transporter_primary_blocker_candidate_name'] or '-'}`",
         f"- transporter_triage_packet_ready: `{s['transporter_triage_packet_ready']}`",
         f"- transporter_operator_review_evidence_matrix_ready: `{s['transporter_operator_review_evidence_matrix_ready']}`",
         f"- transporter_claim_safe_local_evidence_ready_count: `{s['transporter_claim_safe_local_evidence_ready_count']}`",
@@ -603,13 +656,14 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
             "",
         "## Intake Rows",
         "",
-        "| priority | domain | item | mode | ready | operator binding | local payloads | transporter triage | claim safe | claim blocker | required columns |",
-        "| ---: | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- |",
+        "| priority | domain | target | item | target status | mode | ready | operator binding | local payloads | transporter triage | claim safe | claim blocker | required columns |",
+        "| ---: | --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- |",
         ]
     )
     for row in payload["rows"]:
         lines.append(
-            f"| {row['priority']} | `{row['domain']}` | `{row['item_id']}` | `{row['intake_mode']}` | "
+            f"| {row['priority']} | `{row['domain']}` | `{row['target_id'] or '-'}` | "
+            f"`{row['item_id']}` | `{row['target_promotion_status'] or '-'}` | `{row['intake_mode']}` | "
             f"`{row['evidence_intake_ready']}` | `{row['operator_packet_binding_ready']}` | "
             f"{row['local_crosscheck_readable_count']}/{row['local_crosscheck_path_count']} | "
             f"`{row['transporter_slot_triage_bucket'] or '-'}` | "

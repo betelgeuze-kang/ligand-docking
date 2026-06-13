@@ -103,6 +103,68 @@ def test_api_customer_flow_release_evidence_ready(tmp_path: Path) -> None:
     assert payload["blockers"] == []
 
 
+def test_api_customer_flow_release_evidence_accepts_signed_recovered_live_job(tmp_path: Path) -> None:
+    packets = _ready_packets(tmp_path)
+    smoke = packets["smoke"]
+    smoke["summary"]["evidence_mode"] = "live_job_recovered_from_completed_artifacts"
+    smoke["recovered_from_completed_artifacts"] = True
+    smoke["result_manifest_signature_verified"] = True
+    smoke["result_manifest_status"] = "completed"
+    smoke["runner_execution_ok"] = True
+    smoke["worker_dispatch_enqueued"] = True
+    smoke["ledger_progress_state"] = "worker_dispatch_completed"
+    smoke["dispatch_outcome"] = {
+        "dispatched": True,
+        "reason": "completed_artifact_recovered_after_parent_wait",
+        "job_id": "job_1",
+    }
+
+    payload = mod.build_api_customer_flow_release_evidence(
+        e2e_packet=packets["e2e"],
+        restricted_packet=packets["restricted"],
+        smoke_packet=smoke,
+        product_bundle_packet=packets["bundle"],
+        delivery_evidence_packet=packets["delivery"],
+        pilot_packet=packets["pilot"],
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "api_customer_flow_release_evidence_ready"
+    assert summary["tier_alpha_evidence_mode"] == "live_job_recovered_from_completed_artifacts"
+    assert summary["tier_alpha_recovered_live_artifacts_ready"] is True
+    assert summary["tier_alpha_worker_dispatch_enqueued"] is True
+    assert payload["blockers"] == []
+
+
+def test_api_customer_flow_release_evidence_blocks_incomplete_recovered_live_job(tmp_path: Path) -> None:
+    packets = _ready_packets(tmp_path)
+    smoke = packets["smoke"]
+    smoke["summary"]["evidence_mode"] = "live_job_recovered_from_completed_artifacts"
+    smoke["recovered_from_completed_artifacts"] = True
+    smoke["result_manifest_signature_verified"] = True
+    smoke["result_manifest_status"] = "completed"
+    smoke["runner_execution_ok"] = True
+    smoke["worker_dispatch_enqueued"] = False
+    smoke["ledger_progress_state"] = "worker_dispatch_completed"
+    smoke["dispatch_outcome"] = {
+        "dispatched": True,
+        "reason": "completed_artifact_recovered_after_parent_wait",
+        "job_id": "job_1",
+    }
+
+    payload = mod.build_api_customer_flow_release_evidence(
+        e2e_packet=packets["e2e"],
+        restricted_packet=packets["restricted"],
+        smoke_packet=smoke,
+        product_bundle_packet=packets["bundle"],
+        delivery_evidence_packet=packets["delivery"],
+        pilot_packet=packets["pilot"],
+    )
+
+    assert payload["summary"]["status"] == "blocked_api_customer_flow_release_evidence"
+    assert "worker_lease_and_runner_profile_ready" in payload["summary"]["blocked_check_ids"]
+
+
 def test_api_customer_flow_release_evidence_blocks_synthetic_only_e2e(tmp_path: Path) -> None:
     packets = _ready_packets(tmp_path)
     packets["e2e"]["summary"]["evidence_mode"] = "synthetic_wiring_proof"

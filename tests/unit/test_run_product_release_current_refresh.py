@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import threading
+import time
 from pathlib import Path
 
 from tools.product import run_product_release_current_refresh as mod
@@ -562,3 +564,62 @@ def test_tier_alpha_smoke_in_process_enforces_parent_timeout(tmp_path: Path) -> 
 
     assert result["returncode"] != 0
     assert result["timed_out"] is True
+
+
+def test_tier_alpha_smoke_in_process_recovers_completed_artifacts(tmp_path: Path) -> None:
+    workspace = tmp_path / "runs/tier_alpha_dispatch_smoke/current"
+    job_id = "tier_alpha_adrb2_smoke_20260613T000000Z_recovered"
+    job_dir = workspace / "results" / job_id
+    ledger_dir = workspace / "results" / "product_docking_jobs"
+    out_json = tmp_path / "runs/tier_alpha_adrb2_dispatch_smoke_current.json"
+
+    def write_completed_artifacts() -> None:
+        time.sleep(0.2)
+        job_dir.mkdir(parents=True, exist_ok=True)
+        ledger_dir.mkdir(parents=True, exist_ok=True)
+        result_file = job_dir / "htvs_summary.json"
+        runner_execution = job_dir / "runner_execution.json"
+        result_manifest = job_dir / "result_manifest.json"
+        result_file.write_text('{"status":"completed"}\n', encoding="utf-8")
+        runner_execution.write_text('{"timeout_seconds":60}\n', encoding="utf-8")
+        result_manifest.write_text('{"status":"completed","signature_key_id":"tier-alpha-local"}\n', encoding="utf-8")
+        (job_dir / "status.json").write_text(
+            json.dumps(
+                {
+                    "job_id": job_id,
+                    "status": "completed",
+                    "result_file": str(result_file),
+                    "runner_execution": str(runner_execution),
+                    "result_manifest": str(result_manifest),
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        (ledger_dir / f"{job_id}.json").write_text(
+            '{"worker_state":"completed_fail_closed","simulation_sync_status":"completed"}\n',
+            encoding="utf-8",
+        )
+
+    writer = threading.Thread(target=write_completed_artifacts)
+    writer.start()
+    try:
+        result = mod._run_tier_alpha_smoke_in_process(
+            (
+                "python3 tools/product/run_tier_alpha_adrb2_dispatch_smoke.py "
+                f"--workspace {workspace} --out-json {out_json}"
+            ),
+            cwd=Path.cwd(),
+            timeout_seconds=10,
+        )
+    finally:
+        writer.join(timeout=5)
+
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert result["returncode"] == 0
+    assert result["timed_out"] is False
+    assert result["completed_evidence_recovered"] is True
+    assert payload["summary"]["status"] == "tier_alpha_adrb2_dispatch_smoke_pass"
+    assert payload["job_id"] == job_id
+    assert payload["ledger_worker_state"] == "completed_fail_closed"
+    assert payload["simulation_sync_status"] == "completed"

@@ -36,12 +36,27 @@ def _binding_fields(domain: str, item_id: str, evidence_type: str) -> dict[str, 
 
 def _priority_packet(crosscheck_path: Path) -> dict[str, object]:
     return {
-        "summary": {"priority_packet_ready": True, "queue_item_count": 4},
+        "summary": {
+            "priority_packet_ready": True,
+            "queue_item_count": 4,
+            "transporter_target_ready_for_promotion_ids": ["GLUT1"],
+            "transporter_target_blocked_for_promotion_ids": ["AQP1"],
+            "transporter_priority_target_ready_item_count": 1,
+            "transporter_priority_target_blocked_item_count": 2,
+            "transporter_primary_blocker_target_id": "AQP1",
+            "transporter_primary_blocker_packet_step": "core_binder_01",
+            "transporter_primary_blocker_candidate_name": "AqB013",
+            "transporter_primary_blocker_signal": "target_ready_for_promotion_ids=GLUT1;target_blocked_for_promotion_ids=AQP1",
+        },
         "rows": [
             {
                 "priority": 1,
                 "domain": "transporter",
                 "item_id": "AQP1.core_binder_01",
+                "target_id": "AQP1",
+                "target_promotion_status": "target_blocked_for_promotion",
+                "target_ready_for_promotion": False,
+                "target_blocked_for_promotion": True,
                 "candidate_or_check": "AqB013",
                 "evidence_priority_bucket": "local_crosscheck_review_present_but_exact_quant_required",
                 "local_crosscheck_paths": str(crosscheck_path),
@@ -56,6 +71,10 @@ def _priority_packet(crosscheck_path: Path) -> dict[str, object]:
                 "priority": 2,
                 "domain": "pxr",
                 "item_id": "ood_fit_binder_01",
+                "target_id": "PXR",
+                "target_promotion_status": "not_target_scored",
+                "target_ready_for_promotion": False,
+                "target_blocked_for_promotion": False,
                 "candidate_or_check": "bexarotene",
                 "evidence_priority_bucket": "external_primary_exact_evidence_required",
                 "local_crosscheck_paths": "",
@@ -70,6 +89,10 @@ def _priority_packet(crosscheck_path: Path) -> dict[str, object]:
                 "priority": 3,
                 "domain": "transporter",
                 "item_id": "GLUT1_4PYP.core_binder_02",
+                "target_id": "GLUT1",
+                "target_promotion_status": "target_ready_for_promotion",
+                "target_ready_for_promotion": True,
+                "target_blocked_for_promotion": False,
                 "candidate_or_check": "glut1_placeholder_binder_02",
                 "evidence_priority_bucket": "review_only_keep_blocked_until_direct_binding",
                 "local_crosscheck_paths": "",
@@ -84,6 +107,10 @@ def _priority_packet(crosscheck_path: Path) -> dict[str, object]:
                 "priority": 4,
                 "domain": "general_protein_ligand",
                 "item_id": "domain_ready.pxr",
+                "target_id": "PXR",
+                "target_promotion_status": "not_target_scored",
+                "target_ready_for_promotion": False,
+                "target_blocked_for_promotion": False,
                 "candidate_or_check": "domain_ready.pxr",
                 "evidence_priority_bucket": "claim_gate_waits_on_domain_evidence",
                 "local_crosscheck_paths": "",
@@ -216,6 +243,10 @@ def test_scope_breadth_evidence_intake_readiness_classifies_intake_lanes(tmp_pat
     assert summary["operator_packet_binding_ready_count"] == 4
     assert summary["operator_packet_binding_missing_count"] == 0
     assert summary["next_operator_completion_item_id"] == "AQP1.core_binder_01"
+    assert summary["next_operator_completion_target_id"] == "AQP1"
+    assert summary["next_operator_completion_target_promotion_status"] == "target_blocked_for_promotion"
+    assert summary["next_operator_completion_target_ready_for_promotion"] is False
+    assert summary["next_operator_completion_target_blocked_for_promotion"] is True
     assert summary["next_operator_completion_domain"] == "transporter"
     assert summary["next_operator_completion_candidate_or_check"] == "AqB013"
     assert summary["next_operator_completion_intake_mode"] == "local_crosscheck_triage"
@@ -239,6 +270,14 @@ def test_scope_breadth_evidence_intake_readiness_classifies_intake_lanes(tmp_pat
         "functional_assay_quantitative_but_not_direct_binding_claim_safe"
     )
     assert summary["next_operator_completion_transporter_best_evidence_activity_type"] == "IC50"
+    assert summary["transporter_target_ready_for_promotion_ids"] == ["GLUT1"]
+    assert summary["transporter_target_blocked_for_promotion_ids"] == ["AQP1"]
+    assert summary["transporter_priority_target_ready_item_count"] == 1
+    assert summary["transporter_priority_target_blocked_item_count"] == 2
+    assert summary["transporter_primary_blocker_target_id"] == "AQP1"
+    assert summary["transporter_primary_blocker_packet_step"] == "core_binder_01"
+    assert summary["transporter_primary_blocker_candidate_name"] == "AqB013"
+    assert "target_blocked_for_promotion_ids=AQP1" in summary["transporter_primary_blocker_signal"]
     assert summary["transporter_triage_packet_ready"] is True
     assert summary["transporter_operator_review_evidence_matrix_ready"] is True
     assert summary["transporter_claim_safe_local_evidence_ready_count"] == 0
@@ -297,6 +336,9 @@ def test_scope_breadth_evidence_intake_readiness_classifies_intake_lanes(tmp_pat
     assert "build_transporter_manual_review_intake_template.py" in summary[
         "scope_operator_transfer_post_return_validation_command"
     ]
+    assert rows[0]["target_id"] == "AQP1"
+    assert rows[0]["target_promotion_status"] == "target_blocked_for_promotion"
+    assert rows[0]["target_blocked_for_promotion"] is True
     assert rows[0]["evidence_intake_ready"] is True
     assert rows[0]["operator_packet_binding_ready"] is True
     assert rows[0]["review_template_artifact"] == "runs/transporter_manual_review_intake_template_current.json"
@@ -315,6 +357,8 @@ def test_scope_breadth_evidence_intake_readiness_classifies_intake_lanes(tmp_pat
     assert "reference_binding_kcal_mol" in rows[0]["required_intake_columns"]
     assert rows[1]["intake_mode"] == "external_exact_source_required"
     assert rows[1]["external_exact_evidence_required"] is True
+    assert rows[2]["target_id"] == "GLUT1"
+    assert rows[2]["target_ready_for_promotion"] is True
     assert rows[2]["guardrail_ready"] is True
     assert rows[3]["intake_mode"] == "deferred_claim_gate"
     assert all(row["scope_promotion_allowed"] is False for row in rows)
@@ -407,4 +451,6 @@ def test_scope_breadth_evidence_intake_readiness_cli_writes_outputs(tmp_path: Pa
     md = out_md.read_text(encoding="utf-8")
     assert "Product Scope Breadth Evidence Intake Readiness" in md
     assert "Operator Evidence Transfer Manifest" in md
+    assert "next_operator_completion_target_id" in md
+    assert "`AQP1`" in md
     assert "required_intake_columns" in out_csv.read_text(encoding="utf-8")

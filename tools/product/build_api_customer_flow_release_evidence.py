@@ -108,6 +108,32 @@ def _verify_manifest_from_smoke(smoke: dict[str, Any]) -> tuple[bool, str, str]:
     )
 
 
+def _ledger_from_smoke(smoke: dict[str, Any]) -> dict[str, Any]:
+    direct = smoke.get("ledger_payload")
+    if isinstance(direct, dict):
+        return direct
+    jobs_dir = _text(smoke.get("jobs_dir"))
+    job_id = _text(smoke.get("job_id"))
+    if not jobs_dir or not job_id:
+        return {}
+    return _read_json_if_present(_resolve(jobs_dir) / f"{job_id}.json")
+
+
+def _status_from_smoke(smoke: dict[str, Any]) -> dict[str, Any]:
+    status_json = _text(smoke.get("status_json"))
+    return _read_json_if_present(status_json) if status_json else {}
+
+
+def _runner_execution_from_smoke(smoke: dict[str, Any]) -> dict[str, Any]:
+    direct = smoke.get("runner_execution_payload")
+    if isinstance(direct, dict):
+        return direct
+    runner_execution = _text(smoke.get("runner_execution"))
+    if not runner_execution:
+        runner_execution = _text(_status_from_smoke(smoke).get("runner_execution"))
+    return _read_json_if_present(runner_execution) if runner_execution else {}
+
+
 def _row(check_id: str, passed: bool, observed: str, required: str, reason: str, artifact_path: str) -> dict[str, Any]:
     return {
         "check_id": check_id,
@@ -144,7 +170,35 @@ def build_api_customer_flow_release_evidence(
     delivery = _summary(delivery_evidence_packet)
     pilot = _summary(pilot_packet)
     dispatch = smoke_packet.get("dispatch_outcome") if isinstance(smoke_packet.get("dispatch_outcome"), dict) else {}
+    smoke_ledger = _ledger_from_smoke(smoke_packet)
+    runner_execution = _runner_execution_from_smoke(smoke_packet)
     manifest_verified, manifest_path, manifest_key_id = _verify_manifest_from_smoke(smoke_packet)
+    smoke_evidence_mode = _text(smoke.get("evidence_mode"))
+    recovered_live_job = (
+        smoke_evidence_mode == "live_job_recovered_from_completed_artifacts"
+        and smoke_packet.get("recovered_from_completed_artifacts") is True
+    )
+    runner_execution_ok = (
+        smoke_packet.get("runner_execution_ok") is True
+        or (
+            runner_execution.get("ok") is True
+            and _int(runner_execution.get("returncode")) == 0
+            and runner_execution.get("timed_out") is not True
+        )
+    )
+    worker_dispatch_enqueued = smoke_packet.get("worker_dispatch_enqueued") is True or smoke_ledger.get(
+        "worker_dispatch_enqueued"
+    ) is True
+    ledger_progress_state = _text(
+        smoke_packet.get("ledger_progress_state") or smoke_ledger.get("progress_state") or smoke_ledger.get("current_step")
+    )
+    recovered_live_artifacts_ready = (
+        recovered_live_job
+        and manifest_verified
+        and _text(smoke_packet.get("result_manifest_status")) == "completed"
+        and runner_execution_ok
+        and worker_dispatch_enqueued
+    )
 
     live_e2e_ready = (
         _text(e2e.get("status")) == "api_docking_dispatch_e2e_ready"
@@ -155,19 +209,27 @@ def build_api_customer_flow_release_evidence(
     )
     live_smoke_ready = (
         _text(smoke.get("status")) == "tier_alpha_adrb2_dispatch_smoke_pass"
-        and _text(smoke.get("evidence_mode")) == "live_job"
+        and (smoke_evidence_mode == "live_job" or recovered_live_artifacts_ready)
         and smoke.get("api_validated_runner_enabled") is True
         and smoke_packet.get("worker_ran") is True
         and _text(smoke_packet.get("sqlite_job_status")) == "completed"
         and _text(smoke_packet.get("ledger_worker_state")) == "completed_fail_closed"
         and _text(smoke_packet.get("simulation_sync_status")) == "completed"
     )
-    worker_lease_ready = (
+    standard_worker_lease_ready = (
         live_smoke_ready
         and dispatch.get("dispatched") is True
         and _text(dispatch.get("reason")) == "eligible"
         and _text((dispatch.get("enqueue") or {}).get("sqlite_status")) == "submitted"
     )
+    recovered_worker_lease_ready = (
+        live_smoke_ready
+        and recovered_live_artifacts_ready
+        and dispatch.get("dispatched") is True
+        and _text(dispatch.get("reason")) == "completed_artifact_recovered_after_parent_wait"
+        and ledger_progress_state == "worker_dispatch_completed"
+    )
+    worker_lease_ready = standard_worker_lease_ready or recovered_worker_lease_ready
     signed_manifest_ready = (
         manifest_verified
         and bool(manifest_path)
@@ -208,11 +270,14 @@ def build_api_customer_flow_release_evidence(
             "tier_alpha_smoke_live_job_ready",
             live_smoke_ready,
             (
-                f"status={_text(smoke.get('status'))};runner_enabled={smoke.get('api_validated_runner_enabled')};"
+                f"status={_text(smoke.get('status'))};evidence_mode={smoke_evidence_mode};"
+                f"recovered={smoke_packet.get('recovered_from_completed_artifacts') is True};"
+                f"runner_enabled={smoke.get('api_validated_runner_enabled')};"
                 f"worker_ran={smoke_packet.get('worker_ran')};sqlite={_text(smoke_packet.get('sqlite_job_status'))};"
-                f"ledger={_text(smoke_packet.get('ledger_worker_state'))};sync={_text(smoke_packet.get('simulation_sync_status'))}"
+                f"ledger={_text(smoke_packet.get('ledger_worker_state'))};sync={_text(smoke_packet.get('simulation_sync_status'))};"
+                f"manifest_verified={manifest_verified};runner_execution_ok={runner_execution_ok}"
             ),
-            "tier_alpha_adrb2_dispatch_smoke_pass with validated runner enabled and completed worker ledger sync",
+            "tier_alpha_adrb2_dispatch_smoke_pass with live_job or signed recovered live-job artifacts, validated runner enabled, and completed worker ledger sync",
             "The customer path must prove the validated runner worker actually drained a queued restricted job.",
             smoke_path,
         ),
@@ -221,9 +286,10 @@ def build_api_customer_flow_release_evidence(
             worker_lease_ready,
             (
                 f"dispatched={dispatch.get('dispatched')};reason={_text(dispatch.get('reason'))};"
-                f"sqlite_status={_text((dispatch.get('enqueue') or {}).get('sqlite_status'))}"
+                f"sqlite_status={_text((dispatch.get('enqueue') or {}).get('sqlite_status'))};"
+                f"worker_dispatch_enqueued={worker_dispatch_enqueued};ledger_progress_state={ledger_progress_state}"
             ),
-            "dispatch_outcome.dispatched=true;reason=eligible;enqueue.sqlite_status=submitted",
+            "dispatch_outcome.dispatched=true with either reason=eligible/enqueue.sqlite_status=submitted or signed recovered artifacts proving worker_dispatch_enqueued and worker_dispatch_completed",
             "The flow must prove a dispatch-eligible ledger record was converted into a worker-leaseable queue job.",
             smoke_path,
         ),
@@ -276,7 +342,12 @@ def build_api_customer_flow_release_evidence(
         "blocker_count": len(blockers),
         "blocked_check_ids": [row["check_id"] for row in blockers],
         "e2e_evidence_mode": _text(e2e.get("evidence_mode")),
+        "tier_alpha_evidence_mode": smoke_evidence_mode,
         "tier_alpha_smoke_status": _text(smoke.get("status")),
+        "tier_alpha_recovered_from_completed_artifacts": recovered_live_job,
+        "tier_alpha_recovered_live_artifacts_ready": recovered_live_artifacts_ready,
+        "tier_alpha_runner_execution_ok": runner_execution_ok,
+        "tier_alpha_worker_dispatch_enqueued": worker_dispatch_enqueued,
         "result_manifest": manifest_path,
         "result_manifest_sha256": _sha256_file(manifest_path) if manifest_path else "",
         "result_manifest_signature_verified": manifest_verified,

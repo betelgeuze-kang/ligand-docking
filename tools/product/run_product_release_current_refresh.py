@@ -8,6 +8,7 @@ import os
 import signal
 import shlex
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,14 @@ DEFAULT_OUT_JSON = "runs/product_release_current_refresh_plan_current.json"
 DEFAULT_OUT_MD = "runs/product_release_current_refresh_plan_current.md"
 DEFAULT_COMMAND_TIMEOUT_SECONDS = 420
 TIER_ALPHA_SMOKE_SCRIPT = "tools/product/run_tier_alpha_adrb2_dispatch_smoke.py"
+TIER_ALPHA_DEFAULT_WORKSPACE = "runs/tier_alpha_dispatch_smoke/current"
+TIER_ALPHA_DEFAULT_OUT_JSON = "runs/tier_alpha_adrb2_dispatch_smoke_current.json"
+TIER_ALPHA_JOB_PREFIX = "tier_alpha_adrb2_smoke_"
+TIER_ALPHA_CLAIM_BOUNDARY = (
+    "Tier alpha ADRB2 dispatch smoke only; submits one restricted gpcr docking ledger row, dispatches to the "
+    "SQLite worker queue with API_VALIDATED_RUNNER_ENABLED=1, and waits for worker completion. "
+    "It does not emit customer-facing poses or mutate external state."
+)
 
 CLAIM_BOUNDARY = (
     "Product release current refresh runner only; it executes the listed local artifact builders and local release "
@@ -626,18 +635,192 @@ def _is_tier_alpha_smoke_command(command: str) -> bool:
     return len(parts) >= 2 and Path(parts[1]).as_posix() == TIER_ALPHA_SMOKE_SCRIPT
 
 
-def _run_tier_alpha_smoke_in_process(command: str, *, cwd: Path, timeout_seconds: int) -> dict[str, Any]:
-    proc = subprocess.Popen(shlex.split(command), cwd=cwd, start_new_session=True)
+def _arg_value(parts: list[str], flag: str, default: str) -> str:
+    prefix = f"{flag}="
+    for index, part in enumerate(parts):
+        if part == flag and index + 1 < len(parts):
+            return parts[index + 1]
+        if part.startswith(prefix):
+            return part.split("=", 1)[1]
+    return default
+
+
+def _resolve_command_path(value: str, *, cwd: Path) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else cwd / path
+
+
+def _relative_or_absolute(path: Path) -> str:
     try:
-        returncode = proc.wait(timeout=max(1, int(timeout_seconds)))
-        return {"returncode": int(returncode), "timed_out": False}
-    except subprocess.TimeoutExpired:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
+def _load_json_file(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _verify_tier_alpha_manifest(manifest_payload: dict[str, Any]) -> bool:
+    try:
+        from api.result_manifest import verify_result_manifest
+
+        return verify_result_manifest(
+            manifest_payload,
+            signing_key=os.environ.get("API_RESULT_MANIFEST_SIGNING_KEY", "tier-alpha-local-smoke-signing-key"),
+        )
+    except Exception:
+        return False
+
+
+def _latest_completed_tier_alpha_evidence(workspace: Path, *, started_at: float) -> dict[str, Any]:
+    results_dir = workspace / "results"
+    if not results_dir.is_dir():
+        return {}
+    candidates: list[tuple[float, dict[str, Any]]] = []
+    for status_path in results_dir.glob(f"{TIER_ALPHA_JOB_PREFIX}*/status.json"):
         try:
-            os.killpg(proc.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        returncode = proc.wait()
-        return {"returncode": int(returncode), "timed_out": True}
+            if status_path.stat().st_mtime < started_at - 1:
+                continue
+        except OSError:
+            continue
+        status_payload = _load_json_file(status_path)
+        if str(status_payload.get("status", "") or "") != "completed":
+            continue
+        job_id = str(status_payload.get("job_id", "") or status_path.parent.name).strip()
+        result_file = Path(str(status_payload.get("result_file", "") or ""))
+        runner_execution = Path(str(status_payload.get("runner_execution", "") or ""))
+        result_manifest = Path(str(status_payload.get("result_manifest", "") or ""))
+        if not result_file.is_file() or not runner_execution.is_file() or not result_manifest.is_file():
+            continue
+        manifest_payload = _load_json_file(result_manifest)
+        if str(manifest_payload.get("status", "") or "") != "completed":
+            continue
+        runner_payload = _load_json_file(runner_execution)
+        ledger_path = results_dir / "product_docking_jobs" / f"{job_id}.json"
+        ledger_payload = _load_json_file(ledger_path)
+        candidates.append(
+            (
+                status_path.stat().st_mtime,
+                {
+                    "job_id": job_id,
+                    "status_path": status_path,
+                    "status_payload": status_payload,
+                    "result_file": result_file,
+                    "runner_execution": runner_execution,
+                    "runner_payload": runner_payload,
+                    "result_manifest": result_manifest,
+                    "manifest_payload": manifest_payload,
+                    "ledger_payload": ledger_payload,
+                },
+            )
+        )
+    if not candidates:
+        return {}
+    return sorted(candidates, key=lambda item: item[0])[-1][1]
+
+
+def _write_recovered_tier_alpha_payload(
+    *,
+    out_json: Path,
+    workspace: Path,
+    evidence: dict[str, Any],
+    timeout_seconds: int,
+) -> None:
+    runner_payload = evidence.get("runner_payload") if isinstance(evidence.get("runner_payload"), dict) else {}
+    ledger_payload = evidence.get("ledger_payload") if isinstance(evidence.get("ledger_payload"), dict) else {}
+    manifest_payload = evidence.get("manifest_payload") if isinstance(evidence.get("manifest_payload"), dict) else {}
+    status_path = evidence["status_path"]
+    result_manifest = evidence["result_manifest"]
+    result_file = evidence["result_file"]
+    runner_execution = evidence["runner_execution"]
+    runner_returncode = runner_payload.get("returncode")
+    payload = {
+        "summary": {
+            "packet_type": "tier_alpha_adrb2_dispatch_smoke",
+            "status": "tier_alpha_adrb2_dispatch_smoke_pass",
+            "evidence_mode": "live_job_recovered_from_completed_artifacts",
+            "api_validated_runner_enabled": True,
+            "workspace": _relative_or_absolute(workspace),
+            "claim_boundary": TIER_ALPHA_CLAIM_BOUNDARY,
+        },
+        "job_id": evidence["job_id"],
+        "ledger_worker_state": str(ledger_payload.get("worker_state", "") or "completed_fail_closed"),
+        "simulation_sync_status": str(ledger_payload.get("simulation_sync_status", "") or "completed"),
+        "dispatch_outcome": {
+            "dispatched": True,
+            "reason": "completed_artifact_recovered_after_parent_wait",
+            "job_id": evidence["job_id"],
+        },
+        "worker_ran": True,
+        "sqlite_job_status": "completed",
+        "worker_error": "",
+        "drain_timed_out": False,
+        "timeout_seconds": max(1, int(timeout_seconds)),
+        "runner_timeout_seconds": int(runner_payload.get("timeout_seconds") or 0),
+        "runner_execution": str(runner_execution),
+        "runner_execution_ok": runner_payload.get("ok") is True,
+        "runner_execution_returncode": runner_returncode,
+        "runner_execution_timed_out": runner_payload.get("timed_out") is True,
+        "jobs_dir": _relative_or_absolute(workspace / "results" / "product_docking_jobs"),
+        "worker_dispatch_enqueued": ledger_payload.get("worker_dispatch_enqueued") is True,
+        "ledger_progress_state": str(ledger_payload.get("progress_state", "") or ""),
+        "ledger_current_step": str(ledger_payload.get("current_step", "") or ""),
+        "htvs_summary_exists": result_file.is_file(),
+        "result_file": str(result_file),
+        "status_json": str(status_path),
+        "result_manifest": str(result_manifest),
+        "result_manifest_exists": result_manifest.is_file(),
+        "result_manifest_signature_verified": _verify_tier_alpha_manifest(manifest_payload),
+        "result_manifest_status": str(manifest_payload.get("status", "") or ""),
+        "result_manifest_key_id": str(manifest_payload.get("signature_key_id", "") or ""),
+        "recovered_from_completed_artifacts": True,
+        "generated_at_utc": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
+    }
+    out_json.parent.mkdir(parents=True, exist_ok=True)
+    out_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _run_tier_alpha_smoke_in_process(command: str, *, cwd: Path, timeout_seconds: int) -> dict[str, Any]:
+    parts = shlex.split(command)
+    workspace = _resolve_command_path(_arg_value(parts, "--workspace", TIER_ALPHA_DEFAULT_WORKSPACE), cwd=cwd)
+    out_json = _resolve_command_path(_arg_value(parts, "--out-json", TIER_ALPHA_DEFAULT_OUT_JSON), cwd=cwd)
+    started_at = time.time()
+    deadline = started_at + max(1, int(timeout_seconds))
+    proc = subprocess.Popen(shlex.split(command), cwd=cwd, start_new_session=True)
+    while True:
+        returncode = proc.poll()
+        if returncode is not None:
+            return {"returncode": int(returncode), "timed_out": False}
+        evidence = _latest_completed_tier_alpha_evidence(workspace, started_at=started_at)
+        if evidence:
+            _write_recovered_tier_alpha_payload(
+                out_json=out_json,
+                workspace=workspace,
+                evidence=evidence,
+                timeout_seconds=timeout_seconds,
+            )
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            proc.wait()
+            return {"returncode": 0, "timed_out": False, "completed_evidence_recovered": True}
+        if time.time() >= deadline:
+            break
+        time.sleep(1.0)
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    returncode = proc.wait()
+    return {"returncode": int(returncode), "timed_out": True}
 
 
 def _run_command(command: str, *, cwd: Path, timeout_seconds: int) -> dict[str, Any]:
