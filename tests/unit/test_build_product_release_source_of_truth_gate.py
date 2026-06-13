@@ -32,6 +32,12 @@ def _refresh_release_decision_ready() -> dict:
             "status": "goal_release_ready",
             "release_allowed": True,
             "blocker_count": 0,
+            "cameo_official_result_fetch_preflight_recorded": True,
+            "cameo_official_result_fetch_preflight_network_request_opened": False,
+            "cameo_official_result_fetch_preflight_official_results_fetched": False,
+            "cameo_official_result_fetch_preflight_native_local_accuracy_used": False,
+            "cameo_official_result_fetch_preflight_outbound_email_enabled": False,
+            "cameo_official_result_fetch_preflight_external_state_mutated": False,
             "goal_bottleneck_briefing_full_commercial_receipts_recorded": True,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded": True,
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_packet_ready": True,
@@ -91,6 +97,9 @@ def _refresh_release_decision_ready() -> dict:
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_row_count": 8,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_blocked_row_count": 8,
             "engine_refinement_claim_evidence_priority_packet_approval_token_count": 1,
+            "cameo_official_result_fetch_preflight_blocked_row_count": 1,
+            "cameo_official_result_fetch_preflight_blocker_count": 2,
+            "cameo_official_result_fetch_preflight_awaiting_operator_fetch_approval_row_count": 1,
             "science_claim_promotion_gap_closure_open_gap_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
@@ -145,6 +154,18 @@ def _refresh_release_decision_ready() -> dict:
             ),
             "production_ai_registry_promotion_priority_observed_registry_default_residual_mode": (
                 "shadow"
+            ),
+            "cameo_official_result_fetch_preflight_status": (
+                "blocked_cameo_official_result_fetch_preflight"
+            ),
+            "cameo_official_result_fetch_preflight_operator_fetch_csv": (
+                "runs/cameo_official_result_fetch_operator_approval_intake.csv"
+            ),
+            "cameo_official_result_fetch_preflight_operator_template_csv": (
+                "runs/cameo_official_result_fetch_operator_approval_template_current.csv"
+            ),
+            "cameo_official_result_fetch_preflight_fetch_approval_token_required": (
+                "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH"
             ),
             "accuracy_parity_scorecard_status": "blocked_accuracy_parity",
             "accuracy_parity_scorecard_current_broad_accuracy_parity_estimate_pct": "40-50",
@@ -409,6 +430,11 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
         "production_ai_registry_promotion_priority_packet_recorded"
         in release_row["required_true_fields"]
     )
+    assert "cameo_official_result_fetch_preflight_recorded" in release_row["required_true_fields"]
+    assert (
+        "cameo_official_result_fetch_preflight_network_request_opened"
+        in release_row["required_zero_fields"]
+    )
     assert "accuracy_parity_scorecard_recorded" in release_row["required_true_fields"]
     assert (
         "api_runner_profile_promotion_operator_receipt_recorded"
@@ -429,6 +455,9 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_int_exact_fields"][
         "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count"
     ] == 0
+    assert release_row["required_int_exact_fields"][
+        "cameo_official_result_fetch_preflight_blocker_count"
+    ] == 2
     assert release_row["required_int_exact_fields"][
         "accuracy_parity_scorecard_top_blocker_count"
     ] == 4
@@ -453,6 +482,9 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_text_exact_fields"][
         "production_ai_registry_promotion_priority_operator_receipt_status"
     ] == "blocked_production_ai_registry_promotion_operator_receipt"
+    assert release_row["required_text_exact_fields"][
+        "cameo_official_result_fetch_preflight_fetch_approval_token_required"
+    ] == "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH"
     assert release_row["required_text_exact_fields"][
         "production_ai_registry_promotion_priority_observed_registry_default_residual_mode"
     ] == "shadow"

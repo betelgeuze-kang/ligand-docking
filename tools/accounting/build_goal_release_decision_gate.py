@@ -15,6 +15,9 @@ DEFAULT_PRODUCT_COMMERCIAL_INDEPENDENCE_JSON = "runs/product_commercial_independ
 DEFAULT_CAMEO_VALIDATION_JSON = "runs/cameo_validation_readiness_gate_current.json"
 DEFAULT_CAMEO_CAPABILITY_JSON = "runs/cameo_capability_preflight_current.json"
 DEFAULT_CAMEO_PUBLIC_REGISTRATION_APPROVAL_GATE_JSON = "runs/cameo_public_registration_approval_gate_current.json"
+DEFAULT_CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_JSON = (
+    "runs/cameo_official_result_fetch_preflight_current.json"
+)
 DEFAULT_GOAL_ROLLUP_JSON = "runs/goal_readiness_rollup_current.json"
 DEFAULT_OPERATOR_ACTION_BOARD_JSON = "runs/goal_operator_action_board_current.json"
 DEFAULT_TRANSITION_CLEANUP_PREFLIGHT_JSON = "runs/transition_cleanup_execution_preflight_current.json"
@@ -191,6 +194,7 @@ def build_goal_release_decision_gate(
     cameo_validation_packet: dict[str, Any],
     cameo_capability_packet: dict[str, Any],
     cameo_public_registration_approval_gate_packet: dict[str, Any] | None = None,
+    cameo_official_result_fetch_preflight_packet: dict[str, Any] | None = None,
     goal_rollup_packet: dict[str, Any],
     operator_action_board_packet: dict[str, Any],
     transition_cleanup_preflight_packet: dict[str, Any],
@@ -221,6 +225,7 @@ def build_goal_release_decision_gate(
     cameo_validation_path: str = DEFAULT_CAMEO_VALIDATION_JSON,
     cameo_capability_path: str = DEFAULT_CAMEO_CAPABILITY_JSON,
     cameo_public_registration_approval_gate_path: str = DEFAULT_CAMEO_PUBLIC_REGISTRATION_APPROVAL_GATE_JSON,
+    cameo_official_result_fetch_preflight_path: str = DEFAULT_CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_JSON,
     goal_rollup_path: str = DEFAULT_GOAL_ROLLUP_JSON,
     operator_action_board_path: str = DEFAULT_OPERATOR_ACTION_BOARD_JSON,
     transition_cleanup_preflight_path: str = DEFAULT_TRANSITION_CLEANUP_PREFLIGHT_JSON,
@@ -266,6 +271,26 @@ def build_goal_release_decision_gate(
     cameo_validation = _summary(cameo_validation_packet)
     cameo_capability = _summary(cameo_capability_packet)
     cameo_registration_gate = _summary(cameo_public_registration_approval_gate_packet or {})
+    cameo_fetch_preflight = _summary(cameo_official_result_fetch_preflight_packet or {})
+    cameo_fetch_preflight_gate_present = cameo_official_result_fetch_preflight_packet is not None
+    cameo_fetch_preflight_recorded = (
+        _text(cameo_fetch_preflight.get("status"))
+        in {
+            "blocked_cameo_official_result_fetch_preflight",
+            "cameo_official_result_fetch_preflight_ready",
+        }
+        and _text(cameo_fetch_preflight.get("fetch_approval_token_required"))
+        == "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH"
+        and _text(cameo_fetch_preflight.get("operator_fetch_csv"))
+        == "runs/cameo_official_result_fetch_operator_approval_intake.csv"
+        and _text(cameo_fetch_preflight.get("operator_template_csv"))
+        == "runs/cameo_official_result_fetch_operator_approval_template_current.csv"
+        and bool(cameo_fetch_preflight.get("network_request_opened") is False)
+        and bool(cameo_fetch_preflight.get("official_results_fetched") is False)
+        and bool(cameo_fetch_preflight.get("native_local_accuracy_used") is False)
+        and bool(cameo_fetch_preflight.get("outbound_email_enabled") is False)
+        and bool(cameo_fetch_preflight.get("external_state_mutated") is False)
+    )
     rollup = _summary(goal_rollup_packet)
     actions = _summary(operator_action_board_packet)
     transition_cleanup = _summary(transition_cleanup_preflight_packet)
@@ -991,6 +1016,46 @@ def build_goal_release_decision_gate(
             reason="The top-level local API must expose a verified read-only goal status surface before release can be claimed.",
         ),
     ]
+    if cameo_fetch_preflight_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="cameo_official_result_fetch_preflight_recorded",
+                artifact_path=cameo_official_result_fetch_preflight_path,
+                observed=(
+                    f"{_text(cameo_fetch_preflight.get('status')) or 'missing'};"
+                    f"authorized_for_separate_operator_fetch="
+                    f"{_bool_text(bool(cameo_fetch_preflight.get('authorized_for_separate_operator_fetch') is True))};"
+                    f"operator_fetch_csv_present="
+                    f"{_bool_text(bool(cameo_fetch_preflight.get('operator_fetch_csv_present') is True))};"
+                    f"blocked_row_count={_int(cameo_fetch_preflight.get('blocked_row_count'))};"
+                    f"blocker_count={_int(cameo_fetch_preflight.get('blocker_count'))};"
+                    f"awaiting_operator_fetch_approval_row_count="
+                    f"{_int(cameo_fetch_preflight.get('awaiting_operator_fetch_approval_row_count'))};"
+                    f"fetch_approval_token_required="
+                    f"{_text(cameo_fetch_preflight.get('fetch_approval_token_required'))};"
+                    f"network_request_opened="
+                    f"{_bool_text(bool(cameo_fetch_preflight.get('network_request_opened') is True))};"
+                    f"official_results_fetched="
+                    f"{_bool_text(bool(cameo_fetch_preflight.get('official_results_fetched') is True))};"
+                    f"native_local_accuracy_used="
+                    f"{_bool_text(bool(cameo_fetch_preflight.get('native_local_accuracy_used') is True))};"
+                    f"outbound_email_enabled="
+                    f"{_bool_text(bool(cameo_fetch_preflight.get('outbound_email_enabled') is True))};"
+                    f"external_state_mutated="
+                    f"{_bool_text(bool(cameo_fetch_preflight.get('external_state_mutated') is True))}"
+                ),
+                required=(
+                    "CAMEO official-result fetch preflight recorded with approval token, operator CSV boundary, "
+                    "no network fetch, no local native substitution, and no external mutation"
+                ),
+                passed=cameo_fetch_preflight_recorded,
+                reason=(
+                    "Official CAMEO result retrieval must remain a separate operator-approved step; the release "
+                    "decision should not hide whether the fetch preflight is blocked or ready."
+                ),
+            )
+        )
     if api_runner_profile_receipt_gate_present:
         rows.append(
             _row(
@@ -1506,6 +1571,8 @@ def build_goal_release_decision_gate(
         next_required_items.append("commercial-independence packaging")
     if not product_architecture_public_benchmark_ready:
         next_required_items.append("public benchmark scorecards")
+    if cameo_fetch_preflight_gate_present and not cameo_fetch_preflight_recorded:
+        next_required_items.append("CAMEO official-result fetch preflight")
     if not cleanup_objective_ready:
         next_required_items.append("cleanup completion/postchecks")
     if not no_goal_blockers:
@@ -1627,6 +1694,52 @@ def build_goal_release_decision_gate(
         "source_cameo_capability_status": _text(cameo_capability.get("status")),
         "source_cameo_public_registration_approval_gate_status": _text(cameo_registration_gate.get("status")),
         "cameo_public_registration_authorized_for_registration_review": bool(cameo_registration_gate.get("authorized_for_registration_review") is True),
+        "cameo_official_result_fetch_preflight_gate_present": cameo_fetch_preflight_gate_present,
+        "cameo_official_result_fetch_preflight_status": _text(
+            cameo_fetch_preflight.get("status")
+        ),
+        "cameo_official_result_fetch_preflight_recorded": (
+            cameo_fetch_preflight_recorded if cameo_fetch_preflight_gate_present else None
+        ),
+        "cameo_official_result_fetch_preflight_authorized": bool(
+            cameo_fetch_preflight.get("authorized_for_separate_operator_fetch") is True
+        ),
+        "cameo_official_result_fetch_preflight_operator_fetch_csv": _text(
+            cameo_fetch_preflight.get("operator_fetch_csv")
+        ),
+        "cameo_official_result_fetch_preflight_operator_fetch_csv_present": bool(
+            cameo_fetch_preflight.get("operator_fetch_csv_present") is True
+        ),
+        "cameo_official_result_fetch_preflight_operator_template_csv": _text(
+            cameo_fetch_preflight.get("operator_template_csv")
+        ),
+        "cameo_official_result_fetch_preflight_blocked_row_count": _int(
+            cameo_fetch_preflight.get("blocked_row_count")
+        ),
+        "cameo_official_result_fetch_preflight_blocker_count": _int(
+            cameo_fetch_preflight.get("blocker_count")
+        ),
+        "cameo_official_result_fetch_preflight_awaiting_operator_fetch_approval_row_count": _int(
+            cameo_fetch_preflight.get("awaiting_operator_fetch_approval_row_count")
+        ),
+        "cameo_official_result_fetch_preflight_fetch_approval_token_required": _text(
+            cameo_fetch_preflight.get("fetch_approval_token_required")
+        ),
+        "cameo_official_result_fetch_preflight_network_request_opened": bool(
+            cameo_fetch_preflight.get("network_request_opened") is True
+        ),
+        "cameo_official_result_fetch_preflight_official_results_fetched": bool(
+            cameo_fetch_preflight.get("official_results_fetched") is True
+        ),
+        "cameo_official_result_fetch_preflight_native_local_accuracy_used": bool(
+            cameo_fetch_preflight.get("native_local_accuracy_used") is True
+        ),
+        "cameo_official_result_fetch_preflight_outbound_email_enabled": bool(
+            cameo_fetch_preflight.get("outbound_email_enabled") is True
+        ),
+        "cameo_official_result_fetch_preflight_external_state_mutated": bool(
+            cameo_fetch_preflight.get("external_state_mutated") is True
+        ),
         "source_goal_rollup_status": _text(rollup.get("status")),
         "source_goal_api_surface_contract_status": _text(goal_api_surface.get("status")),
         "goal_api_surface_ready": goal_api_surface_ready,
@@ -2481,6 +2594,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_architecture_cameo_public_registration_blocker_count: `{s['product_architecture_cameo_public_registration_blocker_count']}`",
         f"- product_architecture_cameo_registration_approval_token_count: `{s['product_architecture_cameo_registration_approval_token_count']}`",
         f"- product_architecture_cameo_registration_approval_tokens_required: `{';'.join(s['product_architecture_cameo_registration_approval_tokens_required'])}`",
+        f"- cameo_official_result_fetch_preflight_recorded: `{s['cameo_official_result_fetch_preflight_recorded']}`",
+        f"- cameo_official_result_fetch_preflight_status: `{s['cameo_official_result_fetch_preflight_status']}`",
+        f"- cameo_official_result_fetch_preflight_blocked_row_count: `{s['cameo_official_result_fetch_preflight_blocked_row_count']}`",
+        f"- cameo_official_result_fetch_preflight_fetch_approval_token_required: `{s['cameo_official_result_fetch_preflight_fetch_approval_token_required']}`",
+        f"- cameo_official_result_fetch_preflight_network_request_opened: `{s['cameo_official_result_fetch_preflight_network_request_opened']}`",
+        f"- cameo_official_result_fetch_preflight_official_results_fetched: `{s['cameo_official_result_fetch_preflight_official_results_fetched']}`",
+        f"- cameo_official_result_fetch_preflight_native_local_accuracy_used: `{s['cameo_official_result_fetch_preflight_native_local_accuracy_used']}`",
         f"- product_commercial_independence_ready: `{s['product_commercial_independence_ready']}`",
         f"- cameo_architecture_validation_ready: `{s['cameo_architecture_validation_ready']}`",
         f"- cleanup_objective_ready: `{s['cleanup_objective_ready']}`",
@@ -2684,6 +2804,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--cameo-validation-json", default=DEFAULT_CAMEO_VALIDATION_JSON)
     parser.add_argument("--cameo-capability-json", default=DEFAULT_CAMEO_CAPABILITY_JSON)
     parser.add_argument("--cameo-public-registration-approval-gate-json", default=DEFAULT_CAMEO_PUBLIC_REGISTRATION_APPROVAL_GATE_JSON)
+    parser.add_argument(
+        "--cameo-official-result-fetch-preflight-json",
+        default=DEFAULT_CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_JSON,
+    )
     parser.add_argument("--goal-rollup-json", default=DEFAULT_GOAL_ROLLUP_JSON)
     parser.add_argument("--operator-action-board-json", default=DEFAULT_OPERATOR_ACTION_BOARD_JSON)
     parser.add_argument("--transition-cleanup-preflight-json", default=DEFAULT_TRANSITION_CLEANUP_PREFLIGHT_JSON)
@@ -2753,6 +2877,9 @@ def main(argv: list[str] | None = None) -> None:
         cameo_validation_packet=_read_json_if_present(args.cameo_validation_json),
         cameo_capability_packet=_read_json_if_present(args.cameo_capability_json),
         cameo_public_registration_approval_gate_packet=_read_json_if_present(args.cameo_public_registration_approval_gate_json),
+        cameo_official_result_fetch_preflight_packet=_read_json_if_present(
+            args.cameo_official_result_fetch_preflight_json
+        ),
         goal_rollup_packet=_read_json_if_present(args.goal_rollup_json),
         operator_action_board_packet=_read_json_if_present(args.operator_action_board_json),
         transition_cleanup_preflight_packet=_read_json_if_present(args.transition_cleanup_preflight_json),
@@ -2805,6 +2932,7 @@ def main(argv: list[str] | None = None) -> None:
         cameo_validation_path=args.cameo_validation_json,
         cameo_capability_path=args.cameo_capability_json,
         cameo_public_registration_approval_gate_path=args.cameo_public_registration_approval_gate_json,
+        cameo_official_result_fetch_preflight_path=args.cameo_official_result_fetch_preflight_json,
         goal_rollup_path=args.goal_rollup_json,
         operator_action_board_path=args.operator_action_board_json,
         transition_cleanup_preflight_path=args.transition_cleanup_preflight_json,

@@ -711,6 +711,10 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `operator_fetch_csv_present=false`, `network_request_opened=false`,
   `official_results_fetched=false`,
   `fetch_approval_token_required=APPROVE_CAMEO_OFFICIAL_RESULT_FETCH`가 drift하지 않게 한다.
+  최신 `goal_release_decision_gate_current.json`도 같은 preflight를
+  `cameo_official_result_fetch_preflight_*` summary와 recorded row로 직접 흡수하며,
+  final refresh exact check가 blocked status, blocked row count, operator intake/template
+  CSV, approval token, no-network/no-fetch/no-local-native flags를 고정한다.
   `product_ledger_privacy_scan_current.json`도 goal-facing JSON artifacts
   (`goal_readiness_rollup`, `goal_operator_action_board`, `goal_operator_intake_kit`,
   `goal_release_burndown_work_order`,
@@ -937,6 +941,10 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   template/intake path, approval token, blocked flags, no-network/no-fetch 상태를
   직접 노출한다. 같은 상태는
   `/product/cameo-official-result-fetch-preflight` API surface에서도 확인된다.
+  최신 goal release decision도 이 preflight를 직접 읽어
+  `cameo_official_result_fetch_preflight_recorded=true`,
+  `blocked_cameo_official_result_fetch_preflight`, approval token, no-network/no-fetch
+  상태를 final refresh exact check에 고정한다.
 - `runs/cameo_validation_operations_dossier_current.json`은
   `stage_count=10`, `blocked_stage_count=1`, `approval_required_stage_count=1`,
   `official_result_fetch_preflight_ready=false`,

@@ -347,6 +347,9 @@
   `engine_refinement_claim_evidence_priority_packet_blocked_semantic_ready` row로 고정되어
   placeholder evidence, 6/6 blocked rows, public benchmark work-order 8개 row,
   approval token requirement, first-blocked diagnostics를 source-of-truth에서 직접 검증한다.
+  CAMEO official-result fetch preflight도 release decision summary/row와 final refresh
+  exact check로 승격되어 operator fetch CSV, approval token, blocked row count,
+  no-network/no-fetch/no-local-native 상태가 최종 release gate에서 빠지지 않는다.
   `product_pose_sampling_readiness_semantic_ready` row는 deterministic local
   pocket placement, 6-start pose ensemble, RMSD diversity clustering,
   bounded cross-docking/induced-fit guard, 그리고 claim-grade pose accuracy
@@ -697,7 +700,11 @@ durable queue → worker 실행 → signed 결과 번들 회수까지 무인 동
    `APPROVE_CAMEO_OFFICIAL_RESULT_FETCH`를 operator handoff에 노출한다. 같은
    preflight status/template/intake/token/no-network flags는 `/goal/status`의
    `cameo_official_result_fetch_preflight_*` keys와
-   `/product/cameo-official-result-fetch-preflight`에서도 확인된다.
+   `/product/cameo-official-result-fetch-preflight`에서도 확인된다. 최신
+   `goal_release_decision_gate_current.json`도 이 preflight를 직접 읽어
+   `cameo_official_result_fetch_preflight_recorded=true`,
+   `blocked_cameo_official_result_fetch_preflight`, approval token, no-network/no-fetch
+   상태를 final refresh exact check에 고정한다.
 3. GPCR CI-low: feature/data engineering + 100k 재실행으로 ≥ 0.45 + top20 안정화.
 
 **완료 정의**: 공개 표준에서 재현 가능한 수치 리포트 + CI-low 임계치 통과로 scorer/router claim 승격.

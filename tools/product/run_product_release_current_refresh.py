@@ -38,6 +38,7 @@ FINAL_GATE_SPECS = [
         "required_status": "goal_release_ready",
         "required_true_fields": [
             "release_allowed",
+            "cameo_official_result_fetch_preflight_recorded",
             "goal_bottleneck_briefing_full_commercial_receipts_recorded",
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded",
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_packet_ready",
@@ -50,8 +51,18 @@ FINAL_GATE_SPECS = [
             "engine_refinement_claim_evidence_priority_packet_recorded",
             "engine_refinement_claim_evidence_priority_packet_ready",
         ],
-        "required_zero_fields": ["blocker_count"],
+        "required_zero_fields": [
+            "blocker_count",
+            "cameo_official_result_fetch_preflight_network_request_opened",
+            "cameo_official_result_fetch_preflight_official_results_fetched",
+            "cameo_official_result_fetch_preflight_native_local_accuracy_used",
+            "cameo_official_result_fetch_preflight_outbound_email_enabled",
+            "cameo_official_result_fetch_preflight_external_state_mutated",
+        ],
         "required_int_exact_fields": {
+            "cameo_official_result_fetch_preflight_blocked_row_count": 1,
+            "cameo_official_result_fetch_preflight_blocker_count": 2,
+            "cameo_official_result_fetch_preflight_awaiting_operator_fetch_approval_row_count": 1,
             "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_operator_input_required_count": 2,
@@ -102,6 +113,18 @@ FINAL_GATE_SPECS = [
             "science_claim_promotion_gap_closure_open_gap_count": 2,
         },
         "required_text_exact_fields": {
+            "cameo_official_result_fetch_preflight_status": (
+                "blocked_cameo_official_result_fetch_preflight"
+            ),
+            "cameo_official_result_fetch_preflight_operator_fetch_csv": (
+                "runs/cameo_official_result_fetch_operator_approval_intake.csv"
+            ),
+            "cameo_official_result_fetch_preflight_operator_template_csv": (
+                "runs/cameo_official_result_fetch_operator_approval_template_current.csv"
+            ),
+            "cameo_official_result_fetch_preflight_fetch_approval_token_required": (
+                "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH"
+            ),
             "source_goal_bottleneck_briefing_status": "goal_bottleneck_briefing_ready",
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"

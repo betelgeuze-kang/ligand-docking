@@ -161,6 +161,29 @@ def _ready_cameo_registration_gate() -> dict:
     }
 
 
+def _blocked_cameo_official_result_fetch_preflight() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_cameo_official_result_fetch_preflight",
+            "authorized_for_separate_operator_fetch": False,
+            "operator_fetch_csv": "runs/cameo_official_result_fetch_operator_approval_intake.csv",
+            "operator_fetch_csv_present": False,
+            "operator_template_csv": (
+                "runs/cameo_official_result_fetch_operator_approval_template_current.csv"
+            ),
+            "blocked_row_count": 1,
+            "blocker_count": 2,
+            "awaiting_operator_fetch_approval_row_count": 1,
+            "fetch_approval_token_required": "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH",
+            "network_request_opened": False,
+            "official_results_fetched": False,
+            "native_local_accuracy_used": False,
+            "outbound_email_enabled": False,
+            "external_state_mutated": False,
+        }
+    }
+
+
 def _blocked_rollup() -> dict:
     return {"summary": {"status": "blocked_goal_readiness"}}
 
@@ -947,6 +970,9 @@ def test_goal_release_decision_gate_blocks_current_incomplete_goal() -> None:
         product_commercial_independence_packet=_blocked_product_independence(),
         cameo_validation_packet=_blocked_cameo_validation(),
         cameo_capability_packet=_blocked_cameo_capability(),
+        cameo_official_result_fetch_preflight_packet=(
+            _blocked_cameo_official_result_fetch_preflight()
+        ),
         goal_rollup_packet=_blocked_rollup(),
         operator_action_board_packet=_blocked_action_board(),
         transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_preflight_ready"),
@@ -1021,6 +1047,25 @@ def test_goal_release_decision_gate_blocks_current_incomplete_goal() -> None:
         "APPROVE_CAMEO_SERVER_REGISTRATION",
         "APPROVE_CAMEO_OUTBOUND_EMAIL",
     ]
+    assert summary["cameo_official_result_fetch_preflight_recorded"] is True
+    assert summary["cameo_official_result_fetch_preflight_status"] == (
+        "blocked_cameo_official_result_fetch_preflight"
+    )
+    assert summary["cameo_official_result_fetch_preflight_blocked_row_count"] == 1
+    assert summary["cameo_official_result_fetch_preflight_blocker_count"] == 2
+    assert summary["cameo_official_result_fetch_preflight_fetch_approval_token_required"] == (
+        "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH"
+    )
+    assert summary["cameo_official_result_fetch_preflight_network_request_opened"] is False
+    assert summary["cameo_official_result_fetch_preflight_official_results_fetched"] is False
+    fetch_row = next(
+        row
+        for row in payload["rows"]
+        if row["check"] == "cameo_official_result_fetch_preflight_recorded"
+    )
+    assert fetch_row["status"] == "pass"
+    assert fetch_row["release_blocker"] is False
+    assert "fetch_approval_token_required=APPROVE_CAMEO_OFFICIAL_RESULT_FETCH" in fetch_row["observed"]
     assert summary["protected_cleanup_policy_change_required_count"] == 2
     assert summary["cleanup_postcheck_contract_status"] == "cleanup_postcheck_contract_ready"
     assert summary["cleanup_postcheck_contract_ready"] is True
@@ -1983,6 +2028,7 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
         "product_independence": tmp_path / "product_independence.json",
         "cameo_validation": tmp_path / "cameo_validation.json",
         "cameo_capability": tmp_path / "cameo_capability.json",
+        "cameo_fetch_preflight": tmp_path / "cameo_fetch_preflight.json",
         "rollup": tmp_path / "rollup.json",
         "actions": tmp_path / "actions.json",
         "transition_cleanup": tmp_path / "transition_cleanup.json",
@@ -2011,6 +2057,10 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     paths["product_independence"].write_text(json.dumps(_blocked_product_independence()) + "\n", encoding="utf-8")
     paths["cameo_validation"].write_text(json.dumps(_blocked_cameo_validation()) + "\n", encoding="utf-8")
     paths["cameo_capability"].write_text(json.dumps(_blocked_cameo_capability()) + "\n", encoding="utf-8")
+    paths["cameo_fetch_preflight"].write_text(
+        json.dumps(_blocked_cameo_official_result_fetch_preflight()) + "\n",
+        encoding="utf-8",
+    )
     paths["rollup"].write_text(json.dumps(_blocked_rollup()) + "\n", encoding="utf-8")
     paths["actions"].write_text(json.dumps(_blocked_action_board()) + "\n", encoding="utf-8")
     paths["transition_cleanup"].write_text(json.dumps(_transition_cleanup("transition_cleanup_execution_preflight_ready")) + "\n", encoding="utf-8")
@@ -2082,6 +2132,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
             str(paths["cameo_validation"]),
             "--cameo-capability-json",
             str(paths["cameo_capability"]),
+            "--cameo-official-result-fetch-preflight-json",
+            str(paths["cameo_fetch_preflight"]),
             "--goal-rollup-json",
             str(paths["rollup"]),
             "--operator-action-board-json",
@@ -2137,6 +2189,12 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
 
     summary = json.loads(out_json.read_text(encoding="utf-8"))["summary"]
     assert summary["status"] == "blocked_goal_release_decision"
+    assert summary["cameo_official_result_fetch_preflight_status"] == (
+        "blocked_cameo_official_result_fetch_preflight"
+    )
+    assert summary["cameo_official_result_fetch_preflight_fetch_approval_token_required"] == (
+        "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH"
+    )
     assert summary["product_full_commercial_blocker_evidence_matrix_status"] == (
         "blocked_product_full_commercial_blocker_evidence_matrix"
     )
@@ -2203,6 +2261,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     md_text = out_md.read_text(encoding="utf-8")
     assert "Goal Release Decision Gate" in md_text
     assert "cameo_live_validation_required_for_product_release" in md_text
+    assert "cameo_official_result_fetch_preflight_status" in md_text
+    assert "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH" in md_text
     assert "goal_bottleneck_briefing_full_commercial_receipts_recorded" in md_text
     assert "goal_bottleneck_briefing_production_ai_registry_promotion_priority_recorded" in md_text
     assert "trained_model_checkpoint_count_positive" in md_text
