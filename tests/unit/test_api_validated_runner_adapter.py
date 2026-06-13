@@ -34,6 +34,26 @@ def _write_fake_runner(path: Path) -> None:
     )
 
 
+def _write_slow_runner(path: Path) -> None:
+    path.write_text(
+        "\n".join(
+            [
+                "from __future__ import annotations",
+                "import argparse, json, time",
+                "from pathlib import Path",
+                "p = argparse.ArgumentParser()",
+                "p.add_argument('--request-json', required=True)",
+                "p.add_argument('--out-json', required=True)",
+                "args = p.parse_args()",
+                "time.sleep(10)",
+                "Path(args.out_json).write_text(json.dumps({'ok': True}) + '\\n', encoding='utf-8')",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -126,6 +146,48 @@ def test_api_task_executes_operator_approved_runner_profile(
     assert result["target_name"] == "Chignolin"
     assert execution_record.exists()
     assert "shell" not in json.loads(execution_record.read_text(encoding="utf-8"))
+
+
+def test_validated_runner_timeout_records_fail_closed_execution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.validated_runner as validated_runner
+
+    slow_runner = tmp_path / "slow_validated_runner.py"
+    _write_slow_runner(slow_runner)
+    evidence = tmp_path / "profile_evidence.json"
+    _write_evidence(evidence)
+    profiles_dir = tmp_path / "profiles"
+    profiles_dir.mkdir()
+    (profiles_dir / "slow.json").write_text(
+        json.dumps(_profile_payload("slow", slow_runner, evidence), sort_keys=True)
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(validated_runner, "ALLOWED_RUNNER_SCRIPTS", {str(slow_runner.resolve())})
+    monkeypatch.setattr(validated_runner.settings, "api_validated_runner_enabled", True)
+    monkeypatch.setattr(validated_runner.settings, "api_validated_runner_profiles_path", str(profiles_dir))
+    monkeypatch.setattr(validated_runner.settings, "api_validated_runner_timeout_seconds", 1)
+    monkeypatch.setattr(validated_runner.settings, "results_storage_path", str(tmp_path / "results"))
+
+    with pytest.raises(RuntimeError, match="validated runner failed"):
+        asyncio.run(
+            validated_runner.execute_validated_runner_profile(
+                "job_slow",
+                {"target_name": "Chignolin", "runner_profile_id": "slow"},
+            )
+        )
+
+    status = json.loads((tmp_path / "results" / "job_slow" / "status.json").read_text(encoding="utf-8"))
+    execution_record = json.loads(Path(status["runner_execution"]).read_text(encoding="utf-8"))
+
+    assert status["status"] == "failed"
+    assert status["error"] == "validated_runner_timeout:1s"
+    assert execution_record["timed_out"] is True
+    assert execution_record["timeout_seconds"] == 1
+    assert execution_record["process_group_killed_on_timeout"] is True
+    assert execution_record["returncode"] != 0
 
 
 def test_api_task_remains_fail_closed_when_validated_runner_disabled(

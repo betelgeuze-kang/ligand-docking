@@ -257,6 +257,12 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   allowlisted runner script hash와 동기화됐고, `tools/product/validate_api_runner_profiles.py`는
   `status=pass`, `failed_profile_count=0`이다. 이 hash gate 복구 뒤
   Tier α ADRB2 dispatch smoke도 `tier_alpha_adrb2_dispatch_smoke_pass`로 재검증됐다.
+  최신 refresh 계약은 이 smoke를 `--timeout-seconds 420`으로 실행하고,
+  `api/validated_runner.py`는 runner timeout 발생 시 subprocess group 전체를
+  kill한 뒤 `runner_execution.json`에 `timed_out=true`,
+  `process_group_killed_on_timeout=true`, `validated_runner_timeout:<N>s`를
+  fail-closed로 기록한다. 따라서 내부 HTVS/Newton probe가 parent timeout을 넘겨
+  release refresh를 매달리게 하는 상태는 별도 timeout evidence로 수렴한다.
 - 같은 도구는
   `runs/api_runner_profile_promotion_operator_template_current.csv`도 생성한다.
   이 템플릿은 profile별 `operator_decision`, `approval_token`,

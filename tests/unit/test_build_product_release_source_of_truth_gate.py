@@ -1210,6 +1210,22 @@ def test_product_release_current_refresh_uses_command_timeout_hint(tmp_path: Pat
     assert payload["summary"]["status"] == "product_release_current_refresh_verified"
 
 
+def test_release_refresh_uses_stable_tier_alpha_smoke_timeout_budget() -> None:
+    command = (
+        "python3 tools/gpcr_replay/run_tier_alpha_adrb2_dispatch_smoke.py "
+        "--timeout-seconds 420"
+    )
+    tier_alpha_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "tier_alpha_adrb2_dispatch_smoke"
+    )
+
+    assert command in mod.RELEASE_REFRESH_COMMANDS
+    assert tier_alpha_spec["builder_command"] == command
+    assert refresh_mod._command_timeout_seconds(command, 99) == 450
+
+
 def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     artifact_ids = {spec["artifact_id"] for spec in mod.DEFAULT_ARTIFACT_SPECS}
     status_ids = {spec["artifact_id"] for spec in mod.DEFAULT_STATUS_SPECS}

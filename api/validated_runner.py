@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import time
@@ -156,6 +157,34 @@ def validate_profile_readiness(profile: dict[str, Any], *, runner_script_path: s
     }
 
 
+def _run_profile_command(command: list[str], *, timeout_seconds: int) -> dict[str, Any]:
+    proc = subprocess.Popen(
+        command,
+        cwd=str(_repo_root()),
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        shell=False,
+        start_new_session=True,
+    )
+    timed_out = False
+    try:
+        stdout, stderr = proc.communicate(timeout=max(1, int(timeout_seconds)))
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        stdout, stderr = proc.communicate()
+    return {
+        "returncode": int(proc.returncode if proc.returncode is not None else -9),
+        "timed_out": timed_out,
+        "stdout": stdout or "",
+        "stderr": stderr or "",
+    }
+
+
 async def execute_validated_runner_profile(job_id: str, request_data: dict[str, Any]) -> dict[str, Any]:
     if not settings.api_validated_runner_enabled:
         raise NotImplementedError(
@@ -192,14 +221,11 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
 
     started = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
     t0 = time.time()
-    proc = await asyncio.to_thread(
-        subprocess.run,
+    timeout_seconds = int(settings.api_validated_runner_timeout_seconds)
+    completed = await asyncio.to_thread(
+        _run_profile_command,
         command,
-        cwd=str(_repo_root()),
-        text=True,
-        capture_output=True,
-        timeout=int(settings.api_validated_runner_timeout_seconds),
-        shell=False,
+        timeout_seconds=timeout_seconds,
     )
     duration = max(time.time() - t0, 0.0)
     ended = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
@@ -212,13 +238,16 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
         "runner_script": str(profile.get("runner_script", "")),
         "profile_readiness": readiness_record,
         "command": command,
-        "returncode": int(proc.returncode),
-        "ok": bool(proc.returncode == 0),
+        "returncode": int(completed["returncode"]),
+        "ok": bool(completed["returncode"] == 0),
+        "timed_out": bool(completed["timed_out"]),
+        "timeout_seconds": timeout_seconds,
+        "process_group_killed_on_timeout": bool(completed["timed_out"]),
         "started_at_utc": started,
         "ended_at_utc": ended,
         "duration_sec": float(duration),
-        "stdout_tail": "\n".join((proc.stdout or "").splitlines()[-40:]),
-        "stderr_tail": "\n".join((proc.stderr or "").splitlines()[-40:]),
+        "stdout_tail": "\n".join(str(completed["stdout"] or "").splitlines()[-40:]),
+        "stderr_tail": "\n".join(str(completed["stderr"] or "").splitlines()[-40:]),
         "result_file": str(result_file),
         "claim_boundary": (
             "Validated runner adapter only. It executes an operator-approved local profile and records provenance; "
@@ -228,8 +257,21 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
     execution_record_path = results_dir / "runner_execution.json"
     execution_record_path.write_text(json.dumps(execution_record, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
 
-    if proc.returncode != 0:
-        _write_status(job_id, {"job_id": job_id, "status": "failed", "error": execution_record["stderr_tail"] or "runner failed"})
+    if completed["returncode"] != 0:
+        error = (
+            f"validated_runner_timeout:{timeout_seconds}s"
+            if completed["timed_out"]
+            else execution_record["stderr_tail"] or "runner failed"
+        )
+        _write_status(
+            job_id,
+            {
+                "job_id": job_id,
+                "status": "failed",
+                "error": error,
+                "runner_execution": str(execution_record_path),
+            },
+        )
         raise RuntimeError(f"validated runner failed for profile {profile_id}; see {execution_record_path}")
     if not result_file.exists() or not result_file.is_file():
         raise FileNotFoundError(f"validated runner did not produce expected result_file: {result_file}")
