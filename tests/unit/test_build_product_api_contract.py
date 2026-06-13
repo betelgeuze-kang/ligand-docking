@@ -278,6 +278,24 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "registry_promotion_missing_gate_ids" in promotion_keys
     assert "registry_promotion_missing_gate_count" in promotion_keys
     assert "registry_promotion_upstream_acceptance_ready" in promotion_keys
+    assert EXPECTED_ROUTES["get_product_production_ai_registry_promotion_operator_receipt"] == (
+        "GET",
+        "/production-ai-registry-promotion-operator-receipt",
+    )
+    registry_receipt_keys = REQUIRED_STATUS_DOMAIN_KEYS[
+        "get_product_production_ai_registry_promotion_operator_receipt"
+    ]
+    assert "operator_receipt_ready" in registry_receipt_keys
+    assert "receipt_row_count" in registry_receipt_keys
+    assert "blocked_row_count" in registry_receipt_keys
+    assert "first_blocked_artifact_id" in registry_receipt_keys
+    assert "approval_token_required" in registry_receipt_keys
+    assert "observed_registry_default_residual_mode" in registry_receipt_keys
+    assert "observed_registry_trained_model_checkpoint_count" in registry_receipt_keys
+    assert "observed_checkpoint_registry_promotion_missing_gate_ids" in registry_receipt_keys
+    assert "registry_edited_by_this_tool" in registry_receipt_keys
+    assert "checkpoint_created_by_this_tool" in registry_receipt_keys
+    assert "model_promoted" in registry_receipt_keys
     assert "production_inference_worker_runtime_receipt_completion_rule" in checkpoint_keys
     assert "production_inference_worker_runtime_receipt_post_environment_next_stage_id" in checkpoint_keys
     assert "production_inference_worker_runtime_receipt_guardrails" in checkpoint_keys
@@ -635,6 +653,34 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "operator_return_pending_artifact_reference_count" in handoff_bundle_keys
     assert "abstract_artifact_reference_count" in handoff_bundle_keys
     assert "checkpoint_promoted" in handoff_bundle_keys
+    assert EXPECTED_ROUTES["get_product_scope_breadth_evidence_receipt"] == (
+        "GET",
+        "/scope-breadth-evidence-receipt",
+    )
+    scope_receipt_keys = REQUIRED_STATUS_DOMAIN_KEYS["get_product_scope_breadth_evidence_receipt"]
+    assert "full_scope_evidence_receipt_ready" in scope_receipt_keys
+    assert "receipt_row_count" in scope_receipt_keys
+    assert "required_scope_blocker_count" in scope_receipt_keys
+    assert "blocked_row_count" in scope_receipt_keys
+    assert "first_blocked_scope_blocker_id" in scope_receipt_keys
+    assert "approval_token_required" in scope_receipt_keys
+    assert "receipt_rows" in scope_receipt_keys
+    assert "scope_widened" in scope_receipt_keys
+    assert EXPECTED_ROUTES["get_product_engine_refinement_claim_evidence_receipt"] == (
+        "GET",
+        "/engine-refinement-claim-evidence-receipt",
+    )
+    engine_receipt_keys = REQUIRED_STATUS_DOMAIN_KEYS[
+        "get_product_engine_refinement_claim_evidence_receipt"
+    ]
+    assert "claim_promotion_evidence_receipt_ready" in engine_receipt_keys
+    assert "receipt_row_count" in engine_receipt_keys
+    assert "required_blocker_count" in engine_receipt_keys
+    assert "blocked_row_count" in engine_receipt_keys
+    assert "first_blocked_blocker_id" in engine_receipt_keys
+    assert "approval_token_required" in engine_receipt_keys
+    assert "receipt_rows" in engine_receipt_keys
+    assert "claim_promoted" in engine_receipt_keys
     assert EXPECTED_ROUTES["get_product_full_commercial_blocker_evidence_matrix"] == (
         "GET",
         "/full-commercial-blocker-evidence-matrix",

@@ -83,6 +83,9 @@ PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT = (
 PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT = (
     ROOT / "runs" / "product_full_commercial_blocker_evidence_matrix_current.json"
 )
+ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_ARTIFACT = (
+    ROOT / "runs" / "engine_refinement_claim_evidence_receipt_current.json"
+)
 PRODUCT_SCOPE_BREADTH_CONTRACT_ARTIFACT = ROOT / "runs" / "product_scope_breadth_contract_current.json"
 PRODUCT_SCOPE_CLAIM_GUARD_ARTIFACT = ROOT / "runs" / "product_scope_breadth_closure_checklist_current.json"
 PRODUCT_SCOPE_EVIDENCE_PRIORITY_ARTIFACT = (
@@ -90,6 +93,9 @@ PRODUCT_SCOPE_EVIDENCE_PRIORITY_ARTIFACT = (
 )
 PRODUCT_SCOPE_EVIDENCE_INTAKE_READINESS_ARTIFACT = (
     ROOT / "runs" / "product_scope_breadth_evidence_intake_readiness_current.json"
+)
+PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_ARTIFACT = (
+    ROOT / "runs" / "product_scope_breadth_evidence_receipt_current.json"
 )
 TRANSPORTER_MANUAL_REVIEW_INTAKE_ARTIFACT = ROOT / "runs" / "transporter_manual_review_intake_template_current.json"
 PXR_EXACT_REVIEW_INTAKE_ARTIFACT = ROOT / "runs" / "pxr_exact_evidence_review_intake_template_current.json"
@@ -107,6 +113,9 @@ PRODUCT_PRODUCTION_AI_PROMOTION_WORKBENCH_ARTIFACT = (
 )
 PRODUCT_PRODUCTION_AI_GPU_RETURN_INTAKE_ARTIFACT = (
     ROOT / "runs" / "product_production_ai_gpu_return_intake_current.json"
+)
+PRODUCTION_AI_REGISTRY_PROMOTION_OPERATOR_RECEIPT_ARTIFACT = (
+    ROOT / "runs" / "production_ai_registry_promotion_operator_receipt_current.json"
 )
 RESIDUAL_MODEL_REGISTRY_ARTIFACT = ROOT / "runs" / "residual_model_registry_current.json"
 RESIDUAL_PRODUCTION_CHECKPOINT_WORK_ORDER_ARTIFACT = (
@@ -4048,6 +4057,120 @@ async def get_product_production_ai_promotion_workbench() -> dict[str, Any]:
     }
 
 
+@router.get("/production-ai-registry-promotion-operator-receipt")
+async def get_product_production_ai_registry_promotion_operator_receipt() -> dict[str, Any]:
+    packet = _read_json_object(PRODUCTION_AI_REGISTRY_PROMOTION_OPERATOR_RECEIPT_ARTIFACT)
+    summary = _summary(packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    if not summary:
+        return {
+            "status": "missing_production_ai_registry_promotion_operator_receipt",
+            "artifact_path": str(PRODUCTION_AI_REGISTRY_PROMOTION_OPERATOR_RECEIPT_ARTIFACT),
+            "operator_receipt_ready": False,
+            "receipt_csv": "",
+            "receipt_present": False,
+            "receipt_row_count": 0,
+            "pass_row_count": 0,
+            "blocked_row_count": 0,
+            "first_blocked_artifact_id": "",
+            "first_blocked_row_blocker": "",
+            "first_blocked_row_blockers": [],
+            "most_common_row_blocker": "",
+            "approval_token_required": "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION",
+            "registry_artifact": "",
+            "registry_artifact_present": False,
+            "checkpoint_readiness_artifact": "",
+            "checkpoint_readiness_artifact_present": False,
+            "registry_promotion_required_gate_ids": [],
+            "observed_registry_default_residual_mode": "",
+            "observed_registry_production_promotion_allowed": False,
+            "observed_registry_customer_facing_auto_correction_allowed": False,
+            "observed_registry_customer_facing_score_mutation_allowed": False,
+            "observed_registry_customer_facing_ranking_mutation_allowed": False,
+            "observed_registry_trained_model_checkpoint_count": 0,
+            "observed_checkpoint_registry_promotion_currently_satisfied": False,
+            "observed_checkpoint_registry_promotion_missing_gate_ids": [],
+            "blocker_count": 1,
+            "blockers": [],
+            "receipt_rows": [],
+            "next_required_step": "",
+            "registry_edited_by_this_tool": False,
+            "checkpoint_created_by_this_tool": False,
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+            "model_promoted": False,
+            "claim_boundary": (
+                "Production AI registry promotion operator receipt endpoint only; the local receipt artifact is "
+                "missing or invalid. It does not edit the registry, create checkpoints, enable customer-facing "
+                "mutation, run GPU jobs, deploy, upload, email, delete, commit, push, or mutate external state."
+            ),
+        }
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(PRODUCTION_AI_REGISTRY_PROMOTION_OPERATOR_RECEIPT_ARTIFACT),
+        "operator_receipt_ready": bool(summary.get("operator_receipt_ready") is True),
+        "receipt_csv": summary.get("receipt_csv", ""),
+        "receipt_present": bool(summary.get("receipt_present") is True),
+        "receipt_row_count": int(summary.get("receipt_row_count") or 0),
+        "pass_row_count": int(summary.get("pass_row_count") or 0),
+        "blocked_row_count": int(summary.get("blocked_row_count") or 0),
+        "first_blocked_artifact_id": summary.get("first_blocked_artifact_id", ""),
+        "first_blocked_row_blocker": summary.get("first_blocked_row_blocker", ""),
+        "first_blocked_row_blockers": list(summary.get("first_blocked_row_blockers") or []),
+        "most_common_row_blocker": summary.get("most_common_row_blocker", ""),
+        "approval_token_required": summary.get(
+            "approval_token_required", "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+        ),
+        "registry_artifact": summary.get("registry_artifact", ""),
+        "registry_artifact_present": bool(summary.get("registry_artifact_present") is True),
+        "checkpoint_readiness_artifact": summary.get("checkpoint_readiness_artifact", ""),
+        "checkpoint_readiness_artifact_present": bool(
+            summary.get("checkpoint_readiness_artifact_present") is True
+        ),
+        "registry_promotion_required_gate_ids": list(
+            summary.get("registry_promotion_required_gate_ids") or []
+        ),
+        "observed_registry_default_residual_mode": summary.get(
+            "observed_registry_default_residual_mode", ""
+        ),
+        "observed_registry_production_promotion_allowed": bool(
+            summary.get("observed_registry_production_promotion_allowed") is True
+        ),
+        "observed_registry_customer_facing_auto_correction_allowed": bool(
+            summary.get("observed_registry_customer_facing_auto_correction_allowed") is True
+        ),
+        "observed_registry_customer_facing_score_mutation_allowed": bool(
+            summary.get("observed_registry_customer_facing_score_mutation_allowed") is True
+        ),
+        "observed_registry_customer_facing_ranking_mutation_allowed": bool(
+            summary.get("observed_registry_customer_facing_ranking_mutation_allowed") is True
+        ),
+        "observed_registry_trained_model_checkpoint_count": int(
+            summary.get("observed_registry_trained_model_checkpoint_count") or 0
+        ),
+        "observed_checkpoint_registry_promotion_currently_satisfied": bool(
+            summary.get("observed_checkpoint_registry_promotion_currently_satisfied") is True
+        ),
+        "observed_checkpoint_registry_promotion_missing_gate_ids": list(
+            summary.get("observed_checkpoint_registry_promotion_missing_gate_ids") or []
+        ),
+        "blocker_count": int(summary.get("blocker_count") or 0),
+        "blockers": list(summary.get("blockers") or []),
+        "receipt_rows": rows,
+        "next_required_step": summary.get("next_required_step", ""),
+        "registry_edited_by_this_tool": bool(summary.get("registry_edited_by_this_tool") is True),
+        "checkpoint_created_by_this_tool": bool(
+            summary.get("checkpoint_created_by_this_tool") is True
+        ),
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": False,
+        "model_promoted": False,
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
 @router.get("/scope-breadth-contract")
 async def get_product_scope_breadth_contract() -> dict[str, Any]:
     packet = _read_json_object(PRODUCT_SCOPE_BREADTH_CONTRACT_ARTIFACT)
@@ -6355,6 +6478,121 @@ async def get_product_commercial_readiness_handoff_bundle() -> dict[str, Any]:
     }
 
 
+@router.get("/scope-breadth-evidence-receipt")
+async def get_product_scope_breadth_evidence_receipt() -> dict[str, Any]:
+    packet = _read_json_object(PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_ARTIFACT)
+    summary = _summary(packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    required_columns = packet.get("required_columns") if isinstance(packet.get("required_columns"), list) else []
+    if not summary:
+        return {
+            "status": "missing_product_scope_breadth_evidence_receipt",
+            "artifact_path": str(PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_ARTIFACT),
+            "full_scope_evidence_receipt_ready": False,
+            "receipt_csv": "",
+            "receipt_csv_present": False,
+            "receipt_row_count": 0,
+            "required_scope_blocker_count": 0,
+            "required_scope_blockers": [],
+            "current_scope_blocker_count": 0,
+            "current_scope_blockers": [],
+            "missing_required_scope_blocker_count": 0,
+            "missing_required_scope_blockers": [],
+            "duplicate_scope_blocker_id_count": 0,
+            "duplicate_scope_blocker_ids": [],
+            "pass_row_count": 0,
+            "blocked_row_count": 0,
+            "first_blocked_scope_blocker_id": "",
+            "first_blocked_row_blockers": [],
+            "first_blocked_evidence_artifact": "",
+            "first_blocked_expected_evidence_status": "",
+            "first_blocked_observed_evidence_status": "",
+            "first_blocked_missing_true_fields": [],
+            "most_common_row_blocker": "",
+            "evidence_artifact_present_count": 0,
+            "evidence_status_verified_count": 0,
+            "scope_checklist_json": "",
+            "scope_checklist_present": False,
+            "scope_checklist_scope_breadth_ready": False,
+            "scope_checklist_status": "",
+            "approval_token_required": "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT",
+            "blocker_count": 1,
+            "blockers": [],
+            "receipt_rows": [],
+            "required_columns": [],
+            "next_required_step": "",
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+            "scope_widened": False,
+            "claim_promoted": False,
+            "claim_boundary": (
+                "Product scope-breadth evidence receipt endpoint only; the local receipt artifact is missing "
+                "or invalid. It does not acquire evidence, widen scope, approve tokens, run docking, promote "
+                "claims, upload, email, delete, commit, push, or mutate external state."
+            ),
+        }
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_ARTIFACT),
+        "full_scope_evidence_receipt_ready": bool(
+            summary.get("full_scope_evidence_receipt_ready") is True
+        ),
+        "receipt_csv": summary.get("receipt_csv", ""),
+        "receipt_csv_present": bool(summary.get("receipt_csv_present") is True),
+        "receipt_row_count": int(summary.get("receipt_row_count") or 0),
+        "required_scope_blocker_count": int(summary.get("required_scope_blocker_count") or 0),
+        "required_scope_blockers": list(summary.get("required_scope_blockers") or []),
+        "current_scope_blocker_count": int(summary.get("current_scope_blocker_count") or 0),
+        "current_scope_blockers": list(summary.get("current_scope_blockers") or []),
+        "missing_required_scope_blocker_count": int(
+            summary.get("missing_required_scope_blocker_count") or 0
+        ),
+        "missing_required_scope_blockers": list(
+            summary.get("missing_required_scope_blockers") or []
+        ),
+        "duplicate_scope_blocker_id_count": int(summary.get("duplicate_scope_blocker_id_count") or 0),
+        "duplicate_scope_blocker_ids": list(summary.get("duplicate_scope_blocker_ids") or []),
+        "pass_row_count": int(summary.get("pass_row_count") or 0),
+        "blocked_row_count": int(summary.get("blocked_row_count") or 0),
+        "first_blocked_scope_blocker_id": summary.get("first_blocked_scope_blocker_id", ""),
+        "first_blocked_row_blockers": list(summary.get("first_blocked_row_blockers") or []),
+        "first_blocked_evidence_artifact": summary.get("first_blocked_evidence_artifact", ""),
+        "first_blocked_expected_evidence_status": summary.get(
+            "first_blocked_expected_evidence_status", ""
+        ),
+        "first_blocked_observed_evidence_status": summary.get(
+            "first_blocked_observed_evidence_status", ""
+        ),
+        "first_blocked_missing_true_fields": list(
+            summary.get("first_blocked_missing_true_fields") or []
+        ),
+        "most_common_row_blocker": summary.get("most_common_row_blocker", ""),
+        "evidence_artifact_present_count": int(summary.get("evidence_artifact_present_count") or 0),
+        "evidence_status_verified_count": int(summary.get("evidence_status_verified_count") or 0),
+        "scope_checklist_json": summary.get("scope_checklist_json", ""),
+        "scope_checklist_present": bool(summary.get("scope_checklist_present") is True),
+        "scope_checklist_scope_breadth_ready": bool(
+            summary.get("scope_checklist_scope_breadth_ready") is True
+        ),
+        "scope_checklist_status": summary.get("scope_checklist_status", ""),
+        "approval_token_required": summary.get(
+            "approval_token_required", "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+        ),
+        "blocker_count": int(summary.get("blocker_count") or 0),
+        "blockers": list(summary.get("blockers") or []),
+        "receipt_rows": rows,
+        "required_columns": required_columns,
+        "next_required_step": summary.get("next_required_step", ""),
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": False,
+        "scope_widened": False,
+        "claim_promoted": False,
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
 @router.get("/full-commercial-blocker-evidence-matrix")
 async def get_product_full_commercial_blocker_evidence_matrix() -> dict[str, Any]:
     packet = _read_json_object(PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_ARTIFACT)
@@ -6476,6 +6714,105 @@ async def get_product_full_commercial_blocker_evidence_matrix() -> dict[str, Any
         "execution_enabled": False,
         "docking_results_emitted": False,
         "external_state_mutated": False,
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
+@router.get("/engine-refinement-claim-evidence-receipt")
+async def get_product_engine_refinement_claim_evidence_receipt() -> dict[str, Any]:
+    packet = _read_json_object(ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_ARTIFACT)
+    summary = _summary(packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    required_columns = packet.get("required_columns") if isinstance(packet.get("required_columns"), list) else []
+    if not summary:
+        return {
+            "status": "missing_engine_refinement_claim_evidence_receipt",
+            "artifact_path": str(ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_ARTIFACT),
+            "claim_promotion_evidence_receipt_ready": False,
+            "receipt_csv": "",
+            "receipt_csv_present": False,
+            "receipt_row_count": 0,
+            "required_blocker_count": 0,
+            "required_blockers": [],
+            "missing_required_blocker_count": 0,
+            "missing_required_blockers": [],
+            "duplicate_blocker_id_count": 0,
+            "duplicate_blocker_ids": [],
+            "pass_row_count": 0,
+            "blocked_row_count": 0,
+            "first_blocked_blocker_id": "",
+            "first_blocked_row_blockers": [],
+            "first_blocked_evidence_artifact": "",
+            "first_blocked_expected_evidence_status": "",
+            "first_blocked_observed_evidence_status": "",
+            "first_blocked_missing_true_fields": [],
+            "most_common_row_blocker": "",
+            "evidence_artifact_present_count": 0,
+            "evidence_status_verified_count": 0,
+            "action_board_csv": "",
+            "action_board_blocker_count": 0,
+            "approval_token_required": "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT",
+            "blocker_count": 1,
+            "blockers": [],
+            "receipt_rows": [],
+            "required_columns": [],
+            "next_required_step": "",
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+            "claim_promoted": False,
+            "claim_boundary": (
+                "Engine refinement claim evidence receipt endpoint only; the local receipt artifact is "
+                "missing or invalid. It does not fill evidence, approve tokens, run docking or MD, promote "
+                "claims, upload, email, delete, commit, push, or mutate external state."
+            ),
+        }
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_ARTIFACT),
+        "claim_promotion_evidence_receipt_ready": bool(
+            summary.get("claim_promotion_evidence_receipt_ready") is True
+        ),
+        "receipt_csv": summary.get("receipt_csv", ""),
+        "receipt_csv_present": bool(summary.get("receipt_csv_present") is True),
+        "receipt_row_count": int(summary.get("receipt_row_count") or 0),
+        "required_blocker_count": int(summary.get("required_blocker_count") or 0),
+        "required_blockers": list(summary.get("required_blockers") or []),
+        "missing_required_blocker_count": int(summary.get("missing_required_blocker_count") or 0),
+        "missing_required_blockers": list(summary.get("missing_required_blockers") or []),
+        "duplicate_blocker_id_count": int(summary.get("duplicate_blocker_id_count") or 0),
+        "duplicate_blocker_ids": list(summary.get("duplicate_blocker_ids") or []),
+        "pass_row_count": int(summary.get("pass_row_count") or 0),
+        "blocked_row_count": int(summary.get("blocked_row_count") or 0),
+        "first_blocked_blocker_id": summary.get("first_blocked_blocker_id", ""),
+        "first_blocked_row_blockers": list(summary.get("first_blocked_row_blockers") or []),
+        "first_blocked_evidence_artifact": summary.get("first_blocked_evidence_artifact", ""),
+        "first_blocked_expected_evidence_status": summary.get(
+            "first_blocked_expected_evidence_status", ""
+        ),
+        "first_blocked_observed_evidence_status": summary.get(
+            "first_blocked_observed_evidence_status", ""
+        ),
+        "first_blocked_missing_true_fields": list(
+            summary.get("first_blocked_missing_true_fields") or []
+        ),
+        "most_common_row_blocker": summary.get("most_common_row_blocker", ""),
+        "evidence_artifact_present_count": int(summary.get("evidence_artifact_present_count") or 0),
+        "evidence_status_verified_count": int(summary.get("evidence_status_verified_count") or 0),
+        "action_board_csv": summary.get("action_board_csv", ""),
+        "action_board_blocker_count": int(summary.get("action_board_blocker_count") or 0),
+        "approval_token_required": summary.get(
+            "approval_token_required", "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+        ),
+        "blocker_count": int(summary.get("blocker_count") or 0),
+        "blockers": list(summary.get("blockers") or []),
+        "receipt_rows": rows,
+        "required_columns": required_columns,
+        "next_required_step": summary.get("next_required_step", ""),
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": False,
+        "claim_promoted": False,
         "claim_boundary": summary.get("claim_boundary", ""),
     }
 

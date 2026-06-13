@@ -151,7 +151,8 @@
   `runs/product_commercial_readiness_handoff_bundle_current.json` summary에도
   `engine_refinement_claim_promotion_*` 필드 및
   `/product/commercial-readiness-operator-packet`,
-  `/product/commercial-readiness-handoff-bundle` API surface로 전파되어, handoff 단계에서도
+  `/product/commercial-readiness-handoff-bundle`,
+  `/product/engine-refinement-claim-evidence-receipt` API surface로 전파되어, handoff 단계에서도
   claim-grade evidence 병목이 숨지 않는다. handoff bundle artifact reference manifest는
   engine refinement action board, receipt JSON, receipt CSV를
   `local_engine_refinement_claim_*` reference로 추적한다.
@@ -247,7 +248,8 @@
   `runs/product_commercial_readiness_handoff_bundle_current.json` summary의
   `product_scope_breadth_evidence_receipt_*` 필드 및
   `/product/commercial-readiness-operator-packet`,
-  `/product/commercial-readiness-handoff-bundle` API surface에도 전파된다.
+  `/product/commercial-readiness-handoff-bundle`,
+  `/product/scope-breadth-evidence-receipt` API surface에도 전파된다.
   handoff bundle의 artifact reference manifest는
   `product_scope_breadth_evidence_receipt` JSON과 CSV를 필수 local
   scope-breadth receipt evidence로 추적하며
@@ -438,7 +440,8 @@
   CSV 값과 residual registry/checkpoint-readiness artifact가 어긋나면 ready가 되지 않는다.
   `/product/commercial-readiness-operator-packet`,
   `/product/commercial-readiness-execution-ladder`,
-  `/product/commercial-readiness-handoff-bundle`도
+  `/product/commercial-readiness-handoff-bundle`,
+  `/product/production-ai-registry-promotion-operator-receipt`도
   `production_ai_registry_promotion_*` alias, completion packet,
   `production_ai_registry_promotion_operator_receipt_*` status/token/observed blocker
   fields를 전달한다. `/goal/status`도 같은

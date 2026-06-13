@@ -460,7 +460,8 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `runs/product_commercial_readiness_handoff_bundle_current.json` summary의
   `engine_refinement_claim_promotion_*` 필드 및
   `/product/commercial-readiness-operator-packet`,
-  `/product/commercial-readiness-handoff-bundle` API surface로도 전파되어, 상용 readiness
+  `/product/commercial-readiness-handoff-bundle`,
+  `/product/engine-refinement-claim-evidence-receipt` API surface로도 전파되어, 상용 readiness
   handoff 단계에서 claim-grade evidence 병목이 빠지지 않게 한다. handoff bundle은
   `runs/engine_refinement_claim_promotion_action_board_current.csv`,
   `runs/engine_refinement_claim_evidence_receipt_current.json`,
@@ -573,7 +574,8 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `runs/product_commercial_readiness_handoff_bundle_current.json` summary의
   `product_scope_breadth_evidence_receipt_*` 필드 및
   `/product/commercial-readiness-operator-packet`,
-  `/product/commercial-readiness-handoff-bundle` API surface로도 전파된다.
+  `/product/commercial-readiness-handoff-bundle`,
+  `/product/scope-breadth-evidence-receipt` API surface로도 전파된다.
   handoff bundle은 `runs/product_scope_breadth_evidence_receipt_current.json`과
   `config/product_scope_breadth_evidence_receipt_current.csv`를
   `local_scope_breadth_receipt` / `local_scope_breadth_receipt_template`
@@ -723,7 +725,8 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   registry/checkpoint-readiness artifact와 CSV 입력값이 일치하지 않으면 ready가 되지 않는다.
   `/product/commercial-readiness-operator-packet`,
   `/product/commercial-readiness-execution-ladder`,
-  `/product/commercial-readiness-handoff-bundle`은
+  `/product/commercial-readiness-handoff-bundle`,
+  `/product/production-ai-registry-promotion-operator-receipt`은
   `production_ai_registry_promotion_*` alias, completion packet,
   `production_ai_registry_promotion_operator_receipt_*` status/token/observed blocker
   fields를 그대로 전달한다. `/goal/status`도 같은

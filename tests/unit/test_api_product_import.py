@@ -51,6 +51,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "/product/production-ai-gpu-worker-execution-runbook" in paths
     assert "/product/production-ai-gpu-return-intake" in paths
     assert "/product/production-ai-promotion-workbench" in paths
+    assert "/product/production-ai-registry-promotion-operator-receipt" in paths
     assert "/product/scope-breadth-contract" in paths
     assert "/product/scope-claim-guard" in paths
     assert "/product/scope-evidence-priority" in paths
@@ -63,6 +64,8 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "/product/commercial-readiness-operator-packet-freshness" in paths
     assert "/product/commercial-readiness-execution-ladder" in paths
     assert "/product/commercial-readiness-handoff-bundle" in paths
+    assert "/product/scope-breadth-evidence-receipt" in paths
+    assert "/product/engine-refinement-claim-evidence-receipt" in paths
     assert "/product/full-commercial-blocker-evidence-matrix" in paths
     assert "/product/goal-completion-audit" in paths
     assert "/product/pose-sampling-readiness" in paths
@@ -994,6 +997,40 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert promotion["execution_enabled"] is False
     assert promotion["model_promoted"] is False
     assert promotion["external_state_mutated"] is False
+
+    registry_receipt = asyncio.run(
+        product.get_product_production_ai_registry_promotion_operator_receipt()
+    )
+    assert registry_receipt["status"] == "blocked_production_ai_registry_promotion_operator_receipt"
+    assert registry_receipt["operator_receipt_ready"] is False
+    assert registry_receipt["receipt_present"] is True
+    assert registry_receipt["receipt_row_count"] == 1
+    assert registry_receipt["blocked_row_count"] == 1
+    assert registry_receipt["first_blocked_artifact_id"] == (
+        "residual_model_registry_guarded_promotion"
+    )
+    assert registry_receipt["first_blocked_row_blocker"] == "operator_placeholders_unfilled"
+    assert registry_receipt["approval_token_required"] == (
+        "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+    )
+    assert registry_receipt["registry_artifact_present"] is True
+    assert registry_receipt["checkpoint_readiness_artifact_present"] is True
+    assert registry_receipt["observed_registry_default_residual_mode"] == "shadow"
+    assert registry_receipt["observed_registry_trained_model_checkpoint_count"] == 0
+    assert registry_receipt["observed_checkpoint_registry_promotion_currently_satisfied"] is False
+    assert registry_receipt["observed_checkpoint_registry_promotion_missing_gate_ids"] == [
+        "production_promotion_allowed",
+        "customer_facing_mutation_flags",
+        "default_residual_mode_guarded",
+        "trained_model_checkpoint_count_positive",
+    ]
+    assert len(registry_receipt["receipt_rows"]) == registry_receipt["receipt_row_count"]
+    assert registry_receipt["registry_edited_by_this_tool"] is False
+    assert registry_receipt["checkpoint_created_by_this_tool"] is False
+    assert registry_receipt["execution_enabled"] is False
+    assert registry_receipt["docking_results_emitted"] is False
+    assert registry_receipt["external_state_mutated"] is False
+    assert registry_receipt["model_promoted"] is False
 
     scope_breadth = asyncio.run(product.get_product_scope_breadth_contract())
     assert scope_breadth["status"] == "blocked_product_scope_breadth_contract"
@@ -2186,6 +2223,61 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert len(handoff_bundle["artifacts"][0]["sha256"]) == 64
     assert handoff_bundle["execution_enabled"] is False
     assert handoff_bundle["checkpoint_promoted"] is False
+
+    scope_receipt_summary = _artifact_summary(
+        "product_scope_breadth_evidence_receipt_current.json"
+    )
+    scope_receipt = asyncio.run(product.get_product_scope_breadth_evidence_receipt())
+    assert scope_receipt["status"] == scope_receipt_summary.get("status")
+    assert scope_receipt["status"] == "blocked_product_scope_breadth_evidence_receipt"
+    assert scope_receipt["full_scope_evidence_receipt_ready"] is False
+    assert scope_receipt["receipt_csv_present"] is True
+    assert scope_receipt["receipt_row_count"] == 6
+    assert scope_receipt["required_scope_blocker_count"] == 6
+    assert scope_receipt["blocked_row_count"] == 6
+    assert scope_receipt["first_blocked_scope_blocker_id"] == "direct_binding_evidence_missing"
+    assert scope_receipt["first_blocked_expected_evidence_status"] == (
+        "product_scope_transporter_direct_binding_evidence_ready"
+    )
+    assert scope_receipt["first_blocked_observed_evidence_status"] == "missing"
+    assert scope_receipt["most_common_row_blocker"] == "operator_placeholders_unfilled"
+    assert scope_receipt["approval_token_required"] == (
+        "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+    )
+    assert len(scope_receipt["receipt_rows"]) == scope_receipt["receipt_row_count"]
+    assert "scope_blocker_id" in scope_receipt["required_columns"]
+    assert scope_receipt["execution_enabled"] is False
+    assert scope_receipt["docking_results_emitted"] is False
+    assert scope_receipt["external_state_mutated"] is False
+    assert scope_receipt["scope_widened"] is False
+    assert scope_receipt["claim_promoted"] is False
+
+    engine_receipt_summary = _artifact_summary(
+        "engine_refinement_claim_evidence_receipt_current.json"
+    )
+    engine_receipt = asyncio.run(product.get_product_engine_refinement_claim_evidence_receipt())
+    assert engine_receipt["status"] == engine_receipt_summary.get("status")
+    assert engine_receipt["status"] == "blocked_engine_refinement_claim_evidence_receipt"
+    assert engine_receipt["claim_promotion_evidence_receipt_ready"] is False
+    assert engine_receipt["receipt_csv_present"] is True
+    assert engine_receipt["receipt_row_count"] == 6
+    assert engine_receipt["required_blocker_count"] == 6
+    assert engine_receipt["blocked_row_count"] == 6
+    assert engine_receipt["first_blocked_blocker_id"] == "public_benchmark_gate_not_ready"
+    assert engine_receipt["first_blocked_expected_evidence_status"] == (
+        "refine_tier_public_benchmark_ready"
+    )
+    assert engine_receipt["first_blocked_observed_evidence_status"] == "missing"
+    assert engine_receipt["most_common_row_blocker"] == "operator_placeholders_unfilled"
+    assert engine_receipt["approval_token_required"] == (
+        "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+    )
+    assert len(engine_receipt["receipt_rows"]) == engine_receipt["receipt_row_count"]
+    assert "blocker_id" in engine_receipt["required_columns"]
+    assert engine_receipt["execution_enabled"] is False
+    assert engine_receipt["docking_results_emitted"] is False
+    assert engine_receipt["external_state_mutated"] is False
+    assert engine_receipt["claim_promoted"] is False
 
     full_matrix_summary = _artifact_summary(
         "product_full_commercial_blocker_evidence_matrix_current.json"
