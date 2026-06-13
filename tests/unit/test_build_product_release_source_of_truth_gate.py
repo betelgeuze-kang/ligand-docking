@@ -117,6 +117,22 @@ def _refresh_release_decision_ready() -> dict:
             "product_quality_gate_verification_blocker_count": 0,
             "product_quality_gate_verification_execution_enabled": False,
             "product_quality_gate_verification_external_state_mutated": False,
+            "product_pose_sampling_readiness_recorded": True,
+            "product_pose_sampling_readiness_ready": True,
+            "product_pose_sampling_readiness_pose_generation_contract_ready": True,
+            "product_pose_sampling_readiness_pocket_detection_ready": True,
+            "product_pose_sampling_readiness_multi_start_pose_ensemble_ready": True,
+            "product_pose_sampling_readiness_pose_centroid_pocket_bound_ready": True,
+            "product_pose_sampling_readiness_pose_rmsd_diversity_surface_ready": True,
+            "product_pose_sampling_readiness_bounded_cross_docking_induced_fit_guard_ready": True,
+            "product_pose_sampling_readiness_pose_claim_boundary_guard_ready": True,
+            "product_pose_sampling_readiness_blocker_count": 0,
+            "product_pose_sampling_readiness_claim_grade_pose_accuracy_ready": False,
+            "product_pose_sampling_readiness_claim_grade_induced_fit_ready": False,
+            "product_pose_sampling_readiness_claim_grade_cross_docking_ready": False,
+            "product_pose_sampling_readiness_docking_results_emitted": False,
+            "product_pose_sampling_readiness_execution_enabled": False,
+            "product_pose_sampling_readiness_external_state_mutated": False,
             "source_goal_bottleneck_briefing_status": "goal_bottleneck_briefing_ready",
             "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 2,
@@ -199,6 +215,12 @@ def _refresh_release_decision_ready() -> dict:
             "science_claim_promotion_gap_closure_release_blocker_row_count": 2,
             "product_quality_gate_verification_check_count": 4,
             "product_quality_gate_verification_pass_count": 4,
+            "product_pose_sampling_readiness_check_count": 6,
+            "product_pose_sampling_readiness_pass_count": 6,
+            "product_pose_sampling_readiness_requested_pose_start_count": 6,
+            "product_pose_sampling_readiness_pose_count": 6,
+            "product_pose_sampling_readiness_cluster_count": 6,
+            "product_pose_sampling_readiness_cross_docking_pose_count": 4,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
                 "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"
@@ -351,6 +373,8 @@ def _refresh_release_decision_ready() -> dict:
             "product_quality_gate_verification_source_contract_status": (
                 "product_operational_quality_contract_ready"
             ),
+            "product_pose_sampling_readiness_status": "product_pose_sampling_readiness_ready",
+            "product_pose_sampling_readiness_pocket_method": "ligand_guided",
             "accuracy_parity_scorecard_status": "blocked_accuracy_parity",
             "accuracy_parity_scorecard_current_broad_accuracy_parity_estimate_pct": "40-50",
             "accuracy_parity_scorecard_current_broad_commercial_platform_estimate_pct": "35-45",
@@ -734,6 +758,17 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert "product_quality_gate_verification_blocker_count" in release_row["required_zero_fields"]
     assert "product_quality_gate_verification_execution_enabled" in release_row["required_zero_fields"]
     assert "product_quality_gate_verification_external_state_mutated" in release_row["required_zero_fields"]
+    assert "product_pose_sampling_readiness_blocker_count" in release_row["required_zero_fields"]
+    assert (
+        "product_pose_sampling_readiness_claim_grade_pose_accuracy_ready"
+        in release_row["required_zero_fields"]
+    )
+    assert (
+        "product_pose_sampling_readiness_docking_results_emitted"
+        in release_row["required_zero_fields"]
+    )
+    assert "product_pose_sampling_readiness_execution_enabled" in release_row["required_zero_fields"]
+    assert "product_pose_sampling_readiness_external_state_mutated" in release_row["required_zero_fields"]
     assert "accuracy_parity_scorecard_recorded" in release_row["required_true_fields"]
     assert (
         "api_runner_profile_promotion_operator_receipt_recorded"
@@ -750,6 +785,16 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     )
     assert "product_quality_gate_verification_recorded" in release_row["required_true_fields"]
     assert "product_quality_gate_verification_ready" in release_row["required_true_fields"]
+    assert "product_pose_sampling_readiness_recorded" in release_row["required_true_fields"]
+    assert "product_pose_sampling_readiness_ready" in release_row["required_true_fields"]
+    assert (
+        "product_pose_sampling_readiness_pose_generation_contract_ready"
+        in release_row["required_true_fields"]
+    )
+    assert (
+        "product_pose_sampling_readiness_pose_claim_boundary_guard_ready"
+        in release_row["required_true_fields"]
+    )
     assert release_row["required_int_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count"
     ] == 3
@@ -798,12 +843,27 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_int_exact_fields"][
         "product_quality_gate_verification_pass_count"
     ] == 4
+    assert release_row["required_int_exact_fields"][
+        "product_pose_sampling_readiness_pose_count"
+    ] == 6
+    assert release_row["required_int_exact_fields"][
+        "product_pose_sampling_readiness_cluster_count"
+    ] == 6
+    assert release_row["required_int_exact_fields"][
+        "product_pose_sampling_readiness_cross_docking_pose_count"
+    ] == 4
     assert release_row["required_text_exact_fields"][
         "product_quality_gate_verification_status"
     ] == "product_quality_gate_verified"
     assert release_row["required_text_exact_fields"][
         "product_quality_gate_verification_source_contract_status"
     ] == "product_operational_quality_contract_ready"
+    assert release_row["required_text_exact_fields"][
+        "product_pose_sampling_readiness_status"
+    ] == "product_pose_sampling_readiness_ready"
+    assert release_row["required_text_exact_fields"][
+        "product_pose_sampling_readiness_pocket_method"
+    ] == "ligand_guided"
     assert release_row["required_text_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id"
     ] == "default_residual_mode_guarded"

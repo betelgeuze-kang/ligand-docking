@@ -137,6 +137,16 @@ def test_refresh_final_gate_requires_release_decision_bottleneck_receipt_linkage
     assert decision_row["required_int_exact_fields"][
         "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count"
     ] == 2
+    assert "product_pose_sampling_readiness_recorded" in decision_row["required_true_fields"]
+    assert "product_pose_sampling_readiness_docking_results_emitted" in decision_row[
+        "required_zero_fields"
+    ]
+    assert decision_row["required_int_exact_fields"][
+        "product_pose_sampling_readiness_pose_count"
+    ] == 6
+    assert decision_row["required_text_exact_fields"][
+        "product_pose_sampling_readiness_status"
+    ] == "product_pose_sampling_readiness_ready"
     assert decision_row["required_text_exact_fields"][
         "goal_bottleneck_briefing_full_commercial_evidence_receipt_required_inputs"
     ] == (
@@ -254,6 +264,49 @@ def test_refresh_final_gate_blocks_quality_gate_verification_drift(tmp_path: Pat
     assert summary["final_gate_blocker_count"] == 1
     assert quality_row["status"] == "fail"
     assert quality_row["failed_int_exact_fields"] == ["pass_count"]
+
+
+def test_refresh_final_gate_blocks_pose_sampling_release_decision_drift(tmp_path: Path) -> None:
+    decision_payload = _release_decision_ready()
+    decision_payload["summary"]["product_pose_sampling_readiness_pose_count"] = 4
+    decision_payload["summary"]["product_pose_sampling_readiness_docking_results_emitted"] = True
+    _write_json(
+        tmp_path / "runs" / "product_release_source_of_truth_gate_current.json",
+        _source_of_truth_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "product_quality_gate_verification_current.json",
+        _quality_gate_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_release_decision_gate_current.json",
+        decision_payload,
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_operator_action_board_current.json",
+        _action_board_ready(),
+    )
+
+    payload = mod.run_product_release_current_refresh(
+        execute=True,
+        root=tmp_path,
+        commands=[],
+    )
+
+    summary = payload["summary"]
+    decision_row = next(
+        row for row in payload["verification_rows"] if row["gate_id"] == "goal_release_decision_gate"
+    )
+    assert summary["status"] == "blocked_product_release_current_refresh"
+    assert summary["final_gate_verification_ready"] is False
+    assert summary["final_gate_blocker_count"] == 1
+    assert decision_row["status"] == "fail"
+    assert decision_row["nonzero_fields"] == [
+        "product_pose_sampling_readiness_docking_results_emitted"
+    ]
+    assert decision_row["failed_int_exact_fields"] == [
+        "product_pose_sampling_readiness_pose_count"
+    ]
 
 
 def test_refresh_final_gate_blocks_stale_action_board_release_decision_echo(

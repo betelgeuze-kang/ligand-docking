@@ -45,6 +45,7 @@ DEFAULT_PRODUCT_AI_ARCHITECTURE_GAP_JSON = "runs/product_ai_architecture_gap_clo
 DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON = "runs/product_ai_architecture_execution_backlog_current.json"
 DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON = "runs/product_release_source_of_truth_gate_current.json"
 DEFAULT_PRODUCT_QUALITY_GATE_VERIFICATION_JSON = "runs/product_quality_gate_verification_current.json"
+DEFAULT_PRODUCT_POSE_SAMPLING_READINESS_JSON = "runs/product_pose_sampling_readiness_current.json"
 DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON = "runs/api_customer_flow_release_evidence_current.json"
 DEFAULT_API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_JSON = (
     "runs/api_runner_profile_promotion_operator_receipt_current.json"
@@ -225,6 +226,7 @@ def build_goal_release_decision_gate(
     product_ai_execution_backlog_packet: dict[str, Any] | None = None,
     product_release_source_of_truth_packet: dict[str, Any] | None = None,
     product_quality_gate_verification_packet: dict[str, Any] | None = None,
+    product_pose_sampling_readiness_packet: dict[str, Any] | None = None,
     api_customer_flow_release_evidence_packet: dict[str, Any] | None = None,
     api_runner_profile_promotion_operator_receipt_packet: dict[str, Any] | None = None,
     product_scope_breadth_evidence_receipt_packet: dict[str, Any] | None = None,
@@ -267,6 +269,7 @@ def build_goal_release_decision_gate(
     product_ai_execution_backlog_path: str = DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON,
     product_release_source_of_truth_path: str = DEFAULT_PRODUCT_RELEASE_SOURCE_OF_TRUTH_JSON,
     product_quality_gate_verification_path: str = DEFAULT_PRODUCT_QUALITY_GATE_VERIFICATION_JSON,
+    product_pose_sampling_readiness_path: str = DEFAULT_PRODUCT_POSE_SAMPLING_READINESS_JSON,
     api_customer_flow_release_evidence_path: str = DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON,
     api_runner_profile_promotion_operator_receipt_path: str = (
         DEFAULT_API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_JSON
@@ -752,6 +755,33 @@ def build_goal_release_decision_gate(
         == "product_operational_quality_contract_ready"
         and bool(product_quality_gate.get("execution_enabled") is False)
         and bool(product_quality_gate.get("external_state_mutated") is False)
+    )
+    product_pose_sampling = _summary(product_pose_sampling_readiness_packet or {})
+    product_pose_sampling_gate_present = product_pose_sampling_readiness_packet is not None
+    product_pose_sampling_recorded = (
+        _text(product_pose_sampling.get("status")) == "product_pose_sampling_readiness_ready"
+        and bool(product_pose_sampling.get("pose_sampling_readiness_ready") is True)
+        and bool(product_pose_sampling.get("pose_generation_contract_ready") is True)
+        and bool(product_pose_sampling.get("pocket_detection_ready") is True)
+        and bool(product_pose_sampling.get("multi_start_pose_ensemble_ready") is True)
+        and bool(product_pose_sampling.get("pose_centroid_pocket_bound_ready") is True)
+        and bool(product_pose_sampling.get("pose_rmsd_diversity_surface_ready") is True)
+        and bool(product_pose_sampling.get("bounded_cross_docking_induced_fit_guard_ready") is True)
+        and bool(product_pose_sampling.get("pose_claim_boundary_guard_ready") is True)
+        and _int(product_pose_sampling.get("check_count")) == 6
+        and _int(product_pose_sampling.get("pass_count")) == 6
+        and _int(product_pose_sampling.get("blocker_count")) == 0
+        and _int(product_pose_sampling.get("requested_pose_start_count")) == 6
+        and _int(product_pose_sampling.get("pose_count")) == 6
+        and _int(product_pose_sampling.get("cross_docking_pose_count")) == 4
+        and _int(product_pose_sampling.get("cluster_count")) >= 2
+        and _text(product_pose_sampling.get("pocket_method")) == "ligand_guided"
+        and bool(product_pose_sampling.get("claim_grade_pose_accuracy_ready") is False)
+        and bool(product_pose_sampling.get("claim_grade_induced_fit_ready") is False)
+        and bool(product_pose_sampling.get("claim_grade_cross_docking_ready") is False)
+        and bool(product_pose_sampling.get("docking_results_emitted") is False)
+        and bool(product_pose_sampling.get("execution_enabled") is False)
+        and bool(product_pose_sampling.get("external_state_mutated") is False)
     )
     api_customer_flow = _summary(api_customer_flow_release_evidence_packet or {})
     api_customer_flow_gate_present = api_customer_flow_release_evidence_packet is not None
@@ -1756,6 +1786,51 @@ def build_goal_release_decision_gate(
                 ),
             )
         )
+    if product_pose_sampling_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="product_pose_sampling_readiness_recorded",
+                artifact_path=product_pose_sampling_readiness_path,
+                observed=(
+                    f"{_text(product_pose_sampling.get('status')) or 'missing'};"
+                    f"pose_sampling_readiness_ready="
+                    f"{_bool_text(bool(product_pose_sampling.get('pose_sampling_readiness_ready') is True))};"
+                    f"pose_generation_contract_ready="
+                    f"{_bool_text(bool(product_pose_sampling.get('pose_generation_contract_ready') is True))};"
+                    f"pocket_detection_ready="
+                    f"{_bool_text(bool(product_pose_sampling.get('pocket_detection_ready') is True))};"
+                    f"requested_pose_start_count={_int(product_pose_sampling.get('requested_pose_start_count'))};"
+                    f"pose_count={_int(product_pose_sampling.get('pose_count'))};"
+                    f"cluster_count={_int(product_pose_sampling.get('cluster_count'))};"
+                    f"cross_docking_pose_count={_int(product_pose_sampling.get('cross_docking_pose_count'))};"
+                    f"pocket_method={_text(product_pose_sampling.get('pocket_method'))};"
+                    f"claim_grade_pose_accuracy_ready="
+                    f"{_bool_text(bool(product_pose_sampling.get('claim_grade_pose_accuracy_ready') is True))};"
+                    f"claim_grade_induced_fit_ready="
+                    f"{_bool_text(bool(product_pose_sampling.get('claim_grade_induced_fit_ready') is True))};"
+                    f"claim_grade_cross_docking_ready="
+                    f"{_bool_text(bool(product_pose_sampling.get('claim_grade_cross_docking_ready') is True))};"
+                    f"docking_results_emitted="
+                    f"{_bool_text(bool(product_pose_sampling.get('docking_results_emitted') is True))};"
+                    f"execution_enabled="
+                    f"{_bool_text(bool(product_pose_sampling.get('execution_enabled') is True))};"
+                    f"external_state_mutated="
+                    f"{_bool_text(bool(product_pose_sampling.get('external_state_mutated') is True))}"
+                ),
+                required=(
+                    "product_pose_sampling_readiness_ready with 6 local starts, >=2 RMSD clusters, "
+                    "bounded cross-docking/induced-fit guard, claim-grade pose accuracy/cross-target "
+                    "claims blocked, and no docking result emission or external mutation"
+                ),
+                passed=product_pose_sampling_recorded,
+                reason=(
+                    "The final release decision must directly preserve the local pose-sampling smoke "
+                    "receipt so ligand-docking readiness cannot be represented only by downstream "
+                    "AI graph, release-bundle, or source-of-truth rollups."
+                ),
+            )
+        )
     if full_commercial_matrix_gate_present:
         rows.append(
             _row(
@@ -2140,6 +2215,8 @@ def build_goal_release_decision_gate(
         next_required_items.append("product release source-of-truth gate")
     if product_quality_gate_present and not product_quality_gate_verified:
         next_required_items.append("product quality gate verification receipt")
+    if product_pose_sampling_gate_present and not product_pose_sampling_recorded:
+        next_required_items.append("product pose sampling readiness receipt")
     if full_commercial_matrix_gate_present and not full_commercial_matrix_recorded:
         next_required_items.append("full-commercial blocker evidence matrix")
     if rollout_smoke_gate_present and not rollout_smoke_recorded:
@@ -3122,6 +3199,80 @@ def build_goal_release_decision_gate(
         "product_quality_gate_verification_external_state_mutated": bool(
             product_quality_gate.get("external_state_mutated") is True
         ),
+        "product_pose_sampling_readiness_gate_present": product_pose_sampling_gate_present,
+        "product_pose_sampling_readiness_status": _text(product_pose_sampling.get("status")),
+        "product_pose_sampling_readiness_recorded": (
+            product_pose_sampling_recorded if product_pose_sampling_gate_present else None
+        ),
+        "product_pose_sampling_readiness_ready": bool(
+            product_pose_sampling.get("pose_sampling_readiness_ready") is True
+        ),
+        "product_pose_sampling_readiness_pose_generation_contract_ready": bool(
+            product_pose_sampling.get("pose_generation_contract_ready") is True
+        ),
+        "product_pose_sampling_readiness_pocket_detection_ready": bool(
+            product_pose_sampling.get("pocket_detection_ready") is True
+        ),
+        "product_pose_sampling_readiness_multi_start_pose_ensemble_ready": bool(
+            product_pose_sampling.get("multi_start_pose_ensemble_ready") is True
+        ),
+        "product_pose_sampling_readiness_pose_centroid_pocket_bound_ready": bool(
+            product_pose_sampling.get("pose_centroid_pocket_bound_ready") is True
+        ),
+        "product_pose_sampling_readiness_pose_rmsd_diversity_surface_ready": bool(
+            product_pose_sampling.get("pose_rmsd_diversity_surface_ready") is True
+        ),
+        "product_pose_sampling_readiness_bounded_cross_docking_induced_fit_guard_ready": bool(
+            product_pose_sampling.get("bounded_cross_docking_induced_fit_guard_ready") is True
+        ),
+        "product_pose_sampling_readiness_pose_claim_boundary_guard_ready": bool(
+            product_pose_sampling.get("pose_claim_boundary_guard_ready") is True
+        ),
+        "product_pose_sampling_readiness_check_count": _int(
+            product_pose_sampling.get("check_count")
+        ),
+        "product_pose_sampling_readiness_pass_count": _int(
+            product_pose_sampling.get("pass_count")
+        ),
+        "product_pose_sampling_readiness_blocker_count": _int(
+            product_pose_sampling.get("blocker_count")
+        ),
+        "product_pose_sampling_readiness_requested_pose_start_count": _int(
+            product_pose_sampling.get("requested_pose_start_count")
+        ),
+        "product_pose_sampling_readiness_pose_count": _int(
+            product_pose_sampling.get("pose_count")
+        ),
+        "product_pose_sampling_readiness_cluster_count": _int(
+            product_pose_sampling.get("cluster_count")
+        ),
+        "product_pose_sampling_readiness_cross_docking_pose_count": _int(
+            product_pose_sampling.get("cross_docking_pose_count")
+        ),
+        "product_pose_sampling_readiness_pocket_method": _text(
+            product_pose_sampling.get("pocket_method")
+        ),
+        "product_pose_sampling_readiness_claim_grade_pose_accuracy_ready": bool(
+            product_pose_sampling.get("claim_grade_pose_accuracy_ready") is True
+        ),
+        "product_pose_sampling_readiness_claim_grade_induced_fit_ready": bool(
+            product_pose_sampling.get("claim_grade_induced_fit_ready") is True
+        ),
+        "product_pose_sampling_readiness_claim_grade_cross_docking_ready": bool(
+            product_pose_sampling.get("claim_grade_cross_docking_ready") is True
+        ),
+        "product_pose_sampling_readiness_docking_results_emitted": bool(
+            product_pose_sampling.get("docking_results_emitted") is True
+        ),
+        "product_pose_sampling_readiness_execution_enabled": bool(
+            product_pose_sampling.get("execution_enabled") is True
+        ),
+        "product_pose_sampling_readiness_external_state_mutated": bool(
+            product_pose_sampling.get("external_state_mutated") is True
+        ),
+        "product_pose_sampling_readiness_next_required_step": _text(
+            product_pose_sampling.get("next_required_step")
+        ),
         "product_full_commercial_blocker_evidence_matrix_gate_present": full_commercial_matrix_gate_present,
         "product_full_commercial_blocker_evidence_matrix_status": _text(
             full_commercial_matrix.get("status")
@@ -3653,6 +3804,18 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_quality_gate_verification_blocker_count: `{s['product_quality_gate_verification_blocker_count']}`",
         f"- product_quality_gate_verification_execution_enabled: `{s['product_quality_gate_verification_execution_enabled']}`",
         f"- product_quality_gate_verification_external_state_mutated: `{s['product_quality_gate_verification_external_state_mutated']}`",
+        f"- product_pose_sampling_readiness_gate_present: `{s['product_pose_sampling_readiness_gate_present']}`",
+        f"- product_pose_sampling_readiness_status: `{s['product_pose_sampling_readiness_status']}`",
+        f"- product_pose_sampling_readiness_recorded: `{s['product_pose_sampling_readiness_recorded']}`",
+        f"- product_pose_sampling_readiness_ready: `{s['product_pose_sampling_readiness_ready']}`",
+        f"- product_pose_sampling_readiness_pose_generation_contract_ready: `{s['product_pose_sampling_readiness_pose_generation_contract_ready']}`",
+        f"- product_pose_sampling_readiness_pose_count: `{s['product_pose_sampling_readiness_pose_count']}`",
+        f"- product_pose_sampling_readiness_cluster_count: `{s['product_pose_sampling_readiness_cluster_count']}`",
+        f"- product_pose_sampling_readiness_cross_docking_pose_count: `{s['product_pose_sampling_readiness_cross_docking_pose_count']}`",
+        f"- product_pose_sampling_readiness_claim_grade_pose_accuracy_ready: `{s['product_pose_sampling_readiness_claim_grade_pose_accuracy_ready']}`",
+        f"- product_pose_sampling_readiness_docking_results_emitted: `{s['product_pose_sampling_readiness_docking_results_emitted']}`",
+        f"- product_pose_sampling_readiness_execution_enabled: `{s['product_pose_sampling_readiness_execution_enabled']}`",
+        f"- product_pose_sampling_readiness_external_state_mutated: `{s['product_pose_sampling_readiness_external_state_mutated']}`",
         f"- product_full_commercial_blocker_evidence_matrix_gate_present: `{s['product_full_commercial_blocker_evidence_matrix_gate_present']}`",
         f"- product_full_commercial_blocker_evidence_matrix_status: `{s['product_full_commercial_blocker_evidence_matrix_status']}`",
         f"- product_full_commercial_blocker_evidence_matrix_ready: `{s['product_full_commercial_blocker_evidence_matrix_ready']}`",
@@ -3852,6 +4015,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--product-quality-gate-verification-json",
         default=DEFAULT_PRODUCT_QUALITY_GATE_VERIFICATION_JSON,
     )
+    parser.add_argument(
+        "--product-pose-sampling-readiness-json",
+        default=DEFAULT_PRODUCT_POSE_SAMPLING_READINESS_JSON,
+    )
     parser.add_argument("--api-customer-flow-release-evidence-json", default=DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON)
     parser.add_argument(
         "--api-runner-profile-promotion-operator-receipt-json",
@@ -3938,6 +4105,9 @@ def main(argv: list[str] | None = None) -> None:
         product_quality_gate_verification_packet=_read_json_if_present(
             args.product_quality_gate_verification_json
         ),
+        product_pose_sampling_readiness_packet=_read_json_if_present(
+            args.product_pose_sampling_readiness_json
+        ),
         api_customer_flow_release_evidence_packet=_read_json_if_present(
             args.api_customer_flow_release_evidence_json
         ),
@@ -4000,6 +4170,7 @@ def main(argv: list[str] | None = None) -> None:
         product_ai_execution_backlog_path=args.product_ai_execution_backlog_json,
         product_release_source_of_truth_path=args.product_release_source_of_truth_json,
         product_quality_gate_verification_path=args.product_quality_gate_verification_json,
+        product_pose_sampling_readiness_path=args.product_pose_sampling_readiness_json,
         api_customer_flow_release_evidence_path=args.api_customer_flow_release_evidence_json,
         api_runner_profile_promotion_operator_receipt_path=(
             args.api_runner_profile_promotion_operator_receipt_json

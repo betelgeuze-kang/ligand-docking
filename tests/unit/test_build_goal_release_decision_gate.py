@@ -565,6 +565,54 @@ def _ready_product_quality_gate_verification() -> dict:
     }
 
 
+def _ready_product_pose_sampling_readiness() -> dict:
+    return {
+        "summary": {
+            "status": "product_pose_sampling_readiness_ready",
+            "pose_sampling_readiness_ready": True,
+            "pose_generation_contract_ready": True,
+            "pocket_detection_ready": True,
+            "multi_start_pose_ensemble_ready": True,
+            "pose_centroid_pocket_bound_ready": True,
+            "pose_rmsd_diversity_surface_ready": True,
+            "bounded_cross_docking_induced_fit_guard_ready": True,
+            "pose_claim_boundary_guard_ready": True,
+            "check_count": 6,
+            "pass_count": 6,
+            "blocker_count": 0,
+            "requested_pose_start_count": 6,
+            "pose_count": 6,
+            "cluster_count": 6,
+            "cross_docking_pose_count": 4,
+            "pocket_method": "ligand_guided",
+            "claim_grade_pose_accuracy_ready": False,
+            "claim_grade_induced_fit_ready": False,
+            "claim_grade_cross_docking_ready": False,
+            "docking_results_emitted": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "next_required_step": (
+                "Keep pose accuracy, induced-fit, and cross-target claims blocked until public pose benchmarks clear."
+            ),
+        }
+    }
+
+
+def _blocked_product_pose_sampling_readiness() -> dict:
+    packet = _ready_product_pose_sampling_readiness()
+    packet["summary"].update(
+        {
+            "status": "blocked_product_pose_sampling_readiness",
+            "pose_sampling_readiness_ready": False,
+            "pose_count": 4,
+            "cluster_count": 1,
+            "pass_count": 4,
+            "blocker_count": 2,
+        }
+    )
+    return packet
+
+
 def _blocked_full_commercial_matrix() -> dict:
     return {
         "summary": {
@@ -1602,6 +1650,81 @@ def test_goal_release_decision_gate_blocks_failed_quality_gate_verification() ->
     assert quality_row["status"] == "fail"
     assert quality_row["release_blocker"] is True
     assert "pass_count=3" in quality_row["observed"]
+
+
+def test_goal_release_decision_gate_passes_ready_pose_sampling_readiness() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_ready_cameo_validation(),
+        cameo_capability_packet=_ready_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+        product_release_source_of_truth_packet=_ready_source_of_truth(),
+        product_quality_gate_verification_packet=_ready_product_quality_gate_verification(),
+        product_pose_sampling_readiness_packet=_ready_product_pose_sampling_readiness(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "goal_release_ready"
+    assert summary["product_pose_sampling_readiness_gate_present"] is True
+    assert summary["product_pose_sampling_readiness_recorded"] is True
+    assert summary["product_pose_sampling_readiness_ready"] is True
+    assert summary["product_pose_sampling_readiness_pose_generation_contract_ready"] is True
+    assert summary["product_pose_sampling_readiness_pose_count"] == 6
+    assert summary["product_pose_sampling_readiness_cluster_count"] == 6
+    assert summary["product_pose_sampling_readiness_cross_docking_pose_count"] == 4
+    assert summary["product_pose_sampling_readiness_claim_grade_pose_accuracy_ready"] is False
+    assert summary["product_pose_sampling_readiness_docking_results_emitted"] is False
+    assert summary["product_pose_sampling_readiness_execution_enabled"] is False
+    assert summary["product_pose_sampling_readiness_external_state_mutated"] is False
+    pose_row = next(
+        row for row in payload["rows"] if row["check"] == "product_pose_sampling_readiness_recorded"
+    )
+    assert pose_row["status"] == "pass"
+    assert pose_row["release_blocker"] is False
+    assert "pose_count=6" in pose_row["observed"]
+    assert "claim_grade_pose_accuracy_ready=false" in pose_row["observed"]
+
+
+def test_goal_release_decision_gate_blocks_failed_pose_sampling_readiness() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_ready_cameo_validation(),
+        cameo_capability_packet=_ready_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+        product_release_source_of_truth_packet=_ready_source_of_truth(),
+        product_quality_gate_verification_packet=_ready_product_quality_gate_verification(),
+        product_pose_sampling_readiness_packet=_blocked_product_pose_sampling_readiness(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_goal_release_decision"
+    assert summary["release_allowed"] is False
+    assert summary["product_pose_sampling_readiness_recorded"] is False
+    assert summary["product_pose_sampling_readiness_pose_count"] == 4
+    assert summary["product_pose_sampling_readiness_cluster_count"] == 1
+    assert "product pose sampling readiness receipt" in summary["next_required_step"]
+    pose_row = next(
+        row for row in payload["rows"] if row["check"] == "product_pose_sampling_readiness_recorded"
+    )
+    assert pose_row["status"] == "fail"
+    assert pose_row["release_blocker"] is True
+    assert "pose_count=4" in pose_row["observed"]
 
 
 def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_blocking_restricted_release() -> None:

@@ -97,6 +97,15 @@ FINAL_GATE_SPECS = [
             "engine_refinement_claim_evidence_priority_packet_ready",
             "product_quality_gate_verification_recorded",
             "product_quality_gate_verification_ready",
+            "product_pose_sampling_readiness_recorded",
+            "product_pose_sampling_readiness_ready",
+            "product_pose_sampling_readiness_pose_generation_contract_ready",
+            "product_pose_sampling_readiness_pocket_detection_ready",
+            "product_pose_sampling_readiness_multi_start_pose_ensemble_ready",
+            "product_pose_sampling_readiness_pose_centroid_pocket_bound_ready",
+            "product_pose_sampling_readiness_pose_rmsd_diversity_surface_ready",
+            "product_pose_sampling_readiness_bounded_cross_docking_induced_fit_guard_ready",
+            "product_pose_sampling_readiness_pose_claim_boundary_guard_ready",
         ],
         "required_zero_fields": [
             "blocker_count",
@@ -142,6 +151,13 @@ FINAL_GATE_SPECS = [
             "product_quality_gate_verification_blocker_count",
             "product_quality_gate_verification_execution_enabled",
             "product_quality_gate_verification_external_state_mutated",
+            "product_pose_sampling_readiness_blocker_count",
+            "product_pose_sampling_readiness_claim_grade_pose_accuracy_ready",
+            "product_pose_sampling_readiness_claim_grade_induced_fit_ready",
+            "product_pose_sampling_readiness_claim_grade_cross_docking_ready",
+            "product_pose_sampling_readiness_docking_results_emitted",
+            "product_pose_sampling_readiness_execution_enabled",
+            "product_pose_sampling_readiness_external_state_mutated",
         ],
         "required_int_exact_fields": {
             "cameo_official_result_fetch_preflight_blocked_row_count": 1,
@@ -225,12 +241,20 @@ FINAL_GATE_SPECS = [
             "science_claim_promotion_gap_closure_release_blocker_row_count": 2,
             "product_quality_gate_verification_check_count": 4,
             "product_quality_gate_verification_pass_count": 4,
+            "product_pose_sampling_readiness_check_count": 6,
+            "product_pose_sampling_readiness_pass_count": 6,
+            "product_pose_sampling_readiness_requested_pose_start_count": 6,
+            "product_pose_sampling_readiness_pose_count": 6,
+            "product_pose_sampling_readiness_cluster_count": 6,
+            "product_pose_sampling_readiness_cross_docking_pose_count": 4,
         },
         "required_text_exact_fields": {
             "product_quality_gate_verification_status": "product_quality_gate_verified",
             "product_quality_gate_verification_source_contract_status": (
                 "product_operational_quality_contract_ready"
             ),
+            "product_pose_sampling_readiness_status": "product_pose_sampling_readiness_ready",
+            "product_pose_sampling_readiness_pocket_method": "ligand_guided",
             "cameo_official_result_fetch_preflight_status": (
                 "blocked_cameo_official_result_fetch_preflight"
             ),

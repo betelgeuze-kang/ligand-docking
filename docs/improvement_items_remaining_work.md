@@ -751,7 +751,20 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   exact/min field로 검증한다. 따라서 product AI decision graph의
   `pose_generation_contract` node는 capability/preflight만 보지 않고 실제 local
   pose sampling smoke artifact를 요구하며, `/product/pose-sampling-readiness`
-  API surface도 같은 artifact와 claim-grade blocked posture를 노출한다.
+  API surface도 같은 artifact와 claim-grade blocked posture를 노출한다. 최신
+  `goal_release_decision_gate_current.json`도 같은 artifact를 직접 읽어
+  `product_pose_sampling_readiness_recorded=true`,
+  `product_pose_sampling_readiness_ready=true`,
+  `product_pose_sampling_readiness_pose_count=6`,
+  `product_pose_sampling_readiness_cluster_count=6`,
+  `product_pose_sampling_readiness_cross_docking_pose_count=4`,
+  `product_pose_sampling_readiness_claim_grade_pose_accuracy_ready=false`,
+  `product_pose_sampling_readiness_docking_results_emitted=false`,
+  `product_pose_sampling_readiness_execution_enabled=false`,
+  `product_pose_sampling_readiness_external_state_mutated=false`를 노출하고,
+  `/goal/status`와 final refresh exact check가 이 값을 그대로 검증한다. 따라서
+  local pose sampling smoke가 release bundle/source-of-truth/product API 안에만
+  머물지 않고 operator-facing release decision surface에서도 직접 확인된다.
   API/service-boundary semantic readiness와 self-hosted license audit semantic
   readiness도 이 source-of-truth 안으로 편입됐다. 고객-facing AI report explanation/UX semantic
   readiness는 core/full decision graph 순환을 분리한 뒤 닫혔다. R8/R9 evidence

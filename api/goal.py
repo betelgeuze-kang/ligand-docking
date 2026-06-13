@@ -304,6 +304,100 @@ def _api_runner_profile_receipt_release_fields(release: dict[str, Any]) -> dict[
     }
 
 
+def _pose_sampling_release_fields(release: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "product_pose_sampling_readiness_gate_present": bool(
+            release.get("product_pose_sampling_readiness_gate_present") is True
+        ),
+        "product_pose_sampling_readiness_status": release.get(
+            "product_pose_sampling_readiness_status", ""
+        ),
+        "product_pose_sampling_readiness_recorded": bool(
+            release.get("product_pose_sampling_readiness_recorded") is True
+        ),
+        "product_pose_sampling_readiness_ready": bool(
+            release.get("product_pose_sampling_readiness_ready") is True
+        ),
+        "product_pose_sampling_readiness_pose_generation_contract_ready": bool(
+            release.get("product_pose_sampling_readiness_pose_generation_contract_ready")
+            is True
+        ),
+        "product_pose_sampling_readiness_pocket_detection_ready": bool(
+            release.get("product_pose_sampling_readiness_pocket_detection_ready") is True
+        ),
+        "product_pose_sampling_readiness_multi_start_pose_ensemble_ready": bool(
+            release.get("product_pose_sampling_readiness_multi_start_pose_ensemble_ready")
+            is True
+        ),
+        "product_pose_sampling_readiness_pose_centroid_pocket_bound_ready": bool(
+            release.get("product_pose_sampling_readiness_pose_centroid_pocket_bound_ready")
+            is True
+        ),
+        "product_pose_sampling_readiness_pose_rmsd_diversity_surface_ready": bool(
+            release.get("product_pose_sampling_readiness_pose_rmsd_diversity_surface_ready")
+            is True
+        ),
+        "product_pose_sampling_readiness_bounded_cross_docking_induced_fit_guard_ready": bool(
+            release.get(
+                "product_pose_sampling_readiness_bounded_cross_docking_induced_fit_guard_ready"
+            )
+            is True
+        ),
+        "product_pose_sampling_readiness_pose_claim_boundary_guard_ready": bool(
+            release.get("product_pose_sampling_readiness_pose_claim_boundary_guard_ready")
+            is True
+        ),
+        "product_pose_sampling_readiness_check_count": _int(
+            release.get("product_pose_sampling_readiness_check_count")
+        ),
+        "product_pose_sampling_readiness_pass_count": _int(
+            release.get("product_pose_sampling_readiness_pass_count")
+        ),
+        "product_pose_sampling_readiness_blocker_count": _int(
+            release.get("product_pose_sampling_readiness_blocker_count")
+        ),
+        "product_pose_sampling_readiness_requested_pose_start_count": _int(
+            release.get("product_pose_sampling_readiness_requested_pose_start_count")
+        ),
+        "product_pose_sampling_readiness_pose_count": _int(
+            release.get("product_pose_sampling_readiness_pose_count")
+        ),
+        "product_pose_sampling_readiness_cluster_count": _int(
+            release.get("product_pose_sampling_readiness_cluster_count")
+        ),
+        "product_pose_sampling_readiness_cross_docking_pose_count": _int(
+            release.get("product_pose_sampling_readiness_cross_docking_pose_count")
+        ),
+        "product_pose_sampling_readiness_pocket_method": release.get(
+            "product_pose_sampling_readiness_pocket_method", ""
+        ),
+        "product_pose_sampling_readiness_claim_grade_pose_accuracy_ready": bool(
+            release.get("product_pose_sampling_readiness_claim_grade_pose_accuracy_ready")
+            is True
+        ),
+        "product_pose_sampling_readiness_claim_grade_induced_fit_ready": bool(
+            release.get("product_pose_sampling_readiness_claim_grade_induced_fit_ready")
+            is True
+        ),
+        "product_pose_sampling_readiness_claim_grade_cross_docking_ready": bool(
+            release.get("product_pose_sampling_readiness_claim_grade_cross_docking_ready")
+            is True
+        ),
+        "product_pose_sampling_readiness_docking_results_emitted": bool(
+            release.get("product_pose_sampling_readiness_docking_results_emitted") is True
+        ),
+        "product_pose_sampling_readiness_execution_enabled": bool(
+            release.get("product_pose_sampling_readiness_execution_enabled") is True
+        ),
+        "product_pose_sampling_readiness_external_state_mutated": bool(
+            release.get("product_pose_sampling_readiness_external_state_mutated") is True
+        ),
+        "product_pose_sampling_readiness_next_required_step": release.get(
+            "product_pose_sampling_readiness_next_required_step", ""
+        ),
+    }
+
+
 def _bottleneck_id(row: dict[str, Any]) -> str:
     return str(row.get("bottleneck_id") or row.get("requirement_id") or row.get("phase") or "").strip()
 
@@ -675,6 +769,7 @@ async def get_goal_status() -> dict[str, Any]:
             "science_claim_promotion_gap_closure_openmm_release_blocker": False,
             **_accuracy_parity_release_fields({}),
             **_api_runner_profile_receipt_release_fields({}),
+            **_pose_sampling_release_fields({}),
             "product_goal_release_blocker_fail_count": 0,
             "product_goal_release_blocker_requirement_ids": [],
             "product_goal_primary_release_blocker_requirement_id": "",
@@ -988,6 +1083,7 @@ async def get_goal_status() -> dict[str, Any]:
         ),
         **_accuracy_parity_release_fields(release),
         **_api_runner_profile_receipt_release_fields(release),
+        **_pose_sampling_release_fields(release),
         "product_goal_release_blocker_fail_count": _int(
             actions.get("product_goal_release_blocker_fail_count")
             or intake.get("product_goal_release_blocker_fail_count")
@@ -1580,6 +1676,7 @@ async def get_goal_release_decision() -> dict[str, Any]:
             "release_allowed": False,
             **_accuracy_parity_release_fields({}),
             **_api_runner_profile_receipt_release_fields({}),
+            **_pose_sampling_release_fields({}),
             **_mutation_flags(),
             "claim_boundary": CLAIM_BOUNDARY,
         }
@@ -1587,6 +1684,7 @@ async def get_goal_release_decision() -> dict[str, Any]:
         **summary,
         **_accuracy_parity_release_fields(summary),
         **_api_runner_profile_receipt_release_fields(summary),
+        **_pose_sampling_release_fields(summary),
         "artifact_path": str(GOAL_RELEASE_DECISION_ARTIFACT),
         "checks": _rows(packet),
         "blockers": _blockers(packet),

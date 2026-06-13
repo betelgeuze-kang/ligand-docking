@@ -355,6 +355,40 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["product_quality_gate_verification_external_state_mutated"] is (
         release_artifact.get("product_quality_gate_verification_external_state_mutated") is True
     )
+    assert status["product_pose_sampling_readiness_status"] == release_artifact.get(
+        "product_pose_sampling_readiness_status", ""
+    )
+    assert status["product_pose_sampling_readiness_recorded"] is (
+        release_artifact.get("product_pose_sampling_readiness_recorded") is True
+    )
+    assert status["product_pose_sampling_readiness_ready"] is (
+        release_artifact.get("product_pose_sampling_readiness_ready") is True
+    )
+    assert status["product_pose_sampling_readiness_pose_generation_contract_ready"] is (
+        release_artifact.get("product_pose_sampling_readiness_pose_generation_contract_ready") is True
+    )
+    assert status["product_pose_sampling_readiness_pose_count"] == int(
+        release_artifact.get("product_pose_sampling_readiness_pose_count") or 0
+    )
+    assert status["product_pose_sampling_readiness_cluster_count"] == int(
+        release_artifact.get("product_pose_sampling_readiness_cluster_count") or 0
+    )
+    assert status["product_pose_sampling_readiness_cross_docking_pose_count"] == int(
+        release_artifact.get("product_pose_sampling_readiness_cross_docking_pose_count") or 0
+    )
+    assert status["product_pose_sampling_readiness_claim_grade_pose_accuracy_ready"] is (
+        release_artifact.get("product_pose_sampling_readiness_claim_grade_pose_accuracy_ready")
+        is True
+    )
+    assert status["product_pose_sampling_readiness_docking_results_emitted"] is (
+        release_artifact.get("product_pose_sampling_readiness_docking_results_emitted") is True
+    )
+    assert status["product_pose_sampling_readiness_execution_enabled"] is (
+        release_artifact.get("product_pose_sampling_readiness_execution_enabled") is True
+    )
+    assert status["product_pose_sampling_readiness_external_state_mutated"] is (
+        release_artifact.get("product_pose_sampling_readiness_external_state_mutated") is True
+    )
     assert status["api_runner_profile_promotion_operator_receipt_recorded"] is (
         release_artifact.get("api_runner_profile_promotion_operator_receipt_recorded") is True
     )
