@@ -533,9 +533,10 @@ def test_refresh_final_gate_blocks_stale_action_board_release_decision_echo(
 def test_run_command_routes_tier_alpha_smoke_in_process(tmp_path: Path, monkeypatch) -> None:
     observed: dict[str, object] = {}
 
-    def fake_tier_alpha(command: str, *, cwd: Path) -> dict:
+    def fake_tier_alpha(command: str, *, cwd: Path, timeout_seconds: int) -> dict:
         observed["command"] = command
         observed["cwd"] = cwd
+        observed["timeout_seconds"] = timeout_seconds
         return {"returncode": 0, "timed_out": False}
 
     monkeypatch.setattr(mod, "_run_tier_alpha_smoke_in_process", fake_tier_alpha)
@@ -548,4 +549,16 @@ def test_run_command_routes_tier_alpha_smoke_in_process(tmp_path: Path, monkeypa
 
     assert result == {"returncode": 0, "timed_out": False}
     assert observed["cwd"] == tmp_path
+    assert observed["timeout_seconds"] == 450
     assert str(observed["command"]).endswith("--timeout-seconds 420")
+
+
+def test_tier_alpha_smoke_in_process_enforces_parent_timeout(tmp_path: Path) -> None:
+    result = mod._run_tier_alpha_smoke_in_process(
+        "python3 -c 'import time; time.sleep(30)'",
+        cwd=tmp_path,
+        timeout_seconds=1,
+    )
+
+    assert result["returncode"] != 0
+    assert result["timed_out"] is True

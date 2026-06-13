@@ -16,6 +16,7 @@ DEFAULT_QUEUE_JSON = RUNS / "product_scope_breadth_evidence_acquisition_queue_cu
 DEFAULT_CROSSCHECK_DIR = RUNS / "life_science_skill_crosscheck"
 TRANSPORTER_REVIEW_TEMPLATE = RUNS / "transporter_manual_review_intake_template_current.json"
 TRANSPORTER_APPLY_GATE = RUNS / "transporter_binder_promotion_gate_current.json"
+DEFAULT_TRANSPORTER_BINDER_GATE_JSON = TRANSPORTER_APPLY_GATE
 PXR_REVIEW_TEMPLATE = RUNS / "pxr_exact_evidence_review_intake_template_current.json"
 PXR_APPLY_GATE = RUNS / "pxr_blocked_row_promotion_gate_current.json"
 GENERAL_REVIEW_TEMPLATE = RUNS / "general_protein_ligand_claim_blocker_packet_current.json"
@@ -72,6 +73,15 @@ def _int(value: Any) -> int:
         return 0
 
 
+def _list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value if str(item)]
+    text = _text(value)
+    if not text:
+        return []
+    return [item.strip() for item in re.split(r"[;,]", text) if item.strip()]
+
+
 def _tokenize(value: str) -> list[str]:
     return [token for token in re.split(r"[^a-z0-9]+", value.lower()) if len(token) >= 3]
 
@@ -93,6 +103,27 @@ def _domain_tokens(row: dict[str, Any]) -> list[str]:
     if domain == "pxr":
         return ["pxr", "nr1i2"]
     return []
+
+
+def _target_id(row: dict[str, Any]) -> str:
+    if _text(row.get("domain")) != "transporter":
+        return ""
+    item_id = _text(row.get("item_id")).upper()
+    if item_id.startswith("AQP1"):
+        return "AQP1"
+    if item_id.startswith("GLUT1") or "GLUT1" in item_id:
+        return "GLUT1"
+    return item_id.split(".", 1)[0].split("_", 1)[0]
+
+
+def _target_promotion_status(target_id: str, ready_ids: set[str], blocked_ids: set[str]) -> str:
+    if not target_id:
+        return ""
+    if target_id in ready_ids:
+        return "target_ready_for_promotion"
+    if target_id in blocked_ids:
+        return "target_blocked_for_promotion"
+    return "target_status_unknown"
 
 
 def _candidate_tokens(row: dict[str, Any]) -> list[str]:
@@ -261,18 +292,29 @@ def _operator_packet_binding_ready(row: dict[str, Any], bucket: str) -> bool:
 def build_payload(
     *,
     queue_payload: dict[str, Any],
+    transporter_binder_gate_payload: dict[str, Any] | None = None,
     crosscheck_dir: str | Path = DEFAULT_CROSSCHECK_DIR,
     queue_path: str = DEFAULT_QUEUE_JSON.as_posix(),
+    transporter_binder_gate_path: str = DEFAULT_TRANSPORTER_BINDER_GATE_JSON.as_posix(),
 ) -> dict[str, Any]:
     crosscheck_paths = _crosscheck_files(crosscheck_dir)
+    transporter_binder_summary = _summary(transporter_binder_gate_payload or {})
+    target_ready_ids = set(_list(transporter_binder_summary.get("target_ready_for_promotion_ids")))
+    target_blocked_ids = set(_list(transporter_binder_summary.get("target_blocked_for_promotion_ids")))
     rows: list[dict[str, Any]] = []
     for row in _rows(queue_payload):
         local_paths = _matching_crosscheck_paths(row, crosscheck_paths)
         bucket = _priority_bucket(row, local_paths)
+        target_id = _target_id(row)
+        target_status = _target_promotion_status(target_id, target_ready_ids, target_blocked_ids)
         rows.append(
             {
                 "priority": _int(row.get("priority")),
                 "domain": _text(row.get("domain")),
+                "target_id": target_id,
+                "target_promotion_status": target_status,
+                "target_ready_for_promotion": target_status == "target_ready_for_promotion",
+                "target_blocked_for_promotion": target_status == "target_blocked_for_promotion",
                 "item_id": _text(row.get("item_id")),
                 "item_type": _text(row.get("item_type")),
                 "candidate_or_check": _text(row.get("candidate_or_check")),
@@ -309,6 +351,8 @@ def build_payload(
         row for row in scientific_rows if row["evidence_priority_bucket"] == "review_only_keep_blocked_until_direct_binding"
     ]
     binding_ready_rows = [row for row in rows if row["operator_packet_binding_ready"]]
+    target_blocked_rows = [row for row in scientific_rows if row["target_blocked_for_promotion"]]
+    target_ready_rows = [row for row in scientific_rows if row["target_ready_for_promotion"]]
     top_row = rows[0] if rows else {}
     summary = {
         "packet_type": "product_scope_breadth_evidence_priority_packet",
@@ -321,10 +365,37 @@ def build_payload(
         "local_crosscheck_candidate_count": len(local_rows),
         "external_primary_exact_evidence_required_count": len(external_rows),
         "review_only_keep_blocked_count": len(review_only_rows),
+        "transporter_binder_gate_present": bool(transporter_binder_summary),
+        "transporter_binder_gate_path": transporter_binder_gate_path,
+        "transporter_binder_gate_status": _text(transporter_binder_summary.get("status")),
+        "transporter_binder_promotion_ready": transporter_binder_summary.get("binder_promotion_ready") is True,
+        "transporter_target_ready_for_promotion_count": _int(
+            transporter_binder_summary.get("target_ready_for_promotion_count")
+        ),
+        "transporter_target_blocked_for_promotion_count": _int(
+            transporter_binder_summary.get("target_blocked_for_promotion_count")
+        ),
+        "transporter_target_ready_for_promotion_ids": sorted(target_ready_ids),
+        "transporter_target_blocked_for_promotion_ids": sorted(target_blocked_ids),
+        "transporter_priority_target_ready_item_count": len(target_ready_rows),
+        "transporter_priority_target_blocked_item_count": len(target_blocked_rows),
+        "transporter_primary_blocker_target_id": _text(
+            transporter_binder_summary.get("primary_blocker_target_id")
+        ),
+        "transporter_primary_blocker_packet_step": _text(
+            transporter_binder_summary.get("primary_blocker_packet_step")
+        ),
+        "transporter_primary_blocker_candidate_name": _text(
+            transporter_binder_summary.get("primary_blocker_candidate_name")
+        ),
+        "transporter_primary_blocker_signal": _text(transporter_binder_summary.get("primary_blocker_signal")),
         "operator_packet_binding_ready_count": len(binding_ready_rows),
         "operator_packet_binding_missing_count": len(rows) - len(binding_ready_rows),
         "all_operator_packet_bindings_ready": bool(rows) and len(binding_ready_rows) == len(rows),
         "top_item_id": top_row.get("item_id", ""),
+        "top_target_id": top_row.get("target_id", ""),
+        "top_target_promotion_status": top_row.get("target_promotion_status", ""),
+        "top_target_blocked_for_promotion": top_row.get("target_blocked_for_promotion", False),
         "top_domain": top_row.get("domain", ""),
         "top_bucket": top_row.get("evidence_priority_bucket", ""),
         "top_required_evidence_type": top_row.get("required_evidence_type", ""),
@@ -336,10 +407,10 @@ def build_payload(
         "authoritative_apply_allowed": False,
         "scope_promotion_allowed": False,
         "external_state_mutated": False,
-        "source_artifacts": [queue_path, str(crosscheck_dir)],
+        "source_artifacts": [queue_path, str(crosscheck_dir), transporter_binder_gate_path],
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
-            "Triage local AQP1/GLUT1 crosscheck candidates first, keep review-only rows blocked, and acquire exact primary evidence for PXR and any unmatched transporter rows."
+            "Triage local AQP1/GLUT1 crosscheck candidates first, keep review-only rows blocked, and resolve target-level transporter blockers before any full-scope claim receipt."
         ),
     }
     return {"summary": summary, "rows": rows}
@@ -365,6 +436,11 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- local_crosscheck_candidate_count: `{s['local_crosscheck_candidate_count']}`",
         f"- external_primary_exact_evidence_required_count: `{s['external_primary_exact_evidence_required_count']}`",
         f"- review_only_keep_blocked_count: `{s['review_only_keep_blocked_count']}`",
+        f"- transporter_target_ready_for_promotion_ids: `{';'.join(s['transporter_target_ready_for_promotion_ids']) or '-'}`",
+        f"- transporter_target_blocked_for_promotion_ids: `{';'.join(s['transporter_target_blocked_for_promotion_ids']) or '-'}`",
+        f"- transporter_priority_target_blocked_item_count: `{s['transporter_priority_target_blocked_item_count']}`",
+        f"- transporter_primary_blocker_target_id: `{s['transporter_primary_blocker_target_id'] or '-'}`",
+        f"- transporter_primary_blocker_packet_step: `{s['transporter_primary_blocker_packet_step'] or '-'}`",
         f"- all_operator_packet_bindings_ready: `{s['all_operator_packet_bindings_ready']}`",
         f"- operator_packet_binding_missing_count: `{s['operator_packet_binding_missing_count']}`",
         f"- top_item_id: `{s['top_item_id']}`",
@@ -375,12 +451,13 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Priority Rows",
         "",
-        "| priority | domain | item | candidate/check | bucket | evidence type | review template | apply gate | local files | next step |",
-        "| ---: | --- | --- | --- | --- | --- | --- | --- | ---: | --- |",
+        "| priority | domain | target | target status | item | candidate/check | bucket | evidence type | review template | apply gate | local files | next step |",
+        "| ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---: | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
-            f"| {row['priority']} | `{row['domain']}` | `{row['item_id']}` | `{row['candidate_or_check'] or '-'}` | "
+            f"| {row['priority']} | `{row['domain']}` | `{row['target_id'] or '-'}` | "
+            f"`{row['target_promotion_status'] or '-'}` | `{row['item_id']}` | `{row['candidate_or_check'] or '-'}` | "
             f"`{row['evidence_priority_bucket']}` | `{row['required_evidence_type']}` | "
             f"`{row['review_template_artifact']}` | `{row['apply_gate_artifact']}` | "
             f"{row['local_crosscheck_path_count']} | {row['next_step']} |"
@@ -394,6 +471,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build product scope breadth evidence priority packet.")
     parser.add_argument("--queue-json", default=str(DEFAULT_QUEUE_JSON))
     parser.add_argument("--crosscheck-dir", default=str(DEFAULT_CROSSCHECK_DIR))
+    parser.add_argument("--transporter-binder-gate-json", default=str(DEFAULT_TRANSPORTER_BINDER_GATE_JSON))
     parser.add_argument("--out-json", default=str(DEFAULT_OUT_JSON))
     parser.add_argument("--out-csv", default=str(DEFAULT_OUT_CSV))
     parser.add_argument("--out-md", default=str(DEFAULT_OUT_MD))
@@ -404,8 +482,10 @@ def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     payload = build_payload(
         queue_payload=_load_json(args.queue_json),
+        transporter_binder_gate_payload=_load_json(args.transporter_binder_gate_json),
         crosscheck_dir=args.crosscheck_dir,
         queue_path=args.queue_json,
+        transporter_binder_gate_path=args.transporter_binder_gate_json,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])
