@@ -363,12 +363,12 @@
   freshness 및 semantic-ready 상태를 함께 검증한다. 최신 full refresh 후
   source-of-truth는 `row_count=94`, `pass_count=94`, `blocker_count=0`,
   `artifact_row_count=63`, `semantic_status_row_count=29`,
-  `release_refresh_command_count=87`, `stale_artifact_count=0`,
+  `release_refresh_command_count=88`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   마지막 refresh 단계는 `goal_release_decision_gate` 뒤
-  `goal_release_burndown_work_order`부터 intake kit, bottleneck briefing,
-  full commercial matrix, release bundle, handoff bundle, privacy scan,
-  source-of-truth gate까지 downstream 산출물을 재생성하고, bottleneck briefing
+  `goal_operator_action_board`, `goal_release_burndown_work_order`, intake kit,
+  bottleneck briefing, full commercial matrix, release bundle, handoff bundle,
+  privacy scan, source-of-truth gate까지 downstream 산출물을 재생성하고, bottleneck briefing
   builder는 burndown의 observed/required 문자열을 최신 release-decision row로 보정해
   R8/R9 release blocker count가 이전 cycle 값으로 operator-facing 병목표에
   남지 않도록 한다.

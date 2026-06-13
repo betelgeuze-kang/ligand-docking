@@ -467,6 +467,16 @@ FINAL_GATE_SPECS = [
             ),
         },
     },
+    {
+        "gate_id": "goal_operator_action_board",
+        "artifact_path": "runs/goal_operator_action_board_current.json",
+        "required_status": "operator_actions_required",
+        "required_true_fields": ["goal_release_allowed"],
+        "required_zero_fields": ["goal_release_blocker_count"],
+        "required_text_exact_fields": {
+            "goal_release_decision_gate_status": "goal_release_ready",
+        },
+    },
 ]
 
 

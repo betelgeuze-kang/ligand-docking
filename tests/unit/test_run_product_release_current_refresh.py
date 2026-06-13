@@ -29,6 +29,12 @@ def _goal_release_decision_spec() -> dict:
     )
 
 
+def _goal_operator_action_board_spec() -> dict:
+    return next(
+        spec for spec in mod.FINAL_GATE_SPECS if spec["gate_id"] == "goal_operator_action_board"
+    )
+
+
 def _release_decision_ready(*, bottleneck_recorded: bool = True) -> dict:
     spec = _goal_release_decision_spec()
     summary = {
@@ -44,6 +50,31 @@ def _release_decision_ready(*, bottleneck_recorded: bool = True) -> dict:
     }
 
 
+def _action_board_ready() -> dict:
+    spec = _goal_operator_action_board_spec()
+    summary = {
+        "status": spec["required_status"],
+        **{field: True for field in spec.get("required_true_fields", [])},
+        **{field: 0 for field in spec.get("required_zero_fields", [])},
+        **dict(spec.get("required_text_exact_fields", {})),
+    }
+    return {
+        "summary": summary
+    }
+
+
+def _action_board_stale_release_echo() -> dict:
+    payload = _action_board_ready()
+    payload["summary"].update(
+        {
+            "goal_release_decision_gate_status": "blocked_goal_release_decision",
+            "goal_release_allowed": False,
+            "goal_release_blocker_count": 1,
+        }
+    )
+    return payload
+
+
 def test_refresh_final_gate_requires_release_decision_bottleneck_receipt_linkage(tmp_path: Path) -> None:
     _write_json(
         tmp_path / "runs" / "product_release_source_of_truth_gate_current.json",
@@ -52,6 +83,10 @@ def test_refresh_final_gate_requires_release_decision_bottleneck_receipt_linkage
     _write_json(
         tmp_path / "runs" / "goal_release_decision_gate_current.json",
         _release_decision_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_operator_action_board_current.json",
+        _action_board_ready(),
     )
 
     payload = mod.run_product_release_current_refresh(
@@ -91,6 +126,10 @@ def test_refresh_final_gate_blocks_missing_release_decision_bottleneck_receipt_l
         tmp_path / "runs" / "goal_release_decision_gate_current.json",
         _release_decision_ready(bottleneck_recorded=False),
     )
+    _write_json(
+        tmp_path / "runs" / "goal_operator_action_board_current.json",
+        _action_board_ready(),
+    )
 
     payload = mod.run_product_release_current_refresh(
         execute=True,
@@ -109,3 +148,38 @@ def test_refresh_final_gate_blocks_missing_release_decision_bottleneck_receipt_l
     assert "goal_bottleneck_briefing_full_commercial_receipts_recorded" in decision_row[
         "missing_true_fields"
     ]
+
+
+def test_refresh_final_gate_blocks_stale_action_board_release_decision_echo(
+    tmp_path: Path,
+) -> None:
+    _write_json(
+        tmp_path / "runs" / "product_release_source_of_truth_gate_current.json",
+        _source_of_truth_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_release_decision_gate_current.json",
+        _release_decision_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_operator_action_board_current.json",
+        _action_board_stale_release_echo(),
+    )
+
+    payload = mod.run_product_release_current_refresh(
+        execute=True,
+        root=tmp_path,
+        commands=[],
+    )
+
+    summary = payload["summary"]
+    action_board_row = next(
+        row for row in payload["verification_rows"] if row["gate_id"] == "goal_operator_action_board"
+    )
+    assert summary["status"] == "blocked_product_release_current_refresh"
+    assert summary["final_gate_verification_ready"] is False
+    assert summary["final_gate_blocker_count"] == 1
+    assert action_board_row["status"] == "fail"
+    assert action_board_row["missing_true_fields"] == ["goal_release_allowed"]
+    assert action_board_row["nonzero_fields"] == ["goal_release_blocker_count"]
+    assert action_board_row["failed_text_exact_fields"] == ["goal_release_decision_gate_status"]

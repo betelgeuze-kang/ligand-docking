@@ -101,6 +101,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_ledger_privacy_scan.py",
     "python3 tools/build_product_release_source_of_truth_gate.py",
     "python3 tools/build_goal_release_decision_gate.py",
+    "python3 tools/build_goal_operator_action_board.py",
     "python3 tools/build_goal_release_burndown_work_order.py",
     "python3 tools/build_goal_operator_intake_kit.py",
     "python3 tools/build_goal_bottleneck_briefing.py",

@@ -465,6 +465,17 @@ def _refresh_release_decision_ready() -> dict:
     }
 
 
+def _refresh_action_board_ready() -> dict:
+    return {
+        "summary": {
+            "status": "operator_actions_required",
+            "goal_release_decision_gate_status": "goal_release_ready",
+            "goal_release_allowed": True,
+            "goal_release_blocker_count": 0,
+        }
+    }
+
+
 def test_release_source_of_truth_gate_blocks_stale_artifact_and_readme_drift(tmp_path: Path) -> None:
     artifact = tmp_path / "runs" / "operator_packet.json"
     dependency = tmp_path / "runs" / "goal_audit.json"
@@ -568,6 +579,10 @@ def test_product_release_current_refresh_blocks_if_final_gate_is_blocked(tmp_pat
         tmp_path / "runs" / "goal_release_decision_gate_current.json",
         _refresh_release_decision_ready(),
     )
+    _write_json(
+        tmp_path / "runs" / "goal_operator_action_board_current.json",
+        _refresh_action_board_ready(),
+    )
 
     monkeypatch.setattr(
         refresh_mod,
@@ -604,6 +619,10 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     _write_json(
         tmp_path / "runs" / "goal_release_decision_gate_current.json",
         _refresh_release_decision_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_operator_action_board_current.json",
+        _refresh_action_board_ready(),
     )
 
     monkeypatch.setattr(
@@ -867,6 +886,10 @@ def test_product_release_current_refresh_uses_command_timeout_hint(tmp_path: Pat
     _write_json(
         tmp_path / "runs" / "goal_release_decision_gate_current.json",
         _refresh_release_decision_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_operator_action_board_current.json",
+        _refresh_action_board_ready(),
     )
 
     payload = refresh_mod.run_product_release_current_refresh(
@@ -1736,6 +1759,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_release_decision_gate.py")
     )
     assert _last_refresh_index("python3 tools/build_goal_release_decision_gate.py") < (
+        _last_refresh_index("python3 tools/build_goal_operator_action_board.py")
+    )
+    assert _last_refresh_index("python3 tools/build_goal_operator_action_board.py") < (
         _last_refresh_index("python3 tools/build_goal_release_burndown_work_order.py")
     )
     assert _last_refresh_index("python3 tools/build_goal_release_burndown_work_order.py") < (

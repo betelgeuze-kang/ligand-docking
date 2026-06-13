@@ -704,12 +704,12 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
   빠지지 않게 한다. 최신 source-of-truth는 `row_count=94`, `pass_count=94`,
   `blocker_count=0`, `artifact_row_count=63`, `semantic_status_row_count=29`,
-  `release_refresh_command_count=87`, `stale_artifact_count=0`,
+  `release_refresh_command_count=88`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   final refresh는 마지막 `goal_release_decision_gate` 뒤에
-  `goal_release_burndown_work_order`부터 intake kit, bottleneck briefing,
-  full commercial matrix, release bundle, handoff bundle, privacy scan,
-  source-of-truth gate까지 downstream 산출물을 한 번 더 재생성하고,
+  `goal_operator_action_board`, `goal_release_burndown_work_order`, intake kit,
+  bottleneck briefing, full commercial matrix, release bundle, handoff bundle,
+  privacy scan, source-of-truth gate까지 downstream 산출물을 한 번 더 재생성하고,
   `goal_bottleneck_briefing`은 burndown row의 `release_observed`/`release_required`
   문자열을 최신 release-decision row에서 보정해, R8/R9 completion-audit blocker
   수가 한 사이클 전 값으로 operator-facing 병목표에 남지 않게 한다.
@@ -1248,7 +1248,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=87`, `executed_count=87`,
+  `product_release_current_refresh_verified`, `command_count=88`, `executed_count=88`,
   `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=true`,
   `final_gate_blocker_count=0`이다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
@@ -1299,7 +1299,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   master gap closure rollup 포함 refresh 이후
   `product_release_source_of_truth_gate_ready`, `pass_count=94/94`,
   `blocker_count=0`, `stale_artifact_count=0`,
-  `release_refresh_command_count=87`으로 재검증됐다.
+  `release_refresh_command_count=88`으로 재검증됐다.
 - `prometheus_client` 기반 실제 metrics endpoint는 1차 완료.
 - Alert rules + paged webhook receiver + closed-loop alert delivery smoke는 1차 완료;
   다음은 operator webhook secret mount, 실제 pager provider delivery smoke,
