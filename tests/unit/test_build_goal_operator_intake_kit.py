@@ -66,6 +66,50 @@ def _action_board() -> dict:
             "product_accuracy_parity_ligand_ranking_recommended_action": (
                 "Repair DRD2/HTR2A/OPRM1 pose-supported ranking."
             ),
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id": (
+                "direct_binding_evidence_missing"
+            ),
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_evidence_artifact": (
+                "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+            ),
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_expected_evidence_status": (
+                "product_scope_transporter_direct_binding_evidence_ready"
+            ),
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_observed_evidence_status": (
+                "missing"
+            ),
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_missing_true_fields": [
+                "transporter_direct_binding_evidence_ready",
+            ],
+            "product_goal_scope_breadth_evidence_receipt_first_blocked_row_blockers": [
+                "operator_placeholders_unfilled",
+                "evidence_artifact_not_found",
+            ],
+            "product_goal_scope_breadth_evidence_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_blocker_id": (
+                "public_benchmark_gate_not_ready"
+            ),
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact": (
+                "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+            ),
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_expected_evidence_status": (
+                "refine_tier_public_benchmark_ready"
+            ),
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_observed_evidence_status": (
+                "missing"
+            ),
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields": [
+                "claim_grade_public_benchmark_ready",
+            ],
+            "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_row_blockers": [
+                "operator_placeholders_unfilled",
+                "evidence_artifact_not_found",
+            ],
+            "product_goal_engine_refinement_claim_evidence_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
             "science_claim_promotion_gap_closure_open_gap_ids": [
                 "SCI-GPCR",
                 "SCI-OPENMM",
@@ -442,6 +486,42 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
         "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT;"
         "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
     )
+    assert summary[
+        "product_goal_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id"
+    ] == "direct_binding_evidence_missing"
+    assert summary[
+        "product_goal_scope_breadth_evidence_receipt_first_blocked_evidence_artifact"
+    ] == "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+    assert summary[
+        "product_goal_scope_breadth_evidence_receipt_first_blocked_expected_evidence_status"
+    ] == "product_scope_transporter_direct_binding_evidence_ready"
+    assert summary[
+        "product_goal_scope_breadth_evidence_receipt_first_blocked_missing_true_fields"
+    ] == ["transporter_direct_binding_evidence_ready"]
+    assert "operator_placeholders_unfilled" in summary[
+        "product_goal_scope_breadth_evidence_receipt_first_blocked_row_blockers"
+    ]
+    assert summary[
+        "product_goal_scope_breadth_evidence_receipt_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    assert summary[
+        "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_blocker_id"
+    ] == "public_benchmark_gate_not_ready"
+    assert summary[
+        "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact"
+    ] == "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+    assert summary[
+        "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_expected_evidence_status"
+    ] == "refine_tier_public_benchmark_ready"
+    assert summary[
+        "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields"
+    ] == ["claim_grade_public_benchmark_ready"]
+    assert "operator_placeholders_unfilled" in summary[
+        "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_row_blockers"
+    ]
+    assert summary[
+        "product_goal_engine_refinement_claim_evidence_receipt_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
     assert summary["product_scope_breadth_evidence_priority_source_json"] == (
         mod.DEFAULT_PRODUCT_SCOPE_EVIDENCE_PRIORITY_JSON
     )

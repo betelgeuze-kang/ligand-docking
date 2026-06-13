@@ -1050,6 +1050,76 @@ def build_goal_operator_intake_kit(
                 "product_full_commercial_blocker_evidence_matrix_r9_approval_token_required"
             )
         ),
+        "product_goal_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id": _text(
+            action_board_summary.get(
+                "product_goal_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id"
+            )
+        ),
+        "product_goal_scope_breadth_evidence_receipt_first_blocked_evidence_artifact": _text(
+            action_board_summary.get(
+                "product_goal_scope_breadth_evidence_receipt_first_blocked_evidence_artifact"
+            )
+        ),
+        "product_goal_scope_breadth_evidence_receipt_first_blocked_expected_evidence_status": _text(
+            action_board_summary.get(
+                "product_goal_scope_breadth_evidence_receipt_first_blocked_expected_evidence_status"
+            )
+        ),
+        "product_goal_scope_breadth_evidence_receipt_first_blocked_observed_evidence_status": _text(
+            action_board_summary.get(
+                "product_goal_scope_breadth_evidence_receipt_first_blocked_observed_evidence_status"
+            )
+        ),
+        "product_goal_scope_breadth_evidence_receipt_first_blocked_missing_true_fields": _text_list(
+            action_board_summary.get(
+                "product_goal_scope_breadth_evidence_receipt_first_blocked_missing_true_fields"
+            )
+        ),
+        "product_goal_scope_breadth_evidence_receipt_first_blocked_row_blockers": _text_list(
+            action_board_summary.get(
+                "product_goal_scope_breadth_evidence_receipt_first_blocked_row_blockers"
+            )
+        ),
+        "product_goal_scope_breadth_evidence_receipt_most_common_row_blocker": _text(
+            action_board_summary.get(
+                "product_goal_scope_breadth_evidence_receipt_most_common_row_blocker"
+            )
+        ),
+        "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_blocker_id": _text(
+            action_board_summary.get(
+                "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_blocker_id"
+            )
+        ),
+        "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact": _text(
+            action_board_summary.get(
+                "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact"
+            )
+        ),
+        "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_expected_evidence_status": _text(
+            action_board_summary.get(
+                "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_expected_evidence_status"
+            )
+        ),
+        "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_observed_evidence_status": _text(
+            action_board_summary.get(
+                "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_observed_evidence_status"
+            )
+        ),
+        "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields": _text_list(
+            action_board_summary.get(
+                "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields"
+            )
+        ),
+        "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_row_blockers": _text_list(
+            action_board_summary.get(
+                "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_row_blockers"
+            )
+        ),
+        "product_goal_engine_refinement_claim_evidence_receipt_most_common_row_blocker": _text(
+            action_board_summary.get(
+                "product_goal_engine_refinement_claim_evidence_receipt_most_common_row_blocker"
+            )
+        ),
         "approval_required_count": sum(1 for row in rows if row["kit_status"] == "approval_required"),
         "official_results_required_count": sum(1 for row in rows if row["official_result_required"]),
         "policy_decision_required_count": sum(1 for row in rows if row["policy_decision_required"]),

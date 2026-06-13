@@ -1016,10 +1016,53 @@ def _product_goal_completion_audit_registry_action() -> dict:
     return payload
 
 
+def _scope_breadth_evidence_receipt() -> dict:
+    return {
+        "summary": {
+            "first_blocked_scope_blocker_id": "direct_binding_evidence_missing",
+            "first_blocked_evidence_artifact": "OPERATOR_FILL_LOCAL_EVIDENCE_JSON",
+            "first_blocked_expected_evidence_status": (
+                "product_scope_transporter_direct_binding_evidence_ready"
+            ),
+            "first_blocked_observed_evidence_status": "missing",
+            "first_blocked_missing_true_fields": [
+                "transporter_direct_binding_evidence_ready",
+            ],
+            "first_blocked_row_blockers": [
+                "operator_placeholders_unfilled",
+                "evidence_artifact_not_found",
+                "approval_token_missing_or_invalid",
+            ],
+            "most_common_row_blocker": "operator_placeholders_unfilled",
+        }
+    }
+
+
+def _engine_refinement_claim_evidence_receipt() -> dict:
+    return {
+        "summary": {
+            "first_blocked_blocker_id": "public_benchmark_gate_not_ready",
+            "first_blocked_evidence_artifact": "OPERATOR_FILL_LOCAL_EVIDENCE_JSON",
+            "first_blocked_expected_evidence_status": "refine_tier_public_benchmark_ready",
+            "first_blocked_observed_evidence_status": "missing",
+            "first_blocked_missing_true_fields": [
+                "claim_grade_public_benchmark_ready",
+            ],
+            "first_blocked_row_blockers": [
+                "operator_placeholders_unfilled",
+                "evidence_artifact_not_found",
+                "approval_token_missing_or_invalid",
+            ],
+            "most_common_row_blocker": "operator_placeholders_unfilled",
+        }
+    }
+
+
 def test_goal_operator_action_board_surfaces_product_ai_goal_completion_actions() -> None:
     actions = mod._product_goal_completion_actions(
         goal_completion_audit=_product_goal_completion_audit(),
         goal_completion_audit_path="runs/product_goal_completion_audit_current.json",
+        scope_breadth_evidence_receipt=_scope_breadth_evidence_receipt(),
     )
 
     by_type = {row["action_type"]: row for row in actions}
@@ -1124,6 +1167,27 @@ def test_goal_operator_action_board_surfaces_product_ai_goal_completion_actions(
     )
     assert receipt["scope_breadth_evidence_receipt_blocked_row_count"] == 6
     assert receipt["scope_breadth_evidence_receipt_required_scope_blocker_count"] == 6
+    assert receipt["scope_breadth_evidence_receipt_first_blocked_scope_blocker_id"] == (
+        "direct_binding_evidence_missing"
+    )
+    assert receipt["scope_breadth_evidence_receipt_first_blocked_evidence_artifact"] == (
+        "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+    )
+    assert receipt["scope_breadth_evidence_receipt_first_blocked_expected_evidence_status"] == (
+        "product_scope_transporter_direct_binding_evidence_ready"
+    )
+    assert receipt["scope_breadth_evidence_receipt_first_blocked_observed_evidence_status"] == (
+        "missing"
+    )
+    assert receipt["scope_breadth_evidence_receipt_first_blocked_missing_true_fields"] == (
+        "transporter_direct_binding_evidence_ready"
+    )
+    assert "operator_placeholders_unfilled" in receipt[
+        "scope_breadth_evidence_receipt_first_blocked_row_blockers"
+    ]
+    assert receipt["scope_breadth_evidence_receipt_most_common_row_blocker"] == (
+        "operator_placeholders_unfilled"
+    )
     assert "blocked_row_count=6" in receipt["reason"]
 
 
@@ -1140,6 +1204,7 @@ def test_goal_operator_action_board_surfaces_engine_refinement_claim_actions() -
         ligand_cleanup_preflight_packet={},
         cleanup_completion_gate_packet=_cleanup_completion_gate_ready(),
         engine_refinement_claim_action_board_rows=_engine_refinement_claim_action_rows(),
+        engine_refinement_claim_evidence_receipt_packet=_engine_refinement_claim_evidence_receipt(),
         engine_refinement_claim_action_board_path=(
             "runs/engine_refinement_claim_promotion_action_board_current.csv"
         ),
@@ -1160,6 +1225,25 @@ def test_goal_operator_action_board_surfaces_engine_refinement_claim_actions() -
     assert public["required_input"] == "public_benchmark_gate_not_ready"
     assert public["claim_blocker_gate_or_artifact"] == "runs/refine_tier_public_benchmark_readiness_current.json"
     assert "insufficient_total_rows" in public["claim_blocker_blocking_signals"]
+    assert public["claim_evidence_receipt_first_blocked_match"] is True
+    assert public["claim_evidence_receipt_first_blocked_blocker_id"] == (
+        "public_benchmark_gate_not_ready"
+    )
+    assert public["claim_evidence_receipt_first_blocked_evidence_artifact"] == (
+        "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+    )
+    assert public["claim_evidence_receipt_first_blocked_expected_evidence_status"] == (
+        "refine_tier_public_benchmark_ready"
+    )
+    assert public["claim_evidence_receipt_first_blocked_missing_true_fields"] == (
+        "claim_grade_public_benchmark_ready"
+    )
+    assert "operator_placeholders_unfilled" in public[
+        "claim_evidence_receipt_first_blocked_row_blockers"
+    ]
+    assert public["claim_evidence_receipt_most_common_row_blocker"] == (
+        "operator_placeholders_unfilled"
+    )
 
 
 def test_goal_operator_action_board_surfaces_accuracy_ligand_ranking_action() -> None:
@@ -1226,6 +1310,8 @@ def test_goal_operator_action_board_summary_points_to_primary_product_ai_action(
         product_bundle_contract_packet={},
         product_delivery_evidence_packet={},
         product_goal_completion_audit_packet=_product_goal_completion_audit_registry_action(),
+        product_scope_breadth_evidence_receipt_packet=_scope_breadth_evidence_receipt(),
+        engine_refinement_claim_evidence_receipt_packet=_engine_refinement_claim_evidence_receipt(),
         cameo_input_kit_packet={},
         cameo_input_validation_packet={},
         cameo_repair_preflight_packet={},
@@ -1346,12 +1432,48 @@ def test_goal_operator_action_board_summary_points_to_primary_product_ai_action(
         summary["product_goal_engine_refinement_claim_evidence_receipt_artifact"]
         == "runs/engine_refinement_claim_evidence_receipt_current.json"
     )
+    assert summary[
+        "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_blocker_id"
+    ] == "public_benchmark_gate_not_ready"
+    assert summary[
+        "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact"
+    ] == "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+    assert summary[
+        "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_expected_evidence_status"
+    ] == "refine_tier_public_benchmark_ready"
+    assert summary[
+        "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_missing_true_fields"
+    ] == ["claim_grade_public_benchmark_ready"]
+    assert "operator_placeholders_unfilled" in summary[
+        "product_goal_engine_refinement_claim_evidence_receipt_first_blocked_row_blockers"
+    ]
+    assert summary[
+        "product_goal_engine_refinement_claim_evidence_receipt_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
     assert summary["product_goal_scope_breadth_evidence_receipt_ready"] is False
     assert summary["product_goal_scope_breadth_evidence_receipt_blocked_row_count"] == 6
     assert (
         summary["product_goal_scope_breadth_evidence_receipt_artifact"]
         == "runs/product_scope_breadth_evidence_receipt_current.json"
     )
+    assert summary[
+        "product_goal_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id"
+    ] == "direct_binding_evidence_missing"
+    assert summary[
+        "product_goal_scope_breadth_evidence_receipt_first_blocked_evidence_artifact"
+    ] == "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+    assert summary[
+        "product_goal_scope_breadth_evidence_receipt_first_blocked_expected_evidence_status"
+    ] == "product_scope_transporter_direct_binding_evidence_ready"
+    assert summary[
+        "product_goal_scope_breadth_evidence_receipt_first_blocked_missing_true_fields"
+    ] == ["transporter_direct_binding_evidence_ready"]
+    assert "operator_placeholders_unfilled" in summary[
+        "product_goal_scope_breadth_evidence_receipt_first_blocked_row_blockers"
+    ]
+    assert summary[
+        "product_goal_scope_breadth_evidence_receipt_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
     assert "curated public benchmark rows" in summary[
         "product_goal_engine_refinement_claim_promotion_next_required_step"
     ]

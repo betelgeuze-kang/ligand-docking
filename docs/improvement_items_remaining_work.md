@@ -645,13 +645,22 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   full commercial goal completion이 닫히지 않는다. 또한
   `runs/goal_operator_action_board_current.json`은
   `resolve_full_scope_breadth_evidence_receipt` action을 만들고,
+  `product_goal_scope_breadth_evidence_receipt_first_blocked_*` summary와 action row의
+  `scope_breadth_evidence_receipt_first_blocked_*` 필드로
+  `direct_binding_evidence_missing`, `OPERATOR_FILL_LOCAL_EVIDENCE_JSON`,
+  expected/observed evidence status, missing true fields, row blockers를 노출한다.
   `runs/goal_operator_intake_kit_current/manifest.json`은
   `product_scope_breadth_evidence_receipt` entry로
   `config/product_scope_breadth_evidence_receipt_current.csv`를 operator template에
   복사한다. intake kit summary는 R8/R9 receipt 묶음을
   `full_commercial_evidence_receipt_*` 필드로 별도 집계해 entry count 2,
   template present 2/2, approval token 2개, 두 source gate status, 두 required input
-  CSV를 한 번 더 고정한다. `runs/goal_bottleneck_briefing_current.json`도 같은
+  CSV를 한 번 더 고정하고, R8 first-blocked receipt diagnostics도 전달한다.
+  R9도 `product_goal_engine_refinement_claim_evidence_receipt_first_blocked_*`와
+  첫 `resolve_refine_tier_claim_promotion_blocker` action row의
+  `claim_evidence_receipt_first_blocked_*` 필드로
+  `public_benchmark_gate_not_ready` receipt 실패 원인을 직접 표시한다.
+  `runs/goal_bottleneck_briefing_current.json`도 같은
   summary를 흡수해 R8/R9 completion-audit 병목 브리핑에서 operator handoff
   receipt 묶음이 사라지지 않게 하며, source-of-truth의
   `goal_bottleneck_briefing_semantic_ready` row는 entry count 2, template present
