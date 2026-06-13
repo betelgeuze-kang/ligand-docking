@@ -269,6 +269,11 @@
   `engine_refinement_claim_evidence_receipt_*` 직접 필드도 제공해, R8/R9 receipt
   status, CSV, approval token, row counts, first-blocked diagnostics, required
   blocker 목록을 goal API contract 안에 고정한다.
+  `runs/goal_release_decision_gate_current.json`도 같은 R8/R9 receipt를
+  `product_scope_breadth_evidence_receipt_*` 및
+  `engine_refinement_claim_evidence_receipt_*` summary와 recorded row로 직접 노출하고,
+  final refresh exact check가 status, row counts, first-blocked diagnostics,
+  approval token을 고정한다.
   `product_goal_completion_audit`의 `R8_full_scope_claim_closure` row는 이 receipt를
   evidence artifact와 observed field로 직접 사용하며, `goal_operator_action_board`는
   `resolve_full_scope_breadth_evidence_receipt` action을 노출한다.

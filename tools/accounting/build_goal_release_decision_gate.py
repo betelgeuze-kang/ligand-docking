@@ -32,6 +32,12 @@ DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON = "runs/api_customer_flow_releas
 DEFAULT_API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_JSON = (
     "runs/api_runner_profile_promotion_operator_receipt_current.json"
 )
+DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_JSON = (
+    "runs/product_scope_breadth_evidence_receipt_current.json"
+)
+DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON = (
+    "runs/engine_refinement_claim_evidence_receipt_current.json"
+)
 DEFAULT_PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON = (
     "runs/product_full_commercial_blocker_evidence_matrix_current.json"
 )
@@ -194,6 +200,8 @@ def build_goal_release_decision_gate(
     product_release_source_of_truth_packet: dict[str, Any] | None = None,
     api_customer_flow_release_evidence_packet: dict[str, Any] | None = None,
     api_runner_profile_promotion_operator_receipt_packet: dict[str, Any] | None = None,
+    product_scope_breadth_evidence_receipt_packet: dict[str, Any] | None = None,
+    engine_refinement_claim_evidence_receipt_packet: dict[str, Any] | None = None,
     product_full_commercial_blocker_evidence_matrix_packet: dict[str, Any] | None = None,
     product_rollout_execution_smoke_receipt_packet: dict[str, Any] | None = None,
     accuracy_parity_scorecard_packet: dict[str, Any] | None = None,
@@ -221,6 +229,12 @@ def build_goal_release_decision_gate(
     api_customer_flow_release_evidence_path: str = DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON,
     api_runner_profile_promotion_operator_receipt_path: str = (
         DEFAULT_API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_JSON
+    ),
+    product_scope_breadth_evidence_receipt_path: str = (
+        DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_JSON
+    ),
+    engine_refinement_claim_evidence_receipt_path: str = (
+        DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON
     ),
     product_full_commercial_blocker_evidence_matrix_path: str = (
         DEFAULT_PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON
@@ -270,6 +284,42 @@ def build_goal_release_decision_gate(
         and bool(api_runner_profile_receipt.get("profile_enabled_by_this_tool") is False)
         and bool(api_runner_profile_receipt.get("runner_executed") is False)
         and bool(api_runner_profile_receipt.get("external_state_mutated") is False)
+    )
+    product_scope_receipt = _summary(product_scope_breadth_evidence_receipt_packet or {})
+    product_scope_receipt_gate_present = product_scope_breadth_evidence_receipt_packet is not None
+    product_scope_receipt_first_blocked_row_blockers = _text_list(
+        product_scope_receipt.get("first_blocked_row_blockers")
+    )
+    product_scope_receipt_recorded = (
+        _text(product_scope_receipt.get("status"))
+        in {
+            "blocked_product_scope_breadth_evidence_receipt",
+            "product_scope_breadth_evidence_receipt_ready",
+        }
+        and _int(product_scope_receipt.get("receipt_row_count")) >= 1
+        and _int(product_scope_receipt.get("required_scope_blocker_count")) >= 1
+        and _text(product_scope_receipt.get("approval_token_required"))
+        == "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+        and bool(product_scope_receipt.get("external_state_mutated") is False)
+    )
+    engine_refinement_receipt = _summary(engine_refinement_claim_evidence_receipt_packet or {})
+    engine_refinement_receipt_gate_present = (
+        engine_refinement_claim_evidence_receipt_packet is not None
+    )
+    engine_refinement_receipt_first_blocked_row_blockers = _text_list(
+        engine_refinement_receipt.get("first_blocked_row_blockers")
+    )
+    engine_refinement_receipt_recorded = (
+        _text(engine_refinement_receipt.get("status"))
+        in {
+            "blocked_engine_refinement_claim_evidence_receipt",
+            "engine_refinement_claim_evidence_receipt_ready",
+        }
+        and _int(engine_refinement_receipt.get("receipt_row_count")) >= 1
+        and _int(engine_refinement_receipt.get("required_blocker_count")) >= 1
+        and _text(engine_refinement_receipt.get("approval_token_required"))
+        == "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+        and bool(engine_refinement_receipt.get("external_state_mutated") is False)
     )
     goal_bottleneck_briefing = _summary(goal_bottleneck_briefing_packet or {})
     goal_bottleneck_briefing_gate_present = goal_bottleneck_briefing_packet is not None
@@ -857,6 +907,74 @@ def build_goal_release_decision_gate(
                 ),
             )
         )
+    if product_scope_receipt_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="product_scope_breadth_evidence_receipt_recorded",
+                artifact_path=product_scope_breadth_evidence_receipt_path,
+                observed=(
+                    f"{_text(product_scope_receipt.get('status')) or 'missing'};"
+                    f"receipt_ready="
+                    f"{_bool_text(bool(product_scope_receipt.get('full_scope_evidence_receipt_ready') is True))};"
+                    f"receipt_row_count={_int(product_scope_receipt.get('receipt_row_count'))};"
+                    f"blocked_row_count={_int(product_scope_receipt.get('blocked_row_count'))};"
+                    f"blocker_count={_int(product_scope_receipt.get('blocker_count'))};"
+                    f"required_scope_blocker_count={_int(product_scope_receipt.get('required_scope_blocker_count'))};"
+                    f"first_blocked_scope_blocker_id={_text(product_scope_receipt.get('first_blocked_scope_blocker_id'))};"
+                    f"first_blocked_evidence_artifact={_text(product_scope_receipt.get('first_blocked_evidence_artifact'))};"
+                    f"first_blocked_observed_evidence_status="
+                    f"{_text(product_scope_receipt.get('first_blocked_observed_evidence_status'))};"
+                    f"most_common_row_blocker={_text(product_scope_receipt.get('most_common_row_blocker'))};"
+                    f"approval_token_required={_text(product_scope_receipt.get('approval_token_required'))};"
+                    f"external_state_mutated="
+                    f"{_bool_text(bool(product_scope_receipt.get('external_state_mutated') is True))}"
+                ),
+                required=(
+                    "R8 product scope breadth evidence receipt recorded with blocked-row detail, "
+                    "approval token, and no external mutation"
+                ),
+                passed=product_scope_receipt_recorded,
+                reason=(
+                    "The final release decision must preserve the R8 full-scope evidence receipt "
+                    "placeholder/operator-input blocker, not only the collapsed R8 matrix row."
+                ),
+            )
+        )
+    if engine_refinement_receipt_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="engine_refinement_claim_evidence_receipt_recorded",
+                artifact_path=engine_refinement_claim_evidence_receipt_path,
+                observed=(
+                    f"{_text(engine_refinement_receipt.get('status')) or 'missing'};"
+                    f"receipt_ready="
+                    f"{_bool_text(bool(engine_refinement_receipt.get('claim_promotion_evidence_receipt_ready') is True))};"
+                    f"receipt_row_count={_int(engine_refinement_receipt.get('receipt_row_count'))};"
+                    f"blocked_row_count={_int(engine_refinement_receipt.get('blocked_row_count'))};"
+                    f"blocker_count={_int(engine_refinement_receipt.get('blocker_count'))};"
+                    f"required_blocker_count={_int(engine_refinement_receipt.get('required_blocker_count'))};"
+                    f"first_blocked_blocker_id={_text(engine_refinement_receipt.get('first_blocked_blocker_id'))};"
+                    f"first_blocked_evidence_artifact={_text(engine_refinement_receipt.get('first_blocked_evidence_artifact'))};"
+                    f"first_blocked_observed_evidence_status="
+                    f"{_text(engine_refinement_receipt.get('first_blocked_observed_evidence_status'))};"
+                    f"most_common_row_blocker={_text(engine_refinement_receipt.get('most_common_row_blocker'))};"
+                    f"approval_token_required={_text(engine_refinement_receipt.get('approval_token_required'))};"
+                    f"external_state_mutated="
+                    f"{_bool_text(bool(engine_refinement_receipt.get('external_state_mutated') is True))}"
+                ),
+                required=(
+                    "R9 engine refinement claim evidence receipt recorded with blocked-row detail, "
+                    "approval token, and no external mutation"
+                ),
+                passed=engine_refinement_receipt_recorded,
+                reason=(
+                    "The final release decision must preserve the R9 OpenMM/Schrodinger-grade claim "
+                    "evidence receipt blocker, not only the collapsed R9 matrix row."
+                ),
+            )
+        )
     if goal_bottleneck_briefing_gate_present:
         rows.append(
             _row(
@@ -1171,6 +1289,10 @@ def build_goal_release_decision_gate(
         next_required_items.append("goal API surface contract")
     if api_runner_profile_receipt_gate_present and not api_runner_profile_receipt_recorded:
         next_required_items.append("API runner profile promotion operator receipt")
+    if product_scope_receipt_gate_present and not product_scope_receipt_recorded:
+        next_required_items.append("product scope breadth evidence receipt")
+    if engine_refinement_receipt_gate_present and not engine_refinement_receipt_recorded:
+        next_required_items.append("engine refinement claim evidence receipt")
     if goal_bottleneck_briefing_gate_present and not goal_bottleneck_full_commercial_receipts_recorded:
         next_required_items.append("goal bottleneck full-commercial receipt briefing")
     if (
@@ -1336,6 +1458,108 @@ def build_goal_release_decision_gate(
         ),
         "api_runner_profile_promotion_operator_receipt_external_state_mutated": bool(
             api_runner_profile_receipt.get("external_state_mutated") is True
+        ),
+        "product_scope_breadth_evidence_receipt_gate_present": product_scope_receipt_gate_present,
+        "product_scope_breadth_evidence_receipt_status": _text(product_scope_receipt.get("status")),
+        "product_scope_breadth_evidence_receipt_recorded": (
+            product_scope_receipt_recorded if product_scope_receipt_gate_present else None
+        ),
+        "product_scope_breadth_evidence_receipt_ready": bool(
+            product_scope_receipt.get("full_scope_evidence_receipt_ready") is True
+        ),
+        "product_scope_breadth_evidence_receipt_receipt_row_count": _int(
+            product_scope_receipt.get("receipt_row_count")
+        ),
+        "product_scope_breadth_evidence_receipt_pass_row_count": _int(
+            product_scope_receipt.get("pass_row_count")
+        ),
+        "product_scope_breadth_evidence_receipt_blocked_row_count": _int(
+            product_scope_receipt.get("blocked_row_count")
+        ),
+        "product_scope_breadth_evidence_receipt_blocker_count": _int(
+            product_scope_receipt.get("blocker_count")
+        ),
+        "product_scope_breadth_evidence_receipt_required_scope_blocker_count": _int(
+            product_scope_receipt.get("required_scope_blocker_count")
+        ),
+        "product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id": _text(
+            product_scope_receipt.get("first_blocked_scope_blocker_id")
+        ),
+        "product_scope_breadth_evidence_receipt_first_blocked_evidence_artifact": _text(
+            product_scope_receipt.get("first_blocked_evidence_artifact")
+        ),
+        "product_scope_breadth_evidence_receipt_first_blocked_expected_evidence_status": _text(
+            product_scope_receipt.get("first_blocked_expected_evidence_status")
+        ),
+        "product_scope_breadth_evidence_receipt_first_blocked_observed_evidence_status": _text(
+            product_scope_receipt.get("first_blocked_observed_evidence_status")
+        ),
+        "product_scope_breadth_evidence_receipt_first_blocked_row_blockers": (
+            product_scope_receipt_first_blocked_row_blockers
+        ),
+        "product_scope_breadth_evidence_receipt_most_common_row_blocker": _text(
+            product_scope_receipt.get("most_common_row_blocker")
+        ),
+        "product_scope_breadth_evidence_receipt_approval_token_required": _text(
+            product_scope_receipt.get("approval_token_required")
+        ),
+        "product_scope_breadth_evidence_receipt_csv": _text(
+            product_scope_receipt.get("receipt_csv")
+        ),
+        "product_scope_breadth_evidence_receipt_external_state_mutated": bool(
+            product_scope_receipt.get("external_state_mutated") is True
+        ),
+        "engine_refinement_claim_evidence_receipt_gate_present": engine_refinement_receipt_gate_present,
+        "engine_refinement_claim_evidence_receipt_status": _text(
+            engine_refinement_receipt.get("status")
+        ),
+        "engine_refinement_claim_evidence_receipt_recorded": (
+            engine_refinement_receipt_recorded if engine_refinement_receipt_gate_present else None
+        ),
+        "engine_refinement_claim_evidence_receipt_ready": bool(
+            engine_refinement_receipt.get("claim_promotion_evidence_receipt_ready") is True
+        ),
+        "engine_refinement_claim_evidence_receipt_receipt_row_count": _int(
+            engine_refinement_receipt.get("receipt_row_count")
+        ),
+        "engine_refinement_claim_evidence_receipt_pass_row_count": _int(
+            engine_refinement_receipt.get("pass_row_count")
+        ),
+        "engine_refinement_claim_evidence_receipt_blocked_row_count": _int(
+            engine_refinement_receipt.get("blocked_row_count")
+        ),
+        "engine_refinement_claim_evidence_receipt_blocker_count": _int(
+            engine_refinement_receipt.get("blocker_count")
+        ),
+        "engine_refinement_claim_evidence_receipt_required_blocker_count": _int(
+            engine_refinement_receipt.get("required_blocker_count")
+        ),
+        "engine_refinement_claim_evidence_receipt_first_blocked_blocker_id": _text(
+            engine_refinement_receipt.get("first_blocked_blocker_id")
+        ),
+        "engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact": _text(
+            engine_refinement_receipt.get("first_blocked_evidence_artifact")
+        ),
+        "engine_refinement_claim_evidence_receipt_first_blocked_expected_evidence_status": _text(
+            engine_refinement_receipt.get("first_blocked_expected_evidence_status")
+        ),
+        "engine_refinement_claim_evidence_receipt_first_blocked_observed_evidence_status": _text(
+            engine_refinement_receipt.get("first_blocked_observed_evidence_status")
+        ),
+        "engine_refinement_claim_evidence_receipt_first_blocked_row_blockers": (
+            engine_refinement_receipt_first_blocked_row_blockers
+        ),
+        "engine_refinement_claim_evidence_receipt_most_common_row_blocker": _text(
+            engine_refinement_receipt.get("most_common_row_blocker")
+        ),
+        "engine_refinement_claim_evidence_receipt_approval_token_required": _text(
+            engine_refinement_receipt.get("approval_token_required")
+        ),
+        "engine_refinement_claim_evidence_receipt_csv": _text(
+            engine_refinement_receipt.get("receipt_csv")
+        ),
+        "engine_refinement_claim_evidence_receipt_external_state_mutated": bool(
+            engine_refinement_receipt.get("external_state_mutated") is True
         ),
         "goal_bottleneck_briefing_gate_present": goal_bottleneck_briefing_gate_present,
         "source_goal_bottleneck_briefing_status": _text(goal_bottleneck_briefing.get("status")),
@@ -1822,6 +2046,20 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- api_runner_profile_promotion_operator_receipt_first_blocked_row_blocker: `{s['api_runner_profile_promotion_operator_receipt_first_blocked_row_blocker']}`",
         f"- api_runner_profile_promotion_operator_receipt_approval_token_required: `{s['api_runner_profile_promotion_operator_receipt_approval_token_required']}`",
         f"- api_runner_profile_promotion_operator_receipt_runner_executed: `{s['api_runner_profile_promotion_operator_receipt_runner_executed']}`",
+        f"- product_scope_breadth_evidence_receipt_status: `{s['product_scope_breadth_evidence_receipt_status']}`",
+        f"- product_scope_breadth_evidence_receipt_recorded: `{s['product_scope_breadth_evidence_receipt_recorded']}`",
+        f"- product_scope_breadth_evidence_receipt_ready: `{s['product_scope_breadth_evidence_receipt_ready']}`",
+        f"- product_scope_breadth_evidence_receipt_blocked_row_count: `{s['product_scope_breadth_evidence_receipt_blocked_row_count']}`",
+        f"- product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id: `{s['product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id']}`",
+        f"- product_scope_breadth_evidence_receipt_most_common_row_blocker: `{s['product_scope_breadth_evidence_receipt_most_common_row_blocker']}`",
+        f"- product_scope_breadth_evidence_receipt_approval_token_required: `{s['product_scope_breadth_evidence_receipt_approval_token_required']}`",
+        f"- engine_refinement_claim_evidence_receipt_status: `{s['engine_refinement_claim_evidence_receipt_status']}`",
+        f"- engine_refinement_claim_evidence_receipt_recorded: `{s['engine_refinement_claim_evidence_receipt_recorded']}`",
+        f"- engine_refinement_claim_evidence_receipt_ready: `{s['engine_refinement_claim_evidence_receipt_ready']}`",
+        f"- engine_refinement_claim_evidence_receipt_blocked_row_count: `{s['engine_refinement_claim_evidence_receipt_blocked_row_count']}`",
+        f"- engine_refinement_claim_evidence_receipt_first_blocked_blocker_id: `{s['engine_refinement_claim_evidence_receipt_first_blocked_blocker_id']}`",
+        f"- engine_refinement_claim_evidence_receipt_most_common_row_blocker: `{s['engine_refinement_claim_evidence_receipt_most_common_row_blocker']}`",
+        f"- engine_refinement_claim_evidence_receipt_approval_token_required: `{s['engine_refinement_claim_evidence_receipt_approval_token_required']}`",
         f"- goal_bottleneck_briefing_gate_present: `{s['goal_bottleneck_briefing_gate_present']}`",
         f"- source_goal_bottleneck_briefing_status: `{s['source_goal_bottleneck_briefing_status']}`",
         f"- goal_bottleneck_briefing_full_commercial_receipts_recorded: `{s['goal_bottleneck_briefing_full_commercial_receipts_recorded']}`",
@@ -1999,6 +2237,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_JSON,
     )
     parser.add_argument(
+        "--product-scope-breadth-evidence-receipt-json",
+        default=DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_JSON,
+    )
+    parser.add_argument(
+        "--engine-refinement-claim-evidence-receipt-json",
+        default=DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON,
+    )
+    parser.add_argument(
         "--product-full-commercial-blocker-evidence-matrix-json",
         default=DEFAULT_PRODUCT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON,
     )
@@ -2052,6 +2298,12 @@ def main(argv: list[str] | None = None) -> None:
         api_runner_profile_promotion_operator_receipt_packet=_read_json_if_present(
             args.api_runner_profile_promotion_operator_receipt_json
         ),
+        product_scope_breadth_evidence_receipt_packet=_read_json_if_present(
+            args.product_scope_breadth_evidence_receipt_json
+        ),
+        engine_refinement_claim_evidence_receipt_packet=_read_json_if_present(
+            args.engine_refinement_claim_evidence_receipt_json
+        ),
         product_full_commercial_blocker_evidence_matrix_packet=_read_json_if_present(
             args.product_full_commercial_blocker_evidence_matrix_json
         ),
@@ -2089,6 +2341,12 @@ def main(argv: list[str] | None = None) -> None:
         api_customer_flow_release_evidence_path=args.api_customer_flow_release_evidence_json,
         api_runner_profile_promotion_operator_receipt_path=(
             args.api_runner_profile_promotion_operator_receipt_json
+        ),
+        product_scope_breadth_evidence_receipt_path=(
+            args.product_scope_breadth_evidence_receipt_json
+        ),
+        engine_refinement_claim_evidence_receipt_path=(
+            args.engine_refinement_claim_evidence_receipt_json
         ),
         product_full_commercial_blocker_evidence_matrix_path=(
             args.product_full_commercial_blocker_evidence_matrix_json

@@ -43,6 +43,8 @@ FINAL_GATE_SPECS = [
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_packet_ready",
             "accuracy_parity_scorecard_recorded",
             "api_runner_profile_promotion_operator_receipt_recorded",
+            "product_scope_breadth_evidence_receipt_recorded",
+            "engine_refinement_claim_evidence_receipt_recorded",
         ],
         "required_zero_fields": ["blocker_count"],
         "required_int_exact_fields": {
@@ -67,6 +69,16 @@ FINAL_GATE_SPECS = [
             "api_runner_profile_promotion_operator_receipt_pass_row_count": 0,
             "api_runner_profile_promotion_operator_receipt_blocked_row_count": 4,
             "api_runner_profile_promotion_operator_receipt_blocker_count": 1,
+            "product_scope_breadth_evidence_receipt_receipt_row_count": 6,
+            "product_scope_breadth_evidence_receipt_pass_row_count": 0,
+            "product_scope_breadth_evidence_receipt_blocked_row_count": 6,
+            "product_scope_breadth_evidence_receipt_blocker_count": 1,
+            "product_scope_breadth_evidence_receipt_required_scope_blocker_count": 6,
+            "engine_refinement_claim_evidence_receipt_receipt_row_count": 6,
+            "engine_refinement_claim_evidence_receipt_pass_row_count": 0,
+            "engine_refinement_claim_evidence_receipt_blocked_row_count": 6,
+            "engine_refinement_claim_evidence_receipt_blocker_count": 1,
+            "engine_refinement_claim_evidence_receipt_required_blocker_count": 6,
             "science_claim_promotion_gap_closure_open_gap_count": 2,
         },
         "required_text_exact_fields": {
@@ -119,6 +131,42 @@ FINAL_GATE_SPECS = [
             ),
             "api_runner_profile_promotion_operator_receipt_approval_token_required": (
                 "APPROVE_API_RUNNER_PROFILE_PROMOTION"
+            ),
+            "product_scope_breadth_evidence_receipt_status": (
+                "blocked_product_scope_breadth_evidence_receipt"
+            ),
+            "product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id": (
+                "direct_binding_evidence_missing"
+            ),
+            "product_scope_breadth_evidence_receipt_first_blocked_evidence_artifact": (
+                "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+            ),
+            "product_scope_breadth_evidence_receipt_first_blocked_observed_evidence_status": (
+                "missing"
+            ),
+            "product_scope_breadth_evidence_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "product_scope_breadth_evidence_receipt_approval_token_required": (
+                "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+            ),
+            "engine_refinement_claim_evidence_receipt_status": (
+                "blocked_engine_refinement_claim_evidence_receipt"
+            ),
+            "engine_refinement_claim_evidence_receipt_first_blocked_blocker_id": (
+                "public_benchmark_gate_not_ready"
+            ),
+            "engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact": (
+                "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+            ),
+            "engine_refinement_claim_evidence_receipt_first_blocked_observed_evidence_status": (
+                "missing"
+            ),
+            "engine_refinement_claim_evidence_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "engine_refinement_claim_evidence_receipt_approval_token_required": (
+                "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
             ),
             "science_claim_promotion_gap_closure_status": (
                 "blocked_science_claim_promotion_gap_closure"

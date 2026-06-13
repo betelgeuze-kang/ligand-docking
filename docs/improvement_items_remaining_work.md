@@ -600,6 +600,11 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `engine_refinement_claim_evidence_receipt_*` 필드도 직접 노출해, 두 receipt의
   status, CSV, approval token, row counts, first-blocked evidence/status/blockers,
   required blocker 목록이 상위 goal API에서 빠지지 않게 한다.
+  `runs/goal_release_decision_gate_current.json`도 같은 R8/R9 receipt를
+  `product_scope_breadth_evidence_receipt_*` 및
+  `engine_refinement_claim_evidence_receipt_*` summary와 recorded row로 직접 노출하고,
+  final refresh exact check가 status, row counts, first-blocked diagnostics,
+  approval token을 고정한다.
   `runs/product_goal_completion_audit_current.json`의 `R8_full_scope_claim_closure`
   row도 이 receipt를 evidence artifact와 observed field로 직접 흡수해,
   scope contract가 green처럼 보이더라도 `full_scope_evidence_receipt_ready=false`면

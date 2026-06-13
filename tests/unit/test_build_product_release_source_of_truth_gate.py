@@ -37,6 +37,8 @@ def _refresh_release_decision_ready() -> dict:
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_packet_ready": True,
             "accuracy_parity_scorecard_recorded": True,
             "api_runner_profile_promotion_operator_receipt_recorded": True,
+            "product_scope_breadth_evidence_receipt_recorded": True,
+            "engine_refinement_claim_evidence_receipt_recorded": True,
             "source_goal_bottleneck_briefing_status": "goal_bottleneck_briefing_ready",
             "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 2,
@@ -59,6 +61,16 @@ def _refresh_release_decision_ready() -> dict:
             "api_runner_profile_promotion_operator_receipt_pass_row_count": 0,
             "api_runner_profile_promotion_operator_receipt_blocked_row_count": 4,
             "api_runner_profile_promotion_operator_receipt_blocker_count": 1,
+            "product_scope_breadth_evidence_receipt_receipt_row_count": 6,
+            "product_scope_breadth_evidence_receipt_pass_row_count": 0,
+            "product_scope_breadth_evidence_receipt_blocked_row_count": 6,
+            "product_scope_breadth_evidence_receipt_blocker_count": 1,
+            "product_scope_breadth_evidence_receipt_required_scope_blocker_count": 6,
+            "engine_refinement_claim_evidence_receipt_receipt_row_count": 6,
+            "engine_refinement_claim_evidence_receipt_pass_row_count": 0,
+            "engine_refinement_claim_evidence_receipt_blocked_row_count": 6,
+            "engine_refinement_claim_evidence_receipt_blocker_count": 1,
+            "engine_refinement_claim_evidence_receipt_required_blocker_count": 6,
             "science_claim_promotion_gap_closure_open_gap_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
@@ -108,6 +120,42 @@ def _refresh_release_decision_ready() -> dict:
             ),
             "api_runner_profile_promotion_operator_receipt_approval_token_required": (
                 "APPROVE_API_RUNNER_PROFILE_PROMOTION"
+            ),
+            "product_scope_breadth_evidence_receipt_status": (
+                "blocked_product_scope_breadth_evidence_receipt"
+            ),
+            "product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id": (
+                "direct_binding_evidence_missing"
+            ),
+            "product_scope_breadth_evidence_receipt_first_blocked_evidence_artifact": (
+                "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+            ),
+            "product_scope_breadth_evidence_receipt_first_blocked_observed_evidence_status": (
+                "missing"
+            ),
+            "product_scope_breadth_evidence_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "product_scope_breadth_evidence_receipt_approval_token_required": (
+                "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+            ),
+            "engine_refinement_claim_evidence_receipt_status": (
+                "blocked_engine_refinement_claim_evidence_receipt"
+            ),
+            "engine_refinement_claim_evidence_receipt_first_blocked_blocker_id": (
+                "public_benchmark_gate_not_ready"
+            ),
+            "engine_refinement_claim_evidence_receipt_first_blocked_evidence_artifact": (
+                "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+            ),
+            "engine_refinement_claim_evidence_receipt_first_blocked_observed_evidence_status": (
+                "missing"
+            ),
+            "engine_refinement_claim_evidence_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "engine_refinement_claim_evidence_receipt_approval_token_required": (
+                "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
             ),
             "science_claim_promotion_gap_closure_status": (
                 "blocked_science_claim_promotion_gap_closure"
@@ -288,6 +336,11 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
         "api_runner_profile_promotion_operator_receipt_recorded"
         in release_row["required_true_fields"]
     )
+    assert "product_scope_breadth_evidence_receipt_recorded" in release_row["required_true_fields"]
+    assert (
+        "engine_refinement_claim_evidence_receipt_recorded"
+        in release_row["required_true_fields"]
+    )
     assert release_row["required_int_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_missing_gate_count"
     ] == 4
@@ -300,6 +353,12 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_int_exact_fields"][
         "api_runner_profile_promotion_operator_receipt_blocked_row_count"
     ] == 4
+    assert release_row["required_int_exact_fields"][
+        "product_scope_breadth_evidence_receipt_blocked_row_count"
+    ] == 6
+    assert release_row["required_int_exact_fields"][
+        "engine_refinement_claim_evidence_receipt_required_blocker_count"
+    ] == 6
     assert release_row["required_text_exact_fields"][
         "goal_bottleneck_briefing_production_ai_registry_promotion_priority_top_gate_id"
     ] == "trained_model_checkpoint_count_positive"
@@ -312,6 +371,12 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_text_exact_fields"][
         "api_runner_profile_promotion_operator_receipt_first_blocked_profile_id"
     ] == "backmapping_scoring.example"
+    assert release_row["required_text_exact_fields"][
+        "product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id"
+    ] == "direct_binding_evidence_missing"
+    assert release_row["required_text_exact_fields"][
+        "engine_refinement_claim_evidence_receipt_first_blocked_blocker_id"
+    ] == "public_benchmark_gate_not_ready"
     assert release_row["required_int_exact_fields"][
         "science_claim_promotion_gap_closure_open_gap_count"
     ] == 2
