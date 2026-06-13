@@ -225,6 +225,152 @@ def _assert_refine_tier_public_benchmark_fields(
     )
 
 
+def _assert_product_launch_r4_preflight_fields(*, observed: dict, artifact: dict) -> None:
+    prefix = "product_launch_r4_preflight"
+    bool_fields = [
+        "authorized_for_r4_confirmation",
+        "authorized_for_external_mutation",
+        "launch_executed",
+        "external_state_mutated",
+        "engine_refinement_claim_evidence_receipt_ready",
+    ]
+    int_fields = [
+        "check_count",
+        "pass_count",
+        "blocker_count",
+        "engine_refinement_claim_evidence_receipt_blocked_row_count",
+        "engine_refinement_claim_promotion_action_row_count",
+    ]
+    text_fields = [
+        "status",
+        "source_api_customer_flow_status",
+        "source_rollout_execution_status",
+        "source_release_bundle_status",
+        "source_commercial_independence_status",
+        "source_license_decision_status",
+        "source_third_party_license_status",
+        "source_engine_refinement_status",
+        "engine_refinement_claim_evidence_receipt_status",
+        "engine_refinement_claim_evidence_receipt_csv",
+        "next_required_step",
+    ]
+    list_fields = [
+        "blocked_check_ids",
+        "required_r4_fields",
+        "required_rollout_tokens",
+    ]
+    assert observed[f"{prefix}_ready"] is (
+        artifact.get("status") == "product_launch_r4_preflight_ready"
+    )
+    assert observed[f"{prefix}_artifact_path"].endswith(
+        "runs/product_launch_r4_preflight_current.json"
+    )
+    for field in bool_fields:
+        assert observed[f"{prefix}_{field}"] is (artifact.get(field) is True)
+    for field in int_fields:
+        assert observed[f"{prefix}_{field}"] == int(artifact.get(field) or 0)
+    for field in text_fields:
+        assert observed[f"{prefix}_{field}"] == artifact.get(field, "")
+    for field in list_fields:
+        assert observed[f"{prefix}_{field}"] == (artifact.get(field) or [])
+
+    guard_missing_reasons = []
+    if artifact.get("status") != "product_launch_r4_preflight_ready":
+        guard_missing_reasons.append("preflight_not_ready")
+    if artifact.get("authorized_for_r4_confirmation") is not True:
+        guard_missing_reasons.append("r4_confirmation_not_authorized")
+    if artifact.get("authorized_for_external_mutation") is True:
+        guard_missing_reasons.append("external_mutation_authorized")
+    if artifact.get("launch_executed") is True:
+        guard_missing_reasons.append("launch_executed")
+    if artifact.get("external_state_mutated") is True:
+        guard_missing_reasons.append("external_state_mutated")
+    if int(artifact.get("blocker_count") or 0) != 0:
+        guard_missing_reasons.append("blockers_present")
+    if int(artifact.get("check_count") or 0) == 0 or int(
+        artifact.get("pass_count") or 0
+    ) != int(artifact.get("check_count") or 0):
+        guard_missing_reasons.append("checks_not_all_passed")
+    for field in ("target", "action", "impact", "risk", "rollback", "verification"):
+        if field not in (artifact.get("required_r4_fields") or []):
+            guard_missing_reasons.append("required_r4_fields_missing")
+            break
+    for token in ("APPROVE_PRODUCT_ROLLOUT", "APPROVE_HOSTED_PRODUCT_API_EXPOSURE"):
+        if token not in (artifact.get("required_rollout_tokens") or []):
+            guard_missing_reasons.append("required_rollout_tokens_missing")
+            break
+    assert observed[f"{prefix}_fail_closed_guard_ready"] is (
+        not guard_missing_reasons
+    )
+    assert observed[f"{prefix}_fail_closed_guard_missing_reasons"] == guard_missing_reasons
+
+
+def _assert_deploy_ops_legal_gap_closure_fields(*, observed: dict, artifact: dict) -> None:
+    prefix = "deploy_ops_legal_gap_closure"
+    bool_fields = [
+        "all_gaps_closed",
+        "rollout_execution_readiness_ready",
+        "rollout_smoke_receipt_ready",
+        "rollout_executed",
+        "rollout_smoke_external_state_mutated",
+        "rollout_smoke_pager_provider_contacted",
+        "rollout_smoke_ingress_certificate_verified_live",
+        "pager_provider_contacted",
+        "ingress_certificate_verified_live",
+        "legal_advice_provided",
+        "external_state_mutated",
+    ]
+    int_fields = ["gap_count", "closed_gap_count", "open_gap_count"]
+    text_fields = [
+        "status",
+        "current_primary_open_gap_id",
+        "current_next_action",
+        "rollout_smoke_receipt_status",
+    ]
+    list_fields = ["closed_gap_ids", "open_gap_ids"]
+    assert observed[f"{prefix}_complete"] is (
+        artifact.get("status") == "deploy_ops_legal_gap_closure_complete"
+        and artifact.get("all_gaps_closed") is True
+    )
+    assert observed[f"{prefix}_artifact_path"].endswith(
+        "runs/deploy_ops_legal_gap_closure_current.json"
+    )
+    for field in bool_fields:
+        assert observed[f"{prefix}_{field}"] is (artifact.get(field) is True)
+    for field in int_fields:
+        assert observed[f"{prefix}_{field}"] == int(artifact.get(field) or 0)
+    for field in text_fields:
+        assert observed[f"{prefix}_{field}"] == artifact.get(field, "")
+    for field in list_fields:
+        assert observed[f"{prefix}_{field}"] == (artifact.get(field) or [])
+
+    guard_missing_reasons = []
+    if artifact.get("status") != "deploy_ops_legal_gap_closure_complete":
+        guard_missing_reasons.append("gap_closure_not_complete")
+    if artifact.get("all_gaps_closed") is not True:
+        guard_missing_reasons.append("gaps_open")
+    if int(artifact.get("open_gap_count") or 0) != 0:
+        guard_missing_reasons.append("open_gap_count_nonzero")
+    if artifact.get("rollout_execution_readiness_ready") is not True:
+        guard_missing_reasons.append("rollout_readiness_not_ready")
+    if artifact.get("rollout_smoke_receipt_ready") is not True:
+        guard_missing_reasons.append("rollout_smoke_receipt_not_ready")
+    if artifact.get("rollout_executed") is not True:
+        guard_missing_reasons.append("rollout_execution_not_recorded")
+    if artifact.get("rollout_smoke_external_state_mutated") is not True:
+        guard_missing_reasons.append("rollout_smoke_external_mutation_not_recorded")
+    if artifact.get("rollout_smoke_pager_provider_contacted") is not True:
+        guard_missing_reasons.append("rollout_smoke_pager_contact_not_recorded")
+    if artifact.get("rollout_smoke_ingress_certificate_verified_live") is not True:
+        guard_missing_reasons.append("rollout_smoke_ingress_certificate_not_verified")
+    if artifact.get("external_state_mutated") is True:
+        guard_missing_reasons.append("gap_closure_builder_mutated_external_state")
+    if artifact.get("legal_advice_provided") is True:
+        guard_missing_reasons.append("legal_advice_claimed")
+    assert observed[f"{prefix}_boundary_guard_ready"] is (not guard_missing_reasons)
+    assert observed[f"{prefix}_boundary_guard_missing_reasons"] == guard_missing_reasons
+
+
 def test_api_app_imports_with_goal_router() -> None:
     from api.main import app
     from api.goal import (
@@ -260,6 +406,10 @@ def test_api_app_imports_with_goal_router() -> None:
     cameo_fetch_artifact = _artifact_summary("cameo_official_result_fetch_preflight_current.json")
     rollout_smoke_receipt_artifact = _artifact_summary(
         "product_rollout_execution_smoke_receipt_current.json"
+    )
+    launch_r4_preflight_artifact = _artifact_summary("product_launch_r4_preflight_current.json")
+    deploy_ops_legal_artifact = _artifact_summary(
+        "deploy_ops_legal_gap_closure_current.json"
     )
     scope_receipt_artifact = _artifact_summary("product_scope_breadth_evidence_receipt_current.json")
     engine_receipt_artifact = _artifact_summary(
@@ -1185,6 +1335,14 @@ def test_api_app_imports_with_goal_router() -> None:
             "product_rollout_execution_smoke_receipt_operator_receipt_guard_missing_reasons"
         ]
         == rollout_guard_missing_reasons
+    )
+    _assert_product_launch_r4_preflight_fields(
+        observed=status,
+        artifact=launch_r4_preflight_artifact,
+    )
+    _assert_deploy_ops_legal_gap_closure_fields(
+        observed=status,
+        artifact=deploy_ops_legal_artifact,
     )
     _assert_receipt_fields(
         status=status,

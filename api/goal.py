@@ -35,6 +35,12 @@ CAMEO_OFFICIAL_RESULT_FETCH_PREFLIGHT_ARTIFACT = (
 PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_ARTIFACT = (
     ROOT / "runs" / "product_rollout_execution_smoke_receipt_current.json"
 )
+PRODUCT_LAUNCH_R4_PREFLIGHT_ARTIFACT = (
+    ROOT / "runs" / "product_launch_r4_preflight_current.json"
+)
+DEPLOY_OPS_LEGAL_GAP_CLOSURE_ARTIFACT = (
+    ROOT / "runs" / "deploy_ops_legal_gap_closure_current.json"
+)
 
 FULL_COMMERCIAL_RELEASE_BLOCKER_IDS = (
     "R8_full_scope_claim_closure",
@@ -997,6 +1003,210 @@ def _product_rollout_execution_smoke_receipt_fields(receipt: dict[str, Any]) -> 
     }
 
 
+def _product_launch_r4_preflight_fields(preflight: dict[str, Any]) -> dict[str, Any]:
+    required_r4_fields = _string_list(preflight.get("required_r4_fields"))
+    required_rollout_tokens = _string_list(preflight.get("required_rollout_tokens"))
+    expected_r4_fields = ("target", "action", "impact", "risk", "rollback", "verification")
+    expected_rollout_tokens = (
+        "APPROVE_PRODUCT_ROLLOUT",
+        "APPROVE_HOSTED_PRODUCT_API_EXPOSURE",
+    )
+    guard_missing_reasons: list[str] = []
+    if preflight.get("status") != "product_launch_r4_preflight_ready":
+        guard_missing_reasons.append("preflight_not_ready")
+    if preflight.get("authorized_for_r4_confirmation") is not True:
+        guard_missing_reasons.append("r4_confirmation_not_authorized")
+    if preflight.get("authorized_for_external_mutation") is True:
+        guard_missing_reasons.append("external_mutation_authorized")
+    if preflight.get("launch_executed") is True:
+        guard_missing_reasons.append("launch_executed")
+    if preflight.get("external_state_mutated") is True:
+        guard_missing_reasons.append("external_state_mutated")
+    if _int(preflight.get("blocker_count")) != 0:
+        guard_missing_reasons.append("blockers_present")
+    if _int(preflight.get("check_count")) == 0 or _int(preflight.get("pass_count")) != _int(
+        preflight.get("check_count")
+    ):
+        guard_missing_reasons.append("checks_not_all_passed")
+    if any(field not in required_r4_fields for field in expected_r4_fields):
+        guard_missing_reasons.append("required_r4_fields_missing")
+    if any(token not in required_rollout_tokens for token in expected_rollout_tokens):
+        guard_missing_reasons.append("required_rollout_tokens_missing")
+    return {
+        "product_launch_r4_preflight_status": preflight.get("status", ""),
+        "product_launch_r4_preflight_ready": bool(
+            preflight.get("status") == "product_launch_r4_preflight_ready"
+        ),
+        "product_launch_r4_preflight_artifact_path": str(
+            PRODUCT_LAUNCH_R4_PREFLIGHT_ARTIFACT
+        ),
+        "product_launch_r4_preflight_authorized_for_r4_confirmation": bool(
+            preflight.get("authorized_for_r4_confirmation") is True
+        ),
+        "product_launch_r4_preflight_authorized_for_external_mutation": bool(
+            preflight.get("authorized_for_external_mutation") is True
+        ),
+        "product_launch_r4_preflight_launch_executed": bool(
+            preflight.get("launch_executed") is True
+        ),
+        "product_launch_r4_preflight_external_state_mutated": bool(
+            preflight.get("external_state_mutated") is True
+        ),
+        "product_launch_r4_preflight_check_count": _int(preflight.get("check_count")),
+        "product_launch_r4_preflight_pass_count": _int(preflight.get("pass_count")),
+        "product_launch_r4_preflight_blocker_count": _int(
+            preflight.get("blocker_count")
+        ),
+        "product_launch_r4_preflight_blocked_check_ids": _string_list(
+            preflight.get("blocked_check_ids")
+        ),
+        "product_launch_r4_preflight_required_r4_fields": required_r4_fields,
+        "product_launch_r4_preflight_required_rollout_tokens": required_rollout_tokens,
+        "product_launch_r4_preflight_source_api_customer_flow_status": preflight.get(
+            "source_api_customer_flow_status", ""
+        ),
+        "product_launch_r4_preflight_source_rollout_execution_status": preflight.get(
+            "source_rollout_execution_status", ""
+        ),
+        "product_launch_r4_preflight_source_release_bundle_status": preflight.get(
+            "source_release_bundle_status", ""
+        ),
+        "product_launch_r4_preflight_source_commercial_independence_status": preflight.get(
+            "source_commercial_independence_status", ""
+        ),
+        "product_launch_r4_preflight_source_license_decision_status": preflight.get(
+            "source_license_decision_status", ""
+        ),
+        "product_launch_r4_preflight_source_third_party_license_status": preflight.get(
+            "source_third_party_license_status", ""
+        ),
+        "product_launch_r4_preflight_source_engine_refinement_status": preflight.get(
+            "source_engine_refinement_status", ""
+        ),
+        "product_launch_r4_preflight_engine_refinement_claim_evidence_receipt_status": preflight.get(
+            "engine_refinement_claim_evidence_receipt_status", ""
+        ),
+        "product_launch_r4_preflight_engine_refinement_claim_evidence_receipt_ready": bool(
+            preflight.get("engine_refinement_claim_evidence_receipt_ready") is True
+        ),
+        "product_launch_r4_preflight_engine_refinement_claim_evidence_receipt_blocked_row_count": _int(
+            preflight.get("engine_refinement_claim_evidence_receipt_blocked_row_count")
+        ),
+        "product_launch_r4_preflight_engine_refinement_claim_evidence_receipt_csv": preflight.get(
+            "engine_refinement_claim_evidence_receipt_csv", ""
+        ),
+        "product_launch_r4_preflight_engine_refinement_claim_promotion_action_row_count": _int(
+            preflight.get("engine_refinement_claim_promotion_action_row_count")
+        ),
+        "product_launch_r4_preflight_next_required_step": preflight.get(
+            "next_required_step", ""
+        ),
+        "product_launch_r4_preflight_fail_closed_guard_ready": (
+            not guard_missing_reasons
+        ),
+        "product_launch_r4_preflight_fail_closed_guard_missing_reasons": (
+            guard_missing_reasons
+        ),
+    }
+
+
+def _deploy_ops_legal_gap_closure_fields(deploy: dict[str, Any]) -> dict[str, Any]:
+    guard_missing_reasons: list[str] = []
+    if deploy.get("status") != "deploy_ops_legal_gap_closure_complete":
+        guard_missing_reasons.append("gap_closure_not_complete")
+    if deploy.get("all_gaps_closed") is not True:
+        guard_missing_reasons.append("gaps_open")
+    if _int(deploy.get("open_gap_count")) != 0:
+        guard_missing_reasons.append("open_gap_count_nonzero")
+    if deploy.get("rollout_execution_readiness_ready") is not True:
+        guard_missing_reasons.append("rollout_readiness_not_ready")
+    if deploy.get("rollout_smoke_receipt_ready") is not True:
+        guard_missing_reasons.append("rollout_smoke_receipt_not_ready")
+    if deploy.get("rollout_executed") is not True:
+        guard_missing_reasons.append("rollout_execution_not_recorded")
+    if deploy.get("rollout_smoke_external_state_mutated") is not True:
+        guard_missing_reasons.append("rollout_smoke_external_mutation_not_recorded")
+    if deploy.get("rollout_smoke_pager_provider_contacted") is not True:
+        guard_missing_reasons.append("rollout_smoke_pager_contact_not_recorded")
+    if deploy.get("rollout_smoke_ingress_certificate_verified_live") is not True:
+        guard_missing_reasons.append("rollout_smoke_ingress_certificate_not_verified")
+    if deploy.get("external_state_mutated") is True:
+        guard_missing_reasons.append("gap_closure_builder_mutated_external_state")
+    if deploy.get("legal_advice_provided") is True:
+        guard_missing_reasons.append("legal_advice_claimed")
+    return {
+        "deploy_ops_legal_gap_closure_status": deploy.get("status", ""),
+        "deploy_ops_legal_gap_closure_complete": bool(
+            deploy.get("status") == "deploy_ops_legal_gap_closure_complete"
+            and deploy.get("all_gaps_closed") is True
+        ),
+        "deploy_ops_legal_gap_closure_artifact_path": str(
+            DEPLOY_OPS_LEGAL_GAP_CLOSURE_ARTIFACT
+        ),
+        "deploy_ops_legal_gap_closure_all_gaps_closed": bool(
+            deploy.get("all_gaps_closed") is True
+        ),
+        "deploy_ops_legal_gap_closure_gap_count": _int(deploy.get("gap_count")),
+        "deploy_ops_legal_gap_closure_closed_gap_count": _int(
+            deploy.get("closed_gap_count")
+        ),
+        "deploy_ops_legal_gap_closure_open_gap_count": _int(
+            deploy.get("open_gap_count")
+        ),
+        "deploy_ops_legal_gap_closure_closed_gap_ids": _string_list(
+            deploy.get("closed_gap_ids")
+        ),
+        "deploy_ops_legal_gap_closure_open_gap_ids": _string_list(
+            deploy.get("open_gap_ids")
+        ),
+        "deploy_ops_legal_gap_closure_current_primary_open_gap_id": deploy.get(
+            "current_primary_open_gap_id", ""
+        ),
+        "deploy_ops_legal_gap_closure_current_next_action": deploy.get(
+            "current_next_action", ""
+        ),
+        "deploy_ops_legal_gap_closure_rollout_execution_readiness_ready": bool(
+            deploy.get("rollout_execution_readiness_ready") is True
+        ),
+        "deploy_ops_legal_gap_closure_rollout_smoke_receipt_status": deploy.get(
+            "rollout_smoke_receipt_status", ""
+        ),
+        "deploy_ops_legal_gap_closure_rollout_smoke_receipt_ready": bool(
+            deploy.get("rollout_smoke_receipt_ready") is True
+        ),
+        "deploy_ops_legal_gap_closure_rollout_executed": bool(
+            deploy.get("rollout_executed") is True
+        ),
+        "deploy_ops_legal_gap_closure_rollout_smoke_external_state_mutated": bool(
+            deploy.get("rollout_smoke_external_state_mutated") is True
+        ),
+        "deploy_ops_legal_gap_closure_rollout_smoke_pager_provider_contacted": bool(
+            deploy.get("rollout_smoke_pager_provider_contacted") is True
+        ),
+        "deploy_ops_legal_gap_closure_rollout_smoke_ingress_certificate_verified_live": bool(
+            deploy.get("rollout_smoke_ingress_certificate_verified_live") is True
+        ),
+        "deploy_ops_legal_gap_closure_pager_provider_contacted": bool(
+            deploy.get("pager_provider_contacted") is True
+        ),
+        "deploy_ops_legal_gap_closure_ingress_certificate_verified_live": bool(
+            deploy.get("ingress_certificate_verified_live") is True
+        ),
+        "deploy_ops_legal_gap_closure_legal_advice_provided": bool(
+            deploy.get("legal_advice_provided") is True
+        ),
+        "deploy_ops_legal_gap_closure_external_state_mutated": bool(
+            deploy.get("external_state_mutated") is True
+        ),
+        "deploy_ops_legal_gap_closure_boundary_guard_ready": (
+            not guard_missing_reasons
+        ),
+        "deploy_ops_legal_gap_closure_boundary_guard_missing_reasons": (
+            guard_missing_reasons
+        ),
+    }
+
+
 def _evidence_receipt_fields(
     *,
     prefix: str,
@@ -1073,6 +1283,10 @@ async def get_goal_status() -> dict[str, Any]:
     rollout_smoke_receipt_packet = _read_json_object(
         PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_ARTIFACT
     )
+    product_launch_r4_preflight_packet = _read_json_object(
+        PRODUCT_LAUNCH_R4_PREFLIGHT_ARTIFACT
+    )
+    deploy_ops_legal_packet = _read_json_object(DEPLOY_OPS_LEGAL_GAP_CLOSURE_ARTIFACT)
 
     readiness = _summary(readiness_packet)
     actions = _summary(action_packet)
@@ -1088,6 +1302,8 @@ async def get_goal_status() -> dict[str, Any]:
     engine_receipt = _summary(engine_receipt_packet)
     cameo_fetch = _summary(cameo_fetch_packet)
     rollout_smoke_receipt = _summary(rollout_smoke_receipt_packet)
+    product_launch_r4_preflight = _summary(product_launch_r4_preflight_packet)
+    deploy_ops_legal = _summary(deploy_ops_legal_packet)
     intake_rows = _rows(intake_packet)
     bottleneck_rows = _rows(bottleneck_packet)
     full_commercial_release_blocker_ids = [
@@ -1383,6 +1599,8 @@ async def get_goal_status() -> dict[str, Any]:
             **_production_ai_registry_promotion_receipt_fields({}),
             **_cameo_official_result_fetch_preflight_fields({}, []),
             **_product_rollout_execution_smoke_receipt_fields({}),
+            **_product_launch_r4_preflight_fields({}),
+            **_deploy_ops_legal_gap_closure_fields({}),
             **_evidence_receipt_fields(
                 prefix="product_scope_breadth_evidence_receipt",
                 receipt={},
@@ -1831,6 +2049,8 @@ async def get_goal_status() -> dict[str, Any]:
         **_production_ai_registry_promotion_receipt_fields(handoff),
         **_cameo_official_result_fetch_preflight_fields(cameo_fetch, intake_rows),
         **_product_rollout_execution_smoke_receipt_fields(rollout_smoke_receipt),
+        **_product_launch_r4_preflight_fields(product_launch_r4_preflight),
+        **_deploy_ops_legal_gap_closure_fields(deploy_ops_legal),
         **_evidence_receipt_fields(
             prefix="product_scope_breadth_evidence_receipt",
             receipt=scope_receipt,
