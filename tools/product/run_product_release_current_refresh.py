@@ -49,6 +49,19 @@ FINAL_GATE_SPECS = [
             "goal_bottleneck_briefing_production_ai_registry_promotion_priority_packet_ready",
             "production_ai_registry_promotion_priority_packet_recorded",
             "production_ai_registry_promotion_priority_packet_ready",
+            "production_ai_checkpoint_readiness_recorded",
+            "production_ai_checkpoint_readiness_product_model_layer_ready",
+            "production_ai_checkpoint_readiness_production_gpu_execution_environment_ready",
+            "production_ai_checkpoint_readiness_delta_force_derivation_validation_ready",
+            "production_ai_checkpoint_readiness_selected_sidecar_ready",
+            "production_ai_checkpoint_readiness_checkpoint_preflight_ready",
+            "production_ai_checkpoint_readiness_production_training_data_ready",
+            "production_ai_checkpoint_readiness_production_output_heads_complete",
+            "production_ai_checkpoint_readiness_production_inference_acceptance_matrix_ready",
+            "production_ai_checkpoint_readiness_registry_promotion_upstream_acceptance_ready",
+            "production_ai_promotion_workbench_recorded",
+            "production_ai_promotion_workbench_ready",
+            "production_ai_promotion_workbench_registry_promotion_upstream_acceptance_ready",
             "accuracy_parity_scorecard_recorded",
             "api_runner_profile_promotion_operator_receipt_recorded",
             "product_scope_breadth_evidence_receipt_recorded",
@@ -73,6 +86,26 @@ FINAL_GATE_SPECS = [
             "third_party_license_review_gate_legal_advice_provided",
             "third_party_license_review_gate_asset_modified",
             "third_party_license_review_gate_external_state_mutated",
+            "production_ai_checkpoint_readiness_production_ai_checkpoint_ready",
+            "production_ai_checkpoint_readiness_production_ai_inference_subject_active",
+            "production_ai_checkpoint_readiness_registry_promotion_currently_satisfied",
+            "production_ai_checkpoint_readiness_production_promotion_allowed",
+            "production_ai_checkpoint_readiness_customer_facing_auto_correction_allowed",
+            "production_ai_checkpoint_readiness_customer_facing_score_mutation_allowed",
+            "production_ai_checkpoint_readiness_customer_facing_ranking_mutation_allowed",
+            "production_ai_checkpoint_readiness_model_promoted",
+            "production_ai_checkpoint_readiness_docking_results_emitted",
+            "production_ai_checkpoint_readiness_execution_enabled",
+            "production_ai_checkpoint_readiness_external_state_mutated",
+            "production_ai_promotion_workbench_production_ai_promotion_ready",
+            "production_ai_promotion_workbench_production_ai_checkpoint_ready",
+            "production_ai_promotion_workbench_production_ai_inference_subject_active",
+            "production_ai_promotion_workbench_registry_promotion_currently_satisfied",
+            "production_ai_promotion_workbench_production_promotion_allowed",
+            "production_ai_promotion_workbench_model_promoted",
+            "production_ai_promotion_workbench_docking_results_emitted",
+            "production_ai_promotion_workbench_execution_enabled",
+            "production_ai_promotion_workbench_external_state_mutated",
         ],
         "required_int_exact_fields": {
             "cameo_official_result_fetch_preflight_blocked_row_count": 1,
@@ -101,6 +134,23 @@ FINAL_GATE_SPECS = [
             "production_ai_registry_promotion_priority_missing_gate_count": 4,
             "production_ai_registry_promotion_priority_approval_token_count": 1,
             "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 0,
+            "production_ai_checkpoint_readiness_check_count": 8,
+            "production_ai_checkpoint_readiness_pass_check_count": 7,
+            "production_ai_checkpoint_readiness_fail_check_count": 1,
+            "production_ai_checkpoint_readiness_production_inference_acceptance_stage_count": 8,
+            "production_ai_checkpoint_readiness_production_inference_acceptance_ready_stage_count": 7,
+            "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_count": 1,
+            "production_ai_checkpoint_readiness_registry_promotion_missing_gate_count": 4,
+            "production_ai_checkpoint_readiness_candidate_checkpoint_count": 1,
+            "production_ai_checkpoint_readiness_ready_checkpoint_count": 1,
+            "production_ai_checkpoint_readiness_trained_model_checkpoint_count": 0,
+            "production_ai_promotion_workbench_post_return_ladder_stage_count": 10,
+            "production_ai_promotion_workbench_post_return_ladder_ready_stage_count": 8,
+            "production_ai_promotion_workbench_post_return_ladder_blocked_stage_count": 2,
+            "production_ai_promotion_workbench_registry_promotion_missing_gate_count": 4,
+            "production_ai_promotion_workbench_candidate_checkpoint_count": 1,
+            "production_ai_promotion_workbench_ready_checkpoint_count": 1,
+            "production_ai_promotion_workbench_trained_model_checkpoint_count": 0,
             "accuracy_parity_scorecard_row_count": 5,
             "accuracy_parity_scorecard_pass_row_count": 4,
             "accuracy_parity_scorecard_blocked_row_count": 1,
@@ -234,6 +284,55 @@ FINAL_GATE_SPECS = [
             "production_ai_registry_promotion_priority_observed_registry_default_residual_mode": (
                 "shadow"
             ),
+            "production_ai_checkpoint_readiness_status": (
+                "blocked_product_production_ai_checkpoint_readiness"
+            ),
+            "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_ids": (
+                "registry_guarded_promotion_acceptance"
+            ),
+            "production_ai_checkpoint_readiness_first_failed_check_id": (
+                "registry_customer_facing_promotion_allowed"
+            ),
+            "production_ai_checkpoint_readiness_first_failed_source_artifact": (
+                "runs/residual_model_registry_current.json"
+            ),
+            "production_ai_checkpoint_readiness_actionable_blocker_stage_id": (
+                "registry_guarded_promotion_acceptance"
+            ),
+            "production_ai_checkpoint_readiness_actionable_blocker_check_id": (
+                "registry_customer_facing_promotion_allowed"
+            ),
+            "production_ai_checkpoint_readiness_actionable_blocker_artifact": (
+                "runs/residual_model_registry_current.json"
+            ),
+            "production_ai_checkpoint_readiness_registry_promotion_missing_gate_ids": (
+                "production_promotion_allowed;customer_facing_mutation_flags;"
+                "default_residual_mode_guarded;trained_model_checkpoint_count_positive"
+            ),
+            "production_ai_checkpoint_readiness_default_residual_mode": "shadow",
+            "production_ai_promotion_workbench_status": (
+                "blocked_product_production_ai_promotion_workbench"
+            ),
+            "production_ai_promotion_workbench_checkpoint_readiness_artifact_path": (
+                "runs/product_production_ai_checkpoint_readiness_current.json"
+            ),
+            "production_ai_promotion_workbench_blocked_stage_ids": (
+                "residual_model_registry;product_goal_completion_audit"
+            ),
+            "production_ai_promotion_workbench_first_blocked_stage_id": (
+                "residual_model_registry"
+            ),
+            "production_ai_promotion_workbench_first_blocked_stage_artifact": (
+                "runs/residual_model_registry_current.json"
+            ),
+            "production_ai_promotion_workbench_first_blocked_stage_ready_key": (
+                "production_promotion_allowed"
+            ),
+            "production_ai_promotion_workbench_registry_promotion_missing_gate_ids": (
+                "production_promotion_allowed;customer_facing_mutation_flags;"
+                "default_residual_mode_guarded;trained_model_checkpoint_count_positive"
+            ),
+            "production_ai_promotion_workbench_default_residual_mode": "shadow",
             "accuracy_parity_scorecard_status": "blocked_accuracy_parity",
             "accuracy_parity_scorecard_current_broad_accuracy_parity_estimate_pct": "40-50",
             "accuracy_parity_scorecard_current_broad_commercial_platform_estimate_pct": "35-45",

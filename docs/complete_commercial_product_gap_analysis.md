@@ -537,6 +537,13 @@
   `observed_registry_default_residual_mode=shadow`,
   `observed_registry_trained_model_checkpoint_count=0`을 summary와 final refresh exact
   check에 고정한다.
+  최신 goal release decision/final refresh는 priority packet뿐 아니라
+  `product_production_ai_checkpoint_readiness_current.json`과
+  `product_production_ai_promotion_workbench_current.json` 원천도 직접 요구한다.
+  그래서 upstream 7/8 acceptance ready, `registry_guarded_promotion_acceptance`,
+  trained checkpoint count 0, `default_residual_mode=shadow`, residual
+  registry/product-goal blocked stages, no promotion/no mutation 상태가 최종 gate에서
+  빠지지 않는다.
   `/product/commercial-readiness-operator-packet`,
   `/product/commercial-readiness-execution-ladder`,
   `/product/commercial-readiness-handoff-bundle`,

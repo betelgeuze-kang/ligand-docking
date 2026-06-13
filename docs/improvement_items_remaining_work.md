@@ -842,6 +842,13 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `observed_registry_default_residual_mode=shadow`,
   `observed_registry_trained_model_checkpoint_count=0`을 summary와 final refresh exact
   check에 고정한다.
+  또한 최신 goal release decision은 원천
+  `product_production_ai_checkpoint_readiness_current.json` 및
+  `product_production_ai_promotion_workbench_current.json`도 직접 읽어
+  upstream 7/8 acceptance ready, `registry_guarded_promotion_acceptance` blocked
+  stage, trained checkpoint count 0, `default_residual_mode=shadow`,
+  residual registry/product-goal blocked stages, no promotion/no mutation을 summary/row와
+  final refresh exact check로 고정한다.
   `/product/commercial-readiness-operator-packet`,
   `/product/commercial-readiness-execution-ladder`,
   `/product/commercial-readiness-handoff-bundle`,
