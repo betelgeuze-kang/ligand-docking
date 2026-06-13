@@ -254,6 +254,28 @@ def commercial_production_ai_registry_promotion_fields(summary: dict[str, Any]) 
         "production_ai_registry_promotion_priority_missing_gate_ids": list(
             summary.get("production_ai_registry_promotion_priority_missing_gate_ids") or []
         ),
+        "production_ai_registry_promotion_priority_operator_receipt_csv": summary.get(
+            "production_ai_registry_promotion_priority_operator_receipt_csv", ""
+        ),
+        "production_ai_registry_promotion_priority_approval_token_required": summary.get(
+            "production_ai_registry_promotion_priority_approval_token_required", ""
+        ),
+        "production_ai_registry_promotion_priority_observed_registry_default_residual_mode": summary.get(
+            "production_ai_registry_promotion_priority_observed_registry_default_residual_mode",
+            "",
+        ),
+        "production_ai_registry_promotion_priority_observed_registry_production_promotion_allowed": bool(
+            summary.get(
+                "production_ai_registry_promotion_priority_observed_registry_production_promotion_allowed"
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_priority_observed_registry_customer_facing_mutation_flags_ready": bool(
+            summary.get(
+                "production_ai_registry_promotion_priority_observed_registry_customer_facing_mutation_flags_ready"
+            )
+            is True
+        ),
         "production_ai_registry_promotion_priority_top_gate_id": summary.get(
             "production_ai_registry_promotion_priority_top_gate_id", ""
         ),

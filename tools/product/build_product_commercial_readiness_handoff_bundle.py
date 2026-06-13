@@ -1635,6 +1635,43 @@ def build_product_commercial_readiness_handoff_bundle(
                 or []
             )
         ],
+        "production_ai_registry_promotion_priority_operator_receipt_csv": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_operator_receipt_csv",
+            )
+        ),
+        "production_ai_registry_promotion_priority_approval_token_required": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_approval_token_required",
+            )
+        ),
+        "production_ai_registry_promotion_priority_observed_registry_default_residual_mode": _text(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_observed_registry_default_residual_mode",
+            )
+        ),
+        "production_ai_registry_promotion_priority_observed_registry_production_promotion_allowed": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_observed_registry_production_promotion_allowed",
+            )
+            is True
+        ),
+        "production_ai_registry_promotion_priority_observed_registry_customer_facing_mutation_flags_ready": bool(
+            _first_present(
+                ladder_summary,
+                operator_summary,
+                "production_ai_registry_promotion_priority_observed_registry_customer_facing_mutation_flags_ready",
+            )
+            is True
+        ),
         "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": int(
             _first_present(
                 ladder_summary,
@@ -1917,6 +1954,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- production_ai_registry_promotion_operator_receipt_ready: `{s['production_ai_registry_promotion_operator_receipt_ready']}`",
         f"- production_ai_registry_promotion_operator_receipt_csv: `{s['production_ai_registry_promotion_operator_receipt_csv']}`",
         f"- production_ai_registry_promotion_operator_receipt_approval_token_required: `{s['production_ai_registry_promotion_operator_receipt_approval_token_required']}`",
+        f"- production_ai_registry_promotion_priority_status: `{s['production_ai_registry_promotion_priority_status']}`",
+        f"- production_ai_registry_promotion_priority_top_gate_id: `{s['production_ai_registry_promotion_priority_top_gate_id']}`",
+        f"- production_ai_registry_promotion_priority_operator_receipt_csv: `{s['production_ai_registry_promotion_priority_operator_receipt_csv']}`",
+        f"- production_ai_registry_promotion_priority_approval_token_required: `{s['production_ai_registry_promotion_priority_approval_token_required']}`",
+        f"- production_ai_registry_promotion_priority_observed_registry_default_residual_mode: `{s['production_ai_registry_promotion_priority_observed_registry_default_residual_mode']}`",
+        f"- production_ai_registry_promotion_priority_observed_registry_production_promotion_allowed: `{s['production_ai_registry_promotion_priority_observed_registry_production_promotion_allowed']}`",
+        f"- production_ai_registry_promotion_priority_observed_registry_customer_facing_mutation_flags_ready: `{s['production_ai_registry_promotion_priority_observed_registry_customer_facing_mutation_flags_ready']}`",
         f"- first_operator_completion_worker_runtime_receipt_contract_ready: `{s['first_operator_completion_worker_runtime_receipt_contract_ready']}`",
         f"- first_operator_completion_worker_runtime_receipt_required_fields_or_columns: `{';'.join(s['first_operator_completion_worker_runtime_receipt_required_fields_or_columns'])}`",
         f"- first_operator_completion_worker_runtime_receipt_post_environment_next_artifact: `{s['first_operator_completion_worker_runtime_receipt_post_environment_next_artifact']}`",

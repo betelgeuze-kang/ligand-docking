@@ -1086,6 +1086,25 @@ def build_product_commercial_readiness_operator_packet(
                 production_ai_registry_priority.get("registry_promotion_missing_gate_ids")
             )
         ],
+        "production_ai_registry_promotion_priority_operator_receipt_csv": _text(
+            production_ai_registry_priority.get("operator_receipt_csv")
+        ),
+        "production_ai_registry_promotion_priority_approval_token_required": _text(
+            production_ai_registry_priority.get("approval_token_required")
+        ),
+        "production_ai_registry_promotion_priority_observed_registry_default_residual_mode": _text(
+            production_ai_registry_priority.get("observed_registry_default_residual_mode")
+        ),
+        "production_ai_registry_promotion_priority_observed_registry_production_promotion_allowed": bool(
+            production_ai_registry_priority.get("observed_registry_production_promotion_allowed")
+            is True
+        ),
+        "production_ai_registry_promotion_priority_observed_registry_customer_facing_mutation_flags_ready": bool(
+            production_ai_registry_priority.get(
+                "observed_registry_customer_facing_mutation_flags_ready"
+            )
+            is True
+        ),
         "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": _int(
             production_ai_registry_priority.get("observed_registry_trained_model_checkpoint_count")
         ),
@@ -1323,6 +1342,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "## Production AI Registry Promotion Packet",
         "",
         f"- action_id: `{s['production_ai_registry_promotion_action_id']}`",
+        f"- priority_status: `{s['production_ai_registry_promotion_priority_status']}`",
+        f"- priority_top_gate_id: `{s['production_ai_registry_promotion_priority_top_gate_id']}`",
+        f"- priority_operator_receipt_csv: `{s['production_ai_registry_promotion_priority_operator_receipt_csv']}`",
+        f"- priority_approval_token_required: `{s['production_ai_registry_promotion_priority_approval_token_required']}`",
+        f"- priority_observed_registry_default_residual_mode: `{s['production_ai_registry_promotion_priority_observed_registry_default_residual_mode']}`",
+        f"- priority_observed_registry_production_promotion_allowed: `{s['production_ai_registry_promotion_priority_observed_registry_production_promotion_allowed']}`",
+        f"- priority_observed_registry_customer_facing_mutation_flags_ready: `{s['production_ai_registry_promotion_priority_observed_registry_customer_facing_mutation_flags_ready']}`",
         f"- artifact: `{s['production_ai_registry_promotion_action_artifact']}`",
         f"- blocked_by_action_id: `{s['production_ai_registry_promotion_action_blocked_by_action_id']}`",
         f"- packet_ready: `{s['production_ai_registry_promotion_operator_completion_packet_ready']}`",

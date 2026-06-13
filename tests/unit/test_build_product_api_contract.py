@@ -529,6 +529,23 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "production_ai_registry_promotion_priority_status" in operator_packet_keys
     assert "production_ai_registry_promotion_priority_top_gate_id" in operator_packet_keys
     assert "production_ai_registry_promotion_priority_top_priority_bucket" in operator_packet_keys
+    assert "production_ai_registry_promotion_priority_operator_receipt_csv" in operator_packet_keys
+    assert (
+        "production_ai_registry_promotion_priority_approval_token_required"
+        in operator_packet_keys
+    )
+    assert (
+        "production_ai_registry_promotion_priority_observed_registry_default_residual_mode"
+        in operator_packet_keys
+    )
+    assert (
+        "production_ai_registry_promotion_priority_observed_registry_production_promotion_allowed"
+        in operator_packet_keys
+    )
+    assert (
+        "production_ai_registry_promotion_priority_observed_registry_customer_facing_mutation_flags_ready"
+        in operator_packet_keys
+    )
     assert "production_ai_registry_promotion_priority_model_promoted" in operator_packet_keys
     assert "production_ai_return_operator_completion_artifact_path" in operator_packet_keys
     assert "production_ai_return_operator_completion_completion_rule" in operator_packet_keys
@@ -730,6 +747,23 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     assert "production_ai_registry_promotion_priority_status" in handoff_bundle_keys
     assert "production_ai_registry_promotion_priority_top_gate_id" in handoff_bundle_keys
     assert "production_ai_registry_promotion_priority_top_priority_bucket" in handoff_bundle_keys
+    assert "production_ai_registry_promotion_priority_operator_receipt_csv" in handoff_bundle_keys
+    assert (
+        "production_ai_registry_promotion_priority_approval_token_required"
+        in handoff_bundle_keys
+    )
+    assert (
+        "production_ai_registry_promotion_priority_observed_registry_default_residual_mode"
+        in handoff_bundle_keys
+    )
+    assert (
+        "production_ai_registry_promotion_priority_observed_registry_production_promotion_allowed"
+        in handoff_bundle_keys
+    )
+    assert (
+        "production_ai_registry_promotion_priority_observed_registry_customer_facing_mutation_flags_ready"
+        in handoff_bundle_keys
+    )
     assert "production_ai_registry_promotion_priority_model_promoted" in handoff_bundle_keys
     assert "production_ai_return_operator_completion_artifact_path" in handoff_bundle_keys
     assert "production_ai_return_operator_completion_completion_rule" in handoff_bundle_keys

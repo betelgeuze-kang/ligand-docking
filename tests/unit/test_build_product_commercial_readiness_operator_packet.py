@@ -588,6 +588,12 @@ def _registry_priority() -> dict:
                 "production_promotion_allowed",
                 "customer_facing_mutation_flags",
             ],
+            "operator_receipt_csv": "config/production_ai_registry_promotion_operator_receipt_current.csv",
+            "approval_token_required": "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION",
+            "observed_registry_default_residual_mode": "shadow",
+            "observed_registry_production_promotion_allowed": False,
+            "observed_registry_customer_facing_mutation_flags_ready": False,
+            "observed_registry_trained_model_checkpoint_count": 0,
             "top_gate_id": "trained_model_checkpoint_count_positive",
             "top_priority_bucket": "trained_checkpoint_registration_required",
             "top_required_input": "Register a trained production residual checkpoint.",
@@ -965,6 +971,30 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
     assert summary["production_ai_registry_promotion_priority_registry_promotion_ready"] is False
     assert summary["production_ai_registry_promotion_priority_operator_input_required_count"] == 4
     assert summary["production_ai_registry_promotion_priority_missing_gate_count"] == 4
+    assert summary["production_ai_registry_promotion_priority_operator_receipt_csv"] == (
+        "config/production_ai_registry_promotion_operator_receipt_current.csv"
+    )
+    assert summary[
+        "production_ai_registry_promotion_priority_approval_token_required"
+    ] == "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+    assert summary[
+        "production_ai_registry_promotion_priority_observed_registry_default_residual_mode"
+    ] == "shadow"
+    assert (
+        summary[
+            "production_ai_registry_promotion_priority_observed_registry_production_promotion_allowed"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "production_ai_registry_promotion_priority_observed_registry_customer_facing_mutation_flags_ready"
+        ]
+        is False
+    )
+    assert summary[
+        "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count"
+    ] == 0
     assert summary["production_ai_registry_promotion_priority_top_gate_id"] == (
         "trained_model_checkpoint_count_positive"
     )
