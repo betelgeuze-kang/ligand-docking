@@ -337,6 +337,8 @@ REQUIRED_STATUS_KEYS = {
     "cameo_official_result_fetch_preflight_external_state_mutated",
     "cameo_official_result_fetch_preflight_blocker_count",
     "cameo_official_result_fetch_preflight_blockers",
+    "refine_tier_public_benchmark_work_order_apply_write_guard_ready",
+    "refine_tier_public_benchmark_work_order_apply_write_guard_missing_reasons",
     "product_scope_breadth_evidence_receipt_status",
     "product_scope_breadth_evidence_receipt_ready",
     "product_scope_breadth_evidence_receipt_artifact_path",

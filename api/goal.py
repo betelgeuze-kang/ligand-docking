@@ -453,6 +453,27 @@ def _ledger_privacy_scan_release_fields(release: dict[str, Any]) -> dict[str, An
 
 
 def _refine_tier_public_benchmark_release_fields(release: dict[str, Any]) -> dict[str, Any]:
+    write_guard_missing_reasons: list[str] = []
+    if release.get("refine_tier_public_benchmark_work_order_apply_recorded") is not True:
+        write_guard_missing_reasons.append("apply_gate_not_recorded")
+    if release.get("refine_tier_public_benchmark_work_order_apply_work_order_csv_present") is not True:
+        write_guard_missing_reasons.append("work_order_csv_missing")
+    if not release.get("refine_tier_public_benchmark_work_order_apply_target_intake_csv"):
+        write_guard_missing_reasons.append("target_intake_csv_missing")
+    for field, reason in [
+        ("refine_tier_public_benchmark_work_order_apply_candidate_intake_written", "candidate_intake_written"),
+        (
+            "refine_tier_public_benchmark_work_order_apply_candidate_readiness_checked",
+            "candidate_readiness_checked",
+        ),
+        ("refine_tier_public_benchmark_work_order_apply_intake_written", "intake_written"),
+        ("refine_tier_public_benchmark_work_order_apply_write_intake_requested", "write_intake_requested"),
+        ("refine_tier_public_benchmark_work_order_apply_approval_token_present", "approval_token_present"),
+        ("refine_tier_public_benchmark_work_order_apply_approval_token_accepted", "approval_token_accepted"),
+        ("refine_tier_public_benchmark_work_order_apply_external_state_mutated", "external_state_mutated"),
+    ]:
+        if release.get(field) is True:
+            write_guard_missing_reasons.append(reason)
     return {
         "refine_tier_public_benchmark_gate_present": bool(
             release.get("refine_tier_public_benchmark_gate_present") is True
@@ -607,6 +628,12 @@ def _refine_tier_public_benchmark_release_fields(release: dict[str, Any]) -> dic
         ),
         "refine_tier_public_benchmark_work_order_apply_next_required_step": release.get(
             "refine_tier_public_benchmark_work_order_apply_next_required_step", ""
+        ),
+        "refine_tier_public_benchmark_work_order_apply_write_guard_ready": (
+            not write_guard_missing_reasons
+        ),
+        "refine_tier_public_benchmark_work_order_apply_write_guard_missing_reasons": (
+            write_guard_missing_reasons
         ),
     }
 

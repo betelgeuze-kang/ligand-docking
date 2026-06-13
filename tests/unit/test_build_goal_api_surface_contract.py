@@ -284,6 +284,8 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         '"cameo_official_result_fetch_preflight_external_state_mutated": False,'
         '"cameo_official_result_fetch_preflight_blocker_count": 2,'
         '"cameo_official_result_fetch_preflight_blockers": ["operator_decision_missing", "operator_fetch_csv_missing"],'
+        '"refine_tier_public_benchmark_work_order_apply_write_guard_ready": True,'
+        '"refine_tier_public_benchmark_work_order_apply_write_guard_missing_reasons": [],'
         '"product_scope_breadth_evidence_receipt_status": "blocked_product_scope_breadth_evidence_receipt",'
         '"product_scope_breadth_evidence_receipt_ready": False,'
         '"product_scope_breadth_evidence_receipt_artifact_path": PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_ARTIFACT,'
