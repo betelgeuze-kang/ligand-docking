@@ -12,6 +12,9 @@ def _write_json(path: Path, payload: dict) -> None:
 
 
 def _source_of_truth_ready() -> dict:
+    spec = next(
+        spec for spec in mod.FINAL_GATE_SPECS if spec["gate_id"] == "product_release_source_of_truth_gate"
+    )
     return {
         "summary": {
             "status": "product_release_source_of_truth_gate_ready",
@@ -19,6 +22,7 @@ def _source_of_truth_ready() -> dict:
             "blocker_count": 0,
             "stale_artifact_count": 0,
             "readme_drift_count": 0,
+            **dict(spec.get("required_int_exact_fields", {})),
         }
     }
 
@@ -148,6 +152,39 @@ def test_refresh_final_gate_blocks_missing_release_decision_bottleneck_receipt_l
     assert "goal_bottleneck_briefing_full_commercial_receipts_recorded" in decision_row[
         "missing_true_fields"
     ]
+
+
+def test_refresh_final_gate_blocks_source_of_truth_coverage_drift(tmp_path: Path) -> None:
+    source_payload = _source_of_truth_ready()
+    source_payload["summary"]["row_count"] -= 1
+    _write_json(
+        tmp_path / "runs" / "product_release_source_of_truth_gate_current.json",
+        source_payload,
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_release_decision_gate_current.json",
+        _release_decision_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_operator_action_board_current.json",
+        _action_board_ready(),
+    )
+
+    payload = mod.run_product_release_current_refresh(
+        execute=True,
+        root=tmp_path,
+        commands=[],
+    )
+
+    summary = payload["summary"]
+    source_row = next(
+        row for row in payload["verification_rows"] if row["gate_id"] == "product_release_source_of_truth_gate"
+    )
+    assert summary["status"] == "blocked_product_release_current_refresh"
+    assert summary["final_gate_verification_ready"] is False
+    assert summary["final_gate_blocker_count"] == 1
+    assert source_row["status"] == "fail"
+    assert source_row["failed_int_exact_fields"] == ["row_count"]
 
 
 def test_refresh_final_gate_blocks_stale_action_board_release_decision_echo(

@@ -29,6 +29,7 @@ def test_remaining_work_doc_tracks_current_release_metrics() -> None:
     text = _doc_text()
     bundle = product_release_bundle.build_release_bundle(release_id="doc-metric-check")
     refresh = _summary("runs/product_release_current_refresh_plan_current.json")
+    source = _summary("runs/product_release_source_of_truth_gate_current.json")
     action_board = _summary("runs/goal_operator_action_board_current.json")
     command_count = len(source_of_truth.RELEASE_REFRESH_COMMANDS)
 
@@ -38,6 +39,10 @@ def test_remaining_work_doc_tracks_current_release_metrics() -> None:
     assert f"`product_release_current_refresh_verified`, `command_count={command_count}`" in text
     assert f"`executed_count={command_count}`" in text
     assert f"`release_refresh_command_count={command_count}`" in text
+    assert f"`row_count={source['row_count']}`" in text
+    assert f"`artifact_row_count={source['artifact_row_count']}`" in text
+    assert f"`semantic_status_row_count={source['semantic_status_row_count']}`" in text
+    assert f"`readme_row_count={source['readme_row_count']}`" in text
     assert f"`final_gate_count={refresh['final_gate_count']}`" in text
     assert f"`final_gate_blocker_count={refresh['final_gate_blocker_count']}`" in text
     assert (

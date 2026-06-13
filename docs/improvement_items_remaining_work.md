@@ -712,7 +712,11 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   bottleneck briefing, full commercial matrix, release bundle, handoff bundle,
   privacy scan, source-of-truth gate까지 downstream 산출물을 한 번 더 재생성하고,
   refresh runner final gate는 source-of-truth, release decision, action board
-  3개 surface를 검증한다. action board echo는
+  3개 surface를 검증한다. source-of-truth final gate는 `row_count=96`,
+  `pass_count=96`, `artifact_row_count=64`, `semantic_status_row_count=30`,
+  `readme_row_count=2`, `release_refresh_command_count=89`를 exact-check해
+  품질 receipt나 downstream readiness row가 조용히 빠지는 회귀를 막는다.
+  action board echo는
   `goal_release_decision_gate_status=goal_release_ready`,
   `goal_release_allowed=true`, `goal_release_blocker_count=0`이어야 하므로
   operator-facing 보드가 한 cycle 전 release-decision 상태를 들고 있어도

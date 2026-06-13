@@ -604,6 +604,11 @@ def test_product_release_current_refresh_blocks_if_final_gate_is_blocked(tmp_pat
 
 
 def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_path: Path, monkeypatch) -> None:
+    source_gate_spec = next(
+        spec
+        for spec in refresh_mod.FINAL_GATE_SPECS
+        if spec["gate_id"] == "product_release_source_of_truth_gate"
+    )
     _write_json(
         tmp_path / "runs" / "product_release_source_of_truth_gate_current.json",
         {
@@ -613,6 +618,7 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
                 "blocker_count": 0,
                 "stale_artifact_count": 0,
                 "readme_drift_count": 0,
+                **dict(source_gate_spec.get("required_int_exact_fields", {})),
             }
         },
     )
@@ -865,6 +871,11 @@ def test_product_release_current_refresh_blocks_timed_out_command(tmp_path: Path
 
 def test_product_release_current_refresh_uses_command_timeout_hint(tmp_path: Path, monkeypatch) -> None:
     observed: list[int] = []
+    source_gate_spec = next(
+        spec
+        for spec in refresh_mod.FINAL_GATE_SPECS
+        if spec["gate_id"] == "product_release_source_of_truth_gate"
+    )
 
     def fake_run(command: str, *, cwd: Path, timeout_seconds: int) -> dict:
         observed.append(timeout_seconds)
@@ -880,6 +891,7 @@ def test_product_release_current_refresh_uses_command_timeout_hint(tmp_path: Pat
                 "blocker_count": 0,
                 "stale_artifact_count": 0,
                 "readme_drift_count": 0,
+                **dict(source_gate_spec.get("required_int_exact_fields", {})),
             }
         },
     )

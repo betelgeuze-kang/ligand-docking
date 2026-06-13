@@ -31,6 +31,14 @@ FINAL_GATE_SPECS = [
         "required_status": "product_release_source_of_truth_gate_ready",
         "required_true_fields": ["release_source_of_truth_ready"],
         "required_zero_fields": ["blocker_count", "stale_artifact_count", "readme_drift_count"],
+        "required_int_exact_fields": {
+            "row_count": 96,
+            "artifact_row_count": 64,
+            "semantic_status_row_count": 30,
+            "readme_row_count": 2,
+            "pass_count": 96,
+            "release_refresh_command_count": 89,
+        },
     },
     {
         "gate_id": "goal_release_decision_gate",
