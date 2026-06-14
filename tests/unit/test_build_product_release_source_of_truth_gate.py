@@ -2982,11 +2982,35 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         in engine_field_worksheet_status_spec["required_true_fields"]
     )
     assert (
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_artifact_present"
+        in engine_field_worksheet_status_spec["required_true_fields"]
+    )
+    assert (
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_csv_present"
+        in engine_field_worksheet_status_spec["required_true_fields"]
+    )
+    assert (
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_required"
+        in engine_field_worksheet_status_spec["required_true_fields"]
+    )
+    assert (
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_artifact_present"
         in engine_field_worksheet_status_spec["required_true_fields"]
     )
     assert (
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
+        in engine_field_worksheet_status_spec["required_true_fields"]
+    )
+    assert (
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_artifact_present"
+        in engine_field_worksheet_status_spec["required_true_fields"]
+    )
+    assert (
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_csv_present"
+        in engine_field_worksheet_status_spec["required_true_fields"]
+    )
+    assert (
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_required"
         in engine_field_worksheet_status_spec["required_true_fields"]
     )
     assert engine_field_worksheet_status_spec["required_int_exact_fields"][
@@ -3086,6 +3110,39 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total"
     ] == 0
     assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_row_count"
+    ] == 51
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_template_count"
+    ] == 51
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_pass_row_count"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count"
+    ] == 51
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approved_payload_count"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count"
+    ] == 51
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_verified_count"
+    ] == 51
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_payload_write_allowed"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocker_count"
+    ] == 1
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
         "public_benchmark_statistical_support_coordinate_fetch_r4_row_count"
     ] == 17
     assert engine_field_worksheet_status_spec["required_int_exact_fields"][
@@ -3106,6 +3163,39 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert engine_field_worksheet_status_spec["required_int_exact_fields"][
         "public_benchmark_statistical_support_coordinate_fetch_r4_download_executed"
     ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count"
+    ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_required_r4_review_count"
+    ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count"
+    ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count"
+    ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_download_executed"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocker_count"
+    ] == 1
     assert engine_field_worksheet_status_spec["required_text_exact_fields"][
         "public_benchmark_statistical_support_work_order_status"
     ] == "refine_tier_public_benchmark_statistical_support_work_order_ready"
@@ -3126,10 +3216,43 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_metric_source_templates_status"
     ] == "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
     assert engine_field_worksheet_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_status"
+    ] == "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+    assert engine_field_worksheet_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_template_id"
+    ] == "r9_statistical_support_metric_source_template_001"
+    assert engine_field_worksheet_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_metric_name"
+    ] == "dockq"
+    assert engine_field_worksheet_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    assert engine_field_worksheet_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required"
+    ] == "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+    assert engine_field_worksheet_status_spec["required_text_exact_fields"][
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status"
     ] == "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
     assert engine_field_worksheet_status_spec["required_text_exact_fields"][
         "public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required"
+    ] == "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+    assert engine_field_worksheet_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_status"
+    ] == "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt"
+    assert engine_field_worksheet_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id"
+    ] == "r9_statistical_support_coordinate_fetch_001"
+    assert engine_field_worksheet_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_target_id"
+    ] == "4ivc"
+    assert engine_field_worksheet_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_pose_id"
+    ] == "4ivc_20"
+    assert engine_field_worksheet_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    assert engine_field_worksheet_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approval_token_required"
     ] == "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
     assert (
         engine_field_worksheet_status_spec["required_text_exact_fields"]["next_required_step"]
@@ -3137,14 +3260,18 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "(r4_ready_for_review_row_count=17, r4_blocked_row_count=0, "
         "fetch_required_row_count=17, "
         "approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD) "
-        "and, after explicit operator approval, "
+        "and fill/approve the 17-row coordinate fetch operator receipt "
+        "(receipt_blocked_row_count=17, fingerprint_verified_count=17); "
+        "after explicit operator approval, "
         "stage and validate coordinates for 17 statistical-support candidates "
         "(coordinate_validation_pass_row_count=0, "
         "metric_materialization_candidate_ready_count=0, "
         "required_input_artifacts=34/17/17, "
-        "planned_metric_source_payload_count=51); then materialize DockQ/lDDT-PLI/internal "
-        "DeltaG source payloads and rerun bootstrap Spearman p05 before any R9 claim receipt "
-        "or canonical intake promotion."
+        "planned_metric_source_payload_count=51); then fill/approve the 51-row metric "
+        "payload operator receipt (receipt_blocked_row_count=51, "
+        "approval_token_required=APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS) "
+        "and materialize DockQ/lDDT-PLI/internal DeltaG source payloads before rerunning "
+        "bootstrap Spearman p05 ahead of any R9 claim receipt or canonical intake promotion."
     )
     engine_staging_apply_status_spec = next(
         spec
@@ -3158,6 +3285,22 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert (
         "field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready"
+        in engine_staging_apply_status_spec["required_true_fields"]
+    )
+    assert (
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_artifact_present"
+        in engine_staging_apply_status_spec["required_true_fields"]
+    )
+    assert (
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_required"
+        in engine_staging_apply_status_spec["required_true_fields"]
+    )
+    assert (
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_artifact_present"
+        in engine_staging_apply_status_spec["required_true_fields"]
+    )
+    assert (
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_required"
         in engine_staging_apply_status_spec["required_true_fields"]
     )
     assert engine_staging_apply_status_spec["required_int_exact_fields"][
@@ -3206,6 +3349,72 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "field_worksheet_public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total"
     ] == 0
     assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_row_count"
+    ] == 51
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_template_count"
+    ] == 51
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_pass_row_count"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count"
+    ] == 51
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_approved_payload_count"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count"
+    ] == 51
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_verified_count"
+    ] == 51
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_payload_write_allowed"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocker_count"
+    ] == 1
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count"
+    ] == 17
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_required_r4_review_count"
+    ] == 17
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count"
+    ] == 17
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count"
+    ] == 17
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_download_executed"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocker_count"
+    ] == 1
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
         "public_benchmark_intake_write_allowed"
     ] == 0
     assert engine_staging_apply_status_spec["required_text_exact_fields"][
@@ -3220,6 +3429,45 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert engine_staging_apply_status_spec["required_text_exact_fields"][
         "field_worksheet_public_benchmark_statistical_support_metric_source_templates_status"
     ] == "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+    assert engine_staging_apply_status_spec["required_text_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_status"
+    ] == "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+    assert engine_staging_apply_status_spec["required_text_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_template_id"
+    ] == "r9_statistical_support_metric_source_template_001"
+    assert engine_staging_apply_status_spec["required_text_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_metric_name"
+    ] == "dockq"
+    assert engine_staging_apply_status_spec["required_text_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    assert engine_staging_apply_status_spec["required_text_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required"
+    ] == "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+    assert engine_staging_apply_status_spec["required_text_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_status"
+    ] == "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt"
+    assert engine_staging_apply_status_spec["required_text_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id"
+    ] == "r9_statistical_support_coordinate_fetch_001"
+    assert engine_staging_apply_status_spec["required_text_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_target_id"
+    ] == "4ivc"
+    assert engine_staging_apply_status_spec["required_text_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_pose_id"
+    ] == "4ivc_20"
+    assert engine_staging_apply_status_spec["required_text_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    assert engine_staging_apply_status_spec["required_text_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approval_token_required"
+    ] == "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+    assert "fill/approve 17 coordinate fetch receipt rows" in engine_staging_apply_status_spec[
+        "required_text_exact_fields"
+    ]["next_required_step"]
+    assert "fill/approve 51 metric payload receipt rows" in engine_staging_apply_status_spec[
+        "required_text_exact_fields"
+    ]["next_required_step"]
     runner_receipt_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS

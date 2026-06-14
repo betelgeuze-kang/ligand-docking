@@ -3227,8 +3227,14 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_metric_materialization_readiness_ready",
             "public_benchmark_statistical_support_metric_source_templates_artifact_present",
             "public_benchmark_statistical_support_metric_source_templates_ready",
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_artifact_present",
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_csv_present",
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_required",
             "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_artifact_present",
             "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready",
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_artifact_present",
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_csv_present",
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_required",
         ],
         "required_int_exact_fields": {
             "operator_fill_complete": 0,
@@ -3292,6 +3298,21 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_metric_source_templates_placeholder_license_ok_count": 51,
             "public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total": 0,
             "public_benchmark_statistical_support_metric_source_templates_canonical_intake_promotion_allowed": 0,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready": 0,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_template_count": 51,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_pass_row_count": 0,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approved_payload_count": 0,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_pass_payload_row_count": 0,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_verified_count": 51,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count": 0,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_payload_write_allowed": 0,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_canonical_intake_promotion_allowed": 0,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_claim_promotion_allowed": 0,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_external_state_mutated": 0,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocker_count": 1,
             "public_benchmark_statistical_support_coordinate_fetch_r4_row_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": 0,
@@ -3301,6 +3322,20 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download": 0,
             "public_benchmark_statistical_support_coordinate_fetch_r4_download_executed": 0,
             "public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_required_r4_review_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_download_executed": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_canonical_intake_promotion_allowed": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_claim_promotion_allowed": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_external_state_mutated": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocker_count": 1,
             "public_benchmark_metric_evidence_missing_required_input_artifact_row_count": 0,
             "public_benchmark_metric_evidence_missing_required_input_artifact_sha256_row_count": 0,
             "claim_promotion_allowed": 0,
@@ -3336,10 +3371,43 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_metric_source_templates_status": (
                 "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
             ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_status": (
+                "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+            ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_template_id": (
+                "r9_statistical_support_metric_source_template_001"
+            ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_metric_name": (
+                "dockq"
+            ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required": (
+                "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+            ),
             "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status": (
                 "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
             ),
             "public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required": (
+                "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+            ),
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_status": (
+                "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt"
+            ),
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id": (
+                "r9_statistical_support_coordinate_fetch_001"
+            ),
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_target_id": (
+                "4ivc"
+            ),
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_pose_id": (
+                "4ivc_20"
+            ),
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approval_token_required": (
                 "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
             ),
             "next_required_step": (
@@ -3347,14 +3415,18 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "(r4_ready_for_review_row_count=17, r4_blocked_row_count=0, "
                 "fetch_required_row_count=17, "
                 "approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD) "
-                "and, after explicit operator approval, "
+                "and fill/approve the 17-row coordinate fetch operator receipt "
+                "(receipt_blocked_row_count=17, fingerprint_verified_count=17); "
+                "after explicit operator approval, "
                 "stage and validate coordinates for 17 statistical-support candidates "
                 "(coordinate_validation_pass_row_count=0, "
                 "metric_materialization_candidate_ready_count=0, "
                 "required_input_artifacts=34/17/17, "
-                "planned_metric_source_payload_count=51); then materialize DockQ/lDDT-PLI/internal "
-                "DeltaG source payloads and rerun bootstrap Spearman p05 before any R9 claim receipt "
-                "or canonical intake promotion."
+                "planned_metric_source_payload_count=51); then fill/approve the 51-row metric "
+                "payload operator receipt (receipt_blocked_row_count=51, "
+                "approval_token_required=APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS) "
+                "and materialize DockQ/lDDT-PLI/internal DeltaG source payloads before rerunning "
+                "bootstrap Spearman p05 ahead of any R9 claim receipt or canonical intake promotion."
             ),
             "approval_token_required": "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT",
         },
@@ -3374,6 +3446,10 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "field_worksheet_present",
             "field_worksheet_public_benchmark_statistical_support_metric_source_templates_artifact_present",
             "field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready",
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_artifact_present",
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_required",
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_artifact_present",
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_required",
         ],
         "required_int_exact_fields": {
             "staging_receipt_row_count": 6,
@@ -3406,6 +3482,29 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
             "field_worksheet_public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count": 0,
             "field_worksheet_public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total": 0,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready": 0,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_row_count": 51,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_template_count": 51,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_pass_row_count": 0,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count": 51,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_approved_payload_count": 0,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_pass_payload_row_count": 0,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count": 51,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_verified_count": 51,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count": 0,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_payload_write_allowed": 0,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocker_count": 1,
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready": 0,
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count": 17,
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_required_r4_review_count": 17,
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count": 0,
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count": 17,
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count": 0,
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count": 17,
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count": 0,
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download": 0,
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_download_executed": 0,
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocker_count": 1,
             "approval_token_present": 0,
             "approval_token_accepted": 0,
             "public_benchmark_approval_token_present": 0,
@@ -3449,6 +3548,49 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "field_worksheet_top_priority_bucket": "public_benchmark_work_order_apply_required",
             "field_worksheet_public_benchmark_statistical_support_metric_source_templates_status": (
                 "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+            ),
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_status": (
+                "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+            ),
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_template_id": (
+                "r9_statistical_support_metric_source_template_001"
+            ),
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_metric_name": (
+                "dockq"
+            ),
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required": (
+                "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+            ),
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_status": (
+                "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt"
+            ),
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id": (
+                "r9_statistical_support_coordinate_fetch_001"
+            ),
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_target_id": (
+                "4ivc"
+            ),
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_pose_id": (
+                "4ivc_20"
+            ),
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approval_token_required": (
+                "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+            ),
+            "next_required_step": (
+                "Materialized public benchmark science candidate is ready but not claim-grade: "
+                "review the R4 coordinate-fetch preflight, fill/approve 17 coordinate fetch "
+                "receipt rows (APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD), then "
+                "validate the 17 statistical-support coordinates, then replace 51 blocked "
+                "metric source template placeholders and "
+                "fill/approve 51 metric payload receipt rows "
+                "(APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS) before any canonical "
+                "R9 receipt or public benchmark intake promotion."
             ),
         },
     },

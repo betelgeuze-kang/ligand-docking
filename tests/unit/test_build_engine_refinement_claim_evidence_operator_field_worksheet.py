@@ -631,6 +631,63 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
         in summary["source_artifacts"]
     )
     assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_artifact_present"
+    ] is True
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready"
+    ] is False
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_status"
+    ] == (
+        "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+    )
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_row_count"
+    ] == 51
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_template_count"
+    ] == 51
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_pass_row_count"
+    ] == 0
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count"
+    ] == 51
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approved_payload_count"
+    ] == 0
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count"
+    ] == 51
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_required"
+    ] is True
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_verified_count"
+    ] == 51
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count"
+    ] == 0
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_payload_write_allowed"
+    ] is False
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_template_id"
+    ] == "r9_statistical_support_metric_source_template_001"
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_metric_name"
+    ] == "dockq"
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required"
+    ] == "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+    assert (
+        mod.DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON
+        in summary["source_artifacts"]
+    )
+    assert summary[
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_artifact_present"
     ] is True
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"] is True
@@ -656,8 +713,71 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required"] == (
         "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
     )
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_artifact_present"
+    ] is True
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready"
+    ] is False
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_status"
+    ] == (
+        "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt"
+    )
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_required_r4_review_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count"
+    ] == 0
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count"
+    ] == 0
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_required"
+    ] is True
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count"
+    ] == 0
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download"
+    ] is False
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_download_executed"
+    ] is False
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id"
+    ] == "r9_statistical_support_coordinate_fetch_001"
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_target_id"
+    ] == "4ivc"
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_pose_id"
+    ] == "4ivc_20"
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approval_token_required"
+    ] == "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+    assert (
+        mod.DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_OPERATOR_RECEIPT_JSON
+        in summary["source_artifacts"]
+    )
     assert "required_input_artifacts=34/17/17" in summary["next_required_step"]
     assert "r4_ready_for_review_row_count=17" in summary["next_required_step"]
+    assert "fill/approve the 17-row coordinate fetch operator receipt" in summary["next_required_step"]
+    assert "fill/approve the 51-row metric payload operator receipt" in summary["next_required_step"]
+    assert "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS" in summary["next_required_step"]
     assert "approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD" in summary[
         "next_required_step"
     ]
