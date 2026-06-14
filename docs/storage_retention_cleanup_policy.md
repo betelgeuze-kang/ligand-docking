@@ -87,6 +87,18 @@ The current intended sequence is:
 4. Request a separate operator approval before any deletion of protected
    evidence roots or historical payloads.
 
+The current compact evidence register builder is:
+
+```bash
+python3 tools/build_storage_essential_evidence_register.py
+```
+
+It inventories `models/` and `casp17/` by evidence role, top domain, size,
+source-of-truth reference status, sha256 status, and keep policy. Large files
+are intentionally marked `deferred_file_above_hash_max_bytes` or
+`deferred_hash_row_limit_reached` instead of being aggressively hashed during a
+disk-pressure review.
+
 ## Required Cleanup Flow
 
 1. Build a cleanup review manifest that lists candidate paths, sizes, reason,
@@ -109,6 +121,7 @@ Run these after a cleanup plan is generated or applied:
 
 ```bash
 python3 tools/build_storage_retention_manifest.py
+python3 tools/build_storage_essential_evidence_register.py
 python3 tools/build_product_release_source_of_truth_gate.py
 python3 scripts/check_independent_product_readiness.py
 git status --short --branch

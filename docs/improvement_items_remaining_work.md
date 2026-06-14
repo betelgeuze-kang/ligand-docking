@@ -2718,6 +2718,20 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   즉 `models/`와 `casp17/`는 삭제 후보가 아니라 compact 필수 증거 register
   작성 대상이다. 현재 결정 요약은
   `docs/storage_retention_current_review.md`에 저장했다.
+- `tools/build_storage_essential_evidence_register.py`는 `models/`, `casp17/`의
+  compact 필수 증거 register를 read-only로 생성한다. 최신 local register는
+  `runs/storage_essential_evidence_register_current.{json,csv,md}`이며
+  `file_count=21847`, `total_size_human=9.78 GiB`,
+  `high_priority_file_count=10789`, `models_file_count=1463`,
+  `models_size_human=5.92 GiB`, `casp17_file_count=20384`,
+  `casp17_size_human=3.86 GiB`, `sha256_recorded_count=200`,
+  `sha256_deferred_count=21647`이다. Top domains는
+  `models/curriculum_active_learning_continuous` 4.35 GiB,
+  `casp17/runs` 1.46 GiB,
+  `casp17/massivefold_representative_viewers` 1.24 GiB다.
+  `delete_executed=false`, `archive_executed=false`,
+  `externalize_executed=false`, `external_state_mutated=false`라 실제 정리는
+  아직 수행하지 않았다.
 - `tools/product/build_storage_residual_cleanup_status.py`와
   `runs/storage_residual_cleanup_status_current.json`은 selected heavy path 9개를
   read-only로 측정한다. 최신 상태는
@@ -2751,8 +2765,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   payload가 같은 tree에 공존한다. 따라서 단순 `mv /tmp` 또는 대량 삭제는
   재현성/claim evidence를 깨뜨릴 수 있다.
 - 추가 cleanup 실행은 여전히 operator-approved 별도 계획이 필요하다. 다만
-  다음 실행의 선행 조건은 임시 대피가 아니라 `models/`, `casp17/`의 compact
-  필수 증거 register 작성이다.
+  다음 실행의 선행 조건은 임시 대피가 아니라 생성된 essential-evidence
+  register에서 selected checkpoint와 final CASP17 target/viewer/validation
+  evidence를 확정하는 것이다.
 
 **필요 작업**
 - storage residual status는 1차 생성 완료.
@@ -2762,10 +2777,10 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 - Final PDB/mmCIF, top representative, sha256 manifest, viewer index,
   validation report 보존.
 - 다음 cleanup은 `docs/storage_retention_cleanup_policy.md`의 keep set 기준으로
-  보존 manifest와 compact essential-evidence register를 먼저 만들고,
-  current source-of-truth reference가 없는 transient/regenerable 항목만 operator
-  approval 후 삭제한다. `/tmp` 임시 대피나 bulk externalize는 현재 기본 경로가
-  아니다.
+  보존 manifest와 compact essential-evidence register를 먼저 검토하고,
+  selected checkpoint/final CASP17 evidence register 밖에 남는
+  transient/regenerable 항목만 operator approval 후 삭제한다. `/tmp` 임시 대피나
+  bulk externalize는 현재 기본 경로가 아니다.
 
 ### J. Tools 비대 (1,575 top-level wrapper/tool files)
 
