@@ -49,6 +49,9 @@ REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_APPLY_COMMAND 
     "python3 tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py "
     "--mode preview"
 )
+REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_COMMAND = (
+    "python3 tools/product/build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight.py"
+)
 
 RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_accuracy_parity_scorecard.py",
@@ -120,6 +123,7 @@ RELEASE_REFRESH_COMMANDS = [
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_INTAKE_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_PLAN_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_APPLY_COMMAND,
+    REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_COMMAND,
     "python3 tools/product/build_engine_refinement_tier_readiness.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py",
@@ -987,6 +991,22 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "tools/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py",
             "tools/product/fetch_public_benchmark_native_structure.py",
             "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_current.json",
+        ],
+    },
+    {
+        "artifact_id": "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight",
+        "artifact_path": (
+            "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json"
+        ),
+        "builder_command": (
+            REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_COMMAND
+        ),
+        "depends_on": [
+            "tools/product/build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight.py",
+            "tools/build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight.py",
+            "tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py",
+            "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_current.json",
         ],
     },
     {
@@ -2495,6 +2515,68 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "next_required_step": (
                 "Set APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD as the approval token and "
                 "rerun with --mode execute, then rebuild coordinate intake validation."
+            ),
+        },
+    },
+    {
+        "artifact_id": "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_semantic_ready",
+        "artifact_path": (
+            "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json"
+        ),
+        "builder_command": (
+            REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_COMMAND
+        ),
+        "required_status": (
+            "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
+        ),
+        "required_true_fields": [
+            "r4_preflight_ready",
+            "operator_approval_required",
+            "operator_confirmation_required",
+            "fetch_plan_present",
+            "fetch_plan_ready",
+            "fetch_apply_present",
+            "fetch_apply_preview_ready",
+            "post_fetch_validation_supported",
+            "required_r4_fields_present",
+        ],
+        "required_int_exact_fields": {
+            "authorized_for_external_download": 0,
+            "approval_token_present": 0,
+            "approval_token_accepted": 0,
+            "execute_command_count": 1,
+            "required_r4_field_count": 6,
+            "r4_row_count": 17,
+            "ready_for_r4_review_row_count": 17,
+            "blocked_r4_row_count": 0,
+            "target_row_count": 17,
+            "source_url_primary_row_count": 17,
+            "staging_destination_row_count": 17,
+            "missing_r4_field_row_count": 0,
+            "download_executed": 0,
+            "canonical_intake_promotion_allowed": 0,
+            "external_state_mutated": 0,
+            "blocker_count": 0,
+        },
+        "required_text_exact_fields": {
+            "fetch_plan": (
+                "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_current.json"
+            ),
+            "fetch_apply": (
+                "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_current.json"
+            ),
+            "approval_token_required": "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD",
+            "required_r4_fields": "target;action;impact;risk;rollback;verification",
+            "execute_command": (
+                "python3 tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py "
+                "--mode execute --run-post-fetch-validation "
+                "--approval-token APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+            ),
+            "next_required_step": (
+                "Present Target/Action/Impact/Risk/Rollback/Verification for the 17 public coordinate "
+                "fetches to the operator; only after explicit approval run `python3 tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py "
+                "--mode execute --run-post-fetch-validation --approval-token APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`, "
+                "then review coordinate validation before metric source materialization."
             ),
         },
     },

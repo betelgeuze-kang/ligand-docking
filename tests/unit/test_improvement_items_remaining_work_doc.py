@@ -277,6 +277,21 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     )
     assert "`approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`" in text
     assert "`--mode execute --run-post-fetch-validation`" in text
+    assert (
+        "`runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json`"
+        in text
+    )
+    assert (
+        "`refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready`"
+        in text
+    )
+    assert "`r4_preflight_ready=true`" in text
+    assert "`r4_row_count=17`" in text
+    assert "`ready_for_r4_review_row_count=17`" in text
+    assert "`blocked_r4_row_count=0`" in text
+    assert "`required_r4_fields=target;action;impact;risk;rollback;verification`" in text
+    assert "`execute_command_count=1`" in text
+    assert "`authorized_for_external_download=false`" in text
     assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
     assert "`runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`" in text
     assert "`Fill 17 additional reviewed public benchmark-pair expansion slots`" in text
