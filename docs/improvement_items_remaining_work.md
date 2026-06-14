@@ -315,18 +315,27 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `public_benchmark_statistical_support_metric_materialization_row_count=17`,
   `public_benchmark_statistical_support_metric_materialization_candidate_ready_count=0`,
   `public_benchmark_statistical_support_metric_materialization_candidate_blocked_count=17`,
+  `public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready=false`,
+  `public_benchmark_statistical_support_metric_materialization_required_input_artifact_count=34`,
+  `public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count=17`,
+  `public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count=17`,
+  `public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count=17`,
   `public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count=0`,
   `public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count=17`,
   `public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count=0`,
   `public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count=51`,
   `public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`,
+  `public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count=11`,
+  `public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields=metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;operator_id;reviewed_at_utc;license_ok;external_engine_calls`,
   `blocker_count=6`다. 추가 blocker는
   `openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized`로,
   17개 statistical-support 후보의 coordinate validation/materialization이 아직
   닫히지 않았음을 accuracy frontier에서 직접 표시한다. 즉 상용 parity claim의 과학 병목은 더 이상 단일 metric
   failure가 아니라 GPCR formal claim/router approval, R9 public benchmark/evidence
   receipt 부재, materialized R9 후보의 통계 support 부족, 그리고 17개 후보의
-  DockQ/lDDT-PLI/internal ΔG source payload 51개 미생성으로 분리된다.
+  DockQ/lDDT-PLI/internal ΔG source payload 51개 미생성, 그리고 이 payload가 묶어야 할
+  ligand/receptor 입력 artifact 34개 중 receptor coordinate artifact 17개 미확정으로
+  분리된다.
   R9 쪽은 public experimental ΔG가 pAffinity에서
   선채움됐고 ligand pose artifact 8개도 로컬에 있으며, 2026-06-14에는 RCSB
   public PDB coordinate 8개를 로컬 dataset 경로에 배치해 receptor/complex coordinate
@@ -523,17 +532,27 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `metric_materialization_row_count=17`,
   `metric_materialization_candidate_ready_count=0`,
   `metric_materialization_candidate_blocked_count=17`,
+  `metric_materialization_input_artifact_contract_ready=false`,
+  `required_metric_input_artifact_count=34`,
+  `present_required_metric_input_artifact_count=17`,
+  `missing_required_metric_input_artifact_count=17`,
+  `missing_required_metric_input_artifact_row_count=17`,
   `coordinate_validation_pass_row_count=0`,
   `coordinate_validation_blocked_row_count=17`,
   `planned_metric_source_payload_count=51`,
   `existing_metric_source_payload_count=0`,
   `required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`,
+  `required_metric_source_payload_fields=metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;operator_id;reviewed_at_utc;license_ok;external_engine_calls`,
   `ligand_pose_artifact_present_count=17`,
   `experimental_deltaG_prefilled_count=17`,
   `claim_grade_statistical_support_ready=false`,
   `canonical_intake_promotion_allowed=false`를 기록한다. 따라서 좌표 다운로드가 승인되어도
   17개 coordinate validation pass가 먼저 닫히기 전에는 DockQ/lDDT-PLI/internal
-  ΔG source materialization과 bootstrap Spearman p05 재검증으로 넘어가지 않는다.
+  ΔG source materialization과 bootstrap Spearman p05 재검증으로 넘어가지 않는다. 이
+  readiness는 각 candidate가 생성할 3개 metric payload의 required schema와
+  ligand/receptor input artifact binding도 함께 기록하므로, 승인 후에도 빈 payload
+  파일이나 receptor coordinate를 포함하지 않는 payload가 상용 parity evidence로
+  승격되지 않는다.
   `runs/engine_refinement_claim_evidence_priority_packet_current.json`과
   `runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`도 이
   work-order와 metric materialization readiness를 source artifact로 읽어 top operator
@@ -544,6 +563,9 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_row_count=17`,
   `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_ready_count=0`,
   `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_blocked_count=17`,
+  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_input_artifact_count=34`,
+  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count=17`,
+  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count=17`,
   `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count=0`,
   `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count=51`,
   `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count=0`,
@@ -2961,6 +2983,10 @@ row를 확인하고 승인 토큰 실행을 허용하는 것이다.
 metric materialization readiness도 `metric_materialization_row_count=17`,
 `metric_materialization_candidate_ready_count=0`,
 `metric_materialization_candidate_blocked_count=17`,
+`metric_materialization_input_artifact_contract_ready=false`,
+`required_metric_input_artifact_count=34`,
+`present_required_metric_input_artifact_count=17`,
+`missing_required_metric_input_artifact_count=17`,
 `planned_metric_source_payload_count=51`,
 `existing_metric_source_payload_count=0`으로 고정되어, 승인 이후에도 17개 좌표
 validation pass가 먼저 닫혀야 DockQ/lDDT-PLI/internal ΔG source payload 생성과

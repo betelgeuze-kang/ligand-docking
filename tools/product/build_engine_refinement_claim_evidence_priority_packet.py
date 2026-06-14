@@ -199,6 +199,9 @@ def _next_operator_step(
     public_statistical_support_metric_materialization_row_count: int,
     public_statistical_support_metric_materialization_candidate_ready_count: int,
     public_statistical_support_metric_materialization_coordinate_validation_pass_row_count: int,
+    public_statistical_support_metric_materialization_required_input_artifact_count: int,
+    public_statistical_support_metric_materialization_present_required_input_artifact_count: int,
+    public_statistical_support_metric_materialization_missing_required_input_artifact_count: int,
     public_statistical_support_metric_materialization_planned_metric_source_payload_count: int,
     public_statistical_support_metric_materialization_next_required_step: str,
 ) -> str:
@@ -219,6 +222,10 @@ def _next_operator_step(
                         f"{public_statistical_support_metric_materialization_coordinate_validation_pass_row_count}, "
                         "metric_materialization_candidate_ready_count="
                         f"{public_statistical_support_metric_materialization_candidate_ready_count}, "
+                        "required_input_artifacts="
+                        f"{public_statistical_support_metric_materialization_required_input_artifact_count}/"
+                        f"{public_statistical_support_metric_materialization_present_required_input_artifact_count}/"
+                        f"{public_statistical_support_metric_materialization_missing_required_input_artifact_count}, "
                         "planned_metric_source_payload_count="
                         f"{public_statistical_support_metric_materialization_planned_metric_source_payload_count}); "
                         "then materialize DockQ/lDDT-PLI/internal DeltaG source payloads and rerun bootstrap "
@@ -423,6 +430,32 @@ def _row(
                 "metric_materialization_candidate_blocked_count"
             )
         ),
+        "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": bool(
+            public_statistical_support_metric_materialization_summary.get(
+                "metric_materialization_input_artifact_contract_ready"
+            )
+            is True
+        ),
+        "public_benchmark_statistical_support_metric_materialization_required_input_artifact_count": _int(
+            public_statistical_support_metric_materialization_summary.get(
+                "required_metric_input_artifact_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": _int(
+            public_statistical_support_metric_materialization_summary.get(
+                "present_required_metric_input_artifact_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": _int(
+            public_statistical_support_metric_materialization_summary.get(
+                "missing_required_metric_input_artifact_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": _int(
+            public_statistical_support_metric_materialization_summary.get(
+                "missing_required_metric_input_artifact_row_count"
+            )
+        ),
         "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": _int(
             public_statistical_support_metric_materialization_summary.get(
                 "coordinate_validation_pass_row_count"
@@ -452,6 +485,16 @@ def _row(
         "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads": _text(
             public_statistical_support_metric_materialization_summary.get(
                 "required_metric_source_payloads"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": _int(
+            public_statistical_support_metric_materialization_summary.get(
+                "required_metric_source_payload_field_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields": _text(
+            public_statistical_support_metric_materialization_summary.get(
+                "required_metric_source_payload_fields"
             )
         ),
         "public_benchmark_statistical_support_metric_materialization_next_required_step": _text(
@@ -495,6 +538,21 @@ def _row(
             public_statistical_support_metric_materialization_coordinate_validation_pass_row_count=_int(
                 public_statistical_support_metric_materialization_summary.get(
                     "coordinate_validation_pass_row_count"
+                )
+            ),
+            public_statistical_support_metric_materialization_required_input_artifact_count=_int(
+                public_statistical_support_metric_materialization_summary.get(
+                    "required_metric_input_artifact_count"
+                )
+            ),
+            public_statistical_support_metric_materialization_present_required_input_artifact_count=_int(
+                public_statistical_support_metric_materialization_summary.get(
+                    "present_required_metric_input_artifact_count"
+                )
+            ),
+            public_statistical_support_metric_materialization_missing_required_input_artifact_count=_int(
+                public_statistical_support_metric_materialization_summary.get(
+                    "missing_required_metric_input_artifact_count"
                 )
             ),
             public_statistical_support_metric_materialization_planned_metric_source_payload_count=_int(
@@ -728,6 +786,32 @@ def build_engine_refinement_claim_evidence_priority_packet(
                 "metric_materialization_candidate_blocked_count"
             )
         ),
+        "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": bool(
+            public_statistical_support_metric_materialization_summary.get(
+                "metric_materialization_input_artifact_contract_ready"
+            )
+            is True
+        ),
+        "public_benchmark_statistical_support_metric_materialization_required_input_artifact_count": _int(
+            public_statistical_support_metric_materialization_summary.get(
+                "required_metric_input_artifact_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": _int(
+            public_statistical_support_metric_materialization_summary.get(
+                "present_required_metric_input_artifact_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": _int(
+            public_statistical_support_metric_materialization_summary.get(
+                "missing_required_metric_input_artifact_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": _int(
+            public_statistical_support_metric_materialization_summary.get(
+                "missing_required_metric_input_artifact_row_count"
+            )
+        ),
         "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": _int(
             public_statistical_support_metric_materialization_summary.get(
                 "coordinate_validation_pass_row_count"
@@ -757,6 +841,16 @@ def build_engine_refinement_claim_evidence_priority_packet(
         "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads": _text(
             public_statistical_support_metric_materialization_summary.get(
                 "required_metric_source_payloads"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": _int(
+            public_statistical_support_metric_materialization_summary.get(
+                "required_metric_source_payload_field_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields": _text(
+            public_statistical_support_metric_materialization_summary.get(
+                "required_metric_source_payload_fields"
             )
         ),
         "public_benchmark_statistical_support_metric_materialization_next_required_step": _text(

@@ -428,6 +428,32 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
                     "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count"
                 )
             ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": bool(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready"
+                )
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_required_input_artifact_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_materialization_required_input_artifact_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count"
+                )
+            ),
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": _int(
                 science_frontier.get(
                     "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count"
@@ -451,6 +477,17 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads": str(
                 science_frontier.get(
                     "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads",
+                    "",
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields": str(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields",
                     "",
                 )
             ),

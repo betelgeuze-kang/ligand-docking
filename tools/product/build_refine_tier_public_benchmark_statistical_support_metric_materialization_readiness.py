@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -29,6 +30,19 @@ DEFAULT_OUT_MD = (
 )
 
 REQUIRED_METRIC_SOURCE_PAYLOADS = ["dockq", "lddt_pli", "internal_deltaG"]
+REQUIRED_METRIC_SOURCE_PAYLOAD_FIELDS = (
+    "metric_name",
+    "target_id",
+    "pose_id",
+    "value",
+    "method",
+    "input_artifacts",
+    "input_artifact_sha256s",
+    "operator_id",
+    "reviewed_at_utc",
+    "license_ok",
+    "external_engine_calls",
+)
 CLAIM_BOUNDARY = (
     "Refine-tier public-benchmark statistical-support metric materialization readiness only; it reads "
     "local candidate queue and coordinate validation artifacts to determine whether the 17 R9 "
@@ -98,6 +112,19 @@ def _path_present(path_like: str | Path, *, root: Path = ROOT) -> bool:
     return _resolve(value, root=root).is_file()
 
 
+def _path_sha256(path_like: str | Path, *, root: Path = ROOT) -> str:
+    value = _text(path_like)
+    if not value:
+        return ""
+    path = _resolve(value, root=root)
+    if not path.is_file():
+        return ""
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return ""
+
+
 def _validation_key(row: dict[str, Any]) -> tuple[str, str, str]:
     return (
         _text(row.get("candidate_queue_id")),
@@ -132,6 +159,26 @@ def _readiness_row(
         root=root,
     )
     delta_g = _text(candidate.get("deltaG_experimental_kcal_mol"))
+    receptor_coordinate = _text(validation.get("receptor_coordinate_artifact")) or _text(
+        candidate.get("receptor_coordinate_artifact")
+    )
+    receptor_present = coordinate_pass and _path_present(receptor_coordinate, root=root)
+    required_input_artifacts: list[str] = []
+    required_input_hashes: list[str] = []
+    if ligand_pose:
+        required_input_artifacts.append(ligand_pose)
+        required_input_hashes.append(_path_sha256(ligand_pose, root=root))
+    if receptor_coordinate:
+        required_input_artifacts.append(receptor_coordinate)
+        required_input_hashes.append(
+            _text(validation.get("receptor_coordinate_artifact_sha256"))
+            or (_path_sha256(receptor_coordinate, root=root) if receptor_present else "")
+        )
+    missing_required_inputs: list[str] = []
+    if ligand_pose and not ligand_present:
+        missing_required_inputs.append("ligand_pose_artifact")
+    if receptor_coordinate and not receptor_present:
+        missing_required_inputs.append("receptor_coordinate_artifact")
     metric_paths = _metric_source_paths(candidate)
     metric_paths_present = all(metric_paths)
     existing_metric_source_count = sum(1 for path in metric_paths if _path_present(path, root=root))
@@ -147,6 +194,8 @@ def _readiness_row(
         blockers.append("experimental_deltaG_missing")
     if not metric_paths_present:
         blockers.append("metric_source_artifact_paths_missing")
+    if missing_required_inputs:
+        blockers.append("required_metric_input_artifacts_missing:" + ",".join(missing_required_inputs))
 
     ready = not blockers
     return {
@@ -161,7 +210,7 @@ def _readiness_row(
         "ligand_pose_artifact_present": ligand_present,
         "deltaG_experimental_kcal_mol": delta_g,
         "experimental_deltaG_present": bool(delta_g),
-        "receptor_coordinate_artifact": _text(validation.get("receptor_coordinate_artifact")),
+        "receptor_coordinate_artifact": receptor_coordinate,
         "coordinate_validation_status": validation_status,
         "coordinate_validation_blockers": _text(validation.get("blockers")),
         "coordinate_validation_pass": coordinate_pass,
@@ -170,6 +219,16 @@ def _readiness_row(
         "internal_deltaG_source_artifact": metric_paths[2],
         "required_metric_source_payloads": ";".join(REQUIRED_METRIC_SOURCE_PAYLOADS),
         "required_metric_source_payload_count": len(REQUIRED_METRIC_SOURCE_PAYLOADS),
+        "required_metric_source_payload_fields": ";".join(REQUIRED_METRIC_SOURCE_PAYLOAD_FIELDS),
+        "required_metric_source_payload_field_count": len(REQUIRED_METRIC_SOURCE_PAYLOAD_FIELDS),
+        "required_metric_input_artifacts": ";".join(required_input_artifacts),
+        "required_metric_input_artifact_sha256s": ";".join(required_input_hashes),
+        "required_metric_input_artifact_count": len(required_input_artifacts),
+        "present_required_metric_input_artifact_count": (
+            len(required_input_artifacts) - len(missing_required_inputs)
+        ),
+        "missing_required_metric_input_artifacts": ";".join(missing_required_inputs),
+        "missing_required_metric_input_artifact_count": len(missing_required_inputs),
         "planned_metric_source_payload_count": len([path for path in metric_paths if path]),
         "existing_metric_source_payload_count": existing_metric_source_count,
         "metric_source_artifact_paths_present": metric_paths_present,
@@ -228,6 +287,15 @@ def build_refine_tier_public_benchmark_statistical_support_metric_materializatio
     existing_metric_source_payload_count = sum(
         int(row.get("existing_metric_source_payload_count") or 0) for row in rows
     )
+    required_metric_input_artifact_count = sum(
+        int(row.get("required_metric_input_artifact_count") or 0) for row in rows
+    )
+    present_required_metric_input_artifact_count = sum(
+        int(row.get("present_required_metric_input_artifact_count") or 0) for row in rows
+    )
+    missing_required_metric_input_artifact_count = sum(
+        int(row.get("missing_required_metric_input_artifact_count") or 0) for row in rows
+    )
     readiness_ready = bool(candidate_present and coordinate_present and validation_csv_present and row_count and not blockers)
     summary = {
         "packet_type": "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness",
@@ -265,8 +333,19 @@ def build_refine_tier_public_benchmark_statistical_support_metric_materializatio
         "metric_materialization_row_count": row_count,
         "metric_materialization_candidate_ready_count": len(ready_rows),
         "metric_materialization_candidate_blocked_count": len(blocked_rows),
+        "metric_materialization_input_artifact_contract_ready": bool(
+            row_count and missing_required_metric_input_artifact_count == 0
+        ),
         "required_metric_source_payloads": ";".join(REQUIRED_METRIC_SOURCE_PAYLOADS),
         "required_metric_source_payload_count": len(REQUIRED_METRIC_SOURCE_PAYLOADS),
+        "required_metric_source_payload_fields": ";".join(REQUIRED_METRIC_SOURCE_PAYLOAD_FIELDS),
+        "required_metric_source_payload_field_count": len(REQUIRED_METRIC_SOURCE_PAYLOAD_FIELDS),
+        "required_metric_input_artifact_count": required_metric_input_artifact_count,
+        "present_required_metric_input_artifact_count": present_required_metric_input_artifact_count,
+        "missing_required_metric_input_artifact_count": missing_required_metric_input_artifact_count,
+        "missing_required_metric_input_artifact_row_count": sum(
+            1 for row in rows if int(row.get("missing_required_metric_input_artifact_count") or 0)
+        ),
         "metric_source_path_row_count": sum(
             1 for row in rows if row["metric_source_artifact_paths_present"] is True
         ),
@@ -313,8 +392,13 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- metric_materialization_candidate_ready_count: `{summary['metric_materialization_candidate_ready_count']}`",
         f"- metric_materialization_candidate_blocked_count: `{summary['metric_materialization_candidate_blocked_count']}`",
         f"- coordinate_validation_pass_row_count: `{summary['coordinate_validation_pass_row_count']}`",
+        f"- metric_materialization_input_artifact_contract_ready: `{summary['metric_materialization_input_artifact_contract_ready']}`",
+        f"- required_metric_input_artifact_count: `{summary['required_metric_input_artifact_count']}`",
+        f"- present_required_metric_input_artifact_count: `{summary['present_required_metric_input_artifact_count']}`",
+        f"- missing_required_metric_input_artifact_count: `{summary['missing_required_metric_input_artifact_count']}`",
         f"- planned_metric_source_payload_count: `{summary['planned_metric_source_payload_count']}`",
         f"- existing_metric_source_payload_count: `{summary['existing_metric_source_payload_count']}`",
+        f"- required_metric_source_payload_fields: `{summary['required_metric_source_payload_fields']}`",
         "",
         "## Claim Boundary",
         "",

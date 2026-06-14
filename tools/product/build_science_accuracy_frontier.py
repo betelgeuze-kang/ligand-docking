@@ -420,6 +420,21 @@ def build_science_accuracy_frontier(
         "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": _int(
             metric_materialization_readiness.get("metric_materialization_candidate_blocked_count")
         ),
+        "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": bool(
+            metric_materialization_readiness.get("metric_materialization_input_artifact_contract_ready") is True
+        ),
+        "public_benchmark_statistical_support_metric_materialization_required_input_artifact_count": _int(
+            metric_materialization_readiness.get("required_metric_input_artifact_count")
+        ),
+        "public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": _int(
+            metric_materialization_readiness.get("present_required_metric_input_artifact_count")
+        ),
+        "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": _int(
+            metric_materialization_readiness.get("missing_required_metric_input_artifact_count")
+        ),
+        "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": _int(
+            metric_materialization_readiness.get("missing_required_metric_input_artifact_row_count")
+        ),
         "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": _int(
             metric_materialization_readiness.get("coordinate_validation_pass_row_count")
         ),
@@ -434,6 +449,12 @@ def build_science_accuracy_frontier(
         ),
         "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads": str(
             metric_materialization_readiness.get("required_metric_source_payloads", "")
+        ),
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": _int(
+            metric_materialization_readiness.get("required_metric_source_payload_field_count")
+        ),
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields": str(
+            metric_materialization_readiness.get("required_metric_source_payload_fields", "")
         ),
         "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready": bool(
             metric_materialization_readiness.get("claim_grade_statistical_support_ready") is True
@@ -697,6 +718,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"`{summary['public_benchmark_statistical_support_metric_materialization_row_count']}/"
         f"{summary['public_benchmark_statistical_support_metric_materialization_candidate_ready_count']}/"
         f"{summary['public_benchmark_statistical_support_metric_materialization_candidate_blocked_count']}`",
+        "- public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready: "
+        f"`{summary['public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready']}`",
+        "- public_benchmark_statistical_support_metric_materialization_required_input_present_missing: "
+        f"`{summary['public_benchmark_statistical_support_metric_materialization_required_input_artifact_count']}/"
+        f"{summary['public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count']}/"
+        f"{summary['public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count']}`",
         "- public_benchmark_statistical_support_coordinate_validation_pass/blocked: "
         f"`{summary['public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count']}/"
         f"{summary['public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count']}`",

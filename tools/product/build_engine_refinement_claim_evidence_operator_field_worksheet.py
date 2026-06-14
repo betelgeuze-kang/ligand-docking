@@ -995,6 +995,32 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
                 "metric_materialization_candidate_blocked_count"
             )
         ),
+        "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": bool(
+            statistical_support_metric_materialization_summary.get(
+                "metric_materialization_input_artifact_contract_ready"
+            )
+            is True
+        ),
+        "public_benchmark_statistical_support_metric_materialization_required_input_artifact_count": _int(
+            statistical_support_metric_materialization_summary.get(
+                "required_metric_input_artifact_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": _int(
+            statistical_support_metric_materialization_summary.get(
+                "present_required_metric_input_artifact_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": _int(
+            statistical_support_metric_materialization_summary.get(
+                "missing_required_metric_input_artifact_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": _int(
+            statistical_support_metric_materialization_summary.get(
+                "missing_required_metric_input_artifact_row_count"
+            )
+        ),
         "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": _int(
             statistical_support_metric_materialization_summary.get("coordinate_validation_pass_row_count")
         ),
@@ -1015,6 +1041,16 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
         ),
         "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads": _text(
             statistical_support_metric_materialization_summary.get("required_metric_source_payloads")
+        ),
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": _int(
+            statistical_support_metric_materialization_summary.get(
+                "required_metric_source_payload_field_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields": _text(
+            statistical_support_metric_materialization_summary.get(
+                "required_metric_source_payload_fields"
+            )
         ),
         "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready": bool(
             statistical_support_metric_materialization_summary.get(
@@ -1228,6 +1264,10 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
                 f"{_int(statistical_support_metric_materialization_summary.get('coordinate_validation_pass_row_count'))}, "
                 "metric_materialization_candidate_ready_count="
                 f"{_int(statistical_support_metric_materialization_summary.get('metric_materialization_candidate_ready_count'))}, "
+                "required_input_artifacts="
+                f"{_int(statistical_support_metric_materialization_summary.get('required_metric_input_artifact_count'))}/"
+                f"{_int(statistical_support_metric_materialization_summary.get('present_required_metric_input_artifact_count'))}/"
+                f"{_int(statistical_support_metric_materialization_summary.get('missing_required_metric_input_artifact_count'))}, "
                 "planned_metric_source_payload_count="
                 f"{_int(statistical_support_metric_materialization_summary.get('planned_metric_source_payload_count'))}); "
                 "then materialize DockQ/lDDT-PLI/internal DeltaG source payloads and rerun bootstrap "
@@ -1319,6 +1359,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"`{summary['public_benchmark_statistical_support_metric_materialization_candidate_ready_count']}`",
         "- public_benchmark_statistical_support_metric_materialization_candidate_blocked_count: "
         f"`{summary['public_benchmark_statistical_support_metric_materialization_candidate_blocked_count']}`",
+        "- public_benchmark_statistical_support_metric_materialization_required_input_present_missing: "
+        f"`{summary['public_benchmark_statistical_support_metric_materialization_required_input_artifact_count']}/"
+        f"{summary['public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count']}/"
+        f"{summary['public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count']}`",
         "- public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count: "
         f"`{summary['public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count']}`",
         "- public_benchmark_receptor_coordinate_intake_artifact_present_row_count: "

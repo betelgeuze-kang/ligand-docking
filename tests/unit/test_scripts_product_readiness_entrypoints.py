@@ -117,6 +117,36 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
     )
     assert (
         summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_required_input_artifact_count"
+        ]
+        == 34
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count"
         ]
         == 0
@@ -144,6 +174,21 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads"
         ]
         == "dockq;lddt_pli;internal_deltaG"
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count"
+        ]
+        == 11
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields"
+        ]
+        == (
+            "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
+            "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
+        )
     )
     assert (
         "openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized"

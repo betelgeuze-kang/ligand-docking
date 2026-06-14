@@ -41,9 +41,12 @@ def _write_validation_csv(path: Path) -> None:
 def _candidate_queue(tmp_path: Path) -> dict:
     ligand_1 = tmp_path / "dataset" / "data_5_sdf" / "new1_001"
     ligand_2 = tmp_path / "dataset" / "data_5_sdf" / "new2_002"
+    receptor_1 = tmp_path / "dataset" / "new1" / "new1_complex.pdb"
     ligand_1.parent.mkdir(parents=True, exist_ok=True)
     ligand_1.write_text("ligand1\n", encoding="utf-8")
     ligand_2.write_text("ligand2\n", encoding="utf-8")
+    receptor_1.parent.mkdir(parents=True, exist_ok=True)
+    receptor_1.write_text("ATOM      1  CA  ALA A   1       0.0   0.0   0.0\n", encoding="utf-8")
     return {
         "summary": {
             "status": "refine_tier_public_benchmark_statistical_support_candidate_queue_ready",
@@ -60,6 +63,7 @@ def _candidate_queue(tmp_path: Path) -> dict:
                 "suggested_split": "holdout",
                 "ligand_pose_artifact": "dataset/data_5_sdf/new1_001",
                 "ligand_pose_artifact_present": True,
+                "receptor_coordinate_artifact": "dataset/new1/new1_complex.pdb",
                 "deltaG_experimental_kcal_mol": "-8.0",
                 "dockq_source_artifact": "runs/sources/work_001_dockq.json",
                 "lddt_pli_source_artifact": "runs/sources/work_001_lddt_pli.json",
@@ -75,6 +79,7 @@ def _candidate_queue(tmp_path: Path) -> dict:
                 "suggested_split": "fit",
                 "ligand_pose_artifact": "dataset/data_5_sdf/new2_002",
                 "ligand_pose_artifact_present": True,
+                "receptor_coordinate_artifact": "dataset/new2/new2_complex.pdb",
                 "deltaG_experimental_kcal_mol": "-7.0",
                 "dockq_source_artifact": "runs/sources/work_002_dockq.json",
                 "lddt_pli_source_artifact": "runs/sources/work_002_lddt_pli.json",
@@ -138,6 +143,16 @@ def test_metric_materialization_readiness_counts_ready_and_blocked_candidates(
     assert summary["metric_materialization_candidate_blocked_count"] == 1
     assert summary["coordinate_validation_pass_row_count"] == 1
     assert summary["coordinate_validation_blocked_row_count"] == 1
+    assert summary["metric_materialization_input_artifact_contract_ready"] is False
+    assert summary["required_metric_input_artifact_count"] == 4
+    assert summary["present_required_metric_input_artifact_count"] == 3
+    assert summary["missing_required_metric_input_artifact_count"] == 1
+    assert summary["missing_required_metric_input_artifact_row_count"] == 1
+    assert summary["required_metric_source_payload_field_count"] == 11
+    assert summary["required_metric_source_payload_fields"] == (
+        "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
+        "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
+    )
     assert summary["planned_metric_source_payload_count"] == 6
     assert summary["existing_metric_source_payload_count"] == 0
     assert summary["canonical_intake_promotion_allowed"] is False
@@ -145,7 +160,17 @@ def test_metric_materialization_readiness_counts_ready_and_blocked_candidates(
     assert payload["rows"][0]["metric_materialization_status"] == (
         "ready_for_metric_source_materialization"
     )
-    assert payload["rows"][1]["metric_materialization_blockers"] == "coordinate_validation_not_pass"
+    assert payload["rows"][0]["required_metric_input_artifact_count"] == 2
+    assert payload["rows"][0]["present_required_metric_input_artifact_count"] == 2
+    assert payload["rows"][0]["missing_required_metric_input_artifact_count"] == 0
+    assert payload["rows"][0]["required_metric_input_artifacts"] == (
+        "dataset/data_5_sdf/new1_001;dataset/new1/new1_complex.pdb"
+    )
+    assert payload["rows"][0]["required_metric_input_artifact_sha256s"].count(";") == 1
+    assert payload["rows"][1]["metric_materialization_blockers"] == (
+        "coordinate_validation_not_pass;required_metric_input_artifacts_missing:receptor_coordinate_artifact"
+    )
+    assert payload["rows"][1]["missing_required_metric_input_artifacts"] == "receptor_coordinate_artifact"
 
 
 def test_metric_materialization_readiness_blocks_missing_coordinate_intake(
@@ -200,4 +225,6 @@ def test_metric_materialization_readiness_cli_writes_outputs(tmp_path: Path) -> 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["metric_materialization_row_count"] == 2
     assert "blocked_metric_source_materialization_inputs" in out_csv.read_text(encoding="utf-8")
+    assert "required_metric_input_artifacts" in out_csv.read_text(encoding="utf-8")
     assert "Metric Materialization Readiness" in out_md.read_text(encoding="utf-8")
+    assert "required_metric_input_artifact_count" in out_md.read_text(encoding="utf-8")

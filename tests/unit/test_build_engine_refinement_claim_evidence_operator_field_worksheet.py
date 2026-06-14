@@ -560,6 +560,16 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
     assert summary["public_benchmark_statistical_support_metric_materialization_row_count"] == 17
     assert summary["public_benchmark_statistical_support_metric_materialization_candidate_ready_count"] == 0
     assert summary["public_benchmark_statistical_support_metric_materialization_candidate_blocked_count"] == 17
+    assert summary["public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready"] is False
+    assert summary["public_benchmark_statistical_support_metric_materialization_required_input_artifact_count"] == 34
+    assert summary["public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count"] == 17
+    assert summary["public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count"] == 17
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count"
+        ]
+        == 17
+    )
     assert (
         summary[
             "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count"
@@ -581,6 +591,17 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
     assert summary[
         "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads"
     ] == "dockq;lddt_pli;internal_deltaG"
+    assert summary[
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count"
+    ] == 11
+    assert summary[
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields"
+    ] == (
+        "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
+        "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
+    )
+    assert "required_input_artifacts=34/17/17" in summary["next_required_step"]
+    assert "required_input_artifacts=34/17/17" in summary["top_next_operator_step"]
     assert summary["worksheet_field_row_count"] == 389
     assert summary["operator_fill_pending_field_count"] == 296
     assert summary["top_blocker_field_count"] == 329

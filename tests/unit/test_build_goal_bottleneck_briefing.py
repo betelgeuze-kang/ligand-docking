@@ -503,6 +503,7 @@ def _engine_refinement_claim_evidence_priority_packet() -> dict:
                 "stage and validate coordinates for 17 statistical-support candidates "
                 "(coordinate_validation_pass_row_count=0, "
                 "metric_materialization_candidate_ready_count=0, "
+                "required_input_artifacts=34/17/17, "
                 "planned_metric_source_payload_count=51); then materialize DockQ/lDDT-PLI/internal "
                 "DeltaG source payloads and rerun bootstrap Spearman p05 before any canonical intake "
                 "promotion."
@@ -540,6 +541,11 @@ def _engine_refinement_claim_evidence_priority_packet() -> dict:
             "public_benchmark_statistical_support_metric_materialization_row_count": 17,
             "public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 0,
             "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": False,
+            "public_benchmark_statistical_support_metric_materialization_required_input_artifact_count": 34,
+            "public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": 17,
             "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 0,
             "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 17,
             "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
@@ -547,6 +553,11 @@ def _engine_refinement_claim_evidence_priority_packet() -> dict:
             "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready": False,
             "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads": (
                 "dockq;lddt_pli;internal_deltaG"
+            ),
+            "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": 11,
+            "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields": (
+                "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
+                "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
             ),
             "public_benchmark_statistical_support_metric_materialization_next_required_step": (
                 "After operator-approved coordinate fetch and post-fetch validation, require all 17 "
@@ -927,6 +938,18 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
     ] == 0
     assert summary[
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_blocked_count"
+    ] == 17
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready"
+    ] is False
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_input_artifact_count"
+    ] == 34
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count"
+    ] == 17
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count"
     ] == 17
     assert summary[
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count"

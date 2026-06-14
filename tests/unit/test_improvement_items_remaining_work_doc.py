@@ -305,10 +305,19 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`metric_materialization_row_count=17`" in text
     assert "`metric_materialization_candidate_ready_count=0`" in text
     assert "`metric_materialization_candidate_blocked_count=17`" in text
+    assert "`metric_materialization_input_artifact_contract_ready=false`" in text
+    assert "`required_metric_input_artifact_count=34`" in text
+    assert "`present_required_metric_input_artifact_count=17`" in text
+    assert "`missing_required_metric_input_artifact_count=17`" in text
+    assert "`missing_required_metric_input_artifact_row_count=17`" in text
     assert "`coordinate_validation_blocked_row_count=17`" in text
     assert "`planned_metric_source_payload_count=51`" in text
     assert "`existing_metric_source_payload_count=0`" in text
     assert "`required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`" in text
+    assert (
+        "`required_metric_source_payload_fields=metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;operator_id;reviewed_at_utc;license_ok;external_engine_calls`"
+        in text
+    )
     assert "`claim_grade_statistical_support_ready=false`" in text
     assert "`public_benchmark_statistical_support_metric_materialization_readiness_present=true`" in text
     assert "`public_benchmark_statistical_support_metric_materialization_readiness_ready=true`" in text
@@ -316,6 +325,14 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`public_benchmark_statistical_support_metric_materialization_row_count=17`" in text
     assert "`public_benchmark_statistical_support_metric_materialization_candidate_ready_count=0`" in text
     assert "`public_benchmark_statistical_support_metric_materialization_candidate_blocked_count=17`" in text
+    assert "`public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready=false`" in text
+    assert "`public_benchmark_statistical_support_metric_materialization_required_input_artifact_count=34`" in text
+    assert "`public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count=17`" in text
+    assert "`public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count=17`" in text
+    assert (
+        "`public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count=17`"
+        in text
+    )
     assert (
         "`public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count=0`"
         in text
@@ -336,6 +353,14 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         "`public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`"
         in text
     )
+    assert (
+        "`public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count=11`"
+        in text
+    )
+    assert (
+        "`public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields=metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;operator_id;reviewed_at_utc;license_ok;external_engine_calls`"
+        in text
+    )
     assert "`openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized`" in text
     assert "`blocker_count=6`" in text
     assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
@@ -351,6 +376,18 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     )
     assert (
         "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_blocked_count=17`"
+        in text
+    )
+    assert (
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_input_artifact_count=34`"
+        in text
+    )
+    assert (
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count=17`"
+        in text
+    )
+    assert (
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count=17`"
         in text
     )
     assert (

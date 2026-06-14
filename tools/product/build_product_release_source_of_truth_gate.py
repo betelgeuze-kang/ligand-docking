@@ -2732,10 +2732,16 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_metric_materialization_row_count": 17,
             "public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 0,
             "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": 0,
+            "public_benchmark_statistical_support_metric_materialization_required_input_artifact_count": 34,
+            "public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": 17,
             "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 0,
             "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 17,
             "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
             "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": 11,
             "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready": 0,
             "approval_token_count": 1,
             "external_state_mutated": 0,
@@ -2755,11 +2761,17 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads": (
                 "dockq;lddt_pli;internal_deltaG"
             ),
+            "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields": (
+                "metric_name;target_id;pose_id;value;method;input_artifacts;"
+                "input_artifact_sha256s;operator_id;reviewed_at_utc;license_ok;"
+                "external_engine_calls"
+            ),
             "top_next_operator_step": (
                 "Review the R4 coordinate-fetch preflight and, after explicit operator approval, "
                 "stage and validate coordinates for 17 statistical-support candidates "
                 "(coordinate_validation_pass_row_count=0, "
                 "metric_materialization_candidate_ready_count=0, "
+                "required_input_artifacts=34/17/17, "
                 "planned_metric_source_payload_count=51); then materialize DockQ/lDDT-PLI/internal "
                 "DeltaG source payloads and rerun bootstrap Spearman p05 before any canonical intake "
                 "promotion."
@@ -2820,10 +2832,16 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_metric_materialization_row_count": 17,
             "public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 0,
             "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": 0,
+            "public_benchmark_statistical_support_metric_materialization_required_input_artifact_count": 34,
+            "public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": 17,
             "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 0,
             "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 17,
             "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
             "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": 11,
             "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready": 0,
             "public_benchmark_metric_evidence_missing_required_input_artifact_row_count": 0,
             "public_benchmark_metric_evidence_missing_required_input_artifact_sha256_row_count": 0,
@@ -2852,11 +2870,17 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads": (
                 "dockq;lddt_pli;internal_deltaG"
             ),
+            "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields": (
+                "metric_name;target_id;pose_id;value;method;input_artifacts;"
+                "input_artifact_sha256s;operator_id;reviewed_at_utc;license_ok;"
+                "external_engine_calls"
+            ),
             "next_required_step": (
                 "Review the R4 coordinate-fetch preflight and, after explicit operator approval, "
                 "stage and validate coordinates for 17 statistical-support candidates "
                 "(coordinate_validation_pass_row_count=0, "
                 "metric_materialization_candidate_ready_count=0, "
+                "required_input_artifacts=34/17/17, "
                 "planned_metric_source_payload_count=51); then materialize DockQ/lDDT-PLI/internal "
                 "DeltaG source payloads and rerun bootstrap Spearman p05 before any R9 claim receipt "
                 "or canonical intake promotion."
@@ -3055,10 +3079,16 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_metric_materialization_row_count": 17,
             "public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 0,
             "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": 0,
+            "public_benchmark_statistical_support_metric_materialization_required_input_artifact_count": 34,
+            "public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": 17,
             "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 0,
             "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 17,
             "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
             "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
+            "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": 11,
             "public_benchmark_work_order_ligand_pose_only_row_count": 0,
             "public_benchmark_work_order_missing_interaction_metric_source_row_count": 8,
             "public_benchmark_work_order_missing_internal_deltaG_source_row_count": 8,
@@ -3088,6 +3118,10 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             ),
             "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads": (
                 "dockq;lddt_pli;internal_deltaG"
+            ),
+            "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields": (
+                "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
+                "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
             ),
             "engine_refinement_claim_evidence_receipt_status": (
                 "blocked_engine_refinement_claim_evidence_receipt"
@@ -3276,10 +3310,16 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_row_count": 17,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 0,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 17,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": 0,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_input_artifact_count": 34,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": 17,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": 17,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": 17,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 0,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 17,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": 11,
         },
         "required_text_exact_fields": {
             "engine_refinement_claim_evidence_priority_packet_source_json": (
@@ -3297,11 +3337,17 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads": (
                 "dockq;lddt_pli;internal_deltaG"
             ),
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields": (
+                "metric_name;target_id;pose_id;value;method;input_artifacts;"
+                "input_artifact_sha256s;operator_id;reviewed_at_utc;license_ok;"
+                "external_engine_calls"
+            ),
             "engine_refinement_claim_evidence_priority_packet_top_next_operator_step": (
                 "Review the R4 coordinate-fetch preflight and, after explicit operator approval, "
                 "stage and validate coordinates for 17 statistical-support candidates "
                 "(coordinate_validation_pass_row_count=0, "
                 "metric_materialization_candidate_ready_count=0, "
+                "required_input_artifacts=34/17/17, "
                 "planned_metric_source_payload_count=51); then materialize DockQ/lDDT-PLI/internal "
                 "DeltaG source payloads and rerun bootstrap Spearman p05 before any canonical intake "
                 "promotion."

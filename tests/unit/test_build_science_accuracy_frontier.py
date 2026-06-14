@@ -224,11 +224,21 @@ def _write_inputs(
             "metric_materialization_row_count": 17 if materialized_candidate_ready and not ready else 0,
             "metric_materialization_candidate_ready_count": 0,
             "metric_materialization_candidate_blocked_count": 17 if materialized_candidate_ready and not ready else 0,
+            "metric_materialization_input_artifact_contract_ready": ready,
+            "required_metric_input_artifact_count": 34 if materialized_candidate_ready and not ready else 0,
+            "present_required_metric_input_artifact_count": 17 if materialized_candidate_ready and not ready else 0,
+            "missing_required_metric_input_artifact_count": 17 if materialized_candidate_ready and not ready else 0,
+            "missing_required_metric_input_artifact_row_count": 17 if materialized_candidate_ready and not ready else 0,
             "coordinate_validation_pass_row_count": 0,
             "coordinate_validation_blocked_row_count": 17 if materialized_candidate_ready and not ready else 0,
             "existing_metric_source_payload_count": 0,
             "planned_metric_source_payload_count": 51 if materialized_candidate_ready and not ready else 0,
             "required_metric_source_payloads": "dockq;lddt_pli;internal_deltaG",
+            "required_metric_source_payload_field_count": 11 if materialized_candidate_ready and not ready else 0,
+            "required_metric_source_payload_fields": (
+                "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
+                "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
+            ),
             "claim_grade_statistical_support_ready": ready,
             "next_required_step": (
                 "After operator-approved coordinate fetch and post-fetch validation, require all 17 "
@@ -310,6 +320,12 @@ def test_science_accuracy_frontier_blocks_commercial_parity_without_public_r9_ev
     assert summary["public_benchmark_statistical_support_metric_materialization_all_candidates_ready"] is False
     assert summary["public_benchmark_statistical_support_metric_materialization_row_count"] == 0
     assert summary["public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count"] == 0
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_materialization_required_input_artifact_count"
+        ]
+        == 0
+    )
     assert summary["engine_refinement_claim_evidence_receipt_ready"] is False
     assert summary["public_benchmark_work_order_seeded_row_count"] == 8
     assert summary["public_benchmark_work_order_prefilled_operator_field_count"] == 40
@@ -424,6 +440,36 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
     assert summary["public_benchmark_statistical_support_metric_materialization_candidate_blocked_count"] == 17
     assert (
         summary[
+            "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_materialization_required_input_artifact_count"
+        ]
+        == 34
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
             "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count"
         ]
         == 0
@@ -449,6 +495,18 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
     assert summary[
         "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads"
     ] == "dockq;lddt_pli;internal_deltaG"
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count"
+        ]
+        == 11
+    )
+    assert summary[
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields"
+    ] == (
+        "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
+        "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
+    )
     assert summary["blockers"] == [
         "gpcr_broad_claim_review_not_approved",
         "gpcr_scorer_router_promotion_not_approved",

@@ -225,12 +225,19 @@ ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_FIELDS = (
     "public_benchmark_statistical_support_metric_materialization_row_count",
     "public_benchmark_statistical_support_metric_materialization_candidate_ready_count",
     "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count",
+    "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready",
+    "public_benchmark_statistical_support_metric_materialization_required_input_artifact_count",
+    "public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count",
+    "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count",
+    "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count",
     "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count",
     "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count",
     "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count",
     "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count",
     "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready",
     "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads",
+    "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count",
+    "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields",
     "public_benchmark_statistical_support_metric_materialization_next_required_step",
     "external_state_mutated",
 )
@@ -331,6 +338,7 @@ def _engine_refinement_claim_evidence_priority_packet_fields(
         "public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed",
         "public_benchmark_statistical_support_metric_materialization_readiness_present",
         "public_benchmark_statistical_support_metric_materialization_readiness_ready",
+        "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready",
         "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready",
         "external_state_mutated",
     }
@@ -1398,6 +1406,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"`{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_ready_count']}`",
         "- engine_refinement_claim_evidence_priority_packet_metric_materialization_candidate_blocked_count: "
         f"`{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_blocked_count']}`",
+        "- engine_refinement_claim_evidence_priority_packet_metric_materialization_required_input_present_missing: "
+        f"`{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_input_artifact_count']}/"
+        f"{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count']}/"
+        f"{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count']}`",
         "- engine_refinement_claim_evidence_priority_packet_coordinate_validation_pass_row_count: "
         f"`{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count']}`",
         "- engine_refinement_claim_evidence_priority_packet_planned_metric_source_payload_count: "

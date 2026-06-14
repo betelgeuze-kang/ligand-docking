@@ -149,6 +149,16 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     assert summary["public_benchmark_statistical_support_metric_materialization_row_count"] == 17
     assert summary["public_benchmark_statistical_support_metric_materialization_candidate_ready_count"] == 0
     assert summary["public_benchmark_statistical_support_metric_materialization_candidate_blocked_count"] == 17
+    assert summary["public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready"] is False
+    assert summary["public_benchmark_statistical_support_metric_materialization_required_input_artifact_count"] == 34
+    assert summary["public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count"] == 17
+    assert summary["public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count"] == 17
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count"
+        ]
+        == 17
+    )
     assert (
         summary[
             "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count"
@@ -170,11 +180,21 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     assert summary[
         "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads"
     ] == "dockq;lddt_pli;internal_deltaG"
+    assert summary[
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count"
+    ] == 11
+    assert summary[
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields"
+    ] == (
+        "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
+        "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
+    )
     assert summary["top_blocker_id"] == "public_benchmark_gate_not_ready"
     assert summary["top_priority_bucket"] == "public_benchmark_work_order_apply_required"
     assert summary["top_required_input"] == "runs/refine_tier_public_benchmark_work_order_current.csv"
     assert "apply_refine_tier_public_benchmark_work_order.py" in summary["top_verification_command"]
     assert "Review the R4 coordinate-fetch preflight" in summary["top_next_operator_step"]
+    assert "required_input_artifacts=34/17/17" in summary["top_next_operator_step"]
     assert "planned_metric_source_payload_count=51" in summary["top_next_operator_step"]
     assert summary["approval_token_required"] == mod.APPROVAL_TOKEN
     assert "operator_evidence_rows_pending" in summary["blockers"]
@@ -185,6 +205,9 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     assert payload["rows"][0]["public_benchmark_statistical_support_work_order_expansion_slot_count"] == 17
     assert payload["rows"][0][
         "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count"
+    ] == 17
+    assert payload["rows"][0][
+        "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count"
     ] == 17
     assert "Review the R4 coordinate-fetch preflight" in payload["rows"][0][
         "next_operator_step"
