@@ -1,0 +1,98 @@
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+from tools.accounting import build_ligand_ubuntu1_heavy_run_top_rank_compaction_receipt as mod
+
+
+NOW = 1_800_000_000.0
+
+
+def _write_old(path: Path, text: str, *, age_days: int = 30) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    ts = NOW - age_days * 86_400
+    os.utime(path, (ts, ts))
+
+
+def test_ubuntu1_compaction_keeps_dynamic_score_top_rows_without_deleting(tmp_path: Path) -> None:
+    csv_path = tmp_path / "runs" / "gpcr_demo_shadow_replay_ranking_rows_current.csv"
+    _write_old(
+        csv_path,
+        "\n".join(
+            [
+                "target,ligand_id,is_binder,binding_score_composite_v7_demo,mean_min_distance_A",
+                "ADRB2,L1,0,-3.0,1.0",
+                "ADRB2,L2,1,-9.0,0.5",
+                "ADRB2,L3,0,-5.0,0.8",
+            ]
+        )
+        + "\n",
+    )
+
+    payload = mod.build_ligand_ubuntu1_heavy_run_top_rank_compaction_receipt(
+        root=tmp_path,
+        min_size_bytes=1,
+        top_n=2,
+        now=NOW,
+    )
+
+    assert payload["summary"]["status"] == "ligand_ubuntu1_heavy_run_top_rank_compaction_ready"
+    assert payload["summary"]["candidate_count"] == 1
+    assert payload["summary"]["top_rows_retained_count"] == 2
+    row = payload["rows"][0]
+    assert row["score_col"] == "binding_score_composite_v7_demo"
+    assert row["delete_status"] == "pending_delete_after_top_rank_retention"
+    assert row["top_rows"][0]["ligand_id"] == "L2"
+    assert row["top_rows"][1]["ligand_id"] == "L3"
+    assert csv_path.exists()
+    assert (tmp_path / row["top_rank_output_csv"]).is_file()
+
+
+def test_ubuntu1_compaction_deletes_only_with_valid_approval(tmp_path: Path) -> None:
+    csv_path = tmp_path / "runs" / "external_validation_2026-05-18_gpcr_demo_stage5_ranking_unique.csv"
+    _write_old(
+        csv_path,
+        "\n".join(
+            [
+                "target,ligand_id,binding_score_composite_v7_residual_active,is_binder",
+                "ADRB2,L1,-4.0,0",
+                "ADRB2,L2,-10.0,1",
+            ]
+        )
+        + "\n",
+    )
+
+    payload = mod.build_ligand_ubuntu1_heavy_run_top_rank_compaction_receipt(
+        root=tmp_path,
+        min_size_bytes=1,
+        top_n=1,
+        execute=True,
+        approval_token=mod.APPROVAL_TOKEN,
+        now=NOW,
+    )
+
+    assert payload["summary"]["deleted_count"] == 1
+    assert payload["summary"]["local_filesystem_mutated"] is True
+    assert payload["rows"][0]["delete_status"] == "deleted"
+    assert payload["rows"][0]["top_rows"][0]["ligand_id"] == "L2"
+    assert not csv_path.exists()
+    assert (tmp_path / payload["rows"][0]["top_rank_output_csv"]).is_file()
+
+
+def test_ubuntu1_compaction_skips_protected_topk_and_compound_universe(tmp_path: Path) -> None:
+    topk_path = tmp_path / "runs" / "gpcr_demo_shadow_replay_ranking_topk_current.csv"
+    universe_path = tmp_path / "runs" / "wetlab_broad_screen_compound_universe_current.csv"
+    _write_old(topk_path, "k,hit_rate\n10,1.0\n")
+    _write_old(universe_path, "ligand_id,smiles\nL1,C\n")
+
+    payload = mod.build_ligand_ubuntu1_heavy_run_top_rank_compaction_receipt(
+        root=tmp_path,
+        min_size_bytes=1,
+        now=NOW,
+    )
+
+    assert payload["summary"]["candidate_count"] == 0
+    reasons = {row["reason"] for row in payload["skipped_large_files"]}
+    assert "skipped_protected_or_non_run_payload" in reasons

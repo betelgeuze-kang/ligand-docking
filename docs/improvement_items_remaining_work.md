@@ -698,6 +698,24 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   존재하지만 operator receipt row가 없어 reviewed evidence로 승격할 수 없다.
   이 packet도 metric 계산, payload JSON write, receipt 승인, canonical intake promotion,
   production score mutation을 하지 않는다.
+  2026-06-15 KST 추가 R9 CV failure-analysis packet은 locked CV residual을
+  residual metric payload priority/receipt 상태와 결합했다.
+  `config/refine_tier_public_benchmark_cv_failure_analysis_packet_current.json` 및
+  `docs/refine_tier_public_benchmark_cv_failure_analysis_packet_current.md`는
+  `locked_cv_bootstrap_p05=0.4035769230769231`,
+  `locked_cv_bootstrap_p05_gap_to_claim_grade=0.09642307692307689`,
+  `locked_cv_bootstrap_p05_drop_from_fit_trained=0.0908461538461538`,
+  `failure_row_count=25`,
+  `high_error_failure_row_count=4`,
+  `cv_regression_row_count=9`,
+  `holdout_high_error_row_count=2`,
+  `payload_priority_matched_failure_row_count=12`,
+  `operator_receipt_blocked_payload_count=27`,
+  `operator_receipt_missing_payload_count=9`,
+  `existing_metric_source_artifact_present_without_receipt_count=9`를 기록한다.
+  top failure는 `3n86/3n86_99`이고, 다음 고위험 row는 `2j7h`,
+  `3f3e`, `4j28`, `1gpk`, `3n7a`다. 이 packet도 training, score rewrite,
+  payload write, claim promotion을 하지 않는다.
   2026-06-15 KST 추가 score-variant probe는 같은 25쌍 preview의 candidate
   `rows.details_json`을 internal ΔG detail source로 결합해 contact/atom feature
   결손이 없음을 먼저 확인한다.
@@ -3046,6 +3064,19 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `review_required_count=209`다. 누적 ligand-heavy cleanup receipt는
   `cumulative_execution_deleted_count=76`,
   `cumulative_execution_deleted_size_human=3.35 GiB`로 갱신됐다.
+- 2026-06-15 KST `ubuntu-1` full ranking/eval CSV cleanup은
+  `tools/build_ligand_ubuntu1_heavy_run_top_rank_compaction_receipt.py`로
+  오래된 GPCR/ligand full `stage5_ranking_unique`, `ranking_rows`,
+  `ranking_unique`, `shadow_replay_eval_detail`, `shadow_replay_eval_unique`
+  CSV 37개에서 각 top-50 row만 compact JSON/CSV로 보존한 뒤 승인 토큰
+  `APPROVE_LIGAND_UBUNTU1_HEAVY_RUN_TOP_RANK_COMPACTION`으로 원본 full CSV
+  37개를 삭제했다. 삭제량은 `292.41 MiB`, 보존 row는 `1850`, 실패는 `0`이다.
+  Git-tracked receipt는
+  `config/ligand_ubuntu1_heavy_run_top_rank_compaction_current.json` 및
+  `docs/ligand_ubuntu1_heavy_run_top_rank_compaction_current.md`에 남겼다.
+  PDBBind benchmark, wetlab compound universe, artifact inventory, storage
+  register, ADMET surface, CASP17 viewer, SMILES/bead cache는 입력/benchmark/
+  register 또는 비-ranking payload로 보호해 삭제하지 않았다.
 - wetlab compound universe, artifact inventory, essential evidence register,
   CASP17 viewer HTML, active SMILES/bead cache는 입력/인벤토리/증거/register
   또는 current config 참조 payload로 분리해 이번 삭제 대상에서 제외했다.
