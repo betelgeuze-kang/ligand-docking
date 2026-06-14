@@ -123,6 +123,7 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
         "openmm_schrodinger_public_benchmark_statistical_support_not_claim_grade",
         "openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized",
         "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_r4_approval_required",
+        "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_not_ready",
         "engine_refinement_claim_evidence_receipt_not_ready",
     ]
     accuracy_top_blockers = _list(accuracy.get("top_blockers"))
@@ -306,6 +307,10 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
                 f"{science_frontier.get('public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count')};"
                 f"coordinate_fetch_r4_download_executed="
                 f"{science_frontier.get('public_benchmark_statistical_support_coordinate_fetch_r4_download_executed')};"
+                f"coordinate_fetch_operator_receipt_ready="
+                f"{science_frontier.get('public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready')};"
+                f"coordinate_fetch_operator_receipt_blocked="
+                f"{science_frontier.get('public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count')};"
                 f"broad_commercial_accuracy_claim_ready={science_frontier.get('broad_commercial_accuracy_claim_ready')};"
                 f"science_frontier_blockers={_csv(science_frontier.get('blockers'))}"
             ),
@@ -751,6 +756,120 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
                 science_frontier.get(
                     "public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required",
                     "",
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_present": bool(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_present"
+                )
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready": bool(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready"
+                )
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_status": str(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_status",
+                    "",
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_csv_present": bool(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_csv_present"
+                )
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_required_r4_review_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_required_r4_review_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download": bool(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download"
+                )
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_download_executed": bool(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_download_executed"
+                )
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_canonical_intake_promotion_allowed": bool(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_canonical_intake_promotion_allowed"
+                )
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_claim_promotion_allowed": bool(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_claim_promotion_allowed"
+                )
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_external_state_mutated": bool(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_external_state_mutated"
+                )
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id": str(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id",
+                    "",
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_target_id": str(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_target_id",
+                    "",
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_pose_id": str(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_pose_id",
+                    "",
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_most_common_row_blocker": str(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_most_common_row_blocker",
+                    "",
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approval_token_required": str(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approval_token_required",
+                    "",
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocker_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocker_count"
                 )
             ),
             "science_accuracy_frontier_public_benchmark_receptor_coordinate_validation_ready_row_count": _int(

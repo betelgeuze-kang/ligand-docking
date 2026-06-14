@@ -1610,6 +1610,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready" in (
         science_accuracy_frontier_spec["required_true_fields"]
     )
+    assert "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_present" in (
+        science_accuracy_frontier_spec["required_true_fields"]
+    )
+    assert "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_csv_present" in (
+        science_accuracy_frontier_spec["required_true_fields"]
+    )
     assert "public_benchmark_claim_grade_gap_audit_present" in (
         science_accuracy_frontier_spec["required_true_fields"]
     )
@@ -1764,6 +1770,18 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download": 0,
         "public_benchmark_statistical_support_coordinate_fetch_r4_download_executed": 0,
         "public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated": 0,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready": 0,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count": 17,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_required_r4_review_count": 17,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count": 0,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count": 17,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count": 0,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download": 0,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_download_executed": 0,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_canonical_intake_promotion_allowed": 0,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_claim_promotion_allowed": 0,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_external_state_mutated": 0,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocker_count": 1,
         "public_benchmark_work_order_ligand_pose_only_row_count": 0,
         "public_benchmark_work_order_missing_interaction_metric_source_row_count": 8,
         "public_benchmark_work_order_missing_internal_deltaG_source_row_count": 8,
@@ -1773,7 +1791,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_work_order_seed_distinct_target_count": 284,
         "engine_refinement_receipt_blocked_row_count": 6,
         "external_state_mutated": 0,
-        "blocker_count": 7,
+        "blocker_count": 8,
     }
     assert science_accuracy_frontier_spec["required_text_exact_fields"] == {
         "accuracy_parity_status": "blocked_accuracy_parity",
@@ -1805,6 +1823,24 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
             "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
         ),
         "public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required": (
+            "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_status": (
+            "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt"
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id": (
+            "r9_statistical_support_coordinate_fetch_001"
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_target_id": (
+            "4ivc"
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_pose_id": (
+            "4ivc_20"
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_most_common_row_blocker": (
+            "operator_placeholders_unfilled"
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approval_token_required": (
             "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
         ),
         "public_benchmark_claim_grade_gap_audit_status": (
@@ -3614,6 +3650,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert (
         "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json"
+        in science_accuracy_frontier_spec["depends_on"]
+    )
+    assert (
+        "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_current.json"
         in science_accuracy_frontier_spec["depends_on"]
     )
     assert (

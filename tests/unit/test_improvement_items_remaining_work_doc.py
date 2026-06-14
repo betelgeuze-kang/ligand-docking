@@ -207,6 +207,34 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_present=true`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready=false`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count=17`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count=17`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count=0`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id=r9_statistical_support_coordinate_fetch_001`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_most_common_row_blocker=operator_placeholders_unfilled`"
+        in text
+    )
+    assert (
         "`science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_ready=true`"
         in text
     )
@@ -470,7 +498,11 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         "`openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_r4_approval_required`"
         in text
     )
-    assert "`blocker_count=7`" in text
+    assert (
+        "`openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_not_ready`"
+        in text
+    )
+    assert "`blocker_count=8`" in text
     assert "`blocker_count=6`" in text
     assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
     assert "`runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`" in text

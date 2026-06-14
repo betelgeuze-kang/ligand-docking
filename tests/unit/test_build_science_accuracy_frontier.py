@@ -33,6 +33,9 @@ def _write_inputs(
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json": (
             tmp_path / "public_stat_coordinate_fetch_r4_preflight.json"
         ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_json": (
+            tmp_path / "public_stat_coordinate_fetch_operator_receipt.json"
+        ),
         "public_benchmark_claim_grade_gap_audit_json": tmp_path / "public_claim_grade_gap_audit.json",
         "engine_receipt_json": tmp_path / "receipt.json",
         "engine_priority_json": tmp_path / "priority.json",
@@ -334,6 +337,50 @@ def _write_inputs(
                 "python3 tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py "
                 "--mode execute --run-post-fetch-validation --approval-token "
                 "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+            ),
+        },
+    )
+    _write(
+        paths["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_json"],
+        {
+            "status": (
+                "refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready"
+                if ready
+                else "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt"
+            ),
+            "operator_receipt_ready": ready,
+            "receipt_csv_present": True,
+            "receipt_row_count": 0 if ready or not materialized_candidate_ready else 17,
+            "required_r4_review_count": 0 if ready or not materialized_candidate_ready else 17,
+            "pass_row_count": 0,
+            "blocked_row_count": 0 if ready or not materialized_candidate_ready else 17,
+            "approved_fetch_count": 0,
+            "authorized_for_external_download": False,
+            "download_executed": False,
+            "canonical_intake_promotion_allowed": False,
+            "claim_promotion_allowed": False,
+            "external_state_mutated": False,
+            "first_blocked_review_id": (
+                "r9_statistical_support_coordinate_fetch_001"
+                if materialized_candidate_ready and not ready
+                else ""
+            ),
+            "first_blocked_target_id": "4ivc" if materialized_candidate_ready and not ready else "",
+            "first_blocked_pose_id": "4ivc_20" if materialized_candidate_ready and not ready else "",
+            "most_common_row_blocker": (
+                "operator_placeholders_unfilled" if materialized_candidate_ready and not ready else ""
+            ),
+            "approval_token_required": "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD",
+            "execute_command": (
+                "python3 tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py "
+                "--mode execute --run-post-fetch-validation --approval-token "
+                "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+            ),
+            "blocker_count": 0 if ready or not materialized_candidate_ready else 1,
+            "next_required_step": (
+                "Fill all 17 coordinate fetch operator receipt rows before execute-mode download."
+                if materialized_candidate_ready and not ready
+                else ""
             ),
         },
     )
@@ -758,6 +805,56 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required"] == (
         "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
     )
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_present"] is True
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready"] is False
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_status"] == (
+        "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt"
+    )
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_csv_present"] is True
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count"] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_required_r4_review_count"
+    ] == 17
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count"] == 0
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count"] == 17
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count"] == 0
+    assert (
+        summary[
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download"
+        ]
+        is False
+    )
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_download_executed"] is False
+    assert (
+        summary[
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_canonical_intake_promotion_allowed"
+        ]
+        is False
+    )
+    assert (
+        summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_claim_promotion_allowed"]
+        is False
+    )
+    assert (
+        summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_external_state_mutated"]
+        is False
+    )
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id"
+    ] == "r9_statistical_support_coordinate_fetch_001"
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_target_id"
+    ] == "4ivc"
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_pose_id"
+    ] == "4ivc_20"
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approval_token_required"
+    ] == "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocker_count"] == 1
     assert summary["blockers"] == [
         "gpcr_broad_claim_review_not_approved",
         "gpcr_scorer_router_promotion_not_approved",
@@ -765,10 +862,12 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
         "openmm_schrodinger_public_benchmark_statistical_support_not_claim_grade",
         "openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized",
         "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_r4_approval_required",
+        "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_not_ready",
         "engine_refinement_claim_evidence_receipt_not_ready",
     ]
     assert "current 8-row materialized R9 metric evidence" in summary["next_required_step"]
     assert "coordinate-fetch R4 approval" in summary["next_required_step"]
+    assert "coordinate operator receipt" in summary["next_required_step"]
     assert "coordinate validation/materialization" in summary["next_required_step"]
 
 
@@ -814,6 +913,8 @@ def test_science_accuracy_frontier_cli_writes_json_and_markdown(tmp_path: Path) 
             str(paths["public_benchmark_statistical_support_metric_source_templates_json"]),
             "--public-benchmark-statistical-support-coordinate-fetch-r4-preflight-json",
             str(paths["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json"]),
+            "--public-benchmark-statistical-support-coordinate-fetch-operator-receipt-json",
+            str(paths["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_json"]),
             "--public-benchmark-claim-grade-gap-audit-json",
             str(paths["public_benchmark_claim_grade_gap_audit_json"]),
             "--engine-receipt-json",

@@ -505,11 +505,135 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         == "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
     )
     assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_present"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_status"
+        ]
+        == "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt"
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_csv_present"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_required_r4_review_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_download_executed"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_canonical_intake_promotion_allowed"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_claim_promotion_allowed"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_external_state_mutated"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id"
+        ]
+        == "r9_statistical_support_coordinate_fetch_001"
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_target_id"
+        ]
+        == "4ivc"
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_pose_id"
+        ]
+        == "4ivc_20"
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_most_common_row_blocker"
+        ]
+        == "operator_placeholders_unfilled"
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approval_token_required"
+        ]
+        == "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocker_count"
+        ]
+        == 1
+    )
+    assert (
         "openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized"
         in summary["science_accuracy_frontier_blockers"]
     )
     assert (
         "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_r4_approval_required"
+        in summary["science_accuracy_frontier_blockers"]
+    )
+    assert (
+        "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_not_ready"
         in summary["science_accuracy_frontier_blockers"]
     )
     assert summary["science_accuracy_frontier_public_benchmark_receptor_coordinate_validation_min_protein_like_residues"] == 5
@@ -568,6 +692,8 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
     assert "coordinate_fetch_r4_preflight_ready=True" in boundary["observed"]
     assert "coordinate_fetch_r4_fetch_required=17" in boundary["observed"]
     assert "coordinate_fetch_r4_download_executed=False" in boundary["observed"]
+    assert "coordinate_fetch_operator_receipt_ready=False" in boundary["observed"]
+    assert "coordinate_fetch_operator_receipt_blocked=17" in boundary["observed"]
 
 
 def test_verify_quality_gate_script_rebuilds_operational_quality_fail_closed() -> None:

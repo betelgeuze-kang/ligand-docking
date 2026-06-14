@@ -31,6 +31,9 @@ DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_JSON = (
 DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON = (
     "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json"
 )
+DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_OPERATOR_RECEIPT_JSON = (
+    "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_current.json"
+)
 DEFAULT_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_JSON = (
     "runs/refine_tier_public_benchmark_claim_grade_gap_audit_current.json"
 )
@@ -111,6 +114,8 @@ def build_science_accuracy_frontier(
     | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_JSON,
     public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json: str
     | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON,
+    public_benchmark_statistical_support_coordinate_fetch_operator_receipt_json: str
+    | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_OPERATOR_RECEIPT_JSON,
     public_benchmark_claim_grade_gap_audit_json: str
     | Path = DEFAULT_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_JSON,
     engine_receipt_json: str | Path = DEFAULT_ENGINE_RECEIPT_JSON,
@@ -135,6 +140,9 @@ def build_science_accuracy_frontier(
     coordinate_fetch_r4_preflight_payload, coordinate_fetch_r4_preflight_present = _read_json(
         public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json
     )
+    coordinate_fetch_operator_receipt_payload, coordinate_fetch_operator_receipt_present = _read_json(
+        public_benchmark_statistical_support_coordinate_fetch_operator_receipt_json
+    )
     claim_grade_gap_audit_payload, claim_grade_gap_audit_present = _read_json(
         public_benchmark_claim_grade_gap_audit_json
     )
@@ -152,6 +160,7 @@ def build_science_accuracy_frontier(
     metric_materialization_readiness = _summary(metric_materialization_readiness_payload)
     metric_source_templates = _summary(metric_source_templates_payload)
     coordinate_fetch_r4_preflight = _summary(coordinate_fetch_r4_preflight_payload)
+    coordinate_fetch_operator_receipt = _summary(coordinate_fetch_operator_receipt_payload)
     claim_grade_gap_audit = _summary(claim_grade_gap_audit_payload)
     receipt = _summary(receipt_payload)
     priority = _summary(priority_payload)
@@ -235,6 +244,12 @@ def build_science_accuracy_frontier(
         and coordinate_fetch_r4_preflight.get("status")
         == "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
         and coordinate_fetch_r4_preflight.get("r4_preflight_ready") is True
+    )
+    public_statistical_support_coordinate_fetch_operator_receipt_ready = bool(
+        coordinate_fetch_operator_receipt_present
+        and coordinate_fetch_operator_receipt.get("status")
+        == "refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready"
+        and coordinate_fetch_operator_receipt.get("operator_receipt_ready") is True
     )
     public_claim_grade_gap_audit_ready = bool(
         claim_grade_gap_audit_present
@@ -323,6 +338,14 @@ def build_science_accuracy_frontier(
                 blockers.append(
                     "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_r4_approval_required"
                 )
+                if not coordinate_fetch_operator_receipt_present:
+                    blockers.append(
+                        "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_missing"
+                    )
+                elif not public_statistical_support_coordinate_fetch_operator_receipt_ready:
+                    blockers.append(
+                        "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_not_ready"
+                    )
     if not engine_receipt_ready:
         blockers.append("engine_refinement_claim_evidence_receipt_not_ready")
     if not pose_surface_ready:
@@ -338,7 +361,7 @@ def build_science_accuracy_frontier(
             "Restricted science accuracy and the current 8-row materialized R9 metric evidence are ready, but broad "
             "commercial parity remains blocked by GPCR claim/router approval, canonical intake promotion, "
             "R9 statistical-support limits, R9 statistical-support coordinate-fetch R4 approval, coordinate "
-            "validation/materialization, and R9 evidence receipts."
+            "operator receipt, coordinate validation/materialization, and R9 evidence receipts."
         )
     elif restricted_science_accuracy_ready:
         next_required_step = (
@@ -711,6 +734,72 @@ def build_science_accuracy_frontier(
         "public_benchmark_statistical_support_coordinate_fetch_r4_execute_command": str(
             coordinate_fetch_r4_preflight.get("execute_command", "")
         ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_present": (
+            coordinate_fetch_operator_receipt_present
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready": (
+            public_statistical_support_coordinate_fetch_operator_receipt_ready
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_status": str(
+            coordinate_fetch_operator_receipt.get("status", "")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_csv_present": bool(
+            coordinate_fetch_operator_receipt.get("receipt_csv_present") is True
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count": _int(
+            coordinate_fetch_operator_receipt.get("receipt_row_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_required_r4_review_count": _int(
+            coordinate_fetch_operator_receipt.get("required_r4_review_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count": _int(
+            coordinate_fetch_operator_receipt.get("pass_row_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count": _int(
+            coordinate_fetch_operator_receipt.get("blocked_row_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count": _int(
+            coordinate_fetch_operator_receipt.get("approved_fetch_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download": bool(
+            coordinate_fetch_operator_receipt.get("authorized_for_external_download") is True
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_download_executed": bool(
+            coordinate_fetch_operator_receipt.get("download_executed") is True
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_canonical_intake_promotion_allowed": bool(
+            coordinate_fetch_operator_receipt.get("canonical_intake_promotion_allowed") is True
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_claim_promotion_allowed": bool(
+            coordinate_fetch_operator_receipt.get("claim_promotion_allowed") is True
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_external_state_mutated": bool(
+            coordinate_fetch_operator_receipt.get("external_state_mutated") is True
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id": str(
+            coordinate_fetch_operator_receipt.get("first_blocked_review_id", "")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_target_id": str(
+            coordinate_fetch_operator_receipt.get("first_blocked_target_id", "")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_pose_id": str(
+            coordinate_fetch_operator_receipt.get("first_blocked_pose_id", "")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_most_common_row_blocker": str(
+            coordinate_fetch_operator_receipt.get("most_common_row_blocker", "")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approval_token_required": str(
+            coordinate_fetch_operator_receipt.get("approval_token_required", "")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_execute_command": str(
+            coordinate_fetch_operator_receipt.get("execute_command", "")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocker_count": _int(
+            coordinate_fetch_operator_receipt.get("blocker_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_next_required_step": str(
+            coordinate_fetch_operator_receipt.get("next_required_step", "")
+        ),
         "openmm_schrodinger_claim_ready": openmm_schrodinger_claim_ready,
         "engine_refinement_claim_evidence_receipt_ready": engine_receipt_ready,
         "engine_refinement_claim_evidence_priority_packet_ready": engine_priority_ready,
@@ -924,6 +1013,9 @@ def build_science_accuracy_frontier(
             "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight": str(
                 public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json
             ),
+            "refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt": str(
+                public_benchmark_statistical_support_coordinate_fetch_operator_receipt_json
+            ),
             "refine_tier_public_benchmark_claim_grade_gap_audit": str(
                 public_benchmark_claim_grade_gap_audit_json
             ),
@@ -1017,6 +1109,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"{summary['public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count']}`",
         "- public_benchmark_statistical_support_coordinate_fetch_r4_download_executed: "
         f"`{summary['public_benchmark_statistical_support_coordinate_fetch_r4_download_executed']}`",
+        "- public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready/blocked: "
+        f"`{summary['public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready']}/"
+        f"{summary['public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count']}`",
+        "- public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked: "
+        f"`{summary['public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id']}/"
+        f"{summary['public_benchmark_statistical_support_coordinate_fetch_operator_receipt_most_common_row_blocker']}`",
         f"- engine_refinement_claim_evidence_receipt_ready: `{summary['engine_refinement_claim_evidence_receipt_ready']}`",
         f"- public_benchmark_work_order_seeded_row_count: `{summary['public_benchmark_work_order_seeded_row_count']}`",
         f"- public_benchmark_work_order_prefilled_operator_field_count: `{summary['public_benchmark_work_order_prefilled_operator_field_count']}`",
@@ -1072,6 +1170,10 @@ def main(argv: list[str] | None = None) -> None:
         default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON,
     )
     parser.add_argument(
+        "--public-benchmark-statistical-support-coordinate-fetch-operator-receipt-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_OPERATOR_RECEIPT_JSON,
+    )
+    parser.add_argument(
         "--public-benchmark-claim-grade-gap-audit-json",
         default=DEFAULT_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_JSON,
     )
@@ -1099,6 +1201,9 @@ def main(argv: list[str] | None = None) -> None:
         ),
         public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json=(
             args.public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json
+        ),
+        public_benchmark_statistical_support_coordinate_fetch_operator_receipt_json=(
+            args.public_benchmark_statistical_support_coordinate_fetch_operator_receipt_json
         ),
         public_benchmark_claim_grade_gap_audit_json=args.public_benchmark_claim_grade_gap_audit_json,
         engine_receipt_json=args.engine_receipt_json,
