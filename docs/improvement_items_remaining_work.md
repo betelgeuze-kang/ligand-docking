@@ -319,11 +319,11 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `public_benchmark_claim_grade_gap_audit_ready=true`,
   `public_benchmark_claim_grade_gap_audit_status=refine_tier_public_benchmark_claim_grade_gap_audit_ready`,
   `public_benchmark_claim_grade_gap_audit_claim_grade_statistical_support_ready=false`,
-  `public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count=8`,
-  `public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count=3`,
-  `public_benchmark_claim_grade_gap_audit_bootstrap_spearman_p05_deficit=0.6428571428571428`,
-  `public_benchmark_claim_grade_gap_audit_minimum_new_pair_count=17`,
-  `public_benchmark_claim_grade_gap_audit_minimum_new_holdout_pair_count=5`,
+  `public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count=25`,
+  `public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count=8`,
+  `public_benchmark_claim_grade_gap_audit_bootstrap_spearman_p05_deficit=0.2694615384615384`,
+  `public_benchmark_claim_grade_gap_audit_minimum_new_pair_count=0`,
+  `public_benchmark_claim_grade_gap_audit_minimum_new_holdout_pair_count=0`,
   `public_benchmark_claim_grade_gap_audit_coordinate_validation_pass_row_count=17`,
   `public_benchmark_claim_grade_gap_audit_coordinate_validation_blocked_row_count=0`,
   `public_benchmark_claim_grade_gap_audit_coordinate_validation_deficit=0`,
@@ -331,10 +331,10 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count=0`,
   `public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_deficit=0`,
   `public_benchmark_claim_grade_gap_audit_gap_row_count=5`,
-  `public_benchmark_claim_grade_gap_audit_blocked_gap_row_count=3`,
-  `public_benchmark_claim_grade_gap_audit_blocker_count=3`,
-  `public_benchmark_claim_grade_gap_audit_top_science_gap_id=claim_grade_public_benchmark_pair_count_below_minimum`,
-  `public_benchmark_claim_grade_gap_audit_top_statistical_gap_id=claim_grade_public_benchmark_pair_count_below_minimum`,
+  `public_benchmark_claim_grade_gap_audit_blocked_gap_row_count=1`,
+  `public_benchmark_claim_grade_gap_audit_blocker_count=1`,
+  `public_benchmark_claim_grade_gap_audit_top_science_gap_id=claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum`,
+  `public_benchmark_claim_grade_gap_audit_top_statistical_gap_id=claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum`,
   `public_benchmark_statistical_support_metric_materialization_readiness_present=true`,
   `public_benchmark_statistical_support_metric_materialization_readiness_ready=true`,
   `public_benchmark_statistical_support_metric_materialization_all_candidates_ready=true`,
@@ -531,31 +531,36 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `minimum_new_fit_or_holdout_pair_count=12`,
   `bootstrap_spearman_p05_deficit=0.6428571428571428`,
   `bootstrap_retest_required=true`,
-  `canonical_intake_promotion_allowed=false`를 기록한다. 즉 현재 8쌍/3 holdout
+  `canonical_intake_promotion_allowed=false`를 기록한다. 이 값은 8쌍/3 holdout
+  materialized evidence에서 출발한 expansion 요구량 snapshot이며, 아래 최신
+  candidate-fill preview와 claim-grade gap audit에서 pair/holdout 수량 결손은
+  0으로 닫히고 bootstrap p05 결손만 남는다. 즉 현재 8쌍/3 holdout
   materialized 후보를 canonical intake로 승격하는 것이 아니라, 최소 25개 public
   benchmark pair, 8개 holdout pair, bootstrap Spearman p05 >= 0.5 기준을 만족하기
   위해 추가로 채워야 하는 17개 공개 benchmark-pair 슬롯을 fail-closed로 발행한다.
   이 work-order도 외부 dataset download, docking/MD 실행, intake write, operator
   receipt 승인, upload/push 없이 로컬 materialized summary와 apply summary만 읽는다.
-  `runs/refine_tier_public_benchmark_claim_grade_gap_audit_current.json`은 같은 결손을
-  claim-grade gap audit으로 분리해
+  `runs/refine_tier_public_benchmark_claim_grade_gap_audit_current.json`은 최신
+  51-row candidate-fill preview를 통계 관측 source로 사용해 claim-grade gap audit을
+  재계산한다. 현재 상태는
   `refine_tier_public_benchmark_claim_grade_gap_audit_ready`,
   `claim_grade_statistical_support_ready=false`,
-  `observed_public_benchmark_pair_count=8`,
-  `observed_holdout_pair_count=3`,
-  `observed_bootstrap_spearman_p05=-0.14285714285714285`,
-  `minimum_new_pair_count=17`,
-  `minimum_new_holdout_pair_count=5`,
-  `bootstrap_spearman_p05_deficit=0.6428571428571428`,
+  `statistical_support_observation_source=metric_source_candidate_fill_preview`,
+  `observed_public_benchmark_pair_count=25`,
+  `observed_holdout_pair_count=8`,
+  `observed_bootstrap_spearman_p05=0.23053846153846155`,
+  `minimum_new_pair_count=0`,
+  `minimum_new_holdout_pair_count=0`,
+  `bootstrap_spearman_p05_deficit=0.2694615384615384`,
   `coordinate_validation_pass_row_count=17`,
   `coordinate_validation_blocked_row_count=0`,
   `metric_source_payload_fill_ready_row_count=51`,
   `metric_source_payload_fill_blocked_row_count=0`,
-  `blocked_gap_row_count=3`,
-  `top_science_gap_id=claim_grade_public_benchmark_pair_count_below_minimum`를 고정한다. 이 audit도
-  read-only이며, 현재 8-row materialized evidence를 상용 claim-grade parity로
-  승격하지 못하는 이유를 sample/holdout/bootstrap과 metric payload receipt 결손으로
-  분해한다.
+  `blocked_gap_row_count=1`,
+  `top_science_gap_id=claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum`를
+  고정한다. 이 audit도 read-only이며, 25쌍/8 holdout 수량 결손은 닫혔지만
+  preview가 reviewed metric source payload를 쓰지 않았고 bootstrap p05가 0.5 기준
+  아래라 상용 claim-grade parity로 승격하지 못하는 이유를 분리한다.
   `runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json`은
   이 17개 expansion slot에 대해 로컬 PDBBind/CASF pose-affinity seed에서
   비중복 후보를 선별해
@@ -659,6 +664,20 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `canonical_intake_promotion_allowed=false`를 기록한다. 즉 후보 metric 값 계산과
   25쌍/8 holdout 수량 조건은 닫혔지만, bootstrap low가 기준 0.5에 못 미쳐 R9
   claim 승격과 expected metric source payload write는 여전히 금지된다.
+  `config/refine_tier_public_benchmark_candidate_support_diagnostic_current.json`은
+  같은 25쌍 preview를 leave-one-out/rank-residual로 진단해
+  `refine_tier_public_benchmark_candidate_support_diagnostic_ready`,
+  `combined_pair_count=25`,
+  `free_energy_spearman_bootstrap_p05=0.23053846153846155`,
+  `best_single_pair_removal_target_id=3f3e`,
+  `best_single_pair_removal_bootstrap_p05=0.354695652174`,
+  `best_single_pair_removal_claim_grade_p05_ready=false`,
+  `top_rank_residual_target_id=3f3e`,
+  `top_rank_residual_abs_error=18`을 기록한다. 따라서 남은 과학 병목은
+  outlier row를 제거해 해결되는 문제가 아니라, `3f3e`, 기존 `2j7h`, `3n86`
+  같은 큰 rank-residual pair에서 contact-shell/descriptor/score calibration을
+  개선하고 bootstrap p05를 다시 올리는 일이다. 이 diagnostic은 row drop,
+  payload write, intake promotion을 하지 않는다.
   `runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json`은
   이 execute 직전 handoff를 R4/operator review packet으로 고정해
   `refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready`,
@@ -3597,9 +3616,9 @@ metric materialization readiness도 `metric_materialization_row_count=17`,
 `existing_metric_source_payload_count=0`으로 고정되어, 이제 DockQ/lDDT-PLI/internal
 ΔG source payload 생성과 bootstrap Spearman p05 재검증으로 넘어갈 입력 계약은 닫혔다.
 새 claim-grade gap audit은 이 상태를 `gap_row_count=5`,
-`blocked_gap_row_count=3`, `blocker_count=3`,
-`minimum_new_pair_count=17`, `minimum_new_holdout_pair_count=5`,
-`bootstrap_spearman_p05_deficit=0.6428571428571428`,
+`blocked_gap_row_count=1`, `blocker_count=1`,
+`minimum_new_pair_count=0`, `minimum_new_holdout_pair_count=0`,
+`bootstrap_spearman_p05_deficit=0.2694615384615384`,
 `coordinate_validation_deficit=0`,
 `metric_source_payload_fill_deficit=0`으로 고정해, 남은 통계 support 부족과
 metric payload receipt/materialization 부족을 release source-of-truth가 exact-check한다.

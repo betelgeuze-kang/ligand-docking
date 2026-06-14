@@ -36,6 +36,9 @@ def _write_inputs(
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_json": (
             tmp_path / "public_stat_metric_source_payload_operator_receipt.json"
         ),
+        "public_benchmark_statistical_support_metric_source_candidate_fill_json": (
+            tmp_path / "public_stat_metric_source_candidate_fill.json"
+        ),
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json": (
             tmp_path / "public_stat_coordinate_fetch_r4_preflight.json"
         ),
@@ -462,6 +465,32 @@ def _write_inputs(
                 if materialized_candidate_ready and not ready
                 else ""
             ),
+        },
+    )
+    _write(
+        paths["public_benchmark_statistical_support_metric_source_candidate_fill_json"],
+        {
+            "status": "blocked_refine_tier_public_benchmark_statistical_support_metric_candidates",
+            "candidate_row_count": 0,
+            "candidate_pass_row_count": 0,
+            "candidate_blocked_row_count": 0,
+            "metric_value_candidate_count": 0,
+            "candidate_pair_count": 0,
+            "candidate_pair_pass_count": 0,
+            "combined_pair_count": 0,
+            "combined_fit_pair_count": 0,
+            "combined_holdout_pair_count": 0,
+            "combined_free_energy_spearman": None,
+            "free_energy_spearman_bootstrap_p05": None,
+            "free_energy_spearman_bootstrap_p50": None,
+            "free_energy_spearman_bootstrap_p95": None,
+            "claim_grade_public_benchmark_statistical_support_ready": False,
+            "claim_grade_public_benchmark_statistical_support_blocker_count": 0,
+            "expected_metric_source_artifact_touched_count": 0,
+            "payload_write_allowed": False,
+            "operator_receipt_approval_filled": False,
+            "canonical_intake_promotion_allowed": False,
+            "claim_promotion_allowed": False,
         },
     )
     _write(
@@ -1051,6 +1080,8 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required"
     ] == "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
     assert summary["public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocker_count"] == 1
+    assert summary["public_benchmark_statistical_support_metric_source_candidate_fill_present"] is True
+    assert summary["public_benchmark_statistical_support_metric_source_candidate_fill_ready"] is False
     assert summary["public_benchmark_statistical_support_coordinate_intake_present"] is True
     assert summary["public_benchmark_statistical_support_coordinate_intake_ready"] is True
     assert summary["public_benchmark_statistical_support_coordinate_intake_status"] == (
@@ -1243,6 +1274,64 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
     assert "coordinate validation/materialization" in summary["next_required_step"]
 
 
+def test_science_accuracy_frontier_surfaces_candidate_fill_quality_gap(
+    tmp_path: Path,
+) -> None:
+    paths = _write_inputs(tmp_path, ready=False, materialized_candidate_ready=True)
+    _write(
+        paths["public_benchmark_statistical_support_metric_source_candidate_fill_json"],
+        {
+            "status": "refine_tier_public_benchmark_statistical_support_metric_candidates_ready",
+            "candidate_row_count": 51,
+            "candidate_pass_row_count": 51,
+            "candidate_blocked_row_count": 0,
+            "metric_value_candidate_count": 51,
+            "candidate_pair_count": 17,
+            "candidate_pair_pass_count": 17,
+            "combined_pair_count": 25,
+            "combined_fit_pair_count": 17,
+            "combined_holdout_pair_count": 8,
+            "combined_free_energy_spearman": 0.5315384615384615,
+            "free_energy_spearman_bootstrap_p05": 0.23053846153846155,
+            "free_energy_spearman_bootstrap_p50": 0.5492307692307692,
+            "free_energy_spearman_bootstrap_p95": 0.7739230769230769,
+            "claim_grade_public_benchmark_statistical_support_ready": False,
+            "claim_grade_public_benchmark_statistical_support_blocker_count": 1,
+            "expected_metric_source_artifact_touched_count": 0,
+            "payload_write_allowed": False,
+            "operator_receipt_approval_filled": False,
+            "canonical_intake_promotion_allowed": False,
+            "claim_promotion_allowed": False,
+        },
+    )
+
+    payload = mod.build_science_accuracy_frontier(**paths)
+    summary = payload["summary"]
+
+    assert summary["public_benchmark_statistical_support_metric_source_candidate_fill_ready"] is True
+    assert summary["public_benchmark_statistical_support_metric_source_candidate_fill_candidate_pass_row_count"] == 51
+    assert summary["public_benchmark_statistical_support_metric_source_candidate_fill_combined_pair_count"] == 25
+    assert summary["public_benchmark_statistical_support_metric_source_candidate_fill_combined_holdout_pair_count"] == 8
+    assert summary["public_benchmark_statistical_support_metric_source_candidate_fill_spearman_bootstrap_p05"] == (
+        0.23053846153846155
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_source_candidate_fill_claim_grade_statistical_support_ready"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_source_candidate_fill_expected_metric_source_artifact_touched_count"
+        ]
+        == 0
+    )
+    assert summary["public_benchmark_statistical_support_metric_source_candidate_fill_payload_write_allowed"] is False
+    assert "25-pair R9 metric candidate preview" in summary["next_required_step"]
+    assert "below the claim-grade 0.5 floor" in summary["next_required_step"]
+
+
 def test_science_accuracy_frontier_can_turn_ready_when_claim_evidence_is_ready(
     tmp_path: Path,
 ) -> None:
@@ -1287,6 +1376,8 @@ def test_science_accuracy_frontier_cli_writes_json_and_markdown(tmp_path: Path) 
             str(paths["public_benchmark_statistical_support_metric_source_templates_json"]),
             "--public-benchmark-statistical-support-metric-source-payload-operator-receipt-json",
             str(paths["public_benchmark_statistical_support_metric_source_payload_operator_receipt_json"]),
+            "--public-benchmark-statistical-support-metric-source-candidate-fill-json",
+            str(paths["public_benchmark_statistical_support_metric_source_candidate_fill_json"]),
             "--public-benchmark-statistical-support-coordinate-fetch-r4-preflight-json",
             str(paths["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json"]),
             "--public-benchmark-statistical-support-coordinate-fetch-operator-receipt-json",

@@ -17,6 +17,7 @@ def _fixture_paths(tmp_path: Path) -> dict[str, Path]:
         "work_order": tmp_path / "statistical_work_order.json",
         "readiness": tmp_path / "metric_readiness.json",
         "templates": tmp_path / "metric_templates.json",
+        "candidate_fill": tmp_path / "candidate_fill.json",
         "r4": tmp_path / "r4.json",
     }
     _write_json(
@@ -63,6 +64,14 @@ def _fixture_paths(tmp_path: Path) -> dict[str, Path]:
         },
     )
     _write_json(
+        paths["candidate_fill"],
+        {
+            "status": "blocked_refine_tier_public_benchmark_statistical_support_metric_candidates",
+            "candidate_blocked_row_count": 51,
+            "combined_pair_count": 0,
+        },
+    )
+    _write_json(
         paths["r4"],
         {
             "r4_preflight_ready": True,
@@ -86,6 +95,7 @@ def test_claim_grade_gap_audit_tracks_statistical_and_materialization_gaps(tmp_p
         statistical_support_work_order_json=paths["work_order"],
         metric_materialization_readiness_json=paths["readiness"],
         metric_source_templates_json=paths["templates"],
+        metric_source_candidate_fill_json=paths["candidate_fill"],
         coordinate_fetch_r4_preflight_json=paths["r4"],
     )
     summary = payload["summary"]
@@ -96,6 +106,9 @@ def test_claim_grade_gap_audit_tracks_statistical_and_materialization_gaps(tmp_p
     assert summary["canonical_intake_promotion_allowed"] is False
     assert summary["observed_public_benchmark_pair_count"] == 8
     assert summary["observed_holdout_pair_count"] == 3
+    assert summary["statistical_support_observation_source"] == "materialized_metric_sources"
+    assert summary["metric_source_candidate_fill_present"] is True
+    assert summary["metric_source_candidate_fill_ready"] is False
     assert summary["minimum_new_pair_count"] == 17
     assert summary["minimum_new_holdout_pair_count"] == 5
     assert summary["bootstrap_spearman_p05_deficit"] == 0.6428571428571428
@@ -179,6 +192,7 @@ def test_claim_grade_gap_audit_allows_canonical_review_when_all_gaps_pass(tmp_pa
         statistical_support_work_order_json=paths["work_order"],
         metric_materialization_readiness_json=paths["readiness"],
         metric_source_templates_json=paths["templates"],
+        metric_source_candidate_fill_json=paths["candidate_fill"],
         coordinate_fetch_r4_preflight_json=paths["r4"],
     )
     summary = payload["summary"]
@@ -188,6 +202,89 @@ def test_claim_grade_gap_audit_allows_canonical_review_when_all_gaps_pass(tmp_pa
     assert summary["blocked_gap_row_count"] == 0
     assert summary["blocker_count"] == 0
     assert all(row["status"] == "pass" for row in payload["rows"])
+
+
+def test_claim_grade_gap_audit_uses_candidate_fill_preview_without_promotion(tmp_path: Path) -> None:
+    paths = _fixture_paths(tmp_path)
+    _write_json(
+        paths["readiness"],
+        {
+            "metric_materialization_row_count": 17,
+            "coordinate_validation_pass_row_count": 17,
+            "coordinate_validation_blocked_row_count": 0,
+            "planned_metric_source_payload_count": 51,
+        },
+    )
+    _write_json(
+        paths["templates"],
+        {
+            "planned_metric_source_payload_count": 51,
+            "metric_source_payload_fill_ready_row_count": 51,
+            "metric_source_payload_fill_blocked_row_count": 0,
+        },
+    )
+    _write_json(
+        paths["candidate_fill"],
+        {
+            "status": "refine_tier_public_benchmark_statistical_support_metric_candidates_ready",
+            "candidate_blocked_row_count": 0,
+            "candidate_pair_count": 17,
+            "candidate_pair_pass_count": 17,
+            "combined_pair_count": 25,
+            "combined_fit_pair_count": 17,
+            "combined_holdout_pair_count": 8,
+            "combined_free_energy_spearman": 0.5315384615384615,
+            "free_energy_spearman_bootstrap_p05": 0.23053846153846155,
+            "free_energy_spearman_bootstrap_p50": 0.5492307692307692,
+            "free_energy_spearman_bootstrap_p95": 0.7739230769230769,
+            "claim_grade_public_benchmark_statistical_support_ready": False,
+            "claim_grade_public_benchmark_statistical_support_blocker_count": 1,
+            "expected_metric_source_artifact_touched_count": 0,
+            "payload_write_allowed": False,
+            "operator_receipt_approval_filled": False,
+            "canonical_intake_promotion_allowed": False,
+            "claim_promotion_allowed": False,
+        },
+    )
+    _write_json(
+        paths["r4"],
+        {
+            "r4_preflight_ready": True,
+            "fetch_required_row_count": 17,
+            "ready_for_r4_review_row_count": 17,
+            "blocked_r4_row_count": 0,
+            "authorized_for_external_download": True,
+            "download_executed": True,
+            "external_state_mutated": False,
+            "approval_token_required": "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD",
+        },
+    )
+
+    payload = mod.build_refine_tier_public_benchmark_claim_grade_gap_audit(
+        materialization_json=paths["materialization"],
+        statistical_support_work_order_json=paths["work_order"],
+        metric_materialization_readiness_json=paths["readiness"],
+        metric_source_templates_json=paths["templates"],
+        metric_source_candidate_fill_json=paths["candidate_fill"],
+        coordinate_fetch_r4_preflight_json=paths["r4"],
+    )
+    summary = payload["summary"]
+
+    assert summary["statistical_support_observation_source"] == "metric_source_candidate_fill_preview"
+    assert summary["metric_source_candidate_fill_ready"] is True
+    assert summary["observed_public_benchmark_pair_count"] == 25
+    assert summary["observed_holdout_pair_count"] == 8
+    assert summary["minimum_new_pair_count"] == 0
+    assert summary["minimum_new_holdout_pair_count"] == 0
+    assert summary["bootstrap_spearman_p05_deficit"] == 0.26946153846153843
+    assert summary["coordinate_validation_deficit"] == 0
+    assert summary["metric_source_payload_fill_deficit"] == 0
+    assert summary["blocked_gap_row_count"] == 1
+    assert summary["blocker_count"] == 1
+    assert summary["top_statistical_gap_id"] == "claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum"
+    assert summary["candidate_fill_expected_metric_source_artifact_touched_count"] == 0
+    assert summary["candidate_fill_payload_write_allowed"] is False
+    assert summary["canonical_intake_promotion_allowed"] is False
 
 
 def test_claim_grade_gap_audit_cli_writes_outputs(tmp_path: Path) -> None:
@@ -206,6 +303,8 @@ def test_claim_grade_gap_audit_cli_writes_outputs(tmp_path: Path) -> None:
             str(paths["readiness"]),
             "--metric-source-templates-json",
             str(paths["templates"]),
+            "--metric-source-candidate-fill-json",
+            str(paths["candidate_fill"]),
             "--coordinate-fetch-r4-preflight-json",
             str(paths["r4"]),
             "--out-json",

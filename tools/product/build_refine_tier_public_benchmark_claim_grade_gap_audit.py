@@ -27,6 +27,9 @@ DEFAULT_METRIC_MATERIALIZATION_READINESS_JSON = (
 DEFAULT_METRIC_SOURCE_TEMPLATES_JSON = (
     "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json"
 )
+DEFAULT_METRIC_SOURCE_CANDIDATE_FILL_JSON = (
+    "config/refine_tier_public_benchmark_statistical_support_metric_source_candidate_fill_current.json"
+)
 DEFAULT_COORDINATE_FETCH_R4_PREFLIGHT_JSON = (
     "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json"
 )
@@ -117,23 +120,54 @@ def build_refine_tier_public_benchmark_claim_grade_gap_audit(
     statistical_support_work_order_json: str | Path = DEFAULT_STATISTICAL_SUPPORT_WORK_ORDER_JSON,
     metric_materialization_readiness_json: str | Path = DEFAULT_METRIC_MATERIALIZATION_READINESS_JSON,
     metric_source_templates_json: str | Path = DEFAULT_METRIC_SOURCE_TEMPLATES_JSON,
+    metric_source_candidate_fill_json: str | Path = DEFAULT_METRIC_SOURCE_CANDIDATE_FILL_JSON,
     coordinate_fetch_r4_preflight_json: str | Path = DEFAULT_COORDINATE_FETCH_R4_PREFLIGHT_JSON,
 ) -> dict[str, Any]:
     materialization_payload, materialization_present = _read_json(materialization_json)
     work_order_payload, work_order_present = _read_json(statistical_support_work_order_json)
     metric_readiness_payload, metric_readiness_present = _read_json(metric_materialization_readiness_json)
     templates_payload, templates_present = _read_json(metric_source_templates_json)
+    candidate_fill_payload, candidate_fill_present = _read_json(metric_source_candidate_fill_json)
     r4_payload, r4_present = _read_json(coordinate_fetch_r4_preflight_json)
 
     materialization = _summary(materialization_payload)
     work_order = _summary(work_order_payload)
     metric_readiness = _summary(metric_readiness_payload)
     templates = _summary(templates_payload)
+    candidate_fill = _summary(candidate_fill_payload)
     r4 = _summary(r4_payload)
 
-    observed_pair_count = _int(materialization.get("free_energy_pair_count"))
-    observed_holdout_count = _int(materialization.get("free_energy_holdout_pair_count"))
-    observed_bootstrap_p05 = _float(materialization.get("free_energy_spearman_bootstrap_p05"))
+    candidate_fill_ready = bool(
+        candidate_fill_present
+        and candidate_fill.get("status")
+        == "refine_tier_public_benchmark_statistical_support_metric_candidates_ready"
+        and _int(candidate_fill.get("candidate_blocked_row_count")) == 0
+        and _int(candidate_fill.get("combined_pair_count")) > 0
+    )
+    support_source = "metric_source_candidate_fill_preview" if candidate_fill_ready else "materialized_metric_sources"
+    observed_pair_count = _int(
+        candidate_fill.get("combined_pair_count") if candidate_fill_ready else materialization.get("free_energy_pair_count")
+    )
+    observed_holdout_count = _int(
+        candidate_fill.get("combined_holdout_pair_count")
+        if candidate_fill_ready
+        else materialization.get("free_energy_holdout_pair_count")
+    )
+    observed_bootstrap_p05 = _float(
+        candidate_fill.get("free_energy_spearman_bootstrap_p05")
+        if candidate_fill_ready
+        else materialization.get("free_energy_spearman_bootstrap_p05")
+    )
+    observed_bootstrap_p50 = _float(
+        candidate_fill.get("free_energy_spearman_bootstrap_p50")
+        if candidate_fill_ready
+        else materialization.get("free_energy_spearman_bootstrap_p50")
+    )
+    observed_bootstrap_p95 = _float(
+        candidate_fill.get("free_energy_spearman_bootstrap_p95")
+        if candidate_fill_ready
+        else materialization.get("free_energy_spearman_bootstrap_p95")
+    )
     pair_deficit = _deficit(observed_pair_count, MIN_CLAIM_GRADE_PUBLIC_BENCHMARK_PAIRS)
     holdout_deficit = _deficit(observed_holdout_count, MIN_CLAIM_GRADE_HOLDOUT_PAIRS)
     bootstrap_deficit = _float_deficit(
@@ -162,6 +196,8 @@ def build_refine_tier_public_benchmark_claim_grade_gap_audit(
         blocker_ids.append("metric_materialization_readiness_missing")
     if not templates_present:
         blocker_ids.append("metric_source_templates_missing")
+    if not candidate_fill_present:
+        blocker_ids.append("metric_source_candidate_fill_missing")
     if not r4_present:
         blocker_ids.append("coordinate_fetch_r4_preflight_missing")
     if pair_deficit:
@@ -176,11 +212,14 @@ def build_refine_tier_public_benchmark_claim_grade_gap_audit(
         blocker_ids.append("claim_grade_metric_source_payloads_not_materialized")
 
     claim_grade_ready = bool(
-        materialization.get("claim_grade_public_benchmark_statistical_support_ready") is True
+        candidate_fill.get("claim_grade_public_benchmark_statistical_support_ready") is True
+        if candidate_fill_ready
+        else materialization.get("claim_grade_public_benchmark_statistical_support_ready") is True
     )
     canonical_intake_promotion_allowed = bool(
         claim_grade_ready
         and not blocker_ids
+        and not candidate_fill_ready
         and work_order.get("canonical_intake_promotion_allowed") is True
     )
     audit_ready = bool(
@@ -188,6 +227,7 @@ def build_refine_tier_public_benchmark_claim_grade_gap_audit(
         and work_order_present
         and metric_readiness_present
         and templates_present
+        and candidate_fill_present
         and r4_present
     )
 
@@ -236,6 +276,13 @@ def build_refine_tier_public_benchmark_claim_grade_gap_audit(
     blocked_row_count = sum(1 for row in rows if row["status"] != "pass")
     if coordinate_validation_deficit:
         next_required_step = NEXT_REQUIRED_STEP
+    elif candidate_fill_ready:
+        next_required_step = (
+            "The 17-candidate preview fills 51/51 metric values and closes the 25-pair/8-holdout "
+            "quantity gaps, but bootstrap Spearman p05 remains below 0.5 and the preview has not written "
+            "reviewed metric source payloads. Keep R9 claim-grade promotion blocked; improve candidate/score "
+            "quality, then require operator-reviewed payload receipt before canonical intake promotion."
+        )
     else:
         next_required_step = (
             "Coordinate fetch and validation are complete for the 17 R9 statistical-support candidates; "
@@ -262,13 +309,51 @@ def build_refine_tier_public_benchmark_claim_grade_gap_audit(
         "metric_materialization_readiness_present": metric_readiness_present,
         "metric_source_templates_artifact": _display(metric_source_templates_json),
         "metric_source_templates_present": templates_present,
+        "metric_source_candidate_fill_artifact": _display(metric_source_candidate_fill_json),
+        "metric_source_candidate_fill_present": candidate_fill_present,
+        "metric_source_candidate_fill_ready": candidate_fill_ready,
+        "metric_source_candidate_fill_status": str(candidate_fill.get("status", "")),
+        "statistical_support_observation_source": support_source,
         "coordinate_fetch_r4_preflight_artifact": _display(coordinate_fetch_r4_preflight_json),
         "coordinate_fetch_r4_preflight_present": r4_present,
         "observed_public_benchmark_pair_count": observed_pair_count,
         "observed_holdout_pair_count": observed_holdout_count,
         "observed_bootstrap_spearman_p05": observed_bootstrap_p05,
-        "observed_bootstrap_spearman_p50": _float(materialization.get("free_energy_spearman_bootstrap_p50")),
-        "observed_bootstrap_spearman_p95": _float(materialization.get("free_energy_spearman_bootstrap_p95")),
+        "observed_bootstrap_spearman_p50": observed_bootstrap_p50,
+        "observed_bootstrap_spearman_p95": observed_bootstrap_p95,
+        "candidate_fill_candidate_pair_count": _int(candidate_fill.get("candidate_pair_count")),
+        "candidate_fill_candidate_pair_pass_count": _int(candidate_fill.get("candidate_pair_pass_count")),
+        "candidate_fill_combined_pair_count": _int(candidate_fill.get("combined_pair_count")),
+        "candidate_fill_combined_fit_pair_count": _int(candidate_fill.get("combined_fit_pair_count")),
+        "candidate_fill_combined_holdout_pair_count": _int(candidate_fill.get("combined_holdout_pair_count")),
+        "candidate_fill_combined_free_energy_spearman": _float(candidate_fill.get("combined_free_energy_spearman")),
+        "candidate_fill_free_energy_spearman_bootstrap_p05": _float(
+            candidate_fill.get("free_energy_spearman_bootstrap_p05")
+        ),
+        "candidate_fill_free_energy_spearman_bootstrap_p50": _float(
+            candidate_fill.get("free_energy_spearman_bootstrap_p50")
+        ),
+        "candidate_fill_free_energy_spearman_bootstrap_p95": _float(
+            candidate_fill.get("free_energy_spearman_bootstrap_p95")
+        ),
+        "candidate_fill_claim_grade_statistical_support_ready": bool(
+            candidate_fill.get("claim_grade_public_benchmark_statistical_support_ready") is True
+        ),
+        "candidate_fill_claim_grade_statistical_support_blocker_count": _int(
+            candidate_fill.get("claim_grade_public_benchmark_statistical_support_blocker_count")
+        ),
+        "candidate_fill_candidate_blocked_row_count": _int(candidate_fill.get("candidate_blocked_row_count")),
+        "candidate_fill_expected_metric_source_artifact_touched_count": _int(
+            candidate_fill.get("expected_metric_source_artifact_touched_count")
+        ),
+        "candidate_fill_payload_write_allowed": bool(candidate_fill.get("payload_write_allowed") is True),
+        "candidate_fill_operator_receipt_approval_filled": bool(
+            candidate_fill.get("operator_receipt_approval_filled") is True
+        ),
+        "candidate_fill_canonical_intake_promotion_allowed": bool(
+            candidate_fill.get("canonical_intake_promotion_allowed") is True
+        ),
+        "candidate_fill_claim_promotion_allowed": bool(candidate_fill.get("claim_promotion_allowed") is True),
         "min_claim_grade_public_benchmark_pairs_required": MIN_CLAIM_GRADE_PUBLIC_BENCHMARK_PAIRS,
         "min_claim_grade_holdout_pairs_required": MIN_CLAIM_GRADE_HOLDOUT_PAIRS,
         "min_claim_grade_bootstrap_spearman_low_required": MIN_CLAIM_GRADE_BOOTSTRAP_SPEARMAN_LOW,
@@ -351,6 +436,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- claim_grade_statistical_support_ready: `{s['claim_grade_statistical_support_ready']}`",
         f"- observed_pair_count: `{s['observed_public_benchmark_pair_count']}`",
         f"- observed_holdout_pair_count: `{s['observed_holdout_pair_count']}`",
+        f"- statistical_support_observation_source: `{s['statistical_support_observation_source']}`",
         f"- observed_bootstrap_p05: `{s['observed_bootstrap_spearman_p05']}`",
         f"- minimum_new_pair_count: `{s['minimum_new_pair_count']}`",
         f"- minimum_new_holdout_pair_count: `{s['minimum_new_holdout_pair_count']}`",
@@ -381,6 +467,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--statistical-support-work-order-json", default=DEFAULT_STATISTICAL_SUPPORT_WORK_ORDER_JSON)
     parser.add_argument("--metric-materialization-readiness-json", default=DEFAULT_METRIC_MATERIALIZATION_READINESS_JSON)
     parser.add_argument("--metric-source-templates-json", default=DEFAULT_METRIC_SOURCE_TEMPLATES_JSON)
+    parser.add_argument("--metric-source-candidate-fill-json", default=DEFAULT_METRIC_SOURCE_CANDIDATE_FILL_JSON)
     parser.add_argument("--coordinate-fetch-r4-preflight-json", default=DEFAULT_COORDINATE_FETCH_R4_PREFLIGHT_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
@@ -395,6 +482,7 @@ def main(argv: list[str] | None = None) -> dict[str, Any]:
         statistical_support_work_order_json=args.statistical_support_work_order_json,
         metric_materialization_readiness_json=args.metric_materialization_readiness_json,
         metric_source_templates_json=args.metric_source_templates_json,
+        metric_source_candidate_fill_json=args.metric_source_candidate_fill_json,
         coordinate_fetch_r4_preflight_json=args.coordinate_fetch_r4_preflight_json,
     )
     _write_json(args.out_json, payload)
