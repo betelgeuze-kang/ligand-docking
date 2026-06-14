@@ -526,6 +526,14 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `r4_preflight_ready=true`, `r4_row_count=17`,
   `ready_for_r4_review_row_count=17`, `blocked_r4_row_count=0`,
   `required_r4_fields=target;action;impact;risk;rollback;verification`,
+  `fetch_required_row_count=17`,
+  `metric_materialization_readiness_present=true`,
+  `metric_materialization_readiness_ready=true`,
+  `metric_materialization_row_count=17`,
+  `metric_materialization_candidate_blocked_count=17`,
+  `missing_required_metric_input_artifact_count=17`,
+  `planned_metric_source_payload_count=51`,
+  `metric_materialization_blocked_row_count=17`,
   `execute_command_count=1`,
   `authorized_for_external_download=false`,
   `download_executed=false`, `external_state_mutated=false`를 기록한다.
@@ -533,6 +541,12 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `python3 tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py --mode execute --run-post-fetch-validation --approval-token APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`이며,
   승인이 없으면 coordinate fetch, canonical intake promotion, metric materialization을
   모두 실행하지 않는 claim boundary를 유지한다.
+  또한 이 preflight는 최신 metric materialization readiness를 R4 row에 묶어
+  각 후보의 `coordinate_validation_status`, `fetch_required`,
+  `metric_materialization_status`, `missing_required_metric_input_artifact_count`,
+  `planned_metric_source_payload_count`를 같이 surface한다. 따라서 operator 승인은
+  단순 파일 다운로드 허가가 아니라, 17개 좌표 검증을 통과시켜 51개 DockQ/lDDT-PLI/internal
+  ΔG source payload materialization 전제를 해소하는 과학/정확도 단계로 고정된다.
   `runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json`은
   좌표 fetch 승인 이후 바로 이어질 metric source materialization 입력 조건을
   별도 read-only readiness로 고정해

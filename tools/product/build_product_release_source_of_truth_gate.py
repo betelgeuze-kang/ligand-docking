@@ -126,8 +126,8 @@ RELEASE_REFRESH_COMMANDS = [
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_INTAKE_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_PLAN_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_APPLY_COMMAND,
-    REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_COMMAND,
+    REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_COMMAND,
     "python3 tools/product/build_engine_refinement_tier_readiness.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py",
@@ -1011,6 +1011,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py",
             "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json",
         ],
     },
     {
@@ -2564,6 +2565,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "fetch_apply_present",
             "fetch_apply_preview_ready",
             "post_fetch_validation_supported",
+            "metric_materialization_readiness_present",
+            "metric_materialization_readiness_ready",
             "required_r4_fields_present",
         ],
         "required_int_exact_fields": {
@@ -2578,6 +2581,17 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "target_row_count": 17,
             "source_url_primary_row_count": 17,
             "staging_destination_row_count": 17,
+            "fetch_required_row_count": 17,
+            "staging_destination_present_row_count": 0,
+            "metric_materialization_row_count": 17,
+            "metric_materialization_candidate_ready_count": 0,
+            "metric_materialization_candidate_blocked_count": 17,
+            "coordinate_validation_pass_row_count": 0,
+            "coordinate_validation_blocked_row_count": 17,
+            "missing_required_metric_input_artifact_count": 17,
+            "planned_metric_source_payload_count": 51,
+            "existing_metric_source_payload_count": 0,
+            "metric_materialization_blocked_row_count": 17,
             "missing_r4_field_row_count": 0,
             "download_executed": 0,
             "canonical_intake_promotion_allowed": 0,
@@ -2590,6 +2604,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             ),
             "fetch_apply": (
                 "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_current.json"
+            ),
+            "metric_materialization_readiness": (
+                "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json"
             ),
             "approval_token_required": "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD",
             "required_r4_fields": "target;action;impact;risk;rollback;verification",

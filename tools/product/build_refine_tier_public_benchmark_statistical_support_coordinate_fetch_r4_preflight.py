@@ -14,6 +14,9 @@ from tools.product.apply_refine_tier_public_benchmark_statistical_support_coordi
 from tools.product.build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan import (
     DEFAULT_OUT_JSON as DEFAULT_FETCH_PLAN_JSON,
 )
+from tools.product.build_refine_tier_public_benchmark_statistical_support_metric_materialization_readiness import (
+    DEFAULT_OUT_JSON as DEFAULT_METRIC_MATERIALIZATION_READINESS_JSON,
+)
 from tools.product.fetch_public_benchmark_native_structure import APPROVAL_TOKEN
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -86,6 +89,14 @@ def _rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
 
 
+def _row_key(row: dict[str, Any]) -> tuple[str, str, str]:
+    return (
+        _text(row.get("candidate_queue_id")),
+        _text(row.get("target_id")).lower(),
+        _text(row.get("pose_id")),
+    )
+
+
 def _r4_values(row: dict[str, Any]) -> dict[str, str]:
     target_id = _text(row.get("target_id")).lower()
     pose_id = _text(row.get("pose_id"))
@@ -114,8 +125,14 @@ def _r4_values(row: dict[str, Any]) -> dict[str, str]:
     }
 
 
-def _preflight_row(row: dict[str, Any], *, index: int) -> dict[str, Any]:
+def _preflight_row(
+    row: dict[str, Any],
+    *,
+    index: int,
+    metric_by_key: dict[tuple[str, str, str], dict[str, Any]],
+) -> dict[str, Any]:
     values = _r4_values(row)
+    metric = metric_by_key.get(_row_key(row), {})
     blockers: list[str] = []
     if not _text(row.get("target_id")):
         blockers.append("target_id_missing")
@@ -136,8 +153,26 @@ def _preflight_row(row: dict[str, Any], *, index: int) -> dict[str, Any]:
         "target_id": _text(row.get("target_id")).lower(),
         "pose_id": _text(row.get("pose_id")),
         "required_split": _text(row.get("required_split")),
+        "current_coordinate_artifact": _text(row.get("current_coordinate_artifact")),
+        "current_coordinate_artifact_present": _bool(row.get("current_coordinate_artifact_present")),
+        "coordinate_validation_status": _text(row.get("coordinate_validation_status")),
         "source_url_primary": _text(row.get("source_url_primary")),
         "staging_destination_path": _text(row.get("staging_destination_path")),
+        "staging_destination_present": _bool(row.get("staging_destination_present")),
+        "fetch_required": _bool(row.get("fetch_required")),
+        "coordinate_fetch_status": _text(row.get("coordinate_fetch_status")),
+        "coordinate_fetch_blockers": _text(row.get("coordinate_fetch_blockers")),
+        "metric_materialization_status": _text(metric.get("metric_materialization_status")) or "missing",
+        "metric_materialization_candidate_ready": _bool(
+            metric.get("metric_materialization_candidate_ready")
+        ),
+        "metric_materialization_blockers": _text(metric.get("metric_materialization_blockers")),
+        "missing_required_metric_input_artifact_count": int(
+            metric.get("missing_required_metric_input_artifact_count") or 0
+        ),
+        "planned_metric_source_payload_count": int(metric.get("planned_metric_source_payload_count") or 0),
+        "existing_metric_source_payload_count": int(metric.get("existing_metric_source_payload_count") or 0),
+        "required_metric_source_payloads": _text(metric.get("required_metric_source_payloads")),
         "execute_command": EXECUTE_COMMAND,
         "approval_token_required": APPROVAL_TOKEN,
         "operator_confirmation_required": True,
@@ -161,24 +196,39 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_p
     *,
     fetch_plan_json: str | Path = DEFAULT_FETCH_PLAN_JSON,
     fetch_apply_json: str | Path = DEFAULT_FETCH_APPLY_JSON,
+    metric_materialization_readiness_json: str | Path = DEFAULT_METRIC_MATERIALIZATION_READINESS_JSON,
     root: Path = ROOT,
 ) -> dict[str, Any]:
     plan_payload, plan_present = _read_json(fetch_plan_json, root=root)
     apply_payload, apply_present = _read_json(fetch_apply_json, root=root)
+    metric_payload, metric_present = _read_json(metric_materialization_readiness_json, root=root)
     plan_summary = _summary(plan_payload)
     apply_summary = _summary(apply_payload)
+    metric_summary = _summary(metric_payload)
     plan_rows = _rows(plan_payload)
-    rows = [_preflight_row(row, index=index) for index, row in enumerate(plan_rows, start=1)]
+    metric_rows = _rows(metric_payload)
+    metric_by_key = {_row_key(row): row for row in metric_rows}
+    rows = [
+        _preflight_row(row, index=index, metric_by_key=metric_by_key)
+        for index, row in enumerate(plan_rows, start=1)
+    ]
 
     blockers: list[str] = []
     if not plan_present:
         blockers.append("coordinate_fetch_plan_missing")
     if not apply_present:
         blockers.append("coordinate_fetch_apply_missing")
+    if not metric_present:
+        blockers.append("metric_materialization_readiness_missing")
     if plan_summary.get("status") != "refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_ready":
         blockers.append("coordinate_fetch_plan_not_ready")
     if apply_summary.get("status") != "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply":
         blockers.append("coordinate_fetch_apply_not_in_preview_blocked_posture")
+    if (
+        metric_summary.get("status")
+        != "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
+    ):
+        blockers.append("metric_materialization_readiness_not_ready")
     if not _bool(apply_summary.get("coordinate_fetch_apply_preview_ready")):
         blockers.append("coordinate_fetch_apply_preview_not_ready")
     if not _bool(apply_summary.get("post_fetch_validation_supported")):
@@ -209,6 +259,39 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_p
         "fetch_apply_present": apply_present,
         "fetch_apply_preview_ready": _bool(apply_summary.get("coordinate_fetch_apply_preview_ready")),
         "post_fetch_validation_supported": _bool(apply_summary.get("post_fetch_validation_supported")),
+        "metric_materialization_readiness": _display(
+            metric_materialization_readiness_json,
+            root=root,
+        ),
+        "metric_materialization_readiness_present": metric_present,
+        "metric_materialization_readiness_ready": bool(
+            metric_summary.get("status")
+            == "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
+        ),
+        "metric_materialization_row_count": int(
+            metric_summary.get("metric_materialization_row_count") or 0
+        ),
+        "metric_materialization_candidate_ready_count": int(
+            metric_summary.get("metric_materialization_candidate_ready_count") or 0
+        ),
+        "metric_materialization_candidate_blocked_count": int(
+            metric_summary.get("metric_materialization_candidate_blocked_count") or 0
+        ),
+        "coordinate_validation_pass_row_count": int(
+            metric_summary.get("coordinate_validation_pass_row_count") or 0
+        ),
+        "coordinate_validation_blocked_row_count": int(
+            metric_summary.get("coordinate_validation_blocked_row_count") or 0
+        ),
+        "missing_required_metric_input_artifact_count": int(
+            metric_summary.get("missing_required_metric_input_artifact_count") or 0
+        ),
+        "planned_metric_source_payload_count": int(
+            metric_summary.get("planned_metric_source_payload_count") or 0
+        ),
+        "existing_metric_source_payload_count": int(
+            metric_summary.get("existing_metric_source_payload_count") or 0
+        ),
         "approval_token_required": APPROVAL_TOKEN,
         "approval_token_present": False,
         "approval_token_accepted": False,
@@ -225,6 +308,13 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_p
         "target_row_count": sum(1 for row in rows if _text(row.get("target_id"))),
         "source_url_primary_row_count": sum(1 for row in rows if _text(row.get("source_url_primary"))),
         "staging_destination_row_count": sum(1 for row in rows if _text(row.get("staging_destination_path"))),
+        "fetch_required_row_count": sum(1 for row in rows if row.get("fetch_required") is True),
+        "staging_destination_present_row_count": sum(
+            1 for row in rows if row.get("staging_destination_present") is True
+        ),
+        "metric_materialization_blocked_row_count": sum(
+            1 for row in rows if _text(row.get("metric_materialization_status")).startswith("blocked")
+        ),
         "missing_r4_field_row_count": sum(1 for row in rows if _text(row.get("missing_r4_fields"))),
         "download_executed": False,
         "canonical_intake_promotion_allowed": False,
@@ -259,18 +349,25 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- r4_row_count: `{summary['r4_row_count']}`",
         f"- ready_for_r4_review_row_count: `{summary['ready_for_r4_review_row_count']}`",
         f"- blocked_r4_row_count: `{summary['blocked_r4_row_count']}`",
+        f"- metric_materialization_readiness_ready: `{summary['metric_materialization_readiness_ready']}`",
+        f"- metric_materialization_candidate_blocked_count: `{summary['metric_materialization_candidate_blocked_count']}`",
+        f"- missing_required_metric_input_artifact_count: `{summary['missing_required_metric_input_artifact_count']}`",
+        f"- planned_metric_source_payload_count: `{summary['planned_metric_source_payload_count']}`",
         f"- approval_token_required: `{summary['approval_token_required']}`",
         f"- execute_command: `{summary['execute_command']}`",
         "",
         "## Rows",
         "",
-        "| review_id | target | pose | status | source_url | destination |",
-        "| --- | --- | --- | --- | --- | --- |",
+        "| review_id | target | pose | status | validation | fetch_required | metric_status | missing_inputs | planned_payloads | source_url | destination |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| `{row['r4_review_id']}` | `{row['target_id']}` | `{row['pose_id']}` | "
-            f"`{row['r4_preflight_status']}` | `{row['source_url_primary']}` | "
+            f"`{row['r4_preflight_status']}` | `{row['coordinate_validation_status']}` | "
+            f"`{row['fetch_required']}` | `{row['metric_materialization_status']}` | "
+            f"`{row['missing_required_metric_input_artifact_count']}` | "
+            f"`{row['planned_metric_source_payload_count']}` | `{row['source_url_primary']}` | "
             f"`{row['staging_destination_path']}` |"
         )
     lines.extend(["", "## Claim Boundary", "", summary["claim_boundary"], "", "## Next Required Step", "", summary["next_required_step"], ""])
@@ -283,6 +380,10 @@ def main(argv: list[str] | None = None) -> dict[str, Any]:
     )
     parser.add_argument("--fetch-plan-json", default=DEFAULT_FETCH_PLAN_JSON)
     parser.add_argument("--fetch-apply-json", default=DEFAULT_FETCH_APPLY_JSON)
+    parser.add_argument(
+        "--metric-materialization-readiness-json",
+        default=DEFAULT_METRIC_MATERIALIZATION_READINESS_JSON,
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -290,6 +391,7 @@ def main(argv: list[str] | None = None) -> dict[str, Any]:
     payload = build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight(
         fetch_plan_json=args.fetch_plan_json,
         fetch_apply_json=args.fetch_apply_json,
+        metric_materialization_readiness_json=args.metric_materialization_readiness_json,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])
