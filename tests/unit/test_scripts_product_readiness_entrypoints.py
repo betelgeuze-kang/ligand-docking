@@ -191,6 +191,120 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         )
     )
     assert (
+        summary["science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_present"]
+        is True
+    )
+    assert (
+        summary["science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_ready"]
+        is True
+    )
+    assert (
+        summary["science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_status"]
+        == "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_template_row_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_template_metric_name_count"
+        ]
+        == 3
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_template_metric_source_artifact_path_row_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_template_payload_required_fields_present_row_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_coordinate_validation_blocked_template_row_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_missing_required_input_template_row_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_placeholder_value_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_placeholder_method_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_placeholder_operator_id_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_placeholder_reviewed_at_utc_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_placeholder_license_ok_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_canonical_intake_promotion_allowed"
+        ]
+        is False
+    )
+    assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present"
         ]

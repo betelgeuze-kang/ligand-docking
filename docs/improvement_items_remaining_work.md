@@ -327,6 +327,19 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`,
   `public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count=11`,
   `public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields=metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;operator_id;reviewed_at_utc;license_ok;external_engine_calls`,
+  `public_benchmark_statistical_support_metric_source_templates_present=true`,
+  `public_benchmark_statistical_support_metric_source_templates_ready=true`,
+  `public_benchmark_statistical_support_metric_source_templates_template_row_count=51`,
+  `public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count=17`,
+  `public_benchmark_statistical_support_metric_source_templates_template_metric_name_count=3`,
+  `public_benchmark_statistical_support_metric_source_templates_template_metric_source_artifact_path_row_count=51`,
+  `public_benchmark_statistical_support_metric_source_templates_template_payload_required_fields_present_row_count=51`,
+  `public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=0`,
+  `public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=51`,
+  `public_benchmark_statistical_support_metric_source_templates_coordinate_validation_blocked_template_row_count=51`,
+  `public_benchmark_statistical_support_metric_source_templates_missing_required_input_template_row_count=51`,
+  `public_benchmark_statistical_support_metric_source_templates_placeholder_value_count=51`,
+  `public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total=0`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready=true`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count=17`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=17`,
@@ -587,6 +600,27 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   ligand/receptor input artifact binding도 함께 기록하므로, 승인 후에도 빈 payload
   파일이나 receptor coordinate를 포함하지 않는 payload가 상용 parity evidence로
   승격되지 않는다.
+  `runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json`은
+  이 readiness row를 51개 operator-fill metric source payload template으로
+  확장해 `refine_tier_public_benchmark_statistical_support_metric_source_templates_ready`,
+  `metric_source_templates_ready=true`, `template_row_count=51`,
+  `template_candidate_row_count=17`, `template_metric_name_count=3`,
+  `template_metric_source_artifact_path_row_count=51`,
+  `template_payload_required_fields_present_row_count=51`,
+  `metric_source_payload_fill_ready_row_count=0`,
+  `metric_source_payload_fill_blocked_row_count=51`,
+  `coordinate_validation_blocked_template_row_count=51`,
+  `missing_required_input_template_row_count=51`,
+  `existing_metric_source_payload_present_row_count=0`,
+  `placeholder_value_count=51`, `placeholder_method_count=51`,
+  `placeholder_operator_id_count=51`, `placeholder_reviewed_at_utc_count=51`,
+  `placeholder_license_ok_count=51`, `external_engine_calls_total=0`,
+  `canonical_intake_promotion_allowed=false`를 기록한다. 이 산출물은 좌표 다운로드,
+  docking/MD, metric 계산, canonical intake promotion을 하지 않고, R4 승인 후
+  좌표 validation이 끝났을 때 DockQ/lDDT-PLI/internal DeltaG 값을 어떤 schema와
+  artifact hash로 채워야 하는지만 고정한다. 그래서 다음 병목은 더 이상 payload
+  schema 설계가 아니라 17개 native coordinate fetch/validation과 51개 placeholder
+  value의 operator-reviewed replacement다.
   `runs/engine_refinement_claim_evidence_priority_packet_current.json`과
   `runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`도 이
   work-order, metric materialization readiness, coordinate-fetch R4 preflight를 source
@@ -1402,6 +1436,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `product_pose_sampling_readiness_current.json`,
   `refine_tier_public_benchmark_readiness_current.json`,
   `refine_tier_public_benchmark_work_order_apply_current.json`,
+  `refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json`,
   `engine_refinement_claim_evidence_priority_packet_current.json`,
   `engine_refinement_claim_evidence_operator_field_worksheet_current.json`,
   `engine_refinement_claim_evidence_operator_staging_apply_current.json`,
@@ -1414,18 +1449,18 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `cameo_validation_operations_dossier_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=139`, `pass_count=139`,
-  `blocker_count=0`, `artifact_row_count=89`, `semantic_status_row_count=48`,
-  `release_refresh_command_count=114`, `stale_artifact_count=0`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=141`, `pass_count=141`,
+  `blocker_count=0`, `artifact_row_count=90`, `semantic_status_row_count=49`,
+  `release_refresh_command_count=115`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   final refresh는 마지막 `goal_release_decision_gate` 뒤에
   `goal_operator_action_board`, `goal_release_burndown_work_order`, intake kit,
   bottleneck briefing, full commercial matrix, release bundle, handoff bundle,
   privacy scan, source-of-truth gate까지 downstream 산출물을 한 번 더 재생성하고,
   refresh runner final gate는 source-of-truth, quality gate verification,
-  release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=139`,
-  `pass_count=139`, `artifact_row_count=89`, `semantic_status_row_count=48`,
-  `readme_row_count=2`, `release_refresh_command_count=114`를 exact-check해
+  release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=141`,
+  `pass_count=141`, `artifact_row_count=90`, `semantic_status_row_count=49`,
+  `readme_row_count=2`, `release_refresh_command_count=115`를 exact-check해
   downstream readiness row가 조용히 빠지는 회귀를 막고,
   `product_quality_gate_verification_current.json` final gate는
   `product_quality_gate_verified`, `quality_gate_ready=true`,
@@ -2142,7 +2177,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=114`, `executed_count=114`,
+  `product_release_current_refresh_verified`, `command_count=115`, `executed_count=115`,
   `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=true`,
   `final_gate_count=4`, `final_gate_blocker_count=0`이다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
@@ -2185,9 +2220,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   input readiness, science accuracy frontier restricted-ready/commercial-parity-blocked accounting, production AI registry promotion operator
   receipt/priority packet/field worksheet/staging apply preview, CAMEO official-result fetch preflight, R8 scope-breadth evidence field worksheet/staging apply preview, R9 engine-refinement claim evidence priority packet/field worksheet/staging apply preview,
   master gap closure rollup 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=139/139`,
+  `product_release_source_of_truth_gate_ready`, `pass_count=141/141`,
   `blocker_count=0`, `stale_artifact_count=0`,
-  `release_refresh_command_count=114`으로 재검증됐다.
+  `release_refresh_command_count=115`으로 재검증됐다.
 - `scripts/check_independent_product_readiness.py`는 현재 release/source-of-truth,
   product readiness, operational quality, commercial-independence, capability surface,
   release bundle, master/science-claim rollup을 read-only로 확인해
@@ -2202,6 +2237,16 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=17`,
   `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=false`,
   `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_ready=true`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_template_row_count=51`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count=17`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_template_metric_name_count=3`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=0`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=51`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_coordinate_validation_blocked_template_row_count=51`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_missing_required_input_template_row_count=51`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_placeholder_value_count=51`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total=0`,
   `accuracy_parity_ligand_ranking_metric_thresholds_pass=true`,
   `accuracy_parity_ligand_ranking_metric_blocker_count=0`,
   `accuracy_parity_ligand_ranking_claim_scope_lock_only=true`,

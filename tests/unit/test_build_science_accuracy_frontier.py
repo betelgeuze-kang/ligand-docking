@@ -27,6 +27,9 @@ def _write_inputs(
         "public_benchmark_statistical_support_metric_materialization_readiness_json": (
             tmp_path / "public_stat_metric_materialization_readiness.json"
         ),
+        "public_benchmark_statistical_support_metric_source_templates_json": (
+            tmp_path / "public_stat_metric_source_templates.json"
+        ),
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json": (
             tmp_path / "public_stat_coordinate_fetch_r4_preflight.json"
         ),
@@ -248,6 +251,62 @@ def _write_inputs(
                 "statistical-support candidates to pass coordinate validation before materializing "
                 "DockQ, lDDT-PLI, and internal DeltaG source payloads and rerunning bootstrap "
                 "Spearman p05."
+            ),
+        },
+    )
+    _write(
+        paths["public_benchmark_statistical_support_metric_source_templates_json"],
+        {
+            "status": "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready",
+            "metric_source_templates_ready": True,
+            "metric_materialization_readiness_present": True,
+            "metric_materialization_readiness_ready": True,
+            "metric_materialization_row_count": 17 if materialized_candidate_ready and not ready else 0,
+            "metric_materialization_candidate_ready_count": 0,
+            "metric_materialization_candidate_blocked_count": (
+                17 if materialized_candidate_ready and not ready else 0
+            ),
+            "coordinate_validation_pass_row_count": 0,
+            "coordinate_validation_blocked_row_count": 17 if materialized_candidate_ready and not ready else 0,
+            "planned_metric_source_payload_count": 51 if materialized_candidate_ready and not ready else 0,
+            "existing_metric_source_payload_count": 0,
+            "template_row_count": 51 if materialized_candidate_ready and not ready else 0,
+            "template_candidate_row_count": 17 if materialized_candidate_ready and not ready else 0,
+            "template_metric_name_count": 3 if materialized_candidate_ready and not ready else 0,
+            "template_metric_source_artifact_path_row_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
+            "template_payload_required_fields_present_row_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
+            "metric_source_payload_fill_ready_row_count": 0,
+            "metric_source_payload_fill_blocked_row_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
+            "coordinate_validation_blocked_template_row_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
+            "missing_required_input_template_row_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
+            "existing_metric_source_payload_present_row_count": 0,
+            "required_metric_source_payloads": "dockq;lddt_pli;internal_deltaG",
+            "required_metric_source_payload_field_count": 11 if materialized_candidate_ready and not ready else 0,
+            "required_metric_source_payload_fields": (
+                "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
+                "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
+            ),
+            "placeholder_value_count": 51 if materialized_candidate_ready and not ready else 0,
+            "placeholder_method_count": 51 if materialized_candidate_ready and not ready else 0,
+            "placeholder_operator_id_count": 51 if materialized_candidate_ready and not ready else 0,
+            "placeholder_reviewed_at_utc_count": 51 if materialized_candidate_ready and not ready else 0,
+            "placeholder_license_ok_count": 51 if materialized_candidate_ready and not ready else 0,
+            "external_engine_calls_total": 0,
+            "canonical_intake_promotion_allowed": False,
+            "next_required_step": (
+                "After R4-approved coordinate fetch and validation, replace each operator placeholder "
+                "with reviewed DockQ/lDDT-PLI/internal DeltaG values while preserving input artifact "
+                "paths, hashes, license_ok=true, and external_engine_calls=0."
             ),
         },
     )
@@ -536,6 +595,53 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
         "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
         "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
     )
+    assert summary["public_benchmark_statistical_support_metric_source_templates_present"] is True
+    assert summary["public_benchmark_statistical_support_metric_source_templates_ready"] is True
+    assert summary["public_benchmark_statistical_support_metric_source_templates_status"] == (
+        "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+    )
+    assert summary["public_benchmark_statistical_support_metric_source_templates_template_row_count"] == 51
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count"
+    ] == 17
+    assert summary["public_benchmark_statistical_support_metric_source_templates_template_metric_name_count"] == 3
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_templates_template_metric_source_artifact_path_row_count"
+    ] == 51
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_templates_template_payload_required_fields_present_row_count"
+    ] == 51
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+    ] == 0
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+    ] == 51
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_templates_coordinate_validation_blocked_template_row_count"
+    ] == 51
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_templates_missing_required_input_template_row_count"
+    ] == 51
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count"
+    ] == 0
+    assert summary["public_benchmark_statistical_support_metric_source_templates_placeholder_value_count"] == 51
+    assert summary["public_benchmark_statistical_support_metric_source_templates_placeholder_method_count"] == 51
+    assert summary["public_benchmark_statistical_support_metric_source_templates_placeholder_operator_id_count"] == 51
+    assert (
+        summary["public_benchmark_statistical_support_metric_source_templates_placeholder_reviewed_at_utc_count"]
+        == 51
+    )
+    assert summary["public_benchmark_statistical_support_metric_source_templates_placeholder_license_ok_count"] == 51
+    assert summary["public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total"] == 0
+    assert (
+        summary["public_benchmark_statistical_support_metric_source_templates_canonical_intake_promotion_allowed"]
+        is False
+    )
+    assert "external_engine_calls=0" in summary[
+        "public_benchmark_statistical_support_metric_source_templates_next_required_step"
+    ]
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present"] is True
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"] is True
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status"] == (
@@ -615,6 +721,8 @@ def test_science_accuracy_frontier_cli_writes_json_and_markdown(tmp_path: Path) 
             str(paths["public_benchmark_statistical_support_work_order_json"]),
             "--public-benchmark-statistical-support-metric-materialization-readiness-json",
             str(paths["public_benchmark_statistical_support_metric_materialization_readiness_json"]),
+            "--public-benchmark-statistical-support-metric-source-templates-json",
+            str(paths["public_benchmark_statistical_support_metric_source_templates_json"]),
             "--public-benchmark-statistical-support-coordinate-fetch-r4-preflight-json",
             str(paths["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json"]),
             "--engine-receipt-json",

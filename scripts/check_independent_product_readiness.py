@@ -498,6 +498,97 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
                     "",
                 )
             ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_present": bool(
+                science_frontier.get("public_benchmark_statistical_support_metric_source_templates_present") is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_ready": bool(
+                science_frontier.get("public_benchmark_statistical_support_metric_source_templates_ready") is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_status": str(
+                science_frontier.get("public_benchmark_statistical_support_metric_source_templates_status", "")
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_template_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_source_templates_template_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_template_metric_name_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_source_templates_template_metric_name_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_template_metric_source_artifact_path_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_source_templates_template_metric_source_artifact_path_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_template_payload_required_fields_present_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_source_templates_template_payload_required_fields_present_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_coordinate_validation_blocked_template_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_source_templates_coordinate_validation_blocked_template_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_missing_required_input_template_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_source_templates_missing_required_input_template_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_placeholder_value_count": _int(
+                science_frontier.get("public_benchmark_statistical_support_metric_source_templates_placeholder_value_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_placeholder_method_count": _int(
+                science_frontier.get("public_benchmark_statistical_support_metric_source_templates_placeholder_method_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_placeholder_operator_id_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_source_templates_placeholder_operator_id_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_placeholder_reviewed_at_utc_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_source_templates_placeholder_reviewed_at_utc_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_placeholder_license_ok_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_source_templates_placeholder_license_ok_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_canonical_intake_promotion_allowed": bool(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_metric_source_templates_canonical_intake_promotion_allowed"
+                )
+                is True
+            ),
             "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present": bool(
                 science_frontier.get("public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present")
                 is True

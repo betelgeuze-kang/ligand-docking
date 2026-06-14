@@ -206,6 +206,22 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`"
         in text
     )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_ready=true`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_template_row_count=51`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=0`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=51`"
+        in text
+    )
     assert "`public_benchmark_work_order_receptor_coordinate_validation_ready_row_count=8`" in text
     assert "`public_benchmark_work_order_receptor_coordinate_validation_blocked_row_count=0`" in text
     assert "`public_benchmark_work_order_receptor_coordinate_validation_min_atom_records=20`" in text
@@ -391,6 +407,37 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         "`public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields=metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;operator_id;reviewed_at_utc;license_ok;external_engine_calls`"
         in text
     )
+    assert "`public_benchmark_statistical_support_metric_source_templates_present=true`" in text
+    assert "`public_benchmark_statistical_support_metric_source_templates_ready=true`" in text
+    assert "`public_benchmark_statistical_support_metric_source_templates_template_row_count=51`" in text
+    assert "`public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count=17`" in text
+    assert "`public_benchmark_statistical_support_metric_source_templates_template_metric_name_count=3`" in text
+    assert (
+        "`public_benchmark_statistical_support_metric_source_templates_template_metric_source_artifact_path_row_count=51`"
+        in text
+    )
+    assert (
+        "`public_benchmark_statistical_support_metric_source_templates_template_payload_required_fields_present_row_count=51`"
+        in text
+    )
+    assert (
+        "`public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=0`"
+        in text
+    )
+    assert (
+        "`public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=51`"
+        in text
+    )
+    assert (
+        "`public_benchmark_statistical_support_metric_source_templates_coordinate_validation_blocked_template_row_count=51`"
+        in text
+    )
+    assert (
+        "`public_benchmark_statistical_support_metric_source_templates_missing_required_input_template_row_count=51`"
+        in text
+    )
+    assert "`public_benchmark_statistical_support_metric_source_templates_placeholder_value_count=51`" in text
+    assert "`public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total=0`" in text
     assert "`openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized`" in text
     assert (
         "`openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_r4_approval_required`"
@@ -411,6 +458,28 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert "`public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=false`" in text
+    assert (
+        "`runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json`"
+        in text
+    )
+    assert "`refine_tier_public_benchmark_statistical_support_metric_source_templates_ready`" in text
+    assert "`metric_source_templates_ready=true`" in text
+    assert "`template_row_count=51`" in text
+    assert "`template_candidate_row_count=17`" in text
+    assert "`template_metric_name_count=3`" in text
+    assert "`template_metric_source_artifact_path_row_count=51`" in text
+    assert "`template_payload_required_fields_present_row_count=51`" in text
+    assert "`metric_source_payload_fill_ready_row_count=0`" in text
+    assert "`metric_source_payload_fill_blocked_row_count=51`" in text
+    assert "`coordinate_validation_blocked_template_row_count=51`" in text
+    assert "`missing_required_input_template_row_count=51`" in text
+    assert "`existing_metric_source_payload_present_row_count=0`" in text
+    assert "`placeholder_value_count=51`" in text
+    assert "`placeholder_method_count=51`" in text
+    assert "`placeholder_operator_id_count=51`" in text
+    assert "`placeholder_reviewed_at_utc_count=51`" in text
+    assert "`placeholder_license_ok_count=51`" in text
+    assert "`external_engine_calls_total=0`" in text
     assert (
         "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_row_count=17`"
         in text

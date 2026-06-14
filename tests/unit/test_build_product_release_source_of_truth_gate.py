@@ -1297,6 +1297,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "refine_tier_public_benchmark_statistical_support_coordinate_intake" in artifact_ids
     assert "refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan" in artifact_ids
     assert "refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply" in artifact_ids
+    assert "refine_tier_public_benchmark_statistical_support_metric_source_templates" in artifact_ids
     assert "science_accuracy_frontier" in artifact_ids
     assert "self_hosted_license_distribution_audit" in artifact_ids
     assert "third_party_license_review_gate" in artifact_ids
@@ -1414,6 +1415,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_COMMAND
         in mod.RELEASE_REFRESH_COMMANDS
     )
+    assert (
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_COMMAND
+        in mod.RELEASE_REFRESH_COMMANDS
+    )
     assert "python3 tools/product/build_science_accuracy_frontier.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "product_release_bundle_semantic_ready" in status_ids
     assert (
@@ -1430,6 +1435,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert (
         "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_semantic_ready"
+        in status_ids
+    )
+    assert (
+        "refine_tier_public_benchmark_statistical_support_metric_source_templates_semantic_ready"
         in status_ids
     )
     assert "product_goal_completion_audit_full_commercial_release_blockers_semantic_ready" in status_ids
@@ -1565,6 +1574,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "public_benchmark_statistical_support_metric_materialization_readiness_ready" in (
         science_accuracy_frontier_spec["required_true_fields"]
     )
+    assert "public_benchmark_statistical_support_metric_source_templates_present" in (
+        science_accuracy_frontier_spec["required_true_fields"]
+    )
+    assert "public_benchmark_statistical_support_metric_source_templates_ready" in (
+        science_accuracy_frontier_spec["required_true_fields"]
+    )
     assert "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present" in (
         science_accuracy_frontier_spec["required_true_fields"]
     )
@@ -1673,6 +1688,23 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
         "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
         "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": 11,
+        "public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
+        "public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count": 17,
+        "public_benchmark_statistical_support_metric_source_templates_template_metric_name_count": 3,
+        "public_benchmark_statistical_support_metric_source_templates_template_metric_source_artifact_path_row_count": 51,
+        "public_benchmark_statistical_support_metric_source_templates_template_payload_required_fields_present_row_count": 51,
+        "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
+        "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
+        "public_benchmark_statistical_support_metric_source_templates_coordinate_validation_blocked_template_row_count": 51,
+        "public_benchmark_statistical_support_metric_source_templates_missing_required_input_template_row_count": 51,
+        "public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count": 0,
+        "public_benchmark_statistical_support_metric_source_templates_placeholder_value_count": 51,
+        "public_benchmark_statistical_support_metric_source_templates_placeholder_method_count": 51,
+        "public_benchmark_statistical_support_metric_source_templates_placeholder_operator_id_count": 51,
+        "public_benchmark_statistical_support_metric_source_templates_placeholder_reviewed_at_utc_count": 51,
+        "public_benchmark_statistical_support_metric_source_templates_placeholder_license_ok_count": 51,
+        "public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total": 0,
+        "public_benchmark_statistical_support_metric_source_templates_canonical_intake_promotion_allowed": 0,
         "public_benchmark_statistical_support_coordinate_fetch_r4_row_count": 17,
         "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": 17,
         "public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": 0,
@@ -1715,6 +1747,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields": (
             "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
             "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_status": (
+            "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
         ),
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status": (
             "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
@@ -2396,6 +2431,51 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "existing_metric_source_payload_count"
     ] == 0
     assert statistical_metric_materialization_readiness_status_spec["required_text_exact_fields"][
+        "required_metric_source_payloads"
+    ] == "dockq;lddt_pli;internal_deltaG"
+    statistical_metric_source_templates_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "refine_tier_public_benchmark_statistical_support_metric_source_templates_semantic_ready"
+    )
+    assert statistical_metric_source_templates_status_spec["required_status"] == (
+        "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+    )
+    assert "metric_source_templates_ready" in statistical_metric_source_templates_status_spec[
+        "required_true_fields"
+    ]
+    assert "metric_materialization_readiness_ready" in statistical_metric_source_templates_status_spec[
+        "required_true_fields"
+    ]
+    assert statistical_metric_source_templates_status_spec["required_int_exact_fields"][
+        "template_row_count"
+    ] == 51
+    assert statistical_metric_source_templates_status_spec["required_int_exact_fields"][
+        "template_candidate_row_count"
+    ] == 17
+    assert statistical_metric_source_templates_status_spec["required_int_exact_fields"][
+        "template_metric_name_count"
+    ] == 3
+    assert statistical_metric_source_templates_status_spec["required_int_exact_fields"][
+        "metric_source_payload_fill_ready_row_count"
+    ] == 0
+    assert statistical_metric_source_templates_status_spec["required_int_exact_fields"][
+        "metric_source_payload_fill_blocked_row_count"
+    ] == 51
+    assert statistical_metric_source_templates_status_spec["required_int_exact_fields"][
+        "coordinate_validation_blocked_template_row_count"
+    ] == 51
+    assert statistical_metric_source_templates_status_spec["required_int_exact_fields"][
+        "missing_required_input_template_row_count"
+    ] == 51
+    assert statistical_metric_source_templates_status_spec["required_int_exact_fields"][
+        "external_engine_calls_total"
+    ] == 0
+    assert statistical_metric_source_templates_status_spec["required_text_exact_fields"][
+        "metric_materialization_readiness"
+    ] == "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json"
+    assert statistical_metric_source_templates_status_spec["required_text_exact_fields"][
         "required_metric_source_payloads"
     ] == "dockq;lddt_pli;internal_deltaG"
     engine_field_worksheet_status_spec = next(
@@ -3161,6 +3241,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         in science_accuracy_frontier_spec["depends_on"]
     )
     assert (
+        "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json"
+        in science_accuracy_frontier_spec["depends_on"]
+    )
+    assert (
         "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json"
         in science_accuracy_frontier_spec["depends_on"]
     )
@@ -3406,6 +3490,11 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert mod.RELEASE_REFRESH_COMMANDS.index(
         mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_COMMAND
     ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_COMMAND
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_COMMAND
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
         mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_COMMAND
     )
     assert "tools/product/build_refine_tier_public_benchmark_statistical_support_metric_materialization_readiness.py" in (
@@ -3422,6 +3511,24 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert "runs/refine_tier_public_benchmark_statistical_support_coordinate_validation_current.csv" in (
         statistical_metric_materialization_readiness_spec["depends_on"]
+    )
+    statistical_metric_source_templates_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"]
+        == "refine_tier_public_benchmark_statistical_support_metric_source_templates"
+    )
+    assert statistical_metric_source_templates_spec["builder_command"] == (
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_COMMAND
+    )
+    assert "tools/product/build_refine_tier_public_benchmark_statistical_support_metric_source_templates.py" in (
+        statistical_metric_source_templates_spec["depends_on"]
+    )
+    assert "tools/build_refine_tier_public_benchmark_statistical_support_metric_source_templates.py" in (
+        statistical_metric_source_templates_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json" in (
+        statistical_metric_source_templates_spec["depends_on"]
     )
     priority_packet_spec = next(
         spec
@@ -3443,6 +3550,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert (
         "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json"
+        in priority_packet_spec["depends_on"]
+    )
+    assert (
+        "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json"
         in priority_packet_spec["depends_on"]
     )
     field_worksheet_spec = next(

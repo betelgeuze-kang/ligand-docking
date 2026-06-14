@@ -189,6 +189,24 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
         "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
         "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
     )
+    assert summary["public_benchmark_statistical_support_metric_source_templates_present"] is True
+    assert summary["public_benchmark_statistical_support_metric_source_templates_ready"] is True
+    assert summary["public_benchmark_statistical_support_metric_source_templates_status"] == (
+        "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+    )
+    assert summary["public_benchmark_statistical_support_metric_source_templates_template_row_count"] == 51
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+        ]
+        == 51
+    )
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present"] is True
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"] is True
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status"] == (
@@ -240,6 +258,12 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     assert payload["rows"][0][
         "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count"
     ] == 17
+    assert payload["rows"][0][
+        "public_benchmark_statistical_support_metric_source_templates_ready"
+    ] is True
+    assert payload["rows"][0][
+        "public_benchmark_statistical_support_metric_source_templates_template_row_count"
+    ] == 51
     assert payload["rows"][0][
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
     ] is True
