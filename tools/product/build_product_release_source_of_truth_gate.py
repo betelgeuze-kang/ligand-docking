@@ -2720,6 +2720,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "receipt_csv_present",
             "r4_preflight_present",
             "r4_preflight_ready",
+            "r4_preflight_row_fingerprint_required",
         ],
         "required_int_exact_fields": {
             "operator_receipt_ready": 0,
@@ -2728,6 +2729,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "missing_required_r4_review_count": 0,
             "unexpected_r4_review_count": 0,
             "duplicate_r4_review_id_count": 0,
+            "r4_preflight_row_fingerprint_verified_count": 17,
+            "r4_preflight_row_fingerprint_mismatch_count": 0,
             "pass_row_count": 0,
             "blocked_row_count": 17,
             "approved_fetch_count": 0,
@@ -2764,9 +2767,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             ),
             "next_required_step": (
                 "Fill all 17 coordinate-fetch receipt rows with approve_coordinate_fetch, reviewed "
-                "source/license/assembly fields, reviewer, timestamp, and "
-                "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD; keep claim and canonical intake "
-                "promotion flags false."
+                "source/license/assembly fields, matching R4 preflight row fingerprints, reviewer, "
+                "timestamp, and APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD; keep claim and "
+                "canonical intake promotion flags false."
             ),
         },
     },
@@ -3391,6 +3394,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready",
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_present",
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_csv_present",
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_required",
             "public_benchmark_claim_grade_gap_audit_present",
             "public_benchmark_claim_grade_gap_audit_ready",
         ],
@@ -3545,6 +3549,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready": 0,
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_required_r4_review_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count": 0,
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count": 0,
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count": 0,

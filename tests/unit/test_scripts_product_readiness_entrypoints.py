@@ -542,6 +542,24 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
     )
     assert (
         summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_required"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count"
         ]
         == 0
@@ -694,6 +712,7 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
     assert "coordinate_fetch_r4_download_executed=False" in boundary["observed"]
     assert "coordinate_fetch_operator_receipt_ready=False" in boundary["observed"]
     assert "coordinate_fetch_operator_receipt_blocked=17" in boundary["observed"]
+    assert "coordinate_fetch_operator_receipt_fingerprint_verified=17" in boundary["observed"]
 
 
 def test_verify_quality_gate_script_rebuilds_operational_quality_fail_closed() -> None:

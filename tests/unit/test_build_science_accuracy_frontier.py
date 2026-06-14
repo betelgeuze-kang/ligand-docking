@@ -352,6 +352,11 @@ def _write_inputs(
             "receipt_csv_present": True,
             "receipt_row_count": 0 if ready or not materialized_candidate_ready else 17,
             "required_r4_review_count": 0 if ready or not materialized_candidate_ready else 17,
+            "r4_preflight_row_fingerprint_required": materialized_candidate_ready and not ready,
+            "r4_preflight_row_fingerprint_verified_count": (
+                17 if materialized_candidate_ready and not ready else 0
+            ),
+            "r4_preflight_row_fingerprint_mismatch_count": 0,
             "pass_row_count": 0,
             "blocked_row_count": 0 if ready or not materialized_candidate_ready else 17,
             "approved_fetch_count": 0,
@@ -815,6 +820,24 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
     assert summary[
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_required_r4_review_count"
     ] == 17
+    assert (
+        summary[
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_required"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count"
+        ]
+        == 0
+    )
     assert summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count"] == 0
     assert summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count"] == 17
     assert summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count"] == 0

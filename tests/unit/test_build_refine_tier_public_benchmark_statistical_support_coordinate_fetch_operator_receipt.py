@@ -22,8 +22,8 @@ def _write_csv(path: Path, rows: list[dict[str, object]], fieldnames: list[str])
         writer.writerows(rows)
 
 
-def _r4_preflight(path: Path) -> None:
-    rows = [
+def _r4_rows() -> list[dict[str, object]]:
+    return [
         {
             "r4_review_id": "r9_statistical_support_coordinate_fetch_001",
             "target_id": "4ivc",
@@ -57,6 +57,10 @@ def _r4_preflight(path: Path) -> None:
             "verification": "rerun coordinate validation",
         },
     ]
+
+
+def _r4_preflight(path: Path) -> None:
+    rows = _r4_rows()
     _write_json(
         path,
         {
@@ -74,6 +78,7 @@ def _receipt_rows(*, ready: bool) -> list[dict[str, object]]:
         ("r9_statistical_support_coordinate_fetch_001", "4ivc", "4ivc_20"),
         ("r9_statistical_support_coordinate_fetch_002", "3g0w", "3g0w_281"),
     ]
+    r4_by_id = {str(row["r4_review_id"]): row for row in _r4_rows()}
     rows = []
     for review_id, target_id, pose_id in base:
         rows.append(
@@ -81,6 +86,11 @@ def _receipt_rows(*, ready: bool) -> list[dict[str, object]]:
                 "r4_review_id": review_id,
                 "target_id": target_id,
                 "pose_id": pose_id,
+                "r4_preflight_row_sha256": (
+                    mod._r4_row_fingerprint(r4_by_id[review_id])
+                    if ready
+                    else "OPERATOR_FILL_R4_PREFLIGHT_ROW_SHA256"
+                ),
                 "operator_decision": "approve_coordinate_fetch" if ready else "OPERATOR_FILL_DECISION",
                 "coordinate_fetch_approved": "true" if ready else "OPERATOR_CONFIRM_TRUE",
                 "source_url_reviewed": "true" if ready else "OPERATOR_CONFIRM_TRUE",
@@ -117,6 +127,9 @@ def test_coordinate_fetch_operator_receipt_blocks_current_placeholders() -> None
     assert summary["missing_required_r4_review_count"] == 0
     assert summary["unexpected_r4_review_count"] == 0
     assert summary["duplicate_r4_review_id_count"] == 0
+    assert summary["r4_preflight_row_fingerprint_required"] is True
+    assert summary["r4_preflight_row_fingerprint_verified_count"] == 17
+    assert summary["r4_preflight_row_fingerprint_mismatch_count"] == 0
     assert summary["pass_row_count"] == 0
     assert summary["blocked_row_count"] == 17
     assert summary["approved_fetch_count"] == 0
@@ -153,6 +166,9 @@ def test_coordinate_fetch_operator_receipt_ready_with_verified_rows(tmp_path: Pa
     assert summary["operator_receipt_ready"] is True
     assert summary["pass_row_count"] == 2
     assert summary["blocked_row_count"] == 0
+    assert summary["r4_preflight_row_fingerprint_required"] is True
+    assert summary["r4_preflight_row_fingerprint_verified_count"] == 2
+    assert summary["r4_preflight_row_fingerprint_mismatch_count"] == 0
     assert summary["approved_fetch_count"] == 2
     assert summary["source_url_reviewed_count"] == 2
     assert summary["license_ok_count"] == 2
@@ -190,5 +206,6 @@ def test_coordinate_fetch_operator_receipt_cli_writes_outputs(tmp_path: Path) ->
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["receipt_row_count"] == 2
     assert payload["summary"]["blocked_row_count"] == 2
+    assert payload["summary"]["r4_preflight_row_fingerprint_mismatch_count"] == 2
     assert out_csv.is_file()
     assert out_md.is_file()

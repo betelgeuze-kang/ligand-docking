@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import datetime as dt
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -35,6 +36,7 @@ REQUIRED_COLUMNS = [
     "r4_review_id",
     "target_id",
     "pose_id",
+    "r4_preflight_row_sha256",
     "operator_decision",
     "coordinate_fetch_approved",
     "source_url_reviewed",
@@ -50,6 +52,20 @@ REQUIRED_COLUMNS = [
     "reviewed_at_utc",
     "approval_token",
     "notes",
+]
+R4_FINGERPRINT_FIELDS = [
+    "r4_review_id",
+    "target_id",
+    "pose_id",
+    "source_url_primary",
+    "staging_destination_path",
+    "execute_command",
+    "target",
+    "action",
+    "impact",
+    "risk",
+    "rollback",
+    "verification",
 ]
 
 CLAIM_BOUNDARY = (
@@ -136,6 +152,21 @@ def _split_blockers(value: Any) -> list[str]:
     return [part for part in _text(value).split(";") if part]
 
 
+def _r4_row_fingerprint(row: dict[str, Any]) -> str:
+    payload = {
+        field: (
+            EXECUTE_COMMAND
+            if field == "execute_command"
+            else _text(row.get(field)).lower()
+            if field == "target_id"
+            else _text(row.get(field))
+        )
+        for field in R4_FINGERPRINT_FIELDS
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def _most_common_blocker(rows: list[dict[str, Any]]) -> str:
     counts: dict[str, int] = {}
     first_seen: dict[str, int] = {}
@@ -157,6 +188,8 @@ def _receipt_row(
 ) -> dict[str, Any]:
     review_id = _text(row.get("r4_review_id"))
     r4_row = r4_by_id.get(review_id, {})
+    expected_fingerprint = _r4_row_fingerprint(r4_row) if r4_row else ""
+    provided_fingerprint = _text(row.get("r4_preflight_row_sha256"))
     blockers: list[str] = []
 
     if not review_id or review_id not in r4_by_id:
@@ -169,6 +202,8 @@ def _receipt_row(
         blockers.append("target_id_mismatch")
     if _text(row.get("pose_id")) != _text(r4_row.get("pose_id")):
         blockers.append("pose_id_mismatch")
+    if not provided_fingerprint or provided_fingerprint != expected_fingerprint:
+        blockers.append("r4_preflight_row_fingerprint_missing_or_mismatch")
     if _text(row.get("operator_decision")) != "approve_coordinate_fetch":
         blockers.append("operator_decision_not_approved")
     if _bool(row.get("coordinate_fetch_approved")) is not True:
@@ -205,6 +240,10 @@ def _receipt_row(
         "source_url_primary": _text(r4_row.get("source_url_primary")),
         "staging_destination_path": _text(r4_row.get("staging_destination_path")),
         "execute_command": EXECUTE_COMMAND,
+        "expected_r4_preflight_row_sha256": expected_fingerprint,
+        "r4_preflight_row_fingerprint_verified": bool(
+            provided_fingerprint and provided_fingerprint == expected_fingerprint
+        ),
         "r4_preflight_status": _text(r4_row.get("r4_preflight_status")) or "missing",
         "coordinate_validation_status": _text(r4_row.get("coordinate_validation_status")) or "missing",
         "metric_materialization_status": _text(r4_row.get("metric_materialization_status")) or "missing",
@@ -250,6 +289,14 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_oper
     passed_rows = [row for row in rows if row["row_status"] == "pass"]
     blocked_rows = [row for row in rows if row["row_status"] != "pass"]
     first_blocked = blocked_rows[0] if blocked_rows else {}
+    fingerprint_verified_rows = [
+        row for row in rows if row.get("r4_preflight_row_fingerprint_verified") is True
+    ]
+    fingerprint_mismatch_rows = [
+        row
+        for row in rows
+        if "r4_preflight_row_fingerprint_missing_or_mismatch" in _split_blockers(row.get("blockers"))
+    ]
 
     blockers: list[str] = []
     if not r4_present:
@@ -298,6 +345,9 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_oper
         "unexpected_r4_review_ids": unexpected_review_ids,
         "duplicate_r4_review_id_count": len(duplicate_review_ids),
         "duplicate_r4_review_ids": duplicate_review_ids,
+        "r4_preflight_row_fingerprint_required": True,
+        "r4_preflight_row_fingerprint_verified_count": len(fingerprint_verified_rows),
+        "r4_preflight_row_fingerprint_mismatch_count": len(fingerprint_mismatch_rows),
         "pass_row_count": len(passed_rows),
         "blocked_row_count": len(blocked_rows),
         "approved_fetch_count": sum(1 for row in passed_rows if _bool(row.get("coordinate_fetch_approved"))),
@@ -329,8 +379,8 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_oper
             "then rebuild coordinate intake validation and metric source materialization readiness."
             if ready
             else "Fill all 17 coordinate-fetch receipt rows with approve_coordinate_fetch, reviewed source/license/"
-            f"assembly fields, reviewer, timestamp, and {APPROVAL_TOKEN}; keep claim and canonical intake "
-            "promotion flags false."
+            f"assembly fields, matching R4 preflight row fingerprints, reviewer, timestamp, and {APPROVAL_TOKEN}; "
+            "keep claim and canonical intake promotion flags false."
         ),
     }
     return {"summary": summary, "rows": rows, "required_columns": REQUIRED_COLUMNS}
@@ -352,6 +402,9 @@ def _write_md(path_like: str | Path, payload: dict[str, Any], *, root: Path = RO
         f"- operator_receipt_ready: `{summary['operator_receipt_ready']}`",
         f"- rows pass/blocked/total: `{summary['pass_row_count']}/{summary['blocked_row_count']}/{summary['receipt_row_count']}`",
         f"- required_r4_review_count: `{summary['required_r4_review_count']}`",
+        "- r4_preflight_row_fingerprint_verified/mismatch: "
+        f"`{summary['r4_preflight_row_fingerprint_verified_count']}/"
+        f"{summary['r4_preflight_row_fingerprint_mismatch_count']}`",
         f"- approval_token_required: `{summary['approval_token_required']}`",
         f"- authorized_for_external_download: `{summary['authorized_for_external_download']}`",
         f"- first_blocked_review_id: `{summary['first_blocked_review_id']}`",

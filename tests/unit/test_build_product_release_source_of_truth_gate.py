@@ -1616,6 +1616,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_csv_present" in (
         science_accuracy_frontier_spec["required_true_fields"]
     )
+    assert (
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_required"
+        in science_accuracy_frontier_spec["required_true_fields"]
+    )
     assert "public_benchmark_claim_grade_gap_audit_present" in (
         science_accuracy_frontier_spec["required_true_fields"]
     )
@@ -1773,6 +1777,8 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready": 0,
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count": 17,
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_required_r4_review_count": 17,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count": 17,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count": 0,
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count": 0,
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count": 17,
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count": 0,
@@ -2728,6 +2734,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "receipt_csv_present" in coordinate_fetch_operator_receipt_status_spec["required_true_fields"]
     assert "r4_preflight_present" in coordinate_fetch_operator_receipt_status_spec["required_true_fields"]
     assert "r4_preflight_ready" in coordinate_fetch_operator_receipt_status_spec["required_true_fields"]
+    assert (
+        "r4_preflight_row_fingerprint_required"
+        in coordinate_fetch_operator_receipt_status_spec["required_true_fields"]
+    )
     assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
         "operator_receipt_ready"
     ] == 0
@@ -2737,6 +2747,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
         "required_r4_review_count"
     ] == 17
+    assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
+        "r4_preflight_row_fingerprint_verified_count"
+    ] == 17
+    assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
+        "r4_preflight_row_fingerprint_mismatch_count"
+    ] == 0
     assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
         "blocked_row_count"
     ] == 17

@@ -227,6 +227,18 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_required=true`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count=17`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count=0`"
+        in text
+    )
+    assert (
         "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id=r9_statistical_support_coordinate_fetch_001`"
         in text
     )

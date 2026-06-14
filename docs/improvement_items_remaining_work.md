@@ -374,6 +374,9 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count=17`,
   `public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count=17`,
   `public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count=0`,
+  `public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_required=true`,
+  `public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count=17`,
+  `public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count=0`,
   `public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download=false`,
   `public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id=r9_statistical_support_coordinate_fetch_001`,
   `public_benchmark_statistical_support_coordinate_fetch_operator_receipt_most_common_row_blocker=operator_placeholders_unfilled`,
@@ -382,7 +385,9 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_r4_approval_required`와
   `openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_not_ready`로,
   17개 statistical-support 후보의 coordinate fetch 승인 receipt, coordinate validation/materialization이 아직
-  닫히지 않았음을 accuracy frontier에서 직접 표시한다. 즉 상용 parity claim의 과학 병목은 더 이상 단일 metric
+  닫히지 않았음을 accuracy frontier에서 직접 표시한다. 다만 receipt template 자체는 현재 R4 preflight row
+  fingerprint 17/17개를 mismatch 0으로 고정해, operator가 승인하더라도 stale Target/Action/Impact/Risk/
+  Rollback/Verification row를 근거로 실행 승인이 열리는 경로는 fail-closed로 막는다. 즉 상용 parity claim의 과학 병목은 더 이상 단일 metric
   failure가 아니라 GPCR formal claim/router approval, R9 public benchmark/evidence
   receipt 부재, materialized R9 후보의 통계 support 부족, 그리고 17개 후보의
   DockQ/lDDT-PLI/internal ΔG source payload 51개 미생성, 그리고 이 payload가 묶어야 할
@@ -2348,6 +2353,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count=17`,
   `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count=17`,
   `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count=0`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_required=true`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count=17`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count=0`,
   `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id=r9_statistical_support_coordinate_fetch_001`,
   `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_most_common_row_blocker=operator_placeholders_unfilled`,
   `science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_ready=true`,
