@@ -327,6 +327,21 @@ def _worksheet(path: Path, *, filled: bool = False) -> None:
                 if filled
                 else "public_benchmark_work_order_apply_required",
                 "top_blocker_pending_field_count": 0 if filled else 102,
+                "public_benchmark_statistical_support_metric_source_templates_artifact": (
+                    "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json"
+                ),
+                "public_benchmark_statistical_support_metric_source_templates_artifact_present": True,
+                "public_benchmark_statistical_support_metric_source_templates_ready": True,
+                "public_benchmark_statistical_support_metric_source_templates_status": (
+                    "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+                ),
+                "public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
+                "public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count": 17,
+                "public_benchmark_statistical_support_metric_source_templates_template_metric_name_count": 3,
+                "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
+                "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
+                "public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count": 0,
+                "public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total": 0,
             }
         },
     )
@@ -407,6 +422,30 @@ def test_blocks_placeholder_receipt_and_public_benchmark_work_order(tmp_path: Pa
     assert summary["staging_receipt_placeholder_row_count"] == 6
     assert summary["staging_public_benchmark_work_order_placeholder_row_count"] == 8
     assert summary["field_worksheet_pending_field_count"] == 132
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+        ]
+        == 51
+    )
     assert summary["live_copy_allowed"] is False
     assert summary["public_benchmark_intake_write_allowed"] is False
     assert summary["canonical_receipt_written"] is False
@@ -511,4 +550,17 @@ def test_current_staging_apply_surfaces_materialized_public_benchmark_candidate(
     assert summary["materialized_public_benchmark_free_energy_spearman_bootstrap_p05"] == -0.14285714285714285
     assert summary["materialized_public_benchmark_claim_grade_statistical_support_ready"] is False
     assert summary["materialized_public_benchmark_claim_grade_statistical_support_blocker_count"] == 3
-    assert "Materialized public benchmark science candidate is ready" in summary["next_required_step"]
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+        ]
+        == 51
+    )
+    assert "validate the 17 statistical-support coordinates" in summary["next_required_step"]
+    assert "replace 51 blocked metric source template placeholders" in summary["next_required_step"]

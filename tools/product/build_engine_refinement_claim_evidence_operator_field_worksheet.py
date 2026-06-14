@@ -18,6 +18,7 @@ from tools.product.build_engine_refinement_claim_evidence_priority_packet import
     DEFAULT_PUBLIC_BENCHMARK_READINESS_JSON,
     DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON,
     DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_JSON,
+    DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_JSON,
     DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_JSON,
     DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_APPLY_JSON,
     DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_CSV,
@@ -617,6 +618,8 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
     ),
     public_benchmark_statistical_support_metric_materialization_readiness_json: str
     | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_JSON,
+    public_benchmark_statistical_support_metric_source_templates_json: str
+    | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_JSON,
     public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json: str
     | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON,
     public_benchmark_receptor_coordinate_intake_csv: str
@@ -669,6 +672,13 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
         root=root_path,
     )
     (
+        statistical_support_metric_source_templates_packet,
+        statistical_support_metric_source_templates_present,
+    ) = _read_json(
+        public_benchmark_statistical_support_metric_source_templates_json,
+        root=root_path,
+    )
+    (
         statistical_support_coordinate_fetch_r4_packet,
         statistical_support_coordinate_fetch_r4_present,
     ) = _read_json(
@@ -700,6 +710,9 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
     statistical_support_metric_materialization_summary = _summary(
         statistical_support_metric_materialization_packet
     )
+    statistical_support_metric_source_templates_summary = _summary(
+        statistical_support_metric_source_templates_packet
+    )
     statistical_support_coordinate_fetch_r4_summary = _summary(
         statistical_support_coordinate_fetch_r4_packet
     )
@@ -715,6 +728,10 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
     )
     statistical_support_metric_materialization_readiness_ready = bool(
         statistical_support_metric_materialization_summary.get("metric_materialization_readiness_ready")
+        is True
+    )
+    statistical_support_metric_source_templates_ready = bool(
+        statistical_support_metric_source_templates_summary.get("metric_source_templates_ready")
         is True
     )
     statistical_support_coordinate_fetch_r4_preflight_ready = bool(
@@ -877,6 +894,24 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
     ):
         source_blockers.append(
             "public_benchmark_statistical_support_metric_materialization_readiness_missing"
+        )
+    if (
+        materialized_science_evidence_complete
+        and statistical_support_work_order_ready
+        and statistical_support_metric_materialization_present
+        and not statistical_support_metric_source_templates_present
+    ):
+        source_blockers.append(
+            "public_benchmark_statistical_support_metric_source_templates_missing"
+        )
+    if (
+        materialized_science_evidence_complete
+        and statistical_support_work_order_ready
+        and statistical_support_metric_source_templates_present
+        and not statistical_support_metric_source_templates_ready
+    ):
+        source_blockers.append(
+            "public_benchmark_statistical_support_metric_source_templates_not_ready"
         )
     if (
         materialized_science_evidence_complete
@@ -1085,6 +1120,94 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
         ),
         "public_benchmark_statistical_support_metric_materialization_next_required_step": _text(
             statistical_support_metric_materialization_summary.get("next_required_step")
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_artifact": (
+            _display_path(
+                public_benchmark_statistical_support_metric_source_templates_json,
+                root=root_path,
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_artifact_present": (
+            statistical_support_metric_source_templates_present
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_ready": (
+            statistical_support_metric_source_templates_ready
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_status": _text(
+            statistical_support_metric_source_templates_summary.get("status")
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_template_row_count": _int(
+            statistical_support_metric_source_templates_summary.get("template_row_count")
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count": _int(
+            statistical_support_metric_source_templates_summary.get("template_candidate_row_count")
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_template_metric_name_count": _int(
+            statistical_support_metric_source_templates_summary.get("template_metric_name_count")
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_template_metric_source_artifact_path_row_count": _int(
+            statistical_support_metric_source_templates_summary.get(
+                "template_metric_source_artifact_path_row_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_template_payload_required_fields_present_row_count": _int(
+            statistical_support_metric_source_templates_summary.get(
+                "template_payload_required_fields_present_row_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": _int(
+            statistical_support_metric_source_templates_summary.get(
+                "metric_source_payload_fill_ready_row_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": _int(
+            statistical_support_metric_source_templates_summary.get(
+                "metric_source_payload_fill_blocked_row_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_coordinate_validation_blocked_template_row_count": _int(
+            statistical_support_metric_source_templates_summary.get(
+                "coordinate_validation_blocked_template_row_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_missing_required_input_template_row_count": _int(
+            statistical_support_metric_source_templates_summary.get(
+                "missing_required_input_template_row_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count": _int(
+            statistical_support_metric_source_templates_summary.get(
+                "existing_metric_source_payload_present_row_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_placeholder_value_count": _int(
+            statistical_support_metric_source_templates_summary.get("placeholder_value_count")
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_placeholder_method_count": _int(
+            statistical_support_metric_source_templates_summary.get("placeholder_method_count")
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_placeholder_operator_id_count": _int(
+            statistical_support_metric_source_templates_summary.get("placeholder_operator_id_count")
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_placeholder_reviewed_at_utc_count": _int(
+            statistical_support_metric_source_templates_summary.get(
+                "placeholder_reviewed_at_utc_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_placeholder_license_ok_count": _int(
+            statistical_support_metric_source_templates_summary.get("placeholder_license_ok_count")
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total": _int(
+            statistical_support_metric_source_templates_summary.get("external_engine_calls_total")
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_canonical_intake_promotion_allowed": bool(
+            statistical_support_metric_source_templates_summary.get(
+                "canonical_intake_promotion_allowed"
+            )
+            is True
+        ),
+        "public_benchmark_statistical_support_metric_source_templates_next_required_step": _text(
+            statistical_support_metric_source_templates_summary.get("next_required_step")
         ),
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_artifact": (
             _display_path(
@@ -1398,6 +1521,7 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
             str(public_benchmark_materialized_apply_json),
             str(public_benchmark_statistical_support_work_order_json),
             str(public_benchmark_statistical_support_metric_materialization_readiness_json),
+            str(public_benchmark_statistical_support_metric_source_templates_json),
             str(public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json),
             str(public_benchmark_receptor_coordinate_intake_csv),
             str(public_benchmark_receptor_coordinate_validation_csv),
@@ -1452,6 +1576,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"{summary['public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count']}`",
         "- public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count: "
         f"`{summary['public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count']}`",
+        "- public_benchmark_statistical_support_metric_source_templates_ready: "
+        f"`{summary['public_benchmark_statistical_support_metric_source_templates_ready']}`",
+        "- public_benchmark_statistical_support_metric_source_templates_row/fill_ready/fill_blocked: "
+        f"`{summary['public_benchmark_statistical_support_metric_source_templates_template_row_count']}/"
+        f"{summary['public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count']}/"
+        f"{summary['public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count']}`",
         "- public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count: "
         f"`{summary['public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count']}`",
         "- public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count: "
@@ -1516,6 +1646,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_JSON,
     )
     parser.add_argument(
+        "--public-benchmark-statistical-support-metric-source-templates-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_JSON,
+    )
+    parser.add_argument(
         "--public-benchmark-statistical-support-coordinate-fetch-r4-preflight-json",
         default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON,
     )
@@ -1553,6 +1687,9 @@ def main(argv: list[str] | None = None) -> None:
         ),
         public_benchmark_statistical_support_metric_materialization_readiness_json=(
             args.public_benchmark_statistical_support_metric_materialization_readiness_json
+        ),
+        public_benchmark_statistical_support_metric_source_templates_json=(
+            args.public_benchmark_statistical_support_metric_source_templates_json
         ),
         public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json=(
             args.public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json

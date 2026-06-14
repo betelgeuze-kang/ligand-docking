@@ -1110,6 +1110,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json",
         ],
     },
@@ -2940,6 +2941,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_work_order_ready",
             "public_benchmark_statistical_support_metric_materialization_readiness_artifact_present",
             "public_benchmark_statistical_support_metric_materialization_readiness_ready",
+            "public_benchmark_statistical_support_metric_source_templates_artifact_present",
+            "public_benchmark_statistical_support_metric_source_templates_ready",
             "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_artifact_present",
             "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready",
         ],
@@ -2988,6 +2991,23 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
             "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": 11,
             "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready": 0,
+            "public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count": 17,
+            "public_benchmark_statistical_support_metric_source_templates_template_metric_name_count": 3,
+            "public_benchmark_statistical_support_metric_source_templates_template_metric_source_artifact_path_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_templates_template_payload_required_fields_present_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
+            "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_templates_coordinate_validation_blocked_template_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_templates_missing_required_input_template_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count": 0,
+            "public_benchmark_statistical_support_metric_source_templates_placeholder_value_count": 51,
+            "public_benchmark_statistical_support_metric_source_templates_placeholder_method_count": 51,
+            "public_benchmark_statistical_support_metric_source_templates_placeholder_operator_id_count": 51,
+            "public_benchmark_statistical_support_metric_source_templates_placeholder_reviewed_at_utc_count": 51,
+            "public_benchmark_statistical_support_metric_source_templates_placeholder_license_ok_count": 51,
+            "public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total": 0,
+            "public_benchmark_statistical_support_metric_source_templates_canonical_intake_promotion_allowed": 0,
             "public_benchmark_statistical_support_coordinate_fetch_r4_row_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": 0,
@@ -3029,6 +3049,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "input_artifact_sha256s;operator_id;reviewed_at_utc;license_ok;"
                 "external_engine_calls"
             ),
+            "public_benchmark_statistical_support_metric_source_templates_status": (
+                "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+            ),
             "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status": (
                 "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
             ),
@@ -3065,6 +3088,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "staging_public_benchmark_work_order_csv_present",
             "existing_public_benchmark_work_order_apply_artifact_present",
             "field_worksheet_present",
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_artifact_present",
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready",
         ],
         "required_int_exact_fields": {
             "staging_receipt_row_count": 6,
@@ -3090,6 +3115,13 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "field_worksheet_receipt_pending_field_count": 36,
             "field_worksheet_work_order_pending_field_count": 56,
             "field_worksheet_top_blocker_pending_field_count": 266,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count": 17,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_metric_name_count": 3,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count": 0,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total": 0,
             "approval_token_present": 0,
             "approval_token_accepted": 0,
             "public_benchmark_approval_token_present": 0,
@@ -3131,6 +3163,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "field_worksheet_status": "engine_refinement_claim_evidence_operator_field_worksheet_ready",
             "field_worksheet_top_blocker_id": "public_benchmark_gate_not_ready",
             "field_worksheet_top_priority_bucket": "public_benchmark_work_order_apply_required",
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_status": (
+                "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+            ),
         },
     },
     {

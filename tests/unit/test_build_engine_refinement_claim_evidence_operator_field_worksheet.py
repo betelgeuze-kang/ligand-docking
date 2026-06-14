@@ -601,6 +601,36 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
         "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
     )
     assert summary[
+        "public_benchmark_statistical_support_metric_source_templates_artifact_present"
+    ] is True
+    assert summary["public_benchmark_statistical_support_metric_source_templates_ready"] is True
+    assert summary["public_benchmark_statistical_support_metric_source_templates_status"] == (
+        "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+    )
+    assert summary["public_benchmark_statistical_support_metric_source_templates_template_row_count"] == 51
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_templates_template_metric_name_count"
+    ] == 3
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+    ] == 0
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+    ] == 51
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count"
+    ] == 0
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total"
+    ] == 0
+    assert (
+        mod.DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_JSON
+        in summary["source_artifacts"]
+    )
+    assert summary[
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_artifact_present"
     ] is True
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"] is True

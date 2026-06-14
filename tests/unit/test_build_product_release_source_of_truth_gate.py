@@ -2522,6 +2522,14 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         in engine_field_worksheet_status_spec["required_true_fields"]
     )
     assert (
+        "public_benchmark_statistical_support_metric_source_templates_artifact_present"
+        in engine_field_worksheet_status_spec["required_true_fields"]
+    )
+    assert (
+        "public_benchmark_statistical_support_metric_source_templates_ready"
+        in engine_field_worksheet_status_spec["required_true_fields"]
+    )
+    assert (
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_artifact_present"
         in engine_field_worksheet_status_spec["required_true_fields"]
     )
@@ -2605,6 +2613,27 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count"
     ] == 11
     assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_templates_template_row_count"
+    ] == 51
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count"
+    ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_templates_template_metric_name_count"
+    ] == 3
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+    ] == 51
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
         "public_benchmark_statistical_support_coordinate_fetch_r4_row_count"
     ] == 17
     assert engine_field_worksheet_status_spec["required_int_exact_fields"][
@@ -2642,6 +2671,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "external_engine_calls"
     )
     assert engine_field_worksheet_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_metric_source_templates_status"
+    ] == "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+    assert engine_field_worksheet_status_spec["required_text_exact_fields"][
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status"
     ] == "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
     assert engine_field_worksheet_status_spec["required_text_exact_fields"][
@@ -2668,6 +2700,14 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         if spec["artifact_id"]
         == "engine_refinement_claim_evidence_operator_staging_apply_blocked_semantic_ready"
     )
+    assert (
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_artifact_present"
+        in engine_staging_apply_status_spec["required_true_fields"]
+    )
+    assert (
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready"
+        in engine_staging_apply_status_spec["required_true_fields"]
+    )
     assert engine_staging_apply_status_spec["required_int_exact_fields"][
         "candidate_receipt_blocked_row_count"
     ] == 6
@@ -2693,6 +2733,27 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "field_worksheet_top_blocker_pending_field_count"
     ] == 266
     assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count"
+    ] == 51
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count"
+    ] == 17
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_metric_name_count"
+    ] == 3
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+    ] == 51
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
         "public_benchmark_intake_write_allowed"
     ] == 0
     assert engine_staging_apply_status_spec["required_text_exact_fields"][
@@ -2704,6 +2765,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert engine_staging_apply_status_spec["required_text_exact_fields"][
         "candidate_most_common_row_blocker"
     ] == "operator_placeholders_unfilled"
+    assert engine_staging_apply_status_spec["required_text_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_status"
+    ] == "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
     runner_receipt_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS

@@ -277,6 +277,22 @@ def build_engine_refinement_claim_evidence_operator_staging_apply(
         and work_order_present
         and public_benchmark_approval_token_accepted
     )
+    field_metric_source_templates_artifact = _text(
+        field_worksheet.get("public_benchmark_statistical_support_metric_source_templates_artifact")
+    )
+    field_metric_source_templates_template_row_count = _int(
+        field_worksheet.get("public_benchmark_statistical_support_metric_source_templates_template_row_count")
+    )
+    field_metric_source_templates_fill_ready_row_count = _int(
+        field_worksheet.get(
+            "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+        )
+    )
+    field_metric_source_templates_fill_blocked_row_count = _int(
+        field_worksheet.get(
+            "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+        )
+    )
 
     blockers: list[str] = []
     if not staging_present:
@@ -339,10 +355,18 @@ def build_engine_refinement_claim_evidence_operator_staging_apply(
         next_required_step = "Review the candidate artifacts, then use live_apply mode with the matching approval token before canonical writes."
     elif materialized_candidate_ready:
         status = "blocked_engine_refinement_claim_evidence_operator_staging_apply"
-        next_required_step = (
-            "Materialized public benchmark science candidate is ready, but the canonical staging receipt/work-order "
-            "still blocks. Review the materialized candidate, then use the explicit intake/receipt promotion path."
-        )
+        if field_metric_source_templates_template_row_count:
+            next_required_step = (
+                "Materialized public benchmark science candidate is ready but not claim-grade: "
+                "review the R4 coordinate-fetch preflight, validate the 17 statistical-support coordinates, "
+                f"then replace {field_metric_source_templates_fill_blocked_row_count} blocked metric source "
+                "template placeholders before any canonical R9 receipt or public benchmark intake promotion."
+            )
+        else:
+            next_required_step = (
+                "Materialized public benchmark science candidate is ready, but the canonical staging receipt/work-order "
+                "still blocks. Review the materialized candidate, then use the explicit intake/receipt promotion path."
+            )
     else:
         status = "blocked_engine_refinement_claim_evidence_operator_staging_apply"
         next_required_step = "Fill or repair R9 claim-evidence receipt rows and public benchmark work-order rows before touching canonical receipt or intake CSVs."
@@ -489,6 +513,51 @@ def build_engine_refinement_claim_evidence_operator_staging_apply(
         "field_worksheet_top_blocker_pending_field_count": int(
             field_worksheet.get("top_blocker_pending_field_count") or 0
         ),
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_artifact": (
+            field_metric_source_templates_artifact
+        ),
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_artifact_present": bool(
+            field_worksheet.get(
+                "public_benchmark_statistical_support_metric_source_templates_artifact_present"
+            )
+            is True
+        ),
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready": bool(
+            field_worksheet.get("public_benchmark_statistical_support_metric_source_templates_ready")
+            is True
+        ),
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_status": _text(
+            field_worksheet.get("public_benchmark_statistical_support_metric_source_templates_status")
+        ),
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count": (
+            field_metric_source_templates_template_row_count
+        ),
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count": _int(
+            field_worksheet.get(
+                "public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count"
+            )
+        ),
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_metric_name_count": _int(
+            field_worksheet.get(
+                "public_benchmark_statistical_support_metric_source_templates_template_metric_name_count"
+            )
+        ),
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": (
+            field_metric_source_templates_fill_ready_row_count
+        ),
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": (
+            field_metric_source_templates_fill_blocked_row_count
+        ),
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count": _int(
+            field_worksheet.get(
+                "public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count"
+            )
+        ),
+        "field_worksheet_public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total": _int(
+            field_worksheet.get(
+                "public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total"
+            )
+        ),
         "approval_token_required": APPROVAL_TOKEN if mode == "live_apply" or write_canonical_receipt else "",
         "approval_token_present": approval_token_present,
         "approval_token_accepted": approval_token_accepted if mode == "live_apply" or write_canonical_receipt else False,
@@ -530,6 +599,7 @@ def build_engine_refinement_claim_evidence_operator_staging_apply(
             str(receptor_coordinate_validation_csv),
             str(metric_evidence_csv),
             str(target_public_benchmark_intake_csv),
+            *([field_metric_source_templates_artifact] if field_metric_source_templates_artifact else []),
         ],
     }
     return {
@@ -577,6 +647,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"- staging_receipt_placeholder_row_count: `{summary['staging_receipt_placeholder_row_count']}`",
         f"- staging_public_benchmark_work_order_placeholder_row_count: `{summary['staging_public_benchmark_work_order_placeholder_row_count']}`",
         f"- field_worksheet_pending_field_count: `{summary['field_worksheet_pending_field_count']}`",
+        "- field_worksheet_metric_source_templates_ready: "
+        f"`{summary['field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready']}`",
+        "- field_worksheet_metric_source_templates_row/fill_ready/fill_blocked: "
+        f"`{summary['field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count']}/"
+        f"{summary['field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count']}/"
+        f"{summary['field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count']}`",
         f"- live_copy_allowed: `{summary['live_copy_allowed']}`",
         f"- public_benchmark_intake_write_allowed: `{summary['public_benchmark_intake_write_allowed']}`",
         f"- canonical_receipt_written: `{summary['canonical_receipt_written']}`",

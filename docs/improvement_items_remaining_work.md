@@ -632,8 +632,13 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   value의 operator-reviewed replacement다.
   `runs/engine_refinement_claim_evidence_priority_packet_current.json`과
   `runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`도 이
-  work-order, metric materialization readiness, coordinate-fetch R4 preflight를 source
-  artifact로 읽어 top operator step을 `Review the R4 coordinate-fetch preflight`,
+  work-order, metric materialization readiness, metric source templates,
+  coordinate-fetch R4 preflight를 source artifact로 읽어 top operator step을
+  `Review the R4 coordinate-fetch preflight`,
+  `public_benchmark_statistical_support_metric_source_templates_ready=true`,
+  `public_benchmark_statistical_support_metric_source_templates_template_row_count=51`,
+  `public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=0`,
+  `public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=51`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready=true`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count=17`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=17`,
@@ -1047,6 +1052,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `candidate_public_benchmark_blocked_row_count=8`,
   `field_worksheet_pending_field_count=296`,
   `field_worksheet_work_order_pending_field_count=56`,
+  `field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count=51`,
+  `field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=0`,
+  `field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=51`,
   `live_copy_allowed=false`, `public_benchmark_intake_write_allowed=false`,
   `external_engine_calls_executed=false`, `external_state_mutated=false`를 기록한다.
   따라서 R9 operator가 receipt row나 public benchmark work-order row를 채워도,
@@ -1367,7 +1375,13 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `public_benchmark_statistical_support_expansion_field_count=221`,
   `public_benchmark_statistical_support_expansion_pending_field_count=204`,
   `public_benchmark_statistical_support_expansion_ready_field_count=17`을 summary에
-  고정한다. 즉 R9의 남은 과학/정확도 병목은 기존 8개 pair의 metric source path뿐
+  고정한다. 또한 metric source template artifact를 직접 읽어
+  `public_benchmark_statistical_support_metric_source_templates_template_row_count=51`,
+  `public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=0`,
+  `public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=51`,
+  `public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count=0`,
+  `public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total=0`도
+  R9 worksheet summary/source artifact에 고정한다. 즉 R9의 남은 과학/정확도 병목은 기존 8개 pair의 metric source path뿐
   아니라, 최소 17개 추가 public benchmark pair와 그중 5개 holdout pair를 채워
   bootstrap Spearman p05 >= 0.5를 재검증해야 하는 통계 support 결손까지 operator-facing
   worksheet에 직접 노출된다. 또한
@@ -1419,6 +1433,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `candidate_public_benchmark_metric_evidence_missing_required_input_artifact_row_count=0`,
   `candidate_public_benchmark_metric_evidence_missing_required_receptor_input_row_count=0`,
   `candidate_public_benchmark_metric_evidence_required_input_sha256_blocked_row_count=0`,
+  `field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count=51`,
+  `field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=0`,
+  `field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=51`,
   `live_copy_allowed=false`, `public_benchmark_intake_write_allowed=false`,
   `canonical_receipt_written=false`, `public_benchmark_intake_written=false`,
   `external_engine_calls_executed=false`, `external_state_mutated=false`라 operator가
@@ -1545,6 +1562,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   statistical support coordinate intake 17개, coordinate validation pass 0개/blocked 17개,
   statistical support coordinate fetch required 17개/ready-for-validation 0개,
   statistical support coordinate fetch apply preview preflight pass 17개/downloaded 0개,
+  statistical support metric source template 51개/fill-ready 0개/fill-blocked 51개,
   statistical support expansion field 221개/pending 204개/ready split 17개,
   approval token requirement, first-blocked diagnostics가 source-of-truth에서 직접 검증된다. production AI
   checkpoint/promotion workbench는 현재 `shadow`/blocked 상태를 semantic-ready row로
