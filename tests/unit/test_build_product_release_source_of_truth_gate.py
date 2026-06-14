@@ -1299,6 +1299,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply" in artifact_ids
     assert "refine_tier_public_benchmark_statistical_support_metric_source_templates" in artifact_ids
     assert (
+        "refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+        in artifact_ids
+    )
+    assert (
         "refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt"
         in artifact_ids
     )
@@ -1336,6 +1340,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert (
         "refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_semantic_ready"
+        in status_ids
+    )
+    assert (
+        "refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_semantic_ready"
         in status_ids
     )
     assert "refine_tier_public_benchmark_claim_grade_gap_audit_semantic_ready" in status_ids
@@ -1433,6 +1441,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_COMMAND
         in mod.RELEASE_REFRESH_COMMANDS
     )
+    assert (
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_COMMAND
+        in mod.RELEASE_REFRESH_COMMANDS
+    )
     assert mod.REFINE_TIER_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_science_accuracy_frontier.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "product_release_bundle_semantic_ready" in status_ids
@@ -1462,6 +1474,14 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert (
         "refine_tier_public_benchmark_statistical_support_metric_source_templates_semantic_ready"
+        in status_ids
+    )
+    assert (
+        "refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+        in artifact_ids
+    )
+    assert (
+        "refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_semantic_ready"
         in status_ids
     )
     assert "refine_tier_public_benchmark_claim_grade_gap_audit_semantic_ready" in status_ids
@@ -1603,6 +1623,16 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert "public_benchmark_statistical_support_metric_source_templates_ready" in (
         science_accuracy_frontier_spec["required_true_fields"]
+    )
+    assert "public_benchmark_statistical_support_metric_source_payload_operator_receipt_present" in (
+        science_accuracy_frontier_spec["required_true_fields"]
+    )
+    assert "public_benchmark_statistical_support_metric_source_payload_operator_receipt_csv_present" in (
+        science_accuracy_frontier_spec["required_true_fields"]
+    )
+    assert (
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_required"
+        in science_accuracy_frontier_spec["required_true_fields"]
     )
     assert "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present" in (
         science_accuracy_frontier_spec["required_true_fields"]
@@ -1765,6 +1795,22 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_metric_source_templates_placeholder_license_ok_count": 51,
         "public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total": 0,
         "public_benchmark_statistical_support_metric_source_templates_canonical_intake_promotion_allowed": 0,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready": 0,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_row_count": 51,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_template_count": 51,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_pass_row_count": 0,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count": 51,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approved_payload_count": 0,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_fill_ready_row_count": 0,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_pass_payload_row_count": 0,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count": 51,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_verified_count": 51,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count": 0,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_payload_write_allowed": 0,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_canonical_intake_promotion_allowed": 0,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_claim_promotion_allowed": 0,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_external_state_mutated": 0,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocker_count": 1,
         "public_benchmark_statistical_support_coordinate_fetch_r4_row_count": 17,
         "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": 17,
         "public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": 0,
@@ -1797,7 +1843,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_work_order_seed_distinct_target_count": 284,
         "engine_refinement_receipt_blocked_row_count": 6,
         "external_state_mutated": 0,
-        "blocker_count": 8,
+        "blocker_count": 9,
     }
     assert science_accuracy_frontier_spec["required_text_exact_fields"] == {
         "accuracy_parity_status": "blocked_accuracy_parity",
@@ -1824,6 +1870,27 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         ),
         "public_benchmark_statistical_support_metric_source_templates_status": (
             "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_status": (
+            "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_template_id": (
+            "r9_statistical_support_metric_source_template_001"
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_target_id": (
+            "4ivc"
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_pose_id": (
+            "4ivc_20"
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_metric_name": (
+            "dockq"
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker": (
+            "operator_placeholders_unfilled"
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required": (
+            "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
         ),
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status": (
             "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
@@ -2722,6 +2789,62 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert statistical_metric_source_templates_status_spec["required_text_exact_fields"][
         "required_metric_source_payloads"
     ] == "dockq;lddt_pli;internal_deltaG"
+    metric_source_payload_receipt_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_semantic_ready"
+    )
+    assert metric_source_payload_receipt_status_spec["required_status"] == (
+        "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+    )
+    assert "receipt_csv_present" in metric_source_payload_receipt_status_spec["required_true_fields"]
+    assert "metric_source_templates_ready" in metric_source_payload_receipt_status_spec["required_true_fields"]
+    assert (
+        "metric_source_template_row_fingerprint_required"
+        in metric_source_payload_receipt_status_spec["required_true_fields"]
+    )
+    assert metric_source_payload_receipt_status_spec["required_int_exact_fields"][
+        "operator_receipt_ready"
+    ] == 0
+    assert metric_source_payload_receipt_status_spec["required_int_exact_fields"][
+        "receipt_row_count"
+    ] == 51
+    assert metric_source_payload_receipt_status_spec["required_int_exact_fields"][
+        "required_template_count"
+    ] == 51
+    assert metric_source_payload_receipt_status_spec["required_int_exact_fields"][
+        "metric_source_template_row_fingerprint_verified_count"
+    ] == 51
+    assert metric_source_payload_receipt_status_spec["required_int_exact_fields"][
+        "metric_source_template_row_fingerprint_mismatch_count"
+    ] == 0
+    assert metric_source_payload_receipt_status_spec["required_int_exact_fields"][
+        "blocked_row_count"
+    ] == 51
+    assert metric_source_payload_receipt_status_spec["required_int_exact_fields"][
+        "approved_payload_count"
+    ] == 0
+    assert metric_source_payload_receipt_status_spec["required_int_exact_fields"][
+        "coordinate_validation_blocked_payload_row_count"
+    ] == 51
+    assert metric_source_payload_receipt_status_spec["required_int_exact_fields"][
+        "payload_write_allowed"
+    ] == 0
+    assert metric_source_payload_receipt_status_spec["required_text_exact_fields"][
+        "receipt_csv"
+    ] == (
+        "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+    )
+    assert metric_source_payload_receipt_status_spec["required_text_exact_fields"][
+        "first_blocked_template_id"
+    ] == "r9_statistical_support_metric_source_template_001"
+    assert metric_source_payload_receipt_status_spec["required_text_exact_fields"][
+        "first_blocked_metric_name"
+    ] == "dockq"
+    assert metric_source_payload_receipt_status_spec["required_text_exact_fields"][
+        "most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
     coordinate_fetch_operator_receipt_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -4283,6 +4406,16 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index(
         mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_COMMAND
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_COMMAND
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_COMMAND
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_COMMAND
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_COMMAND
     ) < mod.RELEASE_REFRESH_COMMANDS.index(
         mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_COMMAND
     )

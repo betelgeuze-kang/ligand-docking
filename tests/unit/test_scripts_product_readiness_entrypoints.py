@@ -654,6 +654,118 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_not_ready"
         in summary["science_accuracy_frontier_blockers"]
     )
+    assert (
+        "openmm_schrodinger_public_benchmark_statistical_support_metric_source_payload_operator_receipt_not_ready"
+        in summary["science_accuracy_frontier_blockers"]
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_present"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_status"
+        ]
+        == "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_csv_present"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_row_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_template_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_approved_payload_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_required"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_verified_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_payload_write_allowed"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_template_id"
+        ]
+        == "r9_statistical_support_metric_source_template_001"
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_metric_name"
+        ]
+        == "dockq"
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker"
+        ]
+        == "operator_placeholders_unfilled"
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required"
+        ]
+        == "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocker_count"
+        ]
+        == 1
+    )
     assert summary["science_accuracy_frontier_public_benchmark_receptor_coordinate_validation_min_protein_like_residues"] == 5
     assert (
         summary[
@@ -713,6 +825,9 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
     assert "coordinate_fetch_operator_receipt_ready=False" in boundary["observed"]
     assert "coordinate_fetch_operator_receipt_blocked=17" in boundary["observed"]
     assert "coordinate_fetch_operator_receipt_fingerprint_verified=17" in boundary["observed"]
+    assert "metric_source_payload_receipt_ready=False" in boundary["observed"]
+    assert "metric_source_payload_receipt_blocked=51" in boundary["observed"]
+    assert "metric_source_payload_receipt_fingerprint_verified=51" in boundary["observed"]
 
 
 def test_verify_quality_gate_script_rebuilds_operational_quality_fail_closed() -> None:

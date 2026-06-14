@@ -30,6 +30,9 @@ def _write_inputs(
         "public_benchmark_statistical_support_metric_source_templates_json": (
             tmp_path / "public_stat_metric_source_templates.json"
         ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_json": (
+            tmp_path / "public_stat_metric_source_payload_operator_receipt.json"
+        ),
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json": (
             tmp_path / "public_stat_coordinate_fetch_r4_preflight.json"
         ),
@@ -311,6 +314,56 @@ def _write_inputs(
                 "After R4-approved coordinate fetch and validation, replace each operator placeholder "
                 "with reviewed DockQ/lDDT-PLI/internal DeltaG values while preserving input artifact "
                 "paths, hashes, license_ok=true, and external_engine_calls=0."
+            ),
+        },
+    )
+    _write(
+        paths["public_benchmark_statistical_support_metric_source_payload_operator_receipt_json"],
+        {
+            "status": (
+                "refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready"
+                if ready
+                else "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+            ),
+            "operator_receipt_ready": ready,
+            "receipt_csv_present": True,
+            "receipt_row_count": 0 if ready or not materialized_candidate_ready else 51,
+            "required_template_count": 0 if ready or not materialized_candidate_ready else 51,
+            "metric_source_template_row_fingerprint_required": materialized_candidate_ready and not ready,
+            "metric_source_template_row_fingerprint_verified_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
+            "metric_source_template_row_fingerprint_mismatch_count": 0,
+            "pass_row_count": 0,
+            "blocked_row_count": 0 if ready or not materialized_candidate_ready else 51,
+            "approved_payload_count": 0,
+            "template_fill_ready_row_count": 0,
+            "coordinate_validation_pass_payload_row_count": 0,
+            "coordinate_validation_blocked_payload_row_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
+            "payload_write_allowed": False,
+            "canonical_intake_promotion_allowed": False,
+            "claim_promotion_allowed": False,
+            "external_state_mutated": False,
+            "first_blocked_template_id": (
+                "r9_statistical_support_metric_source_template_001"
+                if materialized_candidate_ready and not ready
+                else ""
+            ),
+            "first_blocked_target_id": "4ivc" if materialized_candidate_ready and not ready else "",
+            "first_blocked_pose_id": "4ivc_20" if materialized_candidate_ready and not ready else "",
+            "first_blocked_metric_name": "dockq" if materialized_candidate_ready and not ready else "",
+            "most_common_row_blocker": (
+                "operator_placeholders_unfilled" if materialized_candidate_ready and not ready else ""
+            ),
+            "approval_token_required": "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS",
+            "blocker_count": 0 if ready or not materialized_candidate_ready else 1,
+            "next_required_step": (
+                "After the 17 coordinate candidates pass validation, fill all 51 metric-source payload "
+                "receipt rows with numeric reviewed values."
+                if materialized_candidate_ready and not ready
+                else ""
             ),
         },
     )
@@ -783,6 +836,90 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
     assert "external_engine_calls=0" in summary[
         "public_benchmark_statistical_support_metric_source_templates_next_required_step"
     ]
+    assert (
+        summary["public_benchmark_statistical_support_metric_source_payload_operator_receipt_present"]
+        is True
+    )
+    assert (
+        summary["public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready"]
+        is False
+    )
+    assert summary["public_benchmark_statistical_support_metric_source_payload_operator_receipt_status"] == (
+        "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+    )
+    assert summary["public_benchmark_statistical_support_metric_source_payload_operator_receipt_csv_present"] is True
+    assert summary["public_benchmark_statistical_support_metric_source_payload_operator_receipt_row_count"] == 51
+    assert (
+        summary["public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_template_count"]
+        == 51
+    )
+    assert summary["public_benchmark_statistical_support_metric_source_payload_operator_receipt_pass_row_count"] == 0
+    assert summary["public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count"] == 51
+    assert (
+        summary["public_benchmark_statistical_support_metric_source_payload_operator_receipt_approved_payload_count"]
+        == 0
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_pass_payload_row_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_required"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_verified_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count"
+        ]
+        == 0
+    )
+    assert (
+        summary["public_benchmark_statistical_support_metric_source_payload_operator_receipt_payload_write_allowed"]
+        is False
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_canonical_intake_promotion_allowed"
+        ]
+        is False
+    )
+    assert (
+        summary["public_benchmark_statistical_support_metric_source_payload_operator_receipt_claim_promotion_allowed"]
+        is False
+    )
+    assert (
+        summary["public_benchmark_statistical_support_metric_source_payload_operator_receipt_external_state_mutated"]
+        is False
+    )
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_template_id"
+    ] == "r9_statistical_support_metric_source_template_001"
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_metric_name"
+    ] == "dockq"
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required"
+    ] == "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+    assert summary["public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocker_count"] == 1
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present"] is True
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"] is True
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status"] == (
@@ -886,11 +1023,13 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
         "openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized",
         "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_r4_approval_required",
         "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_not_ready",
+        "openmm_schrodinger_public_benchmark_statistical_support_metric_source_payload_operator_receipt_not_ready",
         "engine_refinement_claim_evidence_receipt_not_ready",
     ]
     assert "current 8-row materialized R9 metric evidence" in summary["next_required_step"]
     assert "coordinate-fetch R4 approval" in summary["next_required_step"]
     assert "coordinate operator receipt" in summary["next_required_step"]
+    assert "metric payload receipt" in summary["next_required_step"]
     assert "coordinate validation/materialization" in summary["next_required_step"]
 
 
@@ -934,6 +1073,8 @@ def test_science_accuracy_frontier_cli_writes_json_and_markdown(tmp_path: Path) 
             str(paths["public_benchmark_statistical_support_metric_materialization_readiness_json"]),
             "--public-benchmark-statistical-support-metric-source-templates-json",
             str(paths["public_benchmark_statistical_support_metric_source_templates_json"]),
+            "--public-benchmark-statistical-support-metric-source-payload-operator-receipt-json",
+            str(paths["public_benchmark_statistical_support_metric_source_payload_operator_receipt_json"]),
             "--public-benchmark-statistical-support-coordinate-fetch-r4-preflight-json",
             str(paths["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json"]),
             "--public-benchmark-statistical-support-coordinate-fetch-operator-receipt-json",
