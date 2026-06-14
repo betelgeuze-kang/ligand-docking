@@ -3000,6 +3000,18 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   (`220.72 MiB`), `review_required_count=198`(`743.49 MiB`)다.
   review-required row는 상위권/요약 증거 매칭 부족, current-named, 또는
   recent payload라서 자동 삭제 대상으로 승격하지 않았다.
+- 2026-06-15 KST `ubuntu-1`/local 후속 current-heavy compaction은
+  `tools/build_ligand_current_heavy_top_rank_compaction_receipt.py`로
+  오래된 GPCR replay/feature-cache 대형 CSV 26개에서 각 top-50 row만
+  compact JSON/CSV로 보존한 뒤 승인 토큰
+  `APPROVE_LIGAND_CURRENT_HEAVY_TOP_RANK_COMPACTION`으로 원본 CSV 26개를
+  삭제했다. 삭제량은 `946.83 MiB`, 보존 row는 `1300`, 실패는 `0`이다.
+  Git-tracked receipt는
+  `config/ligand_current_heavy_top_rank_compaction_current.json` 및
+  `docs/ligand_current_heavy_top_rank_compaction_current.md`에 남겼다.
+  wetlab compound universe, artifact inventory, essential evidence register,
+  CASP17 viewer HTML, 최근 stage3 refine scores는 입력/인벤토리/최근 payload로
+  분리해 이번 삭제 대상에서 제외했다.
 - Final PDB/mmCIF, top representative, sha256 manifest, viewer index,
   validation report 보존.
 - 다음 cleanup은 `docs/storage_retention_cleanup_policy.md`의 keep set 기준으로
