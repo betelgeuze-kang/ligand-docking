@@ -1410,6 +1410,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_COMMAND
         in mod.RELEASE_REFRESH_COMMANDS
     )
+    assert (
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_COMMAND
+        in mod.RELEASE_REFRESH_COMMANDS
+    )
     assert "python3 tools/product/build_science_accuracy_frontier.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "product_release_bundle_semantic_ready" in status_ids
     assert (
@@ -1418,6 +1422,14 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert (
         "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_semantic_ready"
+        in status_ids
+    )
+    assert (
+        "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness"
+        in artifact_ids
+    )
+    assert (
+        "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_semantic_ready"
         in status_ids
     )
     assert "product_goal_completion_audit_full_commercial_release_blockers_semantic_ready" in status_ids
@@ -2120,6 +2132,36 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "--mode execute --run-post-fetch-validation "
         "--approval-token APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
     )
+    statistical_metric_materialization_readiness_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_semantic_ready"
+    )
+    assert statistical_metric_materialization_readiness_status_spec["required_status"] == (
+        "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
+    )
+    assert "metric_materialization_readiness_ready" in (
+        statistical_metric_materialization_readiness_status_spec["required_true_fields"]
+    )
+    assert statistical_metric_materialization_readiness_status_spec["required_int_exact_fields"][
+        "metric_materialization_row_count"
+    ] == 17
+    assert statistical_metric_materialization_readiness_status_spec["required_int_exact_fields"][
+        "metric_materialization_candidate_ready_count"
+    ] == 0
+    assert statistical_metric_materialization_readiness_status_spec["required_int_exact_fields"][
+        "metric_materialization_candidate_blocked_count"
+    ] == 17
+    assert statistical_metric_materialization_readiness_status_spec["required_int_exact_fields"][
+        "planned_metric_source_payload_count"
+    ] == 51
+    assert statistical_metric_materialization_readiness_status_spec["required_int_exact_fields"][
+        "existing_metric_source_payload_count"
+    ] == 0
+    assert statistical_metric_materialization_readiness_status_spec["required_text_exact_fields"][
+        "required_metric_source_payloads"
+    ] == "dockq;lddt_pli;internal_deltaG"
     engine_field_worksheet_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -3005,6 +3047,30 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_current.json" in (
         statistical_coordinate_fetch_r4_preflight_spec["depends_on"]
     )
+    statistical_metric_materialization_readiness_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"]
+        == "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness"
+    )
+    assert statistical_metric_materialization_readiness_spec["builder_command"] == (
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_COMMAND
+    )
+    assert "tools/product/build_refine_tier_public_benchmark_statistical_support_metric_materialization_readiness.py" in (
+        statistical_metric_materialization_readiness_spec["depends_on"]
+    )
+    assert "tools/build_refine_tier_public_benchmark_statistical_support_metric_materialization_readiness.py" in (
+        statistical_metric_materialization_readiness_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json" in (
+        statistical_metric_materialization_readiness_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json" in (
+        statistical_metric_materialization_readiness_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_statistical_support_coordinate_validation_current.csv" in (
+        statistical_metric_materialization_readiness_spec["depends_on"]
+    )
     priority_packet_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -3256,6 +3322,11 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index(
         mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_COMMAND
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_COMMAND
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_COMMAND
     ) < mod.RELEASE_REFRESH_COMMANDS.index(
         "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py"
     )

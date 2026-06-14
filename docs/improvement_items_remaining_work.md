@@ -499,6 +499,24 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `python3 tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py --mode execute --run-post-fetch-validation --approval-token APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`이며,
   승인이 없으면 coordinate fetch, canonical intake promotion, metric materialization을
   모두 실행하지 않는 claim boundary를 유지한다.
+  `runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json`은
+  좌표 fetch 승인 이후 바로 이어질 metric source materialization 입력 조건을
+  별도 read-only readiness로 고정해
+  `refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready`,
+  `metric_materialization_readiness_ready=true`,
+  `metric_materialization_row_count=17`,
+  `metric_materialization_candidate_ready_count=0`,
+  `metric_materialization_candidate_blocked_count=17`,
+  `coordinate_validation_pass_row_count=0`,
+  `planned_metric_source_payload_count=51`,
+  `existing_metric_source_payload_count=0`,
+  `required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`,
+  `ligand_pose_artifact_present_count=17`,
+  `experimental_deltaG_prefilled_count=17`,
+  `claim_grade_statistical_support_ready=false`,
+  `canonical_intake_promotion_allowed=false`를 기록한다. 따라서 좌표 다운로드가 승인되어도
+  17개 coordinate validation pass가 먼저 닫히기 전에는 DockQ/lDDT-PLI/internal
+  ΔG source materialization과 bootstrap Spearman p05 재검증으로 넘어가지 않는다.
   `runs/engine_refinement_claim_evidence_priority_packet_current.json`과
   `runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`도 이
   work-order를 source artifact로 읽어 top operator step을
@@ -1287,18 +1305,18 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `cameo_validation_operations_dossier_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=137`, `pass_count=137`,
-  `blocker_count=0`, `artifact_row_count=88`, `semantic_status_row_count=47`,
-  `release_refresh_command_count=113`, `stale_artifact_count=0`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=139`, `pass_count=139`,
+  `blocker_count=0`, `artifact_row_count=89`, `semantic_status_row_count=48`,
+  `release_refresh_command_count=114`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   final refresh는 마지막 `goal_release_decision_gate` 뒤에
   `goal_operator_action_board`, `goal_release_burndown_work_order`, intake kit,
   bottleneck briefing, full commercial matrix, release bundle, handoff bundle,
   privacy scan, source-of-truth gate까지 downstream 산출물을 한 번 더 재생성하고,
   refresh runner final gate는 source-of-truth, quality gate verification,
-  release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=137`,
-  `pass_count=137`, `artifact_row_count=88`, `semantic_status_row_count=47`,
-  `readme_row_count=2`, `release_refresh_command_count=113`를 exact-check해
+  release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=139`,
+  `pass_count=139`, `artifact_row_count=89`, `semantic_status_row_count=48`,
+  `readme_row_count=2`, `release_refresh_command_count=114`를 exact-check해
   downstream readiness row가 조용히 빠지는 회귀를 막고,
   `product_quality_gate_verification_current.json` final gate는
   `product_quality_gate_verified`, `quality_gate_ready=true`,
@@ -2015,7 +2033,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=113`, `executed_count=113`,
+  `product_release_current_refresh_verified`, `command_count=114`, `executed_count=114`,
   `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=true`,
   `final_gate_count=4`, `final_gate_blocker_count=0`이다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
@@ -2058,9 +2076,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   input readiness, science accuracy frontier restricted-ready/commercial-parity-blocked accounting, production AI registry promotion operator
   receipt/priority packet/field worksheet/staging apply preview, CAMEO official-result fetch preflight, R8 scope-breadth evidence field worksheet/staging apply preview, R9 engine-refinement claim evidence priority packet/field worksheet/staging apply preview,
   master gap closure rollup 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=137/137`,
+  `product_release_source_of_truth_gate_ready`, `pass_count=139/139`,
   `blocker_count=0`, `stale_artifact_count=0`,
-  `release_refresh_command_count=113`으로 재검증됐다.
+  `release_refresh_command_count=114`으로 재검증됐다.
 - `scripts/check_independent_product_readiness.py`는 현재 release/source-of-truth,
   product readiness, operational quality, commercial-independence, capability surface,
   release bundle, master/science-claim rollup을 read-only로 확인해
@@ -2900,6 +2918,13 @@ coordinate fetch R4 preflight도 `r4_row_count=17`,
 `authorized_for_external_download=false`, `download_executed=false`로 준비되어,
 남은 직접 병목은 operator가 17개 Target/Action/Impact/Risk/Rollback/Verification
 row를 확인하고 승인 토큰 실행을 허용하는 것이다.
+metric materialization readiness도 `metric_materialization_row_count=17`,
+`metric_materialization_candidate_ready_count=0`,
+`metric_materialization_candidate_blocked_count=17`,
+`planned_metric_source_payload_count=51`,
+`existing_metric_source_payload_count=0`으로 고정되어, 승인 이후에도 17개 좌표
+validation pass가 먼저 닫혀야 DockQ/lDDT-PLI/internal ΔG source payload 생성과
+bootstrap Spearman p05 재검증으로 넘어간다.
 tracked current work-order의
 DockQ/lDDT-PLI/internal ΔG source field와 R9 evidence receipt도 operator
 placeholder 상태라, source evidence는 파일 존재만으로는 부족하고 schema-valid JSON

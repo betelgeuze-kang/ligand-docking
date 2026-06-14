@@ -292,6 +292,22 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`required_r4_fields=target;action;impact;risk;rollback;verification`" in text
     assert "`execute_command_count=1`" in text
     assert "`authorized_for_external_download=false`" in text
+    assert (
+        "`runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json`"
+        in text
+    )
+    assert (
+        "`refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready`"
+        in text
+    )
+    assert "`metric_materialization_readiness_ready=true`" in text
+    assert "`metric_materialization_row_count=17`" in text
+    assert "`metric_materialization_candidate_ready_count=0`" in text
+    assert "`metric_materialization_candidate_blocked_count=17`" in text
+    assert "`planned_metric_source_payload_count=51`" in text
+    assert "`existing_metric_source_payload_count=0`" in text
+    assert "`required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`" in text
+    assert "`claim_grade_statistical_support_ready=false`" in text
     assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
     assert "`runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`" in text
     assert "`Fill 17 additional reviewed public benchmark-pair expansion slots`" in text

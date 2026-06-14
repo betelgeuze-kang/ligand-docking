@@ -52,6 +52,9 @@ REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_APPLY_COMMAND 
 REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_COMMAND = (
     "python3 tools/product/build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight.py"
 )
+REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_COMMAND = (
+    "python3 tools/product/build_refine_tier_public_benchmark_statistical_support_metric_materialization_readiness.py"
+)
 
 RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_accuracy_parity_scorecard.py",
@@ -124,6 +127,7 @@ RELEASE_REFRESH_COMMANDS = [
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_PLAN_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_APPLY_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_COMMAND,
+    REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_COMMAND,
     "python3 tools/product/build_engine_refinement_tier_readiness.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py",
@@ -1007,6 +1011,24 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py",
             "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_current.json",
+        ],
+    },
+    {
+        "artifact_id": (
+            "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness"
+        ),
+        "artifact_path": (
+            "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json"
+        ),
+        "builder_command": (
+            REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_COMMAND
+        ),
+        "depends_on": [
+            "tools/product/build_refine_tier_public_benchmark_statistical_support_metric_materialization_readiness.py",
+            "tools/build_refine_tier_public_benchmark_statistical_support_metric_materialization_readiness.py",
+            "runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_coordinate_validation_current.csv",
         ],
     },
     {
@@ -2577,6 +2599,67 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "fetches to the operator; only after explicit approval run `python3 tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py "
                 "--mode execute --run-post-fetch-validation --approval-token APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`, "
                 "then review coordinate validation before metric source materialization."
+            ),
+        },
+    },
+    {
+        "artifact_id": (
+            "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_semantic_ready"
+        ),
+        "artifact_path": (
+            "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json"
+        ),
+        "builder_command": (
+            REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_COMMAND
+        ),
+        "required_status": (
+            "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
+        ),
+        "required_true_fields": [
+            "metric_materialization_readiness_ready",
+            "candidate_queue_present",
+            "candidate_queue_ready",
+            "coordinate_intake_present",
+            "coordinate_intake_ready",
+            "coordinate_validation_csv_present",
+        ],
+        "required_int_exact_fields": {
+            "metric_materialization_all_candidates_ready": 0,
+            "candidate_queue_selected_candidate_count": 17,
+            "coordinate_validation_row_count": 17,
+            "coordinate_validation_pass_row_count": 0,
+            "coordinate_validation_blocked_row_count": 17,
+            "metric_materialization_row_count": 17,
+            "metric_materialization_candidate_ready_count": 0,
+            "metric_materialization_candidate_blocked_count": 17,
+            "required_metric_source_payload_count": 3,
+            "metric_source_path_row_count": 17,
+            "planned_metric_source_payload_count": 51,
+            "existing_metric_source_payload_count": 0,
+            "ligand_pose_artifact_present_count": 17,
+            "experimental_deltaG_prefilled_count": 17,
+            "candidate_ready_for_canonical_intake_count": 0,
+            "claim_grade_statistical_support_ready": 0,
+            "canonical_intake_promotion_allowed": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "blocker_count": 0,
+        },
+        "required_text_exact_fields": {
+            "candidate_queue": (
+                "runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json"
+            ),
+            "coordinate_intake": (
+                "runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json"
+            ),
+            "coordinate_validation_csv": (
+                "runs/refine_tier_public_benchmark_statistical_support_coordinate_validation_current.csv"
+            ),
+            "required_metric_source_payloads": "dockq;lddt_pli;internal_deltaG",
+            "next_required_step": (
+                "After operator-approved coordinate fetch and post-fetch validation, require all 17 "
+                "statistical-support candidates to pass coordinate validation before materializing DockQ, "
+                "lDDT-PLI, and internal DeltaG source payloads and rerunning bootstrap Spearman p05."
             ),
         },
     },
