@@ -1,17 +1,17 @@
 # Ligand Heavy Run Retention Receipt
 
 - status: `ligand_heavy_run_retention_receipt_execution_recorded`
-- manifest_delete_recommended_count: `1`
-- manifest_delete_recommended_size_human: `33.36 KiB`
-- manifest_top_rank_keep_count: `4323`
-- manifest_top_rank_keep_size_human: `220.72 MiB`
-- manifest_review_required_count: `198`
-- manifest_review_required_size_human: `743.49 MiB`
-- retained_top_rank_or_compact_evidence_count: `12`
-- current_execution_deleted_count: `1`
-- current_execution_deleted_size_human: `33.36 KiB`
-- cumulative_execution_deleted_count: `18`
-- cumulative_execution_deleted_size_human: `171.07 MiB`
+- manifest_delete_recommended_count: `0`
+- manifest_delete_recommended_size_human: `0.00 B`
+- manifest_top_rank_keep_count: `4387`
+- manifest_top_rank_keep_size_human: `311.28 MiB`
+- manifest_review_required_count: `189`
+- manifest_review_required_size_human: `884.87 MiB`
+- retained_top_rank_or_compact_evidence_count: `217`
+- current_execution_deleted_count: `11`
+- current_execution_deleted_size_human: `1.18 GiB`
+- cumulative_execution_deleted_count: `71`
+- cumulative_execution_deleted_size_human: `3.11 GiB`
 - execution_failed_count: `0`
 - external_state_mutated: `False`
 
@@ -37,6 +37,28 @@
 | `runs/gpcr_frozen_post_stage3_chain_watch_current.log` | `transient_ligand_run_log_or_lock` | `349.82 KiB` | `deleted` |
 | `runs/gpcr_frozen_ranking_quality_port_full_nonadrb2_chain_run.log` | `transient_ligand_run_log_or_lock` | `19.22 KiB` | `deleted` |
 | `runs/gpcr_frozen_ranking_quality_repair_chain_run.log` | `transient_ligand_run_log_or_lock` | `33.36 KiB` | `deleted` |
+| `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_labels_pos100.csv` | `raw_label_or_split_payload` | `122.68 KiB` | `deleted` |
+| `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_split_pos100.csv` | `raw_label_or_split_payload` | `29.21 KiB` | `deleted` |
+| `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_labels_pos50.csv` | `raw_label_or_split_payload` | `111.19 KiB` | `deleted` |
+| `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_split_pos50.csv` | `raw_label_or_split_payload` | `26.56 KiB` | `deleted` |
+| `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_labels_pos100.csv` | `raw_label_or_split_payload` | `122.68 KiB` | `deleted` |
+| `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_split_pos100.csv` | `raw_label_or_split_payload` | `29.21 KiB` | `deleted` |
+| `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_labels_pos50.csv` | `raw_label_or_split_payload` | `111.19 KiB` | `deleted` |
+| `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_split_pos50.csv` | `raw_label_or_split_payload` | `26.56 KiB` | `deleted` |
+| `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_labels_pos100.csv` | `raw_label_or_split_payload` | `122.68 KiB` | `deleted` |
+| `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_split_pos100.csv` | `raw_label_or_split_payload` | `29.21 KiB` | `deleted` |
+| `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_labels_pos50.csv` | `raw_label_or_split_payload` | `111.19 KiB` | `deleted` |
+| `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_split_pos50.csv` | `raw_label_or_split_payload` | `26.56 KiB` | `deleted` |
+| `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_labels_pos100.csv` | `raw_label_or_split_payload` | `122.68 KiB` | `deleted` |
+| `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_split_pos100.csv` | `raw_label_or_split_payload` | `29.21 KiB` | `deleted` |
+| `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_labels_pos50.csv` | `raw_label_or_split_payload` | `111.19 KiB` | `deleted` |
+| `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_split_pos50.csv` | `raw_label_or_split_payload` | `26.56 KiB` | `deleted` |
+| `runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set2_expanded_ood_kinase_strict_full_p100_n1000000_r1_labels_pos100.csv` | `raw_label_or_split_payload` | `201.31 MiB` | `deleted` |
+| `runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set2_expanded_ood_kinase_strict_full_p100_n1000000_r1_split_pos100.csv` | `raw_label_or_split_payload` | `45.74 MiB` | `deleted` |
+| `runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set2_expanded_ood_kinase_strict_full_p50_n1000000_r1_labels_pos50.csv` | `raw_label_or_split_payload` | `201.30 MiB` | `deleted` |
+| `runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set2_expanded_ood_kinase_strict_full_p50_n1000000_r1_split_pos50.csv` | `raw_label_or_split_payload` | `45.74 MiB` | `deleted` |
+| `runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_labels_pos100.csv` | `raw_label_or_split_payload` | `128.90 KiB` | `deleted` |
+| `runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_split_pos100.csv` | `raw_label_or_split_payload` | `29.21 KiB` | `deleted` |
 
 ## Retained Evidence
 
@@ -52,6 +74,74 @@
 - `runs/external_validation_2026-05-03_family_balanced_frozen_r2_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage2_summary.json`
 - `runs/external_validation_2026-05-03_family_balanced_frozen_r2_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage2_summary.md`
 - `runs/external_validation_2026-05-03_family_balanced_frozen_r2_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage2_traj_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_stage0_leakage_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_stage0_leakage_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_stage1_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_stage1_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_claim_split.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_claim_split.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_sla_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_sla_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage0_leakage_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage0_leakage_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage1_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage1_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage2_active_learning_hard_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage2_active_learning_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_stage0_leakage_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_stage0_leakage_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_stage1_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_stage1_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_claim_split.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_claim_split.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_sla_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_sla_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage0_leakage_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage0_leakage_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage1_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage1_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage2_active_learning_hard_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage2_active_learning_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_stage0_leakage_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_stage0_leakage_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_stage1_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_stage1_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_claim_split.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_claim_split.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_sla_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_sla_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage0_leakage_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage0_leakage_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage1_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage1_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage2_active_learning_hard_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_enum_norelax_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage2_active_learning_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_stage0_leakage_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_stage0_leakage_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_stage1_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_stage1_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p100_n64_r1_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_claim_split.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_claim_split.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_sla_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_sla_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage0_leakage_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage0_leakage_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage1_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage1_summary.md`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage2_active_learning_hard_summary.json`
+- `runs/external_validation_2026-05-11_scaleup_1m_pilot_v1_ligandonly_gpu_set3_operational_smoke_kinase_smoke_p50_n64_r1_stage2_active_learning_summary.json`
+- `runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set2_expanded_ood_kinase_strict_full_p100_n1000000_r1_claim_split.json`
+- `runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set2_expanded_ood_kinase_strict_full_p100_n1000000_r1_claim_split.md`
+- `runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set2_expanded_ood_kinase_strict_full_p100_n1000000_r1_sla_summary.json`
+- `runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set2_expanded_ood_kinase_strict_full_p100_n1000000_r1_sla_summary.md`
+- `runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set2_expanded_ood_kinase_strict_full_p100_n1000000_r1_stage0_leakage_summary.json`
+- `runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set2_expanded_ood_kinase_strict_full_p100_n1000000_r1_stage0_leakage_summary.md`
+- `runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set2_expanded_ood_kinase_strict_full_p100_n1000000_r1_stage1_summary.json`
+- `runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set2_expanded_ood_kinase_strict_full_p100_n1000000_r1_stage1_summary.md`
 
 ## Claim Boundary
 

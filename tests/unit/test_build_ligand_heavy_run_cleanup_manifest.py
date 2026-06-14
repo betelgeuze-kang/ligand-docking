@@ -82,3 +82,84 @@ def test_ligand_cleanup_manifest_recent_raw_payload_requires_review(tmp_path: Pa
 
     assert rows[str(raw.relative_to(tmp_path))]["delete_recommended"] is False
     assert rows[str(raw.relative_to(tmp_path))]["disposition"] == "review_recent_ligand_payload"
+
+
+def test_ligand_cleanup_manifest_marks_old_current_replay_scores_when_rank_evidence_exists(
+    tmp_path: Path,
+) -> None:
+    runs = tmp_path / "runs"
+    prefix = "gpcr_coverage_v2_crossfit_rank_rescue_repeat_r1"
+    score_payload = runs / f"{prefix}_shadow_replay_scores_current.csv"
+    ranking_unique = runs / f"{prefix}_shadow_replay_ranking_unique_current.csv"
+    ranking_topk = runs / f"{prefix}_shadow_replay_ranking_topk_current.csv"
+    ranking_summary = runs / f"{prefix}_shadow_replay_ranking_summary_current.json"
+
+    _write(score_payload, "queue_id,target,score\nq1,ADRB2,-1\n", age_days=30)
+    _write(ranking_unique, "target,ligand_id,score\nADRB2,lig1,-1\n", age_days=30)
+    _write(ranking_topk, "k,hit_rate\n10,1.0\n", age_days=30)
+    _write(ranking_summary, "{}", age_days=30)
+
+    payload = mod.build_ligand_heavy_run_cleanup_manifest(root=tmp_path, now=NOW, older_than_days=7)
+    rows = {row["path"]: row for row in payload["rows"]}
+
+    score_row = rows[str(score_payload.relative_to(tmp_path))]
+    assert score_row["cleanup_class"] == "raw_replay_score_payload"
+    assert score_row["delete_recommended"] is True
+    assert score_row["preserved_evidence_count"] >= 2
+    assert rows[str(ranking_unique.relative_to(tmp_path))]["disposition"] == "keep_top_ranking_or_compact_evidence"
+
+
+def test_ligand_cleanup_manifest_accepts_eval_unique_as_replay_retention_evidence(
+    tmp_path: Path,
+) -> None:
+    runs = tmp_path / "runs"
+    prefix = "gpcr_atom_window_excess_polar_v9"
+    score_payload = runs / f"{prefix}_shadow_replay_scores_current.csv"
+    eval_unique = runs / f"{prefix}_shadow_replay_eval_unique_current.csv"
+    eval_topk = runs / f"{prefix}_shadow_replay_eval_topk_current.csv"
+    eval_summary = runs / f"{prefix}_shadow_replay_eval_current.json"
+
+    _write(score_payload, "queue_id,target,score\nq1,ADRB2,-1\n", age_days=30)
+    _write(eval_unique, "target,ligand_id,score\nADRB2,lig1,-1\n", age_days=30)
+    _write(eval_topk, "k,hit_rate\n10,1.0\n", age_days=30)
+    _write(eval_summary, "{}", age_days=30)
+
+    payload = mod.build_ligand_heavy_run_cleanup_manifest(root=tmp_path, now=NOW, older_than_days=7)
+    rows = {row["path"]: row for row in payload["rows"]}
+
+    score_row = rows[str(score_payload.relative_to(tmp_path))]
+    assert score_row["cleanup_class"] == "raw_replay_score_payload"
+    assert score_row["delete_recommended"] is True
+    assert score_row["preserved_evidence_count"] >= 2
+    assert rows[str(eval_unique.relative_to(tmp_path))]["disposition"] == "keep_top_ranking_or_compact_evidence"
+
+
+def test_ligand_cleanup_manifest_marks_old_label_payloads_when_summary_evidence_exists(
+    tmp_path: Path,
+) -> None:
+    runs = tmp_path / "runs"
+    prefix = (
+        "external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_"
+        "gpu_set2_expanded_ood_kinase_strict_full_p100_n1000000_r1"
+    )
+    labels = runs / f"{prefix}_labels_pos100.csv"
+    split = runs / f"{prefix}_split_pos100.csv"
+    summary = runs / f"{prefix}_summary.json"
+    ranking_unique = runs / f"{prefix}_stage5_ranking_unique.csv"
+
+    _write(labels, "target,ligand_id,is_binder\nT,L,1\n", age_days=30)
+    _write(split, "target,ligand_id,split\nT,L,eval\n", age_days=30)
+    _write(summary, "{}", age_days=30)
+    _write(ranking_unique, "target,ligand_id,score\nT,L,-1\n", age_days=30)
+
+    payload = mod.build_ligand_heavy_run_cleanup_manifest(root=tmp_path, now=NOW, older_than_days=7)
+    rows = {row["path"]: row for row in payload["rows"]}
+
+    label_row = rows[str(labels.relative_to(tmp_path))]
+    split_row = rows[str(split.relative_to(tmp_path))]
+    assert label_row["cleanup_class"] == "raw_label_or_split_payload"
+    assert split_row["cleanup_class"] == "raw_label_or_split_payload"
+    assert label_row["delete_recommended"] is True
+    assert split_row["delete_recommended"] is True
+    assert label_row["preserved_evidence_count"] >= 1
+    assert split_row["preserved_evidence_count"] >= 1

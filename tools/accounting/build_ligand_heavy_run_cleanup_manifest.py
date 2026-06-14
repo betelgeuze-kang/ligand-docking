@@ -53,6 +53,16 @@ TOP_RANKING_KEEP_TOKENS = (
     "ranking_topk",
     "ranking_unique",
     "ranking_summary",
+    "ranking_eval_topk",
+    "ranking_eval_unique",
+    "ranking_eval_rows",
+    "ranking_eval_current",
+    "shadow_replay_eval_topk",
+    "shadow_replay_eval_unique",
+    "shadow_replay_eval_current",
+    "_eval_topk",
+    "_eval_unique",
+    "_eval_current",
 )
 
 COMPACT_KEEP_TOKENS = (
@@ -89,6 +99,8 @@ RAW_FILE_DELETE_TOKENS = (
     "hard_decoy_split.csv",
     "labels_pos",
     "split_pos",
+    "shadow_replay_scores",
+    "replay_scores",
     "admet_surface.csv",
     "admet_surface.json",
     "_aggregate.csv",
@@ -112,7 +124,11 @@ RUN_PREFIX_MARKERS = (
     "_stage3_",
     "_stage4_",
     "_stage5_",
+    "_shadow_replay_scores",
+    "_replay_scores",
     "_hard_decoy_",
+    "_labels_pos",
+    "_split_pos",
     "_admet_surface",
     "_claim_split",
     "_sla_summary",
@@ -168,8 +184,23 @@ def _evidence_globs(prefix: str) -> tuple[str, ...]:
     return (
         f"{prefix}*stage5_ranking_topk.csv",
         f"{prefix}*stage5_ranking_unique.csv",
+        f"{prefix}*stage5_ranking_rows.csv",
         f"{prefix}*stage5_ranking_summary.json",
         f"{prefix}*stage5_ranking_summary.md",
+        f"{prefix}*ranking_topk*.csv",
+        f"{prefix}*ranking_unique*.csv",
+        f"{prefix}*ranking_rows*.csv",
+        f"{prefix}*ranking_eval_unique*.csv",
+        f"{prefix}*ranking_eval_rows*.csv",
+        f"{prefix}*ranking_eval_topk*.csv",
+        f"{prefix}*ranking_eval_current*.json",
+        f"{prefix}*ranking_eval_current*.md",
+        f"{prefix}*ranking_summary*.json",
+        f"{prefix}*ranking_summary*.md",
+        f"{prefix}*eval_topk*.csv",
+        f"{prefix}*eval_unique*.csv",
+        f"{prefix}*eval_current*.json",
+        f"{prefix}*eval_current*.md",
         f"{prefix}*stage3_refine_scores_shortlist.csv",
         f"{prefix}*stage3_refine_scores_shortlist.json",
         f"{prefix}*summary.json",
@@ -296,6 +327,10 @@ def _cleanup_class(path: Path) -> str:
         return "raw_stage1_ligand_inventory"
     if "hard_decoy" in name and ("labels" in name or "split" in name):
         return "raw_hard_decoy_labels"
+    if "labels_pos" in name or "split_pos" in name:
+        return "raw_label_or_split_payload"
+    if "shadow_replay_scores" in name or "replay_scores" in name:
+        return "raw_replay_score_payload"
     if "admet_surface" in name and not name.endswith(".md"):
         return "raw_admet_surface"
     if "stage5_ranking_rows" in name:
