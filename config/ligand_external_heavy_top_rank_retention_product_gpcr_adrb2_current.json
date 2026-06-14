@@ -1,0 +1,556 @@
+{
+  "cleanup": {
+    "deletion_status": "deleted_or_absent_after_compaction",
+    "dry_run_json": "runs/product_gpcr_adrb2_after_approval_external_heavy_cleanup_dry_run_current.json",
+    "dry_run_planned_delete_count": 1,
+    "dry_run_present": true,
+    "dry_run_row_status": "dry_run_delete",
+    "dry_run_status": "dry_run",
+    "heavy_payload_path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/product_gpcr_adrb2_after_approval/stage2_trajectory_frames",
+    "observed_payload_exists": false,
+    "observed_payload_size_bytes": null,
+    "observed_payload_size_human": "0.00 B",
+    "pre_delete_age_days": 11.11,
+    "pre_delete_file_count": 19997,
+    "pre_delete_size_bytes": 102514396532,
+    "pre_delete_size_human": "95.47 GiB",
+    "run_name": "product_gpcr_adrb2_after_approval"
+  },
+  "ranking": {
+    "eval_unique_keys": 200,
+    "lower_better": true,
+    "metrics": {
+      "bedroc_alpha20": 1.0,
+      "brier": 0.04144653247007736,
+      "ci": {
+        "bedroc_alpha20": {
+          "high": 1.0,
+          "low": 1.0,
+          "n": 800
+        },
+        "ef1": {
+          "high": 11.76470588235294,
+          "low": 5.555555555555555,
+          "n": 800
+        },
+        "pr_auc": {
+          "high": 0.9759804744946387,
+          "low": 0.8369784056627239,
+          "n": 800
+        },
+        "roc_auc": {
+          "high": 0.9961695607763024,
+          "low": 0.9673116087516087,
+          "n": 800
+        }
+      },
+      "ece_10bin": 0.06082558017106604,
+      "ef1": 7.692307692307692,
+      "positive_count": 26,
+      "pr_auc": 0.9157321921917204,
+      "roc_auc": 0.9836427939876216,
+      "score_mode_ratio": 0.005,
+      "score_tie_ratio": 0.0,
+      "score_unique_ratio": 1.0,
+      "spearman_ref_vs_score": 0.33993994403419464
+    },
+    "ranking_pass": true,
+    "ranking_summary_json": "runs/product_gpcr_adrb2_after_approval_stage5_ranking_summary.json",
+    "ranking_summary_present": true,
+    "refine_selected_count": 128,
+    "refine_shortlist_json": "runs/product_gpcr_adrb2_after_approval_stage3_refine_scores_shortlist.json",
+    "refine_shortlist_present": true,
+    "rows_eval": 200,
+    "score_col": "binding_score_composite_v7",
+    "top_rows": [
+      {
+        "binding_score_composite_v7": "-16.732086373188206",
+        "is_binder": "1",
+        "ligand_id": "chembl2012522",
+        "mean_min_distance_A": "4.351670842369398",
+        "reference_binding_kcal_mol": "-14.895",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-15.137956651413017",
+        "is_binder": "1",
+        "ligand_id": "chembl4854418",
+        "mean_min_distance_A": "4.520015347997347",
+        "reference_binding_kcal_mol": "-13.64",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-14.973814174970908",
+        "is_binder": "1",
+        "ligand_id": "chembl4874819",
+        "mean_min_distance_A": "4.2741645226875935",
+        "reference_binding_kcal_mol": "-14.458",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-14.29200521454394",
+        "is_binder": "1",
+        "ligand_id": "chembl5207281",
+        "mean_min_distance_A": "4.47916093369325",
+        "reference_binding_kcal_mol": "-13.845",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-13.589770788241909",
+        "is_binder": "1",
+        "ligand_id": "chembl5206565",
+        "mean_min_distance_A": "4.992165940999985",
+        "reference_binding_kcal_mol": "-13.845",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-13.123874365426076",
+        "is_binder": "1",
+        "ligand_id": "chembl4863525",
+        "mean_min_distance_A": "5.03530393242836",
+        "reference_binding_kcal_mol": "-14.731",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-12.151104290578537",
+        "is_binder": "1",
+        "ligand_id": "chembl4456301",
+        "mean_min_distance_A": "4.1750238244732225",
+        "reference_binding_kcal_mol": "-13.831",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-9.16627280372655",
+        "is_binder": "1",
+        "ligand_id": "chembl388570",
+        "mean_min_distance_A": "4.394904471437137",
+        "reference_binding_kcal_mol": "-13.435",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-8.436325224006852",
+        "is_binder": "1",
+        "ligand_id": "chembl1263",
+        "mean_min_distance_A": "5.008917064468066",
+        "reference_binding_kcal_mol": "-13.776",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-7.729892182375242",
+        "is_binder": "1",
+        "ligand_id": "timolol",
+        "mean_min_distance_A": "4.317883222301801",
+        "reference_binding_kcal_mol": "-8.5",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-7.229060781629306",
+        "is_binder": "1",
+        "ligand_id": "carvedilol",
+        "mean_min_distance_A": "4.305196524163087",
+        "reference_binding_kcal_mol": "-9.1",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-6.911676135558636",
+        "is_binder": "1",
+        "ligand_id": "chembl36060",
+        "mean_min_distance_A": "4.318940473596255",
+        "reference_binding_kcal_mol": "-13.64",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-6.622532641788358",
+        "is_binder": "1",
+        "ligand_id": "chembl1082500",
+        "mean_min_distance_A": "4.529102090001106",
+        "reference_binding_kcal_mol": "-13.231",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-5.647518847138695",
+        "is_binder": "1",
+        "ligand_id": "chembl4860528",
+        "mean_min_distance_A": "5.186959058046341",
+        "reference_binding_kcal_mol": "-13.845",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-5.142115630250817",
+        "is_binder": "1",
+        "ligand_id": "chembl5201074",
+        "mean_min_distance_A": "4.3619923482338585",
+        "reference_binding_kcal_mol": "-13.845",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-4.870334520023755",
+        "is_binder": "1",
+        "ligand_id": "chembl1082501",
+        "mean_min_distance_A": "4.803821016351382",
+        "reference_binding_kcal_mol": "-13.64",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-4.338752067905385",
+        "is_binder": "1",
+        "ligand_id": "carazolol",
+        "mean_min_distance_A": "4.429282011588414",
+        "reference_binding_kcal_mol": "-10.2",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-4.221773865177986",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0155",
+        "mean_min_distance_A": "4.260133588314056",
+        "reference_binding_kcal_mol": "-0.36",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-4.000393490635232",
+        "is_binder": "1",
+        "ligand_id": "chembl1082827",
+        "mean_min_distance_A": "5.029171120127042",
+        "reference_binding_kcal_mol": "-13.231",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-3.908274002315263",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0109",
+        "mean_min_distance_A": "4.23113636440701",
+        "reference_binding_kcal_mol": "-0.51",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-3.8282869779884874",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0156",
+        "mean_min_distance_A": "4.2373533474074465",
+        "reference_binding_kcal_mol": "-0.39",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-3.2833647385631646",
+        "is_binder": "1",
+        "ligand_id": "chembl15245",
+        "mean_min_distance_A": "4.308979997038842",
+        "reference_binding_kcal_mol": "-14.186",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-3.2795423702411597",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0171",
+        "mean_min_distance_A": "4.305095010333591",
+        "reference_binding_kcal_mol": "-0.33",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-3.1063797037485483",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0123",
+        "mean_min_distance_A": "4.264729627635744",
+        "reference_binding_kcal_mol": "-0.42",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-3.078548895460166",
+        "is_binder": "1",
+        "ligand_id": "chembl2104145",
+        "mean_min_distance_A": "4.30428284406662",
+        "reference_binding_kcal_mol": "-14.267",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-3.066056739701406",
+        "is_binder": "1",
+        "ligand_id": "chembl1160723",
+        "mean_min_distance_A": "4.7440970003604885",
+        "reference_binding_kcal_mol": "-14.049",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-3.051543397203549",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0140",
+        "mean_min_distance_A": "4.276502230432299",
+        "reference_binding_kcal_mol": "-0.42",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-3.041930489815249",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0141",
+        "mean_min_distance_A": "4.270446290572484",
+        "reference_binding_kcal_mol": "-0.45",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-3.0222001766873765",
+        "is_binder": "1",
+        "ligand_id": "pindolol",
+        "mean_min_distance_A": "4.180435127019882",
+        "reference_binding_kcal_mol": "-8.2",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-2.884954664265931",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0122",
+        "mean_min_distance_A": "4.174792420201832",
+        "reference_binding_kcal_mol": "-0.39",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-2.8360124479445754",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0154",
+        "mean_min_distance_A": "4.233371633953518",
+        "reference_binding_kcal_mol": "-0.33",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-2.643641356175355",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0164",
+        "mean_min_distance_A": "4.662288351853689",
+        "reference_binding_kcal_mol": "-0.63",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-2.612423453033989",
+        "is_binder": "1",
+        "ligand_id": "alprenolol",
+        "mean_min_distance_A": "4.1230140800277395",
+        "reference_binding_kcal_mol": "-7.8",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-2.5762147320365107",
+        "is_binder": "1",
+        "ligand_id": "propranolol",
+        "mean_min_distance_A": "4.226916581392288",
+        "reference_binding_kcal_mol": "-8.8",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-2.408270533920579",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0139",
+        "mean_min_distance_A": "4.144557844267951",
+        "reference_binding_kcal_mol": "-0.39",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-2.3244128543190854",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0152",
+        "mean_min_distance_A": "4.231682446930143",
+        "reference_binding_kcal_mol": "-0.78",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-2.2820630678950553",
+        "is_binder": "1",
+        "ligand_id": "chembl513104",
+        "mean_min_distance_A": "4.98463402291139",
+        "reference_binding_kcal_mol": "-13.422",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-2.2811866338428417",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0116",
+        "mean_min_distance_A": "4.457166145907508",
+        "reference_binding_kcal_mol": "-0.72",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-2.2623193780857327",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0133",
+        "mean_min_distance_A": "4.24553859366311",
+        "reference_binding_kcal_mol": "-0.72",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-2.2066315058028985",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0151",
+        "mean_min_distance_A": "4.181439356009165",
+        "reference_binding_kcal_mol": "-0.75",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-2.1436973269778874",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0165",
+        "mean_min_distance_A": "4.048163624604544",
+        "reference_binding_kcal_mol": "-0.66",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-2.1432403183518285",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0170",
+        "mean_min_distance_A": "4.317173424032",
+        "reference_binding_kcal_mol": "-0.3",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-1.7488835035786685",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0162",
+        "mean_min_distance_A": "4.203182572788663",
+        "reference_binding_kcal_mol": "-0.57",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-1.6106877680110998",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0148",
+        "mean_min_distance_A": "4.262464674313863",
+        "reference_binding_kcal_mol": "-0.66",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-1.401855566501496",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0135",
+        "mean_min_distance_A": "4.120528815852271",
+        "reference_binding_kcal_mol": "-0.78",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-1.3438577359902233",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0168",
+        "mean_min_distance_A": "4.334986031717724",
+        "reference_binding_kcal_mol": "-0.75",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-1.3001596865049325",
+        "is_binder": "1",
+        "ligand_id": "chembl513389",
+        "mean_min_distance_A": "4.364695506791273",
+        "reference_binding_kcal_mol": "-13.49",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-1.2496919478519066",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0118",
+        "mean_min_distance_A": "4.2189533280001745",
+        "reference_binding_kcal_mol": "-0.78",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-1.1801123184641458",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0146",
+        "mean_min_distance_A": "4.023807722330093",
+        "reference_binding_kcal_mol": "-0.6",
+        "target": "ADRB2_GPCR_BLIND"
+      },
+      {
+        "binding_score_composite_v7": "-1.0746165360508562",
+        "is_binder": "0",
+        "ligand_id": "product_gate_decoy_0136",
+        "mean_min_distance_A": "4.199010745684306",
+        "reference_binding_kcal_mol": "-0.3",
+        "target": "ADRB2_GPCR_BLIND"
+      }
+    ],
+    "top_rows_retained_count": 50,
+    "top_rows_source": "runs/product_gpcr_adrb2_after_approval_stage5_ranking_unique.csv",
+    "topk": [
+      {
+        "enrichment_factor": 7.692307692307692,
+        "hit_rate": 1.0,
+        "hits": 10,
+        "k": 10
+      },
+      {
+        "enrichment_factor": 6.923076923076923,
+        "hit_rate": 0.9,
+        "hits": 18,
+        "k": 20
+      },
+      {
+        "enrichment_factor": 4.0,
+        "hit_rate": 0.52,
+        "hits": 26,
+        "k": 50
+      }
+    ],
+    "topk_unique": [
+      {
+        "enrichment_factor": 7.692307692307692,
+        "hit_rate": 1.0,
+        "hits": 10,
+        "k": 10
+      },
+      {
+        "enrichment_factor": 6.923076923076923,
+        "hit_rate": 0.9,
+        "hits": 18,
+        "k": 20
+      },
+      {
+        "enrichment_factor": 4.0,
+        "hit_rate": 0.52,
+        "hits": 26,
+        "k": 50
+      }
+    ]
+  },
+  "retained_artifacts": [
+    {
+      "exists": true,
+      "path": "runs/product_gpcr_adrb2_after_approval_stage5_ranking_summary.json",
+      "sha256": "7a33ff43aa065e3846a68863517ae91670406408d2538df9f0d2c2f6b8001d30",
+      "size_bytes": 7283,
+      "size_human": "7.11 KiB"
+    },
+    {
+      "exists": true,
+      "path": "runs/product_gpcr_adrb2_after_approval_stage5_ranking_topk.csv",
+      "sha256": "14555beaa87437de8c3576afcfe20347b75bc60069cf1fe98270c6b0484cad1e",
+      "size_bytes": 105,
+      "size_human": "105.00 B"
+    },
+    {
+      "exists": true,
+      "path": "runs/product_gpcr_adrb2_after_approval_stage5_ranking_unique.csv",
+      "sha256": "2681a8a91a54486fa6279c620911e3191eb544d3f7dbe10750338fd1265e0889",
+      "size_bytes": 16994,
+      "size_human": "16.60 KiB"
+    },
+    {
+      "exists": true,
+      "path": "runs/product_gpcr_adrb2_after_approval_stage3_refine_scores_shortlist.json",
+      "sha256": "e20818319da19f264a0c6dcfb079c07742a0ac371a8b174f25ef2a7b248930d5",
+      "size_bytes": 1002339,
+      "size_human": "978.85 KiB"
+    }
+  ],
+  "summary": {
+    "claim_boundary": "External ligand-heavy top-rank retention only records compact ranking evidence before deleting local heavy trajectory payloads. It does not run docking, change ranking scores, approve commercial promotion, or claim wet-lab validation.",
+    "external_state_mutated": false,
+    "heavy_payload_path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/product_gpcr_adrb2_after_approval/stage2_trajectory_frames",
+    "local_external_filesystem_compaction": true,
+    "next_required_step": "No heavy payload action remains for this run; keep tracked config/docs receipt with top-rank evidence.",
+    "observed_payload_exists": false,
+    "packet_type": "ligand_external_heavy_top_rank_retention_receipt",
+    "pre_delete_file_count": 19997,
+    "pre_delete_size_human": "95.47 GiB",
+    "ranking_pass": true,
+    "retained_artifact_count": 4,
+    "retained_top_rows": 50,
+    "run_name": "product_gpcr_adrb2_after_approval",
+    "status": "ligand_external_heavy_payload_deleted_top_rank_retained"
+  }
+}
