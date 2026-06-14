@@ -1904,6 +1904,18 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_metric_evidence_missing_required_input_artifact_sha256_row_count"
     ] == 0
     assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "worksheet_field_row_count"
+    ] == 389
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "operator_fill_pending_field_count"
+    ] == 296
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "top_blocker_field_count"
+    ] == 329
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "top_blocker_pending_field_count"
+    ] == 266
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
         "public_benchmark_statistical_support_work_order_expansion_slot_count"
     ] == 17
     assert engine_field_worksheet_status_spec["required_int_exact_fields"][
@@ -1912,6 +1924,24 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert engine_field_worksheet_status_spec["required_int_exact_fields"][
         "public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count"
     ] == 5
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_expansion_slot_row_count"
+    ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_expansion_holdout_slot_count"
+    ] == 5
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_expansion_fit_or_holdout_slot_count"
+    ] == 12
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_expansion_field_count"
+    ] == 221
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_expansion_pending_field_count"
+    ] == 204
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_expansion_ready_field_count"
+    ] == 17
     assert engine_field_worksheet_status_spec["required_text_exact_fields"][
         "public_benchmark_statistical_support_work_order_status"
     ] == "refine_tier_public_benchmark_statistical_support_work_order_ready"
@@ -1944,13 +1974,13 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     ] == 0
     assert engine_staging_apply_status_spec["required_int_exact_fields"][
         "field_worksheet_pending_field_count"
-    ] == 92
+    ] == 296
     assert engine_staging_apply_status_spec["required_int_exact_fields"][
         "field_worksheet_work_order_pending_field_count"
     ] == 56
     assert engine_staging_apply_status_spec["required_int_exact_fields"][
         "field_worksheet_top_blocker_pending_field_count"
-    ] == 62
+    ] == 266
     assert engine_staging_apply_status_spec["required_int_exact_fields"][
         "public_benchmark_intake_write_allowed"
     ] == 0

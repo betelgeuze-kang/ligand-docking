@@ -59,6 +59,21 @@ WORK_ORDER_OPERATOR_FIELDS = [
     "internal_deltaG_source_artifact",
     "deltaG_experimental_kcal_mol",
 ]
+STATISTICAL_SUPPORT_FALLBACK_FIELDS = [
+    "benchmark_id",
+    "target_id",
+    "split",
+    "license_ok",
+    "pose_rmsd_A",
+    "dockq",
+    "lddt_pli",
+    "deltaG_mm_gbsa_kcal_mol",
+    "dockq_source_artifact",
+    "lddt_pli_source_artifact",
+    "internal_deltaG_source_artifact",
+    "deltaG_experimental_kcal_mol",
+    "receptor_coordinate_artifact",
+]
 RECEIPT_OPTIONAL_FIELDS = {"notes"}
 RECEIPT_TRUE_FIELDS = {"claim_ready", "license_ok"}
 RECEIPT_TIMESTAMP_FIELDS = {"reviewed_at_utc"}
@@ -102,6 +117,8 @@ FIELD_ACTIONS = {
     "lddt_pli_source_artifact": "Point to the local reviewed artifact used to compute or verify lDDT-PLI.",
     "internal_deltaG_source_artifact": "Point to the local reviewed artifact used to compute or verify internal refine ΔG.",
     "deltaG_experimental_kcal_mol": "Fill the public experimental free-energy value.",
+    "split": "Keep the required split for this statistical-support expansion slot.",
+    "receptor_coordinate_artifact": "Point to the validated public receptor or complex coordinate artifact.",
 }
 
 
@@ -509,6 +526,79 @@ def _work_order_field_row(
     }
 
 
+def _statistical_support_fields(row: dict[str, Any]) -> list[str]:
+    fields = _split_nonempty(row.get("required_fields"))
+    return fields or list(STATISTICAL_SUPPORT_FALLBACK_FIELDS)
+
+
+def _statistical_support_current_value(field_name: str, slot_row: dict[str, Any]) -> str:
+    if field_name == "split":
+        return _text(slot_row.get("required_split"))
+    return ""
+
+
+def _expected_statistical_support_value(field_name: str, slot_row: dict[str, Any]) -> str:
+    if field_name == "split":
+        return _text(slot_row.get("required_split")) or "fit_or_holdout or holdout"
+    if field_name == "receptor_coordinate_artifact":
+        return "validated public receptor or complex coordinate artifact path"
+    if field_name in {"dockq_source_artifact", "lddt_pli_source_artifact", "internal_deltaG_source_artifact"}:
+        return "schema-valid local metric source JSON path"
+    return _expected_work_order_value(field_name)
+
+
+def _statistical_support_field_status(field_name: str, value: Any) -> tuple[str, str]:
+    if field_name == "split":
+        return ("ready", "") if _text(value) else ("operator_fill_pending", "required_split_missing")
+    return _work_order_field_status(field_name, value)
+
+
+def _statistical_support_expansion_field_row(
+    field_name: str,
+    *,
+    row_index: int,
+    slot_row: dict[str, Any],
+    priority_summary: dict[str, Any],
+    statistical_support_summary: dict[str, Any],
+) -> dict[str, Any]:
+    slot_id = _text(slot_row.get("expansion_slot_id")) or f"stat_support_expansion_{row_index}"
+    value = _statistical_support_current_value(field_name, slot_row)
+    status, blocker = _statistical_support_field_status(field_name, value)
+    return {
+        "worksheet_section": "public_benchmark_statistical_support_expansion",
+        "source_row_id": slot_id,
+        "source_row_index": row_index,
+        "field_name": field_name,
+        "gate_id": "public_benchmark_statistical_support_not_claim_grade",
+        "receipt_column_present": True,
+        "required_for_operator_receipt": False,
+        "top_blocker_field": True,
+        "current_value": value,
+        "observed_source_value": _text(statistical_support_summary.get("status")),
+        "expected_value_hint": _expected_statistical_support_value(field_name, slot_row),
+        "expected_true_fields": "claim_grade_public_benchmark_statistical_support_ready",
+        "field_status": status,
+        "blocker": blocker,
+        "operator_input_required": status == "operator_fill_pending",
+        "top_blocker_id": _text(priority_summary.get("top_blocker_id")),
+        "top_priority_bucket": _text(priority_summary.get("top_priority_bucket")),
+        "required_split": _text(slot_row.get("required_split")),
+        "required_benchmark_family": _text(slot_row.get("required_benchmark_family")),
+        "required_new_pair_count_credit": _int(slot_row.get("required_new_pair_count_credit")),
+        "required_holdout_pair_count_credit": _int(slot_row.get("required_holdout_pair_count_credit")),
+        "required_metric_source_payloads": _text(slot_row.get("required_metric_source_payloads")),
+        "acceptance_rule": _text(slot_row.get("acceptance_rule")),
+        "operator_action": FIELD_ACTIONS.get(field_name) or _text(slot_row.get("operator_action")),
+        "canonical_intake_promotion_allowed": _bool_text(
+            slot_row.get("canonical_intake_promotion_allowed")
+        ),
+        "external_engine_calls_allowed": _bool_text(slot_row.get("external_engine_calls_allowed")),
+        "claim_promoted": False,
+        "external_engine_calls_executed": False,
+        "external_state_mutated": False,
+    }
+
+
 def build_engine_refinement_claim_evidence_operator_field_worksheet(
     *,
     receipt_csv: str | Path = DEFAULT_RECEIPT_CSV,
@@ -663,7 +753,19 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
         for row_index, work_order_row in enumerate(work_order_rows, start=1)
         for field_name in WORK_ORDER_OPERATOR_FIELDS
     ]
-    worksheet_rows = receipt_field_rows + work_order_field_rows
+    statistical_support_slot_rows = _rows(statistical_support_work_order_packet)
+    statistical_support_expansion_field_rows = [
+        _statistical_support_expansion_field_row(
+            field_name,
+            row_index=row_index,
+            slot_row=slot_row,
+            priority_summary=priority_summary,
+            statistical_support_summary=statistical_support_work_order_summary,
+        )
+        for row_index, slot_row in enumerate(statistical_support_slot_rows, start=1)
+        for field_name in _statistical_support_fields(slot_row)
+    ]
+    worksheet_rows = receipt_field_rows + work_order_field_rows + statistical_support_expansion_field_rows
     pending_rows = [row for row in worksheet_rows if row["field_status"] == "operator_fill_pending"]
     invalid_rows = [row for row in worksheet_rows if row["field_status"] in {"invalid", "missing_column"}]
     top_blocker_rows = [row for row in worksheet_rows if row.get("top_blocker_field") is True]
@@ -675,6 +777,14 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
     ]
     work_order_pending_rows = [
         row for row in work_order_field_rows if row["field_status"] == "operator_fill_pending"
+    ]
+    statistical_support_expansion_pending_rows = [
+        row
+        for row in statistical_support_expansion_field_rows
+        if row["field_status"] == "operator_fill_pending"
+    ]
+    statistical_support_expansion_ready_rows = [
+        row for row in statistical_support_expansion_field_rows if row["field_status"] == "ready"
     ]
     source_blockers: list[str] = []
     if not receipt_csv_present:
@@ -831,6 +941,32 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
         ),
         "public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed": bool(
             statistical_support_work_order_summary.get("canonical_intake_promotion_allowed") is True
+        ),
+        "public_benchmark_statistical_support_expansion_slot_row_count": len(
+            statistical_support_slot_rows
+        ),
+        "public_benchmark_statistical_support_expansion_holdout_slot_count": len(
+            [
+                row
+                for row in statistical_support_slot_rows
+                if _text(row.get("required_split")) == "holdout"
+            ]
+        ),
+        "public_benchmark_statistical_support_expansion_fit_or_holdout_slot_count": len(
+            [
+                row
+                for row in statistical_support_slot_rows
+                if _text(row.get("required_split")) == "fit_or_holdout"
+            ]
+        ),
+        "public_benchmark_statistical_support_expansion_field_count": len(
+            statistical_support_expansion_field_rows
+        ),
+        "public_benchmark_statistical_support_expansion_pending_field_count": len(
+            statistical_support_expansion_pending_rows
+        ),
+        "public_benchmark_statistical_support_expansion_ready_field_count": len(
+            statistical_support_expansion_ready_rows
         ),
         "public_benchmark_materialized_metric_ready": materialized_metric_ready,
         "public_benchmark_materialized_apply_ready": materialized_apply_ready,

@@ -802,7 +802,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `candidate_receipt_ready=false`, `candidate_receipt_blocked_row_count=6`,
   `candidate_public_benchmark_work_order_ready=false`,
   `candidate_public_benchmark_blocked_row_count=8`,
-  `field_worksheet_pending_field_count=92`,
+  `field_worksheet_pending_field_count=296`,
   `field_worksheet_work_order_pending_field_count=56`,
   `live_copy_allowed=false`, `public_benchmark_intake_write_allowed=false`,
   `external_engine_calls_executed=false`, `external_state_mutated=false`를 기록한다.
@@ -1095,16 +1095,27 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   claim evidence도
   `runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`을
   `local_engine_refinement_claim_field_worksheet` reference로 포함하며,
-  현재 `worksheet_field_row_count=168`,
-  `operator_fill_pending_field_count=92`,
+  현재 `worksheet_field_row_count=389`,
+  `operator_fill_pending_field_count=296`,
   `receipt_operator_fill_pending_field_count=36`,
   `public_benchmark_work_order_pending_field_count=56`,
   `top_blocker_id=public_benchmark_gate_not_ready`,
   `top_priority_bucket=public_benchmark_work_order_apply_required`,
-  `top_blocker_pending_field_count=62`, `claim_promoted=false`,
+  `top_blocker_pending_field_count=266`, `claim_promoted=false`,
   `external_engine_calls_executed=false`, `external_state_mutated=false`로
   public benchmark work-order 8개와 claim evidence receipt 6개 row를 field-level로
-  분리한다. 또한
+  분리한다. 2026-06-14 최신 worksheet는 claim-grade statistical support work-order의
+  17개 expansion slot도 `public_benchmark_statistical_support_expansion` field row로
+  펼쳐 `public_benchmark_statistical_support_expansion_slot_row_count=17`,
+  `public_benchmark_statistical_support_expansion_holdout_slot_count=5`,
+  `public_benchmark_statistical_support_expansion_fit_or_holdout_slot_count=12`,
+  `public_benchmark_statistical_support_expansion_field_count=221`,
+  `public_benchmark_statistical_support_expansion_pending_field_count=204`,
+  `public_benchmark_statistical_support_expansion_ready_field_count=17`을 summary에
+  고정한다. 즉 R9의 남은 과학/정확도 병목은 기존 8개 pair의 metric source path뿐
+  아니라, 최소 17개 추가 public benchmark pair와 그중 5개 holdout pair를 채워
+  bootstrap Spearman p05 >= 0.5를 재검증해야 하는 통계 support 결손까지 operator-facing
+  worksheet에 직접 노출된다. 또한
   receptor-coordinate intake/validation CSV와 metric evidence CSV를 함께 읽어
   `public_benchmark_receptor_coordinate_intake_row_count=8`,
   `public_benchmark_receptor_coordinate_intake_artifact_present_row_count=8`,
@@ -1265,7 +1276,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `engine_refinement_claim_evidence_operator_field_worksheet_semantic_ready`,
   `engine_refinement_claim_evidence_operator_staging_apply_blocked_semantic_ready` row로 고정되어
   placeholder evidence, 6/6 blocked rows, R8 field-level pending count 36개,
-  public benchmark work-order 8개 row, R9 field-level pending count 92개,
+  public benchmark work-order 8개 row, R9 field-level pending count 296개,
   public benchmark work-order pending count 56개,
   R9 receptor-coordinate validation pass 8개/blocked 0개,
   tracked R9 metric-evidence blocked 8개와 materialized metric-evidence pass 8개,
@@ -1273,6 +1284,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   tracked DockQ/lDDT-PLI/internal ΔG source missing 8/8/8개,
   materialized DockQ/lDDT-PLI/internal ΔG source payload 24개,
   claim-grade statistical support expansion slot 17개와 holdout slot 5개,
+  statistical support expansion field 221개/pending 204개/ready split 17개,
   approval token requirement, first-blocked diagnostics가 source-of-truth에서 직접 검증된다. production AI
   checkpoint/promotion workbench는 현재 `shadow`/blocked 상태를 semantic-ready row로
   검증하고, `production_ai_registry_promotion_operator_staging_apply_blocked_semantic_ready`

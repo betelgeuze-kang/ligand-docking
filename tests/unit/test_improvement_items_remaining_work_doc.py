@@ -226,6 +226,12 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "R9 receptor-coordinate validation pass 8개/blocked 0개" in text
     assert "materialized metric-evidence pass 8개" in text
     assert "claim-grade statistical support expansion slot 17개" in text
+    assert "`worksheet_field_row_count=389`" in text
+    assert "`operator_fill_pending_field_count=296`" in text
+    assert "`public_benchmark_statistical_support_expansion_field_count=221`" in text
+    assert "`public_benchmark_statistical_support_expansion_pending_field_count=204`" in text
+    assert "`public_benchmark_statistical_support_expansion_ready_field_count=17`" in text
+    assert "`field_worksheet_pending_field_count=296`" in text
     assert "17개 추가 public benchmark pair" in text
     assert "bootstrap Spearman\np05 >= 0.5 재검증" in text
     assert "`candidate_claim_grade_public_benchmark_ready=true`" in text

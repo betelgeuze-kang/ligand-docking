@@ -552,6 +552,48 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
         summary["public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed"]
         is False
     )
+    assert summary["worksheet_field_row_count"] == 389
+    assert summary["operator_fill_pending_field_count"] == 296
+    assert summary["top_blocker_field_count"] == 329
+    assert summary["top_blocker_pending_field_count"] == 266
+    assert summary["public_benchmark_statistical_support_expansion_slot_row_count"] == 17
+    assert summary["public_benchmark_statistical_support_expansion_holdout_slot_count"] == 5
+    assert summary["public_benchmark_statistical_support_expansion_fit_or_holdout_slot_count"] == 12
+    assert summary["public_benchmark_statistical_support_expansion_field_count"] == 221
+    assert summary["public_benchmark_statistical_support_expansion_pending_field_count"] == 204
+    assert summary["public_benchmark_statistical_support_expansion_ready_field_count"] == 17
+    holdout_split_row = next(
+        row
+        for row in payload["rows"]
+        if row["source_row_id"] == "refine_tier_public_benchmark_stat_support_expansion_001"
+        and row["field_name"] == "split"
+    )
+    assert holdout_split_row["worksheet_section"] == "public_benchmark_statistical_support_expansion"
+    assert holdout_split_row["current_value"] == "holdout"
+    assert holdout_split_row["field_status"] == "ready"
+    assert holdout_split_row["required_holdout_pair_count_credit"] == 1
+    assert holdout_split_row["operator_input_required"] is False
+    holdout_benchmark_row = next(
+        row
+        for row in payload["rows"]
+        if row["source_row_id"] == "refine_tier_public_benchmark_stat_support_expansion_001"
+        and row["field_name"] == "benchmark_id"
+    )
+    assert holdout_benchmark_row["field_status"] == "operator_fill_pending"
+    assert holdout_benchmark_row["required_split"] == "holdout"
+    assert (
+        holdout_benchmark_row["expected_true_fields"]
+        == "claim_grade_public_benchmark_statistical_support_ready"
+    )
+    fit_or_holdout_split_row = next(
+        row
+        for row in payload["rows"]
+        if row["source_row_id"] == "refine_tier_public_benchmark_stat_support_expansion_006"
+        and row["field_name"] == "split"
+    )
+    assert fit_or_holdout_split_row["current_value"] == "fit_or_holdout"
+    assert fit_or_holdout_split_row["field_status"] == "ready"
+    assert fit_or_holdout_split_row["required_holdout_pair_count_credit"] == 0
     assert "Fill 17 additional reviewed public benchmark-pair expansion slots" in summary["next_required_step"]
 
 
