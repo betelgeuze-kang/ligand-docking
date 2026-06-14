@@ -350,6 +350,11 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count=51`" in text
     assert "`field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=0`" in text
     assert "`field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=51`" in text
+    assert "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count=51" in text
+    assert "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count=51" in text
+    assert "product_commercial_readiness_operator_packet_semantic_ready" in text
+    assert "product_commercial_readiness_handoff_bundle_semantic_ready" in text
+    assert "`metric_source_templates_metric_source_payload_fill_blocked_row_count=51`" in text
     assert "`execute_command_count=1`" in text
     assert "`authorized_for_external_download=false`" in text
     assert (

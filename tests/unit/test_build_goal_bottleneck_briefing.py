@@ -569,6 +569,14 @@ def _engine_refinement_claim_evidence_priority_packet() -> dict:
                 "DockQ, lDDT-PLI, and internal DeltaG source payloads and rerunning bootstrap "
                 "Spearman p05."
             ),
+            "public_benchmark_statistical_support_metric_source_templates_present": True,
+            "public_benchmark_statistical_support_metric_source_templates_ready": True,
+            "public_benchmark_statistical_support_metric_source_templates_status": (
+                "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+            ),
+            "public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
+            "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
             "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present": True,
             "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready": True,
             "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status": (
@@ -597,6 +605,7 @@ def _engine_refinement_claim_evidence_priority_packet() -> dict:
                 "runs/engine_refinement_claim_evidence_receipt_current.json",
                 "runs/refine_tier_public_benchmark_readiness_current.json",
                 "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json",
+                "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json",
             ],
         }
     }
@@ -990,6 +999,21 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads"
     ] == "dockq;lddt_pli;internal_deltaG"
     assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_ready"
+    ] is True
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_status"
+    ] == "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_template_row_count"
+    ] == 51
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+    ] == 0
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+    ] == 51
+    assert summary[
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present"
     ] is True
     assert summary[
@@ -1052,6 +1076,9 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
     ]["source_artifacts"]
     assert by_id["R9_engine_refinement_claim_promotion"][
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count"
+    ] == 51
+    assert by_id["R9_engine_refinement_claim_promotion"][
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
     ] == 51
     assert "coordinate-fetch preflight" in by_id["R9_engine_refinement_claim_promotion"][
         "recommended_action"

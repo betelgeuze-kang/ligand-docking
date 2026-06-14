@@ -813,6 +813,40 @@ def build_product_commercial_readiness_handoff_bundle(
             )
             or 0
         ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_artifact": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_artifact"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready": bool(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_status": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_status"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+            )
+            or 0
+        ),
         "engine_refinement_claim_evidence_operator_field_worksheet_claim_promoted": bool(
             operator_summary.get(
                 "engine_refinement_claim_evidence_operator_field_worksheet_claim_promoted"
@@ -944,6 +978,40 @@ def build_product_commercial_readiness_handoff_bundle(
             operator_summary.get(
                 "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_top_priority_bucket"
             )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_artifact": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_artifact"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready": bool(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready"
+            )
+            is True
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_status": _text(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_status"
+            )
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+            )
+            or 0
+        ),
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": int(
+            operator_summary.get(
+                "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+            )
+            or 0
         ),
         "engine_refinement_claim_evidence_operator_staging_apply_live_copy_allowed": bool(
             operator_summary.get(
@@ -3019,10 +3087,18 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count: `{s['engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count']}`",
         f"- engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count: `{s['engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count']}`",
         f"- engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_id: `{s['engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_id']}`",
+        "- engine_refinement_claim_evidence_operator_field_worksheet_metric_source_templates_row/fill_ready/fill_blocked: "
+        f"`{s['engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count']}/"
+        f"{s['engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count']}/"
+        f"{s['engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count']}`",
         f"- engine_refinement_claim_evidence_operator_staging_apply_status: `{s['engine_refinement_claim_evidence_operator_staging_apply_status']}`",
         f"- engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_ready: `{s['engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_ready']}`",
         f"- engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_blocked_row_count: `{s['engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_blocked_row_count']}`",
         f"- engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_blocked_row_count: `{s['engine_refinement_claim_evidence_operator_staging_apply_candidate_public_benchmark_blocked_row_count']}`",
+        "- engine_refinement_claim_evidence_operator_staging_apply_metric_source_templates_row/fill_ready/fill_blocked: "
+        f"`{s['engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count']}/"
+        f"{s['engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count']}/"
+        f"{s['engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count']}`",
         f"- engine_refinement_claim_evidence_operator_staging_apply_live_copy_allowed: `{s['engine_refinement_claim_evidence_operator_staging_apply_live_copy_allowed']}`",
         f"- engine_refinement_claim_evidence_operator_staging_apply_public_benchmark_intake_write_allowed: `{s['engine_refinement_claim_evidence_operator_staging_apply_public_benchmark_intake_write_allowed']}`",
         f"- product_scope_breadth_evidence_receipt_ready: `{s['product_scope_breadth_evidence_receipt_ready']}`",

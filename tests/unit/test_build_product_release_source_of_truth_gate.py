@@ -1848,6 +1848,8 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "engine_refinement_claim_evidence_priority_packet_priority_packet_ready",
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_readiness_present",
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_readiness_ready",
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_present",
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_ready",
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present",
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready",
         "product_scope_breadth_evidence_priority_packet_ready",
@@ -1885,6 +1887,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": 11,
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_row_count": 17,
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": 17,
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": 0,
@@ -1914,6 +1919,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "input_artifact_sha256s;operator_id;reviewed_at_utc;license_ok;"
         "external_engine_calls"
     )
+    assert bottleneck_status_spec["required_text_exact_fields"][
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_status"
+    ] == "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
     assert bottleneck_status_spec["required_text_exact_fields"][
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status"
     ] == "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
@@ -1953,6 +1961,63 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert bottleneck_status_spec["required_text_exact_fields"][
         "production_ai_registry_promotion_priority_top_gate_id"
     ] == "default_residual_mode_guarded"
+    operator_packet_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "product_commercial_readiness_operator_packet_semantic_ready"
+    )
+    assert operator_packet_status_spec["required_status"] == (
+        "product_commercial_readiness_operator_packet_ready"
+    )
+    assert operator_packet_status_spec["required_true_fields"] == [
+        "packet_ready",
+        "source_fingerprint_ready",
+        "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready",
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready",
+    ]
+    assert operator_packet_status_spec["required_int_exact_fields"][
+        "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count"
+    ] == 51
+    assert operator_packet_status_spec["required_int_exact_fields"][
+        "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+    ] == 0
+    assert operator_packet_status_spec["required_int_exact_fields"][
+        "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+    ] == 51
+    assert operator_packet_status_spec["required_int_exact_fields"][
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count"
+    ] == 51
+    assert operator_packet_status_spec["required_int_exact_fields"][
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+    ] == 0
+    assert operator_packet_status_spec["required_int_exact_fields"][
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+    ] == 51
+    assert operator_packet_status_spec["required_text_exact_fields"][
+        "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_status"
+    ] == "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+    assert operator_packet_status_spec["required_text_exact_fields"][
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_status"
+    ] == "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+    handoff_bundle_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "product_commercial_readiness_handoff_bundle_semantic_ready"
+    )
+    assert handoff_bundle_status_spec["required_status"] == (
+        "product_commercial_readiness_handoff_bundle_ready"
+    )
+    assert handoff_bundle_status_spec["required_true_fields"] == [
+        "handoff_bundle_ready",
+        "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready",
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready",
+    ]
+    assert handoff_bundle_status_spec["required_int_exact_fields"][
+        "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count"
+    ] == 51
+    assert handoff_bundle_status_spec["required_int_exact_fields"][
+        "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+    ] == 51
     full_matrix_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS

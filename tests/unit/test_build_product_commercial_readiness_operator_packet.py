@@ -802,6 +802,16 @@ def _engine_refinement_claim_evidence_field_worksheet() -> dict:
             "top_priority_bucket": "public_benchmark_work_order_apply_required",
             "top_blocker_pending_field_count": 78,
             "public_benchmark_work_order_apply_blocked_row_count": 8,
+            "public_benchmark_statistical_support_metric_source_templates_artifact": (
+                "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json"
+            ),
+            "public_benchmark_statistical_support_metric_source_templates_ready": True,
+            "public_benchmark_statistical_support_metric_source_templates_status": (
+                "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+            ),
+            "public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
+            "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
             "claim_promoted": False,
             "external_engine_calls_executed": False,
             "external_state_mutated": False,
@@ -828,6 +838,16 @@ def _engine_refinement_claim_evidence_staging_apply() -> dict:
             "field_worksheet_pending_field_count": 108,
             "field_worksheet_receipt_pending_field_count": 36,
             "field_worksheet_work_order_pending_field_count": 72,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_artifact": (
+                "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json"
+            ),
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready": True,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_status": (
+                "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+            ),
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
             "candidate_first_blocked_blocker_id": "public_benchmark_gate_not_ready",
             "candidate_first_blocked_evidence_artifact": "OPERATOR_FILL_LOCAL_EVIDENCE_JSON",
             "candidate_first_blocked_expected_evidence_status": "refine_tier_public_benchmark_ready",
@@ -1031,6 +1051,30 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
         ]
         == 8
     )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+        ]
+        == 51
+    )
     assert summary["engine_refinement_claim_evidence_operator_field_worksheet_claim_promoted"] is False
     assert (
         summary[
@@ -1093,6 +1137,30 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
             "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_pending_field_count"
         ]
         == 108
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+        ]
+        == 51
     )
     assert summary[
         "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_blocker_id"

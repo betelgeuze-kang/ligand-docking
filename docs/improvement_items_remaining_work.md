@@ -1086,7 +1086,13 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   현재 R8 입력 파일이 사라지지 않는다.
   같은 R9 상태는 `runs/product_commercial_readiness_operator_packet_current.json`과
   `runs/product_commercial_readiness_handoff_bundle_current.json` summary의
-  `engine_refinement_claim_promotion_*` 필드 및
+  `engine_refinement_claim_promotion_*`,
+  `engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count=51`,
+  `engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=0`,
+  `engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=51`,
+  `engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count=51`,
+  `engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=0`,
+  `engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=51` 필드 및
   `/product/commercial-readiness-operator-packet`,
   `/product/commercial-readiness-handoff-bundle`,
   `/product/engine-refinement-claim-evidence-receipt` API surface로도 전파되어, 상용 readiness
@@ -1120,6 +1126,10 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   action board/intake kit에서 끌어와 노출한다. `goal_api_surface_contract_current.json`은 이
   R8/R9/ACCURACY blocker set + primary release blocker action + commercial handoff visibility를
   `goal_full_commercial_bottleneck_visibility_present` check로 고정한다.
+  `runs/product_release_source_of_truth_gate_current.json`도
+  `product_commercial_readiness_operator_packet_semantic_ready`와
+  `product_commercial_readiness_handoff_bundle_semantic_ready` row로 최종 operator
+  packet/handoff bundle의 R9 metric-source-template 51/0/51 fields를 exact 검증한다.
   `tools/product/build_product_full_commercial_blocker_evidence_matrix.py`는 같은
   R8/R9 release blocker를 `runs/product_full_commercial_blocker_evidence_matrix_current.json`
   한곳에 집계한다. 최신 matrix는
@@ -1253,6 +1263,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `planned_metric_source_payload_count=51`,
   `existing_metric_source_payload_count=0`,
   `required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`, 그리고
+  `metric_source_templates_template_row_count=51`,
+  `metric_source_templates_metric_source_payload_fill_ready_row_count=0`,
+  `metric_source_templates_metric_source_payload_fill_blocked_row_count=51`, 그리고
   `coordinate_fetch_r4_preflight_ready=true`,
   `coordinate_fetch_r4_ready_for_review_row_count=17`,
   `coordinate_fetch_r4_fetch_required_row_count=17`,
@@ -1475,8 +1488,8 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `cameo_validation_operations_dossier_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=141`, `pass_count=141`,
-  `blocker_count=0`, `artifact_row_count=90`, `semantic_status_row_count=49`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=143`, `pass_count=143`,
+  `blocker_count=0`, `artifact_row_count=90`, `semantic_status_row_count=51`,
   `release_refresh_command_count=115`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   final refresh는 마지막 `goal_release_decision_gate` 뒤에
@@ -1484,8 +1497,8 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   bottleneck briefing, full commercial matrix, release bundle, handoff bundle,
   privacy scan, source-of-truth gate까지 downstream 산출물을 한 번 더 재생성하고,
   refresh runner final gate는 source-of-truth, quality gate verification,
-  release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=141`,
-  `pass_count=141`, `artifact_row_count=90`, `semantic_status_row_count=49`,
+  release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=143`,
+  `pass_count=143`, `artifact_row_count=90`, `semantic_status_row_count=51`,
   `readme_row_count=2`, `release_refresh_command_count=115`를 exact-check해
   downstream readiness row가 조용히 빠지는 회귀를 막고,
   `product_quality_gate_verification_current.json` final gate는
@@ -2247,7 +2260,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   input readiness, science accuracy frontier restricted-ready/commercial-parity-blocked accounting, production AI registry promotion operator
   receipt/priority packet/field worksheet/staging apply preview, CAMEO official-result fetch preflight, R8 scope-breadth evidence field worksheet/staging apply preview, R9 engine-refinement claim evidence priority packet/field worksheet/staging apply preview,
   master gap closure rollup 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=141/141`,
+  `product_release_source_of_truth_gate_ready`, `pass_count=143/143`,
   `blocker_count=0`, `stale_artifact_count=0`,
   `release_refresh_command_count=115`으로 재검증됐다.
 - `scripts/check_independent_product_readiness.py`는 현재 release/source-of-truth,

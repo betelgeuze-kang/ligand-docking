@@ -76,6 +76,16 @@ def _operator_packet(ready: bool = True) -> dict:
             ),
             "engine_refinement_claim_evidence_operator_field_worksheet_top_blocker_pending_field_count": 78,
             "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_apply_blocked_row_count": 8,
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_artifact": (
+                "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json"
+            ),
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready": True,
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_status": (
+                "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+            ),
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
             "engine_refinement_claim_evidence_operator_field_worksheet_claim_promoted": False,
             "engine_refinement_claim_evidence_operator_field_worksheet_external_engine_calls_executed": False,
             "engine_refinement_claim_evidence_operator_field_worksheet_external_state_mutated": False,
@@ -123,6 +133,16 @@ def _operator_packet(ready: bool = True) -> dict:
             "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_top_priority_bucket": (
                 "public_benchmark_work_order_apply_required"
             ),
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_artifact": (
+                "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json"
+            ),
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready": True,
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_status": (
+                "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+            ),
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
             "engine_refinement_claim_evidence_operator_staging_apply_live_copy_allowed": False,
             "engine_refinement_claim_evidence_operator_staging_apply_public_benchmark_intake_write_allowed": False,
             "engine_refinement_claim_evidence_operator_staging_apply_canonical_receipt_written": False,
@@ -1102,6 +1122,30 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         ]
         == 8
     )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+        ]
+        == 51
+    )
     assert summary["engine_refinement_claim_evidence_operator_staging_apply_status"] == (
         "blocked_engine_refinement_claim_evidence_operator_staging_apply"
     )
@@ -1129,6 +1173,30 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
             "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_pending_field_count"
         ]
         == 108
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_ready"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+        ]
+        == 51
     )
     assert summary[
         "engine_refinement_claim_evidence_operator_staging_apply_first_blocked_blocker_id"
