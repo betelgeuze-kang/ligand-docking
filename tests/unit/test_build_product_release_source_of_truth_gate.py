@@ -2363,6 +2363,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "metric_materialization_readiness_ready" in statistical_coordinate_fetch_r4_preflight_status_spec[
         "required_true_fields"
     ]
+    assert "metric_source_templates_present" in statistical_coordinate_fetch_r4_preflight_status_spec[
+        "required_true_fields"
+    ]
+    assert "metric_source_templates_ready" in statistical_coordinate_fetch_r4_preflight_status_spec[
+        "required_true_fields"
+    ]
     assert statistical_coordinate_fetch_r4_preflight_status_spec["required_int_exact_fields"][
         "r4_row_count"
     ] == 17
@@ -2388,6 +2394,24 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "planned_metric_source_payload_count"
     ] == 51
     assert statistical_coordinate_fetch_r4_preflight_status_spec["required_int_exact_fields"][
+        "metric_source_template_row_count"
+    ] == 51
+    assert statistical_coordinate_fetch_r4_preflight_status_spec["required_int_exact_fields"][
+        "metric_source_template_candidate_row_count"
+    ] == 17
+    assert statistical_coordinate_fetch_r4_preflight_status_spec["required_int_exact_fields"][
+        "metric_source_template_metric_name_count"
+    ] == 3
+    assert statistical_coordinate_fetch_r4_preflight_status_spec["required_int_exact_fields"][
+        "metric_source_template_fill_ready_row_count"
+    ] == 0
+    assert statistical_coordinate_fetch_r4_preflight_status_spec["required_int_exact_fields"][
+        "metric_source_template_fill_blocked_row_count"
+    ] == 51
+    assert statistical_coordinate_fetch_r4_preflight_status_spec["required_int_exact_fields"][
+        "metric_source_template_existing_payload_present_row_count"
+    ] == 0
+    assert statistical_coordinate_fetch_r4_preflight_status_spec["required_int_exact_fields"][
         "metric_materialization_blocked_row_count"
     ] == 17
     assert statistical_coordinate_fetch_r4_preflight_status_spec["required_text_exact_fields"][
@@ -2403,6 +2427,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert statistical_coordinate_fetch_r4_preflight_status_spec["required_text_exact_fields"][
         "metric_materialization_readiness"
     ] == "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json"
+    assert statistical_coordinate_fetch_r4_preflight_status_spec["required_text_exact_fields"][
+        "metric_source_templates"
+    ] == "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json"
     statistical_metric_materialization_readiness_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -3476,6 +3503,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         statistical_coordinate_fetch_r4_preflight_spec["depends_on"]
     )
     assert "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json" in (
+        statistical_coordinate_fetch_r4_preflight_spec["depends_on"]
+    )
+    assert "tools/product/build_refine_tier_public_benchmark_statistical_support_metric_source_templates.py" in (
+        statistical_coordinate_fetch_r4_preflight_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json" in (
         statistical_coordinate_fetch_r4_preflight_spec["depends_on"]
     )
     statistical_metric_materialization_readiness_spec = next(

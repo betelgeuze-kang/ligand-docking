@@ -1013,9 +1013,11 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "tools/product/build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight.py",
             "tools/build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight.py",
             "tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py",
+            "tools/product/build_refine_tier_public_benchmark_statistical_support_metric_source_templates.py",
             "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json",
         ],
     },
     {
@@ -2592,6 +2594,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "post_fetch_validation_supported",
             "metric_materialization_readiness_present",
             "metric_materialization_readiness_ready",
+            "metric_source_templates_present",
+            "metric_source_templates_ready",
             "required_r4_fields_present",
         ],
         "required_int_exact_fields": {
@@ -2616,6 +2620,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "missing_required_metric_input_artifact_count": 17,
             "planned_metric_source_payload_count": 51,
             "existing_metric_source_payload_count": 0,
+            "metric_source_template_row_count": 51,
+            "metric_source_template_candidate_row_count": 17,
+            "metric_source_template_metric_name_count": 3,
+            "metric_source_template_fill_ready_row_count": 0,
+            "metric_source_template_fill_blocked_row_count": 51,
+            "metric_source_template_existing_payload_present_row_count": 0,
             "metric_materialization_blocked_row_count": 17,
             "missing_r4_field_row_count": 0,
             "download_executed": 0,
@@ -2633,6 +2643,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "metric_materialization_readiness": (
                 "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json"
             ),
+            "metric_source_templates": (
+                "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json"
+            ),
             "approval_token_required": "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD",
             "required_r4_fields": "target;action;impact;risk;rollback;verification",
             "execute_command": (
@@ -2644,7 +2657,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "Present Target/Action/Impact/Risk/Rollback/Verification for the 17 public coordinate "
                 "fetches to the operator; only after explicit approval run `python3 tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py "
                 "--mode execute --run-post-fetch-validation --approval-token APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`, "
-                "then review coordinate validation before metric source materialization."
+                "then review coordinate validation before replacing the 51 metric source template placeholders."
             ),
         },
     },

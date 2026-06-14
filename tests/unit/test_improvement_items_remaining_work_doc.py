@@ -335,7 +335,16 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`metric_materialization_candidate_blocked_count=17`" in text
     assert "`planned_metric_source_payload_count=51`" in text
     assert "`metric_materialization_blocked_row_count=17`" in text
+    assert "`metric_source_templates_present=true`" in text
+    assert "`metric_source_templates_ready=true`" in text
+    assert "`metric_source_template_row_count=51`" in text
+    assert "`metric_source_template_candidate_row_count=17`" in text
+    assert "`metric_source_template_metric_name_count=3`" in text
+    assert "`metric_source_template_fill_ready_row_count=0`" in text
+    assert "`metric_source_template_fill_blocked_row_count=51`" in text
+    assert "`metric_source_template_existing_payload_present_row_count=0`" in text
     assert "최신 metric materialization readiness를 R4 row에 묶어" in text
+    assert "51개 metric source template placeholder" in text
     assert "`execute_command_count=1`" in text
     assert "`authorized_for_external_download=false`" in text
     assert (

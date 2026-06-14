@@ -17,6 +17,9 @@ from tools.product.build_refine_tier_public_benchmark_statistical_support_coordi
 from tools.product.build_refine_tier_public_benchmark_statistical_support_metric_materialization_readiness import (
     DEFAULT_OUT_JSON as DEFAULT_METRIC_MATERIALIZATION_READINESS_JSON,
 )
+from tools.product.build_refine_tier_public_benchmark_statistical_support_metric_source_templates import (
+    DEFAULT_OUT_JSON as DEFAULT_METRIC_SOURCE_TEMPLATES_JSON,
+)
 from tools.product.fetch_public_benchmark_native_structure import APPROVAL_TOKEN
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -130,9 +133,11 @@ def _preflight_row(
     *,
     index: int,
     metric_by_key: dict[tuple[str, str, str], dict[str, Any]],
+    templates_by_key: dict[tuple[str, str, str], list[dict[str, Any]]],
 ) -> dict[str, Any]:
     values = _r4_values(row)
     metric = metric_by_key.get(_row_key(row), {})
+    template_rows = templates_by_key.get(_row_key(row), [])
     blockers: list[str] = []
     if not _text(row.get("target_id")):
         blockers.append("target_id_missing")
@@ -173,6 +178,18 @@ def _preflight_row(
         "planned_metric_source_payload_count": int(metric.get("planned_metric_source_payload_count") or 0),
         "existing_metric_source_payload_count": int(metric.get("existing_metric_source_payload_count") or 0),
         "required_metric_source_payloads": _text(metric.get("required_metric_source_payloads")),
+        "metric_source_template_row_count": len(template_rows),
+        "metric_source_template_fill_ready_count": sum(
+            1 for template in template_rows if _bool(template.get("metric_source_payload_fill_ready"))
+        ),
+        "metric_source_template_fill_blocked_count": sum(
+            1 for template in template_rows if not _bool(template.get("metric_source_payload_fill_ready"))
+        ),
+        "metric_source_template_existing_payload_count": sum(
+            1
+            for template in template_rows
+            if _bool(template.get("existing_metric_source_payload_present"))
+        ),
         "execute_command": EXECUTE_COMMAND,
         "approval_token_required": APPROVAL_TOKEN,
         "operator_confirmation_required": True,
@@ -197,19 +214,31 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_p
     fetch_plan_json: str | Path = DEFAULT_FETCH_PLAN_JSON,
     fetch_apply_json: str | Path = DEFAULT_FETCH_APPLY_JSON,
     metric_materialization_readiness_json: str | Path = DEFAULT_METRIC_MATERIALIZATION_READINESS_JSON,
+    metric_source_templates_json: str | Path = DEFAULT_METRIC_SOURCE_TEMPLATES_JSON,
     root: Path = ROOT,
 ) -> dict[str, Any]:
     plan_payload, plan_present = _read_json(fetch_plan_json, root=root)
     apply_payload, apply_present = _read_json(fetch_apply_json, root=root)
     metric_payload, metric_present = _read_json(metric_materialization_readiness_json, root=root)
+    template_payload, template_present = _read_json(metric_source_templates_json, root=root)
     plan_summary = _summary(plan_payload)
     apply_summary = _summary(apply_payload)
     metric_summary = _summary(metric_payload)
+    template_summary = _summary(template_payload)
     plan_rows = _rows(plan_payload)
     metric_rows = _rows(metric_payload)
+    template_rows = _rows(template_payload)
     metric_by_key = {_row_key(row): row for row in metric_rows}
+    templates_by_key: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
+    for template in template_rows:
+        templates_by_key.setdefault(_row_key(template), []).append(template)
     rows = [
-        _preflight_row(row, index=index, metric_by_key=metric_by_key)
+        _preflight_row(
+            row,
+            index=index,
+            metric_by_key=metric_by_key,
+            templates_by_key=templates_by_key,
+        )
         for index, row in enumerate(plan_rows, start=1)
     ]
 
@@ -220,6 +249,8 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_p
         blockers.append("coordinate_fetch_apply_missing")
     if not metric_present:
         blockers.append("metric_materialization_readiness_missing")
+    if not template_present:
+        blockers.append("metric_source_templates_missing")
     if plan_summary.get("status") != "refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_ready":
         blockers.append("coordinate_fetch_plan_not_ready")
     if apply_summary.get("status") != "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply":
@@ -229,6 +260,11 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_p
         != "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
     ):
         blockers.append("metric_materialization_readiness_not_ready")
+    if (
+        template_summary.get("status")
+        != "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+    ):
+        blockers.append("metric_source_templates_not_ready")
     if not _bool(apply_summary.get("coordinate_fetch_apply_preview_ready")):
         blockers.append("coordinate_fetch_apply_preview_not_ready")
     if not _bool(apply_summary.get("post_fetch_validation_supported")):
@@ -267,6 +303,30 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_p
         "metric_materialization_readiness_ready": bool(
             metric_summary.get("status")
             == "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
+        ),
+        "metric_source_templates": _display(metric_source_templates_json, root=root),
+        "metric_source_templates_present": template_present,
+        "metric_source_templates_ready": bool(
+            template_summary.get("status")
+            == "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+        ),
+        "metric_source_template_row_count": int(
+            template_summary.get("template_row_count") or 0
+        ),
+        "metric_source_template_candidate_row_count": int(
+            template_summary.get("template_candidate_row_count") or 0
+        ),
+        "metric_source_template_metric_name_count": int(
+            template_summary.get("template_metric_name_count") or 0
+        ),
+        "metric_source_template_fill_ready_row_count": int(
+            template_summary.get("metric_source_payload_fill_ready_row_count") or 0
+        ),
+        "metric_source_template_fill_blocked_row_count": int(
+            template_summary.get("metric_source_payload_fill_blocked_row_count") or 0
+        ),
+        "metric_source_template_existing_payload_present_row_count": int(
+            template_summary.get("existing_metric_source_payload_present_row_count") or 0
         ),
         "metric_materialization_row_count": int(
             metric_summary.get("metric_materialization_row_count") or 0
@@ -325,7 +385,7 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_p
         "next_required_step": (
             "Present Target/Action/Impact/Risk/Rollback/Verification for the 17 public coordinate "
             f"fetches to the operator; only after explicit approval run `{EXECUTE_COMMAND}`, then "
-            "review coordinate validation before metric source materialization."
+            "review coordinate validation before replacing the 51 metric source template placeholders."
         ),
     }
     return {"summary": summary, "rows": rows}
@@ -353,13 +413,16 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- metric_materialization_candidate_blocked_count: `{summary['metric_materialization_candidate_blocked_count']}`",
         f"- missing_required_metric_input_artifact_count: `{summary['missing_required_metric_input_artifact_count']}`",
         f"- planned_metric_source_payload_count: `{summary['planned_metric_source_payload_count']}`",
+        f"- metric_source_template_row_count: `{summary['metric_source_template_row_count']}`",
+        f"- metric_source_template_fill_ready_row_count: `{summary['metric_source_template_fill_ready_row_count']}`",
+        f"- metric_source_template_fill_blocked_row_count: `{summary['metric_source_template_fill_blocked_row_count']}`",
         f"- approval_token_required: `{summary['approval_token_required']}`",
         f"- execute_command: `{summary['execute_command']}`",
         "",
         "## Rows",
         "",
-        "| review_id | target | pose | status | validation | fetch_required | metric_status | missing_inputs | planned_payloads | source_url | destination |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| review_id | target | pose | status | validation | fetch_required | metric_status | missing_inputs | planned_payloads | template_rows | template_fill_ready | source_url | destination |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
@@ -367,7 +430,9 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
             f"`{row['r4_preflight_status']}` | `{row['coordinate_validation_status']}` | "
             f"`{row['fetch_required']}` | `{row['metric_materialization_status']}` | "
             f"`{row['missing_required_metric_input_artifact_count']}` | "
-            f"`{row['planned_metric_source_payload_count']}` | `{row['source_url_primary']}` | "
+            f"`{row['planned_metric_source_payload_count']}` | "
+            f"`{row['metric_source_template_row_count']}` | "
+            f"`{row['metric_source_template_fill_ready_count']}` | `{row['source_url_primary']}` | "
             f"`{row['staging_destination_path']}` |"
         )
     lines.extend(["", "## Claim Boundary", "", summary["claim_boundary"], "", "## Next Required Step", "", summary["next_required_step"], ""])
@@ -384,6 +449,7 @@ def main(argv: list[str] | None = None) -> dict[str, Any]:
         "--metric-materialization-readiness-json",
         default=DEFAULT_METRIC_MATERIALIZATION_READINESS_JSON,
     )
+    parser.add_argument("--metric-source-templates-json", default=DEFAULT_METRIC_SOURCE_TEMPLATES_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -392,6 +458,7 @@ def main(argv: list[str] | None = None) -> dict[str, Any]:
         fetch_plan_json=args.fetch_plan_json,
         fetch_apply_json=args.fetch_apply_json,
         metric_materialization_readiness_json=args.metric_materialization_readiness_json,
+        metric_source_templates_json=args.metric_source_templates_json,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

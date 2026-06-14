@@ -557,6 +557,14 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `missing_required_metric_input_artifact_count=17`,
   `planned_metric_source_payload_count=51`,
   `metric_materialization_blocked_row_count=17`,
+  `metric_source_templates_present=true`,
+  `metric_source_templates_ready=true`,
+  `metric_source_template_row_count=51`,
+  `metric_source_template_candidate_row_count=17`,
+  `metric_source_template_metric_name_count=3`,
+  `metric_source_template_fill_ready_row_count=0`,
+  `metric_source_template_fill_blocked_row_count=51`,
+  `metric_source_template_existing_payload_present_row_count=0`,
   `execute_command_count=1`,
   `authorized_for_external_download=false`,
   `download_executed=false`, `external_state_mutated=false`를 기록한다.
@@ -569,7 +577,8 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `metric_materialization_status`, `missing_required_metric_input_artifact_count`,
   `planned_metric_source_payload_count`를 같이 surface한다. 따라서 operator 승인은
   단순 파일 다운로드 허가가 아니라, 17개 좌표 검증을 통과시켜 51개 DockQ/lDDT-PLI/internal
-  ΔG source payload materialization 전제를 해소하는 과학/정확도 단계로 고정된다.
+  ΔG source template placeholder를 reviewed payload로 교체할 전제를 해소하는
+  과학/정확도 단계로 고정된다.
   `runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json`은
   좌표 fetch 승인 이후 바로 이어질 metric source materialization 입력 조건을
   별도 read-only readiness로 고정해
@@ -3074,9 +3083,12 @@ preview도 `coordinate_fetch_apply_preflight_pass_row_count=17`,
 `--mode execute --run-post-fetch-validation`으로 좁혀졌다.
 coordinate fetch R4 preflight도 `r4_row_count=17`,
 `ready_for_r4_review_row_count=17`, `blocked_r4_row_count=0`,
+`metric_source_template_row_count=51`, `metric_source_template_fill_ready_row_count=0`,
+`metric_source_template_fill_blocked_row_count=51`,
 `authorized_for_external_download=false`, `download_executed=false`로 준비되어,
 남은 직접 병목은 operator가 17개 Target/Action/Impact/Risk/Rollback/Verification
-row를 확인하고 승인 토큰 실행을 허용하는 것이다.
+row를 확인하고 승인 토큰 실행을 허용한 뒤 51개 metric source template placeholder를
+reviewed payload로 교체하는 것이다.
 metric materialization readiness도 `metric_materialization_row_count=17`,
 `metric_materialization_candidate_ready_count=0`,
 `metric_materialization_candidate_blocked_count=17`,
