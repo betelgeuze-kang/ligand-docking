@@ -137,6 +137,25 @@ def test_metric_source_payload_operator_receipt_blocks_current_placeholders() ->
     assert summary["metric_source_template_row_fingerprint_required"] is True
     assert summary["metric_source_template_row_fingerprint_verified_count"] == 51
     assert summary["metric_source_template_row_fingerprint_mismatch_count"] == 0
+    assert summary["operator_review_surface_ready_count"] == 51
+    assert summary["operator_review_surface_blocked_count"] == 0
+    assert summary["metric_source_artifact_path_present_count"] == 51
+    assert summary["required_metric_input_artifact_list_present_count"] == 51
+    assert summary["required_metric_input_artifact_sha256_list_present_count"] == 51
+    assert summary["required_metric_input_artifact_sha256_list_complete_count"] == 0
+    assert summary["required_metric_source_payload_fields_present_count"] == 51
+    assert summary["external_engine_calls_zero_count"] == 51
+    assert summary["receipt_manual_field_pending_count"] == 510
+    assert summary["receipt_metric_value_pending_count"] == 51
+    assert summary["receipt_method_pending_count"] == 51
+    assert summary["receipt_input_artifacts_reviewed_pending_count"] == 51
+    assert summary["receipt_input_artifact_sha256s_reviewed_pending_count"] == 51
+    assert summary["receipt_metric_source_artifact_reviewed_pending_count"] == 51
+    assert summary["receipt_payload_schema_reviewed_pending_count"] == 51
+    assert summary["receipt_license_ok_pending_count"] == 51
+    assert summary["receipt_operator_id_pending_count"] == 51
+    assert summary["receipt_reviewed_at_utc_pending_count"] == 51
+    assert summary["receipt_approval_token_pending_count"] == 51
     assert summary["pass_row_count"] == 0
     assert summary["blocked_row_count"] == 51
     assert summary["approved_payload_count"] == 0
@@ -173,6 +192,10 @@ def test_metric_source_payload_operator_receipt_ready_with_verified_rows(tmp_pat
     assert summary["pass_row_count"] == 2
     assert summary["blocked_row_count"] == 0
     assert summary["metric_source_template_row_fingerprint_verified_count"] == 2
+    assert summary["operator_review_surface_ready_count"] == 2
+    assert summary["operator_review_surface_blocked_count"] == 0
+    assert summary["required_metric_input_artifact_sha256_list_complete_count"] == 2
+    assert summary["receipt_manual_field_pending_count"] == 0
     assert summary["approved_payload_count"] == 2
     assert summary["coordinate_validation_pass_payload_row_count"] == 2
     assert summary["blocker_count"] == 0

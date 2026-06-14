@@ -1418,6 +1418,101 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
                 "metric_source_template_row_fingerprint_mismatch_count"
             )
         ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_ready_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "operator_review_surface_ready_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_blocked_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "operator_review_surface_blocked_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_metric_source_artifact_path_present_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "metric_source_artifact_path_present_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_list_present_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "required_metric_input_artifact_list_present_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_present_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "required_metric_input_artifact_sha256_list_present_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_complete_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "required_metric_input_artifact_sha256_list_complete_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_source_payload_fields_present_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "required_metric_source_payload_fields_present_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_external_engine_calls_zero_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "external_engine_calls_zero_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "receipt_manual_field_pending_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_metric_value_pending_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "receipt_metric_value_pending_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_method_pending_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "receipt_method_pending_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_input_artifacts_reviewed_pending_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "receipt_input_artifacts_reviewed_pending_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_input_artifact_sha256s_reviewed_pending_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "receipt_input_artifact_sha256s_reviewed_pending_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_metric_source_artifact_reviewed_pending_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "receipt_metric_source_artifact_reviewed_pending_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_payload_schema_reviewed_pending_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "receipt_payload_schema_reviewed_pending_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_license_ok_pending_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "receipt_license_ok_pending_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_operator_id_pending_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "receipt_operator_id_pending_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_reviewed_at_utc_pending_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "receipt_reviewed_at_utc_pending_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_approval_token_pending_count": _int(
+            statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "receipt_approval_token_pending_count"
+            )
+        ),
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_payload_write_allowed": bool(
             statistical_support_metric_source_payload_operator_receipt_summary.get("payload_write_allowed")
             is True

@@ -370,6 +370,47 @@ def _write_inputs(
                 51 if materialized_candidate_ready and not ready else 0
             ),
             "metric_source_template_row_fingerprint_mismatch_count": 0,
+            "operator_review_surface_ready_count": 51 if materialized_candidate_ready and not ready else 0,
+            "operator_review_surface_blocked_count": 0,
+            "metric_source_artifact_path_present_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
+            "required_metric_input_artifact_list_present_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
+            "required_metric_input_artifact_sha256_list_present_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
+            "required_metric_input_artifact_sha256_list_complete_count": 0,
+            "required_metric_source_payload_fields_present_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
+            "external_engine_calls_zero_count": 51 if materialized_candidate_ready and not ready else 0,
+            "receipt_manual_field_pending_count": (
+                510 if materialized_candidate_ready and not ready else 0
+            ),
+            "receipt_metric_value_pending_count": 51 if materialized_candidate_ready and not ready else 0,
+            "receipt_method_pending_count": 51 if materialized_candidate_ready and not ready else 0,
+            "receipt_input_artifacts_reviewed_pending_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
+            "receipt_input_artifact_sha256s_reviewed_pending_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
+            "receipt_metric_source_artifact_reviewed_pending_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
+            "receipt_payload_schema_reviewed_pending_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
+            "receipt_license_ok_pending_count": 51 if materialized_candidate_ready and not ready else 0,
+            "receipt_operator_id_pending_count": 51 if materialized_candidate_ready and not ready else 0,
+            "receipt_reviewed_at_utc_pending_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
+            "receipt_approval_token_pending_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
             "pass_row_count": 0,
             "blocked_row_count": 0 if ready or not materialized_candidate_ready else 51,
             "approved_payload_count": 0,
@@ -932,6 +973,24 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
             "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count"
         ]
         == 0
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_ready_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_blocked_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count"
+        ]
+        == 510
     )
     assert (
         summary["public_benchmark_statistical_support_metric_source_payload_operator_receipt_payload_write_allowed"]

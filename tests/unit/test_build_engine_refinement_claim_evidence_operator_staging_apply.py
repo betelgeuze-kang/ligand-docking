@@ -411,6 +411,25 @@ def _worksheet(path: Path, *, filled: bool = False) -> None:
                 "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_required": True,
                 "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_verified_count": 51,
                 "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count": 0,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_ready_count": 51,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_blocked_count": 0,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_metric_source_artifact_path_present_count": 51,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_list_present_count": 51,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_present_count": 51,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_complete_count": 0,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_source_payload_fields_present_count": 51,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_external_engine_calls_zero_count": 51,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count": 510,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_metric_value_pending_count": 51,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_method_pending_count": 51,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_input_artifacts_reviewed_pending_count": 51,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_input_artifact_sha256s_reviewed_pending_count": 51,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_metric_source_artifact_reviewed_pending_count": 51,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_payload_schema_reviewed_pending_count": 51,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_license_ok_pending_count": 51,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_operator_id_pending_count": 51,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_reviewed_at_utc_pending_count": 51,
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_approval_token_pending_count": 51,
                 "public_benchmark_statistical_support_metric_source_payload_operator_receipt_payload_write_allowed": False,
                 "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_template_id": (
                     "r9_statistical_support_metric_source_template_001"
@@ -643,6 +662,24 @@ def test_blocks_placeholder_receipt_and_public_benchmark_work_order(tmp_path: Pa
     )
     assert (
         summary[
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_ready_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_blocked_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count"
+        ]
+        == 510
+    )
+    assert (
+        summary[
             "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required"
         ]
         == "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
@@ -858,6 +895,24 @@ def test_current_staging_apply_surfaces_materialized_public_benchmark_candidate(
             "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count"
         ]
         == 0
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_ready_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_blocked_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count"
+        ]
+        == 510
     )
     assert (
         summary[

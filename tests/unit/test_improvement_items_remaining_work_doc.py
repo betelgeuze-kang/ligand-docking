@@ -338,6 +338,14 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         "`science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_verified_count=51`"
         in text
     )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_ready_count=51`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count=510`"
+        in text
+    )
     assert "`public_benchmark_work_order_receptor_coordinate_validation_ready_row_count=8`" in text
     assert "`public_benchmark_work_order_receptor_coordinate_validation_blocked_row_count=0`" in text
     assert "`public_benchmark_work_order_receptor_coordinate_validation_min_atom_records=20`" in text
@@ -520,6 +528,8 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count=51`" in text
     assert "`field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_verified_count=51`" in text
     assert "`field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count=0`" in text
+    assert "`field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_ready_count=51`" in text
+    assert "`field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count=510`" in text
     assert (
         "`field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required=APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS`"
         in text
@@ -676,6 +686,9 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count=51`" in text
     assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_verified_count=51`" in text
     assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count=0`" in text
+    assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_ready_count=51`" in text
+    assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_complete_count=0`" in text
+    assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count=510`" in text
     assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_payload_write_allowed=false`" in text
     assert (
         "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required=APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS`"

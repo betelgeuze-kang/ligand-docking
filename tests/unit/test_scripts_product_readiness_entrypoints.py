@@ -824,6 +824,30 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
     )
     assert (
         summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_ready_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_blocked_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_complete_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count"
+        ]
+        == 510
+    )
+    assert (
+        summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_payload_write_allowed"
         ]
         is False

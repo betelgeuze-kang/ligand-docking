@@ -32,6 +32,18 @@ DEFAULT_OUT_MD = (
 
 PLACEHOLDER_PREFIXES = ("OPERATOR_FILL", "OPERATOR_CONFIRM")
 APPROVAL_TOKEN = "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+MANUAL_REVIEW_FIELDS = [
+    "metric_value",
+    "method",
+    "input_artifacts_reviewed",
+    "input_artifact_sha256s_reviewed",
+    "metric_source_artifact_reviewed",
+    "payload_schema_reviewed",
+    "license_ok",
+    "operator_id",
+    "reviewed_at_utc",
+    "approval_token",
+]
 REQUIRED_COLUMNS = [
     "template_id",
     "target_id",
@@ -167,6 +179,35 @@ def _split_blockers(value: Any) -> list[str]:
     return [part for part in _text(value).split(";") if part]
 
 
+def _split_semicolon(value: Any) -> list[str]:
+    return [part.strip() for part in _text(value).split(";") if part.strip()]
+
+
+def _manual_pending_fields(row: dict[str, Any]) -> list[str]:
+    pending: list[str] = []
+    if not _float_valid(row.get("metric_value")):
+        pending.append("metric_value")
+    if not _text(row.get("method")) or _has_placeholder({"method": row.get("method")}):
+        pending.append("method")
+    if _bool(row.get("input_artifacts_reviewed")) is not True:
+        pending.append("input_artifacts_reviewed")
+    if _bool(row.get("input_artifact_sha256s_reviewed")) is not True:
+        pending.append("input_artifact_sha256s_reviewed")
+    if _bool(row.get("metric_source_artifact_reviewed")) is not True:
+        pending.append("metric_source_artifact_reviewed")
+    if _bool(row.get("payload_schema_reviewed")) is not True:
+        pending.append("payload_schema_reviewed")
+    if _bool(row.get("license_ok")) is not True:
+        pending.append("license_ok")
+    if not _text(row.get("operator_id")) or _has_placeholder({"operator_id": row.get("operator_id")}):
+        pending.append("operator_id")
+    if not _reviewed_at_valid(row.get("reviewed_at_utc")):
+        pending.append("reviewed_at_utc")
+    if _text(row.get("approval_token")) != APPROVAL_TOKEN:
+        pending.append("approval_token")
+    return pending
+
+
 def template_row_fingerprint(row: dict[str, Any]) -> str:
     payload = {
         field: _text(row.get(field)).lower() if field == "target_id" else _text(row.get(field))
@@ -200,6 +241,26 @@ def _receipt_row(
     template = template_by_id.get(template_id, {})
     expected_fingerprint = template_row_fingerprint(template) if template else ""
     provided_fingerprint = _text(row.get("metric_source_template_row_sha256"))
+    metric_source_artifact = _text(template.get("metric_source_artifact"))
+    required_input_artifacts = _text(template.get("required_metric_input_artifacts"))
+    required_input_artifact_sha256s = _text(template.get("required_metric_input_artifact_sha256s"))
+    required_input_artifact_count = len(_split_semicolon(required_input_artifacts))
+    required_input_artifact_sha256_count = len(_split_semicolon(required_input_artifact_sha256s))
+    required_input_artifact_sha256_list_complete = bool(
+        required_input_artifact_count > 0
+        and required_input_artifact_sha256_count == required_input_artifact_count
+    )
+    required_payload_fields_present = bool(_text(template.get("required_metric_source_payload_fields")))
+    manual_pending_fields = _manual_pending_fields(row)
+    operator_review_surface_ready = bool(
+        template
+        and provided_fingerprint
+        and provided_fingerprint == expected_fingerprint
+        and metric_source_artifact
+        and required_input_artifacts
+        and required_input_artifact_sha256s
+        and required_payload_fields_present
+    )
     blockers: list[str] = []
 
     if not template_id or template_id not in template_by_id:
@@ -244,7 +305,6 @@ def _receipt_row(
         blockers.append("metric_source_template_not_fill_ready")
     if _int(template.get("missing_required_metric_input_artifact_count")):
         blockers.append("required_metric_input_artifacts_missing")
-    metric_source_artifact = _text(template.get("metric_source_artifact"))
     if metric_source_artifact and _resolve(metric_source_artifact, root=root).is_file():
         blockers.append("metric_source_artifact_already_present")
 
@@ -261,8 +321,11 @@ def _receipt_row(
         "suggested_work_order_id": _text(template.get("suggested_work_order_id")),
         "metric_source_artifact": metric_source_artifact,
         "required_metric_input_artifacts": _text(template.get("required_metric_input_artifacts")),
-        "required_metric_input_artifact_sha256s": _text(
-            template.get("required_metric_input_artifact_sha256s")
+        "required_metric_input_artifact_sha256s": required_input_artifact_sha256s,
+        "required_metric_input_artifact_count": required_input_artifact_count,
+        "required_metric_input_artifact_sha256_count": required_input_artifact_sha256_count,
+        "required_metric_input_artifact_sha256_list_complete": (
+            required_input_artifact_sha256_list_complete
         ),
         "required_metric_source_payload_fields": ";".join(REQUIRED_METRIC_SOURCE_PAYLOAD_FIELDS),
         "coordinate_validation_status": _text(template.get("coordinate_validation_status")) or "missing",
@@ -270,6 +333,9 @@ def _receipt_row(
         "metric_source_payload_fill_ready": _bool(template.get("metric_source_payload_fill_ready")),
         "template_status": _text(template.get("template_status")),
         "template_blockers": _text(template.get("template_blockers")),
+        "operator_review_surface_ready": operator_review_surface_ready,
+        "operator_manual_pending_fields": ";".join(manual_pending_fields),
+        "operator_manual_pending_field_count": len(manual_pending_fields),
         "payload_write_allowed": False,
         "canonical_intake_promotion_allowed": False,
         "claim_promotion_allowed": False,
@@ -317,6 +383,15 @@ def build_refine_tier_public_benchmark_statistical_support_metric_source_payload
         for row in rows
         if "metric_source_template_row_fingerprint_missing_or_mismatch" in _split_blockers(row.get("blockers"))
     ]
+    operator_review_surface_ready_rows = [
+        row for row in rows if row.get("operator_review_surface_ready") is True
+    ]
+    operator_review_surface_blocked_rows = [
+        row for row in rows if row.get("operator_review_surface_ready") is not True
+    ]
+    receipt_manual_field_pending_count = sum(
+        _int(row.get("operator_manual_pending_field_count")) for row in rows
+    )
 
     blockers: list[str] = []
     if not template_present:
@@ -371,6 +446,35 @@ def build_refine_tier_public_benchmark_statistical_support_metric_source_payload
         "metric_source_template_row_fingerprint_required": True,
         "metric_source_template_row_fingerprint_verified_count": len(fingerprint_verified_rows),
         "metric_source_template_row_fingerprint_mismatch_count": len(fingerprint_mismatch_rows),
+        "operator_review_surface_ready_count": len(operator_review_surface_ready_rows),
+        "operator_review_surface_blocked_count": len(operator_review_surface_blocked_rows),
+        "metric_source_artifact_path_present_count": sum(
+            1 for row in rows if _text(row.get("metric_source_artifact"))
+        ),
+        "required_metric_input_artifact_list_present_count": sum(
+            1 for row in rows if _text(row.get("required_metric_input_artifacts"))
+        ),
+        "required_metric_input_artifact_sha256_list_present_count": sum(
+            1 for row in rows if _text(row.get("required_metric_input_artifact_sha256s"))
+        ),
+        "required_metric_input_artifact_sha256_list_complete_count": sum(
+            1 for row in rows if row.get("required_metric_input_artifact_sha256_list_complete") is True
+        ),
+        "required_metric_source_payload_fields_present_count": sum(
+            1 for row in rows if _text(row.get("required_metric_source_payload_fields"))
+        ),
+        "external_engine_calls_zero_count": sum(
+            1 for row in rows if _int(row.get("external_engine_calls")) == 0
+        ),
+        "receipt_manual_field_pending_count": receipt_manual_field_pending_count,
+        **{
+            f"receipt_{field_name}_pending_count": sum(
+                1
+                for row in rows
+                if field_name in _split_semicolon(row.get("operator_manual_pending_fields"))
+            )
+            for field_name in MANUAL_REVIEW_FIELDS
+        },
         "pass_row_count": len(passed_rows),
         "blocked_row_count": len(blocked_rows),
         "approved_payload_count": len(passed_rows),
@@ -403,7 +507,9 @@ def build_refine_tier_public_benchmark_statistical_support_metric_source_payload
             if ready
             else "After the 17 coordinate candidates pass validation, fill all 51 metric-source payload "
             f"receipt rows with numeric reviewed values, matching template fingerprints, method/operator/"
-            f"timestamp, license_ok=true, external_engine_calls=0, and {APPROVAL_TOKEN}."
+            f"timestamp, license_ok=true, external_engine_calls=0, and {APPROVAL_TOKEN} "
+            f"(operator_review_surface_ready_count={len(operator_review_surface_ready_rows)}, "
+            f"receipt_manual_field_pending_count={receipt_manual_field_pending_count})."
         ),
     }
     return {"summary": summary, "rows": rows, "required_columns": REQUIRED_COLUMNS}
@@ -428,6 +534,10 @@ def _write_md(path_like: str | Path, payload: dict[str, Any], *, root: Path = RO
         "- template_fingerprint_verified/mismatch: "
         f"`{summary['metric_source_template_row_fingerprint_verified_count']}/"
         f"{summary['metric_source_template_row_fingerprint_mismatch_count']}`",
+        "- operator_review_surface_ready/blocked: "
+        f"`{summary['operator_review_surface_ready_count']}/"
+        f"{summary['operator_review_surface_blocked_count']}`",
+        f"- receipt_manual_field_pending_count: `{summary['receipt_manual_field_pending_count']}`",
         f"- coordinate_validation_pass_payload_row_count: `{summary['coordinate_validation_pass_payload_row_count']}`",
         f"- approval_token_required: `{summary['approval_token_required']}`",
         f"- first_blocked_template_id: `{summary['first_blocked_template_id']}`",

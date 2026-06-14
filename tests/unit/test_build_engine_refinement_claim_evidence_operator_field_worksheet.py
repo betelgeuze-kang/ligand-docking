@@ -704,6 +704,18 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count"
     ] == 0
     assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_ready_count"
+    ] == 51
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_blocked_count"
+    ] == 0
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_complete_count"
+    ] == 0
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count"
+    ] == 510
+    assert summary[
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_payload_write_allowed"
     ] is False
     assert summary[
