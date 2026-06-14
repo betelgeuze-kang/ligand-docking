@@ -42,6 +42,9 @@ DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_JSON = (
 DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON = (
     "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json"
 )
+DEFAULT_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_JSON = (
+    "runs/refine_tier_public_benchmark_claim_grade_gap_audit_current.json"
+)
 DEFAULT_OUT_JSON = "runs/engine_refinement_claim_evidence_priority_packet_current.json"
 DEFAULT_OUT_CSV = "runs/engine_refinement_claim_evidence_priority_packet_current.csv"
 DEFAULT_OUT_MD = "runs/engine_refinement_claim_evidence_priority_packet_current.md"
@@ -306,6 +309,8 @@ def _row(
     public_statistical_support_metric_source_templates_present: bool,
     public_statistical_support_coordinate_fetch_r4_summary: dict[str, Any],
     public_statistical_support_coordinate_fetch_r4_present: bool,
+    public_benchmark_claim_grade_gap_audit_summary: dict[str, Any],
+    public_benchmark_claim_grade_gap_audit_present: bool,
 ) -> dict[str, Any]:
     public_benchmark_ready = bool(public_benchmark_summary.get("claim_grade_public_benchmark_ready") is True)
     public_apply_ready = bool(public_apply_summary.get("apply_ready") is True)
@@ -334,6 +339,9 @@ def _row(
     )
     public_statistical_support_coordinate_fetch_r4_preflight_ready = bool(
         public_statistical_support_coordinate_fetch_r4_summary.get("r4_preflight_ready") is True
+    )
+    public_benchmark_claim_grade_gap_audit_ready = bool(
+        public_benchmark_claim_grade_gap_audit_summary.get("claim_grade_gap_audit_ready") is True
     )
     bucket = _priority_bucket(
         blocker_id,
@@ -414,6 +422,56 @@ def _row(
         "public_benchmark_materialized_apply_status": _text(public_materialized_apply_summary.get("status")),
         "public_benchmark_materialized_apply_blocked_row_count": _int(
             public_materialized_apply_summary.get("blocked_row_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_present": public_benchmark_claim_grade_gap_audit_present,
+        "public_benchmark_claim_grade_gap_audit_ready": public_benchmark_claim_grade_gap_audit_ready,
+        "public_benchmark_claim_grade_gap_audit_status": _text(
+            public_benchmark_claim_grade_gap_audit_summary.get("status")
+        ),
+        "public_benchmark_claim_grade_gap_audit_claim_grade_statistical_support_ready": bool(
+            public_benchmark_claim_grade_gap_audit_summary.get("claim_grade_statistical_support_ready")
+            is True
+        ),
+        "public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("observed_public_benchmark_pair_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("observed_holdout_pair_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_minimum_new_pair_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("minimum_new_pair_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_minimum_new_holdout_pair_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("minimum_new_holdout_pair_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_coordinate_validation_pass_row_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("coordinate_validation_pass_row_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_coordinate_validation_blocked_row_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("coordinate_validation_blocked_row_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_ready_row_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("metric_source_payload_fill_ready_row_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get(
+                "metric_source_payload_fill_blocked_row_count"
+            )
+        ),
+        "public_benchmark_claim_grade_gap_audit_gap_row_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("gap_row_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_blocked_gap_row_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("blocked_gap_row_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_blocker_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("blocker_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_top_science_gap_id": _text(
+            public_benchmark_claim_grade_gap_audit_summary.get("top_science_gap_id")
+        ),
+        "public_benchmark_claim_grade_gap_audit_top_statistical_gap_id": _text(
+            public_benchmark_claim_grade_gap_audit_summary.get("top_statistical_gap_id")
         ),
         "public_benchmark_statistical_support_work_order_present": public_statistical_support_work_order_present,
         "public_benchmark_statistical_support_work_order_ready": public_statistical_support_work_order_ready,
@@ -716,6 +774,8 @@ def build_engine_refinement_claim_evidence_priority_packet(
     | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_JSON,
     public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json: str
     | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON,
+    public_benchmark_claim_grade_gap_audit_json: str
+    | Path = DEFAULT_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_JSON,
     root: str | Path = ROOT,
 ) -> dict[str, Any]:
     root_path = Path(root)
@@ -780,6 +840,16 @@ def build_engine_refinement_claim_evidence_priority_packet(
     public_statistical_support_coordinate_fetch_r4_summary = _summary(
         public_statistical_support_coordinate_fetch_r4_packet
     )
+    (
+        public_benchmark_claim_grade_gap_audit_packet,
+        public_benchmark_claim_grade_gap_audit_present,
+    ) = _read_json(public_benchmark_claim_grade_gap_audit_json, root=root_path)
+    public_benchmark_claim_grade_gap_audit_summary = _summary(
+        public_benchmark_claim_grade_gap_audit_packet
+    )
+    public_benchmark_claim_grade_gap_audit_ready = bool(
+        public_benchmark_claim_grade_gap_audit_summary.get("claim_grade_gap_audit_ready") is True
+    )
     public_materialized_metric_ready = _materialized_metric_ready(public_materialization_summary)
     public_materialized_apply_ready = bool(public_materialized_apply_summary.get("apply_ready") is True)
     public_materialized_candidate_ready = bool(
@@ -823,6 +893,12 @@ def build_engine_refinement_claim_evidence_priority_packet(
             ),
             public_statistical_support_coordinate_fetch_r4_present=(
                 public_statistical_support_coordinate_fetch_r4_present
+            ),
+            public_benchmark_claim_grade_gap_audit_summary=(
+                public_benchmark_claim_grade_gap_audit_summary
+            ),
+            public_benchmark_claim_grade_gap_audit_present=(
+                public_benchmark_claim_grade_gap_audit_present
             ),
         )
         for index, blocker_id in enumerate(REQUIRED_BLOCKERS, start=1)
@@ -873,6 +949,19 @@ def build_engine_refinement_claim_evidence_priority_packet(
         and not public_statistical_support_coordinate_fetch_r4_present
     ):
         blockers.append("public_benchmark_statistical_support_coordinate_fetch_r4_preflight_missing")
+    if (
+        public_materialized_candidate_ready
+        and not public_materialized_statistical_support_ready
+        and not public_benchmark_claim_grade_gap_audit_present
+    ):
+        blockers.append("public_benchmark_claim_grade_gap_audit_missing")
+    if (
+        public_materialized_candidate_ready
+        and not public_materialized_statistical_support_ready
+        and public_benchmark_claim_grade_gap_audit_present
+        and not public_benchmark_claim_grade_gap_audit_ready
+    ):
+        blockers.append("public_benchmark_claim_grade_gap_audit_not_ready")
     if operator_required_rows:
         blockers.append("operator_evidence_rows_pending")
 
@@ -1157,6 +1246,56 @@ def build_engine_refinement_claim_evidence_priority_packet(
         "public_benchmark_materialized_candidate_intake_written": bool(
             public_materialized_apply_summary.get("candidate_intake_written") is True
         ),
+        "public_benchmark_claim_grade_gap_audit_present": public_benchmark_claim_grade_gap_audit_present,
+        "public_benchmark_claim_grade_gap_audit_ready": public_benchmark_claim_grade_gap_audit_ready,
+        "public_benchmark_claim_grade_gap_audit_status": _text(
+            public_benchmark_claim_grade_gap_audit_summary.get("status")
+        ),
+        "public_benchmark_claim_grade_gap_audit_claim_grade_statistical_support_ready": bool(
+            public_benchmark_claim_grade_gap_audit_summary.get("claim_grade_statistical_support_ready")
+            is True
+        ),
+        "public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("observed_public_benchmark_pair_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("observed_holdout_pair_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_minimum_new_pair_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("minimum_new_pair_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_minimum_new_holdout_pair_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("minimum_new_holdout_pair_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_coordinate_validation_pass_row_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("coordinate_validation_pass_row_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_coordinate_validation_blocked_row_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("coordinate_validation_blocked_row_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_ready_row_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("metric_source_payload_fill_ready_row_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get(
+                "metric_source_payload_fill_blocked_row_count"
+            )
+        ),
+        "public_benchmark_claim_grade_gap_audit_gap_row_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("gap_row_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_blocked_gap_row_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("blocked_gap_row_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_blocker_count": _int(
+            public_benchmark_claim_grade_gap_audit_summary.get("blocker_count")
+        ),
+        "public_benchmark_claim_grade_gap_audit_top_science_gap_id": _text(
+            public_benchmark_claim_grade_gap_audit_summary.get("top_science_gap_id")
+        ),
+        "public_benchmark_claim_grade_gap_audit_top_statistical_gap_id": _text(
+            public_benchmark_claim_grade_gap_audit_summary.get("top_statistical_gap_id")
+        ),
         "top_blocker_id": _text(public_first.get("blocker_id")),
         "top_priority_bucket": _text(public_first.get("priority_bucket")),
         "top_required_input": _text(public_first.get("required_input")),
@@ -1180,6 +1319,7 @@ def build_engine_refinement_claim_evidence_priority_packet(
             str(public_benchmark_statistical_support_metric_materialization_readiness_json),
             str(public_benchmark_statistical_support_metric_source_templates_json),
             str(public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json),
+            str(public_benchmark_claim_grade_gap_audit_json),
         ],
         "external_state_mutated": False,
         "claim_boundary": CLAIM_BOUNDARY,
@@ -1218,6 +1358,20 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"`{summary['public_benchmark_materialized_free_energy_spearman_bootstrap_p05']}`",
         "- public_benchmark_materialized_claim_grade_statistical_support_ready: "
         f"`{summary['public_benchmark_materialized_claim_grade_statistical_support_ready']}`",
+        "- public_benchmark_claim_grade_gap_audit_ready/blocked_gaps: "
+        f"`{summary['public_benchmark_claim_grade_gap_audit_ready']}/"
+        f"{summary['public_benchmark_claim_grade_gap_audit_blocked_gap_row_count']}`",
+        "- public_benchmark_claim_grade_gap_audit_observed_pair/holdout: "
+        f"`{summary['public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count']}/"
+        f"{summary['public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count']}`",
+        "- public_benchmark_claim_grade_gap_audit_coordinate_validation_pass/blocked: "
+        f"`{summary['public_benchmark_claim_grade_gap_audit_coordinate_validation_pass_row_count']}/"
+        f"{summary['public_benchmark_claim_grade_gap_audit_coordinate_validation_blocked_row_count']}`",
+        "- public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_ready/blocked: "
+        f"`{summary['public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_ready_row_count']}/"
+        f"{summary['public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count']}`",
+        "- public_benchmark_claim_grade_gap_audit_top_science_gap_id: "
+        f"`{summary['public_benchmark_claim_grade_gap_audit_top_science_gap_id']}`",
         "- public_benchmark_statistical_support_work_order_ready: "
         f"`{summary['public_benchmark_statistical_support_work_order_ready']}`",
         "- public_benchmark_statistical_support_work_order_expansion_slot_count: "
@@ -1300,6 +1454,10 @@ def main(argv: list[str] | None = None) -> None:
         "--public-benchmark-statistical-support-coordinate-fetch-r4-preflight-json",
         default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON,
     )
+    parser.add_argument(
+        "--public-benchmark-claim-grade-gap-audit-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_JSON,
+    )
     parser.add_argument("--root", default=str(ROOT))
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
@@ -1327,6 +1485,7 @@ def main(argv: list[str] | None = None) -> None:
         public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json=(
             args.public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json
         ),
+        public_benchmark_claim_grade_gap_audit_json=args.public_benchmark_claim_grade_gap_audit_json,
         root=root,
     )
     _write_json(args.out_json, payload, root=root)

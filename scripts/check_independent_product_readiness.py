@@ -404,6 +404,108 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
             "science_accuracy_frontier_public_benchmark_materialized_claim_grade_statistical_support_blockers": (
                 science_frontier.get("public_benchmark_materialized_claim_grade_statistical_support_blockers") or []
             ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_present": bool(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_present") is True
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_ready": bool(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_ready") is True
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_status": str(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_status", "")
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_claim_grade_statistical_support_ready": bool(
+                science_frontier.get(
+                    "public_benchmark_claim_grade_gap_audit_claim_grade_statistical_support_ready"
+                )
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_canonical_intake_promotion_allowed": bool(
+                science_frontier.get(
+                    "public_benchmark_claim_grade_gap_audit_canonical_intake_promotion_allowed"
+                )
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_bootstrap_retest_required": bool(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_bootstrap_retest_required") is True
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count": _int(
+                science_frontier.get(
+                    "public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count": _int(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_observed_bootstrap_spearman_p05": _float(
+                science_frontier.get(
+                    "public_benchmark_claim_grade_gap_audit_observed_bootstrap_spearman_p05"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_bootstrap_spearman_p05_deficit": _float(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_bootstrap_spearman_p05_deficit")
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_minimum_new_pair_count": _int(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_minimum_new_pair_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_minimum_new_holdout_pair_count": _int(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_minimum_new_holdout_pair_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_coordinate_validation_pass_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_claim_grade_gap_audit_coordinate_validation_pass_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_coordinate_validation_blocked_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_claim_grade_gap_audit_coordinate_validation_blocked_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_coordinate_validation_deficit": _int(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_coordinate_validation_deficit")
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_ready_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_ready_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_deficit": _int(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_deficit")
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_planned_metric_source_payload_count": _int(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_planned_metric_source_payload_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_fetch_required_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_fetch_required_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_download_executed": bool(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_download_executed")
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_gap_row_count": _int(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_gap_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_blocked_gap_row_count": _int(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_blocked_gap_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_pass_gap_row_count": _int(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_pass_gap_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_blocker_count": _int(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_blocker_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_top_science_gap_id": str(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_top_science_gap_id", "")
+            ),
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_top_statistical_gap_id": str(
+                science_frontier.get("public_benchmark_claim_grade_gap_audit_top_statistical_gap_id", "")
+            ),
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_readiness_present": bool(
                 science_frontier.get(
                     "public_benchmark_statistical_support_metric_materialization_readiness_present"

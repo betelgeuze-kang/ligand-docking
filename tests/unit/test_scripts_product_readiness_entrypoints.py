@@ -79,6 +79,128 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         "claim_grade_public_benchmark_holdout_pair_count_below_minimum",
         "claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum",
     ]
+    assert summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_present"] is True
+    assert summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_ready"] is True
+    assert (
+        summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_status"]
+        == "refine_tier_public_benchmark_claim_grade_gap_audit_ready"
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_claim_grade_statistical_support_ready"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_canonical_intake_promotion_allowed"
+        ]
+        is False
+    )
+    assert (
+        summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_bootstrap_retest_required"]
+        is True
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count"
+        ]
+        == 8
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count"
+        ]
+        == 3
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_observed_bootstrap_spearman_p05"
+        ]
+        == -0.14285714285714285
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_bootstrap_spearman_p05_deficit"
+        ]
+        == 0.6428571428571428
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_minimum_new_pair_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_minimum_new_holdout_pair_count"
+        ]
+        == 5
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_coordinate_validation_pass_row_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_coordinate_validation_blocked_row_count"
+        ]
+        == 17
+    )
+    assert (
+        summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_coordinate_validation_deficit"]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_ready_row_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_deficit"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_planned_metric_source_payload_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_fetch_required_row_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_download_executed"
+        ]
+        is False
+    )
+    assert summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_gap_row_count"] == 5
+    assert summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_blocked_gap_row_count"] == 5
+    assert summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_pass_gap_row_count"] == 0
+    assert summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_blocker_count"] == 5
+    assert (
+        summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_top_science_gap_id"]
+        == "coordinate_fetch_r4_approval_required"
+    )
+    assert (
+        summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_top_statistical_gap_id"]
+        == "claim_grade_public_benchmark_pair_count_below_minimum"
+    )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_readiness_present"

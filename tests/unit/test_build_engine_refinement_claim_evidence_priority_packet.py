@@ -124,6 +124,29 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     assert summary["public_benchmark_materialized_free_energy_spearman_bootstrap_p05"] == -0.14285714285714285
     assert summary["public_benchmark_materialized_claim_grade_statistical_support_ready"] is False
     assert summary["public_benchmark_materialized_claim_grade_statistical_support_blocker_count"] == 3
+    assert summary["public_benchmark_claim_grade_gap_audit_present"] is True
+    assert summary["public_benchmark_claim_grade_gap_audit_ready"] is True
+    assert summary["public_benchmark_claim_grade_gap_audit_status"] == (
+        "refine_tier_public_benchmark_claim_grade_gap_audit_ready"
+    )
+    assert summary["public_benchmark_claim_grade_gap_audit_claim_grade_statistical_support_ready"] is False
+    assert summary["public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count"] == 8
+    assert summary["public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count"] == 3
+    assert summary["public_benchmark_claim_grade_gap_audit_minimum_new_pair_count"] == 17
+    assert summary["public_benchmark_claim_grade_gap_audit_minimum_new_holdout_pair_count"] == 5
+    assert summary["public_benchmark_claim_grade_gap_audit_coordinate_validation_pass_row_count"] == 0
+    assert summary["public_benchmark_claim_grade_gap_audit_coordinate_validation_blocked_row_count"] == 17
+    assert summary["public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_ready_row_count"] == 0
+    assert summary["public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count"] == 51
+    assert summary["public_benchmark_claim_grade_gap_audit_gap_row_count"] == 5
+    assert summary["public_benchmark_claim_grade_gap_audit_blocked_gap_row_count"] == 5
+    assert summary["public_benchmark_claim_grade_gap_audit_blocker_count"] == 5
+    assert summary["public_benchmark_claim_grade_gap_audit_top_science_gap_id"] == (
+        "coordinate_fetch_r4_approval_required"
+    )
+    assert summary["public_benchmark_claim_grade_gap_audit_top_statistical_gap_id"] == (
+        "claim_grade_public_benchmark_pair_count_below_minimum"
+    )
     assert summary["public_benchmark_statistical_support_work_order_present"] is True
     assert summary["public_benchmark_statistical_support_work_order_ready"] is True
     assert summary["public_benchmark_statistical_support_work_order_status"] == (
@@ -251,6 +274,12 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     assert payload["rows"][0]["operator_input_required"] is True
     assert payload["rows"][0]["public_benchmark_materialized_candidate_ready"] is True
     assert payload["rows"][0]["public_benchmark_materialized_claim_grade_statistical_support_ready"] is False
+    assert payload["rows"][0]["public_benchmark_claim_grade_gap_audit_ready"] is True
+    assert payload["rows"][0]["public_benchmark_claim_grade_gap_audit_blocked_gap_row_count"] == 5
+    assert (
+        payload["rows"][0]["public_benchmark_claim_grade_gap_audit_top_science_gap_id"]
+        == "coordinate_fetch_r4_approval_required"
+    )
     assert payload["rows"][0]["public_benchmark_statistical_support_work_order_expansion_slot_count"] == 17
     assert payload["rows"][0][
         "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count"

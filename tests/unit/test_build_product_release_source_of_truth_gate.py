@@ -1590,6 +1590,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready" in (
         science_accuracy_frontier_spec["required_true_fields"]
     )
+    assert "public_benchmark_claim_grade_gap_audit_present" in (
+        science_accuracy_frontier_spec["required_true_fields"]
+    )
+    assert "public_benchmark_claim_grade_gap_audit_ready" in (
+        science_accuracy_frontier_spec["required_true_fields"]
+    )
     assert science_accuracy_frontier_spec["required_int_exact_fields"] == {
             "broad_commercial_accuracy_claim_ready": 0,
             "gpcr_broad_claim_ready": 0,
@@ -1669,6 +1675,26 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_materialized_claim_grade_statistical_support_blocker_count": 3,
         "public_benchmark_materialized_min_claim_grade_public_benchmark_pairs_required": 25,
         "public_benchmark_materialized_min_claim_grade_holdout_pairs_required": 8,
+        "public_benchmark_claim_grade_gap_audit_claim_grade_statistical_support_ready": 0,
+        "public_benchmark_claim_grade_gap_audit_canonical_intake_promotion_allowed": 0,
+        "public_benchmark_claim_grade_gap_audit_bootstrap_retest_required": 1,
+        "public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count": 8,
+        "public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count": 3,
+        "public_benchmark_claim_grade_gap_audit_minimum_new_pair_count": 17,
+        "public_benchmark_claim_grade_gap_audit_minimum_new_holdout_pair_count": 5,
+        "public_benchmark_claim_grade_gap_audit_coordinate_validation_pass_row_count": 0,
+        "public_benchmark_claim_grade_gap_audit_coordinate_validation_blocked_row_count": 17,
+        "public_benchmark_claim_grade_gap_audit_coordinate_validation_deficit": 17,
+        "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_ready_row_count": 0,
+        "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count": 51,
+        "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_deficit": 51,
+        "public_benchmark_claim_grade_gap_audit_planned_metric_source_payload_count": 51,
+        "public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_fetch_required_row_count": 17,
+        "public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_download_executed": 0,
+        "public_benchmark_claim_grade_gap_audit_gap_row_count": 5,
+        "public_benchmark_claim_grade_gap_audit_blocked_gap_row_count": 5,
+        "public_benchmark_claim_grade_gap_audit_pass_gap_row_count": 0,
+        "public_benchmark_claim_grade_gap_audit_blocker_count": 5,
         "public_benchmark_materialized_apply_blocked_row_count": 0,
         "public_benchmark_materialized_apply_metric_evidence_pass_row_count": 8,
         "public_benchmark_materialized_apply_metric_evidence_contract_blocked_row_count": 0,
@@ -1760,6 +1786,15 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         ),
         "public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required": (
             "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+        ),
+        "public_benchmark_claim_grade_gap_audit_status": (
+            "refine_tier_public_benchmark_claim_grade_gap_audit_ready"
+        ),
+        "public_benchmark_claim_grade_gap_audit_top_science_gap_id": (
+            "coordinate_fetch_r4_approval_required"
+        ),
+        "public_benchmark_claim_grade_gap_audit_top_statistical_gap_id": (
+            "claim_grade_public_benchmark_pair_count_below_minimum"
         ),
         "engine_refinement_claim_evidence_receipt_status": (
             "blocked_engine_refinement_claim_evidence_receipt"
@@ -2151,6 +2186,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
         in engine_priority_status_spec["required_true_fields"]
     )
+    assert "public_benchmark_claim_grade_gap_audit_present" in engine_priority_status_spec[
+        "required_true_fields"
+    ]
+    assert "public_benchmark_claim_grade_gap_audit_ready" in engine_priority_status_spec[
+        "required_true_fields"
+    ]
     assert engine_priority_status_spec["required_int_exact_fields"][
         "public_benchmark_statistical_support_work_order_expansion_slot_count"
     ] == 17
@@ -2163,6 +2204,42 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert engine_priority_status_spec["required_int_exact_fields"][
         "public_benchmark_materialized_claim_grade_statistical_support_ready"
     ] == 0
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_claim_grade_gap_audit_claim_grade_statistical_support_ready"
+    ] == 0
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count"
+    ] == 8
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count"
+    ] == 3
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_claim_grade_gap_audit_minimum_new_pair_count"
+    ] == 17
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_claim_grade_gap_audit_minimum_new_holdout_pair_count"
+    ] == 5
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_claim_grade_gap_audit_coordinate_validation_pass_row_count"
+    ] == 0
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_claim_grade_gap_audit_coordinate_validation_blocked_row_count"
+    ] == 17
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_ready_row_count"
+    ] == 0
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count"
+    ] == 51
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_claim_grade_gap_audit_gap_row_count"
+    ] == 5
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_claim_grade_gap_audit_blocked_gap_row_count"
+    ] == 5
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_claim_grade_gap_audit_blocker_count"
+    ] == 5
     assert engine_priority_status_spec["required_int_exact_fields"][
         "public_benchmark_statistical_support_metric_materialization_row_count"
     ] == 17
@@ -2236,6 +2313,15 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert engine_priority_status_spec["required_text_exact_fields"][
         "public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required"
     ] == "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+    assert engine_priority_status_spec["required_text_exact_fields"][
+        "public_benchmark_claim_grade_gap_audit_status"
+    ] == "refine_tier_public_benchmark_claim_grade_gap_audit_ready"
+    assert engine_priority_status_spec["required_text_exact_fields"][
+        "public_benchmark_claim_grade_gap_audit_top_science_gap_id"
+    ] == "coordinate_fetch_r4_approval_required"
+    assert engine_priority_status_spec["required_text_exact_fields"][
+        "public_benchmark_claim_grade_gap_audit_top_statistical_gap_id"
+    ] == "claim_grade_public_benchmark_pair_count_below_minimum"
     assert (
         engine_priority_status_spec["required_text_exact_fields"]["top_next_operator_step"]
         == "Review the R4 coordinate-fetch preflight "
@@ -3463,6 +3549,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json"
         in science_accuracy_frontier_spec["depends_on"]
     )
+    assert (
+        "runs/refine_tier_public_benchmark_claim_grade_gap_audit_current.json"
+        in science_accuracy_frontier_spec["depends_on"]
+    )
     assert "runs/engine_refinement_claim_evidence_receipt_current.json" in science_accuracy_frontier_spec[
         "depends_on"
     ]
@@ -3806,6 +3896,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert (
         "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json"
+        in priority_packet_spec["depends_on"]
+    )
+    assert (
+        "runs/refine_tier_public_benchmark_claim_grade_gap_audit_current.json"
         in priority_packet_spec["depends_on"]
     )
     field_worksheet_spec = next(

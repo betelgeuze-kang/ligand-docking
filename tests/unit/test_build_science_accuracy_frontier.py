@@ -33,6 +33,7 @@ def _write_inputs(
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json": (
             tmp_path / "public_stat_coordinate_fetch_r4_preflight.json"
         ),
+        "public_benchmark_claim_grade_gap_audit_json": tmp_path / "public_claim_grade_gap_audit.json",
         "engine_receipt_json": tmp_path / "receipt.json",
         "engine_priority_json": tmp_path / "priority.json",
         "pose_sampling_json": tmp_path / "pose.json",
@@ -337,6 +338,58 @@ def _write_inputs(
         },
     )
     _write(
+        paths["public_benchmark_claim_grade_gap_audit_json"],
+        {
+            "status": (
+                "refine_tier_public_benchmark_claim_grade_gap_audit_ready"
+                if materialized_candidate_ready
+                else "blocked_refine_tier_public_benchmark_claim_grade_gap_audit"
+            ),
+            "claim_grade_gap_audit_ready": materialized_candidate_ready,
+            "claim_grade_statistical_support_ready": ready,
+            "canonical_intake_promotion_allowed": ready,
+            "bootstrap_retest_required": not ready,
+            "observed_public_benchmark_pair_count": 8 if materialized_candidate_ready else 0,
+            "observed_holdout_pair_count": 3 if materialized_candidate_ready else 0,
+            "observed_bootstrap_spearman_p05": -0.14285714285714285
+            if materialized_candidate_ready
+            else None,
+            "observed_bootstrap_spearman_p50": 0.6428571428571429 if materialized_candidate_ready else None,
+            "observed_bootstrap_spearman_p95": 1.0 if materialized_candidate_ready else None,
+            "bootstrap_spearman_p05_deficit": 0.6428571428571428 if materialized_candidate_ready else None,
+            "minimum_new_pair_count": 17 if materialized_candidate_ready and not ready else 0,
+            "minimum_new_holdout_pair_count": 5 if materialized_candidate_ready and not ready else 0,
+            "coordinate_validation_pass_row_count": 0,
+            "coordinate_validation_blocked_row_count": 17 if materialized_candidate_ready and not ready else 0,
+            "coordinate_validation_deficit": 17 if materialized_candidate_ready and not ready else 0,
+            "metric_source_payload_fill_ready_row_count": 0,
+            "metric_source_payload_fill_blocked_row_count": 51
+            if materialized_candidate_ready and not ready
+            else 0,
+            "metric_source_payload_fill_deficit": 51 if materialized_candidate_ready and not ready else 0,
+            "planned_metric_source_payload_count": 51 if materialized_candidate_ready and not ready else 0,
+            "coordinate_fetch_r4_fetch_required_row_count": 17 if materialized_candidate_ready and not ready else 0,
+            "coordinate_fetch_r4_download_executed": False,
+            "gap_row_count": 5 if materialized_candidate_ready and not ready else 0,
+            "blocked_gap_row_count": 5 if materialized_candidate_ready and not ready else 0,
+            "pass_gap_row_count": 0 if materialized_candidate_ready and not ready else 5,
+            "blocker_count": 5 if materialized_candidate_ready and not ready else 0,
+            "top_science_gap_id": (
+                "coordinate_fetch_r4_approval_required" if materialized_candidate_ready and not ready else ""
+            ),
+            "top_statistical_gap_id": (
+                "claim_grade_public_benchmark_pair_count_below_minimum"
+                if materialized_candidate_ready and not ready
+                else ""
+            ),
+            "next_required_step": (
+                "Keep R9 claim-grade promotion blocked until coordinate validation and metric payloads close."
+                if materialized_candidate_ready and not ready
+                else ""
+            ),
+        },
+    )
+    _write(
         paths["engine_receipt_json"],
         {
             "status": (
@@ -513,6 +566,42 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
         "claim_grade_public_benchmark_holdout_pair_count_below_minimum",
         "claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum",
     ]
+    assert summary["public_benchmark_claim_grade_gap_audit_present"] is True
+    assert summary["public_benchmark_claim_grade_gap_audit_ready"] is True
+    assert summary["public_benchmark_claim_grade_gap_audit_status"] == (
+        "refine_tier_public_benchmark_claim_grade_gap_audit_ready"
+    )
+    assert summary["public_benchmark_claim_grade_gap_audit_claim_grade_statistical_support_ready"] is False
+    assert summary["public_benchmark_claim_grade_gap_audit_canonical_intake_promotion_allowed"] is False
+    assert summary["public_benchmark_claim_grade_gap_audit_bootstrap_retest_required"] is True
+    assert summary["public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count"] == 8
+    assert summary["public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count"] == 3
+    assert summary["public_benchmark_claim_grade_gap_audit_observed_bootstrap_spearman_p05"] == (
+        -0.14285714285714285
+    )
+    assert summary["public_benchmark_claim_grade_gap_audit_bootstrap_spearman_p05_deficit"] == (
+        0.6428571428571428
+    )
+    assert summary["public_benchmark_claim_grade_gap_audit_minimum_new_pair_count"] == 17
+    assert summary["public_benchmark_claim_grade_gap_audit_minimum_new_holdout_pair_count"] == 5
+    assert summary["public_benchmark_claim_grade_gap_audit_coordinate_validation_pass_row_count"] == 0
+    assert summary["public_benchmark_claim_grade_gap_audit_coordinate_validation_blocked_row_count"] == 17
+    assert summary["public_benchmark_claim_grade_gap_audit_coordinate_validation_deficit"] == 17
+    assert summary["public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_ready_row_count"] == 0
+    assert summary["public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count"] == 51
+    assert summary["public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_deficit"] == 51
+    assert summary["public_benchmark_claim_grade_gap_audit_planned_metric_source_payload_count"] == 51
+    assert summary["public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_fetch_required_row_count"] == 17
+    assert summary["public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_download_executed"] is False
+    assert summary["public_benchmark_claim_grade_gap_audit_gap_row_count"] == 5
+    assert summary["public_benchmark_claim_grade_gap_audit_blocked_gap_row_count"] == 5
+    assert summary["public_benchmark_claim_grade_gap_audit_blocker_count"] == 5
+    assert summary["public_benchmark_claim_grade_gap_audit_top_science_gap_id"] == (
+        "coordinate_fetch_r4_approval_required"
+    )
+    assert summary["public_benchmark_claim_grade_gap_audit_top_statistical_gap_id"] == (
+        "claim_grade_public_benchmark_pair_count_below_minimum"
+    )
     assert summary["public_benchmark_statistical_support_work_order_ready"] is True
     assert summary["public_benchmark_statistical_support_work_order_expansion_slot_count"] == 17
     assert summary["public_benchmark_statistical_support_work_order_minimum_new_pair_count"] == 17
@@ -725,6 +814,8 @@ def test_science_accuracy_frontier_cli_writes_json_and_markdown(tmp_path: Path) 
             str(paths["public_benchmark_statistical_support_metric_source_templates_json"]),
             "--public-benchmark-statistical-support-coordinate-fetch-r4-preflight-json",
             str(paths["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json"]),
+            "--public-benchmark-claim-grade-gap-audit-json",
+            str(paths["public_benchmark_claim_grade_gap_audit_json"]),
             "--engine-receipt-json",
             str(paths["engine_receipt_json"]),
             "--engine-priority-json",
