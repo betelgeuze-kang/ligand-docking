@@ -115,6 +115,13 @@ def _broad_review_receipt(*, ready: bool = False) -> dict:
             "receipt_row_count": 2,
             "pass_row_count": 2 if ready else 0,
             "blocked_row_count": 0 if ready else 2,
+            "operator_review_surface_ready_count": 2,
+            "operator_review_surface_blocked_count": 0,
+            "evidence_artifact_present_count": 2 if ready else 0,
+            "evidence_status_contract_present_count": 2,
+            "expected_true_fields_present_count": 2,
+            "external_engine_calls_zero_count": 2,
+            "receipt_manual_field_pending_count": 0 if ready else 16,
             "first_blocked_review_id": "" if ready else "target_heldout_broad_scope_review_not_approved",
             "approval_token_required": "APPROVE_GPCR_BROAD_CLAIM_REVIEW",
         }
@@ -149,6 +156,12 @@ def test_broad_claim_scope_splits_ready_inputs_from_missing_approval(tmp_path: P
     assert summary["broad_claim_review_receipt_status"] == "blocked_gpcr_broad_claim_review_receipt"
     assert summary["broad_claim_review_receipt_ready"] is False
     assert summary["broad_claim_review_receipt_blocked_row_count"] == 2
+    assert summary["broad_claim_review_receipt_operator_review_surface_ready_count"] == 2
+    assert summary["broad_claim_review_receipt_operator_review_surface_blocked_count"] == 0
+    assert summary["broad_claim_review_receipt_evidence_artifact_present_count"] == 0
+    assert summary["broad_claim_review_receipt_expected_true_fields_present_count"] == 2
+    assert summary["broad_claim_review_receipt_external_engine_calls_zero_count"] == 2
+    assert summary["broad_claim_review_receipt_manual_field_pending_count"] == 16
     assert summary["broad_claim_review_receipt_first_blocked_review_id"] == (
         "target_heldout_broad_scope_review_not_approved"
     )

@@ -162,6 +162,27 @@ def build_packet(
         "broad_claim_review_receipt_row_count": _int(broad_review_receipt.get("receipt_row_count")),
         "broad_claim_review_receipt_pass_row_count": _int(broad_review_receipt.get("pass_row_count")),
         "broad_claim_review_receipt_blocked_row_count": _int(broad_review_receipt.get("blocked_row_count")),
+        "broad_claim_review_receipt_operator_review_surface_ready_count": _int(
+            broad_review_receipt.get("operator_review_surface_ready_count")
+        ),
+        "broad_claim_review_receipt_operator_review_surface_blocked_count": _int(
+            broad_review_receipt.get("operator_review_surface_blocked_count")
+        ),
+        "broad_claim_review_receipt_evidence_artifact_present_count": _int(
+            broad_review_receipt.get("evidence_artifact_present_count")
+        ),
+        "broad_claim_review_receipt_evidence_status_contract_present_count": _int(
+            broad_review_receipt.get("evidence_status_contract_present_count")
+        ),
+        "broad_claim_review_receipt_expected_true_fields_present_count": _int(
+            broad_review_receipt.get("expected_true_fields_present_count")
+        ),
+        "broad_claim_review_receipt_external_engine_calls_zero_count": _int(
+            broad_review_receipt.get("external_engine_calls_zero_count")
+        ),
+        "broad_claim_review_receipt_manual_field_pending_count": _int(
+            broad_review_receipt.get("receipt_manual_field_pending_count")
+        ),
         "broad_claim_review_receipt_first_blocked_review_id": _text(
             broad_review_receipt.get("first_blocked_review_id")
         ),

@@ -44,6 +44,17 @@ REQUIRED_COLUMNS = [
     "notes",
 ]
 
+MANUAL_REVIEW_FIELDS = [
+    "evidence_artifact",
+    "claim_ready",
+    "reviewer",
+    "reviewed_at_utc",
+    "license_ok",
+    "approval_token",
+    "operator_attestation",
+    "notes",
+]
+
 ALLOWED_PROVENANCE_KINDS = {
     "target_heldout_public_benchmark_review",
     "scorer_router_promotion_gate",
@@ -138,6 +149,31 @@ def _split_blockers(value: Any) -> list[str]:
     return [item for item in _text(value).split(";") if item]
 
 
+def _is_placeholder(value: Any) -> bool:
+    return _text(value).startswith(PLACEHOLDER_PREFIXES)
+
+
+def _manual_pending_fields(row: dict[str, Any], *, evidence_present: bool) -> list[str]:
+    pending: list[str] = []
+    if not _text(row.get("evidence_artifact")) or _is_placeholder(row.get("evidence_artifact")) or not evidence_present:
+        pending.append("evidence_artifact")
+    if _bool(row.get("claim_ready")) is not True:
+        pending.append("claim_ready")
+    if not _text(row.get("reviewer")) or _is_placeholder(row.get("reviewer")):
+        pending.append("reviewer")
+    if not _reviewed_at_valid(row.get("reviewed_at_utc")):
+        pending.append("reviewed_at_utc")
+    if _bool(row.get("license_ok")) is not True:
+        pending.append("license_ok")
+    if _text(row.get("approval_token")) != APPROVAL_TOKEN:
+        pending.append("approval_token")
+    if _text(row.get("operator_attestation")) != "reviewed_for_broad_gpcr_claim":
+        pending.append("operator_attestation")
+    if not _text(row.get("notes")) or _is_placeholder(row.get("notes")):
+        pending.append("notes")
+    return pending
+
+
 def _most_common_blocker(rows: list[dict[str, Any]]) -> str:
     counts: dict[str, int] = {}
     first_seen: dict[str, int] = {}
@@ -165,6 +201,20 @@ def _row_status(
     expected_status = _text(expected.get("status"))
     expected_true_fields = [str(field) for field in expected.get("true_fields", [])]
     missing_true_fields = [field for field in expected_true_fields if evidence_summary.get(field) is not True]
+    manual_pending_fields = _manual_pending_fields(row, evidence_present=evidence_present)
+    evidence_status_contract_present = bool(
+        expected_status and _text(row.get("evidence_status")) == expected_status
+    )
+    provenance_kind_accepted = _text(row.get("provenance_kind")) in ALLOWED_PROVENANCE_KINDS
+    external_engine_calls_zero = _int(row.get("external_engine_calls"), default=999999) == 0
+    operator_review_surface_ready = bool(
+        review_id in REQUIRED_REVIEW_IDS
+        and expected_status
+        and expected_true_fields
+        and evidence_status_contract_present
+        and provenance_kind_accepted
+        and external_engine_calls_zero
+    )
     blockers: list[str] = []
 
     if review_id not in REQUIRED_REVIEW_IDS:
@@ -208,9 +258,16 @@ def _row_status(
         "blockers": ";".join(blockers),
         "expected_evidence_status": expected_status,
         "expected_true_fields": ";".join(expected_true_fields),
+        "expected_true_field_count": len(expected_true_fields),
         "missing_true_fields": ";".join(missing_true_fields),
         "evidence_artifact_present": evidence_present,
         "observed_evidence_status": _text(evidence_summary.get("status")) or "missing",
+        "evidence_status_contract_present": evidence_status_contract_present,
+        "provenance_kind_accepted": provenance_kind_accepted,
+        "external_engine_calls_zero": external_engine_calls_zero,
+        "operator_review_surface_ready": operator_review_surface_ready,
+        "operator_manual_pending_fields": ";".join(manual_pending_fields),
+        "operator_manual_pending_field_count": len(manual_pending_fields),
         "external_state_mutated": False,
     }
 
@@ -230,6 +287,12 @@ def build_gpcr_broad_claim_review_receipt(
     missing_required_reviews = [review_id for review_id in REQUIRED_REVIEW_IDS if review_id not in present_review_ids]
     blocked_rows = [row for row in rows if row["row_status"] != "pass"]
     pass_rows = [row for row in rows if row["row_status"] == "pass"]
+    operator_review_surface_ready_rows = [
+        row for row in rows if row.get("operator_review_surface_ready") is True
+    ]
+    operator_review_surface_blocked_rows = [
+        row for row in rows if row.get("operator_review_surface_ready") is not True
+    ]
     row_blocker_tokens = sorted({blocker for row in rows for blocker in _split_blockers(row.get("blockers"))})
     target_review_pass = any(
         row["review_id"] == "target_heldout_broad_scope_review_not_approved" and row["row_status"] == "pass"
@@ -269,6 +332,54 @@ def build_gpcr_broad_claim_review_receipt(
         "missing_required_columns": missing_columns,
         "pass_row_count": len(pass_rows),
         "blocked_row_count": len(blocked_rows),
+        "operator_review_surface_ready_count": len(operator_review_surface_ready_rows),
+        "operator_review_surface_blocked_count": len(operator_review_surface_blocked_rows),
+        "evidence_artifact_present_count": len(
+            [row for row in rows if row.get("evidence_artifact_present") is True]
+        ),
+        "evidence_status_contract_present_count": len(
+            [row for row in rows if row.get("evidence_status_contract_present") is True]
+        ),
+        "expected_true_fields_present_count": len(
+            [row for row in rows if _int(row.get("expected_true_field_count")) > 0]
+        ),
+        "provenance_kind_accepted_count": len(
+            [row for row in rows if row.get("provenance_kind_accepted") is True]
+        ),
+        "external_engine_calls_zero_count": len(
+            [row for row in rows if row.get("external_engine_calls_zero") is True]
+        ),
+        "receipt_manual_field_pending_count": sum(
+            _int(row.get("operator_manual_pending_field_count")) for row in rows
+        ),
+        "receipt_evidence_artifact_pending_count": len(
+            [row for row in rows if "evidence_artifact" in _split_blockers(row.get("operator_manual_pending_fields"))]
+        ),
+        "receipt_claim_ready_pending_count": len(
+            [row for row in rows if "claim_ready" in _split_blockers(row.get("operator_manual_pending_fields"))]
+        ),
+        "receipt_reviewer_pending_count": len(
+            [row for row in rows if "reviewer" in _split_blockers(row.get("operator_manual_pending_fields"))]
+        ),
+        "receipt_reviewed_at_utc_pending_count": len(
+            [row for row in rows if "reviewed_at_utc" in _split_blockers(row.get("operator_manual_pending_fields"))]
+        ),
+        "receipt_license_ok_pending_count": len(
+            [row for row in rows if "license_ok" in _split_blockers(row.get("operator_manual_pending_fields"))]
+        ),
+        "receipt_approval_token_pending_count": len(
+            [row for row in rows if "approval_token" in _split_blockers(row.get("operator_manual_pending_fields"))]
+        ),
+        "receipt_operator_attestation_pending_count": len(
+            [
+                row
+                for row in rows
+                if "operator_attestation" in _split_blockers(row.get("operator_manual_pending_fields"))
+            ]
+        ),
+        "receipt_notes_pending_count": len(
+            [row for row in rows if "notes" in _split_blockers(row.get("operator_manual_pending_fields"))]
+        ),
         "row_blocker_count": len(row_blocker_tokens),
         "most_common_row_blocker": _most_common_blocker(rows),
         "first_blocked_review_id": _text(first_blocked.get("review_id")),
@@ -289,7 +400,10 @@ def build_gpcr_broad_claim_review_receipt(
             "Receipt ready; GPCR broad claim-scope readiness can consume this review evidence."
             if receipt_ready
             else "Replace placeholder GPCR broad-claim review rows with local evidence JSON paths, reviewed provenance, "
-            "license flags, zero external engine calls, and APPROVE_GPCR_BROAD_CLAIM_REVIEW."
+            "license flags, zero external engine calls, and APPROVE_GPCR_BROAD_CLAIM_REVIEW "
+            f"(operator_review_surface_ready_count={len(operator_review_surface_ready_rows)}, "
+            f"receipt_manual_field_pending_count="
+            f"{sum(_int(row.get('operator_manual_pending_field_count')) for row in rows)})."
         ),
     }
     return {"summary": summary, "rows": rows}
@@ -310,6 +424,9 @@ def render_markdown(payload: dict[str, Any]) -> str:
             f"- status: `{summary['status']}`",
             f"- receipt_csv_present: `{summary['receipt_csv_present']}`",
             f"- pass/blocked rows: `{summary['pass_row_count']}/{summary['blocked_row_count']}`",
+            f"- operator_review_surface_ready/blocked: `{summary['operator_review_surface_ready_count']}/"
+            f"{summary['operator_review_surface_blocked_count']}`",
+            f"- receipt_manual_field_pending_count: `{summary['receipt_manual_field_pending_count']}`",
             f"- target_heldout_broad_scope_review_approved: `{summary['target_heldout_broad_scope_review_approved']}`",
             f"- scorer_router_promotion_gate_approved: `{summary['scorer_router_promotion_gate_approved']}`",
             f"- approval_token_required: `{summary['approval_token_required']}`",

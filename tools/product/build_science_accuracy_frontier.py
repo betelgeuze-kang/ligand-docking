@@ -436,6 +436,27 @@ def build_science_accuracy_frontier(
         "gpcr_broad_claim_review_receipt_blocked_row_count": _int(
             gpcr.get("broad_claim_review_receipt_blocked_row_count")
         ),
+        "gpcr_broad_claim_review_receipt_operator_review_surface_ready_count": _int(
+            gpcr.get("broad_claim_review_receipt_operator_review_surface_ready_count")
+        ),
+        "gpcr_broad_claim_review_receipt_operator_review_surface_blocked_count": _int(
+            gpcr.get("broad_claim_review_receipt_operator_review_surface_blocked_count")
+        ),
+        "gpcr_broad_claim_review_receipt_evidence_artifact_present_count": _int(
+            gpcr.get("broad_claim_review_receipt_evidence_artifact_present_count")
+        ),
+        "gpcr_broad_claim_review_receipt_evidence_status_contract_present_count": _int(
+            gpcr.get("broad_claim_review_receipt_evidence_status_contract_present_count")
+        ),
+        "gpcr_broad_claim_review_receipt_expected_true_fields_present_count": _int(
+            gpcr.get("broad_claim_review_receipt_expected_true_fields_present_count")
+        ),
+        "gpcr_broad_claim_review_receipt_external_engine_calls_zero_count": _int(
+            gpcr.get("broad_claim_review_receipt_external_engine_calls_zero_count")
+        ),
+        "gpcr_broad_claim_review_receipt_manual_field_pending_count": _int(
+            gpcr.get("broad_claim_review_receipt_manual_field_pending_count")
+        ),
         "gpcr_broad_claim_review_receipt_first_blocked_review_id": str(
             gpcr.get("broad_claim_review_receipt_first_blocked_review_id", "")
         ),

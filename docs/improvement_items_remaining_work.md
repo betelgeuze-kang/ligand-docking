@@ -233,6 +233,12 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `runs/gpcr_broad_claim_review_receipt_current.json`은
   `blocked_gpcr_broad_claim_review_receipt`, `receipt_row_count=2`,
   `pass_row_count=0`, `blocked_row_count=2`,
+  `operator_review_surface_ready_count=2`,
+  `operator_review_surface_blocked_count=0`,
+  `evidence_artifact_present_count=0`,
+  `expected_true_fields_present_count=2`,
+  `external_engine_calls_zero_count=2`,
+  `receipt_manual_field_pending_count=16`,
   `target_heldout_broad_scope_review_approved=false`,
   `scorer_router_promotion_gate_approved=false`,
   `approval_token_required=APPROVE_GPCR_BROAD_CLAIM_REVIEW`이며,
@@ -2236,6 +2242,13 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 - `gpcr_broad_claim_review_receipt_current.json`은 target-held-out broad review와
   scorer/router promotion gate 2개 row를 별도 evidence receipt로 요구한다. 현재
   둘 다 placeholder라 `pass_row_count=0`, `blocked_row_count=2`이며,
+  `operator_review_surface_ready_count=2`,
+  `operator_review_surface_blocked_count=0`,
+  `evidence_artifact_present_count=0`,
+  `expected_true_fields_present_count=2`,
+  `external_engine_calls_zero_count=2`,
+  `receipt_manual_field_pending_count=16`으로 review surface 자체는 준비됐지만
+  evidence JSON/reviewer/license/token/attestation/notes 입력이 남아 있다.
   metric green이나 guarded input green만으로 broad claim을 승격할 수 없다.
 
 **병목 원인**
@@ -2519,6 +2532,14 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `science_accuracy_frontier_status=blocked_science_accuracy_frontier`,
   `science_accuracy_frontier_restricted_ready=true`,
   `science_accuracy_frontier_broad_commercial_blocked=true`,
+  `science_accuracy_frontier_gpcr_broad_claim_review_receipt_ready=false`,
+  `science_accuracy_frontier_gpcr_broad_claim_review_receipt_blocked_row_count=2`,
+  `science_accuracy_frontier_gpcr_broad_claim_review_receipt_operator_review_surface_ready_count=2`,
+  `science_accuracy_frontier_gpcr_broad_claim_review_receipt_operator_review_surface_blocked_count=0`,
+  `science_accuracy_frontier_gpcr_broad_claim_review_receipt_evidence_artifact_present_count=0`,
+  `science_accuracy_frontier_gpcr_broad_claim_review_receipt_expected_true_fields_present_count=2`,
+  `science_accuracy_frontier_gpcr_broad_claim_review_receipt_external_engine_calls_zero_count=2`,
+  `science_accuracy_frontier_gpcr_broad_claim_review_receipt_manual_field_pending_count=16`,
   `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_ready=true`,
   `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_row_count=17`,
   `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_missing_row_count=17`,
@@ -3377,7 +3398,11 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 
 가장 큰 단일 잔여 gap은 이제 **R8/R9 full-commercial science claim evidence
 receipt + R9 public benchmark 통계 support 확대 + production AI registry guarded
-promotion + operator-approved 실제 실행 증거**다. 특히 R9은 receptor/complex
+promotion + operator-approved 실제 실행 증거**다. GPCR broad claim 쪽은
+metric/guarded input이 green이어도 `gpcr_broad_claim_review_receipt_current`가
+`operator_review_surface_ready_count=2`, `receipt_manual_field_pending_count=16`,
+`evidence_artifact_present_count=0`이라 formal evidence JSON과 scorer/router
+promotion receipt가 막혀 있다. 특히 R9은 receptor/complex
 coordinate validation 자체는 8/8 pass로 닫혔고, materialized DockQ/lDDT-PLI/internal
 ΔG source payload도 24개가 schema-valid 입력 artifact까지 묶어 생성됐지만,
 현재 8쌍/3 holdout만으로는 claim-grade 통계 support가 부족하다. 따라서

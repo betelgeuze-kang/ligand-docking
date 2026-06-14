@@ -84,6 +84,21 @@ def test_placeholder_receipt_blocks_broad_claim_review(tmp_path: Path) -> None:
     assert summary["receipt_row_count"] == 2
     assert summary["blocked_row_count"] == 2
     assert summary["pass_row_count"] == 0
+    assert summary["operator_review_surface_ready_count"] == 2
+    assert summary["operator_review_surface_blocked_count"] == 0
+    assert summary["evidence_artifact_present_count"] == 0
+    assert summary["evidence_status_contract_present_count"] == 2
+    assert summary["expected_true_fields_present_count"] == 2
+    assert summary["external_engine_calls_zero_count"] == 2
+    assert summary["receipt_manual_field_pending_count"] == 16
+    assert summary["receipt_evidence_artifact_pending_count"] == 2
+    assert summary["receipt_claim_ready_pending_count"] == 2
+    assert summary["receipt_reviewer_pending_count"] == 2
+    assert summary["receipt_reviewed_at_utc_pending_count"] == 2
+    assert summary["receipt_license_ok_pending_count"] == 2
+    assert summary["receipt_approval_token_pending_count"] == 2
+    assert summary["receipt_operator_attestation_pending_count"] == 2
+    assert summary["receipt_notes_pending_count"] == 2
     assert summary["target_heldout_broad_scope_review_approved"] is False
     assert summary["scorer_router_promotion_gate_approved"] is False
     assert summary["blockers"] == ["blocked_receipt_rows_present"]
@@ -140,6 +155,13 @@ def test_review_receipt_passes_with_local_evidence_json(tmp_path: Path) -> None:
     assert summary["broad_claim_review_receipt_ready"] is True
     assert summary["pass_row_count"] == 2
     assert summary["blocked_row_count"] == 0
+    assert summary["operator_review_surface_ready_count"] == 2
+    assert summary["operator_review_surface_blocked_count"] == 0
+    assert summary["evidence_artifact_present_count"] == 2
+    assert summary["evidence_status_contract_present_count"] == 2
+    assert summary["expected_true_fields_present_count"] == 2
+    assert summary["external_engine_calls_zero_count"] == 2
+    assert summary["receipt_manual_field_pending_count"] == 0
     assert summary["target_heldout_broad_scope_review_approved"] is True
     assert summary["scorer_router_promotion_gate_approved"] is True
 

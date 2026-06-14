@@ -268,6 +268,18 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
             and science_frontier.get("engine_refinement_claim_evidence_receipt_ready") is False
             and science_frontier.get("gpcr_broad_claim_ready") is False
             and science_frontier.get("gpcr_scorer_router_ready") is False
+            and _int(science_frontier.get("gpcr_broad_claim_review_receipt_operator_review_surface_ready_count"))
+            == 2
+            and _int(science_frontier.get("gpcr_broad_claim_review_receipt_operator_review_surface_blocked_count"))
+            == 0
+            and _int(science_frontier.get("gpcr_broad_claim_review_receipt_evidence_artifact_present_count"))
+            == 0
+            and _int(science_frontier.get("gpcr_broad_claim_review_receipt_expected_true_fields_present_count"))
+            == 2
+            and _int(science_frontier.get("gpcr_broad_claim_review_receipt_external_engine_calls_zero_count"))
+            == 2
+            and _int(science_frontier.get("gpcr_broad_claim_review_receipt_manual_field_pending_count"))
+            == 16
             and _list(science_frontier.get("blockers")) == expected_science_frontier_blockers
             and _int(science_frontier.get("blocker_count")) == len(expected_science_frontier_blockers),
             (
@@ -292,6 +304,16 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
                 f"science_status={science.get('status')};science_open={_csv(science.get('open_gap_ids'))};"
                 f"science_frontier_status={science_frontier.get('status')};"
                 f"restricted_science_accuracy_ready={science_frontier.get('restricted_science_accuracy_ready')};"
+                f"gpcr_broad_claim_review_receipt_ready="
+                f"{science_frontier.get('gpcr_broad_claim_review_receipt_ready')};"
+                f"gpcr_broad_claim_review_receipt_blocked="
+                f"{science_frontier.get('gpcr_broad_claim_review_receipt_blocked_row_count')};"
+                f"gpcr_broad_claim_review_receipt_review_surface_ready="
+                f"{science_frontier.get('gpcr_broad_claim_review_receipt_operator_review_surface_ready_count')};"
+                f"gpcr_broad_claim_review_receipt_manual_field_pending="
+                f"{science_frontier.get('gpcr_broad_claim_review_receipt_manual_field_pending_count')};"
+                f"gpcr_broad_claim_review_receipt_evidence_artifact_present="
+                f"{science_frontier.get('gpcr_broad_claim_review_receipt_evidence_artifact_present_count')};"
                 f"openmm_schrodinger_public_benchmark_science_ready="
                 f"{science_frontier.get('openmm_schrodinger_public_benchmark_science_ready')};"
                 f"public_benchmark_materialized_metric_ready="
@@ -380,6 +402,30 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
                 and science_frontier.get("status") == "blocked_science_accuracy_frontier"
             ),
             "science_accuracy_frontier_blockers": science_frontier.get("blockers") or [],
+            "science_accuracy_frontier_gpcr_broad_claim_review_receipt_ready": bool(
+                science_frontier.get("gpcr_broad_claim_review_receipt_ready") is True
+            ),
+            "science_accuracy_frontier_gpcr_broad_claim_review_receipt_blocked_row_count": _int(
+                science_frontier.get("gpcr_broad_claim_review_receipt_blocked_row_count")
+            ),
+            "science_accuracy_frontier_gpcr_broad_claim_review_receipt_operator_review_surface_ready_count": _int(
+                science_frontier.get("gpcr_broad_claim_review_receipt_operator_review_surface_ready_count")
+            ),
+            "science_accuracy_frontier_gpcr_broad_claim_review_receipt_operator_review_surface_blocked_count": _int(
+                science_frontier.get("gpcr_broad_claim_review_receipt_operator_review_surface_blocked_count")
+            ),
+            "science_accuracy_frontier_gpcr_broad_claim_review_receipt_evidence_artifact_present_count": _int(
+                science_frontier.get("gpcr_broad_claim_review_receipt_evidence_artifact_present_count")
+            ),
+            "science_accuracy_frontier_gpcr_broad_claim_review_receipt_expected_true_fields_present_count": _int(
+                science_frontier.get("gpcr_broad_claim_review_receipt_expected_true_fields_present_count")
+            ),
+            "science_accuracy_frontier_gpcr_broad_claim_review_receipt_external_engine_calls_zero_count": _int(
+                science_frontier.get("gpcr_broad_claim_review_receipt_external_engine_calls_zero_count")
+            ),
+            "science_accuracy_frontier_gpcr_broad_claim_review_receipt_manual_field_pending_count": _int(
+                science_frontier.get("gpcr_broad_claim_review_receipt_manual_field_pending_count")
+            ),
             "science_accuracy_frontier_public_benchmark_science_ready": bool(
                 science_frontier.get("openmm_schrodinger_public_benchmark_science_ready") is True
             ),

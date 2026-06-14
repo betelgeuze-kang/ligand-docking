@@ -190,6 +190,35 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`science_accuracy_frontier_status=blocked_science_accuracy_frontier`" in text
     assert "`science_accuracy_frontier_restricted_ready=true`" in text
     assert "`science_accuracy_frontier_broad_commercial_blocked=true`" in text
+    assert "`science_accuracy_frontier_gpcr_broad_claim_review_receipt_ready=false`" in text
+    assert (
+        "`science_accuracy_frontier_gpcr_broad_claim_review_receipt_blocked_row_count=2`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_gpcr_broad_claim_review_receipt_operator_review_surface_ready_count=2`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_gpcr_broad_claim_review_receipt_operator_review_surface_blocked_count=0`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_gpcr_broad_claim_review_receipt_evidence_artifact_present_count=0`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_gpcr_broad_claim_review_receipt_expected_true_fields_present_count=2`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_gpcr_broad_claim_review_receipt_external_engine_calls_zero_count=2`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_gpcr_broad_claim_review_receipt_manual_field_pending_count=16`"
+        in text
+    )
     assert (
         "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_ready=true`"
         in text

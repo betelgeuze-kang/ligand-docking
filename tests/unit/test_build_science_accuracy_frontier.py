@@ -70,6 +70,26 @@ def _write_inputs(
             "guarded_100k_claim_review_inputs_ready": True,
             "target_heldout_broad_scope_review_input_ready": True,
             "accuracy_parity_metric_ready": True,
+            "broad_claim_review_receipt_status": (
+                "gpcr_broad_claim_review_receipt_ready"
+                if ready
+                else "blocked_gpcr_broad_claim_review_receipt"
+            ),
+            "broad_claim_review_receipt_ready": ready,
+            "broad_claim_review_receipt_row_count": 2,
+            "broad_claim_review_receipt_pass_row_count": 2 if ready else 0,
+            "broad_claim_review_receipt_blocked_row_count": 0 if ready else 2,
+            "broad_claim_review_receipt_operator_review_surface_ready_count": 2,
+            "broad_claim_review_receipt_operator_review_surface_blocked_count": 0,
+            "broad_claim_review_receipt_evidence_artifact_present_count": 2 if ready else 0,
+            "broad_claim_review_receipt_evidence_status_contract_present_count": 2,
+            "broad_claim_review_receipt_expected_true_fields_present_count": 2,
+            "broad_claim_review_receipt_external_engine_calls_zero_count": 2,
+            "broad_claim_review_receipt_manual_field_pending_count": 0 if ready else 16,
+            "broad_claim_review_receipt_first_blocked_review_id": (
+                "" if ready else "target_heldout_broad_scope_review_not_approved"
+            ),
+            "broad_claim_review_receipt_approval_token_required": "APPROVE_GPCR_BROAD_CLAIM_REVIEW",
             "claim_promotion_allowed": ready,
             "router_claim_allowed": ready,
             "blocker_count": 0 if ready else 2,
@@ -628,6 +648,14 @@ def test_science_accuracy_frontier_blocks_commercial_parity_without_public_r9_ev
     assert summary["broad_commercial_accuracy_claim_ready"] is False
     assert summary["gpcr_ligand_metric_ready"] is True
     assert summary["gpcr_target_heldout_guarded_inputs_ready"] is True
+    assert summary["gpcr_broad_claim_review_receipt_ready"] is False
+    assert summary["gpcr_broad_claim_review_receipt_blocked_row_count"] == 2
+    assert summary["gpcr_broad_claim_review_receipt_operator_review_surface_ready_count"] == 2
+    assert summary["gpcr_broad_claim_review_receipt_operator_review_surface_blocked_count"] == 0
+    assert summary["gpcr_broad_claim_review_receipt_evidence_artifact_present_count"] == 0
+    assert summary["gpcr_broad_claim_review_receipt_expected_true_fields_present_count"] == 2
+    assert summary["gpcr_broad_claim_review_receipt_external_engine_calls_zero_count"] == 2
+    assert summary["gpcr_broad_claim_review_receipt_manual_field_pending_count"] == 16
     assert summary["engine_refinement_internal_surface_ready"] is True
     assert summary["openmm_schrodinger_public_benchmark_ready"] is False
     assert summary["openmm_schrodinger_public_benchmark_science_ready"] is False
