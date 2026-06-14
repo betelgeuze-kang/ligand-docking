@@ -168,6 +168,35 @@ top-ranking/summary keep rows, referenced keep rows, review-required rows,
 source code, model roots, CASP17 roots, git history, or any path outside the
 repository.
 
+## Residual-Force Ligand Trajectory Cleanup
+
+The regenerated residual-force trajectory bundles under
+`runs/residual_force_trajectory_regeneration_current/stage2_trajectory_frames`
+are large NPZ payloads. They may be compacted after retaining the queue,
+manifest, summary, target-tail performance table, source stage3 score files, and
+target-level top-ranked ligand rows.
+
+The retention and delete-manifest builder is:
+
+```bash
+python3 tools/build_ligand_residual_force_trajectory_retention.py
+```
+
+It writes compact evidence to
+`config/ligand_residual_force_trajectory_retention_current.json` and
+`docs/ligand_residual_force_trajectory_retention_current.md`, plus a
+delete-compatible manifest at
+`runs/ligand_residual_force_trajectory_cleanup_manifest_current.json`. The
+approval-gated execution reuses the ligand heavy cleanup executor:
+
+```bash
+python3 tools/apply_ligand_heavy_run_cleanup_manifest.py --manifest-json runs/ligand_residual_force_trajectory_cleanup_manifest_current.json --out-json runs/ligand_residual_force_trajectory_cleanup_execution_current.json --out-csv runs/ligand_residual_force_trajectory_cleanup_execution_current.csv --out-md runs/ligand_residual_force_trajectory_cleanup_execution_current.md --execute --approval-token APPROVE_LIGAND_HEAVY_RUN_CLEANUP
+```
+
+After execution, rerun the retention builder with `--no-delete-manifest` so the
+config/docs evidence records the deletion result without overwriting the
+original delete manifest.
+
 ## Required Cleanup Flow
 
 1. Build a cleanup review manifest that lists candidate paths, sizes, reason,
