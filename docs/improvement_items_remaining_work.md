@@ -2829,6 +2829,14 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 - `runs/archive`, `runs/local_heavy_runs`는 small residual review로 유지.
 - repo-local ligand/HTVS raw run payload cleanup은 완료됐고 top-ranking/compact
   evidence rows만 active keep set으로 남겼다.
+- 2026-06-14 KST 후속 ligand-heavy cleanup은
+  `tools/build_ligand_heavy_run_cleanup_manifest.py` →
+  `tools/apply_ligand_heavy_run_cleanup_manifest.py --execute --approval-token APPROVE_LIGAND_HEAVY_RUN_CLEANUP`
+  경로로 May 3 GPCR family-balanced frozen run의 오래된 raw/log payload 17개를
+  삭제했다. 삭제량은 `171.04 MiB`, 실패/누락은 `0`, postcheck
+  `delete_recommended_count=0`이다. Git-tracked compact receipt는
+  `config/ligand_heavy_run_retention_receipt_current.json` 및
+  `docs/ligand_heavy_run_retention_receipt_current.md`에 남겼다.
 - Final PDB/mmCIF, top representative, sha256 manifest, viewer index,
   validation report 보존.
 - 다음 cleanup은 `docs/storage_retention_cleanup_policy.md`의 keep set 기준으로
