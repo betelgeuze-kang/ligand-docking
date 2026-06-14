@@ -98,7 +98,18 @@ def test_coordinate_intake_validates_present_and_missing_receptor_coordinates(tm
     assert summary["coordinate_validation_missing_row_count"] == 1
     assert summary["candidate_ready_for_metric_materialization_count"] == 1
     assert summary["candidate_ready_for_canonical_intake_count"] == 0
+    assert summary["coordinate_intake_suggested_local_path_candidate_count"] == 2
+    assert summary["coordinate_intake_suggested_local_path_present_count"] == 1
+    assert summary["coordinate_intake_suggested_local_path_present_target_count"] == 1
+    assert summary["coordinate_intake_suggested_local_path_missing_target_count"] == 1
+    assert summary["coordinate_intake_expected_archive_member_example_count"] == 2
     assert intake_rows[0]["coordinate_intake_status"] == "blocked_coordinate_artifact_missing"
+    assert intake_rows[0]["suggested_local_coordinate_path_count"] == 1
+    assert intake_rows[0]["suggested_local_coordinate_path_present_count"] == 0
+    assert intake_rows[0]["local_coordinate_inventory_status"] == "no_local_coordinate_candidate_present"
+    assert intake_rows[1]["suggested_local_coordinate_path_present_count"] == 1
+    assert intake_rows[1]["first_present_suggested_local_coordinate_path"] == str(receptor_path)
+    assert intake_rows[1]["local_coordinate_inventory_status"] == "local_coordinate_candidate_present"
     assert validation_rows[0]["coordinate_validation_status"] == "blocked"
     assert validation_rows[1]["coordinate_validation_status"] == "pass"
     assert validation_rows[1]["coordinate_atom_record_count"] == 25
@@ -155,7 +166,13 @@ def test_coordinate_intake_prefers_existing_complex_coordinate_from_suggested_pa
 
     assert payload["summary"]["coordinate_intake_artifact_present_row_count"] == 1
     assert payload["summary"]["coordinate_validation_pass_row_count"] == 1
+    assert payload["summary"]["coordinate_intake_suggested_local_path_candidate_count"] == 2
+    assert payload["summary"]["coordinate_intake_suggested_local_path_present_count"] == 1
+    assert payload["summary"]["coordinate_intake_suggested_local_path_present_target_count"] == 1
     assert payload["intake_rows"][0]["current_receptor_coordinate_artifact"] == str(complex_path)
+    assert payload["intake_rows"][0]["suggested_local_coordinate_path_count"] == 2
+    assert payload["intake_rows"][0]["suggested_local_coordinate_path_present_count"] == 1
+    assert payload["intake_rows"][0]["first_present_suggested_local_coordinate_path"] == str(complex_path)
     assert payload["validation_rows"][0]["coordinate_validation_status"] == "pass"
 
 
@@ -189,6 +206,9 @@ def test_coordinate_intake_cli_writes_json_csv_and_markdown(tmp_path: Path) -> N
     intake_rows = list(csv.DictReader(out_intake_csv.open("r", encoding="utf-8", newline="")))
     validation_rows = list(csv.DictReader(out_validation_csv.open("r", encoding="utf-8", newline="")))
     assert payload["summary"]["coordinate_intake_row_count"] == 2
+    assert payload["summary"]["coordinate_intake_suggested_local_path_present_target_count"] == 1
     assert len(intake_rows) == 2
     assert len(validation_rows) == 2
+    assert intake_rows[0]["suggested_local_coordinate_path_present_count"] == "0"
+    assert intake_rows[1]["suggested_local_coordinate_path_present_count"] == "1"
     assert "Statistical Support Coordinate Intake" in out_md.read_text(encoding="utf-8")

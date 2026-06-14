@@ -338,6 +338,11 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`coordinate_intake_missing_row_count=17`" in text
     assert "`coordinate_intake_suggested_public_url_row_count=17`" in text
     assert "`coordinate_intake_suggested_local_path_row_count=17`" in text
+    assert "`coordinate_intake_suggested_local_path_candidate_count=136`" in text
+    assert "`coordinate_intake_suggested_local_path_present_count=0`" in text
+    assert "`coordinate_intake_suggested_local_path_present_target_count=0`" in text
+    assert "`coordinate_intake_suggested_local_path_missing_target_count=17`" in text
+    assert "`coordinate_intake_expected_archive_member_example_count=51`" in text
     assert "`coordinate_intake_operator_review_required_row_count=17`" in text
     assert "`coordinate_validation_row_count=17`" in text
     assert "`coordinate_validation_pass_row_count=0`" in text

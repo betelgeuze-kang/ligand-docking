@@ -133,10 +133,21 @@ def _candidate_receptor_artifact(row: dict[str, Any], *, root: Path) -> str:
     return candidates[0] if candidates else ""
 
 
+def _present_paths(paths: list[str], *, root: Path) -> list[str]:
+    return [path for path in paths if _path_present(path, root=root)]
+
+
 def _intake_row(row: dict[str, Any], *, root: Path) -> dict[str, Any]:
     target_id = _text(row.get("target_id")).lower()
     artifact = _candidate_receptor_artifact(row, root=root)
     present = _path_present(artifact, root=root)
+    suggested_local_paths = _split_paths(row.get("suggested_local_coordinate_paths"))
+    present_suggested_local_paths = _present_paths(suggested_local_paths, root=root)
+    accepted_patterns = _split_paths(_accepted_receptor_coordinate_patterns(target_id))
+    archive_examples = _split_paths(
+        _text(row.get("expected_archive_member_examples"))
+        or _expected_receptor_archive_member_examples(target_id)
+    )
     blockers = [] if present else ["receptor_coordinate_artifact_missing"]
     return {
         "candidate_queue_id": _text(row.get("candidate_queue_id")),
@@ -150,13 +161,22 @@ def _intake_row(row: dict[str, Any], *, root: Path) -> dict[str, Any]:
         "ligand_pose_artifact_present": _bool(row.get("ligand_pose_artifact_present")),
         "current_receptor_coordinate_artifact": artifact,
         "receptor_coordinate_artifact_present": present,
-        "accepted_offline_coordinate_patterns": _accepted_receptor_coordinate_patterns(target_id),
-        "expected_archive_member_examples": (
-            _text(row.get("expected_archive_member_examples"))
-            or _expected_receptor_archive_member_examples(target_id)
-        ),
+        "accepted_offline_coordinate_patterns": ";".join(accepted_patterns),
+        "accepted_offline_coordinate_pattern_count": len(accepted_patterns),
+        "expected_archive_member_examples": ";".join(archive_examples),
+        "expected_archive_member_example_count": len(archive_examples),
         "suggested_public_coordinate_urls": _text(row.get("suggested_public_coordinate_urls")),
-        "suggested_local_coordinate_paths": _text(row.get("suggested_local_coordinate_paths")),
+        "suggested_local_coordinate_paths": ";".join(suggested_local_paths),
+        "suggested_local_coordinate_path_count": len(suggested_local_paths),
+        "suggested_local_coordinate_path_present_count": len(present_suggested_local_paths),
+        "first_present_suggested_local_coordinate_path": (
+            present_suggested_local_paths[0] if present_suggested_local_paths else ""
+        ),
+        "local_coordinate_inventory_status": (
+            "local_coordinate_candidate_present"
+            if present_suggested_local_paths
+            else "no_local_coordinate_candidate_present"
+        ),
         "operator_coordinate_source_review_required": (
             "confirm_public_coordinate_source_license_and_native_receptor_or_complex_chain_assembly_matches_pose_target"
             if target_id
@@ -254,6 +274,18 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_intake(
     suggested_local_path_count = sum(
         1 for row in intake_rows if _text(row.get("suggested_local_coordinate_paths"))
     )
+    suggested_local_path_candidate_count = sum(
+        int(row.get("suggested_local_coordinate_path_count") or 0) for row in intake_rows
+    )
+    suggested_local_path_present_count = sum(
+        int(row.get("suggested_local_coordinate_path_present_count") or 0) for row in intake_rows
+    )
+    suggested_local_path_present_target_count = sum(
+        1 for row in intake_rows if int(row.get("suggested_local_coordinate_path_present_count") or 0) > 0
+    )
+    expected_archive_member_example_count = sum(
+        int(row.get("expected_archive_member_example_count") or 0) for row in intake_rows
+    )
     operator_review_count = sum(
         1 for row in intake_rows if _text(row.get("operator_coordinate_source_review_required"))
     )
@@ -280,6 +312,15 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_intake(
         "coordinate_intake_missing_row_count": len(intake_rows) - artifact_present_count,
         "coordinate_intake_suggested_public_url_row_count": suggested_public_url_count,
         "coordinate_intake_suggested_local_path_row_count": suggested_local_path_count,
+        "coordinate_intake_suggested_local_path_candidate_count": suggested_local_path_candidate_count,
+        "coordinate_intake_suggested_local_path_present_count": suggested_local_path_present_count,
+        "coordinate_intake_suggested_local_path_present_target_count": (
+            suggested_local_path_present_target_count
+        ),
+        "coordinate_intake_suggested_local_path_missing_target_count": (
+            len(intake_rows) - suggested_local_path_present_target_count
+        ),
+        "coordinate_intake_expected_archive_member_example_count": expected_archive_member_example_count,
         "coordinate_intake_operator_review_required_row_count": operator_review_count,
         "coordinate_validation_row_count": len(validation_rows),
         "coordinate_validation_pass_row_count": validation_pass_count,
@@ -349,6 +390,8 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
                 f"- status: `{summary['status']}`",
                 f"- coordinate_intake_row_count: `{summary['coordinate_intake_row_count']}`",
                 f"- coordinate_intake_missing_row_count: `{summary['coordinate_intake_missing_row_count']}`",
+                f"- coordinate_intake_suggested_local_path_present_target_count: "
+                f"`{summary['coordinate_intake_suggested_local_path_present_target_count']}`",
                 f"- coordinate_validation_pass_row_count: `{summary['coordinate_validation_pass_row_count']}`",
                 f"- coordinate_validation_blocked_row_count: `{summary['coordinate_validation_blocked_row_count']}`",
                 f"- candidate_ready_for_metric_materialization_count: "

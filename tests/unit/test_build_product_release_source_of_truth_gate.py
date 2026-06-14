@@ -2535,6 +2535,21 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "coordinate_intake_missing_row_count"
     ] == 17
     assert statistical_coordinate_intake_status_spec["required_int_exact_fields"][
+        "coordinate_intake_suggested_local_path_candidate_count"
+    ] == 136
+    assert statistical_coordinate_intake_status_spec["required_int_exact_fields"][
+        "coordinate_intake_suggested_local_path_present_count"
+    ] == 0
+    assert statistical_coordinate_intake_status_spec["required_int_exact_fields"][
+        "coordinate_intake_suggested_local_path_present_target_count"
+    ] == 0
+    assert statistical_coordinate_intake_status_spec["required_int_exact_fields"][
+        "coordinate_intake_suggested_local_path_missing_target_count"
+    ] == 17
+    assert statistical_coordinate_intake_status_spec["required_int_exact_fields"][
+        "coordinate_intake_expected_archive_member_example_count"
+    ] == 51
+    assert statistical_coordinate_intake_status_spec["required_int_exact_fields"][
         "coordinate_validation_pass_row_count"
     ] == 0
     assert statistical_coordinate_intake_status_spec["required_int_exact_fields"][
