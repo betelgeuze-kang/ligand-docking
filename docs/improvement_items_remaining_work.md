@@ -579,8 +579,13 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   승격되지 않는다.
   `runs/engine_refinement_claim_evidence_priority_packet_current.json`과
   `runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`도 이
-  work-order와 metric materialization readiness를 source artifact로 읽어 top operator
-  step을 `Review the R4 coordinate-fetch preflight` 및
+  work-order, metric materialization readiness, coordinate-fetch R4 preflight를 source
+  artifact로 읽어 top operator step을 `Review the R4 coordinate-fetch preflight`,
+  `public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready=true`,
+  `public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count=17`,
+  `public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=17`,
+  `public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count=0`,
+  `public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=false`, 및
   `planned_metric_source_payload_count=51`로 전환한다.
   `runs/goal_bottleneck_briefing_current.json`도 같은 priority packet을 직접 읽어
   `R9_engine_refinement_claim_promotion` completion-audit row와 summary에
@@ -594,6 +599,10 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count=51`,
   `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count=0`,
   `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`,
+  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready=true`,
+  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count=17`,
+  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=17`,
+  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=false`,
   `engine_refinement_claim_evidence_priority_packet_top_next_operator_step=Review the R4 coordinate-fetch preflight...`를
   보존한다. 따라서 top-level 병목 briefing도 R9를 단순 receipt placeholder가
   아니라 coordinate validation 0/17 및 metric source payload 0/51 과학/정확도
@@ -1183,6 +1192,10 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `planned_metric_source_payload_count=51`,
   `existing_metric_source_payload_count=0`,
   `required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`, 그리고
+  `coordinate_fetch_r4_preflight_ready=true`,
+  `coordinate_fetch_r4_ready_for_review_row_count=17`,
+  `coordinate_fetch_r4_fetch_required_row_count=17`,
+  `coordinate_fetch_r4_download_executed=false`, 그리고
   `Review the R4 coordinate-fetch preflight` top step을 직접 노출한다.
   source-of-truth의
   `goal_bottleneck_briefing_semantic_ready` row는 entry count 2, template present

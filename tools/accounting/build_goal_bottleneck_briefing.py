@@ -239,6 +239,20 @@ ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_FIELDS = (
     "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count",
     "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields",
     "public_benchmark_statistical_support_metric_materialization_next_required_step",
+    "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present",
+    "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready",
+    "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status",
+    "public_benchmark_statistical_support_coordinate_fetch_r4_row_count",
+    "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count",
+    "public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count",
+    "public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count",
+    "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count",
+    "public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count",
+    "public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download",
+    "public_benchmark_statistical_support_coordinate_fetch_r4_download_executed",
+    "public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated",
+    "public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required",
+    "public_benchmark_statistical_support_coordinate_fetch_r4_execute_command",
     "external_state_mutated",
 )
 
@@ -340,6 +354,11 @@ def _engine_refinement_claim_evidence_priority_packet_fields(
         "public_benchmark_statistical_support_metric_materialization_readiness_ready",
         "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready",
         "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready",
+        "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present",
+        "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready",
+        "public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download",
+        "public_benchmark_statistical_support_coordinate_fetch_r4_download_executed",
+        "public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated",
         "external_state_mutated",
     }
     float_suffixes = {

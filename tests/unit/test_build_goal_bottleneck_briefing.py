@@ -499,14 +499,18 @@ def _engine_refinement_claim_evidence_priority_packet() -> dict:
                 "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py"
             ),
             "top_next_operator_step": (
-                "Review the R4 coordinate-fetch preflight and, after explicit operator approval, "
+                "Review the R4 coordinate-fetch preflight "
+                "(r4_ready_for_review_row_count=17, r4_blocked_row_count=0, "
+                "fetch_required_row_count=17, "
+                "approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD) "
+                "and, after explicit operator approval, "
                 "stage and validate coordinates for 17 statistical-support candidates "
                 "(coordinate_validation_pass_row_count=0, "
                 "metric_materialization_candidate_ready_count=0, "
                 "required_input_artifacts=34/17/17, "
                 "planned_metric_source_payload_count=51); then materialize DockQ/lDDT-PLI/internal "
-                "DeltaG source payloads and rerun bootstrap Spearman p05 before any canonical intake "
-                "promotion."
+                "DeltaG source payloads and rerun bootstrap Spearman p05 before any R9 claim receipt "
+                "or canonical intake promotion."
             ),
             "public_benchmark_materialized_candidate_ready": True,
             "public_benchmark_materialized_metric_ready": True,
@@ -564,6 +568,28 @@ def _engine_refinement_claim_evidence_priority_packet() -> dict:
                 "statistical-support candidates to pass coordinate validation before materializing "
                 "DockQ, lDDT-PLI, and internal DeltaG source payloads and rerunning bootstrap "
                 "Spearman p05."
+            ),
+            "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present": True,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready": True,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status": (
+                "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
+            ),
+            "public_benchmark_statistical_support_coordinate_fetch_r4_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count": 51,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download": False,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_download_executed": False,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated": False,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required": (
+                "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+            ),
+            "public_benchmark_statistical_support_coordinate_fetch_r4_execute_command": (
+                "python3 tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py "
+                "--mode execute --run-post-fetch-validation --approval-token "
+                "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
             ),
             "external_state_mutated": False,
             "source_artifacts": [
@@ -963,6 +989,21 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
     assert summary[
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads"
     ] == "dockq;lddt_pli;internal_deltaG"
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present"
+    ] is True
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
+    ] is True
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count"
+    ] == 17
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_download_executed"
+    ] is False
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required"
+    ] == "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
     assert summary["production_ai_registry_promotion_priority_status"] == (
         "blocked_production_ai_registry_promotion_priority_packet"
     )

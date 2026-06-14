@@ -600,7 +600,37 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
         "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
         "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
     )
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_artifact_present"
+    ] is True
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"] is True
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status"] == (
+        "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
+    )
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_row_count"] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count"
+    ] == 17
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count"] == 0
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count"
+    ] == 51
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_download_executed"] is False
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated"] is False
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required"] == (
+        "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+    )
     assert "required_input_artifacts=34/17/17" in summary["next_required_step"]
+    assert "r4_ready_for_review_row_count=17" in summary["next_required_step"]
+    assert "approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD" in summary[
+        "next_required_step"
+    ]
     assert "required_input_artifacts=34/17/17" in summary["top_next_operator_step"]
     assert summary["worksheet_field_row_count"] == 389
     assert summary["operator_fill_pending_field_count"] == 296

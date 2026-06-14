@@ -380,12 +380,26 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
     assert "`runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`" in text
     assert "`Review the R4 coordinate-fetch preflight`" in text
+    assert "`public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready=true`" in text
+    assert (
+        "`public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count=17`"
+        in text
+    )
+    assert (
+        "`public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=17`"
+        in text
+    )
+    assert "`public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=false`" in text
     assert (
         "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_row_count=17`"
         in text
     )
     assert (
         "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_ready_count=0`"
+        in text
+    )
+    assert (
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready=true`"
         in text
     )
     assert (

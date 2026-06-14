@@ -36,6 +36,9 @@ DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_JSON = (
 DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_JSON = (
     "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json"
 )
+DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON = (
+    "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json"
+)
 DEFAULT_OUT_JSON = "runs/engine_refinement_claim_evidence_priority_packet_current.json"
 DEFAULT_OUT_CSV = "runs/engine_refinement_claim_evidence_priority_packet_current.csv"
 DEFAULT_OUT_MD = "runs/engine_refinement_claim_evidence_priority_packet_current.md"
@@ -204,6 +207,11 @@ def _next_operator_step(
     public_statistical_support_metric_materialization_missing_required_input_artifact_count: int,
     public_statistical_support_metric_materialization_planned_metric_source_payload_count: int,
     public_statistical_support_metric_materialization_next_required_step: str,
+    public_statistical_support_coordinate_fetch_r4_preflight_ready: bool,
+    public_statistical_support_coordinate_fetch_r4_ready_for_review_row_count: int,
+    public_statistical_support_coordinate_fetch_r4_blocked_row_count: int,
+    public_statistical_support_coordinate_fetch_r4_fetch_required_row_count: int,
+    public_statistical_support_coordinate_fetch_r4_approval_token_required: str,
 ) -> str:
     action_step = _text(action_row.get("next_required_step"))
     if blocker_id == PUBLIC_BENCHMARK_BLOCKER:
@@ -214,8 +222,22 @@ def _next_operator_step(
                 and public_statistical_support_work_order_ready
             ):
                 if public_statistical_support_metric_materialization_readiness_ready:
+                    r4_context = ""
+                    if public_statistical_support_coordinate_fetch_r4_preflight_ready:
+                        r4_context = (
+                            " "
+                            f"(r4_ready_for_review_row_count="
+                            f"{public_statistical_support_coordinate_fetch_r4_ready_for_review_row_count}, "
+                            f"r4_blocked_row_count="
+                            f"{public_statistical_support_coordinate_fetch_r4_blocked_row_count}, "
+                            f"fetch_required_row_count="
+                            f"{public_statistical_support_coordinate_fetch_r4_fetch_required_row_count}, "
+                            f"approval_token_required="
+                            f"{public_statistical_support_coordinate_fetch_r4_approval_token_required})"
+                        )
                     return (
-                        "Review the R4 coordinate-fetch preflight and, after explicit operator approval, "
+                        "Review the R4 coordinate-fetch preflight"
+                        f"{r4_context} and, after explicit operator approval, "
                         f"stage and validate coordinates for {public_statistical_support_metric_materialization_row_count} "
                         "statistical-support candidates "
                         f"(coordinate_validation_pass_row_count="
@@ -229,7 +251,7 @@ def _next_operator_step(
                         "planned_metric_source_payload_count="
                         f"{public_statistical_support_metric_materialization_planned_metric_source_payload_count}); "
                         "then materialize DockQ/lDDT-PLI/internal DeltaG source payloads and rerun bootstrap "
-                        "Spearman p05 before any canonical intake promotion."
+                        "Spearman p05 before any R9 claim receipt or canonical intake promotion."
                     )
                 if public_statistical_support_metric_materialization_next_required_step:
                     return public_statistical_support_metric_materialization_next_required_step
@@ -277,6 +299,8 @@ def _row(
     public_statistical_support_work_order_present: bool,
     public_statistical_support_metric_materialization_summary: dict[str, Any],
     public_statistical_support_metric_materialization_present: bool,
+    public_statistical_support_coordinate_fetch_r4_summary: dict[str, Any],
+    public_statistical_support_coordinate_fetch_r4_present: bool,
 ) -> dict[str, Any]:
     public_benchmark_ready = bool(public_benchmark_summary.get("claim_grade_public_benchmark_ready") is True)
     public_apply_ready = bool(public_apply_summary.get("apply_ready") is True)
@@ -298,6 +322,9 @@ def _row(
             "metric_materialization_readiness_ready"
         )
         is True
+    )
+    public_statistical_support_coordinate_fetch_r4_preflight_ready = bool(
+        public_statistical_support_coordinate_fetch_r4_summary.get("r4_preflight_ready") is True
     )
     bucket = _priority_bucket(
         blocker_id,
@@ -500,6 +527,57 @@ def _row(
         "public_benchmark_statistical_support_metric_materialization_next_required_step": _text(
             public_statistical_support_metric_materialization_summary.get("next_required_step")
         ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present": (
+            public_statistical_support_coordinate_fetch_r4_present
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready": (
+            public_statistical_support_coordinate_fetch_r4_preflight_ready
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status": _text(
+            public_statistical_support_coordinate_fetch_r4_summary.get("status")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_row_count": _int(
+            public_statistical_support_coordinate_fetch_r4_summary.get("r4_row_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": _int(
+            public_statistical_support_coordinate_fetch_r4_summary.get(
+                "ready_for_r4_review_row_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": _int(
+            public_statistical_support_coordinate_fetch_r4_summary.get("blocked_r4_row_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count": _int(
+            public_statistical_support_coordinate_fetch_r4_summary.get("fetch_required_row_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count": _int(
+            public_statistical_support_coordinate_fetch_r4_summary.get(
+                "metric_materialization_blocked_row_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count": _int(
+            public_statistical_support_coordinate_fetch_r4_summary.get(
+                "planned_metric_source_payload_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download": bool(
+            public_statistical_support_coordinate_fetch_r4_summary.get(
+                "authorized_for_external_download"
+            )
+            is True
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_download_executed": bool(
+            public_statistical_support_coordinate_fetch_r4_summary.get("download_executed") is True
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated": bool(
+            public_statistical_support_coordinate_fetch_r4_summary.get("external_state_mutated") is True
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required": _text(
+            public_statistical_support_coordinate_fetch_r4_summary.get("approval_token_required")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_execute_command": _text(
+            public_statistical_support_coordinate_fetch_r4_summary.get("execute_command")
+        ),
         "next_operator_step": _next_operator_step(
             blocker_id,
             action_row=action_row,
@@ -563,6 +641,25 @@ def _row(
             public_statistical_support_metric_materialization_next_required_step=_text(
                 public_statistical_support_metric_materialization_summary.get("next_required_step")
             ),
+            public_statistical_support_coordinate_fetch_r4_preflight_ready=(
+                public_statistical_support_coordinate_fetch_r4_preflight_ready
+            ),
+            public_statistical_support_coordinate_fetch_r4_ready_for_review_row_count=_int(
+                public_statistical_support_coordinate_fetch_r4_summary.get(
+                    "ready_for_r4_review_row_count"
+                )
+            ),
+            public_statistical_support_coordinate_fetch_r4_blocked_row_count=_int(
+                public_statistical_support_coordinate_fetch_r4_summary.get("blocked_r4_row_count")
+            ),
+            public_statistical_support_coordinate_fetch_r4_fetch_required_row_count=_int(
+                public_statistical_support_coordinate_fetch_r4_summary.get("fetch_required_row_count")
+            ),
+            public_statistical_support_coordinate_fetch_r4_approval_token_required=_text(
+                public_statistical_support_coordinate_fetch_r4_summary.get(
+                    "approval_token_required"
+                )
+            ),
         ),
         "claim_promotion_allowed": False,
         "external_state_mutated": False,
@@ -584,6 +681,8 @@ def build_engine_refinement_claim_evidence_priority_packet(
     ),
     public_benchmark_statistical_support_metric_materialization_readiness_json: str
     | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_JSON,
+    public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json: str
+    | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON,
     root: str | Path = ROOT,
 ) -> dict[str, Any]:
     root_path = Path(root)
@@ -628,6 +727,16 @@ def build_engine_refinement_claim_evidence_priority_packet(
     public_statistical_support_metric_materialization_summary = _summary(
         public_statistical_support_metric_materialization_packet
     )
+    (
+        public_statistical_support_coordinate_fetch_r4_packet,
+        public_statistical_support_coordinate_fetch_r4_present,
+    ) = _read_json(
+        public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json,
+        root=root_path,
+    )
+    public_statistical_support_coordinate_fetch_r4_summary = _summary(
+        public_statistical_support_coordinate_fetch_r4_packet
+    )
     public_materialized_metric_ready = _materialized_metric_ready(public_materialization_summary)
     public_materialized_apply_ready = bool(public_materialized_apply_summary.get("apply_ready") is True)
     public_materialized_candidate_ready = bool(
@@ -659,6 +768,12 @@ def build_engine_refinement_claim_evidence_priority_packet(
             ),
             public_statistical_support_metric_materialization_present=(
                 public_statistical_support_metric_materialization_present
+            ),
+            public_statistical_support_coordinate_fetch_r4_summary=(
+                public_statistical_support_coordinate_fetch_r4_summary
+            ),
+            public_statistical_support_coordinate_fetch_r4_present=(
+                public_statistical_support_coordinate_fetch_r4_present
             ),
         )
         for index, blocker_id in enumerate(REQUIRED_BLOCKERS, start=1)
@@ -695,6 +810,13 @@ def build_engine_refinement_claim_evidence_priority_packet(
         and not public_statistical_support_metric_materialization_present
     ):
         blockers.append("public_benchmark_statistical_support_metric_materialization_readiness_missing")
+    if (
+        public_materialized_candidate_ready
+        and bool(public_statistical_support_work_order_summary.get("work_order_ready") is True)
+        and public_statistical_support_metric_materialization_present
+        and not public_statistical_support_coordinate_fetch_r4_present
+    ):
+        blockers.append("public_benchmark_statistical_support_coordinate_fetch_r4_preflight_missing")
     if operator_required_rows:
         blockers.append("operator_evidence_rows_pending")
 
@@ -856,6 +978,55 @@ def build_engine_refinement_claim_evidence_priority_packet(
         "public_benchmark_statistical_support_metric_materialization_next_required_step": _text(
             public_statistical_support_metric_materialization_summary.get("next_required_step")
         ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present": (
+            public_statistical_support_coordinate_fetch_r4_present
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready": bool(
+            public_statistical_support_coordinate_fetch_r4_summary.get("r4_preflight_ready") is True
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status": _text(
+            public_statistical_support_coordinate_fetch_r4_summary.get("status")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_row_count": _int(
+            public_statistical_support_coordinate_fetch_r4_summary.get("r4_row_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": _int(
+            public_statistical_support_coordinate_fetch_r4_summary.get("ready_for_r4_review_row_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": _int(
+            public_statistical_support_coordinate_fetch_r4_summary.get("blocked_r4_row_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count": _int(
+            public_statistical_support_coordinate_fetch_r4_summary.get("fetch_required_row_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count": _int(
+            public_statistical_support_coordinate_fetch_r4_summary.get(
+                "metric_materialization_blocked_row_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count": _int(
+            public_statistical_support_coordinate_fetch_r4_summary.get(
+                "planned_metric_source_payload_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download": bool(
+            public_statistical_support_coordinate_fetch_r4_summary.get(
+                "authorized_for_external_download"
+            )
+            is True
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_download_executed": bool(
+            public_statistical_support_coordinate_fetch_r4_summary.get("download_executed") is True
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated": bool(
+            public_statistical_support_coordinate_fetch_r4_summary.get("external_state_mutated") is True
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required": _text(
+            public_statistical_support_coordinate_fetch_r4_summary.get("approval_token_required")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_execute_command": _text(
+            public_statistical_support_coordinate_fetch_r4_summary.get("execute_command")
+        ),
         "public_benchmark_materialized_metric_ready": public_materialized_metric_ready,
         "public_benchmark_materialized_apply_ready": public_materialized_apply_ready,
         "public_benchmark_materialized_candidate_ready": public_materialized_candidate_ready,
@@ -928,6 +1099,7 @@ def build_engine_refinement_claim_evidence_priority_packet(
             str(public_benchmark_materialized_apply_json),
             str(public_benchmark_statistical_support_work_order_json),
             str(public_benchmark_statistical_support_metric_materialization_readiness_json),
+            str(public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json),
         ],
         "external_state_mutated": False,
         "claim_boundary": CLAIM_BOUNDARY,
@@ -978,6 +1150,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"`{summary['public_benchmark_statistical_support_metric_materialization_candidate_blocked_count']}`",
         "- public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count: "
         f"`{summary['public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count']}`",
+        "- public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready: "
+        f"`{summary['public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready']}`",
+        "- public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count: "
+        f"`{summary['public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count']}`",
+        "- public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count: "
+        f"`{summary['public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count']}`",
         f"- top_blocker_id: `{summary['top_blocker_id']}`",
         f"- top_priority_bucket: `{summary['top_priority_bucket']}`",
         f"- top_required_input: `{summary['top_required_input']}`",
@@ -1028,6 +1206,10 @@ def main(argv: list[str] | None = None) -> None:
         "--public-benchmark-statistical-support-metric-materialization-readiness-json",
         default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_JSON,
     )
+    parser.add_argument(
+        "--public-benchmark-statistical-support-coordinate-fetch-r4-preflight-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON,
+    )
     parser.add_argument("--root", default=str(ROOT))
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
@@ -1048,6 +1230,9 @@ def main(argv: list[str] | None = None) -> None:
         ),
         public_benchmark_statistical_support_metric_materialization_readiness_json=(
             args.public_benchmark_statistical_support_metric_materialization_readiness_json
+        ),
+        public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json=(
+            args.public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json
         ),
         root=root,
     )
