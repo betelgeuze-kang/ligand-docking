@@ -505,7 +505,7 @@ def build_refine_tier_public_benchmark_statistical_support_metric_source_payload
             "Receipt ready; only then write reviewed metric source payload JSON files and rerun "
             "materialization, canonical intake, and bootstrap support gates."
             if ready
-            else "After the 17 coordinate candidates pass validation, fill all 51 metric-source payload "
+            else "With all 51 receipt rows tied to passing coordinate validation, fill all metric-source payload "
             f"receipt rows with numeric reviewed values, matching template fingerprints, method/operator/"
             f"timestamp, license_ok=true, external_engine_calls=0, and {APPROVAL_TOKEN} "
             f"(operator_review_surface_ready_count={len(operator_review_surface_ready_rows)}, "

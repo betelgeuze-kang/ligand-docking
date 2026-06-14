@@ -312,7 +312,7 @@ def build_refine_tier_public_benchmark_statistical_support_metric_source_templat
         "blockers": blockers,
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
-            "After R4-approved coordinate fetch and validation, replace each operator placeholder "
+            "With coordinate fetch and validation ready, replace each operator placeholder "
             "with reviewed DockQ/lDDT-PLI/internal DeltaG values while preserving input artifact "
             "paths, hashes, license_ok=true, and external_engine_calls=0."
         ),

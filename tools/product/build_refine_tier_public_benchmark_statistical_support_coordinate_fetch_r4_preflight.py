@@ -71,6 +71,13 @@ def _bool(value: Any) -> bool:
     return _text(value).lower() in {"1", "true", "yes", "y"}
 
 
+def _int(value: Any) -> int:
+    try:
+        return int(float(_text(value)))
+    except (TypeError, ValueError):
+        return 0
+
+
 def _read_json(path_like: str | Path, *, root: Path = ROOT) -> tuple[dict[str, Any], bool]:
     path = _resolve(path_like, root=root)
     if not path.is_file():
@@ -132,12 +139,20 @@ def _preflight_row(
     row: dict[str, Any],
     *,
     index: int,
+    apply_by_key: dict[tuple[str, str, str], dict[str, Any]],
     metric_by_key: dict[tuple[str, str, str], dict[str, Any]],
     templates_by_key: dict[tuple[str, str, str], list[dict[str, Any]]],
 ) -> dict[str, Any]:
     values = _r4_values(row)
+    apply_row = apply_by_key.get(_row_key(row), {})
     metric = metric_by_key.get(_row_key(row), {})
     template_rows = templates_by_key.get(_row_key(row), [])
+    fetch_downloaded = _bool(apply_row.get("download_executed"))
+    fetch_destination_present = _bool(apply_row.get("destination_present_after"))
+    coordinate_validation_status = (
+        _text(metric.get("coordinate_validation_status"))
+        or _text(row.get("coordinate_validation_status"))
+    )
     blockers: list[str] = []
     if not _text(row.get("target_id")):
         blockers.append("target_id_missing")
@@ -160,12 +175,16 @@ def _preflight_row(
         "required_split": _text(row.get("required_split")),
         "current_coordinate_artifact": _text(row.get("current_coordinate_artifact")),
         "current_coordinate_artifact_present": _bool(row.get("current_coordinate_artifact_present")),
-        "coordinate_validation_status": _text(row.get("coordinate_validation_status")),
+        "coordinate_validation_status": coordinate_validation_status,
         "source_url_primary": _text(row.get("source_url_primary")),
         "staging_destination_path": _text(row.get("staging_destination_path")),
-        "staging_destination_present": _bool(row.get("staging_destination_present")),
+        "staging_destination_present": (
+            fetch_destination_present or _bool(row.get("staging_destination_present"))
+        ),
         "fetch_required": _bool(row.get("fetch_required")),
-        "coordinate_fetch_status": _text(row.get("coordinate_fetch_status")),
+        "coordinate_fetch_status": _text(apply_row.get("fetch_status"))
+        or _text(row.get("coordinate_fetch_status")),
+        "coordinate_fetch_apply_status": _text(apply_row.get("row_status")),
         "coordinate_fetch_blockers": _text(row.get("coordinate_fetch_blockers")),
         "metric_materialization_status": _text(metric.get("metric_materialization_status")) or "missing",
         "metric_materialization_candidate_ready": _bool(
@@ -192,7 +211,7 @@ def _preflight_row(
         ),
         "execute_command": EXECUTE_COMMAND,
         "approval_token_required": APPROVAL_TOKEN,
-        "operator_confirmation_required": True,
+        "operator_confirmation_required": not fetch_downloaded,
         "target": values["target"],
         "action": values["action"],
         "impact": values["impact"],
@@ -203,7 +222,8 @@ def _preflight_row(
         "missing_r4_fields": ";".join(missing_r4_fields),
         "r4_preflight_status": status,
         "row_blockers": ";".join(blockers),
-        "download_executed": False,
+        "download_executed": fetch_downloaded,
+        "approval_token_accepted": _bool(apply_row.get("approval_token_accepted")),
         "canonical_intake_promotion_allowed": False,
         "external_state_mutated": False,
     }
@@ -228,6 +248,8 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_p
     plan_rows = _rows(plan_payload)
     metric_rows = _rows(metric_payload)
     template_rows = _rows(template_payload)
+    apply_rows = _rows(apply_payload)
+    apply_by_key = {_row_key(row): row for row in apply_rows}
     metric_by_key = {_row_key(row): row for row in metric_rows}
     templates_by_key: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
     for template in template_rows:
@@ -236,6 +258,7 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_p
         _preflight_row(
             row,
             index=index,
+            apply_by_key=apply_by_key,
             metric_by_key=metric_by_key,
             templates_by_key=templates_by_key,
         )
@@ -253,8 +276,21 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_p
         blockers.append("metric_source_templates_missing")
     if plan_summary.get("status") != "refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_ready":
         blockers.append("coordinate_fetch_plan_not_ready")
-    if apply_summary.get("status") != "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply":
-        blockers.append("coordinate_fetch_apply_not_in_preview_blocked_posture")
+    apply_preview_posture = bool(
+        apply_summary.get("status")
+        == "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply"
+        and _bool(apply_summary.get("coordinate_fetch_apply_preview_ready"))
+    )
+    apply_executed_posture = bool(
+        apply_summary.get("status")
+        == "refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_ready"
+        and _bool(apply_summary.get("coordinate_fetch_apply_live_ready"))
+        and _bool(apply_summary.get("approval_token_accepted"))
+        and _bool(apply_summary.get("download_executed"))
+        and _bool(apply_summary.get("post_fetch_validation_executed"))
+    )
+    if not (apply_preview_posture or apply_executed_posture):
+        blockers.append("coordinate_fetch_apply_not_in_preview_or_executed_posture")
     if (
         metric_summary.get("status")
         != "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
@@ -265,7 +301,7 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_p
         != "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
     ):
         blockers.append("metric_source_templates_not_ready")
-    if not _bool(apply_summary.get("coordinate_fetch_apply_preview_ready")):
+    if not (apply_preview_posture or apply_executed_posture):
         blockers.append("coordinate_fetch_apply_preview_not_ready")
     if not _bool(apply_summary.get("post_fetch_validation_supported")):
         blockers.append("post_fetch_validation_not_supported")
@@ -274,6 +310,13 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_p
         blockers.append("blocked_r4_preflight_rows_present")
 
     ready = bool(plan_present and apply_present and rows and not blockers)
+    r4_preflight_posture = (
+        "approved_fetch_executed"
+        if apply_executed_posture
+        else "preview_pending_operator_approval"
+        if apply_preview_posture
+        else "blocked"
+    )
     summary = {
         "packet_type": "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight",
         "status": (
@@ -282,9 +325,12 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_p
             else "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight"
         ),
         "r4_preflight_ready": ready,
-        "operator_approval_required": True,
-        "operator_confirmation_required": True,
-        "authorized_for_external_download": False,
+        "r4_preflight_posture": r4_preflight_posture,
+        "operator_approval_required": not apply_executed_posture,
+        "operator_confirmation_required": not apply_executed_posture,
+        "authorized_for_external_download": bool(
+            apply_executed_posture and _bool(apply_summary.get("approval_token_accepted"))
+        ),
         "fetch_plan": _display(fetch_plan_json, root=root),
         "fetch_plan_present": plan_present,
         "fetch_plan_ready": bool(
@@ -294,7 +340,15 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_p
         "fetch_apply": _display(fetch_apply_json, root=root),
         "fetch_apply_present": apply_present,
         "fetch_apply_preview_ready": _bool(apply_summary.get("coordinate_fetch_apply_preview_ready")),
+        "fetch_apply_live_ready": _bool(apply_summary.get("coordinate_fetch_apply_live_ready")),
+        "coordinate_fetch_apply_downloaded_row_count": _int(
+            apply_summary.get("coordinate_fetch_apply_downloaded_row_count")
+        ),
+        "coordinate_fetch_apply_destination_present_after_row_count": _int(
+            apply_summary.get("coordinate_fetch_apply_destination_present_after_row_count")
+        ),
         "post_fetch_validation_supported": _bool(apply_summary.get("post_fetch_validation_supported")),
+        "post_fetch_validation_executed": _bool(apply_summary.get("post_fetch_validation_executed")),
         "metric_materialization_readiness": _display(
             metric_materialization_readiness_json,
             root=root,
@@ -353,8 +407,8 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_p
             metric_summary.get("existing_metric_source_payload_count") or 0
         ),
         "approval_token_required": APPROVAL_TOKEN,
-        "approval_token_present": False,
-        "approval_token_accepted": False,
+        "approval_token_present": _bool(apply_summary.get("approval_token_present")),
+        "approval_token_accepted": _bool(apply_summary.get("approval_token_accepted")),
         "execute_command": EXECUTE_COMMAND,
         "execute_command_count": 1,
         "required_r4_fields": ";".join(REQUIRED_R4_FIELDS),
@@ -376,7 +430,7 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_p
             1 for row in rows if _text(row.get("metric_materialization_status")).startswith("blocked")
         ),
         "missing_r4_field_row_count": sum(1 for row in rows if _text(row.get("missing_r4_fields"))),
-        "download_executed": False,
+        "download_executed": _bool(apply_summary.get("download_executed")),
         "canonical_intake_promotion_allowed": False,
         "external_state_mutated": False,
         "blocker_count": len(blockers),
@@ -406,6 +460,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         f"- status: `{summary['status']}`",
         f"- r4_preflight_ready: `{summary['r4_preflight_ready']}`",
+        f"- r4_preflight_posture: `{summary['r4_preflight_posture']}`",
         f"- r4_row_count: `{summary['r4_row_count']}`",
         f"- ready_for_r4_review_row_count: `{summary['ready_for_r4_review_row_count']}`",
         f"- blocked_r4_row_count: `{summary['blocked_r4_row_count']}`",
@@ -417,6 +472,9 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- metric_source_template_fill_ready_row_count: `{summary['metric_source_template_fill_ready_row_count']}`",
         f"- metric_source_template_fill_blocked_row_count: `{summary['metric_source_template_fill_blocked_row_count']}`",
         f"- approval_token_required: `{summary['approval_token_required']}`",
+        f"- approval_token_accepted: `{summary['approval_token_accepted']}`",
+        f"- download_executed: `{summary['download_executed']}`",
+        f"- post_fetch_validation_executed: `{summary['post_fetch_validation_executed']}`",
         f"- execute_command: `{summary['execute_command']}`",
         "",
         "## Rows",

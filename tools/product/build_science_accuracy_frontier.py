@@ -55,6 +55,30 @@ CLAIM_BOUNDARY = (
     "docking/MD, fill public benchmark evidence, approve operator receipts, or promote claims."
 )
 
+BLOCKER_LABELS = {
+    "gpcr_broad_claim_review_not_approved": "GPCR broad claim review",
+    "gpcr_scorer_router_promotion_not_approved": "GPCR scorer/router promotion",
+    "openmm_schrodinger_public_benchmark_not_promoted_to_canonical_intake": (
+        "OpenMM/Schrödinger public-benchmark canonical intake promotion"
+    ),
+    "openmm_schrodinger_public_benchmark_statistical_support_not_claim_grade": (
+        "R9 statistical-support claim-grade limits"
+    ),
+    "openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized": (
+        "coordinate validation/materialization"
+    ),
+    "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_r4_approval_required": (
+        "coordinate-fetch R4 approval"
+    ),
+    "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_not_ready": (
+        "coordinate operator receipt"
+    ),
+    "openmm_schrodinger_public_benchmark_statistical_support_metric_source_payload_operator_receipt_not_ready": (
+        "metric payload receipt"
+    ),
+    "engine_refinement_claim_evidence_receipt_not_ready": "R9 evidence receipts",
+}
+
 
 def _resolve(path_like: str | Path) -> Path:
     path = Path(path_like)
@@ -102,6 +126,10 @@ def _list(value: Any) -> list[str]:
     if isinstance(value, str) and value:
         return [item for item in value.split(";") if item]
     return []
+
+
+def _blocker_label(blocker: str) -> str:
+    return BLOCKER_LABELS.get(blocker, blocker)
 
 
 def build_science_accuracy_frontier(
@@ -392,6 +420,15 @@ def build_science_accuracy_frontier(
                 blockers.append(
                     "openmm_schrodinger_public_benchmark_statistical_support_metric_source_payload_operator_receipt_not_ready"
                 )
+        elif metric_materialization_readiness_present and public_statistical_support_metric_materialization_all_candidates_ready:
+            if not metric_source_payload_operator_receipt_present:
+                blockers.append(
+                    "openmm_schrodinger_public_benchmark_statistical_support_metric_source_payload_operator_receipt_missing"
+                )
+            elif not public_statistical_support_metric_source_payload_operator_receipt_ready:
+                blockers.append(
+                    "openmm_schrodinger_public_benchmark_statistical_support_metric_source_payload_operator_receipt_not_ready"
+                )
     if not engine_receipt_ready:
         blockers.append("engine_refinement_claim_evidence_receipt_not_ready")
     if not pose_surface_ready:
@@ -404,11 +441,10 @@ def build_science_accuracy_frontier(
     )
     if restricted_science_accuracy_ready and public_benchmark_science_metric_ready:
         next_required_step = (
-            "Restricted science accuracy and the current 8-row materialized R9 metric evidence are ready, but broad "
-            "commercial parity remains blocked by GPCR claim/router approval, canonical intake promotion, "
-            "R9 statistical-support limits, R9 statistical-support coordinate-fetch R4 approval, coordinate "
-            "operator receipt, metric payload receipt, coordinate validation/materialization, and R9 evidence "
-            "receipts."
+            "Restricted science accuracy and the current 8-row materialized R9 metric evidence are ready; "
+            "remaining commercial-parity blockers: "
+            + ("; ".join(_blocker_label(blocker) for blocker in blockers) if blockers else "none")
+            + "."
         )
     elif restricted_science_accuracy_ready:
         next_required_step = (

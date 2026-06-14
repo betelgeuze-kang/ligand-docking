@@ -558,29 +558,29 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
         "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
     )
     assert summary["public_benchmark_statistical_support_metric_materialization_row_count"] == 17
-    assert summary["public_benchmark_statistical_support_metric_materialization_candidate_ready_count"] == 0
-    assert summary["public_benchmark_statistical_support_metric_materialization_candidate_blocked_count"] == 17
-    assert summary["public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready"] is False
+    assert summary["public_benchmark_statistical_support_metric_materialization_candidate_ready_count"] == 17
+    assert summary["public_benchmark_statistical_support_metric_materialization_candidate_blocked_count"] == 0
+    assert summary["public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready"] is True
     assert summary["public_benchmark_statistical_support_metric_materialization_required_input_artifact_count"] == 34
-    assert summary["public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count"] == 17
-    assert summary["public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count"] == 17
+    assert summary["public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count"] == 34
+    assert summary["public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count"] == 0
     assert (
         summary[
             "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count"
-        ]
-        == 17
-    )
-    assert (
-        summary[
-            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count"
         ]
         == 0
     )
     assert (
         summary[
-            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count"
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count"
         ]
         == 17
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count"
+        ]
+        == 0
     )
     assert summary[
         "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count"
@@ -608,29 +608,29 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
     assert summary["public_benchmark_statistical_support_coordinate_intake_row_count"] == 17
     assert summary[
         "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count"
-    ] == 0
-    assert summary["public_benchmark_statistical_support_coordinate_intake_missing_row_count"] == 17
+    ] == 17
+    assert summary["public_benchmark_statistical_support_coordinate_intake_missing_row_count"] == 0
     assert summary[
         "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count"
     ] == 136
     assert summary[
         "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count"
-    ] == 0
+    ] == 17
     assert summary[
         "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count"
-    ] == 0
+    ] == 17
     assert summary[
         "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count"
-    ] == 17
+    ] == 0
     assert summary[
         "public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count"
     ] == 51
     assert summary[
         "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count"
-    ] == 0
+    ] == 17
     assert summary[
         "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count"
-    ] == 17
+    ] == 0
     assert (
         mod.DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_INTAKE_JSON
         in summary["source_artifacts"]
@@ -651,10 +651,10 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
     ] == 3
     assert summary[
         "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
-    ] == 0
+    ] == 51
     assert summary[
         "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
-    ] == 51
+    ] == 0
     assert summary[
         "public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count"
     ] == 0
@@ -693,7 +693,7 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
     ] == 0
     assert summary[
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count"
-    ] == 51
+    ] == 0
     assert summary[
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_required"
     ] is True
@@ -711,7 +711,7 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
     ] == 0
     assert summary[
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_complete_count"
-    ] == 0
+    ] == 51
     assert summary[
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count"
     ] == 510
@@ -751,11 +751,11 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
     ] == 17
     assert summary[
         "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count"
-    ] == 17
+    ] == 0
     assert summary[
         "public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count"
     ] == 51
-    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_download_executed"] is False
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_download_executed"] is True
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated"] is False
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required"] == (
         "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
@@ -838,21 +838,17 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
         mod.DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_OPERATOR_RECEIPT_JSON
         in summary["source_artifacts"]
     )
-    assert "required_input_artifacts=34/17/17" in summary["next_required_step"]
-    assert "local_coordinate_path_candidates=136" in summary["next_required_step"]
-    assert "local_coordinate_present_targets=0" in summary["next_required_step"]
-    assert "local_coordinate_missing_targets=17" in summary["next_required_step"]
-    assert "r4_ready_for_review_row_count=17" in summary["next_required_step"]
-    assert "operator_review_surface_ready_count=17" in summary["next_required_step"]
-    assert "receipt_manual_field_pending_count=187" in summary["next_required_step"]
-    assert "fill/approve the 17-row coordinate fetch operator receipt" in summary["next_required_step"]
+    assert "Coordinate fetch and validation are complete" in summary["next_required_step"]
+    assert "required_input_artifacts=34/34/0" in summary["next_required_step"]
+    assert "local_coordinate_present_targets=17" in summary["next_required_step"]
+    assert "local_coordinate_missing_targets=0" in summary["next_required_step"]
+    assert "coordinate_validation_pass_row_count=17" in summary["next_required_step"]
+    assert "operator_review_surface_ready_count=51" in summary["next_required_step"]
+    assert "receipt_manual_field_pending_count=510" in summary["next_required_step"]
     assert "fill/approve the 51-row metric payload operator receipt" in summary["next_required_step"]
     assert "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS" in summary["next_required_step"]
-    assert "approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD" in summary[
-        "next_required_step"
-    ]
-    assert "required_input_artifacts=34/17/17" in summary["top_next_operator_step"]
-    assert "local_coordinate_path_candidates=136" in summary["top_next_operator_step"]
+    assert "required_input_artifacts=34/34/0" in summary["top_next_operator_step"]
+    assert "local_coordinate_present_targets=17" in summary["top_next_operator_step"]
     assert summary["worksheet_field_row_count"] == 389
     assert summary["operator_fill_pending_field_count"] == 296
     assert summary["top_blocker_field_count"] == 329
@@ -895,7 +891,7 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
     assert fit_or_holdout_split_row["current_value"] == "fit_or_holdout"
     assert fit_or_holdout_split_row["field_status"] == "ready"
     assert fit_or_holdout_split_row["required_holdout_pair_count_credit"] == 0
-    assert "Review the R4 coordinate-fetch preflight" in summary["next_required_step"]
+    assert "Coordinate fetch and validation are complete" in summary["next_required_step"]
     assert "planned_metric_source_payload_count=51" in summary["next_required_step"]
 
 

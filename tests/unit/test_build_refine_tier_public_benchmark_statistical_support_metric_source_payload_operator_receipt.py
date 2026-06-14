@@ -142,7 +142,7 @@ def test_metric_source_payload_operator_receipt_blocks_current_placeholders() ->
     assert summary["metric_source_artifact_path_present_count"] == 51
     assert summary["required_metric_input_artifact_list_present_count"] == 51
     assert summary["required_metric_input_artifact_sha256_list_present_count"] == 51
-    assert summary["required_metric_input_artifact_sha256_list_complete_count"] == 0
+    assert summary["required_metric_input_artifact_sha256_list_complete_count"] == 51
     assert summary["required_metric_source_payload_fields_present_count"] == 51
     assert summary["external_engine_calls_zero_count"] == 51
     assert summary["receipt_manual_field_pending_count"] == 510
@@ -159,8 +159,8 @@ def test_metric_source_payload_operator_receipt_blocks_current_placeholders() ->
     assert summary["pass_row_count"] == 0
     assert summary["blocked_row_count"] == 51
     assert summary["approved_payload_count"] == 0
-    assert summary["coordinate_validation_pass_payload_row_count"] == 0
-    assert summary["coordinate_validation_blocked_payload_row_count"] == 51
+    assert summary["coordinate_validation_pass_payload_row_count"] == 51
+    assert summary["coordinate_validation_blocked_payload_row_count"] == 0
     assert summary["payload_write_allowed"] is False
     assert summary["canonical_intake_promotion_allowed"] is False
     assert summary["claim_promotion_allowed"] is False

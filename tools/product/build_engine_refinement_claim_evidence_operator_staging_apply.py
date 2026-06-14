@@ -296,6 +296,14 @@ def build_engine_refinement_claim_evidence_operator_staging_apply(
     field_coordinate_intake_artifact = _text(
         field_worksheet.get("public_benchmark_statistical_support_coordinate_intake_artifact")
     )
+    field_coordinate_intake_validation_pass_row_count = _int(
+        field_worksheet.get(
+            "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count"
+        )
+    )
+    field_coordinate_intake_missing_row_count = _int(
+        field_worksheet.get("public_benchmark_statistical_support_coordinate_intake_missing_row_count")
+    )
     field_metric_source_payload_receipt_artifact = _text(
         field_worksheet.get(
             "public_benchmark_statistical_support_metric_source_payload_operator_receipt_artifact"
@@ -309,6 +317,16 @@ def build_engine_refinement_claim_evidence_operator_staging_apply(
     field_metric_source_payload_receipt_approval_token_required = _text(
         field_worksheet.get(
             "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required"
+        )
+    )
+    field_metric_source_payload_receipt_review_surface_ready_count = _int(
+        field_worksheet.get(
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_ready_count"
+        )
+    )
+    field_metric_source_payload_receipt_manual_field_pending_count = _int(
+        field_worksheet.get(
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count"
         )
     )
     field_coordinate_fetch_operator_receipt_artifact = _text(
@@ -404,22 +422,40 @@ def build_engine_refinement_claim_evidence_operator_staging_apply(
     elif materialized_candidate_ready:
         status = "blocked_engine_refinement_claim_evidence_operator_staging_apply"
         if field_metric_source_templates_template_row_count:
-            next_required_step = (
-                "Materialized public benchmark science candidate is ready but not claim-grade: "
-                "review the R4 coordinate-fetch preflight, fill/approve "
-                f"{field_coordinate_fetch_operator_receipt_blocked_row_count} coordinate fetch receipt rows "
-                f"(operator_review_surface_ready_count="
-                f"{field_coordinate_fetch_operator_receipt_review_surface_ready_count}, "
-                f"receipt_manual_field_pending_count="
-                f"{field_coordinate_fetch_operator_receipt_manual_field_pending_count}, "
-                f"{field_coordinate_fetch_operator_receipt_approval_token_required}), "
-                "then validate the 17 statistical-support coordinates, "
-                f"then replace {field_metric_source_templates_fill_blocked_row_count} blocked metric source "
-                "template placeholders and fill/approve "
-                f"{field_metric_source_payload_receipt_blocked_row_count} metric payload receipt rows "
-                f"({field_metric_source_payload_receipt_approval_token_required}) before any canonical "
-                "R9 receipt or public benchmark intake promotion."
-            )
+            if (
+                field_coordinate_intake_validation_pass_row_count >= 17
+                and field_coordinate_intake_missing_row_count == 0
+                and field_metric_source_templates_fill_blocked_row_count == 0
+            ):
+                next_required_step = (
+                    "Materialized public benchmark science candidate is ready but not claim-grade, and "
+                    "R9 statistical-support coordinate fetch/validation is complete: fill/approve "
+                    f"{field_metric_source_payload_receipt_blocked_row_count} metric payload receipt rows "
+                    f"(operator_review_surface_ready_count="
+                    f"{field_metric_source_payload_receipt_review_surface_ready_count}, "
+                    f"receipt_manual_field_pending_count="
+                    f"{field_metric_source_payload_receipt_manual_field_pending_count}, "
+                    f"{field_metric_source_payload_receipt_approval_token_required}), materialize the "
+                    "DockQ/lDDT-PLI/internal DeltaG source payloads, and rerun bootstrap Spearman p05 "
+                    "before any canonical R9 receipt or public benchmark intake promotion."
+                )
+            else:
+                next_required_step = (
+                    "Materialized public benchmark science candidate is ready but not claim-grade: "
+                    "review the R4 coordinate-fetch preflight, fill/approve "
+                    f"{field_coordinate_fetch_operator_receipt_blocked_row_count} coordinate fetch receipt rows "
+                    f"(operator_review_surface_ready_count="
+                    f"{field_coordinate_fetch_operator_receipt_review_surface_ready_count}, "
+                    f"receipt_manual_field_pending_count="
+                    f"{field_coordinate_fetch_operator_receipt_manual_field_pending_count}, "
+                    f"{field_coordinate_fetch_operator_receipt_approval_token_required}), "
+                    "then validate the 17 statistical-support coordinates, "
+                    f"then replace {field_metric_source_templates_fill_blocked_row_count} blocked metric source "
+                    "template placeholders and fill/approve "
+                    f"{field_metric_source_payload_receipt_blocked_row_count} metric payload receipt rows "
+                    f"({field_metric_source_payload_receipt_approval_token_required}) before any canonical "
+                    "R9 receipt or public benchmark intake promotion."
+                )
         else:
             next_required_step = (
                 "Materialized public benchmark science candidate is ready, but the canonical staging receipt/work-order "

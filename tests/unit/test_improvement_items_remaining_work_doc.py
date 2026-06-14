@@ -228,7 +228,7 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert (
-        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_missing_row_count=17`"
+            "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_missing_row_count=0`"
         in text
     )
     assert (
@@ -236,15 +236,15 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert (
-        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count=0`"
+            "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count=17`"
         in text
     )
     assert (
-        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count=0`"
+            "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count=17`"
         in text
     )
     assert (
-        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count=17`"
+            "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count=0`"
         in text
     )
     assert (
@@ -260,7 +260,7 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert (
-        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=false`"
+            "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=true`"
         in text
     )
     assert (
@@ -340,11 +340,11 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert (
-        "`science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=0`"
+            "`science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=51`"
         in text
     )
     assert (
-        "`science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=51`"
+            "`science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=0`"
         in text
     )
     assert (
@@ -423,24 +423,25 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`candidate_coordinate_archive_missing_receptor_member_target_count=17`" in text
     assert "같은 로컬 coordinate matcher를 재사용한다" in text
     assert "`archive.tar::pdbbind/<target>/<target>_protein.pdb`" in text
-    assert "현재 로컬 coordinate archive 2개에는 17개 후보의 ligand pose/source member만" in text
+    assert "queue 자체는 fetch 전 선별 snapshot이라 17개 후보의 ligand pose/source member만 있고" in text
+    assert "coordinate intake/apply/validation은 승인 실행 후 public RCSB complex PDB를 로컬" in text
     assert "`runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json`" in text
     assert "`refine_tier_public_benchmark_statistical_support_coordinate_intake_ready`" in text
     assert "`coordinate_intake_row_count=17`" in text
-    assert "`coordinate_intake_artifact_present_row_count=0`" in text
-    assert "`coordinate_intake_missing_row_count=17`" in text
+    assert "`coordinate_intake_artifact_present_row_count=17`" in text
+    assert "`coordinate_intake_missing_row_count=0`" in text
     assert "`coordinate_intake_suggested_public_url_row_count=17`" in text
     assert "`coordinate_intake_suggested_local_path_row_count=17`" in text
     assert "`coordinate_intake_suggested_local_path_candidate_count=136`" in text
-    assert "`coordinate_intake_suggested_local_path_present_count=0`" in text
-    assert "`coordinate_intake_suggested_local_path_present_target_count=0`" in text
-    assert "`coordinate_intake_suggested_local_path_missing_target_count=17`" in text
+    assert "`coordinate_intake_suggested_local_path_present_count=17`" in text
+    assert "`coordinate_intake_suggested_local_path_present_target_count=17`" in text
+    assert "`coordinate_intake_suggested_local_path_missing_target_count=0`" in text
     assert "`coordinate_intake_expected_archive_member_example_count=51`" in text
     assert "`coordinate_intake_operator_review_required_row_count=17`" in text
     assert "`coordinate_validation_row_count=17`" in text
-    assert "`coordinate_validation_pass_row_count=0`" in text
-    assert "`coordinate_validation_blocked_row_count=17`" in text
-    assert "`coordinate_validation_missing_row_count=17`" in text
+    assert "`coordinate_validation_pass_row_count=17`" in text
+    assert "`coordinate_validation_blocked_row_count=0`" in text
+    assert "`coordinate_validation_missing_row_count=0`" in text
     assert (
         "`runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_current.json`"
         in text
@@ -451,29 +452,33 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`coordinate_fetch_blocked_row_count=17`" in text
     assert "`coordinate_fetch_primary_url_row_count=17`" in text
     assert "`coordinate_fetch_staging_destination_row_count=17`" in text
-    assert "`coordinate_fetch_ready_for_validation_row_count=0`" in text
-    assert "`coordinate_fetch_external_download_executed=false`" in text
+    assert "`coordinate_fetch_ready_for_validation_row_count=17`" in text
+    assert "`coordinate_fetch_external_download_executed=true`" in text
     assert (
         "`runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_current.json`"
         in text
     )
-    assert "`blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply`" in text
-    assert "`coordinate_fetch_apply_preview_ready=true`" in text
+    assert "`refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_ready`" in text
+    assert "`coordinate_fetch_apply_preview_ready=false`" in text
     assert "`coordinate_fetch_apply_row_count=17`" in text
     assert "`coordinate_fetch_apply_preflight_pass_row_count=17`" in text
-    assert "`coordinate_fetch_apply_preview_ready_row_count=17`" in text
+    assert "`coordinate_fetch_apply_preview_ready_row_count=0`" in text
     assert "`coordinate_fetch_apply_blocked_row_count=0`" in text
-    assert "`coordinate_fetch_apply_downloaded_row_count=0`" in text
+    assert "`coordinate_fetch_apply_downloaded_row_count=17`" in text
+    assert "`coordinate_fetch_apply_ready_for_validation_row_count=17`" in text
     assert "`post_fetch_validation_supported=true`" in text
-    assert "`post_fetch_validation_requested=false`" in text
-    assert "`post_fetch_validation_executed=false`" in text
-    assert "`post_fetch_validation_coordinate_validation_pass_row_count=0`" in text
+    assert "`post_fetch_validation_requested=true`" in text
+    assert "`post_fetch_validation_executed=true`" in text
+    assert "`post_fetch_validation_coordinate_validation_pass_row_count=17`" in text
     assert (
         "`post_fetch_validation_candidate_queue=runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json`"
         in text
     )
     assert "`approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`" in text
-    assert "`--mode execute --run-post-fetch-validation`" in text
+    assert (
+        "`python3 tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py --mode execute --run-post-fetch-validation --approval-token APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`"
+        in text
+    )
     assert (
         "`runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json`"
         in text
@@ -490,21 +495,21 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`fetch_required_row_count=17`" in text
     assert "`metric_materialization_readiness_present=true`" in text
     assert "`metric_materialization_row_count=17`" in text
-    assert "`metric_materialization_candidate_blocked_count=17`" in text
+    assert "`metric_materialization_candidate_blocked_count=0`" in text
     assert "`planned_metric_source_payload_count=51`" in text
-    assert "`metric_materialization_blocked_row_count=17`" in text
+    assert "`metric_materialization_blocked_row_count=0`" in text
     assert "`metric_source_templates_present=true`" in text
     assert "`metric_source_templates_ready=true`" in text
     assert "`metric_source_template_row_count=51`" in text
     assert "`metric_source_template_candidate_row_count=17`" in text
     assert "`metric_source_template_metric_name_count=3`" in text
-    assert "`metric_source_template_fill_ready_row_count=0`" in text
-    assert "`metric_source_template_fill_blocked_row_count=51`" in text
+    assert "`metric_source_template_fill_ready_row_count=51`" in text
+    assert "`metric_source_template_fill_blocked_row_count=0`" in text
     assert "`metric_source_template_existing_payload_present_row_count=0`" in text
     assert "최신 metric materialization readiness를 R4 row에 묶어" in text
     assert "51개 metric source template placeholder" in text
     assert "metric source templates," in text
-    assert "statistical support metric source template 51개/fill-ready 0개/fill-blocked 51개" in text
+    assert "statistical support metric source template 51개/fill-ready 51개/fill-blocked 0개" in text
     assert "`field_worksheet_public_benchmark_statistical_support_coordinate_intake_ready=true`" in text
     assert "`field_worksheet_public_benchmark_statistical_support_coordinate_intake_row_count=17`" in text
     assert (
@@ -512,19 +517,18 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert (
-        "`field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count=0`"
+        "`field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count=17`"
         in text
     )
     assert (
-        "`field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count=17`"
+        "`field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count=0`"
         in text
     )
-    assert "`local_coordinate_path_candidates=136`" in text
-    assert "`local_coordinate_present_targets=0`" in text
-    assert "`local_coordinate_missing_targets=17`" in text
+    assert "`local_coordinate_present_targets=17`" in text
+    assert "`local_coordinate_missing_targets=0`" in text
     assert "`field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count=51`" in text
-    assert "`field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=0`" in text
-    assert "`field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=51`" in text
+    assert "`field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=51`" in text
+    assert "`field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=0`" in text
     assert "`field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready=false`" in text
     assert "`field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count=17`" in text
     assert "`field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count=17`" in text
@@ -558,6 +562,7 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_verified_count=51`" in text
     assert "`field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count=0`" in text
     assert "`field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_ready_count=51`" in text
+    assert "`field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_complete_count=51`" in text
     assert "`field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count=510`" in text
     assert (
         "`field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required=APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS`"
@@ -567,15 +572,15 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count=51" in text
     assert "product_commercial_readiness_operator_packet_semantic_ready" in text
     assert "product_commercial_readiness_handoff_bundle_semantic_ready" in text
-    assert "`metric_source_templates_metric_source_payload_fill_blocked_row_count=51`" in text
+    assert "`metric_source_templates_metric_source_payload_fill_blocked_row_count=0`" in text
     assert "`refine_tier_public_benchmark_claim_grade_gap_audit_ready`" in text
     assert "`observed_public_benchmark_pair_count=8`" in text
     assert "`observed_holdout_pair_count=3`" in text
     assert "`observed_bootstrap_spearman_p05=-0.14285714285714285`" in text
-    assert "`blocked_gap_row_count=5`" in text
-    assert "`top_science_gap_id=coordinate_fetch_r4_approval_required`" in text
-    assert "`coordinate_validation_deficit=17`" in text
-    assert "`metric_source_payload_fill_deficit=51`" in text
+    assert "`blocked_gap_row_count=3`" in text
+    assert "`top_science_gap_id=claim_grade_public_benchmark_pair_count_below_minimum`" in text
+    assert "`coordinate_validation_deficit=0`" in text
+    assert "`metric_source_payload_fill_deficit=0`" in text
     assert "`execute_command_count=1`" in text
     assert "`authorized_for_external_download=false`" in text
     assert (
@@ -587,16 +592,16 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert "`metric_materialization_readiness_ready=true`" in text
-    assert "`metric_materialization_all_candidates_ready=false`" in text
+    assert "`metric_materialization_all_candidates_ready=true`" in text
     assert "`metric_materialization_row_count=17`" in text
-    assert "`metric_materialization_candidate_ready_count=0`" in text
-    assert "`metric_materialization_candidate_blocked_count=17`" in text
-    assert "`metric_materialization_input_artifact_contract_ready=false`" in text
+    assert "`metric_materialization_candidate_ready_count=17`" in text
+    assert "`metric_materialization_candidate_blocked_count=0`" in text
+    assert "`metric_materialization_input_artifact_contract_ready=true`" in text
     assert "`required_metric_input_artifact_count=34`" in text
-    assert "`present_required_metric_input_artifact_count=17`" in text
-    assert "`missing_required_metric_input_artifact_count=17`" in text
-    assert "`missing_required_metric_input_artifact_row_count=17`" in text
-    assert "`coordinate_validation_blocked_row_count=17`" in text
+    assert "`present_required_metric_input_artifact_count=34`" in text
+    assert "`missing_required_metric_input_artifact_count=0`" in text
+    assert "`missing_required_metric_input_artifact_row_count=0`" in text
+    assert "`coordinate_validation_blocked_row_count=0`" in text
     assert "`planned_metric_source_payload_count=51`" in text
     assert "`existing_metric_source_payload_count=0`" in text
     assert "`required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`" in text
@@ -607,24 +612,24 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`claim_grade_statistical_support_ready=false`" in text
     assert "`public_benchmark_statistical_support_metric_materialization_readiness_present=true`" in text
     assert "`public_benchmark_statistical_support_metric_materialization_readiness_ready=true`" in text
-    assert "`public_benchmark_statistical_support_metric_materialization_all_candidates_ready=false`" in text
+    assert "`public_benchmark_statistical_support_metric_materialization_all_candidates_ready=true`" in text
     assert "`public_benchmark_statistical_support_metric_materialization_row_count=17`" in text
-    assert "`public_benchmark_statistical_support_metric_materialization_candidate_ready_count=0`" in text
-    assert "`public_benchmark_statistical_support_metric_materialization_candidate_blocked_count=17`" in text
-    assert "`public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready=false`" in text
+    assert "`public_benchmark_statistical_support_metric_materialization_candidate_ready_count=17`" in text
+    assert "`public_benchmark_statistical_support_metric_materialization_candidate_blocked_count=0`" in text
+    assert "`public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready=true`" in text
     assert "`public_benchmark_statistical_support_metric_materialization_required_input_artifact_count=34`" in text
-    assert "`public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count=17`" in text
-    assert "`public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count=17`" in text
+    assert "`public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count=34`" in text
+    assert "`public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count=0`" in text
     assert (
-        "`public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count=17`"
+        "`public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count=0`"
         in text
     )
     assert (
-        "`public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count=0`"
+        "`public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count=17`"
         in text
     )
     assert (
-        "`public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count=17`"
+        "`public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count=0`"
         in text
     )
     assert (
@@ -661,19 +666,19 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert (
-        "`public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=0`"
+        "`public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=51`"
         in text
     )
     assert (
-        "`public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=51`"
+        "`public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=0`"
         in text
     )
     assert (
-        "`public_benchmark_statistical_support_metric_source_templates_coordinate_validation_blocked_template_row_count=51`"
+        "`public_benchmark_statistical_support_metric_source_templates_coordinate_validation_blocked_template_row_count=0`"
         in text
     )
     assert (
-        "`public_benchmark_statistical_support_metric_source_templates_missing_required_input_template_row_count=51`"
+        "`public_benchmark_statistical_support_metric_source_templates_missing_required_input_template_row_count=0`"
         in text
     )
     assert "`public_benchmark_statistical_support_metric_source_templates_placeholder_value_count=51`" in text
@@ -712,35 +717,27 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_row_count=51`" in text
     assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count=51`" in text
     assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_approved_payload_count=0`" in text
-    assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count=51`" in text
+    assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count=0`" in text
+    assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_pass_payload_row_count=51`" in text
     assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_verified_count=51`" in text
     assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count=0`" in text
     assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_ready_count=51`" in text
-    assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_complete_count=0`" in text
+    assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_complete_count=51`" in text
     assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count=510`" in text
     assert "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_payload_write_allowed=false`" in text
     assert (
         "`public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required=APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS`"
         in text
     )
-    assert "`openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized`" in text
-    assert (
-        "`openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_r4_approval_required`"
-        in text
-    )
-    assert (
-        "`openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_not_ready`"
-        in text
-    )
     assert (
         "`openmm_schrodinger_public_benchmark_statistical_support_metric_source_payload_operator_receipt_not_ready`"
         in text
     )
-    assert "`blocker_count=9`" in text
+    assert "`engine_refinement_claim_evidence_receipt_not_ready`" in text
     assert "`blocker_count=6`" in text
     assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
     assert "`runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`" in text
-    assert "`Review the R4 coordinate-fetch preflight`" in text
+    assert "`Coordinate fetch and validation are complete`" in text
     assert "`public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready=true`" in text
     assert (
         "`public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count=17`"
@@ -750,7 +747,7 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         "`public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=17`"
         in text
     )
-    assert "`public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=false`" in text
+    assert "`public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=true`" in text
     assert (
         "`runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json`"
         in text
@@ -762,10 +759,10 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`template_metric_name_count=3`" in text
     assert "`template_metric_source_artifact_path_row_count=51`" in text
     assert "`template_payload_required_fields_present_row_count=51`" in text
-    assert "`metric_source_payload_fill_ready_row_count=0`" in text
-    assert "`metric_source_payload_fill_blocked_row_count=51`" in text
-    assert "`coordinate_validation_blocked_template_row_count=51`" in text
-    assert "`missing_required_input_template_row_count=51`" in text
+    assert "`metric_source_payload_fill_ready_row_count=51`" in text
+    assert "`metric_source_payload_fill_blocked_row_count=0`" in text
+    assert "`coordinate_validation_blocked_template_row_count=0`" in text
+    assert "`missing_required_input_template_row_count=0`" in text
     assert "`existing_metric_source_payload_present_row_count=0`" in text
     assert "`placeholder_value_count=51`" in text
     assert "`placeholder_method_count=51`" in text
@@ -778,7 +775,7 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert (
-        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_ready_count=0`"
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_ready_count=17`"
         in text
     )
     assert (
@@ -786,7 +783,7 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert (
-        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_blocked_count=17`"
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_blocked_count=0`"
         in text
     )
     assert (
@@ -794,15 +791,15 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert (
-        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count=17`"
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count=34`"
         in text
     )
     assert (
-        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count=17`"
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count=0`"
         in text
     )
     assert (
-        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count=0`"
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count=17`"
         in text
     )
     assert (
@@ -826,11 +823,11 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert (
-        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count=0`"
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count=17`"
         in text
     )
     assert (
-        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count=17`"
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count=0`"
         in text
     )
     assert "`public_benchmark_statistical_support_coordinate_intake_ready=true`" in text
@@ -840,11 +837,11 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert (
-        "`public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count=0`"
+        "`public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count=17`"
         in text
     )
     assert (
-        "`public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count=17`"
+        "`public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count=0`"
         in text
     )
     assert "`planned_metric_source_payload_count=51`" in text
@@ -853,11 +850,11 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "materialized metric-evidence pass 8개" in text
     assert "claim-grade statistical support expansion slot 17개" in text
     assert "statistical support candidate queue 17개" in text
-    assert "receptor coordinate missing 17/17개" in text
+    assert "ligand pose/experimental ΔG prefill 17/17개" in text
     assert "statistical support coordinate intake 17개" in text
-    assert "coordinate validation pass 0개/blocked 17개" in text
-    assert "statistical support coordinate fetch required 17개/ready-for-validation 0개" in text
-    assert "statistical support coordinate fetch apply preview preflight pass 17개/downloaded 0개" in text
+    assert "coordinate validation pass 17개/blocked 0개" in text
+    assert "statistical support coordinate fetch required 17개/ready-for-validation 17개" in text
+    assert "statistical support coordinate fetch apply pass 17개/downloaded 17개" in text
     assert "`worksheet_field_row_count=389`" in text
     assert "`operator_fill_pending_field_count=296`" in text
     assert "`public_benchmark_statistical_support_expansion_field_count=221`" in text
@@ -875,7 +872,7 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "receptor/complex coordinate validation 8/8 blocked" not in text
     assert "DockQ/lDDT-PLI/internal ΔG source evidence 8/8/8 missing" not in text
     assert "`selected_candidate_count=0`" not in text
-    assert "`coordinate_validation_pass_row_count=17`" not in text
+    assert "`coordinate_validation_pass_row_count=17`" in text
 
 
 def test_remaining_work_doc_tracks_r8_scope_receipt_review_surface_debt() -> None:

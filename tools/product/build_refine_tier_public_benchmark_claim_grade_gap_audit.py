@@ -42,10 +42,10 @@ CLAIM_BOUNDARY = (
 )
 
 NEXT_REQUIRED_STEP = (
-    "Keep R9 claim-grade promotion blocked; after explicit R4 approval fetch and validate the 17 public "
-    "coordinate candidates, replace 51 DockQ/lDDT-PLI/internal DeltaG metric source payload placeholders, "
-    "then rebuild materialization and require bootstrap Spearman p05 >= 0.5 with at least 25 public "
-    "benchmark pairs and 8 holdout pairs."
+    "Keep R9 claim-grade promotion blocked; fetch and validate any remaining public coordinate candidates, "
+    "replace reviewed DockQ/lDDT-PLI/internal DeltaG metric source payload placeholders, then rebuild "
+    "materialization and require bootstrap Spearman p05 >= 0.5 with at least 25 public benchmark pairs and "
+    "8 holdout pairs."
 )
 
 
@@ -234,6 +234,15 @@ def build_refine_tier_public_benchmark_claim_grade_gap_audit(
         },
     ]
     blocked_row_count = sum(1 for row in rows if row["status"] != "pass")
+    if coordinate_validation_deficit:
+        next_required_step = NEXT_REQUIRED_STEP
+    else:
+        next_required_step = (
+            "Coordinate fetch and validation are complete for the 17 R9 statistical-support candidates; "
+            "fill/review the 51 DockQ/lDDT-PLI/internal DeltaG metric source payload values, materialize "
+            "the 17 candidates, and rerun bootstrap Spearman p05 with at least 25 public benchmark pairs "
+            "and 8 holdout pairs before any claim-grade promotion."
+        )
 
     summary = {
         "packet_type": "refine_tier_public_benchmark_claim_grade_gap_audit",
@@ -318,7 +327,7 @@ def build_refine_tier_public_benchmark_claim_grade_gap_audit(
             else (blocker_ids[0] if blocker_ids else "")
         ),
         "claim_boundary": CLAIM_BOUNDARY,
-        "next_required_step": NEXT_REQUIRED_STEP,
+        "next_required_step": next_required_step,
         "execution_enabled": False,
         "external_state_mutated": False,
     }

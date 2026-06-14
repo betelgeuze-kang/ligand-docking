@@ -366,9 +366,18 @@ def build_refine_tier_public_benchmark_statistical_support_metric_materializatio
         "blockers": blockers,
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
-            "After operator-approved coordinate fetch and post-fetch validation, require all 17 "
-            "statistical-support candidates to pass coordinate validation before materializing DockQ, "
-            "lDDT-PLI, and internal DeltaG source payloads and rerunning bootstrap Spearman p05."
+            "All 17 statistical-support candidates have coordinate validation and required input "
+            "artifacts ready; fill/review the 51 DockQ/lDDT-PLI/internal DeltaG metric source "
+            "payloads, materialize them, and rerun bootstrap Spearman p05 before any R9 claim "
+            "receipt or canonical intake promotion."
+            if row_count
+            and len(ready_rows) == row_count
+            and missing_required_metric_input_artifact_count == 0
+            else (
+                "After operator-approved coordinate fetch and post-fetch validation, require all 17 "
+                "statistical-support candidates to pass coordinate validation before materializing DockQ, "
+                "lDDT-PLI, and internal DeltaG source payloads and rerunning bootstrap Spearman p05."
+            )
         ),
     }
     return {"summary": summary, "rows": rows}

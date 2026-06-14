@@ -141,35 +141,35 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         summary[
             "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_coordinate_validation_pass_row_count"
         ]
-        == 0
+        == 17
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_coordinate_validation_blocked_row_count"
         ]
-        == 17
+        == 0
     )
     assert (
         summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_coordinate_validation_deficit"]
-        == 17
+        == 0
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_ready_row_count"
         ]
-        == 0
+        == 51
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count"
         ]
-        == 51
+        == 0
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_deficit"
         ]
-        == 51
+        == 0
     )
     assert (
         summary[
@@ -187,15 +187,15 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         summary[
             "science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_download_executed"
         ]
-        is False
+        is True
     )
     assert summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_gap_row_count"] == 5
-    assert summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_blocked_gap_row_count"] == 5
-    assert summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_pass_gap_row_count"] == 0
-    assert summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_blocker_count"] == 5
+    assert summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_blocked_gap_row_count"] == 3
+    assert summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_pass_gap_row_count"] == 2
+    assert summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_blocker_count"] == 3
     assert (
         summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_top_science_gap_id"]
-        == "coordinate_fetch_r4_approval_required"
+        == "claim_grade_public_benchmark_pair_count_below_minimum"
     )
     assert (
         summary["science_accuracy_frontier_public_benchmark_claim_grade_gap_audit_top_statistical_gap_id"]
@@ -217,7 +217,7 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_all_candidates_ready"
         ]
-        is False
+        is True
     )
     assert (
         summary[
@@ -229,19 +229,19 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_candidate_ready_count"
         ]
-        == 0
+        == 17
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_candidate_blocked_count"
         ]
-        == 17
+        == 0
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready"
         ]
-        is False
+        is True
     )
     assert (
         summary[
@@ -253,31 +253,31 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count"
         ]
-        == 17
+        == 34
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count"
         ]
-        == 17
+        == 0
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count"
         ]
-        == 17
+        == 0
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count"
         ]
-        == 0
+        == 17
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count"
         ]
-        == 17
+        == 0
     )
     assert (
         summary[
@@ -358,25 +358,25 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
         ]
-        == 0
+        == 51
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
         ]
-        == 51
+        == 0
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_coordinate_validation_blocked_template_row_count"
         ]
-        == 51
+        == 0
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_templates_missing_required_input_template_row_count"
         ]
-        == 51
+        == 0
     )
     assert (
         summary[
@@ -446,11 +446,11 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count"
         ]
-        == 0
+        == 17
     )
     assert (
         summary["science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_missing_row_count"]
-        == 17
+        == 0
     )
     assert (
         summary[
@@ -474,19 +474,19 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count"
         ]
-        == 0
+        == 17
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count"
         ]
-        == 0
+        == 17
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count"
         ]
-        == 17
+        == 0
     )
     assert (
         summary[
@@ -504,19 +504,19 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count"
         ]
-        == 0
+        == 17
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count"
         ]
-        == 17
+        == 0
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_coordinate_validation_missing_row_count"
         ]
-        == 17
+        == 0
     )
     assert (
         summary[
@@ -564,7 +564,7 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count"
         ]
-        == 17
+        == 0
     )
     assert (
         summary[
@@ -576,13 +576,13 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download"
         ]
-        is False
+        is True
     )
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_download_executed"
         ]
-        is False
+        is True
     )
     assert (
         summary[
@@ -734,22 +734,14 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         ]
         == 1
     )
-    assert (
-        "openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized"
-        in summary["science_accuracy_frontier_blockers"]
-    )
-    assert (
-        "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_r4_approval_required"
-        in summary["science_accuracy_frontier_blockers"]
-    )
-    assert (
-        "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_not_ready"
-        in summary["science_accuracy_frontier_blockers"]
-    )
-    assert (
-        "openmm_schrodinger_public_benchmark_statistical_support_metric_source_payload_operator_receipt_not_ready"
-        in summary["science_accuracy_frontier_blockers"]
-    )
+    assert summary["science_accuracy_frontier_blockers"] == [
+        "gpcr_broad_claim_review_not_approved",
+        "gpcr_scorer_router_promotion_not_approved",
+        "openmm_schrodinger_public_benchmark_not_promoted_to_canonical_intake",
+        "openmm_schrodinger_public_benchmark_statistical_support_not_claim_grade",
+        "openmm_schrodinger_public_benchmark_statistical_support_metric_source_payload_operator_receipt_not_ready",
+        "engine_refinement_claim_evidence_receipt_not_ready",
+    ]
     assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_present"
@@ -802,6 +794,12 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count"
         ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_pass_payload_row_count"
+        ]
         == 51
     )
     assert (
@@ -838,7 +836,7 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_complete_count"
         ]
-        == 0
+        == 51
     )
     assert (
         summary[
@@ -942,7 +940,7 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
     assert "public_benchmark_materialized_claim_grade_statistical_support_ready=False" in boundary["observed"]
     assert "coordinate_fetch_r4_preflight_ready=True" in boundary["observed"]
     assert "coordinate_fetch_r4_fetch_required=17" in boundary["observed"]
-    assert "coordinate_fetch_r4_download_executed=False" in boundary["observed"]
+    assert "coordinate_fetch_r4_download_executed=True" in boundary["observed"]
     assert "coordinate_fetch_operator_receipt_ready=False" in boundary["observed"]
     assert "coordinate_fetch_operator_receipt_blocked=17" in boundary["observed"]
     assert "coordinate_fetch_operator_receipt_fingerprint_verified=17" in boundary["observed"]
@@ -950,8 +948,9 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
     assert "metric_source_payload_receipt_blocked=51" in boundary["observed"]
     assert "metric_source_payload_receipt_fingerprint_verified=51" in boundary["observed"]
     assert "coordinate_intake_ready=True" in boundary["observed"]
-    assert "coordinate_intake_missing=17" in boundary["observed"]
-    assert "coordinate_intake_local_path_present_targets=0" in boundary["observed"]
+    assert "coordinate_intake_missing=0" in boundary["observed"]
+    assert "coordinate_intake_local_path_present_targets=17" in boundary["observed"]
+    assert "metric_source_payload_receipt_sha256_complete=51" in boundary["observed"]
 
 
 def test_verify_quality_gate_script_rebuilds_operational_quality_fail_closed() -> None:

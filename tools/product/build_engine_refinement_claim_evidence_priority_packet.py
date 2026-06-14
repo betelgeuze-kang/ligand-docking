@@ -247,6 +247,39 @@ def _next_operator_step(
                             f"approval_token_required="
                             f"{public_statistical_support_coordinate_fetch_r4_approval_token_required})"
                         )
+                    coordinates_ready_for_metric_payloads = bool(
+                        public_statistical_support_metric_materialization_row_count > 0
+                        and public_statistical_support_metric_materialization_candidate_ready_count
+                        >= public_statistical_support_metric_materialization_row_count
+                        and public_statistical_support_metric_materialization_coordinate_validation_pass_row_count
+                        >= public_statistical_support_metric_materialization_row_count
+                        and public_statistical_support_metric_materialization_missing_required_input_artifact_count
+                        == 0
+                    )
+                    if coordinates_ready_for_metric_payloads:
+                        return (
+                            "Coordinate fetch and validation are complete"
+                            f"{r4_context} for "
+                            f"{public_statistical_support_metric_materialization_row_count} "
+                            "statistical-support candidates "
+                            f"(coordinate_validation_pass_row_count="
+                            f"{public_statistical_support_metric_materialization_coordinate_validation_pass_row_count}, "
+                            "metric_materialization_candidate_ready_count="
+                            f"{public_statistical_support_metric_materialization_candidate_ready_count}, "
+                            "required_input_artifacts="
+                            f"{public_statistical_support_metric_materialization_required_input_artifact_count}/"
+                            f"{public_statistical_support_metric_materialization_present_required_input_artifact_count}/"
+                            f"{public_statistical_support_metric_materialization_missing_required_input_artifact_count}, "
+                            "local_coordinate_present_targets="
+                            f"{public_statistical_support_coordinate_intake_suggested_local_path_present_target_count}, "
+                            "local_coordinate_missing_targets="
+                            f"{public_statistical_support_coordinate_intake_suggested_local_path_missing_target_count}, "
+                            "planned_metric_source_payload_count="
+                            f"{public_statistical_support_metric_materialization_planned_metric_source_payload_count}); "
+                            "fill and review the 51 DockQ/lDDT-PLI/internal DeltaG metric source payloads, "
+                            "materialize them, and rerun bootstrap Spearman p05 before any R9 claim receipt "
+                            "or canonical intake promotion."
+                        )
                     return (
                         "Review the R4 coordinate-fetch preflight"
                         f"{r4_context} and, after explicit operator approval, "

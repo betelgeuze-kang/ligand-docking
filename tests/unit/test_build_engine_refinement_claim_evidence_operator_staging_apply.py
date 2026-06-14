@@ -796,9 +796,15 @@ def test_current_staging_apply_surfaces_materialized_public_benchmark_candidate(
     )
     assert (
         summary[
-            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count"
         ]
         == 51
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
+        ]
+        == 0
     )
     assert (
         summary[
@@ -822,13 +828,13 @@ def test_current_staging_apply_surfaces_materialized_public_benchmark_candidate(
         summary[
             "field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count"
         ]
-        == 0
+        == 17
     )
     assert (
         summary[
             "field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count"
         ]
-        == 17
+        == 0
     )
     assert (
         summary[
@@ -920,9 +926,8 @@ def test_current_staging_apply_surfaces_materialized_public_benchmark_candidate(
         ]
         == "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
     )
-    assert "fill/approve 17 coordinate fetch receipt rows" in summary["next_required_step"]
-    assert "operator_review_surface_ready_count=17" in summary["next_required_step"]
-    assert "receipt_manual_field_pending_count=187" in summary["next_required_step"]
-    assert "validate the 17 statistical-support coordinates" in summary["next_required_step"]
-    assert "replace 51 blocked metric source template placeholders" in summary["next_required_step"]
+    assert "coordinate fetch/validation is complete" in summary["next_required_step"]
+    assert "operator_review_surface_ready_count=51" in summary["next_required_step"]
+    assert "receipt_manual_field_pending_count=510" in summary["next_required_step"]
+    assert "materialize the DockQ/lDDT-PLI/internal DeltaG source payloads" in summary["next_required_step"]
     assert "fill/approve 51 metric payload receipt rows" in summary["next_required_step"]

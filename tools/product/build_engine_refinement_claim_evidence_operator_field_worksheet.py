@@ -1045,6 +1045,22 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
         and metric_evidence_pass_row_count >= len(work_order_rows)
     )
     operator_fill_complete = worksheet_ready and not pending_rows and not invalid_rows and science_evidence_complete
+    statistical_support_coordinates_ready_for_metric_payloads = bool(
+        _int(statistical_support_metric_materialization_summary.get("metric_materialization_row_count")) > 0
+        and _int(
+            statistical_support_metric_materialization_summary.get(
+                "metric_materialization_candidate_ready_count"
+            )
+        )
+        >= _int(statistical_support_metric_materialization_summary.get("metric_materialization_row_count"))
+        and _int(statistical_support_metric_materialization_summary.get("coordinate_validation_pass_row_count"))
+        >= _int(statistical_support_metric_materialization_summary.get("metric_materialization_row_count"))
+        and _int(
+            statistical_support_metric_materialization_summary.get("missing_required_metric_input_artifact_count")
+        )
+        == 0
+    )
+
     summary = {
         "packet_type": "engine_refinement_claim_evidence_operator_field_worksheet",
         "status": (
@@ -1923,50 +1939,81 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
             "and product-goal audit before any claim promotion."
             if operator_fill_complete
             else (
-                "Review the R4 coordinate-fetch preflight "
-                f"(r4_ready_for_review_row_count="
-                f"{_int(statistical_support_coordinate_fetch_r4_summary.get('ready_for_r4_review_row_count'))}, "
-                f"r4_blocked_row_count="
-                f"{_int(statistical_support_coordinate_fetch_r4_summary.get('blocked_r4_row_count'))}, "
-                f"fetch_required_row_count="
-                f"{_int(statistical_support_coordinate_fetch_r4_summary.get('fetch_required_row_count'))}, "
-                f"approval_token_required="
-                f"{_text(statistical_support_coordinate_fetch_r4_summary.get('approval_token_required'))}) "
-                "and fill/approve the 17-row coordinate fetch operator receipt "
-                f"(receipt_blocked_row_count="
-                f"{_int(statistical_support_coordinate_fetch_operator_receipt_summary.get('blocked_row_count'))}, "
-                f"operator_review_surface_ready_count="
-                f"{_int(statistical_support_coordinate_fetch_operator_receipt_summary.get('operator_review_surface_ready_count'))}, "
-                f"receipt_manual_field_pending_count="
-                f"{_int(statistical_support_coordinate_fetch_operator_receipt_summary.get('receipt_manual_field_pending_count'))}, "
-                f"fingerprint_verified_count="
-                f"{_int(statistical_support_coordinate_fetch_operator_receipt_summary.get('r4_preflight_row_fingerprint_verified_count'))}); "
-                "after explicit operator approval, stage and validate coordinates for "
-                f"{_int(statistical_support_metric_materialization_summary.get('metric_materialization_row_count'))} "
-                "statistical-support candidates "
-                f"(coordinate_validation_pass_row_count="
-                f"{_int(statistical_support_metric_materialization_summary.get('coordinate_validation_pass_row_count'))}, "
-                "metric_materialization_candidate_ready_count="
-                f"{_int(statistical_support_metric_materialization_summary.get('metric_materialization_candidate_ready_count'))}, "
-                "required_input_artifacts="
-                f"{_int(statistical_support_metric_materialization_summary.get('required_metric_input_artifact_count'))}/"
-                f"{_int(statistical_support_metric_materialization_summary.get('present_required_metric_input_artifact_count'))}/"
-                f"{_int(statistical_support_metric_materialization_summary.get('missing_required_metric_input_artifact_count'))}, "
-                "local_coordinate_path_candidates="
-                f"{_int(statistical_support_coordinate_intake_summary.get('coordinate_intake_suggested_local_path_candidate_count'))}, "
-                "local_coordinate_present_targets="
-                f"{_int(statistical_support_coordinate_intake_summary.get('coordinate_intake_suggested_local_path_present_target_count'))}, "
-                "local_coordinate_missing_targets="
-                f"{_int(statistical_support_coordinate_intake_summary.get('coordinate_intake_suggested_local_path_missing_target_count'))}, "
-                "planned_metric_source_payload_count="
-                f"{_int(statistical_support_metric_materialization_summary.get('planned_metric_source_payload_count'))}); "
-                "then fill/approve the 51-row metric payload operator receipt "
-                f"(receipt_blocked_row_count="
-                f"{_int(statistical_support_metric_source_payload_operator_receipt_summary.get('blocked_row_count'))}, "
-                f"approval_token_required="
-                f"{_text(statistical_support_metric_source_payload_operator_receipt_summary.get('approval_token_required'))}) "
-                "and materialize DockQ/lDDT-PLI/internal DeltaG source payloads before rerunning "
-                "bootstrap Spearman p05 ahead of any R9 claim receipt or canonical intake promotion."
+                (
+                    "Coordinate fetch and validation are complete "
+                    f"(coordinate_validation_pass_row_count="
+                    f"{_int(statistical_support_metric_materialization_summary.get('coordinate_validation_pass_row_count'))}, "
+                    "metric_materialization_candidate_ready_count="
+                    f"{_int(statistical_support_metric_materialization_summary.get('metric_materialization_candidate_ready_count'))}, "
+                    "required_input_artifacts="
+                    f"{_int(statistical_support_metric_materialization_summary.get('required_metric_input_artifact_count'))}/"
+                    f"{_int(statistical_support_metric_materialization_summary.get('present_required_metric_input_artifact_count'))}/"
+                    f"{_int(statistical_support_metric_materialization_summary.get('missing_required_metric_input_artifact_count'))}, "
+                    "local_coordinate_present_targets="
+                    f"{_int(statistical_support_coordinate_intake_summary.get('coordinate_intake_suggested_local_path_present_target_count'))}, "
+                    "local_coordinate_missing_targets="
+                    f"{_int(statistical_support_coordinate_intake_summary.get('coordinate_intake_suggested_local_path_missing_target_count'))}, "
+                    "planned_metric_source_payload_count="
+                    f"{_int(statistical_support_metric_materialization_summary.get('planned_metric_source_payload_count'))}); "
+                    "fill/approve the 51-row metric payload operator receipt "
+                    f"(receipt_blocked_row_count="
+                    f"{_int(statistical_support_metric_source_payload_operator_receipt_summary.get('blocked_row_count'))}, "
+                    f"operator_review_surface_ready_count="
+                    f"{_int(statistical_support_metric_source_payload_operator_receipt_summary.get('operator_review_surface_ready_count'))}, "
+                    f"receipt_manual_field_pending_count="
+                    f"{_int(statistical_support_metric_source_payload_operator_receipt_summary.get('receipt_manual_field_pending_count'))}, "
+                    f"approval_token_required="
+                    f"{_text(statistical_support_metric_source_payload_operator_receipt_summary.get('approval_token_required'))}) "
+                    "and materialize DockQ/lDDT-PLI/internal DeltaG source payloads before rerunning "
+                    "bootstrap Spearman p05 ahead of any R9 claim receipt or canonical intake promotion."
+                )
+                if statistical_support_coordinates_ready_for_metric_payloads
+                else (
+                    "Review the R4 coordinate-fetch preflight "
+                    f"(r4_ready_for_review_row_count="
+                    f"{_int(statistical_support_coordinate_fetch_r4_summary.get('ready_for_r4_review_row_count'))}, "
+                    f"r4_blocked_row_count="
+                    f"{_int(statistical_support_coordinate_fetch_r4_summary.get('blocked_r4_row_count'))}, "
+                    f"fetch_required_row_count="
+                    f"{_int(statistical_support_coordinate_fetch_r4_summary.get('fetch_required_row_count'))}, "
+                    f"approval_token_required="
+                    f"{_text(statistical_support_coordinate_fetch_r4_summary.get('approval_token_required'))}) "
+                    "and fill/approve the 17-row coordinate fetch operator receipt "
+                    f"(receipt_blocked_row_count="
+                    f"{_int(statistical_support_coordinate_fetch_operator_receipt_summary.get('blocked_row_count'))}, "
+                    f"operator_review_surface_ready_count="
+                    f"{_int(statistical_support_coordinate_fetch_operator_receipt_summary.get('operator_review_surface_ready_count'))}, "
+                    f"receipt_manual_field_pending_count="
+                    f"{_int(statistical_support_coordinate_fetch_operator_receipt_summary.get('receipt_manual_field_pending_count'))}, "
+                    f"fingerprint_verified_count="
+                    f"{_int(statistical_support_coordinate_fetch_operator_receipt_summary.get('r4_preflight_row_fingerprint_verified_count'))}); "
+                    "after explicit operator approval, stage and validate coordinates for "
+                    f"{_int(statistical_support_metric_materialization_summary.get('metric_materialization_row_count'))} "
+                    "statistical-support candidates "
+                    f"(coordinate_validation_pass_row_count="
+                    f"{_int(statistical_support_metric_materialization_summary.get('coordinate_validation_pass_row_count'))}, "
+                    "metric_materialization_candidate_ready_count="
+                    f"{_int(statistical_support_metric_materialization_summary.get('metric_materialization_candidate_ready_count'))}, "
+                    "required_input_artifacts="
+                    f"{_int(statistical_support_metric_materialization_summary.get('required_metric_input_artifact_count'))}/"
+                    f"{_int(statistical_support_metric_materialization_summary.get('present_required_metric_input_artifact_count'))}/"
+                    f"{_int(statistical_support_metric_materialization_summary.get('missing_required_metric_input_artifact_count'))}, "
+                    "local_coordinate_path_candidates="
+                    f"{_int(statistical_support_coordinate_intake_summary.get('coordinate_intake_suggested_local_path_candidate_count'))}, "
+                    "local_coordinate_present_targets="
+                    f"{_int(statistical_support_coordinate_intake_summary.get('coordinate_intake_suggested_local_path_present_target_count'))}, "
+                    "local_coordinate_missing_targets="
+                    f"{_int(statistical_support_coordinate_intake_summary.get('coordinate_intake_suggested_local_path_missing_target_count'))}, "
+                    "planned_metric_source_payload_count="
+                    f"{_int(statistical_support_metric_materialization_summary.get('planned_metric_source_payload_count'))}); "
+                    "then fill/approve the 51-row metric payload operator receipt "
+                    f"(receipt_blocked_row_count="
+                    f"{_int(statistical_support_metric_source_payload_operator_receipt_summary.get('blocked_row_count'))}, "
+                    f"approval_token_required="
+                    f"{_text(statistical_support_metric_source_payload_operator_receipt_summary.get('approval_token_required'))}) "
+                    "and materialize DockQ/lDDT-PLI/internal DeltaG source payloads before rerunning "
+                    "bootstrap Spearman p05 ahead of any R9 claim receipt or canonical intake promotion."
+                )
             )
             if (
                 materialized_science_evidence_complete

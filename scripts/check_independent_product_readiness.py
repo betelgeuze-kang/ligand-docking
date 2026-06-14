@@ -121,9 +121,6 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
         "gpcr_scorer_router_promotion_not_approved",
         "openmm_schrodinger_public_benchmark_not_promoted_to_canonical_intake",
         "openmm_schrodinger_public_benchmark_statistical_support_not_claim_grade",
-        "openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized",
-        "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_r4_approval_required",
-        "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_not_ready",
         "openmm_schrodinger_public_benchmark_statistical_support_metric_source_payload_operator_receipt_not_ready",
         "engine_refinement_claim_evidence_receipt_not_ready",
     ]

@@ -50,6 +50,35 @@ def _fetch_apply_payload(*, post_fetch_validation_supported: bool = True) -> dic
     }
 
 
+def _fetch_apply_executed_payload() -> dict:
+    return {
+        "summary": {
+            "status": "refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_ready",
+            "coordinate_fetch_apply_preview_ready": False,
+            "coordinate_fetch_apply_live_ready": True,
+            "coordinate_fetch_apply_downloaded_row_count": 1,
+            "coordinate_fetch_apply_destination_present_after_row_count": 1,
+            "post_fetch_validation_supported": True,
+            "post_fetch_validation_executed": True,
+            "download_executed": True,
+            "approval_token_present": True,
+            "approval_token_accepted": True,
+        },
+        "rows": [
+            {
+                "candidate_queue_id": "candidate_001",
+                "target_id": "1ABC",
+                "pose_id": "1abc_ligand_a_1",
+                "fetch_status": "downloaded",
+                "row_status": "downloaded",
+                "destination_present_after": True,
+                "download_executed": True,
+                "approval_token_accepted": True,
+            }
+        ],
+    }
+
+
 def _metric_readiness_payload() -> dict:
     return {
         "summary": {
@@ -84,6 +113,38 @@ def _metric_readiness_payload() -> dict:
     }
 
 
+def _metric_readiness_ready_payload() -> dict:
+    return {
+        "summary": {
+            "status": "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready",
+            "metric_materialization_readiness_ready": True,
+            "metric_materialization_row_count": 1,
+            "metric_materialization_candidate_ready_count": 1,
+            "metric_materialization_candidate_blocked_count": 0,
+            "coordinate_validation_pass_row_count": 1,
+            "coordinate_validation_blocked_row_count": 0,
+            "missing_required_metric_input_artifact_count": 0,
+            "planned_metric_source_payload_count": 3,
+            "existing_metric_source_payload_count": 0,
+        },
+        "rows": [
+            {
+                "candidate_queue_id": "candidate_001",
+                "target_id": "1ABC",
+                "pose_id": "1abc_ligand_a_1",
+                "coordinate_validation_status": "pass",
+                "metric_materialization_status": "ready_for_metric_source_materialization",
+                "metric_materialization_candidate_ready": True,
+                "metric_materialization_blockers": "",
+                "missing_required_metric_input_artifact_count": 0,
+                "planned_metric_source_payload_count": 3,
+                "existing_metric_source_payload_count": 0,
+                "required_metric_source_payloads": "dockq;lddt_pli;internal_deltaG",
+            }
+        ],
+    }
+
+
 def _metric_source_templates_payload() -> dict:
     return {
         "summary": {
@@ -103,6 +164,32 @@ def _metric_source_templates_payload() -> dict:
                 "pose_id": "1abc_ligand_a_1",
                 "metric_name": metric_name,
                 "metric_source_payload_fill_ready": False,
+                "existing_metric_source_payload_present": False,
+            }
+            for metric_name in ("dockq", "lddt_pli", "internal_deltaG")
+        ],
+    }
+
+
+def _metric_source_templates_ready_payload() -> dict:
+    return {
+        "summary": {
+            "status": "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready",
+            "metric_source_templates_ready": True,
+            "template_row_count": 3,
+            "template_candidate_row_count": 1,
+            "template_metric_name_count": 3,
+            "metric_source_payload_fill_ready_row_count": 3,
+            "metric_source_payload_fill_blocked_row_count": 0,
+            "existing_metric_source_payload_present_row_count": 0,
+        },
+        "rows": [
+            {
+                "candidate_queue_id": "candidate_001",
+                "target_id": "1ABC",
+                "pose_id": "1abc_ligand_a_1",
+                "metric_name": metric_name,
+                "metric_source_payload_fill_ready": True,
                 "existing_metric_source_payload_present": False,
             }
             for metric_name in ("dockq", "lddt_pli", "internal_deltaG")
@@ -183,6 +270,58 @@ def test_coordinate_fetch_r4_preflight_builds_review_rows(tmp_path: Path) -> Non
     assert row["operator_confirmation_required"] is True
     assert row["download_executed"] is False
     assert row["external_state_mutated"] is False
+
+
+def test_coordinate_fetch_r4_preflight_accepts_approved_execute_posture(tmp_path: Path) -> None:
+    fetch_plan_json = tmp_path / "runs" / "fetch_plan.json"
+    fetch_apply_json = tmp_path / "runs" / "fetch_apply.json"
+    metric_json = tmp_path / "runs" / "metric_readiness.json"
+    templates_json = tmp_path / "runs" / "metric_source_templates.json"
+    _write_json(fetch_plan_json, _fetch_plan_payload())
+    _write_json(fetch_apply_json, _fetch_apply_executed_payload())
+    _write_json(metric_json, _metric_readiness_ready_payload())
+    _write_json(templates_json, _metric_source_templates_ready_payload())
+
+    payload = mod.build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight(
+        fetch_plan_json=fetch_plan_json,
+        fetch_apply_json=fetch_apply_json,
+        metric_materialization_readiness_json=metric_json,
+        metric_source_templates_json=templates_json,
+        root=tmp_path,
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == (
+        "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
+    )
+    assert summary["r4_preflight_ready"] is True
+    assert summary["r4_preflight_posture"] == "approved_fetch_executed"
+    assert summary["operator_approval_required"] is False
+    assert summary["operator_confirmation_required"] is False
+    assert summary["authorized_for_external_download"] is True
+    assert summary["approval_token_present"] is True
+    assert summary["approval_token_accepted"] is True
+    assert summary["download_executed"] is True
+    assert summary["post_fetch_validation_executed"] is True
+    assert summary["fetch_apply_live_ready"] is True
+    assert summary["coordinate_fetch_apply_downloaded_row_count"] == 1
+    assert summary["coordinate_fetch_apply_destination_present_after_row_count"] == 1
+    assert summary["coordinate_validation_pass_row_count"] == 1
+    assert summary["metric_materialization_candidate_ready_count"] == 1
+    assert summary["metric_materialization_candidate_blocked_count"] == 0
+    assert summary["metric_source_template_fill_ready_row_count"] == 3
+    assert summary["metric_source_template_fill_blocked_row_count"] == 0
+
+    row = payload["rows"][0]
+    assert row["coordinate_validation_status"] == "pass"
+    assert row["coordinate_fetch_status"] == "downloaded"
+    assert row["coordinate_fetch_apply_status"] == "downloaded"
+    assert row["staging_destination_present"] is True
+    assert row["download_executed"] is True
+    assert row["approval_token_accepted"] is True
+    assert row["operator_confirmation_required"] is False
+    assert row["metric_materialization_status"] == "ready_for_metric_source_materialization"
+    assert row["metric_source_template_fill_ready_count"] == 3
 
 
 def test_coordinate_fetch_r4_preflight_blocks_without_post_fetch_validation(
