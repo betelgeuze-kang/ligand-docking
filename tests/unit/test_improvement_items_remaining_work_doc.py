@@ -256,6 +256,18 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`coordinate_fetch_staging_destination_row_count=17`" in text
     assert "`coordinate_fetch_ready_for_validation_row_count=0`" in text
     assert "`coordinate_fetch_external_download_executed=false`" in text
+    assert (
+        "`runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_current.json`"
+        in text
+    )
+    assert "`blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply`" in text
+    assert "`coordinate_fetch_apply_preview_ready=true`" in text
+    assert "`coordinate_fetch_apply_row_count=17`" in text
+    assert "`coordinate_fetch_apply_preflight_pass_row_count=17`" in text
+    assert "`coordinate_fetch_apply_preview_ready_row_count=17`" in text
+    assert "`coordinate_fetch_apply_blocked_row_count=0`" in text
+    assert "`coordinate_fetch_apply_downloaded_row_count=0`" in text
+    assert "`approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`" in text
     assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
     assert "`runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`" in text
     assert "`Fill 17 additional reviewed public benchmark-pair expansion slots`" in text
@@ -267,6 +279,7 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "statistical support coordinate intake 17개" in text
     assert "coordinate validation pass 0개/blocked 17개" in text
     assert "statistical support coordinate fetch required 17개/ready-for-validation 0개" in text
+    assert "statistical support coordinate fetch apply preview preflight pass 17개/downloaded 0개" in text
     assert "`worksheet_field_row_count=389`" in text
     assert "`operator_fill_pending_field_count=296`" in text
     assert "`public_benchmark_statistical_support_expansion_field_count=221`" in text

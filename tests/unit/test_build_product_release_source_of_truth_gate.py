@@ -1296,6 +1296,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "refine_tier_public_benchmark_statistical_support_candidate_queue" in artifact_ids
     assert "refine_tier_public_benchmark_statistical_support_coordinate_intake" in artifact_ids
     assert "refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan" in artifact_ids
+    assert "refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply" in artifact_ids
     assert "science_accuracy_frontier" in artifact_ids
     assert "self_hosted_license_distribution_audit" in artifact_ids
     assert "third_party_license_review_gate" in artifact_ids
@@ -1321,6 +1322,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "refine_tier_public_benchmark_statistical_support_coordinate_intake_semantic_ready" in status_ids
     assert (
         "refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_semantic_ready"
+        in status_ids
+    )
+    assert (
+        "refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_blocked_semantic_ready"
         in status_ids
     )
     assert "product_ledger_privacy_scan" in artifact_ids
@@ -1395,6 +1400,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert (
         mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_PLAN_COMMAND
+        in mod.RELEASE_REFRESH_COMMANDS
+    )
+    assert (
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_APPLY_COMMAND
         in mod.RELEASE_REFRESH_COMMANDS
     )
     assert "python3 tools/product/build_science_accuracy_frontier.py" in mod.RELEASE_REFRESH_COMMANDS
@@ -2020,6 +2029,30 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "statistical-support targets, then rerun coordinate intake validation before metric "
         "source materialization."
     )
+    statistical_coordinate_fetch_apply_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_blocked_semantic_ready"
+    )
+    assert statistical_coordinate_fetch_apply_status_spec["required_status"] == (
+        "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply"
+    )
+    assert "coordinate_fetch_apply_preview_ready" in statistical_coordinate_fetch_apply_status_spec[
+        "required_true_fields"
+    ]
+    assert statistical_coordinate_fetch_apply_status_spec["required_int_exact_fields"][
+        "coordinate_fetch_apply_row_count"
+    ] == 17
+    assert statistical_coordinate_fetch_apply_status_spec["required_int_exact_fields"][
+        "coordinate_fetch_apply_preflight_pass_row_count"
+    ] == 17
+    assert statistical_coordinate_fetch_apply_status_spec["required_int_exact_fields"][
+        "coordinate_fetch_apply_downloaded_row_count"
+    ] == 0
+    assert statistical_coordinate_fetch_apply_status_spec["required_text_exact_fields"][
+        "approval_token_required"
+    ] == "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
     engine_field_worksheet_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -2864,6 +2897,26 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json" in (
         statistical_coordinate_fetch_spec["depends_on"]
     )
+    statistical_coordinate_fetch_apply_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply"
+    )
+    assert statistical_coordinate_fetch_apply_spec["builder_command"] == (
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_APPLY_COMMAND
+    )
+    assert "tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py" in (
+        statistical_coordinate_fetch_apply_spec["depends_on"]
+    )
+    assert "tools/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py" in (
+        statistical_coordinate_fetch_apply_spec["depends_on"]
+    )
+    assert "tools/product/fetch_public_benchmark_native_structure.py" in (
+        statistical_coordinate_fetch_apply_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_current.json" in (
+        statistical_coordinate_fetch_apply_spec["depends_on"]
+    )
     priority_packet_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -3105,6 +3158,11 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index(
         mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_PLAN_COMMAND
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_APPLY_COMMAND
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_APPLY_COMMAND
     ) < mod.RELEASE_REFRESH_COMMANDS.index(
         "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py"
     )
