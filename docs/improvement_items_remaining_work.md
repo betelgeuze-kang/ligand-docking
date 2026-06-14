@@ -702,6 +702,30 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   R9 holdout 또는 operator-reviewed metric-source payload에서 재검증하고,
   `3n86`, `2j7h`, `3f3e` 잔차를 줄이는 calibrated scoring으로 bootstrap p05를
   0.5 이상으로 끌어올리는 일이다.
+  2026-06-15 KST 추가 fit/holdout calibration probe는 같은 variant grid를
+  fit split 선택과 holdout guard로 분리해 calibration 방향을 한 번 더 좁혔다.
+  `config/refine_tier_public_benchmark_fit_holdout_calibration_probe_current.json`과
+  `docs/refine_tier_public_benchmark_fit_holdout_calibration_probe_current.md`는
+  `refine_tier_public_benchmark_fit_holdout_calibration_probe_ready`,
+  `fit_pair_count=17`, `holdout_pair_count=8`,
+  `feature_complete_pair_count=25`,
+  `baseline_fit_spearman=0.5343137254901961`,
+  `baseline_holdout_spearman=0.6428571428571429`,
+  `baseline_bootstrap_p05=0.23053846153846155`,
+  `fit_selected_variant_id=sqrt_contact_density_only`,
+  `fit_selected_fit_spearman=0.6642156862745098`,
+  `fit_selected_holdout_spearman=0.6190476190476191`,
+  `fit_selected_holdout_non_degradation_ready=false`,
+  `fit_selected_bootstrap_p05=0.36630769230769233`,
+  `holdout_guarded_variant_id=small_ligand_rescue_a0.08`,
+  `holdout_guarded_holdout_spearman=0.7142857142857143`,
+  `holdout_guarded_bootstrap_p05=0.3547307692307693`,
+  `holdout_guarded_claim_grade_p05_ready=false`,
+  `calibration_generalization_ready=false`를 기록한다. 즉 fit-only 최선인
+  contact-sqrt density는 combined p05를 가장 끌어올리지만 holdout non-degradation
+  guard를 통과하지 못하고, holdout까지 지키는 small-ligand rescue 후보도
+  claim-grade p05 0.5에는 아직 미달한다. 이 probe도 score mutation, payload write,
+  canonical intake, claim promotion을 하지 않는다.
   `runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json`은
   이 execute 직전 handoff를 R4/operator review packet으로 고정해
   `refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready`,
