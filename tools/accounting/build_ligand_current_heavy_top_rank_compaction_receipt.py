@@ -34,11 +34,21 @@ RAW_HEAVY_TOKENS = (
     "shadow_replay_scores",
     "replay_scores",
     "feature_cache",
+    "stage3_refine_scores",
 )
 
 SKIP_LARGE_NAME_TOKENS = (
     "wetlab_broad_screen_compound_universe",
     "runs_artifact_inventory",
+)
+
+LIGAND_HEAVY_SCOPE_TOKENS = (
+    "gpcr",
+    "ligand",
+    "htvs",
+    "external_validation",
+    "ion_trpv1",
+    "kinase",
 )
 
 SCORE_COLUMN_PRIORITY = (
@@ -49,14 +59,23 @@ SCORE_COLUMN_PRIORITY = (
 )
 
 RETAIN_COLUMNS = (
+    "queue_id",
     "target",
     "ligand_id",
+    "ligand_smiles",
+    "export_rank",
+    "replica_idx",
     "is_binder",
     "reference_binding_kcal_mol",
     "base_score",
     "binding_score_composite_v7",
     "binding_score_composite_v7_residual_active",
     "binding_score_composite_v7_residual_shadow",
+    "binding_energy_mmpbsa_kcal_mol_proxy",
+    "deltaG_mm_gbsa_kcal_mol",
+    "binding_score_stronger_physics_v1",
+    "physics_refinement_decision_bucket",
+    "physics_refinement_confidence",
     "residual_shadow_delta",
     "residual_shadow_band",
     "feature_cache_status",
@@ -80,7 +99,7 @@ def _is_candidate_name(name: str) -> bool:
     lower = name.lower()
     return (
         lower.endswith(".csv")
-        and "gpcr" in lower
+        and any(token in lower for token in LIGAND_HEAVY_SCOPE_TOKENS)
         and any(token in lower for token in RAW_HEAVY_TOKENS)
     )
 
@@ -93,8 +112,8 @@ def _skip_reason(path: Path) -> str:
         return "skipped_non_csv_payload"
     if not any(token in lower for token in RAW_HEAVY_TOKENS):
         return "skipped_not_ligand_heavy_raw_score_or_feature_cache"
-    if "gpcr" not in lower:
-        return "skipped_outside_current_gpcr_scope"
+    if not any(token in lower for token in LIGAND_HEAVY_SCOPE_TOKENS):
+        return "skipped_outside_current_ligand_heavy_scope"
     return ""
 
 

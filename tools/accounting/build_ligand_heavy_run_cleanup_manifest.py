@@ -44,6 +44,7 @@ LIGAND_SCOPE_TOKENS = (
     "dude_z",
     "lit_pcba",
     "adrb2",
+    "nightly_stage6_downstream",
 )
 
 TOP_RANKING_KEEP_TOKENS = (
@@ -374,6 +375,19 @@ def _disposition(
     preserved_evidence: list[str],
 ) -> tuple[str, bool, str]:
     name = path.name.lower()
+    raw_shape = _is_raw_dir_delete_shape(path.name) if path.is_dir() else _is_raw_file_delete_shape(path.name)
+    if (
+        _is_current_named(rel_path)
+        and raw_shape
+        and _cleanup_class(path) == "raw_stage2_trajectory_sidecar"
+        and age >= older_than_days
+        and preserved_evidence
+    ):
+        return (
+            "delete_old_current_stage2_trajectory_after_top_rank_manifest_approval",
+            True,
+            "Old current-named stage2 trajectory sidecar has matching top-ranking or compact summary evidence preserved.",
+        )
     if current_refs or source_refs:
         return (
             "keep_referenced_current_evidence",
@@ -398,7 +412,6 @@ def _disposition(
             False,
             "Payload is newer than the cleanup age threshold.",
         )
-    raw_shape = _is_raw_dir_delete_shape(path.name) if path.is_dir() else _is_raw_file_delete_shape(path.name)
     if raw_shape and preserved_evidence:
         return (
             "delete_after_top_rank_manifest_approval",

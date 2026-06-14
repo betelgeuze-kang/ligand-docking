@@ -1,17 +1,17 @@
 # Ligand Heavy Run Retention Receipt
 
 - status: `ligand_heavy_run_retention_receipt_execution_recorded`
-- manifest_delete_recommended_count: `0`
-- manifest_delete_recommended_size_human: `0.00 B`
-- manifest_top_rank_keep_count: `4387`
-- manifest_top_rank_keep_size_human: `311.28 MiB`
-- manifest_review_required_count: `189`
-- manifest_review_required_size_human: `884.87 MiB`
-- retained_top_rank_or_compact_evidence_count: `217`
-- current_execution_deleted_count: `11`
-- current_execution_deleted_size_human: `1.18 GiB`
-- cumulative_execution_deleted_count: `71`
-- cumulative_execution_deleted_size_human: `3.11 GiB`
+- manifest_delete_recommended_count: `5`
+- manifest_delete_recommended_size_human: `239.74 MiB`
+- manifest_top_rank_keep_count: `4453`
+- manifest_top_rank_keep_size_human: `311.88 MiB`
+- manifest_review_required_count: `209`
+- manifest_review_required_size_human: `126.38 MiB`
+- retained_top_rank_or_compact_evidence_count: `237`
+- current_execution_deleted_count: `5`
+- current_execution_deleted_size_human: `239.74 MiB`
+- cumulative_execution_deleted_count: `76`
+- cumulative_execution_deleted_size_human: `3.35 GiB`
 - execution_failed_count: `0`
 - external_state_mutated: `False`
 

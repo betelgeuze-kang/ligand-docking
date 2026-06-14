@@ -3009,9 +3009,26 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   Git-tracked receipt는
   `config/ligand_current_heavy_top_rank_compaction_current.json` 및
   `docs/ligand_current_heavy_top_rank_compaction_current.md`에 남겼다.
-  wetlab compound universe, artifact inventory, essential evidence register,
-  CASP17 viewer HTML, 최근 stage3 refine scores는 입력/인벤토리/최근 payload로
-  분리해 이번 삭제 대상에서 제외했다.
+- 2026-06-15 KST 추가 `ubuntu-1` cleanup에서는 같은 compaction 경로를
+  `stage3_refine_scores.csv`까지 확장했다. May 11/12 external validation
+  stage3 refine 대형 CSV 7개에서 각 top-50 row만 남기고 원본 7개를 삭제했다.
+  삭제량은 `122.17 MiB`, 보존 row는 `350`, 실패는 `0`이며 별도 receipt는
+  `config/ligand_current_heavy_stage3_refine_top_rank_compaction_current.json`
+  및 `docs/ligand_current_heavy_stage3_refine_top_rank_compaction_current.md`에
+  남겼다.
+- 같은 추가 cleanup에서 top-rank/summary evidence가 이미 남아 있던
+  `nightly_stage6_downstream_execute_current_stage2_traj_frames` 및
+  `nightly_stage6_downstream_rerun_current_stage2_traj_frames`를
+  approval-gated ligand cleanup manifest로 삭제했다. 관련 lock/log까지 총
+  5개, `239.74 MiB`가 삭제됐고, post-clean
+  `runs/ligand_heavy_run_cleanup_manifest_current.json`은
+  `delete_recommended_count=0`, `top_rank_keep_count=4453`,
+  `review_required_count=209`다. 누적 ligand-heavy cleanup receipt는
+  `cumulative_execution_deleted_count=76`,
+  `cumulative_execution_deleted_size_human=3.35 GiB`로 갱신됐다.
+- wetlab compound universe, artifact inventory, essential evidence register,
+  CASP17 viewer HTML, active SMILES/bead cache는 입력/인벤토리/증거/register
+  또는 current config 참조 payload로 분리해 이번 삭제 대상에서 제외했다.
 - Final PDB/mmCIF, top representative, sha256 manifest, viewer index,
   validation report 보존.
 - 다음 cleanup은 `docs/storage_retention_cleanup_policy.md`의 keep set 기준으로

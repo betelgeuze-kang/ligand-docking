@@ -134,6 +134,38 @@ def test_ligand_cleanup_manifest_accepts_eval_unique_as_replay_retention_evidenc
     assert rows[str(eval_unique.relative_to(tmp_path))]["disposition"] == "keep_top_ranking_or_compact_evidence"
 
 
+def test_ligand_cleanup_manifest_marks_old_nightly_stage6_current_frames_with_rank_evidence(
+    tmp_path: Path,
+) -> None:
+    runs = tmp_path / "runs"
+    prefix = "nightly_stage6_downstream_execute_current"
+    frame_dir = runs / f"{prefix}_stage2_traj_frames"
+    ranking_topk = runs / f"{prefix}_stage5_ranking_topk.csv"
+    ranking_unique = runs / f"{prefix}_stage5_ranking_unique.csv"
+    ranking_summary = runs / f"{prefix}_stage5_ranking_summary.json"
+    manifest_chunks = runs / f"{prefix}_stage2_traj_manifest_chunks"
+
+    _mkdir(frame_dir, age_days=30)
+    _mkdir(manifest_chunks, age_days=30)
+    _write(ranking_topk, "k,hit_rate\n4,0.5\n", age_days=30)
+    _write(ranking_unique, "target,ligand_id,score\nT,L,-1\n", age_days=30)
+    _write(ranking_summary, "{}", age_days=30)
+
+    payload = mod.build_ligand_heavy_run_cleanup_manifest(root=tmp_path, now=NOW, older_than_days=7)
+    rows = {row["path"]: row for row in payload["rows"]}
+
+    frame_row = rows[str(frame_dir.relative_to(tmp_path))]
+    assert frame_row["cleanup_class"] == "raw_stage2_trajectory_sidecar"
+    assert frame_row["delete_recommended"] is True
+    assert (
+        frame_row["disposition"]
+        == "delete_old_current_stage2_trajectory_after_top_rank_manifest_approval"
+    )
+    assert frame_row["preserved_evidence_count"] >= 2
+    assert rows[str(manifest_chunks.relative_to(tmp_path))]["delete_recommended"] is False
+    assert rows[str(manifest_chunks.relative_to(tmp_path))]["disposition"] == "review_current_named_ligand_payload"
+
+
 def test_ligand_cleanup_manifest_marks_old_label_payloads_when_summary_evidence_exists(
     tmp_path: Path,
 ) -> None:

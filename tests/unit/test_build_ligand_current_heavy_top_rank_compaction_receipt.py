@@ -84,3 +84,39 @@ def test_current_heavy_compaction_deletes_only_with_valid_approval(tmp_path: Pat
     assert payload["rows"][0]["top_rows"][0]["ligand_id"] == "L2"
     assert not csv_path.exists()
     assert (tmp_path / payload["rows"][0]["top_rank_output_csv"]).is_file()
+
+
+def test_current_heavy_compaction_accepts_ligand_refine_scores_without_gpcr_name(tmp_path: Path) -> None:
+    csv_path = (
+        tmp_path
+        / "runs"
+        / "external_validation_2026-05-12_ligandonly_kinase_core_stage3_refine_scores.csv"
+    )
+    _write_old(
+        csv_path,
+        "\n".join(
+            [
+                "queue_id,target,ligand_id,ligand_smiles,binding_score_composite_v7,deltaG_mm_gbsa_kcal_mol,export_rank",
+                "Q1,EGFR,L1,C,-11.0,-8.0,2",
+                "Q2,EGFR,L2,CC,-20.0,-12.0,1",
+                "Q3,EGFR,L3,CCC,-5.0,-3.0,3",
+            ]
+        )
+        + "\n",
+    )
+
+    payload = mod.build_ligand_current_heavy_top_rank_compaction_receipt(
+        root=tmp_path,
+        min_size_bytes=1,
+        top_n=2,
+        now=NOW,
+    )
+
+    assert payload["summary"]["candidate_count"] == 1
+    row = payload["rows"][0]
+    assert row["path"].endswith("stage3_refine_scores.csv")
+    assert row["score_col"] == "binding_score_composite_v7"
+    assert row["top_rows"][0]["ligand_id"] == "L2"
+    assert row["top_rows"][0]["queue_id"] == "Q2"
+    assert row["top_rows"][0]["deltaG_mm_gbsa_kcal_mol"] == "-12.0"
+    assert row["delete_status"] == "pending_delete_after_top_rank_retention"
