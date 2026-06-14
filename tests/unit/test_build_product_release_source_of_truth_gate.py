@@ -1778,6 +1778,21 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
         "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
         "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": 11,
+        "public_benchmark_statistical_support_coordinate_intake_ready": 1,
+        "public_benchmark_statistical_support_coordinate_intake_row_count": 17,
+        "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count": 0,
+        "public_benchmark_statistical_support_coordinate_intake_missing_row_count": 17,
+        "public_benchmark_statistical_support_coordinate_intake_suggested_public_url_row_count": 17,
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_row_count": 17,
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count": 136,
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count": 0,
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count": 0,
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count": 17,
+        "public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count": 51,
+        "public_benchmark_statistical_support_coordinate_intake_operator_review_required_row_count": 17,
+        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count": 0,
+        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count": 17,
+        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_missing_row_count": 17,
         "public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
         "public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count": 17,
         "public_benchmark_statistical_support_metric_source_templates_template_metric_name_count": 3,
@@ -1867,6 +1882,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields": (
             "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
             "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_status": (
+            "refine_tier_public_benchmark_statistical_support_coordinate_intake_ready"
         ),
         "public_benchmark_statistical_support_metric_source_templates_status": (
             "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"

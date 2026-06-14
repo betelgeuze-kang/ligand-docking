@@ -302,6 +302,12 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
                 f"{science_frontier.get('public_benchmark_materialized_free_energy_spearman_bootstrap_p05')};"
                 f"public_benchmark_materialized_claim_grade_statistical_support_ready="
                 f"{science_frontier.get('public_benchmark_materialized_claim_grade_statistical_support_ready')};"
+                f"coordinate_intake_ready="
+                f"{science_frontier.get('public_benchmark_statistical_support_coordinate_intake_ready')};"
+                f"coordinate_intake_missing="
+                f"{science_frontier.get('public_benchmark_statistical_support_coordinate_intake_missing_row_count')};"
+                f"coordinate_intake_local_path_present_targets="
+                f"{science_frontier.get('public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count')};"
                 f"coordinate_fetch_r4_preflight_ready="
                 f"{science_frontier.get('public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready')};"
                 f"coordinate_fetch_r4_fetch_required="
@@ -704,6 +710,81 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
                     "public_benchmark_statistical_support_metric_source_templates_canonical_intake_promotion_allowed"
                 )
                 is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_present": bool(
+                science_frontier.get("public_benchmark_statistical_support_coordinate_intake_present") is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_ready": bool(
+                science_frontier.get("public_benchmark_statistical_support_coordinate_intake_ready") is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_status": str(
+                science_frontier.get("public_benchmark_statistical_support_coordinate_intake_status", "")
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_row_count": _int(
+                science_frontier.get("public_benchmark_statistical_support_coordinate_intake_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_missing_row_count": _int(
+                science_frontier.get("public_benchmark_statistical_support_coordinate_intake_missing_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_public_url_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_intake_suggested_public_url_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_operator_review_required_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_intake_operator_review_required_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_coordinate_validation_missing_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_missing_row_count"
+                )
             ),
             "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present": bool(
                 science_frontier.get("public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present")

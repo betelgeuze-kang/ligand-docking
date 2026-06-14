@@ -427,6 +427,98 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         is False
     )
     assert (
+        summary["science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_present"]
+        is True
+    )
+    assert (
+        summary["science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_ready"]
+        is True
+    )
+    assert (
+        summary["science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_status"]
+        == "refine_tier_public_benchmark_statistical_support_coordinate_intake_ready"
+    )
+    assert (
+        summary["science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_row_count"]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count"
+        ]
+        == 0
+    )
+    assert (
+        summary["science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_missing_row_count"]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_public_url_row_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_row_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count"
+        ]
+        == 136
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_operator_review_required_row_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_coordinate_validation_missing_row_count"
+        ]
+        == 17
+    )
+    assert (
         summary[
             "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present"
         ]
@@ -828,6 +920,9 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
     assert "metric_source_payload_receipt_ready=False" in boundary["observed"]
     assert "metric_source_payload_receipt_blocked=51" in boundary["observed"]
     assert "metric_source_payload_receipt_fingerprint_verified=51" in boundary["observed"]
+    assert "coordinate_intake_ready=True" in boundary["observed"]
+    assert "coordinate_intake_missing=17" in boundary["observed"]
+    assert "coordinate_intake_local_path_present_targets=0" in boundary["observed"]
 
 
 def test_verify_quality_gate_script_rebuilds_operational_quality_fail_closed() -> None:

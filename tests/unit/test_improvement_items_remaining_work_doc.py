@@ -191,6 +191,38 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`science_accuracy_frontier_restricted_ready=true`" in text
     assert "`science_accuracy_frontier_broad_commercial_blocked=true`" in text
     assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_ready=true`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_row_count=17`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_missing_row_count=17`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count=136`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count=0`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count=0`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count=17`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count=51`"
+        in text
+    )
+    assert (
         "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready=true`"
         in text
     )

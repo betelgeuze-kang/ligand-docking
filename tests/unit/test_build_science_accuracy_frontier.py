@@ -27,6 +27,9 @@ def _write_inputs(
         "public_benchmark_statistical_support_metric_materialization_readiness_json": (
             tmp_path / "public_stat_metric_materialization_readiness.json"
         ),
+        "public_benchmark_statistical_support_coordinate_intake_json": (
+            tmp_path / "public_stat_coordinate_intake.json"
+        ),
         "public_benchmark_statistical_support_metric_source_templates_json": (
             tmp_path / "public_stat_metric_source_templates.json"
         ),
@@ -259,6 +262,39 @@ def _write_inputs(
                 "DockQ, lDDT-PLI, and internal DeltaG source payloads and rerunning bootstrap "
                 "Spearman p05."
             ),
+        },
+    )
+    _write(
+        paths["public_benchmark_statistical_support_coordinate_intake_json"],
+        {
+            "status": "refine_tier_public_benchmark_statistical_support_coordinate_intake_ready",
+            "coordinate_intake_ready": True,
+            "coordinate_intake_row_count": 17 if materialized_candidate_ready and not ready else 0,
+            "coordinate_intake_artifact_present_row_count": 0,
+            "coordinate_intake_missing_row_count": 17 if materialized_candidate_ready and not ready else 0,
+            "coordinate_intake_suggested_public_url_row_count": (
+                17 if materialized_candidate_ready and not ready else 0
+            ),
+            "coordinate_intake_suggested_local_path_row_count": (
+                17 if materialized_candidate_ready and not ready else 0
+            ),
+            "coordinate_intake_suggested_local_path_candidate_count": (
+                136 if materialized_candidate_ready and not ready else 0
+            ),
+            "coordinate_intake_suggested_local_path_present_count": 0,
+            "coordinate_intake_suggested_local_path_present_target_count": 0,
+            "coordinate_intake_suggested_local_path_missing_target_count": (
+                17 if materialized_candidate_ready and not ready else 0
+            ),
+            "coordinate_intake_expected_archive_member_example_count": (
+                51 if materialized_candidate_ready and not ready else 0
+            ),
+            "coordinate_intake_operator_review_required_row_count": (
+                17 if materialized_candidate_ready and not ready else 0
+            ),
+            "coordinate_validation_pass_row_count": 0,
+            "coordinate_validation_blocked_row_count": 17 if materialized_candidate_ready and not ready else 0,
+            "coordinate_validation_missing_row_count": 17 if materialized_candidate_ready and not ready else 0,
         },
     )
     _write(
@@ -920,6 +956,49 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required"
     ] == "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
     assert summary["public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocker_count"] == 1
+    assert summary["public_benchmark_statistical_support_coordinate_intake_present"] is True
+    assert summary["public_benchmark_statistical_support_coordinate_intake_ready"] is True
+    assert summary["public_benchmark_statistical_support_coordinate_intake_status"] == (
+        "refine_tier_public_benchmark_statistical_support_coordinate_intake_ready"
+    )
+    assert summary["public_benchmark_statistical_support_coordinate_intake_row_count"] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count"
+    ] == 0
+    assert summary["public_benchmark_statistical_support_coordinate_intake_missing_row_count"] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_intake_suggested_public_url_row_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_row_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count"
+    ] == 136
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count"
+    ] == 0
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count"
+    ] == 0
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count"
+    ] == 51
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_intake_operator_review_required_row_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count"
+    ] == 0
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_missing_row_count"
+    ] == 17
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present"] is True
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"] is True
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status"] == (
@@ -1071,6 +1150,8 @@ def test_science_accuracy_frontier_cli_writes_json_and_markdown(tmp_path: Path) 
             str(paths["public_benchmark_statistical_support_work_order_json"]),
             "--public-benchmark-statistical-support-metric-materialization-readiness-json",
             str(paths["public_benchmark_statistical_support_metric_materialization_readiness_json"]),
+            "--public-benchmark-statistical-support-coordinate-intake-json",
+            str(paths["public_benchmark_statistical_support_coordinate_intake_json"]),
             "--public-benchmark-statistical-support-metric-source-templates-json",
             str(paths["public_benchmark_statistical_support_metric_source_templates_json"]),
             "--public-benchmark-statistical-support-metric-source-payload-operator-receipt-json",
