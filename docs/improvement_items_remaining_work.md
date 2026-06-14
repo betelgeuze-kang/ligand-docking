@@ -1182,6 +1182,11 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `candidate_public_benchmark_blocked_row_count=8`,
   `field_worksheet_pending_field_count=296`,
   `field_worksheet_work_order_pending_field_count=56`,
+  `field_worksheet_public_benchmark_statistical_support_coordinate_intake_ready=true`,
+  `field_worksheet_public_benchmark_statistical_support_coordinate_intake_row_count=17`,
+  `field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count=136`,
+  `field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count=0`,
+  `field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count=17`,
   `field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count=51`,
   `field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=0`,
   `field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=51`,
@@ -1199,6 +1204,11 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required=APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS`,
   `live_copy_allowed=false`, `public_benchmark_intake_write_allowed=false`,
   `external_engine_calls_executed=false`, `external_state_mutated=false`를 기록한다.
+  또한 field worksheet 자체의 `next_required_step`도
+  `local_coordinate_path_candidates=136`,
+  `local_coordinate_present_targets=0`,
+  `local_coordinate_missing_targets=17`를 포함해, R9 operator가 coordinate fetch 승인 전에
+  로컬 후보 경로 재고와 실제 present target 결손을 동시에 보게 한다.
   따라서 R9 operator가 receipt row나 public benchmark work-order row를 채워도,
   승인 token과 semantic gate가 모두 맞기 전에는 canonical evidence receipt나 tracked
   public benchmark intake CSV가 갱신되지 않는다.
@@ -1612,6 +1622,11 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `candidate_public_benchmark_metric_evidence_missing_required_input_artifact_row_count=0`,
   `candidate_public_benchmark_metric_evidence_missing_required_receptor_input_row_count=0`,
   `candidate_public_benchmark_metric_evidence_required_input_sha256_blocked_row_count=0`,
+  `field_worksheet_public_benchmark_statistical_support_coordinate_intake_ready=true`,
+  `field_worksheet_public_benchmark_statistical_support_coordinate_intake_row_count=17`,
+  `field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count=136`,
+  `field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count=0`,
+  `field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count=17`,
   `field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count=51`,
   `field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=0`,
   `field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=51`,

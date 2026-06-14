@@ -293,6 +293,9 @@ def build_engine_refinement_claim_evidence_operator_staging_apply(
             "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
         )
     )
+    field_coordinate_intake_artifact = _text(
+        field_worksheet.get("public_benchmark_statistical_support_coordinate_intake_artifact")
+    )
     field_metric_source_payload_receipt_artifact = _text(
         field_worksheet.get(
             "public_benchmark_statistical_support_metric_source_payload_operator_receipt_artifact"
@@ -594,6 +597,68 @@ def build_engine_refinement_claim_evidence_operator_staging_apply(
                 "public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total"
             )
         ),
+        "field_worksheet_public_benchmark_statistical_support_coordinate_intake_artifact": (
+            field_coordinate_intake_artifact
+        ),
+        "field_worksheet_public_benchmark_statistical_support_coordinate_intake_artifact_present": bool(
+            field_worksheet.get(
+                "public_benchmark_statistical_support_coordinate_intake_artifact_present"
+            )
+            is True
+        ),
+        "field_worksheet_public_benchmark_statistical_support_coordinate_intake_ready": bool(
+            field_worksheet.get("public_benchmark_statistical_support_coordinate_intake_ready")
+            is True
+        ),
+        "field_worksheet_public_benchmark_statistical_support_coordinate_intake_status": _text(
+            field_worksheet.get("public_benchmark_statistical_support_coordinate_intake_status")
+        ),
+        "field_worksheet_public_benchmark_statistical_support_coordinate_intake_row_count": _int(
+            field_worksheet.get("public_benchmark_statistical_support_coordinate_intake_row_count")
+        ),
+        "field_worksheet_public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count": _int(
+            field_worksheet.get(
+                "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count"
+            )
+        ),
+        "field_worksheet_public_benchmark_statistical_support_coordinate_intake_missing_row_count": _int(
+            field_worksheet.get("public_benchmark_statistical_support_coordinate_intake_missing_row_count")
+        ),
+        "field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count": _int(
+            field_worksheet.get(
+                "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count"
+            )
+        ),
+        "field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count": _int(
+            field_worksheet.get(
+                "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count"
+            )
+        ),
+        "field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count": _int(
+            field_worksheet.get(
+                "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count"
+            )
+        ),
+        "field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count": _int(
+            field_worksheet.get(
+                "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count"
+            )
+        ),
+        "field_worksheet_public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count": _int(
+            field_worksheet.get(
+                "public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count"
+            )
+        ),
+        "field_worksheet_public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count": _int(
+            field_worksheet.get(
+                "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count"
+            )
+        ),
+        "field_worksheet_public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count": _int(
+            field_worksheet.get(
+                "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count"
+            )
+        ),
         "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_artifact": (
             field_coordinate_fetch_operator_receipt_artifact
         ),
@@ -833,6 +898,7 @@ def build_engine_refinement_claim_evidence_operator_staging_apply(
             str(metric_evidence_csv),
             str(target_public_benchmark_intake_csv),
             *([field_metric_source_templates_artifact] if field_metric_source_templates_artifact else []),
+            *([field_coordinate_intake_artifact] if field_coordinate_intake_artifact else []),
             *(
                 [field_coordinate_fetch_operator_receipt_artifact]
                 if field_coordinate_fetch_operator_receipt_artifact
@@ -896,6 +962,16 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"`{summary['field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count']}/"
         f"{summary['field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count']}/"
         f"{summary['field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count']}`",
+        "- field_worksheet_coordinate_intake_ready: "
+        f"`{summary['field_worksheet_public_benchmark_statistical_support_coordinate_intake_ready']}`",
+        "- field_worksheet_coordinate_intake_row/present/missing: "
+        f"`{summary['field_worksheet_public_benchmark_statistical_support_coordinate_intake_row_count']}/"
+        f"{summary['field_worksheet_public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count']}/"
+        f"{summary['field_worksheet_public_benchmark_statistical_support_coordinate_intake_missing_row_count']}`",
+        "- field_worksheet_coordinate_intake_local_path_candidate/present_target/missing_target: "
+        f"`{summary['field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count']}/"
+        f"{summary['field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count']}/"
+        f"{summary['field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count']}`",
         "- field_worksheet_coordinate_fetch_operator_receipt_ready: "
         f"`{summary['field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready']}`",
         "- field_worksheet_coordinate_fetch_operator_receipt_row/pass/blocked: "

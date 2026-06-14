@@ -342,6 +342,24 @@ def _worksheet(path: Path, *, filled: bool = False) -> None:
                 "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
                 "public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count": 0,
                 "public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total": 0,
+                "public_benchmark_statistical_support_coordinate_intake_artifact": (
+                    "runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json"
+                ),
+                "public_benchmark_statistical_support_coordinate_intake_artifact_present": True,
+                "public_benchmark_statistical_support_coordinate_intake_ready": True,
+                "public_benchmark_statistical_support_coordinate_intake_status": (
+                    "refine_tier_public_benchmark_statistical_support_coordinate_intake_ready"
+                ),
+                "public_benchmark_statistical_support_coordinate_intake_row_count": 17,
+                "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count": 0,
+                "public_benchmark_statistical_support_coordinate_intake_missing_row_count": 17,
+                "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count": 136,
+                "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count": 0,
+                "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count": 0,
+                "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count": 17,
+                "public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count": 51,
+                "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count": 0,
+                "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count": 17,
                 "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_artifact": (
                     "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_current.json"
                 ),
@@ -505,6 +523,36 @@ def test_blocks_placeholder_receipt_and_public_benchmark_work_order(tmp_path: Pa
             "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
         ]
         == 51
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_coordinate_intake_ready"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_coordinate_intake_row_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count"
+        ]
+        == 136
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count"
+        ]
+        == 17
     )
     assert (
         summary[
@@ -693,6 +741,36 @@ def test_current_staging_apply_surfaces_materialized_public_benchmark_candidate(
             "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
         ]
         == 51
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_coordinate_intake_ready"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_coordinate_intake_row_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count"
+        ]
+        == 136
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count"
+        ]
+        == 17
     )
     assert (
         summary[

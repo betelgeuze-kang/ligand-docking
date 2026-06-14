@@ -1172,6 +1172,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json",
         ],
@@ -3250,6 +3251,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_work_order_ready",
             "public_benchmark_statistical_support_metric_materialization_readiness_artifact_present",
             "public_benchmark_statistical_support_metric_materialization_readiness_ready",
+            "public_benchmark_statistical_support_coordinate_intake_artifact_present",
+            "public_benchmark_statistical_support_coordinate_intake_ready",
             "public_benchmark_statistical_support_metric_source_templates_artifact_present",
             "public_benchmark_statistical_support_metric_source_templates_ready",
             "public_benchmark_statistical_support_metric_source_payload_operator_receipt_artifact_present",
@@ -3306,6 +3309,16 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
             "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": 11,
             "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready": 0,
+            "public_benchmark_statistical_support_coordinate_intake_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count": 0,
+            "public_benchmark_statistical_support_coordinate_intake_missing_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count": 136,
+            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count": 0,
+            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count": 0,
+            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count": 51,
+            "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count": 0,
+            "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count": 17,
             "public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
             "public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count": 17,
             "public_benchmark_statistical_support_metric_source_templates_template_metric_name_count": 3,
@@ -3393,6 +3406,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "input_artifact_sha256s;operator_id;reviewed_at_utc;license_ok;"
                 "external_engine_calls"
             ),
+            "public_benchmark_statistical_support_coordinate_intake_status": (
+                "refine_tier_public_benchmark_statistical_support_coordinate_intake_ready"
+            ),
             "public_benchmark_statistical_support_metric_source_templates_status": (
                 "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
             ),
@@ -3447,6 +3463,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "(coordinate_validation_pass_row_count=0, "
                 "metric_materialization_candidate_ready_count=0, "
                 "required_input_artifacts=34/17/17, "
+                "local_coordinate_path_candidates=136, "
+                "local_coordinate_present_targets=0, "
+                "local_coordinate_missing_targets=17, "
                 "planned_metric_source_payload_count=51); then fill/approve the 51-row metric "
                 "payload operator receipt (receipt_blocked_row_count=51, "
                 "approval_token_required=APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS) "

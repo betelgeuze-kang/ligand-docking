@@ -444,6 +444,23 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "51개 metric source template placeholder" in text
     assert "metric source templates," in text
     assert "statistical support metric source template 51개/fill-ready 0개/fill-blocked 51개" in text
+    assert "`field_worksheet_public_benchmark_statistical_support_coordinate_intake_ready=true`" in text
+    assert "`field_worksheet_public_benchmark_statistical_support_coordinate_intake_row_count=17`" in text
+    assert (
+        "`field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count=136`"
+        in text
+    )
+    assert (
+        "`field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count=0`"
+        in text
+    )
+    assert (
+        "`field_worksheet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count=17`"
+        in text
+    )
+    assert "`local_coordinate_path_candidates=136`" in text
+    assert "`local_coordinate_present_targets=0`" in text
+    assert "`local_coordinate_missing_targets=17`" in text
     assert "`field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count=51`" in text
     assert "`field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count=0`" in text
     assert "`field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=51`" in text

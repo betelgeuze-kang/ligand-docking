@@ -3075,6 +3075,14 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         in engine_field_worksheet_status_spec["required_true_fields"]
     )
     assert (
+        "public_benchmark_statistical_support_coordinate_intake_artifact_present"
+        in engine_field_worksheet_status_spec["required_true_fields"]
+    )
+    assert (
+        "public_benchmark_statistical_support_coordinate_intake_ready"
+        in engine_field_worksheet_status_spec["required_true_fields"]
+    )
+    assert (
         "public_benchmark_statistical_support_metric_source_templates_artifact_present"
         in engine_field_worksheet_status_spec["required_true_fields"]
     )
@@ -3189,6 +3197,36 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert engine_field_worksheet_status_spec["required_int_exact_fields"][
         "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count"
     ] == 11
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_intake_row_count"
+    ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_intake_missing_row_count"
+    ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count"
+    ] == 136
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count"
+    ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count"
+    ] == 51
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count"
+    ] == 17
     assert engine_field_worksheet_status_spec["required_int_exact_fields"][
         "public_benchmark_statistical_support_metric_source_templates_template_row_count"
     ] == 51
@@ -3314,6 +3352,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "external_engine_calls"
     )
     assert engine_field_worksheet_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_intake_status"
+    ] == "refine_tier_public_benchmark_statistical_support_coordinate_intake_ready"
+    assert engine_field_worksheet_status_spec["required_text_exact_fields"][
         "public_benchmark_statistical_support_metric_source_templates_status"
     ] == "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
     assert engine_field_worksheet_status_spec["required_text_exact_fields"][
@@ -3355,6 +3396,15 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert engine_field_worksheet_status_spec["required_text_exact_fields"][
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approval_token_required"
     ] == "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+    assert "local_coordinate_path_candidates=136" in engine_field_worksheet_status_spec[
+        "required_text_exact_fields"
+    ]["next_required_step"]
+    assert "local_coordinate_present_targets=0" in engine_field_worksheet_status_spec[
+        "required_text_exact_fields"
+    ]["next_required_step"]
+    assert "local_coordinate_missing_targets=17" in engine_field_worksheet_status_spec[
+        "required_text_exact_fields"
+    ]["next_required_step"]
     assert (
         engine_field_worksheet_status_spec["required_text_exact_fields"]["next_required_step"]
         == "Review the R4 coordinate-fetch preflight "
@@ -3368,6 +3418,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "(coordinate_validation_pass_row_count=0, "
         "metric_materialization_candidate_ready_count=0, "
         "required_input_artifacts=34/17/17, "
+        "local_coordinate_path_candidates=136, "
+        "local_coordinate_present_targets=0, "
+        "local_coordinate_missing_targets=17, "
         "planned_metric_source_payload_count=51); then fill/approve the 51-row metric "
         "payload operator receipt (receipt_blocked_row_count=51, "
         "approval_token_required=APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS) "
@@ -4566,6 +4619,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert (
         "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json"
+        in field_worksheet_spec["depends_on"]
+    )
+    assert (
+        "runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json"
         in field_worksheet_spec["depends_on"]
     )
     staging_apply_spec = next(
