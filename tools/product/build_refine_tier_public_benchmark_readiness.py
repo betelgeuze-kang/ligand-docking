@@ -776,7 +776,10 @@ def _suggested_local_coordinate_paths(target_id: str, dataset_dir: str | Path) -
     candidates = [
         dataset / f"{target}_protein.pdb",
         dataset / target / f"{target}_protein.pdb",
+        dataset / target / f"{target}_receptor.pdb",
         dataset / target / f"{target}_receptor.cif",
+        dataset / target / f"{target}_complex.pdb",
+        dataset / target / f"{target}_complex.cif",
         dataset / "CASF-2016_scoring" / target / f"{target}_complex.pdb",
         dataset / "PDBbind_v2016_refined" / target / f"{target}_protein.pdb",
     ]

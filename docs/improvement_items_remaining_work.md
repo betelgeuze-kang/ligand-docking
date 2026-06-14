@@ -455,6 +455,12 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   위한 다음 17개 target/pose 후보 목록은 좁혀졌지만, 아직 공개 receptor/complex
   coordinate artifact 검토와 배치가 끝나지 않았으므로 DockQ/lDDT-PLI/internal
   ΔG source payload materialization과 canonical intake/receipt 승격은 계속 차단된다.
+  2026-06-14 추가 보강으로 이 candidate queue는 기존 8개 public benchmark
+  readiness와 같은 로컬 coordinate matcher를 재사용한다. 따라서 future/offline
+  bundle이 `archive.tar::pdbbind/<target>/<target>_protein.pdb` 같은 tar member를
+  포함하면 candidate 단계부터 `receptor_coordinate_artifact_present=true`로 잡지만,
+  현재 로컬 `CASF-2016_scoring.tar.xz`에는 17개 후보의 ligand pose member만 있고
+  receptor/protein/complex coordinate member는 없어 0/17 병목이 유지된다.
   `runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json`은
   이 17개 후보를 coordinate intake/validation row로 펼쳐
   `refine_tier_public_benchmark_statistical_support_coordinate_intake_ready`,

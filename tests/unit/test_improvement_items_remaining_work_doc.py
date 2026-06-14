@@ -232,6 +232,9 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`receptor_coordinate_artifact_missing_count=17`" in text
     assert "`candidate_ready_for_metric_materialization_count=0`" in text
     assert "`candidate_ready_for_canonical_intake_count=0`" in text
+    assert "같은 로컬 coordinate matcher를 재사용한다" in text
+    assert "`archive.tar::pdbbind/<target>/<target>_protein.pdb`" in text
+    assert "현재 로컬 `CASF-2016_scoring.tar.xz`에는 17개 후보의 ligand pose member만" in text
     assert "`runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json`" in text
     assert "`refine_tier_public_benchmark_statistical_support_coordinate_intake_ready`" in text
     assert "`coordinate_intake_row_count=17`" in text

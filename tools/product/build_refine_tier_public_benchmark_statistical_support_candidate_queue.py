@@ -16,6 +16,11 @@ from tools.product.build_refine_tier_public_benchmark_readiness import (
     DEFAULT_WORK_ORDER_DATASET_DIR,
     DEFAULT_WORK_ORDER_SEED_CSV,
     PAFFINITY_TO_DG_KCAL_PER_MOL,
+    _expected_receptor_archive_member_examples,
+    _matching_receptor_coordinate_artifact,
+    _read_coordinate_artifact_text,
+    _suggested_local_coordinate_paths,
+    _suggested_public_coordinate_urls,
 )
 from tools.product.build_refine_tier_public_benchmark_statistical_support_work_order import (
     DEFAULT_OUT_JSON as DEFAULT_STATISTICAL_SUPPORT_WORK_ORDER_JSON,
@@ -112,6 +117,16 @@ def _format_float(value: float | None) -> str:
     if value is None:
         return ""
     return f"{value:.6g}"
+
+
+def _coordinate_artifact_present(path_like: str | Path, *, root: Path = ROOT) -> bool:
+    value = _text(path_like)
+    if not value:
+        return False
+    if "::" in value:
+        text, _source_kind, read_status = _read_coordinate_artifact_text(value)
+        return bool(text) and read_status == "read"
+    return _resolve(value, root=root).is_file()
 
 
 def _stable_id(value: Any) -> str:
@@ -264,11 +279,11 @@ def _candidate_row(
     suggested_work_order_id = slot_id or f"refine_tier_public_benchmark_stat_support_expansion_{candidate_rank:03d}"
     ligand_pose_artifact = _display(candidate.get("pose_artifact"), root=root)
     ligand_pose_present = _resolve(candidate.get("pose_artifact"), root=root).is_file()
-    receptor_coordinate_artifact = _display(
+    receptor_coordinate_artifact = _matching_receptor_coordinate_artifact(dataset_dir, target_id) or _display(
         Path(dataset_dir) / target_id / f"{target_id}_receptor.pdb",
         root=root,
     )
-    receptor_coordinate_present = _resolve(receptor_coordinate_artifact, root=root).is_file()
+    receptor_coordinate_present = _coordinate_artifact_present(receptor_coordinate_artifact, root=root)
     experimental_delta_g = experimental_delta_g_by_complex.get(target_id)
     blockers: list[str] = []
     if not ligand_pose_present:
@@ -307,19 +322,9 @@ def _candidate_row(
         "ligand_pose_artifact_present": ligand_pose_present,
         "receptor_coordinate_artifact": receptor_coordinate_artifact,
         "receptor_coordinate_artifact_present": receptor_coordinate_present,
-        "suggested_public_coordinate_urls": (
-            f"https://files.rcsb.org/download/{target_id.upper()}.cif;"
-            f"https://files.rcsb.org/download/{target_id.upper()}.pdb"
-        ),
-        "suggested_local_coordinate_paths": (
-            f"data/public_benchmarks/pdbbind_casf_pose_affinity/{target_id}/{target_id}_receptor.pdb;"
-            f"data/public_benchmarks/pdbbind_casf_pose_affinity/{target_id}/{target_id}_complex.pdb"
-        ),
-        "expected_archive_member_examples": (
-            f"pdbbind/{target_id}/{target_id}_protein.pdb;"
-            f"pdbbind/{target_id}/{target_id}_receptor.cif;"
-            f"casf/{target_id}/{target_id}_complex.pdb"
-        ),
+        "suggested_public_coordinate_urls": _suggested_public_coordinate_urls(target_id),
+        "suggested_local_coordinate_paths": _suggested_local_coordinate_paths(target_id, dataset_dir),
+        "expected_archive_member_examples": _expected_receptor_archive_member_examples(target_id),
         "dockq_source_artifact": (
             f"runs/refine_tier_public_benchmark_metric_sources/{suggested_work_order_id}_dockq.json"
         ),
