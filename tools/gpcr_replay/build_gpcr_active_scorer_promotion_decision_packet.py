@@ -49,6 +49,91 @@ def _bool(value: Any) -> bool:
     return value is True
 
 
+def _num(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = packet.get("rows")
+    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+
+
+def _ligand_ranking_row(packet: dict[str, Any]) -> dict[str, Any]:
+    for row in _rows(packet):
+        if _text(row.get("axis")) == "ligand_ranking":
+            return row
+    return {}
+
+
+def scorecard_metric_ready_under_claim_lock(packet: dict[str, Any]) -> dict[str, Any]:
+    """Separate ranking metric readiness from broad GPCR claim promotion."""
+    summary = _summary(packet)
+    ligand = _ligand_ranking_row(packet)
+    metrics = ligand.get("metrics") if isinstance(ligand.get("metrics"), dict) else {}
+    thresholds = ligand.get("thresholds") if isinstance(ligand.get("thresholds"), dict) else {}
+    blockers = [str(item) for item in ligand.get("blockers") or []]
+    metric_blockers: list[str] = []
+
+    if _text(summary.get("status")) == "green":
+        metric_ready = True
+    else:
+        pr_auc = _num(metrics.get("ranking_pr_auc"))
+        pr_auc_ci_low = _num(metrics.get("ranking_pr_auc_ci_low"))
+        topk = _num(metrics.get("ranking_topk_hit_rate"))
+        pr_auc_min = _num(thresholds.get("ranking_pr_auc_min"))
+        pr_auc_ci_low_min = _num(thresholds.get("ranking_pr_auc_ci_low_min"))
+        topk_min = _num(thresholds.get("ranking_topk_hit_rate_min"))
+
+        if _text(ligand.get("status")) != "restricted_pass":
+            metric_blockers.append("ligand_ranking_not_restricted_pass")
+        if blockers != ["broad_gpcr_claim_not_allowed"]:
+            metric_blockers.append("ligand_ranking_has_non_scope_blockers")
+        if _int(summary.get("blocked_row_count")) != 0:
+            metric_blockers.append("accuracy_parity_blocked_rows_present")
+        if _int(summary.get("missing_row_count")) != 0:
+            metric_blockers.append("accuracy_parity_missing_rows_present")
+        if pr_auc is None or pr_auc_min is None or pr_auc < pr_auc_min:
+            metric_blockers.append("ranking_pr_auc_below_threshold")
+        if pr_auc_ci_low is None or pr_auc_ci_low_min is None or pr_auc_ci_low < pr_auc_ci_low_min:
+            metric_blockers.append("ranking_pr_auc_ci_low_below_threshold")
+        if topk is None or topk_min is None or topk < topk_min:
+            metric_blockers.append("ranking_topk_hit_rate_below_threshold")
+        if _bool(metrics.get("gpcr_conditional_prior_boundary_ready")) is not True:
+            metric_blockers.append("gpcr_conditional_prior_boundary_not_ready")
+        if _bool(metrics.get("gpcr_oprm1_pose_repair_evidence_ready")) is not True:
+            metric_blockers.append("gpcr_oprm1_pose_repair_not_ready")
+        if _bool(metrics.get("crossfit_validation_ready")) is not True:
+            metric_blockers.append("crossfit_validation_not_ready")
+
+        metric_ready = not metric_blockers
+
+    claim_scope_lock_only = (
+        metric_ready
+        and _text(summary.get("status")) == "blocked_accuracy_parity"
+        and blockers == ["broad_gpcr_claim_not_allowed"]
+        and _bool(ligand.get("claim_promotion_allowed")) is False
+        and _bool(ligand.get("commercial_parity_claim_allowed")) is False
+    )
+    return {
+        "metric_ready": metric_ready,
+        "metric_blockers": sorted(set(metric_blockers)),
+        "claim_scope_lock_only": claim_scope_lock_only,
+        "ligand_ranking_status": _text(ligand.get("status")),
+        "ligand_ranking_blockers": blockers,
+        "status": _text(summary.get("status")),
+    }
+
+
 def build_packet(
     *,
     phase_ab_chain_json: str | Path = "runs/gpcr_commercial_phase_ab_closure_chain_current.json",
@@ -64,7 +149,9 @@ def build_packet(
     phase_ab = _summary(_read_json(phase_ab_chain_json))
     operational = _summary(_read_json(operational_gate_json))
     repeat = _summary(_read_json(independent_repeat_json))
-    scorecard = _summary(_read_json(scorecard_json))
+    scorecard_packet = _read_json(scorecard_json)
+    scorecard = _summary(scorecard_packet)
+    scorecard_readiness = scorecard_metric_ready_under_claim_lock(scorecard_packet)
     approval = _summary(_read_json(approval_gate_json))
     bundle = _summary(_read_json(bundle_contract_json))
     delivery = _summary(_read_json(delivery_evidence_json))
@@ -90,7 +177,7 @@ def build_packet(
         blockers.append("operational_launch_not_eligible")
     if repeat.get("status") != "independent_repeat_passed_claim_locked":
         blockers.append("independent_repeat_not_passed")
-    if scorecard.get("status") != "green":
+    if not _bool(scorecard_readiness.get("metric_ready")):
         blockers.append("accuracy_parity_scorecard_not_green")
     if not _bool(approval.get("authorized_for_execution")):
         blockers.append("product_execution_not_operator_authorized")
@@ -122,6 +209,11 @@ def build_packet(
         "promotion_scope": "guarded_operational_gpcr_ranking_only",
         "phase_a_claim_closure_ready": _bool(phase_ab.get("phase_a_claim_closure_ready")),
         "phase_b_product_delivery_ready": _bool(phase_ab.get("phase_b_product_delivery_ready")),
+        "accuracy_parity_metric_ready": bool(scorecard_readiness["metric_ready"]),
+        "accuracy_parity_metric_blockers": scorecard_readiness["metric_blockers"],
+        "accuracy_parity_claim_scope_lock_only": bool(scorecard_readiness["claim_scope_lock_only"]),
+        "accuracy_parity_ligand_ranking_status": scorecard_readiness["ligand_ranking_status"],
+        "accuracy_parity_ligand_ranking_blockers": scorecard_readiness["ligand_ranking_blockers"],
         "delivery_ready_claim_allowed": _bool(delivery.get("delivery_ready_claim_allowed")),
         "product_execution_authorized": _bool(approval.get("authorized_for_execution")),
         "residual_production_promotion_allowed": _bool(registry.get("production_promotion_allowed")),
@@ -152,6 +244,8 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- status: `{summary['status']}`",
         f"- active_scorer_apply_allowed: `{summary['active_scorer_apply_allowed']}`",
         f"- operational_score_col: `{summary['operational_score_col']}`",
+        f"- accuracy_parity_metric_ready: `{summary['accuracy_parity_metric_ready']}`",
+        f"- accuracy_parity_claim_scope_lock_only: `{summary['accuracy_parity_claim_scope_lock_only']}`",
         f"- delivery_ready_claim_allowed: `{summary['delivery_ready_claim_allowed']}`",
         f"- claim_promotion_allowed: `{summary['claim_promotion_allowed']}`",
         "",

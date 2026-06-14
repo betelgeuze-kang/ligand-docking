@@ -98,15 +98,20 @@ def _refresh_release_decision_ready() -> dict:
             "production_ai_promotion_workbench_execution_enabled": False,
             "production_ai_promotion_workbench_external_state_mutated": False,
             "accuracy_parity_scorecard_recorded": True,
+            "accuracy_parity_ligand_ranking_metric_thresholds_pass": True,
+            "accuracy_parity_ligand_ranking_claim_scope_lock_only": True,
+            "accuracy_parity_ligand_ranking_claim_promotion_allowed": False,
+            "accuracy_parity_ligand_ranking_commercial_parity_claim_allowed": False,
+            "accuracy_parity_ligand_ranking_metric_blocker_count": 0,
             "master_gap_closure_rollup_recorded": True,
-            "master_gap_closure_rollup_all_gaps_closed": False,
+            "master_gap_closure_rollup_all_gaps_closed": True,
             "master_gap_closure_rollup_claim_promotion_allowed": False,
-            "master_gap_closure_rollup_science_claim_release_blocker": True,
+            "master_gap_closure_rollup_science_claim_release_blocker": False,
             "science_claim_promotion_gap_closure_recorded": True,
-            "science_claim_promotion_gap_closure_all_gaps_closed": False,
+            "science_claim_promotion_gap_closure_all_gaps_closed": True,
             "science_claim_promotion_gap_closure_claim_promotion_allowed": False,
-            "science_claim_promotion_gap_closure_gpcr_release_blocker": True,
-            "science_claim_promotion_gap_closure_openmm_release_blocker": True,
+            "science_claim_promotion_gap_closure_gpcr_release_blocker": False,
+            "science_claim_promotion_gap_closure_openmm_release_blocker": False,
             "api_runner_profile_promotion_operator_receipt_recorded": True,
             "product_scope_breadth_evidence_receipt_recorded": True,
             "engine_refinement_claim_evidence_receipt_recorded": True,
@@ -179,10 +184,11 @@ def _refresh_release_decision_ready() -> dict:
             "production_ai_promotion_workbench_trained_model_checkpoint_count": 1,
             "accuracy_parity_scorecard_row_count": 5,
             "accuracy_parity_scorecard_pass_row_count": 4,
-            "accuracy_parity_scorecard_blocked_row_count": 1,
-            "accuracy_parity_scorecard_top_blocker_count": 4,
-            "accuracy_parity_ligand_ranking_blocker_count": 4,
-            "accuracy_parity_ligand_ranking_positive_count": 13,
+            "accuracy_parity_scorecard_restricted_pass_row_count": 1,
+            "accuracy_parity_scorecard_blocked_row_count": 0,
+            "accuracy_parity_scorecard_top_blocker_count": 1,
+            "accuracy_parity_ligand_ranking_blocker_count": 1,
+            "accuracy_parity_ligand_ranking_positive_count": 34,
             "api_runner_profile_promotion_operator_receipt_profile_count": 4,
             "api_runner_profile_promotion_operator_receipt_receipt_row_count": 4,
             "api_runner_profile_promotion_operator_receipt_pass_row_count": 0,
@@ -232,6 +238,14 @@ def _refresh_release_decision_ready() -> dict:
             "refine_tier_public_benchmark_work_order_apply_valid_intake_row_count": 0,
             "refine_tier_public_benchmark_work_order_apply_blocker_count": 1,
             "refine_tier_public_benchmark_work_order_apply_duplicate_benchmark_id_count": 0,
+            "refine_tier_public_benchmark_work_order_apply_receptor_coordinate_validation_required": True,
+            "refine_tier_public_benchmark_work_order_apply_receptor_coordinate_validation_pass_row_count": 8,
+            "refine_tier_public_benchmark_work_order_apply_receptor_coordinate_validation_blocked_row_count": 0,
+            "refine_tier_public_benchmark_work_order_apply_receptor_coordinate_validation_missing_row_count": 0,
+            "refine_tier_public_benchmark_work_order_apply_metric_evidence_required": True,
+            "refine_tier_public_benchmark_work_order_apply_metric_evidence_pass_row_count": 0,
+            "refine_tier_public_benchmark_work_order_apply_metric_evidence_blocked_row_count": 8,
+            "refine_tier_public_benchmark_work_order_apply_metric_evidence_missing_row_count": 0,
             "refine_tier_public_benchmark_work_order_apply_candidate_intake_written": False,
             "refine_tier_public_benchmark_work_order_apply_candidate_readiness_checked": False,
             "refine_tier_public_benchmark_work_order_apply_candidate_claim_grade_public_benchmark_ready": False,
@@ -249,12 +263,12 @@ def _refresh_release_decision_ready() -> dict:
             "third_party_license_review_gate_approved_review_asset_count": 1,
             "third_party_license_review_gate_source_hard_blocker_count": 0,
             "third_party_license_review_gate_source_operator_review_item_count": 1,
-            "master_gap_closure_rollup_open_gap_count": 1,
-            "master_gap_closure_rollup_closed_gap_count": 8,
-            "master_gap_closure_rollup_release_blocker_row_count": 1,
-            "science_claim_promotion_gap_closure_open_gap_count": 2,
-            "science_claim_promotion_gap_closure_closed_gap_count": 3,
-            "science_claim_promotion_gap_closure_release_blocker_row_count": 2,
+            "master_gap_closure_rollup_open_gap_count": 0,
+            "master_gap_closure_rollup_closed_gap_count": 9,
+            "master_gap_closure_rollup_release_blocker_row_count": 0,
+            "science_claim_promotion_gap_closure_open_gap_count": 0,
+            "science_claim_promotion_gap_closure_closed_gap_count": 5,
+            "science_claim_promotion_gap_closure_release_blocker_row_count": 0,
             "product_quality_gate_verification_check_count": 4,
             "product_quality_gate_verification_pass_count": 4,
             "product_pose_sampling_readiness_check_count": 6,
@@ -422,20 +436,20 @@ def _refresh_release_decision_ready() -> dict:
             "product_pose_sampling_readiness_pocket_method": "ligand_guided",
             "product_ledger_privacy_scan_status": "product_ledger_privacy_scan_ready",
             "accuracy_parity_scorecard_status": "blocked_accuracy_parity",
-            "accuracy_parity_scorecard_current_broad_accuracy_parity_estimate_pct": "40-50",
-            "accuracy_parity_scorecard_current_broad_commercial_platform_estimate_pct": "35-45",
-            "accuracy_parity_ligand_ranking_status": "blocked",
+            "accuracy_parity_scorecard_current_broad_accuracy_parity_estimate_pct": "65-75",
+            "accuracy_parity_scorecard_current_broad_commercial_platform_estimate_pct": "45-55",
+            "accuracy_parity_ligand_ranking_status": "restricted_pass",
             "accuracy_parity_ligand_ranking_score_col_used": (
-                "binding_score_composite_v7_residual_active"
+                "binding_score_composite_v7_coverage_v2_crossfit_rank_rescue_shadow"
             ),
-            "master_gap_closure_rollup_status": "blocked_master_gap_closure_rollup",
-            "master_gap_closure_rollup_open_gap_ids_joined": "SCI-CLAIM",
+            "master_gap_closure_rollup_status": "master_gap_closure_rollup_complete",
+            "master_gap_closure_rollup_open_gap_ids_joined": "",
             "master_gap_closure_rollup_closed_gap_ids_joined": (
-                "COMMERCIAL;PRODUCT-AI;DATA-SCIENCE;INFRA;DEPLOY-OPS;STORAGE;TOOLS;API-RUNNER"
+                "COMMERCIAL;PRODUCT-AI;DATA-SCIENCE;INFRA;SCI-CLAIM;DEPLOY-OPS;STORAGE;TOOLS;API-RUNNER"
             ),
-            "master_gap_closure_rollup_current_primary_open_gap_id": "SCI-CLAIM",
+            "master_gap_closure_rollup_current_primary_open_gap_id": "none",
             "master_gap_closure_rollup_science_claim_rollup_status": (
-                "blocked_science_claim_promotion_gap_closure"
+                "science_claim_promotion_gap_closure_complete"
             ),
             "master_gap_closure_rollup_science_claim_evidence": (
                 "runs/science_claim_promotion_gap_closure_current.json"
@@ -540,18 +554,18 @@ def _refresh_release_decision_ready() -> dict:
                 "config/refine_tier_public_benchmark_intake_current.csv"
             ),
             "science_claim_promotion_gap_closure_status": (
-                "blocked_science_claim_promotion_gap_closure"
+                "science_claim_promotion_gap_closure_complete"
             ),
-            "science_claim_promotion_gap_closure_open_gap_ids_joined": "SCI-GPCR;SCI-OPENMM",
+            "science_claim_promotion_gap_closure_open_gap_ids_joined": "",
             "science_claim_promotion_gap_closure_closed_gap_ids_joined": (
-                "SCI-TRANS;SCI-CA2-PXR;SCI-WETLAB"
+                "SCI-GPCR;SCI-TRANS;SCI-CA2-PXR;SCI-WETLAB;SCI-OPENMM"
             ),
-            "science_claim_promotion_gap_closure_current_primary_open_gap_id": "SCI-GPCR",
+            "science_claim_promotion_gap_closure_current_primary_open_gap_id": "none",
             "science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status": (
-                "blocked_ci_low_oprm1"
+                ""
             ),
             "science_claim_promotion_gap_closure_gpcr_claim_promotion_status": (
-                "blocked_ci_low_oprm1"
+                "boundary_ready_comparison_only"
             ),
             "science_claim_promotion_gap_closure_gpcr_evidence": (
                 "runs/gpcr_conditional_prior_promotion_gate_current.json"
@@ -898,6 +912,10 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
         "refine_tier_public_benchmark_work_order_apply_work_order_csv_present"
         in release_row["required_true_fields"]
     )
+    assert (
+        "refine_tier_public_benchmark_work_order_apply_metric_evidence_required"
+        in release_row["required_true_fields"]
+    )
     assert "product_quality_gate_verification_recorded" in release_row["required_true_fields"]
     assert "product_quality_gate_verification_ready" in release_row["required_true_fields"]
     assert "product_pose_sampling_readiness_recorded" in release_row["required_true_fields"]
@@ -938,10 +956,10 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     ] == 1
     assert release_row["required_int_exact_fields"][
         "accuracy_parity_scorecard_top_blocker_count"
-    ] == 4
+    ] == 1
     assert release_row["required_int_exact_fields"][
         "accuracy_parity_ligand_ranking_positive_count"
-    ] == 13
+    ] == 34
     assert release_row["required_int_exact_fields"][
         "api_runner_profile_promotion_operator_receipt_blocked_row_count"
     ] == 4
@@ -974,6 +992,9 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     ] == 8
     assert release_row["required_int_exact_fields"][
         "refine_tier_public_benchmark_work_order_apply_blocked_row_count"
+    ] == 8
+    assert release_row["required_int_exact_fields"][
+        "refine_tier_public_benchmark_work_order_apply_metric_evidence_blocked_row_count"
     ] == 8
     assert release_row["required_int_exact_fields"][
         "refine_tier_public_benchmark_work_order_apply_blocker_count"
@@ -1061,26 +1082,47 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     ] == "blocked_accuracy_parity"
     assert release_row["required_text_exact_fields"][
         "accuracy_parity_ligand_ranking_score_col_used"
-    ] == "binding_score_composite_v7_residual_active"
+    ] == "binding_score_composite_v7_coverage_v2_crossfit_rank_rescue_shadow"
+    assert release_row["required_true_fields"].count(
+        "accuracy_parity_ligand_ranking_metric_thresholds_pass"
+    ) == 1
+    assert release_row["required_true_fields"].count(
+        "accuracy_parity_ligand_ranking_claim_scope_lock_only"
+    ) == 1
+    assert release_row["required_zero_fields"].count(
+        "accuracy_parity_ligand_ranking_claim_promotion_allowed"
+    ) == 1
+    assert release_row["required_zero_fields"].count(
+        "accuracy_parity_ligand_ranking_commercial_parity_claim_allowed"
+    ) == 1
+    assert release_row["required_zero_fields"].count(
+        "accuracy_parity_ligand_ranking_metric_blocker_count"
+    ) == 1
     assert release_row["required_true_fields"].count("master_gap_closure_rollup_recorded") == 1
     assert release_row["required_true_fields"].count(
-        "science_claim_promotion_gap_closure_gpcr_release_blocker"
+        "master_gap_closure_rollup_all_gaps_closed"
+    ) == 1
+    assert release_row["required_true_fields"].count(
+        "science_claim_promotion_gap_closure_all_gaps_closed"
     ) == 1
     assert release_row["required_zero_fields"].count(
         "science_claim_promotion_gap_closure_claim_promotion_allowed"
     ) == 1
+    assert release_row["required_zero_fields"].count(
+        "science_claim_promotion_gap_closure_gpcr_release_blocker"
+    ) == 1
     assert release_row["required_int_exact_fields"][
         "master_gap_closure_rollup_open_gap_count"
-    ] == 1
+    ] == 0
     assert release_row["required_int_exact_fields"][
         "master_gap_closure_rollup_release_blocker_row_count"
-    ] == 1
+    ] == 0
     assert release_row["required_text_exact_fields"][
         "master_gap_closure_rollup_open_gap_ids_joined"
-    ] == "SCI-CLAIM"
+    ] == ""
     assert release_row["required_text_exact_fields"][
         "master_gap_closure_rollup_science_claim_rollup_status"
-    ] == "blocked_science_claim_promotion_gap_closure"
+    ] == "science_claim_promotion_gap_closure_complete"
     assert release_row["required_text_exact_fields"][
         "api_runner_profile_promotion_operator_receipt_first_blocked_profile_id"
     ] == "backmapping_scoring.example"
@@ -1116,22 +1158,22 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     ] == "config/refine_tier_public_benchmark_intake_current.csv"
     assert release_row["required_int_exact_fields"][
         "science_claim_promotion_gap_closure_open_gap_count"
-    ] == 2
+    ] == 0
     assert release_row["required_int_exact_fields"][
         "science_claim_promotion_gap_closure_closed_gap_count"
-    ] == 3
+    ] == 5
     assert release_row["required_int_exact_fields"][
         "science_claim_promotion_gap_closure_release_blocker_row_count"
-    ] == 2
+    ] == 0
     assert release_row["required_text_exact_fields"][
         "science_claim_promotion_gap_closure_open_gap_ids_joined"
-    ] == "SCI-GPCR;SCI-OPENMM"
+    ] == ""
     assert release_row["required_text_exact_fields"][
         "science_claim_promotion_gap_closure_current_primary_open_gap_id"
-    ] == "SCI-GPCR"
+    ] == "none"
     assert release_row["required_text_exact_fields"][
         "science_claim_promotion_gap_closure_gpcr_claim_promotion_status"
-    ] == "blocked_ci_low_oprm1"
+    ] == "boundary_ready_comparison_only"
     assert release_row["required_text_exact_fields"][
         "science_claim_promotion_gap_closure_openmm_claim_promotion_status"
     ] == "restricted_2bead_only"
@@ -1244,6 +1286,13 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_bundle_contract" in artifact_ids
     assert "product_delivery_evidence_contract" in artifact_ids
     assert "product_pilot_packet_contract" in artifact_ids
+    assert "gpcr_commercial_phase_ab_closure_chain" in artifact_ids
+    assert "gpcr_active_scorer_promotion_decision_packet" in artifact_ids
+    assert "gpcr_broad_claim_review_receipt" in artifact_ids
+    assert "gpcr_broad_claim_scope_readiness" in artifact_ids
+    assert "refine_tier_public_benchmark_metric_source_materialization" in artifact_ids
+    assert "refine_tier_public_benchmark_work_order_apply_materialized" in artifact_ids
+    assert "science_accuracy_frontier" in artifact_ids
     assert "self_hosted_license_distribution_audit" in artifact_ids
     assert "third_party_license_review_gate" in artifact_ids
     assert "product_execution_work_order" in artifact_ids
@@ -1259,6 +1308,11 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_pose_sampling_readiness_semantic_ready" in status_ids
     assert "product_trajectory_sla_contract_semantic_ready" in status_ids
     assert "product_job_orchestration_contract_semantic_ready" in status_ids
+    assert "gpcr_commercial_phase_ab_closure_chain_claim_locked_metric_ready" in status_ids
+    assert "gpcr_active_scorer_promotion_decision_claim_locked_metric_ready" in status_ids
+    assert "gpcr_broad_claim_review_receipt_blocked_semantic_ready" in status_ids
+    assert "gpcr_broad_claim_scope_readiness_target_heldout_ready_claim_locked" in status_ids
+    assert "science_accuracy_frontier_restricted_ready_commercial_parity_blocked" in status_ids
     assert "product_ledger_privacy_scan" in artifact_ids
     assert "product_trajectory_sla_contract" in artifact_ids
     assert "product_job_orchestration_contract" in artifact_ids
@@ -1281,6 +1335,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "aqp1_direct_binding_external_evidence_operator_fill_guide" in artifact_ids
     assert "aqp1_direct_binding_external_evidence_operator_worksheet" in artifact_ids
     assert "aqp1_direct_binding_external_evidence_operator_staging_apply" in artifact_ids
+    assert "aqp1_negative_evidence_intake_gate" in artifact_ids
     assert "product_commercial_readiness_execution_ladder" in artifact_ids
     assert "product_rollout_execution_smoke_receipt" in artifact_ids
     assert "deploy_ops_legal_gap_closure" in artifact_ids
@@ -1313,10 +1368,18 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "--mode preview --staging-csv runs/aqp1_direct_binding_external_evidence_intake_supplement_current.csv"
         in mod.RELEASE_REFRESH_COMMANDS
     )
+    assert "python3 tools/build_aqp1_negative_evidence_intake_gate.py" in mod.RELEASE_REFRESH_COMMANDS
     assert (
         "python3 tools/build_engine_refinement_claim_evidence_operator_staging_apply.py"
         in mod.RELEASE_REFRESH_COMMANDS
     )
+    assert "python3 tools/build_gpcr_commercial_phase_ab_closure_chain.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_gpcr_active_scorer_promotion_decision_packet.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_gpcr_broad_claim_review_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_gpcr_broad_claim_scope_readiness.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.REFINE_TIER_PUBLIC_BENCHMARK_METRIC_MATERIALIZATION_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.REFINE_TIER_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/product/build_science_accuracy_frontier.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "product_release_bundle_semantic_ready" in status_ids
     assert "product_goal_completion_audit_full_commercial_release_blockers_semantic_ready" in status_ids
     assert "api_runner_profile_promotion_operator_receipt_blocked_semantic_ready" in status_ids
@@ -1342,6 +1405,221 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/build_cameo_official_result_fetch_preflight.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_cameo_validation_operations_dossier.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_cameo_architecture_validation_contract.py" in mod.RELEASE_REFRESH_COMMANDS
+    phase_ab_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "gpcr_commercial_phase_ab_closure_chain_claim_locked_metric_ready"
+    )
+    assert phase_ab_status_spec["required_status"] == "gpcr_commercial_phase_ab_closure_complete_claim_locked"
+    assert "accuracy_parity_metric_ready" in phase_ab_status_spec["required_true_fields"]
+    assert phase_ab_status_spec["required_int_exact_fields"] == {
+        "claim_promotion_allowed": 0,
+        "scorer_apply_allowed": 0,
+    }
+    assert phase_ab_status_spec["required_text_exact_fields"] == {
+        "accuracy_parity_ligand_ranking_status": "restricted_pass",
+    }
+    active_scorer_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "gpcr_active_scorer_promotion_decision_claim_locked_metric_ready"
+    )
+    assert active_scorer_status_spec["required_status"] == "blocked_gpcr_active_scorer_promotion_decision"
+    assert "accuracy_parity_claim_scope_lock_only" in active_scorer_status_spec["required_true_fields"]
+    assert active_scorer_status_spec["required_int_exact_fields"]["blocker_count"] == 1
+    assert active_scorer_status_spec["required_int_exact_fields"]["claim_promotion_allowed"] == 0
+    assert active_scorer_status_spec["required_text_exact_fields"] == {
+        "promotion_scope": "guarded_operational_gpcr_ranking_only",
+        "accuracy_parity_ligand_ranking_status": "restricted_pass",
+    }
+    broad_claim_receipt_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "gpcr_broad_claim_review_receipt_blocked_semantic_ready"
+    )
+    assert broad_claim_receipt_status_spec["required_status"] == "blocked_gpcr_broad_claim_review_receipt"
+    assert broad_claim_receipt_status_spec["required_int_exact_fields"] == {
+        "broad_claim_review_receipt_ready": 0,
+        "target_heldout_broad_scope_review_approved": 0,
+        "scorer_router_promotion_gate_approved": 0,
+        "receipt_row_count": 2,
+        "required_review_count": 2,
+        "pass_row_count": 0,
+        "blocked_row_count": 2,
+        "missing_required_review_count": 0,
+        "duplicate_review_id_count": 0,
+        "missing_required_column_count": 0,
+        "execution_enabled": 0,
+        "external_state_mutated": 0,
+        "blocker_count": 1,
+    }
+    broad_claim_scope_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "gpcr_broad_claim_scope_readiness_target_heldout_ready_claim_locked"
+    )
+    assert broad_claim_scope_status_spec["required_status"] == "blocked_gpcr_broad_claim_scope_readiness"
+    assert "target_heldout_broad_scope_review_input_ready" in broad_claim_scope_status_spec[
+        "required_true_fields"
+    ]
+    assert broad_claim_scope_status_spec["required_int_exact_fields"] == {
+        "target_heldout_broad_scope_review_approved": 0,
+        "broad_claim_review_receipt_ready": 0,
+        "broad_claim_review_receipt_row_count": 2,
+        "broad_claim_review_receipt_pass_row_count": 0,
+        "broad_claim_review_receipt_blocked_row_count": 2,
+        "active_scorer_gate_ready": 0,
+        "scorer_router_promotion_gate_receipt_approved": 0,
+        "scorer_router_promotion_gate_ready": 0,
+        "claim_promotion_allowed": 0,
+        "router_claim_allowed": 0,
+        "platform_claim_allowed": 0,
+        "blocker_count": 2,
+    }
+    assert broad_claim_scope_status_spec["required_text_exact_fields"] == {
+        "promotion_scope": "guarded_operational_gpcr_ranking_only",
+        "accuracy_parity_ligand_ranking_status": "restricted_pass",
+        "heldout_guardrail_status": "green",
+        "guarded_100k_readiness_status": "eligible",
+        "broad_claim_review_receipt_status": "blocked_gpcr_broad_claim_review_receipt",
+        "broad_claim_review_receipt_first_blocked_review_id": (
+            "target_heldout_broad_scope_review_not_approved"
+        ),
+        "broad_claim_review_receipt_approval_token_required": "APPROVE_GPCR_BROAD_CLAIM_REVIEW",
+    }
+    science_accuracy_frontier_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "science_accuracy_frontier_restricted_ready_commercial_parity_blocked"
+    )
+    assert science_accuracy_frontier_spec["required_status"] == "blocked_science_accuracy_frontier"
+    assert "restricted_science_accuracy_ready" in science_accuracy_frontier_spec[
+        "required_true_fields"
+    ]
+    assert "engine_refinement_internal_surface_ready" in science_accuracy_frontier_spec[
+        "required_true_fields"
+    ]
+    assert "public_benchmark_materialized_metric_ready" in science_accuracy_frontier_spec[
+        "required_true_fields"
+    ]
+    assert "public_benchmark_materialized_apply_ready" in science_accuracy_frontier_spec[
+        "required_true_fields"
+    ]
+    assert science_accuracy_frontier_spec["required_int_exact_fields"] == {
+            "broad_commercial_accuracy_claim_ready": 0,
+            "gpcr_broad_claim_ready": 0,
+            "gpcr_scorer_router_ready": 0,
+            "gpcr_broad_claim_review_receipt_ready": 0,
+            "gpcr_broad_claim_review_receipt_row_count": 2,
+            "gpcr_broad_claim_review_receipt_pass_row_count": 0,
+            "gpcr_broad_claim_review_receipt_blocked_row_count": 2,
+            "gpcr_active_scorer_gate_ready": 0,
+            "gpcr_scorer_router_promotion_gate_receipt_approved": 0,
+            "openmm_schrodinger_public_benchmark_ready": 0,
+        "openmm_schrodinger_claim_ready": 0,
+        "engine_refinement_claim_evidence_receipt_ready": 0,
+        "accuracy_metric_blocker_count": 0,
+        "gpcr_broad_claim_blocker_count": 2,
+        "engine_refinement_claim_blocker_count": 6,
+        "public_benchmark_blocker_count": 6,
+        "public_benchmark_required_row_count": 8,
+        "public_benchmark_current_row_count": 0,
+        "public_benchmark_work_order_row_count": 8,
+        "public_benchmark_work_order_seeded_row_count": 8,
+        "public_benchmark_work_order_prefilled_operator_field_count": 40,
+        "public_benchmark_work_order_pending_operator_field_count": 56,
+        "public_benchmark_work_order_experimental_deltaG_prefilled_count": 8,
+        "public_benchmark_work_order_experimental_deltaG_source_parsed_count": 285,
+        "public_benchmark_work_order_pending_license_ok_count": 8,
+        "public_benchmark_work_order_pending_dockq_count": 8,
+        "public_benchmark_work_order_pending_lddt_pli_count": 8,
+        "public_benchmark_work_order_pending_internal_deltaG_count": 8,
+        "public_benchmark_work_order_pending_experimental_deltaG_count": 0,
+        "public_benchmark_work_order_remaining_nonlicense_science_field_count": 48,
+        "public_benchmark_work_order_current_local_source_prefill_ready_field_count": 0,
+        "public_benchmark_work_order_local_receptor_coordinate_file_count": 8,
+        "public_benchmark_work_order_tar_ligand_pose_member_count": 23062,
+        "public_benchmark_work_order_tar_receptor_coordinate_member_count": 0,
+        "public_benchmark_work_order_tar_ligand_only_archive_count": 2,
+        "public_benchmark_work_order_science_input_gap_row_count": 8,
+        "public_benchmark_work_order_science_input_gap_blocked_row_count": 8,
+        "public_benchmark_work_order_local_ligand_pose_artifact_count": 8,
+        "public_benchmark_work_order_missing_ligand_pose_artifact_count": 0,
+        "public_benchmark_work_order_receptor_coordinate_ready_row_count": 8,
+        "public_benchmark_work_order_missing_receptor_coordinate_row_count": 0,
+        "public_benchmark_work_order_receptor_coordinate_intake_row_count": 8,
+        "public_benchmark_work_order_receptor_coordinate_intake_matched_row_count": 8,
+        "public_benchmark_work_order_receptor_coordinate_intake_missing_row_count": 0,
+        "public_benchmark_work_order_receptor_coordinate_intake_suggested_public_url_row_count": 8,
+        "public_benchmark_work_order_receptor_coordinate_intake_suggested_local_path_row_count": 8,
+        "public_benchmark_work_order_receptor_coordinate_intake_operator_review_required_row_count": 8,
+        "public_benchmark_work_order_receptor_coordinate_validation_row_count": 8,
+        "public_benchmark_work_order_receptor_coordinate_validation_ready_row_count": 8,
+        "public_benchmark_work_order_receptor_coordinate_validation_blocked_row_count": 0,
+        "public_benchmark_work_order_receptor_coordinate_validation_missing_row_count": 0,
+        "public_benchmark_work_order_receptor_coordinate_validation_below_min_atom_row_count": 0,
+        "public_benchmark_work_order_receptor_coordinate_validation_below_min_macromolecule_row_count": 0,
+        "public_benchmark_work_order_receptor_coordinate_validation_below_min_protein_like_row_count": 0,
+        "public_benchmark_work_order_receptor_coordinate_validation_min_atom_records": 20,
+        "public_benchmark_work_order_receptor_coordinate_validation_min_macromolecule_atom_records": 20,
+        "public_benchmark_work_order_receptor_coordinate_validation_min_distinct_residues": 5,
+        "public_benchmark_work_order_receptor_coordinate_validation_min_protein_like_residues": 5,
+        "public_benchmark_work_order_metric_evidence_required": 1,
+        "public_benchmark_work_order_metric_evidence_row_count": 8,
+        "public_benchmark_work_order_metric_evidence_ready_row_count": 0,
+        "public_benchmark_work_order_metric_evidence_blocked_row_count": 8,
+        "public_benchmark_work_order_metric_evidence_missing_dockq_source_row_count": 8,
+        "public_benchmark_work_order_metric_evidence_missing_lddt_pli_source_row_count": 8,
+        "public_benchmark_work_order_metric_evidence_missing_internal_deltaG_source_row_count": 8,
+        "public_benchmark_materialized_row_count": 8,
+        "public_benchmark_materialized_blocked_row_count": 0,
+        "public_benchmark_materialized_metric_evidence_pass_row_count": 8,
+        "public_benchmark_materialized_metric_evidence_blocked_row_count": 0,
+        "public_benchmark_materialized_free_energy_pair_count": 8,
+        "public_benchmark_materialized_free_energy_fit_pair_count": 5,
+        "public_benchmark_materialized_free_energy_holdout_pair_count": 3,
+        "public_benchmark_materialized_free_energy_unknown_split_pair_count": 0,
+        "public_benchmark_materialized_free_energy_spearman_gate_ready": 1,
+        "public_benchmark_materialized_claim_grade_statistical_support_ready": 0,
+        "public_benchmark_materialized_claim_grade_statistical_support_blocker_count": 3,
+        "public_benchmark_materialized_min_claim_grade_public_benchmark_pairs_required": 25,
+        "public_benchmark_materialized_min_claim_grade_holdout_pairs_required": 8,
+        "public_benchmark_materialized_apply_blocked_row_count": 0,
+        "public_benchmark_materialized_apply_metric_evidence_pass_row_count": 8,
+        "public_benchmark_materialized_apply_metric_evidence_contract_blocked_row_count": 0,
+        "public_benchmark_work_order_ligand_pose_only_row_count": 0,
+        "public_benchmark_work_order_missing_interaction_metric_source_row_count": 8,
+        "public_benchmark_work_order_missing_internal_deltaG_source_row_count": 8,
+        "public_benchmark_work_order_seed_interaction_metric_column_count": 0,
+        "public_benchmark_work_order_seed_internal_deltaG_column_count": 0,
+        "public_benchmark_work_order_seed_candidate_row_count": 5824,
+        "public_benchmark_work_order_seed_distinct_target_count": 284,
+        "engine_refinement_receipt_blocked_row_count": 6,
+        "external_state_mutated": 0,
+        "blocker_count": 5,
+    }
+    assert science_accuracy_frontier_spec["required_text_exact_fields"] == {
+        "accuracy_parity_status": "blocked_accuracy_parity",
+        "gpcr_broad_claim_scope_status": "blocked_gpcr_broad_claim_scope_readiness",
+        "gpcr_broad_claim_review_receipt_status": "blocked_gpcr_broad_claim_review_receipt",
+        "gpcr_broad_claim_review_receipt_first_blocked_review_id": (
+            "target_heldout_broad_scope_review_not_approved"
+        ),
+        "gpcr_broad_claim_review_receipt_approval_token_required": "APPROVE_GPCR_BROAD_CLAIM_REVIEW",
+        "engine_refinement_tier_status": "engine_refinement_tier_ready",
+        "refine_tier_public_benchmark_status": "blocked_refine_tier_public_benchmark_readiness",
+        "engine_refinement_claim_evidence_receipt_status": (
+            "blocked_engine_refinement_claim_evidence_receipt"
+        ),
+        "engine_refinement_claim_evidence_priority_packet_status": (
+            "blocked_engine_refinement_claim_evidence_priority_packet"
+        ),
+        "product_pose_sampling_readiness_status": "product_pose_sampling_readiness_ready",
+        "engine_refinement_priority_top_blocker_id": "public_benchmark_gate_not_ready",
+        "engine_refinement_priority_top_required_input": (
+            "runs/refine_tier_public_benchmark_work_order_current.csv"
+        ),
+    }
     goal_api_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -1564,6 +1842,17 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert engine_receipt_status_spec["required_text_exact_fields"][
         "most_common_row_blocker"
     ] == "operator_placeholders_unfilled"
+    engine_field_worksheet_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "engine_refinement_claim_evidence_operator_field_worksheet_semantic_ready"
+    )
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_metric_evidence_missing_required_input_artifact_row_count"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_metric_evidence_missing_required_input_artifact_sha256_row_count"
+    ] == 0
     engine_staging_apply_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -1577,8 +1866,23 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "candidate_public_benchmark_blocked_row_count"
     ] == 8
     assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "candidate_public_benchmark_metric_evidence_missing_required_input_artifact_row_count"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "candidate_public_benchmark_metric_evidence_missing_required_receptor_input_row_count"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "candidate_public_benchmark_metric_evidence_required_input_sha256_blocked_row_count"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
         "field_worksheet_pending_field_count"
-    ] == 108
+    ] == 92
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_work_order_pending_field_count"
+    ] == 56
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_top_blocker_pending_field_count"
+    ] == 62
     assert engine_staging_apply_status_spec["required_int_exact_fields"][
         "public_benchmark_intake_write_allowed"
     ] == 0
@@ -1922,6 +2226,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/aqp1_direct_binding_external_evidence_operator_fill_guide_current.json" in aqp1_worksheet_spec[
         "depends_on"
     ]
+    assert "tools/product/build_aqp1_direct_binding_external_evidence_intake.py" in aqp1_worksheet_spec[
+        "depends_on"
+    ]
     aqp1_staging_apply_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -1930,6 +2237,30 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/aqp1_direct_binding_external_evidence_operator_worksheet_current.json" in aqp1_staging_apply_spec[
         "depends_on"
     ]
+    assert "tools/product/build_aqp1_direct_binding_external_evidence_intake.py" in aqp1_staging_apply_spec[
+        "depends_on"
+    ]
+    aqp1_negative_intake_gate_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "aqp1_negative_evidence_intake_gate"
+    )
+    assert (
+        "tools/accounting/build_aqp1_negative_evidence_intake_gate.py"
+        in aqp1_negative_intake_gate_spec["depends_on"]
+    )
+    assert (
+        "tools/build_aqp1_negative_evidence_intake_gate.py"
+        in aqp1_negative_intake_gate_spec["depends_on"]
+    )
+    assert (
+        "runs/aqp1_negative_evidence_request_packet_current.json"
+        in aqp1_negative_intake_gate_spec["depends_on"]
+    )
+    assert (
+        "runs/aqp1_negative_evidence_intake_current.csv"
+        in aqp1_negative_intake_gate_spec["depends_on"]
+    )
     commercial_operator_packet_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -2076,6 +2407,55 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         if spec["artifact_id"] == "science_claim_promotion_gap_closure"
     )
     assert "runs/gpcr_conditional_prior_promotion_gate_current.json" in science_claim_spec["depends_on"]
+    phase_ab_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "gpcr_commercial_phase_ab_closure_chain"
+    )
+    assert "runs/accuracy_parity_scorecard_current.json" in phase_ab_spec["depends_on"]
+    assert "runs/gpcr_guarded_operational_gate_refresh_chain_current.json" in phase_ab_spec["depends_on"]
+    assert "runs/product_delivery_evidence_contract_current.json" in phase_ab_spec["depends_on"]
+    active_scorer_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "gpcr_active_scorer_promotion_decision_packet"
+    )
+    assert "runs/gpcr_commercial_phase_ab_closure_chain_current.json" in active_scorer_spec["depends_on"]
+    assert "runs/product_execution_approval_gate_current.json" in active_scorer_spec["depends_on"]
+    assert "runs/residual_model_registry_current.json" in active_scorer_spec["depends_on"]
+    broad_claim_scope_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "gpcr_broad_claim_scope_readiness"
+    )
+    assert "runs/accuracy_parity_scorecard_current.json" in broad_claim_scope_spec["depends_on"]
+    assert "runs/gpcr_family_heldout_scorecard_guardrail_current.json" in broad_claim_scope_spec["depends_on"]
+    assert "runs/gpcr_guarded_100k_rerun_readiness_current.json" in broad_claim_scope_spec["depends_on"]
+    assert "runs/gpcr_active_scorer_promotion_decision_packet_current.json" in broad_claim_scope_spec["depends_on"]
+    science_accuracy_frontier_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "science_accuracy_frontier"
+    )
+    assert "runs/accuracy_parity_scorecard_current.json" in science_accuracy_frontier_spec["depends_on"]
+    assert "runs/gpcr_broad_claim_scope_readiness_current.json" in science_accuracy_frontier_spec["depends_on"]
+    assert "runs/engine_refinement_tier_readiness_current.json" in science_accuracy_frontier_spec["depends_on"]
+    assert "runs/refine_tier_public_benchmark_readiness_current.json" in science_accuracy_frontier_spec["depends_on"]
+    assert (
+        "runs/refine_tier_public_benchmark_metric_source_materialization_current.json"
+        in science_accuracy_frontier_spec["depends_on"]
+    )
+    assert (
+        "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json"
+        in science_accuracy_frontier_spec["depends_on"]
+    )
+    assert "runs/engine_refinement_claim_evidence_receipt_current.json" in science_accuracy_frontier_spec[
+        "depends_on"
+    ]
+    assert "runs/engine_refinement_claim_evidence_priority_packet_current.json" in science_accuracy_frontier_spec[
+        "depends_on"
+    ]
+    assert "runs/product_pose_sampling_readiness_current.json" in science_accuracy_frontier_spec["depends_on"]
     master_rollup_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "master_gap_closure_rollup"
     )
@@ -2140,6 +2520,50 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert "config/engine_refinement_claim_promotion_evidence_receipt_current.csv" in evidence_receipt_spec["depends_on"]
     assert "runs/engine_refinement_claim_promotion_action_board_current.csv" in evidence_receipt_spec["depends_on"]
+    work_order_apply_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "refine_tier_public_benchmark_work_order_apply"
+    )
+    assert (
+        "runs/refine_tier_public_benchmark_receptor_coordinate_validation_current.csv"
+        in work_order_apply_spec["depends_on"]
+    )
+    assert (
+        "runs/refine_tier_public_benchmark_metric_evidence_current.csv"
+        in work_order_apply_spec["depends_on"]
+    )
+    materialization_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "refine_tier_public_benchmark_metric_source_materialization"
+    )
+    assert materialization_spec["builder_command"] == (
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_METRIC_MATERIALIZATION_COMMAND
+    )
+    assert "tools/product/materialize_refine_tier_public_benchmark_metric_sources.py" in (
+        materialization_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_science_input_gap_current.csv" in (
+        materialization_spec["depends_on"]
+    )
+    materialized_apply_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "refine_tier_public_benchmark_work_order_apply_materialized"
+    )
+    assert materialized_apply_spec["builder_command"] == (
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_COMMAND
+    )
+    assert "runs/refine_tier_public_benchmark_metric_source_materialization_current.json" in (
+        materialized_apply_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_work_order_materialized_current.csv" in (
+        materialized_apply_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_metric_evidence_materialized_current.csv" in (
+        materialized_apply_spec["depends_on"]
+    )
     priority_packet_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -2149,6 +2573,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/refine_tier_public_benchmark_readiness_current.json" in priority_packet_spec["depends_on"]
     assert "runs/refine_tier_public_benchmark_work_order_current.csv" in priority_packet_spec["depends_on"]
     assert "runs/refine_tier_public_benchmark_work_order_apply_current.json" in priority_packet_spec["depends_on"]
+    assert "runs/refine_tier_public_benchmark_metric_source_materialization_current.json" in (
+        priority_packet_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json" in (
+        priority_packet_spec["depends_on"]
+    )
     field_worksheet_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -2169,6 +2599,24 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/refine_tier_public_benchmark_work_order_apply_current.json" in field_worksheet_spec[
         "depends_on"
     ]
+    assert (
+        "runs/refine_tier_public_benchmark_receptor_coordinate_intake_current.csv"
+        in field_worksheet_spec["depends_on"]
+    )
+    assert (
+        "runs/refine_tier_public_benchmark_receptor_coordinate_validation_current.csv"
+        in field_worksheet_spec["depends_on"]
+    )
+    assert (
+        "runs/refine_tier_public_benchmark_metric_evidence_current.csv"
+        in field_worksheet_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_metric_source_materialization_current.json" in (
+        field_worksheet_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json" in (
+        field_worksheet_spec["depends_on"]
+    )
     staging_apply_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -2192,6 +2640,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/refine_tier_public_benchmark_work_order_apply_current.json" in staging_apply_spec[
         "depends_on"
     ]
+    assert "runs/refine_tier_public_benchmark_metric_source_materialization_current.json" in (
+        staging_apply_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json" in (
+        staging_apply_spec["depends_on"]
+    )
     goal_audit_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_goal_completion_audit"
     )
@@ -2225,6 +2679,8 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/product/build_engine_refinement_tier_readiness.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_refine_tier_public_benchmark_readiness.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/apply_refine_tier_public_benchmark_work_order.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.REFINE_TIER_PUBLIC_BENCHMARK_METRIC_MATERIALIZATION_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.REFINE_TIER_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py" in mod.RELEASE_REFRESH_COMMANDS
     assert (
@@ -2297,10 +2753,31 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "python3 tools/build_aqp1_direct_binding_external_evidence_operator_fill_guide.py"
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_aqp1_direct_binding_external_evidence_operator_staging_apply.py "
+        "--mode preview --staging-csv runs/aqp1_direct_binding_external_evidence_intake_supplement_current.csv"
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_aqp1_negative_evidence_intake_gate.py"
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_aqp1_negative_evidence_intake_gate.py"
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_product_operational_quality_contract.py"
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
         "python3 tools/product/build_refine_tier_public_benchmark_readiness.py"
     ) < mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_engine_refinement_tier_readiness.py")
     assert mod.RELEASE_REFRESH_COMMANDS.index(
         "python3 tools/product/apply_refine_tier_public_benchmark_work_order.py"
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_METRIC_MATERIALIZATION_COMMAND
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_METRIC_MATERIALIZATION_COMMAND
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_COMMAND
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_COMMAND
     ) < mod.RELEASE_REFRESH_COMMANDS.index(
         "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py"
     )
@@ -2319,6 +2796,14 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     ) < mod.RELEASE_REFRESH_COMMANDS.index(
         "python3 tools/build_engine_refinement_claim_evidence_operator_staging_apply.py"
     )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_engine_refinement_claim_evidence_operator_staging_apply.py"
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/product/build_science_accuracy_frontier.py"
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/product/build_science_accuracy_frontier.py"
+    ) < mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_product_launch_r4_preflight.py")
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_goal_completion_audit.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_operator_action_board.py")
     )
@@ -2406,6 +2891,15 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_commercial_independence_gate.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_commercial_independence_gate.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_gpcr_commercial_phase_ab_closure_chain.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_gpcr_commercial_phase_ab_closure_chain.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_gpcr_active_scorer_promotion_decision_packet.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_gpcr_active_scorer_promotion_decision_packet.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_gpcr_broad_claim_scope_readiness.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_gpcr_broad_claim_scope_readiness.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_self_hosted_license_distribution_audit.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_self_hosted_license_distribution_audit.py") < (

@@ -54,7 +54,20 @@ def test_mm_gbsa_binding_energy_refine_tier():
     assert out["refine_tier"] == "gb_sa_v1"
     assert "e_gb" in out
     assert "e_sa" in out
+    assert "ligand_contact_atom_count" in out
     assert np.isfinite(out["deltaG_mm_gbsa_kcal_mol"])
+
+
+def test_mm_gbsa_contact_normalized_score_prefers_contact_rich_pose():
+    protein = _sample_protein()
+    near_ligand = _sample_ligand()
+    far_ligand = near_ligand + np.asarray([30.0, 0.0, 0.0], dtype=np.float32)
+
+    near = mm_gbsa_binding_energy(protein, near_ligand)
+    far = mm_gbsa_binding_energy(protein, far_ligand)
+
+    assert near["contact_count"] > far["contact_count"]
+    assert near["deltaG_mm_gbsa_kcal_mol"] < far["deltaG_mm_gbsa_kcal_mol"]
 
 
 def test_backmapping_refine_gb_sa_model():

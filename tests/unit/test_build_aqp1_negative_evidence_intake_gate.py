@@ -101,8 +101,16 @@ def test_build_aqp1_negative_evidence_intake_gate_blank_template_waits_for_evide
     assert summary["intake_row_count"] == 3
     assert summary["intake_row_with_data_count"] == 0
     assert summary["valid_intake_row_count"] == 0
+    assert summary["exact_negative_quantitative_row_count"] == 0
+    assert summary["primary_source_verified_count"] == 0
     assert summary["required_assignable_negative_row_count"] == 3
     assert summary["missing_valid_intake_row_count"] == 3
+    assert summary["product_scope_evidence_status"] == "blocked_product_scope_transporter_negative_quantitative_evidence"
+    assert summary["transporter_negative_quantitative_evidence_ready"] is False
+    assert summary["primary_source_negative_evidence_ready"] is False
+    assert summary["exact_negative_quantitative_value_ready"] is False
+    assert summary["negative_evidence_gap_open"] is True
+    assert summary["functional_surrogate_promoted_to_negative"] is False
     assert summary["intake_gate_complete"] is False
     assert summary["negative_evidence_closure_allowed"] is False
     assert summary["claim_promotion_allowed"] is False
@@ -116,9 +124,17 @@ def test_build_aqp1_negative_evidence_intake_gate_accepts_three_exact_rows_for_r
 
     summary = payload["summary"]
     assert summary["valid_intake_row_count"] == 3
+    assert summary["exact_negative_quantitative_row_count"] == 3
+    assert summary["primary_source_verified_count"] == 3
     assert summary["missing_valid_intake_row_count"] == 0
     assert summary["review_ready_row_count"] == 3
     assert summary["intake_gate_complete"] is True
+    assert summary["product_scope_evidence_status"] == "product_scope_transporter_negative_quantitative_evidence_ready"
+    assert summary["transporter_negative_quantitative_evidence_ready"] is True
+    assert summary["primary_source_negative_evidence_ready"] is True
+    assert summary["exact_negative_quantitative_value_ready"] is True
+    assert summary["negative_evidence_gap_open"] is False
+    assert summary["functional_surrogate_promoted_to_negative"] is False
     assert summary["split_reference_meta_update_required"] is True
     assert summary["authoritative_negative_apply_allowed_count"] == 0
     assert summary["negative_evidence_closure_allowed"] is False
@@ -158,6 +174,12 @@ def test_build_aqp1_negative_evidence_intake_gate_accepts_primary_pmid_23123479_
     payload = mod.build_payload(_request_payload(), [row])
 
     assert payload["summary"]["valid_intake_row_count"] == 1
+    assert payload["summary"]["exact_negative_quantitative_row_count"] == 1
+    assert payload["summary"]["primary_source_verified_count"] == 1
+    assert payload["summary"]["transporter_negative_quantitative_evidence_ready"] is False
+    assert payload["summary"]["primary_source_negative_evidence_ready"] is True
+    assert payload["summary"]["exact_negative_quantitative_value_ready"] is True
+    assert payload["summary"]["negative_evidence_gap_open"] is False
     assert payload["rows"][0]["issue_codes"] == ""
 
 

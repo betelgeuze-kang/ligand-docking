@@ -310,7 +310,7 @@ CATALOG: list[dict[str, Any]] = [
     {
         "kit_entry_id": "accuracy_ligand_ranking_repair",
         "lane_id": "product_accuracy_parity",
-        "action_types": ["repair_ligand_ranking_parity"],
+        "action_types": ["repair_ligand_ranking_parity", "close_ligand_ranking_claim_scope"],
         "input_kind": "ligand_ranking_parity_repair_action",
         "source_gate_json": DEFAULT_ACCURACY_PARITY_SCORECARD_JSON,
         "template_path": "",

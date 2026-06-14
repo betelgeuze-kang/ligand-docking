@@ -12,6 +12,9 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 from tools.product.build_engine_refinement_claim_evidence_priority_packet import (
+    DEFAULT_PUBLIC_BENCHMARK_MATERIALIZATION_JSON,
+    DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_JSON,
+    DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_WORK_ORDER_CSV,
     DEFAULT_PUBLIC_BENCHMARK_READINESS_JSON,
     DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_APPLY_JSON,
     DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_CSV,
@@ -26,6 +29,14 @@ from tools.product.build_engine_refinement_claim_evidence_receipt import (
     PLACEHOLDER_PREFIXES,
     REQUIRED_BLOCKERS,
     REQUIRED_COLUMNS,
+)
+from tools.product.build_refine_tier_public_benchmark_readiness import (
+    DEFAULT_OUT_METRIC_EVIDENCE_CSV as DEFAULT_PUBLIC_BENCHMARK_METRIC_EVIDENCE_CSV,
+    DEFAULT_OUT_RECEPTOR_COORDINATE_INTAKE_CSV as DEFAULT_PUBLIC_BENCHMARK_RECEPTOR_COORDINATE_INTAKE_CSV,
+    DEFAULT_OUT_RECEPTOR_COORDINATE_VALIDATION_CSV as DEFAULT_PUBLIC_BENCHMARK_RECEPTOR_COORDINATE_VALIDATION_CSV,
+    METRIC_EVIDENCE_COLUMNS,
+    RECEPTOR_COORDINATE_INTAKE_COLUMNS,
+    RECEPTOR_COORDINATE_VALIDATION_COLUMNS,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -42,6 +53,9 @@ WORK_ORDER_OPERATOR_FIELDS = [
     "dockq",
     "lddt_pli",
     "deltaG_mm_gbsa_kcal_mol",
+    "dockq_source_artifact",
+    "lddt_pli_source_artifact",
+    "internal_deltaG_source_artifact",
     "deltaG_experimental_kcal_mol",
 ]
 RECEIPT_OPTIONAL_FIELDS = {"notes"}
@@ -83,6 +97,9 @@ FIELD_ACTIONS = {
     "dockq": "Fill a finite DockQ-like score.",
     "lddt_pli": "Fill a finite lDDT-PLI-like score.",
     "deltaG_mm_gbsa_kcal_mol": "Fill the internal refine free-energy estimate.",
+    "dockq_source_artifact": "Point to the local reviewed artifact used to compute or verify DockQ.",
+    "lddt_pli_source_artifact": "Point to the local reviewed artifact used to compute or verify lDDT-PLI.",
+    "internal_deltaG_source_artifact": "Point to the local reviewed artifact used to compute or verify internal refine ΔG.",
     "deltaG_experimental_kcal_mol": "Fill the public experimental free-energy value.",
 }
 
@@ -160,6 +177,53 @@ def _summary(packet: dict[str, Any]) -> dict[str, Any]:
 
 def _rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
     return [dict(row) for row in packet.get("rows") or [] if isinstance(row, dict)]
+
+
+def _rows_by_work_order_id(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {
+        _text(row.get("work_order_id")): row
+        for row in rows
+        if _text(row.get("work_order_id"))
+    }
+
+
+def _count_rows_with_value(rows: list[dict[str, Any]], field_name: str, expected: str) -> int:
+    return len([row for row in rows if _text(row.get(field_name)) == expected])
+
+
+def _count_rows_without_true(rows: list[dict[str, Any]], field_name: str) -> int:
+    return len([row for row in rows if not _bool_text(row.get(field_name))])
+
+
+def _split_nonempty(value: Any) -> list[str]:
+    return [part.strip() for part in _text(value).split(";") if part.strip()]
+
+
+def _count_rows_with_missing_required_metric_inputs(rows: list[dict[str, Any]]) -> int:
+    return len([row for row in rows if _text(row.get("missing_required_metric_input_artifacts"))])
+
+
+def _count_rows_with_missing_required_metric_input_hashes(rows: list[dict[str, Any]]) -> int:
+    blocked_rows = []
+    for row in rows:
+        required_artifacts = _split_nonempty(row.get("required_metric_input_artifacts"))
+        required_hashes = _split_nonempty(row.get("required_metric_input_artifact_sha256s"))
+        if required_artifacts and len(required_hashes) < len(required_artifacts):
+            blocked_rows.append(row)
+    return len(blocked_rows)
+
+
+def _materialized_metric_ready(materialization: dict[str, Any]) -> bool:
+    row_count = _int(materialization.get("materialized_row_count"))
+    return bool(
+        _text(materialization.get("status")) == "refine_tier_public_benchmark_metric_sources_materialized"
+        and row_count > 0
+        and _int(materialization.get("blocked_row_count")) == 0
+        and _int(materialization.get("metric_evidence_pass_row_count")) >= row_count
+        and materialization.get("free_energy_spearman_gate_ready") is True
+        and _int(materialization.get("external_engine_calls")) == 0
+        and materialization.get("external_state_mutated") is False
+    )
 
 
 def _read_csv(
@@ -294,6 +358,8 @@ def _receipt_field_row(
 def _expected_work_order_value(field_name: str) -> str:
     if field_name in {"pose_rmsd_A", "dockq", "lddt_pli", "deltaG_mm_gbsa_kcal_mol", "deltaG_experimental_kcal_mol"}:
         return "finite numeric value"
+    if field_name in {"dockq_source_artifact", "lddt_pli_source_artifact", "internal_deltaG_source_artifact"}:
+        return "local reviewed metric evidence artifact path"
     if field_name == "license_ok":
         return "true"
     return "non-placeholder public benchmark value"
@@ -316,6 +382,9 @@ def _work_order_field_row(
     column_present: bool,
     work_order_row: dict[str, str],
     work_order_report_row: dict[str, Any],
+    receptor_intake_row: dict[str, Any],
+    receptor_validation_row: dict[str, Any],
+    metric_evidence_row: dict[str, Any],
     priority_summary: dict[str, Any],
 ) -> dict[str, Any]:
     work_order_id = _text(work_order_row.get("work_order_id")) or f"work_order_row_{row_index}"
@@ -336,6 +405,95 @@ def _work_order_field_row(
         "top_blocker_field": True,
         "current_value": _text(value),
         "observed_source_value": _text(work_order_report_row.get("row_status")),
+        "receptor_coordinate_intake_current_artifact": _text(
+            receptor_intake_row.get("current_receptor_coordinate_artifact")
+        ),
+        "receptor_coordinate_intake_artifact_present": _bool_text(
+            receptor_intake_row.get("receptor_coordinate_artifact_present")
+        ),
+        "receptor_coordinate_accepted_offline_coordinate_patterns": _text(
+            receptor_intake_row.get("accepted_offline_coordinate_patterns")
+        ),
+        "receptor_coordinate_expected_archive_member_examples": _text(
+            receptor_intake_row.get("expected_archive_member_examples")
+        ),
+        "receptor_coordinate_suggested_public_coordinate_urls": _text(
+            receptor_intake_row.get("suggested_public_coordinate_urls")
+        ),
+        "receptor_coordinate_suggested_local_coordinate_paths": _text(
+            receptor_intake_row.get("suggested_local_coordinate_paths")
+        ),
+        "receptor_coordinate_operator_source_review_required": _text(
+            receptor_intake_row.get("operator_coordinate_source_review_required")
+        ),
+        "receptor_coordinate_intake_next_operator_action": _text(
+            receptor_intake_row.get("next_operator_action")
+        ),
+        "receptor_coordinate_validation_status": _text(
+            receptor_validation_row.get("coordinate_validation_status")
+        ),
+        "receptor_coordinate_validation_blockers": _text(receptor_validation_row.get("blockers")),
+        "receptor_coordinate_artifact": _text(receptor_validation_row.get("receptor_coordinate_artifact")),
+        "receptor_coordinate_artifact_present": _bool_text(
+            receptor_validation_row.get("receptor_coordinate_artifact_present")
+        ),
+        "receptor_coordinate_next_required_science_input": _text(
+            receptor_validation_row.get("next_required_science_input")
+        ),
+        "metric_evidence_status": _text(metric_evidence_row.get("metric_evidence_status")),
+        "metric_evidence_blockers": _text(metric_evidence_row.get("blockers")),
+        "metric_next_required_science_input": _text(metric_evidence_row.get("next_required_science_input")),
+        "metric_expected_dockq_source_artifact": _text(
+            metric_evidence_row.get("expected_dockq_source_artifact")
+        ),
+        "metric_expected_lddt_pli_source_artifact": _text(
+            metric_evidence_row.get("expected_lddt_pli_source_artifact")
+        ),
+        "metric_expected_internal_deltaG_source_artifact": _text(
+            metric_evidence_row.get("expected_internal_deltaG_source_artifact")
+        ),
+        "metric_required_input_artifacts": _text(
+            metric_evidence_row.get("required_metric_input_artifacts")
+        ),
+        "metric_required_input_artifact_sha256s": _text(
+            metric_evidence_row.get("required_metric_input_artifact_sha256s")
+        ),
+        "metric_missing_required_input_artifacts": _text(
+            metric_evidence_row.get("missing_required_metric_input_artifacts")
+        ),
+        "metric_required_source_payload_fields": _text(
+            metric_evidence_row.get("required_metric_source_payload_fields")
+        ),
+        "metric_evidence_next_operator_action": _text(
+            metric_evidence_row.get("metric_evidence_next_operator_action")
+        ),
+        "metric_dockq_source_artifact_present": _bool_text(
+            metric_evidence_row.get("dockq_source_artifact_present")
+        ),
+        "metric_lddt_pli_source_artifact_present": _bool_text(
+            metric_evidence_row.get("lddt_pli_source_artifact_present")
+        ),
+        "metric_internal_deltaG_source_artifact_present": _bool_text(
+            metric_evidence_row.get("internal_deltaG_source_artifact_present")
+        ),
+        "metric_dockq_source_payload_valid": _bool_text(
+            metric_evidence_row.get("dockq_source_payload_valid")
+        ),
+        "metric_lddt_pli_source_payload_valid": _bool_text(
+            metric_evidence_row.get("lddt_pli_source_payload_valid")
+        ),
+        "metric_internal_deltaG_source_payload_valid": _bool_text(
+            metric_evidence_row.get("internal_deltaG_source_payload_valid")
+        ),
+        "metric_dockq_source_payload_blockers": _text(
+            metric_evidence_row.get("dockq_source_payload_blockers")
+        ),
+        "metric_lddt_pli_source_payload_blockers": _text(
+            metric_evidence_row.get("lddt_pli_source_payload_blockers")
+        ),
+        "metric_internal_deltaG_source_payload_blockers": _text(
+            metric_evidence_row.get("internal_deltaG_source_payload_blockers")
+        ),
         "expected_value_hint": _expected_work_order_value(field_name),
         "expected_true_fields": "claim_grade_public_benchmark_ready",
         "field_status": status,
@@ -358,6 +516,14 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
     public_benchmark_readiness_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_READINESS_JSON,
     public_benchmark_work_order_csv: str | Path = DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_CSV,
     public_benchmark_work_order_apply_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_APPLY_JSON,
+    public_benchmark_materialization_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_MATERIALIZATION_JSON,
+    public_benchmark_materialized_work_order_csv: str | Path = DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_WORK_ORDER_CSV,
+    public_benchmark_materialized_apply_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_JSON,
+    public_benchmark_receptor_coordinate_intake_csv: str
+    | Path = DEFAULT_PUBLIC_BENCHMARK_RECEPTOR_COORDINATE_INTAKE_CSV,
+    public_benchmark_receptor_coordinate_validation_csv: str
+    | Path = DEFAULT_PUBLIC_BENCHMARK_RECEPTOR_COORDINATE_VALIDATION_CSV,
+    public_benchmark_metric_evidence_csv: str | Path = DEFAULT_PUBLIC_BENCHMARK_METRIC_EVIDENCE_CSV,
     root: str | Path = ROOT,
 ) -> dict[str, Any]:
     root_path = Path(root)
@@ -378,16 +544,73 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
         public_benchmark_work_order_apply_json,
         root=root_path,
     )
+    materialization_packet, materialization_present = _read_json(
+        public_benchmark_materialization_json,
+        root=root_path,
+    )
+    materialized_work_order_rows, _, materialized_work_order_present = _read_csv(
+        public_benchmark_materialized_work_order_csv,
+        root=root_path,
+        required_columns=WORK_ORDER_OPERATOR_FIELDS,
+    )
+    materialized_apply_packet, materialized_apply_present = _read_json(
+        public_benchmark_materialized_apply_json,
+        root=root_path,
+    )
+    receptor_intake_rows, receptor_intake_missing_columns, receptor_intake_csv_present = _read_csv(
+        public_benchmark_receptor_coordinate_intake_csv,
+        root=root_path,
+        required_columns=RECEPTOR_COORDINATE_INTAKE_COLUMNS,
+    )
+    receptor_validation_rows, receptor_validation_missing_columns, receptor_validation_csv_present = _read_csv(
+        public_benchmark_receptor_coordinate_validation_csv,
+        root=root_path,
+        required_columns=RECEPTOR_COORDINATE_VALIDATION_COLUMNS,
+    )
+    metric_evidence_rows, metric_evidence_missing_columns, metric_evidence_csv_present = _read_csv(
+        public_benchmark_metric_evidence_csv,
+        root=root_path,
+        required_columns=METRIC_EVIDENCE_COLUMNS,
+    )
     receipt_summary = _summary(receipt_packet)
     priority_summary = _summary(priority_packet)
     public_summary = _summary(public_packet)
     work_order_apply_summary = _summary(work_order_apply_packet)
+    materialization_summary = _summary(materialization_packet)
+    materialized_apply_summary = _summary(materialized_apply_packet)
+    materialized_metric_ready = _materialized_metric_ready(materialization_summary)
+    materialized_apply_ready = bool(materialized_apply_summary.get("apply_ready") is True)
+    materialized_science_evidence_complete = bool(materialized_metric_ready and materialized_apply_ready)
     receipt_report_by_blocker = {
         _text(row.get("blocker_id")): row for row in _rows(receipt_packet)
     }
     work_order_report_by_id = {
         _text(row.get("work_order_id")): row for row in _rows(work_order_apply_packet)
     }
+    receptor_intake_by_work_order_id = _rows_by_work_order_id(receptor_intake_rows)
+    receptor_validation_by_work_order_id = _rows_by_work_order_id(receptor_validation_rows)
+    metric_evidence_by_work_order_id = _rows_by_work_order_id(metric_evidence_rows)
+    missing_receptor_intake_work_order_count = len(
+        [
+            row
+            for row in work_order_rows
+            if _text(row.get("work_order_id")) not in receptor_intake_by_work_order_id
+        ]
+    )
+    missing_receptor_validation_work_order_count = len(
+        [
+            row
+            for row in work_order_rows
+            if _text(row.get("work_order_id")) not in receptor_validation_by_work_order_id
+        ]
+    )
+    missing_metric_evidence_work_order_count = len(
+        [
+            row
+            for row in work_order_rows
+            if _text(row.get("work_order_id")) not in metric_evidence_by_work_order_id
+        ]
+    )
     receipt_field_rows = [
         _receipt_field_row(
             field_name,
@@ -407,6 +630,18 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
             column_present=field_name not in work_order_missing_columns,
             work_order_row=work_order_row,
             work_order_report_row=work_order_report_by_id.get(_text(work_order_row.get("work_order_id")), {}),
+            receptor_intake_row=receptor_intake_by_work_order_id.get(
+                _text(work_order_row.get("work_order_id")),
+                {},
+            ),
+            receptor_validation_row=receptor_validation_by_work_order_id.get(
+                _text(work_order_row.get("work_order_id")),
+                {},
+            ),
+            metric_evidence_row=metric_evidence_by_work_order_id.get(
+                _text(work_order_row.get("work_order_id")),
+                {},
+            ),
             priority_summary=priority_summary,
         )
         for row_index, work_order_row in enumerate(work_order_rows, start=1)
@@ -446,8 +681,63 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
         source_blockers.append("public_benchmark_work_order_rows_missing")
     if not work_order_apply_present:
         source_blockers.append("public_benchmark_work_order_apply_artifact_missing")
+    if not receptor_intake_csv_present:
+        source_blockers.append("public_benchmark_receptor_coordinate_intake_csv_missing")
+    if receptor_intake_missing_columns:
+        source_blockers.append("public_benchmark_receptor_coordinate_intake_columns_missing")
+    if work_order_rows and not receptor_intake_rows:
+        source_blockers.append("public_benchmark_receptor_coordinate_intake_rows_missing")
+    if missing_receptor_intake_work_order_count:
+        source_blockers.append("public_benchmark_receptor_coordinate_intake_work_order_rows_missing")
+    if not receptor_validation_csv_present:
+        source_blockers.append("public_benchmark_receptor_coordinate_validation_csv_missing")
+    if receptor_validation_missing_columns:
+        source_blockers.append("public_benchmark_receptor_coordinate_validation_columns_missing")
+    if work_order_rows and not receptor_validation_rows:
+        source_blockers.append("public_benchmark_receptor_coordinate_validation_rows_missing")
+    if missing_receptor_validation_work_order_count:
+        source_blockers.append("public_benchmark_receptor_coordinate_validation_work_order_rows_missing")
+    if not metric_evidence_csv_present:
+        source_blockers.append("public_benchmark_metric_evidence_csv_missing")
+    if metric_evidence_missing_columns:
+        source_blockers.append("public_benchmark_metric_evidence_columns_missing")
+    if work_order_rows and not metric_evidence_rows:
+        source_blockers.append("public_benchmark_metric_evidence_rows_missing")
+    if missing_metric_evidence_work_order_count:
+        source_blockers.append("public_benchmark_metric_evidence_work_order_rows_missing")
     worksheet_ready = not source_blockers
-    operator_fill_complete = worksheet_ready and not pending_rows and not invalid_rows
+    receptor_validation_pass_row_count = _count_rows_with_value(
+        receptor_validation_rows,
+        "coordinate_validation_status",
+        "pass",
+    )
+    metric_evidence_pass_row_count = _count_rows_with_value(metric_evidence_rows, "metric_evidence_status", "pass")
+    receptor_validation_blocked_row_count = _count_rows_with_value(
+        receptor_validation_rows,
+        "coordinate_validation_status",
+        "blocked",
+    )
+    metric_evidence_blocked_row_count = _count_rows_with_value(
+        metric_evidence_rows,
+        "metric_evidence_status",
+        "blocked",
+    )
+    metric_evidence_missing_required_input_artifact_row_count = (
+        _count_rows_with_missing_required_metric_inputs(metric_evidence_rows)
+    )
+    metric_evidence_missing_required_input_artifact_sha256_row_count = (
+        _count_rows_with_missing_required_metric_input_hashes(metric_evidence_rows)
+    )
+    science_evidence_complete = (
+        bool(work_order_rows)
+        and missing_receptor_validation_work_order_count == 0
+        and missing_metric_evidence_work_order_count == 0
+        and receptor_validation_blocked_row_count == 0
+        and metric_evidence_blocked_row_count == 0
+        and receptor_validation_pass_row_count >= len(work_order_rows)
+        and metric_evidence_pass_row_count >= len(work_order_rows)
+    )
+    operator_fill_complete = worksheet_ready and not pending_rows and not invalid_rows and science_evidence_complete
     summary = {
         "packet_type": "engine_refinement_claim_evidence_operator_field_worksheet",
         "status": (
@@ -473,12 +763,84 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
         ),
         "public_benchmark_work_order_apply_status": _text(work_order_apply_summary.get("status")),
         "public_benchmark_work_order_apply_ready": bool(work_order_apply_summary.get("apply_ready") is True),
+        "public_benchmark_materialization_artifact": _display_path(
+            public_benchmark_materialization_json,
+            root=root_path,
+        ),
+        "public_benchmark_materialized_work_order_csv": _display_path(
+            public_benchmark_materialized_work_order_csv,
+            root=root_path,
+        ),
+        "public_benchmark_materialized_work_order_apply_artifact": _display_path(
+            public_benchmark_materialized_apply_json,
+            root=root_path,
+        ),
+        "public_benchmark_materialization_artifact_present": materialization_present,
+        "public_benchmark_materialized_work_order_csv_present": materialized_work_order_present,
+        "public_benchmark_materialized_work_order_apply_artifact_present": materialized_apply_present,
+        "public_benchmark_materialized_metric_ready": materialized_metric_ready,
+        "public_benchmark_materialized_apply_ready": materialized_apply_ready,
+        "public_benchmark_materialized_science_evidence_complete": materialized_science_evidence_complete,
+        "public_benchmark_materialized_work_order_row_count": len(materialized_work_order_rows),
+        "public_benchmark_materialized_metric_evidence_pass_row_count": _int(
+            materialization_summary.get("metric_evidence_pass_row_count")
+        ),
+        "public_benchmark_materialized_metric_evidence_blocked_row_count": _int(
+            materialization_summary.get("metric_evidence_blocked_row_count")
+        ),
+        "public_benchmark_materialized_free_energy_pair_count": _int(
+            materialization_summary.get("free_energy_pair_count")
+        ),
+        "public_benchmark_materialized_free_energy_spearman": materialization_summary.get(
+            "free_energy_spearman"
+        ),
+        "public_benchmark_materialized_free_energy_spearman_gate_ready": bool(
+            materialization_summary.get("free_energy_spearman_gate_ready") is True
+        ),
+        "public_benchmark_materialized_free_energy_spearman_bootstrap_p05": materialization_summary.get(
+            "free_energy_spearman_bootstrap_p05"
+        ),
+        "public_benchmark_materialized_free_energy_spearman_bootstrap_p50": materialization_summary.get(
+            "free_energy_spearman_bootstrap_p50"
+        ),
+        "public_benchmark_materialized_free_energy_spearman_bootstrap_p95": materialization_summary.get(
+            "free_energy_spearman_bootstrap_p95"
+        ),
+        "public_benchmark_materialized_claim_grade_statistical_support_ready": bool(
+            materialization_summary.get("claim_grade_public_benchmark_statistical_support_ready")
+            is True
+        ),
+        "public_benchmark_materialized_claim_grade_statistical_support_blocker_count": _int(
+            materialization_summary.get("claim_grade_public_benchmark_statistical_support_blocker_count")
+        ),
+        "public_benchmark_materialized_claim_grade_statistical_support_blockers": (
+            materialization_summary.get("claim_grade_public_benchmark_statistical_support_blockers") or []
+        ),
+        "public_benchmark_materialized_apply_status": _text(materialized_apply_summary.get("status")),
+        "public_benchmark_materialized_apply_blocked_row_count": _int(
+            materialized_apply_summary.get("blocked_row_count")
+        ),
+        "public_benchmark_receptor_coordinate_intake_csv": _display_path(
+            public_benchmark_receptor_coordinate_intake_csv,
+            root=root_path,
+        ),
+        "public_benchmark_receptor_coordinate_validation_csv": _display_path(
+            public_benchmark_receptor_coordinate_validation_csv,
+            root=root_path,
+        ),
+        "public_benchmark_metric_evidence_csv": _display_path(
+            public_benchmark_metric_evidence_csv,
+            root=root_path,
+        ),
         "receipt_csv_present": receipt_csv_present,
         "receipt_artifact_present": receipt_artifact_present,
         "priority_packet_artifact_present": priority_artifact_present,
         "public_benchmark_readiness_artifact_present": public_artifact_present,
         "public_benchmark_work_order_csv_present": work_order_csv_present,
         "public_benchmark_work_order_apply_artifact_present": work_order_apply_present,
+        "public_benchmark_receptor_coordinate_intake_csv_present": receptor_intake_csv_present,
+        "public_benchmark_receptor_coordinate_validation_csv_present": receptor_validation_csv_present,
+        "public_benchmark_metric_evidence_csv_present": metric_evidence_csv_present,
         "receipt_row_count": len(receipt_rows),
         "receipt_field_row_count": len(receipt_field_rows),
         "required_receipt_field_count": len(
@@ -488,6 +850,72 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
         "public_benchmark_work_order_row_count": len(work_order_rows),
         "public_benchmark_work_order_field_count": len(work_order_field_rows),
         "public_benchmark_work_order_pending_field_count": len(work_order_pending_rows),
+        "public_benchmark_receptor_coordinate_intake_row_count": len(receptor_intake_rows),
+        "public_benchmark_receptor_coordinate_intake_artifact_present_row_count": len(
+            [
+                row
+                for row in receptor_intake_rows
+                if _bool_text(row.get("receptor_coordinate_artifact_present"))
+            ]
+        ),
+        "public_benchmark_receptor_coordinate_intake_missing_work_order_row_count": (
+            missing_receptor_intake_work_order_count
+        ),
+        "public_benchmark_receptor_coordinate_validation_row_count": len(receptor_validation_rows),
+        "public_benchmark_receptor_coordinate_validation_pass_row_count": receptor_validation_pass_row_count,
+        "public_benchmark_receptor_coordinate_validation_blocked_row_count": receptor_validation_blocked_row_count,
+        "public_benchmark_receptor_coordinate_validation_missing_work_order_row_count": (
+            missing_receptor_validation_work_order_count
+        ),
+        "public_benchmark_metric_evidence_row_count": len(metric_evidence_rows),
+        "public_benchmark_metric_evidence_pass_row_count": metric_evidence_pass_row_count,
+        "public_benchmark_metric_evidence_blocked_row_count": metric_evidence_blocked_row_count,
+        "public_benchmark_metric_evidence_missing_work_order_row_count": (
+            missing_metric_evidence_work_order_count
+        ),
+        "public_benchmark_metric_evidence_missing_required_input_artifact_row_count": (
+            metric_evidence_missing_required_input_artifact_row_count
+        ),
+        "public_benchmark_metric_evidence_missing_required_input_artifact_sha256_row_count": (
+            metric_evidence_missing_required_input_artifact_sha256_row_count
+        ),
+        "public_benchmark_metric_evidence_missing_dockq_source_row_count": _count_rows_without_true(
+            metric_evidence_rows,
+            "dockq_source_artifact_present",
+        ),
+        "public_benchmark_metric_evidence_missing_lddt_pli_source_row_count": _count_rows_without_true(
+            metric_evidence_rows,
+            "lddt_pli_source_artifact_present",
+        ),
+        "public_benchmark_metric_evidence_missing_internal_deltaG_source_row_count": _count_rows_without_true(
+            metric_evidence_rows,
+            "internal_deltaG_source_artifact_present",
+        ),
+        "public_benchmark_metric_evidence_invalid_dockq_source_payload_row_count": len(
+            [
+                row
+                for row in metric_evidence_rows
+                if _bool_text(row.get("dockq_source_artifact_present"))
+                and not _bool_text(row.get("dockq_source_payload_valid"))
+            ]
+        ),
+        "public_benchmark_metric_evidence_invalid_lddt_pli_source_payload_row_count": len(
+            [
+                row
+                for row in metric_evidence_rows
+                if _bool_text(row.get("lddt_pli_source_artifact_present"))
+                and not _bool_text(row.get("lddt_pli_source_payload_valid"))
+            ]
+        ),
+        "public_benchmark_metric_evidence_invalid_internal_deltaG_source_payload_row_count": len(
+            [
+                row
+                for row in metric_evidence_rows
+                if _bool_text(row.get("internal_deltaG_source_artifact_present"))
+                and not _bool_text(row.get("internal_deltaG_source_payload_valid"))
+            ]
+        ),
+        "public_benchmark_science_evidence_complete": science_evidence_complete,
         "worksheet_field_row_count": len(worksheet_rows),
         "operator_fill_pending_field_count": len(pending_rows),
         "invalid_field_count": len(invalid_rows),
@@ -518,6 +946,9 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
             "Operator fields are complete; rerun public benchmark apply/readiness, claim receipt, priority packet, "
             "and product-goal audit before any claim promotion."
             if operator_fill_complete
+            else "Materialized R9 science evidence is complete; review the materialized work-order/apply candidate "
+            "and decide whether to explicitly promote it to canonical intake before filling the R9 receipt."
+            if materialized_science_evidence_complete
             else "Fill public benchmark work-order fields and matching claim evidence receipt fields, starting with "
             "the top R9 blocker, then rerun apply/readiness and receipt gates."
         ),
@@ -528,6 +959,12 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
             str(public_benchmark_readiness_json),
             str(public_benchmark_work_order_csv),
             str(public_benchmark_work_order_apply_json),
+            str(public_benchmark_materialization_json),
+            str(public_benchmark_materialized_work_order_csv),
+            str(public_benchmark_materialized_apply_json),
+            str(public_benchmark_receptor_coordinate_intake_csv),
+            str(public_benchmark_receptor_coordinate_validation_csv),
+            str(public_benchmark_metric_evidence_csv),
         ],
     }
     return {"summary": summary, "rows": worksheet_rows}
@@ -554,6 +991,25 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"- top_blocker_id: `{summary['top_blocker_id']}`",
         f"- top_priority_bucket: `{summary['top_priority_bucket']}`",
         f"- public_benchmark_work_order_apply_blocked_row_count: `{summary['public_benchmark_work_order_apply_blocked_row_count']}`",
+        f"- public_benchmark_materialized_science_evidence_complete: `{summary['public_benchmark_materialized_science_evidence_complete']}`",
+        f"- public_benchmark_materialized_work_order_row_count: `{summary['public_benchmark_materialized_work_order_row_count']}`",
+        "- public_benchmark_materialized_free_energy_spearman: "
+        f"`{summary['public_benchmark_materialized_free_energy_spearman']}`",
+        "- public_benchmark_materialized_spearman_bootstrap_p05: "
+        f"`{summary['public_benchmark_materialized_free_energy_spearman_bootstrap_p05']}`",
+        "- public_benchmark_materialized_claim_grade_statistical_support_ready: "
+        f"`{summary['public_benchmark_materialized_claim_grade_statistical_support_ready']}`",
+        "- public_benchmark_receptor_coordinate_intake_artifact_present_row_count: "
+        f"`{summary['public_benchmark_receptor_coordinate_intake_artifact_present_row_count']}`",
+        "- public_benchmark_receptor_coordinate_validation_blocked_row_count: "
+        f"`{summary['public_benchmark_receptor_coordinate_validation_blocked_row_count']}`",
+        f"- public_benchmark_metric_evidence_blocked_row_count: `{summary['public_benchmark_metric_evidence_blocked_row_count']}`",
+        "- public_benchmark_metric_evidence_missing_source_row_counts: "
+        f"`dockq={summary['public_benchmark_metric_evidence_missing_dockq_source_row_count']};"
+        f"lddt_pli={summary['public_benchmark_metric_evidence_missing_lddt_pli_source_row_count']};"
+        f"internal_deltaG={summary['public_benchmark_metric_evidence_missing_internal_deltaG_source_row_count']}`",
+        "- public_benchmark_metric_evidence_missing_required_input_artifact_row_count: "
+        f"`{summary['public_benchmark_metric_evidence_missing_required_input_artifact_row_count']}`",
         f"- approval_token_required: `{summary['approval_token_required']}`",
         "",
         "## Rows",
@@ -582,6 +1038,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--public-benchmark-readiness-json", default=DEFAULT_PUBLIC_BENCHMARK_READINESS_JSON)
     parser.add_argument("--public-benchmark-work-order-csv", default=DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_CSV)
     parser.add_argument("--public-benchmark-work-order-apply-json", default=DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_APPLY_JSON)
+    parser.add_argument(
+        "--public-benchmark-materialization-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_MATERIALIZATION_JSON,
+    )
+    parser.add_argument(
+        "--public-benchmark-materialized-work-order-csv",
+        default=DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_WORK_ORDER_CSV,
+    )
+    parser.add_argument(
+        "--public-benchmark-materialized-apply-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_JSON,
+    )
+    parser.add_argument(
+        "--public-benchmark-receptor-coordinate-intake-csv",
+        default=DEFAULT_PUBLIC_BENCHMARK_RECEPTOR_COORDINATE_INTAKE_CSV,
+    )
+    parser.add_argument(
+        "--public-benchmark-receptor-coordinate-validation-csv",
+        default=DEFAULT_PUBLIC_BENCHMARK_RECEPTOR_COORDINATE_VALIDATION_CSV,
+    )
+    parser.add_argument("--public-benchmark-metric-evidence-csv", default=DEFAULT_PUBLIC_BENCHMARK_METRIC_EVIDENCE_CSV)
     parser.add_argument("--root", default=str(ROOT))
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
@@ -599,6 +1076,12 @@ def main(argv: list[str] | None = None) -> None:
         public_benchmark_readiness_json=args.public_benchmark_readiness_json,
         public_benchmark_work_order_csv=args.public_benchmark_work_order_csv,
         public_benchmark_work_order_apply_json=args.public_benchmark_work_order_apply_json,
+        public_benchmark_materialization_json=args.public_benchmark_materialization_json,
+        public_benchmark_materialized_work_order_csv=args.public_benchmark_materialized_work_order_csv,
+        public_benchmark_materialized_apply_json=args.public_benchmark_materialized_apply_json,
+        public_benchmark_receptor_coordinate_intake_csv=args.public_benchmark_receptor_coordinate_intake_csv,
+        public_benchmark_receptor_coordinate_validation_csv=args.public_benchmark_receptor_coordinate_validation_csv,
+        public_benchmark_metric_evidence_csv=args.public_benchmark_metric_evidence_csv,
         root=root,
     )
     _write_json(args.out_json, payload, root=root)

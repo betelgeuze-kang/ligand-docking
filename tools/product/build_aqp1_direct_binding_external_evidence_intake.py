@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,14 @@ DEFAULT_OVERLAY_CSV = RUNS / "aqp1_direct_binding_external_evidence_workbook_ove
 KEEP_BLOCKED = "KEEP_BLOCKED"
 OPERATOR_FILL = "OPERATOR_FILL"
 APPROVE_DECISIONS = {"APPROVE_CLAIM_SAFE", "CLAIM_SAFE_APPROVED", "APPROVE"}
+PRODUCT_SCOPE_DIRECT_BINDING_STATUS = "product_scope_transporter_direct_binding_evidence_ready"
+BLOCKED_PRODUCT_SCOPE_DIRECT_BINDING_STATUS = "blocked_product_scope_transporter_direct_binding_evidence"
+DIRECT_BINDING_STANDARD_TYPES = {"KD", "KI"}
+PRIMARY_SOURCE_PREFIXES = (
+    "INTERNAL_WETLAB_REPORT:",
+    "INTERNAL_PRIMARY_REPORT:",
+    "PRIMARY_REPORT:",
+)
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -72,6 +81,36 @@ def _is_numeric_kcal(value: Any) -> bool:
     return True
 
 
+def _is_numeric_positive(value: Any) -> bool:
+    text = _text(value)
+    if not text or text == KEEP_BLOCKED:
+        return False
+    try:
+        return float(text) > 0
+    except ValueError:
+        return False
+
+
+def _standard_type_is_direct_binding(value: Any) -> bool:
+    return _text(value).upper().replace("_", "") in DIRECT_BINDING_STANDARD_TYPES
+
+
+def _source_locator_is_primary_source(value: Any) -> bool:
+    text = _text(value)
+    upper = text.upper()
+    if _is_operator_placeholder(text) or "EXAMPLE" in upper:
+        return False
+    if re.search(r"\bPMID[:\s]?\d{5,9}\b", upper):
+        return True
+    if re.search(r"pubmed\.ncbi\.nlm\.nih\.gov/\d{5,9}", text, re.IGNORECASE):
+        return True
+    if re.search(r"\bDOI[:\s]", upper) or "doi.org/" in text.lower():
+        return True
+    if re.search(r"\b10\.\d{4,9}/\S+", text):
+        return True
+    return any(upper.startswith(prefix) for prefix in PRIMARY_SOURCE_PREFIXES)
+
+
 def _row_validation_errors(row: dict[str, str]) -> list[str]:
     review_row_id = _text(row.get("review_row_id")) or _text(row.get("packet_step")) or "unknown_row"
     errors: list[str] = []
@@ -80,6 +119,28 @@ def _row_validation_errors(row: dict[str, str]) -> list[str]:
     target_uniprot = _text(row.get("target_uniprot"))
     if target_uniprot and target_uniprot != "P29972":
         errors.append(f"{review_row_id}: target_uniprot must be P29972 for claim-safe AQP1 direct binding")
+    if _text(row.get("operator_claim_safe_decision")).upper() not in APPROVE_DECISIONS:
+        return errors
+    if not _is_truthy(row.get("target_match_confirmed")):
+        errors.append(f"{review_row_id}: APPROVE_CLAIM_SAFE requires target_match_confirmed=true")
+    if not _is_truthy(row.get("assay_is_direct_binding")):
+        errors.append(f"{review_row_id}: APPROVE_CLAIM_SAFE requires assay_is_direct_binding=true")
+    if not _is_truthy(row.get("data_validity_accepted")):
+        errors.append(f"{review_row_id}: APPROVE_CLAIM_SAFE requires data_validity_accepted=true")
+    if _is_operator_placeholder(row.get("direct_binding_method")):
+        errors.append(f"{review_row_id}: APPROVE_CLAIM_SAFE requires direct_binding_method")
+    if not _standard_type_is_direct_binding(row.get("standard_type")):
+        errors.append(f"{review_row_id}: APPROVE_CLAIM_SAFE requires standard_type Kd or Ki")
+    if not _is_numeric_positive(row.get("standard_value_nM")):
+        errors.append(f"{review_row_id}: APPROVE_CLAIM_SAFE requires positive numeric standard_value_nM")
+    if not _source_locator_is_primary_source(row.get("source_locator_or_raw_report")):
+        errors.append(f"{review_row_id}: APPROVE_CLAIM_SAFE requires PMID/DOI/internal primary-source locator")
+    if not _is_numeric_kcal(row.get("replacement_reference_binding_kcal_mol")):
+        errors.append(f"{review_row_id}: APPROVE_CLAIM_SAFE requires numeric direct-binding kcal")
+    if _is_operator_placeholder(row.get("replacement_ligand_id")):
+        errors.append(f"{review_row_id}: APPROVE_CLAIM_SAFE requires replacement_ligand_id")
+    if _is_truthy(row.get("functional_surrogate_promoted_to_kcal")):
+        errors.append(f"{review_row_id}: functional surrogate kcal must not be promoted")
     return errors
 
 
@@ -94,13 +155,19 @@ def _row_is_claim_safe_approved(row: dict[str, str]) -> bool:
         return False
     if not _is_truthy(row.get("data_validity_accepted")):
         return False
-    if _is_operator_placeholder(row.get("source_locator_or_raw_report")):
+    if _is_operator_placeholder(row.get("direct_binding_method")):
         return False
-    if _is_operator_placeholder(row.get("standard_value_nM")):
+    if not _standard_type_is_direct_binding(row.get("standard_type")):
+        return False
+    if not _is_numeric_positive(row.get("standard_value_nM")):
+        return False
+    if not _source_locator_is_primary_source(row.get("source_locator_or_raw_report")):
         return False
     if not _is_numeric_kcal(row.get("replacement_reference_binding_kcal_mol")):
         return False
     if _is_operator_placeholder(row.get("replacement_ligand_id")):
+        return False
+    if _is_truthy(row.get("functional_surrogate_promoted_to_kcal")):
         return False
     return True
 
@@ -168,6 +235,31 @@ def build_payload(rows: list[dict[str, str]]) -> dict[str, Any]:
     approved_count = sum(1 for row in reviewed_rows if row["intake_status"] == "claim_safe_approved")
     pending_count = sum(1 for row in reviewed_rows if row["intake_status"] == "operator_fill_pending")
     keep_blocked_count = len(reviewed_rows) - approved_count - pending_count
+    primary_source_verified_count = sum(
+        1
+        for row in reviewed_rows
+        if row["intake_status"] == "claim_safe_approved"
+        and _source_locator_is_primary_source(row.get("source_locator_or_raw_report"))
+    )
+    standard_type_kd_ki_row_count = sum(
+        1
+        for row in reviewed_rows
+        if row["intake_status"] == "claim_safe_approved"
+        and _standard_type_is_direct_binding(row.get("standard_type"))
+    )
+    exact_direct_binding_value_row_count = sum(
+        1
+        for row in reviewed_rows
+        if row["intake_status"] == "claim_safe_approved"
+        and _is_numeric_positive(row.get("standard_value_nM"))
+    )
+    claim_safe_direct_binding_ready = bool(
+        approved_count > 0
+        and primary_source_verified_count > 0
+        and standard_type_kd_ki_row_count > 0
+        and exact_direct_binding_value_row_count > 0
+        and not validation_errors
+    )
 
     summary = {
         "packet_type": "aqp1_direct_binding_external_evidence_intake",
@@ -180,10 +272,29 @@ def build_payload(rows: list[dict[str, str]]) -> dict[str, Any]:
         "target_uniprot": "P29972",
         "row_count": len(rows),
         "claim_safe_approved_count": approved_count,
+        "claim_safe_direct_binding_row_count": approved_count,
+        "primary_source_verified_count": primary_source_verified_count,
+        "standard_type_kd_ki_row_count": standard_type_kd_ki_row_count,
+        "exact_direct_binding_value_row_count": exact_direct_binding_value_row_count,
         "operator_fill_pending_count": pending_count,
         "keep_blocked_count": keep_blocked_count,
         "workbook_overlay_row_count": len(overlay_rows),
+        "product_scope_evidence_status": (
+            PRODUCT_SCOPE_DIRECT_BINDING_STATUS
+            if claim_safe_direct_binding_ready
+            else BLOCKED_PRODUCT_SCOPE_DIRECT_BINDING_STATUS
+        ),
+        "transporter_direct_binding_evidence_ready": claim_safe_direct_binding_ready,
+        "primary_source_direct_binding_evidence_ready": primary_source_verified_count > 0,
+        "claim_safe_direct_binding_kcal_ready": claim_safe_direct_binding_ready,
         "direct_binding_gap_open": approved_count == 0,
+        "source_locator_invalid_count": sum(
+            1
+            for row in reviewed_rows
+            if _text(row.get("operator_claim_safe_decision")).upper() in APPROVE_DECISIONS
+            and not _source_locator_is_primary_source(row.get("source_locator_or_raw_report"))
+        ),
+        "functional_surrogate_promoted_to_kcal": False,
         "kcal_policy": "never_promote_functional_surrogate_to_replacement_reference_binding_kcal_mol",
         "validation_error_count": len(validation_errors),
         "intake_applied": bool(rows) and not validation_errors,

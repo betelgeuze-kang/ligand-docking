@@ -186,7 +186,33 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`independent_product_readiness_verified`" in text
     assert "`independent_restricted_product_ready=true`" in text
     assert "`full_commercial_claim_promotion_ready=false`" in text
-    assert "`full_commercial_open_gap_ids=[SCI-GPCR, SCI-OPENMM]`" in text
+    assert "`full_commercial_open_gap_ids=[]`" in text
+    assert "`science_accuracy_frontier_status=blocked_science_accuracy_frontier`" in text
+    assert "`science_accuracy_frontier_restricted_ready=true`" in text
+    assert "`science_accuracy_frontier_broad_commercial_blocked=true`" in text
+    assert "`public_benchmark_work_order_receptor_coordinate_validation_ready_row_count=8`" in text
+    assert "`public_benchmark_work_order_receptor_coordinate_validation_blocked_row_count=0`" in text
+    assert "`public_benchmark_work_order_receptor_coordinate_validation_min_atom_records=20`" in text
+    assert "`public_benchmark_work_order_receptor_coordinate_validation_min_macromolecule_atom_records=20`" in text
+    assert "`public_benchmark_work_order_receptor_coordinate_validation_min_distinct_residues=5`" in text
+    assert "`public_benchmark_work_order_receptor_coordinate_validation_min_protein_like_residues=5`" in text
+    assert "`public_benchmark_work_order_metric_evidence_required=true`" in text
+    assert "`public_benchmark_work_order_metric_evidence_ready_row_count=0`" in text
+    assert "`public_benchmark_work_order_metric_evidence_blocked_row_count=8`" in text
+    assert "`public_benchmark_work_order_metric_evidence_missing_required_input_artifact_row_count=0`" in text
+    assert "`public_benchmark_work_order_metric_evidence_missing_dockq_source_row_count=8`" in text
+    assert "`public_benchmark_work_order_metric_evidence_missing_lddt_pli_source_row_count=8`" in text
+    assert "`public_benchmark_work_order_metric_evidence_missing_internal_deltaG_source_row_count=8`" in text
+    assert "`runs/refine_tier_public_benchmark_receptor_coordinate_validation_current.csv`" in text
+    assert "`runs/refine_tier_public_benchmark_metric_evidence_current.csv`" in text
+    assert "`refine_tier_public_benchmark_metric_sources_materialized`" in text
+    assert "`metric_evidence_pass_row_count=8`" in text
+    assert "`free_energy_spearman=0.6190476190476191`" in text
+    assert "`free_energy_spearman_bootstrap_p05=-0.14285714285714285`" in text
+    assert "`claim_grade_public_benchmark_statistical_support_ready=false`" in text
+    assert "`claim_grade_public_benchmark_statistical_support_blocker_count=3`" in text
+    assert "`public_benchmark_materialized_claim_grade_statistical_support_ready=false`" in text
+    assert "`candidate_claim_grade_public_benchmark_ready=true`" in text
     assert "`scripts/verify_quality_gate.py`" in text
     assert "`product_quality_gate_verified`" in text
     assert "`quality_gate_ready=true`" in text

@@ -24,6 +24,7 @@ from tools.product.build_product_scope_breadth_evidence_receipt import (
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PRIORITY_PACKET_JSON = "runs/product_scope_breadth_evidence_priority_packet_current.json"
+DEFAULT_AQP1_NEGATIVE_EVIDENCE_JSON = "runs/aqp1_negative_evidence_intake_gate_current.json"
 DEFAULT_OUT_JSON = "runs/product_scope_breadth_evidence_operator_field_worksheet_current.json"
 DEFAULT_OUT_CSV = "runs/product_scope_breadth_evidence_operator_field_worksheet_current.csv"
 DEFAULT_OUT_MD = "runs/product_scope_breadth_evidence_operator_field_worksheet_current.md"
@@ -110,6 +111,42 @@ def _summary(packet: dict[str, Any]) -> dict[str, Any]:
     if isinstance(summary, dict):
         return summary
     return packet if packet.get("status") else {}
+
+
+def _observed_evidence_status(summary: dict[str, Any]) -> str:
+    return _text(summary.get("product_scope_evidence_status")) or _text(summary.get("status"))
+
+
+def _candidate_evidence_by_blocker(
+    *,
+    aqp1_negative_evidence_json: str | Path,
+    root: Path,
+) -> dict[str, dict[str, Any]]:
+    packet, present = _read_json(aqp1_negative_evidence_json, root=root)
+    summary = _summary(packet)
+    expected_status = _text(
+        EXPECTED_EVIDENCE["exact_negative_quantitative_value_missing"]["status"]
+    )
+    ready = (
+        present
+        and _observed_evidence_status(summary) == expected_status
+        and summary.get("transporter_negative_quantitative_evidence_ready") is True
+        and summary.get("primary_source_negative_evidence_ready") is True
+        and summary.get("exact_negative_quantitative_value_ready") is True
+    )
+    if not ready:
+        return {}
+    return {
+        "exact_negative_quantitative_value_missing": {
+            "suggested_evidence_artifact": _display_path(aqp1_negative_evidence_json, root=root),
+            "suggested_evidence_status": expected_status,
+            "suggested_evidence_ready": True,
+            "suggested_evidence_note": (
+                "AQP1 exact negative quantitative primary-source evidence is ready; operator review, "
+                "license confirmation, timestamp, and approval token are still required."
+            ),
+        }
+    }
 
 
 def _rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
@@ -214,6 +251,7 @@ def _field_row(
     receipt_row: dict[str, str],
     receipt_report_row: dict[str, Any],
     priority_summary: dict[str, Any],
+    candidate_evidence: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     scope_blocker_id = _text(receipt_row.get("scope_blocker_id"))
     value = receipt_row.get(field_name, "")
@@ -224,6 +262,7 @@ def _field_row(
     )
     expected = EXPECTED_EVIDENCE.get(scope_blocker_id, {})
     expected_true_fields = ";".join(str(field) for field in expected.get("true_fields", []))
+    suggestion = candidate_evidence.get(scope_blocker_id, {})
     return {
         "worksheet_section": "scope_breadth_evidence_receipt",
         "source_row_id": scope_blocker_id or f"receipt_row_{row_index}",
@@ -237,6 +276,10 @@ def _field_row(
         "observed_source_value": _text(receipt_report_row.get("observed_evidence_status")),
         "expected_value_hint": _expected_value(field_name, scope_blocker_id),
         "expected_true_fields": expected_true_fields,
+        "suggested_evidence_artifact": _text(suggestion.get("suggested_evidence_artifact")),
+        "suggested_evidence_status": _text(suggestion.get("suggested_evidence_status")),
+        "suggested_evidence_ready": bool(suggestion.get("suggested_evidence_ready") is True),
+        "suggested_evidence_note": _text(suggestion.get("suggested_evidence_note")),
         "field_status": status,
         "blocker": blocker,
         "operator_input_required": status == "operator_fill_pending",
@@ -254,6 +297,7 @@ def build_product_scope_breadth_evidence_operator_field_worksheet(
     receipt_csv: str | Path = DEFAULT_RECEIPT_CSV,
     receipt_json: str | Path = DEFAULT_RECEIPT_JSON,
     priority_packet_json: str | Path = DEFAULT_PRIORITY_PACKET_JSON,
+    aqp1_negative_evidence_json: str | Path = DEFAULT_AQP1_NEGATIVE_EVIDENCE_JSON,
     scope_checklist_json: str | Path = DEFAULT_SCOPE_CHECKLIST_JSON,
     root: str | Path = ROOT,
 ) -> dict[str, Any]:
@@ -275,6 +319,10 @@ def build_product_scope_breadth_evidence_operator_field_worksheet(
     receipt_report_by_blocker = {
         _text(row.get("scope_blocker_id")): row for row in _rows(receipt_packet)
     }
+    candidate_evidence = _candidate_evidence_by_blocker(
+        aqp1_negative_evidence_json=aqp1_negative_evidence_json,
+        root=root_path,
+    )
     worksheet_rows = [
         _field_row(
             field_name,
@@ -283,6 +331,7 @@ def build_product_scope_breadth_evidence_operator_field_worksheet(
             receipt_row=receipt_row,
             receipt_report_row=receipt_report_by_blocker.get(_text(receipt_row.get("scope_blocker_id")), {}),
             priority_summary=priority_summary,
+            candidate_evidence=candidate_evidence,
         )
         for row_index, receipt_row in enumerate(receipt_rows, start=1)
         for field_name in REQUIRED_COLUMNS
@@ -325,6 +374,7 @@ def build_product_scope_breadth_evidence_operator_field_worksheet(
         "receipt_status": _text(receipt_summary.get("status")),
         "receipt_ready": bool(receipt_summary.get("full_scope_evidence_receipt_ready") is True),
         "priority_packet_artifact": _display_path(priority_packet_json, root=root_path),
+        "aqp1_negative_evidence_artifact": _display_path(aqp1_negative_evidence_json, root=root_path),
         "priority_packet_status": _text(priority_summary.get("status")),
         "priority_packet_ready": bool(priority_summary.get("priority_packet_ready") is True),
         "scope_checklist_artifact": _display_path(scope_checklist_json, root=root_path),
@@ -333,6 +383,7 @@ def build_product_scope_breadth_evidence_operator_field_worksheet(
         "receipt_csv_present": receipt_csv_present,
         "receipt_artifact_present": receipt_artifact_present,
         "priority_packet_artifact_present": priority_artifact_present,
+        "suggested_evidence_artifact_count": len(candidate_evidence),
         "scope_checklist_artifact_present": scope_checklist_artifact_present,
         "receipt_row_count": len(receipt_rows),
         "receipt_field_row_count": len(worksheet_rows),
@@ -393,6 +444,7 @@ def build_product_scope_breadth_evidence_operator_field_worksheet(
             str(receipt_csv),
             str(receipt_json),
             str(priority_packet_json),
+            str(aqp1_negative_evidence_json),
             str(scope_checklist_json),
         ],
     }

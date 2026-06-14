@@ -182,23 +182,19 @@ def _intake_kit() -> dict:
                 "Run the full regeneration command on a GPU worker, return the identity-locked manifest and summary."
             ),
             "full_commercial_release_allowed": False,
-            "full_commercial_release_blocker_count": 4,
+            "full_commercial_release_blocker_count": 3,
             "full_commercial_release_blocker_ids": [
                 "R8_full_scope_claim_closure",
                 "R9_engine_refinement_claim_promotion",
-                "MASTER:SCI-CLAIM",
                 "ACCURACY:ligand_ranking",
             ],
             "full_commercial_release_next_required_step": "Fill the R8/R9 receipt CSVs.",
-            "science_claim_promotion_gap_closure_open_gap_ids": [
-                "SCI-GPCR",
-                "SCI-OPENMM",
-            ],
+            "science_claim_promotion_gap_closure_open_gap_ids": [],
             "science_claim_promotion_gap_closure_current_next_action": (
-                "Maintain conditional prior gate and keep broad-family claim promotion blocked."
+                "All science claim promotion boundary gaps are closed."
             ),
             "product_accuracy_parity_ligand_ranking_action_id": (
-                "product_accuracy_parity:repair_ligand_ranking_parity"
+                "product_accuracy_parity:close_ligand_ranking_claim_scope"
             ),
             "product_accuracy_parity_ligand_ranking_action_present": True,
             "product_accuracy_parity_ligand_ranking_required_input": "ACCURACY:ligand_ranking",
@@ -206,14 +202,16 @@ def _intake_kit() -> dict:
                 "runs/accuracy_parity_scorecard_current.json"
             ),
             "product_accuracy_parity_ligand_ranking_recommended_action": (
-                "Repair DRD2/HTR2A/OPRM1 pose-supported ranking."
+                "Keep broad GPCR/Schrodinger-class promotion locked until target-held-out "
+                "broad-scope review and scorer/router promotion gates are approved."
             ),
-            "accuracy_parity_ligand_ranking_status": "blocked",
-            "accuracy_parity_ligand_ranking_pr_auc": 0.15749,
-            "accuracy_parity_ligand_ranking_pr_auc_ci_low": 0.001347,
-            "accuracy_parity_ligand_ranking_topk_hit_rate": 0.1,
+            "accuracy_parity_ligand_ranking_status": "restricted_pass",
+            "accuracy_parity_ligand_ranking_pr_auc": 0.871853,
+            "accuracy_parity_ligand_ranking_pr_auc_ci_low": 0.761168,
+            "accuracy_parity_ligand_ranking_topk_hit_rate": 1.0,
             "accuracy_parity_ligand_ranking_next_required_step": (
-                "Repair DRD2/HTR2A/OPRM1 pose-supported ranking."
+                "Keep broad GPCR/Schrodinger-class promotion locked until target-held-out "
+                "broad-scope review and scorer/router promotion gates are approved."
             ),
             "primary_full_commercial_release_blocker_id": "R8_full_scope_claim_closure",
             "primary_full_commercial_release_blocker_requirement_id": "R8_full_scope_claim_closure",
@@ -712,24 +710,20 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
     assert summary["completion_audit_release_blocker_fail_count"] == 2
     assert summary["completion_audit_release_blocker_bottleneck_count"] == 2
     assert summary["full_commercial_release_allowed"] is False
-    assert summary["full_commercial_release_blocker_count"] == 4
+    assert summary["full_commercial_release_blocker_count"] == 3
     assert summary["full_commercial_release_blocker_ids"] == [
         "R8_full_scope_claim_closure",
         "R9_engine_refinement_claim_promotion",
-        "MASTER:SCI-CLAIM",
         "ACCURACY:ligand_ranking",
     ]
     assert "R8/R9 receipt CSVs" in summary["full_commercial_release_next_required_step"]
-    assert summary["science_claim_promotion_gap_closure_open_gap_ids"] == [
-        "SCI-GPCR",
-        "SCI-OPENMM",
-    ]
-    assert "broad-family claim promotion" in summary[
+    assert summary["science_claim_promotion_gap_closure_open_gap_ids"] == []
+    assert "All science claim promotion boundary gaps are closed" in summary[
         "science_claim_promotion_gap_closure_current_next_action"
     ]
-    assert summary["accuracy_parity_ligand_ranking_status"] == "blocked"
+    assert summary["accuracy_parity_ligand_ranking_status"] == "restricted_pass"
     assert summary["product_accuracy_parity_ligand_ranking_action_id"] == (
-        "product_accuracy_parity:repair_ligand_ranking_parity"
+        "product_accuracy_parity:close_ligand_ranking_claim_scope"
     )
     assert summary["product_accuracy_parity_ligand_ranking_action_present"] is True
     assert summary["product_accuracy_parity_ligand_ranking_required_input"] == (
@@ -738,10 +732,10 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
     assert summary["product_accuracy_parity_ligand_ranking_artifact_path"] == (
         "runs/accuracy_parity_scorecard_current.json"
     )
-    assert summary["accuracy_parity_ligand_ranking_pr_auc"] == 0.15749
-    assert summary["accuracy_parity_ligand_ranking_pr_auc_ci_low"] == 0.001347
-    assert summary["accuracy_parity_ligand_ranking_topk_hit_rate"] == 0.1
-    assert "DRD2/HTR2A/OPRM1" in summary[
+    assert summary["accuracy_parity_ligand_ranking_pr_auc"] == 0.871853
+    assert summary["accuracy_parity_ligand_ranking_pr_auc_ci_low"] == 0.761168
+    assert summary["accuracy_parity_ligand_ranking_topk_hit_rate"] == 1.0
+    assert "target-held-out broad-scope review" in summary[
         "accuracy_parity_ligand_ranking_next_required_step"
     ]
     assert summary["primary_full_commercial_release_blocker_id"] == "R8_full_scope_claim_closure"

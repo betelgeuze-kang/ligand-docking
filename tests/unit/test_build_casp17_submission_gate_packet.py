@@ -59,6 +59,19 @@ def _base_artifacts(root: Path) -> None:
     _write_json(runs / "wetlab_selected_allatom_gate_burndown_packet_current.json", {"summary": {"hard_block_count": 0}})
 
 
+def _restricted_claim_lock_scorecard() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_accuracy_parity",
+            "pass_row_count": 4,
+            "restricted_pass_row_count": 1,
+            "blocked_row_count": 0,
+            "missing_row_count": 0,
+            "top_blockers": ["ligand_ranking:broad_gpcr_claim_not_allowed"],
+        }
+    }
+
+
 def _run_builder(root: Path, extra_args: list[str] | None = None) -> dict:
     out_json = root / "runs/casp17_submission_gate_packet_current.json"
     subprocess.run(
@@ -180,6 +193,40 @@ def test_casp17_framework_blocker_blocks_otherwise_ready_target(tmp_path: Path) 
     assert "accuracy_parity_scorecard_not_green" in payload["summary"]["framework_blockers"]
     assert payload["target_rows"][0]["submission_decision"] == "submission_no_go"
     assert "framework_gate_not_green" in payload["target_rows"][0]["blockers"]
+
+
+def test_casp17_framework_accepts_accuracy_claim_scope_lock_only(tmp_path: Path) -> None:
+    _base_artifacts(tmp_path)
+    _write_json(tmp_path / "runs/accuracy_parity_scorecard_current.json", _restricted_claim_lock_scorecard())
+    (tmp_path / "outputs").mkdir()
+    (tmp_path / "outputs/H2002TS.pdb").write_text("PFRMAT TS\nTARGET H2002\n", encoding="utf-8")
+    (tmp_path / "inputs").mkdir()
+    (tmp_path / "inputs/H2002.fasta").write_text(">H2002\nACDEFGHIK\n", encoding="utf-8")
+    _write_intake(
+        tmp_path / "config/casp17_target_intake_template.csv",
+        [
+            {
+                "target_id": "H2002",
+                "lane": "difficult_protein_complexes",
+                "submission_format": "TS",
+                "deadline_class": "regular",
+                "sequence_path": "inputs/H2002.fasta",
+                "prediction_file_path": "outputs/H2002TS.pdb",
+                "format_check_status": "pass",
+                "model_generation_status": "pass",
+                "geometry_sanity_status": "pass",
+                "confidence_calibration_status": "pass",
+                "internal_scorecard_status": "pass",
+            }
+        ],
+    )
+
+    payload = _run_builder(tmp_path)
+
+    assert payload["summary"]["framework_gate_pass"] is True
+    assert payload["summary"]["source_metrics"]["accuracy_parity_claim_scope_lock_only"] is True
+    assert "accuracy_parity_scorecard_not_green" not in payload["summary"]["framework_blockers"]
+    assert payload["target_rows"][0]["submission_decision"] == "submission_go"
 
 
 def test_casp17_validation_json_hard_blocker_overrides_csv_pass(tmp_path: Path) -> None:

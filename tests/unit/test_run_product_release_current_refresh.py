@@ -167,6 +167,10 @@ def test_refresh_final_gate_requires_release_decision_bottleneck_receipt_linkage
         in decision_row["required_true_fields"]
     )
     assert (
+        "refine_tier_public_benchmark_work_order_apply_metric_evidence_required"
+        in decision_row["required_true_fields"]
+    )
+    assert (
         "refine_tier_public_benchmark_claim_grade_public_benchmark_ready"
         in decision_row["required_zero_fields"]
     )
@@ -179,6 +183,9 @@ def test_refresh_final_gate_requires_release_decision_bottleneck_receipt_linkage
     ] == 6
     assert decision_row["required_int_exact_fields"][
         "refine_tier_public_benchmark_work_order_apply_blocked_row_count"
+    ] == 8
+    assert decision_row["required_int_exact_fields"][
+        "refine_tier_public_benchmark_work_order_apply_metric_evidence_blocked_row_count"
     ] == 8
     assert decision_row["required_text_exact_fields"][
         "refine_tier_public_benchmark_status"

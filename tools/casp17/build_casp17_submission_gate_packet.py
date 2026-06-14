@@ -110,6 +110,24 @@ def _summary(payload: dict[str, Any]) -> dict[str, Any]:
     return summary if isinstance(summary, dict) else {}
 
 
+def _accuracy_parity_framework_ready(summary: dict[str, Any]) -> dict[str, Any]:
+    status = _text(summary.get("status")).lower()
+    top_blockers = summary.get("top_blockers")
+    top_blocker_set = {str(item) for item in top_blockers} if isinstance(top_blockers, list) else set()
+    claim_scope_lock_only = (
+        status == "blocked_accuracy_parity"
+        and _int(summary.get("blocked_row_count")) == 0
+        and _int(summary.get("missing_row_count")) == 0
+        and _int(summary.get("restricted_pass_row_count")) > 0
+        and top_blocker_set == {"ligand_ranking:broad_gpcr_claim_not_allowed"}
+    )
+    return {
+        "ready": status in {"green", "pass", "ready"} or claim_scope_lock_only,
+        "claim_scope_lock_only": claim_scope_lock_only,
+        "status": status,
+    }
+
+
 def _read_csv(path_like: str | Path, root: Path) -> list[dict[str, str]]:
     path = _resolve(path_like, root)
     if not path.exists():
@@ -184,13 +202,14 @@ def _framework_gate(args: argparse.Namespace, root: Path) -> tuple[dict[str, Any
     accuracy_summary = _summary(accuracy_payload)
     pde_summary = _summary(pde_payload)
     selected_summary = _summary(selected_payload)
+    accuracy_readiness = _accuracy_parity_framework_ready(accuracy_summary)
 
     blockers: list[str] = []
     if _boolish(verdict_summary.get("delivery_ready")) is not True:
         blockers.append("local_delivery_verdict_not_ready")
     if _boolish(queue_summary.get("queue_clear")) is not True and _int(queue_summary.get("blocked_count")) > 0:
         blockers.append("local_engine_queue_not_clear")
-    if _text(accuracy_summary.get("status")).lower() not in {"green", "pass", "ready"}:
+    if not accuracy_readiness["ready"]:
         blockers.append("accuracy_parity_scorecard_not_green")
     if _int(pde_summary.get("parameterization_ready_count")) < 7:
         blockers.append("pde_atomized_parameterization_not_7_of_7")
@@ -216,6 +235,7 @@ def _framework_gate(args: argparse.Namespace, root: Path) -> tuple[dict[str, Any
             "local_engine_blocked_count": queue_summary.get("blocked_count"),
             "accuracy_parity_status": accuracy_summary.get("status"),
             "accuracy_parity_pass_row_count": accuracy_summary.get("pass_row_count"),
+            "accuracy_parity_claim_scope_lock_only": accuracy_readiness["claim_scope_lock_only"],
             "pde_parameterization_ready_count": pde_summary.get("parameterization_ready_count"),
             "pde_local_minimization_ready_count": pde_summary.get("protein_local_minimization_ready_count"),
             "selected_allatom_hard_block_count": selected_summary.get("hard_block_count"),

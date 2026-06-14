@@ -112,6 +112,18 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     assert summary["public_benchmark_work_order_row_count"] == 8
     assert summary["public_benchmark_work_order_apply_ready"] is False
     assert summary["public_benchmark_work_order_apply_blocked_row_count"] == 8
+    assert summary["public_benchmark_materialized_metric_ready"] is True
+    assert summary["public_benchmark_materialized_apply_ready"] is True
+    assert summary["public_benchmark_materialized_candidate_ready"] is True
+    assert summary["public_benchmark_materialized_work_order_row_count"] == 8
+    assert summary["public_benchmark_materialized_metric_evidence_pass_row_count"] == 8
+    assert summary["public_benchmark_materialized_metric_evidence_blocked_row_count"] == 0
+    assert summary["public_benchmark_materialized_free_energy_pair_count"] == 8
+    assert summary["public_benchmark_materialized_free_energy_spearman"] == 0.6190476190476191
+    assert summary["public_benchmark_materialized_free_energy_spearman_gate_ready"] is True
+    assert summary["public_benchmark_materialized_free_energy_spearman_bootstrap_p05"] == -0.14285714285714285
+    assert summary["public_benchmark_materialized_claim_grade_statistical_support_ready"] is False
+    assert summary["public_benchmark_materialized_claim_grade_statistical_support_blocker_count"] == 3
     assert summary["top_blocker_id"] == "public_benchmark_gate_not_ready"
     assert summary["top_priority_bucket"] == "public_benchmark_work_order_apply_required"
     assert summary["top_required_input"] == "runs/refine_tier_public_benchmark_work_order_current.csv"
@@ -120,6 +132,9 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     assert "operator_evidence_rows_pending" in summary["blockers"]
     assert payload["rows"][0]["blocker_id"] == "public_benchmark_gate_not_ready"
     assert payload["rows"][0]["operator_input_required"] is True
+    assert payload["rows"][0]["public_benchmark_materialized_candidate_ready"] is True
+    assert payload["rows"][0]["public_benchmark_materialized_claim_grade_statistical_support_ready"] is False
+    assert "Materialized public benchmark candidate is apply-ready" in payload["rows"][0]["next_operator_step"]
     assert payload["rows"][1]["priority_bucket"] == "blocked_until_public_benchmark_ready"
     assert payload["rows"][1]["prerequisite_blocker_id"] == "public_benchmark_gate_not_ready"
     assert all(row["external_state_mutated"] is False for row in payload["rows"])

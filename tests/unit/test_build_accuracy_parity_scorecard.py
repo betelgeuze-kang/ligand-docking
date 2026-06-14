@@ -351,6 +351,7 @@ def test_ligand_ranking_reads_stage5_metric_shape(tmp_path: Path) -> None:
 def test_ligand_ranking_uses_rank_rescue_evidence_without_broad_claim(tmp_path: Path) -> None:
     ranking = tmp_path / "rank_rescue_evidence.json"
     core = tmp_path / "core.json"
+    conditional_gate = tmp_path / "conditional_gate.json"
     child_ranking = "runs/gpcr_coverage_v2_crossfit_rank_rescue_repeat_r1_shadow_replay_ranking_summary_current.json"
     _write_json(
         ranking,
@@ -376,8 +377,22 @@ def test_ligand_ranking_uses_rank_rescue_evidence_without_broad_claim(tmp_path: 
         },
     )
     _write_json(core, {"summary": {"claim_safe": False, "primary_blocker_task": "gpcr_core_full"}})
+    _write_json(
+        conditional_gate,
+        {
+            "summary": {
+                "promotion_boundary_ready": True,
+                "oprm1_pose_repair_evidence_ready": True,
+                "claim_promotion_allowed": False,
+            }
+        },
+    )
 
-    row = mod._ligand_ranking_row(gpcr_ranking_json=ranking, gpcr_core_diagnostics_json=core)
+    row = mod._ligand_ranking_row(
+        gpcr_ranking_json=ranking,
+        gpcr_core_diagnostics_json=core,
+        gpcr_conditional_prior_gate_json=conditional_gate,
+    )
 
     assert row["status"] == "restricted_pass"
     assert row["commercial_parity_claim_allowed"] is False
@@ -388,10 +403,39 @@ def test_ligand_ranking_uses_rank_rescue_evidence_without_broad_claim(tmp_path: 
     assert row["metrics"]["broad_gpcr_claim_allowed"] is False
     assert row["metrics"]["validation_claim_promotion_allowed"] is True
     assert row["metrics"]["independent_repeat_completed"] is True
+    assert row["metrics"]["gpcr_conditional_prior_boundary_ready"] is True
+    assert row["metrics"]["gpcr_oprm1_pose_repair_evidence_ready"] is True
     assert "broad_gpcr_claim_not_allowed" in row["blockers"]
     assert "ranking_pr_auc_below_threshold" not in row["blockers"]
     assert child_ranking in row["source_artifacts"]
-    assert "OPRM1" in row["next_required_step"]
+    assert str(conditional_gate) in row["source_artifacts"]
+    assert "target-held-out broad-scope review" in row["next_required_step"]
+
+
+def test_ligand_ranking_prefers_specific_broad_claim_lock_over_generic_claim_blocker(tmp_path: Path) -> None:
+    ranking = tmp_path / "rank_rescue_evidence.json"
+    core = tmp_path / "core.json"
+    _write_json(
+        ranking,
+        {
+            "summary": {
+                "claim_promotion_allowed": False,
+                "broad_gpcr_claim_allowed": False,
+                "ranking_pr_auc": 0.8718530390764964,
+                "ranking_pr_auc_ci_low": 0.7611678630724843,
+                "ranking_topk_hit_rate": 1.0,
+                "positive_count": 34,
+                "blockers": [],
+            }
+        },
+    )
+    _write_json(core, {"summary": {"claim_safe": False, "primary_blocker_task": "gpcr_core_full"}})
+
+    row = mod._ligand_ranking_row(gpcr_ranking_json=ranking, gpcr_core_diagnostics_json=core)
+
+    assert row["status"] == "restricted_pass"
+    assert row["blockers"] == ["broad_gpcr_claim_not_allowed"]
+    assert "claim_promotion_not_allowed" not in row["blockers"]
 
 
 def test_structure_row_exposes_internal_true_metric_backend(tmp_path: Path) -> None:

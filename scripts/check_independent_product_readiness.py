@@ -20,15 +20,18 @@ DEFAULT_ARTIFACTS = {
     "release_bundle": "runs/product_release_bundle_current.json",
     "source_of_truth": "runs/product_release_source_of_truth_gate_current.json",
     "release_refresh": "runs/product_release_current_refresh_plan_current.json",
+    "goal_release": "runs/goal_release_decision_gate_current.json",
+    "accuracy": "runs/accuracy_parity_scorecard_current.json",
     "master_gap": "runs/master_gap_closure_rollup_current.json",
     "science_claim": "runs/science_claim_promotion_gap_closure_current.json",
+    "science_frontier": "runs/science_accuracy_frontier_current.json",
 }
 
 CLAIM_BOUNDARY = (
     "Independent product readiness check only; it reads local current artifacts and verifies the restricted "
     "self-hosted product surface, fail-closed execution posture, release source-of-truth freshness, and explicit "
-    "full-commercial science-claim blockers. It does not run docking, enable execution, promote claims, deploy, "
-    "upload, email, delete, commit, push, or mutate external state."
+    "full-commercial R8/R9/ACCURACY claim blockers. It does not run docking, enable execution, promote claims, "
+    "deploy, upload, email, delete, commit, push, or mutate external state."
 )
 
 
@@ -58,10 +61,25 @@ def _int(value: Any) -> int:
         return 0
 
 
+def _float(value: Any) -> float | None:
+    try:
+        return float(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+
+
 def _csv(items: Any) -> str:
     if isinstance(items, list):
         return ",".join(str(item) for item in items)
     return str(items or "")
+
+
+def _list(items: Any) -> list[str]:
+    if isinstance(items, list):
+        return [str(item) for item in items if str(item)]
+    if isinstance(items, tuple):
+        return [str(item) for item in items if str(item)]
+    return [str(items)] if str(items or "") else []
 
 
 def _row(check: str, passed: bool, observed: str, required: str, *, release_blocker: bool = True) -> dict[str, Any]:
@@ -87,8 +105,25 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
     bundle = summaries["release_bundle"]
     source = summaries["source_of_truth"]
     refresh = summaries["release_refresh"]
+    goal_release = summaries["goal_release"]
+    accuracy = summaries["accuracy"]
     master = summaries["master_gap"]
     science = summaries["science_claim"]
+    science_frontier = summaries["science_frontier"]
+    full_commercial_blocker_ids = _list(goal_release.get("full_commercial_release_blocker_ids"))
+    expected_full_commercial_blocker_ids = [
+        "R8_full_scope_claim_closure",
+        "R9_engine_refinement_claim_promotion",
+        "ACCURACY:ligand_ranking",
+    ]
+    expected_science_frontier_blockers = [
+        "gpcr_broad_claim_review_not_approved",
+        "gpcr_scorer_router_promotion_not_approved",
+        "openmm_schrodinger_public_benchmark_not_promoted_to_canonical_intake",
+        "openmm_schrodinger_public_benchmark_statistical_support_not_claim_grade",
+        "engine_refinement_claim_evidence_receipt_not_ready",
+    ]
+    accuracy_top_blockers = _list(accuracy.get("top_blockers"))
 
     rows = [
         _row(
@@ -193,25 +228,87 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
             "release refresh verified with final gate blocker count 0",
         ),
         _row(
-            "full_commercial_science_claim_blockers_explicit",
-            master.get("status") == "blocked_master_gap_closure_rollup"
-            and master.get("claim_promotion_allowed") is False
-            and "SCI-CLAIM" in (master.get("open_gap_ids") or [])
-            and science.get("status") == "blocked_science_claim_promotion_gap_closure"
-            and set(science.get("open_gap_ids") or []) == {"SCI-GPCR", "SCI-OPENMM"},
+            "full_commercial_claim_boundaries_explicit",
             (
+                (
+                    goal_release.get("status") == "blocked_goal_release_decision"
+                    and goal_release.get("release_allowed") is False
+                )
+                or (
+                    goal_release.get("status") == "goal_release_ready"
+                    and goal_release.get("release_allowed") is True
+                    and goal_release.get("restricted_release_allowed") is True
+                )
+            )
+            and goal_release.get("full_commercial_release_allowed") is False
+            and full_commercial_blocker_ids == expected_full_commercial_blocker_ids
+            and goal_release.get("accuracy_parity_ligand_ranking_status") == "restricted_pass"
+            and goal_release.get("accuracy_parity_ligand_ranking_blockers") == ["broad_gpcr_claim_not_allowed"]
+            and goal_release.get("accuracy_parity_ligand_ranking_metric_thresholds_pass") is True
+            and _int(goal_release.get("accuracy_parity_ligand_ranking_metric_blocker_count")) == 0
+            and goal_release.get("accuracy_parity_ligand_ranking_claim_scope_lock_only") is True
+            and goal_release.get("accuracy_parity_ligand_ranking_claim_promotion_allowed") is False
+            and goal_release.get("accuracy_parity_ligand_ranking_commercial_parity_claim_allowed") is False
+            and accuracy.get("status") == "blocked_accuracy_parity"
+            and accuracy_top_blockers == ["ligand_ranking:broad_gpcr_claim_not_allowed"]
+            and master.get("status") == "master_gap_closure_rollup_complete"
+            and master.get("claim_promotion_allowed") is False
+            and not _list(master.get("open_gap_ids"))
+            and science.get("status") == "science_claim_promotion_gap_closure_complete"
+            and science.get("claim_promotion_allowed") is False
+            and not _list(science.get("open_gap_ids"))
+            and science_frontier.get("status") == "blocked_science_accuracy_frontier"
+            and science_frontier.get("restricted_science_accuracy_ready") is True
+            and science_frontier.get("broad_commercial_accuracy_claim_ready") is False
+            and science_frontier.get("openmm_schrodinger_public_benchmark_ready") is False
+            and science_frontier.get("engine_refinement_claim_evidence_receipt_ready") is False
+            and science_frontier.get("gpcr_broad_claim_ready") is False
+            and science_frontier.get("gpcr_scorer_router_ready") is False
+            and _list(science_frontier.get("blockers")) == expected_science_frontier_blockers
+            and _int(science_frontier.get("blocker_count")) == len(expected_science_frontier_blockers),
+            (
+                f"goal_release_status={goal_release.get('status')};"
+                f"release_allowed={goal_release.get('release_allowed')};"
+                f"full_commercial_release_allowed={goal_release.get('full_commercial_release_allowed')};"
+                f"full_commercial_blockers={_csv(full_commercial_blocker_ids)};"
+                f"ligand_status={goal_release.get('accuracy_parity_ligand_ranking_status')};"
+                f"ligand_blockers={_csv(goal_release.get('accuracy_parity_ligand_ranking_blockers'))};"
+                f"ligand_metric_thresholds_pass="
+                f"{goal_release.get('accuracy_parity_ligand_ranking_metric_thresholds_pass')};"
+                f"ligand_metric_blocker_count="
+                f"{goal_release.get('accuracy_parity_ligand_ranking_metric_blocker_count')};"
+                f"ligand_claim_scope_lock_only="
+                f"{goal_release.get('accuracy_parity_ligand_ranking_claim_scope_lock_only')};"
+                f"ligand_claim_promotion_allowed="
+                f"{goal_release.get('accuracy_parity_ligand_ranking_claim_promotion_allowed')};"
+                f"ligand_commercial_parity_claim_allowed="
+                f"{goal_release.get('accuracy_parity_ligand_ranking_commercial_parity_claim_allowed')};"
                 f"master_status={master.get('status')};master_open={_csv(master.get('open_gap_ids'))};"
                 f"claim_promotion_allowed={master.get('claim_promotion_allowed')};"
-                f"science_status={science.get('status')};science_open={_csv(science.get('open_gap_ids'))}"
+                f"science_status={science.get('status')};science_open={_csv(science.get('open_gap_ids'))};"
+                f"science_frontier_status={science_frontier.get('status')};"
+                f"restricted_science_accuracy_ready={science_frontier.get('restricted_science_accuracy_ready')};"
+                f"openmm_schrodinger_public_benchmark_science_ready="
+                f"{science_frontier.get('openmm_schrodinger_public_benchmark_science_ready')};"
+                f"public_benchmark_materialized_metric_ready="
+                f"{science_frontier.get('public_benchmark_materialized_metric_ready')};"
+                f"public_benchmark_materialized_apply_ready="
+                f"{science_frontier.get('public_benchmark_materialized_apply_ready')};"
+                f"public_benchmark_materialized_bootstrap_p05="
+                f"{science_frontier.get('public_benchmark_materialized_free_energy_spearman_bootstrap_p05')};"
+                f"public_benchmark_materialized_claim_grade_statistical_support_ready="
+                f"{science_frontier.get('public_benchmark_materialized_claim_grade_statistical_support_ready')};"
+                f"broad_commercial_accuracy_claim_ready={science_frontier.get('broad_commercial_accuracy_claim_ready')};"
+                f"science_frontier_blockers={_csv(science_frontier.get('blockers'))}"
             ),
-            "full-commercial science claim remains explicitly blocked on SCI-GPCR and SCI-OPENMM",
+            "full-commercial claim promotion remains explicitly blocked on R8/R9 receipts and ACCURACY broad claim lock",
             release_blocker=False,
         ),
     ]
 
-    required_rows = [row for row in rows if row["check"] != "full_commercial_science_claim_blockers_explicit"]
+    required_rows = [row for row in rows if row["check"] != "full_commercial_claim_boundaries_explicit"]
     blocker_rows = [row for row in required_rows if row["status"] != "pass"]
-    boundary_row = next(row for row in rows if row["check"] == "full_commercial_science_claim_blockers_explicit")
+    boundary_row = next(row for row in rows if row["check"] == "full_commercial_claim_boundaries_explicit")
     independent_ready = not blocker_rows and boundary_row["status"] == "pass"
 
     payload = {
@@ -225,7 +322,138 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
             "independent_restricted_product_ready": bool(independent_ready),
             "full_commercial_claim_promotion_ready": False,
             "full_commercial_science_claim_blocked": boundary_row["status"] == "pass",
+            "full_commercial_claim_boundaries_explicit": boundary_row["status"] == "pass",
+            "accuracy_parity_ligand_ranking_metric_thresholds_pass": bool(
+                goal_release.get("accuracy_parity_ligand_ranking_metric_thresholds_pass") is True
+            ),
+            "accuracy_parity_ligand_ranking_metric_blocker_count": _int(
+                goal_release.get("accuracy_parity_ligand_ranking_metric_blocker_count")
+            ),
+            "accuracy_parity_ligand_ranking_claim_scope_lock_only": bool(
+                goal_release.get("accuracy_parity_ligand_ranking_claim_scope_lock_only") is True
+            ),
             "full_commercial_open_gap_ids": science.get("open_gap_ids") or [],
+            "science_accuracy_frontier_status": science_frontier.get("status", ""),
+            "science_accuracy_frontier_restricted_ready": bool(
+                science_frontier.get("restricted_science_accuracy_ready") is True
+            ),
+            "science_accuracy_frontier_broad_commercial_blocked": bool(
+                science_frontier.get("broad_commercial_accuracy_claim_ready") is False
+                and science_frontier.get("status") == "blocked_science_accuracy_frontier"
+            ),
+            "science_accuracy_frontier_blockers": science_frontier.get("blockers") or [],
+            "science_accuracy_frontier_public_benchmark_science_ready": bool(
+                science_frontier.get("openmm_schrodinger_public_benchmark_science_ready") is True
+            ),
+            "science_accuracy_frontier_public_benchmark_materialized_metric_ready": bool(
+                science_frontier.get("public_benchmark_materialized_metric_ready") is True
+            ),
+            "science_accuracy_frontier_public_benchmark_materialized_apply_ready": bool(
+                science_frontier.get("public_benchmark_materialized_apply_ready") is True
+            ),
+            "science_accuracy_frontier_public_benchmark_materialized_row_count": _int(
+                science_frontier.get("public_benchmark_materialized_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_materialized_blocked_row_count": _int(
+                science_frontier.get("public_benchmark_materialized_blocked_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_materialized_metric_evidence_pass_row_count": _int(
+                science_frontier.get("public_benchmark_materialized_metric_evidence_pass_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_materialized_metric_evidence_blocked_row_count": _int(
+                science_frontier.get("public_benchmark_materialized_metric_evidence_blocked_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_materialized_free_energy_pair_count": _int(
+                science_frontier.get("public_benchmark_materialized_free_energy_pair_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_materialized_free_energy_fit_pair_count": _int(
+                science_frontier.get("public_benchmark_materialized_free_energy_fit_pair_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_materialized_free_energy_holdout_pair_count": _int(
+                science_frontier.get("public_benchmark_materialized_free_energy_holdout_pair_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_materialized_free_energy_spearman": _float(
+                science_frontier.get("public_benchmark_materialized_free_energy_spearman")
+            ),
+            "science_accuracy_frontier_public_benchmark_materialized_free_energy_spearman_gate_ready": bool(
+                science_frontier.get("public_benchmark_materialized_free_energy_spearman_gate_ready") is True
+            ),
+            "science_accuracy_frontier_public_benchmark_materialized_free_energy_spearman_bootstrap_p05": _float(
+                science_frontier.get("public_benchmark_materialized_free_energy_spearman_bootstrap_p05")
+            ),
+            "science_accuracy_frontier_public_benchmark_materialized_free_energy_spearman_bootstrap_p50": _float(
+                science_frontier.get("public_benchmark_materialized_free_energy_spearman_bootstrap_p50")
+            ),
+            "science_accuracy_frontier_public_benchmark_materialized_free_energy_spearman_bootstrap_p95": _float(
+                science_frontier.get("public_benchmark_materialized_free_energy_spearman_bootstrap_p95")
+            ),
+            "science_accuracy_frontier_public_benchmark_materialized_claim_grade_statistical_support_ready": bool(
+                science_frontier.get("public_benchmark_materialized_claim_grade_statistical_support_ready") is True
+            ),
+            "science_accuracy_frontier_public_benchmark_materialized_claim_grade_statistical_support_blocker_count": _int(
+                science_frontier.get("public_benchmark_materialized_claim_grade_statistical_support_blocker_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_materialized_claim_grade_statistical_support_blockers": (
+                science_frontier.get("public_benchmark_materialized_claim_grade_statistical_support_blockers") or []
+            ),
+            "science_accuracy_frontier_public_benchmark_receptor_coordinate_validation_ready_row_count": _int(
+                science_frontier.get("public_benchmark_work_order_receptor_coordinate_validation_ready_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_receptor_coordinate_validation_blocked_row_count": _int(
+                science_frontier.get("public_benchmark_work_order_receptor_coordinate_validation_blocked_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_receptor_coordinate_intake_suggested_public_url_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_work_order_receptor_coordinate_intake_suggested_public_url_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_receptor_coordinate_intake_suggested_local_path_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_work_order_receptor_coordinate_intake_suggested_local_path_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_receptor_coordinate_intake_operator_review_required_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_work_order_receptor_coordinate_intake_operator_review_required_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_receptor_coordinate_validation_min_atom_records": _int(
+                science_frontier.get("public_benchmark_work_order_receptor_coordinate_validation_min_atom_records")
+            ),
+            "science_accuracy_frontier_public_benchmark_receptor_coordinate_validation_min_macromolecule_atom_records": _int(
+                science_frontier.get(
+                    "public_benchmark_work_order_receptor_coordinate_validation_min_macromolecule_atom_records"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_receptor_coordinate_validation_min_distinct_residues": _int(
+                science_frontier.get("public_benchmark_work_order_receptor_coordinate_validation_min_distinct_residues")
+            ),
+            "science_accuracy_frontier_public_benchmark_receptor_coordinate_validation_min_protein_like_residues": _int(
+                science_frontier.get("public_benchmark_work_order_receptor_coordinate_validation_min_protein_like_residues")
+            ),
+            "science_accuracy_frontier_public_benchmark_metric_evidence_ready_row_count": _int(
+                science_frontier.get("public_benchmark_work_order_metric_evidence_ready_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_metric_evidence_blocked_row_count": _int(
+                science_frontier.get("public_benchmark_work_order_metric_evidence_blocked_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_metric_evidence_missing_required_input_artifact_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_work_order_metric_evidence_missing_required_input_artifact_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_metric_evidence_missing_dockq_source_row_count": _int(
+                science_frontier.get("public_benchmark_work_order_metric_evidence_missing_dockq_source_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_metric_evidence_missing_lddt_pli_source_row_count": _int(
+                science_frontier.get("public_benchmark_work_order_metric_evidence_missing_lddt_pli_source_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_metric_evidence_missing_internal_deltaG_source_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_work_order_metric_evidence_missing_internal_deltaG_source_row_count"
+                )
+            ),
+            "full_commercial_release_blocker_ids": full_commercial_blocker_ids,
             "check_count": len(rows),
             "required_check_count": len(required_rows),
             "pass_count": sum(1 for row in rows if row["status"] == "pass"),
@@ -235,8 +463,8 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
             "external_state_mutated": False,
             "claim_boundary": CLAIM_BOUNDARY,
             "next_required_step": (
-                "Independent restricted product readiness is verified; keep full-commercial science claims blocked "
-                "until SCI-GPCR and SCI-OPENMM evidence gates clear."
+                "Independent restricted product readiness is verified; keep full-commercial claims blocked "
+                "until R8/R9 evidence receipts and ACCURACY broad claim review clear."
                 if independent_ready
                 else "Fix the failed readiness checks, rerun the current release refresh, and retry this script."
             ),

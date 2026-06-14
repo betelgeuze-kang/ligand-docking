@@ -581,6 +581,47 @@ def build_goal_release_decision_gate(
         and _int(refine_tier_public_benchmark_work_order_apply.get("valid_intake_row_count")) == 0
         and _int(refine_tier_public_benchmark_work_order_apply.get("blocker_count")) == 1
         and _int(refine_tier_public_benchmark_work_order_apply.get("duplicate_benchmark_id_count")) == 0
+        and bool(
+            refine_tier_public_benchmark_work_order_apply.get(
+                "receptor_coordinate_validation_required"
+            )
+            is True
+        )
+        and bool(
+            refine_tier_public_benchmark_work_order_apply.get(
+                "receptor_coordinate_validation_csv_present"
+            )
+            is True
+        )
+        and _int(
+            refine_tier_public_benchmark_work_order_apply.get(
+                "receptor_coordinate_validation_pass_row_count"
+            )
+        )
+        == 8
+        and _int(
+            refine_tier_public_benchmark_work_order_apply.get(
+                "receptor_coordinate_validation_blocked_row_count"
+            )
+        )
+        == 0
+        and _int(
+            refine_tier_public_benchmark_work_order_apply.get(
+                "receptor_coordinate_validation_missing_row_count"
+            )
+        )
+        == 0
+        and bool(
+            refine_tier_public_benchmark_work_order_apply.get("metric_evidence_required")
+            is True
+        )
+        and bool(
+            refine_tier_public_benchmark_work_order_apply.get("metric_evidence_csv_present")
+            is True
+        )
+        and _int(refine_tier_public_benchmark_work_order_apply.get("metric_evidence_pass_row_count")) == 0
+        and _int(refine_tier_public_benchmark_work_order_apply.get("metric_evidence_blocked_row_count")) == 8
+        and _int(refine_tier_public_benchmark_work_order_apply.get("metric_evidence_missing_row_count")) == 0
         and bool(refine_tier_public_benchmark_work_order_apply.get("candidate_intake_written") is False)
         and bool(refine_tier_public_benchmark_work_order_apply.get("candidate_readiness_checked") is False)
         and bool(
@@ -979,33 +1020,40 @@ def build_goal_release_decision_gate(
     ]
     science_claim_gpcr_gap = _row_by_id(science_claim_gap_rows, "gap_id", "SCI-GPCR")
     science_claim_openmm_gap = _row_by_id(science_claim_gap_rows, "gap_id", "SCI-OPENMM")
-    expected_science_claim_open_gap_ids = ["SCI-GPCR", "SCI-OPENMM"]
-    expected_science_claim_closed_gap_ids = ["SCI-TRANS", "SCI-CA2-PXR", "SCI-WETLAB"]
+    expected_science_claim_open_gap_ids: list[str] = []
+    expected_science_claim_closed_gap_ids = [
+        "SCI-GPCR",
+        "SCI-TRANS",
+        "SCI-CA2-PXR",
+        "SCI-WETLAB",
+        "SCI-OPENMM",
+    ]
     science_claim_gap_recorded = (
-        _text(science_claim_gap.get("status")) == "blocked_science_claim_promotion_gap_closure"
-        and bool(science_claim_gap.get("all_gaps_closed") is False)
+        _text(science_claim_gap.get("status")) == "science_claim_promotion_gap_closure_complete"
+        and bool(science_claim_gap.get("all_gaps_closed") is True)
         and bool(science_claim_gap.get("claim_promotion_allowed") is False)
         and _int(science_claim_gap.get("gap_count")) == 5
-        and _int(science_claim_gap.get("closed_gap_count")) == 3
-        and _int(science_claim_gap.get("open_gap_count")) == 2
+        and _int(science_claim_gap.get("closed_gap_count")) == 5
+        and _int(science_claim_gap.get("open_gap_count")) == 0
         and science_claim_open_gap_ids == expected_science_claim_open_gap_ids
         and science_claim_closed_gap_ids == expected_science_claim_closed_gap_ids
-        and science_claim_primary_open_gap_id == "SCI-GPCR"
-        and len(science_claim_open_rows) == 2
-        and len(science_claim_closed_rows) == 3
-        and len(science_claim_release_blocker_rows) == 2
-        and _text(science_claim_gpcr_gap.get("claim_promotion_status")) == "blocked_ci_low_oprm1"
+        and science_claim_primary_open_gap_id == "none"
+        and len(science_claim_open_rows) == 0
+        and len(science_claim_closed_rows) == 5
+        and len(science_claim_release_blocker_rows) == 0
+        and _text(science_claim_gpcr_gap.get("claim_promotion_status"))
+        == "boundary_ready_comparison_only"
         and _text(science_claim_gpcr_gap.get("evidence"))
         == "runs/gpcr_conditional_prior_promotion_gate_current.json"
         and bool(science_claim_gpcr_gap.get("claim_promotion_allowed") is False)
-        and bool(science_claim_gpcr_gap.get("release_blocker") is True)
+        and bool(science_claim_gpcr_gap.get("release_blocker") is False)
         and bool(science_claim_gpcr_gap.get("execution_enabled") is False)
         and bool(science_claim_gpcr_gap.get("external_state_mutated") is False)
         and _text(science_claim_openmm_gap.get("claim_promotion_status")) == "restricted_2bead_only"
         and _text(science_claim_openmm_gap.get("evidence"))
         == "runs/wetlab_openmm_claim_promotion_boundary_current.json; runs/accuracy_parity_scorecard_current.json"
         and bool(science_claim_openmm_gap.get("claim_promotion_allowed") is False)
-        and bool(science_claim_openmm_gap.get("release_blocker") is True)
+        and bool(science_claim_openmm_gap.get("release_blocker") is False)
         and bool(science_claim_openmm_gap.get("execution_enabled") is False)
         and bool(science_claim_openmm_gap.get("external_state_mutated") is False)
         and bool(science_claim_gap.get("execution_enabled") is False)
@@ -1030,6 +1078,49 @@ def build_goal_release_decision_gate(
     if not isinstance(accuracy_ligand_thresholds, dict):
         accuracy_ligand_thresholds = {}
     accuracy_ligand_blockers = _text_list(accuracy_ligand_ranking.get("blockers"))
+    accuracy_ligand_metric_blockers = [
+        blocker
+        for blocker in accuracy_ligand_blockers
+        if blocker != "broad_gpcr_claim_not_allowed"
+    ]
+    accuracy_ligand_pr_auc = _float(accuracy_ligand_metrics.get("ranking_pr_auc"))
+    accuracy_ligand_pr_auc_ci_low = _float(
+        accuracy_ligand_metrics.get("ranking_pr_auc_ci_low")
+    )
+    accuracy_ligand_topk_hit_rate = _float(
+        accuracy_ligand_metrics.get("ranking_topk_hit_rate")
+    )
+    accuracy_ligand_pr_auc_threshold = _float(
+        accuracy_ligand_thresholds.get("ranking_pr_auc_min")
+    )
+    accuracy_ligand_pr_auc_ci_low_threshold = _float(
+        accuracy_ligand_thresholds.get("ranking_pr_auc_ci_low_min")
+    )
+    accuracy_ligand_topk_hit_rate_threshold = _float(
+        accuracy_ligand_thresholds.get("ranking_topk_hit_rate_min")
+    )
+    accuracy_ligand_metric_thresholds_present = (
+        bool(accuracy_ligand_ranking)
+        and "ranking_pr_auc" in accuracy_ligand_metrics
+        and "ranking_pr_auc_ci_low" in accuracy_ligand_metrics
+        and "ranking_topk_hit_rate" in accuracy_ligand_metrics
+        and "ranking_pr_auc_min" in accuracy_ligand_thresholds
+        and "ranking_pr_auc_ci_low_min" in accuracy_ligand_thresholds
+        and "ranking_topk_hit_rate_min" in accuracy_ligand_thresholds
+    )
+    accuracy_ligand_metric_thresholds_pass = (
+        accuracy_ligand_metric_thresholds_present
+        and accuracy_ligand_pr_auc >= accuracy_ligand_pr_auc_threshold
+        and accuracy_ligand_pr_auc_ci_low >= accuracy_ligand_pr_auc_ci_low_threshold
+        and accuracy_ligand_topk_hit_rate >= accuracy_ligand_topk_hit_rate_threshold
+    )
+    accuracy_ligand_claim_scope_lock_only = (
+        _text(accuracy_ligand_ranking.get("status")) == "restricted_pass"
+        and accuracy_ligand_blockers == ["broad_gpcr_claim_not_allowed"]
+        and accuracy_ligand_metric_thresholds_pass
+        and accuracy_ligand_ranking.get("claim_promotion_allowed") is not True
+        and accuracy_ligand_ranking.get("commercial_parity_claim_allowed") is not True
+    )
     accuracy_parity_rows_accounted = (
         _int(accuracy_parity.get("pass_row_count"))
         + _int(accuracy_parity.get("restricted_pass_row_count"))
@@ -1067,29 +1158,30 @@ def build_goal_release_decision_gate(
         "PRODUCT-AI",
         "DATA-SCIENCE",
         "INFRA",
+        "SCI-CLAIM",
         "DEPLOY-OPS",
         "STORAGE",
         "TOOLS",
         "API-RUNNER",
     ]
     master_gap_rollup_recorded = (
-        _text(master_gap_rollup.get("status")) == "blocked_master_gap_closure_rollup"
-        and bool(master_gap_rollup.get("all_gaps_closed") is False)
+        _text(master_gap_rollup.get("status")) == "master_gap_closure_rollup_complete"
+        and bool(master_gap_rollup.get("all_gaps_closed") is True)
         and bool(master_gap_rollup.get("claim_promotion_allowed") is False)
         and _int(master_gap_rollup.get("gap_count")) == 9
-        and _int(master_gap_rollup.get("closed_gap_count")) == 8
-        and _int(master_gap_rollup.get("open_gap_count")) == 1
-        and master_gap_open_ids == ["SCI-CLAIM"]
+        and _int(master_gap_rollup.get("closed_gap_count")) == 9
+        and _int(master_gap_rollup.get("open_gap_count")) == 0
+        and master_gap_open_ids == []
         and master_gap_closed_ids == expected_master_gap_closed_ids
-        and _text(master_gap_rollup.get("current_primary_open_gap_id")) == "SCI-CLAIM"
+        and _text(master_gap_rollup.get("current_primary_open_gap_id")) == "none"
         and len(master_gap_rows) == 9
-        and len(master_gap_release_blocker_rows) == 1
-        and _text(master_gap_science_claim_row.get("status")) == "open"
+        and len(master_gap_release_blocker_rows) == 0
+        and _text(master_gap_science_claim_row.get("status")) == "closed"
         and _text(master_gap_science_claim_row.get("rollup_status"))
-        == "blocked_science_claim_promotion_gap_closure"
+        == "science_claim_promotion_gap_closure_complete"
         and _text(master_gap_science_claim_row.get("evidence"))
         == "runs/science_claim_promotion_gap_closure_current.json"
-        and bool(master_gap_science_claim_row.get("release_blocker") is True)
+        and bool(master_gap_science_claim_row.get("release_blocker") is False)
         and bool(master_gap_science_claim_row.get("execution_enabled") is False)
         and bool(master_gap_science_claim_row.get("external_state_mutated") is False)
         and bool(master_gap_rollup.get("execution_enabled") is False)
@@ -1709,6 +1801,18 @@ def build_goal_release_decision_gate(
                     f"{_int(refine_tier_public_benchmark_work_order_apply.get('blocked_row_count'))};"
                     f"valid_intake_row_count="
                     f"{_int(refine_tier_public_benchmark_work_order_apply.get('valid_intake_row_count'))};"
+                    f"receptor_coordinate_validation_required="
+                    f"{_bool_text(bool(refine_tier_public_benchmark_work_order_apply.get('receptor_coordinate_validation_required') is True))};"
+                    f"receptor_coordinate_validation_pass_row_count="
+                    f"{_int(refine_tier_public_benchmark_work_order_apply.get('receptor_coordinate_validation_pass_row_count'))};"
+                    f"receptor_coordinate_validation_blocked_row_count="
+                    f"{_int(refine_tier_public_benchmark_work_order_apply.get('receptor_coordinate_validation_blocked_row_count'))};"
+                    f"metric_evidence_required="
+                    f"{_bool_text(bool(refine_tier_public_benchmark_work_order_apply.get('metric_evidence_required') is True))};"
+                    f"metric_evidence_pass_row_count="
+                    f"{_int(refine_tier_public_benchmark_work_order_apply.get('metric_evidence_pass_row_count'))};"
+                    f"metric_evidence_blocked_row_count="
+                    f"{_int(refine_tier_public_benchmark_work_order_apply.get('metric_evidence_blocked_row_count'))};"
                     f"candidate_intake_written="
                     f"{_bool_text(bool(refine_tier_public_benchmark_work_order_apply.get('candidate_intake_written') is True))};"
                     f"intake_written="
@@ -1722,7 +1826,8 @@ def build_goal_release_decision_gate(
                 ),
                 required=(
                     "blocked_refine_tier_public_benchmark_work_order_apply with 8 blocked placeholder "
-                    "rows, no candidate/tracked intake write, no approval token use, and no external mutation"
+                    "rows, 8/0 receptor-coordinate validation pass/blocked rows, 0/8 metric-evidence pass rows, "
+                    "no candidate/tracked intake write, no approval token use, and no external mutation"
                 ),
                 passed=refine_tier_public_benchmark_work_order_apply_recorded,
                 reason=(
@@ -2153,11 +2258,14 @@ def build_goal_release_decision_gate(
                     f"science_claim_release_blocker={_bool_text(bool(master_gap_science_claim_row.get('release_blocker') is True))}"
                 ),
                 required=(
-                    "master gap closure rollup recorded with SCI-CLAIM as the sole open "
-                    "full-commercial rollup gap and all other master gaps closed"
+                    "master gap closure rollup recorded complete with SCI-CLAIM closed, "
+                    "no release-blocking master rows, and claim promotion still locked"
                 ),
                 passed=master_gap_rollup_recorded,
-                reason="The final release decision must not hide the full-commercial SCI-CLAIM blocker while restricted release evidence is green.",
+                reason=(
+                    "The final release decision must show that science accounting is closed "
+                    "without implying broad full-commercial claim promotion is allowed."
+                ),
             )
         )
     if accuracy_parity_gate_present:
@@ -2174,22 +2282,28 @@ def build_goal_release_decision_gate(
                     f"{_bool_text(bool(accuracy_parity.get('schrodinger_class_claim_allowed') is True))};"
                     f"row_count={_int(accuracy_parity.get('row_count'))};"
                     f"pass_row_count={_int(accuracy_parity.get('pass_row_count'))};"
+                    f"restricted_pass_row_count={_int(accuracy_parity.get('restricted_pass_row_count'))};"
                     f"blocked_row_count={_int(accuracy_parity.get('blocked_row_count'))};"
                     f"top_blockers={';'.join(accuracy_parity_top_blockers)};"
                     f"ligand_ranking_status={_text(accuracy_ligand_ranking.get('status'))};"
-                    f"ligand_ranking_pr_auc={_float(accuracy_ligand_metrics.get('ranking_pr_auc'))};"
-                    f"ligand_ranking_pr_auc_ci_low={_float(accuracy_ligand_metrics.get('ranking_pr_auc_ci_low'))};"
-                    f"ligand_ranking_topk_hit_rate={_float(accuracy_ligand_metrics.get('ranking_topk_hit_rate'))};"
+                    f"ligand_ranking_pr_auc={accuracy_ligand_pr_auc};"
+                    f"ligand_ranking_pr_auc_ci_low={accuracy_ligand_pr_auc_ci_low};"
+                    f"ligand_ranking_topk_hit_rate={accuracy_ligand_topk_hit_rate};"
+                    f"ligand_ranking_metric_thresholds_pass="
+                    f"{_bool_text(accuracy_ligand_metric_thresholds_pass)};"
+                    f"ligand_ranking_metric_blocker_count={len(accuracy_ligand_metric_blockers)};"
+                    f"ligand_ranking_claim_scope_lock_only="
+                    f"{_bool_text(accuracy_ligand_claim_scope_lock_only)};"
                     f"ligand_ranking_blockers={';'.join(accuracy_ligand_blockers)}"
                 ),
                 required=(
                     "accuracy parity scorecard recorded with frozen-row claim boundary and "
-                    "ligand_ranking Schrodinger-class blocker visibility"
+                    "ligand_ranking restricted-pass broad-claim lock visibility"
                 ),
                 passed=accuracy_parity_scorecard_recorded,
                 reason=(
-                    "The final release decision must preserve the broad GPCR ligand-ranking/Schrodinger-class "
-                    "parity blocker instead of allowing it to disappear behind restricted local delivery readiness."
+                    "The final release decision must preserve the broad GPCR/Schrodinger-class "
+                    "claim lock even after the tracked ligand-ranking metrics clear."
                 ),
             )
         )
@@ -2220,13 +2334,13 @@ def build_goal_release_decision_gate(
                     f"openmm_release_blocker={_bool_text(bool(science_claim_openmm_gap.get('release_blocker') is True))}"
                 ),
                 required=(
-                    "science claim promotion gap closure recorded with SCI-GPCR and "
-                    "SCI-OPENMM as release-blocking open rows and all closed row ids preserved"
+                    "science claim promotion gap closure recorded complete with SCI-GPCR and "
+                    "SCI-OPENMM closed, no release-blocking science rows, and claim promotion still locked"
                 ),
                 passed=science_claim_gap_recorded,
                 reason=(
-                    "The final release decision must preserve the science-claim sub-gaps underneath "
-                    "MASTER:SCI-CLAIM, not only the collapsed master rollup id."
+                    "The final release decision must preserve the science-claim sub-gap accounting "
+                    "without treating closed boundary rows as broad claim promotion."
                 ),
             )
         )
@@ -3140,6 +3254,40 @@ def build_goal_release_decision_gate(
         "refine_tier_public_benchmark_work_order_apply_duplicate_benchmark_id_count": _int(
             refine_tier_public_benchmark_work_order_apply.get("duplicate_benchmark_id_count")
         ),
+        "refine_tier_public_benchmark_work_order_apply_receptor_coordinate_validation_required": bool(
+            refine_tier_public_benchmark_work_order_apply.get(
+                "receptor_coordinate_validation_required"
+            )
+            is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_receptor_coordinate_validation_pass_row_count": _int(
+            refine_tier_public_benchmark_work_order_apply.get(
+                "receptor_coordinate_validation_pass_row_count"
+            )
+        ),
+        "refine_tier_public_benchmark_work_order_apply_receptor_coordinate_validation_blocked_row_count": _int(
+            refine_tier_public_benchmark_work_order_apply.get(
+                "receptor_coordinate_validation_blocked_row_count"
+            )
+        ),
+        "refine_tier_public_benchmark_work_order_apply_receptor_coordinate_validation_missing_row_count": _int(
+            refine_tier_public_benchmark_work_order_apply.get(
+                "receptor_coordinate_validation_missing_row_count"
+            )
+        ),
+        "refine_tier_public_benchmark_work_order_apply_metric_evidence_required": bool(
+            refine_tier_public_benchmark_work_order_apply.get("metric_evidence_required")
+            is True
+        ),
+        "refine_tier_public_benchmark_work_order_apply_metric_evidence_pass_row_count": _int(
+            refine_tier_public_benchmark_work_order_apply.get("metric_evidence_pass_row_count")
+        ),
+        "refine_tier_public_benchmark_work_order_apply_metric_evidence_blocked_row_count": _int(
+            refine_tier_public_benchmark_work_order_apply.get("metric_evidence_blocked_row_count")
+        ),
+        "refine_tier_public_benchmark_work_order_apply_metric_evidence_missing_row_count": _int(
+            refine_tier_public_benchmark_work_order_apply.get("metric_evidence_missing_row_count")
+        ),
         "refine_tier_public_benchmark_work_order_apply_candidate_intake_written": bool(
             refine_tier_public_benchmark_work_order_apply.get("candidate_intake_written") is True
         ),
@@ -3956,29 +4104,31 @@ def build_goal_release_decision_gate(
         ),
         "accuracy_parity_ligand_ranking_blocker_count": len(accuracy_ligand_blockers),
         "accuracy_parity_ligand_ranking_blockers": accuracy_ligand_blockers,
-        "accuracy_parity_ligand_ranking_pr_auc": _float(
-            accuracy_ligand_metrics.get("ranking_pr_auc")
+        "accuracy_parity_ligand_ranking_metric_thresholds_pass": (
+            accuracy_ligand_metric_thresholds_pass
         ),
-        "accuracy_parity_ligand_ranking_pr_auc_ci_low": _float(
-            accuracy_ligand_metrics.get("ranking_pr_auc_ci_low")
+        "accuracy_parity_ligand_ranking_metric_blocker_count": len(
+            accuracy_ligand_metric_blockers
         ),
-        "accuracy_parity_ligand_ranking_topk_hit_rate": _float(
-            accuracy_ligand_metrics.get("ranking_topk_hit_rate")
+        "accuracy_parity_ligand_ranking_metric_blockers": accuracy_ligand_metric_blockers,
+        "accuracy_parity_ligand_ranking_claim_scope_lock_only": (
+            accuracy_ligand_claim_scope_lock_only
         ),
+        "accuracy_parity_ligand_ranking_pr_auc": accuracy_ligand_pr_auc,
+        "accuracy_parity_ligand_ranking_pr_auc_ci_low": accuracy_ligand_pr_auc_ci_low,
+        "accuracy_parity_ligand_ranking_topk_hit_rate": accuracy_ligand_topk_hit_rate,
         "accuracy_parity_ligand_ranking_positive_count": _int(
             accuracy_ligand_metrics.get("positive_count")
         ),
         "accuracy_parity_ligand_ranking_score_col_used": _text(
             accuracy_ligand_metrics.get("ranking_score_col_used")
         ),
-        "accuracy_parity_ligand_ranking_pr_auc_threshold": _float(
-            accuracy_ligand_thresholds.get("ranking_pr_auc_min")
+        "accuracy_parity_ligand_ranking_pr_auc_threshold": accuracy_ligand_pr_auc_threshold,
+        "accuracy_parity_ligand_ranking_pr_auc_ci_low_threshold": (
+            accuracy_ligand_pr_auc_ci_low_threshold
         ),
-        "accuracy_parity_ligand_ranking_pr_auc_ci_low_threshold": _float(
-            accuracy_ligand_thresholds.get("ranking_pr_auc_ci_low_min")
-        ),
-        "accuracy_parity_ligand_ranking_topk_hit_rate_threshold": _float(
-            accuracy_ligand_thresholds.get("ranking_topk_hit_rate_min")
+        "accuracy_parity_ligand_ranking_topk_hit_rate_threshold": (
+            accuracy_ligand_topk_hit_rate_threshold
         ),
         "accuracy_parity_ligand_ranking_next_required_step": _text(
             accuracy_ligand_ranking.get("next_required_step")
@@ -4445,6 +4595,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- accuracy_parity_ligand_ranking_pr_auc: `{s['accuracy_parity_ligand_ranking_pr_auc']}`",
         f"- accuracy_parity_ligand_ranking_pr_auc_ci_low: `{s['accuracy_parity_ligand_ranking_pr_auc_ci_low']}`",
         f"- accuracy_parity_ligand_ranking_topk_hit_rate: `{s['accuracy_parity_ligand_ranking_topk_hit_rate']}`",
+        f"- accuracy_parity_ligand_ranking_metric_thresholds_pass: `{s['accuracy_parity_ligand_ranking_metric_thresholds_pass']}`",
+        f"- accuracy_parity_ligand_ranking_metric_blocker_count: `{s['accuracy_parity_ligand_ranking_metric_blocker_count']}`",
+        f"- accuracy_parity_ligand_ranking_claim_scope_lock_only: `{s['accuracy_parity_ligand_ranking_claim_scope_lock_only']}`",
         f"- accuracy_parity_ligand_ranking_blocker_count: `{s['accuracy_parity_ligand_ranking_blocker_count']}`",
         f"- accuracy_parity_ligand_ranking_blockers: `{';'.join(s['accuracy_parity_ligand_ranking_blockers'])}`",
         f"- science_claim_promotion_gap_closure_gate_present: `{s['science_claim_promotion_gap_closure_gate_present']}`",

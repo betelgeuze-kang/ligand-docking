@@ -58,6 +58,8 @@ def mm_gbsa_binding_energy(
     denom = float(max(int(d.size), 1))
     contacts = float(vdw["contact_count"])
     close_contacts = float(np.sum(d < 4.5))
+    ligand_atom_count = float(max(int(lig.shape[0]), 1))
+    ligand_contact_atom_count = float(np.sum(np.any(d < float(contact_cutoff_a), axis=0)))
     contact_fraction = contacts / denom
     clashes = float(vdw["clash_count"])
 
@@ -81,24 +83,30 @@ def mm_gbsa_binding_energy(
     e_sa_lig = sa_surface_energy(lig)
     e_sa_cross = e_sa_complex - e_sa_prot - e_sa_lig
 
-    affinity = float(props.get("affinity_hint", 0.5))
-    e_vdw = float(vdw["e_vdw"]) + (0.22 + 0.05 * (1.0 - affinity)) * clashes
+    raw_vdw = float(vdw["e_vdw"])
+    e_vdw = float(np.clip(0.02 * raw_vdw, -2.0, 2.0)) + 0.18 * clashes
     e_polar = -(0.04 + 0.08 * polar_n) * hb_contacts
-    e_nonpolar = -(0.02 + 0.07 * logp_n) * contacts
-    e_gb = float(e_gb_cross)
-    e_sa = float(e_sa_cross)
+    e_nonpolar = (
+        -0.0020 * contacts
+        -0.10 * ligand_atom_count
+        -0.05 * max(0.0, logp_n) * ligand_contact_atom_count
+    )
+    e_gb = 0.05 * float(e_gb_cross)
+    e_sa = 0.05 * float(e_sa_cross)
     e_solv = e_gb + e_sa + 0.12 * max(0.0, min_d - 4.0) + 0.35 * max(0.0, 0.20 - contact_fraction)
-    delta_g = float(e_vdw + e_polar + e_nonpolar + e_solv)
+    delta_g = float(1.50 + e_vdw + e_polar + e_nonpolar + e_solv)
 
     return {
         "min_distance_a": min_d,
         "contact_fraction": float(contact_fraction),
         "contact_count": contacts,
+        "ligand_contact_atom_count": ligand_contact_atom_count,
         "close_contact_count": close_contacts,
         "clash_count": clashes,
         "deltaG_mm_gbsa_kcal_mol": delta_g,
         "deltaG_mmpbsa_proxy_kcal_mol": delta_g,
         "e_vdw": float(e_vdw),
+        "raw_e_vdw": raw_vdw,
         "e_polar": float(e_polar),
         "e_nonpolar": float(e_nonpolar),
         "e_gb": float(e_gb),

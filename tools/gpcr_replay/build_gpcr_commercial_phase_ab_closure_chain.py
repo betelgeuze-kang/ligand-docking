@@ -9,12 +9,17 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from tools.gpcr_replay.build_gpcr_active_scorer_promotion_decision_packet import (
+    scorecard_metric_ready_under_claim_lock,
+)
+
 ROOT = Path(__file__).resolve().parents[2]
 
-BETA_BLOCKER_RANKING_SUMMARY_JSON = (
+OPERATIONAL_RERUN_RANKING_SUMMARY_JSON = (
     "runs/external_validation_2026-05-10_beta_blocker_rescue_v2_family_balanced100k_r1_set1_core_blind_"
     "gpcr_core_full_p0_n100000_r1_stage5_ranking_summary.json"
 )
+ACCURACY_PARITY_RANK_RESCUE_EVIDENCE_JSON = "runs/gpcr_rank_rescue_crossfit_repeat_r1_evidence_packet_current.json"
 CROSSFIT_REPEAT_RANKING_SUMMARY_JSON = (
     "runs/gpcr_coverage_v2_crossfit_rank_rescue_repeat_r1_shadow_replay_ranking_summary_current.json"
 )
@@ -87,7 +92,7 @@ def _product_work_order_cmd() -> list[str]:
 
 def build_packet(
     *,
-    operational_ranking_summary_json: str | Path = BETA_BLOCKER_RANKING_SUMMARY_JSON,
+    operational_ranking_summary_json: str | Path = ACCURACY_PARITY_RANK_RESCUE_EVIDENCE_JSON,
     independent_repeat_ranking_json: str | Path = CROSSFIT_REPEAT_RANKING_SUMMARY_JSON,
     independent_repeat_tag: str = CROSSFIT_REPEAT_TAG,
     skip_phase_b: bool = False,
@@ -112,7 +117,10 @@ def build_packet(
         ]
     )
     scorecard_lane = _lane("accuracy_parity_scorecard", "runs/accuracy_parity_scorecard_current.json")
-    if scorecard_lane["status"] != "green":
+    scorecard_readiness = scorecard_metric_ready_under_claim_lock(
+        _read_json("runs/accuracy_parity_scorecard_current.json")
+    )
+    if not scorecard_readiness["metric_ready"]:
         blockers.append("phase_a:accuracy_parity_scorecard_not_green")
 
     _run(
@@ -212,6 +220,11 @@ def build_packet(
         "phase_a_claim_closure_ready": not any(item.startswith("phase_a:") for item in blockers),
         "phase_b_product_delivery_ready": not any(item.startswith("phase_b:") for item in blockers),
         "phase_b_operator_approval_pending": phase_b_operator_approval_pending,
+        "accuracy_parity_metric_ready": bool(scorecard_readiness["metric_ready"]),
+        "accuracy_parity_metric_blockers": scorecard_readiness["metric_blockers"],
+        "accuracy_parity_claim_scope_lock_only": bool(scorecard_readiness["claim_scope_lock_only"]),
+        "accuracy_parity_ligand_ranking_status": scorecard_readiness["ligand_ranking_status"],
+        "accuracy_parity_ligand_ranking_blockers": scorecard_readiness["ligand_ranking_blockers"],
         "operational_ranking_summary_json": str(_resolve(operational_ranking_summary_json)),
         "independent_repeat_ranking_json": str(_resolve(independent_repeat_ranking_json)),
         "independent_repeat_tag": independent_repeat_tag,
@@ -244,6 +257,8 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- status: `{summary['status']}`",
         f"- phase_a_claim_closure_ready: `{summary.get('phase_a_claim_closure_ready')}`",
         f"- phase_b_product_delivery_ready: `{summary.get('phase_b_product_delivery_ready')}`",
+        f"- accuracy_parity_metric_ready: `{summary.get('accuracy_parity_metric_ready')}`",
+        f"- accuracy_parity_claim_scope_lock_only: `{summary.get('accuracy_parity_claim_scope_lock_only')}`",
         f"- claim_promotion_allowed: `false`",
         "",
         "## Blockers",
@@ -262,7 +277,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run Phase A GPCR claim closure, then Phase B product delivery contract refresh."
     )
-    parser.add_argument("--operational-ranking-summary-json", default=BETA_BLOCKER_RANKING_SUMMARY_JSON)
+    parser.add_argument("--operational-ranking-summary-json", default=ACCURACY_PARITY_RANK_RESCUE_EVIDENCE_JSON)
     parser.add_argument("--independent-repeat-ranking-json", default=CROSSFIT_REPEAT_RANKING_SUMMARY_JSON)
     parser.add_argument("--independent-repeat-tag", default=CROSSFIT_REPEAT_TAG)
     parser.add_argument("--skip-phase-b", action="store_true")

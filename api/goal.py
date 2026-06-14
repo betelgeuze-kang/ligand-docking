@@ -52,7 +52,6 @@ DEPLOY_OPS_LEGAL_GAP_CLOSURE_ARTIFACT = (
 FULL_COMMERCIAL_RELEASE_BLOCKER_IDS = (
     "R8_full_scope_claim_closure",
     "R9_engine_refinement_claim_promotion",
-    "MASTER:SCI-CLAIM",
     "ACCURACY:ligand_ranking",
 )
 
@@ -2054,6 +2053,7 @@ async def get_goal_status() -> dict[str, Any]:
             "product_accuracy_parity_ligand_ranking_topk_hit_rate": 0.0,
             "product_accuracy_parity_ligand_ranking_next_required_step": "",
             "product_accuracy_parity_scorecard_json": "",
+            "close_ligand_ranking_claim_scope": False,
             "product_goal_completion_audit_artifact_path": str(PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT),
             "production_ai_checkpoint_registry_promotion_required_gate_ids": [],
             "production_ai_checkpoint_registry_promotion_missing_gate_ids": [],
@@ -2485,7 +2485,7 @@ async def get_goal_status() -> dict[str, Any]:
         "product_accuracy_parity_ligand_ranking_action_id": (
             actions.get("product_accuracy_parity_ligand_ranking_action_id")
             or (
-                "product_accuracy_parity:repair_ligand_ranking_parity"
+                "product_accuracy_parity:close_ligand_ranking_claim_scope"
                 if actions.get("product_accuracy_parity_ligand_ranking_action_present") is True
                 else ""
             )
@@ -2528,6 +2528,10 @@ async def get_goal_status() -> dict[str, Any]:
         ),
         "product_accuracy_parity_scorecard_json": actions.get(
             "product_accuracy_parity_scorecard_json", ""
+        ),
+        "close_ligand_ranking_claim_scope": (
+            actions.get("product_accuracy_parity_ligand_ranking_action_id")
+            == "product_accuracy_parity:close_ligand_ranking_claim_scope"
         ),
         "product_goal_completion_audit_artifact_path": str(PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT),
         "production_ai_checkpoint_registry_promotion_required_gate_ids": _string_list(

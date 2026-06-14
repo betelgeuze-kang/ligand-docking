@@ -16,6 +16,9 @@ from tools.product.build_engine_refinement_claim_evidence_operator_field_workshe
     DEFAULT_OUT_JSON as DEFAULT_FIELD_WORKSHEET_JSON,
 )
 from tools.product.build_engine_refinement_claim_evidence_priority_packet import (
+    DEFAULT_PUBLIC_BENCHMARK_MATERIALIZATION_JSON,
+    DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_JSON,
+    DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_WORK_ORDER_CSV,
     DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_APPLY_JSON,
     DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_CSV,
 )
@@ -28,6 +31,8 @@ from tools.product.build_engine_refinement_claim_evidence_receipt import (
 )
 from tools.product.build_refine_tier_public_benchmark_readiness import (
     DEFAULT_INPUT_CSV as DEFAULT_PUBLIC_BENCHMARK_INTAKE_CSV,
+    DEFAULT_OUT_METRIC_EVIDENCE_CSV,
+    DEFAULT_OUT_RECEPTOR_COORDINATE_VALIDATION_CSV,
     REFINE_TIER_PUBLIC_BENCHMARK_INTAKE_APPROVAL_TOKEN,
     WORK_ORDER_COLUMNS,
 )
@@ -101,6 +106,26 @@ def _has_placeholder(row: dict[str, Any]) -> bool:
     return any(_text(value).startswith(("OPERATOR_FILL", "OPERATOR_CONFIRM")) for value in row.values())
 
 
+def _int(value: Any) -> int:
+    try:
+        return int(float(_text(value)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _materialized_metric_ready(materialization: dict[str, Any]) -> bool:
+    row_count = _int(materialization.get("materialized_row_count"))
+    return bool(
+        _text(materialization.get("status")) == "refine_tier_public_benchmark_metric_sources_materialized"
+        and row_count > 0
+        and _int(materialization.get("blocked_row_count")) == 0
+        and _int(materialization.get("metric_evidence_pass_row_count")) >= row_count
+        and materialization.get("free_energy_spearman_gate_ready") is True
+        and _int(materialization.get("external_engine_calls")) == 0
+        and materialization.get("external_state_mutated") is False
+    )
+
+
 def _candidate_receipt_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     return [{column: row.get(column, "") for column in REQUIRED_COLUMNS} for row in rows]
 
@@ -155,6 +180,11 @@ def build_engine_refinement_claim_evidence_operator_staging_apply(
     action_board_csv: str | Path = DEFAULT_ACTION_BOARD_CSV,
     field_worksheet_json: str | Path = DEFAULT_FIELD_WORKSHEET_JSON,
     staging_public_benchmark_work_order_csv: str | Path = DEFAULT_STAGING_PUBLIC_BENCHMARK_WORK_ORDER_CSV,
+    materialized_public_benchmark_work_order_csv: str | Path = DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_WORK_ORDER_CSV,
+    materialized_public_benchmark_materialization_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_MATERIALIZATION_JSON,
+    materialized_public_benchmark_apply_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_JSON,
+    receptor_coordinate_validation_csv: str | Path = DEFAULT_OUT_RECEPTOR_COORDINATE_VALIDATION_CSV,
+    metric_evidence_csv: str | Path = DEFAULT_OUT_METRIC_EVIDENCE_CSV,
     target_public_benchmark_intake_csv: str | Path = DEFAULT_TARGET_PUBLIC_BENCHMARK_INTAKE_CSV,
     candidate_receipt_csv: str | Path = DEFAULT_CANDIDATE_RECEIPT_CSV,
     candidate_public_benchmark_intake_csv: str | Path = DEFAULT_CANDIDATE_PUBLIC_BENCHMARK_INTAKE_CSV,
@@ -185,6 +215,23 @@ def build_engine_refinement_claim_evidence_operator_staging_apply(
         root=root_path,
     )
     existing_work_order_apply = _summary(existing_work_order_apply_packet)
+    materialized_work_order_rows, _, materialized_work_order_present = _read_csv(
+        materialized_public_benchmark_work_order_csv,
+        root=root_path,
+    )
+    materialization_packet, materialization_present = _read_json(
+        materialized_public_benchmark_materialization_json,
+        root=root_path,
+    )
+    materialization_summary = _summary(materialization_packet)
+    materialized_apply_packet, materialized_apply_present = _read_json(
+        materialized_public_benchmark_apply_json,
+        root=root_path,
+    )
+    materialized_apply_summary = _summary(materialized_apply_packet)
+    materialized_metric_ready = _materialized_metric_ready(materialization_summary)
+    materialized_apply_ready = bool(materialized_apply_summary.get("apply_ready") is True)
+    materialized_candidate_ready = bool(materialized_metric_ready and materialized_apply_ready)
 
     candidate_receipt_payload = build_engine_refinement_claim_evidence_receipt(
         receipt_csv=staging_receipt_csv,
@@ -199,6 +246,8 @@ def build_engine_refinement_claim_evidence_operator_staging_apply(
         work_order_csv=_resolve(staging_public_benchmark_work_order_csv, root=root_path),
         out_csv=_resolve(candidate_public_benchmark_intake_csv, root=root_path),
         target_intake_csv=_resolve(target_public_benchmark_intake_csv, root=root_path),
+        receptor_coordinate_validation_csv=_resolve(receptor_coordinate_validation_csv, root=root_path),
+        metric_evidence_csv=_resolve(metric_evidence_csv, root=root_path),
         write_intake=False,
         approval_token="",
     )
@@ -272,6 +321,8 @@ def build_engine_refinement_claim_evidence_operator_staging_apply(
             work_order_csv=_resolve(staging_public_benchmark_work_order_csv, root=root_path),
             out_csv=_resolve(candidate_public_benchmark_intake_csv, root=root_path),
             target_intake_csv=_resolve(target_public_benchmark_intake_csv, root=root_path),
+            receptor_coordinate_validation_csv=_resolve(receptor_coordinate_validation_csv, root=root_path),
+            metric_evidence_csv=_resolve(metric_evidence_csv, root=root_path),
             write_intake=True,
             approval_token=public_benchmark_approval_token,
         )
@@ -286,6 +337,12 @@ def build_engine_refinement_claim_evidence_operator_staging_apply(
     elif candidate_receipt_ready or candidate_work_order_ready:
         status = "engine_refinement_claim_evidence_operator_staging_preview_ready"
         next_required_step = "Review the candidate artifacts, then use live_apply mode with the matching approval token before canonical writes."
+    elif materialized_candidate_ready:
+        status = "blocked_engine_refinement_claim_evidence_operator_staging_apply"
+        next_required_step = (
+            "Materialized public benchmark science candidate is ready, but the canonical staging receipt/work-order "
+            "still blocks. Review the materialized candidate, then use the explicit intake/receipt promotion path."
+        )
     else:
         status = "blocked_engine_refinement_claim_evidence_operator_staging_apply"
         next_required_step = "Fill or repair R9 claim-evidence receipt rows and public benchmark work-order rows before touching canonical receipt or intake CSVs."
@@ -338,8 +395,82 @@ def build_engine_refinement_claim_evidence_operator_staging_apply(
         "candidate_public_benchmark_blocked_row_count": int(
             candidate_work_order_summary.get("blocked_row_count") or 0
         ),
+        "candidate_public_benchmark_receptor_coordinate_validation_contract_blocked_row_count": int(
+            candidate_work_order_summary.get("receptor_coordinate_validation_contract_blocked_row_count") or 0
+        ),
+        "candidate_public_benchmark_metric_evidence_contract_blocked_row_count": int(
+            candidate_work_order_summary.get("metric_evidence_contract_blocked_row_count") or 0
+        ),
+        "candidate_public_benchmark_metric_evidence_missing_required_input_artifact_row_count": int(
+            candidate_work_order_summary.get("metric_evidence_missing_required_input_artifact_row_count") or 0
+        ),
+        "candidate_public_benchmark_metric_evidence_missing_required_receptor_input_row_count": int(
+            candidate_work_order_summary.get("metric_evidence_missing_required_receptor_input_row_count") or 0
+        ),
+        "candidate_public_benchmark_metric_evidence_required_input_sha256_blocked_row_count": int(
+            candidate_work_order_summary.get("metric_evidence_required_input_sha256_blocked_row_count") or 0
+        ),
         "candidate_public_benchmark_candidate_intake_written": bool(
             candidate_work_order_summary.get("candidate_intake_written") is True
+        ),
+        "materialized_public_benchmark_work_order_csv": _display_path(
+            materialized_public_benchmark_work_order_csv,
+            root=root_path,
+        ),
+        "materialized_public_benchmark_materialization_artifact": _display_path(
+            materialized_public_benchmark_materialization_json,
+            root=root_path,
+        ),
+        "materialized_public_benchmark_apply_artifact": _display_path(
+            materialized_public_benchmark_apply_json,
+            root=root_path,
+        ),
+        "materialized_public_benchmark_work_order_csv_present": materialized_work_order_present,
+        "materialized_public_benchmark_materialization_artifact_present": materialization_present,
+        "materialized_public_benchmark_apply_artifact_present": materialized_apply_present,
+        "materialized_public_benchmark_metric_ready": materialized_metric_ready,
+        "materialized_public_benchmark_apply_ready": materialized_apply_ready,
+        "materialized_public_benchmark_candidate_ready": materialized_candidate_ready,
+        "materialized_public_benchmark_work_order_row_count": len(materialized_work_order_rows),
+        "materialized_public_benchmark_metric_evidence_pass_row_count": _int(
+            materialization_summary.get("metric_evidence_pass_row_count")
+        ),
+        "materialized_public_benchmark_metric_evidence_blocked_row_count": _int(
+            materialization_summary.get("metric_evidence_blocked_row_count")
+        ),
+        "materialized_public_benchmark_free_energy_pair_count": _int(
+            materialization_summary.get("free_energy_pair_count")
+        ),
+        "materialized_public_benchmark_free_energy_spearman": materialization_summary.get(
+            "free_energy_spearman"
+        ),
+        "materialized_public_benchmark_free_energy_spearman_gate_ready": bool(
+            materialization_summary.get("free_energy_spearman_gate_ready") is True
+        ),
+        "materialized_public_benchmark_free_energy_spearman_bootstrap_p05": materialization_summary.get(
+            "free_energy_spearman_bootstrap_p05"
+        ),
+        "materialized_public_benchmark_free_energy_spearman_bootstrap_p50": materialization_summary.get(
+            "free_energy_spearman_bootstrap_p50"
+        ),
+        "materialized_public_benchmark_free_energy_spearman_bootstrap_p95": materialization_summary.get(
+            "free_energy_spearman_bootstrap_p95"
+        ),
+        "materialized_public_benchmark_claim_grade_statistical_support_ready": bool(
+            materialization_summary.get("claim_grade_public_benchmark_statistical_support_ready") is True
+        ),
+        "materialized_public_benchmark_claim_grade_statistical_support_blocker_count": _int(
+            materialization_summary.get("claim_grade_public_benchmark_statistical_support_blocker_count")
+        ),
+        "materialized_public_benchmark_claim_grade_statistical_support_blockers": (
+            materialization_summary.get("claim_grade_public_benchmark_statistical_support_blockers") or []
+        ),
+        "materialized_public_benchmark_apply_status": _text(materialized_apply_summary.get("status")),
+        "materialized_public_benchmark_apply_blocked_row_count": _int(
+            materialized_apply_summary.get("blocked_row_count")
+        ),
+        "materialized_public_benchmark_candidate_intake_written": bool(
+            materialized_apply_summary.get("candidate_intake_written") is True
         ),
         "existing_public_benchmark_work_order_apply_artifact_present": existing_work_order_apply_present,
         "existing_public_benchmark_work_order_apply_status": _text(existing_work_order_apply.get("status")),
@@ -393,6 +524,11 @@ def build_engine_refinement_claim_evidence_operator_staging_apply(
             str(action_board_csv),
             str(field_worksheet_json),
             str(staging_public_benchmark_work_order_csv),
+            str(materialized_public_benchmark_work_order_csv),
+            str(materialized_public_benchmark_materialization_json),
+            str(materialized_public_benchmark_apply_json),
+            str(receptor_coordinate_validation_csv),
+            str(metric_evidence_csv),
             str(target_public_benchmark_intake_csv),
         ],
     }
@@ -428,6 +564,16 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"- candidate receipt pass/blocked: `{summary['candidate_receipt_pass_row_count']}/{summary['candidate_receipt_blocked_row_count']}`",
         f"- candidate_public_benchmark_work_order_ready: `{summary['candidate_public_benchmark_work_order_ready']}`",
         f"- candidate_public_benchmark_blocked_row_count: `{summary['candidate_public_benchmark_blocked_row_count']}`",
+        "- candidate_public_benchmark_metric_evidence_missing_required_input_artifact_row_count: "
+        f"`{summary['candidate_public_benchmark_metric_evidence_missing_required_input_artifact_row_count']}`",
+        f"- materialized_public_benchmark_candidate_ready: `{summary['materialized_public_benchmark_candidate_ready']}`",
+        f"- materialized_public_benchmark_work_order_row_count: `{summary['materialized_public_benchmark_work_order_row_count']}`",
+        "- materialized_public_benchmark_free_energy_spearman: "
+        f"`{summary['materialized_public_benchmark_free_energy_spearman']}`",
+        "- materialized_public_benchmark_spearman_bootstrap_p05: "
+        f"`{summary['materialized_public_benchmark_free_energy_spearman_bootstrap_p05']}`",
+        "- materialized_public_benchmark_claim_grade_statistical_support_ready: "
+        f"`{summary['materialized_public_benchmark_claim_grade_statistical_support_ready']}`",
         f"- staging_receipt_placeholder_row_count: `{summary['staging_receipt_placeholder_row_count']}`",
         f"- staging_public_benchmark_work_order_placeholder_row_count: `{summary['staging_public_benchmark_work_order_placeholder_row_count']}`",
         f"- field_worksheet_pending_field_count: `{summary['field_worksheet_pending_field_count']}`",
@@ -441,6 +587,7 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"- staging_receipt_csv: `{summary['staging_receipt_csv']}`",
         f"- live_receipt_csv: `{summary['live_receipt_csv']}`",
         f"- staging_public_benchmark_work_order_csv: `{summary['staging_public_benchmark_work_order_csv']}`",
+        f"- materialized_public_benchmark_work_order_csv: `{summary['materialized_public_benchmark_work_order_csv']}`",
         f"- candidate_receipt_csv: `{summary['candidate_receipt_csv']}`",
         f"- candidate_public_benchmark_intake_csv: `{summary['candidate_public_benchmark_intake_csv']}`",
         "",
@@ -473,6 +620,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_STAGING_PUBLIC_BENCHMARK_WORK_ORDER_CSV,
     )
     parser.add_argument(
+        "--materialized-public-benchmark-work-order-csv",
+        default=DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_WORK_ORDER_CSV,
+    )
+    parser.add_argument(
+        "--materialized-public-benchmark-materialization-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_MATERIALIZATION_JSON,
+    )
+    parser.add_argument(
+        "--materialized-public-benchmark-apply-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_JSON,
+    )
+    parser.add_argument(
+        "--receptor-coordinate-validation-csv",
+        default=DEFAULT_OUT_RECEPTOR_COORDINATE_VALIDATION_CSV,
+    )
+    parser.add_argument("--metric-evidence-csv", default=DEFAULT_OUT_METRIC_EVIDENCE_CSV)
+    parser.add_argument(
         "--target-public-benchmark-intake-csv",
         default=DEFAULT_TARGET_PUBLIC_BENCHMARK_INTAKE_CSV,
     )
@@ -502,6 +666,13 @@ def main(argv: list[str] | None = None) -> None:
         action_board_csv=args.action_board_csv,
         field_worksheet_json=args.field_worksheet_json,
         staging_public_benchmark_work_order_csv=args.staging_public_benchmark_work_order_csv,
+        materialized_public_benchmark_work_order_csv=args.materialized_public_benchmark_work_order_csv,
+        materialized_public_benchmark_materialization_json=(
+            args.materialized_public_benchmark_materialization_json
+        ),
+        materialized_public_benchmark_apply_json=args.materialized_public_benchmark_apply_json,
+        receptor_coordinate_validation_csv=args.receptor_coordinate_validation_csv,
+        metric_evidence_csv=args.metric_evidence_csv,
         target_public_benchmark_intake_csv=args.target_public_benchmark_intake_csv,
         candidate_receipt_csv=args.candidate_receipt_csv,
         candidate_public_benchmark_intake_csv=args.candidate_public_benchmark_intake_csv,

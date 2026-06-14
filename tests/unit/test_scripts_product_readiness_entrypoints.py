@@ -28,15 +28,110 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
     assert summary["independent_restricted_product_ready"] is True
     assert summary["full_commercial_claim_promotion_ready"] is False
     assert summary["full_commercial_science_claim_blocked"] is True
-    assert summary["full_commercial_open_gap_ids"] == ["SCI-GPCR", "SCI-OPENMM"]
+    assert summary["full_commercial_claim_boundaries_explicit"] is True
+    assert summary["accuracy_parity_ligand_ranking_metric_thresholds_pass"] is True
+    assert summary["accuracy_parity_ligand_ranking_metric_blocker_count"] == 0
+    assert summary["accuracy_parity_ligand_ranking_claim_scope_lock_only"] is True
+    assert summary["full_commercial_open_gap_ids"] == []
+    assert summary["science_accuracy_frontier_public_benchmark_science_ready"] is True
+    assert summary["science_accuracy_frontier_public_benchmark_materialized_metric_ready"] is True
+    assert summary["science_accuracy_frontier_public_benchmark_materialized_apply_ready"] is True
+    assert summary["science_accuracy_frontier_public_benchmark_materialized_row_count"] == 8
+    assert summary["science_accuracy_frontier_public_benchmark_materialized_blocked_row_count"] == 0
+    assert summary["science_accuracy_frontier_public_benchmark_materialized_metric_evidence_pass_row_count"] == 8
+    assert summary["science_accuracy_frontier_public_benchmark_materialized_metric_evidence_blocked_row_count"] == 0
+    assert summary["science_accuracy_frontier_public_benchmark_materialized_free_energy_pair_count"] == 8
+    assert summary["science_accuracy_frontier_public_benchmark_materialized_free_energy_fit_pair_count"] == 5
+    assert summary["science_accuracy_frontier_public_benchmark_materialized_free_energy_holdout_pair_count"] == 3
+    assert summary["science_accuracy_frontier_public_benchmark_materialized_free_energy_spearman"] == 0.6190476190476191
+    assert summary["science_accuracy_frontier_public_benchmark_materialized_free_energy_spearman_gate_ready"] is True
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_materialized_free_energy_spearman_bootstrap_p05"
+        ]
+        == -0.14285714285714285
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_materialized_free_energy_spearman_bootstrap_p50"
+        ]
+        == 0.6428571428571429
+    )
+    assert summary[
+        "science_accuracy_frontier_public_benchmark_materialized_free_energy_spearman_bootstrap_p95"
+    ] == 1.0
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_materialized_claim_grade_statistical_support_ready"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_materialized_claim_grade_statistical_support_blocker_count"
+        ]
+        == 3
+    )
+    assert summary[
+        "science_accuracy_frontier_public_benchmark_materialized_claim_grade_statistical_support_blockers"
+    ] == [
+        "claim_grade_public_benchmark_pair_count_below_minimum",
+        "claim_grade_public_benchmark_holdout_pair_count_below_minimum",
+        "claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum",
+    ]
+    assert summary["science_accuracy_frontier_public_benchmark_receptor_coordinate_validation_min_protein_like_residues"] == 5
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_receptor_coordinate_intake_suggested_public_url_row_count"
+        ]
+        == 8
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_receptor_coordinate_intake_suggested_local_path_row_count"
+        ]
+        == 8
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_receptor_coordinate_intake_operator_review_required_row_count"
+        ]
+        == 8
+    )
+    assert summary["science_accuracy_frontier_public_benchmark_metric_evidence_blocked_row_count"] == 8
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_metric_evidence_missing_required_input_artifact_row_count"
+        ]
+        == 0
+    )
+    assert summary["science_accuracy_frontier_public_benchmark_receptor_coordinate_validation_ready_row_count"] == 8
+    assert summary["science_accuracy_frontier_public_benchmark_receptor_coordinate_validation_blocked_row_count"] == 0
+    assert summary["full_commercial_release_blocker_ids"] == [
+        "R8_full_scope_claim_closure",
+        "R9_engine_refinement_claim_promotion",
+        "ACCURACY:ligand_ranking",
+    ]
     assert summary["blocker_count"] == 0
     assert summary["execution_enabled"] is False
     assert summary["external_state_mutated"] is False
     assert {
         "release_source_of_truth_ready",
         "release_refresh_final_gates_verified",
-        "full_commercial_science_claim_blockers_explicit",
+        "full_commercial_claim_boundaries_explicit",
     }.issubset({row["check"] for row in payload["rows"]})
+    boundary = {
+        row["check"]: row
+        for row in payload["rows"]
+    }["full_commercial_claim_boundaries_explicit"]
+    assert "ligand_metric_thresholds_pass=True" in boundary["observed"]
+    assert "ligand_metric_blocker_count=0" in boundary["observed"]
+    assert "ligand_claim_scope_lock_only=True" in boundary["observed"]
+    assert "openmm_schrodinger_public_benchmark_science_ready=True" in boundary["observed"]
+    assert "public_benchmark_materialized_metric_ready=True" in boundary["observed"]
+    assert "public_benchmark_materialized_apply_ready=True" in boundary["observed"]
+    assert "public_benchmark_materialized_bootstrap_p05=-0.14285714285714285" in boundary["observed"]
+    assert "public_benchmark_materialized_claim_grade_statistical_support_ready=False" in boundary["observed"]
 
 
 def test_verify_quality_gate_script_rebuilds_operational_quality_fail_closed() -> None:

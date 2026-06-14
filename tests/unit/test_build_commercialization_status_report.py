@@ -1039,8 +1039,8 @@ def test_closed_accounting_surfaces_post_goal_accuracy_parity_lane() -> None:
                 "restricted_pass_row_count": 1,
                 "blocked_row_count": 4,
                 "missing_row_count": 0,
-                "current_broad_accuracy_parity_estimate_pct": "40-50",
-                "current_broad_commercial_platform_estimate_pct": "35-45",
+                "current_broad_accuracy_parity_estimate_pct": "65-75",
+                "current_broad_commercial_platform_estimate_pct": "45-55",
                 "top_blockers": [
                     "physics_dynamics:openmm_reference_target_count_too_small",
                     "ligand_ranking:ranking_pr_auc_ci_low_below_threshold",

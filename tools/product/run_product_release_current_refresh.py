@@ -42,12 +42,12 @@ FINAL_GATE_SPECS = [
         "required_true_fields": ["release_source_of_truth_ready"],
         "required_zero_fields": ["blocker_count", "stale_artifact_count", "readme_drift_count"],
         "required_int_exact_fields": {
-            "row_count": 113,
-            "artifact_row_count": 74,
-            "semantic_status_row_count": 37,
+            "row_count": 126,
+            "artifact_row_count": 82,
+            "semantic_status_row_count": 42,
             "readme_row_count": 2,
-            "pass_count": 113,
-            "release_refresh_command_count": 99,
+            "pass_count": 126,
+            "release_refresh_command_count": 107,
         },
     },
     {
@@ -95,11 +95,12 @@ FINAL_GATE_SPECS = [
             "production_ai_promotion_workbench_ready",
             "production_ai_promotion_workbench_registry_promotion_upstream_acceptance_ready",
             "accuracy_parity_scorecard_recorded",
+            "accuracy_parity_ligand_ranking_metric_thresholds_pass",
+            "accuracy_parity_ligand_ranking_claim_scope_lock_only",
             "master_gap_closure_rollup_recorded",
-            "master_gap_closure_rollup_science_claim_release_blocker",
+            "master_gap_closure_rollup_all_gaps_closed",
             "science_claim_promotion_gap_closure_recorded",
-            "science_claim_promotion_gap_closure_gpcr_release_blocker",
-            "science_claim_promotion_gap_closure_openmm_release_blocker",
+            "science_claim_promotion_gap_closure_all_gaps_closed",
             "api_runner_profile_promotion_operator_receipt_recorded",
             "product_scope_breadth_evidence_receipt_recorded",
             "engine_refinement_claim_evidence_receipt_recorded",
@@ -111,6 +112,8 @@ FINAL_GATE_SPECS = [
             "refine_tier_public_benchmark_work_order_apply_recorded",
             "refine_tier_public_benchmark_work_order_apply_aggregate_readiness_required",
             "refine_tier_public_benchmark_work_order_apply_work_order_csv_present",
+            "refine_tier_public_benchmark_work_order_apply_receptor_coordinate_validation_required",
+            "refine_tier_public_benchmark_work_order_apply_metric_evidence_required",
             "product_quality_gate_verification_recorded",
             "product_quality_gate_verification_ready",
             "product_pose_sampling_readiness_recorded",
@@ -162,10 +165,14 @@ FINAL_GATE_SPECS = [
             "production_ai_promotion_workbench_docking_results_emitted",
             "production_ai_promotion_workbench_execution_enabled",
             "production_ai_promotion_workbench_external_state_mutated",
-            "master_gap_closure_rollup_all_gaps_closed",
+            "accuracy_parity_ligand_ranking_claim_promotion_allowed",
+            "accuracy_parity_ligand_ranking_commercial_parity_claim_allowed",
+            "accuracy_parity_ligand_ranking_metric_blocker_count",
             "master_gap_closure_rollup_claim_promotion_allowed",
-            "science_claim_promotion_gap_closure_all_gaps_closed",
             "science_claim_promotion_gap_closure_claim_promotion_allowed",
+            "master_gap_closure_rollup_science_claim_release_blocker",
+            "science_claim_promotion_gap_closure_gpcr_release_blocker",
+            "science_claim_promotion_gap_closure_openmm_release_blocker",
             "refine_tier_public_benchmark_claim_grade_public_benchmark_ready",
             "refine_tier_public_benchmark_benchmark_metric_surface_ready",
             "refine_tier_public_benchmark_row_count",
@@ -249,10 +256,11 @@ FINAL_GATE_SPECS = [
             "production_ai_promotion_workbench_trained_model_checkpoint_count": 1,
             "accuracy_parity_scorecard_row_count": 5,
             "accuracy_parity_scorecard_pass_row_count": 4,
-            "accuracy_parity_scorecard_blocked_row_count": 1,
-            "accuracy_parity_scorecard_top_blocker_count": 4,
-            "accuracy_parity_ligand_ranking_blocker_count": 4,
-            "accuracy_parity_ligand_ranking_positive_count": 13,
+            "accuracy_parity_scorecard_restricted_pass_row_count": 1,
+            "accuracy_parity_scorecard_blocked_row_count": 0,
+            "accuracy_parity_scorecard_top_blocker_count": 1,
+            "accuracy_parity_ligand_ranking_blocker_count": 1,
+            "accuracy_parity_ligand_ranking_positive_count": 34,
             "api_runner_profile_promotion_operator_receipt_profile_count": 4,
             "api_runner_profile_promotion_operator_receipt_receipt_row_count": 4,
             "api_runner_profile_promotion_operator_receipt_pass_row_count": 0,
@@ -285,12 +293,17 @@ FINAL_GATE_SPECS = [
             "refine_tier_public_benchmark_work_order_apply_work_order_row_count": 8,
             "refine_tier_public_benchmark_work_order_apply_blocked_row_count": 8,
             "refine_tier_public_benchmark_work_order_apply_blocker_count": 1,
-            "master_gap_closure_rollup_open_gap_count": 1,
-            "master_gap_closure_rollup_closed_gap_count": 8,
-            "master_gap_closure_rollup_release_blocker_row_count": 1,
-            "science_claim_promotion_gap_closure_open_gap_count": 2,
-            "science_claim_promotion_gap_closure_closed_gap_count": 3,
-            "science_claim_promotion_gap_closure_release_blocker_row_count": 2,
+            "refine_tier_public_benchmark_work_order_apply_receptor_coordinate_validation_pass_row_count": 8,
+            "refine_tier_public_benchmark_work_order_apply_receptor_coordinate_validation_blocked_row_count": 0,
+            "refine_tier_public_benchmark_work_order_apply_metric_evidence_pass_row_count": 0,
+            "refine_tier_public_benchmark_work_order_apply_metric_evidence_blocked_row_count": 8,
+            "refine_tier_public_benchmark_work_order_apply_metric_evidence_missing_row_count": 0,
+            "master_gap_closure_rollup_open_gap_count": 0,
+            "master_gap_closure_rollup_closed_gap_count": 9,
+            "master_gap_closure_rollup_release_blocker_row_count": 0,
+            "science_claim_promotion_gap_closure_open_gap_count": 0,
+            "science_claim_promotion_gap_closure_closed_gap_count": 5,
+            "science_claim_promotion_gap_closure_release_blocker_row_count": 0,
             "product_quality_gate_verification_check_count": 4,
             "product_quality_gate_verification_pass_count": 4,
             "product_pose_sampling_readiness_check_count": 6,
@@ -466,34 +479,34 @@ FINAL_GATE_SPECS = [
             ),
             "production_ai_promotion_workbench_default_residual_mode": "shadow",
             "accuracy_parity_scorecard_status": "blocked_accuracy_parity",
-            "accuracy_parity_scorecard_current_broad_accuracy_parity_estimate_pct": "40-50",
-            "accuracy_parity_scorecard_current_broad_commercial_platform_estimate_pct": "35-45",
-            "accuracy_parity_ligand_ranking_status": "blocked",
+            "accuracy_parity_scorecard_current_broad_accuracy_parity_estimate_pct": "65-75",
+            "accuracy_parity_scorecard_current_broad_commercial_platform_estimate_pct": "45-55",
+            "accuracy_parity_ligand_ranking_status": "restricted_pass",
             "accuracy_parity_ligand_ranking_score_col_used": (
-                "binding_score_composite_v7_residual_active"
+                "binding_score_composite_v7_coverage_v2_crossfit_rank_rescue_shadow"
             ),
-            "master_gap_closure_rollup_status": "blocked_master_gap_closure_rollup",
-            "master_gap_closure_rollup_open_gap_ids_joined": "SCI-CLAIM",
+            "master_gap_closure_rollup_status": "master_gap_closure_rollup_complete",
+            "master_gap_closure_rollup_open_gap_ids_joined": "",
             "master_gap_closure_rollup_closed_gap_ids_joined": (
-                "COMMERCIAL;PRODUCT-AI;DATA-SCIENCE;INFRA;DEPLOY-OPS;STORAGE;TOOLS;API-RUNNER"
+                "COMMERCIAL;PRODUCT-AI;DATA-SCIENCE;INFRA;SCI-CLAIM;DEPLOY-OPS;STORAGE;TOOLS;API-RUNNER"
             ),
-            "master_gap_closure_rollup_current_primary_open_gap_id": "SCI-CLAIM",
+            "master_gap_closure_rollup_current_primary_open_gap_id": "none",
             "master_gap_closure_rollup_science_claim_rollup_status": (
-                "blocked_science_claim_promotion_gap_closure"
+                "science_claim_promotion_gap_closure_complete"
             ),
             "master_gap_closure_rollup_science_claim_evidence": (
                 "runs/science_claim_promotion_gap_closure_current.json"
             ),
             "science_claim_promotion_gap_closure_status": (
-                "blocked_science_claim_promotion_gap_closure"
+                "science_claim_promotion_gap_closure_complete"
             ),
-            "science_claim_promotion_gap_closure_open_gap_ids_joined": "SCI-GPCR;SCI-OPENMM",
+            "science_claim_promotion_gap_closure_open_gap_ids_joined": "",
             "science_claim_promotion_gap_closure_closed_gap_ids_joined": (
-                "SCI-TRANS;SCI-CA2-PXR;SCI-WETLAB"
+                "SCI-GPCR;SCI-TRANS;SCI-CA2-PXR;SCI-WETLAB;SCI-OPENMM"
             ),
-            "science_claim_promotion_gap_closure_current_primary_open_gap_id": "SCI-GPCR",
+            "science_claim_promotion_gap_closure_current_primary_open_gap_id": "none",
             "science_claim_promotion_gap_closure_gpcr_claim_promotion_status": (
-                "blocked_ci_low_oprm1"
+                "boundary_ready_comparison_only"
             ),
             "science_claim_promotion_gap_closure_gpcr_evidence": (
                 "runs/gpcr_conditional_prior_promotion_gate_current.json"

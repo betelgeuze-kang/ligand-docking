@@ -5,6 +5,7 @@ import argparse
 import csv
 import json
 import math
+import re
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,8 @@ DEFAULT_OUT_MD = RUNS / "aqp1_negative_evidence_intake_gate_current.md"
 TARGET_ID = "AQP1"
 TARGET_ACCESSION = "P29972"
 TARGET_CHEMBL_ID = "CHEMBL4523210"
+PRODUCT_SCOPE_NEGATIVE_STATUS = "product_scope_transporter_negative_quantitative_evidence_ready"
+BLOCKED_PRODUCT_SCOPE_NEGATIVE_STATUS = "blocked_product_scope_transporter_negative_quantitative_evidence"
 KNOWN_REVIEW_ONLY_PMIDS: set[str] = set()
 EXCLUDED_SHORTCUT_FRAGMENTS = (
     "tetraethylammonium",
@@ -58,6 +61,16 @@ ACCEPTED_CURATOR_DECISIONS = {
     "ready_for_authoritative_negative_review",
     "review_ready",
 }
+PRIMARY_SOURCE_PREFIXES = (
+    "internal_wetlab",
+    "internal wetlab",
+    "internal_primary_report",
+    "internal primary report",
+    "primary_journal_article",
+    "primary journal article",
+    "primary_report",
+    "primary report",
+)
 REQUIRED_EVIDENCE_FIELDS = (
     "candidate_name",
     "molecule_id",
@@ -129,6 +142,35 @@ def _is_number(value: Any) -> bool:
     except ValueError:
         return False
     return math.isfinite(parsed)
+
+
+def _source_is_primary(row: dict[str, Any]) -> bool:
+    source = _text(row.get("primary_source"))
+    source_id = _text(row.get("source_id"))
+    combined = f"{source} {source_id}"
+    upper = combined.upper()
+    if not source or not source_id or "EXAMPLE" in upper:
+        return False
+    if re.search(r"\bPMID[:\s]?\d{5,9}\b", upper):
+        return True
+    if re.search(r"pubmed\.ncbi\.nlm\.nih\.gov/\d{5,9}", combined, re.IGNORECASE):
+        return True
+    if re.search(r"\bDOI[:\s]", upper) or "doi.org/" in combined.lower():
+        return True
+    if re.search(r"\b10\.\d{4,9}/\S+", combined):
+        return True
+    if source_id.upper().startswith(("INT:", "INTERNAL:", "WETLAB:")):
+        return True
+    return any(_norm(source).startswith(prefix) for prefix in PRIMARY_SOURCE_PREFIXES)
+
+
+def _row_has_exact_negative_quantitative_value(row: dict[str, Any]) -> bool:
+    return bool(
+        _is_number(row.get("standard_value"))
+        and _text(row.get("standard_units"))
+        and _text(row.get("standard_relation")) in ALLOWED_STANDARD_RELATIONS
+        and _semantic_key(row.get("negative_semantics")) in ACCEPTED_NEGATIVE_SEMANTICS
+    )
 
 
 def _contains_excluded_shortcut(row: dict[str, Any]) -> bool:
@@ -233,6 +275,8 @@ def _validate_row(row: dict[str, Any], request_slots: dict[str, dict[str, Any]],
         issue_codes.append("unsupported_standard_relation")
     if _text(row.get("standard_value")) and not _is_number(row.get("standard_value")):
         issue_codes.append("standard_value_not_numeric")
+    if _has_evidence_data(row) and not _source_is_primary(row):
+        issue_codes.append("primary_source_not_verified")
     if _text(row.get("negative_semantics")) and _semantic_key(row.get("negative_semantics")) not in ACCEPTED_NEGATIVE_SEMANTICS:
         issue_codes.append("unsupported_negative_semantics")
     if _text(row.get("curator_decision")) and _semantic_key(row.get("curator_decision")) not in ACCEPTED_CURATOR_DECISIONS:
@@ -243,6 +287,8 @@ def _validate_row(row: dict[str, Any], request_slots: dict[str, dict[str, Any]],
         issue_codes.append("review_only_source_context")
 
     row_valid = len(issue_codes) == 0
+    exact_negative_quantitative_value = _row_has_exact_negative_quantitative_value(row)
+    primary_source_verified = _source_is_primary(row)
     return {
         "row_index": 0,
         "slot_queue_id": slot_id,
@@ -267,6 +313,8 @@ def _validate_row(row: dict[str, Any], request_slots: dict[str, dict[str, Any]],
         "required_missing_fields": "; ".join(missing_fields),
         "issue_codes": "; ".join(dict.fromkeys(issue_codes)),
         "row_valid_for_authoritative_negative_review": row_valid,
+        "exact_negative_quantitative_value": exact_negative_quantitative_value,
+        "primary_source_verified": primary_source_verified,
         "authoritative_negative_apply_allowed": False,
         "claim_promotion_allowed": False,
     }
@@ -301,7 +349,28 @@ def build_payload(
     missing_count = max(0, required_row_count - valid_row_count)
     error_count = sum(1 for row in rows if _text(row.get("issue_codes")))
     intake_complete = valid_row_count >= required_row_count
+    exact_negative_quantitative_row_count = sum(
+        1
+        for row in rows
+        if row["row_valid_for_authoritative_negative_review"]
+        and row.get("exact_negative_quantitative_value") is True
+    )
+    primary_source_verified_count = sum(
+        1
+        for row in rows
+        if row["row_valid_for_authoritative_negative_review"]
+        and row.get("primary_source_verified") is True
+    )
+    exact_negative_quantitative_value_ready = exact_negative_quantitative_row_count > 0
+    primary_source_negative_evidence_ready = primary_source_verified_count > 0
+    product_scope_negative_ready = bool(
+        intake_complete
+        and exact_negative_quantitative_row_count >= required_row_count
+        and primary_source_verified_count >= required_row_count
+        and error_count == 0
+    )
     summary = {
+        "status": "aqp1_negative_evidence_intake_gate_ready",
         "intake_gate_ready": True,
         "packet_artifact": "runs/aqp1_negative_evidence_intake_gate_current.md",
         "request_artifact": _text(request_summary.get("packet_artifact")) or "runs/aqp1_negative_evidence_request_packet_current.md",
@@ -314,6 +383,8 @@ def build_payload(
         "intake_row_count": len(rows),
         "intake_row_with_data_count": sum(1 for row in rows if row["intake_row_has_data"]),
         "valid_intake_row_count": valid_row_count,
+        "exact_negative_quantitative_row_count": exact_negative_quantitative_row_count,
+        "primary_source_verified_count": primary_source_verified_count,
         "required_assignable_negative_row_count": required_row_count,
         "missing_valid_intake_row_count": missing_count,
         "validation_error_row_count": error_count,
@@ -321,6 +392,16 @@ def build_payload(
         "unknown_slot_queue_id_count": sum(1 for row in rows if "unknown_slot_queue_id" in _text(row.get("issue_codes"))),
         "review_ready_row_count": valid_row_count,
         "intake_gate_complete": intake_complete,
+        "product_scope_evidence_status": (
+            PRODUCT_SCOPE_NEGATIVE_STATUS
+            if product_scope_negative_ready
+            else BLOCKED_PRODUCT_SCOPE_NEGATIVE_STATUS
+        ),
+        "transporter_negative_quantitative_evidence_ready": product_scope_negative_ready,
+        "primary_source_negative_evidence_ready": primary_source_negative_evidence_ready,
+        "exact_negative_quantitative_value_ready": exact_negative_quantitative_value_ready,
+        "negative_evidence_gap_open": exact_negative_quantitative_row_count == 0,
+        "functional_surrogate_promoted_to_negative": False,
         "split_reference_meta_update_required": intake_complete,
         "authoritative_negative_apply_allowed_count": 0,
         "negative_evidence_closure_allowed": False,
@@ -387,7 +468,7 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate AQP1 exact negative-evidence intake rows before claim promotion.")
     parser.add_argument("--request-json", default=str(DEFAULT_REQUEST_JSON))
     parser.add_argument("--intake-csv", default=str(DEFAULT_INTAKE_CSV))
@@ -395,11 +476,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out-json", default=str(DEFAULT_OUT_JSON))
     parser.add_argument("--out-csv", default=str(DEFAULT_OUT_CSV))
     parser.add_argument("--out-md", default=str(DEFAULT_OUT_MD))
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
-def main() -> None:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
     request_payload = _load_json(args.request_json)
     template_rows = build_template_rows(request_payload)
     template_csv = _resolve(args.template_csv)

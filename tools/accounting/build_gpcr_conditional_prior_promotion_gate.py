@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_BREADTH_JSON = "runs/gpcr_residual_proof_breadth_gate_current.json"
 DEFAULT_CI_LOW_JSON = "runs/gpcr_rank_rescue_crossfit_repeat_r1_evidence_packet_current.json"
 DEFAULT_OPRM1_JSON = "runs/gpcr_oprm1_life_science_evidence_packet_current.json"
+DEFAULT_OPRM1_TOPOLOGY_REPLAY_JSON = "runs/gpcr_oprm1_topology_pose_shadow_replay_summary_current.json"
 DEFAULT_OUT_JSON = "runs/gpcr_conditional_prior_promotion_gate_current.json"
 DEFAULT_OUT_CSV = "runs/gpcr_conditional_prior_promotion_gate_current.csv"
 DEFAULT_OUT_MD = "runs/gpcr_conditional_prior_promotion_gate_current.md"
@@ -79,10 +80,12 @@ def build_gpcr_conditional_prior_promotion_gate(
     breadth_packet: dict[str, Any] | None = None,
     ci_low_packet: dict[str, Any] | None = None,
     oprm1_packet: dict[str, Any] | None = None,
+    oprm1_topology_replay_packet: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     breadth = _summary(breadth_packet or _read_json_if_present(DEFAULT_BREADTH_JSON))
     ci_low = _summary(ci_low_packet or _read_json_if_present(DEFAULT_CI_LOW_JSON))
     oprm1 = _summary(oprm1_packet or _read_json_if_present(DEFAULT_OPRM1_JSON))
+    oprm1_replay = _summary(oprm1_topology_replay_packet or _read_json_if_present(DEFAULT_OPRM1_TOPOLOGY_REPLAY_JSON))
     backmapping = "\n".join(
         [
             _read_text("tools/run_ligand_backmapping_scoring.py"),
@@ -94,7 +97,19 @@ def build_gpcr_conditional_prior_promotion_gate(
     breadth_gate_ready = _bool(breadth.get("gpcr_residual_proof_breadth_gate_ready")) or _text(breadth.get("status")) == "gpcr_residual_proof_breadth_gate_ready"
     ci_low_value = _float(ci_low.get("ranking_pr_auc_ci_low"))
     ci_low_blocker = ci_low_value is None or ci_low_value < CI_LOW_THRESHOLD
-    oprm1_collapse = _bool(oprm1.get("pose_collapse_blocker")) or _int(oprm1.get("blocked_positive_count")) > 0
+    oprm1_replay_ready = (
+        _text(oprm1_replay.get("status")) == "oprm1_topology_pose_shadow_replay_selected_slice_green_claim_locked"
+        and _int(oprm1_replay.get("selected_oprm1_target_rank")) == 1
+        and _int(oprm1_replay.get("selected_oprm1_decoys_above_positive")) == 0
+        and _int(oprm1_replay.get("selected_non_oprm1_regression_count")) == 0
+        and _int(oprm1_replay.get("selected_top20_positive_count")) >= 3
+        and _bool(oprm1_replay.get("claim_promotion_allowed")) is False
+        and _bool(oprm1_replay.get("scorer_apply_allowed")) is False
+        and _bool(oprm1_replay.get("active_score_locked_to_base")) is True
+    )
+    oprm1_collapse = (
+        _bool(oprm1.get("pose_collapse_blocker")) or _int(oprm1.get("blocked_positive_count")) > 0
+    ) and not oprm1_replay_ready
     conditional_prior_scaffold = (
         "gpcr_acidic_anchor_overcontact_prior_gate" in backmapping
         and "gpcr_core_acidic_anchor_overcontact_prior_gate_v4" in prototype_spec
@@ -122,6 +137,18 @@ def build_gpcr_conditional_prior_promotion_gate(
         "ci_low_threshold": CI_LOW_THRESHOLD,
         "ci_low_blocker": ci_low_blocker,
         "oprm1_pose_collapse_blocker": oprm1_collapse,
+        "oprm1_pose_repair_evidence_ready": oprm1_replay_ready,
+        "oprm1_topology_replay_status": oprm1_replay.get("status"),
+        "oprm1_topology_replay_selected_target_rank": _int(oprm1_replay.get("selected_oprm1_target_rank")),
+        "oprm1_topology_replay_selected_decoys_above_positive": _int(
+            oprm1_replay.get("selected_oprm1_decoys_above_positive")
+        ),
+        "oprm1_topology_replay_selected_non_oprm1_regression_count": _int(
+            oprm1_replay.get("selected_non_oprm1_regression_count")
+        ),
+        "oprm1_topology_replay_selected_top20_positive_count": _int(
+            oprm1_replay.get("selected_top20_positive_count")
+        ),
         "breadth_gate_ready": breadth_gate_ready,
         "conditional_prior_scaffold_ready": conditional_prior_scaffold,
         "promotion_boundary_ready": promotion_boundary_ready,
@@ -143,6 +170,8 @@ def build_gpcr_conditional_prior_promotion_gate(
         "comparison_only": True,
         "ci_low_blocker": ci_low_blocker,
         "oprm1_collapse_blocker": oprm1_collapse,
+        "oprm1_pose_repair_evidence_ready": oprm1_replay_ready,
+        "oprm1_topology_replay_status": oprm1_replay.get("status"),
         "blocker_count": len(blockers),
         "blockers": blockers,
         "execution_enabled": False,
@@ -184,6 +213,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--breadth-json", default=DEFAULT_BREADTH_JSON)
     parser.add_argument("--ci-low-json", default=DEFAULT_CI_LOW_JSON)
     parser.add_argument("--oprm1-json", default=DEFAULT_OPRM1_JSON)
+    parser.add_argument("--oprm1-topology-replay-json", default=DEFAULT_OPRM1_TOPOLOGY_REPLAY_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -192,6 +222,7 @@ def main(argv: list[str] | None = None) -> None:
         breadth_packet=_read_json_if_present(args.breadth_json),
         ci_low_packet=_read_json_if_present(args.ci_low_json),
         oprm1_packet=_read_json_if_present(args.oprm1_json),
+        oprm1_topology_replay_packet=_read_json_if_present(args.oprm1_topology_replay_json),
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

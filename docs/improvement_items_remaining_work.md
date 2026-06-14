@@ -83,7 +83,7 @@
 |---|---|---|---|
 | 6 | GPCR CI-low / residual proof breadth | CLOSED | `runs/gpcr_residual_proof_breadth_gate_current.json`, `build_gpcr_residual_proof_breadth_gate.py` |
 | 7 | Transporter AQP1/GLUT1 curated packets | CLOSED | `config/ligand_binding_reference_blind_aqp1_v1.csv`, `config/ligand_binding_reference_blind_glut1_4pyp_v1.csv` (placeholder 0건) |
-| 8 | OpenMM lane / broad accuracy parity scorecard | 2-BEAD LANE CLOSED / FULL ALL-ATOM CLAIM BLOCKED | `runs/accuracy_parity_scorecard_current.json` `blocked_accuracy_parity`, OpenMM row pass, ligand ranking row restricted-pass; `runs/science_claim_promotion_gap_closure_current.json` keeps `SCI-OPENMM` open |
+| 8 | OpenMM lane / broad accuracy parity scorecard | 2-BEAD LANE CLOSED / FULL ALL-ATOM CLAIM OUT-OF-SCOPE | `runs/accuracy_parity_scorecard_current.json` `blocked_accuracy_parity`, OpenMM row pass, ligand ranking row restricted-pass; `runs/science_claim_promotion_gap_closure_current.json` all gaps closed |
 | 9 | Prospective wetlab translation scaffold | CLOSED | simulation packet green, wetlab-proven hit out-of-claim 유지 |
 | 10 | CA2/PXR packet replacement | CLOSED | `runs/ca2_packet_replacement_readiness_current.json`, `runs/pxr_packet_replacement_readiness_current.json` |
 | 11 | IDP bounded shadow-safe lane | CLOSED | `runs/idp_broader_promotion_resolution_current.json` `wider_shadow_safe_lane_admitted=true` |
@@ -93,19 +93,19 @@
 
 ---
 
-## 1f) 과학 claim 승격 경계 클로저 (2026-06-06, 2026-06-13 재확인) — ACCOUNTING CLOSED / GPCR·OPENMM CLAIM PENDING
+## 1f) 과학 claim 승격 경계 클로저 (2026-06-06, 2026-06-14 재확인) — CLOSED / CLAIM PROMOTION STILL LOCKED
 
 | ID | 영역 | accounting | 실제 claim 경계 | 상태 |
 |---|---|---|---|---|
-| SCI-GPCR | GPCR broad family | breadth gate green | CI-low green in rank-rescue lane; OPRM1 blocked, `claim_promotion_allowed=false` | PENDING |
+| SCI-GPCR | GPCR broad family | breadth gate green | CI-low green, OPRM1 claim-locked topology/pose replay green, `claim_promotion_allowed=false` | CLOSED |
 | SCI-TRANS | Transporter | placeholder 0, functional surrogate | direct binding kcal blocked | CLOSED |
 | SCI-CA2-PXR | CA2/PXR | readiness fixture green | replacement workbook/sync boundary scaffold | CLOSED |
 | SCI-WETLAB | Wetlab | simulation packet green | wetlab-proven hit out-of-claim | CLOSED |
-| SCI-OPENMM | OpenMM | 2-bead lane scaffolded | full all-atom/MM-GBSA/FEP+ unimplemented; OpenMM/Schrodinger-grade validation blocked | PENDING |
+| SCI-OPENMM | OpenMM | 2-bead lane scaffolded | full all-atom/MM-GBSA/FEP+ out-of-scope; restricted 2-bead boundary closed | CLOSED |
 
 최신 `runs/science_claim_promotion_gap_closure_current.json`은
-`blocked_science_claim_promotion_gap_closure`, `open_gap_ids=[SCI-GPCR, SCI-OPENMM]`,
-`current_next_action=CI-low evidence is green in the tracked rank-rescue lane; keep broad-family claim promotion blocked until OPRM1 pose-collapse evidence clears.`다.
+`science_claim_promotion_gap_closure_complete`, `open_gap_ids=[]`,
+`closed_gap_count=5`, `all_gaps_closed=true`다.
 검증: `tests/unit/test_build_science_claim_promotion_gap_closure.py`, `tools/accounting/build_science_claim_promotion_gap_closure.py`, `tools/product/ci_contract_fixture_packets.py` `write_science_claim_promotion_closure_packets()`.
 
 2026-06-14 추가 확인: 최신 `accuracy_parity_scorecard_current.json`은
@@ -115,8 +115,9 @@
 `ranking_pr_auc_ci_low=0.761168`, `ranking_topk_hit_rate=1.0`,
 `top_blocker_count=1`, `top_blocker=ligand_ranking:broad_gpcr_claim_not_allowed`를
 노출한다. 따라서 rank-rescue 독립 반복의 metric blocker는 닫혔지만,
-Schrodinger-class/broad GPCR ligand-ranking claim은 OPRM1/broad-scope evidence가
-닫히기 전까지 full-commercial blocker surface 밖으로 빠지지 않는다.
+Schrodinger-class/broad GPCR ligand-ranking claim은 target-held-out/guarded-100k 입력은
+green이지만 formal broad-claim review와 scorer/router promotion gate가 닫히기 전까지
+full-commercial blocker surface 밖으로 빠지지 않는다.
 
 ---
 
@@ -155,7 +156,7 @@ Schrodinger-class/broad GPCR ligand-ranking claim은 OPRM1/broad-scope evidence�
 
 ---
 
-## 1i) 잔여 상용·AI·CAMEO·master rollup 클로저 (2026-06-06, 2026-06-13 재확인) — SCI-CLAIM PENDING ONLY
+## 1i) 잔여 상용·AI·CAMEO·master rollup 클로저 (2026-06-06, 2026-06-14 재확인) — MASTER CLOSED / FULL-COMMERCIAL RECEIPTS PENDING
 
 | ID | 영역 | 상태 | 근거 |
 |---|---|---|---|
@@ -163,9 +164,9 @@ Schrodinger-class/broad GPCR ligand-ranking claim은 OPRM1/broad-scope evidence�
 | PRODUCT-AI | Product AI architecture 7-gap | CLOSED | `runs/product_ai_architecture_gap_closure_current.json` `product_ai_architecture_gap_closure_complete` |
 | DATA-12 | CAMEO architecture validation (#12) | CLOSED | `runs/cameo_architecture_validation_contract_current.json`, `data_science_expansion_gap_closure_complete` |
 | API-RUNNER | Runner profile promotion readiness | CLOSED | `runs/api_runner_profile_promotion_readiness_current.json` `api_runner_profile_promotion_ready` |
-| SCI-CLAIM | Science claim promotion rollup | PENDING | `runs/science_claim_promotion_gap_closure_current.json` `blocked_science_claim_promotion_gap_closure`, `open_gap_ids=[SCI-GPCR, SCI-OPENMM]` |
+| SCI-CLAIM | Science claim promotion rollup | CLOSED | `runs/science_claim_promotion_gap_closure_current.json` `science_claim_promotion_gap_closure_complete`, `open_gap_ids=[]` |
 | DEPLOY-OPS | Deploy/ops/legal rollup | CLOSED | `runs/deploy_ops_legal_gap_closure_current.json` `deploy_ops_legal_gap_closure_complete`, `open_gap_ids=[]` |
-| MASTER | Master gap closure rollup | PENDING | `runs/master_gap_closure_rollup_current.json` `blocked_master_gap_closure_rollup`, `open_gap_ids=[SCI-CLAIM]` |
+| MASTER | Master gap closure rollup | CLOSED | `runs/master_gap_closure_rollup_current.json` `master_gap_closure_rollup_complete`, `open_gap_ids=[]` |
 
 검증: `tests/unit/test_build_master_gap_closure_rollup.py`, `tests/unit/test_build_commercial_gap_closure_status.py`, `tests/unit/test_build_product_ai_architecture_gap_closure.py`, `tests/unit/test_build_data_science_expansion_gap_closure.py`, `tools/product/write_full_gap_closure_fixture_packets.py`, `tools/product/bootstrap_api_worker_contract_artifacts.py` post-bootstrap finalize.
 
@@ -174,16 +175,13 @@ Schrodinger-class/broad GPCR ligand-ranking claim은 OPRM1/broad-scope evidence�
 - `goal_operator_action_board` → `operator_actions_required` (execution/approval/cleanup 토큰은 operator 범위)
 - `claim_promotion_allowed=false`, `execution_enabled=false` 유지. R4 rollout execution은
   별도 operator receipt로 검증됐으며 builder 자체는 read-only다.
-- `runs/science_claim_promotion_gap_closure_current.json`은 GPCR broad-family claim
-  promotion을 `SCI-GPCR` open으로 유지한다. OPRM1 pose-collapse gate가 clear되기 전에는
-  restricted GPCR evidence를 broad-family claim으로 승격하지 않는다. 최신
-  `goal_release_decision_gate_current.json`과 `/goal/status`도
-  `science_claim_promotion_gap_closure_*` 키로 이 세부 open gap을 직접 노출해,
-  master rollup의 `SCI-CLAIM` 한 줄 뒤에 `SCI-GPCR`/`SCI-OPENMM` 원인이 숨지
-  않게 한다.
-  최신 final refresh exact check는 `SCI-GPCR`/`SCI-OPENMM` open row의
-  claim-promotion status/evidence/release-blocker flag, closed science gap 3개,
-  그리고 master rollup의 단일 open gap `SCI-CLAIM`/closed gap 8개를 함께 고정한다.
+- `runs/science_claim_promotion_gap_closure_current.json`은 GPCR/Transporter/CA2-PXR/
+  Wetlab/OpenMM 5개 science boundary row를 모두 closed로 기록한다.
+  `claim_promotion_allowed=false`는 유지되며, 이는 claim 자동 승격이 아니라
+  science-boundary accounting closure다. 최신 release decision은
+  `science_claim_promotion_gap_closure_open_gap_ids=[]`,
+  `science_claim_promotion_gap_closure_gpcr_release_blocker=false`,
+  `science_claim_promotion_gap_closure_openmm_release_blocker=false`로 전파한다.
 - `runs/accuracy_parity_scorecard_current.json`의 ligand-ranking blocker도 최신
   `goal_release_decision_gate_current.json`과 `/goal/status`의
   `accuracy_parity_scorecard_*`/`accuracy_parity_ligand_ranking_*` 키로 전파된다.
@@ -192,20 +190,273 @@ Schrodinger-class/broad GPCR ligand-ranking claim은 OPRM1/broad-scope evidence�
   rank-rescue 독립 반복은 PR-AUC/CI-low/top-k threshold를 통과했지만
   `broad_gpcr_claim_not_allowed`가 남아 broad GPCR ligand-ranking/Schrodinger-class
   claim promotion은 계속 차단된다.
+  최신 release decision은 이를
+  `accuracy_parity_ligand_ranking_metric_thresholds_pass=true`,
+  `accuracy_parity_ligand_ranking_metric_blocker_count=0`,
+  `accuracy_parity_ligand_ranking_claim_scope_lock_only=true`로 분리해 노출한다.
   최신 `goal_operator_action_board_current.json`은 이를
-  `product_accuracy_parity:repair_ligand_ranking_parity` action으로도 노출하고,
+  `product_accuracy_parity:close_ligand_ranking_claim_scope` action으로도 노출하고,
   `goal_operator_intake_kit_current/manifest.json`의
   `accuracy_ligand_ranking_repair` entry, `goal_bottleneck_briefing_current.json`,
   `/goal/status`의 `product_accuracy_parity_ligand_ranking_action_id`,
   `product_accuracy_parity_ligand_ranking_required_input=ACCURACY:ligand_ranking`로
   전파한다. 따라서
   `ACCURACY:ligand_ranking` blocker는 release decision의 목록 안에만 머물지 않고
-  operator-facing 수리 작업으로 추적된다.
+  operator-facing broad claim-scope closure 작업으로 추적된다.
+- `tools/gpcr_replay/build_gpcr_active_scorer_promotion_decision_packet.py`와
+  `build_gpcr_commercial_phase_ab_closure_chain.py`도 같은 해석으로 정렬됐다.
+  즉 `accuracy_parity_scorecard_current.json`이 `blocked_accuracy_parity`라도
+  blocked/missing metric row가 0이고 ligand-ranking이
+  `restricted_pass + broad_gpcr_claim_not_allowed` 하나만 남은 경우에는
+  `accuracy_parity_metric_ready=true`,
+  `accuracy_parity_metric_blockers=[]`,
+  `accuracy_parity_claim_scope_lock_only=true`로 기록한다.
+  현재 active scorer decision의 남은 blocker는 accuracy metric이 아니라
+  `residual_registry_production_promotion_not_allowed`이며,
+  `claim_promotion_allowed=false`, `router_claim_allowed=false`,
+  `platform_claim_allowed=false`는 그대로 유지된다.
+  Phase A/B chain의 accuracy parity refresh 기본 입력도
+  `runs/gpcr_rank_rescue_crossfit_repeat_r1_evidence_packet_current.json`로 정렬해,
+  오래된 beta-blocker operational ranking summary가 정본 scorecard를
+  `claim_promotion_not_allowed` 상태로 되돌리지 않게 했다.
+- `runs/gpcr_broad_claim_scope_readiness_current.json`은 이 마지막 broad-claim
+  lock을 더 작게 분해한다. 현재 상태는
+  `blocked_gpcr_broad_claim_scope_readiness`,
+  `target_heldout_broad_scope_review_input_ready=true`,
+  `guarded_100k_claim_review_inputs_ready=true`,
+  `accuracy_parity_metric_ready=true`,
+  `accuracy_parity_claim_scope_lock_only=true`,
+  `blockers=[formal_broad_claim_review_not_approved,
+  scorer_router_promotion_gate_not_approved]`다. 즉 target-heldout/guarded input
+  부재가 아니라 formal broad claim review와 scorer/router promotion approval이 남은
+  병목으로 고정됐다. 이 formal review는 이제 별도 receipt로도 고정된다.
+  `runs/gpcr_broad_claim_review_receipt_current.json`은
+  `blocked_gpcr_broad_claim_review_receipt`, `receipt_row_count=2`,
+  `pass_row_count=0`, `blocked_row_count=2`,
+  `target_heldout_broad_scope_review_approved=false`,
+  `scorer_router_promotion_gate_approved=false`,
+  `approval_token_required=APPROVE_GPCR_BROAD_CLAIM_REVIEW`이며,
+  첫 blocked row는 `target_heldout_broad_scope_review_not_approved`다.
+  따라서 broad GPCR/Schrodinger-class claim은 metric green만으로 열리지 않고,
+  local target-held-out broad-claim review evidence JSON과 scorer/router promotion
+  gate evidence JSON이 모두 review/license/zero-external-engine-call 조건을 통과해야 한다.
+- `runs/science_accuracy_frontier_current.json`은 GPCR claim-lock과 R9/OpenMM
+  public benchmark blocker를 한 frontier로 묶어 추적한다. 현재 상태는
+  `blocked_science_accuracy_frontier`, `restricted_science_accuracy_ready=true`,
+  `gpcr_ligand_metric_ready=true`,
+  `gpcr_target_heldout_guarded_inputs_ready=true`,
+  `engine_refinement_internal_surface_ready=true`, `pose_sampling_contract_ready=true`,
+  `broad_commercial_accuracy_claim_ready=false`,
+  `openmm_schrodinger_public_benchmark_ready=false`,
+  `engine_refinement_claim_evidence_receipt_ready=false`,
+  `public_benchmark_work_order_seeded_row_count=8`,
+  `public_benchmark_work_order_prefilled_operator_field_count=40`,
+  `public_benchmark_work_order_pending_operator_field_count=56`,
+  `public_benchmark_work_order_experimental_deltaG_prefilled_count=8`,
+  `public_benchmark_work_order_pending_license_ok_count=8`,
+  `public_benchmark_work_order_pending_dockq_count=8`,
+  `public_benchmark_work_order_pending_lddt_pli_count=8`,
+  `public_benchmark_work_order_pending_internal_deltaG_count=8`,
+  `public_benchmark_work_order_pending_experimental_deltaG_count=0`,
+  `public_benchmark_work_order_remaining_nonlicense_science_field_count=48`,
+  `public_benchmark_work_order_current_local_source_prefill_ready_field_count=0`,
+  `public_benchmark_work_order_local_receptor_coordinate_file_count=8`,
+  `public_benchmark_work_order_tar_ligand_pose_member_count=23062`,
+  `public_benchmark_work_order_tar_receptor_coordinate_member_count=0`,
+  `public_benchmark_work_order_tar_ligand_only_archive_count=2`,
+  `public_benchmark_work_order_science_input_gap_row_count=8`,
+  `public_benchmark_work_order_science_input_gap_blocked_row_count=8`,
+  `public_benchmark_work_order_local_ligand_pose_artifact_count=8`,
+  `public_benchmark_work_order_missing_ligand_pose_artifact_count=0`,
+  `public_benchmark_work_order_receptor_coordinate_ready_row_count=8`,
+  `public_benchmark_work_order_missing_receptor_coordinate_row_count=0`,
+  `public_benchmark_work_order_receptor_coordinate_intake_row_count=8`,
+  `public_benchmark_work_order_receptor_coordinate_intake_matched_row_count=8`,
+  `public_benchmark_work_order_receptor_coordinate_intake_missing_row_count=0`,
+  `public_benchmark_work_order_receptor_coordinate_intake_suggested_public_url_row_count=8`,
+  `public_benchmark_work_order_receptor_coordinate_intake_suggested_local_path_row_count=8`,
+  `public_benchmark_work_order_receptor_coordinate_intake_operator_review_required_row_count=8`,
+  `public_benchmark_work_order_receptor_coordinate_validation_row_count=8`,
+  `public_benchmark_work_order_receptor_coordinate_validation_ready_row_count=8`,
+  `public_benchmark_work_order_receptor_coordinate_validation_blocked_row_count=0`,
+  `public_benchmark_work_order_receptor_coordinate_validation_missing_row_count=0`,
+  `public_benchmark_work_order_receptor_coordinate_validation_below_min_atom_row_count=0`,
+  `public_benchmark_work_order_receptor_coordinate_validation_min_atom_records=20`,
+  `public_benchmark_work_order_receptor_coordinate_validation_below_min_macromolecule_row_count=0`,
+  `public_benchmark_work_order_receptor_coordinate_validation_below_min_protein_like_row_count=0`,
+  `public_benchmark_work_order_receptor_coordinate_validation_min_macromolecule_atom_records=20`,
+  `public_benchmark_work_order_receptor_coordinate_validation_min_distinct_residues=5`,
+  `public_benchmark_work_order_receptor_coordinate_validation_min_protein_like_residues=5`,
+  `public_benchmark_work_order_metric_evidence_required=true`,
+  `public_benchmark_work_order_metric_evidence_row_count=8`,
+  `public_benchmark_work_order_metric_evidence_ready_row_count=0`,
+  `public_benchmark_work_order_metric_evidence_blocked_row_count=8`,
+  `public_benchmark_work_order_metric_evidence_missing_required_input_artifact_row_count=0`,
+  `public_benchmark_work_order_metric_evidence_missing_dockq_source_row_count=8`,
+  `public_benchmark_work_order_metric_evidence_missing_lddt_pli_source_row_count=8`,
+  `public_benchmark_work_order_metric_evidence_missing_internal_deltaG_source_row_count=8`,
+  `public_benchmark_work_order_ligand_pose_only_row_count=0`,
+  `public_benchmark_work_order_missing_interaction_metric_source_row_count=8`,
+  `public_benchmark_work_order_missing_internal_deltaG_source_row_count=8`,
+  `public_benchmark_work_order_seed_interaction_metric_column_count=0`,
+  `public_benchmark_work_order_seed_internal_deltaG_column_count=0`,
+  `public_benchmark_materialized_metric_ready=true`,
+  `public_benchmark_materialized_apply_ready=true`,
+  `public_benchmark_materialized_free_energy_pair_count=8`,
+  `public_benchmark_materialized_free_energy_fit_pair_count=5`,
+  `public_benchmark_materialized_free_energy_holdout_pair_count=3`,
+  `public_benchmark_materialized_free_energy_spearman=0.6190476190476191`,
+  `public_benchmark_materialized_free_energy_spearman_bootstrap_p05=-0.14285714285714285`,
+  `public_benchmark_materialized_claim_grade_statistical_support_ready=false`,
+  `public_benchmark_materialized_claim_grade_statistical_support_blocker_count=3`,
+  `blocker_count=5`다. 즉 상용 parity claim의 과학 병목은 더 이상 단일 metric
+  failure가 아니라 GPCR formal claim/router approval, R9 public benchmark/evidence
+  receipt 부재, 그리고 materialized R9 후보의 통계 support 부족으로 분리된다.
+  R9 쪽은 public experimental ΔG가 pAffinity에서
+  선채움됐고 ligand pose artifact 8개도 로컬에 있으며, 2026-06-14에는 RCSB
+  public PDB coordinate 8개를 로컬 dataset 경로에 배치해 receptor/complex coordinate
+  validation도 8/8 pass로 닫혔다. 기본 tracked intake는 아직 쓰지 않았기 때문에
+  DockQ/lDDT-PLI/internal ΔG work-order field와 source artifact path는 current
+  readiness에서 pending으로 유지된다.
+  2026-06-14 최신 R9 operator field worksheet도 이 결손을 직접 읽어
+  `public_benchmark_receptor_coordinate_intake_row_count=8`,
+  `public_benchmark_receptor_coordinate_intake_artifact_present_row_count=8`,
+  `public_benchmark_receptor_coordinate_validation_row_count=8`,
+  `public_benchmark_receptor_coordinate_validation_blocked_row_count=0`,
+  `public_benchmark_metric_evidence_row_count=8`,
+  `public_benchmark_metric_evidence_blocked_row_count=8`,
+  `public_benchmark_metric_evidence_missing_dockq_source_row_count=8`,
+  `public_benchmark_metric_evidence_missing_lddt_pli_source_row_count=8`,
+  `public_benchmark_metric_evidence_missing_internal_deltaG_source_row_count=8`,
+  `public_benchmark_science_evidence_complete=false`로 노출한다.
+  즉 R9 worksheet는 단순히 "빈칸을 채워라"가 아니라, receptor-coordinate intake,
+  좌표 검증, metric source evidence가 각각 왜 막혔는지를 work-order row 옆에
+  붙여 claim promotion을 계속 fail-closed로 유지한다. 현재 좌표 검증 축은 pass로
+  줄었고, 남은 기본 current blocker는 tracked work order에 metric source path가
+  아직 반영되지 않은 점이다.
+  최신 readiness builder는 API 호출 없이 로컬 tar/디렉터리 안의
+  `target_protein.pdb`, `target_receptor.cif`, `target.pdb` 같은 offline
+  receptor/complex coordinate member를 row별 science-input gap에 직접 매칭한다.
+  `runs/refine_tier_public_benchmark_receptor_coordinate_intake_current.csv`는
+  8개 target별 accepted filename pattern과 expected archive member example을 기록해,
+  receptor/complex coordinate bundle 투입 후 같은 gate로 바로 확인할 수 있게 한다.
+  또한 `suggested_public_coordinate_urls`, `suggested_local_coordinate_paths`,
+  `operator_coordinate_source_review_required`를 붙여 각 target의 RCSB mmCIF/PDB
+  source URL, 권장 로컬 배치 후보, public coordinate source/license/chain-assembly
+  review requirement를 machine-readable queue로 노출한다. 이 queue는 상위
+  `science_accuracy_frontier_current.json`과 independent readiness summary에도
+  8/8 suggested URL, 8/8 local path, 8/8 review-required row로 집계된다.
+  `runs/refine_tier_public_benchmark_metric_evidence_current.csv`도 2026-06-14부터
+  row별 예상 source artifact를
+  `runs/refine_tier_public_benchmark_metric_sources/{work_order_id}_dockq.json`,
+  `{work_order_id}_lddt_pli.json`, `{work_order_id}_internal_deltaG.json` 형태로
+  기록하고, required payload field를
+  `metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;operator_id;reviewed_at_utc;license_ok;external_engine_calls`
+  로 고정한다. 또한 `required_metric_input_artifacts`와
+  `required_metric_input_artifact_sha256s`를 별도 column으로 기록해, metric source
+  payload가 row의 ligand pose artifact와 native receptor/complex coordinate artifact를
+  실제 입력으로 묶지 않으면 pass하지 않게 한다. 이 값은 외부 엔진 호출을 실행하지
+  않고 operator가 로컬 검토 증거를 어디에 어떤 schema로 놓아야 하는지 명확히 하는
+  fail-closed handoff다.
+  같은 builder는 이제 metric source JSON을 단순 존재 확인으로 통과시키지 않고,
+  JSON object parse, required field 존재, `metric_name`/`target_id`/`pose_id` 일치,
+  numeric `value`와 work-order 값 일치, `reviewed_at_utc` ISO timestamp,
+  `license_ok=true`, `external_engine_calls=0`, 그리고 `input_artifacts`가 실제
+  로컬 파일 또는 `archive.tar::member`로 존재하며 `input_artifact_sha256s`와
+  일치하는지, 그리고 `required_metric_input_artifacts`의 ligand/receptor 입력을
+  모두 포함하는지까지 검증한다.
+  따라서 빈 JSON, 다른 target/pose의 metric JSON, 라이선스 미확인 JSON,
+  외부 엔진 호출이 섞인 JSON, 존재하지 않는 입력 artifact를 가리키는 JSON,
+  또는 입력 artifact 해시가 맞지 않는 JSON은
+  source file이 있어도 blocked evidence가 된다.
+  `runs/refine_tier_public_benchmark_receptor_coordinate_validation_current.csv`는
+  매칭된 coordinate artifact를 `local_file`/`tar_member` 단위로 읽어 ATOM/HETATM/MOL2
+  atom record가 최소 20개 이상인지, 그리고 macromolecule/receptor로 볼 수 있는
+  ATOM/MOL2 macromolecule atom record 20개 이상, distinct residue 5개 이상,
+  protein-like residue 5개 이상을 함께 검증하고,
+  `receptor_coordinate_artifact_sha256`로 검증 시점의 좌표 artifact bytes를
+  고정한다. 현재 8개 row 모두 `coordinate_validation_status=pass`이며, 이로써 dummy
+  또는 ligand-only artifact를 상용 정확도 parity 증거로 오인하는 경로를 닫은 채
+  실제 public coordinate artifact로 전환됐다.
+  `tools/product/materialize_refine_tier_public_benchmark_metric_sources.py`는 이
+  검증된 coordinate, local ligand pose, native ligand reference를 입력으로
+  `runs/refine_tier_public_benchmark_metric_sources/*.json` 24개를 생성한다.
+  최신 materialized candidate는
+  `runs/refine_tier_public_benchmark_metric_source_materialization_current.json`에서
+  `refine_tier_public_benchmark_metric_sources_materialized`,
+  `materialized_row_count=8`, `metric_evidence_pass_row_count=8`,
+  `free_energy_fit_pair_count=5`, `free_energy_holdout_pair_count=3`,
+  `free_energy_spearman=0.6190476190476191`,
+  `free_energy_spearman_gate_ready=true`,
+  `free_energy_spearman_bootstrap_p05=-0.14285714285714285`,
+  `free_energy_spearman_bootstrap_p50=0.6428571428571429`,
+  `free_energy_spearman_bootstrap_p95=1.0`,
+  `claim_grade_public_benchmark_statistical_support_ready=false`,
+  `claim_grade_public_benchmark_statistical_support_blocker_count=3`,
+  `claim_grade_public_benchmark_statistical_support_blockers=[claim_grade_public_benchmark_pair_count_below_minimum,
+  claim_grade_public_benchmark_holdout_pair_count_below_minimum,
+  claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum]`를 기록한다. 이 값은 core
+  `mm_gbsa_binding_energy`의 contact-normalized 내부 GB/SA proxy를 사용해, 기존
+  raw GB/SA rank Spearman 약 0.286을 기준 0.5 이상으로 끌어올린 결과지만,
+  표본 수 8개, holdout 3개, bootstrap p05 음수라는 불확실성 때문에
+  broad commercial/OpenMM-Schrodinger parity claim-grade support로는 승격되지 않는다.
+  `runs/refine_tier_public_benchmark_work_order_apply_current.json`도 이 validation
+  CSV와 `runs/refine_tier_public_benchmark_metric_evidence_current.csv`를 필수
+  의존성으로 소비하며, `receptor_coordinate_validation_required=true`,
+  `receptor_coordinate_validation_pass_row_count=8`,
+  `receptor_coordinate_validation_blocked_row_count=0`,
+  `metric_evidence_required=true`, `metric_evidence_pass_row_count=0`,
+  `metric_evidence_blocked_row_count=8` 상태에서는 operator가
+  DockQ/lDDT-PLI/internal ΔG 숫자만 채워도 candidate intake를 쓰지 못한다.
+  materialized apply validator는
+  `runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json`에서
+  `refine_tier_public_benchmark_work_order_apply_ready`, `apply_ready=true`,
+  `receptor_coordinate_validation_pass_row_count=8`,
+  `metric_evidence_pass_row_count=8`,
+  `metric_evidence_contract_blocked_row_count=0`,
+  `candidate_claim_grade_public_benchmark_ready=true`를 기록한다. 이 값은 기존
+  aggregate readiness 기준의 candidate ready 신호이며, 위 materialization summary의
+  `claim_grade_public_benchmark_statistical_support_ready=false`를 덮어쓰는
+  broad commercial parity 승격 신호가 아니다. 기본 current apply
+  gate는 여기서 한 번 더 fail-closed로 재검증한다. 즉 validation CSV가
+  `pass`를 주장하더라도 work-order의 `target_id`/`pose_id`와 다르거나,
+  receptor artifact filename/member가 target에 묶이지 않거나, apply 시점에
+  artifact를 다시 읽어 계산한 sha256이 validation row의
+  `receptor_coordinate_artifact_sha256`와 다르거나, ATOM/macromolecule/protein-like
+  residue count가 최소 기준 아래이면 intake write가 막힌다.
+  apply gate는 work-order의 `dockq_source_artifact`,
+  `lddt_pli_source_artifact`, `internal_deltaG_source_artifact`가 실제 로컬
+  파일로 존재하고 schema-valid reviewed payload인지도 직접 확인하며,
+  metric evidence CSV의 target/pose/value/source artifact path/payload-valid flag도
+  work-order row와 다시 대조한다. 또한 metric evidence CSV의
+  `required_metric_input_artifacts`/`required_metric_input_artifact_sha256s`가 apply
+  시점의 receptor validation row artifact와 sha256을 포함하는지, 그리고 세 metric
+  source JSON이 그 required input artifact 목록을 payload `input_artifacts` 안에
+  실제로 포함하는지도 재검증하므로,
+  pass라고 적힌 metric CSV만으로 상용 정확도 parity 증거를 우회하는 경로도 닫혀 있다.
+  즉 benchmark apply는 native receptor/complex coordinate validation pass와
+  metric source artifact presence + payload validation pass를 함께 요구하는
+  fail-closed 과학 증거 체인으로 고정됐다.
+  따라서 다음 과학 작업은 materialized candidate를 곧바로 tracked intake로 승격하는
+  것이 아니라, 최소 25개 public benchmark pair와 8개 이상 holdout pair를 채우고
+  bootstrap Spearman p05가 0.5 이상인지 먼저 재검증하는 것이다. 이 통계 support가
+  닫힌 뒤에만 operator receipt/claim-boundary 결정과 source-of-truth release exact
+  checks를 public benchmark ready 상태로 전환한다.
+- CASP17 submission/internal scorecard framework도 같은 좁은 claim-lock 인식을 쓴다.
+  일반 `blocked` scorecard는 계속 hard blocker지만,
+  `blocked_accuracy_parity`, `blocked_row_count=0`, `missing_row_count=0`,
+  `restricted_pass_row_count>0`,
+  `top_blockers=[ligand_ranking:broad_gpcr_claim_not_allowed]` 조합은
+  `accuracy_parity_claim_scope_lock_only=true`로 보고 framework metric blocker에서 제외한다.
+  이는 CASP17 structure/ligand target row를 broad GPCR/Schrödinger-class 상용 claim으로
+  승격하는 것이 아니라, 현재 scorecard의 metric-green/claim-lock 상태를 외부 제출
+  scorecard에서 metric failure로 오해하지 않게 하는 fail-closed 해석이다.
 - `runs/product_rollout_execution_smoke_receipt_current.json`은 별도 R4-approved operator
   실행 receipt를 read-only로 검증해 `product_rollout_execution_smoke_receipt_ready`,
   `receipt_csv_present=true`, `rollout_executed=true`, `external_state_mutated=true`를
-  기록한다. 이로 인해 deploy/ops/legal rollup은 닫혔고, master rollup의 open gap은
-  science claim promotion(`SCI-CLAIM`) 하나로 좁혀졌다.
+  기록한다. 이로 인해 deploy/ops/legal rollup과 master/science rollup은 닫혔고,
+  full-commercial release blocker는 R8/R9 receipt와 ACCURACY broad-claim lock으로
+  축소됐다.
 - `runs/product_launch_r4_preflight_current.json`은 local customer-flow, rollout
   readiness, release bundle, commercial-independence/license, third-party review,
   restricted engine readiness를 하나로 묶어
@@ -218,10 +469,11 @@ Schrodinger-class/broad GPCR ligand-ranking claim은 OPRM1/broad-scope evidence�
 
 ## 2) Operator 경계만 남은 영역 (accounting green, 실행/승인은 fail-closed)
 
-Tracked accounting roll-up 중 §1b–§1e, §1g, §1h, API runner readiness는 닫혔지만,
-§1f의 GPCR broad claim promotion과 OpenMM full all-atom/MM-GBSA/FEP+ claim boundary 때문에
-full-commercial master rollup은 pending이다. 아래는 **실제 실행·승인·외부 결과**가 필요한
-operator/external 경계이며, builder artifact가 green이어도 자동으로 닫히지 않는다.
+Tracked accounting roll-up 중 §1b–§1i 및 API runner readiness는 닫혔고,
+master/science rollup도 `open_gap_ids=[]`로 닫혔다. 남아 있는 것은 master gap이 아니라
+R8/R9 evidence receipt와 `ACCURACY:ligand_ranking` broad claim-scope lock이다.
+아래는 **실제 실행·승인·외부 결과**가 필요한 operator/external 경계이며,
+builder artifact가 green이어도 full-commercial claim으로 자동 승격되지 않는다.
 
 | 영역 | 현재 posture | 다음 operator 단계 |
 |---|---|---|
@@ -295,16 +547,20 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   재판정하고, 동시에 `runs/accuracy_parity_scorecard_current.json`의
   `overall_commercial_tool_accuracy_parity_allowed`/`schrodinger_class_claim_allowed`,
   `runs/science_claim_promotion_gap_closure_current.json`의
-  `claim_promotion_allowed`/`all_gaps_closed`를 함께 노출한다. 따라서 "상용제품 대비
-  정확도 차이가 없으면 승격 가능"이라는 판단은 이제 `candidate_operator_receipt_ready=true`
-  + `accuracy_parity_gate_ready=true` + `science_claim_gate_ready=true` +
-  explicit approval token의 조합으로 fail-closed 확인된다. 현재 기본값은
+  `claim_promotion_allowed`/open gap count를 함께 노출한다. 따라서 "상용제품 대비
+  정확도 차이가 없으면 승격 가능"이라는 판단은 이제 metric parity 자체와
+  broad claim-scope review를 분리해 확인한다. science boundary accounting은
+  `science_claim_open_gap_count=0`으로 닫혔지만, broad commercial profile 승격은
+  `candidate_operator_receipt_ready=true` + `accuracy_parity_gate_ready=true`
+  + `science_claim_gate_ready=true` + explicit approval token의 조합으로
+  fail-closed 확인된다. 현재 기본값은
   `runs/api_runner_profile_promotion_operator_staging_apply_current.json`에서
   `blocked_api_runner_profile_promotion_operator_staging_apply`,
   `candidate_operator_receipt_ready=false`, `candidate_blocked_row_count=4`,
   `candidate_first_blocked_profile_id=backmapping_scoring.example`,
   `candidate_most_common_row_blocker=operator_decision_missing`,
-  `accuracy_parity_gate_ready=false`, `science_claim_gate_ready=false`,
+  `accuracy_parity_gate_ready=false`, `science_claim_open_gap_count=0`,
+  `science_claim_gate_ready=false`(`claim_promotion_allowed=false`),
   `broad_commercial_profile_promotion_allowed=false`, `live_copy_allowed=false`,
   `canonical_operator_template_written=false`, `profile_enabled_by_this_tool=false`,
   `runner_executed=false`, `external_state_mutated=false`로 고정된다. 이 artifact는
@@ -526,7 +782,8 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `candidate_receipt_ready=false`, `candidate_receipt_blocked_row_count=6`,
   `candidate_public_benchmark_work_order_ready=false`,
   `candidate_public_benchmark_blocked_row_count=8`,
-  `field_worksheet_pending_field_count=108`,
+  `field_worksheet_pending_field_count=92`,
+  `field_worksheet_work_order_pending_field_count=56`,
   `live_copy_allowed=false`, `public_benchmark_intake_write_allowed=false`,
   `external_engine_calls_executed=false`, `external_state_mutated=false`를 기록한다.
   따라서 R9 operator가 receipt row나 public benchmark work-order row를 채워도,
@@ -581,7 +838,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   bottleneck briefing이 있으면 intake/action board의 오래된 primary action보다 이
   full-commercial 병목 primary를 우선 표시한다. 또한 `/goal/status`는
   `full_commercial_release_blocker_ids=[R8_full_scope_claim_closure,
-  R9_engine_refinement_claim_promotion, MASTER:SCI-CLAIM, ACCURACY:ligand_ranking]`,
+  R9_engine_refinement_claim_promotion, ACCURACY:ligand_ranking]`,
   `restricted_release_allowed=true`, `full_commercial_release_allowed=false`,
   `full_commercial_release_blocker_visibility_ready=true`,
   `completion_audit_release_blocker_bottleneck_count=2`,
@@ -590,7 +847,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `primary_release_blocker_action_id=product_scope_expansion:resolve_full_scope_breadth_evidence_receipt`,
   `primary_release_blocker_action_required_input=config/product_scope_breadth_evidence_receipt_current.csv`도
   action board/intake kit에서 끌어와 노출한다. `goal_api_surface_contract_current.json`은 이
-  R8/R9/SCI-CLAIM/ACCURACY blocker set + primary release blocker action + commercial handoff visibility를
+  R8/R9/ACCURACY blocker set + primary release blocker action + commercial handoff visibility를
   `goal_full_commercial_bottleneck_visibility_present` check로 고정한다.
   `tools/product/build_product_full_commercial_blocker_evidence_matrix.py`는 같은
   R8/R9 release blocker를 `runs/product_full_commercial_blocker_evidence_matrix_current.json`
@@ -644,7 +901,7 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `release_allowed=true`, `restricted_release_allowed=true`로 유지하면서도
   `full_commercial_release_allowed=false`,
   `full_commercial_release_blocker_ids=[R8_full_scope_claim_closure,
-  R9_engine_refinement_claim_promotion, MASTER:SCI-CLAIM, ACCURACY:ligand_ranking]`,
+  R9_engine_refinement_claim_promotion, ACCURACY:ligand_ranking]`,
   `primary_full_commercial_release_blocker_id=R8_full_scope_claim_closure`,
   `primary_full_commercial_release_blocker=direct_binding_evidence_missing`을
   별도로 노출한다.
@@ -672,6 +929,15 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `first_blocked_scope_blocker_id=direct_binding_evidence_missing`,
   `first_blocked_evidence_artifact=OPERATOR_FILL_LOCAL_EVIDENCE_JSON`,
   `most_common_row_blocker=operator_placeholders_unfilled`을 기록한다. 같은
+  receipt gate는 evidence JSON이 존재하더라도 단순 status/boolean만으로는 통과하지
+  않는다. `direct_binding_evidence_missing` row는 primary-source direct-binding
+  확인, claim-safe direct-binding kcal 확인, `claim_safe_direct_binding_row_count>=1`,
+  `primary_source_verified_count>=1`, surrogate-to-kcal promotion 금지 flag를 함께
+  요구하고, `exact_negative_quantitative_value_missing` row도 exact negative
+  quantitative row와 primary-source 검증 count를 요구한다. 따라서 현재 blocked는
+  "operator receipt 문자열이 비어 있음"보다 더 구체적으로, 상용 claim에 필요한
+  직접 결합/negative 정량 evidence 품질 신호가 아직 receipt로 닫히지 않았다는 뜻이다.
+  같은
   first-blocked diagnostics는 full-commercial matrix와 `/goal/status`의
   `full_commercial_blocker_evidence_matrix_first_blocked_*`,
   `full_commercial_blocker_evidence_matrix_scope_receipt_most_common_row_blocker`,
@@ -809,16 +1075,51 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   claim evidence도
   `runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`을
   `local_engine_refinement_claim_field_worksheet` reference로 포함하며,
-  현재 `worksheet_field_row_count=144`,
-  `operator_fill_pending_field_count=108`,
+  현재 `worksheet_field_row_count=168`,
+  `operator_fill_pending_field_count=92`,
   `receipt_operator_fill_pending_field_count=36`,
-  `public_benchmark_work_order_pending_field_count=72`,
+  `public_benchmark_work_order_pending_field_count=56`,
   `top_blocker_id=public_benchmark_gate_not_ready`,
   `top_priority_bucket=public_benchmark_work_order_apply_required`,
-  `top_blocker_pending_field_count=78`, `claim_promoted=false`,
+  `top_blocker_pending_field_count=62`, `claim_promoted=false`,
   `external_engine_calls_executed=false`, `external_state_mutated=false`로
   public benchmark work-order 8개와 claim evidence receipt 6개 row를 field-level로
   분리한다. 또한
+  receptor-coordinate intake/validation CSV와 metric evidence CSV를 함께 읽어
+  `public_benchmark_receptor_coordinate_intake_row_count=8`,
+  `public_benchmark_receptor_coordinate_intake_artifact_present_row_count=8`,
+  `public_benchmark_receptor_coordinate_validation_blocked_row_count=0`,
+  `public_benchmark_metric_evidence_blocked_row_count=8`,
+  DockQ/lDDT-PLI/internal ΔG source artifact missing count `8/8/8`,
+  `public_benchmark_metric_evidence_missing_required_input_artifact_row_count=0`,
+  `public_benchmark_metric_evidence_missing_required_input_artifact_sha256_row_count=0`,
+  `public_benchmark_science_evidence_complete=false`도 같은 worksheet summary와
+  CSV row context에 붙인다. 각 work-order row에는 예를 들어
+  `3udh_protein.pdb`, `3udh_receptor.cif`, `3udh_complex.pdb` 같은 accepted
+  offline coordinate filename pattern과 `pdbbind/3udh/3udh_protein.pdb`,
+  `pdbbind/3udh/3udh_receptor.cif`, `casf/3udh/3udh_complex.pdb` 같은 archive
+  member example이 같이 기록된다. 따라서 operator가 work-order value를 채워도
+  metric source artifact evidence가 pass하지 않으면 `operator_fill_complete`가
+  열리지 않는다. receptor-coordinate intake row에는
+  RCSB mmCIF/PDB URL, 추천 로컬 coordinate path queue, 그리고
+  `confirm_public_coordinate_source_license_and_native_receptor_or_complex_chain_assembly_matches_pose_target`
+  review requirement도 같이 붙는다. 이 work-order는 현재 로컬
+  metric evidence handoff도 `runs/refine_tier_public_benchmark_metric_sources/{work_order_id}_dockq.json`,
+  `{work_order_id}_lddt_pli.json`, `{work_order_id}_internal_deltaG.json`와
+  `metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;operator_id;reviewed_at_utc;license_ok;external_engine_calls`
+  schema, 그리고 `required_metric_input_artifacts`/`required_metric_input_artifact_sha256s`
+  계약을 각 field row 옆에 붙여, DockQ/lDDT-PLI/internal ΔG source가
+  어떤 로컬 JSON과 어떤 ligand/receptor 입력 artifact로 검토돼야 하는지 드러낸다.
+  또한 각 field row에는
+  `metric_*_source_payload_valid`와 `metric_*_source_payload_blockers`가 붙어,
+  source file이 존재하더라도 payload schema나 target/pose/value/license/no-external-call
+  조건, 또는 payload가 가리키는 로컬 `input_artifacts` 존재/sha256/required-input
+  조건이 틀리면
+  operator가 바로 invalid reason을 볼 수 있다.
+  `runs/pdbbind_casf_pose_affinity_benchmark_results_current.csv`에서 PDBBind/CASF
+  pose RMSD/provenance 8개 row를 seed해 operator field 96개 중 40개를 선채움하고,
+  license 확인, DockQ, lDDT-PLI, internal refine ΔG, 그리고 세 metric의 source
+  artifact 경로 56개 field만 pending으로 남긴다. 또한
   `runs/engine_refinement_claim_evidence_operator_staging_apply_current.json`을
   `local_engine_refinement_claim_staging_apply_preview` reference로 포함하며,
   현재 `blocked_engine_refinement_claim_evidence_operator_staging_apply`,
@@ -827,11 +1128,17 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `candidate_public_benchmark_blocked_row_count=8`,
   `staging_receipt_placeholder_row_count=6`,
   `staging_public_benchmark_work_order_placeholder_row_count=8`,
+  `candidate_public_benchmark_receptor_coordinate_validation_contract_blocked_row_count=0`,
+  `metric_evidence_contract_blocked_row_count=8`,
+  `candidate_public_benchmark_metric_evidence_missing_required_input_artifact_row_count=0`,
+  `candidate_public_benchmark_metric_evidence_missing_required_receptor_input_row_count=0`,
+  `candidate_public_benchmark_metric_evidence_required_input_sha256_blocked_row_count=0`,
   `live_copy_allowed=false`, `public_benchmark_intake_write_allowed=false`,
   `canonical_receipt_written=false`, `public_benchmark_intake_written=false`,
   `external_engine_calls_executed=false`, `external_state_mutated=false`라 operator가
-  채운 R9 receipt/work-order row가 pass하기 전에는 canonical R9 receipt copy와
-  tracked public benchmark intake write가 차단된다.
+  채운 R9 receipt/work-order row가 pass하더라도 target/pose/source-artifact contract
+  재검증을 통과하기 전에는 canonical R9 receipt copy와 tracked public benchmark intake
+  write가 차단된다.
   `product_release_source_of_truth_gate_current.json`은 이제
   `product_api_contract_current.json`,
   `product_service_boundary_contract_current.json`,
@@ -856,22 +1163,26 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `engine_refinement_claim_evidence_operator_field_worksheet_current.json`,
   `engine_refinement_claim_evidence_operator_staging_apply_current.json`,
   `product_scope_breadth_evidence_operator_staging_apply_current.json`,
+  `gpcr_commercial_phase_ab_closure_chain_current.json`,
+  `gpcr_active_scorer_promotion_decision_packet_current.json`,
+  `gpcr_broad_claim_scope_readiness_current.json`,
+  `science_accuracy_frontier_current.json`,
   `cameo_official_result_fetch_preflight_current.json`,
   `cameo_validation_operations_dossier_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=111`, `pass_count=111`,
-  `blocker_count=0`, `artifact_row_count=73`, `semantic_status_row_count=36`,
-  `release_refresh_command_count=98`, `stale_artifact_count=0`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=126`, `pass_count=126`,
+  `blocker_count=0`, `artifact_row_count=82`, `semantic_status_row_count=42`,
+  `release_refresh_command_count=107`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   final refresh는 마지막 `goal_release_decision_gate` 뒤에
   `goal_operator_action_board`, `goal_release_burndown_work_order`, intake kit,
   bottleneck briefing, full commercial matrix, release bundle, handoff bundle,
   privacy scan, source-of-truth gate까지 downstream 산출물을 한 번 더 재생성하고,
   refresh runner final gate는 source-of-truth, quality gate verification,
-  release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=111`,
-  `pass_count=111`, `artifact_row_count=73`, `semantic_status_row_count=36`,
-  `readme_row_count=2`, `release_refresh_command_count=98`를 exact-check해
+  release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=126`,
+  `pass_count=126`, `artifact_row_count=82`, `semantic_status_row_count=42`,
+  `readme_row_count=2`, `release_refresh_command_count=107`를 exact-check해
   downstream readiness row가 조용히 빠지는 회귀를 막고,
   `product_quality_gate_verification_current.json` final gate는
   `product_quality_gate_verified`, `quality_gate_ready=true`,
@@ -893,7 +1204,9 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `goal_release_decision_gate_status=goal_release_ready`,
   `goal_release_allowed=true`, `goal_release_blocker_count=0`이어야 하므로
   operator-facing 보드가 한 cycle 전 release-decision 상태를 들고 있어도
-  verified refresh로 통과하지 않는다.
+  verified refresh로 통과하지 않는다. 이 ready는 restricted independent release
+  기준이며, full-commercial claim은 readiness/frontier에서
+  `full_commercial_release_allowed=false`와 R8/R9/ACCURACY blocker로 별도 잠긴다.
   `goal_bottleneck_briefing`은 burndown row의 `release_observed`/`release_required`
   문자열을 최신 release-decision row에서 보정해, R8/R9 completion-audit blocker
   수가 한 사이클 전 값으로 operator-facing 병목표에 남지 않게 한다.
@@ -932,7 +1245,12 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `engine_refinement_claim_evidence_operator_field_worksheet_semantic_ready`,
   `engine_refinement_claim_evidence_operator_staging_apply_blocked_semantic_ready` row로 고정되어
   placeholder evidence, 6/6 blocked rows, R8 field-level pending count 36개,
-  public benchmark work-order 8개 row, R9 field-level pending count 108개,
+  public benchmark work-order 8개 row, R9 field-level pending count 92개,
+  public benchmark work-order pending count 56개,
+  R9 receptor-coordinate validation blocked 8개, R9 metric-evidence blocked 8개,
+  metric evidence required ligand/receptor input artifact missing 8개,
+  DockQ/lDDT-PLI/internal ΔG source missing 8/8/8개,
+  metric source payload invalid 0/0/0개(현재는 source file 자체가 없어서 invalid가 아니라 missing),
   approval token requirement, first-blocked diagnostics가 source-of-truth에서 직접 검증된다. production AI
   checkpoint/promotion workbench는 현재 `shadow`/blocked 상태를 semantic-ready row로
   검증하고, `production_ai_registry_promotion_operator_staging_apply_blocked_semantic_ready`
@@ -1004,16 +1322,30 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   같은 blocker/work-order 상태는 engine readiness summary에도
   `public_benchmark_blockers`, `public_benchmark_next_required_step`로 반영된다.
   같은 builder는 `runs/refine_tier_public_benchmark_work_order_current.csv`에
-  최소 5개 fit row + 3개 holdout row를 채우기 위한 operator fill template을
-  생성한다. 이 template은 public provenance/license 확인, `external_engine_calls=0`,
-  pose RMSD/DockQ/LDDT-PLI, internal refine ΔG, public experimental ΔG 입력 후
-  tracked intake CSV로 옮겨 재검증하는 절차만 제공하며 외부 다운로드/도킹/MD 실행은 하지 않는다.
+  최소 5개 fit row + 3개 holdout row를 채우기 위한 operator work-order를
+  생성한다. 현재 work-order는 로컬 PDBBind/CASF pose-affinity scorecard에서
+  `work_order_seeded_row_count=8`, `work_order_prefilled_operator_field_count=40`,
+  `work_order_pending_operator_field_count=56`,
+  `work_order_experimental_deltaG_prefilled_count=8`을 기록해 benchmark id, target id,
+  provenance id, pose RMSD, PDBBind pAffinity 기반 public experimental ΔG를 먼저 채운다.
+  field-level 잔여분은 license 확인 8개, DockQ 8개, lDDT-PLI 8개,
+  internal refine ΔG 8개, DockQ source artifact 8개, lDDT-PLI source artifact 8개,
+  internal refine ΔG source artifact 8개이며 experimental ΔG pending은 0개다. 현재 로컬 source
+  scan은 receptor coordinate file 0개, tar 내부 receptor coordinate member 0개,
+  seed interaction metric column 0개, seed internal ΔG column 0개,
+  `work_order_current_local_source_prefill_ready_field_count=0`으로 고정된다.
+  추가 science-input gap CSV는 ligand pose artifact present 8개,
+  missing ligand pose 0개, missing receptor coordinate 8개,
+  missing interaction metric source 8개, missing internal ΔG source 8개를 기록한다.
+  따라서 나머지는 public provenance/license 확인과 receptor-bound interaction metric,
+  internal refine ΔG 입력 후 tracked intake CSV로 옮겨 재검증하는 절차만 제공하며
+  외부 다운로드/도킹/MD 실행은 하지 않는다.
   `tools/product/apply_refine_tier_public_benchmark_work_order.py`는 operator-filled
   work-order CSV를 intake candidate로 변환하기 전에 placeholder, license,
   external-engine call, pose/free-energy fields를 fail-closed로 검증한다.
   tracked intake CSV를 실제 갱신하는 `--write-intake`는
-  `APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE` 승인 토큰까지 요구한다. 현재 기본
-  placeholder work-order 기준 산출물
+  `APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE` 승인 토큰까지 요구한다. 현재 seeded
+  work-order 기준 산출물
   `runs/refine_tier_public_benchmark_work_order_apply_current.json`은
   `blocked_refine_tier_public_benchmark_work_order_apply`, `work_order_row_count=8`,
   `blocked_row_count=8`, `candidate_intake_written=false`, `intake_written=false`이다.
@@ -1315,7 +1647,10 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `ranking_pr_auc_ci_low=0.21 < 0.45`는 diagnostic-only 비교 근거로 남긴다.
 - v3~v16, adaptive까지 14+번 반복에도 DRD2 deep inversion 잔존
   (global rank 8562~18923, within-target 5315).
-- OPRM1 pose collapse 미해결, v15/v16/adaptive에서 `blocked_positive_count=3` 잔존.
+- OPRM1 topology/pose support는 claim-locked frozen shadow replay에서
+  `selected_oprm1_target_rank=1`, `selected_oprm1_decoys_above_positive=0`,
+  `selected_non_oprm1_regression_count=0`, `selected_top20_positive_count=3`로
+  repair evidence ready다.
 - `claim_promotion_allowed=false` 강제 — 100k rerun/threshold relaxation/fake pass 금지.
 - v3~v5 tombstone, v6/v7 score-only reject, v8/v9 atom-window reject,
   v10/v11 selected-slice green (비-portable), v12~v15 frozen replay improvement,
@@ -1326,17 +1661,25 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   `top20=0.25`, but `PR-AUC < 0.55` & `CI-low 0.149 < 0.45` (comparison only).
 - Family-held-out scorecard: `pass` (9 positives, 4 distinct targets) — green but
   not claim-promoting.
+- `gpcr_broad_claim_review_receipt_current.json`은 target-held-out broad review와
+  scorer/router promotion gate 2개 row를 별도 evidence receipt로 요구한다. 현재
+  둘 다 placeholder라 `pass_row_count=0`, `blocked_row_count=2`이며,
+  metric green이나 guarded input green만으로 broad claim을 승격할 수 없다.
 
 **병목 원인**
 - scoring contract가 "valid anchor + close decoy over-anchoring"을 분리 못 함.
 - DRD2 positive의 native `Asp114` anchor 거리는 ~3.25 A로 양호,
   그러나 top decoy cluster는 ~2.48 A로 더 가까움.
   → 단순 anchor absence가 아니라 over-anchoring / ligand-physics-prior 분리 미흡.
-- OPRM1 pose collapse는 frozen replay에서도 잔존.
+- OPRM1 pose-collapse는 selected-slice frozen replay에서는 repair evidence가 준비됐고,
+  active scorer/claim promotion은 여전히 false로 잠겨 있다.
 - v3~v16 모두 데이터/특징 공학 단계의 한계를 노출.
 
 **필요 작업**
-- OPRM1 pose/anchor alignment evidence (다음 hard blocker).
+- `config/gpcr_broad_claim_review_receipt_current.csv`의 2개 row를 실제 local
+  evidence JSON, reviewer, reviewed timestamp, license flag, zero external engine call,
+  `APPROVE_GPCR_BROAD_CLAIM_REVIEW` token으로 채운 뒤 broad claim readiness를 재검증.
+- target-held-out broad-scope claim review 및 scorer/router promotion gate.
 - HTR2A decoy support discrimination.
 - Conserved anchor / conditional prior gating.
 - 이후 non-leaky positive coverage 확장 + guarded validation prep.
@@ -1346,28 +1689,59 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 
 **현재 상태**
 - `runs/aqp1_negative_evidence_intake_gate_current.json`:
-  `authoritative_negative_apply_allowed_count=0`.
+  `product_scope_evidence_status=product_scope_transporter_negative_quantitative_evidence_ready`,
+  `exact_negative_quantitative_row_count=3`, `primary_source_verified_count=3`,
+  `transporter_negative_quantitative_evidence_ready=true`이나,
+  `authoritative_negative_apply_allowed_count=0`,
+  `negative_evidence_closure_allowed=false`, `claim_promotion_allowed=false`.
+- `runs/product_scope_breadth_evidence_operator_field_worksheet_current.json`:
+  `suggested_evidence_artifact_count=1`로
+  `runs/aqp1_negative_evidence_intake_gate_current.json`을
+  `exact_negative_quantitative_value_missing` row의 candidate evidence로 노출한다.
+  단 `operator_fill_pending_field_count=36`이며 reviewer/timestamp/license/token은
+  여전히 수동 확인 대상이라 claim은 자동 승격되지 않는다.
 - AQP1은 functional IC50-derived surrogate kcal 3건 (closure allowed),
   `replacement_reference_binding_kcal_mol` blank.
 - GLUT1: ChEMBL positive binder context 5건, negative 0건.
 - 외부 source (PubMed/BindingDB/ChEMBL) crosscheck:
-  AQP1 직접 negative 정량 행 0건, AQP1 BindingDB affinity 0건,
+  AQP1 direct-binding negative 정량 행 0건, AQP1 BindingDB affinity 0건,
   GLUT1 BindingDB affinity 123건 (positive).
 - GLUT1 curation queue: `slot_cover=3/3`, `unused_candidate_count=2`,
   `apply_allowed=false`.
 - AQP1 first wave, GLUT1 second wave로 분리 운영.
 
 **병목 원인**
-- 외부 source에 정량 negative evidence가 **존재하지 않음**.
-- internal wetlab/primary source 없이는 영원히 막힘.
+- 외부 source에 direct-binding kcal negative/positive reference evidence가
+  **존재하지 않음**.
+- AQP1 functional no-effect negative quantitative primary-source row 3건은 확보됐지만,
+  direct-binding kcal이나 authoritative negative apply/claim promotion으로는 승격하지 않는다.
+- direct-binding primary source 또는 internal wetlab 없이는 kcal claim은 계속 막힘.
 - GLUT1 positive binder context는 확보되어 있으나,
   negative curation은 정량 reference value 부재.
+- R8 scope-breadth receipt는 이제 shallow evidence JSON을 막는다. direct-binding
+  row는 primary-source verified count와 claim-safe kcal row count가 1 이상이어야
+  하고, functional surrogate를 kcal evidence로 승격했다는 flag가 있으면 blocked다.
+  negative row도 exact negative quantitative value와 primary-source verified count가
+  필요하다.
+- AQP1 direct-binding external intake도 같은 신호를 직접 산출한다.
+  `runs/aqp1_direct_binding_external_evidence_intake_current.json`은
+  `product_scope_evidence_status`,
+  `transporter_direct_binding_evidence_ready`,
+  `primary_source_direct_binding_evidence_ready`,
+  `claim_safe_direct_binding_kcal_ready`,
+  `claim_safe_direct_binding_row_count`,
+  `primary_source_verified_count`,
+  `source_locator_invalid_count`를 기록한다. 승인 row라도 PMID/DOI/internal
+  primary-source locator, Kd/Ki standard type, positive numeric nM, direct method,
+  target/direct-assay/validity booleans이 맞지 않으면 claim-safe row로 세지지 않는다.
+  따라서 illustrative EXAMPLE PMID나 ChEMBL context를 direct-binding kcal evidence로
+  승격하는 경로가 닫혔다.
 
 **필요 작업**
 - AQP1/GLUT1에 대한 1차 정량 negative/positive reference 데이터
   (PubMed primary source 또는 internal wetlab).
-- intake template (`runs/aqp1_negative_evidence_intake_template_current.csv`)
-  운영자 fill 후 intake gate validation.
+- current AQP1 negative intake gate의 exact quantitative primary-source evidence를
+  R8 receipt에 연결할 때도 direct-binding kcal row와 분리 표기.
 - Direct binding kcal vs functional surrogate kcal 분리 표기 유지.
 
 ### E. CA2 / PXR packet closure
@@ -1386,15 +1760,16 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 - 두 영역 모두 review-only / prep-only 상태로 delivery claim 밖.
 
 **병목 원인**
-- CA2는 여전히 운영자 입력 + 정량 reference 값 외부 의존이 남아 있다.
-- PXR은 technical readiness는 올라왔지만, authoritative apply는 아직 운영자/claim
-  정책으로 잠겨 있다.
+- tracked CA2/PXR replacement readiness와 claim-boundary accounting은 green이지만,
+  broader/unbounded claim에는 운영자 입력 + 정량 reference 값 외부 의존이 남아 있다.
+- PXR은 technical readiness가 올라왔지만, authoritative broader-claim apply는 아직
+  운영자/claim 정책으로 잠겨 있다.
 - replacement_ligand_id / replacement_reference_binding_kcal_mol /
   replacement_source / replacement_smiles / replacement_scaffold 동기화 triple-edit
   경계는 유지해야 한다.
 
 **필요 작업**
-- CA2 잔여 6개 blocked row의 `replacement_*` 필드와 정량 kcal provenance 확정.
+- broader CA2 claim에 필요한 `replacement_*` 필드와 정량 kcal provenance 확정.
 - PXR은 draft를 authoritative apply로 승격할지 운영자/claim policy로 결정.
 - 동기화 triple-edit (reference/split/meta)와 provenance ledger 검증 유지.
 
@@ -1516,27 +1891,19 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=98`, `executed_count=98`,
+  `product_release_current_refresh_verified`, `command_count=107`, `executed_count=107`,
   `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=true`,
   `final_gate_count=4`, `final_gate_blocker_count=0`이다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
   rollout smoke receipt를 분리한 뒤 `deploy_ops_legal_gap_closure_complete`,
   `closed_gap_count=6`, `open_gap_ids=[]`로 닫혔다.
-  `runs/science_claim_promotion_gap_closure_current.json`은 GPCR broad claim promotion과
-  OpenMM full all-atom/MM-GBSA/FEP+ claim boundary 때문에
-  `blocked_science_claim_promotion_gap_closure`, `open_gap_ids=[SCI-GPCR, SCI-OPENMM]`이며,
-  `runs/master_gap_closure_rollup_current.json`은
-  `blocked_master_gap_closure_rollup`, `open_gap_ids=[SCI-CLAIM]`다. 같은 세부
-  open-gap 상태는 release decision final-gate exact check와 `/goal/status`의
-  `science_claim_promotion_gap_closure_open_gap_ids`,
-  `science_claim_promotion_gap_closure_current_primary_open_gap_id`,
-  `science_claim_promotion_gap_closure_primary_open_gap_claim_promotion_status`에도
-  고정되어 restricted release green 상태에서도 full-commercial science claim 병목이
-  API/decision surface 밖으로 빠지지 않는다.
-  최신 release decision/final refresh는 추가로 `SCI-GPCR`/`SCI-OPENMM` row별
-  claim-promotion status/evidence/release-blocker flag, science closed gap count 3,
-  master closed gap count 8, master `SCI-CLAIM` release-blocker row count 1을
-  exact-check해 rollup 축약으로 병목이 흐려지는 회귀를 막는다.
+  `runs/science_claim_promotion_gap_closure_current.json`은 GPCR broad-family boundary와
+  restricted OpenMM 2-bead boundary를 모두 closed로 기록해
+  `science_claim_promotion_gap_closure_complete`, `open_gap_ids=[]`,
+  `closed_gap_count=5`가 됐다. `runs/master_gap_closure_rollup_current.json`도
+  `master_gap_closure_rollup_complete`, `open_gap_ids=[]`다. 같은 세부
+  closed-gap 상태는 release decision과 `/goal/status`의
+  `science_claim_promotion_gap_closure_*` 키로 전파된다.
 
 **병목 원인**
 - hosted/상용 SaaS화 자체가 productization roadmap에 없음.
@@ -1558,23 +1925,33 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 - Model registry + signed artifact + rollback은 1차 완료; operator promotion
   policy + release bundle linkage, rollout execution readiness gate, R4 launch
   preflight, operator-provided rollout execution smoke receipt 검증은 1차 완료.
-  다음은 운영 환경별 pager/TLS/SLO tuning과 full-commercial science claim blocker를
+  다음은 운영 환경별 pager/TLS/SLO tuning과 R8/R9/ACCURACY full-commercial claim blocker를
   release claim 밖으로 계속 분리해 유지하는 일이다.
 - release source-of-truth gate는 R4 preflight, R4 rollout smoke receipt artifact,
   R8 scope-breadth receipt, goal operator intake kit, commercial readiness execution
-  ladder, API/bottleneck visibility, local pose sampling readiness, production AI registry promotion operator
+  ladder, API/bottleneck visibility, local pose sampling readiness, GPCR Phase A/B claim-lock metric readiness,
+  active scorer promotion-decision claim-lock metric readiness, GPCR broad claim-scope target-heldout
+  input readiness, science accuracy frontier restricted-ready/commercial-parity-blocked accounting, production AI registry promotion operator
   receipt/priority packet/field worksheet/staging apply preview, CAMEO official-result fetch preflight, R8 scope-breadth evidence field worksheet/staging apply preview, R9 engine-refinement claim evidence priority packet/field worksheet/staging apply preview,
   master gap closure rollup 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=111/111`,
+  `product_release_source_of_truth_gate_ready`, `pass_count=126/126`,
   `blocker_count=0`, `stale_artifact_count=0`,
-  `release_refresh_command_count=98`으로 재검증됐다.
+  `release_refresh_command_count=107`으로 재검증됐다.
 - `scripts/check_independent_product_readiness.py`는 현재 release/source-of-truth,
   product readiness, operational quality, commercial-independence, capability surface,
   release bundle, master/science-claim rollup을 read-only로 확인해
   `independent_product_readiness_verified`,
   `independent_restricted_product_ready=true`,
   `full_commercial_claim_promotion_ready=false`,
-  `full_commercial_open_gap_ids=[SCI-GPCR, SCI-OPENMM]`를 출력한다.
+  `full_commercial_open_gap_ids=[]`,
+  `science_accuracy_frontier_status=blocked_science_accuracy_frontier`,
+  `science_accuracy_frontier_restricted_ready=true`,
+  `science_accuracy_frontier_broad_commercial_blocked=true`,
+  `accuracy_parity_ligand_ranking_metric_thresholds_pass=true`,
+  `accuracy_parity_ligand_ranking_metric_blocker_count=0`,
+  `accuracy_parity_ligand_ranking_claim_scope_lock_only=true`,
+  full-commercial blocker는 R8/R9 receipt와 `ACCURACY:ligand_ranking` broad claim lock으로
+  남긴다.
 - `scripts/verify_quality_gate.py`는 operational quality contract를 메모리에서
   재빌드해 `product_quality_gate_verified`, `quality_gate_ready=true`,
   `blocker_count=0`, execution/results/external mutation/input-payload persistence
@@ -2222,9 +2599,15 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 
 ### Science 정확도 확장
 
-6. **GPCR CI-low 안정화** — OPRM1 pose/anchor alignment,
-   HTR2A decoy support, conditional prior gating, 100k CI-low ≥ 0.45,
-   top20 안정화 → router/scorer deployment claim promote.
+6. **GPCR broad claim-scope closure** — OPRM1 topology/pose replay,
+   conditional prior gate, rank-rescue independent repeat 기준 PR-AUC/CI-low/top20
+   metric blocker는 green이다. target-heldout family guardrail과 guarded-100k
+   claim-review input도 green으로 분리됐고, 남은 것은 formal broad claim review와
+   scorer/router promotion gate approval 없이는 broad GPCR/Schrodinger-class
+   claim promote를 열지 않는 일이다. 이 둘은 이제
+   `config/gpcr_broad_claim_review_receipt_current.csv`의 2개 evidence row로
+   분리되어 `runs/gpcr_broad_claim_review_receipt_current.json`에서
+   `blocked_row_count=2`로 추적된다.
 7. **Transporter direct-binding evidence** — AQP1/GLUT1 1차 정량
    negative/positive reference 데이터 (PubMed primary source 또는
    internal wetlab).
@@ -2233,13 +2616,16 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
    metal/cofactor calibrated parameterization, charged-residue formal protonation, calibrated charge/torsion/improper
    parameterization, solvent/FEP public-pair calibration, curated 공개 pose/free-energy benchmark intake
    (`refine_tier_public_benchmark_readiness_current` 현재 blocked), external MolProbity/OpenStructure,
-   native complex/interface benchmark parity가 남아 있다.
+   native complex/interface benchmark parity가 남아 있다. `science_accuracy_frontier_current`는
+   restricted science accuracy를 ready로 보되 broad commercial parity claim은
+   GPCR approval과 R9 public evidence receipt가 닫히기 전까지 blocked로 고정한다.
 9. **Prospective wetlab T. cruzi PDE 검증** — 실제 assay + hit confirmation.
 
 ### 확장 (claim boundary 확대)
 
-10. **CA2/PXR packet closure** — PXR은 replacement readiness가 ready이고,
-    CA2는 잔여 6개 blocked row의 정량 reference/operator fill-in 필요.
+10. **CA2/PXR broader claim evidence** — tracked replacement readiness/claim-boundary
+    accounting은 green이지만, unbounded broader claim에는 추가 정량 reference와
+    operator-reviewed evidence receipt가 필요하다.
 11. **IDP broader promotion lane** — bounded shadow-safe 단계 통과.
 12. **CAMEO public registration** — API dependency 설치, prediction email /
     result fetcher, 운영자 approval token 발급, 공식 CAMEO 결과 입력.
@@ -2334,14 +2720,18 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
      shadow-only / review-only / parked 상태 유지.
 
 2. **Science scoring 한계**
-   - GPCR CI-low 0.21 vs 0.45 임계치, OPRM1 pose collapse,
-     AQP1 direct-binding/negative evidence 부족, CA2 잔여 정량 reference 부재.
+   - tracked science closure 기준에서는 GPCR CI-low, OPRM1 topology/pose replay,
+     OpenMM 2-bead 제한 lane, CA2/PXR/AQP1 evidence boundary가 모두 green이다.
+   - 다만 broad GPCR/Schrodinger-class 또는 full all-atom commercial-tool parity
+     claim은 여전히 잠겨 있다. GPCR target-heldout/guarded-100k input은 green으로
+     분리됐지만, formal broad claim review와 scorer/router promotion gate approval
+     receipt가 2/2 blocked라 claim promotion이 열리지 않는다.
    - typed all-atom/GB-SA/explicit-shell/FEP internal scaffold와 readiness smoke는 green이나,
      curated 공개 pose/free-energy parity 및 atom typing coverage/charge/torsion/improper
-     calibration은 아직 claim-grade가 아니다.
-   - feature/data engineering 병목. v3~v16까지 tombstone/selected-slice
-     green의 누적.
-   - 외부 source (PubMed/wetlab) 의존성.
+     calibration은 아직 무제한 claim-grade가 아니다.
+   - feature/data engineering 병목은 metric blocker에서 claim-scope blocker로 이동했다.
+     외부 source (PubMed/wetlab)와 target-held-out public benchmark receipt가 broad
+     claim의 다음 병목이다.
 
 3. **Hosted/full-commercial 운영 증거 부재**
    - `core/` physics는 local-only 가정.
@@ -2357,7 +2747,11 @@ operator/external 경계이며, builder artifact가 green이어도 자동으로 
 
 가장 큰 단일 잔여 gap은 이제 **R8/R9 full-commercial science claim evidence
 receipt + production AI registry guarded promotion + operator-approved 실제 실행
-증거**다. 상용 API, durable worker, validated runner profile, license/legal review,
+증거**다. 특히 R9은 receptor/complex coordinate validation 8/8 blocked와
+DockQ/lDDT-PLI/internal ΔG source evidence 8/8/8 missing이 claim-grade public
+benchmark 승격을 직접 막는다. 이제 해당 source evidence는 파일 존재만으로는 부족하고
+schema-valid JSON payload와 payload가 가리키는 로컬 input artifact 존재 확인까지
+통과해야 한다. 상용 API, durable worker, validated runner profile, license/legal review,
 release bundle, R4 preflight, claim-boundary 정책, source-of-truth gate는 local artifact
 기준 1차 green이지만, full-scope/science claim promotion과 production AI 고객-facing
 promotion은 아직 막혀 있다. 실제 고객 실행은

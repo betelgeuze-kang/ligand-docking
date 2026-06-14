@@ -65,6 +65,12 @@ def _write_evidence_packets(root: Path) -> None:
         summary = {"status": expected["status"]}
         for field in expected["true_fields"]:
             summary[str(field)] = True
+        for field in expected.get("quality_true_fields", []):
+            summary[str(field)] = True
+        for field, minimum in (expected.get("int_min_fields") or {}).items():
+            summary[str(field)] = minimum
+        for field in expected.get("false_fields", []):
+            summary[str(field)] = False
         _write_json(root / f"runs/evidence/{scope_blocker_id}.json", {"summary": summary})
 
 

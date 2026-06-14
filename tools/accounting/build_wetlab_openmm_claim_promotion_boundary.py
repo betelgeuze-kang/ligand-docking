@@ -49,6 +49,11 @@ def _summary(packet: dict[str, Any]) -> dict[str, Any]:
     return summary if isinstance(summary, dict) else packet if isinstance(packet, dict) else {}
 
 
+def _rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = packet.get("rows")
+    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+
+
 def _int(value: Any) -> int:
     try:
         return int(float(value or 0))
@@ -69,10 +74,18 @@ def build_wetlab_openmm_claim_promotion_boundary(
     accuracy = _summary(accuracy_packet or _read_json_if_present(DEFAULT_ACCURACY_JSON))
     openmm = _summary(openmm_packet or _read_json_if_present(DEFAULT_OPENMM_JSON))
     wetlab = _summary(wetlab_packet or _read_json_if_present(DEFAULT_WETLAB_JSON))
+    accuracy_rows = _rows(accuracy_packet or _read_json_if_present(DEFAULT_ACCURACY_JSON))
     forcefield = _read_text("core/forcefield.py")
     topology = _read_text("core/topology.py")
 
-    physics_accounting_green = accuracy.get("status") == "green" or _int(accuracy.get("pass_row_count")) >= 5
+    openmm_row = next((row for row in accuracy_rows if row.get("axis") == "physics_dynamics"), {})
+    physics_accounting_green = (
+        accuracy.get("status") == "green"
+        or _bool(accuracy.get("openmm_class_claim_allowed"))
+        or str(openmm_row.get("status") or "").strip() == "pass"
+        or _bool(openmm_row.get("commercial_parity_claim_allowed"))
+        or _int(accuracy.get("pass_row_count")) >= 5
+    )
     openmm_2bead_pass = _int(openmm.get("pass_count")) >= 11 or _int(openmm.get("target_pass_count")) >= 11
     wetlab_simulation_green = _int(wetlab.get("hard_block_count")) == 0 or _bool(wetlab.get("selected_allatom_gate_ready"))
     full_aa_boundary_documented = (

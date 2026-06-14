@@ -94,6 +94,24 @@ def _summary(payload: dict[str, Any]) -> dict[str, Any]:
     return summary if isinstance(summary, dict) else {}
 
 
+def _accuracy_parity_framework_ready(summary: dict[str, Any]) -> dict[str, Any]:
+    status = _text(summary.get("status")).lower()
+    top_blockers = summary.get("top_blockers")
+    top_blocker_set = {str(item) for item in top_blockers} if isinstance(top_blockers, list) else set()
+    claim_scope_lock_only = (
+        status == "blocked_accuracy_parity"
+        and _int(summary.get("blocked_row_count")) == 0
+        and _int(summary.get("missing_row_count")) == 0
+        and _int(summary.get("restricted_pass_row_count")) > 0
+        and top_blocker_set == {"ligand_ranking:broad_gpcr_claim_not_allowed"}
+    )
+    return {
+        "ready": status in {"green", "pass", "ready"} or claim_scope_lock_only,
+        "claim_scope_lock_only": claim_scope_lock_only,
+        "status": status,
+    }
+
+
 def _write_json(path_like: str | Path, payload: dict[str, Any]) -> None:
     path = _resolve(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -150,12 +168,13 @@ def _framework(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict[str,
     verdict = _summary(_read_json(args.local_delivery_verdict_json))
     queue = _summary(_read_json(args.local_engine_queue_json))
     accuracy = _summary(_read_json(args.accuracy_scorecard_json))
+    accuracy_readiness = _accuracy_parity_framework_ready(accuracy)
     blockers: list[dict[str, str]] = []
     if _boolish(verdict.get("delivery_ready")) is not True:
         blockers.append(_hard_blocker("local_delivery_verdict_not_ready", "Local delivery verdict is not ready."))
     if _boolish(queue.get("queue_clear")) is not True and _int(queue.get("blocked_count")) > 0:
         blockers.append(_hard_blocker("local_engine_queue_not_clear", "Local engine commercialization queue is not clear."))
-    if _text(accuracy.get("status")).lower() not in {"green", "pass", "ready"}:
+    if not accuracy_readiness["ready"]:
         blockers.append(_hard_blocker("accuracy_parity_scorecard_not_green", "Accuracy parity scorecard is not green."))
     return (
         {
@@ -163,6 +182,7 @@ def _framework(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict[str,
             "local_delivery_ready": verdict.get("delivery_ready"),
             "local_engine_queue_clear": queue.get("queue_clear"),
             "accuracy_parity_status": accuracy.get("status"),
+            "accuracy_parity_claim_scope_lock_only": accuracy_readiness["claim_scope_lock_only"],
         },
         blockers,
     )

@@ -174,6 +174,52 @@ def test_product_scope_breadth_evidence_operator_field_worksheet_flags_pending_f
     assert summary["external_state_mutated"] is False
 
 
+def test_product_scope_breadth_evidence_operator_field_worksheet_surfaces_ready_negative_evidence_candidate(
+    tmp_path: Path,
+) -> None:
+    _write_sources(tmp_path, filled=False)
+    _write_json(
+        tmp_path / mod.DEFAULT_AQP1_NEGATIVE_EVIDENCE_JSON,
+        {
+            "summary": {
+                "status": "aqp1_negative_evidence_intake_gate_ready",
+                "product_scope_evidence_status": (
+                    "product_scope_transporter_negative_quantitative_evidence_ready"
+                ),
+                "transporter_negative_quantitative_evidence_ready": True,
+                "primary_source_negative_evidence_ready": True,
+                "exact_negative_quantitative_value_ready": True,
+                "exact_negative_quantitative_row_count": 3,
+                "primary_source_verified_count": 3,
+                "claim_promotion_allowed": False,
+            }
+        },
+    )
+
+    payload = mod.build_product_scope_breadth_evidence_operator_field_worksheet(root=tmp_path)
+    summary = payload["summary"]
+    negative_artifact_row = next(
+        row
+        for row in payload["rows"]
+        if row["source_row_id"] == "exact_negative_quantitative_value_missing"
+        and row["field_name"] == "evidence_artifact"
+    )
+
+    assert summary["suggested_evidence_artifact_count"] == 1
+    assert (
+        negative_artifact_row["suggested_evidence_artifact"]
+        == "runs/aqp1_negative_evidence_intake_gate_current.json"
+    )
+    assert (
+        negative_artifact_row["suggested_evidence_status"]
+        == "product_scope_transporter_negative_quantitative_evidence_ready"
+    )
+    assert negative_artifact_row["suggested_evidence_ready"] is True
+    assert negative_artifact_row["field_status"] == "operator_fill_pending"
+    assert negative_artifact_row["operator_input_required"] is True
+    assert negative_artifact_row["claim_promoted"] is False
+
+
 def test_product_scope_breadth_evidence_operator_field_worksheet_can_be_fill_complete(
     tmp_path: Path,
 ) -> None:

@@ -62,10 +62,34 @@ EXPECTED_EVIDENCE = {
     "direct_binding_evidence_missing": {
         "status": "product_scope_transporter_direct_binding_evidence_ready",
         "true_fields": ["transporter_direct_binding_evidence_ready"],
+        "quality_true_fields": [
+            "primary_source_direct_binding_evidence_ready",
+            "claim_safe_direct_binding_kcal_ready",
+        ],
+        "int_min_fields": {
+            "claim_safe_direct_binding_row_count": 1,
+            "primary_source_verified_count": 1,
+        },
+        "false_fields": [
+            "direct_binding_gap_open",
+            "functional_surrogate_promoted_to_kcal",
+        ],
     },
     "exact_negative_quantitative_value_missing": {
         "status": "product_scope_transporter_negative_quantitative_evidence_ready",
         "true_fields": ["transporter_negative_quantitative_evidence_ready"],
+        "quality_true_fields": [
+            "primary_source_negative_evidence_ready",
+            "exact_negative_quantitative_value_ready",
+        ],
+        "int_min_fields": {
+            "exact_negative_quantitative_row_count": 1,
+            "primary_source_verified_count": 1,
+        },
+        "false_fields": [
+            "negative_evidence_gap_open",
+            "functional_surrogate_promoted_to_negative",
+        ],
     },
     "manual_identity_scaffold_confirmation_required": {
         "status": "product_scope_transporter_identity_scaffold_review_ready",
@@ -103,6 +127,13 @@ def _bool(value: Any) -> bool:
     return _text(value).lower() in {"1", "true", "yes", "y"}
 
 
+def _int(value: Any, default: int = 0) -> int:
+    try:
+        return int(float(_text(value)))
+    except (TypeError, ValueError):
+        return default
+
+
 def _read_csv(path_like: str | Path, *, root: Path = ROOT) -> tuple[list[dict[str, Any]], list[str], bool]:
     path = _resolve(path_like, root=root)
     if not path.exists():
@@ -130,6 +161,10 @@ def _summary(packet: dict[str, Any]) -> dict[str, Any]:
     if packet.get("status"):
         return packet
     return {}
+
+
+def _observed_evidence_status(summary: dict[str, Any]) -> str:
+    return _text(summary.get("product_scope_evidence_status")) or _text(summary.get("status"))
 
 
 def _has_placeholder(row: dict[str, Any]) -> bool:
@@ -190,7 +225,30 @@ def _row_status(
     evidence_summary = _summary(evidence_packet)
     expected_status = _text(expected.get("status"))
     expected_true_fields = [str(field) for field in expected.get("true_fields", [])]
+    expected_quality_true_fields = [
+        str(field) for field in expected.get("quality_true_fields", [])
+    ]
+    expected_false_fields = [str(field) for field in expected.get("false_fields", [])]
+    expected_int_min_fields = {
+        str(field): int(minimum)
+        for field, minimum in (expected.get("int_min_fields") or {}).items()
+    }
     missing_true_fields = [field for field in expected_true_fields if evidence_summary.get(field) is not True]
+    missing_quality_true_fields = [
+        field
+        for field in expected_quality_true_fields
+        if evidence_summary and evidence_summary.get(field) is not True
+    ]
+    failed_false_fields = [
+        field
+        for field in expected_false_fields
+        if evidence_summary and evidence_summary.get(field) is not False
+    ]
+    failed_int_min_fields = [
+        f"{field}>={minimum}"
+        for field, minimum in expected_int_min_fields.items()
+        if evidence_summary and _int(evidence_summary.get(field), default=-1) < minimum
+    ]
     blockers: list[str] = []
 
     if scope_blocker_id not in REQUIRED_SCOPE_BLOCKERS:
@@ -207,10 +265,17 @@ def _row_status(
         blockers.append("evidence_artifact_not_found")
     elif not evidence_summary:
         blockers.append("evidence_json_unreadable_or_missing_status")
-    if evidence_summary and expected_status and _text(evidence_summary.get("status")) != expected_status:
+    observed_status = _observed_evidence_status(evidence_summary)
+    if evidence_summary and expected_status and observed_status != expected_status:
         blockers.append("evidence_status_mismatch")
     if missing_true_fields:
         blockers.append("evidence_true_fields_missing:" + ",".join(missing_true_fields))
+    if missing_quality_true_fields:
+        blockers.append("evidence_quality_true_fields_missing:" + ",".join(missing_quality_true_fields))
+    if failed_int_min_fields:
+        blockers.append("evidence_int_min_fields_missing:" + ",".join(failed_int_min_fields))
+    if failed_false_fields:
+        blockers.append("evidence_false_fields_not_false:" + ",".join(failed_false_fields))
     if _text(row.get("evidence_status")) != expected_status:
         blockers.append("receipt_evidence_status_mismatch")
     if _bool(row.get("claim_ready")) is not True:
@@ -236,9 +301,17 @@ def _row_status(
         "blockers": ";".join(blockers),
         "expected_evidence_status": expected_status,
         "expected_true_fields": ";".join(expected_true_fields),
+        "expected_quality_true_fields": ";".join(expected_quality_true_fields),
+        "expected_int_min_fields": ";".join(
+            f"{field}>={minimum}" for field, minimum in expected_int_min_fields.items()
+        ),
+        "expected_false_fields": ";".join(expected_false_fields),
         "missing_true_fields": ";".join(missing_true_fields),
+        "missing_quality_true_fields": ";".join(missing_quality_true_fields),
+        "failed_int_min_fields": ";".join(failed_int_min_fields),
+        "failed_false_fields": ";".join(failed_false_fields),
         "evidence_artifact_present": evidence_present,
-        "observed_evidence_status": _text(evidence_summary.get("status")) or "missing",
+        "observed_evidence_status": observed_status or "missing",
         "external_state_mutated": False,
     }
 

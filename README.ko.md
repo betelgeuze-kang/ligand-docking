@@ -162,7 +162,7 @@ manifest에 명시된 로컬 T. cruzi PDE OpenMM artifact가 존재하면 두 RE
 
 ## T. cruzi PDE 데이터 흐름
 
-현재 PDE selected all-atom 경로는 hard block이 닫혔고, tracked accuracy scorecard에는 blocked metric row가 없습니다. 다만 broad wetlab/platform 및 broad GPCR/Schrodinger-class claim은 prospective wetlab evidence, OPRM1/broad-scope evidence, broader platform guardrail이 생길 때까지 별도 claim으로 둡니다. 후보 확장, metric 진단, atomization, parameterization, local minimization evidence를 분리해서 관리합니다.
+현재 PDE selected all-atom 경로는 hard block이 닫혔고, tracked accuracy scorecard에는 blocked metric row가 없습니다. science accuracy frontier는 restricted-ready이지만 broad wetlab/platform, broad GPCR, OpenMM/Schrodinger-class parity claim은 prospective wetlab evidence, formal broad-claim review, scorer/router promotion gate, R9 public benchmark evidence receipt, broader platform guardrail이 생길 때까지 별도 claim으로 둡니다. GPCR target-held-out/guarded-100k 입력은 ready로 추적되지만 claim-approved는 아닙니다. R9 public benchmark work-order는 로컬 PDBBind/CASF pose 결과에서 `seeded_rows=8`, `prefilled_operator_fields=40`, `pending_operator_fields=32`, `experimental_deltaG_prefilled=8`로 선채움됐고, pending field는 license/DockQ/lDDT-PLI/internal refine free-energy = `8/8/8/8`로 분리됩니다. experimental ΔG pending은 `0`이고 ligand pose artifact는 8개 모두 있으며 로컬 CASF tar archive에는 ligand-pose member `23062`개가 있지만 receptor-coordinate member는 `0`개라서, native receptor/complex coordinate row, interaction-metric source, internal-ΔG source는 아직 `8/8/8`개가 비어 있습니다. 후보 확장, metric 진단, atomization, parameterization, local minimization evidence를 분리해서 관리합니다.
 
 | 단계 | 로컬 artifact | 현재 데이터 | 읽는 법 |
 | --- | --- | --- | --- |

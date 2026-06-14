@@ -21,6 +21,15 @@ DEFAULT_RECEIPT_JSON = "runs/engine_refinement_claim_evidence_receipt_current.js
 DEFAULT_PUBLIC_BENCHMARK_READINESS_JSON = "runs/refine_tier_public_benchmark_readiness_current.json"
 DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_CSV = "runs/refine_tier_public_benchmark_work_order_current.csv"
 DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_APPLY_JSON = "runs/refine_tier_public_benchmark_work_order_apply_current.json"
+DEFAULT_PUBLIC_BENCHMARK_MATERIALIZATION_JSON = (
+    "runs/refine_tier_public_benchmark_metric_source_materialization_current.json"
+)
+DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_WORK_ORDER_CSV = (
+    "runs/refine_tier_public_benchmark_work_order_materialized_current.csv"
+)
+DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_JSON = (
+    "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json"
+)
 DEFAULT_OUT_JSON = "runs/engine_refinement_claim_evidence_priority_packet_current.json"
 DEFAULT_OUT_CSV = "runs/engine_refinement_claim_evidence_priority_packet_current.csv"
 DEFAULT_OUT_MD = "runs/engine_refinement_claim_evidence_priority_packet_current.md"
@@ -132,6 +141,19 @@ def _split(value: Any) -> list[str]:
     return [item for item in _text(value).split(";") if item]
 
 
+def _materialized_metric_ready(materialization: dict[str, Any]) -> bool:
+    row_count = _int(materialization.get("materialized_row_count"))
+    return bool(
+        _text(materialization.get("status")) == "refine_tier_public_benchmark_metric_sources_materialized"
+        and row_count > 0
+        and _int(materialization.get("blocked_row_count")) == 0
+        and _int(materialization.get("metric_evidence_pass_row_count")) >= row_count
+        and materialization.get("free_energy_spearman_gate_ready") is True
+        and _int(materialization.get("external_engine_calls")) == 0
+        and materialization.get("external_state_mutated") is False
+    )
+
+
 def _priority_bucket(
     blocker_id: str,
     *,
@@ -159,10 +181,20 @@ def _next_operator_step(
     bucket: str,
     public_work_order_row_count: int,
     public_apply_blocked_row_count: int,
+    public_materialized_candidate_ready: bool,
+    public_materialized_work_order_row_count: int,
+    public_materialized_free_energy_spearman: Any,
 ) -> str:
     action_step = _text(action_row.get("next_required_step"))
     if blocker_id == PUBLIC_BENCHMARK_BLOCKER:
         if bucket == "public_benchmark_work_order_apply_required":
+            if public_materialized_candidate_ready:
+                return (
+                    "Materialized public benchmark candidate is apply-ready "
+                    f"(rows={public_materialized_work_order_row_count}, "
+                    f"free-energy Spearman={_text(public_materialized_free_energy_spearman)}). "
+                    "Review the materialized work-order/apply artifacts before any explicit canonical intake write."
+                )
             return (
                 f"Fill and validate {public_work_order_row_count or 8} public benchmark work-order rows; "
                 f"current apply blocked rows={public_apply_blocked_row_count}."
@@ -184,10 +216,19 @@ def _row(
     public_work_order_present: bool,
     public_work_order_row_count: int,
     public_apply_summary: dict[str, Any],
+    public_materialization_summary: dict[str, Any],
+    public_materialized_work_order_present: bool,
+    public_materialized_work_order_row_count: int,
+    public_materialized_apply_summary: dict[str, Any],
 ) -> dict[str, Any]:
     public_benchmark_ready = bool(public_benchmark_summary.get("claim_grade_public_benchmark_ready") is True)
     public_apply_ready = bool(public_apply_summary.get("apply_ready") is True)
     public_apply_blocked_row_count = _int(public_apply_summary.get("blocked_row_count"))
+    public_materialized_metric_ready = _materialized_metric_ready(public_materialization_summary)
+    public_materialized_apply_ready = bool(public_materialized_apply_summary.get("apply_ready") is True)
+    public_materialized_candidate_ready = bool(
+        public_materialized_metric_ready and public_materialized_apply_ready
+    )
     bucket = _priority_bucket(
         blocker_id,
         receipt_row=receipt_row,
@@ -222,12 +263,63 @@ def _row(
         "public_benchmark_work_order_apply_status": _text(public_apply_summary.get("status")),
         "public_benchmark_work_order_apply_ready": public_apply_ready,
         "public_benchmark_work_order_apply_blocked_row_count": public_apply_blocked_row_count,
+        "public_benchmark_materialized_metric_ready": public_materialized_metric_ready,
+        "public_benchmark_materialized_apply_ready": public_materialized_apply_ready,
+        "public_benchmark_materialized_candidate_ready": public_materialized_candidate_ready,
+        "public_benchmark_materialized_work_order_present": public_materialized_work_order_present,
+        "public_benchmark_materialized_work_order_row_count": public_materialized_work_order_row_count,
+        "public_benchmark_materialized_metric_evidence_pass_row_count": _int(
+            public_materialization_summary.get("metric_evidence_pass_row_count")
+        ),
+        "public_benchmark_materialized_metric_evidence_blocked_row_count": _int(
+            public_materialization_summary.get("metric_evidence_blocked_row_count")
+        ),
+        "public_benchmark_materialized_free_energy_spearman": public_materialization_summary.get(
+            "free_energy_spearman"
+        ),
+        "public_benchmark_materialized_free_energy_spearman_gate_ready": bool(
+            public_materialization_summary.get("free_energy_spearman_gate_ready") is True
+        ),
+        "public_benchmark_materialized_free_energy_spearman_bootstrap_p05": public_materialization_summary.get(
+            "free_energy_spearman_bootstrap_p05"
+        ),
+        "public_benchmark_materialized_free_energy_spearman_bootstrap_p50": public_materialization_summary.get(
+            "free_energy_spearman_bootstrap_p50"
+        ),
+        "public_benchmark_materialized_free_energy_spearman_bootstrap_p95": public_materialization_summary.get(
+            "free_energy_spearman_bootstrap_p95"
+        ),
+        "public_benchmark_materialized_claim_grade_statistical_support_ready": bool(
+            public_materialization_summary.get("claim_grade_public_benchmark_statistical_support_ready")
+            is True
+        ),
+        "public_benchmark_materialized_claim_grade_statistical_support_blocker_count": _int(
+            public_materialization_summary.get(
+                "claim_grade_public_benchmark_statistical_support_blocker_count"
+            )
+        ),
+        "public_benchmark_materialized_claim_grade_statistical_support_blockers": ";".join(
+            str(blocker)
+            for blocker in public_materialization_summary.get(
+                "claim_grade_public_benchmark_statistical_support_blockers"
+            )
+            or []
+        ),
+        "public_benchmark_materialized_apply_status": _text(public_materialized_apply_summary.get("status")),
+        "public_benchmark_materialized_apply_blocked_row_count": _int(
+            public_materialized_apply_summary.get("blocked_row_count")
+        ),
         "next_operator_step": _next_operator_step(
             blocker_id,
             action_row=action_row,
             bucket=bucket,
             public_work_order_row_count=public_work_order_row_count,
             public_apply_blocked_row_count=public_apply_blocked_row_count,
+            public_materialized_candidate_ready=public_materialized_candidate_ready,
+            public_materialized_work_order_row_count=public_materialized_work_order_row_count,
+            public_materialized_free_energy_spearman=public_materialization_summary.get(
+                "free_energy_spearman"
+            ),
         ),
         "claim_promotion_allowed": False,
         "external_state_mutated": False,
@@ -241,6 +333,9 @@ def build_engine_refinement_claim_evidence_priority_packet(
     public_benchmark_readiness_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_READINESS_JSON,
     public_benchmark_work_order_csv: str | Path = DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_CSV,
     public_benchmark_work_order_apply_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_APPLY_JSON,
+    public_benchmark_materialization_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_MATERIALIZATION_JSON,
+    public_benchmark_materialized_work_order_csv: str | Path = DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_WORK_ORDER_CSV,
+    public_benchmark_materialized_apply_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_JSON,
     root: str | Path = ROOT,
 ) -> dict[str, Any]:
     root_path = Path(root)
@@ -254,6 +349,25 @@ def build_engine_refinement_claim_evidence_priority_packet(
     public_work_order_rows, _, public_work_order_present = _read_csv(public_benchmark_work_order_csv, root=root_path)
     public_apply_packet, public_apply_present = _read_json(public_benchmark_work_order_apply_json, root=root_path)
     public_apply_summary = _summary(public_apply_packet)
+    public_materialization_packet, public_materialization_present = _read_json(
+        public_benchmark_materialization_json,
+        root=root_path,
+    )
+    public_materialization_summary = _summary(public_materialization_packet)
+    public_materialized_work_order_rows, _, public_materialized_work_order_present = _read_csv(
+        public_benchmark_materialized_work_order_csv,
+        root=root_path,
+    )
+    public_materialized_apply_packet, public_materialized_apply_present = _read_json(
+        public_benchmark_materialized_apply_json,
+        root=root_path,
+    )
+    public_materialized_apply_summary = _summary(public_materialized_apply_packet)
+    public_materialized_metric_ready = _materialized_metric_ready(public_materialization_summary)
+    public_materialized_apply_ready = bool(public_materialized_apply_summary.get("apply_ready") is True)
+    public_materialized_candidate_ready = bool(
+        public_materialized_metric_ready and public_materialized_apply_ready
+    )
 
     rows = [
         _row(
@@ -265,6 +379,10 @@ def build_engine_refinement_claim_evidence_priority_packet(
             public_work_order_present=public_work_order_present,
             public_work_order_row_count=len(public_work_order_rows),
             public_apply_summary=public_apply_summary,
+            public_materialization_summary=public_materialization_summary,
+            public_materialized_work_order_present=public_materialized_work_order_present,
+            public_materialized_work_order_row_count=len(public_materialized_work_order_rows),
+            public_materialized_apply_summary=public_materialized_apply_summary,
         )
         for index, blocker_id in enumerate(REQUIRED_BLOCKERS, start=1)
     ]
@@ -318,6 +436,60 @@ def build_engine_refinement_claim_evidence_priority_packet(
         "public_benchmark_work_order_apply_status": _text(public_apply_summary.get("status")),
         "public_benchmark_work_order_apply_ready": bool(public_apply_summary.get("apply_ready") is True),
         "public_benchmark_work_order_apply_blocked_row_count": _int(public_apply_summary.get("blocked_row_count")),
+        "public_benchmark_materialization_present": public_materialization_present,
+        "public_benchmark_materialized_work_order_present": public_materialized_work_order_present,
+        "public_benchmark_materialized_apply_present": public_materialized_apply_present,
+        "public_benchmark_materialized_metric_ready": public_materialized_metric_ready,
+        "public_benchmark_materialized_apply_ready": public_materialized_apply_ready,
+        "public_benchmark_materialized_candidate_ready": public_materialized_candidate_ready,
+        "public_benchmark_materialized_work_order_row_count": len(public_materialized_work_order_rows),
+        "public_benchmark_materialized_metric_evidence_pass_row_count": _int(
+            public_materialization_summary.get("metric_evidence_pass_row_count")
+        ),
+        "public_benchmark_materialized_metric_evidence_blocked_row_count": _int(
+            public_materialization_summary.get("metric_evidence_blocked_row_count")
+        ),
+        "public_benchmark_materialized_source_payload_count": _int(
+            public_materialization_summary.get("source_payload_count")
+        ),
+        "public_benchmark_materialized_free_energy_pair_count": _int(
+            public_materialization_summary.get("free_energy_pair_count")
+        ),
+        "public_benchmark_materialized_free_energy_spearman": public_materialization_summary.get(
+            "free_energy_spearman"
+        ),
+        "public_benchmark_materialized_free_energy_spearman_gate_ready": bool(
+            public_materialization_summary.get("free_energy_spearman_gate_ready") is True
+        ),
+        "public_benchmark_materialized_free_energy_spearman_bootstrap_p05": public_materialization_summary.get(
+            "free_energy_spearman_bootstrap_p05"
+        ),
+        "public_benchmark_materialized_free_energy_spearman_bootstrap_p50": public_materialization_summary.get(
+            "free_energy_spearman_bootstrap_p50"
+        ),
+        "public_benchmark_materialized_free_energy_spearman_bootstrap_p95": public_materialization_summary.get(
+            "free_energy_spearman_bootstrap_p95"
+        ),
+        "public_benchmark_materialized_claim_grade_statistical_support_ready": bool(
+            public_materialization_summary.get("claim_grade_public_benchmark_statistical_support_ready")
+            is True
+        ),
+        "public_benchmark_materialized_claim_grade_statistical_support_blocker_count": _int(
+            public_materialization_summary.get(
+                "claim_grade_public_benchmark_statistical_support_blocker_count"
+            )
+        ),
+        "public_benchmark_materialized_claim_grade_statistical_support_blockers": (
+            public_materialization_summary.get("claim_grade_public_benchmark_statistical_support_blockers")
+            or []
+        ),
+        "public_benchmark_materialized_apply_status": _text(public_materialized_apply_summary.get("status")),
+        "public_benchmark_materialized_apply_blocked_row_count": _int(
+            public_materialized_apply_summary.get("blocked_row_count")
+        ),
+        "public_benchmark_materialized_candidate_intake_written": bool(
+            public_materialized_apply_summary.get("candidate_intake_written") is True
+        ),
         "top_blocker_id": _text(public_first.get("blocker_id")),
         "top_priority_bucket": _text(public_first.get("priority_bucket")),
         "top_required_input": _text(public_first.get("required_input")),
@@ -334,6 +506,9 @@ def build_engine_refinement_claim_evidence_priority_packet(
             str(public_benchmark_readiness_json),
             str(public_benchmark_work_order_csv),
             str(public_benchmark_work_order_apply_json),
+            str(public_benchmark_materialization_json),
+            str(public_benchmark_materialized_work_order_csv),
+            str(public_benchmark_materialized_apply_json),
         ],
         "external_state_mutated": False,
         "claim_boundary": CLAIM_BOUNDARY,
@@ -365,6 +540,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"- operator_input_required_count: `{summary['operator_input_required_count']}`",
         f"- public_benchmark_work_order_row_count: `{summary['public_benchmark_work_order_row_count']}`",
         f"- public_benchmark_work_order_apply_blocked_row_count: `{summary['public_benchmark_work_order_apply_blocked_row_count']}`",
+        f"- public_benchmark_materialized_candidate_ready: `{summary['public_benchmark_materialized_candidate_ready']}`",
+        f"- public_benchmark_materialized_work_order_row_count: `{summary['public_benchmark_materialized_work_order_row_count']}`",
+        f"- public_benchmark_materialized_free_energy_spearman: `{summary['public_benchmark_materialized_free_energy_spearman']}`",
+        "- public_benchmark_materialized_spearman_bootstrap_p05: "
+        f"`{summary['public_benchmark_materialized_free_energy_spearman_bootstrap_p05']}`",
+        "- public_benchmark_materialized_claim_grade_statistical_support_ready: "
+        f"`{summary['public_benchmark_materialized_claim_grade_statistical_support_ready']}`",
         f"- top_blocker_id: `{summary['top_blocker_id']}`",
         f"- top_priority_bucket: `{summary['top_priority_bucket']}`",
         f"- top_required_input: `{summary['top_required_input']}`",
@@ -395,6 +577,18 @@ def main(argv: list[str] | None = None) -> None:
         "--public-benchmark-work-order-apply-json",
         default=DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_APPLY_JSON,
     )
+    parser.add_argument(
+        "--public-benchmark-materialization-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_MATERIALIZATION_JSON,
+    )
+    parser.add_argument(
+        "--public-benchmark-materialized-work-order-csv",
+        default=DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_WORK_ORDER_CSV,
+    )
+    parser.add_argument(
+        "--public-benchmark-materialized-apply-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_JSON,
+    )
     parser.add_argument("--root", default=str(ROOT))
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
@@ -407,6 +601,9 @@ def main(argv: list[str] | None = None) -> None:
         public_benchmark_readiness_json=args.public_benchmark_readiness_json,
         public_benchmark_work_order_csv=args.public_benchmark_work_order_csv,
         public_benchmark_work_order_apply_json=args.public_benchmark_work_order_apply_json,
+        public_benchmark_materialization_json=args.public_benchmark_materialization_json,
+        public_benchmark_materialized_work_order_csv=args.public_benchmark_materialized_work_order_csv,
+        public_benchmark_materialized_apply_json=args.public_benchmark_materialized_apply_json,
         root=root,
     )
     _write_json(args.out_json, payload, root=root)

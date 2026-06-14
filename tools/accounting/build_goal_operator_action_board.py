@@ -1118,10 +1118,25 @@ def _accuracy_ligand_ranking_action(
     source_artifacts = [
         str(item) for item in (ligand_row.get("source_artifacts") or []) if str(item)
     ]
+    metric_thresholds_pass = (
+        pr_auc >= pr_auc_min
+        and ci_low >= ci_low_min
+        and topk >= topk_min
+    )
+    metric_blockers = [blocker for blocker in blockers if blocker != "broad_gpcr_claim_not_allowed"]
+    broad_claim_lock_only = (
+        row_status == "restricted_pass"
+        and blockers == ["broad_gpcr_claim_not_allowed"]
+        and metric_thresholds_pass
+    )
     action = _action(
         priority=2,
         lane_id="product_accuracy_parity",
-        action_type="repair_ligand_ranking_parity",
+        action_type=(
+            "close_ligand_ranking_claim_scope"
+            if broad_claim_lock_only
+            else "repair_ligand_ranking_parity"
+        ),
         status="required",
         required_input="ACCURACY:ligand_ranking",
         artifact_path=accuracy_scorecard_path,
@@ -1133,6 +1148,8 @@ def _accuracy_ligand_ranking_action(
             f"claim_promotion_allowed={claim_allowed}; "
             f"commercial_parity_claim_allowed={parity_allowed}; "
             f"blockers={';'.join(blockers)}; "
+            f"metric_thresholds_pass={metric_thresholds_pass}; "
+            f"claim_scope_lock_only={broad_claim_lock_only}; "
             f"ranking_pr_auc={pr_auc};threshold={pr_auc_min}; "
             f"ranking_pr_auc_ci_low={ci_low};threshold={ci_low_min}; "
             f"ranking_topk_hit_rate={topk};threshold={topk_min}."
@@ -1144,7 +1161,7 @@ def _accuracy_ligand_ranking_action(
             "parallel_primary_action_id": "",
             "parallel_lane_precondition": (
                 "Can be worked independently of product execution, scope receipt, and engine-refinement "
-                "public-benchmark receipt work; it only repairs ligand-ranking evidence before any "
+                "public-benchmark receipt work; it only closes ligand-ranking evidence before any "
                 "Schrodinger-class claim."
             ),
             "accuracy_parity_scorecard_status": _text(summary.get("status")),
@@ -1153,6 +1170,10 @@ def _accuracy_ligand_ranking_action(
             "accuracy_parity_ligand_ranking_comparator": _text(ligand_row.get("comparator")),
             "accuracy_parity_ligand_ranking_blocker_count": len(blockers),
             "accuracy_parity_ligand_ranking_blockers": ";".join(blockers),
+            "accuracy_parity_ligand_ranking_metric_thresholds_pass": metric_thresholds_pass,
+            "accuracy_parity_ligand_ranking_metric_blocker_count": len(metric_blockers),
+            "accuracy_parity_ligand_ranking_metric_blockers": ";".join(metric_blockers),
+            "accuracy_parity_ligand_ranking_claim_scope_lock_only": broad_claim_lock_only,
             "accuracy_parity_ligand_ranking_pr_auc": pr_auc,
             "accuracy_parity_ligand_ranking_pr_auc_threshold": pr_auc_min,
             "accuracy_parity_ligand_ranking_pr_auc_ci_low": ci_low,
@@ -1553,12 +1574,16 @@ def build_action_board(
         key=lambda row: (_int(row.get("priority")), _text(row.get("lane_id")), _text(row.get("action_type"))),
     )
     first_parallel_product_action = parallel_product_actions[0] if parallel_product_actions else {}
+    ligand_ranking_action_types = {
+        "repair_ligand_ranking_parity",
+        "close_ligand_ranking_claim_scope",
+    }
     accuracy_ligand_action = next(
         (
             row
             for row in rows
             if row["lane_id"] == "product_accuracy_parity"
-            and row["action_type"] == "repair_ligand_ranking_parity"
+            and row["action_type"] in ligand_ranking_action_types
         ),
         {},
     )
@@ -1614,7 +1639,7 @@ def build_action_board(
         ),
         "product_accuracy_parity_ligand_ranking_action_present": any(
             row["lane_id"] == "product_accuracy_parity"
-            and row["action_type"] == "repair_ligand_ranking_parity"
+            and row["action_type"] in ligand_ranking_action_types
             for row in rows
         ),
         "product_accuracy_parity_ligand_ranking_required_input": _text(
@@ -1641,6 +1666,21 @@ def build_action_board(
                 accuracy_ligand_action.get("accuracy_parity_ligand_ranking_blockers")
             )
         ],
+        "product_accuracy_parity_ligand_ranking_metric_thresholds_pass": bool(
+            accuracy_ligand_action.get("accuracy_parity_ligand_ranking_metric_thresholds_pass") is True
+        ),
+        "product_accuracy_parity_ligand_ranking_metric_blocker_count": _int(
+            accuracy_ligand_action.get("accuracy_parity_ligand_ranking_metric_blocker_count")
+        ),
+        "product_accuracy_parity_ligand_ranking_metric_blockers": [
+            str(item)
+            for item in _list(
+                accuracy_ligand_action.get("accuracy_parity_ligand_ranking_metric_blockers")
+            )
+        ],
+        "product_accuracy_parity_ligand_ranking_claim_scope_lock_only": bool(
+            accuracy_ligand_action.get("accuracy_parity_ligand_ranking_claim_scope_lock_only") is True
+        ),
         "product_accuracy_parity_ligand_ranking_pr_auc": _float(
             accuracy_ligand_action.get("accuracy_parity_ligand_ranking_pr_auc")
         ),
@@ -2468,6 +2508,8 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_accuracy_parity_action_count: `{s['product_accuracy_parity_action_count']}`",
         f"- product_accuracy_parity_ligand_ranking_action_present: `{s['product_accuracy_parity_ligand_ranking_action_present']}`",
         f"- product_accuracy_parity_ligand_ranking_status: `{s['product_accuracy_parity_ligand_ranking_status']}`",
+        f"- product_accuracy_parity_ligand_ranking_metric_thresholds_pass: `{s['product_accuracy_parity_ligand_ranking_metric_thresholds_pass']}`",
+        f"- product_accuracy_parity_ligand_ranking_claim_scope_lock_only: `{s['product_accuracy_parity_ligand_ranking_claim_scope_lock_only']}`",
         f"- product_accuracy_parity_scorecard_json: `{s['product_accuracy_parity_scorecard_json']}`",
         f"- product_goal_completion_audit_status: `{s['product_goal_completion_audit_status']}`",
         f"- product_goal_complete: `{s['product_goal_complete']}`",

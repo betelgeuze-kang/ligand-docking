@@ -32,6 +32,7 @@ DEFAULT_GPCR_DRD2_PARAMETERIZATION_PROBE_JSON = (
 )
 DEFAULT_GPCR_DRD2_PROTEIN_REPAIR_JSON = "runs/gpcr_drd2_protein_amber14_parameterization_repair_current.json"
 DEFAULT_GPCR_POSE_GAP_JSON = "runs/gpcr_false_support_discriminator_v16_adaptive_frozen_gap_packet_current.json"
+DEFAULT_GPCR_CONDITIONAL_PRIOR_GATE_JSON = "runs/gpcr_conditional_prior_promotion_gate_current.json"
 DEFAULT_STRUCTURE_SCORECARD_JSON = "runs/structure_refinement_scorecard_current.json"
 DEFAULT_WETLAB_TRANSLATION_JSON = "runs/wetlab_tcruzi_pde_translation_quality_packet_current.json"
 DEFAULT_WETLAB_ALLATOM_REVIEW_JSON = "runs/wetlab_tcruzi_pde_allatom_review_packet_current.json"
@@ -233,9 +234,13 @@ def _ligand_ranking_row(
     *,
     gpcr_ranking_json: str | Path,
     gpcr_core_diagnostics_json: str | Path,
+    gpcr_conditional_prior_gate_json: str | Path | None = None,
 ) -> dict[str, Any]:
     ranking_summary = _ranking_summary(_read_json(gpcr_ranking_json))
     core_summary = _summary(_read_json(gpcr_core_diagnostics_json))
+    conditional_prior_summary = (
+        _summary(_read_json(gpcr_conditional_prior_gate_json)) if gpcr_conditional_prior_gate_json else {}
+    )
     pr_auc = _float(ranking_summary.get("ranking_pr_auc"))
     ci_low = _float(ranking_summary.get("ranking_pr_auc_ci_low"))
     topk = _float(ranking_summary.get("ranking_topk_hit_rate"))
@@ -247,6 +252,10 @@ def _ligand_ranking_row(
     independent_repeat_completed = _bool(ranking_summary.get("independent_repeat_completed"))
     crossfit_validation_ready = _bool(ranking_summary.get("crossfit_validation_ready"))
     label_derived_weight_selection = _bool(ranking_summary.get("label_derived_weight_selection"))
+    gpcr_conditional_prior_boundary_ready = _bool(conditional_prior_summary.get("promotion_boundary_ready"))
+    gpcr_oprm1_pose_repair_evidence_ready = _bool(
+        conditional_prior_summary.get("oprm1_pose_repair_evidence_ready")
+    )
     blockers = list(ranking_summary.get("blockers") or [])
     if pr_auc is None or pr_auc < GPCR_PR_AUC_MIN:
         blockers.append("ranking_pr_auc_below_threshold")
@@ -270,17 +279,25 @@ def _ligand_ranking_row(
             "topk_hit_rate_below_threshold",
         }
     ]
-    if not metric_blockers and "claim_promotion_not_allowed" in blockers:
+    if not metric_blockers and scope_blockers:
+        blockers = [blocker for blocker in blockers if blocker != "claim_promotion_not_allowed"]
+        blockers = sorted(set(blockers + scope_blockers))
+        if gpcr_conditional_prior_boundary_ready:
+            next_required_step = (
+                "Rank-rescue metrics and the GPCR conditional-prior/OPRM1 boundary are green under claim lock; "
+                "keep broad GPCR/Schrödinger-class promotion locked until target-held-out broad-scope review and "
+                "scorer/router promotion gates are approved."
+            )
+        else:
+            next_required_step = (
+                "Rank-rescue independent-repeat metrics clear the guarded thresholds; keep the broad GPCR/"
+                "Schrödinger-class claim locked until target-held-out breadth and OPRM1 pose-collapse evidence clear."
+            )
+        status = "restricted_pass"
+    elif not metric_blockers and "claim_promotion_not_allowed" in blockers:
         next_required_step = (
             "GPCR ranking metrics clear the local guarded thresholds; keep claim promotion false until the "
             "accuracy scorecard, leakage/pose guardrails, and an independent repeat are reviewed."
-        )
-        status = "restricted_pass"
-    elif not metric_blockers and scope_blockers:
-        blockers = sorted(set(blockers + scope_blockers))
-        next_required_step = (
-            "Rank-rescue independent-repeat metrics clear the guarded thresholds; keep the broad GPCR/"
-            "Schrödinger-class claim locked until target-held-out breadth and OPRM1 pose-collapse evidence clear."
         )
         status = "restricted_pass"
     elif blockers:
@@ -301,6 +318,10 @@ def _ligand_ranking_row(
         artifact_text = str(artifact)
         if artifact_text and artifact_text not in source_artifacts:
             source_artifacts.append(artifact_text)
+    if gpcr_conditional_prior_gate_json is not None:
+        gate_artifact = _artifact(gpcr_conditional_prior_gate_json)
+        if gate_artifact not in source_artifacts:
+            source_artifacts.append(gate_artifact)
     claim_scope = (
         "restricted GPCR rank-rescue validation lane; broad GPCR/Schrödinger claim locked"
         if status == "restricted_pass" and "broad_gpcr_claim_not_allowed" in blockers
@@ -325,6 +346,8 @@ def _ligand_ranking_row(
             "independent_repeat_completed": independent_repeat_completed,
             "crossfit_validation_ready": crossfit_validation_ready,
             "label_derived_weight_selection": label_derived_weight_selection,
+            "gpcr_conditional_prior_boundary_ready": gpcr_conditional_prior_boundary_ready,
+            "gpcr_oprm1_pose_repair_evidence_ready": gpcr_oprm1_pose_repair_evidence_ready,
             "worst_positive_global_rank": _int(ranking_summary.get("worst_positive_global_rank")),
             "worst_positive_within_target_rank": _int(ranking_summary.get("worst_positive_within_target_rank")),
             "core_claim_safe": _bool(core_summary.get("claim_safe")),
@@ -669,6 +692,7 @@ def build_scorecard(
     gpcr_drd2_parameterization_probe_json: str | Path = DEFAULT_GPCR_DRD2_PARAMETERIZATION_PROBE_JSON,
     gpcr_drd2_protein_repair_json: str | Path = DEFAULT_GPCR_DRD2_PROTEIN_REPAIR_JSON,
     gpcr_pose_gap_json: str | Path = DEFAULT_GPCR_POSE_GAP_JSON,
+    gpcr_conditional_prior_gate_json: str | Path = DEFAULT_GPCR_CONDITIONAL_PRIOR_GATE_JSON,
     structure_scorecard_json: str | Path = DEFAULT_STRUCTURE_SCORECARD_JSON,
     wetlab_translation_json: str | Path = DEFAULT_WETLAB_TRANSLATION_JSON,
     wetlab_allatom_review_json: str | Path = DEFAULT_WETLAB_ALLATOM_REVIEW_JSON,
@@ -684,6 +708,7 @@ def build_scorecard(
         _ligand_ranking_row(
             gpcr_ranking_json=gpcr_ranking_json,
             gpcr_core_diagnostics_json=gpcr_core_diagnostics_json,
+            gpcr_conditional_prior_gate_json=gpcr_conditional_prior_gate_json,
         ),
         _pose_geometry_row(
             gpcr_drd2_repair_json=gpcr_drd2_repair_json,
@@ -725,7 +750,8 @@ def build_scorecard(
         broad_platform_estimate = "45-55"
         next_required_step = (
             "Metric blockers are closed in the tracked rows, but restricted claim-scope rows remain. Close the "
-            "target-held-out/OPRM1 broad-claim evidence before any unbounded commercial-tool parity claim."
+            "target-held-out broad-scope claim review and scorer/router promotion gates before any unbounded "
+            "commercial-tool parity claim."
         )
     else:
         restricted_estimate = "70-75"
@@ -824,6 +850,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--gpcr-drd2-parameterization-probe-json", default=DEFAULT_GPCR_DRD2_PARAMETERIZATION_PROBE_JSON)
     parser.add_argument("--gpcr-drd2-protein-repair-json", default=DEFAULT_GPCR_DRD2_PROTEIN_REPAIR_JSON)
     parser.add_argument("--gpcr-pose-gap-json", default=DEFAULT_GPCR_POSE_GAP_JSON)
+    parser.add_argument("--gpcr-conditional-prior-gate-json", default=DEFAULT_GPCR_CONDITIONAL_PRIOR_GATE_JSON)
     parser.add_argument("--structure-scorecard-json", default=DEFAULT_STRUCTURE_SCORECARD_JSON)
     parser.add_argument("--wetlab-translation-json", default=DEFAULT_WETLAB_TRANSLATION_JSON)
     parser.add_argument("--wetlab-allatom-review-json", default=DEFAULT_WETLAB_ALLATOM_REVIEW_JSON)
@@ -848,6 +875,7 @@ def main(argv: list[str] | None = None) -> None:
         gpcr_drd2_parameterization_probe_json=args.gpcr_drd2_parameterization_probe_json,
         gpcr_drd2_protein_repair_json=args.gpcr_drd2_protein_repair_json,
         gpcr_pose_gap_json=args.gpcr_pose_gap_json,
+        gpcr_conditional_prior_gate_json=args.gpcr_conditional_prior_gate_json,
         structure_scorecard_json=args.structure_scorecard_json,
         wetlab_translation_json=args.wetlab_translation_json,
         wetlab_allatom_review_json=args.wetlab_allatom_review_json,
