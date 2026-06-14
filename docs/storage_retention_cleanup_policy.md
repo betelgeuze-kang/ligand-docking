@@ -176,12 +176,12 @@ python3 tools/build_ligand_heavy_run_retention_receipt.py
 
 It writes `config/ligand_heavy_run_retention_receipt_current.json` and
 `docs/ligand_heavy_run_retention_receipt_current.md`. The 2026-06-14 KST
-follow-up cleanup deleted 17 old ligand-heavy raw/log payloads
-(`171.04 MiB`) from the May 3 GPCR family-balanced frozen run while retaining
-4323 top-ranking/compact evidence rows (`220.72 MiB`). The postcheck manifest
-reported `delete_recommended_count=0`; the remaining 199 rows are
-review-required or current/recent payloads, not automatically approved delete
-targets.
+follow-up cleanups deleted 18 old ligand-heavy raw/log payloads
+(`171.07 MiB`) from the May 3 GPCR family-balanced frozen run and one stale
+GPCR ranking-quality repair log while retaining 4323 top-ranking/compact
+evidence rows (`220.72 MiB`). The postcheck manifest reported
+`delete_recommended_count=0`; the remaining 198 rows are review-required,
+current-named, or recent payloads, not automatically approved delete targets.
 
 ## Residual-Force Ligand Trajectory Cleanup
 

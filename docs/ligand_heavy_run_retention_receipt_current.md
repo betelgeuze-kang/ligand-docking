@@ -1,13 +1,17 @@
 # Ligand Heavy Run Retention Receipt
 
 - status: `ligand_heavy_run_retention_receipt_execution_recorded`
-- manifest_delete_recommended_count: `17`
-- manifest_delete_recommended_size_human: `171.04 MiB`
+- manifest_delete_recommended_count: `1`
+- manifest_delete_recommended_size_human: `33.36 KiB`
 - manifest_top_rank_keep_count: `4323`
 - manifest_top_rank_keep_size_human: `220.72 MiB`
+- manifest_review_required_count: `198`
+- manifest_review_required_size_human: `743.49 MiB`
 - retained_top_rank_or_compact_evidence_count: `12`
-- execution_deleted_count: `17`
-- execution_deleted_size_human: `171.04 MiB`
+- current_execution_deleted_count: `1`
+- current_execution_deleted_size_human: `33.36 KiB`
+- cumulative_execution_deleted_count: `18`
+- cumulative_execution_deleted_size_human: `171.07 MiB`
 - execution_failed_count: `0`
 - external_state_mutated: `False`
 
@@ -32,6 +36,7 @@
 | `runs/gpcr_frozen_htvs_stage3_handoff_current.log` | `transient_ligand_run_log_or_lock` | `74.71 KiB` | `deleted` |
 | `runs/gpcr_frozen_post_stage3_chain_watch_current.log` | `transient_ligand_run_log_or_lock` | `349.82 KiB` | `deleted` |
 | `runs/gpcr_frozen_ranking_quality_port_full_nonadrb2_chain_run.log` | `transient_ligand_run_log_or_lock` | `19.22 KiB` | `deleted` |
+| `runs/gpcr_frozen_ranking_quality_repair_chain_run.log` | `transient_ligand_run_log_or_lock` | `33.36 KiB` | `deleted` |
 
 ## Retained Evidence
 

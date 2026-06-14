@@ -641,6 +641,24 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `download_executed=true`를 기록한다. 따라서 이제 남은 직접 실행 병목은
   fetch row 자체나 좌표 다운로드가 아니라, 좌표 source/license/chain-assembly 검토를
   전제로 51개 metric source payload 값을 채우고 검토/승인하는 일이다.
+  2026-06-14 KST 추가 실행으로
+  `tools/materialize_refine_tier_public_benchmark_statistical_support_metric_candidates.py`가
+  이 51개 template에 대한 fail-closed candidate 값을 별도 preview artifact로 생성했다.
+  `config/refine_tier_public_benchmark_statistical_support_metric_source_candidate_fill_current.json`은
+  `refine_tier_public_benchmark_statistical_support_metric_candidates_ready`,
+  `candidate_pass_row_count=51`, `candidate_blocked_row_count=0`,
+  `metric_value_candidate_count=51`, `candidate_pair_pass_count=17`,
+  `combined_pair_count=25`, `combined_holdout_pair_count=8`,
+  `combined_free_energy_spearman=0.5315384615384615`,
+  `free_energy_spearman_bootstrap_p05=0.23053846153846155`,
+  `claim_grade_public_benchmark_statistical_support_ready=false`,
+  `claim_grade_public_benchmark_statistical_support_blockers=[claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum]`,
+  `expected_metric_source_artifact_touched_count=0`,
+  `payload_write_allowed=false`,
+  `operator_receipt_approval_filled=false`,
+  `canonical_intake_promotion_allowed=false`를 기록한다. 즉 후보 metric 값 계산과
+  25쌍/8 holdout 수량 조건은 닫혔지만, bootstrap low가 기준 0.5에 못 미쳐 R9
+  claim 승격과 expected metric source payload write는 여전히 금지된다.
   `runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json`은
   이 execute 직전 handoff를 R4/operator review packet으로 고정해
   `refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready`,
@@ -873,10 +891,10 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   metric source artifact presence + payload validation pass를 함께 요구하는
   fail-closed 과학 증거 체인으로 고정됐다.
   따라서 다음 과학 작업은 materialized candidate를 곧바로 tracked intake로 승격하는
-  것이 아니라, 최소 25개 public benchmark pair와 8개 이상 holdout pair를 채우고
-  bootstrap Spearman p05가 0.5 이상인지 먼저 재검증하는 것이다. 이 통계 support가
-  닫힌 뒤에만 operator receipt/claim-boundary 결정과 source-of-truth release exact
-  checks를 public benchmark ready 상태로 전환한다.
+  것이 아니라, 현재 25개 public benchmark pair와 8개 holdout pair에서 낮게 나온
+  bootstrap Spearman p05를 끌어올리는 후보/score 개선 또는 evidence-quality
+  재검증이다. 이 통계 support가 닫힌 뒤에만 operator receipt/claim-boundary 결정과
+  source-of-truth release exact checks를 public benchmark ready 상태로 전환한다.
 - CASP17 submission/internal scorecard framework도 같은 좁은 claim-lock 인식을 쓴다.
   일반 `blocked` scorecard는 계속 hard blocker지만,
   `blocked_accuracy_parity`, `blocked_row_count=0`, `missing_row_count=0`,
@@ -2837,6 +2855,14 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `delete_recommended_count=0`이다. Git-tracked compact receipt는
   `config/ligand_heavy_run_retention_receipt_current.json` 및
   `docs/ligand_heavy_run_retention_receipt_current.md`에 남겼다.
+- 같은 날 추가 postcheck에서 남은 안전 삭제 후보였던
+  `runs/gpcr_frozen_ranking_quality_repair_chain_run.log` 1개(`33.36 KiB`)를
+  동일한 approval-gated 경로로 삭제했다. 누적 ligand-heavy 삭제 기록은 18개
+  `171.07 MiB`이며, 재생성한 cleanup manifest는
+  `delete_recommended_count=0`, `top_rank_keep_count=4323`
+  (`220.72 MiB`), `review_required_count=198`(`743.49 MiB`)다.
+  review-required row는 상위권/요약 증거 매칭 부족, current-named, 또는
+  recent payload라서 자동 삭제 대상으로 승격하지 않았다.
 - Final PDB/mmCIF, top representative, sha256 manifest, viewer index,
   validation report 보존.
 - 다음 cleanup은 `docs/storage_retention_cleanup_policy.md`의 keep set 기준으로
@@ -3553,8 +3579,13 @@ coordinate fetch R4 preflight도 `r4_row_count=17`,
 `metric_source_template_row_count=51`, `metric_source_template_fill_ready_row_count=51`,
 `metric_source_template_fill_blocked_row_count=0`,
 `authorized_for_external_download=true`, `download_executed=true`로 준비되어,
-남은 직접 병목은 51개 metric source template placeholder를
-reviewed payload로 교체하는 것이다.
+51개 metric source template placeholder를 값 후보로 채울 입력 조건은 닫혔다.
+`config/refine_tier_public_benchmark_statistical_support_metric_source_candidate_fill_current.json`은
+51/51 candidate metric values와 17/17 candidate pairs를 계산했고,
+expected metric source artifact를 0개 touch한 상태로 보존한다. 다만 combined 25쌍/8 holdout의
+bootstrap Spearman p05가 `0.23053846153846155`로 기준 `0.5` 아래라,
+남은 직접 병목은 reviewed payload 승인 자체보다 먼저 claim-grade statistical support를
+충족할 후보/score/evidence 품질 개선이다.
 metric materialization readiness도 `metric_materialization_row_count=17`,
 `metric_materialization_candidate_ready_count=17`,
 `metric_materialization_candidate_blocked_count=0`,
