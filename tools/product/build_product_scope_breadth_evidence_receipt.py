@@ -110,6 +110,14 @@ EXPECTED_EVIDENCE = {
 }
 
 PLACEHOLDER_PREFIXES = ("OPERATOR_FILL", "OPERATOR_CONFIRM")
+MANUAL_REVIEW_FIELDS = [
+    "evidence_artifact",
+    "claim_ready",
+    "reviewer",
+    "reviewed_at_utc",
+    "license_ok",
+    "approval_token",
+]
 
 
 def _resolve(path_like: str | Path, *, root: Path = ROOT) -> Path:
@@ -169,6 +177,31 @@ def _observed_evidence_status(summary: dict[str, Any]) -> str:
 
 def _has_placeholder(row: dict[str, Any]) -> bool:
     return any(_text(value).startswith(PLACEHOLDER_PREFIXES) for value in row.values())
+
+
+def _field_has_placeholder(value: Any) -> bool:
+    return _text(value).startswith(PLACEHOLDER_PREFIXES)
+
+
+def _manual_pending_fields(row: dict[str, Any], *, evidence_present: bool) -> list[str]:
+    pending: list[str] = []
+    if (
+        not _text(row.get("evidence_artifact"))
+        or _field_has_placeholder(row.get("evidence_artifact"))
+        or not evidence_present
+    ):
+        pending.append("evidence_artifact")
+    if _bool(row.get("claim_ready")) is not True:
+        pending.append("claim_ready")
+    if not _text(row.get("reviewer")) or _field_has_placeholder(row.get("reviewer")):
+        pending.append("reviewer")
+    if not _reviewed_at_valid(row.get("reviewed_at_utc")):
+        pending.append("reviewed_at_utc")
+    if _bool(row.get("license_ok")) is not True:
+        pending.append("license_ok")
+    if _text(row.get("approval_token")) != APPROVAL_TOKEN:
+        pending.append("approval_token")
+    return pending
 
 
 def _reviewed_at_valid(value: Any) -> bool:
@@ -233,6 +266,10 @@ def _row_status(
         str(field): int(minimum)
         for field, minimum in (expected.get("int_min_fields") or {}).items()
     }
+    expected_true_field_count = len(expected_true_fields)
+    expected_quality_true_field_count = len(expected_quality_true_fields)
+    expected_int_min_field_count = len(expected_int_min_fields)
+    expected_false_field_count = len(expected_false_fields)
     missing_true_fields = [field for field in expected_true_fields if evidence_summary.get(field) is not True]
     missing_quality_true_fields = [
         field
@@ -295,23 +332,50 @@ def _row_status(
     if _text(row.get("operator_attestation")) != "reviewed_for_scope_promotion":
         blockers.append("operator_attestation_missing_or_unaccepted")
 
+    evidence_status_contract_present = bool(expected_status and _text(row.get("evidence_status")) == expected_status)
+    provenance_kind_accepted = _text(row.get("provenance_kind")) in ALLOWED_PROVENANCE_KINDS
+    external_state_mutated_false = _bool(row.get("external_state_mutated")) is False
+    operator_attestation_accepted = _text(row.get("operator_attestation")) == "reviewed_for_scope_promotion"
+    operator_review_surface_ready = bool(
+        scope_blocker_id in REQUIRED_SCOPE_BLOCKERS
+        and scope_blocker_id not in duplicate_scope_blocker_ids
+        and (not current_scope_blockers or scope_blocker_id in current_scope_blockers)
+        and evidence_status_contract_present
+        and expected_true_field_count > 0
+        and provenance_kind_accepted
+        and external_state_mutated_false
+        and operator_attestation_accepted
+    )
+    manual_pending_fields = _manual_pending_fields(row, evidence_present=evidence_present)
+
     return {
         **{column: row.get(column, "") for column in REQUIRED_COLUMNS},
         "row_status": "pass" if not blockers else "blocked",
         "blockers": ";".join(blockers),
         "expected_evidence_status": expected_status,
         "expected_true_fields": ";".join(expected_true_fields),
+        "expected_true_field_count": expected_true_field_count,
         "expected_quality_true_fields": ";".join(expected_quality_true_fields),
+        "expected_quality_true_field_count": expected_quality_true_field_count,
         "expected_int_min_fields": ";".join(
             f"{field}>={minimum}" for field, minimum in expected_int_min_fields.items()
         ),
+        "expected_int_min_field_count": expected_int_min_field_count,
         "expected_false_fields": ";".join(expected_false_fields),
+        "expected_false_field_count": expected_false_field_count,
         "missing_true_fields": ";".join(missing_true_fields),
         "missing_quality_true_fields": ";".join(missing_quality_true_fields),
         "failed_int_min_fields": ";".join(failed_int_min_fields),
         "failed_false_fields": ";".join(failed_false_fields),
+        "evidence_status_contract_present": evidence_status_contract_present,
         "evidence_artifact_present": evidence_present,
         "observed_evidence_status": observed_status or "missing",
+        "provenance_kind_accepted": provenance_kind_accepted,
+        "external_state_mutated_false": external_state_mutated_false,
+        "operator_attestation_accepted": operator_attestation_accepted,
+        "operator_review_surface_ready": operator_review_surface_ready,
+        "operator_manual_pending_fields": ";".join(manual_pending_fields),
+        "operator_manual_pending_field_count": len(manual_pending_fields),
         "external_state_mutated": False,
     }
 
@@ -347,6 +411,9 @@ def build_product_scope_breadth_evidence_receipt(
     first_blocked_row = blocked_rows[0] if blocked_rows else {}
     row_ids = {_text(row.get("scope_blocker_id")) for row in raw_rows}
     missing_required_scope_blockers = [blocker for blocker in REQUIRED_SCOPE_BLOCKERS if blocker not in row_ids]
+    receipt_manual_field_pending_count = sum(
+        _int(row.get("operator_manual_pending_field_count")) for row in rows
+    )
 
     blockers: list[str] = []
     if not present:
@@ -392,11 +459,50 @@ def build_product_scope_breadth_evidence_receipt(
         ),
         "most_common_row_blocker": _most_common_blocker(blocked_rows),
         "evidence_artifact_present_count": sum(1 for row in rows if row["evidence_artifact_present"]),
+        "evidence_status_contract_present_count": sum(
+            1 for row in rows if row.get("evidence_status_contract_present") is True
+        ),
         "evidence_status_verified_count": sum(
             1
             for row in passed_rows
             if row["observed_evidence_status"] == row["expected_evidence_status"]
         ),
+        "expected_true_fields_present_count": sum(
+            1 for row in rows if _int(row.get("expected_true_field_count")) > 0
+        ),
+        "expected_quality_true_field_count": sum(
+            _int(row.get("expected_quality_true_field_count")) for row in rows
+        ),
+        "expected_int_min_field_count": sum(
+            _int(row.get("expected_int_min_field_count")) for row in rows
+        ),
+        "expected_false_field_count": sum(
+            _int(row.get("expected_false_field_count")) for row in rows
+        ),
+        "provenance_kind_accepted_count": sum(
+            1 for row in rows if row.get("provenance_kind_accepted") is True
+        ),
+        "external_state_mutated_false_count": sum(
+            1 for row in rows if row.get("external_state_mutated_false") is True
+        ),
+        "operator_attestation_accepted_count": sum(
+            1 for row in rows if row.get("operator_attestation_accepted") is True
+        ),
+        "operator_review_surface_ready_count": sum(
+            1 for row in rows if row.get("operator_review_surface_ready") is True
+        ),
+        "operator_review_surface_blocked_count": sum(
+            1 for row in rows if row.get("operator_review_surface_ready") is not True
+        ),
+        "receipt_manual_field_pending_count": receipt_manual_field_pending_count,
+        **{
+            f"receipt_{field_name}_pending_count": sum(
+                1
+                for row in rows
+                if field_name in _split_blockers(row.get("operator_manual_pending_fields"))
+            )
+            for field_name in MANUAL_REVIEW_FIELDS
+        },
         "scope_checklist_json": str(scope_checklist_json),
         "scope_checklist_present": scope_checklist_present,
         "scope_checklist_status": _text(scope_checklist.get("status")),
@@ -411,7 +517,9 @@ def build_product_scope_breadth_evidence_receipt(
         "next_required_step": (
             "All full-scope evidence receipts are locally verified; rerun scope-breadth, goal audit, release bundle, and source-of-truth gates before considering any widened product claims."
             if ready
-            else "Replace placeholder receipt rows with local evidence JSON paths, reviewed provenance, license flags, no external mutation, and APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT."
+            else "Replace placeholder receipt rows with local evidence JSON paths, reviewed provenance, license flags, no external mutation, and APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT "
+            f"(operator_review_surface_ready_count={sum(1 for row in rows if row.get('operator_review_surface_ready') is True)}, "
+            f"receipt_manual_field_pending_count={receipt_manual_field_pending_count})."
         ),
     }
     return {"summary": summary, "rows": rows, "required_columns": REQUIRED_COLUMNS}
@@ -433,6 +541,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"- full_scope_evidence_receipt_ready: `{summary['full_scope_evidence_receipt_ready']}`",
         f"- rows pass/total: `{summary['pass_row_count']}/{summary['receipt_row_count']}`",
         f"- blocked_row_count: `{summary['blocked_row_count']}`",
+        "- operator_review_surface_ready/blocked: "
+        f"`{summary['operator_review_surface_ready_count']}/"
+        f"{summary['operator_review_surface_blocked_count']}`",
+        f"- receipt_manual_field_pending_count: `{summary['receipt_manual_field_pending_count']}`",
         f"- first_blocked_scope_blocker_id: `{summary['first_blocked_scope_blocker_id']}`",
         f"- first_blocked_row_blockers: `{';'.join(summary['first_blocked_row_blockers'])}`",
         f"- most_common_row_blocker: `{summary['most_common_row_blocker']}`",

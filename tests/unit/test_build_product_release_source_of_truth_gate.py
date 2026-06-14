@@ -198,6 +198,23 @@ def _refresh_release_decision_ready() -> dict:
             "product_scope_breadth_evidence_receipt_pass_row_count": 0,
             "product_scope_breadth_evidence_receipt_blocked_row_count": 6,
             "product_scope_breadth_evidence_receipt_blocker_count": 1,
+            "product_scope_breadth_evidence_receipt_evidence_status_contract_present_count": 6,
+            "product_scope_breadth_evidence_receipt_expected_true_fields_present_count": 6,
+            "product_scope_breadth_evidence_receipt_expected_quality_true_field_count": 4,
+            "product_scope_breadth_evidence_receipt_expected_int_min_field_count": 4,
+            "product_scope_breadth_evidence_receipt_expected_false_field_count": 4,
+            "product_scope_breadth_evidence_receipt_provenance_kind_accepted_count": 6,
+            "product_scope_breadth_evidence_receipt_external_state_mutated_false_count": 6,
+            "product_scope_breadth_evidence_receipt_operator_attestation_accepted_count": 6,
+            "product_scope_breadth_evidence_receipt_operator_review_surface_ready_count": 6,
+            "product_scope_breadth_evidence_receipt_operator_review_surface_blocked_count": 0,
+            "product_scope_breadth_evidence_receipt_receipt_manual_field_pending_count": 36,
+            "product_scope_breadth_evidence_receipt_receipt_evidence_artifact_pending_count": 6,
+            "product_scope_breadth_evidence_receipt_receipt_claim_ready_pending_count": 6,
+            "product_scope_breadth_evidence_receipt_receipt_reviewer_pending_count": 6,
+            "product_scope_breadth_evidence_receipt_receipt_reviewed_at_utc_pending_count": 6,
+            "product_scope_breadth_evidence_receipt_receipt_license_ok_pending_count": 6,
+            "product_scope_breadth_evidence_receipt_receipt_approval_token_pending_count": 6,
             "product_scope_breadth_evidence_receipt_required_scope_blocker_count": 6,
             "engine_refinement_claim_evidence_receipt_receipt_row_count": 6,
             "engine_refinement_claim_evidence_receipt_pass_row_count": 0,
@@ -966,6 +983,15 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_int_exact_fields"][
         "product_scope_breadth_evidence_receipt_blocked_row_count"
     ] == 6
+    assert release_row["required_int_exact_fields"][
+        "product_scope_breadth_evidence_receipt_operator_review_surface_ready_count"
+    ] == 6
+    assert release_row["required_int_exact_fields"][
+        "product_scope_breadth_evidence_receipt_operator_review_surface_blocked_count"
+    ] == 0
+    assert release_row["required_int_exact_fields"][
+        "product_scope_breadth_evidence_receipt_receipt_manual_field_pending_count"
+    ] == 36
     assert release_row["required_int_exact_fields"][
         "engine_refinement_claim_evidence_receipt_required_blocker_count"
     ] == 6
@@ -2275,6 +2301,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "blocked_matrix_row_count": 12,
         "approval_token_count": 2,
         "scope_receipt_blocked_row_count": 6,
+        "scope_receipt_operator_review_surface_ready_count": 6,
+        "scope_receipt_operator_review_surface_blocked_count": 0,
+        "scope_receipt_manual_field_pending_count": 36,
+        "scope_receipt_evidence_status_contract_present_count": 6,
+        "scope_receipt_expected_true_fields_present_count": 6,
+        "scope_receipt_provenance_kind_accepted_count": 6,
         "engine_receipt_blocked_row_count": 6,
     }
     assert full_matrix_status_spec["required_text_exact_fields"][
@@ -2295,7 +2327,24 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "blocked_row_count": 6,
         "blocker_count": 1,
         "evidence_artifact_present_count": 0,
+        "evidence_status_contract_present_count": 6,
         "evidence_status_verified_count": 0,
+        "expected_true_fields_present_count": 6,
+        "expected_quality_true_field_count": 4,
+        "expected_int_min_field_count": 4,
+        "expected_false_field_count": 4,
+        "provenance_kind_accepted_count": 6,
+        "external_state_mutated_false_count": 6,
+        "operator_attestation_accepted_count": 6,
+        "operator_review_surface_ready_count": 6,
+        "operator_review_surface_blocked_count": 0,
+        "receipt_manual_field_pending_count": 36,
+        "receipt_evidence_artifact_pending_count": 6,
+        "receipt_claim_ready_pending_count": 6,
+        "receipt_reviewer_pending_count": 6,
+        "receipt_reviewed_at_utc_pending_count": 6,
+        "receipt_license_ok_pending_count": 6,
+        "receipt_approval_token_pending_count": 6,
         "required_scope_blocker_count": 6,
         "missing_required_scope_blocker_count": 0,
         "external_state_mutated": 0,

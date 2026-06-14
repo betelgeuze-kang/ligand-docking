@@ -2980,6 +2980,57 @@ def build_goal_release_decision_gate(
         "product_scope_breadth_evidence_receipt_blocker_count": _int(
             product_scope_receipt.get("blocker_count")
         ),
+        "product_scope_breadth_evidence_receipt_evidence_status_contract_present_count": _int(
+            product_scope_receipt.get("evidence_status_contract_present_count")
+        ),
+        "product_scope_breadth_evidence_receipt_expected_true_fields_present_count": _int(
+            product_scope_receipt.get("expected_true_fields_present_count")
+        ),
+        "product_scope_breadth_evidence_receipt_expected_quality_true_field_count": _int(
+            product_scope_receipt.get("expected_quality_true_field_count")
+        ),
+        "product_scope_breadth_evidence_receipt_expected_int_min_field_count": _int(
+            product_scope_receipt.get("expected_int_min_field_count")
+        ),
+        "product_scope_breadth_evidence_receipt_expected_false_field_count": _int(
+            product_scope_receipt.get("expected_false_field_count")
+        ),
+        "product_scope_breadth_evidence_receipt_provenance_kind_accepted_count": _int(
+            product_scope_receipt.get("provenance_kind_accepted_count")
+        ),
+        "product_scope_breadth_evidence_receipt_external_state_mutated_false_count": _int(
+            product_scope_receipt.get("external_state_mutated_false_count")
+        ),
+        "product_scope_breadth_evidence_receipt_operator_attestation_accepted_count": _int(
+            product_scope_receipt.get("operator_attestation_accepted_count")
+        ),
+        "product_scope_breadth_evidence_receipt_operator_review_surface_ready_count": _int(
+            product_scope_receipt.get("operator_review_surface_ready_count")
+        ),
+        "product_scope_breadth_evidence_receipt_operator_review_surface_blocked_count": _int(
+            product_scope_receipt.get("operator_review_surface_blocked_count")
+        ),
+        "product_scope_breadth_evidence_receipt_receipt_manual_field_pending_count": _int(
+            product_scope_receipt.get("receipt_manual_field_pending_count")
+        ),
+        "product_scope_breadth_evidence_receipt_receipt_evidence_artifact_pending_count": _int(
+            product_scope_receipt.get("receipt_evidence_artifact_pending_count")
+        ),
+        "product_scope_breadth_evidence_receipt_receipt_claim_ready_pending_count": _int(
+            product_scope_receipt.get("receipt_claim_ready_pending_count")
+        ),
+        "product_scope_breadth_evidence_receipt_receipt_reviewer_pending_count": _int(
+            product_scope_receipt.get("receipt_reviewer_pending_count")
+        ),
+        "product_scope_breadth_evidence_receipt_receipt_reviewed_at_utc_pending_count": _int(
+            product_scope_receipt.get("receipt_reviewed_at_utc_pending_count")
+        ),
+        "product_scope_breadth_evidence_receipt_receipt_license_ok_pending_count": _int(
+            product_scope_receipt.get("receipt_license_ok_pending_count")
+        ),
+        "product_scope_breadth_evidence_receipt_receipt_approval_token_pending_count": _int(
+            product_scope_receipt.get("receipt_approval_token_pending_count")
+        ),
         "product_scope_breadth_evidence_receipt_required_scope_blocker_count": _int(
             product_scope_receipt.get("required_scope_blocker_count")
         ),
@@ -4431,6 +4482,11 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_scope_breadth_evidence_receipt_recorded: `{s['product_scope_breadth_evidence_receipt_recorded']}`",
         f"- product_scope_breadth_evidence_receipt_ready: `{s['product_scope_breadth_evidence_receipt_ready']}`",
         f"- product_scope_breadth_evidence_receipt_blocked_row_count: `{s['product_scope_breadth_evidence_receipt_blocked_row_count']}`",
+        "- product_scope_breadth_evidence_receipt_operator_review_surface_ready/blocked: "
+        f"`{s['product_scope_breadth_evidence_receipt_operator_review_surface_ready_count']}/"
+        f"{s['product_scope_breadth_evidence_receipt_operator_review_surface_blocked_count']}`",
+        "- product_scope_breadth_evidence_receipt_receipt_manual_field_pending_count: "
+        f"`{s['product_scope_breadth_evidence_receipt_receipt_manual_field_pending_count']}`",
         f"- product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id: `{s['product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id']}`",
         f"- product_scope_breadth_evidence_receipt_most_common_row_blocker: `{s['product_scope_breadth_evidence_receipt_most_common_row_blocker']}`",
         f"- product_scope_breadth_evidence_receipt_approval_token_required: `{s['product_scope_breadth_evidence_receipt_approval_token_required']}`",

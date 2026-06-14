@@ -52,10 +52,29 @@ def test_product_scope_breadth_evidence_receipt_blocks_default_template() -> Non
     assert summary["first_blocked_missing_true_fields"] == ["transporter_direct_binding_evidence_ready"]
     assert "operator_placeholders_unfilled" in summary["first_blocked_row_blockers"]
     assert summary["most_common_row_blocker"] == "operator_placeholders_unfilled"
+    assert summary["evidence_status_contract_present_count"] == 6
+    assert summary["expected_true_fields_present_count"] == 6
+    assert summary["expected_quality_true_field_count"] == 4
+    assert summary["expected_int_min_field_count"] == 4
+    assert summary["expected_false_field_count"] == 4
+    assert summary["provenance_kind_accepted_count"] == 6
+    assert summary["external_state_mutated_false_count"] == 6
+    assert summary["operator_attestation_accepted_count"] == 6
+    assert summary["operator_review_surface_ready_count"] == 6
+    assert summary["operator_review_surface_blocked_count"] == 0
+    assert summary["receipt_manual_field_pending_count"] == 36
+    assert summary["receipt_evidence_artifact_pending_count"] == 6
+    assert summary["receipt_claim_ready_pending_count"] == 6
+    assert summary["receipt_reviewer_pending_count"] == 6
+    assert summary["receipt_reviewed_at_utc_pending_count"] == 6
+    assert summary["receipt_license_ok_pending_count"] == 6
+    assert summary["receipt_approval_token_pending_count"] == 6
     assert summary["external_state_mutated"] is False
     assert "blocked_receipt_rows_present" in summary["blockers"]
     assert all(row["row_status"] == "blocked" for row in payload["rows"])
     assert all("operator_placeholders_unfilled" in row["blockers"] for row in payload["rows"])
+    assert all(row["operator_review_surface_ready"] is True for row in payload["rows"])
+    assert all(row["operator_manual_pending_field_count"] == 6 for row in payload["rows"])
 
 
 def test_product_scope_breadth_evidence_receipt_passes_verified_local_evidence(tmp_path: Path) -> None:
@@ -119,7 +138,11 @@ def test_product_scope_breadth_evidence_receipt_passes_verified_local_evidence(t
     assert summary["first_blocked_row_blockers"] == []
     assert summary["most_common_row_blocker"] == ""
     assert summary["evidence_status_verified_count"] == 6
+    assert summary["operator_review_surface_ready_count"] == 6
+    assert summary["operator_review_surface_blocked_count"] == 0
+    assert summary["receipt_manual_field_pending_count"] == 0
     assert summary["blockers"] == []
+    assert all(row["operator_manual_pending_field_count"] == 0 for row in payload["rows"])
 
 
 def test_product_scope_breadth_evidence_receipt_rejects_shallow_transporter_evidence(
@@ -190,6 +213,8 @@ def test_product_scope_breadth_evidence_receipt_rejects_shallow_transporter_evid
         "evidence_false_fields_not_false:"
         "direct_binding_gap_open,functional_surrogate_promoted_to_kcal"
     ) in first_row["blockers"]
+    assert first_row["operator_review_surface_ready"] is True
+    assert first_row["operator_manual_pending_field_count"] == 0
     assert "blocked_receipt_rows_present" in summary["blockers"]
 
 

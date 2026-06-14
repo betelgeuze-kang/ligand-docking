@@ -135,6 +135,9 @@ def _receipt_matrix_rows(
                 "expected_evidence_status": "",
                 "observed_evidence_status": "missing",
                 "claim_ready": False,
+                "operator_review_surface_ready": False,
+                "operator_manual_pending_field_count": 0,
+                "operator_manual_pending_fields": "",
                 "row_status": "blocked",
                 "row_blockers": "receipt_rows_missing",
                 "post_return_acceptance_artifact": post_return_acceptance_artifact,
@@ -163,6 +166,11 @@ def _receipt_matrix_rows(
                 "expected_evidence_status": _text(row.get("expected_evidence_status")),
                 "observed_evidence_status": _text(row.get("observed_evidence_status")) or "missing",
                 "claim_ready": _bool(row.get("claim_ready")),
+                "operator_review_surface_ready": bool(row.get("operator_review_surface_ready") is True),
+                "operator_manual_pending_field_count": _int(
+                    row.get("operator_manual_pending_field_count")
+                ),
+                "operator_manual_pending_fields": _text(row.get("operator_manual_pending_fields")),
                 "row_status": row_status,
                 "row_blockers": _text(row.get("blockers")),
                 "post_return_acceptance_artifact": post_return_acceptance_artifact,
@@ -345,6 +353,24 @@ def build_product_full_commercial_blocker_evidence_matrix_from_packets(
         "scope_receipt_status": _text(scope_summary.get("status")) or "missing",
         "scope_receipt_ready": bool(scope_summary.get("full_scope_evidence_receipt_ready") is True),
         "scope_receipt_blocked_row_count": _int(scope_summary.get("blocked_row_count")),
+        "scope_receipt_operator_review_surface_ready_count": _int(
+            scope_summary.get("operator_review_surface_ready_count")
+        ),
+        "scope_receipt_operator_review_surface_blocked_count": _int(
+            scope_summary.get("operator_review_surface_blocked_count")
+        ),
+        "scope_receipt_manual_field_pending_count": _int(
+            scope_summary.get("receipt_manual_field_pending_count")
+        ),
+        "scope_receipt_evidence_status_contract_present_count": _int(
+            scope_summary.get("evidence_status_contract_present_count")
+        ),
+        "scope_receipt_expected_true_fields_present_count": _int(
+            scope_summary.get("expected_true_fields_present_count")
+        ),
+        "scope_receipt_provenance_kind_accepted_count": _int(
+            scope_summary.get("provenance_kind_accepted_count")
+        ),
         "scope_receipt_first_blocked_scope_blocker_id": _text(
             scope_summary.get("first_blocked_scope_blocker_id")
         ),
@@ -444,6 +470,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"- first_blocked_evidence_row_id: `{summary['first_blocked_evidence_row_id']}`",
         f"- first_blocked_row_blockers: `{summary['first_blocked_row_blockers']}`",
         f"- scope_receipt_most_common_row_blocker: `{summary['scope_receipt_most_common_row_blocker']}`",
+        "- scope_receipt_operator_review_surface_ready/blocked: "
+        f"`{summary['scope_receipt_operator_review_surface_ready_count']}/"
+        f"{summary['scope_receipt_operator_review_surface_blocked_count']}`",
+        f"- scope_receipt_manual_field_pending_count: `{summary['scope_receipt_manual_field_pending_count']}`",
         f"- engine_receipt_most_common_row_blocker: `{summary['engine_receipt_most_common_row_blocker']}`",
         f"- approval_tokens_required: `{';'.join(summary['approval_tokens_required'])}`",
         "",

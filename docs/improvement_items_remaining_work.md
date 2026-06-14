@@ -1404,9 +1404,21 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `runs/product_scope_breadth_evidence_receipt_current.json`은 placeholder evidence를
   막아 `blocked_product_scope_breadth_evidence_receipt`,
   `full_scope_evidence_receipt_ready=false`, `blocked_row_count=6`,
+  `operator_review_surface_ready_count=6`,
+  `operator_review_surface_blocked_count=0`,
+  `receipt_manual_field_pending_count=36`,
+  `receipt_evidence_artifact_pending_count=6`,
+  `receipt_claim_ready_pending_count=6`,
+  `receipt_reviewer_pending_count=6`,
+  `receipt_reviewed_at_utc_pending_count=6`,
+  `receipt_license_ok_pending_count=6`,
+  `receipt_approval_token_pending_count=6`,
   `first_blocked_scope_blocker_id=direct_binding_evidence_missing`,
   `first_blocked_evidence_artifact=OPERATOR_FILL_LOCAL_EVIDENCE_JSON`,
-  `most_common_row_blocker=operator_placeholders_unfilled`을 기록한다. 같은
+  `most_common_row_blocker=operator_placeholders_unfilled`을 기록한다.
+  즉 R8 receipt의 six-row operator review surface 자체는 6/6 준비됐지만,
+  evidence artifact, claim-ready 확인, reviewer, reviewed timestamp, license, approval
+  token은 아직 사람이 과학 근거와 출처를 보고 채워야 한다. 같은
   receipt gate는 evidence JSON이 존재하더라도 단순 status/boolean만으로는 통과하지
   않는다. `direct_binding_evidence_missing` row는 primary-source direct-binding
   확인, claim-safe direct-binding kcal 확인, `claim_safe_direct_binding_row_count>=1`,

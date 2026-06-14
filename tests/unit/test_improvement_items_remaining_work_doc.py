@@ -876,3 +876,20 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "DockQ/lDDT-PLI/internal ΔG source evidence 8/8/8 missing" not in text
     assert "`selected_candidate_count=0`" not in text
     assert "`coordinate_validation_pass_row_count=17`" not in text
+
+
+def test_remaining_work_doc_tracks_r8_scope_receipt_review_surface_debt() -> None:
+    text = _doc_text()
+
+    assert "`config/product_scope_breadth_evidence_receipt_current.csv`" in text
+    assert "`blocked_product_scope_breadth_evidence_receipt`" in text
+    assert "`operator_review_surface_ready_count=6`" in text
+    assert "`operator_review_surface_blocked_count=0`" in text
+    assert "`receipt_manual_field_pending_count=36`" in text
+    assert "`receipt_evidence_artifact_pending_count=6`" in text
+    assert "`receipt_claim_ready_pending_count=6`" in text
+    assert "`receipt_reviewer_pending_count=6`" in text
+    assert "`receipt_reviewed_at_utc_pending_count=6`" in text
+    assert "`receipt_license_ok_pending_count=6`" in text
+    assert "`receipt_approval_token_pending_count=6`" in text
+    assert "R8 receipt의 six-row operator review surface 자체는 6/6 준비" in text

@@ -711,6 +711,23 @@ def _blocked_product_scope_receipt() -> dict:
             "pass_row_count": 0,
             "blocked_row_count": 6,
             "blocker_count": 1,
+            "evidence_status_contract_present_count": 6,
+            "expected_true_fields_present_count": 6,
+            "expected_quality_true_field_count": 4,
+            "expected_int_min_field_count": 4,
+            "expected_false_field_count": 4,
+            "provenance_kind_accepted_count": 6,
+            "external_state_mutated_false_count": 6,
+            "operator_attestation_accepted_count": 6,
+            "operator_review_surface_ready_count": 6,
+            "operator_review_surface_blocked_count": 0,
+            "receipt_manual_field_pending_count": 36,
+            "receipt_evidence_artifact_pending_count": 6,
+            "receipt_claim_ready_pending_count": 6,
+            "receipt_reviewer_pending_count": 6,
+            "receipt_reviewed_at_utc_pending_count": 6,
+            "receipt_license_ok_pending_count": 6,
+            "receipt_approval_token_pending_count": 6,
             "required_scope_blocker_count": 6,
             "first_blocked_scope_blocker_id": "direct_binding_evidence_missing",
             "first_blocked_evidence_artifact": "OPERATOR_FILL_LOCAL_EVIDENCE_JSON",
@@ -2191,6 +2208,23 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
     )
     assert summary["product_scope_breadth_evidence_receipt_ready"] is False
     assert summary["product_scope_breadth_evidence_receipt_blocked_row_count"] == 6
+    assert summary["product_scope_breadth_evidence_receipt_evidence_status_contract_present_count"] == 6
+    assert summary["product_scope_breadth_evidence_receipt_expected_true_fields_present_count"] == 6
+    assert summary["product_scope_breadth_evidence_receipt_expected_quality_true_field_count"] == 4
+    assert summary["product_scope_breadth_evidence_receipt_expected_int_min_field_count"] == 4
+    assert summary["product_scope_breadth_evidence_receipt_expected_false_field_count"] == 4
+    assert summary["product_scope_breadth_evidence_receipt_provenance_kind_accepted_count"] == 6
+    assert summary["product_scope_breadth_evidence_receipt_external_state_mutated_false_count"] == 6
+    assert summary["product_scope_breadth_evidence_receipt_operator_attestation_accepted_count"] == 6
+    assert summary["product_scope_breadth_evidence_receipt_operator_review_surface_ready_count"] == 6
+    assert summary["product_scope_breadth_evidence_receipt_operator_review_surface_blocked_count"] == 0
+    assert summary["product_scope_breadth_evidence_receipt_receipt_manual_field_pending_count"] == 36
+    assert summary["product_scope_breadth_evidence_receipt_receipt_evidence_artifact_pending_count"] == 6
+    assert summary["product_scope_breadth_evidence_receipt_receipt_claim_ready_pending_count"] == 6
+    assert summary["product_scope_breadth_evidence_receipt_receipt_reviewer_pending_count"] == 6
+    assert summary["product_scope_breadth_evidence_receipt_receipt_reviewed_at_utc_pending_count"] == 6
+    assert summary["product_scope_breadth_evidence_receipt_receipt_license_ok_pending_count"] == 6
+    assert summary["product_scope_breadth_evidence_receipt_receipt_approval_token_pending_count"] == 6
     assert summary["product_scope_breadth_evidence_receipt_required_scope_blocker_count"] == 6
     assert summary["product_scope_breadth_evidence_receipt_first_blocked_scope_blocker_id"] == (
         "direct_binding_evidence_missing"

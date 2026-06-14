@@ -40,6 +40,12 @@ def test_full_commercial_blocker_evidence_matrix_surfaces_r8_r9_blocked_receipts
             "status": "blocked_product_scope_breadth_evidence_receipt",
             "full_scope_evidence_receipt_ready": False,
             "blocked_row_count": 1,
+            "operator_review_surface_ready_count": 1,
+            "operator_review_surface_blocked_count": 0,
+            "receipt_manual_field_pending_count": 6,
+            "evidence_status_contract_present_count": 1,
+            "expected_true_fields_present_count": 1,
+            "provenance_kind_accepted_count": 1,
             "first_blocked_scope_blocker_id": "direct_binding_evidence_missing",
             "most_common_row_blocker": "operator_placeholders_unfilled",
             "receipt_csv": "config/product_scope_breadth_evidence_receipt_current.csv",
@@ -54,6 +60,11 @@ def test_full_commercial_blocker_evidence_matrix_surfaces_r8_r9_blocked_receipts
                 "evidence_artifact": "OPERATOR_FILL_LOCAL_EVIDENCE_JSON",
                 "expected_evidence_status": "product_scope_transporter_direct_binding_evidence_ready",
                 "observed_evidence_status": "missing",
+                "operator_review_surface_ready": True,
+                "operator_manual_pending_field_count": 6,
+                "operator_manual_pending_fields": (
+                    "evidence_artifact;claim_ready;reviewer;reviewed_at_utc;license_ok;approval_token"
+                ),
             }
         ],
     }
@@ -136,6 +147,12 @@ def test_full_commercial_blocker_evidence_matrix_surfaces_r8_r9_blocked_receipts
     assert summary["first_blocked_row_blockers"] == "operator_placeholders_unfilled"
     assert summary["scope_receipt_first_blocked_scope_blocker_id"] == "direct_binding_evidence_missing"
     assert summary["scope_receipt_most_common_row_blocker"] == "operator_placeholders_unfilled"
+    assert summary["scope_receipt_operator_review_surface_ready_count"] == 1
+    assert summary["scope_receipt_operator_review_surface_blocked_count"] == 0
+    assert summary["scope_receipt_manual_field_pending_count"] == 6
+    assert summary["scope_receipt_evidence_status_contract_present_count"] == 1
+    assert summary["scope_receipt_expected_true_fields_present_count"] == 1
+    assert summary["scope_receipt_provenance_kind_accepted_count"] == 1
     assert summary["engine_receipt_first_blocked_blocker_id"] == "public_benchmark_gate_not_ready"
     assert summary["engine_receipt_most_common_row_blocker"] == "operator_placeholders_unfilled"
     assert "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT" in summary["approval_tokens_required"]
@@ -143,6 +160,8 @@ def test_full_commercial_blocker_evidence_matrix_surfaces_r8_r9_blocked_receipts
     assert "blocked_evidence_matrix_rows_present" in summary["blockers"]
     assert "full_commercial_receipts_not_ready" in summary["blockers"]
     assert payload["rows"][1]["release_blocker_id"] == "R9_engine_refinement_claim_promotion"
+    assert payload["rows"][0]["operator_review_surface_ready"] is True
+    assert payload["rows"][0]["operator_manual_pending_field_count"] == 6
     assert payload["summary"]["external_state_mutated"] is False
 
 
@@ -152,6 +171,12 @@ def test_full_commercial_blocker_evidence_matrix_passes_when_both_receipts_are_r
             "status": "product_scope_breadth_evidence_receipt_ready",
             "full_scope_evidence_receipt_ready": True,
             "blocked_row_count": 0,
+            "operator_review_surface_ready_count": 1,
+            "operator_review_surface_blocked_count": 0,
+            "receipt_manual_field_pending_count": 0,
+            "evidence_status_contract_present_count": 1,
+            "expected_true_fields_present_count": 1,
+            "provenance_kind_accepted_count": 1,
             "receipt_csv": "config/product_scope_breadth_evidence_receipt_current.csv",
             "approval_token_required": "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT",
         },
@@ -164,6 +189,8 @@ def test_full_commercial_blocker_evidence_matrix_passes_when_both_receipts_are_r
                 "expected_evidence_status": "product_scope_transporter_direct_binding_evidence_ready",
                 "observed_evidence_status": "product_scope_transporter_direct_binding_evidence_ready",
                 "claim_ready": True,
+                "operator_review_surface_ready": True,
+                "operator_manual_pending_field_count": 0,
             }
         ],
     }
