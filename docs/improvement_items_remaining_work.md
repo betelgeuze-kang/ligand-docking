@@ -2696,6 +2696,18 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 ### I. Storage / repo 비대
 
 **현재 상태**
+- 2026-06-14 KST 작업 중 루트 파일시스템이 100% 사용 상태로 관측됐고,
+  repo 자체는 약 64 GiB였다. 큰 축은 `runs/` 35 GiB, `data/` 12 GiB,
+  `models/` 6.0 GiB, `.git/` 5.6 GiB, `casp17/` 4.0 GiB,
+  `tools/` 2.3 GiB다. repo 밖 재생성 가능 사용자 캐시 일부를 정리해
+  작업 가능 공간은 회복했지만, 제품화 관점에서는 임시 이동이 아니라
+  필수 증거만 문서화해 보존하고 나머지는 operator-approved cleanup으로
+  줄이는 정책이 필요하다.
+- 보존/정리 기준은 `docs/storage_retention_cleanup_policy.md`로 분리했다.
+  핵심 원칙은 `/tmp`로 임시 대피하지 않고, 현재 source-of-truth가 참조하는
+  `*_current` ledgers, receipt, final PDB/mmCIF/object/viewer/manifest,
+  validation report, selected checkpoint/sha256 manifest만 active keep set으로
+  두는 것이다.
 - `tools/product/build_storage_residual_cleanup_status.py`와
   `runs/storage_residual_cleanup_status_current.json`은 selected heavy path 9개를
   read-only로 측정한다. 최신 상태는
@@ -2725,6 +2737,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   현재 tracked heavy cleanup 표적은 대부분 missing/resolved다.
 - 남은 큰 용량은 `runs/`, `casp17/`, `models/`, `data/`처럼 보존/프로비넌스
   검토가 필요한 keep 대상이다.
+- 현재 저장소에는 current source-of-truth에 필요한 작은 ledger와, 과거 실험/중간
+  payload가 같은 tree에 공존한다. 따라서 단순 `mv /tmp` 또는 대량 삭제는
+  재현성/claim evidence를 깨뜨릴 수 있다.
 - 추가 cleanup 실행은 여전히 operator-approved 별도 계획이 필요하다.
 
 **필요 작업**
@@ -2734,6 +2749,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 - `runs/archive`, `runs/local_heavy_runs`는 small residual review로 유지.
 - Final PDB/mmCIF, top representative, sha256 manifest, viewer index,
   validation report 보존.
+- 다음 cleanup은 `docs/storage_retention_cleanup_policy.md`의 keep set 기준으로
+  후보 manifest를 먼저 만들고, current source-of-truth reference가 없는 항목만
+  operator approval 후 삭제/외부화한다.
 
 ### J. Tools 비대 (1,575 top-level wrapper/tool files)
 
