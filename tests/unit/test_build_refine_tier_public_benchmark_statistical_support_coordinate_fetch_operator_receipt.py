@@ -130,9 +130,26 @@ def test_coordinate_fetch_operator_receipt_blocks_current_placeholders() -> None
     assert summary["r4_preflight_row_fingerprint_required"] is True
     assert summary["r4_preflight_row_fingerprint_verified_count"] == 17
     assert summary["r4_preflight_row_fingerprint_mismatch_count"] == 0
+    assert summary["operator_review_surface_ready_count"] == 17
+    assert summary["operator_review_surface_blocked_count"] == 0
+    assert summary["source_url_present_count"] == 17
+    assert summary["staging_destination_path_present_count"] == 17
+    assert summary["execute_command_present_count"] == 17
     assert summary["pass_row_count"] == 0
     assert summary["blocked_row_count"] == 17
     assert summary["approved_fetch_count"] == 0
+    assert summary["receipt_operator_decision_pending_count"] == 17
+    assert summary["receipt_coordinate_fetch_approval_pending_count"] == 17
+    assert summary["receipt_source_url_review_pending_count"] == 17
+    assert summary["receipt_staging_destination_review_pending_count"] == 17
+    assert summary["receipt_license_review_pending_count"] == 17
+    assert summary["receipt_biological_assembly_review_pending_count"] == 17
+    assert summary["receipt_execute_command_review_pending_count"] == 17
+    assert summary["receipt_post_fetch_validation_review_pending_count"] == 17
+    assert summary["receipt_reviewer_pending_count"] == 17
+    assert summary["receipt_reviewed_at_pending_count"] == 17
+    assert summary["receipt_approval_token_pending_count"] == 17
+    assert summary["receipt_manual_field_pending_count"] == 187
     assert summary["authorized_for_external_download"] is False
     assert summary["download_executed"] is False
     assert summary["canonical_intake_promotion_allowed"] is False
@@ -169,9 +186,26 @@ def test_coordinate_fetch_operator_receipt_ready_with_verified_rows(tmp_path: Pa
     assert summary["r4_preflight_row_fingerprint_required"] is True
     assert summary["r4_preflight_row_fingerprint_verified_count"] == 2
     assert summary["r4_preflight_row_fingerprint_mismatch_count"] == 0
+    assert summary["operator_review_surface_ready_count"] == 2
+    assert summary["operator_review_surface_blocked_count"] == 0
+    assert summary["source_url_present_count"] == 2
+    assert summary["staging_destination_path_present_count"] == 2
+    assert summary["execute_command_present_count"] == 2
     assert summary["approved_fetch_count"] == 2
     assert summary["source_url_reviewed_count"] == 2
     assert summary["license_ok_count"] == 2
+    assert summary["receipt_operator_decision_pending_count"] == 0
+    assert summary["receipt_coordinate_fetch_approval_pending_count"] == 0
+    assert summary["receipt_source_url_review_pending_count"] == 0
+    assert summary["receipt_staging_destination_review_pending_count"] == 0
+    assert summary["receipt_license_review_pending_count"] == 0
+    assert summary["receipt_biological_assembly_review_pending_count"] == 0
+    assert summary["receipt_execute_command_review_pending_count"] == 0
+    assert summary["receipt_post_fetch_validation_review_pending_count"] == 0
+    assert summary["receipt_reviewer_pending_count"] == 0
+    assert summary["receipt_reviewed_at_pending_count"] == 0
+    assert summary["receipt_approval_token_pending_count"] == 0
+    assert summary["receipt_manual_field_pending_count"] == 0
     assert summary["authorized_for_external_download"] is True
     assert summary["download_executed"] is False
     assert summary["blocker_count"] == 0
@@ -207,5 +241,7 @@ def test_coordinate_fetch_operator_receipt_cli_writes_outputs(tmp_path: Path) ->
     assert payload["summary"]["receipt_row_count"] == 2
     assert payload["summary"]["blocked_row_count"] == 2
     assert payload["summary"]["r4_preflight_row_fingerprint_mismatch_count"] == 2
+    assert payload["summary"]["receipt_manual_field_pending_count"] == 22
     assert out_csv.is_file()
     assert out_md.is_file()
+    assert "receipt_manual_field_pending_count" in out_md.read_text(encoding="utf-8")

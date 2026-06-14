@@ -1557,6 +1557,34 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
                 "r4_preflight_row_fingerprint_mismatch_count"
             )
         ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count": _int(
+            statistical_support_coordinate_fetch_operator_receipt_summary.get(
+                "operator_review_surface_ready_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count": _int(
+            statistical_support_coordinate_fetch_operator_receipt_summary.get(
+                "operator_review_surface_blocked_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_source_url_present_count": _int(
+            statistical_support_coordinate_fetch_operator_receipt_summary.get("source_url_present_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_staging_destination_path_present_count": _int(
+            statistical_support_coordinate_fetch_operator_receipt_summary.get(
+                "staging_destination_path_present_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_execute_command_present_count": _int(
+            statistical_support_coordinate_fetch_operator_receipt_summary.get(
+                "execute_command_present_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count": _int(
+            statistical_support_coordinate_fetch_operator_receipt_summary.get(
+                "receipt_manual_field_pending_count"
+            )
+        ),
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download": bool(
             statistical_support_coordinate_fetch_operator_receipt_summary.get(
                 "authorized_for_external_download"
@@ -1812,6 +1840,10 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
                 "and fill/approve the 17-row coordinate fetch operator receipt "
                 f"(receipt_blocked_row_count="
                 f"{_int(statistical_support_coordinate_fetch_operator_receipt_summary.get('blocked_row_count'))}, "
+                f"operator_review_surface_ready_count="
+                f"{_int(statistical_support_coordinate_fetch_operator_receipt_summary.get('operator_review_surface_ready_count'))}, "
+                f"receipt_manual_field_pending_count="
+                f"{_int(statistical_support_coordinate_fetch_operator_receipt_summary.get('receipt_manual_field_pending_count'))}, "
                 f"fingerprint_verified_count="
                 f"{_int(statistical_support_coordinate_fetch_operator_receipt_summary.get('r4_preflight_row_fingerprint_verified_count'))}); "
                 "after explicit operator approval, stage and validate coordinates for "
@@ -1970,6 +2002,11 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         "- public_benchmark_statistical_support_coordinate_fetch_operator_receipt_fingerprint_verified/mismatch: "
         f"`{summary['public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count']}/"
         f"{summary['public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count']}`",
+        "- public_benchmark_statistical_support_coordinate_fetch_operator_receipt_review_surface_ready/blocked: "
+        f"`{summary['public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count']}/"
+        f"{summary['public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count']}`",
+        "- public_benchmark_statistical_support_coordinate_fetch_operator_receipt_manual_field_pending_count: "
+        f"`{summary['public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count']}`",
         "- public_benchmark_receptor_coordinate_intake_artifact_present_row_count: "
         f"`{summary['public_benchmark_receptor_coordinate_intake_artifact_present_row_count']}`",
         "- public_benchmark_receptor_coordinate_validation_blocked_row_count: "

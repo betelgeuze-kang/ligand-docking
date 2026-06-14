@@ -943,6 +943,24 @@ def build_science_accuracy_frontier(
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count": _int(
             coordinate_fetch_operator_receipt.get("r4_preflight_row_fingerprint_mismatch_count")
         ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count": _int(
+            coordinate_fetch_operator_receipt.get("operator_review_surface_ready_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count": _int(
+            coordinate_fetch_operator_receipt.get("operator_review_surface_blocked_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_source_url_present_count": _int(
+            coordinate_fetch_operator_receipt.get("source_url_present_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_staging_destination_path_present_count": _int(
+            coordinate_fetch_operator_receipt.get("staging_destination_path_present_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_execute_command_present_count": _int(
+            coordinate_fetch_operator_receipt.get("execute_command_present_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count": _int(
+            coordinate_fetch_operator_receipt.get("receipt_manual_field_pending_count")
+        ),
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count": _int(
             coordinate_fetch_operator_receipt.get("pass_row_count")
         ),
@@ -1330,6 +1348,11 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "- public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_fingerprint_verified/mismatch: "
         f"`{summary['public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count']}/"
         f"{summary['public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count']}`",
+        "- public_benchmark_statistical_support_coordinate_fetch_operator_receipt_review_surface_ready/blocked: "
+        f"`{summary['public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count']}/"
+        f"{summary['public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count']}`",
+        "- public_benchmark_statistical_support_coordinate_fetch_operator_receipt_manual_field_pending_count: "
+        f"`{summary['public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count']}`",
         f"- engine_refinement_claim_evidence_receipt_ready: `{summary['engine_refinement_claim_evidence_receipt_ready']}`",
         f"- public_benchmark_work_order_seeded_row_count: `{summary['public_benchmark_work_order_seeded_row_count']}`",
         f"- public_benchmark_work_order_prefilled_operator_field_count: `{summary['public_benchmark_work_order_prefilled_operator_field_count']}`",

@@ -320,6 +320,10 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
                 f"{science_frontier.get('public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count')};"
                 f"coordinate_fetch_operator_receipt_fingerprint_verified="
                 f"{science_frontier.get('public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count')};"
+                f"coordinate_fetch_operator_receipt_review_surface_ready="
+                f"{science_frontier.get('public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count')};"
+                f"coordinate_fetch_operator_receipt_manual_field_pending="
+                f"{science_frontier.get('public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count')};"
                 f"metric_source_payload_receipt_ready="
                 f"{science_frontier.get('public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready')};"
                 f"metric_source_payload_receipt_blocked="
@@ -896,6 +900,36 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
             "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count": _int(
                 science_frontier.get(
                     "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_source_url_present_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_source_url_present_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_staging_destination_path_present_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_staging_destination_path_present_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_execute_command_present_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_execute_command_present_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count"
                 )
             ),
             "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count": _int(

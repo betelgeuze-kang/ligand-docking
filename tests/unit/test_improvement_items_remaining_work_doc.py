@@ -271,6 +271,30 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count=17`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count=0`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_source_url_present_count=17`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_staging_destination_path_present_count=17`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_execute_command_present_count=17`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count=187`"
+        in text
+    )
+    assert (
         "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id=r9_statistical_support_coordinate_fetch_001`"
         in text
     )
@@ -476,6 +500,18 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert (
+        "`field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count=17`"
+        in text
+    )
+    assert (
+        "`field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count=0`"
+        in text
+    )
+    assert (
+        "`field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count=187`"
+        in text
+    )
+    assert (
         "`field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`"
         in text
     )
@@ -613,6 +649,18 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     )
     assert (
         "`public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count=0`"
+        in text
+    )
+    assert (
+        "`public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count=17`"
+        in text
+    )
+    assert (
+        "`public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count=0`"
+        in text
+    )
+    assert (
+        "`public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count=187`"
         in text
     )
     assert "`public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download=false`" in text

@@ -67,6 +67,17 @@ R4_FINGERPRINT_FIELDS = [
     "rollback",
     "verification",
 ]
+R4_OPERATOR_REVIEW_SURFACE_FIELDS = [
+    "source_url_primary",
+    "staging_destination_path",
+    "execute_command",
+    "target",
+    "action",
+    "impact",
+    "risk",
+    "rollback",
+    "verification",
+]
 
 CLAIM_BOUNDARY = (
     "R9 statistical-support coordinate fetch operator receipt only; it validates local operator approval "
@@ -97,6 +108,13 @@ def _bool(value: Any) -> bool:
     if isinstance(value, bool):
         return value
     return _text(value).lower() in {"1", "true", "yes", "y"}
+
+
+def _int(value: Any) -> int:
+    try:
+        return int(float(value or 0))
+    except (TypeError, ValueError):
+        return 0
 
 
 def _read_json(path_like: str | Path, *, root: Path = ROOT) -> tuple[dict[str, Any], bool]:
@@ -135,6 +153,10 @@ def _has_placeholder(row: dict[str, Any]) -> bool:
         for key, value in row.items()
         if key != "notes"
     )
+
+
+def _is_placeholder(value: Any) -> bool:
+    return _text(value).startswith(PLACEHOLDER_PREFIXES)
 
 
 def _reviewed_at_valid(value: Any) -> bool:
@@ -180,6 +202,41 @@ def _most_common_blocker(rows: list[dict[str, Any]]) -> str:
     return sorted(counts.items(), key=lambda item: (-item[1], first_seen[item[0]]))[0][0]
 
 
+def _manual_pending_fields(row: dict[str, Any]) -> list[str]:
+    pending: list[str] = []
+    if _text(row.get("operator_decision")) != "approve_coordinate_fetch":
+        pending.append("operator_decision")
+    if not _bool(row.get("coordinate_fetch_approved")):
+        pending.append("coordinate_fetch_approved")
+    if not _bool(row.get("source_url_reviewed")):
+        pending.append("source_url_reviewed")
+    if not _bool(row.get("staging_destination_reviewed")):
+        pending.append("staging_destination_reviewed")
+    if not _bool(row.get("license_ok")):
+        pending.append("license_ok")
+    if not _bool(row.get("biological_assembly_reviewed")):
+        pending.append("biological_assembly_reviewed")
+    if not _bool(row.get("execute_command_reviewed")):
+        pending.append("execute_command_reviewed")
+    if not _bool(row.get("post_fetch_validation_required")):
+        pending.append("post_fetch_validation_required")
+    if not _text(row.get("reviewer")) or _is_placeholder(row.get("reviewer")):
+        pending.append("reviewer")
+    if not _reviewed_at_valid(row.get("reviewed_at_utc")):
+        pending.append("reviewed_at_utc")
+    if _text(row.get("approval_token")) != APPROVAL_TOKEN:
+        pending.append("approval_token")
+    return pending
+
+
+def _operator_review_surface_ready(row: dict[str, Any]) -> bool:
+    return bool(
+        row.get("r4_preflight_row_fingerprint_verified") is True
+        and _text(row.get("r4_preflight_status")) == "ready_for_r4_operator_confirmation"
+        and all(_text(row.get(field)) for field in R4_OPERATOR_REVIEW_SURFACE_FIELDS)
+    )
+
+
 def _receipt_row(
     row: dict[str, Any],
     *,
@@ -190,6 +247,7 @@ def _receipt_row(
     r4_row = r4_by_id.get(review_id, {})
     expected_fingerprint = _r4_row_fingerprint(r4_row) if r4_row else ""
     provided_fingerprint = _text(row.get("r4_preflight_row_sha256"))
+    pending_fields = _manual_pending_fields(row)
     blockers: list[str] = []
 
     if not review_id or review_id not in r4_by_id:
@@ -253,6 +311,17 @@ def _receipt_row(
         "risk": _text(r4_row.get("risk")),
         "rollback": _text(r4_row.get("rollback")),
         "verification": _text(r4_row.get("verification")),
+        "operator_review_surface_ready": _operator_review_surface_ready(
+            {
+                **r4_row,
+                "execute_command": EXECUTE_COMMAND,
+                "r4_preflight_row_fingerprint_verified": bool(
+                    provided_fingerprint and provided_fingerprint == expected_fingerprint
+                ),
+            }
+        ),
+        "operator_manual_pending_fields": ";".join(pending_fields),
+        "operator_manual_pending_field_count": len(pending_fields),
         "download_executed": False,
         "canonical_intake_promotion_allowed": False,
         "claim_promotion_allowed": False,
@@ -297,6 +366,33 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_oper
         for row in rows
         if "r4_preflight_row_fingerprint_missing_or_mismatch" in _split_blockers(row.get("blockers"))
     ]
+    operator_review_surface_ready_rows = [
+        row for row in rows if row.get("operator_review_surface_ready") is True
+    ]
+    row_pending_fields = [set(_split_blockers(row.get("operator_manual_pending_fields"))) for row in rows]
+    manual_pending_field_counts = {
+        "operator_decision": sum(1 for fields in row_pending_fields if "operator_decision" in fields),
+        "coordinate_fetch_approved": sum(
+            1 for fields in row_pending_fields if "coordinate_fetch_approved" in fields
+        ),
+        "source_url_reviewed": sum(1 for fields in row_pending_fields if "source_url_reviewed" in fields),
+        "staging_destination_reviewed": sum(
+            1 for fields in row_pending_fields if "staging_destination_reviewed" in fields
+        ),
+        "license_ok": sum(1 for fields in row_pending_fields if "license_ok" in fields),
+        "biological_assembly_reviewed": sum(
+            1 for fields in row_pending_fields if "biological_assembly_reviewed" in fields
+        ),
+        "execute_command_reviewed": sum(
+            1 for fields in row_pending_fields if "execute_command_reviewed" in fields
+        ),
+        "post_fetch_validation_required": sum(
+            1 for fields in row_pending_fields if "post_fetch_validation_required" in fields
+        ),
+        "reviewer": sum(1 for fields in row_pending_fields if "reviewer" in fields),
+        "reviewed_at_utc": sum(1 for fields in row_pending_fields if "reviewed_at_utc" in fields),
+        "approval_token": sum(1 for fields in row_pending_fields if "approval_token" in fields),
+    }
 
     blockers: list[str] = []
     if not r4_present:
@@ -348,6 +444,13 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_oper
         "r4_preflight_row_fingerprint_required": True,
         "r4_preflight_row_fingerprint_verified_count": len(fingerprint_verified_rows),
         "r4_preflight_row_fingerprint_mismatch_count": len(fingerprint_mismatch_rows),
+        "operator_review_surface_ready_count": len(operator_review_surface_ready_rows),
+        "operator_review_surface_blocked_count": len(rows) - len(operator_review_surface_ready_rows),
+        "source_url_present_count": sum(1 for row in rows if _text(row.get("source_url_primary"))),
+        "staging_destination_path_present_count": sum(
+            1 for row in rows if _text(row.get("staging_destination_path"))
+        ),
+        "execute_command_present_count": sum(1 for row in rows if _text(row.get("execute_command"))),
         "pass_row_count": len(passed_rows),
         "blocked_row_count": len(blocked_rows),
         "approved_fetch_count": sum(1 for row in passed_rows if _bool(row.get("coordinate_fetch_approved"))),
@@ -358,6 +461,30 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_oper
         ),
         "post_fetch_validation_required_count": sum(
             1 for row in passed_rows if _bool(row.get("post_fetch_validation_required"))
+        ),
+        "receipt_operator_decision_pending_count": manual_pending_field_counts["operator_decision"],
+        "receipt_coordinate_fetch_approval_pending_count": manual_pending_field_counts[
+            "coordinate_fetch_approved"
+        ],
+        "receipt_source_url_review_pending_count": manual_pending_field_counts["source_url_reviewed"],
+        "receipt_staging_destination_review_pending_count": manual_pending_field_counts[
+            "staging_destination_reviewed"
+        ],
+        "receipt_license_review_pending_count": manual_pending_field_counts["license_ok"],
+        "receipt_biological_assembly_review_pending_count": manual_pending_field_counts[
+            "biological_assembly_reviewed"
+        ],
+        "receipt_execute_command_review_pending_count": manual_pending_field_counts[
+            "execute_command_reviewed"
+        ],
+        "receipt_post_fetch_validation_review_pending_count": manual_pending_field_counts[
+            "post_fetch_validation_required"
+        ],
+        "receipt_reviewer_pending_count": manual_pending_field_counts["reviewer"],
+        "receipt_reviewed_at_pending_count": manual_pending_field_counts["reviewed_at_utc"],
+        "receipt_approval_token_pending_count": manual_pending_field_counts["approval_token"],
+        "receipt_manual_field_pending_count": sum(
+            _int(row.get("operator_manual_pending_field_count")) for row in rows
         ),
         "first_blocked_review_id": _text(first_blocked.get("r4_review_id")),
         "first_blocked_target_id": _text(first_blocked.get("target_id")),
@@ -378,8 +505,12 @@ def build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_oper
             f"Receipt ready; run `{EXECUTE_COMMAND}` only in an operator-approved execution context, "
             "then rebuild coordinate intake validation and metric source materialization readiness."
             if ready
-            else "Fill all 17 coordinate-fetch receipt rows with approve_coordinate_fetch, reviewed source/license/"
-            f"assembly fields, matching R4 preflight row fingerprints, reviewer, timestamp, and {APPROVAL_TOKEN}; "
+            else f"Fill all {len(raw_rows)} coordinate-fetch receipt rows "
+            f"(operator_review_surface_ready_count={len(operator_review_surface_ready_rows)}, "
+            f"receipt_manual_field_pending_count="
+            f"{sum(_int(row.get('operator_manual_pending_field_count')) for row in rows)}, "
+            f"fingerprint_verified_count={len(fingerprint_verified_rows)}) with approve_coordinate_fetch, "
+            f"reviewed source/license/assembly fields, reviewer, timestamp, and {APPROVAL_TOKEN}; "
             "keep claim and canonical intake promotion flags false."
         ),
     }
@@ -405,6 +536,13 @@ def _write_md(path_like: str | Path, payload: dict[str, Any], *, root: Path = RO
         "- r4_preflight_row_fingerprint_verified/mismatch: "
         f"`{summary['r4_preflight_row_fingerprint_verified_count']}/"
         f"{summary['r4_preflight_row_fingerprint_mismatch_count']}`",
+        "- operator_review_surface_ready/blocked: "
+        f"`{summary['operator_review_surface_ready_count']}/"
+        f"{summary['operator_review_surface_blocked_count']}`",
+        f"- source_url_present_count: `{summary['source_url_present_count']}`",
+        f"- staging_destination_path_present_count: `{summary['staging_destination_path_present_count']}`",
+        f"- execute_command_present_count: `{summary['execute_command_present_count']}`",
+        f"- receipt_manual_field_pending_count: `{summary['receipt_manual_field_pending_count']}`",
         f"- approval_token_required: `{summary['approval_token_required']}`",
         f"- authorized_for_external_download: `{summary['authorized_for_external_download']}`",
         f"- first_blocked_review_id: `{summary['first_blocked_review_id']}`",

@@ -446,6 +446,14 @@ def _write_inputs(
                 17 if materialized_candidate_ready and not ready else 0
             ),
             "r4_preflight_row_fingerprint_mismatch_count": 0,
+            "operator_review_surface_ready_count": 17 if materialized_candidate_ready and not ready else 0,
+            "operator_review_surface_blocked_count": 0,
+            "source_url_present_count": 17 if materialized_candidate_ready and not ready else 0,
+            "staging_destination_path_present_count": (
+                17 if materialized_candidate_ready and not ready else 0
+            ),
+            "execute_command_present_count": 17 if materialized_candidate_ready and not ready else 0,
+            "receipt_manual_field_pending_count": 187 if materialized_candidate_ready and not ready else 0,
             "pass_row_count": 0,
             "blocked_row_count": 0 if ready or not materialized_candidate_ready else 17,
             "approved_fetch_count": 0,
@@ -1053,6 +1061,42 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count"
         ]
         == 0
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_source_url_present_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_staging_destination_path_present_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_execute_command_present_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count"
+        ]
+        == 187
     )
     assert summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count"] == 0
     assert summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count"] == 17

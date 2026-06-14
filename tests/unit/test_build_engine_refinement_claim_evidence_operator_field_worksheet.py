@@ -784,6 +784,24 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count"
     ] == 0
     assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count"
+    ] == 0
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_source_url_present_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_staging_destination_path_present_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_execute_command_present_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count"
+    ] == 187
+    assert summary[
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download"
     ] is False
     assert summary[
@@ -813,6 +831,8 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
     assert "local_coordinate_present_targets=0" in summary["next_required_step"]
     assert "local_coordinate_missing_targets=17" in summary["next_required_step"]
     assert "r4_ready_for_review_row_count=17" in summary["next_required_step"]
+    assert "operator_review_surface_ready_count=17" in summary["next_required_step"]
+    assert "receipt_manual_field_pending_count=187" in summary["next_required_step"]
     assert "fill/approve the 17-row coordinate fetch operator receipt" in summary["next_required_step"]
     assert "fill/approve the 51-row metric payload operator receipt" in summary["next_required_step"]
     assert "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS" in summary["next_required_step"]

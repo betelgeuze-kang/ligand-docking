@@ -1840,6 +1840,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_required_r4_review_count": 17,
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count": 17,
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count": 0,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count": 17,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count": 0,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_source_url_present_count": 17,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_staging_destination_path_present_count": 17,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_execute_command_present_count": 17,
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count": 187,
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count": 0,
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count": 17,
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count": 0,
@@ -2978,6 +2984,24 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "r4_preflight_row_fingerprint_mismatch_count"
     ] == 0
     assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
+        "operator_review_surface_ready_count"
+    ] == 17
+    assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
+        "operator_review_surface_blocked_count"
+    ] == 0
+    assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
+        "source_url_present_count"
+    ] == 17
+    assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
+        "staging_destination_path_present_count"
+    ] == 17
+    assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
+        "execute_command_present_count"
+    ] == 17
+    assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
+        "receipt_manual_field_pending_count"
+    ] == 187
+    assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
         "blocked_row_count"
     ] == 17
     assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
@@ -3003,6 +3027,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert coordinate_fetch_operator_receipt_status_spec["required_text_exact_fields"][
         "most_common_row_blocker"
     ] == "operator_placeholders_unfilled"
+    assert "operator_review_surface_ready_count=17" in coordinate_fetch_operator_receipt_status_spec[
+        "required_text_exact_fields"
+    ]["next_required_step"]
+    assert "receipt_manual_field_pending_count=187" in coordinate_fetch_operator_receipt_status_spec[
+        "required_text_exact_fields"
+    ]["next_required_step"]
     claim_grade_gap_audit_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -3327,6 +3357,24 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count"
     ] == 0
     assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count"
+    ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_source_url_present_count"
+    ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_staging_destination_path_present_count"
+    ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_execute_command_present_count"
+    ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count"
+    ] == 187
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download"
     ] == 0
     assert engine_field_worksheet_status_spec["required_int_exact_fields"][
@@ -3405,6 +3453,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "local_coordinate_missing_targets=17" in engine_field_worksheet_status_spec[
         "required_text_exact_fields"
     ]["next_required_step"]
+    assert "operator_review_surface_ready_count=17" in engine_field_worksheet_status_spec[
+        "required_text_exact_fields"
+    ]["next_required_step"]
+    assert "receipt_manual_field_pending_count=187" in engine_field_worksheet_status_spec[
+        "required_text_exact_fields"
+    ]["next_required_step"]
     assert (
         engine_field_worksheet_status_spec["required_text_exact_fields"]["next_required_step"]
         == "Review the R4 coordinate-fetch preflight "
@@ -3412,7 +3466,8 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "fetch_required_row_count=17, "
         "approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD) "
         "and fill/approve the 17-row coordinate fetch operator receipt "
-        "(receipt_blocked_row_count=17, fingerprint_verified_count=17); "
+        "(receipt_blocked_row_count=17, operator_review_surface_ready_count=17, "
+        "receipt_manual_field_pending_count=187, fingerprint_verified_count=17); "
         "after explicit operator approval, "
         "stage and validate coordinates for 17 statistical-support candidates "
         "(coordinate_validation_pass_row_count=0, "
@@ -3560,6 +3615,15 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count"
     ] == 0
     assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count"
+    ] == 17
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count"
+    ] == 0
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
+        "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count"
+    ] == 187
+    assert engine_staging_apply_status_spec["required_int_exact_fields"][
         "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download"
     ] == 0
     assert engine_staging_apply_status_spec["required_int_exact_fields"][
@@ -3617,6 +3681,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approval_token_required"
     ] == "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
     assert "fill/approve 17 coordinate fetch receipt rows" in engine_staging_apply_status_spec[
+        "required_text_exact_fields"
+    ]["next_required_step"]
+    assert "operator_review_surface_ready_count=17" in engine_staging_apply_status_spec[
+        "required_text_exact_fields"
+    ]["next_required_step"]
+    assert "receipt_manual_field_pending_count=187" in engine_staging_apply_status_spec[
         "required_text_exact_fields"
     ]["next_required_step"]
     assert "fill/approve 51 metric payload receipt rows" in engine_staging_apply_status_spec[

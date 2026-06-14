@@ -2762,6 +2762,11 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "duplicate_r4_review_id_count": 0,
             "r4_preflight_row_fingerprint_verified_count": 17,
             "r4_preflight_row_fingerprint_mismatch_count": 0,
+            "operator_review_surface_ready_count": 17,
+            "operator_review_surface_blocked_count": 0,
+            "source_url_present_count": 17,
+            "staging_destination_path_present_count": 17,
+            "execute_command_present_count": 17,
             "pass_row_count": 0,
             "blocked_row_count": 17,
             "approved_fetch_count": 0,
@@ -2769,6 +2774,18 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "license_ok_count": 0,
             "biological_assembly_reviewed_count": 0,
             "post_fetch_validation_required_count": 0,
+            "receipt_operator_decision_pending_count": 17,
+            "receipt_coordinate_fetch_approval_pending_count": 17,
+            "receipt_source_url_review_pending_count": 17,
+            "receipt_staging_destination_review_pending_count": 17,
+            "receipt_license_review_pending_count": 17,
+            "receipt_biological_assembly_review_pending_count": 17,
+            "receipt_execute_command_review_pending_count": 17,
+            "receipt_post_fetch_validation_review_pending_count": 17,
+            "receipt_reviewer_pending_count": 17,
+            "receipt_reviewed_at_pending_count": 17,
+            "receipt_approval_token_pending_count": 17,
+            "receipt_manual_field_pending_count": 187,
             "authorized_for_external_download": 0,
             "download_executed": 0,
             "canonical_intake_promotion_allowed": 0,
@@ -2797,10 +2814,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "--approval-token APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
             ),
             "next_required_step": (
-                "Fill all 17 coordinate-fetch receipt rows with approve_coordinate_fetch, reviewed "
-                "source/license/assembly fields, matching R4 preflight row fingerprints, reviewer, "
-                "timestamp, and APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD; keep claim and "
-                "canonical intake promotion flags false."
+                "Fill all 17 coordinate-fetch receipt rows "
+                "(operator_review_surface_ready_count=17, "
+                "receipt_manual_field_pending_count=187, fingerprint_verified_count=17) "
+                "with approve_coordinate_fetch, reviewed source/license/assembly fields, reviewer, "
+                "timestamp, and APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD; keep claim and canonical "
+                "intake promotion flags false."
             ),
         },
     },
@@ -3368,6 +3387,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count": 0,
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_source_url_present_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_staging_destination_path_present_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_execute_command_present_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count": 187,
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download": 0,
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_download_executed": 0,
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_canonical_intake_promotion_allowed": 0,
@@ -3457,7 +3482,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "fetch_required_row_count=17, "
                 "approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD) "
                 "and fill/approve the 17-row coordinate fetch operator receipt "
-                "(receipt_blocked_row_count=17, fingerprint_verified_count=17); "
+                "(receipt_blocked_row_count=17, operator_review_surface_ready_count=17, "
+                "receipt_manual_field_pending_count=187, fingerprint_verified_count=17); "
                 "after explicit operator approval, "
                 "stage and validate coordinates for 17 statistical-support candidates "
                 "(coordinate_validation_pass_row_count=0, "
@@ -3546,6 +3572,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count": 0,
             "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count": 17,
             "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count": 0,
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count": 17,
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count": 0,
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count": 187,
             "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download": 0,
             "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_download_executed": 0,
             "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocker_count": 1,
@@ -3629,7 +3658,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "next_required_step": (
                 "Materialized public benchmark science candidate is ready but not claim-grade: "
                 "review the R4 coordinate-fetch preflight, fill/approve 17 coordinate fetch "
-                "receipt rows (APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD), then "
+                "receipt rows (operator_review_surface_ready_count=17, "
+                "receipt_manual_field_pending_count=187, "
+                "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD), then "
                 "validate the 17 statistical-support coordinates, then replace 51 blocked "
                 "metric source template placeholders and "
                 "fill/approve 51 metric payload receipt rows "
@@ -3852,6 +3883,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_required_r4_review_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_source_url_present_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_staging_destination_path_present_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_execute_command_present_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count": 187,
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_pass_row_count": 0,
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_row_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approved_fetch_count": 0,

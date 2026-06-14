@@ -376,6 +376,9 @@ def _worksheet(path: Path, *, filled: bool = False) -> None:
                 "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_required": True,
                 "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_verified_count": 17,
                 "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count": 0,
+                "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count": 17,
+                "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count": 0,
+                "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count": 187,
                 "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download": False,
                 "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_download_executed": False,
                 "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id": (
@@ -583,6 +586,24 @@ def test_blocks_placeholder_receipt_and_public_benchmark_work_order(tmp_path: Pa
             "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_r4_preflight_row_fingerprint_mismatch_count"
         ]
         == 0
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_ready_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "field_worksheet_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count"
+        ]
+        == 187
     )
     assert (
         summary[
@@ -845,6 +866,8 @@ def test_current_staging_apply_surfaces_materialized_public_benchmark_candidate(
         == "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
     )
     assert "fill/approve 17 coordinate fetch receipt rows" in summary["next_required_step"]
+    assert "operator_review_surface_ready_count=17" in summary["next_required_step"]
+    assert "receipt_manual_field_pending_count=187" in summary["next_required_step"]
     assert "validate the 17 statistical-support coordinates" in summary["next_required_step"]
     assert "replace 51 blocked metric source template placeholders" in summary["next_required_step"]
     assert "fill/approve 51 metric payload receipt rows" in summary["next_required_step"]
