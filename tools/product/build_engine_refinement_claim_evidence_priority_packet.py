@@ -36,6 +36,9 @@ DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_JSON = (
 DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_JSON = (
     "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json"
 )
+DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_INTAKE_JSON = (
+    "runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json"
+)
 DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_JSON = (
     "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json"
 )
@@ -213,6 +216,9 @@ def _next_operator_step(
     public_statistical_support_metric_materialization_missing_required_input_artifact_count: int,
     public_statistical_support_metric_materialization_planned_metric_source_payload_count: int,
     public_statistical_support_metric_materialization_next_required_step: str,
+    public_statistical_support_coordinate_intake_suggested_local_path_candidate_count: int,
+    public_statistical_support_coordinate_intake_suggested_local_path_present_target_count: int,
+    public_statistical_support_coordinate_intake_suggested_local_path_missing_target_count: int,
     public_statistical_support_coordinate_fetch_r4_preflight_ready: bool,
     public_statistical_support_coordinate_fetch_r4_ready_for_review_row_count: int,
     public_statistical_support_coordinate_fetch_r4_blocked_row_count: int,
@@ -254,6 +260,12 @@ def _next_operator_step(
                         f"{public_statistical_support_metric_materialization_required_input_artifact_count}/"
                         f"{public_statistical_support_metric_materialization_present_required_input_artifact_count}/"
                         f"{public_statistical_support_metric_materialization_missing_required_input_artifact_count}, "
+                        "local_coordinate_path_candidates="
+                        f"{public_statistical_support_coordinate_intake_suggested_local_path_candidate_count}, "
+                        "local_coordinate_present_targets="
+                        f"{public_statistical_support_coordinate_intake_suggested_local_path_present_target_count}, "
+                        "local_coordinate_missing_targets="
+                        f"{public_statistical_support_coordinate_intake_suggested_local_path_missing_target_count}, "
                         "planned_metric_source_payload_count="
                         f"{public_statistical_support_metric_materialization_planned_metric_source_payload_count}); "
                         "then materialize DockQ/lDDT-PLI/internal DeltaG source payloads and rerun bootstrap "
@@ -305,6 +317,8 @@ def _row(
     public_statistical_support_work_order_present: bool,
     public_statistical_support_metric_materialization_summary: dict[str, Any],
     public_statistical_support_metric_materialization_present: bool,
+    public_statistical_support_coordinate_intake_summary: dict[str, Any],
+    public_statistical_support_coordinate_intake_present: bool,
     public_statistical_support_metric_source_templates_summary: dict[str, Any],
     public_statistical_support_metric_source_templates_present: bool,
     public_statistical_support_coordinate_fetch_r4_summary: dict[str, Any],
@@ -594,6 +608,59 @@ def _row(
         "public_benchmark_statistical_support_metric_materialization_next_required_step": _text(
             public_statistical_support_metric_materialization_summary.get("next_required_step")
         ),
+        "public_benchmark_statistical_support_coordinate_intake_present": (
+            public_statistical_support_coordinate_intake_present
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_ready": bool(
+            public_statistical_support_coordinate_intake_summary.get("coordinate_intake_ready") is True
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_status": _text(
+            public_statistical_support_coordinate_intake_summary.get("status")
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_row_count": _int(
+            public_statistical_support_coordinate_intake_summary.get("coordinate_intake_row_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count": _int(
+            public_statistical_support_coordinate_intake_summary.get(
+                "coordinate_intake_artifact_present_row_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_missing_row_count": _int(
+            public_statistical_support_coordinate_intake_summary.get("coordinate_intake_missing_row_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count": _int(
+            public_statistical_support_coordinate_intake_summary.get(
+                "coordinate_intake_suggested_local_path_candidate_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count": _int(
+            public_statistical_support_coordinate_intake_summary.get(
+                "coordinate_intake_suggested_local_path_present_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count": _int(
+            public_statistical_support_coordinate_intake_summary.get(
+                "coordinate_intake_suggested_local_path_present_target_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count": _int(
+            public_statistical_support_coordinate_intake_summary.get(
+                "coordinate_intake_suggested_local_path_missing_target_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count": _int(
+            public_statistical_support_coordinate_intake_summary.get(
+                "coordinate_intake_expected_archive_member_example_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count": _int(
+            public_statistical_support_coordinate_intake_summary.get("coordinate_validation_pass_row_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count": _int(
+            public_statistical_support_coordinate_intake_summary.get(
+                "coordinate_validation_blocked_row_count"
+            )
+        ),
         "public_benchmark_statistical_support_metric_source_templates_present": (
             public_statistical_support_metric_source_templates_present
         ),
@@ -730,6 +797,21 @@ def _row(
             public_statistical_support_metric_materialization_next_required_step=_text(
                 public_statistical_support_metric_materialization_summary.get("next_required_step")
             ),
+            public_statistical_support_coordinate_intake_suggested_local_path_candidate_count=_int(
+                public_statistical_support_coordinate_intake_summary.get(
+                    "coordinate_intake_suggested_local_path_candidate_count"
+                )
+            ),
+            public_statistical_support_coordinate_intake_suggested_local_path_present_target_count=_int(
+                public_statistical_support_coordinate_intake_summary.get(
+                    "coordinate_intake_suggested_local_path_present_target_count"
+                )
+            ),
+            public_statistical_support_coordinate_intake_suggested_local_path_missing_target_count=_int(
+                public_statistical_support_coordinate_intake_summary.get(
+                    "coordinate_intake_suggested_local_path_missing_target_count"
+                )
+            ),
             public_statistical_support_coordinate_fetch_r4_preflight_ready=(
                 public_statistical_support_coordinate_fetch_r4_preflight_ready
             ),
@@ -770,6 +852,8 @@ def build_engine_refinement_claim_evidence_priority_packet(
     ),
     public_benchmark_statistical_support_metric_materialization_readiness_json: str
     | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_JSON,
+    public_benchmark_statistical_support_coordinate_intake_json: str
+    | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_INTAKE_JSON,
     public_benchmark_statistical_support_metric_source_templates_json: str
     | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_JSON,
     public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json: str
@@ -819,6 +903,16 @@ def build_engine_refinement_claim_evidence_priority_packet(
     )
     public_statistical_support_metric_materialization_summary = _summary(
         public_statistical_support_metric_materialization_packet
+    )
+    (
+        public_statistical_support_coordinate_intake_packet,
+        public_statistical_support_coordinate_intake_present,
+    ) = _read_json(
+        public_benchmark_statistical_support_coordinate_intake_json,
+        root=root_path,
+    )
+    public_statistical_support_coordinate_intake_summary = _summary(
+        public_statistical_support_coordinate_intake_packet
     )
     (
         public_statistical_support_metric_source_templates_packet,
@@ -882,6 +976,12 @@ def build_engine_refinement_claim_evidence_priority_packet(
             public_statistical_support_metric_materialization_present=(
                 public_statistical_support_metric_materialization_present
             ),
+            public_statistical_support_coordinate_intake_summary=(
+                public_statistical_support_coordinate_intake_summary
+            ),
+            public_statistical_support_coordinate_intake_present=(
+                public_statistical_support_coordinate_intake_present
+            ),
             public_statistical_support_metric_source_templates_summary=(
                 public_statistical_support_metric_source_templates_summary
             ),
@@ -935,6 +1035,13 @@ def build_engine_refinement_claim_evidence_priority_packet(
         and not public_statistical_support_metric_materialization_present
     ):
         blockers.append("public_benchmark_statistical_support_metric_materialization_readiness_missing")
+    if (
+        public_materialized_candidate_ready
+        and bool(public_statistical_support_work_order_summary.get("work_order_ready") is True)
+        and public_statistical_support_metric_materialization_present
+        and not public_statistical_support_coordinate_intake_present
+    ):
+        blockers.append("public_benchmark_statistical_support_coordinate_intake_missing")
     if (
         public_materialized_candidate_ready
         and bool(public_statistical_support_work_order_summary.get("work_order_ready") is True)
@@ -1122,6 +1229,59 @@ def build_engine_refinement_claim_evidence_priority_packet(
         ),
         "public_benchmark_statistical_support_metric_materialization_next_required_step": _text(
             public_statistical_support_metric_materialization_summary.get("next_required_step")
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_present": (
+            public_statistical_support_coordinate_intake_present
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_ready": bool(
+            public_statistical_support_coordinate_intake_summary.get("coordinate_intake_ready") is True
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_status": _text(
+            public_statistical_support_coordinate_intake_summary.get("status")
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_row_count": _int(
+            public_statistical_support_coordinate_intake_summary.get("coordinate_intake_row_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count": _int(
+            public_statistical_support_coordinate_intake_summary.get(
+                "coordinate_intake_artifact_present_row_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_missing_row_count": _int(
+            public_statistical_support_coordinate_intake_summary.get("coordinate_intake_missing_row_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count": _int(
+            public_statistical_support_coordinate_intake_summary.get(
+                "coordinate_intake_suggested_local_path_candidate_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count": _int(
+            public_statistical_support_coordinate_intake_summary.get(
+                "coordinate_intake_suggested_local_path_present_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count": _int(
+            public_statistical_support_coordinate_intake_summary.get(
+                "coordinate_intake_suggested_local_path_present_target_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count": _int(
+            public_statistical_support_coordinate_intake_summary.get(
+                "coordinate_intake_suggested_local_path_missing_target_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count": _int(
+            public_statistical_support_coordinate_intake_summary.get(
+                "coordinate_intake_expected_archive_member_example_count"
+            )
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count": _int(
+            public_statistical_support_coordinate_intake_summary.get("coordinate_validation_pass_row_count")
+        ),
+        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count": _int(
+            public_statistical_support_coordinate_intake_summary.get(
+                "coordinate_validation_blocked_row_count"
+            )
         ),
         "public_benchmark_statistical_support_metric_source_templates_present": (
             public_statistical_support_metric_source_templates_present
@@ -1317,6 +1477,7 @@ def build_engine_refinement_claim_evidence_priority_packet(
             str(public_benchmark_materialized_apply_json),
             str(public_benchmark_statistical_support_work_order_json),
             str(public_benchmark_statistical_support_metric_materialization_readiness_json),
+            str(public_benchmark_statistical_support_coordinate_intake_json),
             str(public_benchmark_statistical_support_metric_source_templates_json),
             str(public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json),
             str(public_benchmark_claim_grade_gap_audit_json),
@@ -1384,6 +1545,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"`{summary['public_benchmark_statistical_support_metric_materialization_candidate_blocked_count']}`",
         "- public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count: "
         f"`{summary['public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count']}`",
+        "- public_benchmark_statistical_support_coordinate_intake_local_path_candidates/present_targets/missing_targets: "
+        f"`{summary['public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count']}/"
+        f"{summary['public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count']}/"
+        f"{summary['public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count']}`",
         "- public_benchmark_statistical_support_metric_source_templates_ready: "
         f"`{summary['public_benchmark_statistical_support_metric_source_templates_ready']}`",
         "- public_benchmark_statistical_support_metric_source_templates_row/fill_ready/fill_blocked: "
@@ -1447,6 +1612,10 @@ def main(argv: list[str] | None = None) -> None:
         default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_JSON,
     )
     parser.add_argument(
+        "--public-benchmark-statistical-support-coordinate-intake-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_INTAKE_JSON,
+    )
+    parser.add_argument(
         "--public-benchmark-statistical-support-metric-source-templates-json",
         default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_JSON,
     )
@@ -1478,6 +1647,9 @@ def main(argv: list[str] | None = None) -> None:
         ),
         public_benchmark_statistical_support_metric_materialization_readiness_json=(
             args.public_benchmark_statistical_support_metric_materialization_readiness_json
+        ),
+        public_benchmark_statistical_support_coordinate_intake_json=(
+            args.public_benchmark_statistical_support_coordinate_intake_json
         ),
         public_benchmark_statistical_support_metric_source_templates_json=(
             args.public_benchmark_statistical_support_metric_source_templates_json

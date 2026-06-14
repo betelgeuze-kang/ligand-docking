@@ -239,6 +239,19 @@ ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_FIELDS = (
     "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count",
     "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields",
     "public_benchmark_statistical_support_metric_materialization_next_required_step",
+    "public_benchmark_statistical_support_coordinate_intake_present",
+    "public_benchmark_statistical_support_coordinate_intake_ready",
+    "public_benchmark_statistical_support_coordinate_intake_status",
+    "public_benchmark_statistical_support_coordinate_intake_row_count",
+    "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count",
+    "public_benchmark_statistical_support_coordinate_intake_missing_row_count",
+    "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count",
+    "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count",
+    "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count",
+    "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count",
+    "public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count",
+    "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count",
+    "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count",
     "public_benchmark_statistical_support_metric_source_templates_present",
     "public_benchmark_statistical_support_metric_source_templates_ready",
     "public_benchmark_statistical_support_metric_source_templates_status",
@@ -360,6 +373,8 @@ def _engine_refinement_claim_evidence_priority_packet_fields(
         "public_benchmark_statistical_support_metric_materialization_readiness_ready",
         "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready",
         "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready",
+        "public_benchmark_statistical_support_coordinate_intake_present",
+        "public_benchmark_statistical_support_coordinate_intake_ready",
         "public_benchmark_statistical_support_metric_source_templates_present",
         "public_benchmark_statistical_support_metric_source_templates_ready",
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present",
@@ -1441,6 +1456,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"`{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count']}`",
         "- engine_refinement_claim_evidence_priority_packet_planned_metric_source_payload_count: "
         f"`{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count']}`",
+        "- engine_refinement_claim_evidence_priority_packet_coordinate_intake_local_path_candidates/present_targets/missing_targets: "
+        f"`{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count']}/"
+        f"{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count']}/"
+        f"{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count']}`",
         "- engine_refinement_claim_evidence_priority_packet_existing_metric_source_payload_count: "
         f"`{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count']}`",
         "- engine_refinement_claim_evidence_priority_packet_required_metric_source_payloads: "

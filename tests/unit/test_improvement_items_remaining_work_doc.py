@@ -710,6 +710,36 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`"
         in text
     )
+    assert (
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_row_count=17`"
+        in text
+    )
+    assert (
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count=136`"
+        in text
+    )
+    assert (
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count=0`"
+        in text
+    )
+    assert (
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count=17`"
+        in text
+    )
+    assert "`public_benchmark_statistical_support_coordinate_intake_ready=true`" in text
+    assert "`public_benchmark_statistical_support_coordinate_intake_row_count=17`" in text
+    assert (
+        "`public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count=136`"
+        in text
+    )
+    assert (
+        "`public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count=0`"
+        in text
+    )
+    assert (
+        "`public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count=17`"
+        in text
+    )
     assert "`planned_metric_source_payload_count=51`" in text
     assert "top-level 병목 briefing" in text
     assert "R9 receptor-coordinate validation pass 8개/blocked 0개" in text

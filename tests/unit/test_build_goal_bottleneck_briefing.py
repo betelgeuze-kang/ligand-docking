@@ -508,6 +508,9 @@ def _engine_refinement_claim_evidence_priority_packet() -> dict:
                 "(coordinate_validation_pass_row_count=0, "
                 "metric_materialization_candidate_ready_count=0, "
                 "required_input_artifacts=34/17/17, "
+                "local_coordinate_path_candidates=136, "
+                "local_coordinate_present_targets=0, "
+                "local_coordinate_missing_targets=17, "
                 "planned_metric_source_payload_count=51); then materialize DockQ/lDDT-PLI/internal "
                 "DeltaG source payloads and rerun bootstrap Spearman p05 before any R9 claim receipt "
                 "or canonical intake promotion."
@@ -569,6 +572,21 @@ def _engine_refinement_claim_evidence_priority_packet() -> dict:
                 "DockQ, lDDT-PLI, and internal DeltaG source payloads and rerunning bootstrap "
                 "Spearman p05."
             ),
+            "public_benchmark_statistical_support_coordinate_intake_present": True,
+            "public_benchmark_statistical_support_coordinate_intake_ready": True,
+            "public_benchmark_statistical_support_coordinate_intake_status": (
+                "refine_tier_public_benchmark_statistical_support_coordinate_intake_ready"
+            ),
+            "public_benchmark_statistical_support_coordinate_intake_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count": 0,
+            "public_benchmark_statistical_support_coordinate_intake_missing_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count": 136,
+            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count": 0,
+            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count": 0,
+            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count": 51,
+            "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count": 0,
+            "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count": 17,
             "public_benchmark_statistical_support_metric_source_templates_present": True,
             "public_benchmark_statistical_support_metric_source_templates_ready": True,
             "public_benchmark_statistical_support_metric_source_templates_status": (
@@ -965,6 +983,15 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
     assert "coordinate-fetch preflight" in summary[
         "engine_refinement_claim_evidence_priority_packet_top_next_operator_step"
     ]
+    assert "local_coordinate_path_candidates=136" in summary[
+        "engine_refinement_claim_evidence_priority_packet_top_next_operator_step"
+    ]
+    assert "local_coordinate_present_targets=0" in summary[
+        "engine_refinement_claim_evidence_priority_packet_top_next_operator_step"
+    ]
+    assert "local_coordinate_missing_targets=17" in summary[
+        "engine_refinement_claim_evidence_priority_packet_top_next_operator_step"
+    ]
     assert summary[
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_row_count"
     ] == 17
@@ -998,6 +1025,39 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
     assert summary[
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads"
     ] == "dockq;lddt_pli;internal_deltaG"
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_present"
+    ] is True
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_ready"
+    ] is True
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_status"
+    ] == "refine_tier_public_benchmark_statistical_support_coordinate_intake_ready"
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_row_count"
+    ] == 17
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_missing_row_count"
+    ] == 17
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count"
+    ] == 136
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count"
+    ] == 0
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count"
+    ] == 17
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count"
+    ] == 51
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count"
+    ] == 0
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count"
+    ] == 17
     assert summary[
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_ready"
     ] is True
@@ -1080,7 +1140,19 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
     assert by_id["R9_engine_refinement_claim_promotion"][
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
     ] == 51
+    assert by_id["R9_engine_refinement_claim_promotion"][
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count"
+    ] == 136
+    assert by_id["R9_engine_refinement_claim_promotion"][
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count"
+    ] == 0
+    assert by_id["R9_engine_refinement_claim_promotion"][
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count"
+    ] == 17
     assert "coordinate-fetch preflight" in by_id["R9_engine_refinement_claim_promotion"][
+        "recommended_action"
+    ]
+    assert "local_coordinate_path_candidates=136" in by_id["R9_engine_refinement_claim_promotion"][
         "recommended_action"
     ]
     assert by_id["R9_engine_refinement_claim_promotion"]["post_return_acceptance_artifact"] == (
