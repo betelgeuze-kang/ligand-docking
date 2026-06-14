@@ -301,13 +301,43 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert "`metric_materialization_readiness_ready=true`" in text
+    assert "`metric_materialization_all_candidates_ready=false`" in text
     assert "`metric_materialization_row_count=17`" in text
     assert "`metric_materialization_candidate_ready_count=0`" in text
     assert "`metric_materialization_candidate_blocked_count=17`" in text
+    assert "`coordinate_validation_blocked_row_count=17`" in text
     assert "`planned_metric_source_payload_count=51`" in text
     assert "`existing_metric_source_payload_count=0`" in text
     assert "`required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`" in text
     assert "`claim_grade_statistical_support_ready=false`" in text
+    assert "`public_benchmark_statistical_support_metric_materialization_readiness_present=true`" in text
+    assert "`public_benchmark_statistical_support_metric_materialization_readiness_ready=true`" in text
+    assert "`public_benchmark_statistical_support_metric_materialization_all_candidates_ready=false`" in text
+    assert "`public_benchmark_statistical_support_metric_materialization_row_count=17`" in text
+    assert "`public_benchmark_statistical_support_metric_materialization_candidate_ready_count=0`" in text
+    assert "`public_benchmark_statistical_support_metric_materialization_candidate_blocked_count=17`" in text
+    assert (
+        "`public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count=0`"
+        in text
+    )
+    assert (
+        "`public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count=17`"
+        in text
+    )
+    assert (
+        "`public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count=0`"
+        in text
+    )
+    assert (
+        "`public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count=51`"
+        in text
+    )
+    assert (
+        "`public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`"
+        in text
+    )
+    assert "`openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized`" in text
+    assert "`blocker_count=6`" in text
     assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
     assert "`runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`" in text
     assert "`Review the R4 coordinate-fetch preflight`" in text

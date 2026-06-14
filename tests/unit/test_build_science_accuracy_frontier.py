@@ -24,6 +24,9 @@ def _write_inputs(
         "public_benchmark_materialization_json": tmp_path / "public_materialization.json",
         "public_benchmark_materialized_apply_json": tmp_path / "public_materialized_apply.json",
         "public_benchmark_statistical_support_work_order_json": tmp_path / "public_stat_work_order.json",
+        "public_benchmark_statistical_support_metric_materialization_readiness_json": (
+            tmp_path / "public_stat_metric_materialization_readiness.json"
+        ),
         "engine_receipt_json": tmp_path / "receipt.json",
         "engine_priority_json": tmp_path / "priority.json",
         "pose_sampling_json": tmp_path / "pose.json",
@@ -211,6 +214,31 @@ def _write_inputs(
         },
     )
     _write(
+        paths["public_benchmark_statistical_support_metric_materialization_readiness_json"],
+        {
+            "status": (
+                "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
+            ),
+            "metric_materialization_readiness_ready": True,
+            "metric_materialization_all_candidates_ready": ready,
+            "metric_materialization_row_count": 17 if materialized_candidate_ready and not ready else 0,
+            "metric_materialization_candidate_ready_count": 0,
+            "metric_materialization_candidate_blocked_count": 17 if materialized_candidate_ready and not ready else 0,
+            "coordinate_validation_pass_row_count": 0,
+            "coordinate_validation_blocked_row_count": 17 if materialized_candidate_ready and not ready else 0,
+            "existing_metric_source_payload_count": 0,
+            "planned_metric_source_payload_count": 51 if materialized_candidate_ready and not ready else 0,
+            "required_metric_source_payloads": "dockq;lddt_pli;internal_deltaG",
+            "claim_grade_statistical_support_ready": ready,
+            "next_required_step": (
+                "After operator-approved coordinate fetch and post-fetch validation, require all 17 "
+                "statistical-support candidates to pass coordinate validation before materializing "
+                "DockQ, lDDT-PLI, and internal DeltaG source payloads and rerunning bootstrap "
+                "Spearman p05."
+            ),
+        },
+    )
+    _write(
         paths["engine_receipt_json"],
         {
             "status": (
@@ -278,6 +306,10 @@ def test_science_accuracy_frontier_blocks_commercial_parity_without_public_r9_ev
     assert summary["public_benchmark_materialized_claim_grade_statistical_support_blocker_count"] == 0
     assert summary["public_benchmark_statistical_support_work_order_ready"] is True
     assert summary["public_benchmark_statistical_support_work_order_expansion_slot_count"] == 0
+    assert summary["public_benchmark_statistical_support_metric_materialization_readiness_ready"] is True
+    assert summary["public_benchmark_statistical_support_metric_materialization_all_candidates_ready"] is False
+    assert summary["public_benchmark_statistical_support_metric_materialization_row_count"] == 0
+    assert summary["public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count"] == 0
     assert summary["engine_refinement_claim_evidence_receipt_ready"] is False
     assert summary["public_benchmark_work_order_seeded_row_count"] == 8
     assert summary["public_benchmark_work_order_prefilled_operator_field_count"] == 40
@@ -384,14 +416,49 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
     assert summary["public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count"] == 12
     assert summary["public_benchmark_statistical_support_work_order_bootstrap_retest_required"] is True
     assert summary["public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed"] is False
+    assert summary["public_benchmark_statistical_support_metric_materialization_readiness_present"] is True
+    assert summary["public_benchmark_statistical_support_metric_materialization_readiness_ready"] is True
+    assert summary["public_benchmark_statistical_support_metric_materialization_all_candidates_ready"] is False
+    assert summary["public_benchmark_statistical_support_metric_materialization_row_count"] == 17
+    assert summary["public_benchmark_statistical_support_metric_materialization_candidate_ready_count"] == 0
+    assert summary["public_benchmark_statistical_support_metric_materialization_candidate_blocked_count"] == 17
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count"
+        ]
+        == 51
+    )
+    assert summary[
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads"
+    ] == "dockq;lddt_pli;internal_deltaG"
     assert summary["blockers"] == [
         "gpcr_broad_claim_review_not_approved",
         "gpcr_scorer_router_promotion_not_approved",
         "openmm_schrodinger_public_benchmark_not_promoted_to_canonical_intake",
         "openmm_schrodinger_public_benchmark_statistical_support_not_claim_grade",
+        "openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized",
         "engine_refinement_claim_evidence_receipt_not_ready",
     ]
-    assert "materialized R9 metric evidence are ready" in summary["next_required_step"]
+    assert "current 8-row materialized R9 metric evidence" in summary["next_required_step"]
+    assert "coordinate validation/materialization" in summary["next_required_step"]
 
 
 def test_science_accuracy_frontier_can_turn_ready_when_claim_evidence_is_ready(
@@ -430,6 +497,8 @@ def test_science_accuracy_frontier_cli_writes_json_and_markdown(tmp_path: Path) 
             str(paths["public_benchmark_materialized_apply_json"]),
             "--public-benchmark-statistical-support-work-order-json",
             str(paths["public_benchmark_statistical_support_work_order_json"]),
+            "--public-benchmark-statistical-support-metric-materialization-readiness-json",
+            str(paths["public_benchmark_statistical_support_metric_materialization_readiness_json"]),
             "--engine-receipt-json",
             str(paths["engine_receipt_json"]),
             "--engine-priority-json",

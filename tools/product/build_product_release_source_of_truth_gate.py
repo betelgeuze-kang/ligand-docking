@@ -1124,6 +1124,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/refine_tier_public_benchmark_metric_source_materialization_current.json",
             "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json",
             "runs/engine_refinement_claim_evidence_receipt_current.json",
             "runs/engine_refinement_claim_evidence_priority_packet_current.json",
             "runs/product_pose_sampling_readiness_current.json",
@@ -2959,6 +2960,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_materialized_metric_ready",
             "public_benchmark_materialized_apply_ready",
             "public_benchmark_statistical_support_work_order_ready",
+            "public_benchmark_statistical_support_metric_materialization_readiness_present",
+            "public_benchmark_statistical_support_metric_materialization_readiness_ready",
         ],
         "required_int_exact_fields": {
             "broad_commercial_accuracy_claim_ready": 0,
@@ -3048,6 +3051,14 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count": 12,
             "public_benchmark_statistical_support_work_order_bootstrap_retest_required": 1,
             "public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed": 0,
+            "public_benchmark_statistical_support_metric_materialization_all_candidates_ready": 0,
+            "public_benchmark_statistical_support_metric_materialization_row_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
             "public_benchmark_work_order_ligand_pose_only_row_count": 0,
             "public_benchmark_work_order_missing_interaction_metric_source_row_count": 8,
             "public_benchmark_work_order_missing_internal_deltaG_source_row_count": 8,
@@ -3057,7 +3068,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_work_order_seed_distinct_target_count": 284,
             "engine_refinement_receipt_blocked_row_count": 6,
             "external_state_mutated": 0,
-            "blocker_count": 5,
+            "blocker_count": 6,
         },
         "required_text_exact_fields": {
             "accuracy_parity_status": "blocked_accuracy_parity",
@@ -3071,6 +3082,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "refine_tier_public_benchmark_status": "blocked_refine_tier_public_benchmark_readiness",
             "public_benchmark_statistical_support_work_order_status": (
                 "refine_tier_public_benchmark_statistical_support_work_order_ready"
+            ),
+            "public_benchmark_statistical_support_metric_materialization_status": (
+                "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
+            ),
+            "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads": (
+                "dockq;lddt_pli;internal_deltaG"
             ),
             "engine_refinement_claim_evidence_receipt_status": (
                 "blocked_engine_refinement_claim_evidence_receipt"

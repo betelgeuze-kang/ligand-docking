@@ -309,9 +309,24 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `public_benchmark_materialized_free_energy_spearman_bootstrap_p05=-0.14285714285714285`,
   `public_benchmark_materialized_claim_grade_statistical_support_ready=false`,
   `public_benchmark_materialized_claim_grade_statistical_support_blocker_count=3`,
-  `blocker_count=5`다. 즉 상용 parity claim의 과학 병목은 더 이상 단일 metric
+  `public_benchmark_statistical_support_metric_materialization_readiness_present=true`,
+  `public_benchmark_statistical_support_metric_materialization_readiness_ready=true`,
+  `public_benchmark_statistical_support_metric_materialization_all_candidates_ready=false`,
+  `public_benchmark_statistical_support_metric_materialization_row_count=17`,
+  `public_benchmark_statistical_support_metric_materialization_candidate_ready_count=0`,
+  `public_benchmark_statistical_support_metric_materialization_candidate_blocked_count=17`,
+  `public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count=0`,
+  `public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count=17`,
+  `public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count=0`,
+  `public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count=51`,
+  `public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`,
+  `blocker_count=6`다. 추가 blocker는
+  `openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized`로,
+  17개 statistical-support 후보의 coordinate validation/materialization이 아직
+  닫히지 않았음을 accuracy frontier에서 직접 표시한다. 즉 상용 parity claim의 과학 병목은 더 이상 단일 metric
   failure가 아니라 GPCR formal claim/router approval, R9 public benchmark/evidence
-  receipt 부재, 그리고 materialized R9 후보의 통계 support 부족으로 분리된다.
+  receipt 부재, materialized R9 후보의 통계 support 부족, 그리고 17개 후보의
+  DockQ/lDDT-PLI/internal ΔG source payload 51개 미생성으로 분리된다.
   R9 쪽은 public experimental ΔG가 pAffinity에서
   선채움됐고 ligand pose artifact 8개도 로컬에 있으며, 2026-06-14에는 RCSB
   public PDB coordinate 8개를 로컬 dataset 경로에 배치해 receptor/complex coordinate
@@ -504,10 +519,12 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   별도 read-only readiness로 고정해
   `refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready`,
   `metric_materialization_readiness_ready=true`,
+  `metric_materialization_all_candidates_ready=false`,
   `metric_materialization_row_count=17`,
   `metric_materialization_candidate_ready_count=0`,
   `metric_materialization_candidate_blocked_count=17`,
   `coordinate_validation_pass_row_count=0`,
+  `coordinate_validation_blocked_row_count=17`,
   `planned_metric_source_payload_count=51`,
   `existing_metric_source_payload_count=0`,
   `required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`,

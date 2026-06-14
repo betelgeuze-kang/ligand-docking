@@ -79,6 +79,76 @@ def test_check_independent_product_readiness_script_reports_restricted_ready_wit
         "claim_grade_public_benchmark_holdout_pair_count_below_minimum",
         "claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum",
     ]
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_readiness_present"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_all_candidates_ready"
+        ]
+        is False
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_row_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_candidate_ready_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_candidate_blocked_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count"
+        ]
+        == 17
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count"
+        ]
+        == 51
+    )
+    assert (
+        summary[
+            "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads"
+        ]
+        == "dockq;lddt_pli;internal_deltaG"
+    )
+    assert (
+        "openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized"
+        in summary["science_accuracy_frontier_blockers"]
+    )
     assert summary["science_accuracy_frontier_public_benchmark_receptor_coordinate_validation_min_protein_like_residues"] == 5
     assert (
         summary[

@@ -1559,6 +1559,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "public_benchmark_statistical_support_work_order_ready" in science_accuracy_frontier_spec[
         "required_true_fields"
     ]
+    assert "public_benchmark_statistical_support_metric_materialization_readiness_present" in (
+        science_accuracy_frontier_spec["required_true_fields"]
+    )
+    assert "public_benchmark_statistical_support_metric_materialization_readiness_ready" in (
+        science_accuracy_frontier_spec["required_true_fields"]
+    )
     assert science_accuracy_frontier_spec["required_int_exact_fields"] == {
             "broad_commercial_accuracy_claim_ready": 0,
             "gpcr_broad_claim_ready": 0,
@@ -1647,6 +1653,14 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count": 12,
         "public_benchmark_statistical_support_work_order_bootstrap_retest_required": 1,
         "public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed": 0,
+        "public_benchmark_statistical_support_metric_materialization_all_candidates_ready": 0,
+        "public_benchmark_statistical_support_metric_materialization_row_count": 17,
+        "public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 0,
+        "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 17,
+        "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 0,
+        "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 17,
+        "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
+        "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
         "public_benchmark_work_order_ligand_pose_only_row_count": 0,
         "public_benchmark_work_order_missing_interaction_metric_source_row_count": 8,
         "public_benchmark_work_order_missing_internal_deltaG_source_row_count": 8,
@@ -1656,7 +1670,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_work_order_seed_distinct_target_count": 284,
         "engine_refinement_receipt_blocked_row_count": 6,
         "external_state_mutated": 0,
-        "blocker_count": 5,
+        "blocker_count": 6,
     }
     assert science_accuracy_frontier_spec["required_text_exact_fields"] == {
         "accuracy_parity_status": "blocked_accuracy_parity",
@@ -1670,6 +1684,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "refine_tier_public_benchmark_status": "blocked_refine_tier_public_benchmark_readiness",
         "public_benchmark_statistical_support_work_order_status": (
             "refine_tier_public_benchmark_statistical_support_work_order_ready"
+        ),
+        "public_benchmark_statistical_support_metric_materialization_status": (
+            "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
+        ),
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads": (
+            "dockq;lddt_pli;internal_deltaG"
         ),
         "engine_refinement_claim_evidence_receipt_status": (
             "blocked_engine_refinement_claim_evidence_receipt"
@@ -2906,6 +2926,14 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert (
         "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json"
+        in science_accuracy_frontier_spec["depends_on"]
+    )
+    assert (
+        "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json"
+        in science_accuracy_frontier_spec["depends_on"]
+    )
+    assert (
+        "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json"
         in science_accuracy_frontier_spec["depends_on"]
     )
     assert "runs/engine_refinement_claim_evidence_receipt_current.json" in science_accuracy_frontier_spec[
