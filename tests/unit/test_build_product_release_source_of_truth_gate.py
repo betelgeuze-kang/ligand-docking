@@ -1759,6 +1759,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         if spec["artifact_id"] == "goal_bottleneck_briefing_semantic_ready"
     )
     assert bottleneck_status_spec["required_true_fields"] == [
+        "engine_refinement_claim_evidence_priority_packet_priority_packet_ready",
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_readiness_present",
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_readiness_ready",
         "product_scope_breadth_evidence_priority_packet_ready",
         "production_ai_registry_promotion_priority_packet_ready"
     ]
@@ -1778,7 +1781,32 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "product_scope_breadth_evidence_priority_scientific_evidence_request_count": 11,
         "product_scope_breadth_evidence_priority_local_crosscheck_candidate_count": 11,
         "product_scope_breadth_evidence_priority_review_only_keep_blocked_count": 1,
+        "engine_refinement_claim_evidence_priority_packet_priority_item_count": 6,
+        "engine_refinement_claim_evidence_priority_packet_operator_input_required_count": 6,
+        "engine_refinement_claim_evidence_priority_packet_blocked_priority_item_count": 6,
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_row_count": 17,
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 0,
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 17,
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 0,
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 17,
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
     }
+    assert bottleneck_status_spec["required_text_exact_fields"][
+        "engine_refinement_claim_evidence_priority_packet_source_json"
+    ] == "runs/engine_refinement_claim_evidence_priority_packet_current.json"
+    assert bottleneck_status_spec["required_text_exact_fields"][
+        "engine_refinement_claim_evidence_priority_packet_status"
+    ] == "blocked_engine_refinement_claim_evidence_priority_packet"
+    assert bottleneck_status_spec["required_text_exact_fields"][
+        "engine_refinement_claim_evidence_priority_packet_top_blocker_id"
+    ] == "public_benchmark_gate_not_ready"
+    assert bottleneck_status_spec["required_text_exact_fields"][
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads"
+    ] == "dockq;lddt_pli;internal_deltaG"
+    assert "planned_metric_source_payload_count=51" in bottleneck_status_spec[
+        "required_text_exact_fields"
+    ]["engine_refinement_claim_evidence_priority_packet_top_next_operator_step"]
     assert bottleneck_status_spec["required_text_exact_fields"][
         "product_scope_breadth_evidence_priority_source_json"
     ] == "runs/product_scope_breadth_evidence_priority_packet_current.json"
@@ -2617,6 +2645,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "goal_bottleneck_briefing"
     )
     assert "runs/product_goal_completion_audit_current.json" in goal_bottleneck_spec["depends_on"]
+    assert "runs/engine_refinement_claim_evidence_priority_packet_current.json" in goal_bottleneck_spec["depends_on"]
     assert "runs/goal_operator_action_board_current.json" in goal_bottleneck_spec["depends_on"]
     assert "runs/goal_operator_intake_kit_current/manifest.json" in goal_bottleneck_spec["depends_on"]
     assert "runs/product_public_benchmark_work_order_current.json" in goal_bottleneck_spec["depends_on"]

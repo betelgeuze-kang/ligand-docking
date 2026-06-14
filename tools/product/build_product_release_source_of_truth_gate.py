@@ -1193,6 +1193,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "tools/accounting/build_goal_bottleneck_briefing.py",
             "tools/build_goal_bottleneck_briefing.py",
             "runs/product_goal_completion_audit_current.json",
+            "runs/engine_refinement_claim_evidence_priority_packet_current.json",
             "runs/goal_operator_action_board_current.json",
             "runs/goal_operator_intake_kit_current/manifest.json",
             "runs/goal_release_burndown_work_order_current.json",
@@ -3230,6 +3231,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "builder_command": "python3 tools/build_goal_bottleneck_briefing.py",
         "required_status": "goal_bottleneck_briefing_ready",
         "required_true_fields": [
+            "engine_refinement_claim_evidence_priority_packet_priority_packet_ready",
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_readiness_present",
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_readiness_ready",
             "product_scope_breadth_evidence_priority_packet_ready",
             "production_ai_registry_promotion_priority_packet_ready",
         ],
@@ -3249,8 +3253,42 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "product_scope_breadth_evidence_priority_scientific_evidence_request_count": 11,
             "product_scope_breadth_evidence_priority_local_crosscheck_candidate_count": 11,
             "product_scope_breadth_evidence_priority_review_only_keep_blocked_count": 1,
+            "engine_refinement_claim_evidence_priority_packet_priority_item_count": 6,
+            "engine_refinement_claim_evidence_priority_packet_operator_input_required_count": 6,
+            "engine_refinement_claim_evidence_priority_packet_blocked_priority_item_count": 6,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_row_count": 17,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 0,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 17,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 0,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 17,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
         },
         "required_text_exact_fields": {
+            "engine_refinement_claim_evidence_priority_packet_source_json": (
+                "runs/engine_refinement_claim_evidence_priority_packet_current.json"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_status": (
+                "blocked_engine_refinement_claim_evidence_priority_packet"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_top_blocker_id": (
+                "public_benchmark_gate_not_ready"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_status": (
+                "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads": (
+                "dockq;lddt_pli;internal_deltaG"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_top_next_operator_step": (
+                "Review the R4 coordinate-fetch preflight and, after explicit operator approval, "
+                "stage and validate coordinates for 17 statistical-support candidates "
+                "(coordinate_validation_pass_row_count=0, "
+                "metric_materialization_candidate_ready_count=0, "
+                "planned_metric_source_payload_count=51); then materialize DockQ/lDDT-PLI/internal "
+                "DeltaG source payloads and rerun bootstrap Spearman p05 before any canonical intake "
+                "promotion."
+            ),
             "product_scope_breadth_evidence_priority_source_json": (
                 "runs/product_scope_breadth_evidence_priority_packet_current.json"
             ),

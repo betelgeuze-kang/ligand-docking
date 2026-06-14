@@ -14,6 +14,9 @@ from tools.build_goal_release_decision_gate import DEFAULT_OUT_JSON as DEFAULT_R
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_COMPLETION_AUDIT_JSON = "runs/product_goal_completion_audit_current.json"
+DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_JSON = (
+    "runs/engine_refinement_claim_evidence_priority_packet_current.json"
+)
 DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_JSON = "runs/product_public_benchmark_work_order_current.json"
 DEFAULT_PUBLIC_BENCHMARK_PREFLIGHT_JSONS = [
     "runs/dude_z_decoy_smoke_product_inputs_current.json",
@@ -176,6 +179,62 @@ PRODUCT_SCOPE_BREADTH_EVIDENCE_PRIORITY_INTAKE_FIELDS = (
     "external_state_mutated",
 )
 
+ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_FIELDS = (
+    "source_json",
+    "status",
+    "priority_packet_ready",
+    "claim_promotion_allowed",
+    "claim_evidence_receipt_ready",
+    "claim_evidence_receipt_status",
+    "priority_item_count",
+    "operator_input_required_count",
+    "blocked_priority_item_count",
+    "required_blocker_count",
+    "missing_required_blocker_count",
+    "blocker_count",
+    "public_benchmark_gate_ready",
+    "public_benchmark_status",
+    "top_blocker_id",
+    "top_priority_bucket",
+    "top_required_input",
+    "top_acceptance_artifact",
+    "top_verification_command",
+    "top_next_operator_step",
+    "public_benchmark_materialized_candidate_ready",
+    "public_benchmark_materialized_metric_ready",
+    "public_benchmark_materialized_apply_ready",
+    "public_benchmark_materialized_apply_status",
+    "public_benchmark_materialized_work_order_row_count",
+    "public_benchmark_materialized_metric_evidence_pass_row_count",
+    "public_benchmark_materialized_metric_evidence_blocked_row_count",
+    "public_benchmark_materialized_free_energy_pair_count",
+    "public_benchmark_materialized_free_energy_spearman",
+    "public_benchmark_materialized_free_energy_spearman_bootstrap_p05",
+    "public_benchmark_materialized_free_energy_spearman_gate_ready",
+    "public_benchmark_statistical_support_work_order_ready",
+    "public_benchmark_statistical_support_work_order_status",
+    "public_benchmark_statistical_support_work_order_expansion_slot_count",
+    "public_benchmark_statistical_support_work_order_minimum_new_pair_count",
+    "public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count",
+    "public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count",
+    "public_benchmark_statistical_support_work_order_bootstrap_retest_required",
+    "public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed",
+    "public_benchmark_statistical_support_metric_materialization_readiness_present",
+    "public_benchmark_statistical_support_metric_materialization_readiness_ready",
+    "public_benchmark_statistical_support_metric_materialization_status",
+    "public_benchmark_statistical_support_metric_materialization_row_count",
+    "public_benchmark_statistical_support_metric_materialization_candidate_ready_count",
+    "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count",
+    "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count",
+    "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count",
+    "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count",
+    "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count",
+    "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready",
+    "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads",
+    "public_benchmark_statistical_support_metric_materialization_next_required_step",
+    "external_state_mutated",
+)
+
 
 def _full_commercial_evidence_receipt_intake_fields(intake: dict[str, Any]) -> dict[str, Any]:
     fields: dict[str, Any] = {}
@@ -249,6 +308,57 @@ def _product_scope_breadth_evidence_priority_intake_fields(
             fields[source_key] = bool(intake.get(source_key) is True)
         else:
             fields[source_key] = _text(intake.get(source_key))
+    return fields
+
+
+def _engine_refinement_claim_evidence_priority_packet_fields(
+    priority: dict[str, Any],
+    *,
+    source_json: str,
+) -> dict[str, Any]:
+    fields: dict[str, Any] = {}
+    bool_suffixes = {
+        "priority_packet_ready",
+        "claim_promotion_allowed",
+        "claim_evidence_receipt_ready",
+        "public_benchmark_gate_ready",
+        "public_benchmark_materialized_candidate_ready",
+        "public_benchmark_materialized_metric_ready",
+        "public_benchmark_materialized_apply_ready",
+        "public_benchmark_materialized_free_energy_spearman_gate_ready",
+        "public_benchmark_statistical_support_work_order_ready",
+        "public_benchmark_statistical_support_work_order_bootstrap_retest_required",
+        "public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed",
+        "public_benchmark_statistical_support_metric_materialization_readiness_present",
+        "public_benchmark_statistical_support_metric_materialization_readiness_ready",
+        "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready",
+        "external_state_mutated",
+    }
+    float_suffixes = {
+        "public_benchmark_materialized_free_energy_spearman",
+        "public_benchmark_materialized_free_energy_spearman_bootstrap_p05",
+    }
+    prefix = "engine_refinement_claim_evidence_priority_packet_"
+    for suffix in ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_FIELDS:
+        target_key = f"{prefix}{suffix}"
+        if suffix == "source_json":
+            fields[target_key] = source_json if priority else ""
+        elif suffix.endswith("_count") or suffix in {
+            "priority_item_count",
+            "public_benchmark_materialized_work_order_row_count",
+            "public_benchmark_materialized_free_energy_pair_count",
+            "public_benchmark_statistical_support_work_order_expansion_slot_count",
+            "public_benchmark_statistical_support_work_order_minimum_new_pair_count",
+            "public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count",
+            "public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count",
+        }:
+            fields[target_key] = _int(priority.get(suffix))
+        elif suffix in bool_suffixes:
+            fields[target_key] = bool(priority.get(suffix) is True)
+        elif suffix in float_suffixes:
+            fields[target_key] = _float(priority.get(suffix))
+        else:
+            fields[target_key] = _text(priority.get(suffix))
     return fields
 
 
@@ -531,6 +641,7 @@ def build_goal_bottleneck_briefing(
     action_board_packet: dict[str, Any],
     intake_kit_packet: dict[str, Any],
     completion_audit_packet: dict[str, Any] | None = None,
+    engine_refinement_claim_evidence_priority_packet: dict[str, Any] | None = None,
     public_benchmark_work_order_packet: dict[str, Any] | None = None,
     public_benchmark_preflight_packets: list[dict[str, Any]] | None = None,
     public_benchmark_preflight_paths: list[str] | None = None,
@@ -539,6 +650,9 @@ def build_goal_bottleneck_briefing(
     action_board_path: str = DEFAULT_ACTION_BOARD_JSON,
     intake_kit_path: str = DEFAULT_INTAKE_KIT_JSON,
     completion_audit_path: str = DEFAULT_COMPLETION_AUDIT_JSON,
+    engine_refinement_claim_evidence_priority_packet_path: str = (
+        DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_JSON
+    ),
     public_benchmark_work_order_path: str = DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_JSON,
 ) -> dict[str, Any]:
     release = _summary(release_gate_packet)
@@ -546,6 +660,19 @@ def build_goal_bottleneck_briefing(
     actions = _summary(action_board_packet)
     intake = _summary(intake_kit_packet)
     completion_audit = _summary(completion_audit_packet or {})
+    engine_refinement_claim_evidence_priority = _summary(
+        engine_refinement_claim_evidence_priority_packet or {}
+    )
+    engine_refinement_claim_evidence_priority_fields = (
+        _engine_refinement_claim_evidence_priority_packet_fields(
+            engine_refinement_claim_evidence_priority,
+            source_json=engine_refinement_claim_evidence_priority_packet_path,
+        )
+    )
+    engine_refinement_claim_evidence_priority_artifacts = _unique(
+        [engine_refinement_claim_evidence_priority_packet_path]
+        + _text_list(engine_refinement_claim_evidence_priority.get("source_artifacts"))
+    )
     public_benchmark_work_order = _summary(public_benchmark_work_order_packet or {})
     public_benchmark_preflights = _preflight_summaries(public_benchmark_preflight_packets)
     public_benchmark_preflight_tokens = _unique(
@@ -765,7 +892,14 @@ def build_goal_bottleneck_briefing(
         if audit_row.get("release_blocker") is not True or _text(audit_row.get("status")) == "pass":
             continue
         kind = _completion_bottleneck_kind(audit_row)
-        source_artifacts = _unique([audit_row.get("evidence_artifacts")])
+        source_artifacts = _unique(
+            [audit_row.get("evidence_artifacts")]
+            + (
+                engine_refinement_claim_evidence_priority_artifacts
+                if kind == "engine_refinement_claim_promotion_required"
+                else []
+            )
+        )
         required_inputs = _unique([audit_row.get("blocker"), audit_row.get("requirement_id")])
         row = {
             "bottleneck_id": _text(audit_row.get("requirement_id")) or f"completion_audit_blocker_{index}",
@@ -836,6 +970,13 @@ def build_goal_bottleneck_briefing(
                 source_artifacts=source_artifacts,
             )
         )
+        if kind == "engine_refinement_claim_promotion_required":
+            row.update(engine_refinement_claim_evidence_priority_fields)
+            top_operator_step = _text(
+                row.get("engine_refinement_claim_evidence_priority_packet_top_next_operator_step")
+            )
+            if top_operator_step:
+                row["recommended_action"] = top_operator_step
         completion_blocker_rows.append(row)
     rows.extend(completion_blocker_rows)
 
@@ -1016,6 +1157,7 @@ def build_goal_bottleneck_briefing(
                 "product_goal_engine_refinement_claim_evidence_receipt_most_common_row_blocker"
             )
         ),
+        **engine_refinement_claim_evidence_priority_fields,
         **_product_scope_breadth_evidence_priority_intake_fields(intake),
         **_production_ai_registry_promotion_priority_intake_fields(intake),
         "public_benchmark_work_order_status": _text(public_benchmark_work_order.get("status")),
@@ -1246,6 +1388,24 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- primary_full_commercial_release_blocker_first_blocked_evidence_row_id: `{s['primary_full_commercial_release_blocker_first_blocked_evidence_row_id']}`",
         f"- primary_full_commercial_release_blocker_receipt_csv: `{s['primary_full_commercial_release_blocker_receipt_csv']}`",
         f"- primary_full_commercial_release_blocker_approval_token_required: `{s['primary_full_commercial_release_blocker_approval_token_required']}`",
+        f"- engine_refinement_claim_evidence_priority_packet_source_json: `{s['engine_refinement_claim_evidence_priority_packet_source_json']}`",
+        f"- engine_refinement_claim_evidence_priority_packet_status: `{s['engine_refinement_claim_evidence_priority_packet_status']}`",
+        f"- engine_refinement_claim_evidence_priority_packet_top_blocker_id: `{s['engine_refinement_claim_evidence_priority_packet_top_blocker_id']}`",
+        f"- engine_refinement_claim_evidence_priority_packet_top_next_operator_step: `{s['engine_refinement_claim_evidence_priority_packet_top_next_operator_step']}`",
+        "- engine_refinement_claim_evidence_priority_packet_metric_materialization_row_count: "
+        f"`{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_row_count']}`",
+        "- engine_refinement_claim_evidence_priority_packet_metric_materialization_candidate_ready_count: "
+        f"`{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_ready_count']}`",
+        "- engine_refinement_claim_evidence_priority_packet_metric_materialization_candidate_blocked_count: "
+        f"`{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_blocked_count']}`",
+        "- engine_refinement_claim_evidence_priority_packet_coordinate_validation_pass_row_count: "
+        f"`{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count']}`",
+        "- engine_refinement_claim_evidence_priority_packet_planned_metric_source_payload_count: "
+        f"`{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count']}`",
+        "- engine_refinement_claim_evidence_priority_packet_existing_metric_source_payload_count: "
+        f"`{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count']}`",
+        "- engine_refinement_claim_evidence_priority_packet_required_metric_source_payloads: "
+        f"`{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads']}`",
         f"- production_ai_registry_promotion_priority_status: `{s['production_ai_registry_promotion_priority_status']}`",
         f"- production_ai_registry_promotion_priority_top_gate_id: `{s['production_ai_registry_promotion_priority_top_gate_id']}`",
         f"- production_ai_registry_promotion_priority_top_required_input: `{s['production_ai_registry_promotion_priority_top_required_input']}`",
@@ -1317,6 +1477,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--action-board-json", default=DEFAULT_ACTION_BOARD_JSON)
     parser.add_argument("--intake-kit-json", default=DEFAULT_INTAKE_KIT_JSON)
     parser.add_argument("--completion-audit-json", default=DEFAULT_COMPLETION_AUDIT_JSON)
+    parser.add_argument(
+        "--engine-refinement-claim-evidence-priority-packet-json",
+        default=DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_JSON,
+    )
     parser.add_argument("--public-benchmark-work-order-json", default=DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_JSON)
     parser.add_argument("--public-benchmark-preflight-json", action="append", default=DEFAULT_PUBLIC_BENCHMARK_PREFLIGHT_JSONS)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
@@ -1333,6 +1497,9 @@ def main(argv: list[str] | None = None) -> None:
         action_board_packet=_read_json_if_present(args.action_board_json),
         intake_kit_packet=_read_json_if_present(args.intake_kit_json),
         completion_audit_packet=_read_json_if_present(args.completion_audit_json),
+        engine_refinement_claim_evidence_priority_packet=_read_json_if_present(
+            args.engine_refinement_claim_evidence_priority_packet_json
+        ),
         public_benchmark_work_order_packet=_read_json_if_present(args.public_benchmark_work_order_json),
         public_benchmark_preflight_packets=[
             _read_json_if_present(path) for path in (args.public_benchmark_preflight_json or [])
@@ -1343,6 +1510,9 @@ def main(argv: list[str] | None = None) -> None:
         action_board_path=args.action_board_json,
         intake_kit_path=args.intake_kit_json,
         completion_audit_path=args.completion_audit_json,
+        engine_refinement_claim_evidence_priority_packet_path=(
+            args.engine_refinement_claim_evidence_priority_packet_json
+        ),
         public_benchmark_work_order_path=args.public_benchmark_work_order_json,
     )
     _write_json(args.out_json, payload)

@@ -311,7 +311,36 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
     assert "`runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`" in text
     assert "`Review the R4 coordinate-fetch preflight`" in text
+    assert (
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_row_count=17`"
+        in text
+    )
+    assert (
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_ready_count=0`"
+        in text
+    )
+    assert (
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_blocked_count=17`"
+        in text
+    )
+    assert (
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count=0`"
+        in text
+    )
+    assert (
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count=51`"
+        in text
+    )
+    assert (
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count=0`"
+        in text
+    )
+    assert (
+        "`engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`"
+        in text
+    )
     assert "`planned_metric_source_payload_count=51`" in text
+    assert "top-level 병목 briefing" in text
     assert "R9 receptor-coordinate validation pass 8개/blocked 0개" in text
     assert "materialized metric-evidence pass 8개" in text
     assert "claim-grade statistical support expansion slot 17개" in text

@@ -473,6 +473,98 @@ def _completion_audit_full_commercial_blockers() -> dict:
     }
 
 
+def _engine_refinement_claim_evidence_priority_packet() -> dict:
+    return {
+        "summary": {
+            "status": "blocked_engine_refinement_claim_evidence_priority_packet",
+            "priority_packet_ready": True,
+            "claim_promotion_allowed": False,
+            "claim_evidence_receipt_ready": False,
+            "claim_evidence_receipt_status": "blocked_engine_refinement_claim_evidence_receipt",
+            "priority_item_count": 6,
+            "operator_input_required_count": 6,
+            "blocked_priority_item_count": 6,
+            "required_blocker_count": 6,
+            "missing_required_blocker_count": 0,
+            "blocker_count": 1,
+            "public_benchmark_gate_ready": False,
+            "public_benchmark_status": "blocked_refine_tier_public_benchmark_readiness",
+            "top_blocker_id": "public_benchmark_gate_not_ready",
+            "top_priority_bucket": "public_benchmark_work_order_apply_required",
+            "top_required_input": "runs/refine_tier_public_benchmark_work_order_current.csv",
+            "top_acceptance_artifact": "runs/refine_tier_public_benchmark_readiness_current.json",
+            "top_verification_command": (
+                "python3 tools/product/apply_refine_tier_public_benchmark_work_order.py; "
+                "python3 tools/product/build_refine_tier_public_benchmark_readiness.py; "
+                "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py"
+            ),
+            "top_next_operator_step": (
+                "Review the R4 coordinate-fetch preflight and, after explicit operator approval, "
+                "stage and validate coordinates for 17 statistical-support candidates "
+                "(coordinate_validation_pass_row_count=0, "
+                "metric_materialization_candidate_ready_count=0, "
+                "planned_metric_source_payload_count=51); then materialize DockQ/lDDT-PLI/internal "
+                "DeltaG source payloads and rerun bootstrap Spearman p05 before any canonical intake "
+                "promotion."
+            ),
+            "public_benchmark_materialized_candidate_ready": True,
+            "public_benchmark_materialized_metric_ready": True,
+            "public_benchmark_materialized_apply_ready": True,
+            "public_benchmark_materialized_apply_status": (
+                "refine_tier_public_benchmark_work_order_apply_ready"
+            ),
+            "public_benchmark_materialized_work_order_row_count": 8,
+            "public_benchmark_materialized_metric_evidence_pass_row_count": 8,
+            "public_benchmark_materialized_metric_evidence_blocked_row_count": 0,
+            "public_benchmark_materialized_free_energy_pair_count": 8,
+            "public_benchmark_materialized_free_energy_spearman": 0.6190476190476191,
+            "public_benchmark_materialized_free_energy_spearman_bootstrap_p05": (
+                -0.14285714285714285
+            ),
+            "public_benchmark_materialized_free_energy_spearman_gate_ready": True,
+            "public_benchmark_statistical_support_work_order_ready": True,
+            "public_benchmark_statistical_support_work_order_status": (
+                "refine_tier_public_benchmark_statistical_support_work_order_ready"
+            ),
+            "public_benchmark_statistical_support_work_order_expansion_slot_count": 17,
+            "public_benchmark_statistical_support_work_order_minimum_new_pair_count": 17,
+            "public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count": 12,
+            "public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count": 5,
+            "public_benchmark_statistical_support_work_order_bootstrap_retest_required": True,
+            "public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed": False,
+            "public_benchmark_statistical_support_metric_materialization_readiness_present": True,
+            "public_benchmark_statistical_support_metric_materialization_readiness_ready": True,
+            "public_benchmark_statistical_support_metric_materialization_status": (
+                "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
+            ),
+            "public_benchmark_statistical_support_metric_materialization_row_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
+            "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready": False,
+            "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads": (
+                "dockq;lddt_pli;internal_deltaG"
+            ),
+            "public_benchmark_statistical_support_metric_materialization_next_required_step": (
+                "After operator-approved coordinate fetch and post-fetch validation, require all 17 "
+                "statistical-support candidates to pass coordinate validation before materializing "
+                "DockQ, lDDT-PLI, and internal DeltaG source payloads and rerunning bootstrap "
+                "Spearman p05."
+            ),
+            "external_state_mutated": False,
+            "source_artifacts": [
+                "runs/engine_refinement_claim_promotion_action_board_current.csv",
+                "runs/engine_refinement_claim_evidence_receipt_current.json",
+                "runs/refine_tier_public_benchmark_readiness_current.json",
+                "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json",
+            ],
+        }
+    }
+
+
 def _burndown_with_scientific_scope_before_refresh() -> dict:
     return {
         "summary": {"status": "goal_release_burndown_work_order_ready"},
@@ -698,6 +790,9 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
         action_board_packet=_action_board(),
         intake_kit_packet=_intake_kit(),
         completion_audit_packet=_completion_audit_full_commercial_blockers(),
+        engine_refinement_claim_evidence_priority_packet=(
+            _engine_refinement_claim_evidence_priority_packet()
+        ),
     )
 
     summary = payload["summary"]
@@ -811,6 +906,40 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
     assert summary[
         "product_goal_engine_refinement_claim_evidence_receipt_most_common_row_blocker"
     ] == "operator_placeholders_unfilled"
+    assert summary["engine_refinement_claim_evidence_priority_packet_source_json"] == (
+        "runs/engine_refinement_claim_evidence_priority_packet_current.json"
+    )
+    assert summary["engine_refinement_claim_evidence_priority_packet_status"] == (
+        "blocked_engine_refinement_claim_evidence_priority_packet"
+    )
+    assert summary["engine_refinement_claim_evidence_priority_packet_priority_packet_ready"] is True
+    assert summary["engine_refinement_claim_evidence_priority_packet_top_blocker_id"] == (
+        "public_benchmark_gate_not_ready"
+    )
+    assert "coordinate-fetch preflight" in summary[
+        "engine_refinement_claim_evidence_priority_packet_top_next_operator_step"
+    ]
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_row_count"
+    ] == 17
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_ready_count"
+    ] == 0
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_blocked_count"
+    ] == 17
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count"
+    ] == 0
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count"
+    ] == 51
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count"
+    ] == 0
+    assert summary[
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads"
+    ] == "dockq;lddt_pli;internal_deltaG"
     assert summary["production_ai_registry_promotion_priority_status"] == (
         "blocked_production_ai_registry_promotion_priority_packet"
     )
@@ -854,6 +983,15 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
     assert by_id["R9_engine_refinement_claim_promotion"]["root_cause_category"] == (
         "external_public_benchmark_and_calibration_evidence"
     )
+    assert "runs/engine_refinement_claim_evidence_priority_packet_current.json" in by_id[
+        "R9_engine_refinement_claim_promotion"
+    ]["source_artifacts"]
+    assert by_id["R9_engine_refinement_claim_promotion"][
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count"
+    ] == 51
+    assert "coordinate-fetch preflight" in by_id["R9_engine_refinement_claim_promotion"][
+        "recommended_action"
+    ]
     assert by_id["R9_engine_refinement_claim_promotion"]["post_return_acceptance_artifact"] == (
         "runs/engine_refinement_claim_evidence_receipt_current.json"
     )

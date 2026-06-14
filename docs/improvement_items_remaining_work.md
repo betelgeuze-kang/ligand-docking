@@ -522,6 +522,19 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   work-order와 metric materialization readiness를 source artifact로 읽어 top operator
   step을 `Review the R4 coordinate-fetch preflight` 및
   `planned_metric_source_payload_count=51`로 전환한다.
+  `runs/goal_bottleneck_briefing_current.json`도 같은 priority packet을 직접 읽어
+  `R9_engine_refinement_claim_promotion` completion-audit row와 summary에
+  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_row_count=17`,
+  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_ready_count=0`,
+  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_blocked_count=17`,
+  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count=0`,
+  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count=51`,
+  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count=0`,
+  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`,
+  `engine_refinement_claim_evidence_priority_packet_top_next_operator_step=Review the R4 coordinate-fetch preflight...`를
+  보존한다. 따라서 top-level 병목 briefing도 R9를 단순 receipt placeholder가
+  아니라 coordinate validation 0/17 및 metric source payload 0/51 과학/정확도
+  병목으로 표시한다.
   따라서 operator handoff는 더 이상 8개 materialized 후보를 상용 claim으로 바로
   검토하라고 안내하지 않고, 17개 후보의 coordinate validation, DockQ/lDDT-PLI/internal
   ΔG source payload materialization, bootstrap 재검증을 먼저 요구한다.
@@ -1100,10 +1113,18 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `public_benchmark_gate_not_ready` receipt 실패 원인을 직접 표시한다.
   `runs/goal_bottleneck_briefing_current.json`도 같은
   summary를 흡수해 R8/R9 completion-audit 병목 브리핑에서 operator handoff
-  receipt 묶음이 사라지지 않게 하며, source-of-truth의
+  receipt 묶음이 사라지지 않게 한다. 최신 briefing은
+  `engine_refinement_claim_evidence_priority_packet_current.json`도 source artifact로
+  읽어 R9 행과 summary에 `coordinate_validation_pass_row_count=0`,
+  `metric_materialization_candidate_ready_count=0`,
+  `planned_metric_source_payload_count=51`,
+  `existing_metric_source_payload_count=0`,
+  `required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`, 그리고
+  `Review the R4 coordinate-fetch preflight` top step을 직접 노출한다.
+  source-of-truth의
   `goal_bottleneck_briefing_semantic_ready` row는 entry count 2, template present
-  2/2, approval token 2개, 두 source gate status, 두 required input CSV를 exact
-  field로 검증한다. `/goal/status`도 같은 값을
+  2/2, approval token 2개, 두 source gate status, 두 required input CSV와 함께
+  이 R9 metric-materialization 수치도 exact field로 검증한다. `/goal/status`도 같은 값을
   `operator_intake_kit_full_commercial_evidence_receipt_*` 및
   `bottleneck_briefing_full_commercial_evidence_receipt_*` 필드로 전달하며,
   handoff chain의 first-blocked diagnostics는
