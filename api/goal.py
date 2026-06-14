@@ -1505,6 +1505,74 @@ def _product_release_bundle_fields(bundle: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+PRODUCT_SCOPE_PRIORITY_RECEIPT_COUNT_SUFFIXES = {
+    "row_count",
+    "blocked_row_count",
+    "operator_review_surface_ready_count",
+    "operator_review_surface_blocked_count",
+    "manual_field_pending_count",
+    "evidence_artifact_pending_count",
+    "claim_ready_pending_count",
+    "reviewer_pending_count",
+    "reviewed_at_utc_pending_count",
+    "license_ok_pending_count",
+    "approval_token_pending_count",
+}
+
+PRODUCT_SCOPE_PRIORITY_RECEIPT_LIST_SUFFIXES = {
+    "first_blocked_missing_true_fields",
+    "first_blocked_row_blockers",
+}
+
+PRODUCT_SCOPE_PRIORITY_RECEIPT_BOOL_SUFFIXES = {"ready"}
+
+PRODUCT_SCOPE_PRIORITY_RECEIPT_SUFFIXES = (
+    "status",
+    "ready",
+    "csv",
+    "row_count",
+    "blocked_row_count",
+    "operator_review_surface_ready_count",
+    "operator_review_surface_blocked_count",
+    "manual_field_pending_count",
+    "evidence_artifact_pending_count",
+    "claim_ready_pending_count",
+    "reviewer_pending_count",
+    "reviewed_at_utc_pending_count",
+    "license_ok_pending_count",
+    "approval_token_pending_count",
+    "first_blocked_scope_blocker_id",
+    "first_blocked_evidence_artifact",
+    "first_blocked_expected_evidence_status",
+    "first_blocked_observed_evidence_status",
+    "first_blocked_missing_true_fields",
+    "first_blocked_row_blockers",
+    "most_common_row_blocker",
+    "approval_token_required",
+)
+
+
+def _prefixed_scope_priority_receipt_fields(
+    source: dict[str, Any],
+    *,
+    prefix: str,
+) -> dict[str, Any]:
+    fields: dict[str, Any] = {}
+    for suffix in PRODUCT_SCOPE_PRIORITY_RECEIPT_SUFFIXES:
+        source_key = f"product_scope_breadth_evidence_priority_receipt_{suffix}"
+        output_key = f"{prefix}_product_scope_breadth_evidence_priority_receipt_{suffix}"
+        value = source.get(source_key)
+        if suffix in PRODUCT_SCOPE_PRIORITY_RECEIPT_COUNT_SUFFIXES:
+            fields[output_key] = _int(value)
+        elif suffix in PRODUCT_SCOPE_PRIORITY_RECEIPT_LIST_SUFFIXES:
+            fields[output_key] = _string_list(value)
+        elif suffix in PRODUCT_SCOPE_PRIORITY_RECEIPT_BOOL_SUFFIXES:
+            fields[output_key] = bool(value is True)
+        else:
+            fields[output_key] = str(value or "")
+    return fields
+
+
 def _product_scope_breadth_evidence_priority_fields(
     priority: dict[str, Any],
 ) -> dict[str, Any]:
@@ -1581,6 +1649,72 @@ def _product_scope_breadth_evidence_priority_fields(
         ),
         "product_scope_breadth_evidence_priority_top_next_step": priority.get(
             "top_next_step", ""
+        ),
+        "product_scope_breadth_evidence_priority_receipt_status": priority.get(
+            "receipt_status", ""
+        ),
+        "product_scope_breadth_evidence_priority_receipt_ready": bool(
+            priority.get("receipt_ready") is True
+        ),
+        "product_scope_breadth_evidence_priority_receipt_csv": priority.get(
+            "receipt_csv", ""
+        ),
+        "product_scope_breadth_evidence_priority_receipt_row_count": _int(
+            priority.get("receipt_row_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_blocked_row_count": _int(
+            priority.get("receipt_blocked_row_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_operator_review_surface_ready_count": _int(
+            priority.get("receipt_operator_review_surface_ready_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_operator_review_surface_blocked_count": _int(
+            priority.get("receipt_operator_review_surface_blocked_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_manual_field_pending_count": _int(
+            priority.get("receipt_manual_field_pending_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_evidence_artifact_pending_count": _int(
+            priority.get("receipt_evidence_artifact_pending_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_claim_ready_pending_count": _int(
+            priority.get("receipt_claim_ready_pending_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_reviewer_pending_count": _int(
+            priority.get("receipt_reviewer_pending_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_reviewed_at_utc_pending_count": _int(
+            priority.get("receipt_reviewed_at_utc_pending_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_license_ok_pending_count": _int(
+            priority.get("receipt_license_ok_pending_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_approval_token_pending_count": _int(
+            priority.get("receipt_approval_token_pending_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_scope_blocker_id": priority.get(
+            "receipt_first_blocked_scope_blocker_id", ""
+        ),
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_evidence_artifact": priority.get(
+            "receipt_first_blocked_evidence_artifact", ""
+        ),
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_expected_evidence_status": priority.get(
+            "receipt_first_blocked_expected_evidence_status", ""
+        ),
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_observed_evidence_status": priority.get(
+            "receipt_first_blocked_observed_evidence_status", ""
+        ),
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_missing_true_fields": _string_list(
+            priority.get("receipt_first_blocked_missing_true_fields")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_row_blockers": _string_list(
+            priority.get("receipt_first_blocked_row_blockers")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_most_common_row_blocker": priority.get(
+            "receipt_most_common_row_blocker", ""
+        ),
+        "product_scope_breadth_evidence_priority_receipt_approval_token_required": priority.get(
+            "receipt_approval_token_required", ""
         ),
         "product_scope_breadth_evidence_priority_transporter_target_ready_for_promotion_count": _int(
             priority.get("transporter_target_ready_for_promotion_count")
@@ -2127,6 +2261,7 @@ async def get_goal_status() -> dict[str, Any]:
             "operator_intake_kit_product_scope_breadth_evidence_priority_scope_promotion_allowed": False,
             "operator_intake_kit_product_scope_breadth_evidence_priority_authoritative_apply_allowed": False,
             "operator_intake_kit_product_scope_breadth_evidence_priority_external_state_mutated": False,
+            **_prefixed_scope_priority_receipt_fields({}, prefix="operator_intake_kit"),
             "bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 0,
             "bottleneck_briefing_full_commercial_evidence_receipt_operator_input_required_count": 0,
             "bottleneck_briefing_full_commercial_evidence_receipt_current_action_required_count": 0,
@@ -2165,6 +2300,7 @@ async def get_goal_status() -> dict[str, Any]:
             "bottleneck_briefing_product_scope_breadth_evidence_priority_scope_promotion_allowed": False,
             "bottleneck_briefing_product_scope_breadth_evidence_priority_authoritative_apply_allowed": False,
             "bottleneck_briefing_product_scope_breadth_evidence_priority_external_state_mutated": False,
+            **_prefixed_scope_priority_receipt_fields({}, prefix="bottleneck_briefing"),
             **_production_ai_registry_promotion_receipt_fields({}),
             **_cameo_official_result_fetch_preflight_fields({}, []),
             **_product_rollout_execution_smoke_receipt_fields({}),
@@ -2928,6 +3064,7 @@ async def get_goal_status() -> dict[str, Any]:
         "operator_intake_kit_product_scope_breadth_evidence_priority_external_state_mutated": bool(
             intake.get("product_scope_breadth_evidence_priority_external_state_mutated") is True
         ),
+        **_prefixed_scope_priority_receipt_fields(intake, prefix="operator_intake_kit"),
         "bottleneck_briefing_full_commercial_evidence_receipt_entry_count": _int(
             bottlenecks.get("full_commercial_evidence_receipt_entry_count")
         ),
@@ -3056,6 +3193,7 @@ async def get_goal_status() -> dict[str, Any]:
         "bottleneck_briefing_product_scope_breadth_evidence_priority_external_state_mutated": bool(
             bottlenecks.get("product_scope_breadth_evidence_priority_external_state_mutated") is True
         ),
+        **_prefixed_scope_priority_receipt_fields(bottlenecks, prefix="bottleneck_briefing"),
         "operator_template_missing_count": _int(intake.get("template_missing_count")),
         "all_required_templates_present": bool(intake.get("all_required_templates_present") is True),
         "official_results_required_count": _int(intake.get("official_results_required_count") or burndown.get("official_results_required_item_count")),

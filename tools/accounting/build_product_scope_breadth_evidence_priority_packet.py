@@ -17,6 +17,7 @@ DEFAULT_CROSSCHECK_DIR = RUNS / "life_science_skill_crosscheck"
 TRANSPORTER_REVIEW_TEMPLATE = RUNS / "transporter_manual_review_intake_template_current.json"
 TRANSPORTER_APPLY_GATE = RUNS / "transporter_binder_promotion_gate_current.json"
 DEFAULT_TRANSPORTER_BINDER_GATE_JSON = TRANSPORTER_APPLY_GATE
+DEFAULT_SCOPE_EVIDENCE_RECEIPT_JSON = RUNS / "product_scope_breadth_evidence_receipt_current.json"
 PXR_REVIEW_TEMPLATE = RUNS / "pxr_exact_evidence_review_intake_template_current.json"
 PXR_APPLY_GATE = RUNS / "pxr_blocked_row_promotion_gate_current.json"
 GENERAL_REVIEW_TEMPLATE = RUNS / "general_protein_ligand_claim_blocker_packet_current.json"
@@ -293,12 +294,15 @@ def build_payload(
     *,
     queue_payload: dict[str, Any],
     transporter_binder_gate_payload: dict[str, Any] | None = None,
+    scope_evidence_receipt_payload: dict[str, Any] | None = None,
     crosscheck_dir: str | Path = DEFAULT_CROSSCHECK_DIR,
     queue_path: str = DEFAULT_QUEUE_JSON.as_posix(),
     transporter_binder_gate_path: str = DEFAULT_TRANSPORTER_BINDER_GATE_JSON.as_posix(),
+    scope_evidence_receipt_path: str = DEFAULT_SCOPE_EVIDENCE_RECEIPT_JSON.as_posix(),
 ) -> dict[str, Any]:
     crosscheck_paths = _crosscheck_files(crosscheck_dir)
     transporter_binder_summary = _summary(transporter_binder_gate_payload or {})
+    receipt_summary = _summary(scope_evidence_receipt_payload or {})
     target_ready_ids = set(_list(transporter_binder_summary.get("target_ready_for_promotion_ids")))
     target_blocked_ids = set(_list(transporter_binder_summary.get("target_blocked_for_promotion_ids")))
     rows: list[dict[str, Any]] = []
@@ -402,15 +406,77 @@ def build_payload(
         "top_review_template_artifact": top_row.get("review_template_artifact", ""),
         "top_apply_gate_artifact": top_row.get("apply_gate_artifact", ""),
         "top_next_step": top_row.get("next_step", ""),
+        "receipt_source_json": scope_evidence_receipt_path,
+        "receipt_status": _text(receipt_summary.get("status")),
+        "receipt_ready": receipt_summary.get("full_scope_evidence_receipt_ready") is True,
+        "receipt_csv": _text(receipt_summary.get("receipt_csv")),
+        "receipt_row_count": _int(receipt_summary.get("receipt_row_count")),
+        "receipt_blocked_row_count": _int(receipt_summary.get("blocked_row_count")),
+        "receipt_operator_review_surface_ready_count": _int(
+            receipt_summary.get("operator_review_surface_ready_count")
+        ),
+        "receipt_operator_review_surface_blocked_count": _int(
+            receipt_summary.get("operator_review_surface_blocked_count")
+        ),
+        "receipt_manual_field_pending_count": _int(
+            receipt_summary.get("receipt_manual_field_pending_count")
+        ),
+        "receipt_evidence_artifact_pending_count": _int(
+            receipt_summary.get("receipt_evidence_artifact_pending_count")
+        ),
+        "receipt_claim_ready_pending_count": _int(
+            receipt_summary.get("receipt_claim_ready_pending_count")
+        ),
+        "receipt_reviewer_pending_count": _int(
+            receipt_summary.get("receipt_reviewer_pending_count")
+        ),
+        "receipt_reviewed_at_utc_pending_count": _int(
+            receipt_summary.get("receipt_reviewed_at_utc_pending_count")
+        ),
+        "receipt_license_ok_pending_count": _int(
+            receipt_summary.get("receipt_license_ok_pending_count")
+        ),
+        "receipt_approval_token_pending_count": _int(
+            receipt_summary.get("receipt_approval_token_pending_count")
+        ),
+        "receipt_first_blocked_scope_blocker_id": _text(
+            receipt_summary.get("first_blocked_scope_blocker_id")
+        ),
+        "receipt_first_blocked_evidence_artifact": _text(
+            receipt_summary.get("first_blocked_evidence_artifact")
+        ),
+        "receipt_first_blocked_expected_evidence_status": _text(
+            receipt_summary.get("first_blocked_expected_evidence_status")
+        ),
+        "receipt_first_blocked_observed_evidence_status": _text(
+            receipt_summary.get("first_blocked_observed_evidence_status")
+        ),
+        "receipt_first_blocked_missing_true_fields": _list(
+            receipt_summary.get("first_blocked_missing_true_fields")
+        ),
+        "receipt_first_blocked_row_blockers": _list(
+            receipt_summary.get("first_blocked_row_blockers")
+        ),
+        "receipt_most_common_row_blocker": _text(
+            receipt_summary.get("most_common_row_blocker")
+        ),
+        "receipt_approval_token_required": _text(
+            receipt_summary.get("approval_token_required")
+        ),
         "open_item_count": len(rows),
         "authoritative_apply_allowed_count": 0,
         "authoritative_apply_allowed": False,
         "scope_promotion_allowed": False,
         "external_state_mutated": False,
-        "source_artifacts": [queue_path, str(crosscheck_dir), transporter_binder_gate_path],
+        "source_artifacts": [
+            queue_path,
+            str(crosscheck_dir),
+            transporter_binder_gate_path,
+            scope_evidence_receipt_path,
+        ],
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
-            "Triage local AQP1/GLUT1 crosscheck candidates first, keep review-only rows blocked, and resolve target-level transporter blockers before any full-scope claim receipt."
+            "Triage local AQP1/GLUT1 crosscheck candidates first, keep review-only rows blocked, and fill the six-row full-scope receipt evidence artifact, claim-ready, reviewer, timestamp, license, and approval-token fields before any full-scope claim receipt."
         ),
     }
     return {"summary": summary, "rows": rows}
@@ -447,6 +513,13 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- top_required_evidence_type: `{s['top_required_evidence_type']}`",
         f"- top_review_template_artifact: `{s['top_review_template_artifact']}`",
         f"- top_apply_gate_artifact: `{s['top_apply_gate_artifact']}`",
+        f"- receipt_status: `{s['receipt_status'] or '-'}`",
+        f"- receipt_ready: `{s['receipt_ready']}`",
+        f"- receipt_operator_review_surface_ready/blocked: `{s['receipt_operator_review_surface_ready_count']}/{s['receipt_operator_review_surface_blocked_count']}`",
+        f"- receipt_manual_field_pending_count: `{s['receipt_manual_field_pending_count']}`",
+        f"- receipt_first_blocked_scope_blocker_id: `{s['receipt_first_blocked_scope_blocker_id'] or '-'}`",
+        f"- receipt_first_blocked_evidence_artifact: `{s['receipt_first_blocked_evidence_artifact'] or '-'}`",
+        f"- receipt_approval_token_required: `{s['receipt_approval_token_required'] or '-'}`",
         f"- scope_promotion_allowed: `{s['scope_promotion_allowed']}`",
         "",
         "## Priority Rows",
@@ -472,6 +545,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--queue-json", default=str(DEFAULT_QUEUE_JSON))
     parser.add_argument("--crosscheck-dir", default=str(DEFAULT_CROSSCHECK_DIR))
     parser.add_argument("--transporter-binder-gate-json", default=str(DEFAULT_TRANSPORTER_BINDER_GATE_JSON))
+    parser.add_argument("--scope-evidence-receipt-json", default=str(DEFAULT_SCOPE_EVIDENCE_RECEIPT_JSON))
     parser.add_argument("--out-json", default=str(DEFAULT_OUT_JSON))
     parser.add_argument("--out-csv", default=str(DEFAULT_OUT_CSV))
     parser.add_argument("--out-md", default=str(DEFAULT_OUT_MD))
@@ -483,9 +557,11 @@ def main(argv: list[str] | None = None) -> None:
     payload = build_payload(
         queue_payload=_load_json(args.queue_json),
         transporter_binder_gate_payload=_load_json(args.transporter_binder_gate_json),
+        scope_evidence_receipt_payload=_load_json(args.scope_evidence_receipt_json),
         crosscheck_dir=args.crosscheck_dir,
         queue_path=args.queue_json,
         transporter_binder_gate_path=args.transporter_binder_gate_json,
+        scope_evidence_receipt_path=args.scope_evidence_receipt_json,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

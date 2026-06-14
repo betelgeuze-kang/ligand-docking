@@ -327,6 +327,40 @@ def _intake_kit() -> dict:
             "product_scope_breadth_evidence_priority_top_next_step": (
                 "Review local crosscheck files, capture exact evidence if present."
             ),
+            "product_scope_breadth_evidence_priority_receipt_status": (
+                "blocked_product_scope_breadth_evidence_receipt"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_ready": False,
+            "product_scope_breadth_evidence_priority_receipt_csv": (
+                "config/product_scope_breadth_evidence_receipt_current.csv"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_row_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_blocked_row_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_operator_review_surface_ready_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_operator_review_surface_blocked_count": 0,
+            "product_scope_breadth_evidence_priority_receipt_manual_field_pending_count": 36,
+            "product_scope_breadth_evidence_priority_receipt_evidence_artifact_pending_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_claim_ready_pending_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_reviewer_pending_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_reviewed_at_utc_pending_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_license_ok_pending_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_approval_token_pending_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_first_blocked_scope_blocker_id": (
+                "direct_binding_evidence_missing"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_first_blocked_evidence_artifact": (
+                "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_first_blocked_missing_true_fields": [
+                "transporter_direct_binding_evidence_ready"
+            ],
+            "product_scope_breadth_evidence_priority_receipt_first_blocked_row_blockers": [
+                "operator_placeholders_unfilled",
+                "evidence_artifact_not_found",
+            ],
+            "product_scope_breadth_evidence_priority_receipt_approval_token_required": (
+                "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+            ),
             "product_scope_breadth_evidence_priority_external_state_mutated": False,
             "production_ai_registry_promotion_priority_source_json": (
                 "runs/production_ai_registry_promotion_priority_packet_current.json"
@@ -745,6 +779,32 @@ def test_goal_bottleneck_briefing_links_release_blockers_to_intake_and_actions()
     assert summary["product_scope_breadth_evidence_priority_top_required_evidence_type"] == (
         "exact_transporter_target_pair_quantitative_binder_kcal"
     )
+    assert summary["product_scope_breadth_evidence_priority_receipt_status"] == (
+        "blocked_product_scope_breadth_evidence_receipt"
+    )
+    assert summary["product_scope_breadth_evidence_priority_receipt_ready"] is False
+    assert summary[
+        "product_scope_breadth_evidence_priority_receipt_operator_review_surface_ready_count"
+    ] == 6
+    assert summary[
+        "product_scope_breadth_evidence_priority_receipt_operator_review_surface_blocked_count"
+    ] == 0
+    assert summary["product_scope_breadth_evidence_priority_receipt_manual_field_pending_count"] == 36
+    assert summary[
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_scope_blocker_id"
+    ] == "direct_binding_evidence_missing"
+    assert summary[
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_evidence_artifact"
+    ] == "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+    assert summary[
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_missing_true_fields"
+    ] == ["transporter_direct_binding_evidence_ready"]
+    assert "operator_placeholders_unfilled" in summary[
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_row_blockers"
+    ]
+    assert summary[
+        "product_scope_breadth_evidence_priority_receipt_approval_token_required"
+    ] == "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
     assert summary["primary_action_id"] == "product_ai_production:return_gpu_force_regeneration_receipt"
     assert summary["top_action_id"] == summary["primary_action_id"]
     assert summary["primary_action_priority"] == 0
@@ -1112,6 +1172,10 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
     )
     assert summary["product_scope_breadth_evidence_priority_open_item_count"] == 15
     assert summary["product_scope_breadth_evidence_priority_top_item_id"] == "AQP1.core_binder_01"
+    assert summary["product_scope_breadth_evidence_priority_receipt_manual_field_pending_count"] == 36
+    assert summary[
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_scope_blocker_id"
+    ] == "direct_binding_evidence_missing"
     assert summary["product_scope_breadth_evidence_priority_authoritative_apply_allowed"] is False
     assert summary["production_ai_registry_promotion_priority_model_promoted"] is False
     assert summary["production_ai_registry_promotion_priority_external_state_mutated"] is False

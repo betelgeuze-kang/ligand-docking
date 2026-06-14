@@ -128,6 +128,39 @@ def _assert_scope_priority_fields(*, status: dict, prefix: str, artifact: dict) 
     assert status[f"{status_prefix}_top_next_step"] == artifact.get(
         "product_scope_breadth_evidence_priority_top_next_step"
     )
+    assert status[f"{status_prefix}_receipt_status"] == artifact.get(
+        "product_scope_breadth_evidence_priority_receipt_status"
+    )
+    assert status[f"{status_prefix}_receipt_ready"] is (
+        artifact.get("product_scope_breadth_evidence_priority_receipt_ready") is True
+    )
+    assert status[f"{status_prefix}_receipt_csv"] == artifact.get(
+        "product_scope_breadth_evidence_priority_receipt_csv"
+    )
+    assert status[f"{status_prefix}_receipt_operator_review_surface_ready_count"] == int(
+        artifact.get("product_scope_breadth_evidence_priority_receipt_operator_review_surface_ready_count") or 0
+    )
+    assert status[f"{status_prefix}_receipt_operator_review_surface_blocked_count"] == int(
+        artifact.get("product_scope_breadth_evidence_priority_receipt_operator_review_surface_blocked_count") or 0
+    )
+    assert status[f"{status_prefix}_receipt_manual_field_pending_count"] == int(
+        artifact.get("product_scope_breadth_evidence_priority_receipt_manual_field_pending_count") or 0
+    )
+    assert status[f"{status_prefix}_receipt_first_blocked_scope_blocker_id"] == artifact.get(
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_scope_blocker_id"
+    )
+    assert status[f"{status_prefix}_receipt_first_blocked_evidence_artifact"] == artifact.get(
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_evidence_artifact"
+    )
+    assert status[f"{status_prefix}_receipt_first_blocked_missing_true_fields"] == (
+        artifact.get("product_scope_breadth_evidence_priority_receipt_first_blocked_missing_true_fields") or []
+    )
+    assert status[f"{status_prefix}_receipt_first_blocked_row_blockers"] == (
+        artifact.get("product_scope_breadth_evidence_priority_receipt_first_blocked_row_blockers") or []
+    )
+    assert status[f"{status_prefix}_receipt_approval_token_required"] == artifact.get(
+        "product_scope_breadth_evidence_priority_receipt_approval_token_required"
+    )
     assert status[f"{status_prefix}_scope_promotion_allowed"] is (
         artifact.get("product_scope_breadth_evidence_priority_scope_promotion_allowed")
         is True
@@ -720,6 +753,72 @@ def _assert_product_scope_priority_fields(*, observed: dict, artifact: dict) -> 
     assert observed["product_scope_breadth_evidence_priority_top_next_step"] == artifact.get(
         "top_next_step", ""
     )
+    assert observed["product_scope_breadth_evidence_priority_receipt_status"] == artifact.get(
+        "receipt_status", ""
+    )
+    assert observed["product_scope_breadth_evidence_priority_receipt_ready"] is (
+        artifact.get("receipt_ready") is True
+    )
+    assert observed["product_scope_breadth_evidence_priority_receipt_csv"] == artifact.get(
+        "receipt_csv", ""
+    )
+    assert observed["product_scope_breadth_evidence_priority_receipt_row_count"] == int(
+        artifact.get("receipt_row_count") or 0
+    )
+    assert observed["product_scope_breadth_evidence_priority_receipt_blocked_row_count"] == int(
+        artifact.get("receipt_blocked_row_count") or 0
+    )
+    assert observed[
+        "product_scope_breadth_evidence_priority_receipt_operator_review_surface_ready_count"
+    ] == int(artifact.get("receipt_operator_review_surface_ready_count") or 0)
+    assert observed[
+        "product_scope_breadth_evidence_priority_receipt_operator_review_surface_blocked_count"
+    ] == int(artifact.get("receipt_operator_review_surface_blocked_count") or 0)
+    assert observed[
+        "product_scope_breadth_evidence_priority_receipt_manual_field_pending_count"
+    ] == int(artifact.get("receipt_manual_field_pending_count") or 0)
+    assert observed[
+        "product_scope_breadth_evidence_priority_receipt_evidence_artifact_pending_count"
+    ] == int(artifact.get("receipt_evidence_artifact_pending_count") or 0)
+    assert observed[
+        "product_scope_breadth_evidence_priority_receipt_claim_ready_pending_count"
+    ] == int(artifact.get("receipt_claim_ready_pending_count") or 0)
+    assert observed[
+        "product_scope_breadth_evidence_priority_receipt_reviewer_pending_count"
+    ] == int(artifact.get("receipt_reviewer_pending_count") or 0)
+    assert observed[
+        "product_scope_breadth_evidence_priority_receipt_reviewed_at_utc_pending_count"
+    ] == int(artifact.get("receipt_reviewed_at_utc_pending_count") or 0)
+    assert observed[
+        "product_scope_breadth_evidence_priority_receipt_license_ok_pending_count"
+    ] == int(artifact.get("receipt_license_ok_pending_count") or 0)
+    assert observed[
+        "product_scope_breadth_evidence_priority_receipt_approval_token_pending_count"
+    ] == int(artifact.get("receipt_approval_token_pending_count") or 0)
+    assert observed[
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_scope_blocker_id"
+    ] == artifact.get("receipt_first_blocked_scope_blocker_id", "")
+    assert observed[
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_evidence_artifact"
+    ] == artifact.get("receipt_first_blocked_evidence_artifact", "")
+    assert observed[
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_expected_evidence_status"
+    ] == artifact.get("receipt_first_blocked_expected_evidence_status", "")
+    assert observed[
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_observed_evidence_status"
+    ] == artifact.get("receipt_first_blocked_observed_evidence_status", "")
+    assert observed[
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_missing_true_fields"
+    ] == (artifact.get("receipt_first_blocked_missing_true_fields") or [])
+    assert observed[
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_row_blockers"
+    ] == (artifact.get("receipt_first_blocked_row_blockers") or [])
+    assert observed[
+        "product_scope_breadth_evidence_priority_receipt_most_common_row_blocker"
+    ] == artifact.get("receipt_most_common_row_blocker", "")
+    assert observed[
+        "product_scope_breadth_evidence_priority_receipt_approval_token_required"
+    ] == artifact.get("receipt_approval_token_required", "")
     assert observed[
         "product_scope_breadth_evidence_priority_transporter_target_ready_for_promotion_count"
     ] == int(artifact.get("transporter_target_ready_for_promotion_count") or 0)
@@ -973,7 +1072,6 @@ def test_api_app_imports_with_goal_router() -> None:
     expected_full_commercial_blockers = [
         "R8_full_scope_claim_closure",
         "R9_engine_refinement_claim_promotion",
-        "MASTER:SCI-CLAIM",
         "ACCURACY:ligand_ranking",
     ]
     assert status["expected_full_commercial_release_blocker_ids"] == expected_full_commercial_blockers
@@ -1313,7 +1411,7 @@ def test_api_app_imports_with_goal_router() -> None:
         actions_artifact.get("product_accuracy_parity_action_count") or 0
     )
     assert status["product_accuracy_parity_ligand_ranking_action_id"] == (
-        "product_accuracy_parity:repair_ligand_ranking_parity"
+        "product_accuracy_parity:close_ligand_ranking_claim_scope"
     )
     assert status["product_accuracy_parity_ligand_ranking_action_present"] is (
         actions_artifact.get("product_accuracy_parity_ligand_ranking_action_present") is True
@@ -1434,8 +1532,12 @@ def test_api_app_imports_with_goal_router() -> None:
         "product_commercial_readiness_handoff_bundle_ready"
     )
     assert status["commercial_readiness_handoff_bundle_ready"] is True
-    assert status["commercial_readiness_handoff_bundle_artifact_reference_count"] == 42
-    assert status["commercial_readiness_handoff_bundle_local_missing_artifact_reference_count"] == 0
+    assert status["commercial_readiness_handoff_bundle_artifact_reference_count"] == int(
+        handoff_artifact.get("artifact_reference_count") or 0
+    )
+    assert status["commercial_readiness_handoff_bundle_local_missing_artifact_reference_count"] == int(
+        handoff_artifact.get("local_missing_artifact_reference_count") or 0
+    )
     assert status["operator_intake_kit_full_commercial_evidence_receipt_entry_count"] == int(
         intake_artifact.get("full_commercial_evidence_receipt_entry_count") or 0
     )

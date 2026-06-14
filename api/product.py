@@ -230,6 +230,15 @@ def _summary(packet: dict[str, Any]) -> dict[str, Any]:
     return summary if isinstance(summary, dict) else {}
 
 
+def _text_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value if str(item).strip()]
+    text = str(value or "").strip()
+    if not text:
+        return []
+    return [part.strip() for part in text.replace(",", ";").split(";") if part.strip()]
+
+
 def _goal_readiness_rollup_lane_surface(readiness: dict[str, Any]) -> dict[str, Any]:
     readiness = readiness or {}
     return {
@@ -5781,6 +5790,28 @@ async def get_product_scope_evidence_priority() -> dict[str, Any]:
             "top_required_evidence_type": "",
             "top_review_template_artifact": "",
             "top_apply_gate_artifact": "",
+            "receipt_status": "",
+            "receipt_ready": False,
+            "receipt_csv": "",
+            "receipt_row_count": 0,
+            "receipt_blocked_row_count": 0,
+            "receipt_operator_review_surface_ready_count": 0,
+            "receipt_operator_review_surface_blocked_count": 0,
+            "receipt_manual_field_pending_count": 0,
+            "receipt_evidence_artifact_pending_count": 0,
+            "receipt_claim_ready_pending_count": 0,
+            "receipt_reviewer_pending_count": 0,
+            "receipt_reviewed_at_utc_pending_count": 0,
+            "receipt_license_ok_pending_count": 0,
+            "receipt_approval_token_pending_count": 0,
+            "receipt_first_blocked_scope_blocker_id": "",
+            "receipt_first_blocked_evidence_artifact": "",
+            "receipt_first_blocked_expected_evidence_status": "",
+            "receipt_first_blocked_observed_evidence_status": "",
+            "receipt_first_blocked_missing_true_fields": [],
+            "receipt_first_blocked_row_blockers": [],
+            "receipt_most_common_row_blocker": "",
+            "receipt_approval_token_required": "",
             "authoritative_apply_allowed_count": 0,
             "source_artifacts": [],
             "top_priority_items": [],
@@ -5822,6 +5853,58 @@ async def get_product_scope_evidence_priority() -> dict[str, Any]:
         "top_required_evidence_type": summary.get("top_required_evidence_type", ""),
         "top_review_template_artifact": summary.get("top_review_template_artifact", ""),
         "top_apply_gate_artifact": summary.get("top_apply_gate_artifact", ""),
+        "receipt_status": summary.get("receipt_status", ""),
+        "receipt_ready": bool(summary.get("receipt_ready") is True),
+        "receipt_csv": summary.get("receipt_csv", ""),
+        "receipt_row_count": int(summary.get("receipt_row_count") or 0),
+        "receipt_blocked_row_count": int(summary.get("receipt_blocked_row_count") or 0),
+        "receipt_operator_review_surface_ready_count": int(
+            summary.get("receipt_operator_review_surface_ready_count") or 0
+        ),
+        "receipt_operator_review_surface_blocked_count": int(
+            summary.get("receipt_operator_review_surface_blocked_count") or 0
+        ),
+        "receipt_manual_field_pending_count": int(
+            summary.get("receipt_manual_field_pending_count") or 0
+        ),
+        "receipt_evidence_artifact_pending_count": int(
+            summary.get("receipt_evidence_artifact_pending_count") or 0
+        ),
+        "receipt_claim_ready_pending_count": int(
+            summary.get("receipt_claim_ready_pending_count") or 0
+        ),
+        "receipt_reviewer_pending_count": int(
+            summary.get("receipt_reviewer_pending_count") or 0
+        ),
+        "receipt_reviewed_at_utc_pending_count": int(
+            summary.get("receipt_reviewed_at_utc_pending_count") or 0
+        ),
+        "receipt_license_ok_pending_count": int(
+            summary.get("receipt_license_ok_pending_count") or 0
+        ),
+        "receipt_approval_token_pending_count": int(
+            summary.get("receipt_approval_token_pending_count") or 0
+        ),
+        "receipt_first_blocked_scope_blocker_id": summary.get(
+            "receipt_first_blocked_scope_blocker_id", ""
+        ),
+        "receipt_first_blocked_evidence_artifact": summary.get(
+            "receipt_first_blocked_evidence_artifact", ""
+        ),
+        "receipt_first_blocked_expected_evidence_status": summary.get(
+            "receipt_first_blocked_expected_evidence_status", ""
+        ),
+        "receipt_first_blocked_observed_evidence_status": summary.get(
+            "receipt_first_blocked_observed_evidence_status", ""
+        ),
+        "receipt_first_blocked_missing_true_fields": _text_list(
+            summary.get("receipt_first_blocked_missing_true_fields") or []
+        ),
+        "receipt_first_blocked_row_blockers": _text_list(
+            summary.get("receipt_first_blocked_row_blockers") or []
+        ),
+        "receipt_most_common_row_blocker": summary.get("receipt_most_common_row_blocker", ""),
+        "receipt_approval_token_required": summary.get("receipt_approval_token_required", ""),
         "authoritative_apply_allowed_count": int(summary.get("authoritative_apply_allowed_count") or 0),
         "source_artifacts": list(summary.get("source_artifacts") or []),
         "top_priority_items": sorted_rows[:5],

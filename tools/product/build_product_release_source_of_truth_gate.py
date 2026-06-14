@@ -4166,6 +4166,17 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "product_scope_breadth_evidence_priority_scientific_evidence_request_count": 11,
             "product_scope_breadth_evidence_priority_local_crosscheck_candidate_count": 11,
             "product_scope_breadth_evidence_priority_review_only_keep_blocked_count": 1,
+            "product_scope_breadth_evidence_priority_receipt_row_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_blocked_row_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_operator_review_surface_ready_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_operator_review_surface_blocked_count": 0,
+            "product_scope_breadth_evidence_priority_receipt_manual_field_pending_count": 36,
+            "product_scope_breadth_evidence_priority_receipt_evidence_artifact_pending_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_claim_ready_pending_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_reviewer_pending_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_reviewed_at_utc_pending_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_license_ok_pending_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_approval_token_pending_count": 6,
         },
         "required_text_exact_fields": {
             "product_scope_breadth_evidence_priority_source_json": (
@@ -4181,6 +4192,30 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             ),
             "product_scope_breadth_evidence_priority_top_required_evidence_type": (
                 "exact_transporter_target_pair_quantitative_binder_kcal"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_status": (
+                "blocked_product_scope_breadth_evidence_receipt"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_csv": (
+                "config/product_scope_breadth_evidence_receipt_current.csv"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_first_blocked_scope_blocker_id": (
+                "direct_binding_evidence_missing"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_first_blocked_evidence_artifact": (
+                "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_first_blocked_expected_evidence_status": (
+                "product_scope_transporter_direct_binding_evidence_ready"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_first_blocked_observed_evidence_status": (
+                "missing"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_approval_token_required": (
+                "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
             ),
             "product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
             "product_goal_primary_release_blocker_tier": "full_commercial_scope",
@@ -4267,6 +4302,17 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "product_scope_breadth_evidence_priority_scientific_evidence_request_count": 11,
             "product_scope_breadth_evidence_priority_local_crosscheck_candidate_count": 11,
             "product_scope_breadth_evidence_priority_review_only_keep_blocked_count": 1,
+            "product_scope_breadth_evidence_priority_receipt_row_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_blocked_row_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_operator_review_surface_ready_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_operator_review_surface_blocked_count": 0,
+            "product_scope_breadth_evidence_priority_receipt_manual_field_pending_count": 36,
+            "product_scope_breadth_evidence_priority_receipt_evidence_artifact_pending_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_claim_ready_pending_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_reviewer_pending_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_reviewed_at_utc_pending_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_license_ok_pending_count": 6,
+            "product_scope_breadth_evidence_priority_receipt_approval_token_pending_count": 6,
             "engine_refinement_claim_evidence_priority_packet_priority_item_count": 6,
             "engine_refinement_claim_evidence_priority_packet_operator_input_required_count": 6,
             "engine_refinement_claim_evidence_priority_packet_blocked_priority_item_count": 6,
@@ -4369,6 +4415,30 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             ),
             "product_scope_breadth_evidence_priority_top_required_evidence_type": (
                 "exact_transporter_target_pair_quantitative_binder_kcal"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_status": (
+                "blocked_product_scope_breadth_evidence_receipt"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_csv": (
+                "config/product_scope_breadth_evidence_receipt_current.csv"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_first_blocked_scope_blocker_id": (
+                "direct_binding_evidence_missing"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_first_blocked_evidence_artifact": (
+                "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_first_blocked_expected_evidence_status": (
+                "product_scope_transporter_direct_binding_evidence_ready"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_first_blocked_observed_evidence_status": (
+                "missing"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_approval_token_required": (
+                "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
             ),
             "full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"

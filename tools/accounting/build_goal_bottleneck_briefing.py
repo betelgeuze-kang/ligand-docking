@@ -176,6 +176,28 @@ PRODUCT_SCOPE_BREADTH_EVIDENCE_PRIORITY_INTAKE_FIELDS = (
     "top_review_template_artifact",
     "top_apply_gate_artifact",
     "top_next_step",
+    "receipt_status",
+    "receipt_ready",
+    "receipt_csv",
+    "receipt_row_count",
+    "receipt_blocked_row_count",
+    "receipt_operator_review_surface_ready_count",
+    "receipt_operator_review_surface_blocked_count",
+    "receipt_manual_field_pending_count",
+    "receipt_evidence_artifact_pending_count",
+    "receipt_claim_ready_pending_count",
+    "receipt_reviewer_pending_count",
+    "receipt_reviewed_at_utc_pending_count",
+    "receipt_license_ok_pending_count",
+    "receipt_approval_token_pending_count",
+    "receipt_first_blocked_scope_blocker_id",
+    "receipt_first_blocked_evidence_artifact",
+    "receipt_first_blocked_expected_evidence_status",
+    "receipt_first_blocked_observed_evidence_status",
+    "receipt_first_blocked_missing_true_fields",
+    "receipt_first_blocked_row_blockers",
+    "receipt_most_common_row_blocker",
+    "receipt_approval_token_required",
     "external_state_mutated",
 )
 
@@ -343,9 +365,15 @@ def _product_scope_breadth_evidence_priority_intake_fields(
             "packet_ready",
             "scope_promotion_allowed",
             "authoritative_apply_allowed",
+            "receipt_ready",
             "external_state_mutated",
         }:
             fields[source_key] = bool(intake.get(source_key) is True)
+        elif suffix in {
+            "receipt_first_blocked_missing_true_fields",
+            "receipt_first_blocked_row_blockers",
+        }:
+            fields[source_key] = _text_list(intake.get(source_key))
         else:
             fields[source_key] = _text(intake.get(source_key))
     return fields

@@ -838,6 +838,72 @@ def build_goal_operator_intake_kit(
         "product_scope_breadth_evidence_priority_top_next_step": _text(
             scope_breadth_priority_summary.get("top_next_step")
         ),
+        "product_scope_breadth_evidence_priority_receipt_status": _text(
+            scope_breadth_priority_summary.get("receipt_status")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_ready": bool(
+            scope_breadth_priority_summary.get("receipt_ready") is True
+        ),
+        "product_scope_breadth_evidence_priority_receipt_csv": _text(
+            scope_breadth_priority_summary.get("receipt_csv")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_row_count": _int(
+            scope_breadth_priority_summary.get("receipt_row_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_blocked_row_count": _int(
+            scope_breadth_priority_summary.get("receipt_blocked_row_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_operator_review_surface_ready_count": _int(
+            scope_breadth_priority_summary.get("receipt_operator_review_surface_ready_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_operator_review_surface_blocked_count": _int(
+            scope_breadth_priority_summary.get("receipt_operator_review_surface_blocked_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_manual_field_pending_count": _int(
+            scope_breadth_priority_summary.get("receipt_manual_field_pending_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_evidence_artifact_pending_count": _int(
+            scope_breadth_priority_summary.get("receipt_evidence_artifact_pending_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_claim_ready_pending_count": _int(
+            scope_breadth_priority_summary.get("receipt_claim_ready_pending_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_reviewer_pending_count": _int(
+            scope_breadth_priority_summary.get("receipt_reviewer_pending_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_reviewed_at_utc_pending_count": _int(
+            scope_breadth_priority_summary.get("receipt_reviewed_at_utc_pending_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_license_ok_pending_count": _int(
+            scope_breadth_priority_summary.get("receipt_license_ok_pending_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_approval_token_pending_count": _int(
+            scope_breadth_priority_summary.get("receipt_approval_token_pending_count")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_scope_blocker_id": _text(
+            scope_breadth_priority_summary.get("receipt_first_blocked_scope_blocker_id")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_evidence_artifact": _text(
+            scope_breadth_priority_summary.get("receipt_first_blocked_evidence_artifact")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_expected_evidence_status": _text(
+            scope_breadth_priority_summary.get("receipt_first_blocked_expected_evidence_status")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_observed_evidence_status": _text(
+            scope_breadth_priority_summary.get("receipt_first_blocked_observed_evidence_status")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_missing_true_fields": _text_list(
+            scope_breadth_priority_summary.get("receipt_first_blocked_missing_true_fields")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_row_blockers": _text_list(
+            scope_breadth_priority_summary.get("receipt_first_blocked_row_blockers")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_most_common_row_blocker": _text(
+            scope_breadth_priority_summary.get("receipt_most_common_row_blocker")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_approval_token_required": _text(
+            scope_breadth_priority_summary.get("receipt_approval_token_required")
+        ),
         "product_scope_breadth_evidence_priority_external_state_mutated": bool(
             scope_breadth_priority_summary.get("external_state_mutated") is True
         ),

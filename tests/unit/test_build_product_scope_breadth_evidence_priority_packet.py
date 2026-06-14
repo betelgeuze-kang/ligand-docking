@@ -72,6 +72,40 @@ def _transporter_binder_gate() -> dict[str, object]:
     }
 
 
+def _scope_evidence_receipt() -> dict[str, object]:
+    return {
+        "summary": {
+            "status": "blocked_product_scope_breadth_evidence_receipt",
+            "full_scope_evidence_receipt_ready": False,
+            "receipt_csv": "config/product_scope_breadth_evidence_receipt_current.csv",
+            "receipt_row_count": 6,
+            "blocked_row_count": 6,
+            "operator_review_surface_ready_count": 6,
+            "operator_review_surface_blocked_count": 0,
+            "receipt_manual_field_pending_count": 36,
+            "receipt_evidence_artifact_pending_count": 6,
+            "receipt_claim_ready_pending_count": 6,
+            "receipt_reviewer_pending_count": 6,
+            "receipt_reviewed_at_utc_pending_count": 6,
+            "receipt_license_ok_pending_count": 6,
+            "receipt_approval_token_pending_count": 6,
+            "first_blocked_scope_blocker_id": "direct_binding_evidence_missing",
+            "first_blocked_evidence_artifact": "OPERATOR_FILL_LOCAL_EVIDENCE_JSON",
+            "first_blocked_expected_evidence_status": (
+                "product_scope_transporter_direct_binding_evidence_ready"
+            ),
+            "first_blocked_observed_evidence_status": "missing",
+            "first_blocked_missing_true_fields": ["transporter_direct_binding_evidence_ready"],
+            "first_blocked_row_blockers": [
+                "operator_placeholders_unfilled",
+                "evidence_artifact_not_found",
+            ],
+            "most_common_row_blocker": "operator_placeholders_unfilled",
+            "approval_token_required": "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT",
+        }
+    }
+
+
 def test_scope_breadth_evidence_priority_packet_classifies_local_and_external_rows(tmp_path: Path) -> None:
     crosscheck = tmp_path / "crosscheck"
     crosscheck.mkdir()
@@ -81,7 +115,9 @@ def test_scope_breadth_evidence_priority_packet_classifies_local_and_external_ro
     payload = mod.build_payload(
         queue_payload=_queue(),
         transporter_binder_gate_payload=_transporter_binder_gate(),
+        scope_evidence_receipt_payload=_scope_evidence_receipt(),
         crosscheck_dir=crosscheck,
+        scope_evidence_receipt_path="runs/product_scope_breadth_evidence_receipt_current.json",
     )
 
     summary = payload["summary"]
@@ -110,6 +146,32 @@ def test_scope_breadth_evidence_priority_packet_classifies_local_and_external_ro
     assert summary["top_required_evidence_type"] == "exact_transporter_target_pair_quantitative_binder_kcal"
     assert summary["top_review_template_artifact"] == "runs/transporter_manual_review_intake_template_current.json"
     assert summary["top_apply_gate_artifact"] == "runs/transporter_binder_promotion_gate_current.json"
+    assert summary["receipt_status"] == "blocked_product_scope_breadth_evidence_receipt"
+    assert summary["receipt_ready"] is False
+    assert summary["receipt_csv"] == "config/product_scope_breadth_evidence_receipt_current.csv"
+    assert summary["receipt_row_count"] == 6
+    assert summary["receipt_blocked_row_count"] == 6
+    assert summary["receipt_operator_review_surface_ready_count"] == 6
+    assert summary["receipt_operator_review_surface_blocked_count"] == 0
+    assert summary["receipt_manual_field_pending_count"] == 36
+    assert summary["receipt_evidence_artifact_pending_count"] == 6
+    assert summary["receipt_claim_ready_pending_count"] == 6
+    assert summary["receipt_reviewer_pending_count"] == 6
+    assert summary["receipt_reviewed_at_utc_pending_count"] == 6
+    assert summary["receipt_license_ok_pending_count"] == 6
+    assert summary["receipt_approval_token_pending_count"] == 6
+    assert summary["receipt_first_blocked_scope_blocker_id"] == "direct_binding_evidence_missing"
+    assert summary["receipt_first_blocked_evidence_artifact"] == "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+    assert summary["receipt_first_blocked_expected_evidence_status"] == (
+        "product_scope_transporter_direct_binding_evidence_ready"
+    )
+    assert summary["receipt_first_blocked_observed_evidence_status"] == "missing"
+    assert summary["receipt_first_blocked_missing_true_fields"] == [
+        "transporter_direct_binding_evidence_ready"
+    ]
+    assert "operator_placeholders_unfilled" in summary["receipt_first_blocked_row_blockers"]
+    assert summary["receipt_most_common_row_blocker"] == "operator_placeholders_unfilled"
+    assert summary["receipt_approval_token_required"] == "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
     assert summary["scope_promotion_allowed"] is False
     assert payload["rows"][0]["evidence_priority_bucket"] == "local_crosscheck_review_present_but_exact_quant_required"
     assert payload["rows"][0]["target_id"] == "AQP1"
@@ -130,6 +192,7 @@ def test_scope_breadth_evidence_priority_packet_classifies_local_and_external_ro
 def test_scope_breadth_evidence_priority_packet_cli_writes_outputs(tmp_path: Path) -> None:
     queue = tmp_path / "queue.json"
     transporter_binder_gate = tmp_path / "transporter_binder_gate.json"
+    scope_receipt = tmp_path / "scope_receipt.json"
     crosscheck = tmp_path / "crosscheck"
     out_json = tmp_path / "priority.json"
     out_csv = tmp_path / "priority.csv"
@@ -138,6 +201,7 @@ def test_scope_breadth_evidence_priority_packet_cli_writes_outputs(tmp_path: Pat
     (crosscheck / "uniprot_aqp1_p29972_latest.json").write_text("{}", encoding="utf-8")
     queue.write_text(json.dumps(_queue()), encoding="utf-8")
     transporter_binder_gate.write_text(json.dumps(_transporter_binder_gate()), encoding="utf-8")
+    scope_receipt.write_text(json.dumps(_scope_evidence_receipt()), encoding="utf-8")
 
     subprocess.run(
         [
@@ -149,6 +213,8 @@ def test_scope_breadth_evidence_priority_packet_cli_writes_outputs(tmp_path: Pat
             str(crosscheck),
             "--transporter-binder-gate-json",
             str(transporter_binder_gate),
+            "--scope-evidence-receipt-json",
+            str(scope_receipt),
             "--out-json",
             str(out_json),
             "--out-csv",
@@ -164,7 +230,11 @@ def test_scope_breadth_evidence_priority_packet_cli_writes_outputs(tmp_path: Pat
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"][
         "transporter_target_blocked_for_promotion_ids"
     ] == ["AQP1"]
+    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"][
+        "receipt_manual_field_pending_count"
+    ] == 36
     assert "Product Scope Breadth Evidence Priority Packet" in out_md.read_text(encoding="utf-8")
+    assert "receipt_manual_field_pending_count" in out_md.read_text(encoding="utf-8")
     assert "target_blocked_for_promotion" in out_md.read_text(encoding="utf-8")
     assert "evidence_priority_bucket" in out_csv.read_text(encoding="utf-8")
     assert "target_promotion_status" in out_csv.read_text(encoding="utf-8")

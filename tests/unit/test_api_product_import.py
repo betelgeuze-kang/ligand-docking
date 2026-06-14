@@ -1432,6 +1432,31 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert scope_priority["top_required_evidence_type"] == "exact_transporter_target_pair_quantitative_binder_kcal"
     assert scope_priority["top_review_template_artifact"] == "runs/transporter_manual_review_intake_template_current.json"
     assert scope_priority["top_apply_gate_artifact"] == "runs/transporter_binder_promotion_gate_current.json"
+    assert scope_priority["receipt_status"] == "blocked_product_scope_breadth_evidence_receipt"
+    assert scope_priority["receipt_ready"] is False
+    assert scope_priority["receipt_row_count"] == 6
+    assert scope_priority["receipt_blocked_row_count"] == 6
+    assert scope_priority["receipt_operator_review_surface_ready_count"] == 6
+    assert scope_priority["receipt_operator_review_surface_blocked_count"] == 0
+    assert scope_priority["receipt_manual_field_pending_count"] == 36
+    assert scope_priority["receipt_evidence_artifact_pending_count"] == 6
+    assert scope_priority["receipt_claim_ready_pending_count"] == 6
+    assert scope_priority["receipt_reviewer_pending_count"] == 6
+    assert scope_priority["receipt_reviewed_at_utc_pending_count"] == 6
+    assert scope_priority["receipt_license_ok_pending_count"] == 6
+    assert scope_priority["receipt_approval_token_pending_count"] == 6
+    assert scope_priority["receipt_first_blocked_scope_blocker_id"] == "direct_binding_evidence_missing"
+    assert scope_priority["receipt_first_blocked_evidence_artifact"] == "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+    assert scope_priority["receipt_first_blocked_expected_evidence_status"] == (
+        "product_scope_transporter_direct_binding_evidence_ready"
+    )
+    assert scope_priority["receipt_first_blocked_observed_evidence_status"] == "missing"
+    assert scope_priority["receipt_first_blocked_missing_true_fields"] == [
+        "transporter_direct_binding_evidence_ready"
+    ]
+    assert "operator_placeholders_unfilled" in scope_priority["receipt_first_blocked_row_blockers"]
+    assert scope_priority["receipt_most_common_row_blocker"] == "operator_placeholders_unfilled"
+    assert scope_priority["receipt_approval_token_required"] == "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
     assert scope_priority["top_priority_items"][0]["item_id"] == "AQP1.core_binder_01"
     assert scope_priority["top_priority_items"][0]["domain"] == "transporter"
     assert len(scope_priority["priority_items"]) == scope_priority["queue_item_count"]
@@ -1946,19 +1971,19 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     )
     assert (
         operator_packet["engine_refinement_claim_evidence_operator_field_worksheet_field_row_count"]
-        == 144
+        == 389
     )
     assert (
         operator_packet[
             "engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count"
         ]
-        == 108
+        == 296
     )
     assert (
         operator_packet[
             "engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count"
         ]
-        == 72
+        == 56
     )
     assert (
         operator_packet[
@@ -2482,13 +2507,13 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
         handoff_bundle[
             "engine_refinement_claim_evidence_operator_field_worksheet_pending_field_count"
         ]
-        == 108
+        == 296
     )
     assert (
         handoff_bundle[
             "engine_refinement_claim_evidence_operator_field_worksheet_work_order_pending_field_count"
         ]
-        == 72
+        == 56
     )
     assert (
         handoff_bundle[

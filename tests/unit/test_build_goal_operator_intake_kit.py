@@ -328,6 +328,30 @@ def _source_packets() -> dict[str, dict]:
                 "top_review_template_artifact": "runs/transporter_manual_review_intake_template_current.json",
                 "top_apply_gate_artifact": "runs/transporter_binder_promotion_gate_current.json",
                 "top_next_step": "Review local crosscheck files, capture exact evidence if present.",
+                "receipt_status": "blocked_product_scope_breadth_evidence_receipt",
+                "receipt_ready": False,
+                "receipt_csv": "config/product_scope_breadth_evidence_receipt_current.csv",
+                "receipt_row_count": 6,
+                "receipt_blocked_row_count": 6,
+                "receipt_operator_review_surface_ready_count": 6,
+                "receipt_operator_review_surface_blocked_count": 0,
+                "receipt_manual_field_pending_count": 36,
+                "receipt_evidence_artifact_pending_count": 6,
+                "receipt_claim_ready_pending_count": 6,
+                "receipt_reviewer_pending_count": 6,
+                "receipt_reviewed_at_utc_pending_count": 6,
+                "receipt_license_ok_pending_count": 6,
+                "receipt_approval_token_pending_count": 6,
+                "receipt_first_blocked_scope_blocker_id": "direct_binding_evidence_missing",
+                "receipt_first_blocked_evidence_artifact": "OPERATOR_FILL_LOCAL_EVIDENCE_JSON",
+                "receipt_first_blocked_missing_true_fields": [
+                    "transporter_direct_binding_evidence_ready"
+                ],
+                "receipt_first_blocked_row_blockers": [
+                    "operator_placeholders_unfilled",
+                    "evidence_artifact_not_found",
+                ],
+                "receipt_approval_token_required": "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT",
                 "external_state_mutated": False,
             }
         },
@@ -537,6 +561,40 @@ def test_goal_operator_intake_kit_summarizes_actions_tokens_and_requirements(tmp
     assert summary["product_scope_breadth_evidence_priority_top_required_evidence_type"] == (
         "exact_transporter_target_pair_quantitative_binder_kcal"
     )
+    assert summary["product_scope_breadth_evidence_priority_receipt_status"] == (
+        "blocked_product_scope_breadth_evidence_receipt"
+    )
+    assert summary["product_scope_breadth_evidence_priority_receipt_ready"] is False
+    assert summary["product_scope_breadth_evidence_priority_receipt_row_count"] == 6
+    assert summary["product_scope_breadth_evidence_priority_receipt_blocked_row_count"] == 6
+    assert summary[
+        "product_scope_breadth_evidence_priority_receipt_operator_review_surface_ready_count"
+    ] == 6
+    assert summary[
+        "product_scope_breadth_evidence_priority_receipt_operator_review_surface_blocked_count"
+    ] == 0
+    assert summary["product_scope_breadth_evidence_priority_receipt_manual_field_pending_count"] == 36
+    assert summary["product_scope_breadth_evidence_priority_receipt_evidence_artifact_pending_count"] == 6
+    assert summary["product_scope_breadth_evidence_priority_receipt_claim_ready_pending_count"] == 6
+    assert summary["product_scope_breadth_evidence_priority_receipt_reviewer_pending_count"] == 6
+    assert summary["product_scope_breadth_evidence_priority_receipt_reviewed_at_utc_pending_count"] == 6
+    assert summary["product_scope_breadth_evidence_priority_receipt_license_ok_pending_count"] == 6
+    assert summary["product_scope_breadth_evidence_priority_receipt_approval_token_pending_count"] == 6
+    assert summary[
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_scope_blocker_id"
+    ] == "direct_binding_evidence_missing"
+    assert summary[
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_evidence_artifact"
+    ] == "OPERATOR_FILL_LOCAL_EVIDENCE_JSON"
+    assert summary[
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_missing_true_fields"
+    ] == ["transporter_direct_binding_evidence_ready"]
+    assert "operator_placeholders_unfilled" in summary[
+        "product_scope_breadth_evidence_priority_receipt_first_blocked_row_blockers"
+    ]
+    assert summary[
+        "product_scope_breadth_evidence_priority_receipt_approval_token_required"
+    ] == "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
     assert summary["product_scope_breadth_evidence_priority_scope_promotion_allowed"] is False
     assert summary["product_scope_breadth_evidence_priority_authoritative_apply_allowed"] is False
     assert by_id["production_ai_registry_promotion"]["kit_status"] == "approval_required"
