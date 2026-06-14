@@ -355,6 +355,14 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "product_commercial_readiness_operator_packet_semantic_ready" in text
     assert "product_commercial_readiness_handoff_bundle_semantic_ready" in text
     assert "`metric_source_templates_metric_source_payload_fill_blocked_row_count=51`" in text
+    assert "`refine_tier_public_benchmark_claim_grade_gap_audit_ready`" in text
+    assert "`observed_public_benchmark_pair_count=8`" in text
+    assert "`observed_holdout_pair_count=3`" in text
+    assert "`observed_bootstrap_spearman_p05=-0.14285714285714285`" in text
+    assert "`blocked_gap_row_count=5`" in text
+    assert "`top_science_gap_id=coordinate_fetch_r4_approval_required`" in text
+    assert "`coordinate_validation_deficit=17`" in text
+    assert "`metric_source_payload_fill_deficit=51`" in text
     assert "`execute_command_count=1`" in text
     assert "`authorized_for_external_download=false`" in text
     assert (

@@ -1298,6 +1298,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan" in artifact_ids
     assert "refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply" in artifact_ids
     assert "refine_tier_public_benchmark_statistical_support_metric_source_templates" in artifact_ids
+    assert "refine_tier_public_benchmark_claim_grade_gap_audit" in artifact_ids
     assert "science_accuracy_frontier" in artifact_ids
     assert "self_hosted_license_distribution_audit" in artifact_ids
     assert "third_party_license_review_gate" in artifact_ids
@@ -1329,6 +1330,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_blocked_semantic_ready"
         in status_ids
     )
+    assert "refine_tier_public_benchmark_claim_grade_gap_audit_semantic_ready" in status_ids
     assert "product_ledger_privacy_scan" in artifact_ids
     assert "product_trajectory_sla_contract" in artifact_ids
     assert "product_job_orchestration_contract" in artifact_ids
@@ -1419,6 +1421,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_COMMAND
         in mod.RELEASE_REFRESH_COMMANDS
     )
+    assert mod.REFINE_TIER_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_science_accuracy_frontier.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "product_release_bundle_semantic_ready" in status_ids
     assert (
@@ -1441,6 +1444,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "refine_tier_public_benchmark_statistical_support_metric_source_templates_semantic_ready"
         in status_ids
     )
+    assert "refine_tier_public_benchmark_claim_grade_gap_audit_semantic_ready" in status_ids
     assert "product_goal_completion_audit_full_commercial_release_blockers_semantic_ready" in status_ids
     assert "api_runner_profile_promotion_operator_receipt_blocked_semantic_ready" in status_ids
     assert "product_production_ai_checkpoint_shadow_blocked_semantic_ready" in status_ids
@@ -2570,6 +2574,61 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert statistical_metric_source_templates_status_spec["required_text_exact_fields"][
         "required_metric_source_payloads"
     ] == "dockq;lddt_pli;internal_deltaG"
+    claim_grade_gap_audit_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "refine_tier_public_benchmark_claim_grade_gap_audit_semantic_ready"
+    )
+    assert claim_grade_gap_audit_status_spec["required_status"] == (
+        "refine_tier_public_benchmark_claim_grade_gap_audit_ready"
+    )
+    assert "claim_grade_gap_audit_ready" in claim_grade_gap_audit_status_spec["required_true_fields"]
+    assert "bootstrap_retest_required" in claim_grade_gap_audit_status_spec["required_true_fields"]
+    assert claim_grade_gap_audit_status_spec["required_int_exact_fields"][
+        "observed_public_benchmark_pair_count"
+    ] == 8
+    assert claim_grade_gap_audit_status_spec["required_int_exact_fields"][
+        "observed_holdout_pair_count"
+    ] == 3
+    assert claim_grade_gap_audit_status_spec["required_int_exact_fields"][
+        "minimum_new_pair_count"
+    ] == 17
+    assert claim_grade_gap_audit_status_spec["required_int_exact_fields"][
+        "minimum_new_holdout_pair_count"
+    ] == 5
+    assert claim_grade_gap_audit_status_spec["required_int_exact_fields"][
+        "coordinate_fetch_r4_fetch_required_row_count"
+    ] == 17
+    assert claim_grade_gap_audit_status_spec["required_int_exact_fields"][
+        "coordinate_validation_pass_row_count"
+    ] == 0
+    assert claim_grade_gap_audit_status_spec["required_int_exact_fields"][
+        "coordinate_validation_blocked_row_count"
+    ] == 17
+    assert claim_grade_gap_audit_status_spec["required_int_exact_fields"][
+        "planned_metric_source_payload_count"
+    ] == 51
+    assert claim_grade_gap_audit_status_spec["required_int_exact_fields"][
+        "metric_source_payload_fill_ready_row_count"
+    ] == 0
+    assert claim_grade_gap_audit_status_spec["required_int_exact_fields"][
+        "metric_source_payload_fill_blocked_row_count"
+    ] == 51
+    assert claim_grade_gap_audit_status_spec["required_int_exact_fields"][
+        "blocked_gap_row_count"
+    ] == 5
+    assert claim_grade_gap_audit_status_spec["required_text_exact_fields"][
+        "observed_bootstrap_spearman_p05"
+    ] == "-0.14285714285714285"
+    assert claim_grade_gap_audit_status_spec["required_text_exact_fields"][
+        "bootstrap_spearman_p05_deficit"
+    ] == "0.6428571428571428"
+    assert claim_grade_gap_audit_status_spec["required_text_exact_fields"][
+        "top_science_gap_id"
+    ] == "coordinate_fetch_r4_approval_required"
+    assert claim_grade_gap_audit_status_spec["required_text_exact_fields"][
+        "top_statistical_gap_id"
+    ] == "claim_grade_public_benchmark_pair_count_below_minimum"
     engine_field_worksheet_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -3692,6 +3751,37 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json" in (
         statistical_metric_source_templates_spec["depends_on"]
     )
+    claim_grade_gap_audit_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "refine_tier_public_benchmark_claim_grade_gap_audit"
+    )
+    assert claim_grade_gap_audit_spec["builder_command"] == (
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_COMMAND
+    )
+    assert "tools/product/build_refine_tier_public_benchmark_claim_grade_gap_audit.py" in (
+        claim_grade_gap_audit_spec["depends_on"]
+    )
+    assert "tools/build_refine_tier_public_benchmark_claim_grade_gap_audit.py" in (
+        claim_grade_gap_audit_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_metric_source_materialization_current.json" in (
+        claim_grade_gap_audit_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json" in (
+        claim_grade_gap_audit_spec["depends_on"]
+    )
+    assert (
+        "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json"
+        in claim_grade_gap_audit_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json" in (
+        claim_grade_gap_audit_spec["depends_on"]
+    )
+    assert (
+        "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json"
+        in claim_grade_gap_audit_spec["depends_on"]
+    )
     priority_packet_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -3960,6 +4050,11 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index(
         mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_COMMAND
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_COMMAND
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_COMMAND
     ) < mod.RELEASE_REFRESH_COMMANDS.index(
         "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py"
     )

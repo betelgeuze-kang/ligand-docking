@@ -58,6 +58,9 @@ REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINES
 REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_COMMAND = (
     "python3 tools/product/build_refine_tier_public_benchmark_statistical_support_metric_source_templates.py"
 )
+REFINE_TIER_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_COMMAND = (
+    "python3 tools/product/build_refine_tier_public_benchmark_claim_grade_gap_audit.py"
+)
 
 RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_accuracy_parity_scorecard.py",
@@ -132,6 +135,7 @@ RELEASE_REFRESH_COMMANDS = [
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_COMMAND,
+    REFINE_TIER_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_COMMAND,
     "python3 tools/product/build_engine_refinement_tier_readiness.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py",
@@ -1052,6 +1056,20 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "tools/product/build_refine_tier_public_benchmark_statistical_support_metric_source_templates.py",
             "tools/build_refine_tier_public_benchmark_statistical_support_metric_source_templates.py",
             "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json",
+        ],
+    },
+    {
+        "artifact_id": "refine_tier_public_benchmark_claim_grade_gap_audit",
+        "artifact_path": "runs/refine_tier_public_benchmark_claim_grade_gap_audit_current.json",
+        "builder_command": REFINE_TIER_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_COMMAND,
+        "depends_on": [
+            "tools/product/build_refine_tier_public_benchmark_claim_grade_gap_audit.py",
+            "tools/build_refine_tier_public_benchmark_claim_grade_gap_audit.py",
+            "runs/refine_tier_public_benchmark_metric_source_materialization_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json",
         ],
     },
     {
@@ -2785,6 +2803,75 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "After R4-approved coordinate fetch and validation, replace each operator placeholder "
                 "with reviewed DockQ/lDDT-PLI/internal DeltaG values while preserving input artifact "
                 "paths, hashes, license_ok=true, and external_engine_calls=0."
+            ),
+        },
+    },
+    {
+        "artifact_id": "refine_tier_public_benchmark_claim_grade_gap_audit_semantic_ready",
+        "artifact_path": "runs/refine_tier_public_benchmark_claim_grade_gap_audit_current.json",
+        "builder_command": REFINE_TIER_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_COMMAND,
+        "required_status": "refine_tier_public_benchmark_claim_grade_gap_audit_ready",
+        "required_true_fields": [
+            "claim_grade_gap_audit_ready",
+            "materialization_artifact_present",
+            "statistical_support_work_order_present",
+            "metric_materialization_readiness_present",
+            "metric_source_templates_present",
+            "coordinate_fetch_r4_preflight_present",
+            "coordinate_fetch_r4_preflight_ready",
+            "bootstrap_retest_required",
+        ],
+        "required_int_exact_fields": {
+            "claim_grade_statistical_support_ready": 0,
+            "canonical_intake_promotion_allowed": 0,
+            "observed_public_benchmark_pair_count": 8,
+            "observed_holdout_pair_count": 3,
+            "min_claim_grade_public_benchmark_pairs_required": 25,
+            "min_claim_grade_holdout_pairs_required": 8,
+            "minimum_new_pair_count": 17,
+            "minimum_new_holdout_pair_count": 5,
+            "statistical_support_work_order_expansion_slot_count": 17,
+            "statistical_support_work_order_holdout_expansion_slot_count": 5,
+            "statistical_support_work_order_fit_or_holdout_expansion_slot_count": 12,
+            "coordinate_fetch_r4_fetch_required_row_count": 17,
+            "coordinate_fetch_r4_ready_for_review_row_count": 17,
+            "coordinate_fetch_r4_blocked_row_count": 0,
+            "coordinate_fetch_r4_authorized_for_external_download": 0,
+            "coordinate_fetch_r4_download_executed": 0,
+            "coordinate_fetch_r4_external_state_mutated": 0,
+            "coordinate_validation_candidate_row_count": 17,
+            "coordinate_validation_pass_row_count": 0,
+            "coordinate_validation_blocked_row_count": 17,
+            "coordinate_validation_deficit": 17,
+            "planned_metric_source_payload_count": 51,
+            "metric_source_payload_fill_ready_row_count": 0,
+            "metric_source_payload_fill_blocked_row_count": 51,
+            "metric_source_payload_fill_deficit": 51,
+            "gap_row_count": 5,
+            "blocked_gap_row_count": 5,
+            "pass_gap_row_count": 0,
+            "blocker_count": 5,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+        },
+        "required_text_exact_fields": {
+            "observed_bootstrap_spearman_p05": "-0.14285714285714285",
+            "bootstrap_spearman_p05_deficit": "0.6428571428571428",
+            "coordinate_fetch_r4_approval_token_required": (
+                "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+            ),
+            "required_metric_source_payloads": "dockq;lddt_pli;internal_deltaG",
+            "required_metric_source_payload_fields": (
+                "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
+                "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
+            ),
+            "top_science_gap_id": "coordinate_fetch_r4_approval_required",
+            "top_statistical_gap_id": "claim_grade_public_benchmark_pair_count_below_minimum",
+            "next_required_step": (
+                "Keep R9 claim-grade promotion blocked; after explicit R4 approval fetch and validate "
+                "the 17 public coordinate candidates, replace 51 DockQ/lDDT-PLI/internal DeltaG metric "
+                "source payload placeholders, then rebuild materialization and require bootstrap Spearman "
+                "p05 >= 0.5 with at least 25 public benchmark pairs and 8 holdout pairs."
             ),
         },
     },
