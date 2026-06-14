@@ -39,6 +39,9 @@ REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_COMMAND = (
 REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_CANDIDATE_QUEUE_COMMAND = (
     "python3 tools/product/build_refine_tier_public_benchmark_statistical_support_candidate_queue.py"
 )
+REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_INTAKE_COMMAND = (
+    "python3 tools/product/build_refine_tier_public_benchmark_statistical_support_coordinate_intake.py"
+)
 
 RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_accuracy_parity_scorecard.py",
@@ -107,6 +110,7 @@ RELEASE_REFRESH_COMMANDS = [
     REFINE_TIER_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_CANDIDATE_QUEUE_COMMAND,
+    REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_INTAKE_COMMAND,
     "python3 tools/product/build_engine_refinement_tier_readiness.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py",
@@ -939,6 +943,16 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/refine_tier_public_benchmark_work_order_current.csv",
             "runs/pdbbind_casf_pose_affinity_benchmark_results_current.csv",
             "data/public_benchmarks/pdbbind_casf_pose_affinity/pdb_to_affinity.txt.original",
+        ],
+    },
+    {
+        "artifact_id": "refine_tier_public_benchmark_statistical_support_coordinate_intake",
+        "artifact_path": "runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json",
+        "builder_command": REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_INTAKE_COMMAND,
+        "depends_on": [
+            "tools/product/build_refine_tier_public_benchmark_statistical_support_coordinate_intake.py",
+            "tools/build_refine_tier_public_benchmark_statistical_support_coordinate_intake.py",
+            "runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json",
         ],
     },
     {
@@ -2287,6 +2301,55 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "Review and place public receptor/complex coordinate artifacts for the selected 17 "
                 "candidates, then materialize DockQ, lDDT-PLI, and internal DeltaG source payloads "
                 "before canonical intake or claim receipt promotion."
+            ),
+        },
+    },
+    {
+        "artifact_id": "refine_tier_public_benchmark_statistical_support_coordinate_intake_semantic_ready",
+        "artifact_path": "runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json",
+        "builder_command": REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_INTAKE_COMMAND,
+        "required_status": "refine_tier_public_benchmark_statistical_support_coordinate_intake_ready",
+        "required_true_fields": [
+            "coordinate_intake_ready",
+            "candidate_queue_present",
+            "candidate_queue_ready",
+        ],
+        "required_int_exact_fields": {
+            "candidate_queue_selected_candidate_count": 17,
+            "coordinate_intake_row_count": 17,
+            "coordinate_intake_artifact_present_row_count": 0,
+            "coordinate_intake_missing_row_count": 17,
+            "coordinate_intake_suggested_public_url_row_count": 17,
+            "coordinate_intake_suggested_local_path_row_count": 17,
+            "coordinate_intake_operator_review_required_row_count": 17,
+            "coordinate_validation_row_count": 17,
+            "coordinate_validation_pass_row_count": 0,
+            "coordinate_validation_blocked_row_count": 17,
+            "coordinate_validation_missing_row_count": 17,
+            "coordinate_validation_below_min_atom_row_count": 0,
+            "coordinate_validation_below_min_macromolecule_row_count": 0,
+            "coordinate_validation_below_min_protein_like_row_count": 0,
+            "coordinate_validation_min_atom_records": 20,
+            "coordinate_validation_min_macromolecule_atom_records": 20,
+            "coordinate_validation_min_distinct_residues": 5,
+            "coordinate_validation_min_protein_like_residues": 5,
+            "ligand_pose_artifact_present_count": 17,
+            "experimental_deltaG_prefilled_count": 17,
+            "candidate_ready_for_metric_materialization_count": 0,
+            "candidate_ready_for_canonical_intake_count": 0,
+            "canonical_intake_promotion_allowed": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "blocker_count": 0,
+        },
+        "required_text_exact_fields": {
+            "candidate_queue": (
+                "runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json"
+            ),
+            "next_required_step": (
+                "Place and review receptor/complex coordinate artifacts for the 17 selected "
+                "statistical-support candidates, then rerun coordinate validation before metric "
+                "source materialization or claim receipt promotion."
             ),
         },
     },

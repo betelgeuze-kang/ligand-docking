@@ -1294,6 +1294,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "refine_tier_public_benchmark_work_order_apply_materialized" in artifact_ids
     assert "refine_tier_public_benchmark_statistical_support_work_order" in artifact_ids
     assert "refine_tier_public_benchmark_statistical_support_candidate_queue" in artifact_ids
+    assert "refine_tier_public_benchmark_statistical_support_coordinate_intake" in artifact_ids
     assert "science_accuracy_frontier" in artifact_ids
     assert "self_hosted_license_distribution_audit" in artifact_ids
     assert "third_party_license_review_gate" in artifact_ids
@@ -1316,6 +1317,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "gpcr_broad_claim_scope_readiness_target_heldout_ready_claim_locked" in status_ids
     assert "science_accuracy_frontier_restricted_ready_commercial_parity_blocked" in status_ids
     assert "refine_tier_public_benchmark_statistical_support_candidate_queue_semantic_ready" in status_ids
+    assert "refine_tier_public_benchmark_statistical_support_coordinate_intake_semantic_ready" in status_ids
     assert "product_ledger_privacy_scan" in artifact_ids
     assert "product_trajectory_sla_contract" in artifact_ids
     assert "product_job_orchestration_contract" in artifact_ids
@@ -1939,6 +1941,44 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "Review and place public receptor/complex coordinate artifacts for the selected 17 "
         "candidates, then materialize DockQ, lDDT-PLI, and internal DeltaG source payloads "
         "before canonical intake or claim receipt promotion."
+    )
+    statistical_coordinate_intake_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "refine_tier_public_benchmark_statistical_support_coordinate_intake_semantic_ready"
+    )
+    assert statistical_coordinate_intake_status_spec["required_status"] == (
+        "refine_tier_public_benchmark_statistical_support_coordinate_intake_ready"
+    )
+    assert "coordinate_intake_ready" in statistical_coordinate_intake_status_spec["required_true_fields"]
+    assert statistical_coordinate_intake_status_spec["required_int_exact_fields"][
+        "candidate_queue_selected_candidate_count"
+    ] == 17
+    assert statistical_coordinate_intake_status_spec["required_int_exact_fields"][
+        "coordinate_intake_row_count"
+    ] == 17
+    assert statistical_coordinate_intake_status_spec["required_int_exact_fields"][
+        "coordinate_intake_missing_row_count"
+    ] == 17
+    assert statistical_coordinate_intake_status_spec["required_int_exact_fields"][
+        "coordinate_validation_pass_row_count"
+    ] == 0
+    assert statistical_coordinate_intake_status_spec["required_int_exact_fields"][
+        "coordinate_validation_blocked_row_count"
+    ] == 17
+    assert statistical_coordinate_intake_status_spec["required_int_exact_fields"][
+        "coordinate_validation_missing_row_count"
+    ] == 17
+    assert statistical_coordinate_intake_status_spec["required_int_exact_fields"][
+        "candidate_ready_for_metric_materialization_count"
+    ] == 0
+    assert statistical_coordinate_intake_status_spec["required_text_exact_fields"][
+        "next_required_step"
+    ] == (
+        "Place and review receptor/complex coordinate artifacts for the 17 selected "
+        "statistical-support candidates, then rerun coordinate validation before metric "
+        "source materialization or claim receipt promotion."
     )
     engine_field_worksheet_status_spec = next(
         spec
@@ -2750,6 +2790,23 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "data/public_benchmarks/pdbbind_casf_pose_affinity/pdb_to_affinity.txt.original" in (
         statistical_candidate_queue_spec["depends_on"]
     )
+    statistical_coordinate_intake_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "refine_tier_public_benchmark_statistical_support_coordinate_intake"
+    )
+    assert statistical_coordinate_intake_spec["builder_command"] == (
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_INTAKE_COMMAND
+    )
+    assert "tools/product/build_refine_tier_public_benchmark_statistical_support_coordinate_intake.py" in (
+        statistical_coordinate_intake_spec["depends_on"]
+    )
+    assert "tools/build_refine_tier_public_benchmark_statistical_support_coordinate_intake.py" in (
+        statistical_coordinate_intake_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json" in (
+        statistical_coordinate_intake_spec["depends_on"]
+    )
     priority_packet_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -2981,6 +3038,11 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index(
         mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_CANDIDATE_QUEUE_COMMAND
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_INTAKE_COMMAND
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_INTAKE_COMMAND
     ) < mod.RELEASE_REFRESH_COMMANDS.index(
         "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py"
     )

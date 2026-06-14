@@ -232,6 +232,18 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`receptor_coordinate_artifact_missing_count=17`" in text
     assert "`candidate_ready_for_metric_materialization_count=0`" in text
     assert "`candidate_ready_for_canonical_intake_count=0`" in text
+    assert "`runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json`" in text
+    assert "`refine_tier_public_benchmark_statistical_support_coordinate_intake_ready`" in text
+    assert "`coordinate_intake_row_count=17`" in text
+    assert "`coordinate_intake_artifact_present_row_count=0`" in text
+    assert "`coordinate_intake_missing_row_count=17`" in text
+    assert "`coordinate_intake_suggested_public_url_row_count=17`" in text
+    assert "`coordinate_intake_suggested_local_path_row_count=17`" in text
+    assert "`coordinate_intake_operator_review_required_row_count=17`" in text
+    assert "`coordinate_validation_row_count=17`" in text
+    assert "`coordinate_validation_pass_row_count=0`" in text
+    assert "`coordinate_validation_blocked_row_count=17`" in text
+    assert "`coordinate_validation_missing_row_count=17`" in text
     assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
     assert "`runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`" in text
     assert "`Fill 17 additional reviewed public benchmark-pair expansion slots`" in text
@@ -240,6 +252,8 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "claim-grade statistical support expansion slot 17개" in text
     assert "statistical support candidate queue 17개" in text
     assert "receptor coordinate missing 17/17개" in text
+    assert "statistical support coordinate intake 17개" in text
+    assert "coordinate validation pass 0개/blocked 17개" in text
     assert "`worksheet_field_row_count=389`" in text
     assert "`operator_fill_pending_field_count=296`" in text
     assert "`public_benchmark_statistical_support_expansion_field_count=221`" in text
@@ -257,3 +271,4 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "receptor/complex coordinate validation 8/8 blocked" not in text
     assert "DockQ/lDDT-PLI/internal ΔG source evidence 8/8/8 missing" not in text
     assert "`selected_candidate_count=0`" not in text
+    assert "`coordinate_validation_pass_row_count=17`" not in text
