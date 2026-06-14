@@ -244,6 +244,18 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`coordinate_validation_pass_row_count=0`" in text
     assert "`coordinate_validation_blocked_row_count=17`" in text
     assert "`coordinate_validation_missing_row_count=17`" in text
+    assert (
+        "`runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_current.json`"
+        in text
+    )
+    assert "`refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_ready`" in text
+    assert "`coordinate_fetch_row_count=17`" in text
+    assert "`coordinate_fetch_required_row_count=17`" in text
+    assert "`coordinate_fetch_blocked_row_count=17`" in text
+    assert "`coordinate_fetch_primary_url_row_count=17`" in text
+    assert "`coordinate_fetch_staging_destination_row_count=17`" in text
+    assert "`coordinate_fetch_ready_for_validation_row_count=0`" in text
+    assert "`coordinate_fetch_external_download_executed=false`" in text
     assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
     assert "`runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`" in text
     assert "`Fill 17 additional reviewed public benchmark-pair expansion slots`" in text
@@ -254,6 +266,7 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "receptor coordinate missing 17/17개" in text
     assert "statistical support coordinate intake 17개" in text
     assert "coordinate validation pass 0개/blocked 17개" in text
+    assert "statistical support coordinate fetch required 17개/ready-for-validation 0개" in text
     assert "`worksheet_field_row_count=389`" in text
     assert "`operator_fill_pending_field_count=296`" in text
     assert "`public_benchmark_statistical_support_expansion_field_count=221`" in text

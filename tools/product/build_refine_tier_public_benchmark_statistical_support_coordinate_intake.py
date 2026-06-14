@@ -114,15 +114,23 @@ def _path_present(reference: str, *, root: Path = ROOT) -> bool:
     return _resolve(reference, root=root).is_file()
 
 
-def _first_path(value: Any) -> str:
-    return next((part.strip() for part in _text(value).split(";") if part.strip()), "")
+def _split_paths(value: Any) -> list[str]:
+    out: list[str] = []
+    for part in _text(value).split(";"):
+        path = part.strip()
+        if path and path not in out:
+            out.append(path)
+    return out
 
 
 def _candidate_receptor_artifact(row: dict[str, Any], *, root: Path) -> str:
-    current = _text(row.get("receptor_coordinate_artifact"))
-    if current:
-        return current
-    return _first_path(row.get("suggested_local_coordinate_paths"))
+    candidates = [_text(row.get("receptor_coordinate_artifact"))]
+    candidates.extend(_split_paths(row.get("suggested_local_coordinate_paths")))
+    candidates = [candidate for candidate in candidates if candidate]
+    for candidate in candidates:
+        if _path_present(candidate, root=root):
+            return candidate
+    return candidates[0] if candidates else ""
 
 
 def _intake_row(row: dict[str, Any], *, root: Path) -> dict[str, Any]:

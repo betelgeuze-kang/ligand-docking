@@ -448,6 +448,21 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `candidate_ready_for_canonical_intake_count=0`을 고정한다. 따라서 다음 병목은
   추상적인 "17개 후보 채우기"가 아니라, 각 후보의 공개 receptor/complex coordinate를
   검토해 local artifact로 배치하고 validation을 pass시키는 일로 좁혀졌다.
+  `runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_current.json`은
+  이 좌표 배치 단계를 operator-review 가능한 fetch/staging plan으로 한 번 더 펼쳐
+  `refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_ready`,
+  `coordinate_fetch_row_count=17`,
+  `coordinate_fetch_required_row_count=17`,
+  `coordinate_fetch_blocked_row_count=17`,
+  `coordinate_fetch_primary_url_row_count=17`,
+  `coordinate_fetch_staging_destination_row_count=17`,
+  `coordinate_fetch_destination_present_row_count=0`,
+  `coordinate_fetch_current_artifact_present_row_count=0`,
+  `coordinate_fetch_ready_for_validation_row_count=0`,
+  `coordinate_fetch_operator_review_required_row_count=17`,
+  `coordinate_fetch_external_download_executed=false`를 기록한다. 즉 현재 병목은
+  좌표 URL 탐색이 아니라, operator-approved public coordinate fetch/staging을
+  실제 로컬 artifact로 수행한 뒤 coordinate intake validation을 다시 통과시키는 것이다.
   `runs/engine_refinement_claim_evidence_priority_packet_current.json`과
   `runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`도 이
   work-order를 source artifact로 읽어 top operator step을
@@ -1236,18 +1251,18 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `cameo_validation_operations_dossier_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=131`, `pass_count=131`,
-  `blocker_count=0`, `artifact_row_count=85`, `semantic_status_row_count=44`,
-  `release_refresh_command_count=110`, `stale_artifact_count=0`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=133`, `pass_count=133`,
+  `blocker_count=0`, `artifact_row_count=86`, `semantic_status_row_count=45`,
+  `release_refresh_command_count=111`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   final refresh는 마지막 `goal_release_decision_gate` 뒤에
   `goal_operator_action_board`, `goal_release_burndown_work_order`, intake kit,
   bottleneck briefing, full commercial matrix, release bundle, handoff bundle,
   privacy scan, source-of-truth gate까지 downstream 산출물을 한 번 더 재생성하고,
   refresh runner final gate는 source-of-truth, quality gate verification,
-  release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=131`,
-  `pass_count=131`, `artifact_row_count=85`, `semantic_status_row_count=44`,
-  `readme_row_count=2`, `release_refresh_command_count=110`를 exact-check해
+  release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=133`,
+  `pass_count=133`, `artifact_row_count=86`, `semantic_status_row_count=45`,
+  `readme_row_count=2`, `release_refresh_command_count=111`를 exact-check해
   downstream readiness row가 조용히 빠지는 회귀를 막고,
   `product_quality_gate_verification_current.json` final gate는
   `product_quality_gate_verified`, `quality_gate_ready=true`,
@@ -1321,6 +1336,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   statistical support candidate queue 17개, candidate queue holdout 5개,
   ligand pose/experimental ΔG prefill 17/17개, receptor coordinate missing 17/17개,
   statistical support coordinate intake 17개, coordinate validation pass 0개/blocked 17개,
+  statistical support coordinate fetch required 17개/ready-for-validation 0개,
   statistical support expansion field 221개/pending 204개/ready split 17개,
   approval token requirement, first-blocked diagnostics가 source-of-truth에서 직접 검증된다. production AI
   checkpoint/promotion workbench는 현재 `shadow`/blocked 상태를 semantic-ready row로
@@ -1962,7 +1978,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=110`, `executed_count=110`,
+  `product_release_current_refresh_verified`, `command_count=111`, `executed_count=111`,
   `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=true`,
   `final_gate_count=4`, `final_gate_blocker_count=0`이다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
@@ -2005,9 +2021,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   input readiness, science accuracy frontier restricted-ready/commercial-parity-blocked accounting, production AI registry promotion operator
   receipt/priority packet/field worksheet/staging apply preview, CAMEO official-result fetch preflight, R8 scope-breadth evidence field worksheet/staging apply preview, R9 engine-refinement claim evidence priority packet/field worksheet/staging apply preview,
   master gap closure rollup 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=131/131`,
+  `product_release_source_of_truth_gate_ready`, `pass_count=133/133`,
   `blocker_count=0`, `stale_artifact_count=0`,
-  `release_refresh_command_count=110`으로 재검증됐다.
+  `release_refresh_command_count=111`으로 재검증됐다.
 - `scripts/check_independent_product_readiness.py`는 현재 release/source-of-truth,
   product readiness, operational quality, commercial-independence, capability surface,
   release bundle, master/science-claim rollup을 read-only로 확인해
@@ -2830,6 +2846,11 @@ slot에 들어갈 target/pose 후보를 선별했지만 receptor/complex coordin
 intake/validation packet도 이를 `coordinate_validation_pass_row_count=0`,
 `coordinate_validation_blocked_row_count=17`로 고정하므로, 다음 직접 작업은 17개
 후보별 공개 receptor/complex coordinate를 검토하고 local artifact로 배치하는 것이다.
+최신 coordinate fetch/staging plan은 `coordinate_fetch_required_row_count=17`,
+`coordinate_fetch_primary_url_row_count=17`,
+`coordinate_fetch_staging_destination_row_count=17`,
+`coordinate_fetch_ready_for_validation_row_count=0`을 고정해, URL 식별은 닫고
+operator-approved fetch/staging과 재검증을 직접 병목으로 남긴다.
 tracked current work-order의
 DockQ/lDDT-PLI/internal ΔG source field와 R9 evidence receipt도 operator
 placeholder 상태라, source evidence는 파일 존재만으로는 부족하고 schema-valid JSON

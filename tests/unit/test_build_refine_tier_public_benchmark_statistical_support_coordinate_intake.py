@@ -104,6 +104,61 @@ def test_coordinate_intake_validates_present_and_missing_receptor_coordinates(tm
     assert validation_rows[1]["coordinate_atom_record_count"] == 25
 
 
+def test_coordinate_intake_prefers_existing_complex_coordinate_from_suggested_paths(tmp_path: Path) -> None:
+    queue_json = tmp_path / "runs" / "candidate_queue.json"
+    dataset_dir = tmp_path / "dataset"
+    receptor_path = dataset_dir / "new1" / "new1_receptor.pdb"
+    complex_path = dataset_dir / "new1" / "new1_complex.pdb"
+    complex_path.parent.mkdir(parents=True, exist_ok=True)
+    complex_path.write_text(_pdb_text(), encoding="utf-8")
+    ligand = dataset_dir / "data_5_sdf" / "new1_020"
+    ligand.parent.mkdir(parents=True, exist_ok=True)
+    ligand.write_text("pose\n", encoding="utf-8")
+    queue_json.parent.mkdir(parents=True, exist_ok=True)
+    queue_json.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "refine_tier_public_benchmark_statistical_support_candidate_queue_ready",
+                    "selected_candidate_count": 1,
+                    "experimental_deltaG_prefilled_count": 1,
+                },
+                "rows": [
+                    {
+                        "candidate_queue_id": "stat_support_candidate_001",
+                        "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_001",
+                        "suggested_work_order_id": (
+                            "refine_tier_public_benchmark_stat_support_expansion_001"
+                        ),
+                        "target_id": "new1",
+                        "pose_id": "new1_020",
+                        "required_split": "holdout",
+                        "suggested_split": "holdout",
+                        "ligand_pose_artifact": str(ligand),
+                        "ligand_pose_artifact_present": True,
+                        "receptor_coordinate_artifact": str(receptor_path),
+                        "receptor_coordinate_artifact_present": False,
+                        "suggested_public_coordinate_urls": "https://files.rcsb.org/download/NEW1.pdb",
+                        "suggested_local_coordinate_paths": f"{receptor_path};{complex_path}",
+                    }
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = mod.build_refine_tier_public_benchmark_statistical_support_coordinate_intake(
+        candidate_queue_json=queue_json,
+        root=tmp_path,
+    )
+
+    assert payload["summary"]["coordinate_intake_artifact_present_row_count"] == 1
+    assert payload["summary"]["coordinate_validation_pass_row_count"] == 1
+    assert payload["intake_rows"][0]["current_receptor_coordinate_artifact"] == str(complex_path)
+    assert payload["validation_rows"][0]["coordinate_validation_status"] == "pass"
+
+
 def test_coordinate_intake_cli_writes_json_csv_and_markdown(tmp_path: Path) -> None:
     queue_json = tmp_path / "candidate_queue.json"
     receptor_path = tmp_path / "dataset" / "new2" / "new2_receptor.pdb"
