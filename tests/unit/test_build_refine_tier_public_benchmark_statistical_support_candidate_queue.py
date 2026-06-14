@@ -140,6 +140,9 @@ def test_statistical_support_candidate_queue_selects_nonoverlapping_slots(tmp_pa
     assert summary["candidate_source_excluded_existing_target_row_count"] == 1
     assert summary["ligand_pose_artifact_present_count"] == 3
     assert summary["receptor_coordinate_artifact_present_count"] == 0
+    assert summary["candidate_coordinate_archive_count"] == 0
+    assert summary["candidate_coordinate_archive_receptor_member_count"] == 0
+    assert summary["candidate_coordinate_archive_missing_receptor_member_target_count"] == 3
     assert summary["experimental_deltaG_prefilled_count"] == 3
     assert rows[0]["target_id"] == "new1"
     assert rows[0]["pose_id"] == "new1_020"
@@ -196,6 +199,10 @@ def test_statistical_support_candidate_queue_uses_local_archive_receptor_member(
     row = payload["rows"][0]
     assert summary["receptor_coordinate_artifact_present_count"] == 1
     assert summary["candidate_ready_for_metric_materialization_count"] == 1
+    assert summary["candidate_coordinate_archive_count"] == 1
+    assert summary["candidate_coordinate_archive_receptor_member_count"] == 1
+    assert summary["candidate_coordinate_archive_receptor_member_target_count"] == 1
+    assert summary["candidate_coordinate_archive_missing_receptor_member_target_count"] == 0
     assert row["receptor_coordinate_artifact"].endswith(
         "local_coordinates.tar::pdbbind/new1/new1_protein.pdb"
     )

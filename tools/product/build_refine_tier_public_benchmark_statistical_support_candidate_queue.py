@@ -6,6 +6,7 @@ import argparse
 import csv
 import json
 import math
+import tarfile
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,7 @@ from tools.product.build_refine_tier_public_benchmark_readiness import (
     PAFFINITY_TO_DG_KCAL_PER_MOL,
     _expected_receptor_archive_member_examples,
     _matching_receptor_coordinate_artifact,
+    _matches_target_receptor_coordinate,
     _read_coordinate_artifact_text,
     _suggested_local_coordinate_paths,
     _suggested_public_coordinate_urls,
@@ -127,6 +129,46 @@ def _coordinate_artifact_present(path_like: str | Path, *, root: Path = ROOT) ->
         text, _source_kind, read_status = _read_coordinate_artifact_text(value)
         return bool(text) and read_status == "read"
     return _resolve(value, root=root).is_file()
+
+
+def _coordinate_archive_audit(
+    rows: list[dict[str, Any]],
+    *,
+    dataset_dir: str | Path,
+    root: Path,
+) -> dict[str, Any]:
+    target_ids = sorted({_text(row.get("target_id")).lower() for row in rows if _text(row.get("target_id"))})
+    dataset = _resolve(dataset_dir, root=root)
+    archive_count = 0
+    read_error_count = 0
+    receptor_member_count = 0
+    matched_targets: set[str] = set()
+    if dataset.is_dir():
+        for archive_path in sorted(dataset.glob("*.tar*")):
+            if not archive_path.is_file():
+                continue
+            archive_count += 1
+            try:
+                with tarfile.open(archive_path, "r:*") as archive:
+                    for member in archive.getmembers():
+                        if not member.isfile():
+                            continue
+                        for target_id in target_ids:
+                            if _matches_target_receptor_coordinate(member.name, target_id):
+                                receptor_member_count += 1
+                                matched_targets.add(target_id)
+                                break
+            except (OSError, tarfile.TarError):
+                read_error_count += 1
+    return {
+        "candidate_coordinate_archive_count": archive_count,
+        "candidate_coordinate_archive_read_error_count": read_error_count,
+        "candidate_coordinate_archive_receptor_member_count": receptor_member_count,
+        "candidate_coordinate_archive_receptor_member_target_count": len(matched_targets),
+        "candidate_coordinate_archive_missing_receptor_member_target_count": (
+            len(target_ids) - len(matched_targets)
+        ),
+    }
 
 
 def _stable_id(value: Any) -> str:
@@ -411,6 +453,7 @@ def build_refine_tier_public_benchmark_statistical_support_candidate_queue(
     )
     canonical_ready_count = sum(1 for row in rows if row["candidate_ready_for_canonical_intake"] is True)
     receptor_missing_count = len(rows) - receptor_present_count
+    coordinate_archive_audit = _coordinate_archive_audit(rows, dataset_dir=dataset_dir, root=root)
 
     queue_ready = bool(
         stat_present
@@ -450,6 +493,7 @@ def build_refine_tier_public_benchmark_statistical_support_candidate_queue(
         "ligand_pose_artifact_present_count": ligand_present_count,
         "receptor_coordinate_artifact_present_count": receptor_present_count,
         "receptor_coordinate_artifact_missing_count": receptor_missing_count,
+        **coordinate_archive_audit,
         "experimental_deltaG_prefilled_count": experimental_delta_g_prefilled_count,
         "candidate_ready_for_metric_materialization_count": metric_materialization_ready_count,
         "candidate_ready_for_canonical_intake_count": canonical_ready_count,
