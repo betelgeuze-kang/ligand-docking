@@ -772,6 +772,30 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   production score로 옮기는 것이 아니라, operator-reviewed R9 metric-source payload
   또는 독립 holdout을 추가하고 `3n86`, `2j7h`, `3f3e`, `4j28` 같은 남은 CV residual을
   줄인 뒤 cross-validation과 bootstrap gate를 다시 통과시키는 일이다.
+  2026-06-15 KST 추가 residual remediation board는 이 남은 CV residual을
+  target/pose/action 단위로 펼쳐 다음 과학 작업 순서를 더 좁힌다.
+  `config/refine_tier_public_benchmark_residual_remediation_board_current.json`과
+  `docs/refine_tier_public_benchmark_residual_remediation_board_current.md`는
+  `refine_tier_public_benchmark_residual_remediation_board_ready`,
+  `locked_cv_model_id=density_size_ridge_l0.1`,
+  `locked_cv_bootstrap_p05=0.4035769230769231`,
+  `locked_cv_bootstrap_p05_gap_to_claim_grade=0.09642307692307689`,
+  `locked_cv_holdout_non_degradation_ready=false`,
+  `remediation_action_row_count=12`,
+  `high_priority_action_row_count=7`,
+  `leave_one_out_leverage_row_count=2`,
+  `cv_worse_than_baseline_row_count=5`,
+  `required_reviewed_metric_payload_count_for_listed_rows=36`,
+  `top_priority_target_id=3n86`,
+  `top_priority_action=target_heldout_generalization_regression_review`을 기록한다.
+  우선순위 board의 상위 residual은 `3n86`, `2j7h`, `3f3e`, `4j28`, `1gpk`이며,
+  특히 `2j7h`와 `3f3e`는 leave-one-out 제거 시 bootstrap p05가 각각
+  `0.0816789297659`, `0.124157190635`만큼 개선되는 leverage row로 분리됐다.
+  따라서 다음 직접 과학 작업은 전체 모델 promotion이 아니라 이 상위 target/pose의
+  DockQ/lDDT-PLI/internal ΔG reviewed payload와 pose/contact assignment를 먼저
+  확인한 뒤 candidate fill, cross-validation, bootstrap gate를 다시 돌리는 것이다.
+  이 board도 payload write, canonical intake, production score mutation,
+  claim promotion을 모두 금지한다.
   `runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json`은
   이 execute 직전 handoff를 R4/operator review packet으로 고정해
   `refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready`,
