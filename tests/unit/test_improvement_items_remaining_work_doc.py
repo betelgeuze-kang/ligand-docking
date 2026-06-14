@@ -190,6 +190,22 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`science_accuracy_frontier_status=blocked_science_accuracy_frontier`" in text
     assert "`science_accuracy_frontier_restricted_ready=true`" in text
     assert "`science_accuracy_frontier_broad_commercial_blocked=true`" in text
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready=true`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=17`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=false`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`"
+        in text
+    )
     assert "`public_benchmark_work_order_receptor_coordinate_validation_ready_row_count=8`" in text
     assert "`public_benchmark_work_order_receptor_coordinate_validation_blocked_row_count=0`" in text
     assert "`public_benchmark_work_order_receptor_coordinate_validation_min_atom_records=20`" in text
@@ -376,6 +392,11 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert "`openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized`" in text
+    assert (
+        "`openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_r4_approval_required`"
+        in text
+    )
+    assert "`blocker_count=7`" in text
     assert "`blocker_count=6`" in text
     assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
     assert "`runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`" in text

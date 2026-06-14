@@ -327,9 +327,19 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads=dockq;lddt_pli;internal_deltaG`,
   `public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count=11`,
   `public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields=metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;operator_id;reviewed_at_utc;license_ok;external_engine_calls`,
-  `blocker_count=6`다. 추가 blocker는
-  `openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized`로,
-  17개 statistical-support 후보의 coordinate validation/materialization이 아직
+  `public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready=true`,
+  `public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count=17`,
+  `public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=17`,
+  `public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count=17`,
+  `public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count=51`,
+  `public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download=false`,
+  `public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=false`,
+  `public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated=false`,
+  `public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`,
+  `blocker_count=7`다. 추가 blockers는
+  `openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized`와
+  `openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_r4_approval_required`로,
+  17개 statistical-support 후보의 coordinate fetch 승인, coordinate validation/materialization이 아직
   닫히지 않았음을 accuracy frontier에서 직접 표시한다. 즉 상용 parity claim의 과학 병목은 더 이상 단일 metric
   failure가 아니라 GPCR formal claim/router approval, R9 public benchmark/evidence
   receipt 부재, materialized R9 후보의 통계 support 부족, 그리고 17개 후보의
@@ -2188,6 +2198,10 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `science_accuracy_frontier_status=blocked_science_accuracy_frontier`,
   `science_accuracy_frontier_restricted_ready=true`,
   `science_accuracy_frontier_broad_commercial_blocked=true`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready=true`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=17`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=false`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`,
   `accuracy_parity_ligand_ranking_metric_thresholds_pass=true`,
   `accuracy_parity_ligand_ranking_metric_blocker_count=0`,
   `accuracy_parity_ligand_ranking_claim_scope_lock_only=true`,
@@ -2859,7 +2873,8 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
    (`refine_tier_public_benchmark_readiness_current` 현재 blocked), external MolProbity/OpenStructure,
    native complex/interface benchmark parity가 남아 있다. `science_accuracy_frontier_current`는
    restricted science accuracy를 ready로 보되 broad commercial parity claim은
-   GPCR approval과 R9 public evidence receipt가 닫히기 전까지 blocked로 고정한다.
+   GPCR approval, R9 statistical-support coordinate-fetch R4 approval, R9 public
+   evidence receipt가 닫히기 전까지 blocked로 고정한다.
 9. **Prospective wetlab T. cruzi PDE 검증** — 실제 assay + hit confirmation.
 
 ### 확장 (claim boundary 확대)

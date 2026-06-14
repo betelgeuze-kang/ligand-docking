@@ -122,6 +122,7 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
         "openmm_schrodinger_public_benchmark_not_promoted_to_canonical_intake",
         "openmm_schrodinger_public_benchmark_statistical_support_not_claim_grade",
         "openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized",
+        "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_r4_approval_required",
         "engine_refinement_claim_evidence_receipt_not_ready",
     ]
     accuracy_top_blockers = _list(accuracy.get("top_blockers"))
@@ -299,6 +300,12 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
                 f"{science_frontier.get('public_benchmark_materialized_free_energy_spearman_bootstrap_p05')};"
                 f"public_benchmark_materialized_claim_grade_statistical_support_ready="
                 f"{science_frontier.get('public_benchmark_materialized_claim_grade_statistical_support_ready')};"
+                f"coordinate_fetch_r4_preflight_ready="
+                f"{science_frontier.get('public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready')};"
+                f"coordinate_fetch_r4_fetch_required="
+                f"{science_frontier.get('public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count')};"
+                f"coordinate_fetch_r4_download_executed="
+                f"{science_frontier.get('public_benchmark_statistical_support_coordinate_fetch_r4_download_executed')};"
                 f"broad_commercial_accuracy_claim_ready={science_frontier.get('broad_commercial_accuracy_claim_ready')};"
                 f"science_frontier_blockers={_csv(science_frontier.get('blockers'))}"
             ),
@@ -488,6 +495,68 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
             "science_accuracy_frontier_public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields": str(
                 science_frontier.get(
                     "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields",
+                    "",
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present": bool(
+                science_frontier.get("public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present")
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready": bool(
+                science_frontier.get("public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready")
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status": str(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status",
+                    "",
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_row_count": _int(
+                science_frontier.get("public_benchmark_statistical_support_coordinate_fetch_r4_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": _int(
+                science_frontier.get("public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count": _int(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download": bool(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download"
+                )
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_download_executed": bool(
+                science_frontier.get("public_benchmark_statistical_support_coordinate_fetch_r4_download_executed")
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated": bool(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated"
+                )
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required": str(
+                science_frontier.get(
+                    "public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required",
                     "",
                 )
             ),

@@ -1128,6 +1128,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json",
             "runs/engine_refinement_claim_evidence_receipt_current.json",
             "runs/engine_refinement_claim_evidence_priority_packet_current.json",
             "runs/product_pose_sampling_readiness_current.json",
@@ -3047,6 +3048,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_work_order_ready",
             "public_benchmark_statistical_support_metric_materialization_readiness_present",
             "public_benchmark_statistical_support_metric_materialization_readiness_ready",
+            "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present",
+            "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready",
         ],
         "required_int_exact_fields": {
             "broad_commercial_accuracy_claim_ready": 0,
@@ -3150,6 +3153,15 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
             "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
             "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": 11,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count": 51,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_download_executed": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated": 0,
             "public_benchmark_work_order_ligand_pose_only_row_count": 0,
             "public_benchmark_work_order_missing_interaction_metric_source_row_count": 8,
             "public_benchmark_work_order_missing_internal_deltaG_source_row_count": 8,
@@ -3159,7 +3171,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_work_order_seed_distinct_target_count": 284,
             "engine_refinement_receipt_blocked_row_count": 6,
             "external_state_mutated": 0,
-            "blocker_count": 6,
+            "blocker_count": 7,
         },
         "required_text_exact_fields": {
             "accuracy_parity_status": "blocked_accuracy_parity",
@@ -3183,6 +3195,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_fields": (
                 "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
                 "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
+            ),
+            "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status": (
+                "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
+            ),
+            "public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required": (
+                "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
             ),
             "engine_refinement_claim_evidence_receipt_status": (
                 "blocked_engine_refinement_claim_evidence_receipt"

@@ -27,6 +27,9 @@ def _write_inputs(
         "public_benchmark_statistical_support_metric_materialization_readiness_json": (
             tmp_path / "public_stat_metric_materialization_readiness.json"
         ),
+        "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json": (
+            tmp_path / "public_stat_coordinate_fetch_r4_preflight.json"
+        ),
         "engine_receipt_json": tmp_path / "receipt.json",
         "engine_priority_json": tmp_path / "priority.json",
         "pose_sampling_json": tmp_path / "pose.json",
@@ -245,6 +248,32 @@ def _write_inputs(
                 "statistical-support candidates to pass coordinate validation before materializing "
                 "DockQ, lDDT-PLI, and internal DeltaG source payloads and rerunning bootstrap "
                 "Spearman p05."
+            ),
+        },
+    )
+    _write(
+        paths["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json"],
+        {
+            "status": (
+                "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
+                if materialized_candidate_ready and not ready
+                else "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight"
+            ),
+            "r4_preflight_ready": materialized_candidate_ready and not ready,
+            "r4_row_count": 17 if materialized_candidate_ready and not ready else 0,
+            "ready_for_r4_review_row_count": 17 if materialized_candidate_ready and not ready else 0,
+            "blocked_r4_row_count": 0,
+            "fetch_required_row_count": 17 if materialized_candidate_ready and not ready else 0,
+            "metric_materialization_blocked_row_count": 17 if materialized_candidate_ready and not ready else 0,
+            "planned_metric_source_payload_count": 51 if materialized_candidate_ready and not ready else 0,
+            "authorized_for_external_download": False,
+            "download_executed": False,
+            "external_state_mutated": False,
+            "approval_token_required": "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD",
+            "execute_command": (
+                "python3 tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py "
+                "--mode execute --run-post-fetch-validation --approval-token "
+                "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
             ),
         },
     )
@@ -507,15 +536,44 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
         "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
         "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
     )
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present"] is True
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"] is True
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status"] == (
+        "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
+    )
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_row_count"] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count"
+    ] == 17
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count"] == 0
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count"
+    ] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count"
+    ] == 51
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download"
+    ] is False
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_download_executed"] is False
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated"] is False
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required"] == (
+        "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+    )
     assert summary["blockers"] == [
         "gpcr_broad_claim_review_not_approved",
         "gpcr_scorer_router_promotion_not_approved",
         "openmm_schrodinger_public_benchmark_not_promoted_to_canonical_intake",
         "openmm_schrodinger_public_benchmark_statistical_support_not_claim_grade",
         "openmm_schrodinger_public_benchmark_statistical_support_metric_sources_not_materialized",
+        "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_r4_approval_required",
         "engine_refinement_claim_evidence_receipt_not_ready",
     ]
     assert "current 8-row materialized R9 metric evidence" in summary["next_required_step"]
+    assert "coordinate-fetch R4 approval" in summary["next_required_step"]
     assert "coordinate validation/materialization" in summary["next_required_step"]
 
 
@@ -557,6 +615,8 @@ def test_science_accuracy_frontier_cli_writes_json_and_markdown(tmp_path: Path) 
             str(paths["public_benchmark_statistical_support_work_order_json"]),
             "--public-benchmark-statistical-support-metric-materialization-readiness-json",
             str(paths["public_benchmark_statistical_support_metric_materialization_readiness_json"]),
+            "--public-benchmark-statistical-support-coordinate-fetch-r4-preflight-json",
+            str(paths["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json"]),
             "--engine-receipt-json",
             str(paths["engine_receipt_json"]),
             "--engine-priority-json",
