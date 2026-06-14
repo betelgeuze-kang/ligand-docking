@@ -726,6 +726,30 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   guard를 통과하지 못하고, holdout까지 지키는 small-ligand rescue 후보도
   claim-grade p05 0.5에는 아직 미달한다. 이 probe도 score mutation, payload write,
   canonical intake, claim promotion을 하지 않는다.
+  2026-06-15 KST 추가 fit-trained calibration probe는 predeclared linear/ridge
+  후보를 fit split에서만 학습하고 holdout guard를 적용해, 실제 calibrated scoring이
+  통계 support를 어디까지 끌어올릴 수 있는지 재현 가능하게 측정한다.
+  `config/refine_tier_public_benchmark_fit_trained_calibration_probe_current.json`과
+  `docs/refine_tier_public_benchmark_fit_trained_calibration_probe_current.md`는
+  `refine_tier_public_benchmark_fit_trained_calibration_probe_ready`,
+  `model_candidate_count=15`,
+  `holdout_guarded_eligible_model_count=9`,
+  `baseline_bootstrap_p05=0.23053846153846155`,
+  `best_model_id=density_size_ridge_l0.1`,
+  `best_model_feature_names=contact_per_atom;pose_atom_count`,
+  `best_model_fit_spearman=0.6617647058823529`,
+  `best_model_holdout_spearman=0.6904761904761905`,
+  `best_model_combined_spearman=0.7`,
+  `best_model_bootstrap_p05=0.4944230769230769`,
+  `best_model_bootstrap_p05_delta=0.2638846153846154`,
+  `best_model_bootstrap_p05_gap_to_claim_grade=0.00557692307692309`,
+  `best_model_claim_grade_p05_ready=false`,
+  `calibration_generalization_ready=false`를 기록한다. 즉 density/size만 쓰는
+  fit-trained ridge 후보가 현재까지 가장 가까운 과학적 후보지만, reviewed payload가
+  아닌 preview data이고 bootstrap p05도 기준 0.5를 넘지 못했으므로 상용 claim으로
+  승격하지 않는다. 남은 직접 병목은 이 near-threshold descriptor hypothesis를
+  operator-reviewed R9 metric-source payload 또는 독립 holdout에서 재검증하고,
+  여전히 큰 `3n86`, `2j7h`, `1gpk`, `4j28`, `3f3e` rank residual을 줄이는 일이다.
   `runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json`은
   이 execute 직전 handoff를 R4/operator review packet으로 고정해
   `refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready`,
