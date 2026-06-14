@@ -750,6 +750,28 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   승격하지 않는다. 남은 직접 병목은 이 near-threshold descriptor hypothesis를
   operator-reviewed R9 metric-source payload 또는 독립 holdout에서 재검증하고,
   여전히 큰 `3n86`, `2j7h`, `1gpk`, `4j28`, `3f3e` rank residual을 줄이는 일이다.
+  2026-06-15 KST 추가 calibration cross-validation probe는 이 near-threshold
+  hypothesis를 leave-one-target-out 방식으로 재검증해 split/selection 착시를 분리한다.
+  `config/refine_tier_public_benchmark_calibration_cross_validation_probe_current.json`과
+  `docs/refine_tier_public_benchmark_calibration_cross_validation_probe_current.md`는
+  `refine_tier_public_benchmark_calibration_cross_validation_probe_ready`,
+  `target_fold_count=25`,
+  `fit_trained_best_model_id=density_size_ridge_l0.1`,
+  `fit_trained_best_model_bootstrap_p05=0.4944230769230769`,
+  `locked_cv_model_id=density_size_ridge_l0.1`,
+  `locked_cv_bootstrap_p05=0.4035769230769231`,
+  `locked_cv_bootstrap_p05_drop_from_fit_trained=0.0908461538461538`,
+  `locked_cv_holdout_spearman=0.5952380952380952`,
+  `baseline_holdout_spearman=0.6428571428571429`,
+  `best_cv_model_id=density_size_ridge_l0.1`,
+  `best_cv_bootstrap_p05=0.4035769230769231`,
+  `holdout_guarded_eligible_model_count=0`,
+  `cross_validation_generalization_ready=false`를 기록한다. 즉 fit-trained
+  near-threshold 값은 out-of-fold target validation에서 claim-grade 기준과 holdout
+  non-degradation을 모두 만족하지 못한다. 따라서 다음 과학 작업은 모델을 그대로
+  production score로 옮기는 것이 아니라, operator-reviewed R9 metric-source payload
+  또는 독립 holdout을 추가하고 `3n86`, `2j7h`, `3f3e`, `4j28` 같은 남은 CV residual을
+  줄인 뒤 cross-validation과 bootstrap gate를 다시 통과시키는 일이다.
   `runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json`은
   이 execute 직전 handoff를 R4/operator review packet으로 고정해
   `refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready`,
