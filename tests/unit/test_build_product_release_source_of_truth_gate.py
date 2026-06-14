@@ -1298,6 +1298,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan" in artifact_ids
     assert "refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply" in artifact_ids
     assert "refine_tier_public_benchmark_statistical_support_metric_source_templates" in artifact_ids
+    assert (
+        "refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt"
+        in artifact_ids
+    )
     assert "refine_tier_public_benchmark_claim_grade_gap_audit" in artifact_ids
     assert "science_accuracy_frontier" in artifact_ids
     assert "self_hosted_license_distribution_audit" in artifact_ids
@@ -1328,6 +1332,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert (
         "refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_blocked_semantic_ready"
+        in status_ids
+    )
+    assert (
+        "refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_semantic_ready"
         in status_ids
     )
     assert "refine_tier_public_benchmark_claim_grade_gap_audit_semantic_ready" in status_ids
@@ -1414,6 +1422,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         in mod.RELEASE_REFRESH_COMMANDS
     )
     assert (
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_OPERATOR_RECEIPT_COMMAND
+        in mod.RELEASE_REFRESH_COMMANDS
+    )
+    assert (
         mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_COMMAND
         in mod.RELEASE_REFRESH_COMMANDS
     )
@@ -1430,6 +1442,14 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert (
         "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_semantic_ready"
+        in status_ids
+    )
+    assert (
+        "refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt"
+        in artifact_ids
+    )
+    assert (
+        "refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_semantic_ready"
         in status_ids
     )
     assert (
@@ -2660,6 +2680,53 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert statistical_metric_source_templates_status_spec["required_text_exact_fields"][
         "required_metric_source_payloads"
     ] == "dockq;lddt_pli;internal_deltaG"
+    coordinate_fetch_operator_receipt_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_semantic_ready"
+    )
+    assert coordinate_fetch_operator_receipt_status_spec["required_status"] == (
+        "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt"
+    )
+    assert "receipt_csv_present" in coordinate_fetch_operator_receipt_status_spec["required_true_fields"]
+    assert "r4_preflight_present" in coordinate_fetch_operator_receipt_status_spec["required_true_fields"]
+    assert "r4_preflight_ready" in coordinate_fetch_operator_receipt_status_spec["required_true_fields"]
+    assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
+        "operator_receipt_ready"
+    ] == 0
+    assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
+        "receipt_row_count"
+    ] == 17
+    assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
+        "required_r4_review_count"
+    ] == 17
+    assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
+        "blocked_row_count"
+    ] == 17
+    assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
+        "approved_fetch_count"
+    ] == 0
+    assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
+        "authorized_for_external_download"
+    ] == 0
+    assert coordinate_fetch_operator_receipt_status_spec["required_int_exact_fields"][
+        "download_executed"
+    ] == 0
+    assert coordinate_fetch_operator_receipt_status_spec["required_text_exact_fields"][
+        "receipt_csv"
+    ] == (
+        "config/refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_current.csv"
+    )
+    assert coordinate_fetch_operator_receipt_status_spec["required_text_exact_fields"][
+        "r4_preflight_status"
+    ] == "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
+    assert coordinate_fetch_operator_receipt_status_spec["required_text_exact_fields"][
+        "first_blocked_review_id"
+    ] == "r9_statistical_support_coordinate_fetch_001"
+    assert coordinate_fetch_operator_receipt_status_spec["required_text_exact_fields"][
+        "most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
     claim_grade_gap_audit_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -3840,6 +3907,27 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json" in (
         statistical_metric_source_templates_spec["depends_on"]
+    )
+    coordinate_fetch_operator_receipt_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"]
+        == "refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt"
+    )
+    assert coordinate_fetch_operator_receipt_spec["builder_command"] == (
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_OPERATOR_RECEIPT_COMMAND
+    )
+    assert "tools/product/build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt.py" in (
+        coordinate_fetch_operator_receipt_spec["depends_on"]
+    )
+    assert "tools/build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt.py" in (
+        coordinate_fetch_operator_receipt_spec["depends_on"]
+    )
+    assert "config/refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_current.csv" in (
+        coordinate_fetch_operator_receipt_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json" in (
+        coordinate_fetch_operator_receipt_spec["depends_on"]
     )
     claim_grade_gap_audit_spec = next(
         spec

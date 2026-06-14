@@ -52,6 +52,9 @@ REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_APPLY_COMMAND 
 REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_COMMAND = (
     "python3 tools/product/build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight.py"
 )
+REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_OPERATOR_RECEIPT_COMMAND = (
+    "python3 tools/product/build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt.py"
+)
 REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_COMMAND = (
     "python3 tools/product/build_refine_tier_public_benchmark_statistical_support_metric_materialization_readiness.py"
 )
@@ -135,6 +138,7 @@ RELEASE_REFRESH_COMMANDS = [
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_COMMAND,
+    REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_OPERATOR_RECEIPT_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_COMMAND,
     "python3 tools/product/build_engine_refinement_tier_readiness.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py",
@@ -1022,6 +1026,21 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json",
+        ],
+    },
+    {
+        "artifact_id": "refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt",
+        "artifact_path": (
+            "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_current.json"
+        ),
+        "builder_command": (
+            REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_OPERATOR_RECEIPT_COMMAND
+        ),
+        "depends_on": [
+            "tools/product/build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt.py",
+            "tools/build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt.py",
+            "config/refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_current.csv",
+            "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json",
         ],
     },
     {
@@ -2680,6 +2699,73 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "fetches to the operator; only after explicit approval run `python3 tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py "
                 "--mode execute --run-post-fetch-validation --approval-token APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`, "
                 "then review coordinate validation before replacing the 51 metric source template placeholders."
+            ),
+        },
+    },
+    {
+        "artifact_id": (
+            "refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocked_semantic_ready"
+        ),
+        "artifact_path": (
+            "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_current.json"
+        ),
+        "builder_command": (
+            REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_OPERATOR_RECEIPT_COMMAND
+        ),
+        "required_status": (
+            "blocked_refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt"
+        ),
+        "required_true_fields": [
+            "receipt_csv_present",
+            "r4_preflight_present",
+            "r4_preflight_ready",
+        ],
+        "required_int_exact_fields": {
+            "operator_receipt_ready": 0,
+            "receipt_row_count": 17,
+            "required_r4_review_count": 17,
+            "missing_required_r4_review_count": 0,
+            "unexpected_r4_review_count": 0,
+            "duplicate_r4_review_id_count": 0,
+            "pass_row_count": 0,
+            "blocked_row_count": 17,
+            "approved_fetch_count": 0,
+            "source_url_reviewed_count": 0,
+            "license_ok_count": 0,
+            "biological_assembly_reviewed_count": 0,
+            "post_fetch_validation_required_count": 0,
+            "authorized_for_external_download": 0,
+            "download_executed": 0,
+            "canonical_intake_promotion_allowed": 0,
+            "claim_promotion_allowed": 0,
+            "external_state_mutated": 0,
+            "blocker_count": 1,
+        },
+        "required_text_exact_fields": {
+            "receipt_csv": (
+                "config/refine_tier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_current.csv"
+            ),
+            "r4_preflight": (
+                "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json"
+            ),
+            "r4_preflight_status": (
+                "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
+            ),
+            "first_blocked_review_id": "r9_statistical_support_coordinate_fetch_001",
+            "first_blocked_target_id": "4ivc",
+            "first_blocked_pose_id": "4ivc_20",
+            "most_common_row_blocker": "operator_placeholders_unfilled",
+            "approval_token_required": "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD",
+            "execute_command": (
+                "python3 tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py "
+                "--mode execute --run-post-fetch-validation "
+                "--approval-token APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+            ),
+            "next_required_step": (
+                "Fill all 17 coordinate-fetch receipt rows with approve_coordinate_fetch, reviewed "
+                "source/license/assembly fields, reviewer, timestamp, and "
+                "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD; keep claim and canonical intake "
+                "promotion flags false."
             ),
         },
     },
