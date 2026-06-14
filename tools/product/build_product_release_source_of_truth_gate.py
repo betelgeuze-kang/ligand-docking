@@ -2260,6 +2260,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_true_fields": [
             "priority_packet_ready",
             "public_benchmark_work_order_present",
+            "public_benchmark_statistical_support_work_order_present",
+            "public_benchmark_statistical_support_work_order_ready",
         ],
         "required_int_exact_fields": {
             "claim_promotion_allowed": 0,
@@ -2272,6 +2274,14 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_work_order_row_count": 8,
             "public_benchmark_work_order_apply_ready": 0,
             "public_benchmark_work_order_apply_blocked_row_count": 8,
+            "public_benchmark_materialized_candidate_ready": 1,
+            "public_benchmark_materialized_claim_grade_statistical_support_ready": 0,
+            "public_benchmark_statistical_support_work_order_expansion_slot_count": 17,
+            "public_benchmark_statistical_support_work_order_minimum_new_pair_count": 17,
+            "public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count": 5,
+            "public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count": 12,
+            "public_benchmark_statistical_support_work_order_bootstrap_retest_required": 1,
+            "public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed": 0,
             "approval_token_count": 1,
             "external_state_mutated": 0,
         },
@@ -2281,6 +2291,15 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "top_priority_bucket": "public_benchmark_work_order_apply_required",
             "top_required_input": "runs/refine_tier_public_benchmark_work_order_current.csv",
             "top_acceptance_artifact": "runs/refine_tier_public_benchmark_readiness_current.json",
+            "public_benchmark_statistical_support_work_order_status": (
+                "refine_tier_public_benchmark_statistical_support_work_order_ready"
+            ),
+            "top_next_operator_step": (
+                "Fill 17 additional reviewed public benchmark-pair expansion slots "
+                "(minimum_new_pair_count=17, minimum_new_holdout_pair_count=5), then rebuild "
+                "materialization and require bootstrap Spearman p05 >= 0.5 before any canonical "
+                "intake promotion."
+            ),
         },
     },
     {
@@ -2298,6 +2317,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_readiness_artifact_present",
             "public_benchmark_work_order_csv_present",
             "public_benchmark_work_order_apply_artifact_present",
+            "public_benchmark_statistical_support_work_order_artifact_present",
+            "public_benchmark_statistical_support_work_order_ready",
         ],
         "required_int_exact_fields": {
             "operator_fill_complete": 0,
@@ -2316,6 +2337,14 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_gate_ready": 0,
             "public_benchmark_work_order_apply_ready": 0,
             "public_benchmark_work_order_apply_blocked_row_count": 8,
+            "public_benchmark_materialized_science_evidence_complete": 1,
+            "public_benchmark_materialized_claim_grade_statistical_support_ready": 0,
+            "public_benchmark_statistical_support_work_order_expansion_slot_count": 17,
+            "public_benchmark_statistical_support_work_order_minimum_new_pair_count": 17,
+            "public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count": 5,
+            "public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count": 12,
+            "public_benchmark_statistical_support_work_order_bootstrap_retest_required": 1,
+            "public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed": 0,
             "public_benchmark_metric_evidence_missing_required_input_artifact_row_count": 0,
             "public_benchmark_metric_evidence_missing_required_input_artifact_sha256_row_count": 0,
             "claim_promotion_allowed": 0,
@@ -2334,6 +2363,14 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "top_blocker_id": "public_benchmark_gate_not_ready",
             "top_priority_bucket": "public_benchmark_work_order_apply_required",
             "top_required_input": "runs/refine_tier_public_benchmark_work_order_current.csv",
+            "public_benchmark_statistical_support_work_order_status": (
+                "refine_tier_public_benchmark_statistical_support_work_order_ready"
+            ),
+            "next_required_step": (
+                "Fill 17 additional reviewed public benchmark-pair expansion slots, including at "
+                "least 5 holdout slots, then rebuild materialization and require bootstrap "
+                "Spearman p05 >= 0.5 before any R9 claim receipt or canonical intake promotion."
+            ),
             "approval_token_required": "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT",
         },
     },

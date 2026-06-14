@@ -1267,10 +1267,12 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   placeholder evidence, 6/6 blocked rows, R8 field-level pending count 36개,
   public benchmark work-order 8개 row, R9 field-level pending count 92개,
   public benchmark work-order pending count 56개,
-  R9 receptor-coordinate validation blocked 8개, R9 metric-evidence blocked 8개,
-  metric evidence required ligand/receptor input artifact missing 8개,
-  DockQ/lDDT-PLI/internal ΔG source missing 8/8/8개,
-  metric source payload invalid 0/0/0개(현재는 source file 자체가 없어서 invalid가 아니라 missing),
+  R9 receptor-coordinate validation pass 8개/blocked 0개,
+  tracked R9 metric-evidence blocked 8개와 materialized metric-evidence pass 8개,
+  metric evidence required ligand/receptor input artifact missing 0개,
+  tracked DockQ/lDDT-PLI/internal ΔG source missing 8/8/8개,
+  materialized DockQ/lDDT-PLI/internal ΔG source payload 24개,
+  claim-grade statistical support expansion slot 17개와 holdout slot 5개,
   approval token requirement, first-blocked diagnostics가 source-of-truth에서 직접 검증된다. production AI
   checkpoint/promotion workbench는 현재 `shadow`/blocked 상태를 semantic-ready row로
   검증하고, `production_ai_registry_promotion_operator_staging_apply_blocked_semantic_ready`
@@ -2766,12 +2768,18 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
    - local delivery + on-prem pilot 가정. hosted SaaS는 별도.
 
 가장 큰 단일 잔여 gap은 이제 **R8/R9 full-commercial science claim evidence
-receipt + production AI registry guarded promotion + operator-approved 실제 실행
-증거**다. 특히 R9은 receptor/complex coordinate validation 8/8 blocked와
-DockQ/lDDT-PLI/internal ΔG source evidence 8/8/8 missing이 claim-grade public
-benchmark 승격을 직접 막는다. 이제 해당 source evidence는 파일 존재만으로는 부족하고
-schema-valid JSON payload와 payload가 가리키는 로컬 input artifact 존재 확인까지
-통과해야 한다. 상용 API, durable worker, validated runner profile, license/legal review,
+receipt + R9 public benchmark 통계 support 확대 + production AI registry guarded
+promotion + operator-approved 실제 실행 증거**다. 특히 R9은 receptor/complex
+coordinate validation 자체는 8/8 pass로 닫혔고, materialized DockQ/lDDT-PLI/internal
+ΔG source payload도 24개가 schema-valid 입력 artifact까지 묶어 생성됐지만,
+현재 8쌍/3 holdout만으로는 claim-grade 통계 support가 부족하다. 따라서
+`refine_tier_public_benchmark_statistical_support_work_order_current`의
+17개 추가 public benchmark pair, 최소 5개 holdout slot, bootstrap Spearman
+p05 >= 0.5 재검증이 R9 승격 전 직접 병목이다. tracked current work-order의
+DockQ/lDDT-PLI/internal ΔG source field와 R9 evidence receipt도 operator
+placeholder 상태라, source evidence는 파일 존재만으로는 부족하고 schema-valid JSON
+payload와 payload가 가리키는 로컬 input artifact 존재 확인까지 통과해야 한다.
+상용 API, durable worker, validated runner profile, license/legal review,
 release bundle, R4 preflight, claim-boundary 정책, source-of-truth gate는 local artifact
 기준 1차 green이지만, full-scope/science claim promotion과 production AI 고객-facing
 promotion은 아직 막혀 있다. 실제 고객 실행은

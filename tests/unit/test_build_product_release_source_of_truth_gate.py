@@ -1859,17 +1859,68 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert engine_receipt_status_spec["required_text_exact_fields"][
         "most_common_row_blocker"
     ] == "operator_placeholders_unfilled"
+    engine_priority_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "engine_refinement_claim_evidence_priority_packet_blocked_semantic_ready"
+    )
+    assert "public_benchmark_statistical_support_work_order_ready" in engine_priority_status_spec[
+        "required_true_fields"
+    ]
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_work_order_expansion_slot_count"
+    ] == 17
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_work_order_minimum_new_pair_count"
+    ] == 17
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count"
+    ] == 5
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_materialized_claim_grade_statistical_support_ready"
+    ] == 0
+    assert engine_priority_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_work_order_status"
+    ] == "refine_tier_public_benchmark_statistical_support_work_order_ready"
+    assert (
+        engine_priority_status_spec["required_text_exact_fields"]["top_next_operator_step"]
+        == "Fill 17 additional reviewed public benchmark-pair expansion slots "
+        "(minimum_new_pair_count=17, minimum_new_holdout_pair_count=5), then rebuild "
+        "materialization and require bootstrap Spearman p05 >= 0.5 before any canonical "
+        "intake promotion."
+    )
     engine_field_worksheet_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
         if spec["artifact_id"] == "engine_refinement_claim_evidence_operator_field_worksheet_semantic_ready"
     )
+    assert "public_benchmark_statistical_support_work_order_ready" in engine_field_worksheet_status_spec[
+        "required_true_fields"
+    ]
     assert engine_field_worksheet_status_spec["required_int_exact_fields"][
         "public_benchmark_metric_evidence_missing_required_input_artifact_row_count"
     ] == 0
     assert engine_field_worksheet_status_spec["required_int_exact_fields"][
         "public_benchmark_metric_evidence_missing_required_input_artifact_sha256_row_count"
     ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_work_order_expansion_slot_count"
+    ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_work_order_minimum_new_pair_count"
+    ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count"
+    ] == 5
+    assert engine_field_worksheet_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_work_order_status"
+    ] == "refine_tier_public_benchmark_statistical_support_work_order_ready"
+    assert (
+        engine_field_worksheet_status_spec["required_text_exact_fields"]["next_required_step"]
+        == "Fill 17 additional reviewed public benchmark-pair expansion slots, including at "
+        "least 5 holdout slots, then rebuild materialization and require bootstrap "
+        "Spearman p05 >= 0.5 before any R9 claim receipt or canonical intake promotion."
+    )
     engine_staging_apply_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS

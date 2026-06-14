@@ -223,8 +223,16 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
     assert "`runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`" in text
     assert "`Fill 17 additional reviewed public benchmark-pair expansion slots`" in text
+    assert "R9 receptor-coordinate validation pass 8개/blocked 0개" in text
+    assert "materialized metric-evidence pass 8개" in text
+    assert "claim-grade statistical support expansion slot 17개" in text
+    assert "17개 추가 public benchmark pair" in text
+    assert "bootstrap Spearman\np05 >= 0.5 재검증" in text
     assert "`candidate_claim_grade_public_benchmark_ready=true`" in text
     assert "`scripts/verify_quality_gate.py`" in text
     assert "`product_quality_gate_verified`" in text
     assert "`quality_gate_ready=true`" in text
     assert "`runs/product_quality_gate_verification_current.json`" in text
+    assert "R9 receptor-coordinate validation blocked 8개" not in text
+    assert "receptor/complex coordinate validation 8/8 blocked" not in text
+    assert "DockQ/lDDT-PLI/internal ΔG source evidence 8/8/8 missing" not in text
