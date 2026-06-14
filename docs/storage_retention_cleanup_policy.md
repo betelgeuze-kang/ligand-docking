@@ -56,10 +56,42 @@ referenced by the current source-of-truth artifacts:
 | Training intermediates | unselected checkpoints, optimizer states, raw curriculum intermediates | Keep selected checkpoint receipt and config; clean only after model manifest review |
 | CASP17 historical probes | massivefold probe workspaces, historical seed candidates, temporary rerank experiments | Keep final current target/object evidence and source authority manifest |
 
+## Essential Evidence Manifest
+
+Large protected roots are not cleanup candidates just because the top-level path
+is absent from the current source-of-truth JSON. `models/` and `casp17/`, for
+example, can contain selected checkpoints, final structures, viewer objects, and
+validation reports that are product evidence. Treat those paths as
+`essential_evidence_manifest_required` until a compact register lists what must
+be kept.
+
+The read-only retention manifest builder is:
+
+```bash
+python3 tools/build_storage_retention_manifest.py
+```
+
+It writes local generated review files under `runs/storage_retention_manifest_current.*`.
+Those files inventory sizes, current source-of-truth references, transient
+cleanup candidates, and protected paths that need a compact evidence register.
+The builder does not delete, move, archive, externalize, rewrite git history,
+upload, commit, push, or mutate external state.
+
+The current intended sequence is:
+
+1. Generate the retention manifest.
+2. For `essential_evidence_manifest_required` paths, create a compact register
+   of final/selected artifacts, sha256s where practical, provenance, validation
+   reports, and regeneration commands.
+3. Clean only transient or regenerable paths that remain unreferenced.
+4. Request a separate operator approval before any deletion of protected
+   evidence roots or historical payloads.
+
 ## Required Cleanup Flow
 
 1. Build a cleanup review manifest that lists candidate paths, sizes, reason,
-   source-of-truth reference status, and required replacement evidence.
+   source-of-truth reference status, and protected paths that need a compact
+   essential evidence register.
 2. For every candidate, prove it is not listed in current `source_artifacts`,
    receipt CSVs, current manifests, or release bundle entries.
 3. Preserve compact evidence before deletion: relative path, size, sha256 where
@@ -76,6 +108,7 @@ referenced by the current source-of-truth artifacts:
 Run these after a cleanup plan is generated or applied:
 
 ```bash
+python3 tools/build_storage_retention_manifest.py
 python3 tools/build_product_release_source_of_truth_gate.py
 python3 scripts/check_independent_product_readiness.py
 git status --short --branch

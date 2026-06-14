@@ -2708,6 +2708,16 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `*_current` ledgers, receipt, final PDB/mmCIF/object/viewer/manifest,
   validation report, selected checkpoint/sha256 manifest만 active keep set으로
   두는 것이다.
+- `tools/build_storage_retention_manifest.py`는 read-only 보존 manifest를 만든다.
+  최신 local snapshot은 `runs/storage_retention_manifest_current.{json,csv,md}`이며
+  `source_of_truth_reference_count=121`, `cleanup_candidate_count=5`,
+  `cleanup_candidate_size_human=45.77 MiB`,
+  `essential_evidence_manifest_required_count=2`,
+  `essential_evidence_manifest_required_paths=models;casp17`,
+  `essential_evidence_manifest_required_size_human=9.78 GiB`다.
+  즉 `models/`와 `casp17/`는 삭제 후보가 아니라 compact 필수 증거 register
+  작성 대상이다. 현재 결정 요약은
+  `docs/storage_retention_current_review.md`에 저장했다.
 - `tools/product/build_storage_residual_cleanup_status.py`와
   `runs/storage_residual_cleanup_status_current.json`은 selected heavy path 9개를
   read-only로 측정한다. 최신 상태는
@@ -2740,7 +2750,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 - 현재 저장소에는 current source-of-truth에 필요한 작은 ledger와, 과거 실험/중간
   payload가 같은 tree에 공존한다. 따라서 단순 `mv /tmp` 또는 대량 삭제는
   재현성/claim evidence를 깨뜨릴 수 있다.
-- 추가 cleanup 실행은 여전히 operator-approved 별도 계획이 필요하다.
+- 추가 cleanup 실행은 여전히 operator-approved 별도 계획이 필요하다. 다만
+  다음 실행의 선행 조건은 임시 대피가 아니라 `models/`, `casp17/`의 compact
+  필수 증거 register 작성이다.
 
 **필요 작업**
 - storage residual status는 1차 생성 완료.
@@ -2750,8 +2762,10 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 - Final PDB/mmCIF, top representative, sha256 manifest, viewer index,
   validation report 보존.
 - 다음 cleanup은 `docs/storage_retention_cleanup_policy.md`의 keep set 기준으로
-  후보 manifest를 먼저 만들고, current source-of-truth reference가 없는 항목만
-  operator approval 후 삭제/외부화한다.
+  보존 manifest와 compact essential-evidence register를 먼저 만들고,
+  current source-of-truth reference가 없는 transient/regenerable 항목만 operator
+  approval 후 삭제한다. `/tmp` 임시 대피나 bulk externalize는 현재 기본 경로가
+  아니다.
 
 ### J. Tools 비대 (1,575 top-level wrapper/tool files)
 
@@ -3313,9 +3327,11 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 
 ### 정리 / 리팩토링
 
-13. **Storage cleanup 실행** — `casp17/massivefold_external_pool_intake`,
-    `runs/archive`, `rust_engine/target`, `.venv` externalize/archive/delete,
-    final PDB/mmCIF + manifest + validation report 보존.
+13. **Storage retention 정리** — `/tmp` 임시 대피 대신
+    `tools/build_storage_retention_manifest.py`로 필수 증거/정리 후보를 문서화.
+    `models/`, `casp17/`는 compact selected-checkpoint/final-structure/
+    viewer/sha256/validation register 작성 후, source-of-truth reference가 없는
+    transient/regenerable payload만 별도 operator approval로 삭제.
 14. **Tools/ 패키지 분리** — `tools/`를 제품별 (product / cameo / casp17 /
     wetlab / cleanup / gpcr_replay) 서브패키지로 분리. Deep reference count,
     1차 selected migration plan, 5개 package move + top-level compatibility wrapper
@@ -3383,8 +3399,8 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   transporter/wetlab은 외부 의존성.
 - **확장** (10~12): 운영자 input + 외부 CAMEO schedule. CA2/PXR는 input만
   채우면 진행, IDP는 bounded lane data, CAMEO는 외부 schedule.
-- **정리** (13~14): cleanup approval + 리팩토링. operator-approved 후
-  진행 가능.
+- **정리** (13~14): storage retention manifest + compact evidence register +
+  리팩토링. transient cleanup은 operator-approved 후 진행 가능.
 
 ---
 
