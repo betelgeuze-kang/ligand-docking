@@ -678,6 +678,30 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   같은 큰 rank-residual pair에서 contact-shell/descriptor/score calibration을
   개선하고 bootstrap p05를 다시 올리는 일이다. 이 diagnostic은 row drop,
   payload write, intake promotion을 하지 않는다.
+  2026-06-15 KST 추가 score-variant probe는 같은 25쌍 preview의 candidate
+  `rows.details_json`을 internal ΔG detail source로 결합해 contact/atom feature
+  결손이 없음을 먼저 확인한다.
+  `config/refine_tier_public_benchmark_score_variant_probe_current.json`과
+  `docs/refine_tier_public_benchmark_score_variant_probe_current.md`는
+  `refine_tier_public_benchmark_score_variant_probe_ready`,
+  `combined_pair_count=25`, `feature_complete_pair_count=25`,
+  `candidate_detail_from_rows_pair_count=17`,
+  `baseline_spearman=0.5315384615384615`,
+  `baseline_bootstrap_p05=0.23053846153846155`,
+  `best_variant_id=sqrt_contact_density_only`,
+  `best_variant_spearman=0.6369230769230769`,
+  `best_variant_bootstrap_p05=0.36630769230769233`,
+  `best_variant_bootstrap_p05_delta=0.13576923076923078`,
+  `best_variant_claim_grade_p05_ready=false`,
+  `top_p05_variant_science_admissible_for_best_selection=true`를 기록한다.
+  따라서 contact-sqrt density는 현재 baseline보다 나은 다음 검증 후보지만,
+  bootstrap p05가 claim-grade 기준 `0.5`에 아직 못 미치므로 payload 값,
+  canonical intake, claim promotion에 쓰면 안 된다. 새 selection policy도
+  p05만 높은 변형을 고르지 않고 combined Spearman이 baseline 아래로 떨어지는
+  변형을 best 후보에서 제외한다. 남은 직접 작업은 이 descriptor 신호를 독립
+  R9 holdout 또는 operator-reviewed metric-source payload에서 재검증하고,
+  `3n86`, `2j7h`, `3f3e` 잔차를 줄이는 calibrated scoring으로 bootstrap p05를
+  0.5 이상으로 끌어올리는 일이다.
   `runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json`은
   이 execute 직전 handoff를 R4/operator review packet으로 고정해
   `refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready`,
