@@ -16,6 +16,7 @@ from tools.product.build_engine_refinement_claim_evidence_priority_packet import
     DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_JSON,
     DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_WORK_ORDER_CSV,
     DEFAULT_PUBLIC_BENCHMARK_READINESS_JSON,
+    DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_JSON,
     DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_APPLY_JSON,
     DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_CSV,
     DEFAULT_RECEIPT_JSON,
@@ -519,6 +520,9 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
     public_benchmark_materialization_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_MATERIALIZATION_JSON,
     public_benchmark_materialized_work_order_csv: str | Path = DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_WORK_ORDER_CSV,
     public_benchmark_materialized_apply_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_JSON,
+    public_benchmark_statistical_support_work_order_json: str | Path = (
+        DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_JSON
+    ),
     public_benchmark_receptor_coordinate_intake_csv: str
     | Path = DEFAULT_PUBLIC_BENCHMARK_RECEPTOR_COORDINATE_INTAKE_CSV,
     public_benchmark_receptor_coordinate_validation_csv: str
@@ -557,6 +561,10 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
         public_benchmark_materialized_apply_json,
         root=root_path,
     )
+    statistical_support_work_order_packet, statistical_support_work_order_present = _read_json(
+        public_benchmark_statistical_support_work_order_json,
+        root=root_path,
+    )
     receptor_intake_rows, receptor_intake_missing_columns, receptor_intake_csv_present = _read_csv(
         public_benchmark_receptor_coordinate_intake_csv,
         root=root_path,
@@ -578,9 +586,17 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
     work_order_apply_summary = _summary(work_order_apply_packet)
     materialization_summary = _summary(materialization_packet)
     materialized_apply_summary = _summary(materialized_apply_packet)
+    statistical_support_work_order_summary = _summary(statistical_support_work_order_packet)
     materialized_metric_ready = _materialized_metric_ready(materialization_summary)
     materialized_apply_ready = bool(materialized_apply_summary.get("apply_ready") is True)
     materialized_science_evidence_complete = bool(materialized_metric_ready and materialized_apply_ready)
+    materialized_statistical_support_ready = bool(
+        materialization_summary.get("claim_grade_public_benchmark_statistical_support_ready")
+        is True
+    )
+    statistical_support_work_order_ready = bool(
+        statistical_support_work_order_summary.get("work_order_ready") is True
+    )
     receipt_report_by_blocker = {
         _text(row.get("blocker_id")): row for row in _rows(receipt_packet)
     }
@@ -705,6 +721,12 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
         source_blockers.append("public_benchmark_metric_evidence_rows_missing")
     if missing_metric_evidence_work_order_count:
         source_blockers.append("public_benchmark_metric_evidence_work_order_rows_missing")
+    if (
+        materialized_science_evidence_complete
+        and not materialized_statistical_support_ready
+        and not statistical_support_work_order_present
+    ):
+        source_blockers.append("public_benchmark_statistical_support_work_order_artifact_missing")
     worksheet_ready = not source_blockers
     receptor_validation_pass_row_count = _count_rows_with_value(
         receptor_validation_rows,
@@ -775,9 +797,41 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
             public_benchmark_materialized_apply_json,
             root=root_path,
         ),
+        "public_benchmark_statistical_support_work_order_artifact": _display_path(
+            public_benchmark_statistical_support_work_order_json,
+            root=root_path,
+        ),
         "public_benchmark_materialization_artifact_present": materialization_present,
         "public_benchmark_materialized_work_order_csv_present": materialized_work_order_present,
         "public_benchmark_materialized_work_order_apply_artifact_present": materialized_apply_present,
+        "public_benchmark_statistical_support_work_order_artifact_present": (
+            statistical_support_work_order_present
+        ),
+        "public_benchmark_statistical_support_work_order_ready": statistical_support_work_order_ready,
+        "public_benchmark_statistical_support_work_order_status": _text(
+            statistical_support_work_order_summary.get("status")
+        ),
+        "public_benchmark_statistical_support_work_order_expansion_slot_count": _int(
+            statistical_support_work_order_summary.get("expansion_slot_count")
+        ),
+        "public_benchmark_statistical_support_work_order_minimum_new_pair_count": _int(
+            statistical_support_work_order_summary.get("minimum_new_pair_count")
+        ),
+        "public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count": _int(
+            statistical_support_work_order_summary.get("minimum_new_holdout_pair_count")
+        ),
+        "public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count": _int(
+            statistical_support_work_order_summary.get("minimum_new_fit_or_holdout_pair_count")
+        ),
+        "public_benchmark_statistical_support_work_order_bootstrap_spearman_p05_deficit": (
+            statistical_support_work_order_summary.get("bootstrap_spearman_p05_deficit")
+        ),
+        "public_benchmark_statistical_support_work_order_bootstrap_retest_required": bool(
+            statistical_support_work_order_summary.get("bootstrap_retest_required") is True
+        ),
+        "public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed": bool(
+            statistical_support_work_order_summary.get("canonical_intake_promotion_allowed") is True
+        ),
         "public_benchmark_materialized_metric_ready": materialized_metric_ready,
         "public_benchmark_materialized_apply_ready": materialized_apply_ready,
         "public_benchmark_materialized_science_evidence_complete": materialized_science_evidence_complete,
@@ -946,6 +1000,21 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
             "Operator fields are complete; rerun public benchmark apply/readiness, claim receipt, priority packet, "
             "and product-goal audit before any claim promotion."
             if operator_fill_complete
+            else (
+                "Fill "
+                f"{_int(statistical_support_work_order_summary.get('expansion_slot_count'))} additional reviewed "
+                "public benchmark-pair expansion slots, including at least "
+                f"{_int(statistical_support_work_order_summary.get('minimum_new_holdout_pair_count'))} holdout "
+                "slots, then rebuild materialization and require bootstrap Spearman p05 >= 0.5 before any R9 "
+                "claim receipt or canonical intake promotion."
+            )
+            if (
+                materialized_science_evidence_complete
+                and not materialized_statistical_support_ready
+                and statistical_support_work_order_ready
+            )
+            else "Build the R9 public-benchmark statistical-support work-order before deciding on canonical intake."
+            if materialized_science_evidence_complete and not materialized_statistical_support_ready
             else "Materialized R9 science evidence is complete; review the materialized work-order/apply candidate "
             "and decide whether to explicitly promote it to canonical intake before filling the R9 receipt."
             if materialized_science_evidence_complete
@@ -962,6 +1031,7 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
             str(public_benchmark_materialization_json),
             str(public_benchmark_materialized_work_order_csv),
             str(public_benchmark_materialized_apply_json),
+            str(public_benchmark_statistical_support_work_order_json),
             str(public_benchmark_receptor_coordinate_intake_csv),
             str(public_benchmark_receptor_coordinate_validation_csv),
             str(public_benchmark_metric_evidence_csv),
@@ -999,6 +1069,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"`{summary['public_benchmark_materialized_free_energy_spearman_bootstrap_p05']}`",
         "- public_benchmark_materialized_claim_grade_statistical_support_ready: "
         f"`{summary['public_benchmark_materialized_claim_grade_statistical_support_ready']}`",
+        "- public_benchmark_statistical_support_work_order_ready: "
+        f"`{summary['public_benchmark_statistical_support_work_order_ready']}`",
+        "- public_benchmark_statistical_support_work_order_expansion_slot_count: "
+        f"`{summary['public_benchmark_statistical_support_work_order_expansion_slot_count']}`",
+        "- public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count: "
+        f"`{summary['public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count']}`",
         "- public_benchmark_receptor_coordinate_intake_artifact_present_row_count: "
         f"`{summary['public_benchmark_receptor_coordinate_intake_artifact_present_row_count']}`",
         "- public_benchmark_receptor_coordinate_validation_blocked_row_count: "
@@ -1051,6 +1127,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_JSON,
     )
     parser.add_argument(
+        "--public-benchmark-statistical-support-work-order-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_JSON,
+    )
+    parser.add_argument(
         "--public-benchmark-receptor-coordinate-intake-csv",
         default=DEFAULT_PUBLIC_BENCHMARK_RECEPTOR_COORDINATE_INTAKE_CSV,
     )
@@ -1079,6 +1159,9 @@ def main(argv: list[str] | None = None) -> None:
         public_benchmark_materialization_json=args.public_benchmark_materialization_json,
         public_benchmark_materialized_work_order_csv=args.public_benchmark_materialized_work_order_csv,
         public_benchmark_materialized_apply_json=args.public_benchmark_materialized_apply_json,
+        public_benchmark_statistical_support_work_order_json=(
+            args.public_benchmark_statistical_support_work_order_json
+        ),
         public_benchmark_receptor_coordinate_intake_csv=args.public_benchmark_receptor_coordinate_intake_csv,
         public_benchmark_receptor_coordinate_validation_csv=args.public_benchmark_receptor_coordinate_validation_csv,
         public_benchmark_metric_evidence_csv=args.public_benchmark_metric_evidence_csv,

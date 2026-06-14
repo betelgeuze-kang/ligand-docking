@@ -1292,6 +1292,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "gpcr_broad_claim_scope_readiness" in artifact_ids
     assert "refine_tier_public_benchmark_metric_source_materialization" in artifact_ids
     assert "refine_tier_public_benchmark_work_order_apply_materialized" in artifact_ids
+    assert "refine_tier_public_benchmark_statistical_support_work_order" in artifact_ids
     assert "science_accuracy_frontier" in artifact_ids
     assert "self_hosted_license_distribution_audit" in artifact_ids
     assert "third_party_license_review_gate" in artifact_ids
@@ -1379,6 +1380,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/build_gpcr_broad_claim_scope_readiness.py" in mod.RELEASE_REFRESH_COMMANDS
     assert mod.REFINE_TIER_PUBLIC_BENCHMARK_METRIC_MATERIALIZATION_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert mod.REFINE_TIER_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert (
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_COMMAND
+        in mod.RELEASE_REFRESH_COMMANDS
+    )
     assert "python3 tools/product/build_science_accuracy_frontier.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "product_release_bundle_semantic_ready" in status_ids
     assert "product_goal_completion_audit_full_commercial_release_blockers_semantic_ready" in status_ids
@@ -1505,6 +1510,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "public_benchmark_materialized_apply_ready" in science_accuracy_frontier_spec[
         "required_true_fields"
     ]
+    assert "public_benchmark_statistical_support_work_order_ready" in science_accuracy_frontier_spec[
+        "required_true_fields"
+    ]
     assert science_accuracy_frontier_spec["required_int_exact_fields"] == {
             "broad_commercial_accuracy_claim_ready": 0,
             "gpcr_broad_claim_ready": 0,
@@ -1587,6 +1595,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_materialized_apply_blocked_row_count": 0,
         "public_benchmark_materialized_apply_metric_evidence_pass_row_count": 8,
         "public_benchmark_materialized_apply_metric_evidence_contract_blocked_row_count": 0,
+        "public_benchmark_statistical_support_work_order_expansion_slot_count": 17,
+        "public_benchmark_statistical_support_work_order_minimum_new_pair_count": 17,
+        "public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count": 5,
+        "public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count": 12,
+        "public_benchmark_statistical_support_work_order_bootstrap_retest_required": 1,
+        "public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed": 0,
         "public_benchmark_work_order_ligand_pose_only_row_count": 0,
         "public_benchmark_work_order_missing_interaction_metric_source_row_count": 8,
         "public_benchmark_work_order_missing_internal_deltaG_source_row_count": 8,
@@ -1608,6 +1622,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "gpcr_broad_claim_review_receipt_approval_token_required": "APPROVE_GPCR_BROAD_CLAIM_REVIEW",
         "engine_refinement_tier_status": "engine_refinement_tier_ready",
         "refine_tier_public_benchmark_status": "blocked_refine_tier_public_benchmark_readiness",
+        "public_benchmark_statistical_support_work_order_status": (
+            "refine_tier_public_benchmark_statistical_support_work_order_ready"
+        ),
         "engine_refinement_claim_evidence_receipt_status": (
             "blocked_engine_refinement_claim_evidence_receipt"
         ),
@@ -2564,6 +2581,23 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/refine_tier_public_benchmark_metric_evidence_materialized_current.csv" in (
         materialized_apply_spec["depends_on"]
     )
+    statistical_work_order_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "refine_tier_public_benchmark_statistical_support_work_order"
+    )
+    assert statistical_work_order_spec["builder_command"] == (
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_COMMAND
+    )
+    assert "tools/product/build_refine_tier_public_benchmark_statistical_support_work_order.py" in (
+        statistical_work_order_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_metric_source_materialization_current.json" in (
+        statistical_work_order_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json" in (
+        statistical_work_order_spec["depends_on"]
+    )
     priority_packet_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -2577,6 +2611,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         priority_packet_spec["depends_on"]
     )
     assert "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json" in (
+        priority_packet_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json" in (
         priority_packet_spec["depends_on"]
     )
     field_worksheet_spec = next(
@@ -2681,6 +2718,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "python3 tools/product/apply_refine_tier_public_benchmark_work_order.py" in mod.RELEASE_REFRESH_COMMANDS
     assert mod.REFINE_TIER_PUBLIC_BENCHMARK_METRIC_MATERIALIZATION_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert mod.REFINE_TIER_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert (
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_COMMAND
+        in mod.RELEASE_REFRESH_COMMANDS
+    )
     assert "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py" in mod.RELEASE_REFRESH_COMMANDS
     assert (
@@ -2778,6 +2819,11 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index(
         mod.REFINE_TIER_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_COMMAND
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_COMMAND
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_COMMAND
     ) < mod.RELEASE_REFRESH_COMMANDS.index(
         "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py"
     )

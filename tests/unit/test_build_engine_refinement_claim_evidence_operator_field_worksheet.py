@@ -535,7 +535,24 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
     assert summary["public_benchmark_materialized_free_energy_spearman_bootstrap_p05"] == -0.14285714285714285
     assert summary["public_benchmark_materialized_claim_grade_statistical_support_ready"] is False
     assert summary["public_benchmark_materialized_claim_grade_statistical_support_blocker_count"] == 3
-    assert "Materialized R9 science evidence is complete" in summary["next_required_step"]
+    assert summary["public_benchmark_statistical_support_work_order_artifact_present"] is True
+    assert summary["public_benchmark_statistical_support_work_order_ready"] is True
+    assert summary["public_benchmark_statistical_support_work_order_status"] == (
+        "refine_tier_public_benchmark_statistical_support_work_order_ready"
+    )
+    assert summary["public_benchmark_statistical_support_work_order_expansion_slot_count"] == 17
+    assert summary["public_benchmark_statistical_support_work_order_minimum_new_pair_count"] == 17
+    assert summary["public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count"] == 5
+    assert summary["public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count"] == 12
+    assert summary["public_benchmark_statistical_support_work_order_bootstrap_spearman_p05_deficit"] == (
+        0.6428571428571428
+    )
+    assert summary["public_benchmark_statistical_support_work_order_bootstrap_retest_required"] is True
+    assert (
+        summary["public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed"]
+        is False
+    )
+    assert "Fill 17 additional reviewed public benchmark-pair expansion slots" in summary["next_required_step"]
 
 
 def test_engine_refinement_claim_evidence_operator_field_worksheet_cli_writes_outputs(

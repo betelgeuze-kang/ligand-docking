@@ -124,6 +124,23 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     assert summary["public_benchmark_materialized_free_energy_spearman_bootstrap_p05"] == -0.14285714285714285
     assert summary["public_benchmark_materialized_claim_grade_statistical_support_ready"] is False
     assert summary["public_benchmark_materialized_claim_grade_statistical_support_blocker_count"] == 3
+    assert summary["public_benchmark_statistical_support_work_order_present"] is True
+    assert summary["public_benchmark_statistical_support_work_order_ready"] is True
+    assert summary["public_benchmark_statistical_support_work_order_status"] == (
+        "refine_tier_public_benchmark_statistical_support_work_order_ready"
+    )
+    assert summary["public_benchmark_statistical_support_work_order_expansion_slot_count"] == 17
+    assert summary["public_benchmark_statistical_support_work_order_minimum_new_pair_count"] == 17
+    assert summary["public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count"] == 5
+    assert summary["public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count"] == 12
+    assert summary["public_benchmark_statistical_support_work_order_bootstrap_spearman_p05_deficit"] == (
+        0.6428571428571428
+    )
+    assert summary["public_benchmark_statistical_support_work_order_bootstrap_retest_required"] is True
+    assert (
+        summary["public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed"]
+        is False
+    )
     assert summary["top_blocker_id"] == "public_benchmark_gate_not_ready"
     assert summary["top_priority_bucket"] == "public_benchmark_work_order_apply_required"
     assert summary["top_required_input"] == "runs/refine_tier_public_benchmark_work_order_current.csv"
@@ -134,7 +151,10 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     assert payload["rows"][0]["operator_input_required"] is True
     assert payload["rows"][0]["public_benchmark_materialized_candidate_ready"] is True
     assert payload["rows"][0]["public_benchmark_materialized_claim_grade_statistical_support_ready"] is False
-    assert "Materialized public benchmark candidate is apply-ready" in payload["rows"][0]["next_operator_step"]
+    assert payload["rows"][0]["public_benchmark_statistical_support_work_order_expansion_slot_count"] == 17
+    assert "Fill 17 additional reviewed public benchmark-pair expansion slots" in payload["rows"][0][
+        "next_operator_step"
+    ]
     assert payload["rows"][1]["priority_bucket"] == "blocked_until_public_benchmark_ready"
     assert payload["rows"][1]["prerequisite_blocker_id"] == "public_benchmark_gate_not_ready"
     assert all(row["external_state_mutated"] is False for row in payload["rows"])
@@ -188,6 +208,8 @@ def test_engine_refinement_claim_evidence_priority_packet_ready_with_verified_lo
     assert summary["blocked_priority_item_count"] == 0
     assert summary["public_benchmark_gate_ready"] is True
     assert summary["public_benchmark_work_order_apply_ready"] is True
+    assert summary["public_benchmark_statistical_support_work_order_present"] is False
+    assert summary["public_benchmark_statistical_support_work_order_ready"] is False
     assert summary["top_priority_bucket"] == "receipt_verified"
     assert summary["blockers"] == []
     assert all(row["priority_bucket"] == "receipt_verified" for row in payload["rows"])

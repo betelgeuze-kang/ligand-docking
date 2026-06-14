@@ -33,6 +33,9 @@ REFINE_TIER_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_COMMAND = (
     "--out-csv runs/refine_tier_public_benchmark_intake_candidate_materialized_current.csv "
     "--out-md runs/refine_tier_public_benchmark_work_order_apply_materialized_current.md"
 )
+REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_COMMAND = (
+    "python3 tools/product/build_refine_tier_public_benchmark_statistical_support_work_order.py"
+)
 
 RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_accuracy_parity_scorecard.py",
@@ -99,6 +102,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/product/apply_refine_tier_public_benchmark_work_order.py",
     REFINE_TIER_PUBLIC_BENCHMARK_METRIC_MATERIALIZATION_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_COMMAND,
+    REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_COMMAND,
     "python3 tools/product/build_engine_refinement_tier_readiness.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py",
@@ -909,6 +913,18 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "artifact_id": "refine_tier_public_benchmark_statistical_support_work_order",
+        "artifact_path": "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json",
+        "builder_command": REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_COMMAND,
+        "depends_on": [
+            "tools/product/build_refine_tier_public_benchmark_statistical_support_work_order.py",
+            "tools/build_refine_tier_public_benchmark_statistical_support_work_order.py",
+            "runs/refine_tier_public_benchmark_metric_source_materialization_current.json",
+            "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json",
+            "runs/refine_tier_public_benchmark_work_order_current.csv",
+        ],
+    },
+    {
         "artifact_id": "engine_refinement_claim_evidence_receipt",
         "artifact_path": "runs/engine_refinement_claim_evidence_receipt_current.json",
         "builder_command": "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py",
@@ -933,6 +949,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/refine_tier_public_benchmark_work_order_materialized_current.csv",
             "runs/refine_tier_public_benchmark_metric_evidence_materialized_current.csv",
             "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json",
         ],
     },
     {
@@ -958,6 +975,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/refine_tier_public_benchmark_work_order_materialized_current.csv",
             "runs/refine_tier_public_benchmark_metric_evidence_materialized_current.csv",
             "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json",
         ],
     },
     {
@@ -981,6 +999,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/refine_tier_public_benchmark_work_order_materialized_current.csv",
             "runs/refine_tier_public_benchmark_metric_evidence_materialized_current.csv",
             "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json",
         ],
     },
     {
@@ -995,6 +1014,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/refine_tier_public_benchmark_readiness_current.json",
             "runs/refine_tier_public_benchmark_metric_source_materialization_current.json",
             "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json",
             "runs/engine_refinement_claim_evidence_receipt_current.json",
             "runs/engine_refinement_claim_evidence_priority_packet_current.json",
             "runs/product_pose_sampling_readiness_current.json",
@@ -2412,6 +2432,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "pose_sampling_contract_ready",
             "public_benchmark_materialized_metric_ready",
             "public_benchmark_materialized_apply_ready",
+            "public_benchmark_statistical_support_work_order_ready",
         ],
         "required_int_exact_fields": {
             "broad_commercial_accuracy_claim_ready": 0,
@@ -2495,6 +2516,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_materialized_apply_blocked_row_count": 0,
             "public_benchmark_materialized_apply_metric_evidence_pass_row_count": 8,
             "public_benchmark_materialized_apply_metric_evidence_contract_blocked_row_count": 0,
+            "public_benchmark_statistical_support_work_order_expansion_slot_count": 17,
+            "public_benchmark_statistical_support_work_order_minimum_new_pair_count": 17,
+            "public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count": 5,
+            "public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count": 12,
+            "public_benchmark_statistical_support_work_order_bootstrap_retest_required": 1,
+            "public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed": 0,
             "public_benchmark_work_order_ligand_pose_only_row_count": 0,
             "public_benchmark_work_order_missing_interaction_metric_source_row_count": 8,
             "public_benchmark_work_order_missing_internal_deltaG_source_row_count": 8,
@@ -2516,6 +2543,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "gpcr_broad_claim_review_receipt_approval_token_required": "APPROVE_GPCR_BROAD_CLAIM_REVIEW",
             "engine_refinement_tier_status": "engine_refinement_tier_ready",
             "refine_tier_public_benchmark_status": "blocked_refine_tier_public_benchmark_readiness",
+            "public_benchmark_statistical_support_work_order_status": (
+                "refine_tier_public_benchmark_statistical_support_work_order_ready"
+            ),
             "engine_refinement_claim_evidence_receipt_status": (
                 "blocked_engine_refinement_claim_evidence_receipt"
             ),

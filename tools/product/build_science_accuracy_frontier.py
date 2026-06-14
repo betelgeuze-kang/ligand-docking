@@ -19,6 +19,9 @@ DEFAULT_PUBLIC_BENCHMARK_MATERIALIZATION_JSON = (
 DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_JSON = (
     "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json"
 )
+DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_JSON = (
+    "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json"
+)
 DEFAULT_ENGINE_RECEIPT_JSON = "runs/engine_refinement_claim_evidence_receipt_current.json"
 DEFAULT_ENGINE_PRIORITY_JSON = "runs/engine_refinement_claim_evidence_priority_packet_current.json"
 DEFAULT_POSE_SAMPLING_JSON = "runs/product_pose_sampling_readiness_current.json"
@@ -88,6 +91,8 @@ def build_science_accuracy_frontier(
     public_benchmark_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_JSON,
     public_benchmark_materialization_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_MATERIALIZATION_JSON,
     public_benchmark_materialized_apply_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_JSON,
+    public_benchmark_statistical_support_work_order_json: str
+    | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_JSON,
     engine_receipt_json: str | Path = DEFAULT_ENGINE_RECEIPT_JSON,
     engine_priority_json: str | Path = DEFAULT_ENGINE_PRIORITY_JSON,
     pose_sampling_json: str | Path = DEFAULT_POSE_SAMPLING_JSON,
@@ -98,6 +103,9 @@ def build_science_accuracy_frontier(
     public_payload, public_present = _read_json(public_benchmark_json)
     materialization_payload, materialization_present = _read_json(public_benchmark_materialization_json)
     materialized_apply_payload, materialized_apply_present = _read_json(public_benchmark_materialized_apply_json)
+    statistical_work_order_payload, statistical_work_order_present = _read_json(
+        public_benchmark_statistical_support_work_order_json
+    )
     receipt_payload, receipt_present = _read_json(engine_receipt_json)
     priority_payload, priority_present = _read_json(engine_priority_json)
     pose_payload, pose_present = _read_json(pose_sampling_json)
@@ -108,6 +116,7 @@ def build_science_accuracy_frontier(
     public = _summary(public_payload)
     materialization = _summary(materialization_payload)
     materialized_apply = _summary(materialized_apply_payload)
+    statistical_work_order = _summary(statistical_work_order_payload)
     receipt = _summary(receipt_payload)
     priority = _summary(priority_payload)
     pose = _summary(pose_payload)
@@ -164,6 +173,12 @@ def build_science_accuracy_frontier(
     public_materialized_statistical_support_ready = bool(
         materialization.get("claim_grade_public_benchmark_statistical_support_ready") is True
     )
+    public_statistical_support_work_order_ready = bool(
+        statistical_work_order_present
+        and statistical_work_order.get("status")
+        == "refine_tier_public_benchmark_statistical_support_work_order_ready"
+        and statistical_work_order.get("work_order_ready") is True
+    )
     engine_receipt_ready = bool(receipt.get("claim_promotion_evidence_receipt_ready") is True)
     engine_priority_ready = bool(priority.get("priority_packet_ready") is True)
     pose_surface_ready = bool(
@@ -218,6 +233,8 @@ def build_science_accuracy_frontier(
         and not public_materialized_statistical_support_ready
     ):
         blockers.append("openmm_schrodinger_public_benchmark_statistical_support_not_claim_grade")
+        if not public_statistical_support_work_order_ready:
+            blockers.append("openmm_schrodinger_public_benchmark_statistical_support_work_order_missing")
     if not engine_receipt_ready:
         blockers.append("engine_refinement_claim_evidence_receipt_not_ready")
     if not pose_surface_ready:
@@ -332,6 +349,28 @@ def build_science_accuracy_frontier(
         ),
         "public_benchmark_materialized_apply_metric_evidence_contract_blocked_row_count": _int(
             materialized_apply.get("metric_evidence_contract_blocked_row_count")
+        ),
+        "public_benchmark_statistical_support_work_order_ready": public_statistical_support_work_order_ready,
+        "public_benchmark_statistical_support_work_order_status": str(
+            statistical_work_order.get("status", "")
+        ),
+        "public_benchmark_statistical_support_work_order_expansion_slot_count": _int(
+            statistical_work_order.get("expansion_slot_count")
+        ),
+        "public_benchmark_statistical_support_work_order_minimum_new_pair_count": _int(
+            statistical_work_order.get("minimum_new_pair_count")
+        ),
+        "public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count": _int(
+            statistical_work_order.get("minimum_new_holdout_pair_count")
+        ),
+        "public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count": _int(
+            statistical_work_order.get("minimum_new_fit_or_holdout_pair_count")
+        ),
+        "public_benchmark_statistical_support_work_order_bootstrap_retest_required": bool(
+            statistical_work_order.get("bootstrap_retest_required") is True
+        ),
+        "public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed": bool(
+            statistical_work_order.get("canonical_intake_promotion_allowed") is True
         ),
         "openmm_schrodinger_claim_ready": openmm_schrodinger_claim_ready,
         "engine_refinement_claim_evidence_receipt_ready": engine_receipt_ready,
@@ -571,6 +610,11 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"{summary['public_benchmark_materialized_free_energy_spearman_bootstrap_p95']}`",
         "- public_benchmark_materialized_claim_grade_statistical_support_ready: "
         f"`{summary['public_benchmark_materialized_claim_grade_statistical_support_ready']}`",
+        "- public_benchmark_statistical_support_work_order_ready: "
+        f"`{summary['public_benchmark_statistical_support_work_order_ready']}`",
+        "- public_benchmark_statistical_support_work_order_expansion/holdout_slots: "
+        f"`{summary['public_benchmark_statistical_support_work_order_expansion_slot_count']}/"
+        f"{summary['public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count']}`",
         f"- engine_refinement_claim_evidence_receipt_ready: `{summary['engine_refinement_claim_evidence_receipt_ready']}`",
         f"- public_benchmark_work_order_seeded_row_count: `{summary['public_benchmark_work_order_seeded_row_count']}`",
         f"- public_benchmark_work_order_prefilled_operator_field_count: `{summary['public_benchmark_work_order_prefilled_operator_field_count']}`",
@@ -609,6 +653,10 @@ def main(argv: list[str] | None = None) -> None:
         "--public-benchmark-materialized-apply-json",
         default=DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_JSON,
     )
+    parser.add_argument(
+        "--public-benchmark-statistical-support-work-order-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_JSON,
+    )
     parser.add_argument("--engine-receipt-json", default=DEFAULT_ENGINE_RECEIPT_JSON)
     parser.add_argument("--engine-priority-json", default=DEFAULT_ENGINE_PRIORITY_JSON)
     parser.add_argument("--pose-sampling-json", default=DEFAULT_POSE_SAMPLING_JSON)
@@ -622,6 +670,9 @@ def main(argv: list[str] | None = None) -> None:
         public_benchmark_json=args.public_benchmark_json,
         public_benchmark_materialization_json=args.public_benchmark_materialization_json,
         public_benchmark_materialized_apply_json=args.public_benchmark_materialized_apply_json,
+        public_benchmark_statistical_support_work_order_json=(
+            args.public_benchmark_statistical_support_work_order_json
+        ),
         engine_receipt_json=args.engine_receipt_json,
         engine_priority_json=args.engine_priority_json,
         pose_sampling_json=args.pose_sampling_json,

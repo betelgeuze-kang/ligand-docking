@@ -23,6 +23,7 @@ def _write_inputs(
         "public_benchmark_json": tmp_path / "public.json",
         "public_benchmark_materialization_json": tmp_path / "public_materialization.json",
         "public_benchmark_materialized_apply_json": tmp_path / "public_materialized_apply.json",
+        "public_benchmark_statistical_support_work_order_json": tmp_path / "public_stat_work_order.json",
         "engine_receipt_json": tmp_path / "receipt.json",
         "engine_priority_json": tmp_path / "priority.json",
         "pose_sampling_json": tmp_path / "pose.json",
@@ -196,6 +197,20 @@ def _write_inputs(
         },
     )
     _write(
+        paths["public_benchmark_statistical_support_work_order_json"],
+        {
+            "status": "refine_tier_public_benchmark_statistical_support_work_order_ready",
+            "work_order_ready": True,
+            "claim_grade_public_benchmark_statistical_support_ready": ready,
+            "canonical_intake_promotion_allowed": ready,
+            "expansion_slot_count": 17 if materialized_candidate_ready and not ready else 0,
+            "minimum_new_pair_count": 17 if materialized_candidate_ready and not ready else 0,
+            "minimum_new_holdout_pair_count": 5 if materialized_candidate_ready and not ready else 0,
+            "minimum_new_fit_or_holdout_pair_count": 12 if materialized_candidate_ready and not ready else 0,
+            "bootstrap_retest_required": not ready,
+        },
+    )
+    _write(
         paths["engine_receipt_json"],
         {
             "status": (
@@ -261,6 +276,8 @@ def test_science_accuracy_frontier_blocks_commercial_parity_without_public_r9_ev
     assert summary["public_benchmark_materialized_free_energy_spearman_bootstrap_p05"] is None
     assert summary["public_benchmark_materialized_claim_grade_statistical_support_ready"] is False
     assert summary["public_benchmark_materialized_claim_grade_statistical_support_blocker_count"] == 0
+    assert summary["public_benchmark_statistical_support_work_order_ready"] is True
+    assert summary["public_benchmark_statistical_support_work_order_expansion_slot_count"] == 0
     assert summary["engine_refinement_claim_evidence_receipt_ready"] is False
     assert summary["public_benchmark_work_order_seeded_row_count"] == 8
     assert summary["public_benchmark_work_order_prefilled_operator_field_count"] == 40
@@ -360,6 +377,13 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
         "claim_grade_public_benchmark_holdout_pair_count_below_minimum",
         "claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum",
     ]
+    assert summary["public_benchmark_statistical_support_work_order_ready"] is True
+    assert summary["public_benchmark_statistical_support_work_order_expansion_slot_count"] == 17
+    assert summary["public_benchmark_statistical_support_work_order_minimum_new_pair_count"] == 17
+    assert summary["public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count"] == 5
+    assert summary["public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count"] == 12
+    assert summary["public_benchmark_statistical_support_work_order_bootstrap_retest_required"] is True
+    assert summary["public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed"] is False
     assert summary["blockers"] == [
         "gpcr_broad_claim_review_not_approved",
         "gpcr_scorer_router_promotion_not_approved",
@@ -400,6 +424,12 @@ def test_science_accuracy_frontier_cli_writes_json_and_markdown(tmp_path: Path) 
             str(paths["engine_refinement_json"]),
             "--public-benchmark-json",
             str(paths["public_benchmark_json"]),
+            "--public-benchmark-materialization-json",
+            str(paths["public_benchmark_materialization_json"]),
+            "--public-benchmark-materialized-apply-json",
+            str(paths["public_benchmark_materialized_apply_json"]),
+            "--public-benchmark-statistical-support-work-order-json",
+            str(paths["public_benchmark_statistical_support_work_order_json"]),
             "--engine-receipt-json",
             str(paths["engine_receipt_json"]),
             "--engine-priority-json",

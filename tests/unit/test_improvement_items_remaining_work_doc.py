@@ -212,6 +212,17 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`claim_grade_public_benchmark_statistical_support_ready=false`" in text
     assert "`claim_grade_public_benchmark_statistical_support_blocker_count=3`" in text
     assert "`public_benchmark_materialized_claim_grade_statistical_support_ready=false`" in text
+    assert "`runs/refine_tier_public_benchmark_statistical_support_work_order_current.json`" in text
+    assert "`refine_tier_public_benchmark_statistical_support_work_order_ready`" in text
+    assert "`work_order_ready=true`, `expansion_slot_count=17`" in text
+    assert "`minimum_new_pair_count=17`, `minimum_new_holdout_pair_count=5`" in text
+    assert "`minimum_new_fit_or_holdout_pair_count=12`" in text
+    assert "`bootstrap_spearman_p05_deficit=0.6428571428571428`" in text
+    assert "`bootstrap_retest_required=true`" in text
+    assert "`canonical_intake_promotion_allowed=false`" in text
+    assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
+    assert "`runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`" in text
+    assert "`Fill 17 additional reviewed public benchmark-pair expansion slots`" in text
     assert "`candidate_claim_grade_public_benchmark_ready=true`" in text
     assert "`scripts/verify_quality_gate.py`" in text
     assert "`product_quality_gate_verified`" in text
