@@ -29,7 +29,7 @@ Latest local generated manifest:
 | protected essential-manifest roots | `2` |
 | protected essential-manifest size | `9.78 GiB` |
 | largest path | `runs` |
-| largest path size | `34.11 GiB` |
+| largest path size | `13.79 GiB` |
 | delete/archive/externalize executed | `false` |
 
 ## Current Classification
@@ -91,9 +91,123 @@ Role counts:
 | `casp17_current_support_artifact` | `2203` |
 | `casp17_historical_or_support_payload` | `2451` |
 
+## Selection Review Board Snapshot
+
+Generated with:
+
+```bash
+python3 tools/build_storage_essential_evidence_selection_review.py
+```
+
+Latest local generated board:
+`runs/storage_essential_evidence_selection_review_current.{json,csv,md}`.
+
+| metric | value |
+| --- | ---: |
+| status | `storage_essential_evidence_selection_review_ready` |
+| review domains | `12` |
+| review-domain file count | `17373` |
+| review-domain size | `9.45 GiB` |
+| cleanup allowed by board | `0` |
+| delete/archive/externalize executed | `false` |
+
+Top review actions:
+
+| rank | domain | size | action |
+| ---: | --- | ---: | --- |
+| `1` | `models/curriculum_active_learning_continuous` | `4.35 GiB` | `model_checkpoint_selection_review` |
+| `2` | `casp17/runs` | `1.46 GiB` | `casp17_run_artifact_register_review` |
+| `3` | `casp17/massivefold_representative_viewers` | `1.24 GiB` | `casp17_viewer_object_register_review` |
+| `4` | `models/curriculum_live_unseen` | `858.90 MiB` | `model_checkpoint_selection_review` |
+| `5` | `casp17/targets_current` | `464.73 MiB` | `casp17_final_target_register_review` |
+
+## NPZ Dynamics Cleanup Snapshot
+
+Generated with:
+
+```bash
+python3 tools/build_npz_dynamics_cleanup_manifest.py
+python3 tools/apply_npz_dynamics_cleanup_manifest.py --execute --approval-token APPROVE_NPZ_DYNAMICS_CLEANUP
+python3 tools/build_npz_dynamics_cleanup_manifest.py
+python3 tools/build_storage_retention_manifest.py
+```
+
+Execution receipt:
+`runs/npz_dynamics_cleanup_execution_current.{json,csv,md}`.
+
+| metric | value |
+| --- | ---: |
+| pre-delete candidates | `7708` |
+| pre-delete candidate size | `16.58 GiB` |
+| delete-recommended rows | `3684` |
+| delete-recommended size | `10.35 GiB` |
+| deleted rows | `3682` |
+| deleted size | `10.35 GiB` |
+| missing-before-delete rows | `2` |
+| failed rows | `0` |
+| postcheck candidates | `4024` |
+| postcheck candidate size | `6.24 GiB` |
+| postcheck delete-recommended rows | `0` |
+| referenced keep rows | `480` |
+| referenced keep size | `1021.55 MiB` |
+| review-required rows | `3544` |
+| review-required size | `5.24 GiB` |
+| filesystem available after cleanup | `15 GiB` |
+| repository `runs/` size after cleanup | `23.80 GiB` |
+
+After the ligand-heavy run cleanup below, the current NPZ postcheck is:
+
+| metric | value |
+| --- | ---: |
+| candidates | `3965` |
+| candidate size | `6.10 GiB` |
+| delete-recommended rows | `0` |
+| referenced keep rows | `421` |
+| referenced keep size | `877.09 MiB` |
+| review-required rows | `3544` |
+| review-required size | `5.24 GiB` |
+
+## Ligand Heavy Run Cleanup Snapshot
+
+Generated with:
+
+```bash
+python3 tools/build_ligand_heavy_run_cleanup_manifest.py
+python3 tools/apply_ligand_heavy_run_cleanup_manifest.py --execute --approval-token APPROVE_LIGAND_HEAVY_RUN_CLEANUP
+python3 tools/build_ligand_heavy_run_cleanup_manifest.py
+python3 tools/build_storage_retention_manifest.py
+```
+
+Execution receipt:
+`runs/ligand_heavy_run_cleanup_execution_current.{json,csv,md}`.
+
+| metric | value |
+| --- | ---: |
+| pre-delete candidates | `6767` |
+| pre-delete candidate size | `11.13 GiB` |
+| delete-recommended rows | `2228` |
+| delete-recommended size | `10.02 GiB` |
+| top-ranking/compact keep rows | `4323` |
+| top-ranking/compact keep size | `220.72 MiB` |
+| deleted rows | `2228` |
+| deleted size | `10.02 GiB` |
+| missing-before-delete rows | `0` |
+| failed rows | `0` |
+| postcheck candidates | `4539` |
+| postcheck candidate size | `1.11 GiB` |
+| postcheck delete-recommended rows | `0` |
+| postcheck top-ranking/compact keep rows | `4323` |
+| postcheck top-ranking/compact keep size | `220.72 MiB` |
+| postcheck review-required rows | `216` |
+| postcheck review-required size | `914.56 MiB` |
+| filesystem available after cleanup | `48 GiB` |
+| repository `runs/` size after cleanup | `13.79 GiB` |
+
 ## Decision
 
 The immediate space-saving path is not temporary relocation. The next useful
-work is to review the high-priority register rows, mark selected checkpoints and
-final CASP17 target/viewer/validation evidence, then decide which historical or
-intermediate payloads can be deleted under a separate operator-approved cleanup.
+work is to use the selection review board to mark selected checkpoints and final
+CASP17 target/viewer/validation evidence. For dynamics and ligand-heavy payloads,
+approved cleanups deleted unreferenced/raw generated payloads and left JSON
+execution records. Remaining NPZ and ligand-heavy rows are keep/review rows, not
+manifest-approved delete rows.

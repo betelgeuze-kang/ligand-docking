@@ -12,8 +12,10 @@ operator-approved plan.
 
 The root filesystem was observed at 100% use during the 2026-06-14 goal run.
 After removing regenerable user caches outside the repository, `df` reported
-about 37 GiB available. The repository itself still measured about 64 GiB, with
-the largest active areas:
+about 37 GiB available. After the approved NPZ/dynamics and ligand-heavy raw
+payload cleanups, `df` reported about 48 GiB available and the generated
+`runs/` tree measured about 13.79 GiB. The repository originally measured about
+64 GiB, with the largest active areas:
 
 | path | observed size | posture |
 | --- | ---: | --- |
@@ -99,6 +101,73 @@ are intentionally marked `deferred_file_above_hash_max_bytes` or
 `deferred_hash_row_limit_reached` instead of being aggressively hashed during a
 disk-pressure review.
 
+The domain-level selection review board is:
+
+```bash
+python3 tools/build_storage_essential_evidence_selection_review.py
+```
+
+It narrows the protected evidence register to the largest review domains and
+assigns the next review action: model checkpoint selection, CASP17 final target
+register, CASP17 viewer/object register, CASP17 run artifact register, or
+manifest/receipt register. This board is still read-only and does not approve
+cleanup.
+
+## NPZ / Dynamics Cleanup
+
+Generated trajectory bundles such as `stage2_traj_frames/**/*.npz` may be
+deleted after preserving a JSON execution record, but only when they are not
+exactly referenced by current evidence. Directory-level or command-level
+mentions are not enough to keep every raw frame forever; exact selected
+trajectory references stay protected.
+
+The read-only candidate manifest is:
+
+```bash
+python3 tools/build_npz_dynamics_cleanup_manifest.py
+```
+
+The approval-gated execution command is:
+
+```bash
+python3 tools/apply_npz_dynamics_cleanup_manifest.py --execute --approval-token APPROVE_NPZ_DYNAMICS_CLEANUP
+```
+
+The apply command deletes only rows marked `delete_recommended=true` in
+`runs/npz_dynamics_cleanup_manifest_current.json`, writes
+`runs/npz_dynamics_cleanup_execution_current.*`, and refuses to touch referenced
+keep rows, review-required rows, source code, model roots, CASP17 roots, git
+history, or any path outside the repository.
+
+## Ligand Heavy Run Cleanup
+
+Old ligand/HTVS run payloads can be reduced to compact top-ranking evidence
+when the generated manifest proves that `stage5_ranking_topk`,
+`stage5_ranking_unique`, `stage5_ranking_summary`, shortlist, summary, claim,
+SLA, or status evidence is already present. Raw ligand inventories, hard-decoy
+labels, full stage score CSVs, full ADMET surfaces, stage2 sidecar directories,
+and transient logs/locks are cleanup candidates only after the JSON manifest is
+written.
+
+The read-only candidate manifest is:
+
+```bash
+python3 tools/build_ligand_heavy_run_cleanup_manifest.py
+```
+
+The approval-gated execution command is:
+
+```bash
+python3 tools/apply_ligand_heavy_run_cleanup_manifest.py --execute --approval-token APPROVE_LIGAND_HEAVY_RUN_CLEANUP
+```
+
+The apply command deletes only rows marked `delete_recommended=true` in
+`runs/ligand_heavy_run_cleanup_manifest_current.json`, writes
+`runs/ligand_heavy_run_cleanup_execution_current.*`, and refuses to touch
+top-ranking/summary keep rows, referenced keep rows, review-required rows,
+source code, model roots, CASP17 roots, git history, or any path outside the
+repository.
+
 ## Required Cleanup Flow
 
 1. Build a cleanup review manifest that lists candidate paths, sizes, reason,
@@ -122,6 +191,9 @@ Run these after a cleanup plan is generated or applied:
 ```bash
 python3 tools/build_storage_retention_manifest.py
 python3 tools/build_storage_essential_evidence_register.py
+python3 tools/build_storage_essential_evidence_selection_review.py
+python3 tools/build_npz_dynamics_cleanup_manifest.py
+python3 tools/build_ligand_heavy_run_cleanup_manifest.py
 python3 tools/build_product_release_source_of_truth_gate.py
 python3 scripts/check_independent_product_readiness.py
 git status --short --branch

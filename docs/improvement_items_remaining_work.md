@@ -914,7 +914,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 | 영역 | 현재 posture | 다음 operator 단계 |
 |---|---|---|
 | Product execution / delivery | latest R4 receipt ready; future execution fail-closed | 다음 rollout마다 Target/Action/Impact/Risk/Rollback/Verification 제시 후 explicit R4/operator approval |
-| Transition / ligand-heavy cleanup | `operator_approval_pending` | cleanup approval token + protected policy decision |
+| Transition / ligand-heavy cleanup | `local_ligand_raw_cleanup_complete` | protected model/CASP17 evidence selection review remains separate |
 | CAMEO official results | `evidence_ready` (local scaffold) | official results intake; outbound send는 별도 승인 |
 | Goal operator board | `operator_actions_required` | surfaced action rows를 순서대로 처리 |
 
@@ -2714,7 +2714,8 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `cleanup_candidate_size_human=45.77 MiB`,
   `essential_evidence_manifest_required_count=2`,
   `essential_evidence_manifest_required_paths=models;casp17`,
-  `essential_evidence_manifest_required_size_human=9.78 GiB`다.
+  `essential_evidence_manifest_required_size_human=9.78 GiB`,
+  `largest_path=runs`, `largest_path_size_human=13.79 GiB`다.
   즉 `models/`와 `casp17/`는 삭제 후보가 아니라 compact 필수 증거 register
   작성 대상이다. 현재 결정 요약은
   `docs/storage_retention_current_review.md`에 저장했다.
@@ -2732,13 +2733,58 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `delete_executed=false`, `archive_executed=false`,
   `externalize_executed=false`, `external_state_mutated=false`라 실제 정리는
   아직 수행하지 않았다.
+- `tools/build_storage_essential_evidence_selection_review.py`는 이 register를
+  상위 review domain board로 압축한다. 최신 board는
+  `runs/storage_essential_evidence_selection_review_current.{json,csv,md}`이며
+  `review_domain_count=12`, `review_domain_file_count=17373`,
+  `review_domain_size_human=9.45 GiB`, `cleanup_allowed_count=0`이다.
+  상위 작업은 `models/curriculum_active_learning_continuous`
+  `model_checkpoint_selection_review` 4.35 GiB, `casp17/runs`
+  `casp17_run_artifact_register_review` 1.46 GiB,
+  `casp17/massivefold_representative_viewers`
+  `casp17_viewer_object_register_review` 1.24 GiB,
+  `models/curriculum_live_unseen` `model_checkpoint_selection_review`
+  858.90 MiB, `casp17/targets_current`
+  `casp17_final_target_register_review` 464.73 MiB다.
+  이 board도 cleanup 승인/삭제/외부화는 수행하지 않는다.
+- `tools/build_npz_dynamics_cleanup_manifest.py`와
+  `tools/apply_npz_dynamics_cleanup_manifest.py`로 NPZ/dynamics cleanup을
+  approval-gated 방식으로 실행했다. 사전 manifest는
+  `candidate_count=7708`, `candidate_size_human=16.58 GiB`,
+  `delete_recommended_count=3684`, `delete_recommended_size_human=10.35 GiB`,
+  `referenced_keep_count=480`, `referenced_keep_size_human=1021.55 MiB`였다.
+  승인 토큰 `APPROVE_NPZ_DYNAMICS_CLEANUP`으로 실행한 receipt는
+  `npz_dynamics_cleanup_execution_complete`, `deleted_count=3682`,
+  `deleted_size_human=10.35 GiB`, `missing_count=2`, `failed_count=0`,
+  `external_state_mutated=false`다. postcheck manifest는
+  ligand-heavy cleanup 이후 기준으로 `candidate_count=3965`,
+  `candidate_size_human=6.10 GiB`, `delete_recommended_count=0`,
+  `referenced_keep_count=421`, `referenced_keep_size_human=877.09 MiB`,
+  `review_required_count=3544`, `review_required_size_human=5.24 GiB`다.
+  NPZ 1차 cleanup 직후 루트 파일시스템 여유는 약 15 GiB로 회복됐고 `runs/`는
+  `largest_path_size_human=23.80 GiB`로 내려갔다.
+- `tools/build_ligand_heavy_run_cleanup_manifest.py`와
+  `tools/apply_ligand_heavy_run_cleanup_manifest.py`로 repo-local ligand/HTVS raw
+  run payload cleanup도 approval-gated 방식으로 실행했다. 사전 manifest는
+  `candidate_count=6767`, `candidate_size_human=11.13 GiB`,
+  `delete_recommended_count=2228`, `delete_recommended_size_human=10.02 GiB`,
+  `top_rank_keep_count=4323`, `top_rank_keep_size_human=220.72 MiB`였다.
+  승인 토큰 `APPROVE_LIGAND_HEAVY_RUN_CLEANUP`으로 실행한 receipt는
+  `ligand_heavy_run_cleanup_execution_complete`, `deleted_count=2228`,
+  `deleted_size_human=10.02 GiB`, `missing_count=0`, `failed_count=0`,
+  `external_state_mutated=false`다. postcheck manifest는
+  `candidate_count=4539`, `candidate_size_human=1.11 GiB`,
+  `delete_recommended_count=0`, `top_rank_keep_count=4323`,
+  `top_rank_keep_size_human=220.72 MiB`, `review_required_count=216`,
+  `review_required_size_human=914.56 MiB`다. 이 정리 뒤 루트 파일시스템 여유는
+  약 48 GiB, `runs/`는 `largest_path_size_human=13.79 GiB`로 내려갔다.
 - `tools/product/build_storage_residual_cleanup_status.py`와
   `runs/storage_residual_cleanup_status_current.json`은 selected heavy path 9개를
   read-only로 측정한다. 최신 상태는
   `storage_residual_cleanup_status_ready`, `existing_path_count=6`,
   `resolved_missing_path_count=3`, `operator_action_candidate_count=0`,
   `existing_target_human=50.27 GiB`, `filesystem_used_percent=76.47`이다.
-- tracked keep 대상: `runs/` 28.99 GiB, `casp17/` 3.86 GiB,
+- tracked keep 대상: `runs/` 13.79 GiB, `casp17/` 3.86 GiB,
   `models/` 5.92 GiB, `data/` 11.50 GiB.
 - 기존 heavy cleanup 표적 중
   `casp17/massivefold_external_pool_intake`, `rust_engine/target`, `.venv`는
@@ -2760,25 +2806,30 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 - CASP17 한시성 산출물 + 반복 trajectory frame 누적은 과거 주요 원인이었으나,
   현재 tracked heavy cleanup 표적은 대부분 missing/resolved다.
 - 남은 큰 용량은 `runs/`, `casp17/`, `models/`, `data/`처럼 보존/프로비넌스
-  검토가 필요한 keep 대상이다.
+  검토가 필요한 keep 대상이다. `runs/` 내부 ligand-heavy raw payload는 top-ranking/
+  summary evidence만 남기는 방식으로 1차 정리 완료됐고, postcheck 기준
+  delete-recommended row는 0개다.
 - 현재 저장소에는 current source-of-truth에 필요한 작은 ledger와, 과거 실험/중간
   payload가 같은 tree에 공존한다. 따라서 단순 `mv /tmp` 또는 대량 삭제는
   재현성/claim evidence를 깨뜨릴 수 있다.
 - 추가 cleanup 실행은 여전히 operator-approved 별도 계획이 필요하다. 다만
-  다음 실행의 선행 조건은 임시 대피가 아니라 생성된 essential-evidence
-  register에서 selected checkpoint와 final CASP17 target/viewer/validation
-  evidence를 확정하는 것이다.
+  다음 실행의 선행 조건은 임시 대피가 아니라 생성된 selection review board에서
+  selected checkpoint와 final CASP17 target/viewer/validation evidence를
+  확정하는 것이다. NPZ/dynamics raw frame 및 ligand-heavy raw payload 1차 cleanup은
+  완료됐고, 남은 NPZ/ligand-heavy row는 keep 또는 review-required로 묶여 있다.
 
 **필요 작업**
 - storage residual status는 1차 생성 완료.
 - `casp17/massivefold_external_pool_intake`, `rust_engine/target`, `.venv`는
   missing/resolved 상태 확인 완료.
 - `runs/archive`, `runs/local_heavy_runs`는 small residual review로 유지.
+- repo-local ligand/HTVS raw run payload cleanup은 완료됐고 top-ranking/compact
+  evidence rows만 active keep set으로 남겼다.
 - Final PDB/mmCIF, top representative, sha256 manifest, viewer index,
   validation report 보존.
 - 다음 cleanup은 `docs/storage_retention_cleanup_policy.md`의 keep set 기준으로
-  보존 manifest와 compact essential-evidence register를 먼저 검토하고,
-  selected checkpoint/final CASP17 evidence register 밖에 남는
+  보존 manifest, compact essential-evidence register, selection review board를
+  먼저 검토하고, selected checkpoint/final CASP17 evidence register 밖에 남는
   transient/regenerable 항목만 operator approval 후 삭제한다. `/tmp` 임시 대피나
   bulk externalize는 현재 기본 경로가 아니다.
 
