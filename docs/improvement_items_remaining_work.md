@@ -678,6 +678,26 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   같은 큰 rank-residual pair에서 contact-shell/descriptor/score calibration을
   개선하고 bootstrap p05를 다시 올리는 일이다. 이 diagnostic은 row drop,
   payload write, intake promotion을 하지 않는다.
+  2026-06-15 KST 추가 R9 residual metric payload priority packet은 이 residual
+  board를 DockQ/lDDT-PLI/internal ΔG payload 단위로 펼쳐 다음 operator/science
+  순서를 고정한다. `config/refine_tier_public_benchmark_residual_metric_payload_priority_packet_current.json`
+  및 `docs/refine_tier_public_benchmark_residual_metric_payload_priority_packet_current.md`는
+  `selected_residual_action_row_count=12`,
+  `metric_payload_priority_row_count=36`,
+  `candidate_fill_matched_payload_count=27`,
+  `operator_receipt_matched_payload_count=27`,
+  `operator_receipt_blocked_payload_count=27`,
+  `operator_receipt_missing_payload_count=9`,
+  `existing_metric_source_artifact_present_without_receipt_count=9`,
+  `operator_manual_pending_field_count=270`,
+  `residual_leverage_payload_count=6`,
+  `cv_worse_payload_count=15`를 기록한다. 따라서 R9의 첫 payload 작업은
+  `3n86/3n86_99`의 generalization-regression metric source payload 3개와
+  `2j7h/2j7h_48`, `3f3e/3f3e_197` leverage payload를 먼저 검토하는 것이다.
+  특히 `2j7h`, `1syi`, `4e5w` seeded metric JSON 9개는 local artifact가
+  존재하지만 operator receipt row가 없어 reviewed evidence로 승격할 수 없다.
+  이 packet도 metric 계산, payload JSON write, receipt 승인, canonical intake promotion,
+  production score mutation을 하지 않는다.
   2026-06-15 KST 추가 score-variant probe는 같은 25쌍 preview의 candidate
   `rows.details_json`을 internal ΔG detail source로 결합해 contact/atom feature
   결손이 없음을 먼저 확인한다.
@@ -3769,6 +3789,12 @@ metric materialization readiness도 `metric_materialization_row_count=17`,
 `coordinate_validation_deficit=0`,
 `metric_source_payload_fill_deficit=0`으로 고정해, 남은 통계 support 부족과
 metric payload receipt/materialization 부족을 release source-of-truth가 exact-check한다.
+추가 residual metric payload priority packet은 이 병목을 top residual 12개 x 3 metrics,
+총 36개 payload review row로 좁혔다. 그중 27개는 current operator receipt row가
+있지만 placeholder blocked이고, 9개는 기존 seeded metric JSON artifact가 있는데
+operator receipt coverage가 없다. 따라서 단순히 "51개 receipt를 채우는 일"이 아니라
+`3n86` generalization regression, `2j7h`/`3f3e` leverage residual, 그리고
+`2j7h`/`1syi`/`4e5w` seeded-artifact receipt gap을 먼저 닫는 순서가 최신 병목이다.
 tracked current work-order의
 DockQ/lDDT-PLI/internal ΔG source field와 R9 evidence receipt도 operator
 placeholder 상태라, source evidence는 파일 존재만으로는 부족하고 schema-valid JSON
