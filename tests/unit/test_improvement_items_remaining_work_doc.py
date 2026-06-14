@@ -220,12 +220,26 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`bootstrap_spearman_p05_deficit=0.6428571428571428`" in text
     assert "`bootstrap_retest_required=true`" in text
     assert "`canonical_intake_promotion_allowed=false`" in text
+    assert "`runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json`" in text
+    assert "`refine_tier_public_benchmark_statistical_support_candidate_queue_ready`" in text
+    assert "`selected_candidate_count=17`" in text
+    assert "`holdout_selected_candidate_count=5`" in text
+    assert "`fit_or_holdout_selected_candidate_count=12`" in text
+    assert "`ligand_pose_artifact_present_count=17`" in text
+    assert "`experimental_deltaG_prefilled_count=17`" in text
+    assert "`candidate_source_distinct_target_count=276`" in text
+    assert "`receptor_coordinate_artifact_present_count=0`" in text
+    assert "`receptor_coordinate_artifact_missing_count=17`" in text
+    assert "`candidate_ready_for_metric_materialization_count=0`" in text
+    assert "`candidate_ready_for_canonical_intake_count=0`" in text
     assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
     assert "`runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`" in text
     assert "`Fill 17 additional reviewed public benchmark-pair expansion slots`" in text
     assert "R9 receptor-coordinate validation pass 8개/blocked 0개" in text
     assert "materialized metric-evidence pass 8개" in text
     assert "claim-grade statistical support expansion slot 17개" in text
+    assert "statistical support candidate queue 17개" in text
+    assert "receptor coordinate missing 17/17개" in text
     assert "`worksheet_field_row_count=389`" in text
     assert "`operator_fill_pending_field_count=296`" in text
     assert "`public_benchmark_statistical_support_expansion_field_count=221`" in text
@@ -242,3 +256,4 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "R9 receptor-coordinate validation blocked 8개" not in text
     assert "receptor/complex coordinate validation 8/8 blocked" not in text
     assert "DockQ/lDDT-PLI/internal ΔG source evidence 8/8/8 missing" not in text
+    assert "`selected_candidate_count=0`" not in text

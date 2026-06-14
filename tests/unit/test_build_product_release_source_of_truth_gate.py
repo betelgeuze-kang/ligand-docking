@@ -1293,6 +1293,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "refine_tier_public_benchmark_metric_source_materialization" in artifact_ids
     assert "refine_tier_public_benchmark_work_order_apply_materialized" in artifact_ids
     assert "refine_tier_public_benchmark_statistical_support_work_order" in artifact_ids
+    assert "refine_tier_public_benchmark_statistical_support_candidate_queue" in artifact_ids
     assert "science_accuracy_frontier" in artifact_ids
     assert "self_hosted_license_distribution_audit" in artifact_ids
     assert "third_party_license_review_gate" in artifact_ids
@@ -1314,6 +1315,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "gpcr_broad_claim_review_receipt_blocked_semantic_ready" in status_ids
     assert "gpcr_broad_claim_scope_readiness_target_heldout_ready_claim_locked" in status_ids
     assert "science_accuracy_frontier_restricted_ready_commercial_parity_blocked" in status_ids
+    assert "refine_tier_public_benchmark_statistical_support_candidate_queue_semantic_ready" in status_ids
     assert "product_ledger_privacy_scan" in artifact_ids
     assert "product_trajectory_sla_contract" in artifact_ids
     assert "product_job_orchestration_contract" in artifact_ids
@@ -1888,6 +1890,55 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "(minimum_new_pair_count=17, minimum_new_holdout_pair_count=5), then rebuild "
         "materialization and require bootstrap Spearman p05 >= 0.5 before any canonical "
         "intake promotion."
+    )
+    statistical_candidate_queue_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "refine_tier_public_benchmark_statistical_support_candidate_queue_semantic_ready"
+    )
+    assert statistical_candidate_queue_status_spec["required_status"] == (
+        "refine_tier_public_benchmark_statistical_support_candidate_queue_ready"
+    )
+    assert "candidate_queue_ready" in statistical_candidate_queue_status_spec["required_true_fields"]
+    assert "statistical_support_work_order_ready" in statistical_candidate_queue_status_spec[
+        "required_true_fields"
+    ]
+    assert statistical_candidate_queue_status_spec["required_int_exact_fields"][
+        "selected_candidate_count"
+    ] == 17
+    assert statistical_candidate_queue_status_spec["required_int_exact_fields"][
+        "holdout_selected_candidate_count"
+    ] == 5
+    assert statistical_candidate_queue_status_spec["required_int_exact_fields"][
+        "fit_or_holdout_selected_candidate_count"
+    ] == 12
+    assert statistical_candidate_queue_status_spec["required_int_exact_fields"][
+        "ligand_pose_artifact_present_count"
+    ] == 17
+    assert statistical_candidate_queue_status_spec["required_int_exact_fields"][
+        "receptor_coordinate_artifact_present_count"
+    ] == 0
+    assert statistical_candidate_queue_status_spec["required_int_exact_fields"][
+        "receptor_coordinate_artifact_missing_count"
+    ] == 17
+    assert statistical_candidate_queue_status_spec["required_int_exact_fields"][
+        "experimental_deltaG_prefilled_count"
+    ] == 17
+    assert statistical_candidate_queue_status_spec["required_int_exact_fields"][
+        "candidate_ready_for_metric_materialization_count"
+    ] == 0
+    assert statistical_candidate_queue_status_spec["required_int_exact_fields"][
+        "candidate_ready_for_canonical_intake_count"
+    ] == 0
+    assert statistical_candidate_queue_status_spec["required_int_exact_fields"][
+        "candidate_source_distinct_target_count"
+    ] == 276
+    assert statistical_candidate_queue_status_spec["required_text_exact_fields"][
+        "next_required_step"
+    ] == (
+        "Review and place public receptor/complex coordinate artifacts for the selected 17 "
+        "candidates, then materialize DockQ, lDDT-PLI, and internal DeltaG source payloads "
+        "before canonical intake or claim receipt promotion."
     )
     engine_field_worksheet_status_spec = next(
         spec
@@ -2679,6 +2730,26 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json" in (
         statistical_work_order_spec["depends_on"]
     )
+    statistical_candidate_queue_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "refine_tier_public_benchmark_statistical_support_candidate_queue"
+    )
+    assert statistical_candidate_queue_spec["builder_command"] == (
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_CANDIDATE_QUEUE_COMMAND
+    )
+    assert "tools/product/build_refine_tier_public_benchmark_statistical_support_candidate_queue.py" in (
+        statistical_candidate_queue_spec["depends_on"]
+    )
+    assert "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json" in (
+        statistical_candidate_queue_spec["depends_on"]
+    )
+    assert "runs/pdbbind_casf_pose_affinity_benchmark_results_current.csv" in (
+        statistical_candidate_queue_spec["depends_on"]
+    )
+    assert "data/public_benchmarks/pdbbind_casf_pose_affinity/pdb_to_affinity.txt.original" in (
+        statistical_candidate_queue_spec["depends_on"]
+    )
     priority_packet_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -2905,6 +2976,11 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index(
         mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_COMMAND
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_CANDIDATE_QUEUE_COMMAND
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_CANDIDATE_QUEUE_COMMAND
     ) < mod.RELEASE_REFRESH_COMMANDS.index(
         "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py"
     )

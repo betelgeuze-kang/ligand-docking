@@ -36,6 +36,9 @@ REFINE_TIER_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_COMMAND = (
 REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_COMMAND = (
     "python3 tools/product/build_refine_tier_public_benchmark_statistical_support_work_order.py"
 )
+REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_CANDIDATE_QUEUE_COMMAND = (
+    "python3 tools/product/build_refine_tier_public_benchmark_statistical_support_candidate_queue.py"
+)
 
 RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_accuracy_parity_scorecard.py",
@@ -103,6 +106,7 @@ RELEASE_REFRESH_COMMANDS = [
     REFINE_TIER_PUBLIC_BENCHMARK_METRIC_MATERIALIZATION_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_COMMAND,
+    REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_CANDIDATE_QUEUE_COMMAND,
     "python3 tools/product/build_engine_refinement_tier_readiness.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py",
@@ -922,6 +926,19 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/refine_tier_public_benchmark_metric_source_materialization_current.json",
             "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json",
             "runs/refine_tier_public_benchmark_work_order_current.csv",
+        ],
+    },
+    {
+        "artifact_id": "refine_tier_public_benchmark_statistical_support_candidate_queue",
+        "artifact_path": "runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json",
+        "builder_command": REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_CANDIDATE_QUEUE_COMMAND,
+        "depends_on": [
+            "tools/product/build_refine_tier_public_benchmark_statistical_support_candidate_queue.py",
+            "tools/build_refine_tier_public_benchmark_statistical_support_candidate_queue.py",
+            "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json",
+            "runs/refine_tier_public_benchmark_work_order_current.csv",
+            "runs/pdbbind_casf_pose_affinity_benchmark_results_current.csv",
+            "data/public_benchmarks/pdbbind_casf_pose_affinity/pdb_to_affinity.txt.original",
         ],
     },
     {
@@ -2220,6 +2237,57 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "field_worksheet_top_blocker_id": "direct_binding_evidence_missing",
             "field_worksheet_top_item_id": "AQP1.core_binder_01",
             "field_worksheet_top_bucket": "local_crosscheck_review_present_but_exact_quant_required",
+        },
+    },
+    {
+        "artifact_id": "refine_tier_public_benchmark_statistical_support_candidate_queue_semantic_ready",
+        "artifact_path": "runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json",
+        "builder_command": REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_CANDIDATE_QUEUE_COMMAND,
+        "required_status": "refine_tier_public_benchmark_statistical_support_candidate_queue_ready",
+        "required_true_fields": [
+            "candidate_queue_ready",
+            "statistical_support_work_order_present",
+            "statistical_support_work_order_ready",
+            "current_work_order_csv_present",
+            "seed_csv_present",
+            "experimental_deltaG_source_present",
+        ],
+        "required_int_exact_fields": {
+            "current_work_order_row_count": 8,
+            "existing_target_exclusion_count": 8,
+            "seed_source_row_count": 22492,
+            "candidate_source_eligible_row_count": 5824,
+            "candidate_source_excluded_existing_target_row_count": 169,
+            "candidate_source_distinct_target_count": 276,
+            "expansion_slot_count": 17,
+            "selected_candidate_count": 17,
+            "holdout_selected_candidate_count": 5,
+            "fit_or_holdout_selected_candidate_count": 12,
+            "ligand_pose_artifact_present_count": 17,
+            "receptor_coordinate_artifact_present_count": 0,
+            "receptor_coordinate_artifact_missing_count": 17,
+            "experimental_deltaG_prefilled_count": 17,
+            "candidate_ready_for_metric_materialization_count": 0,
+            "candidate_ready_for_canonical_intake_count": 0,
+            "canonical_intake_promotion_allowed": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "blocker_count": 0,
+        },
+        "required_text_exact_fields": {
+            "statistical_support_work_order": (
+                "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json"
+            ),
+            "current_work_order_csv": "runs/refine_tier_public_benchmark_work_order_current.csv",
+            "seed_csv": "runs/pdbbind_casf_pose_affinity_benchmark_results_current.csv",
+            "experimental_deltaG_source": (
+                "data/public_benchmarks/pdbbind_casf_pose_affinity/pdb_to_affinity.txt.original"
+            ),
+            "next_required_step": (
+                "Review and place public receptor/complex coordinate artifacts for the selected 17 "
+                "candidates, then materialize DockQ, lDDT-PLI, and internal DeltaG source payloads "
+                "before canonical intake or claim receipt promotion."
+            ),
         },
     },
     {
