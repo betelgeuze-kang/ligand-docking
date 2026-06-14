@@ -1057,6 +1057,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/refine_tier_public_benchmark_metric_evidence_materialized_current.csv",
             "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json",
         ],
     },
     {
@@ -1083,6 +1084,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/refine_tier_public_benchmark_metric_evidence_materialized_current.csv",
             "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json",
+            "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json",
         ],
     },
     {
@@ -2703,6 +2705,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_work_order_present",
             "public_benchmark_statistical_support_work_order_present",
             "public_benchmark_statistical_support_work_order_ready",
+            "public_benchmark_statistical_support_metric_materialization_readiness_present",
+            "public_benchmark_statistical_support_metric_materialization_readiness_ready",
         ],
         "required_int_exact_fields": {
             "claim_promotion_allowed": 0,
@@ -2723,6 +2727,14 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count": 12,
             "public_benchmark_statistical_support_work_order_bootstrap_retest_required": 1,
             "public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed": 0,
+            "public_benchmark_statistical_support_metric_materialization_row_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
+            "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready": 0,
             "approval_token_count": 1,
             "external_state_mutated": 0,
         },
@@ -2735,11 +2747,20 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_work_order_status": (
                 "refine_tier_public_benchmark_statistical_support_work_order_ready"
             ),
+            "public_benchmark_statistical_support_metric_materialization_status": (
+                "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
+            ),
+            "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads": (
+                "dockq;lddt_pli;internal_deltaG"
+            ),
             "top_next_operator_step": (
-                "Fill 17 additional reviewed public benchmark-pair expansion slots "
-                "(minimum_new_pair_count=17, minimum_new_holdout_pair_count=5), then rebuild "
-                "materialization and require bootstrap Spearman p05 >= 0.5 before any canonical "
-                "intake promotion."
+                "Review the R4 coordinate-fetch preflight and, after explicit operator approval, "
+                "stage and validate coordinates for 17 statistical-support candidates "
+                "(coordinate_validation_pass_row_count=0, "
+                "metric_materialization_candidate_ready_count=0, "
+                "planned_metric_source_payload_count=51); then materialize DockQ/lDDT-PLI/internal "
+                "DeltaG source payloads and rerun bootstrap Spearman p05 before any canonical intake "
+                "promotion."
             ),
         },
     },
@@ -2760,6 +2781,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_work_order_apply_artifact_present",
             "public_benchmark_statistical_support_work_order_artifact_present",
             "public_benchmark_statistical_support_work_order_ready",
+            "public_benchmark_statistical_support_metric_materialization_readiness_artifact_present",
+            "public_benchmark_statistical_support_metric_materialization_readiness_ready",
         ],
         "required_int_exact_fields": {
             "operator_fill_complete": 0,
@@ -2792,6 +2815,14 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_expansion_field_count": 221,
             "public_benchmark_statistical_support_expansion_pending_field_count": 204,
             "public_benchmark_statistical_support_expansion_ready_field_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_row_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
+            "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready": 0,
             "public_benchmark_metric_evidence_missing_required_input_artifact_row_count": 0,
             "public_benchmark_metric_evidence_missing_required_input_artifact_sha256_row_count": 0,
             "claim_promotion_allowed": 0,
@@ -2813,10 +2844,20 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_work_order_status": (
                 "refine_tier_public_benchmark_statistical_support_work_order_ready"
             ),
+            "public_benchmark_statistical_support_metric_materialization_status": (
+                "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
+            ),
+            "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads": (
+                "dockq;lddt_pli;internal_deltaG"
+            ),
             "next_required_step": (
-                "Fill 17 additional reviewed public benchmark-pair expansion slots, including at "
-                "least 5 holdout slots, then rebuild materialization and require bootstrap "
-                "Spearman p05 >= 0.5 before any R9 claim receipt or canonical intake promotion."
+                "Review the R4 coordinate-fetch preflight and, after explicit operator approval, "
+                "stage and validate coordinates for 17 statistical-support candidates "
+                "(coordinate_validation_pass_row_count=0, "
+                "metric_materialization_candidate_ready_count=0, "
+                "planned_metric_source_payload_count=51); then materialize DockQ/lDDT-PLI/internal "
+                "DeltaG source payloads and rerun bootstrap Spearman p05 before any R9 claim receipt "
+                "or canonical intake promotion."
             ),
             "approval_token_required": "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT",
         },

@@ -310,7 +310,8 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`claim_grade_statistical_support_ready=false`" in text
     assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
     assert "`runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`" in text
-    assert "`Fill 17 additional reviewed public benchmark-pair expansion slots`" in text
+    assert "`Review the R4 coordinate-fetch preflight`" in text
+    assert "`planned_metric_source_payload_count=51`" in text
     assert "R9 receptor-coordinate validation pass 8개/blocked 0개" in text
     assert "materialized metric-evidence pass 8개" in text
     assert "claim-grade statistical support expansion slot 17개" in text

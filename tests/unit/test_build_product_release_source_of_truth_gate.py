@@ -1913,6 +1913,14 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "public_benchmark_statistical_support_work_order_ready" in engine_priority_status_spec[
         "required_true_fields"
     ]
+    assert (
+        "public_benchmark_statistical_support_metric_materialization_readiness_present"
+        in engine_priority_status_spec["required_true_fields"]
+    )
+    assert (
+        "public_benchmark_statistical_support_metric_materialization_readiness_ready"
+        in engine_priority_status_spec["required_true_fields"]
+    )
     assert engine_priority_status_spec["required_int_exact_fields"][
         "public_benchmark_statistical_support_work_order_expansion_slot_count"
     ] == 17
@@ -1925,15 +1933,36 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert engine_priority_status_spec["required_int_exact_fields"][
         "public_benchmark_materialized_claim_grade_statistical_support_ready"
     ] == 0
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_materialization_row_count"
+    ] == 17
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_materialization_candidate_ready_count"
+    ] == 0
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count"
+    ] == 17
+    assert engine_priority_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count"
+    ] == 51
     assert engine_priority_status_spec["required_text_exact_fields"][
         "public_benchmark_statistical_support_work_order_status"
     ] == "refine_tier_public_benchmark_statistical_support_work_order_ready"
+    assert engine_priority_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_metric_materialization_status"
+    ] == "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
+    assert engine_priority_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads"
+    ] == "dockq;lddt_pli;internal_deltaG"
     assert (
         engine_priority_status_spec["required_text_exact_fields"]["top_next_operator_step"]
-        == "Fill 17 additional reviewed public benchmark-pair expansion slots "
-        "(minimum_new_pair_count=17, minimum_new_holdout_pair_count=5), then rebuild "
-        "materialization and require bootstrap Spearman p05 >= 0.5 before any canonical "
-        "intake promotion."
+        == "Review the R4 coordinate-fetch preflight and, after explicit operator approval, "
+        "stage and validate coordinates for 17 statistical-support candidates "
+        "(coordinate_validation_pass_row_count=0, "
+        "metric_materialization_candidate_ready_count=0, "
+        "planned_metric_source_payload_count=51); then materialize DockQ/lDDT-PLI/internal "
+        "DeltaG source payloads and rerun bootstrap Spearman p05 before any canonical intake "
+        "promotion."
     )
     statistical_candidate_queue_status_spec = next(
         spec
@@ -2170,6 +2199,14 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "public_benchmark_statistical_support_work_order_ready" in engine_field_worksheet_status_spec[
         "required_true_fields"
     ]
+    assert (
+        "public_benchmark_statistical_support_metric_materialization_readiness_artifact_present"
+        in engine_field_worksheet_status_spec["required_true_fields"]
+    )
+    assert (
+        "public_benchmark_statistical_support_metric_materialization_readiness_ready"
+        in engine_field_worksheet_status_spec["required_true_fields"]
+    )
     assert engine_field_worksheet_status_spec["required_int_exact_fields"][
         "public_benchmark_metric_evidence_missing_required_input_artifact_row_count"
     ] == 0
@@ -2215,14 +2252,36 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert engine_field_worksheet_status_spec["required_int_exact_fields"][
         "public_benchmark_statistical_support_expansion_ready_field_count"
     ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_materialization_row_count"
+    ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_materialization_candidate_ready_count"
+    ] == 0
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count"
+    ] == 17
+    assert engine_field_worksheet_status_spec["required_int_exact_fields"][
+        "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count"
+    ] == 51
     assert engine_field_worksheet_status_spec["required_text_exact_fields"][
         "public_benchmark_statistical_support_work_order_status"
     ] == "refine_tier_public_benchmark_statistical_support_work_order_ready"
+    assert engine_field_worksheet_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_metric_materialization_status"
+    ] == "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
+    assert engine_field_worksheet_status_spec["required_text_exact_fields"][
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads"
+    ] == "dockq;lddt_pli;internal_deltaG"
     assert (
         engine_field_worksheet_status_spec["required_text_exact_fields"]["next_required_step"]
-        == "Fill 17 additional reviewed public benchmark-pair expansion slots, including at "
-        "least 5 holdout slots, then rebuild materialization and require bootstrap "
-        "Spearman p05 >= 0.5 before any R9 claim receipt or canonical intake promotion."
+        == "Review the R4 coordinate-fetch preflight and, after explicit operator approval, "
+        "stage and validate coordinates for 17 statistical-support candidates "
+        "(coordinate_validation_pass_row_count=0, "
+        "metric_materialization_candidate_ready_count=0, "
+        "planned_metric_source_payload_count=51); then materialize DockQ/lDDT-PLI/internal "
+        "DeltaG source payloads and rerun bootstrap Spearman p05 before any R9 claim receipt "
+        "or canonical intake promotion."
     )
     engine_staging_apply_status_spec = next(
         spec
@@ -3089,6 +3148,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json" in (
         priority_packet_spec["depends_on"]
     )
+    assert (
+        "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json"
+        in priority_packet_spec["depends_on"]
+    )
     field_worksheet_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -3126,6 +3189,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert "runs/refine_tier_public_benchmark_work_order_apply_materialized_current.json" in (
         field_worksheet_spec["depends_on"]
+    )
+    assert (
+        "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json"
+        in field_worksheet_spec["depends_on"]
     )
     staging_apply_spec = next(
         spec

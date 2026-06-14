@@ -519,10 +519,12 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   ΔG source materialization과 bootstrap Spearman p05 재검증으로 넘어가지 않는다.
   `runs/engine_refinement_claim_evidence_priority_packet_current.json`과
   `runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`도 이
-  work-order를 source artifact로 읽어 top operator step을
-  `Fill 17 additional reviewed public benchmark-pair expansion slots`로 전환한다.
+  work-order와 metric materialization readiness를 source artifact로 읽어 top operator
+  step을 `Review the R4 coordinate-fetch preflight` 및
+  `planned_metric_source_payload_count=51`로 전환한다.
   따라서 operator handoff는 더 이상 8개 materialized 후보를 상용 claim으로 바로
-  검토하라고 안내하지 않고, 통계 support 확대와 bootstrap 재검증을 먼저 요구한다.
+  검토하라고 안내하지 않고, 17개 후보의 coordinate validation, DockQ/lDDT-PLI/internal
+  ΔG source payload materialization, bootstrap 재검증을 먼저 요구한다.
   `runs/refine_tier_public_benchmark_work_order_apply_current.json`도 이 validation
   CSV와 `runs/refine_tier_public_benchmark_metric_evidence_current.csv`를 필수
   의존성으로 소비하며, `receptor_coordinate_validation_required=true`,

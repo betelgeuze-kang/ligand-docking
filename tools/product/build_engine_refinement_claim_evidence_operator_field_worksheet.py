@@ -16,6 +16,7 @@ from tools.product.build_engine_refinement_claim_evidence_priority_packet import
     DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_APPLY_JSON,
     DEFAULT_PUBLIC_BENCHMARK_MATERIALIZED_WORK_ORDER_CSV,
     DEFAULT_PUBLIC_BENCHMARK_READINESS_JSON,
+    DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_JSON,
     DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_JSON,
     DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_APPLY_JSON,
     DEFAULT_PUBLIC_BENCHMARK_WORK_ORDER_CSV,
@@ -613,6 +614,8 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
     public_benchmark_statistical_support_work_order_json: str | Path = (
         DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_JSON
     ),
+    public_benchmark_statistical_support_metric_materialization_readiness_json: str
+    | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_JSON,
     public_benchmark_receptor_coordinate_intake_csv: str
     | Path = DEFAULT_PUBLIC_BENCHMARK_RECEPTOR_COORDINATE_INTAKE_CSV,
     public_benchmark_receptor_coordinate_validation_csv: str
@@ -655,6 +658,13 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
         public_benchmark_statistical_support_work_order_json,
         root=root_path,
     )
+    (
+        statistical_support_metric_materialization_packet,
+        statistical_support_metric_materialization_present,
+    ) = _read_json(
+        public_benchmark_statistical_support_metric_materialization_readiness_json,
+        root=root_path,
+    )
     receptor_intake_rows, receptor_intake_missing_columns, receptor_intake_csv_present = _read_csv(
         public_benchmark_receptor_coordinate_intake_csv,
         root=root_path,
@@ -677,6 +687,9 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
     materialization_summary = _summary(materialization_packet)
     materialized_apply_summary = _summary(materialized_apply_packet)
     statistical_support_work_order_summary = _summary(statistical_support_work_order_packet)
+    statistical_support_metric_materialization_summary = _summary(
+        statistical_support_metric_materialization_packet
+    )
     materialized_metric_ready = _materialized_metric_ready(materialization_summary)
     materialized_apply_ready = bool(materialized_apply_summary.get("apply_ready") is True)
     materialized_science_evidence_complete = bool(materialized_metric_ready and materialized_apply_ready)
@@ -686,6 +699,10 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
     )
     statistical_support_work_order_ready = bool(
         statistical_support_work_order_summary.get("work_order_ready") is True
+    )
+    statistical_support_metric_materialization_readiness_ready = bool(
+        statistical_support_metric_materialization_summary.get("metric_materialization_readiness_ready")
+        is True
     )
     receipt_report_by_blocker = {
         _text(row.get("blocker_id")): row for row in _rows(receipt_packet)
@@ -837,6 +854,14 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
         and not statistical_support_work_order_present
     ):
         source_blockers.append("public_benchmark_statistical_support_work_order_artifact_missing")
+    if (
+        materialized_science_evidence_complete
+        and statistical_support_work_order_ready
+        and not statistical_support_metric_materialization_present
+    ):
+        source_blockers.append(
+            "public_benchmark_statistical_support_metric_materialization_readiness_missing"
+        )
     worksheet_ready = not source_blockers
     receptor_validation_pass_row_count = _count_rows_with_value(
         receptor_validation_rows,
@@ -941,6 +966,64 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
         ),
         "public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed": bool(
             statistical_support_work_order_summary.get("canonical_intake_promotion_allowed") is True
+        ),
+        "public_benchmark_statistical_support_metric_materialization_readiness_artifact": (
+            _display_path(
+                public_benchmark_statistical_support_metric_materialization_readiness_json,
+                root=root_path,
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_readiness_artifact_present": (
+            statistical_support_metric_materialization_present
+        ),
+        "public_benchmark_statistical_support_metric_materialization_readiness_ready": (
+            statistical_support_metric_materialization_readiness_ready
+        ),
+        "public_benchmark_statistical_support_metric_materialization_status": _text(
+            statistical_support_metric_materialization_summary.get("status")
+        ),
+        "public_benchmark_statistical_support_metric_materialization_row_count": _int(
+            statistical_support_metric_materialization_summary.get("metric_materialization_row_count")
+        ),
+        "public_benchmark_statistical_support_metric_materialization_candidate_ready_count": _int(
+            statistical_support_metric_materialization_summary.get(
+                "metric_materialization_candidate_ready_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": _int(
+            statistical_support_metric_materialization_summary.get(
+                "metric_materialization_candidate_blocked_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": _int(
+            statistical_support_metric_materialization_summary.get("coordinate_validation_pass_row_count")
+        ),
+        "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": _int(
+            statistical_support_metric_materialization_summary.get(
+                "coordinate_validation_blocked_row_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": _int(
+            statistical_support_metric_materialization_summary.get(
+                "planned_metric_source_payload_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": _int(
+            statistical_support_metric_materialization_summary.get(
+                "existing_metric_source_payload_count"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads": _text(
+            statistical_support_metric_materialization_summary.get("required_metric_source_payloads")
+        ),
+        "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready": bool(
+            statistical_support_metric_materialization_summary.get(
+                "claim_grade_statistical_support_ready"
+            )
+            is True
+        ),
+        "public_benchmark_statistical_support_metric_materialization_next_required_step": _text(
+            statistical_support_metric_materialization_summary.get("next_required_step")
         ),
         "public_benchmark_statistical_support_expansion_slot_row_count": len(
             statistical_support_slot_rows
@@ -1137,6 +1220,26 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
             "and product-goal audit before any claim promotion."
             if operator_fill_complete
             else (
+                "Review the R4 coordinate-fetch preflight and, after explicit operator approval, stage and "
+                "validate coordinates for "
+                f"{_int(statistical_support_metric_materialization_summary.get('metric_materialization_row_count'))} "
+                "statistical-support candidates "
+                f"(coordinate_validation_pass_row_count="
+                f"{_int(statistical_support_metric_materialization_summary.get('coordinate_validation_pass_row_count'))}, "
+                "metric_materialization_candidate_ready_count="
+                f"{_int(statistical_support_metric_materialization_summary.get('metric_materialization_candidate_ready_count'))}, "
+                "planned_metric_source_payload_count="
+                f"{_int(statistical_support_metric_materialization_summary.get('planned_metric_source_payload_count'))}); "
+                "then materialize DockQ/lDDT-PLI/internal DeltaG source payloads and rerun bootstrap "
+                "Spearman p05 before any R9 claim receipt or canonical intake promotion."
+            )
+            if (
+                materialized_science_evidence_complete
+                and not materialized_statistical_support_ready
+                and statistical_support_work_order_ready
+                and statistical_support_metric_materialization_readiness_ready
+            )
+            else (
                 "Fill "
                 f"{_int(statistical_support_work_order_summary.get('expansion_slot_count'))} additional reviewed "
                 "public benchmark-pair expansion slots, including at least "
@@ -1168,6 +1271,7 @@ def build_engine_refinement_claim_evidence_operator_field_worksheet(
             str(public_benchmark_materialized_work_order_csv),
             str(public_benchmark_materialized_apply_json),
             str(public_benchmark_statistical_support_work_order_json),
+            str(public_benchmark_statistical_support_metric_materialization_readiness_json),
             str(public_benchmark_receptor_coordinate_intake_csv),
             str(public_benchmark_receptor_coordinate_validation_csv),
             str(public_benchmark_metric_evidence_csv),
@@ -1211,6 +1315,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"`{summary['public_benchmark_statistical_support_work_order_expansion_slot_count']}`",
         "- public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count: "
         f"`{summary['public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count']}`",
+        "- public_benchmark_statistical_support_metric_materialization_candidate_ready_count: "
+        f"`{summary['public_benchmark_statistical_support_metric_materialization_candidate_ready_count']}`",
+        "- public_benchmark_statistical_support_metric_materialization_candidate_blocked_count: "
+        f"`{summary['public_benchmark_statistical_support_metric_materialization_candidate_blocked_count']}`",
+        "- public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count: "
+        f"`{summary['public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count']}`",
         "- public_benchmark_receptor_coordinate_intake_artifact_present_row_count: "
         f"`{summary['public_benchmark_receptor_coordinate_intake_artifact_present_row_count']}`",
         "- public_benchmark_receptor_coordinate_validation_blocked_row_count: "
@@ -1267,6 +1377,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_WORK_ORDER_JSON,
     )
     parser.add_argument(
+        "--public-benchmark-statistical-support-metric-materialization-readiness-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_MATERIALIZATION_READINESS_JSON,
+    )
+    parser.add_argument(
         "--public-benchmark-receptor-coordinate-intake-csv",
         default=DEFAULT_PUBLIC_BENCHMARK_RECEPTOR_COORDINATE_INTAKE_CSV,
     )
@@ -1297,6 +1411,9 @@ def main(argv: list[str] | None = None) -> None:
         public_benchmark_materialized_apply_json=args.public_benchmark_materialized_apply_json,
         public_benchmark_statistical_support_work_order_json=(
             args.public_benchmark_statistical_support_work_order_json
+        ),
+        public_benchmark_statistical_support_metric_materialization_readiness_json=(
+            args.public_benchmark_statistical_support_metric_materialization_readiness_json
         ),
         public_benchmark_receptor_coordinate_intake_csv=args.public_benchmark_receptor_coordinate_intake_csv,
         public_benchmark_receptor_coordinate_validation_csv=args.public_benchmark_receptor_coordinate_validation_csv,

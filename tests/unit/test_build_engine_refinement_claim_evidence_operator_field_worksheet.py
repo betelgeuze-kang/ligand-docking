@@ -552,6 +552,35 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
         summary["public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed"]
         is False
     )
+    assert summary["public_benchmark_statistical_support_metric_materialization_readiness_artifact_present"] is True
+    assert summary["public_benchmark_statistical_support_metric_materialization_readiness_ready"] is True
+    assert summary["public_benchmark_statistical_support_metric_materialization_status"] == (
+        "refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_ready"
+    )
+    assert summary["public_benchmark_statistical_support_metric_materialization_row_count"] == 17
+    assert summary["public_benchmark_statistical_support_metric_materialization_candidate_ready_count"] == 0
+    assert summary["public_benchmark_statistical_support_metric_materialization_candidate_blocked_count"] == 17
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count"
+        ]
+        == 17
+    )
+    assert summary[
+        "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count"
+    ] == 51
+    assert summary[
+        "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count"
+    ] == 0
+    assert summary[
+        "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads"
+    ] == "dockq;lddt_pli;internal_deltaG"
     assert summary["worksheet_field_row_count"] == 389
     assert summary["operator_fill_pending_field_count"] == 296
     assert summary["top_blocker_field_count"] == 329
@@ -594,7 +623,8 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
     assert fit_or_holdout_split_row["current_value"] == "fit_or_holdout"
     assert fit_or_holdout_split_row["field_status"] == "ready"
     assert fit_or_holdout_split_row["required_holdout_pair_count_credit"] == 0
-    assert "Fill 17 additional reviewed public benchmark-pair expansion slots" in summary["next_required_step"]
+    assert "Review the R4 coordinate-fetch preflight" in summary["next_required_step"]
+    assert "planned_metric_source_payload_count=51" in summary["next_required_step"]
 
 
 def test_engine_refinement_claim_evidence_operator_field_worksheet_cli_writes_outputs(
