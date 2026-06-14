@@ -473,11 +473,19 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `coordinate_fetch_apply_blocked_row_count=0`,
   `coordinate_fetch_apply_downloaded_row_count=0`,
   `coordinate_fetch_apply_ready_for_validation_row_count=0`,
+  `post_fetch_validation_supported=true`,
+  `post_fetch_validation_requested=false`,
+  `post_fetch_validation_executed=false`,
+  `post_fetch_validation_coordinate_validation_pass_row_count=0`,
+  `post_fetch_validation_candidate_queue=runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json`,
   `approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`,
   `approval_token_accepted=false`, `execution_requested=false`,
   `download_executed=false`를 기록한다. 따라서 이제 남은 직접 실행 병목은
   fetch row 자체의 형식 문제가 아니라 승인 토큰을 가진 operator가 `--mode execute`를
-  실행하고, 이후 coordinate intake validation을 재빌드하는 일이다.
+  실행하는 일이다. apply 경로는 `--run-post-fetch-validation` 옵션으로 실행 직후
+  coordinate intake/validation 재빌드까지 같은 receipt에 묶어 기록할 수 있으므로,
+  승인 후 남는 수동 단계는 좌표 source/license/chain-assembly 검토와 이어지는
+  metric source materialization 검토로 좁혀졌다.
   `runs/engine_refinement_claim_evidence_priority_packet_current.json`과
   `runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`도 이
   work-order를 source artifact로 읽어 top operator step을
@@ -2869,9 +2877,11 @@ intake/validation packet도 이를 `coordinate_validation_pass_row_count=0`,
 operator-approved fetch/staging과 재검증을 직접 병목으로 남긴다. 최신 apply
 preview도 `coordinate_fetch_apply_preflight_pass_row_count=17`,
 `coordinate_fetch_apply_downloaded_row_count=0`,
+`post_fetch_validation_supported=true`,
+`post_fetch_validation_executed=false`,
 `approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`로
-고정해, 다음 실행은 승인 토큰을 동반한 `--mode execute` 뒤 coordinate validation
-재빌드로 좁혀졌다.
+고정해, 다음 실행은 승인 토큰을 동반한
+`--mode execute --run-post-fetch-validation`으로 좁혀졌다.
 tracked current work-order의
 DockQ/lDDT-PLI/internal ΔG source field와 R9 evidence receipt도 operator
 placeholder 상태라, source evidence는 파일 존재만으로는 부족하고 schema-valid JSON

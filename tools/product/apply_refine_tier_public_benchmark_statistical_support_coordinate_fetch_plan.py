@@ -9,6 +9,9 @@ from pathlib import Path
 from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
+from tools.product import (
+    build_refine_tier_public_benchmark_statistical_support_coordinate_intake as coordinate_intake,
+)
 from tools.product.build_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan import (
     DEFAULT_OUT_JSON as DEFAULT_FETCH_PLAN_JSON,
 )
@@ -186,6 +189,8 @@ def apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan
     approval_token: str = "",
     timeout_seconds: int = 30,
     overwrite: bool = False,
+    run_post_fetch_validation: bool = False,
+    candidate_queue_json: str | Path = coordinate_intake.DEFAULT_CANDIDATE_QUEUE_JSON,
     root: Path = ROOT,
 ) -> dict[str, Any]:
     plan_payload, plan_present = _read_json(fetch_plan_json, root=root)
@@ -217,6 +222,19 @@ def apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan
     present_after_count = sum(1 for row in rows if row["destination_present_after"] is True)
     preview_ready_count = sum(1 for row in rows if row["row_status"] == "fetch_apply_ready")
     live_apply_ready = bool(plan_present and not blockers and execution_requested and token_accepted)
+    post_fetch_validation_executed = bool(
+        run_post_fetch_validation and live_apply_ready and blocked_row_count == 0 and rows
+    )
+    post_fetch_validation_payload: dict[str, Any] | None = None
+    post_fetch_validation_summary: dict[str, Any] = {}
+    if post_fetch_validation_executed:
+        post_fetch_validation_payload = (
+            coordinate_intake.build_refine_tier_public_benchmark_statistical_support_coordinate_intake(
+                candidate_queue_json=candidate_queue_json,
+                root=root,
+            )
+        )
+        post_fetch_validation_summary = _summary(post_fetch_validation_payload)
     status = (
         "refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_ready"
         if live_apply_ready and blocked_row_count == 0
@@ -247,6 +265,36 @@ def apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan
         "coordinate_fetch_apply_downloaded_row_count": downloaded_count,
         "coordinate_fetch_apply_destination_present_after_row_count": present_after_count,
         "coordinate_fetch_apply_ready_for_validation_row_count": present_after_count,
+        "post_fetch_validation_supported": True,
+        "post_fetch_validation_requested": run_post_fetch_validation,
+        "post_fetch_validation_executed": post_fetch_validation_executed,
+        "post_fetch_validation_candidate_queue": _display(candidate_queue_json, root=root),
+        "post_fetch_validation_status": _text(post_fetch_validation_summary.get("status")),
+        "post_fetch_validation_coordinate_intake_ready": bool(
+            post_fetch_validation_summary.get("coordinate_intake_ready")
+        ),
+        "post_fetch_validation_coordinate_validation_row_count": int(
+            post_fetch_validation_summary.get("coordinate_validation_row_count") or 0
+        ),
+        "post_fetch_validation_coordinate_validation_pass_row_count": int(
+            post_fetch_validation_summary.get("coordinate_validation_pass_row_count") or 0
+        ),
+        "post_fetch_validation_coordinate_validation_blocked_row_count": int(
+            post_fetch_validation_summary.get("coordinate_validation_blocked_row_count") or 0
+        ),
+        "post_fetch_validation_coordinate_validation_missing_row_count": int(
+            post_fetch_validation_summary.get("coordinate_validation_missing_row_count") or 0
+        ),
+        "post_fetch_validation_candidate_ready_for_metric_materialization_count": int(
+            post_fetch_validation_summary.get("candidate_ready_for_metric_materialization_count") or 0
+        ),
+        "post_fetch_validation_json": _display(coordinate_intake.DEFAULT_OUT_JSON, root=root),
+        "post_fetch_validation_intake_csv": _display(coordinate_intake.DEFAULT_OUT_INTAKE_CSV, root=root),
+        "post_fetch_validation_validation_csv": _display(
+            coordinate_intake.DEFAULT_OUT_VALIDATION_CSV,
+            root=root,
+        ),
+        "post_fetch_validation_md": _display(coordinate_intake.DEFAULT_OUT_MD, root=root),
         "download_executed": downloaded_count > 0,
         "canonical_intake_promotion_allowed": False,
         "external_state_mutated": False,
@@ -260,7 +308,10 @@ def apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan
             else "Rebuild coordinate intake validation and then metric source materialization."
         ),
     }
-    return {"summary": summary, "rows": rows}
+    payload: dict[str, Any] = {"summary": summary, "rows": rows}
+    if post_fetch_validation_payload is not None:
+        payload["post_fetch_validation"] = post_fetch_validation_payload
+    return payload
 
 
 def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
@@ -281,6 +332,10 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
                 f"`{summary['coordinate_fetch_apply_blocked_row_count']}`",
                 f"- coordinate_fetch_apply_downloaded_row_count: "
                 f"`{summary['coordinate_fetch_apply_downloaded_row_count']}`",
+                f"- post_fetch_validation_supported: `{summary['post_fetch_validation_supported']}`",
+                f"- post_fetch_validation_executed: `{summary['post_fetch_validation_executed']}`",
+                f"- post_fetch_validation_coordinate_validation_pass_row_count: "
+                f"`{summary['post_fetch_validation_coordinate_validation_pass_row_count']}`",
                 f"- approval_token_accepted: `{summary['approval_token_accepted']}`",
                 "",
                 "## Claim Boundary",
@@ -306,6 +361,8 @@ def main(argv: list[str] | None = None) -> dict[str, Any]:
     parser.add_argument("--approval-token", default="")
     parser.add_argument("--timeout-seconds", type=int, default=30)
     parser.add_argument("--overwrite", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--run-post-fetch-validation", action="store_true")
+    parser.add_argument("--candidate-queue-json", default=coordinate_intake.DEFAULT_CANDIDATE_QUEUE_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -316,10 +373,24 @@ def main(argv: list[str] | None = None) -> dict[str, Any]:
         approval_token=args.approval_token,
         timeout_seconds=args.timeout_seconds,
         overwrite=args.overwrite,
+        run_post_fetch_validation=args.run_post_fetch_validation,
+        candidate_queue_json=args.candidate_queue_json,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])
     _write_md(args.out_md, payload)
+    if "post_fetch_validation" in payload:
+        validation_payload = payload["post_fetch_validation"]
+        _write_json(coordinate_intake.DEFAULT_OUT_JSON, validation_payload)
+        write_csv_rows(
+            _resolve(coordinate_intake.DEFAULT_OUT_INTAKE_CSV),
+            validation_payload["intake_rows"],
+        )
+        write_csv_rows(
+            _resolve(coordinate_intake.DEFAULT_OUT_VALIDATION_CSV),
+            validation_payload["validation_rows"],
+        )
+        coordinate_intake._write_md(coordinate_intake.DEFAULT_OUT_MD, validation_payload)
     print(json.dumps(payload["summary"], indent=2, ensure_ascii=False, sort_keys=True))
     return payload
 

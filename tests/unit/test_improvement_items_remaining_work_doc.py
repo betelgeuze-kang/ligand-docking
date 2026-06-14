@@ -267,7 +267,16 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`coordinate_fetch_apply_preview_ready_row_count=17`" in text
     assert "`coordinate_fetch_apply_blocked_row_count=0`" in text
     assert "`coordinate_fetch_apply_downloaded_row_count=0`" in text
+    assert "`post_fetch_validation_supported=true`" in text
+    assert "`post_fetch_validation_requested=false`" in text
+    assert "`post_fetch_validation_executed=false`" in text
+    assert "`post_fetch_validation_coordinate_validation_pass_row_count=0`" in text
+    assert (
+        "`post_fetch_validation_candidate_queue=runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json`"
+        in text
+    )
     assert "`approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`" in text
+    assert "`--mode execute --run-post-fetch-validation`" in text
     assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
     assert "`runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`" in text
     assert "`Fill 17 additional reviewed public benchmark-pair expansion slots`" in text

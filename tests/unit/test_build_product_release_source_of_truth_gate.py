@@ -2041,6 +2041,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "coordinate_fetch_apply_preview_ready" in statistical_coordinate_fetch_apply_status_spec[
         "required_true_fields"
     ]
+    assert "post_fetch_validation_supported" in statistical_coordinate_fetch_apply_status_spec[
+        "required_true_fields"
+    ]
     assert statistical_coordinate_fetch_apply_status_spec["required_int_exact_fields"][
         "coordinate_fetch_apply_row_count"
     ] == 17
@@ -2050,9 +2053,24 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert statistical_coordinate_fetch_apply_status_spec["required_int_exact_fields"][
         "coordinate_fetch_apply_downloaded_row_count"
     ] == 0
+    assert statistical_coordinate_fetch_apply_status_spec["required_int_exact_fields"][
+        "post_fetch_validation_requested"
+    ] == 0
+    assert statistical_coordinate_fetch_apply_status_spec["required_int_exact_fields"][
+        "post_fetch_validation_executed"
+    ] == 0
+    assert statistical_coordinate_fetch_apply_status_spec["required_int_exact_fields"][
+        "post_fetch_validation_coordinate_validation_pass_row_count"
+    ] == 0
     assert statistical_coordinate_fetch_apply_status_spec["required_text_exact_fields"][
         "approval_token_required"
     ] == "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+    assert statistical_coordinate_fetch_apply_status_spec["required_text_exact_fields"][
+        "post_fetch_validation_candidate_queue"
+    ] == "runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json"
+    assert statistical_coordinate_fetch_apply_status_spec["required_text_exact_fields"][
+        "post_fetch_validation_validation_csv"
+    ] == "runs/refine_tier_public_benchmark_statistical_support_coordinate_validation_current.csv"
     engine_field_worksheet_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS

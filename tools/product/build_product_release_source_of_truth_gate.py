@@ -2444,6 +2444,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "coordinate_fetch_apply_preview_ready",
             "coordinate_fetch_plan_present",
             "coordinate_fetch_plan_ready",
+            "post_fetch_validation_supported",
         ],
         "required_int_exact_fields": {
             "coordinate_fetch_apply_live_ready": 0,
@@ -2457,6 +2458,14 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "coordinate_fetch_apply_downloaded_row_count": 0,
             "coordinate_fetch_apply_destination_present_after_row_count": 0,
             "coordinate_fetch_apply_ready_for_validation_row_count": 0,
+            "post_fetch_validation_requested": 0,
+            "post_fetch_validation_executed": 0,
+            "post_fetch_validation_coordinate_intake_ready": 0,
+            "post_fetch_validation_coordinate_validation_row_count": 0,
+            "post_fetch_validation_coordinate_validation_pass_row_count": 0,
+            "post_fetch_validation_coordinate_validation_blocked_row_count": 0,
+            "post_fetch_validation_coordinate_validation_missing_row_count": 0,
+            "post_fetch_validation_candidate_ready_for_metric_materialization_count": 0,
             "download_executed": 0,
             "canonical_intake_promotion_allowed": 0,
             "external_state_mutated": 0,
@@ -2468,6 +2477,21 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             ),
             "mode": "preview",
             "approval_token_required": "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD",
+            "post_fetch_validation_candidate_queue": (
+                "runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json"
+            ),
+            "post_fetch_validation_json": (
+                "runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json"
+            ),
+            "post_fetch_validation_intake_csv": (
+                "runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.csv"
+            ),
+            "post_fetch_validation_validation_csv": (
+                "runs/refine_tier_public_benchmark_statistical_support_coordinate_validation_current.csv"
+            ),
+            "post_fetch_validation_md": (
+                "runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.md"
+            ),
             "next_required_step": (
                 "Set APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD as the approval token and "
                 "rerun with --mode execute, then rebuild coordinate intake validation."
