@@ -956,6 +956,102 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   payload schema·license·approval token을 backfill template에서 확인하기 전까지
   canonical receipt coverage로 승격되지 않는다. 이 packet도 canonical receipt write,
   payload write, receipt 승인, canonical intake, claim promotion을 하지 않는다.
+  2026-06-15 KST 추가 residual review dossier는 triage 상위 6개 target-pose를
+  실제 검토 패키지로 한 번 더 좁혔다.
+  `config/refine_tier_public_benchmark_residual_review_dossier_current.json`과
+  `docs/refine_tier_public_benchmark_residual_review_dossier_current.md`는
+  `refine_tier_public_benchmark_residual_review_dossier_ready`,
+  `dossier_row_count=6`,
+  `review_package_ready_count=6`,
+  `metric_payload_pose_model_review_count=1`,
+  `descriptor_coverage_target_heldout_review_count=2`,
+  `seeded_backfill_review_count=3`,
+  `seeded_backfill_template_ready_review_count=3`,
+  `metric_payload_priority_row_count=18`,
+  `required_input_artifact_present_count=15`,
+  `required_input_artifact_count=15`,
+  `operator_receipt_blocked_payload_count=9`,
+  `operator_receipt_missing_payload_count=9`,
+  `operator_manual_pending_field_count=90`,
+  `seeded_backfill_operator_manual_pending_field_count=99`,
+  `top_review_target_id=3n86`,
+  `top_review_pose_id=3n86_99`,
+  `top_review_lane=metric_payload_pose_model_form_review`,
+  `claim_promotion_allowed=false`를 기록한다. 즉 다음 R9 과학 검토는 1) `3n86/3n86_99`
+  DockQ/lDDT-PLI/internal ΔG 값·method·input hash와 pose/model-form 검토,
+  2) `3f3e/3f3e_197`, `4j28/4j28_123`의 contact_per_atom 범위 밖 descriptor
+  coverage/target-held-out evidence 검토, 3) `2j7h`, `1syi`, `4e5w` seeded backfill
+  template review 순서로 고정된다. dossier도 metric 계산, payload write, receipt 승인,
+  canonical intake, claim promotion을 하지 않는다.
+  2026-06-15 KST 추가 bootstrap recovery queue는 25쌍/8 holdout 수량 조건을
+  통과한 뒤에도 p05가 낮은 원인을 pair 단위 leave-one-out으로 분해했다.
+  `config/refine_tier_public_benchmark_bootstrap_recovery_queue_current.json`과
+  `docs/refine_tier_public_benchmark_bootstrap_recovery_queue_current.md`는
+  `refine_tier_public_benchmark_bootstrap_recovery_queue_ready`,
+  `queue_row_count=25`,
+  `existing_materialized_pair_count=8`,
+  `candidate_fill_pair_count=17`,
+  `full_combined_spearman=0.5315384615384615`,
+  `full_bootstrap_p05=0.23053846153846155`,
+  `bootstrap_p05_deficit=0.2694615384615384`,
+  `leave_one_out_improves_p05_count=4`,
+  `material_bootstrap_p05_driver_count=2`,
+  `max_rank_abs_error=18`,
+  `top_recovery_target_id=3f3e`,
+  `top_recovery_pose_id=3f3e_197`,
+  `top_recovery_source_class=candidate_fill_preview`,
+  `top_recovery_review_class=bootstrap_p05_fragility_driver`,
+  `top_recovery_bootstrap_p05_delta_if_removed=0.124157190635`,
+  `claim_promotion_allowed=false`를 기록한다. 즉 R9 bootstrap tail-risk의 첫 검토 대상은
+  `3f3e/3f3e_197`의 candidate internal_deltaG/method/input hash/pose assignment/
+  experimental deltaG mapping이고, 두 번째 driver는 기존 materialized
+  `2j7h/2j7h_48`이다. 이 queue도 metric 계산, payload write, receipt 승인,
+  canonical intake, claim promotion을 하지 않는다.
+  2026-06-15 KST 추가 bootstrap driver evidence audit은 이 두 driver를
+  evidence 상태로 분리했다.
+  `config/refine_tier_public_benchmark_bootstrap_driver_evidence_audit_current.json`과
+  `docs/refine_tier_public_benchmark_bootstrap_driver_evidence_audit_current.md`는
+  `refine_tier_public_benchmark_bootstrap_driver_evidence_audit_ready`,
+  `driver_audit_row_count=2`,
+  `candidate_preview_payload_not_written_count=1`,
+  `existing_payload_receipt_backfill_pending_count=1`,
+  `candidate_input_artifact_count=3`,
+  `candidate_input_artifact_sha256_verified_count=3`,
+  `source_payload_present_count=3`,
+  `source_payload_schema_valid_count=3`,
+  `source_payload_input_artifact_sha256_verified_count=3`,
+  `operator_manual_pending_field_count=63`,
+  `top_driver_target_id=3f3e`,
+  `top_driver_pose_id=3f3e_197`,
+  `top_driver_audit_class=candidate_preview_payload_not_written`,
+  `top_driver_bootstrap_p05_delta_if_removed=0.124157190635`,
+  `claim_promotion_allowed=false`를 기록한다. 즉 `3f3e/3f3e_197`은 candidate
+  input artifact/hash 3/3 검증은 됐지만 expected metric-source payload가 아직
+  쓰이지 않은 상태이고, `2j7h/2j7h_48`은 기존 metric-source payload 3/3이
+  schema/hash valid지만 canonical operator receipt backfill이 33개 manual field로
+  남아 있다. 이 audit도 metric 계산, payload write, receipt 승인, canonical intake,
+  claim promotion을 하지 않는다.
+  2026-06-15 KST 추가 bootstrap driver operator review worksheet는 이 두 driver를
+  operator가 확인할 6개 metric row로 펼쳤다.
+  `config/refine_tier_public_benchmark_bootstrap_driver_operator_review_worksheet_current.json`,
+  `config/refine_tier_public_benchmark_bootstrap_driver_operator_review_worksheet_current.csv`,
+  `docs/refine_tier_public_benchmark_bootstrap_driver_operator_review_worksheet_current.md`는
+  `refine_tier_public_benchmark_bootstrap_driver_operator_review_worksheet_ready`,
+  `worksheet_row_count=6`,
+  `candidate_preview_review_row_count=3`,
+  `existing_payload_backfill_review_row_count=3`,
+  `candidate_preview_input_hash_verified_row_count=3`,
+  `existing_payload_validation_pass_row_count=3`,
+  `existing_payload_input_hash_verified_row_count=3`,
+  `expected_metric_source_artifact_present_row_count=3`,
+  `operator_manual_pending_field_count=66`,
+  `approval_token_required=APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS`,
+  `claim_promotion_allowed=false`를 기록한다. 즉 `3f3e` 쪽 3개 row는
+  candidate value/method/input hash/license를 검토한 뒤 별도 승인 절차 없이는
+  payload write로 넘어가지 않고, `2j7h` 쪽 3개 row는 기존 schema/hash-valid
+  payload를 canonical receipt coverage로 확장하기 전 operator backfill review를
+  요구한다. 이 worksheet도 payload write, canonical receipt write, receipt 승인,
+  canonical intake, claim promotion을 하지 않는다.
   `runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json`은
   이 execute 직전 handoff를 R4/operator review packet으로 고정해
   `refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready`,
