@@ -740,6 +740,26 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   R9 holdout 또는 operator-reviewed metric-source payload에서 재검증하고,
   `3n86`, `2j7h`, `3f3e` 잔차를 줄이는 calibrated scoring으로 bootstrap p05를
   0.5 이상으로 끌어올리는 일이다.
+  2026-06-15 KST 추가 score-variant failure decomposition은 이 best variant가
+  어디서 유효하고 어디서 무너지는지 row-level로 분해했다.
+  `config/refine_tier_public_benchmark_score_variant_failure_decomposition_current.json`과
+  `docs/refine_tier_public_benchmark_score_variant_failure_decomposition_current.md`는
+  `decomposition_row_count=25`,
+  `variant_improved_row_count=16`,
+  `variant_worsened_row_count=6`,
+  `variant_unchanged_row_count=3`,
+  `best_variant_high_error_row_count=4`,
+  `locked_cv_high_error_row_count=4`,
+  `persistent_high_error_row_count=3`,
+  `payload_priority_matched_row_count=12`,
+  `operator_receipt_blocked_payload_count=27`,
+  `operator_receipt_missing_payload_count=9`를 기록한다. top decomposition은
+  `3n86/3n86_99`의 `score_variant_worsens_high_error`이며, `3f3e`와
+  `2j7h`는 variant가 개선해도 CV high-error가 남는다. 즉 다음 작업은 단순히
+  `sqrt_contact_density_only`를 채택하는 것이 아니라, `3n86` over-correction,
+  `1gpk`/`4j28` worsening, 그리고 `2j7h`/`1syi`/`4e5w` seeded-payload receipt gap을
+  분리해 닫는 calibrated scoring/receipt review다. 이 decomposition도 training,
+  score rewrite, payload write, claim promotion을 하지 않는다.
   2026-06-15 KST 추가 fit/holdout calibration probe는 같은 variant grid를
   fit split 선택과 holdout guard로 분리해 calibration 방향을 한 번 더 좁혔다.
   `config/refine_tier_public_benchmark_fit_holdout_calibration_probe_current.json`과
