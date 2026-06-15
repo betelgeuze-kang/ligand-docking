@@ -418,11 +418,11 @@ fail-closed 처리한다.
   `public_benchmark_bootstrap_driver_operator_chain_final_blocker=operator_only_placeholders_unfilled`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready=true`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count=17`,
-  `public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=17`,
+  `public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=0`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count=0`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count=51`,
-  `public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download=true`,
-  `public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=true`,
+  `public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download=false`,
+  `public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=false`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated=false`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`,
   `public_benchmark_statistical_support_coordinate_fetch_operator_receipt_present=true`,
@@ -601,25 +601,25 @@ fail-closed 처리한다.
   `ligand_pose_artifact_present_count=17`,
   `experimental_deltaG_prefilled_count=17`,
   `candidate_source_distinct_target_count=276`,
-  `receptor_coordinate_artifact_present_count=0`,
-  `receptor_coordinate_artifact_missing_count=17`,
-  `candidate_ready_for_metric_materialization_count=0`,
+  `receptor_coordinate_artifact_present_count=17`,
+  `receptor_coordinate_artifact_missing_count=0`,
+  `candidate_ready_for_metric_materialization_count=17`,
   `candidate_ready_for_canonical_intake_count=0`,
   `candidate_coordinate_archive_count=2`,
   `candidate_coordinate_archive_receptor_member_count=0`,
   `candidate_coordinate_archive_receptor_member_target_count=0`,
   `candidate_coordinate_archive_missing_receptor_member_target_count=17`,
   `canonical_intake_promotion_allowed=false`를 기록한다. 즉 통계 support 확대를
-  위한 다음 17개 target/pose 후보 목록은 좁혀졌지만, 아직 공개 receptor/complex
-  coordinate artifact 검토와 배치를 요구하도록 선별됐다.
+  위한 다음 17개 target/pose 후보 목록은 좁혀졌고, 로컬 coordinate artifact까지
+  metric materialization 입력으로 잡혔지만 아직 canonical intake/claim promotion은
+  허용하지 않는다.
   2026-06-14 추가 보강으로 이 candidate queue는 기존 8개 public benchmark
   readiness와 같은 로컬 coordinate matcher를 재사용한다. 따라서 future/offline
   bundle이 `archive.tar::pdbbind/<target>/<target>_protein.pdb` 같은 tar member를
-  포함하면 candidate 단계부터 `receptor_coordinate_artifact_present=true`로 잡지만,
-  queue 자체는 fetch 전 선별 snapshot이라 17개 후보의 ligand pose/source member만 있고
-  receptor/protein/complex coordinate member target match가 0개로 남아 있다. 실제 최신
-  coordinate intake/apply/validation은 승인 실행 후 public RCSB complex PDB를 로컬
-  artifact로 잡아 17/17 pass로 닫았다.
+  포함하면 candidate 단계부터 `receptor_coordinate_artifact_present=true`로 잡는다.
+  최신 queue/intake/validation은 public RCSB complex coordinate의 로컬 artifact를
+  17/17로 잡아 17/17 pass로 닫았고, 남은 일은 이 좌표를 근거로 51개 metric source
+  payload를 reviewed JSON으로 채우는 것이다.
   `runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json`은
   이 17개 후보를 coordinate intake/validation row로 펼쳐
   `refine_tier_public_benchmark_statistical_support_coordinate_intake_ready`,
@@ -646,35 +646,36 @@ fail-closed 처리한다.
   이 좌표 배치 단계를 operator-review 가능한 fetch/staging plan으로 한 번 더 펼쳐
   `refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_ready`,
   `coordinate_fetch_row_count=17`,
-  `coordinate_fetch_required_row_count=17`,
-  `coordinate_fetch_blocked_row_count=17`,
+  `coordinate_fetch_required_row_count=0`,
+  `coordinate_fetch_blocked_row_count=0`,
   `coordinate_fetch_primary_url_row_count=17`,
   `coordinate_fetch_staging_destination_row_count=17`,
   `coordinate_fetch_destination_present_row_count=17`,
   `coordinate_fetch_current_artifact_present_row_count=17`,
   `coordinate_fetch_ready_for_validation_row_count=17`,
   `coordinate_fetch_operator_review_required_row_count=17`,
-  `coordinate_fetch_external_download_executed=true`를 기록한다. 즉 현재 병목은
+  `coordinate_fetch_external_download_executed=false`를 기록한다. 즉 현재 병목은
   좌표 URL 탐색이나 staging 실행이 아니라, 검증된 좌표를 근거로 metric source payload를
   채우고 operator receipt를 통과시키는 것이다.
   `runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_current.json`은
   같은 17개 row를 실제 실행 전 preview apply로 검증해
   `refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_ready`,
-  `coordinate_fetch_apply_preview_ready=false`,
+  `coordinate_fetch_apply_preview_ready=true`,
   `coordinate_fetch_apply_row_count=17`,
   `coordinate_fetch_apply_preflight_pass_row_count=17`,
-  `coordinate_fetch_apply_preview_ready_row_count=0`,
+  `coordinate_fetch_apply_preview_ready_row_count=17`,
   `coordinate_fetch_apply_blocked_row_count=0`,
-  `coordinate_fetch_apply_downloaded_row_count=17`,
+  `coordinate_fetch_apply_downloaded_row_count=0`,
+  `coordinate_fetch_apply_destination_present_after_row_count=17`,
   `coordinate_fetch_apply_ready_for_validation_row_count=17`,
   `post_fetch_validation_supported=true`,
-  `post_fetch_validation_requested=true`,
-  `post_fetch_validation_executed=true`,
-  `post_fetch_validation_coordinate_validation_pass_row_count=17`,
+  `post_fetch_validation_requested=false`,
+  `post_fetch_validation_executed=false`,
+  `post_fetch_validation_coordinate_validation_pass_row_count=0`,
   `post_fetch_validation_candidate_queue=runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json`,
   `approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`,
-  `approval_token_accepted=true`, `execution_requested=true`,
-  `download_executed=true`를 기록한다. 따라서 이제 남은 직접 실행 병목은
+  `approval_token_accepted=false`, `execution_requested=false`,
+  `download_executed=false`를 기록한다. 따라서 이제 남은 직접 실행 병목은
   fetch row 자체나 좌표 다운로드가 아니라, 좌표 source/license/chain-assembly 검토를
   전제로 51개 metric source payload 값을 채우고 검토/승인하는 일이다.
   2026-06-14 KST 추가 실행으로
@@ -1261,7 +1262,7 @@ fail-closed 처리한다.
   `r4_preflight_ready=true`, `r4_row_count=17`,
   `ready_for_r4_review_row_count=17`, `blocked_r4_row_count=0`,
   `required_r4_fields=target;action;impact;risk;rollback;verification`,
-  `fetch_required_row_count=17`,
+  `fetch_required_row_count=0`,
   `metric_materialization_readiness_present=true`,
   `metric_materialization_readiness_ready=true`,
   `metric_materialization_row_count=17`,
@@ -1278,8 +1279,8 @@ fail-closed 처리한다.
   `metric_source_template_fill_blocked_row_count=0`,
   `metric_source_template_existing_payload_present_row_count=0`,
   `execute_command_count=1`,
-  `authorized_for_external_download=true`,
-  `download_executed=true`, `external_state_mutated=false`를 기록한다.
+  `authorized_for_external_download=false`,
+  `download_executed=false`, `external_state_mutated=false`를 기록한다.
   이 R4 preflight의 execute command는
   `python3 tools/product/apply_refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan.py --mode execute --run-post-fetch-validation --approval-token APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`이며,
   승인이 없으면 coordinate fetch, canonical intake promotion, metric materialization을
@@ -1418,9 +1419,9 @@ fail-closed 처리한다.
   `public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count=0`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready=true`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count=17`,
-  `public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=17`,
+  `public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=0`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count=0`,
-  `public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=true`, 및
+  `public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=false`, 및
   `planned_metric_source_payload_count=51`로 전환한다.
   `runs/goal_bottleneck_briefing_current.json`도 같은 priority packet을 직접 읽어
   `R9_engine_refinement_claim_promotion` completion-audit row와 summary에
@@ -1440,8 +1441,8 @@ fail-closed 처리한다.
   `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count=0`,
   `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready=true`,
   `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count=17`,
-  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=17`,
-  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=true`,
+  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=0`,
+  `engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=false`,
   `engine_refinement_claim_evidence_priority_packet_top_next_operator_step=Coordinate fetch and validation are complete...`를
   보존한다. 따라서 top-level 병목 briefing도 R9를 단순 receipt placeholder가
   아니라 metric source payload 0/51 및 claim-grade bootstrap 통계 support 과학/정확도
@@ -2092,8 +2093,8 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `metric_source_templates_metric_source_payload_fill_blocked_row_count=0`, 그리고
   `coordinate_fetch_r4_preflight_ready=true`,
   `coordinate_fetch_r4_ready_for_review_row_count=17`,
-  `coordinate_fetch_r4_fetch_required_row_count=17`,
-  `coordinate_fetch_r4_download_executed=true`, 그리고
+  `coordinate_fetch_r4_fetch_required_row_count=0`,
+  `coordinate_fetch_r4_download_executed=false`, 그리고
   `Coordinate fetch and validation are complete` top step을 직접 노출한다.
   source-of-truth의
   `goal_bottleneck_briefing_semantic_ready` row는 entry count 2, template present
@@ -2368,17 +2369,17 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `cameo_validation_operations_dossier_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=149`, `pass_count=129`,
-  `blocker_count=20`, `artifact_row_count=93`, `semantic_status_row_count=54`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=149`, `pass_count=149`,
+  `blocker_count=0`, `artifact_row_count=93`, `semantic_status_row_count=54`,
   `release_refresh_command_count=118`, `stale_artifact_count=0`,
-  `semantic_status_blocker_count=20`, `readme_drift_count=0`이다.
+  `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   final refresh는 마지막 `goal_release_decision_gate` 뒤에
   `goal_operator_action_board`, `goal_release_burndown_work_order`, intake kit,
   bottleneck briefing, full commercial matrix, release bundle, handoff bundle,
   privacy scan, source-of-truth gate까지 downstream 산출물을 한 번 더 재생성하고,
   refresh runner final gate는 source-of-truth, quality gate verification,
   release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=149`,
-  `pass_count=129`, `artifact_row_count=93`, `semantic_status_row_count=54`,
+  `pass_count=149`, `artifact_row_count=93`, `semantic_status_row_count=54`,
   `readme_row_count=2`, `release_refresh_command_count=118`를 exact-check해
   downstream readiness row가 조용히 빠지는 회귀를 막고,
   `product_quality_gate_verification_current.json` final gate는
@@ -2579,12 +2580,12 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `production_ai_checkpoint_ready=false`,
   `production_ai_inference_subject_active=false`,
   `production_gpu_execution_environment_ready=true`,
-  `delta_force_derivation_validation_ready=true`,
+  `delta_force_derivation_validation_ready=false`,
   `default_residual_mode=shadow`,
   `production_promotion_allowed=false`,
   `trained_model_checkpoint_count=1`을 기록한다. 따라서 trained/preflight-ready
   checkpoint 등록 부재는 더 이상 첫 병목이 아니며, guarded registry promotion
-  operator receipt가 다음 경계다.
+  operator receipt와 force-derivation 재검증이 다음 경계다.
 - ROCm/HIP 환경은 `rocm_environment_manifest_ready`이며,
   `torch_version=2.6.0+rocm6.1`, `torch_hip_version=6.1.40091-a8dbc0c19`,
   `visible_device_count=1`, AMD GPU detected로 기록되어 있다.
@@ -2711,11 +2712,11 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 - `runs/product_production_ai_promotion_workbench_current.json`도
   `blocked_product_production_ai_promotion_workbench`,
   `production_ai_promotion_ready=false`,
-  `post_return_promotion_ladder_blocked_stage_count=2`를 기록한다.
-  남은 blocked stage는 `residual_model_registry`,
-  `product_goal_completion_audit`이며, workbench `next_required_step`도 같은
-  trained production checkpoint registry promotion action과 structured missing
-  gate fields를 승계한다.
+  `post_return_promotion_ladder_blocked_stage_count=3`를 기록한다.
+  남은 blocked stage는 `force_derivation_validation`,
+  `residual_model_registry`, `product_goal_completion_audit`이며, workbench
+  `next_required_step`도 full GPU return receipt 이후 force derivation validation
+  재실행을 요구한다.
 
 **병목 원인**
 - ROCm/HIP 환경, force derivation validation, training data, selected sidecar,
@@ -3195,8 +3196,8 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count=0`,
   `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count=51`,
   `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready=true`,
-  `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=17`,
-  `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=true`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=0`,
+  `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=false`,
   `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`,
   `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_present=true`,
   `science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready=false`,
@@ -4237,21 +4238,23 @@ post-fetch validation으로 receptor/complex coordinate artifact 17/17개가 pas
 intake/validation packet도 이를 `coordinate_validation_pass_row_count=17`,
 `coordinate_validation_blocked_row_count=0`으로 고정하므로, 다음 직접 작업은 17개
 후보별 DockQ/lDDT-PLI/internal ΔG source payload 51개를 reviewed 값으로 채우는 것이다.
-최신 coordinate fetch/staging plan은 `coordinate_fetch_required_row_count=17`,
+최신 coordinate fetch/staging plan은 `coordinate_fetch_required_row_count=0`,
 `coordinate_fetch_primary_url_row_count=17`,
 `coordinate_fetch_staging_destination_row_count=17`,
 `coordinate_fetch_ready_for_validation_row_count=17`을 고정해, URL 식별과 로컬 staging은 닫았다.
 최신 apply도 `coordinate_fetch_apply_preflight_pass_row_count=17`,
-`coordinate_fetch_apply_downloaded_row_count=17`,
+`coordinate_fetch_apply_downloaded_row_count=0`,
+`coordinate_fetch_apply_destination_present_after_row_count=17`,
 `post_fetch_validation_supported=true`,
-`post_fetch_validation_executed=true`,
+`post_fetch_validation_executed=false`,
 `approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD`로
-고정해, 좌표 단계가 승인 실행과 검증을 통과했음을 남긴다.
+고정해, 좌표 입력은 로컬 artifact/validation으로 준비됐지만 apply 자체는 preview/무변이
+상태임을 남긴다.
 coordinate fetch R4 preflight도 `r4_row_count=17`,
 `ready_for_r4_review_row_count=17`, `blocked_r4_row_count=0`,
 `metric_source_template_row_count=51`, `metric_source_template_fill_ready_row_count=51`,
 `metric_source_template_fill_blocked_row_count=0`,
-`authorized_for_external_download=true`, `download_executed=true`로 준비되어,
+`authorized_for_external_download=false`, `download_executed=false`로 준비되어,
 51개 metric source template placeholder를 값 후보로 채울 입력 조건은 닫혔다.
 `config/refine_tier_public_benchmark_statistical_support_metric_source_candidate_fill_current.json`은
 51/51 candidate metric values와 17/17 candidate pairs를 계산했고,

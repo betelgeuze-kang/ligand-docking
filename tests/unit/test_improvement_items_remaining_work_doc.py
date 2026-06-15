@@ -256,11 +256,11 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert (
-        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=17`"
+        "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=0`"
         in text
     )
     assert (
-            "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=true`"
+            "`science_accuracy_frontier_public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=false`"
         in text
     )
     assert (
@@ -441,9 +441,9 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`ligand_pose_artifact_present_count=17`" in text
     assert "`experimental_deltaG_prefilled_count=17`" in text
     assert "`candidate_source_distinct_target_count=276`" in text
-    assert "`receptor_coordinate_artifact_present_count=0`" in text
-    assert "`receptor_coordinate_artifact_missing_count=17`" in text
-    assert "`candidate_ready_for_metric_materialization_count=0`" in text
+    assert "`receptor_coordinate_artifact_present_count=17`" in text
+    assert "`receptor_coordinate_artifact_missing_count=0`" in text
+    assert "`candidate_ready_for_metric_materialization_count=17`" in text
     assert "`candidate_ready_for_canonical_intake_count=0`" in text
     assert "`candidate_coordinate_archive_count=2`" in text
     assert "`candidate_coordinate_archive_receptor_member_count=0`" in text
@@ -451,8 +451,8 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`candidate_coordinate_archive_missing_receptor_member_target_count=17`" in text
     assert "같은 로컬 coordinate matcher를 재사용한다" in text
     assert "`archive.tar::pdbbind/<target>/<target>_protein.pdb`" in text
-    assert "queue 자체는 fetch 전 선별 snapshot이라 17개 후보의 ligand pose/source member만 있고" in text
-    assert "coordinate intake/apply/validation은 승인 실행 후 public RCSB complex PDB를 로컬" in text
+    assert "최신 queue/intake/validation은 public RCSB complex coordinate의 로컬 artifact를" in text
+    assert "51개 metric source" in text
     assert "`runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json`" in text
     assert "`refine_tier_public_benchmark_statistical_support_coordinate_intake_ready`" in text
     assert "`coordinate_intake_row_count=17`" in text
@@ -476,28 +476,29 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     )
     assert "`refine_tier_public_benchmark_statistical_support_coordinate_fetch_plan_ready`" in text
     assert "`coordinate_fetch_row_count=17`" in text
-    assert "`coordinate_fetch_required_row_count=17`" in text
-    assert "`coordinate_fetch_blocked_row_count=17`" in text
+    assert "`coordinate_fetch_required_row_count=0`" in text
+    assert "`coordinate_fetch_blocked_row_count=0`" in text
     assert "`coordinate_fetch_primary_url_row_count=17`" in text
     assert "`coordinate_fetch_staging_destination_row_count=17`" in text
     assert "`coordinate_fetch_ready_for_validation_row_count=17`" in text
-    assert "`coordinate_fetch_external_download_executed=true`" in text
+    assert "`coordinate_fetch_external_download_executed=false`" in text
     assert (
         "`runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_current.json`"
         in text
     )
     assert "`refine_tier_public_benchmark_statistical_support_coordinate_fetch_apply_ready`" in text
-    assert "`coordinate_fetch_apply_preview_ready=false`" in text
+    assert "`coordinate_fetch_apply_preview_ready=true`" in text
     assert "`coordinate_fetch_apply_row_count=17`" in text
     assert "`coordinate_fetch_apply_preflight_pass_row_count=17`" in text
-    assert "`coordinate_fetch_apply_preview_ready_row_count=0`" in text
+    assert "`coordinate_fetch_apply_preview_ready_row_count=17`" in text
     assert "`coordinate_fetch_apply_blocked_row_count=0`" in text
-    assert "`coordinate_fetch_apply_downloaded_row_count=17`" in text
+    assert "`coordinate_fetch_apply_downloaded_row_count=0`" in text
+    assert "`coordinate_fetch_apply_destination_present_after_row_count=17`" in text
     assert "`coordinate_fetch_apply_ready_for_validation_row_count=17`" in text
     assert "`post_fetch_validation_supported=true`" in text
-    assert "`post_fetch_validation_requested=true`" in text
-    assert "`post_fetch_validation_executed=true`" in text
-    assert "`post_fetch_validation_coordinate_validation_pass_row_count=17`" in text
+    assert "`post_fetch_validation_requested=false`" in text
+    assert "`post_fetch_validation_executed=false`" in text
+    assert "`post_fetch_validation_coordinate_validation_pass_row_count=0`" in text
     assert (
         "`post_fetch_validation_candidate_queue=runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json`"
         in text
@@ -520,7 +521,7 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "`ready_for_r4_review_row_count=17`" in text
     assert "`blocked_r4_row_count=0`" in text
     assert "`required_r4_fields=target;action;impact;risk;rollback;verification`" in text
-    assert "`fetch_required_row_count=17`" in text
+    assert "`fetch_required_row_count=0`" in text
     assert "`metric_materialization_readiness_present=true`" in text
     assert "`metric_materialization_row_count=17`" in text
     assert "`metric_materialization_candidate_blocked_count=0`" in text
@@ -776,10 +777,10 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         in text
     )
     assert (
-        "`public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=17`"
+        "`public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=0`"
         in text
     )
-    assert "`public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=true`" in text
+    assert "`public_benchmark_statistical_support_coordinate_fetch_r4_download_executed=false`" in text
     assert (
         "`runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json`"
         in text

@@ -1805,9 +1805,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "artifact_id": "gpcr_commercial_phase_ab_closure_chain_claim_locked_metric_ready",
         "artifact_path": "runs/gpcr_commercial_phase_ab_closure_chain_current.json",
         "builder_command": "python3 tools/build_gpcr_commercial_phase_ab_closure_chain.py",
-        "required_status": "gpcr_commercial_phase_ab_closure_complete_claim_locked",
+        "required_status": "blocked_gpcr_commercial_phase_ab_closure_claim_locked",
         "required_true_fields": [
-            "phase_a_claim_closure_ready",
             "phase_b_product_delivery_ready",
             "accuracy_parity_metric_ready",
             "accuracy_parity_claim_scope_lock_only",
@@ -1826,7 +1825,6 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "builder_command": "python3 tools/build_gpcr_active_scorer_promotion_decision_packet.py",
         "required_status": "blocked_gpcr_active_scorer_promotion_decision",
         "required_true_fields": [
-            "phase_a_claim_closure_ready",
             "phase_b_product_delivery_ready",
             "accuracy_parity_metric_ready",
             "accuracy_parity_claim_scope_lock_only",
@@ -1840,7 +1838,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "router_claim_allowed": 0,
             "platform_claim_allowed": 0,
             "residual_production_promotion_allowed": 0,
-            "blocker_count": 1,
+            "blocker_count": 3,
         },
         "required_text_exact_fields": {
             "promotion_scope": "guarded_operational_gpcr_ranking_only",
@@ -2115,7 +2113,6 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "product_model_layer_ready",
             "production_gpu_execution_environment_ready",
             "force_gpu_worker_return_receipt_ready",
-            "delta_force_derivation_validation_ready",
             "checkpoint_preflight_ready",
             "selected_sidecar_ready",
         ],
@@ -2124,11 +2121,11 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "production_ai_inference_subject_active": 0,
             "production_promotion_allowed": 0,
             "trained_model_checkpoint_count": 1,
-            "production_inference_acceptance_blocked_stage_count": 1,
+            "production_inference_acceptance_blocked_stage_count": 2,
         },
         "required_text_exact_fields": {
             "default_residual_mode": "shadow",
-            "production_inference_actionable_blocker_stage_id": "registry_guarded_promotion_acceptance",
+            "production_inference_actionable_blocker_stage_id": "force_derivation_acceptance",
         },
     },
     {
@@ -2145,11 +2142,11 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "production_ai_inference_subject_active": 0,
             "production_promotion_allowed": 0,
             "trained_model_checkpoint_count": 1,
-            "post_return_promotion_ladder_blocked_stage_count": 2,
+            "post_return_promotion_ladder_blocked_stage_count": 3,
         },
         "required_text_exact_fields": {
             "default_residual_mode": "shadow",
-            "first_blocked_stage_id": "residual_model_registry",
+            "first_blocked_stage_id": "force_derivation_validation",
         },
     },
     {
@@ -2486,10 +2483,10 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "holdout_selected_candidate_count": 5,
             "fit_or_holdout_selected_candidate_count": 12,
             "ligand_pose_artifact_present_count": 17,
-            "receptor_coordinate_artifact_present_count": 0,
-            "receptor_coordinate_artifact_missing_count": 17,
+            "receptor_coordinate_artifact_present_count": 17,
+            "receptor_coordinate_artifact_missing_count": 0,
             "experimental_deltaG_prefilled_count": 17,
-            "candidate_ready_for_metric_materialization_count": 0,
+            "candidate_ready_for_metric_materialization_count": 17,
             "candidate_ready_for_canonical_intake_count": 0,
             "canonical_intake_promotion_allowed": 0,
             "execution_enabled": 0,
@@ -2525,20 +2522,20 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_int_exact_fields": {
             "candidate_queue_selected_candidate_count": 17,
             "coordinate_intake_row_count": 17,
-            "coordinate_intake_artifact_present_row_count": 0,
-            "coordinate_intake_missing_row_count": 17,
+            "coordinate_intake_artifact_present_row_count": 17,
+            "coordinate_intake_missing_row_count": 0,
             "coordinate_intake_suggested_public_url_row_count": 17,
             "coordinate_intake_suggested_local_path_row_count": 17,
             "coordinate_intake_suggested_local_path_candidate_count": 136,
-            "coordinate_intake_suggested_local_path_present_count": 0,
-            "coordinate_intake_suggested_local_path_present_target_count": 0,
-            "coordinate_intake_suggested_local_path_missing_target_count": 17,
+            "coordinate_intake_suggested_local_path_present_count": 17,
+            "coordinate_intake_suggested_local_path_present_target_count": 17,
+            "coordinate_intake_suggested_local_path_missing_target_count": 0,
             "coordinate_intake_expected_archive_member_example_count": 51,
             "coordinate_intake_operator_review_required_row_count": 17,
             "coordinate_validation_row_count": 17,
-            "coordinate_validation_pass_row_count": 0,
-            "coordinate_validation_blocked_row_count": 17,
-            "coordinate_validation_missing_row_count": 17,
+            "coordinate_validation_pass_row_count": 17,
+            "coordinate_validation_blocked_row_count": 0,
+            "coordinate_validation_missing_row_count": 0,
             "coordinate_validation_below_min_atom_row_count": 0,
             "coordinate_validation_below_min_macromolecule_row_count": 0,
             "coordinate_validation_below_min_protein_like_row_count": 0,
@@ -2548,7 +2545,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "coordinate_validation_min_protein_like_residues": 5,
             "ligand_pose_artifact_present_count": 17,
             "experimental_deltaG_prefilled_count": 17,
-            "candidate_ready_for_metric_materialization_count": 0,
+            "candidate_ready_for_metric_materialization_count": 17,
             "candidate_ready_for_canonical_intake_count": 0,
             "canonical_intake_promotion_allowed": 0,
             "execution_enabled": 0,
@@ -2580,16 +2577,16 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         ],
         "required_int_exact_fields": {
             "coordinate_intake_row_count": 17,
-            "coordinate_validation_pass_row_count": 0,
-            "coordinate_validation_blocked_row_count": 17,
+            "coordinate_validation_pass_row_count": 17,
+            "coordinate_validation_blocked_row_count": 0,
             "coordinate_fetch_row_count": 17,
-            "coordinate_fetch_required_row_count": 17,
-            "coordinate_fetch_blocked_row_count": 17,
+            "coordinate_fetch_required_row_count": 0,
+            "coordinate_fetch_blocked_row_count": 0,
             "coordinate_fetch_primary_url_row_count": 17,
             "coordinate_fetch_staging_destination_row_count": 17,
-            "coordinate_fetch_destination_present_row_count": 0,
-            "coordinate_fetch_current_artifact_present_row_count": 0,
-            "coordinate_fetch_ready_for_validation_row_count": 0,
+            "coordinate_fetch_destination_present_row_count": 17,
+            "coordinate_fetch_current_artifact_present_row_count": 17,
+            "coordinate_fetch_ready_for_validation_row_count": 17,
             "coordinate_fetch_operator_review_required_row_count": 17,
             "coordinate_fetch_external_download_executed": 0,
             "canonical_intake_promotion_allowed": 0,
@@ -2635,8 +2632,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "coordinate_fetch_apply_preview_ready_row_count": 17,
             "coordinate_fetch_apply_blocked_row_count": 0,
             "coordinate_fetch_apply_downloaded_row_count": 0,
-            "coordinate_fetch_apply_destination_present_after_row_count": 0,
-            "coordinate_fetch_apply_ready_for_validation_row_count": 0,
+            "coordinate_fetch_apply_destination_present_after_row_count": 17,
+            "coordinate_fetch_apply_ready_for_validation_row_count": 17,
             "post_fetch_validation_requested": 0,
             "post_fetch_validation_executed": 0,
             "post_fetch_validation_coordinate_intake_ready": 0,
@@ -2715,23 +2712,23 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "target_row_count": 17,
             "source_url_primary_row_count": 17,
             "staging_destination_row_count": 17,
-            "fetch_required_row_count": 17,
-            "staging_destination_present_row_count": 0,
+            "fetch_required_row_count": 0,
+            "staging_destination_present_row_count": 17,
             "metric_materialization_row_count": 17,
-            "metric_materialization_candidate_ready_count": 0,
-            "metric_materialization_candidate_blocked_count": 17,
-            "coordinate_validation_pass_row_count": 0,
-            "coordinate_validation_blocked_row_count": 17,
-            "missing_required_metric_input_artifact_count": 17,
+            "metric_materialization_candidate_ready_count": 17,
+            "metric_materialization_candidate_blocked_count": 0,
+            "coordinate_validation_pass_row_count": 17,
+            "coordinate_validation_blocked_row_count": 0,
+            "missing_required_metric_input_artifact_count": 0,
             "planned_metric_source_payload_count": 51,
             "existing_metric_source_payload_count": 0,
             "metric_source_template_row_count": 51,
             "metric_source_template_candidate_row_count": 17,
             "metric_source_template_metric_name_count": 3,
-            "metric_source_template_fill_ready_row_count": 0,
-            "metric_source_template_fill_blocked_row_count": 51,
+            "metric_source_template_fill_ready_row_count": 51,
+            "metric_source_template_fill_blocked_row_count": 0,
             "metric_source_template_existing_payload_present_row_count": 0,
-            "metric_materialization_blocked_row_count": 17,
+            "metric_materialization_blocked_row_count": 0,
             "missing_r4_field_row_count": 0,
             "download_executed": 0,
             "canonical_intake_promotion_allowed": 0,
@@ -2877,14 +2874,19 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "coordinate_validation_csv_present",
         ],
         "required_int_exact_fields": {
-            "metric_materialization_all_candidates_ready": 0,
+            "metric_materialization_all_candidates_ready": 1,
             "candidate_queue_selected_candidate_count": 17,
             "coordinate_validation_row_count": 17,
-            "coordinate_validation_pass_row_count": 0,
-            "coordinate_validation_blocked_row_count": 17,
+            "coordinate_validation_pass_row_count": 17,
+            "coordinate_validation_blocked_row_count": 0,
             "metric_materialization_row_count": 17,
-            "metric_materialization_candidate_ready_count": 0,
-            "metric_materialization_candidate_blocked_count": 17,
+            "metric_materialization_candidate_ready_count": 17,
+            "metric_materialization_candidate_blocked_count": 0,
+            "metric_materialization_input_artifact_contract_ready": 1,
+            "required_metric_input_artifact_count": 34,
+            "present_required_metric_input_artifact_count": 34,
+            "missing_required_metric_input_artifact_count": 0,
+            "missing_required_metric_input_artifact_row_count": 0,
             "required_metric_source_payload_count": 3,
             "metric_source_path_row_count": 17,
             "planned_metric_source_payload_count": 51,
@@ -2910,9 +2912,10 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             ),
             "required_metric_source_payloads": "dockq;lddt_pli;internal_deltaG",
             "next_required_step": (
-                "After operator-approved coordinate fetch and post-fetch validation, require all 17 "
-                "statistical-support candidates to pass coordinate validation before materializing DockQ, "
-                "lDDT-PLI, and internal DeltaG source payloads and rerunning bootstrap Spearman p05."
+                "All 17 statistical-support candidates have coordinate validation and required input "
+                "artifacts ready; fill/review the 51 DockQ/lDDT-PLI/internal DeltaG metric source payloads, "
+                "materialize them, and rerun bootstrap Spearman p05 before any R9 claim receipt or canonical "
+                "intake promotion."
             ),
         },
     },
@@ -2936,10 +2939,10 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         ],
         "required_int_exact_fields": {
             "metric_materialization_row_count": 17,
-            "metric_materialization_candidate_ready_count": 0,
-            "metric_materialization_candidate_blocked_count": 17,
-            "coordinate_validation_pass_row_count": 0,
-            "coordinate_validation_blocked_row_count": 17,
+            "metric_materialization_candidate_ready_count": 17,
+            "metric_materialization_candidate_blocked_count": 0,
+            "coordinate_validation_pass_row_count": 17,
+            "coordinate_validation_blocked_row_count": 0,
             "planned_metric_source_payload_count": 51,
             "existing_metric_source_payload_count": 0,
             "template_row_count": 51,
@@ -2947,10 +2950,10 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "template_metric_name_count": 3,
             "template_metric_source_artifact_path_row_count": 51,
             "template_payload_required_fields_present_row_count": 51,
-            "metric_source_payload_fill_ready_row_count": 0,
-            "metric_source_payload_fill_blocked_row_count": 51,
-            "coordinate_validation_blocked_template_row_count": 51,
-            "missing_required_input_template_row_count": 51,
+            "metric_source_payload_fill_ready_row_count": 51,
+            "metric_source_payload_fill_blocked_row_count": 0,
+            "coordinate_validation_blocked_template_row_count": 0,
+            "missing_required_input_template_row_count": 0,
             "existing_metric_source_payload_present_row_count": 0,
             "required_metric_source_payload_count": 3,
             "required_metric_source_payload_field_count": 11,
@@ -2975,9 +2978,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
             ),
             "next_required_step": (
-                "After R4-approved coordinate fetch and validation, replace each operator placeholder "
-                "with reviewed DockQ/lDDT-PLI/internal DeltaG values while preserving input artifact "
-                "paths, hashes, license_ok=true, and external_engine_calls=0."
+                "With coordinate fetch and validation ready, replace each operator placeholder with "
+                "reviewed DockQ/lDDT-PLI/internal DeltaG values while preserving input artifact paths, "
+                "hashes, license_ok=true, and external_engine_calls=0."
             ),
         },
     },
@@ -3014,7 +3017,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "metric_source_artifact_path_present_count": 51,
             "required_metric_input_artifact_list_present_count": 51,
             "required_metric_input_artifact_sha256_list_present_count": 51,
-            "required_metric_input_artifact_sha256_list_complete_count": 0,
+            "required_metric_input_artifact_sha256_list_complete_count": 51,
             "required_metric_source_payload_fields_present_count": 51,
             "external_engine_calls_zero_count": 51,
             "receipt_manual_field_pending_count": 510,
@@ -3023,9 +3026,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "pass_row_count": 0,
             "blocked_row_count": 51,
             "approved_payload_count": 0,
-            "template_fill_ready_row_count": 0,
-            "coordinate_validation_pass_payload_row_count": 0,
-            "coordinate_validation_blocked_payload_row_count": 51,
+            "template_fill_ready_row_count": 51,
+            "coordinate_validation_pass_payload_row_count": 51,
+            "coordinate_validation_blocked_payload_row_count": 0,
             "payload_write_allowed": 0,
             "canonical_intake_promotion_allowed": 0,
             "claim_promotion_allowed": 0,
@@ -3068,39 +3071,39 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_int_exact_fields": {
             "claim_grade_statistical_support_ready": 0,
             "canonical_intake_promotion_allowed": 0,
-            "observed_public_benchmark_pair_count": 8,
-            "observed_holdout_pair_count": 3,
+            "observed_public_benchmark_pair_count": 25,
+            "observed_holdout_pair_count": 8,
             "min_claim_grade_public_benchmark_pairs_required": 25,
             "min_claim_grade_holdout_pairs_required": 8,
-            "minimum_new_pair_count": 17,
-            "minimum_new_holdout_pair_count": 5,
+            "minimum_new_pair_count": 0,
+            "minimum_new_holdout_pair_count": 0,
             "statistical_support_work_order_expansion_slot_count": 17,
             "statistical_support_work_order_holdout_expansion_slot_count": 5,
             "statistical_support_work_order_fit_or_holdout_expansion_slot_count": 12,
-            "coordinate_fetch_r4_fetch_required_row_count": 17,
+            "coordinate_fetch_r4_fetch_required_row_count": 0,
             "coordinate_fetch_r4_ready_for_review_row_count": 17,
             "coordinate_fetch_r4_blocked_row_count": 0,
             "coordinate_fetch_r4_authorized_for_external_download": 0,
             "coordinate_fetch_r4_download_executed": 0,
             "coordinate_fetch_r4_external_state_mutated": 0,
             "coordinate_validation_candidate_row_count": 17,
-            "coordinate_validation_pass_row_count": 0,
-            "coordinate_validation_blocked_row_count": 17,
-            "coordinate_validation_deficit": 17,
+            "coordinate_validation_pass_row_count": 17,
+            "coordinate_validation_blocked_row_count": 0,
+            "coordinate_validation_deficit": 0,
             "planned_metric_source_payload_count": 51,
-            "metric_source_payload_fill_ready_row_count": 0,
-            "metric_source_payload_fill_blocked_row_count": 51,
-            "metric_source_payload_fill_deficit": 51,
+            "metric_source_payload_fill_ready_row_count": 51,
+            "metric_source_payload_fill_blocked_row_count": 0,
+            "metric_source_payload_fill_deficit": 0,
             "gap_row_count": 5,
-            "blocked_gap_row_count": 5,
-            "pass_gap_row_count": 0,
-            "blocker_count": 5,
+            "blocked_gap_row_count": 1,
+            "pass_gap_row_count": 4,
+            "blocker_count": 1,
             "execution_enabled": 0,
             "external_state_mutated": 0,
         },
         "required_text_exact_fields": {
-            "observed_bootstrap_spearman_p05": "-0.14285714285714285",
-            "bootstrap_spearman_p05_deficit": "0.6428571428571428",
+            "observed_bootstrap_spearman_p05": "0.23053846153846155",
+            "bootstrap_spearman_p05_deficit": "0.2694615384615384",
             "coordinate_fetch_r4_approval_token_required": (
                 "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
             ),
@@ -3109,13 +3112,14 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "metric_name;target_id;pose_id;value;method;input_artifacts;input_artifact_sha256s;"
                 "operator_id;reviewed_at_utc;license_ok;external_engine_calls"
             ),
-            "top_science_gap_id": "coordinate_fetch_r4_approval_required",
-            "top_statistical_gap_id": "claim_grade_public_benchmark_pair_count_below_minimum",
+            "top_science_gap_id": "claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum",
+            "top_statistical_gap_id": "claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum",
             "next_required_step": (
-                "Keep R9 claim-grade promotion blocked; after explicit R4 approval fetch and validate "
-                "the 17 public coordinate candidates, replace 51 DockQ/lDDT-PLI/internal DeltaG metric "
-                "source payload placeholders, then rebuild materialization and require bootstrap Spearman "
-                "p05 >= 0.5 with at least 25 public benchmark pairs and 8 holdout pairs."
+                "The 17-candidate preview fills 51/51 metric values and closes the 25-pair/8-holdout "
+                "quantity gaps, but bootstrap Spearman p05 remains below 0.5 and the preview has not "
+                "written reviewed metric source payloads. Keep R9 claim-grade promotion blocked; improve "
+                "candidate/score quality, then require operator-reviewed payload receipt before canonical "
+                "intake promotion."
             ),
         },
     },
@@ -3184,17 +3188,17 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_materialized_candidate_ready": 1,
             "public_benchmark_materialized_claim_grade_statistical_support_ready": 0,
             "public_benchmark_claim_grade_gap_audit_claim_grade_statistical_support_ready": 0,
-            "public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count": 8,
-            "public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count": 3,
-            "public_benchmark_claim_grade_gap_audit_minimum_new_pair_count": 17,
-            "public_benchmark_claim_grade_gap_audit_minimum_new_holdout_pair_count": 5,
-            "public_benchmark_claim_grade_gap_audit_coordinate_validation_pass_row_count": 0,
-            "public_benchmark_claim_grade_gap_audit_coordinate_validation_blocked_row_count": 17,
-            "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_ready_row_count": 0,
-            "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count": 51,
+            "public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count": 25,
+            "public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count": 8,
+            "public_benchmark_claim_grade_gap_audit_minimum_new_pair_count": 0,
+            "public_benchmark_claim_grade_gap_audit_minimum_new_holdout_pair_count": 0,
+            "public_benchmark_claim_grade_gap_audit_coordinate_validation_pass_row_count": 17,
+            "public_benchmark_claim_grade_gap_audit_coordinate_validation_blocked_row_count": 0,
+            "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_ready_row_count": 51,
+            "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count": 0,
             "public_benchmark_claim_grade_gap_audit_gap_row_count": 5,
-            "public_benchmark_claim_grade_gap_audit_blocked_gap_row_count": 5,
-            "public_benchmark_claim_grade_gap_audit_blocker_count": 5,
+            "public_benchmark_claim_grade_gap_audit_blocked_gap_row_count": 1,
+            "public_benchmark_claim_grade_gap_audit_blocker_count": 1,
             "public_benchmark_statistical_support_work_order_expansion_slot_count": 17,
             "public_benchmark_statistical_support_work_order_minimum_new_pair_count": 17,
             "public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count": 5,
@@ -3202,34 +3206,34 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_work_order_bootstrap_retest_required": 1,
             "public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed": 0,
             "public_benchmark_statistical_support_metric_materialization_row_count": 17,
-            "public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 0,
-            "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 17,
-            "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": 0,
+            "public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": 1,
             "public_benchmark_statistical_support_metric_materialization_required_input_artifact_count": 34,
-            "public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": 17,
-            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": 17,
-            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": 17,
-            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 0,
-            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": 34,
+            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 0,
             "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
             "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
             "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": 11,
             "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready": 0,
             "public_benchmark_statistical_support_coordinate_intake_row_count": 17,
-            "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count": 0,
-            "public_benchmark_statistical_support_coordinate_intake_missing_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_missing_row_count": 0,
             "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count": 136,
-            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count": 0,
-            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count": 0,
-            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count": 0,
             "public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count": 51,
-            "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count": 0,
-            "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count": 0,
             "public_benchmark_statistical_support_coordinate_fetch_r4_row_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": 0,
-            "public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count": 17,
-            "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count": 0,
             "public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count": 51,
             "public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download": 0,
             "public_benchmark_statistical_support_coordinate_fetch_r4_download_executed": 0,
@@ -3270,27 +3274,21 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "refine_tier_public_benchmark_claim_grade_gap_audit_ready"
             ),
             "public_benchmark_claim_grade_gap_audit_top_science_gap_id": (
-                "coordinate_fetch_r4_approval_required"
+                "claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum"
             ),
             "public_benchmark_claim_grade_gap_audit_top_statistical_gap_id": (
-                "claim_grade_public_benchmark_pair_count_below_minimum"
+                "claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum"
             ),
             "top_next_operator_step": (
-                "Review the R4 coordinate-fetch preflight "
-                "(r4_ready_for_review_row_count=17, r4_blocked_row_count=0, "
-                "fetch_required_row_count=17, "
-                "approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD) "
-                "and, after explicit operator approval, "
-                "stage and validate coordinates for 17 statistical-support candidates "
-                "(coordinate_validation_pass_row_count=0, "
-                "metric_materialization_candidate_ready_count=0, "
-                "required_input_artifacts=34/17/17, "
-                "local_coordinate_path_candidates=136, "
-                "local_coordinate_present_targets=0, "
-                "local_coordinate_missing_targets=17, "
-                "planned_metric_source_payload_count=51); then materialize DockQ/lDDT-PLI/internal "
-                "DeltaG source payloads and rerun bootstrap Spearman p05 before any R9 claim receipt "
-                "or canonical intake promotion."
+                "Coordinate fetch and validation are complete "
+                "(r4_ready_for_review_row_count=17, r4_blocked_row_count=0, fetch_required_row_count=0, "
+                "approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD) for 17 "
+                "statistical-support candidates (coordinate_validation_pass_row_count=17, "
+                "metric_materialization_candidate_ready_count=17, required_input_artifacts=34/34/0, "
+                "local_coordinate_present_targets=17, local_coordinate_missing_targets=0, "
+                "planned_metric_source_payload_count=51); fill and review the 51 DockQ/lDDT-PLI/internal "
+                "DeltaG metric source payloads, materialize them, and rerun bootstrap Spearman p05 before "
+                "any R9 claim receipt or canonical intake promotion."
             ),
         },
     },
@@ -3358,38 +3356,38 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_expansion_pending_field_count": 204,
             "public_benchmark_statistical_support_expansion_ready_field_count": 17,
             "public_benchmark_statistical_support_metric_materialization_row_count": 17,
-            "public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 0,
-            "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 17,
-            "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": 0,
+            "public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": 1,
             "public_benchmark_statistical_support_metric_materialization_required_input_artifact_count": 34,
-            "public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": 17,
-            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": 17,
-            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": 17,
-            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 0,
-            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": 34,
+            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": 0,
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 17,
+            "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 0,
             "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
             "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
             "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": 11,
             "public_benchmark_statistical_support_metric_materialization_claim_grade_statistical_support_ready": 0,
             "public_benchmark_statistical_support_coordinate_intake_row_count": 17,
-            "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count": 0,
-            "public_benchmark_statistical_support_coordinate_intake_missing_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_missing_row_count": 0,
             "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count": 136,
-            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count": 0,
-            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count": 0,
-            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count": 0,
             "public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count": 51,
-            "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count": 0,
-            "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count": 0,
             "public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
             "public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count": 17,
             "public_benchmark_statistical_support_metric_source_templates_template_metric_name_count": 3,
             "public_benchmark_statistical_support_metric_source_templates_template_metric_source_artifact_path_row_count": 51,
             "public_benchmark_statistical_support_metric_source_templates_template_payload_required_fields_present_row_count": 51,
-            "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
-            "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
-            "public_benchmark_statistical_support_metric_source_templates_coordinate_validation_blocked_template_row_count": 51,
-            "public_benchmark_statistical_support_metric_source_templates_missing_required_input_template_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 0,
+            "public_benchmark_statistical_support_metric_source_templates_coordinate_validation_blocked_template_row_count": 0,
+            "public_benchmark_statistical_support_metric_source_templates_missing_required_input_template_row_count": 0,
             "public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count": 0,
             "public_benchmark_statistical_support_metric_source_templates_placeholder_value_count": 51,
             "public_benchmark_statistical_support_metric_source_templates_placeholder_method_count": 51,
@@ -3404,8 +3402,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_metric_source_payload_operator_receipt_pass_row_count": 0,
             "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count": 51,
             "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approved_payload_count": 0,
-            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_pass_payload_row_count": 0,
-            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_pass_payload_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count": 0,
             "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_verified_count": 51,
             "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count": 0,
             "public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_ready_count": 51,
@@ -3413,7 +3411,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_metric_source_payload_operator_receipt_metric_source_artifact_path_present_count": 51,
             "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_list_present_count": 51,
             "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_present_count": 51,
-            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_complete_count": 0,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_complete_count": 51,
             "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_source_payload_fields_present_count": 51,
             "public_benchmark_statistical_support_metric_source_payload_operator_receipt_external_engine_calls_zero_count": 51,
             "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count": 510,
@@ -3427,8 +3425,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_coordinate_fetch_r4_row_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": 0,
-            "public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count": 17,
-            "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count": 0,
             "public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count": 51,
             "public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download": 0,
             "public_benchmark_statistical_support_coordinate_fetch_r4_download_executed": 0,
@@ -3531,26 +3529,15 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
             ),
             "next_required_step": (
-                "Review the R4 coordinate-fetch preflight "
-                "(r4_ready_for_review_row_count=17, r4_blocked_row_count=0, "
-                "fetch_required_row_count=17, "
-                "approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD) "
-                "and fill/approve the 17-row coordinate fetch operator receipt "
-                "(receipt_blocked_row_count=17, operator_review_surface_ready_count=17, "
-                "receipt_manual_field_pending_count=187, fingerprint_verified_count=17); "
-                "after explicit operator approval, "
-                "stage and validate coordinates for 17 statistical-support candidates "
-                "(coordinate_validation_pass_row_count=0, "
-                "metric_materialization_candidate_ready_count=0, "
-                "required_input_artifacts=34/17/17, "
-                "local_coordinate_path_candidates=136, "
-                "local_coordinate_present_targets=0, "
-                "local_coordinate_missing_targets=17, "
-                "planned_metric_source_payload_count=51); then fill/approve the 51-row metric "
-                "payload operator receipt (receipt_blocked_row_count=51, "
-                "approval_token_required=APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS) "
-                "and materialize DockQ/lDDT-PLI/internal DeltaG source payloads before rerunning "
-                "bootstrap Spearman p05 ahead of any R9 claim receipt or canonical intake promotion."
+                "Coordinate fetch and validation are complete (coordinate_validation_pass_row_count=17, "
+                "metric_materialization_candidate_ready_count=17, required_input_artifacts=34/34/0, "
+                "local_coordinate_present_targets=17, local_coordinate_missing_targets=0, "
+                "planned_metric_source_payload_count=51); fill/approve the 51-row metric payload "
+                "operator receipt (receipt_blocked_row_count=51, operator_review_surface_ready_count=51, "
+                "receipt_manual_field_pending_count=510, "
+                "approval_token_required=APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS) and "
+                "materialize DockQ/lDDT-PLI/internal DeltaG source payloads before rerunning bootstrap "
+                "Spearman p05 ahead of any R9 claim receipt or canonical intake promotion."
             ),
             "approval_token_required": "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT",
         },
@@ -3602,8 +3589,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
             "field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count": 17,
             "field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_metric_name_count": 3,
-            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
-            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 51,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 0,
             "field_worksheet_public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count": 0,
             "field_worksheet_public_benchmark_statistical_support_metric_source_templates_external_engine_calls_total": 0,
             "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready": 0,
@@ -3612,8 +3599,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_pass_row_count": 0,
             "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count": 51,
             "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_approved_payload_count": 0,
-            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_pass_payload_row_count": 0,
-            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count": 51,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_pass_payload_row_count": 51,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count": 0,
             "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_verified_count": 51,
             "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count": 0,
             "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_ready_count": 51,
@@ -3621,7 +3608,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_metric_source_artifact_path_present_count": 51,
             "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_list_present_count": 51,
             "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_present_count": 51,
-            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_complete_count": 0,
+            "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_complete_count": 51,
             "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_source_payload_fields_present_count": 51,
             "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_external_engine_calls_zero_count": 51,
             "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count": 510,
@@ -3721,16 +3708,13 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
             ),
             "next_required_step": (
-                "Materialized public benchmark science candidate is ready but not claim-grade: "
-                "review the R4 coordinate-fetch preflight, fill/approve 17 coordinate fetch "
-                "receipt rows (operator_review_surface_ready_count=17, "
-                "receipt_manual_field_pending_count=187, "
-                "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD), then "
-                "validate the 17 statistical-support coordinates, then replace 51 blocked "
-                "metric source template placeholders and "
-                "fill/approve 51 metric payload receipt rows "
-                "(APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS) before any canonical "
-                "R9 receipt or public benchmark intake promotion."
+                "Materialized public benchmark science candidate is ready but not claim-grade, and R9 "
+                "statistical-support coordinate fetch/validation is complete: fill/approve 51 metric "
+                "payload receipt rows (operator_review_surface_ready_count=51, "
+                "receipt_manual_field_pending_count=510, "
+                "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS), materialize the "
+                "DockQ/lDDT-PLI/internal DeltaG source payloads, and rerun bootstrap Spearman p05 before "
+                "any canonical R9 receipt or public benchmark intake promotion."
             ),
         },
     },
@@ -3866,8 +3850,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count": 0,
             "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_deficit": 0,
             "public_benchmark_claim_grade_gap_audit_planned_metric_source_payload_count": 51,
-            "public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_fetch_required_row_count": 17,
-            "public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_download_executed": 1,
+            "public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_fetch_required_row_count": 0,
+            "public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_download_executed": 0,
             "public_benchmark_claim_grade_gap_audit_gap_row_count": 5,
             "public_benchmark_claim_grade_gap_audit_blocked_gap_row_count": 1,
             "public_benchmark_claim_grade_gap_audit_pass_gap_row_count": 4,
@@ -3957,11 +3941,11 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_coordinate_fetch_r4_row_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": 0,
-            "public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count": 17,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count": 0,
             "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count": 0,
             "public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count": 51,
-            "public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download": 1,
-            "public_benchmark_statistical_support_coordinate_fetch_r4_download_executed": 1,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download": 0,
+            "public_benchmark_statistical_support_coordinate_fetch_r4_download_executed": 0,
             "public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated": 0,
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready": 0,
             "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count": 17,
@@ -4343,36 +4327,36 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "engine_refinement_claim_evidence_priority_packet_operator_input_required_count": 6,
             "engine_refinement_claim_evidence_priority_packet_blocked_priority_item_count": 6,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_row_count": 17,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 0,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 17,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": 0,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 17,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 0,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": 1,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_input_artifact_count": 34,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": 17,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": 17,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": 17,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 0,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 17,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": 34,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": 0,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": 0,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 17,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 0,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": 11,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_row_count": 17,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count": 0,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_missing_row_count": 17,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count": 17,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_missing_row_count": 0,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count": 136,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count": 0,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count": 0,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count": 17,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count": 17,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count": 17,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count": 0,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count": 51,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count": 0,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count": 17,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count": 17,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count": 0,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 51,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 0,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_row_count": 17,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": 17,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": 0,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count": 17,
-            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count": 17,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count": 0,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count": 0,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count": 51,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download": 0,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_download_executed": 0,
@@ -4412,21 +4396,15 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
             ),
             "engine_refinement_claim_evidence_priority_packet_top_next_operator_step": (
-                "Review the R4 coordinate-fetch preflight "
-                "(r4_ready_for_review_row_count=17, r4_blocked_row_count=0, "
-                "fetch_required_row_count=17, "
-                "approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD) "
-                "and, after explicit operator approval, "
-                "stage and validate coordinates for 17 statistical-support candidates "
-                "(coordinate_validation_pass_row_count=0, "
-                "metric_materialization_candidate_ready_count=0, "
-                "required_input_artifacts=34/17/17, "
-                "local_coordinate_path_candidates=136, "
-                "local_coordinate_present_targets=0, "
-                "local_coordinate_missing_targets=17, "
-                "planned_metric_source_payload_count=51); then materialize DockQ/lDDT-PLI/internal "
-                "DeltaG source payloads and rerun bootstrap Spearman p05 before any R9 claim receipt "
-                "or canonical intake promotion."
+                "Coordinate fetch and validation are complete "
+                "(r4_ready_for_review_row_count=17, r4_blocked_row_count=0, fetch_required_row_count=0, "
+                "approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD) for 17 "
+                "statistical-support candidates (coordinate_validation_pass_row_count=17, "
+                "metric_materialization_candidate_ready_count=17, required_input_artifacts=34/34/0, "
+                "local_coordinate_present_targets=17, local_coordinate_missing_targets=0, "
+                "planned_metric_source_payload_count=51); fill and review the 51 DockQ/lDDT-PLI/internal "
+                "DeltaG metric source payloads, materialize them, and rerun bootstrap Spearman p05 before "
+                "any R9 claim receipt or canonical intake promotion."
             ),
             "product_scope_breadth_evidence_priority_source_json": (
                 "runs/product_scope_breadth_evidence_priority_packet_current.json"
@@ -4505,11 +4483,11 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         ],
         "required_int_exact_fields": {
             "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
-            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
-            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 51,
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 0,
             "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
-            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
-            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 51,
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 0,
         },
         "required_text_exact_fields": {
             "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_status": (
@@ -4532,11 +4510,11 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         ],
         "required_int_exact_fields": {
             "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
-            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
-            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 51,
+            "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 0,
             "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
-            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
-            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 51,
+            "engine_refinement_claim_evidence_operator_staging_apply_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 0,
         },
         "required_text_exact_fields": {
             "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_status": (
