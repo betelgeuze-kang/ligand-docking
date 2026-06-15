@@ -40,6 +40,7 @@ def test_force_derivation_validation_blocks_nan_trajectory_paths(tmp_path: Path)
                 {"target": "ADRB2_GPCR_BLIND", "ligand_id": "lig1", "source_csv": str(stage5)},
             ],
         ),
+        regeneration_manifest_csv=str(tmp_path / "missing_manifest.csv"),
         min_existing_npz_rows=1,
         min_npz_probe_successes=1,
     )
@@ -75,6 +76,7 @@ def test_force_derivation_validation_accepts_npz_coordinate_energy_inputs(tmp_pa
             {"rows_emitted": 1},
             [{"target": "ADRB2_GPCR_BLIND", "ligand_id": "lig0", "source_csv": str(stage5)}],
         ),
+        regeneration_manifest_csv=str(tmp_path / "missing_manifest.csv"),
         min_existing_npz_rows=1,
         min_npz_probe_successes=1,
     )
@@ -117,6 +119,7 @@ def test_force_derivation_validation_accepts_regenerated_npz_remap(tmp_path: Pat
                 }
             ],
         },
+        regeneration_manifest_csv=str(tmp_path / "missing_manifest.csv"),
         min_existing_npz_rows=1,
         min_npz_probe_successes=1,
     )
@@ -150,6 +153,7 @@ def test_force_derivation_validation_caps_existing_npz_floor_to_available_valid_
                 {"target": "ADRB2_GPCR_BLIND", "ligand_id": "lig1", "source_csv": str(stage5)},
             ],
         ),
+        regeneration_manifest_csv=str(tmp_path / "missing_manifest.csv"),
         min_existing_npz_rows=5,
         min_npz_probe_successes=2,
     )
@@ -157,6 +161,45 @@ def test_force_derivation_validation_caps_existing_npz_floor_to_available_valid_
     summary = payload["summary"]
     assert summary["delta_force_derivation_validation_ready"] is True
     assert summary["min_existing_npz_rows"] == 5
+    assert summary["effective_min_existing_npz_rows"] == 2
+    assert summary["existing_npz_floor_capped_by_available_paths"] is True
+
+
+def test_force_derivation_validation_caps_floor_to_regenerated_manifest_universe(tmp_path: Path) -> None:
+    regen_a = tmp_path / "regen" / "q1.npz"
+    regen_b = tmp_path / "regen" / "q2.npz"
+    regen_a.parent.mkdir(parents=True)
+    np.savez(regen_a, ligand_frames=np.zeros((3, 4, 3)), protein_ca=np.zeros((4, 3)))
+    np.savez(regen_b, ligand_frames=np.zeros((3, 4, 3)), protein_ca=np.zeros((4, 3)))
+    manifest = tmp_path / "manifest.csv"
+    manifest.write_text(
+        "status,trajectory_npz,target,ligand_id\n"
+        f"ok_regenerated_npz,{regen_a},ADRB2_GPCR_BLIND,lig0\n"
+        f"ok_regenerated_npz,{regen_b},ADRB2_GPCR_BLIND,lig1\n",
+        encoding="utf-8",
+    )
+
+    payload = mod.build_residual_force_derivation_validation(
+        supervised_dataset_packet=_packet({"rows_emitted": 0}, []),
+        trajectory_regeneration_queue_packet={
+            "summary": {"queue_rows": 2},
+            "rows": [
+                {"original_trajectory_npz": "/missing/q1.npz", "expected_regenerated_trajectory_npz": str(regen_a)},
+                {"original_trajectory_npz": "/missing/q2.npz", "expected_regenerated_trajectory_npz": str(regen_b)},
+            ],
+        },
+        regeneration_manifest_csv=str(manifest),
+        min_existing_npz_rows=5,
+        min_npz_probe_successes=2,
+    )
+
+    summary = payload["summary"]
+    assert summary["delta_force_derivation_validation_ready"] is True
+    assert summary["valid_trajectory_path_rows"] == 0
+    assert summary["regeneration_queue_rows"] == 2
+    assert summary["regeneration_manifest_ok_rows"] == 2
+    assert summary["regeneration_manifest_existing_npz_rows"] == 2
+    assert summary["available_npz_floor_candidate_rows"] == 2
     assert summary["effective_min_existing_npz_rows"] == 2
     assert summary["existing_npz_floor_capped_by_available_paths"] is True
 

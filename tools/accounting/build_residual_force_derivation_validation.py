@@ -113,6 +113,31 @@ def _trajectory_remap_from_regeneration_queue(
     return remap
 
 
+def _regeneration_queue_row_count(packet: dict[str, Any] | None, *, queue_packet_path: str) -> int:
+    if not packet:
+        return 0
+    payload = packet or {}
+    summary = _summary(payload)
+    for key in ("queue_rows", "queue_row_count", "manifest_template_row_count"):
+        try:
+            value = int(summary.get(key) or 0)
+        except (TypeError, ValueError):
+            value = 0
+        if value > 0:
+            return value
+    rows = [row for row in payload.get("rows", []) or [] if isinstance(row, dict)]
+    if rows:
+        return len(rows)
+    csv_path = _resolve(str(summary.get("regeneration_queue_csv") or "").strip() or str(queue_packet_path).replace(".json", ".csv"))
+    if not csv_path.exists():
+        return 0
+    try:
+        with csv_path.open("r", encoding="utf-8", newline="") as fh:
+            return sum(1 for _ in csv.DictReader(fh))
+    except OSError:
+        return 0
+
+
 def _npz_probe(path_text: str) -> dict[str, Any]:
     path = _resolve(path_text)
     if not path.exists():
@@ -385,6 +410,10 @@ def build_residual_force_derivation_validation(
         trajectory_regeneration_queue_packet,
         queue_packet_path=trajectory_regeneration_queue_path,
     )
+    regeneration_queue_rows = _regeneration_queue_row_count(
+        trajectory_regeneration_queue_packet,
+        queue_packet_path=trajectory_regeneration_queue_path,
+    )
     source_rows, npz_rows, counts = _scan_stage3_sources(
         supervised_rows,
         trajectory_remap=trajectory_remap,
@@ -414,14 +443,19 @@ def build_residual_force_derivation_validation(
         and row.get("coordinate_array_present") is True
         and row.get("energy_array_present") is True
     )
+    available_npz_floor_candidate_rows = max(
+        int(counts["valid_trajectory_path_rows"]),
+        int(regeneration_queue_rows),
+        int(manifest_ok_rows),
+    )
     effective_min_existing_npz_rows = (
-        min(int(min_existing_npz_rows), int(counts["valid_trajectory_path_rows"]))
-        if int(counts["valid_trajectory_path_rows"]) > 0
+        min(int(min_existing_npz_rows), available_npz_floor_candidate_rows)
+        if available_npz_floor_candidate_rows > 0
         else int(min_existing_npz_rows)
     )
     existing_npz_rows_ready = counts["existing_trajectory_npz_rows"] >= effective_min_existing_npz_rows
     existing_npz_floor_capped_by_available_paths = (
-        int(counts["valid_trajectory_path_rows"]) > 0 and effective_min_existing_npz_rows < int(min_existing_npz_rows)
+        available_npz_floor_candidate_rows > 0 and effective_min_existing_npz_rows < int(min_existing_npz_rows)
     )
     force_derivation_path_ready = counts["force_label_rows"] > 0 or (
         derivation_input_sample_count >= min_npz_probe_successes and existing_npz_rows_ready
@@ -450,6 +484,7 @@ def build_residual_force_derivation_validation(
                 f"trajectory_remap_candidate_rows={counts['trajectory_remap_candidate_rows']};"
                 f"existing_remapped_trajectory_npz_rows={counts['existing_remapped_trajectory_npz_rows']};"
                 f"min_existing_npz_rows={min_existing_npz_rows};"
+                f"available_npz_floor_candidate_rows={available_npz_floor_candidate_rows};"
                 f"effective_min_existing_npz_rows={effective_min_existing_npz_rows};"
                 f"existing_npz_floor_capped_by_available_paths={existing_npz_floor_capped_by_available_paths}"
             ),
@@ -485,6 +520,7 @@ def build_residual_force_derivation_validation(
         "regeneration_manifest_artifact": regeneration_manifest_csv,
         "regeneration_manifest_ok_rows": manifest_ok_rows,
         "regeneration_manifest_existing_npz_rows": manifest_existing_rows,
+        "regeneration_queue_rows": regeneration_queue_rows,
         "supervised_rows": int(supervised.get("rows_emitted") or len(supervised_rows)),
         "trajectory_remap_rows": len(trajectory_remap),
         **counts,
@@ -494,6 +530,7 @@ def build_residual_force_derivation_validation(
         "energy_array_sample_count": energy_array_sample_count,
         "derivation_input_sample_count": derivation_input_sample_count,
         "min_existing_npz_rows": min_existing_npz_rows,
+        "available_npz_floor_candidate_rows": available_npz_floor_candidate_rows,
         "effective_min_existing_npz_rows": effective_min_existing_npz_rows,
         "existing_npz_floor_capped_by_available_paths": existing_npz_floor_capped_by_available_paths,
         "min_npz_probe_successes": min_npz_probe_successes,
@@ -546,6 +583,7 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- existing_trajectory_npz_rows: `{s['existing_trajectory_npz_rows']}`",
         f"- trajectory_remap_candidate_rows: `{s['trajectory_remap_candidate_rows']}`",
         f"- existing_remapped_trajectory_npz_rows: `{s['existing_remapped_trajectory_npz_rows']}`",
+        f"- available_npz_floor_candidate_rows: `{s['available_npz_floor_candidate_rows']}`",
         f"- effective_min_existing_npz_rows: `{s['effective_min_existing_npz_rows']}`",
         f"- existing_npz_floor_capped_by_available_paths: `{s['existing_npz_floor_capped_by_available_paths']}`",
         f"- force_label_rows: `{s['force_label_rows']}`",

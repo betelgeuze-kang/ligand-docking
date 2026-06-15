@@ -2604,6 +2604,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `runs/residual_force_derivation_validation_current.json`이다.
   observed 값은 `force_derivation_validation_status=blocked_residual_force_derivation_validation`,
   `force_derivation_validation_blocker_count=3`,
+  `regeneration_queue_rows=768`, `regeneration_manifest_ok_rows=768`,
+  `available_npz_floor_candidate_rows=768`, `effective_min_existing_npz_rows=768`,
+  `existing_trajectory_npz_rows=0`,
   `production_training_data_ready=false`, `training_data_failed_check_ids=[production_delta_force_label_evidence]`,
   `default_residual_mode=shadow`,
   `production_promotion_allowed=false`, customer-facing score/ranking mutation
@@ -2750,7 +2753,8 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 - `residual_model_registry`를 rebuild/promotion 가능한 상태로 만들기 전까지
   `default_residual_mode=shadow`와 customer-facing mutation disabled를 유지한다.
 - 다음은 full GPU return receipt 이후 force derivation validation을 재실행해
-  `delta_force_derivation_validation_ready`를 통과시키고, trained checkpoint
+  현재 regeneration queue/manifest universe인 768개 regenerated NPZ를 durable path로
+  모두 반환시킨 뒤 `delta_force_derivation_validation_ready`를 통과시키고, trained checkpoint
   count/promotion policy를 실제 guarded checkpoint와 연결한 뒤 registry guarded
   promotion acceptance 및 `product_goal_completion_audit`을 재검증하는 것이다.
 - API validated runner profile evidence/operator approval과 score/ranking mutation
