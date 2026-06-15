@@ -52,6 +52,9 @@ LIGAND_HEAVY_SCOPE_TOKENS = (
 )
 
 SCORE_COLUMN_PRIORITY = (
+    "binding_score_composite_v7_htr2a_oprm1_drd2_weakbase_false_support_shadow",
+    "binding_score_composite_v7_htr2a_oprm1_topology_pose_shadow",
+    "binding_score_composite_v7_htr2a_topology_support_shadow",
     "binding_score_composite_v7_residual_shadow",
     "binding_score_composite_v7_residual_active",
     "binding_score_composite_v7",
@@ -71,6 +74,9 @@ RETAIN_COLUMNS = (
     "binding_score_composite_v7",
     "binding_score_composite_v7_residual_active",
     "binding_score_composite_v7_residual_shadow",
+    "binding_score_composite_v7_htr2a_topology_support_shadow",
+    "binding_score_composite_v7_htr2a_oprm1_topology_pose_shadow",
+    "binding_score_composite_v7_htr2a_oprm1_drd2_weakbase_false_support_shadow",
     "binding_energy_mmpbsa_kcal_mol_proxy",
     "deltaG_mm_gbsa_kcal_mol",
     "binding_score_stronger_physics_v1",

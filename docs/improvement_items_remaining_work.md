@@ -118,6 +118,15 @@
 Schrodinger-class/broad GPCR ligand-ranking claim은 target-held-out/guarded-100k 입력은
 green이지만 formal broad-claim review와 scorer/router promotion gate가 닫히기 전까지
 full-commercial blocker surface 밖으로 빠지지 않는다.
+2026-06-16 KST 추가 확인: 대용량 raw score CSV cleanup 이후 남은
+`runs/gpcr_drd2_weakbase_false_support_shadow_replay_scores_top_rank_retained_top50_current.csv`는
+`score_col=binding_score_composite_v7_residual_shadow` 기준 compact evidence라,
+현재 guarded shadow claim review가 요구하는
+`binding_score_composite_v7_htr2a_oprm1_drd2_weakbase_false_support_shadow`를
+재계산할 수 없다. `tools/accounting/build_gpcr_guarded_shadow_claim_review.py`는
+이 경우 다른 score를 대입하지 않고
+`retained_score_column_mismatch`, `no_finite_rows_for_requested_score_col`로
+fail-closed 처리한다.
 
 ---
 
@@ -2849,6 +2858,15 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `selected_oprm1_target_rank=1`, `selected_oprm1_decoys_above_positive=0`,
   `selected_non_oprm1_regression_count=0`, `selected_top20_positive_count=3`로
   repair evidence ready다.
+- 2026-06-16 KST 현재 `gpcr_guarded_shadow_claim_review_current.json`은
+  cleanup 후 compact-only 입력을 재검증하며
+  `blocked_guarded_shadow_claim_review`,
+  `score_input_mode=retained_top_rank_score_csv_score_mismatch`,
+  `retained_score_cols=[binding_score_composite_v7_residual_shadow]`,
+  `blockers=[retained_score_column_mismatch,no_finite_rows_for_requested_score_col]`로
+  내려온다. 즉 top-50 row 자체는 남아 있지만, 최종 guarded score column이 보존되지
+  않아 full raw CSV 없이 claim-review metrics를 재계산할 수 없다는 별도 재현성
+  병목이 생겼다.
 - `claim_promotion_allowed=false` 강제 — 100k rerun/threshold relaxation/fake pass 금지.
 - v3~v5 tombstone, v6/v7 score-only reject, v8/v9 atom-window reject,
   v10/v11 selected-slice green (비-portable), v12~v15 frozen replay improvement,
@@ -2879,6 +2897,10 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 - OPRM1 pose-collapse는 selected-slice frozen replay에서는 repair evidence가 준비됐고,
   active scorer/claim promotion은 여전히 false로 잠겨 있다.
 - v3~v16 모두 데이터/특징 공학 단계의 한계를 노출.
+- cleanup 이후 compact retained evidence가 requested guarded score column을 보존하지
+  않은 경우, residual-shadow score를 최종 guarded score로 대체하면 과학 검증이
+  오염된다. 따라서 compact 증거는 top rank뿐 아니라 claim-review에 필요한 active
+  score column과 positive sentinel rows를 함께 보존해야 한다.
 
 **필요 작업**
 - `config/gpcr_broad_claim_review_receipt_current.csv`의 2개 row를 실제 local
@@ -2888,6 +2910,10 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 - HTR2A decoy support discrimination.
 - Conserved anchor / conditional prior gating.
 - 이후 non-leaky positive coverage 확장 + guarded validation prep.
+- deleted full-score CSV를 되살리지 않더라도, compact retention receipt를
+  requested guarded score column 기준으로 재생성하거나 positive sentinel/score-column
+  보존 스키마를 추가해 guarded shadow claim review가 재계산 가능한 최소 증거를
+  확보한다.
 - Threshold relaxation / target identity feature / fake pass 절대 금지.
 
 ### D. Transporter AQP1 / GLUT1 (직접 결합 kcal no-claim)

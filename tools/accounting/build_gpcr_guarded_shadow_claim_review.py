@@ -77,27 +77,117 @@ def _retained_scores_candidate(scores_csv: str | Path) -> str | Path | None:
     return None
 
 
-def _read_score_rows(scores_csv: str | Path, score_col: str) -> tuple[list[dict[str, Any]], str | Path, str]:
+def _read_score_rows(
+    scores_csv: str | Path,
+    score_col: str,
+) -> tuple[list[dict[str, Any]], str | Path, str, list[str]]:
     selected_scores_csv = _retained_scores_candidate(scores_csv)
     if selected_scores_csv is None:
         selected_scores_csv = scores_csv
     rows = _read_csv(selected_scores_csv)
     input_mode = "full_score_csv" if _resolve(selected_scores_csv) == _resolve(scores_csv) else "retained_top_rank_score_csv"
     if input_mode == "full_score_csv":
-        return rows, selected_scores_csv, input_mode
+        return rows, selected_scores_csv, input_mode, []
 
+    retained_score_cols = sorted({_text(row.get("score_col")) for row in rows if _text(row.get("score_col"))})
+    direct_requested_score_present = any(_float(row.get(score_col)) is not None for row in rows)
+    if retained_score_cols and score_col not in retained_score_cols and not direct_requested_score_present:
+        input_mode = "retained_top_rank_score_csv_score_mismatch"
     normalized: list[dict[str, Any]] = []
     for row in rows:
         enriched = dict(row)
-        if _float(enriched.get(score_col)) is None:
+        if _float(enriched.get(score_col)) is None and _text(enriched.get("score_col")) == score_col:
             compact_score = _float(enriched.get("score_value"))
-            residual_shadow_score = _float(enriched.get("binding_score_composite_v7_residual_shadow"))
             if compact_score is not None:
                 enriched[score_col] = compact_score
-            elif residual_shadow_score is not None:
-                enriched[score_col] = residual_shadow_score
         normalized.append(enriched)
-    return normalized, selected_scores_csv, input_mode
+    return normalized, selected_scores_csv, input_mode, retained_score_cols
+
+
+def _blocked_no_score_payload(
+    *,
+    scores_csv: str | Path,
+    selected_scores_csv: str | Path,
+    score_col: str,
+    input_mode: str,
+    retained_score_cols: list[str],
+    pose_gap_json: str | Path,
+    a1_queue_json: str | Path,
+    positives: dict[str, str],
+    source_row_count: int,
+    generated_at_local: str | None = None,
+) -> dict[str, Any]:
+    blockers = ["no_finite_rows_for_requested_score_col"]
+    if input_mode == "retained_top_rank_score_csv_score_mismatch":
+        blockers.insert(0, "retained_score_column_mismatch")
+    diagnostic_warnings = ["claim_locked_shadow_review_only_not_active_scorer"]
+    if input_mode.startswith("retained_top_rank_score_csv"):
+        diagnostic_warnings.append("shadow_input_compacted_top_rank_retained")
+    payload = {
+        "packet_type": "gpcr_guarded_shadow_claim_review",
+        "summary": {
+            "generated_at_local": generated_at_local
+            or dt.datetime.now().astimezone().isoformat(timespec="seconds"),
+            "status": "blocked_guarded_shadow_claim_review",
+            "input_rows": 0,
+            "source_row_count": int(source_row_count),
+            "score_col": score_col,
+            "scores_csv_requested": _artifact(scores_csv),
+            "scores_csv_used": _artifact(selected_scores_csv),
+            "score_input_mode": input_mode,
+            "retained_score_cols": retained_score_cols,
+            "positive_count": 0,
+            "negative_count": 0,
+            "ranking_pr_auc": None,
+            "ranking_pr_auc_ci_low": None,
+            "ranking_pr_auc_ci_high": None,
+            "ranking_pr_auc_ci_mean": None,
+            "ranking_pr_auc_ci_std": None,
+            "ranking_pr_auc_ci_n": 0,
+            "ranking_pr_auc_ci_method": "not_computable_no_requested_score",
+            "ranking_pr_auc_min": DEFAULT_PR_AUC_MIN,
+            "ranking_pr_auc_ci_low_min": DEFAULT_PR_AUC_CI_LOW_MIN,
+            "shadow_ci_low_deferred_to_operational_rerun_evidence": False,
+            "operational_ci_low_crosscheck": None,
+            "topk": 0,
+            "top20_positive_count": 0,
+            "top20_positive_recall": None,
+            "top20_slot_hit_rate": None,
+            "top20_positive_recall_min": DEFAULT_TOP20_POSITIVE_RECALL_MIN,
+            "all_positive_target_rank_1": False,
+            "pre_review_repair_gates_completed": bool(_summary(_read_json(a1_queue_json)).get("guarded_100k_rerun_allowed_now")),
+            "missing_positive_pairs": [f"{target}={ligand_id}" for target, ligand_id in positives.items()],
+            "top20_missing_positives": [],
+            "blockers": blockers,
+            "diagnostic_warnings": diagnostic_warnings,
+            "guarded_shadow_claim_review_passed": False,
+            "claim_promotion_allowed": False,
+            "scorer_apply_allowed": False,
+            "next_required_step": (
+                "Regenerate or retain compact GPCR shadow evidence with the requested guarded score column before "
+                "using it for claim review metrics; do not substitute a different retained score column."
+            ),
+        },
+        "positive_pairs": positives,
+        "positive_summaries": [],
+        "source_artifacts": {
+            "scores_csv": _artifact(selected_scores_csv),
+            "scores_csv_requested": _artifact(scores_csv),
+            "pose_gap_json": _artifact(pose_gap_json),
+            "a1_queue_json": _artifact(a1_queue_json),
+        },
+        "claim_boundary": {
+            "claim_promotion_allowed": False,
+            "scorer_apply_allowed": False,
+            "active_scorer_apply_allowed": False,
+            "target_identity_feature_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "shadow_review_only": True,
+            "full_100k_claim_review_required": True,
+        },
+    }
+    return payload
 
 
 def _positive_pairs(pose_gap: dict[str, Any], extra_pairs: list[str] | None = None) -> dict[str, str]:
@@ -329,13 +419,27 @@ def build_review(
     operational_ci_low_positive_min: int = DEFAULT_OPERATIONAL_CI_LOW_POSITIVE_MIN,
     generated_at_local: str | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    rows, selected_scores_csv, input_mode = _read_score_rows(scores_csv, score_col)
+    rows, selected_scores_csv, input_mode, retained_score_cols = _read_score_rows(scores_csv, score_col)
     pose_gap = _read_json(pose_gap_json)
     a1_queue = _read_json(a1_queue_json)
     positives = _positive_pairs(pose_gap, positive_pair)
     ranked = _rank_rows(rows, score_col)
     if not ranked:
-        raise ValueError(f"No finite rows found for score column `{score_col}` in {scores_csv}")
+        return (
+            _blocked_no_score_payload(
+                scores_csv=scores_csv,
+                selected_scores_csv=selected_scores_csv,
+                score_col=score_col,
+                input_mode=input_mode,
+                retained_score_cols=retained_score_cols,
+                pose_gap_json=pose_gap_json,
+                a1_queue_json=a1_queue_json,
+                positives=positives,
+                source_row_count=len(rows),
+                generated_at_local=generated_at_local,
+            ),
+            [],
+        )
 
     labels = np.asarray([1 if _is_positive(row, positives) else 0 for row in ranked], dtype=np.int64)
     scores = np.asarray([float(row["_score"]) for row in ranked], dtype=np.float64)
@@ -437,6 +541,7 @@ def build_review(
             "scores_csv_requested": _artifact(scores_csv),
             "scores_csv_used": _artifact(selected_scores_csv),
             "score_input_mode": input_mode,
+            "retained_score_cols": retained_score_cols,
             "positive_count": positive_count,
             "negative_count": negative_count,
             "ranking_pr_auc": pr_auc,

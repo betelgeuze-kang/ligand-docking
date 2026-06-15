@@ -33,7 +33,7 @@ def _write_scores(path: Path, score_col: str = "score") -> None:
             writer.writerow({"target": target, "ligand_id": ligand_id, score_col: score})
 
 
-def _write_retained_scores(path: Path) -> None:
+def _write_retained_scores(path: Path, *, score_col: str = "retained_score") -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     rows = [
         ("CHEMBL217_DRD2_HUMAN", "CHEMBL301265", 1.0),
@@ -53,7 +53,7 @@ def _write_retained_scores(path: Path) -> None:
                 "score_value",
                 "target",
                 "ligand_id",
-                "binding_score_composite_v7_residual_shadow",
+                score_col,
             ],
         )
         writer.writeheader()
@@ -62,11 +62,11 @@ def _write_retained_scores(path: Path) -> None:
                 {
                     "source_path": "runs/deleted_full_scores.csv",
                     "rank": rank,
-                    "score_col": "binding_score_composite_v7_residual_shadow",
+                    "score_col": score_col,
                     "score_value": score,
                     "target": target,
                     "ligand_id": ligand_id,
-                    "binding_score_composite_v7_residual_shadow": score,
+                    score_col: score,
                 }
             )
 
@@ -117,7 +117,7 @@ def test_build_review_uses_retained_top_rank_scores_when_full_csv_was_compacted(
     retained_scores = tmp_path / "gpcr_drd2_weakbase_false_support_shadow_replay_scores_top_rank_retained_top50_current.csv"
     pose_gap = tmp_path / "pose_gap.json"
     queue = tmp_path / "queue.json"
-    _write_retained_scores(retained_scores)
+    _write_retained_scores(retained_scores, score_col=mod.DEFAULT_SCORE_COL)
     _write_json(
         pose_gap,
         {
@@ -146,6 +146,36 @@ def test_build_review_uses_retained_top_rank_scores_when_full_csv_was_compacted(
     assert "shadow_input_compacted_top_rank_retained" in summary["diagnostic_warnings"]
     assert rows[0]["score_col"] == mod.DEFAULT_SCORE_COL
     assert rows[0]["score"] == 1.0
+
+
+def test_build_review_blocks_retained_top_rank_score_column_mismatch(tmp_path: Path) -> None:
+    missing_scores = tmp_path / "gpcr_drd2_weakbase_false_support_shadow_replay_scores_current.csv"
+    retained_scores = tmp_path / "gpcr_drd2_weakbase_false_support_shadow_replay_scores_top_rank_retained_top50_current.csv"
+    pose_gap = tmp_path / "pose_gap.json"
+    queue = tmp_path / "queue.json"
+    _write_retained_scores(retained_scores, score_col="binding_score_composite_v7_residual_shadow")
+    _write_json(pose_gap, {"target_summaries": []})
+    _write_json(queue, {"summary": {"guarded_100k_rerun_allowed_now": True}})
+
+    payload, rows = mod.build_review(
+        scores_csv=missing_scores,
+        score_col=mod.DEFAULT_SCORE_COL,
+        pose_gap_json=pose_gap,
+        a1_queue_json=queue,
+        bootstrap_n=0,
+        generated_at_local="2026-05-09T00:00:00+09:00",
+    )
+
+    summary = payload["summary"]
+    assert rows == []
+    assert summary["status"] == "blocked_guarded_shadow_claim_review"
+    assert summary["score_input_mode"] == "retained_top_rank_score_csv_score_mismatch"
+    assert summary["retained_score_cols"] == ["binding_score_composite_v7_residual_shadow"]
+    assert summary["blockers"] == [
+        "retained_score_column_mismatch",
+        "no_finite_rows_for_requested_score_col",
+    ]
+    assert summary["guarded_shadow_claim_review_passed"] is False
 
 
 def test_build_review_blocks_when_ci_low_gate_fails(tmp_path: Path) -> None:

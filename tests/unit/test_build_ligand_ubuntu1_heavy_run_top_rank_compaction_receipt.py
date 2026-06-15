@@ -50,6 +50,36 @@ def test_ubuntu1_compaction_keeps_dynamic_score_top_rows_without_deleting(tmp_pa
     assert (tmp_path / row["top_rank_output_csv"]).is_file()
 
 
+def test_ubuntu1_compaction_prefers_guarded_claim_review_score(tmp_path: Path) -> None:
+    guarded_col = "binding_score_composite_v7_htr2a_oprm1_drd2_weakbase_false_support_shadow"
+    csv_path = tmp_path / "runs" / "gpcr_demo_shadow_replay_ranking_rows_current.csv"
+    _write_old(
+        csv_path,
+        "\n".join(
+            [
+                f"target,ligand_id,binding_score_composite_v7_residual_shadow,{guarded_col}",
+                "ADRB2,L1,-100.0,-1.0",
+                "ADRB2,L2,-2.0,-9.0",
+                "ADRB2,L3,-3.0,-5.0",
+            ]
+        )
+        + "\n",
+    )
+
+    payload = mod.build_ligand_ubuntu1_heavy_run_top_rank_compaction_receipt(
+        root=tmp_path,
+        min_size_bytes=1,
+        top_n=2,
+        now=NOW,
+    )
+
+    row = payload["rows"][0]
+    assert row["score_col"] == guarded_col
+    assert row["top_rows"][0]["ligand_id"] == "L2"
+    assert row["top_rows"][0]["score_col"] == guarded_col
+    assert row["top_rows"][0]["score_value"] == "-9.0"
+
+
 def test_ubuntu1_compaction_deletes_only_with_valid_approval(tmp_path: Path) -> None:
     csv_path = tmp_path / "runs" / "external_validation_2026-05-18_gpcr_demo_stage5_ranking_unique.csv"
     _write_old(

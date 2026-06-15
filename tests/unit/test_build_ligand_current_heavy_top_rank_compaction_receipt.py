@@ -55,6 +55,36 @@ def test_current_heavy_compaction_keeps_top_rows_without_deleting(tmp_path: Path
     assert payload["skipped_large_files"][0]["reason"] == "skipped_non_run_input_or_inventory_payload"
 
 
+def test_current_heavy_compaction_prefers_guarded_claim_review_score(tmp_path: Path) -> None:
+    guarded_col = "binding_score_composite_v7_htr2a_oprm1_drd2_weakbase_false_support_shadow"
+    csv_path = tmp_path / "runs" / "gpcr_drd2_weakbase_false_support_shadow_replay_scores_current.csv"
+    _write_old(
+        csv_path,
+        "\n".join(
+            [
+                f"target,ligand_id,binding_score_composite_v7_residual_shadow,{guarded_col}",
+                "T,L1,-100.0,-1.0",
+                "T,L2,-2.0,-9.0",
+                "T,L3,-3.0,-5.0",
+            ]
+        )
+        + "\n",
+    )
+
+    payload = mod.build_ligand_current_heavy_top_rank_compaction_receipt(
+        root=tmp_path,
+        min_size_bytes=1,
+        top_n=2,
+        now=NOW,
+    )
+
+    row = payload["rows"][0]
+    assert row["score_col"] == guarded_col
+    assert row["top_rows"][0]["ligand_id"] == "L2"
+    assert row["top_rows"][0]["score_col"] == guarded_col
+    assert row["top_rows"][0]["score_value"] == "-9.0"
+
+
 def test_current_heavy_compaction_deletes_only_with_valid_approval(tmp_path: Path) -> None:
     csv_path = tmp_path / "runs" / "gpcr_cationic_demo_feature_cache_current.csv"
     _write_old(
