@@ -2371,8 +2371,14 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
   빠지지 않게 한다. 최신 source-of-truth는 `row_count=149`, `pass_count=149`,
   `blocker_count=0`, `artifact_row_count=93`, `semantic_status_row_count=54`,
-  `release_refresh_command_count=118`, `stale_artifact_count=0`,
+  `release_refresh_command_count=121`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
+  refresh chain은 `build_residual_force_derivation_validation.py` 직후
+  `build_residual_energy_force_label_validation.py`,
+  `build_residual_energy_force_label_evidence_work_order.py`,
+  `build_residual_production_training_data_contract.py`를 실행해,
+  정리/삭제된 NPZ artifact 때문에 force derivation이 blocked이면 상위 training-data
+  contract도 같은 blocked state로 fail-closed 전파되게 한다.
   final refresh는 마지막 `goal_release_decision_gate` 뒤에
   `goal_operator_action_board`, `goal_release_burndown_work_order`, intake kit,
   bottleneck briefing, full commercial matrix, release bundle, handoff bundle,
@@ -2380,7 +2386,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   refresh runner final gate는 source-of-truth, quality gate verification,
   release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=149`,
   `pass_count=149`, `artifact_row_count=93`, `semantic_status_row_count=54`,
-  `readme_row_count=2`, `release_refresh_command_count=118`를 exact-check해
+  `readme_row_count=2`, `release_refresh_command_count=121`를 exact-check해
   downstream readiness row가 조용히 빠지는 회귀를 막고,
   `product_quality_gate_verification_current.json` final gate는
   `product_quality_gate_verified`, `quality_gate_ready=true`,
@@ -2400,7 +2406,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   머물지 않고 operator-facing decision surface에서도 직접 확인된다.
   action board echo는
   `goal_release_decision_gate_status=blocked_goal_release_decision`,
-  `goal_release_allowed=false`, `goal_release_blocker_count=3`으로 내려왔으므로
+  `goal_release_allowed=false`, `goal_release_blocker_count=2`로 내려왔으므로
   operator-facing 보드가 한 cycle 전 release-decision 상태를 들고 있어도
   verified refresh로 통과하지 않는다. 이 blocked 상태는 restricted independent release
   gate의 현재 보수적 판정이며, full-commercial claim은 readiness/frontier에서
@@ -2589,17 +2595,25 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 - ROCm/HIP 환경은 `rocm_environment_manifest_ready`이며,
   `torch_version=2.6.0+rocm6.1`, `torch_hip_version=6.1.40091-a8dbc0c19`,
   `visible_device_count=1`, AMD GPU detected로 기록되어 있다.
-- production inference acceptance matrix는 `8`개 stage 중 `7`개 ready이고,
-  남은 blocked stage는 `registry_guarded_promotion_acceptance` 하나다.
-  actionable blocker는 `registry_customer_facing_promotion_allowed`이며,
-  observed 값은 `default_residual_mode=shadow`,
+- production inference acceptance matrix는 `8`개 stage 중 `5`개 ready이고,
+  남은 blocked stage는 `force_derivation_acceptance`,
+  `production_training_data_acceptance`,
+  `registry_guarded_promotion_acceptance` 세 개다.
+  actionable blocker는 `force_derivation_acceptance`의
+  `delta_force_derivation_validation_ready=false`이며, evidence artifact는
+  `runs/residual_force_derivation_validation_current.json`이다.
+  observed 값은 `force_derivation_validation_status=blocked_residual_force_derivation_validation`,
+  `force_derivation_validation_blocker_count=3`,
+  `production_training_data_ready=false`, `training_data_failed_check_ids=[production_delta_force_label_evidence]`,
+  `default_residual_mode=shadow`,
   `production_promotion_allowed=false`, customer-facing score/ranking mutation
   disabled, `trained_model_checkpoint_count=1`이다.
   `first_failed_next_action`과
   `production_inference_actionable_blocker_next_action`은 이제 이미 ready인
-  ROCm/GPU receipt/training/preflight를 다시 요구하지 않고,
-  `production_promotion_allowed`, `customer_facing_mutation_flags`,
-  `default_residual_mode_guarded`를 남은 registry gate로 직접 지목한다.
+  ROCm/GPU receipt/score-model/sidecar/preflight를 다시 요구하지 않고,
+  `delta_force_derivation_validation_ready`를 첫 actionable gate로 직접 지목하고,
+  그 뒤에 `production_training_data_ready`, `production_promotion_allowed`,
+  `customer_facing_mutation_flags`, `default_residual_mode_guarded` gate가 남는다.
   `trained_model_checkpoint_count_positive`는 만족된 gate로 보존된다. 같은 정보는
   `registry_promotion_missing_gate_ids`, `registry_promotion_missing_gate_count`,
   `registry_promotion_upstream_acceptance_ready`,
@@ -2608,16 +2622,15 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   같은 registry promotion 필드는 `/goal/status`에도
   `production_ai_checkpoint_registry_promotion_*` 키로 전파되어, 운영자용 상위
   상태 API에서 남은 AI registry gate와 upstream acceptance 상태가 숨지 않는다.
-  또한 actionable blocker가 `registry_guarded_promotion_acceptance`인 경우
-  checkpoint-readiness summary는
-  `residual_model_registry_guarded_promotion` operator completion packet을
-  반환한다. 이 packet은 `production_promotion_allowed`, customer-facing mutation
-  flags, guarded `default_residual_mode`, positive `trained_model_checkpoint_count`,
-  validation chain을 구조화하되 실제 checkpoint 생성/registry promotion은 수행하지 않는다.
-  `/goal/status`도 이 packet의 ready flag, artifact id, required fields, diagnostic
-  commands, completion rule, next action을 노출한다.
-  `goal_operator_action_board_current.json`의 primary action도 더 이상 ready GPU return을
-  재요구하지 않고 `complete_residual_registry_guarded_promotion`을 가리킨다.
+  또한 actionable blocker가 `force_derivation_acceptance`인 동안
+  checkpoint-readiness summary는 registry promotion completion packet을
+  ready로 올리지 않는다. 즉 residual registry promotion은 여전히 필요하지만,
+  현재 순서는 force-derivation validation 재검증을 먼저 닫고 나서
+  guarded registry promotion/operator receipt를 다시 평가하는 구조다.
+  `goal_operator_action_board_current.json`의 top action은 현재 제품 실행 승인
+  (`commercial_product_execution:review_product_execution_approval`)이며, Production AI
+  force-derivation/registry promotion은 release-decision final gate와 workbench blocker로
+  계속 추적된다.
   `goal_operator_intake_kit_current/manifest.json`은
   `production_ai_registry_promotion` entry를 operator input required로 surface하며,
   `config/production_ai_registry_promotion_operator_receipt_current.csv`와
@@ -2691,9 +2704,12 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   또한 최신 goal release decision은 원천
   `product_production_ai_checkpoint_readiness_current.json` 및
   `product_production_ai_promotion_workbench_current.json`도 직접 읽어
-  upstream 7/8 acceptance ready, `registry_guarded_promotion_acceptance` blocked
-  stage, trained checkpoint count 1, `default_residual_mode=shadow`,
-  residual registry/product-goal blocked stages, no promotion/no mutation을 summary/row와
+  upstream 5/8 acceptance ready, `force_derivation_acceptance`,
+  `production_training_data_acceptance`, `registry_guarded_promotion_acceptance`
+  blocked stage, trained checkpoint count 1,
+  `default_residual_mode=shadow`, force-derivation validation/energy-force evidence/
+  production training-data contract/residual registry/product-goal
+  blocked stages, no promotion/no mutation을 summary/row와
   final refresh exact check로 고정한다.
   `/product/commercial-readiness-operator-packet`,
   `/product/commercial-readiness-execution-ladder`,
@@ -2719,9 +2735,11 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   재실행을 요구한다.
 
 **병목 원인**
-- ROCm/HIP 환경, force derivation validation, training data, selected sidecar,
-  checkpoint preflight는 현재 산출물 기준 ready지만, residual registry가 아직
-  customer-facing guarded promotion을 허용하지 않는다.
+- ROCm/HIP 환경, GPU return receipt, selected sidecar, score-model checkpoint,
+  checkpoint preflight는 현재 산출물 기준 ready지만, force derivation validation이
+  `blocked_residual_force_derivation_validation`으로 남아 있고, 그 여파로
+  energy-force label evidence와 production training-data contract도 blocked다. 그 다음
+  residual registry도 customer-facing guarded promotion을 아직 허용하지 않는다.
 - production AI 추론 주체 전환은 아직 현재 병목이다. 특히 registry promotion,
   trained checkpoint accounting, customer-facing score/ranking mutation policy,
   goal completion audit linkage가 닫혀야 한다.
@@ -2731,9 +2749,10 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 **필요 작업**
 - `residual_model_registry`를 rebuild/promotion 가능한 상태로 만들기 전까지
   `default_residual_mode=shadow`와 customer-facing mutation disabled를 유지한다.
-- 다음은 trained checkpoint count/promotion policy를 실제 guarded checkpoint와
-  연결하고, registry guarded promotion acceptance를 통과한 뒤
-  `product_goal_completion_audit`을 재검증하는 것이다.
+- 다음은 full GPU return receipt 이후 force derivation validation을 재실행해
+  `delta_force_derivation_validation_ready`를 통과시키고, trained checkpoint
+  count/promotion policy를 실제 guarded checkpoint와 연결한 뒤 registry guarded
+  promotion acceptance 및 `product_goal_completion_audit`을 재검증하는 것이다.
 - API validated runner profile evidence/operator approval과 score/ranking mutation
   policy 검증은 registry promotion 이후에도 별도 운영 경계로 유지한다.
 
@@ -3123,9 +3142,11 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `blocked_product_release_current_refresh`, `command_count=118`, `executed_count=118`,
+  `blocked_product_release_current_refresh`, `command_count=121`, `executed_count=121`,
   `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=false`,
-  `final_gate_count=4`, `final_gate_blocker_count=3`이다.
+  `final_gate_count=4`, `final_gate_blocker_count=2`이다. 직접 final-gate 검증 기준으로
+  `product_release_source_of_truth_gate`와 `product_quality_gate_verification`은 pass이며,
+  남은 blocker는 `goal_release_decision_gate`와 그 echo인 `goal_operator_action_board`다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
   rollout smoke receipt를 분리한 뒤 `deploy_ops_legal_gap_closure_complete`,
   `closed_gap_count=6`, `open_gap_ids=[]`로 닫혔다.
@@ -3168,7 +3189,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   master gap closure rollup 포함 refresh 이후
   `product_release_source_of_truth_gate_ready`, `pass_count=149/149`,
   `blocker_count=0`, `stale_artifact_count=0`,
-  `release_refresh_command_count=118`으로 재검증됐다.
+  `release_refresh_command_count=121`으로 재검증됐다.
 - `scripts/check_independent_product_readiness.py`는 현재 release/source-of-truth,
   product readiness, operational quality, commercial-independence, capability surface,
   release bundle, master/science-claim rollup을 read-only로 확인해

@@ -73,6 +73,9 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_residual_shadow_ab.py",
     "python3 tools/build_residual_model_registry.py",
     "python3 tools/build_residual_force_derivation_validation.py",
+    "python3 tools/build_residual_energy_force_label_validation.py",
+    "python3 tools/build_residual_energy_force_label_evidence_work_order.py",
+    "python3 tools/build_residual_production_training_data_contract.py",
     "python3 tools/build_product_production_ai_checkpoint_readiness.py",
     "python3 tools/build_product_production_ai_promotion_workbench.py",
     "python3 tools/build_production_ai_registry_promotion_operator_receipt.py",
@@ -2121,7 +2124,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "production_ai_inference_subject_active": 0,
             "production_promotion_allowed": 0,
             "trained_model_checkpoint_count": 1,
-            "production_inference_acceptance_blocked_stage_count": 2,
+            "production_inference_acceptance_blocked_stage_count": 3,
         },
         "required_text_exact_fields": {
             "default_residual_mode": "shadow",
@@ -2142,7 +2145,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "production_ai_inference_subject_active": 0,
             "production_promotion_allowed": 0,
             "trained_model_checkpoint_count": 1,
-            "post_return_promotion_ladder_blocked_stage_count": 3,
+            "post_return_promotion_ladder_blocked_stage_count": 5,
         },
         "required_text_exact_fields": {
             "default_residual_mode": "shadow",

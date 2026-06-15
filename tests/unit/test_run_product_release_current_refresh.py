@@ -199,6 +199,49 @@ def test_refresh_final_gate_requires_release_decision_bottleneck_receipt_linkage
         "config/product_scope_breadth_evidence_receipt_current.csv;"
         "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
     )
+    assert decision_row["required_int_exact_fields"][
+        "production_ai_checkpoint_readiness_production_inference_acceptance_ready_stage_count"
+    ] == 5
+    assert decision_row["required_int_exact_fields"][
+        "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_count"
+    ] == 3
+    assert decision_row["required_text_exact_fields"][
+        "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_ids"
+    ] == (
+        "force_derivation_acceptance;production_training_data_acceptance;"
+        "registry_guarded_promotion_acceptance"
+    )
+    assert decision_row["required_text_exact_fields"][
+        "production_ai_checkpoint_readiness_actionable_blocker_stage_id"
+    ] == "force_derivation_acceptance"
+    assert decision_row["required_text_exact_fields"][
+        "production_ai_checkpoint_readiness_actionable_blocker_check_id"
+    ] == "delta_force_derivation_validation_ready"
+    assert decision_row["required_text_exact_fields"][
+        "production_ai_checkpoint_readiness_actionable_blocker_artifact"
+    ] == "runs/residual_force_derivation_validation_current.json"
+    assert decision_row["required_int_exact_fields"][
+        "production_ai_promotion_workbench_post_return_ladder_ready_stage_count"
+    ] == 5
+    assert decision_row["required_int_exact_fields"][
+        "production_ai_promotion_workbench_post_return_ladder_blocked_stage_count"
+    ] == 5
+    assert decision_row["required_text_exact_fields"][
+        "production_ai_promotion_workbench_blocked_stage_ids"
+    ] == (
+        "force_derivation_validation;energy_force_label_evidence;"
+        "production_training_data_contract;residual_model_registry;"
+        "product_goal_completion_audit"
+    )
+    assert decision_row["required_text_exact_fields"][
+        "production_ai_promotion_workbench_first_blocked_stage_id"
+    ] == "force_derivation_validation"
+    assert decision_row["required_text_exact_fields"][
+        "production_ai_promotion_workbench_first_blocked_stage_artifact"
+    ] == "runs/residual_force_derivation_validation_current.json"
+    assert decision_row["required_text_exact_fields"][
+        "production_ai_promotion_workbench_first_blocked_stage_ready_key"
+    ] == "delta_force_derivation_validation_ready"
 
 
 def test_refresh_final_gate_blocks_missing_release_decision_bottleneck_receipt_linkage(tmp_path: Path) -> None:

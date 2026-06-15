@@ -166,18 +166,18 @@ def _refresh_release_decision_ready() -> dict:
             "production_ai_registry_promotion_priority_approval_token_count": 1,
             "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 1,
             "production_ai_checkpoint_readiness_check_count": 8,
-            "production_ai_checkpoint_readiness_pass_check_count": 7,
-            "production_ai_checkpoint_readiness_fail_check_count": 1,
+            "production_ai_checkpoint_readiness_pass_check_count": 6,
+            "production_ai_checkpoint_readiness_fail_check_count": 2,
             "production_ai_checkpoint_readiness_production_inference_acceptance_stage_count": 8,
-            "production_ai_checkpoint_readiness_production_inference_acceptance_ready_stage_count": 7,
-            "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_count": 1,
+            "production_ai_checkpoint_readiness_production_inference_acceptance_ready_stage_count": 5,
+            "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_count": 3,
             "production_ai_checkpoint_readiness_registry_promotion_missing_gate_count": 3,
             "production_ai_checkpoint_readiness_candidate_checkpoint_count": 1,
             "production_ai_checkpoint_readiness_ready_checkpoint_count": 1,
             "production_ai_checkpoint_readiness_trained_model_checkpoint_count": 1,
             "production_ai_promotion_workbench_post_return_ladder_stage_count": 10,
-            "production_ai_promotion_workbench_post_return_ladder_ready_stage_count": 8,
-            "production_ai_promotion_workbench_post_return_ladder_blocked_stage_count": 2,
+            "production_ai_promotion_workbench_post_return_ladder_ready_stage_count": 5,
+            "production_ai_promotion_workbench_post_return_ladder_blocked_stage_count": 5,
             "production_ai_promotion_workbench_registry_promotion_missing_gate_count": 3,
             "production_ai_promotion_workbench_candidate_checkpoint_count": 1,
             "production_ai_promotion_workbench_ready_checkpoint_count": 1,
@@ -355,6 +355,7 @@ def _refresh_release_decision_ready() -> dict:
                 "blocked_product_production_ai_checkpoint_readiness"
             ),
             "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_ids": (
+                "force_derivation_acceptance;production_training_data_acceptance;"
                 "registry_guarded_promotion_acceptance"
             ),
             "production_ai_checkpoint_readiness_first_failed_check_id": (
@@ -364,13 +365,13 @@ def _refresh_release_decision_ready() -> dict:
                 "runs/residual_model_registry_current.json"
             ),
             "production_ai_checkpoint_readiness_actionable_blocker_stage_id": (
-                "registry_guarded_promotion_acceptance"
+                "force_derivation_acceptance"
             ),
             "production_ai_checkpoint_readiness_actionable_blocker_check_id": (
-                "registry_customer_facing_promotion_allowed"
+                "delta_force_derivation_validation_ready"
             ),
             "production_ai_checkpoint_readiness_actionable_blocker_artifact": (
-                "runs/residual_model_registry_current.json"
+                "runs/residual_force_derivation_validation_current.json"
             ),
             "production_ai_checkpoint_readiness_registry_promotion_missing_gate_ids": (
                 "production_promotion_allowed;customer_facing_mutation_flags;"
@@ -384,16 +385,18 @@ def _refresh_release_decision_ready() -> dict:
                 "runs/product_production_ai_checkpoint_readiness_current.json"
             ),
             "production_ai_promotion_workbench_blocked_stage_ids": (
-                "residual_model_registry;product_goal_completion_audit"
+                "force_derivation_validation;energy_force_label_evidence;"
+                "production_training_data_contract;residual_model_registry;"
+                "product_goal_completion_audit"
             ),
             "production_ai_promotion_workbench_first_blocked_stage_id": (
-                "residual_model_registry"
+                "force_derivation_validation"
             ),
             "production_ai_promotion_workbench_first_blocked_stage_artifact": (
-                "runs/residual_model_registry_current.json"
+                "runs/residual_force_derivation_validation_current.json"
             ),
             "production_ai_promotion_workbench_first_blocked_stage_ready_key": (
-                "production_promotion_allowed"
+                "delta_force_derivation_validation_ready"
             ),
             "production_ai_promotion_workbench_registry_promotion_missing_gate_ids": (
                 "production_promotion_allowed;customer_facing_mutation_flags;"
@@ -955,13 +958,13 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     ] == 1
     assert release_row["required_int_exact_fields"][
         "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_count"
-    ] == 1
+    ] == 3
     assert release_row["required_int_exact_fields"][
         "production_ai_checkpoint_readiness_trained_model_checkpoint_count"
     ] == 1
     assert release_row["required_int_exact_fields"][
         "production_ai_promotion_workbench_post_return_ladder_blocked_stage_count"
-    ] == 2
+    ] == 5
     assert release_row["required_int_exact_fields"][
         "cameo_official_result_fetch_preflight_blocker_count"
     ] == 2
@@ -1093,7 +1096,7 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     ] == "shadow"
     assert release_row["required_text_exact_fields"][
         "production_ai_checkpoint_readiness_actionable_blocker_stage_id"
-    ] == "registry_guarded_promotion_acceptance"
+    ] == "force_derivation_acceptance"
     assert release_row["required_text_exact_fields"][
         "production_ai_checkpoint_readiness_registry_promotion_missing_gate_ids"
     ] == (
@@ -1102,7 +1105,11 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     )
     assert release_row["required_text_exact_fields"][
         "production_ai_promotion_workbench_blocked_stage_ids"
-    ] == "residual_model_registry;product_goal_completion_audit"
+    ] == (
+        "force_derivation_validation;energy_force_label_evidence;"
+        "production_training_data_contract;residual_model_registry;"
+        "product_goal_completion_audit"
+    )
     assert release_row["required_text_exact_fields"][
         "accuracy_parity_scorecard_status"
     ] == "blocked_accuracy_parity"
@@ -3895,7 +3902,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert checkpoint_status_spec["required_int_exact_fields"][
         "production_inference_acceptance_blocked_stage_count"
-    ] == 2
+    ] == 3
     assert checkpoint_status_spec["required_text_exact_fields"][
         "production_inference_actionable_blocker_stage_id"
     ] == "force_derivation_acceptance"
@@ -3906,7 +3913,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert promotion_status_spec["required_int_exact_fields"][
         "post_return_promotion_ladder_blocked_stage_count"
-    ] == 3
+    ] == 5
     assert promotion_status_spec["required_text_exact_fields"]["first_blocked_stage_id"] == "force_derivation_validation"
     registry_receipt_spec = next(
         spec
@@ -5091,6 +5098,15 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_force_derivation_validation.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_force_derivation_validation.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_energy_force_label_validation.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_energy_force_label_validation.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_energy_force_label_evidence_work_order.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_energy_force_label_evidence_work_order.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_production_training_data_contract.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_production_training_data_contract.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_production_ai_checkpoint_readiness.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_production_ai_checkpoint_readiness.py") < (
