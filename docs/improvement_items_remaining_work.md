@@ -1052,6 +1052,160 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   payload를 canonical receipt coverage로 확장하기 전 operator backfill review를
   요구한다. 이 worksheet도 payload write, canonical receipt write, receipt 승인,
   canonical intake, claim promotion을 하지 않는다.
+  2026-06-15 KST 추가 bootstrap driver operator staging apply preview는 이
+  worksheet를 실제 payload/receipt write 앞에서 재검증하는 fail-closed gate로
+  고정했다.
+  `config/refine_tier_public_benchmark_bootstrap_driver_operator_staging_apply_current.json`,
+  `config/refine_tier_public_benchmark_bootstrap_driver_operator_staging_apply_current.csv`,
+  `docs/refine_tier_public_benchmark_bootstrap_driver_operator_staging_apply_current.md`는
+  `blocked_refine_tier_public_benchmark_bootstrap_driver_operator_staging_apply`,
+  `worksheet_row_count=6`,
+  `pass_row_count=0`,
+  `blocked_row_count=6`,
+  `candidate_preview_row_count=3`,
+  `candidate_payload_write_preview_ready_count=0`,
+  `existing_payload_backfill_row_count=3`,
+  `existing_payload_receipt_backfill_preview_ready_count=0`,
+  `input_artifact_sha256_verified_row_count=6`,
+  `expected_metric_source_artifact_present_row_count=3`,
+  `existing_payload_schema_revalidated_row_count=3`,
+  `operator_manual_pending_field_count=66`,
+  `placeholder_row_count=6`,
+  `most_common_row_blocker=operator_placeholders_unfilled`,
+  `payload_write_allowed=false`,
+  `canonical_receipt_write_allowed=false`,
+  `claim_promotion_allowed=false`를 기록한다. 따라서 `3f3e` candidate row와
+  `2j7h` existing-backfill row 모두 입력 artifact/hash와 기존 payload schema
+  재검증 surface는 통과하지만, accept decision/review true flags/operator/timestamp/
+  approval token이 채워지기 전에는 preview조차 ready가 되지 않는다. 이 gate도
+  metric payload JSON 생성, canonical receipt copy, canonical intake, production
+  scoring, claim promotion, 외부 상태 변경을 하지 않는다.
+  이어서 bootstrap driver operator field triage는 이 66개 pending field를
+  machine-supported review confirmation과 실제 operator-only attestation으로
+  분해한다.
+  `config/refine_tier_public_benchmark_bootstrap_driver_operator_field_triage_current.json`,
+  `config/refine_tier_public_benchmark_bootstrap_driver_operator_field_triage_current.csv`,
+  `docs/refine_tier_public_benchmark_bootstrap_driver_operator_field_triage_current.md`는
+  `refine_tier_public_benchmark_bootstrap_driver_operator_field_triage_ready`,
+  `row_count=6`,
+  `manual_pending_field_count=66`,
+  `machine_supported_pending_field_count=36`,
+  `operator_only_pending_field_count=30`,
+  `machine_gap_pending_field_count=0`,
+  `unclassified_pending_field_count=0`,
+  `input_artifact_sha256_verified_row_count=6`,
+  `metric_source_artifact_state_consistent_row_count=6`,
+  `payload_schema_support_ready_row_count=6`,
+  `license_requires_operator_review_row_count=6`,
+  `claim_promotion_allowed=false`를 기록한다. 즉 남은 66개 field가 모두
+  과학 데이터 부재는 아니며, metric value/method/input artifact/hash/source-artifact/
+  payload-schema 확인 36개는 현재 local evidence로 support되고, operator
+  decision/license/operator_id/reviewed_at/approval_token 30개가 명시적 human/legal
+  attestation으로 남아 있다. 이 triage도 field를 reviewed로 바꾸거나 payload/receipt/
+  claim state를 변경하지 않는다.
+  2026-06-15 KST 추가 machine-supported prefill template은 이 triage를 사용해
+  별도 operator 후보 CSV만 생성한다.
+  `config/refine_tier_public_benchmark_bootstrap_driver_operator_machine_prefill_template_current.json`,
+  `config/refine_tier_public_benchmark_bootstrap_driver_operator_machine_prefill_template_current.csv`,
+  `docs/refine_tier_public_benchmark_bootstrap_driver_operator_machine_prefill_template_current.md`는
+  `refine_tier_public_benchmark_bootstrap_driver_operator_machine_prefill_template_ready`,
+  `prefill_row_count=6`,
+  `machine_supported_prefilled_field_count=36`,
+  `remaining_pending_field_count=30`,
+  `operator_only_remaining_field_count=30`,
+  `machine_remaining_field_count=0`,
+  `unclassified_remaining_field_count=0`,
+  `remaining_placeholder_row_count=6`,
+  `canonical_worksheet_edited=false`,
+  `payload_write_allowed=false`,
+  `canonical_receipt_write_allowed=false`,
+  `claim_promotion_allowed=false`를 기록한다. 이 후보 CSV를 staging apply에 다시
+  넣으면 `operator_manual_pending_field_count=30`, `blocked_row_count=6`으로
+  남아, machine-supported 36개 confirmation은 operator 검토 면적에서 제거할 수
+  있지만 operator decision/license/operator_id/reviewed_at/approval token 없이는
+  여전히 payload/receipt write가 열리지 않음을 검증한다.
+  2026-06-15 KST 추가 operator-only attestation template은 이 남은 30개 field만
+  별도 CSV로 추출하고, 각 row를 machine-prefill row SHA-256 fingerprint에 묶어
+  stale prefill 기준 승인을 막는다.
+  `config/refine_tier_public_benchmark_bootstrap_driver_operator_attestation_template_current.json`,
+  `config/refine_tier_public_benchmark_bootstrap_driver_operator_attestation_template_current.csv`,
+  `docs/refine_tier_public_benchmark_bootstrap_driver_operator_attestation_template_current.md`는
+  `refine_tier_public_benchmark_bootstrap_driver_operator_attestation_template_ready`,
+  `attestation_row_count=6`,
+  `attestation_pass_row_count=0`,
+  `attestation_blocked_row_count=6`,
+  `prefill_row_fingerprint_count=6`,
+  `duplicate_prefill_row_fingerprint_count=0`,
+  `machine_prefilled_field_count=36`,
+  `operator_only_field_count=5`,
+  `operator_only_total_field_count=30`,
+  `operator_only_pending_field_count=30`,
+  `placeholder_row_count=6`,
+  `approval_ready=false`,
+  `most_common_row_blocker=operator_only_fields_pending`,
+  `payload_write_allowed=false`,
+  `canonical_receipt_write_allowed=false`,
+  `claim_promotion_allowed=false`를 기록한다. 따라서 operator가 실제로 채워야 할
+  값은 6개 row x 5개 field로 고정됐고, 이 값이 채워지더라도 별도 merge/staging
+  apply 검증 전에는 payload write나 canonical receipt copy가 열리지 않는다.
+  2026-06-15 KST 추가 attestation merge preview는 operator-only attestation을
+  machine-prefill 후보 worksheet로 합치기 전 prefill row fingerprint와 operator
+  field pass 여부를 다시 검증한다.
+  `config/refine_tier_public_benchmark_bootstrap_driver_operator_attestation_merge_preview_current.json`,
+  `config/refine_tier_public_benchmark_bootstrap_driver_operator_attestation_merge_preview_current.csv`,
+  `config/refine_tier_public_benchmark_bootstrap_driver_operator_attestation_merged_candidate_current.csv`,
+  `docs/refine_tier_public_benchmark_bootstrap_driver_operator_attestation_merge_preview_current.md`는
+  `blocked_refine_tier_public_benchmark_bootstrap_driver_operator_attestation_merge_preview`,
+  `prefill_row_count=6`,
+  `attestation_row_count=6`,
+  `merge_preview_row_count=6`,
+  `merge_preview_pass_row_count=0`,
+  `merge_preview_blocked_row_count=6`,
+  `prefill_row_fingerprint_verified_count=6`,
+  `prefill_row_fingerprint_mismatch_count=0`,
+  `missing_attestation_row_count=0`,
+  `unexpected_attestation_row_count=0`,
+  `merged_candidate_row_count=0`,
+  `attestation_merge_ready=false`,
+  `most_common_row_blocker=operator_only_placeholders_unfilled`,
+  `payload_write_allowed=false`,
+  `canonical_receipt_write_allowed=false`,
+  `claim_promotion_allowed=false`를 기록한다. 즉 row identity/staleness 문제는
+  닫혀 있지만, operator-only placeholder가 채워지기 전에는 merged candidate
+  worksheet 자체가 0건으로 유지된다. 향후 attestation이 pass하더라도 이 tool은
+  별도 merged candidate CSV만 만들고 canonical worksheet나 payload/receipt state는
+  바꾸지 않는다.
+  2026-06-15 KST 추가 bootstrap driver operator chain rollup은 이 read-only chain을
+  단일 release-facing summary로 묶는다.
+  `config/refine_tier_public_benchmark_bootstrap_driver_operator_chain_rollup_current.json`,
+  `config/refine_tier_public_benchmark_bootstrap_driver_operator_chain_rollup_current.csv`,
+  `docs/refine_tier_public_benchmark_bootstrap_driver_operator_chain_rollup_current.md`는
+  `blocked_refine_tier_public_benchmark_bootstrap_driver_operator_chain_rollup`,
+  `stage_count=5`,
+  `stage_artifact_present_count=5`,
+  `operator_chain_surface_ready=true`,
+  `operator_chain_closure_ready=false`,
+  `source_staging_operator_manual_pending_field_count=66`,
+  `machine_supported_pending_field_count=36`,
+  `machine_supported_prefilled_field_count=36`,
+  `operator_only_pending_field_count=30`,
+  `machine_gap_pending_field_count=0`,
+  `attestation_row_count=6`,
+  `attestation_blocked_row_count=6`,
+  `attestation_merge_ready=false`,
+  `merge_preview_pass_row_count=0`,
+  `merge_preview_blocked_row_count=6`,
+  `prefill_row_fingerprint_verified_count=6`,
+  `prefill_row_fingerprint_mismatch_count=0`,
+  `merged_candidate_row_count=0`,
+  `final_blocker_stage_id=attestation_merge_preview`,
+  `final_blocker=operator_only_placeholders_unfilled`,
+  `payload_write_allowed=false`,
+  `canonical_receipt_write_allowed=false`,
+  `claim_promotion_allowed=false`를 기록한다. 따라서 top-driver R9 operator chain은
+  evidence/preflight surface가 모두 모였지만, 30개 operator-only attestation
+  placeholder가 채워지고 merge/staging apply가 재통과하기 전까지 closure-ready가
+  아니다.
   `runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json`은
   이 execute 직전 handoff를 R4/operator review packet으로 고정해
   `refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready`,
