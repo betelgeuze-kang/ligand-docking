@@ -201,47 +201,51 @@ def test_refresh_final_gate_requires_release_decision_bottleneck_receipt_linkage
     )
     assert decision_row["required_int_exact_fields"][
         "production_ai_checkpoint_readiness_production_inference_acceptance_ready_stage_count"
-    ] == 5
+    ] == 2
     assert decision_row["required_int_exact_fields"][
         "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_count"
-    ] == 3
+    ] == 6
     assert decision_row["required_text_exact_fields"][
         "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_ids"
     ] == (
-        "force_derivation_acceptance;production_training_data_acceptance;"
+        "gpu_return_acceptance;force_derivation_acceptance;"
+        "production_training_data_acceptance;production_score_model_acceptance;"
+        "checkpoint_sidecar_acceptance;"
         "registry_guarded_promotion_acceptance"
     )
     assert decision_row["required_text_exact_fields"][
         "production_ai_checkpoint_readiness_actionable_blocker_stage_id"
-    ] == "force_derivation_acceptance"
+    ] == "gpu_return_acceptance"
     assert decision_row["required_text_exact_fields"][
         "production_ai_checkpoint_readiness_actionable_blocker_check_id"
-    ] == "delta_force_derivation_validation_ready"
+    ] == "force_gpu_worker_return_receipt_ready"
     assert decision_row["required_text_exact_fields"][
         "production_ai_checkpoint_readiness_actionable_blocker_artifact"
-    ] == "runs/residual_force_derivation_validation_current.json"
+    ] == "runs/residual_force_gpu_worker_return_receipt_current.json"
     assert decision_row["required_int_exact_fields"][
         "production_ai_promotion_workbench_post_return_ladder_ready_stage_count"
-    ] == 5
+    ] == 1
     assert decision_row["required_int_exact_fields"][
         "production_ai_promotion_workbench_post_return_ladder_blocked_stage_count"
-    ] == 5
+    ] == 9
     assert decision_row["required_text_exact_fields"][
         "production_ai_promotion_workbench_blocked_stage_ids"
     ] == (
-        "force_derivation_validation;energy_force_label_evidence;"
-        "production_training_data_contract;residual_model_registry;"
+        "gpu_return_receipt;force_derivation_validation;energy_force_label_evidence;"
+        "production_training_data_contract;production_checkpoint_sidecar;"
+        "production_checkpoint_preflight;residual_model_registry;"
+        "product_ai_architecture_gap_closure;"
         "product_goal_completion_audit"
     )
     assert decision_row["required_text_exact_fields"][
         "production_ai_promotion_workbench_first_blocked_stage_id"
-    ] == "force_derivation_validation"
+    ] == "gpu_return_receipt"
     assert decision_row["required_text_exact_fields"][
         "production_ai_promotion_workbench_first_blocked_stage_artifact"
-    ] == "runs/residual_force_derivation_validation_current.json"
+    ] == "runs/residual_force_gpu_worker_return_receipt_current.json"
     assert decision_row["required_text_exact_fields"][
         "production_ai_promotion_workbench_first_blocked_stage_ready_key"
-    ] == "delta_force_derivation_validation_ready"
+    ] == "gpu_worker_return_receipt_ready"
 
 
 def test_refresh_final_gate_blocks_missing_release_decision_bottleneck_receipt_linkage(tmp_path: Path) -> None:

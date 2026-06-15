@@ -238,18 +238,18 @@ FINAL_GATE_SPECS = [
             "production_ai_registry_promotion_priority_approval_token_count": 1,
             "production_ai_registry_promotion_priority_observed_registry_trained_model_checkpoint_count": 1,
             "production_ai_checkpoint_readiness_check_count": 8,
-            "production_ai_checkpoint_readiness_pass_check_count": 6,
-            "production_ai_checkpoint_readiness_fail_check_count": 2,
+            "production_ai_checkpoint_readiness_pass_check_count": 4,
+            "production_ai_checkpoint_readiness_fail_check_count": 4,
             "production_ai_checkpoint_readiness_production_inference_acceptance_stage_count": 8,
-            "production_ai_checkpoint_readiness_production_inference_acceptance_ready_stage_count": 5,
-            "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_count": 3,
+            "production_ai_checkpoint_readiness_production_inference_acceptance_ready_stage_count": 2,
+            "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_count": 6,
             "production_ai_checkpoint_readiness_registry_promotion_missing_gate_count": 3,
             "production_ai_checkpoint_readiness_candidate_checkpoint_count": 1,
             "production_ai_checkpoint_readiness_ready_checkpoint_count": 1,
             "production_ai_checkpoint_readiness_trained_model_checkpoint_count": 1,
             "production_ai_promotion_workbench_post_return_ladder_stage_count": 10,
-            "production_ai_promotion_workbench_post_return_ladder_ready_stage_count": 5,
-            "production_ai_promotion_workbench_post_return_ladder_blocked_stage_count": 5,
+            "production_ai_promotion_workbench_post_return_ladder_ready_stage_count": 1,
+            "production_ai_promotion_workbench_post_return_ladder_blocked_stage_count": 9,
             "production_ai_promotion_workbench_registry_promotion_missing_gate_count": 3,
             "production_ai_promotion_workbench_candidate_checkpoint_count": 1,
             "production_ai_promotion_workbench_ready_checkpoint_count": 1,
@@ -450,7 +450,9 @@ FINAL_GATE_SPECS = [
                 "blocked_product_production_ai_checkpoint_readiness"
             ),
             "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_ids": (
-                "force_derivation_acceptance;production_training_data_acceptance;"
+                "gpu_return_acceptance;force_derivation_acceptance;"
+                "production_training_data_acceptance;production_score_model_acceptance;"
+                "checkpoint_sidecar_acceptance;"
                 "registry_guarded_promotion_acceptance"
             ),
             "production_ai_checkpoint_readiness_first_failed_check_id": (
@@ -460,13 +462,13 @@ FINAL_GATE_SPECS = [
                 "runs/residual_model_registry_current.json"
             ),
             "production_ai_checkpoint_readiness_actionable_blocker_stage_id": (
-                "force_derivation_acceptance"
+                "gpu_return_acceptance"
             ),
             "production_ai_checkpoint_readiness_actionable_blocker_check_id": (
-                "delta_force_derivation_validation_ready"
+                "force_gpu_worker_return_receipt_ready"
             ),
             "production_ai_checkpoint_readiness_actionable_blocker_artifact": (
-                "runs/residual_force_derivation_validation_current.json"
+                "runs/residual_force_gpu_worker_return_receipt_current.json"
             ),
             "production_ai_checkpoint_readiness_registry_promotion_missing_gate_ids": (
                 "production_promotion_allowed;customer_facing_mutation_flags;"
@@ -480,18 +482,20 @@ FINAL_GATE_SPECS = [
                 "runs/product_production_ai_checkpoint_readiness_current.json"
             ),
             "production_ai_promotion_workbench_blocked_stage_ids": (
-                "force_derivation_validation;energy_force_label_evidence;"
-                "production_training_data_contract;residual_model_registry;"
+                "gpu_return_receipt;force_derivation_validation;energy_force_label_evidence;"
+                "production_training_data_contract;production_checkpoint_sidecar;"
+                "production_checkpoint_preflight;residual_model_registry;"
+                "product_ai_architecture_gap_closure;"
                 "product_goal_completion_audit"
             ),
             "production_ai_promotion_workbench_first_blocked_stage_id": (
-                "force_derivation_validation"
+                "gpu_return_receipt"
             ),
             "production_ai_promotion_workbench_first_blocked_stage_artifact": (
-                "runs/residual_force_derivation_validation_current.json"
+                "runs/residual_force_gpu_worker_return_receipt_current.json"
             ),
             "production_ai_promotion_workbench_first_blocked_stage_ready_key": (
-                "delta_force_derivation_validation_ready"
+                "gpu_worker_return_receipt_ready"
             ),
             "production_ai_promotion_workbench_registry_promotion_missing_gate_ids": (
                 "production_promotion_allowed;customer_facing_mutation_flags;"

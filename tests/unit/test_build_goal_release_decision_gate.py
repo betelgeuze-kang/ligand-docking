@@ -1029,31 +1029,39 @@ def _production_ai_checkpoint_readiness() -> dict:
             "status": "blocked_product_production_ai_checkpoint_readiness",
             "product_model_layer_ready": True,
             "production_gpu_execution_environment_ready": True,
-            "delta_force_derivation_validation_ready": True,
-            "selected_sidecar_ready": True,
+            "force_gpu_worker_return_receipt_ready": False,
+            "delta_force_derivation_validation_ready": False,
+            "selected_sidecar_ready": False,
             "checkpoint_preflight_ready": True,
-            "production_training_data_ready": True,
+            "production_training_data_ready": False,
             "production_output_heads_complete": True,
             "production_inference_acceptance_matrix_ready": True,
             "check_count": 8,
-            "pass_check_count": 7,
-            "fail_check_count": 1,
+            "pass_check_count": 4,
+            "fail_check_count": 4,
             "production_inference_acceptance_stage_count": 8,
-            "production_inference_acceptance_ready_stage_count": 7,
-            "production_inference_acceptance_blocked_stage_count": 1,
+            "production_inference_acceptance_ready_stage_count": 2,
+            "production_inference_acceptance_blocked_stage_count": 6,
             "production_inference_acceptance_blocked_stage_ids": [
+                "gpu_return_acceptance",
+                "force_derivation_acceptance",
+                "production_training_data_acceptance",
+                "production_score_model_acceptance",
+                "checkpoint_sidecar_acceptance",
                 "registry_guarded_promotion_acceptance"
             ],
             "first_failed_check_id": "registry_customer_facing_promotion_allowed",
             "first_failed_source_artifact": "runs/residual_model_registry_current.json",
             "production_inference_actionable_blocker_stage_id": (
-                "registry_guarded_promotion_acceptance"
+                "gpu_return_acceptance"
             ),
             "production_inference_actionable_blocker_check_id": (
-                "registry_customer_facing_promotion_allowed"
+                "force_gpu_worker_return_receipt_ready"
             ),
-            "production_inference_actionable_blocker_artifact": "runs/residual_model_registry_current.json",
-            "registry_promotion_upstream_acceptance_ready": True,
+            "production_inference_actionable_blocker_artifact": (
+                "runs/residual_force_gpu_worker_return_receipt_current.json"
+            ),
+            "registry_promotion_upstream_acceptance_ready": False,
             "registry_promotion_currently_satisfied": False,
             "registry_promotion_missing_gate_count": 3,
             "registry_promotion_missing_gate_ids": missing_gate_ids,
@@ -1089,16 +1097,23 @@ def _production_ai_promotion_workbench() -> dict:
                 "runs/product_production_ai_checkpoint_readiness_current.json"
             ),
             "post_return_promotion_ladder_stage_count": 10,
-            "post_return_promotion_ladder_ready_stage_count": 8,
-            "post_return_promotion_ladder_blocked_stage_count": 2,
+            "post_return_promotion_ladder_ready_stage_count": 1,
+            "post_return_promotion_ladder_blocked_stage_count": 9,
             "blocked_stage_ids": [
+                "gpu_return_receipt",
+                "force_derivation_validation",
+                "energy_force_label_evidence",
+                "production_training_data_contract",
+                "production_checkpoint_sidecar",
+                "production_checkpoint_preflight",
                 "residual_model_registry",
+                "product_ai_architecture_gap_closure",
                 "product_goal_completion_audit",
             ],
-            "first_blocked_stage_id": "residual_model_registry",
-            "first_blocked_stage_artifact": "runs/residual_model_registry_current.json",
-            "first_blocked_stage_ready_key": "production_promotion_allowed",
-            "registry_promotion_upstream_acceptance_ready": True,
+            "first_blocked_stage_id": "gpu_return_receipt",
+            "first_blocked_stage_artifact": "runs/residual_force_gpu_worker_return_receipt_current.json",
+            "first_blocked_stage_ready_key": "gpu_worker_return_receipt_ready",
+            "registry_promotion_upstream_acceptance_ready": False,
             "registry_promotion_currently_satisfied": False,
             "registry_promotion_missing_gate_count": 3,
             "registry_promotion_missing_gate_ids": missing_gate_ids,
@@ -2169,9 +2184,9 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
     )
     assert summary["production_ai_checkpoint_readiness_production_gpu_execution_environment_ready"] is True
     assert summary["production_ai_checkpoint_readiness_checkpoint_preflight_ready"] is True
-    assert summary["production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_count"] == 1
+    assert summary["production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_count"] == 6
     assert summary["production_ai_checkpoint_readiness_actionable_blocker_stage_id"] == (
-        "registry_guarded_promotion_acceptance"
+        "gpu_return_acceptance"
     )
     assert summary["production_ai_checkpoint_readiness_registry_promotion_missing_gate_ids"] == (
         "production_promotion_allowed;customer_facing_mutation_flags;"
@@ -2184,12 +2199,15 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
     assert summary["production_ai_promotion_workbench_status"] == (
         "blocked_product_production_ai_promotion_workbench"
     )
-    assert summary["production_ai_promotion_workbench_post_return_ladder_blocked_stage_count"] == 2
+    assert summary["production_ai_promotion_workbench_post_return_ladder_blocked_stage_count"] == 9
     assert summary["production_ai_promotion_workbench_blocked_stage_ids"] == (
-        "residual_model_registry;product_goal_completion_audit"
+        "gpu_return_receipt;force_derivation_validation;energy_force_label_evidence;"
+        "production_training_data_contract;production_checkpoint_sidecar;"
+        "production_checkpoint_preflight;residual_model_registry;"
+        "product_ai_architecture_gap_closure;product_goal_completion_audit"
     )
     assert summary["production_ai_promotion_workbench_first_blocked_stage_id"] == (
-        "residual_model_registry"
+        "gpu_return_receipt"
     )
     assert summary["production_ai_promotion_workbench_registry_promotion_missing_gate_count"] == 3
     checkpoint_row = next(
@@ -2199,9 +2217,9 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
         row for row in payload["rows"] if row["check"] == "production_ai_promotion_workbench_recorded"
     )
     assert checkpoint_row["status"] == "pass"
-    assert "actionable_blocker_stage_id=registry_guarded_promotion_acceptance" in checkpoint_row["observed"]
+    assert "actionable_blocker_stage_id=gpu_return_acceptance" in checkpoint_row["observed"]
     assert workbench_row["status"] == "pass"
-    assert "blocked_stage_ids=residual_model_registry;product_goal_completion_audit" in workbench_row["observed"]
+    assert "blocked_stage_ids=gpu_return_receipt;force_derivation_validation" in workbench_row["observed"]
     assert summary["product_scope_breadth_evidence_receipt_recorded"] is True
     assert summary["product_scope_breadth_evidence_receipt_status"] == (
         "blocked_product_scope_breadth_evidence_receipt"
@@ -3221,14 +3239,14 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     ] == "shadow"
     assert summary["production_ai_checkpoint_readiness_recorded"] is True
     assert summary["production_ai_checkpoint_readiness_actionable_blocker_check_id"] == (
-        "registry_customer_facing_promotion_allowed"
+        "force_gpu_worker_return_receipt_ready"
     )
     assert summary["production_ai_checkpoint_readiness_trained_model_checkpoint_count"] == 1
     assert summary["production_ai_promotion_workbench_recorded"] is True
     assert summary["production_ai_promotion_workbench_first_blocked_stage_ready_key"] == (
-        "production_promotion_allowed"
+        "gpu_worker_return_receipt_ready"
     )
-    assert summary["production_ai_promotion_workbench_post_return_ladder_blocked_stage_count"] == 2
+    assert summary["production_ai_promotion_workbench_post_return_ladder_blocked_stage_count"] == 9
     assert summary["product_rollout_execution_smoke_receipt_status"] == (
         "blocked_product_rollout_execution_smoke_receipt"
     )
@@ -3307,7 +3325,7 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     assert "blocked_production_ai_registry_promotion_operator_receipt" in md_text
     assert "production_ai_checkpoint_readiness_recorded" in md_text
     assert "production_ai_promotion_workbench_recorded" in md_text
-    assert "registry_guarded_promotion_acceptance" in md_text
+    assert "gpu_return_acceptance" in md_text
     assert "product_full_commercial_blocker_evidence_matrix_status" in md_text
     assert "product_rollout_execution_smoke_receipt_status" in md_text
     assert "accuracy_parity_scorecard_status" in md_text

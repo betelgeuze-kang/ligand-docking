@@ -795,30 +795,35 @@ def build_goal_release_decision_gate(
         == "blocked_product_production_ai_checkpoint_readiness"
         and bool(production_ai_checkpoint_readiness.get("product_model_layer_ready") is True)
         and bool(production_ai_checkpoint_readiness.get("production_gpu_execution_environment_ready") is True)
-        and bool(production_ai_checkpoint_readiness.get("delta_force_derivation_validation_ready") is True)
-        and bool(production_ai_checkpoint_readiness.get("selected_sidecar_ready") is True)
+        and bool(production_ai_checkpoint_readiness.get("force_gpu_worker_return_receipt_ready") is False)
+        and bool(production_ai_checkpoint_readiness.get("delta_force_derivation_validation_ready") is False)
+        and bool(production_ai_checkpoint_readiness.get("selected_sidecar_ready") is False)
         and bool(production_ai_checkpoint_readiness.get("checkpoint_preflight_ready") is True)
-        and bool(production_ai_checkpoint_readiness.get("production_training_data_ready") is True)
+        and bool(production_ai_checkpoint_readiness.get("production_training_data_ready") is False)
         and bool(production_ai_checkpoint_readiness.get("production_output_heads_complete") is True)
         and bool(production_ai_checkpoint_readiness.get("production_inference_acceptance_matrix_ready") is True)
         and _int(production_ai_checkpoint_readiness.get("check_count")) == 8
-        and _int(production_ai_checkpoint_readiness.get("pass_check_count")) == 7
-        and _int(production_ai_checkpoint_readiness.get("fail_check_count")) == 1
+        and _int(production_ai_checkpoint_readiness.get("pass_check_count")) == 4
+        and _int(production_ai_checkpoint_readiness.get("fail_check_count")) == 4
         and _int(production_ai_checkpoint_readiness.get("production_inference_acceptance_stage_count")) == 8
-        and _int(production_ai_checkpoint_readiness.get("production_inference_acceptance_ready_stage_count")) == 7
-        and _int(production_ai_checkpoint_readiness.get("production_inference_acceptance_blocked_stage_count")) == 1
-        and production_ai_checkpoint_acceptance_blocked_stage_ids == ["registry_guarded_promotion_acceptance"]
-        and _text(production_ai_checkpoint_readiness.get("first_failed_check_id"))
-        == "registry_customer_facing_promotion_allowed"
-        and _text(production_ai_checkpoint_readiness.get("first_failed_source_artifact"))
-        == "runs/residual_model_registry_current.json"
+        and _int(production_ai_checkpoint_readiness.get("production_inference_acceptance_ready_stage_count")) == 2
+        and _int(production_ai_checkpoint_readiness.get("production_inference_acceptance_blocked_stage_count")) == 6
+        and production_ai_checkpoint_acceptance_blocked_stage_ids
+        == [
+            "gpu_return_acceptance",
+            "force_derivation_acceptance",
+            "production_training_data_acceptance",
+            "production_score_model_acceptance",
+            "checkpoint_sidecar_acceptance",
+            "registry_guarded_promotion_acceptance",
+        ]
         and _text(production_ai_checkpoint_readiness.get("production_inference_actionable_blocker_stage_id"))
-        == "registry_guarded_promotion_acceptance"
+        == "gpu_return_acceptance"
         and _text(production_ai_checkpoint_readiness.get("production_inference_actionable_blocker_check_id"))
-        == "registry_customer_facing_promotion_allowed"
+        == "force_gpu_worker_return_receipt_ready"
         and _text(production_ai_checkpoint_readiness.get("production_inference_actionable_blocker_artifact"))
-        == "runs/residual_model_registry_current.json"
-        and bool(production_ai_checkpoint_readiness.get("registry_promotion_upstream_acceptance_ready") is True)
+        == "runs/residual_force_gpu_worker_return_receipt_current.json"
+        and bool(production_ai_checkpoint_readiness.get("registry_promotion_upstream_acceptance_ready") is False)
         and bool(production_ai_checkpoint_readiness.get("registry_promotion_currently_satisfied") is False)
         and _int(production_ai_checkpoint_readiness.get("registry_promotion_missing_gate_count")) == 3
         and production_ai_checkpoint_readiness_missing_gate_ids
@@ -855,17 +860,27 @@ def build_goal_release_decision_gate(
         and _text(production_ai_promotion_workbench.get("checkpoint_readiness_artifact_path"))
         == "runs/product_production_ai_checkpoint_readiness_current.json"
         and _int(production_ai_promotion_workbench.get("post_return_promotion_ladder_stage_count")) == 10
-        and _int(production_ai_promotion_workbench.get("post_return_promotion_ladder_ready_stage_count")) == 8
-        and _int(production_ai_promotion_workbench.get("post_return_promotion_ladder_blocked_stage_count")) == 2
+        and _int(production_ai_promotion_workbench.get("post_return_promotion_ladder_ready_stage_count")) == 1
+        and _int(production_ai_promotion_workbench.get("post_return_promotion_ladder_blocked_stage_count")) == 9
         and production_ai_promotion_workbench_blocked_stage_ids
-        == ["residual_model_registry", "product_goal_completion_audit"]
+        == [
+            "gpu_return_receipt",
+            "force_derivation_validation",
+            "energy_force_label_evidence",
+            "production_training_data_contract",
+            "production_checkpoint_sidecar",
+            "production_checkpoint_preflight",
+            "residual_model_registry",
+            "product_ai_architecture_gap_closure",
+            "product_goal_completion_audit",
+        ]
         and _text(production_ai_promotion_workbench.get("first_blocked_stage_id"))
-        == "residual_model_registry"
+        == "gpu_return_receipt"
         and _text(production_ai_promotion_workbench.get("first_blocked_stage_artifact"))
-        == "runs/residual_model_registry_current.json"
+        == "runs/residual_force_gpu_worker_return_receipt_current.json"
         and _text(production_ai_promotion_workbench.get("first_blocked_stage_ready_key"))
-        == "production_promotion_allowed"
-        and bool(production_ai_promotion_workbench.get("registry_promotion_upstream_acceptance_ready") is True)
+        == "gpu_worker_return_receipt_ready"
+        and bool(production_ai_promotion_workbench.get("registry_promotion_upstream_acceptance_ready") is False)
         and bool(production_ai_promotion_workbench.get("registry_promotion_currently_satisfied") is False)
         and _int(production_ai_promotion_workbench.get("registry_promotion_missing_gate_count")) == 3
         and production_ai_promotion_workbench_missing_gate_ids

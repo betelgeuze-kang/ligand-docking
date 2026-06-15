@@ -2406,7 +2406,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   머물지 않고 operator-facing decision surface에서도 직접 확인된다.
   action board echo는
   `goal_release_decision_gate_status=blocked_goal_release_decision`,
-  `goal_release_allowed=false`, `goal_release_blocker_count=2`로 내려왔으므로
+  `goal_release_allowed=false`, `goal_release_blocker_count=3`으로 남아 있으므로
   operator-facing 보드가 한 cycle 전 release-decision 상태를 들고 있어도
   verified refresh로 통과하지 않는다. 이 blocked 상태는 restricted independent release
   gate의 현재 보수적 판정이며, full-commercial claim은 readiness/frontier에서
@@ -2589,20 +2589,30 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `delta_force_derivation_validation_ready=false`,
   `default_residual_mode=shadow`,
   `production_promotion_allowed=false`,
-  `trained_model_checkpoint_count=1`을 기록한다. 따라서 trained/preflight-ready
-  checkpoint 등록 부재는 더 이상 첫 병목이 아니며, guarded registry promotion
-  operator receipt와 force-derivation 재검증이 다음 경계다.
+  `trained_model_checkpoint_count=1`을 기록한다. 다만 cleanup 이후 오래된
+  NPZ/dynamics 산출물을 제거하면서 GPU return receipt가 다시 fail-closed 되었고,
+  현재 첫 병목은 guarded registry promotion이나 force-derivation 자체가 아니라
+  manifest가 가리키는 regenerated NPZ 768개를 durable path에 실제로 되돌리는
+  `gpu_return_acceptance`다.
 - ROCm/HIP 환경은 `rocm_environment_manifest_ready`이며,
   `torch_version=2.6.0+rocm6.1`, `torch_hip_version=6.1.40091-a8dbc0c19`,
   `visible_device_count=1`, AMD GPU detected로 기록되어 있다.
-- production inference acceptance matrix는 `8`개 stage 중 `5`개 ready이고,
-  남은 blocked stage는 `force_derivation_acceptance`,
-  `production_training_data_acceptance`,
-  `registry_guarded_promotion_acceptance` 세 개다.
-  actionable blocker는 `force_derivation_acceptance`의
-  `delta_force_derivation_validation_ready=false`이며, evidence artifact는
-  `runs/residual_force_derivation_validation_current.json`이다.
-  observed 값은 `force_derivation_validation_status=blocked_residual_force_derivation_validation`,
+- production inference acceptance matrix는 `8`개 stage 중 `2`개 ready이고,
+  남은 blocked stage는 `gpu_return_acceptance`,
+  `force_derivation_acceptance`, `production_training_data_acceptance`,
+  `production_score_model_acceptance`, `checkpoint_sidecar_acceptance`,
+  `registry_guarded_promotion_acceptance` 여섯 개다.
+  actionable blocker는 `gpu_return_acceptance`의
+  `force_gpu_worker_return_receipt_ready=false`이며, evidence artifact는
+  `runs/residual_force_gpu_worker_return_receipt_current.json`이다. 이 receipt는
+  `blocked_residual_force_gpu_worker_return_receipt`, `expected_queue_rows=768`,
+  `manifest_ok_row_count=768`, `manifest_npz_file_existing_count=0`,
+  `manifest_npz_file_missing_count=768`,
+  `full_regeneration_manifest_npz_files_exist=false`,
+  `post_run_derivation_validation_ready=false`를 기록한다. 즉 manifest/summary 기록은
+  남아 있지만 실제 durable NPZ 파일은 없으므로 상용 정확도/force label gate를 열 수 없다.
+  다음 gate인 force derivation artifact의 observed 값은
+  `force_derivation_validation_status=blocked_residual_force_derivation_validation`,
   `force_derivation_validation_blocker_count=3`,
   `regeneration_queue_rows=768`, `regeneration_manifest_ok_rows=768`,
   `available_npz_floor_candidate_rows=768`, `effective_min_existing_npz_rows=768`,
@@ -2612,11 +2622,12 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `production_promotion_allowed=false`, customer-facing score/ranking mutation
   disabled, `trained_model_checkpoint_count=1`이다.
   `first_failed_next_action`과
-  `production_inference_actionable_blocker_next_action`은 이제 이미 ready인
-  ROCm/GPU receipt/score-model/sidecar/preflight를 다시 요구하지 않고,
-  `delta_force_derivation_validation_ready`를 첫 actionable gate로 직접 지목하고,
-  그 뒤에 `production_training_data_ready`, `production_promotion_allowed`,
-  `customer_facing_mutation_flags`, `default_residual_mode_guarded` gate가 남는다.
+  `production_inference_actionable_blocker_next_action`은 오래된 GPU receipt summary를
+  신뢰하지 않고, 먼저 `force_gpu_worker_return_receipt_ready`를 닫으라고 지목한다.
+  그 뒤에 `delta_force_derivation_validation_ready`,
+  `production_training_data_ready`, score-model/sidecar/preflight 재검증,
+  `production_promotion_allowed`, `customer_facing_mutation_flags`,
+  `default_residual_mode_guarded` gate가 남는다.
   `trained_model_checkpoint_count_positive`는 만족된 gate로 보존된다. 같은 정보는
   `registry_promotion_missing_gate_ids`, `registry_promotion_missing_gate_count`,
   `registry_promotion_upstream_acceptance_ready`,
@@ -2625,10 +2636,11 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   같은 registry promotion 필드는 `/goal/status`에도
   `production_ai_checkpoint_registry_promotion_*` 키로 전파되어, 운영자용 상위
   상태 API에서 남은 AI registry gate와 upstream acceptance 상태가 숨지 않는다.
-  또한 actionable blocker가 `force_derivation_acceptance`인 동안
+  또한 actionable blocker가 `gpu_return_acceptance`인 동안
   checkpoint-readiness summary는 registry promotion completion packet을
   ready로 올리지 않는다. 즉 residual registry promotion은 여전히 필요하지만,
-  현재 순서는 force-derivation validation 재검증을 먼저 닫고 나서
+  현재 순서는 GPU return receipt의 durable NPZ 존재/스키마/identity 검증을 먼저
+  닫고, 그 다음 force-derivation validation, training-data, checkpoint sidecar/preflight,
   guarded registry promotion/operator receipt를 다시 평가하는 구조다.
   `goal_operator_action_board_current.json`의 top action은 현재 제품 실행 승인
   (`commercial_product_execution:review_product_execution_approval`)이며, Production AI
@@ -2707,11 +2719,13 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   또한 최신 goal release decision은 원천
   `product_production_ai_checkpoint_readiness_current.json` 및
   `product_production_ai_promotion_workbench_current.json`도 직접 읽어
-  upstream 5/8 acceptance ready, `force_derivation_acceptance`,
-  `production_training_data_acceptance`, `registry_guarded_promotion_acceptance`
-  blocked stage, trained checkpoint count 1,
-  `default_residual_mode=shadow`, force-derivation validation/energy-force evidence/
-  production training-data contract/residual registry/product-goal
+  upstream 2/8 acceptance ready, `gpu_return_acceptance`,
+  `force_derivation_acceptance`, `production_training_data_acceptance`,
+  `production_score_model_acceptance`, `checkpoint_sidecar_acceptance`,
+  `registry_guarded_promotion_acceptance` blocked stage, trained checkpoint count 1,
+  `default_residual_mode=shadow`, GPU return receipt/force-derivation validation/
+  energy-force evidence/production training-data contract/checkpoint sidecar/
+  checkpoint preflight/residual registry/product-goal
   blocked stages, no promotion/no mutation을 summary/row와
   final refresh exact check로 고정한다.
   `/product/commercial-readiness-operator-packet`,
@@ -2731,18 +2745,23 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 - `runs/product_production_ai_promotion_workbench_current.json`도
   `blocked_product_production_ai_promotion_workbench`,
   `production_ai_promotion_ready=false`,
-  `post_return_promotion_ladder_blocked_stage_count=3`를 기록한다.
-  남은 blocked stage는 `force_derivation_validation`,
-  `residual_model_registry`, `product_goal_completion_audit`이며, workbench
-  `next_required_step`도 full GPU return receipt 이후 force derivation validation
-  재실행을 요구한다.
+  `post_return_promotion_ladder_blocked_stage_count=9`를 기록한다.
+  남은 blocked stage는 `gpu_return_receipt`, `force_derivation_validation`,
+  `energy_force_label_evidence`, `production_training_data_contract`,
+  `production_checkpoint_sidecar`, `production_checkpoint_preflight`,
+  `residual_model_registry`, `product_ai_architecture_gap_closure`,
+  `product_goal_completion_audit`이며, workbench `next_required_step`도 GPU-equipped
+  worker에서 handoff package를 실행하고 execution probe 및 post-regeneration
+  validation chain을 재실행하라고 요구한다.
 
 **병목 원인**
-- ROCm/HIP 환경, GPU return receipt, selected sidecar, score-model checkpoint,
-  checkpoint preflight는 현재 산출물 기준 ready지만, force derivation validation이
-  `blocked_residual_force_derivation_validation`으로 남아 있고, 그 여파로
-  energy-force label evidence와 production training-data contract도 blocked다. 그 다음
-  residual registry도 customer-facing guarded promotion을 아직 허용하지 않는다.
+- ROCm/HIP 환경과 checkpoint preflight 자체는 ready지만, cleanup 이후 GPU return
+  receipt가 `blocked_residual_force_gpu_worker_return_receipt`로 재평가되었다.
+  현재 manifest는 768개 ok row를 보존하지만 실제 regenerated NPZ 파일은 0개라
+  `manifest_npz_file_missing_count=768`이고, 그 결과 force derivation validation,
+  energy-force label evidence, production training-data contract, score model,
+  sidecar/preflight promotion ladder가 모두 downstream blocked다. 그 다음 residual
+  registry도 customer-facing guarded promotion을 아직 허용하지 않는다.
 - production AI 추론 주체 전환은 아직 현재 병목이다. 특히 registry promotion,
   trained checkpoint accounting, customer-facing score/ranking mutation policy,
   goal completion audit linkage가 닫혀야 한다.
