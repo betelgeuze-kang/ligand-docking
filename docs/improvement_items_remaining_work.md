@@ -854,6 +854,108 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   확인한 뒤 candidate fill, cross-validation, bootstrap gate를 다시 돌리는 것이다.
   이 board도 payload write, canonical intake, production score mutation,
   claim promotion을 모두 금지한다.
+  2026-06-15 KST 추가 CV feature-extrapolation probe는 locked leave-one-target-out
+  residual을 각 fold의 학습 descriptor 범위와 대조해 residual 원인을 한 번 더 분해한다.
+  `config/refine_tier_public_benchmark_cv_feature_extrapolation_probe_current.json`과
+  `docs/refine_tier_public_benchmark_cv_feature_extrapolation_probe_current.md`는
+  `refine_tier_public_benchmark_cv_feature_extrapolation_probe_ready`,
+  `locked_cv_model_id=density_size_ridge_l0.1`,
+  `locked_cv_feature_names=contact_per_atom;pose_atom_count`,
+  `locked_cv_bootstrap_p05=0.4035769230769231`,
+  `locked_cv_bootstrap_p05_gap_to_claim_grade=0.09642307692307689`,
+  `feature_extrapolation_probe_row_count=25`,
+  `high_error_row_count=4`,
+  `high_error_feature_extrapolation_count=2`,
+  `high_error_in_distribution_count=2`,
+  `feature_extrapolation_row_count=3`,
+  `feature_shift_warning_row_count=5`,
+  `operator_receipt_blocked_payload_count=27`,
+  `operator_receipt_missing_payload_count=9`를 기록한다.
+  이 결과는 `3n86/3n86_99`와 `2j7h/2j7h_48`의 high-error가 fold descriptor
+  범위 밖 문제가 아니라 in-distribution residual임을 보여 주므로, 이 둘은
+  metric payload/pose assignment/model-form review가 우선이다. 반면
+  `3f3e/3f3e_197`와 `4j28/4j28_123`은 contact_per_atom이 fold train range 밖으로
+  나가는 high-error feature-extrapolation row라, 추가 target-held-out evidence나
+  descriptor coverage 보강 없이 더 강한 calibration term을 넣으면 안 된다. 전체 row 중
+  가장 큰 feature shift는 `1nvq/1nvq_710`의 `pose_atom_count` z-score
+  `3.08554686344`지만 high-error row는 아니므로 monitor로 유지된다.
+  이 probe도 training, score rewrite, reviewed payload write, receipt 승인,
+  canonical intake, claim promotion을 하지 않는다.
+  2026-06-15 KST 추가 CV model-extension probe는 이 분해 결과를 받아
+  interaction/nonlinear descriptor가 locked CV 병목을 실제로 줄이는지 검증했다.
+  `config/refine_tier_public_benchmark_cv_model_extension_probe_current.json`과
+  `docs/refine_tier_public_benchmark_cv_model_extension_probe_current.md`는
+  `refine_tier_public_benchmark_cv_model_extension_probe_ready`,
+  `extension_model_candidate_count=35`,
+  `best_extension_model_id=density_size_quadratic_ridge_l1`,
+  `best_extension_feature_names=contact_per_atom;pose_atom_count;contact_per_atom_sq;pose_atom_count_sq`,
+  `best_extension_bootstrap_p05=0.40449999999999997`,
+  `best_extension_bootstrap_p05_delta_from_locked_cv=0.0009230769230768598`,
+  `best_extension_bootstrap_p05_gap_to_claim_grade=0.09550000000000003`,
+  `best_extension_holdout_spearman=0.5952380952380952`,
+  `best_extension_combined_spearman=0.6338461538461538`,
+  `material_extension_improvement_count=0`,
+  `claim_grade_extension_model_count=0`,
+  `model_extension_generalization_ready=false`를 기록한다.
+  즉 quadratic/interaction/min-distance/log-density extension은 현재 locked CV를
+  claim-grade로 끌어올리지 못하고, best extension도 p05 개선폭이 material threshold
+  `0.02`에 한참 못 미치며 top residual이 여전히 `3n86/3n86_99`다. 따라서 다음
+  작업은 새 descriptor를 production scoring으로 옮기는 것이 아니라, `3n86`/`2j7h`
+  in-distribution residual의 reviewed metric payload·pose assignment·model-form
+  review와 `3f3e`/`4j28` feature-extrapolation evidence coverage를 먼저 닫는 것이다.
+  이 probe도 score rewrite, payload write, receipt 승인, canonical intake,
+  claim promotion을 하지 않는다.
+  2026-06-15 KST 추가 residual evidence triage packet은 위 residual/payload/model
+  진단을 target/pose 단위 action lane으로 합쳤다.
+  `config/refine_tier_public_benchmark_residual_evidence_triage_packet_current.json`과
+  `docs/refine_tier_public_benchmark_residual_evidence_triage_packet_current.md`는
+  `refine_tier_public_benchmark_residual_evidence_triage_packet_ready`,
+  `triage_row_count=12`,
+  `in_distribution_high_error_triage_count=1`,
+  `feature_extrapolation_high_error_triage_count=2`,
+  `seeded_payload_receipt_gap_triage_count=3`,
+  `seeded_backfill_template_ready_triage_count=3`,
+  `seeded_backfill_template_ready_payload_count=9`,
+  `seeded_backfill_operator_manual_pending_field_count=99`,
+  `cv_regression_payload_review_count=2`,
+  `blocked_receipt_fill_count=4`,
+  `operator_receipt_blocked_payload_count=27`,
+  `operator_receipt_missing_payload_count=9`,
+  `operator_manual_pending_field_count=270`,
+  `top_triage_target_id=3n86`,
+  `top_triage_pose_id=3n86_99`,
+  `top_triage_review_lane=metric_payload_pose_model_form_review`,
+  `model_extension_generalization_ready=false`를 기록한다.
+  이에 따라 직접 작업 순서는 1) `3n86/3n86_99` metric payload·pose assignment·model-form
+  review, 2) `3f3e/3f3e_197`와 `4j28/4j28_123` descriptor coverage/target-held-out
+  evidence, 3) 기존 seeded metric JSON은 있으나 receipt row가 없는
+  `2j7h/2j7h_48`, `1syi/1syi_353`, `4e5w/4e5w_121`의 generated backfill template
+  review와 승인된 별도 절차를 통한 operator receipt coverage,
+  4) `1gpk/1gpk_364`, `3n7a/3n7a_955` CV regression payload review로 고정된다.
+  이 triage도 metric 계산, payload JSON write, receipt 승인, canonical intake,
+  claim promotion을 하지 않는다.
+  이어서 seeded metric payload receipt backfill packet은 위 3개 target/pose의
+  기존 local metric JSON 9개를 검증하고 operator-fill template으로 분리했다.
+  `config/refine_tier_public_benchmark_seeded_metric_payload_receipt_backfill_packet_current.json`,
+  `config/refine_tier_public_benchmark_seeded_metric_payload_receipt_backfill_template_current.csv`,
+  `docs/refine_tier_public_benchmark_seeded_metric_payload_receipt_backfill_packet_current.md`는
+  `refine_tier_public_benchmark_seeded_metric_payload_receipt_backfill_packet_ready`,
+  `seeded_backfill_row_count=9`,
+  `seeded_backfill_target_count=3`,
+  `seeded_backfill_targets=1syi;2j7h;4e5w`,
+  `metric_source_artifact_present_count=9`,
+  `payload_schema_valid_count=9`,
+  `payload_schema_blocked_count=0`,
+  `input_artifact_sha256_verified_row_count=9`,
+  `operator_manual_pending_field_count=99`,
+  `operator_receipt_backfill_ready=false`,
+  `canonical_receipt_write_allowed=false`,
+  `approval_token_required=APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS`를
+  기록한다. 즉 이 9개 seeded JSON은 value/method/input artifact/hash/license/
+  zero-external-engine-call schema precheck를 통과했지만, operator가 값·입력·해시·
+  payload schema·license·approval token을 backfill template에서 확인하기 전까지
+  canonical receipt coverage로 승격되지 않는다. 이 packet도 canonical receipt write,
+  payload write, receipt 승인, canonical intake, claim promotion을 하지 않는다.
   `runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json`은
   이 execute 직전 handoff를 R4/operator review packet으로 고정해
   `refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready`,
