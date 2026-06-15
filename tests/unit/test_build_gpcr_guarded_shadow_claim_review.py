@@ -33,6 +33,44 @@ def _write_scores(path: Path, score_col: str = "score") -> None:
             writer.writerow({"target": target, "ligand_id": ligand_id, score_col: score})
 
 
+def _write_retained_scores(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rows = [
+        ("CHEMBL217_DRD2_HUMAN", "CHEMBL301265", 1.0),
+        ("CHEMBL224_HTR2A_HUMAN", "CHEMBL83894", 2.0),
+        ("CHEMBL233_OPRM1_HUMAN", "CHEMBL331883", 3.0),
+        ("CHEMBL217_DRD2_HUMAN", "decoy_drd2_1", 4.0),
+        ("CHEMBL224_HTR2A_HUMAN", "decoy_htr2a_1", 5.0),
+        ("CHEMBL233_OPRM1_HUMAN", "decoy_oprm1_1", 6.0),
+    ]
+    with path.open("w", encoding="utf-8", newline="") as fh:
+        writer = csv.DictWriter(
+            fh,
+            fieldnames=[
+                "source_path",
+                "rank",
+                "score_col",
+                "score_value",
+                "target",
+                "ligand_id",
+                "binding_score_composite_v7_residual_shadow",
+            ],
+        )
+        writer.writeheader()
+        for rank, (target, ligand_id, score) in enumerate(rows, start=1):
+            writer.writerow(
+                {
+                    "source_path": "runs/deleted_full_scores.csv",
+                    "rank": rank,
+                    "score_col": "binding_score_composite_v7_residual_shadow",
+                    "score_value": score,
+                    "target": target,
+                    "ligand_id": ligand_id,
+                    "binding_score_composite_v7_residual_shadow": score,
+                }
+            )
+
+
 def test_build_review_marks_green_diagnostic_when_shadow_metrics_clear(tmp_path: Path) -> None:
     scores = tmp_path / "scores.csv"
     pose_gap = tmp_path / "pose_gap.json"
@@ -72,6 +110,42 @@ def test_build_review_marks_green_diagnostic_when_shadow_metrics_clear(tmp_path:
     assert [row["target_rank"] for row in payload["positive_summaries"]] == [1, 1, 1]
     assert rows[0]["row_kind"] == "topk_positive"
     assert rows[-1]["row_kind"] == "topk_decoy"
+
+
+def test_build_review_uses_retained_top_rank_scores_when_full_csv_was_compacted(tmp_path: Path) -> None:
+    missing_scores = tmp_path / "gpcr_drd2_weakbase_false_support_shadow_replay_scores_current.csv"
+    retained_scores = tmp_path / "gpcr_drd2_weakbase_false_support_shadow_replay_scores_top_rank_retained_top50_current.csv"
+    pose_gap = tmp_path / "pose_gap.json"
+    queue = tmp_path / "queue.json"
+    _write_retained_scores(retained_scores)
+    _write_json(
+        pose_gap,
+        {
+            "target_summaries": [
+                {"target": "CHEMBL224_HTR2A_HUMAN", "ligand_id": "CHEMBL83894"},
+                {"target": "CHEMBL233_OPRM1_HUMAN", "ligand_id": "CHEMBL331883"},
+            ]
+        },
+    )
+    _write_json(queue, {"summary": {"guarded_100k_rerun_allowed_now": True}})
+
+    payload, rows = mod.build_review(
+        scores_csv=missing_scores,
+        score_col=mod.DEFAULT_SCORE_COL,
+        pose_gap_json=pose_gap,
+        a1_queue_json=queue,
+        bootstrap_n=0,
+        generated_at_local="2026-05-09T00:00:00+09:00",
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "guarded_shadow_claim_review_green_diagnostic_only"
+    assert summary["score_input_mode"] == "retained_top_rank_score_csv"
+    assert summary["scores_csv_requested"].endswith("_scores_current.csv")
+    assert summary["scores_csv_used"].endswith("_scores_top_rank_retained_top50_current.csv")
+    assert "shadow_input_compacted_top_rank_retained" in summary["diagnostic_warnings"]
+    assert rows[0]["score_col"] == mod.DEFAULT_SCORE_COL
+    assert rows[0]["score"] == 1.0
 
 
 def test_build_review_blocks_when_ci_low_gate_fails(tmp_path: Path) -> None:

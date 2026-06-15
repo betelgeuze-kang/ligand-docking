@@ -46,6 +46,9 @@ def _write_inputs(
             tmp_path / "public_stat_coordinate_fetch_operator_receipt.json"
         ),
         "public_benchmark_claim_grade_gap_audit_json": tmp_path / "public_claim_grade_gap_audit.json",
+        "public_benchmark_bootstrap_driver_operator_chain_rollup_json": (
+            tmp_path / "public_bootstrap_driver_operator_chain_rollup.json"
+        ),
         "engine_receipt_json": tmp_path / "receipt.json",
         "engine_priority_json": tmp_path / "priority.json",
         "pose_sampling_json": tmp_path / "pose.json",
@@ -629,6 +632,63 @@ def _write_inputs(
         },
     )
     _write(
+        paths["public_benchmark_bootstrap_driver_operator_chain_rollup_json"],
+        {
+            "status": (
+                "refine_tier_public_benchmark_bootstrap_driver_operator_chain_rollup_ready"
+                if ready
+                else "blocked_refine_tier_public_benchmark_bootstrap_driver_operator_chain_rollup"
+            ),
+            "operator_chain_surface_ready": materialized_candidate_ready and not ready or ready,
+            "operator_chain_closure_ready": ready,
+            "stage_count": 5 if materialized_candidate_ready or ready else 0,
+            "stage_artifact_present_count": 5 if materialized_candidate_ready or ready else 0,
+            "stage_surface_ready_count": 5 if ready else 4 if materialized_candidate_ready else 0,
+            "source_staging_operator_manual_pending_field_count": (
+                66 if materialized_candidate_ready and not ready else 0
+            ),
+            "machine_supported_pending_field_count": 36 if materialized_candidate_ready and not ready else 0,
+            "machine_supported_prefilled_field_count": 36 if materialized_candidate_ready and not ready else 36 if ready else 0,
+            "operator_only_pending_field_count": 30 if materialized_candidate_ready and not ready else 0,
+            "machine_gap_pending_field_count": 0,
+            "attestation_row_count": 6 if materialized_candidate_ready or ready else 0,
+            "attestation_blocked_row_count": 6 if materialized_candidate_ready and not ready else 0,
+            "attestation_merge_ready": ready,
+            "merge_preview_pass_row_count": 6 if ready else 0,
+            "merge_preview_blocked_row_count": 6 if materialized_candidate_ready and not ready else 0,
+            "prefill_row_fingerprint_verified_count": 6 if materialized_candidate_ready or ready else 0,
+            "prefill_row_fingerprint_mismatch_count": 0,
+            "merged_candidate_row_count": 6 if ready else 0,
+            "final_blocker_stage_id": (
+                "attestation_merge_preview" if materialized_candidate_ready and not ready else ""
+            ),
+            "final_blocker": (
+                "operator_only_placeholders_unfilled" if materialized_candidate_ready and not ready else ""
+            ),
+            "payload_write_allowed": False,
+            "canonical_receipt_write_allowed": False,
+            "canonical_intake_promotion_allowed": False,
+            "claim_promotion_allowed": False,
+            "blocker_count": 3 if materialized_candidate_ready and not ready else 0,
+            "blockers": (
+                [
+                    "operator_attestation_rows_blocked",
+                    "attestation_merge_rows_blocked",
+                    "operator_chain_closure_not_ready",
+                ]
+                if materialized_candidate_ready and not ready
+                else []
+            ),
+            "next_required_step": (
+                "Fill the operator-only attestation rows, rerun attestation merge preview, then rerun "
+                "staging apply against the merged candidate worksheet before any payload or canonical "
+                "receipt write."
+                if materialized_candidate_ready and not ready
+                else ""
+            ),
+        },
+    )
+    _write(
         paths["engine_receipt_json"],
         {
             "status": (
@@ -714,6 +774,10 @@ def test_science_accuracy_frontier_blocks_commercial_parity_without_public_r9_ev
         ]
         == 0
     )
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_rollup_present"] is True
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_surface_ready"] is False
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_closure_ready"] is False
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_operator_only_pending_field_count"] == 0
     assert summary["engine_refinement_claim_evidence_receipt_ready"] is False
     assert summary["public_benchmark_work_order_seeded_row_count"] == 8
     assert summary["public_benchmark_work_order_prefilled_operator_field_count"] == 40
@@ -1256,6 +1320,49 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_approval_token_required"
     ] == "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
     assert summary["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocker_count"] == 1
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_rollup_present"] is True
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_status"] == (
+        "blocked_refine_tier_public_benchmark_bootstrap_driver_operator_chain_rollup"
+    )
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_surface_ready"] is True
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_closure_ready"] is False
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_stage_count"] == 5
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_stage_artifact_present_count"] == 5
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_stage_surface_ready_count"] == 4
+    assert (
+        summary[
+            "public_benchmark_bootstrap_driver_operator_chain_source_staging_operator_manual_pending_field_count"
+        ]
+        == 66
+    )
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_machine_supported_pending_field_count"] == 36
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_machine_supported_prefilled_field_count"] == 36
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_operator_only_pending_field_count"] == 30
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_machine_gap_pending_field_count"] == 0
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_attestation_row_count"] == 6
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_attestation_blocked_row_count"] == 6
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_attestation_merge_ready"] is False
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_merge_preview_pass_row_count"] == 0
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_merge_preview_blocked_row_count"] == 6
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_verified_count"] == 6
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_mismatch_count"] == 0
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_merged_candidate_row_count"] == 0
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_final_blocker_stage_id"] == (
+        "attestation_merge_preview"
+    )
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_final_blocker"] == (
+        "operator_only_placeholders_unfilled"
+    )
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_payload_write_allowed"] is False
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_canonical_receipt_write_allowed"] is False
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_canonical_intake_promotion_allowed"] is False
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_claim_promotion_allowed"] is False
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_blocker_count"] == 3
+    assert summary["public_benchmark_bootstrap_driver_operator_chain_blockers"] == [
+        "operator_attestation_rows_blocked",
+        "attestation_merge_rows_blocked",
+        "operator_chain_closure_not_ready",
+    ]
     assert summary["blockers"] == [
         "gpcr_broad_claim_review_not_approved",
         "gpcr_scorer_router_promotion_not_approved",
@@ -1265,12 +1372,14 @@ def test_science_accuracy_frontier_distinguishes_materialized_r9_metric_candidat
         "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_r4_approval_required",
         "openmm_schrodinger_public_benchmark_statistical_support_coordinate_fetch_operator_receipt_not_ready",
         "openmm_schrodinger_public_benchmark_statistical_support_metric_source_payload_operator_receipt_not_ready",
+        "openmm_schrodinger_public_benchmark_bootstrap_driver_operator_chain_not_closed",
         "engine_refinement_claim_evidence_receipt_not_ready",
     ]
     assert "current 8-row materialized R9 metric evidence" in summary["next_required_step"]
     assert "coordinate-fetch R4 approval" in summary["next_required_step"]
     assert "coordinate operator receipt" in summary["next_required_step"]
     assert "metric payload receipt" in summary["next_required_step"]
+    assert "bootstrap-driver operator chain closure" in summary["next_required_step"]
     assert "coordinate validation/materialization" in summary["next_required_step"]
 
 
@@ -1384,6 +1493,8 @@ def test_science_accuracy_frontier_cli_writes_json_and_markdown(tmp_path: Path) 
             str(paths["public_benchmark_statistical_support_coordinate_fetch_operator_receipt_json"]),
             "--public-benchmark-claim-grade-gap-audit-json",
             str(paths["public_benchmark_claim_grade_gap_audit_json"]),
+            "--public-benchmark-bootstrap-driver-operator-chain-rollup-json",
+            str(paths["public_benchmark_bootstrap_driver_operator_chain_rollup_json"]),
             "--engine-receipt-json",
             str(paths["engine_receipt_json"]),
             "--engine-priority-json",

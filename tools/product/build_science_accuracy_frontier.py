@@ -46,6 +46,9 @@ DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_OPERATOR_RECEIPT_J
 DEFAULT_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_JSON = (
     "runs/refine_tier_public_benchmark_claim_grade_gap_audit_current.json"
 )
+DEFAULT_PUBLIC_BENCHMARK_BOOTSTRAP_DRIVER_OPERATOR_CHAIN_ROLLUP_JSON = (
+    "config/refine_tier_public_benchmark_bootstrap_driver_operator_chain_rollup_current.json"
+)
 DEFAULT_ENGINE_RECEIPT_JSON = "runs/engine_refinement_claim_evidence_receipt_current.json"
 DEFAULT_ENGINE_PRIORITY_JSON = "runs/engine_refinement_claim_evidence_priority_packet_current.json"
 DEFAULT_POSE_SAMPLING_JSON = "runs/product_pose_sampling_readiness_current.json"
@@ -78,6 +81,15 @@ BLOCKER_LABELS = {
     ),
     "openmm_schrodinger_public_benchmark_statistical_support_metric_source_payload_operator_receipt_not_ready": (
         "metric payload receipt"
+    ),
+    "openmm_schrodinger_public_benchmark_bootstrap_driver_operator_chain_rollup_missing": (
+        "bootstrap-driver operator chain rollup"
+    ),
+    "openmm_schrodinger_public_benchmark_bootstrap_driver_operator_chain_surface_not_ready": (
+        "bootstrap-driver operator chain surface"
+    ),
+    "openmm_schrodinger_public_benchmark_bootstrap_driver_operator_chain_not_closed": (
+        "bootstrap-driver operator chain closure"
     ),
     "engine_refinement_claim_evidence_receipt_not_ready": "R9 evidence receipts",
 }
@@ -161,6 +173,8 @@ def build_science_accuracy_frontier(
     | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_OPERATOR_RECEIPT_JSON,
     public_benchmark_claim_grade_gap_audit_json: str
     | Path = DEFAULT_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_JSON,
+    public_benchmark_bootstrap_driver_operator_chain_rollup_json: str
+    | Path = DEFAULT_PUBLIC_BENCHMARK_BOOTSTRAP_DRIVER_OPERATOR_CHAIN_ROLLUP_JSON,
     engine_receipt_json: str | Path = DEFAULT_ENGINE_RECEIPT_JSON,
     engine_priority_json: str | Path = DEFAULT_ENGINE_PRIORITY_JSON,
     pose_sampling_json: str | Path = DEFAULT_POSE_SAMPLING_JSON,
@@ -198,6 +212,9 @@ def build_science_accuracy_frontier(
     claim_grade_gap_audit_payload, claim_grade_gap_audit_present = _read_json(
         public_benchmark_claim_grade_gap_audit_json
     )
+    bootstrap_driver_operator_chain_payload, bootstrap_driver_operator_chain_present = _read_json(
+        public_benchmark_bootstrap_driver_operator_chain_rollup_json
+    )
     receipt_payload, receipt_present = _read_json(engine_receipt_json)
     priority_payload, priority_present = _read_json(engine_priority_json)
     pose_payload, pose_present = _read_json(pose_sampling_json)
@@ -217,6 +234,7 @@ def build_science_accuracy_frontier(
     coordinate_fetch_r4_preflight = _summary(coordinate_fetch_r4_preflight_payload)
     coordinate_fetch_operator_receipt = _summary(coordinate_fetch_operator_receipt_payload)
     claim_grade_gap_audit = _summary(claim_grade_gap_audit_payload)
+    bootstrap_driver_operator_chain = _summary(bootstrap_driver_operator_chain_payload)
     receipt = _summary(receipt_payload)
     priority = _summary(priority_payload)
     pose = _summary(pose_payload)
@@ -330,6 +348,16 @@ def build_science_accuracy_frontier(
         and claim_grade_gap_audit.get("status") == "refine_tier_public_benchmark_claim_grade_gap_audit_ready"
         and claim_grade_gap_audit.get("claim_grade_gap_audit_ready") is True
     )
+    public_bootstrap_driver_operator_chain_surface_ready = bool(
+        bootstrap_driver_operator_chain_present
+        and bootstrap_driver_operator_chain.get("operator_chain_surface_ready") is True
+    )
+    public_bootstrap_driver_operator_chain_closure_ready = bool(
+        public_bootstrap_driver_operator_chain_surface_ready
+        and bootstrap_driver_operator_chain.get("status")
+        == "refine_tier_public_benchmark_bootstrap_driver_operator_chain_rollup_ready"
+        and bootstrap_driver_operator_chain.get("operator_chain_closure_ready") is True
+    )
     engine_receipt_ready = bool(receipt.get("claim_promotion_evidence_receipt_ready") is True)
     engine_priority_ready = bool(priority.get("priority_packet_ready") is True)
     pose_surface_ready = bool(
@@ -436,6 +464,18 @@ def build_science_accuracy_frontier(
                 blockers.append(
                     "openmm_schrodinger_public_benchmark_statistical_support_metric_source_payload_operator_receipt_not_ready"
                 )
+            if not bootstrap_driver_operator_chain_present:
+                blockers.append(
+                    "openmm_schrodinger_public_benchmark_bootstrap_driver_operator_chain_rollup_missing"
+                )
+            elif not public_bootstrap_driver_operator_chain_surface_ready:
+                blockers.append(
+                    "openmm_schrodinger_public_benchmark_bootstrap_driver_operator_chain_surface_not_ready"
+                )
+            elif not public_bootstrap_driver_operator_chain_closure_ready:
+                blockers.append(
+                    "openmm_schrodinger_public_benchmark_bootstrap_driver_operator_chain_not_closed"
+                )
         elif metric_materialization_readiness_present and public_statistical_support_metric_materialization_all_candidates_ready:
             if not metric_source_payload_operator_receipt_present:
                 blockers.append(
@@ -444,6 +484,18 @@ def build_science_accuracy_frontier(
             elif not public_statistical_support_metric_source_payload_operator_receipt_ready:
                 blockers.append(
                     "openmm_schrodinger_public_benchmark_statistical_support_metric_source_payload_operator_receipt_not_ready"
+                )
+            if not bootstrap_driver_operator_chain_present:
+                blockers.append(
+                    "openmm_schrodinger_public_benchmark_bootstrap_driver_operator_chain_rollup_missing"
+                )
+            elif not public_bootstrap_driver_operator_chain_surface_ready:
+                blockers.append(
+                    "openmm_schrodinger_public_benchmark_bootstrap_driver_operator_chain_surface_not_ready"
+                )
+            elif not public_bootstrap_driver_operator_chain_closure_ready:
+                blockers.append(
+                    "openmm_schrodinger_public_benchmark_bootstrap_driver_operator_chain_not_closed"
                 )
     if not engine_receipt_ready:
         blockers.append("engine_refinement_claim_evidence_receipt_not_ready")
@@ -1229,6 +1281,93 @@ def build_science_accuracy_frontier(
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_next_required_step": str(
             coordinate_fetch_operator_receipt.get("next_required_step", "")
         ),
+        "public_benchmark_bootstrap_driver_operator_chain_rollup_present": (
+            bootstrap_driver_operator_chain_present
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_status": str(
+            bootstrap_driver_operator_chain.get("status", "")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_surface_ready": (
+            public_bootstrap_driver_operator_chain_surface_ready
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_closure_ready": (
+            public_bootstrap_driver_operator_chain_closure_ready
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_stage_count": _int(
+            bootstrap_driver_operator_chain.get("stage_count")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_stage_artifact_present_count": _int(
+            bootstrap_driver_operator_chain.get("stage_artifact_present_count")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_stage_surface_ready_count": _int(
+            bootstrap_driver_operator_chain.get("stage_surface_ready_count")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_source_staging_operator_manual_pending_field_count": _int(
+            bootstrap_driver_operator_chain.get("source_staging_operator_manual_pending_field_count")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_machine_supported_pending_field_count": _int(
+            bootstrap_driver_operator_chain.get("machine_supported_pending_field_count")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_machine_supported_prefilled_field_count": _int(
+            bootstrap_driver_operator_chain.get("machine_supported_prefilled_field_count")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_operator_only_pending_field_count": _int(
+            bootstrap_driver_operator_chain.get("operator_only_pending_field_count")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_machine_gap_pending_field_count": _int(
+            bootstrap_driver_operator_chain.get("machine_gap_pending_field_count")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_attestation_row_count": _int(
+            bootstrap_driver_operator_chain.get("attestation_row_count")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_attestation_blocked_row_count": _int(
+            bootstrap_driver_operator_chain.get("attestation_blocked_row_count")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_attestation_merge_ready": bool(
+            bootstrap_driver_operator_chain.get("attestation_merge_ready") is True
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_merge_preview_pass_row_count": _int(
+            bootstrap_driver_operator_chain.get("merge_preview_pass_row_count")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_merge_preview_blocked_row_count": _int(
+            bootstrap_driver_operator_chain.get("merge_preview_blocked_row_count")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_verified_count": _int(
+            bootstrap_driver_operator_chain.get("prefill_row_fingerprint_verified_count")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_mismatch_count": _int(
+            bootstrap_driver_operator_chain.get("prefill_row_fingerprint_mismatch_count")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_merged_candidate_row_count": _int(
+            bootstrap_driver_operator_chain.get("merged_candidate_row_count")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_final_blocker_stage_id": str(
+            bootstrap_driver_operator_chain.get("final_blocker_stage_id", "")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_final_blocker": str(
+            bootstrap_driver_operator_chain.get("final_blocker", "")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_payload_write_allowed": bool(
+            bootstrap_driver_operator_chain.get("payload_write_allowed") is True
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_canonical_receipt_write_allowed": bool(
+            bootstrap_driver_operator_chain.get("canonical_receipt_write_allowed") is True
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_canonical_intake_promotion_allowed": bool(
+            bootstrap_driver_operator_chain.get("canonical_intake_promotion_allowed") is True
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_claim_promotion_allowed": bool(
+            bootstrap_driver_operator_chain.get("claim_promotion_allowed") is True
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_blocker_count": _int(
+            bootstrap_driver_operator_chain.get("blocker_count")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_blockers": _list(
+            bootstrap_driver_operator_chain.get("blockers")
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_next_required_step": str(
+            bootstrap_driver_operator_chain.get("next_required_step", "")
+        ),
         "openmm_schrodinger_claim_ready": openmm_schrodinger_claim_ready,
         "engine_refinement_claim_evidence_receipt_ready": engine_receipt_ready,
         "engine_refinement_claim_evidence_priority_packet_ready": engine_priority_ready,
@@ -1457,6 +1596,9 @@ def build_science_accuracy_frontier(
             "refine_tier_public_benchmark_claim_grade_gap_audit": str(
                 public_benchmark_claim_grade_gap_audit_json
             ),
+            "refine_tier_public_benchmark_bootstrap_driver_operator_chain_rollup": str(
+                public_benchmark_bootstrap_driver_operator_chain_rollup_json
+            ),
             "engine_refinement_claim_evidence_receipt": str(engine_receipt_json),
             "engine_refinement_claim_evidence_priority_packet": str(engine_priority_json),
             "product_pose_sampling_readiness": str(pose_sampling_json),
@@ -1583,6 +1725,16 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"{summary['public_benchmark_statistical_support_coordinate_fetch_operator_receipt_operator_review_surface_blocked_count']}`",
         "- public_benchmark_statistical_support_coordinate_fetch_operator_receipt_manual_field_pending_count: "
         f"`{summary['public_benchmark_statistical_support_coordinate_fetch_operator_receipt_receipt_manual_field_pending_count']}`",
+        "- public_benchmark_bootstrap_driver_operator_chain_surface/closure: "
+        f"`{summary['public_benchmark_bootstrap_driver_operator_chain_surface_ready']}/"
+        f"{summary['public_benchmark_bootstrap_driver_operator_chain_closure_ready']}`",
+        "- public_benchmark_bootstrap_driver_operator_chain_operator_only_pending/fingerprint_verified/merged_candidates: "
+        f"`{summary['public_benchmark_bootstrap_driver_operator_chain_operator_only_pending_field_count']}/"
+        f"{summary['public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_verified_count']}/"
+        f"{summary['public_benchmark_bootstrap_driver_operator_chain_merged_candidate_row_count']}`",
+        "- public_benchmark_bootstrap_driver_operator_chain_final_blocker: "
+        f"`{summary['public_benchmark_bootstrap_driver_operator_chain_final_blocker_stage_id']}/"
+        f"{summary['public_benchmark_bootstrap_driver_operator_chain_final_blocker']}`",
         f"- engine_refinement_claim_evidence_receipt_ready: `{summary['engine_refinement_claim_evidence_receipt_ready']}`",
         f"- public_benchmark_work_order_seeded_row_count: `{summary['public_benchmark_work_order_seeded_row_count']}`",
         f"- public_benchmark_work_order_prefilled_operator_field_count: `{summary['public_benchmark_work_order_prefilled_operator_field_count']}`",
@@ -1657,6 +1809,10 @@ def main(argv: list[str] | None = None) -> None:
         "--public-benchmark-claim-grade-gap-audit-json",
         default=DEFAULT_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_JSON,
     )
+    parser.add_argument(
+        "--public-benchmark-bootstrap-driver-operator-chain-rollup-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_BOOTSTRAP_DRIVER_OPERATOR_CHAIN_ROLLUP_JSON,
+    )
     parser.add_argument("--engine-receipt-json", default=DEFAULT_ENGINE_RECEIPT_JSON)
     parser.add_argument("--engine-priority-json", default=DEFAULT_ENGINE_PRIORITY_JSON)
     parser.add_argument("--pose-sampling-json", default=DEFAULT_POSE_SAMPLING_JSON)
@@ -1695,6 +1851,9 @@ def main(argv: list[str] | None = None) -> None:
             args.public_benchmark_statistical_support_coordinate_fetch_operator_receipt_json
         ),
         public_benchmark_claim_grade_gap_audit_json=args.public_benchmark_claim_grade_gap_audit_json,
+        public_benchmark_bootstrap_driver_operator_chain_rollup_json=(
+            args.public_benchmark_bootstrap_driver_operator_chain_rollup_json
+        ),
         engine_receipt_json=args.engine_receipt_json,
         engine_priority_json=args.engine_priority_json,
         pose_sampling_json=args.pose_sampling_json,

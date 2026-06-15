@@ -36,7 +36,7 @@ def test_remaining_work_doc_tracks_current_release_metrics() -> None:
     assert f"`artifact_count={bundle['artifact_count']}`" in text
     assert f"`check_count={bundle['check_count']}`" in text
     assert f"`pass_count={bundle['pass_count']}`" in text
-    assert f"`product_release_current_refresh_verified`, `command_count={command_count}`" in text
+    assert f"`{refresh['status']}`, `command_count={command_count}`" in text
     assert f"`executed_count={command_count}`" in text
     assert f"`release_refresh_command_count={command_count}`" in text
     assert f"`row_count={source['row_count']}`" in text
@@ -375,6 +375,34 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         "`science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count=510`"
         in text
     )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_rollup_present=true`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_surface_ready=true`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_closure_ready=false`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_operator_only_pending_field_count=30`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_verified_count=6`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_merged_candidate_row_count=0`"
+        in text
+    )
+    assert (
+        "`science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_final_blocker=operator_only_placeholders_unfilled`"
+        in text
+    )
     assert "`public_benchmark_work_order_receptor_coordinate_validation_ready_row_count=8`" in text
     assert "`public_benchmark_work_order_receptor_coordinate_validation_blocked_row_count=0`" in text
     assert "`public_benchmark_work_order_receptor_coordinate_validation_min_atom_records=20`" in text
@@ -574,11 +602,11 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     assert "product_commercial_readiness_handoff_bundle_semantic_ready" in text
     assert "`metric_source_templates_metric_source_payload_fill_blocked_row_count=0`" in text
     assert "`refine_tier_public_benchmark_claim_grade_gap_audit_ready`" in text
-    assert "`observed_public_benchmark_pair_count=8`" in text
-    assert "`observed_holdout_pair_count=3`" in text
-    assert "`observed_bootstrap_spearman_p05=-0.14285714285714285`" in text
-    assert "`blocked_gap_row_count=3`" in text
-    assert "`top_science_gap_id=claim_grade_public_benchmark_pair_count_below_minimum`" in text
+    assert "`observed_public_benchmark_pair_count=25`" in text
+    assert "`observed_holdout_pair_count=8`" in text
+    assert "`observed_bootstrap_spearman_p05=0.23053846153846155`" in text
+    assert "`blocked_gap_row_count=1`" in text
+    assert "`top_science_gap_id=claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum`" in text
     assert "`coordinate_validation_deficit=0`" in text
     assert "`metric_source_payload_fill_deficit=0`" in text
     assert "`execute_command_count=1`" in text
@@ -733,8 +761,12 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
         "`openmm_schrodinger_public_benchmark_statistical_support_metric_source_payload_operator_receipt_not_ready`"
         in text
     )
+    assert (
+        "`openmm_schrodinger_public_benchmark_bootstrap_driver_operator_chain_not_closed`"
+        in text
+    )
     assert "`engine_refinement_claim_evidence_receipt_not_ready`" in text
-    assert "`blocker_count=6`" in text
+    assert "`blocker_count=7`" in text
     assert "`runs/engine_refinement_claim_evidence_priority_packet_current.json`" in text
     assert "`runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json`" in text
     assert "`Coordinate fetch and validation are complete`" in text

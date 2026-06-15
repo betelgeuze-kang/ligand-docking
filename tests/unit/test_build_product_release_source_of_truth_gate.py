@@ -1696,6 +1696,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "public_benchmark_claim_grade_gap_audit_ready" in (
         science_accuracy_frontier_spec["required_true_fields"]
     )
+    assert "public_benchmark_bootstrap_driver_operator_chain_rollup_present" in (
+        science_accuracy_frontier_spec["required_true_fields"]
+    )
+    assert "public_benchmark_bootstrap_driver_operator_chain_surface_ready" in (
+        science_accuracy_frontier_spec["required_true_fields"]
+    )
     assert science_accuracy_frontier_spec["required_int_exact_fields"] == {
             "broad_commercial_accuracy_claim_ready": 0,
             "gpcr_broad_claim_ready": 0,
@@ -1735,7 +1741,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_work_order_pending_experimental_deltaG_count": 0,
         "public_benchmark_work_order_remaining_nonlicense_science_field_count": 48,
         "public_benchmark_work_order_current_local_source_prefill_ready_field_count": 0,
-        "public_benchmark_work_order_local_receptor_coordinate_file_count": 8,
+        "public_benchmark_work_order_local_receptor_coordinate_file_count": 25,
         "public_benchmark_work_order_tar_ligand_pose_member_count": 23062,
         "public_benchmark_work_order_tar_receptor_coordinate_member_count": 0,
         "public_benchmark_work_order_tar_ligand_only_archive_count": 2,
@@ -1785,23 +1791,23 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_claim_grade_gap_audit_claim_grade_statistical_support_ready": 0,
         "public_benchmark_claim_grade_gap_audit_canonical_intake_promotion_allowed": 0,
         "public_benchmark_claim_grade_gap_audit_bootstrap_retest_required": 1,
-        "public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count": 8,
-        "public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count": 3,
-        "public_benchmark_claim_grade_gap_audit_minimum_new_pair_count": 17,
-        "public_benchmark_claim_grade_gap_audit_minimum_new_holdout_pair_count": 5,
-        "public_benchmark_claim_grade_gap_audit_coordinate_validation_pass_row_count": 0,
-        "public_benchmark_claim_grade_gap_audit_coordinate_validation_blocked_row_count": 17,
-        "public_benchmark_claim_grade_gap_audit_coordinate_validation_deficit": 17,
-        "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_ready_row_count": 0,
-        "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count": 51,
-        "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_deficit": 51,
+        "public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count": 25,
+        "public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count": 8,
+        "public_benchmark_claim_grade_gap_audit_minimum_new_pair_count": 0,
+        "public_benchmark_claim_grade_gap_audit_minimum_new_holdout_pair_count": 0,
+        "public_benchmark_claim_grade_gap_audit_coordinate_validation_pass_row_count": 17,
+        "public_benchmark_claim_grade_gap_audit_coordinate_validation_blocked_row_count": 0,
+        "public_benchmark_claim_grade_gap_audit_coordinate_validation_deficit": 0,
+        "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_ready_row_count": 51,
+        "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count": 0,
+        "public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_deficit": 0,
         "public_benchmark_claim_grade_gap_audit_planned_metric_source_payload_count": 51,
         "public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_fetch_required_row_count": 17,
-        "public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_download_executed": 0,
+        "public_benchmark_claim_grade_gap_audit_coordinate_fetch_r4_download_executed": 1,
         "public_benchmark_claim_grade_gap_audit_gap_row_count": 5,
-        "public_benchmark_claim_grade_gap_audit_blocked_gap_row_count": 5,
-        "public_benchmark_claim_grade_gap_audit_pass_gap_row_count": 0,
-        "public_benchmark_claim_grade_gap_audit_blocker_count": 5,
+        "public_benchmark_claim_grade_gap_audit_blocked_gap_row_count": 1,
+        "public_benchmark_claim_grade_gap_audit_pass_gap_row_count": 4,
+        "public_benchmark_claim_grade_gap_audit_blocker_count": 1,
         "public_benchmark_materialized_apply_blocked_row_count": 0,
         "public_benchmark_materialized_apply_metric_evidence_pass_row_count": 8,
         "public_benchmark_materialized_apply_metric_evidence_contract_blocked_row_count": 0,
@@ -1811,44 +1817,44 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count": 12,
         "public_benchmark_statistical_support_work_order_bootstrap_retest_required": 1,
         "public_benchmark_statistical_support_work_order_canonical_intake_promotion_allowed": 0,
-        "public_benchmark_statistical_support_metric_materialization_all_candidates_ready": 0,
+        "public_benchmark_statistical_support_metric_materialization_all_candidates_ready": 1,
         "public_benchmark_statistical_support_metric_materialization_row_count": 17,
-        "public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 0,
-        "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 17,
-        "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": 0,
+        "public_benchmark_statistical_support_metric_materialization_candidate_ready_count": 17,
+        "public_benchmark_statistical_support_metric_materialization_candidate_blocked_count": 0,
+        "public_benchmark_statistical_support_metric_materialization_input_artifact_contract_ready": 1,
         "public_benchmark_statistical_support_metric_materialization_required_input_artifact_count": 34,
-        "public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": 17,
-        "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": 17,
-        "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": 17,
-        "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 0,
-        "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 17,
+        "public_benchmark_statistical_support_metric_materialization_present_required_input_artifact_count": 34,
+        "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_count": 0,
+        "public_benchmark_statistical_support_metric_materialization_missing_required_input_artifact_row_count": 0,
+        "public_benchmark_statistical_support_metric_materialization_coordinate_validation_pass_row_count": 17,
+        "public_benchmark_statistical_support_metric_materialization_coordinate_validation_blocked_row_count": 0,
         "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count": 0,
         "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count": 51,
         "public_benchmark_statistical_support_metric_materialization_required_metric_source_payload_field_count": 11,
         "public_benchmark_statistical_support_coordinate_intake_ready": 1,
         "public_benchmark_statistical_support_coordinate_intake_row_count": 17,
-        "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count": 0,
-        "public_benchmark_statistical_support_coordinate_intake_missing_row_count": 17,
+        "public_benchmark_statistical_support_coordinate_intake_artifact_present_row_count": 17,
+        "public_benchmark_statistical_support_coordinate_intake_missing_row_count": 0,
         "public_benchmark_statistical_support_coordinate_intake_suggested_public_url_row_count": 17,
         "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_row_count": 17,
         "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_candidate_count": 136,
-        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count": 0,
-        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count": 0,
-        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count": 17,
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_count": 17,
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_present_target_count": 17,
+        "public_benchmark_statistical_support_coordinate_intake_suggested_local_path_missing_target_count": 0,
         "public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count": 51,
         "public_benchmark_statistical_support_coordinate_intake_operator_review_required_row_count": 17,
-        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count": 0,
-        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count": 17,
-        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_missing_row_count": 17,
+        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count": 17,
+        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count": 0,
+        "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_missing_row_count": 0,
         "public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
         "public_benchmark_statistical_support_metric_source_templates_template_candidate_row_count": 17,
         "public_benchmark_statistical_support_metric_source_templates_template_metric_name_count": 3,
         "public_benchmark_statistical_support_metric_source_templates_template_metric_source_artifact_path_row_count": 51,
         "public_benchmark_statistical_support_metric_source_templates_template_payload_required_fields_present_row_count": 51,
-        "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
-        "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
-        "public_benchmark_statistical_support_metric_source_templates_coordinate_validation_blocked_template_row_count": 51,
-        "public_benchmark_statistical_support_metric_source_templates_missing_required_input_template_row_count": 51,
+        "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 51,
+        "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 0,
+        "public_benchmark_statistical_support_metric_source_templates_coordinate_validation_blocked_template_row_count": 0,
+        "public_benchmark_statistical_support_metric_source_templates_missing_required_input_template_row_count": 0,
         "public_benchmark_statistical_support_metric_source_templates_existing_metric_source_payload_present_row_count": 0,
         "public_benchmark_statistical_support_metric_source_templates_placeholder_value_count": 51,
         "public_benchmark_statistical_support_metric_source_templates_placeholder_method_count": 51,
@@ -1863,9 +1869,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_pass_row_count": 0,
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count": 51,
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approved_payload_count": 0,
-        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_fill_ready_row_count": 0,
-        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_pass_payload_row_count": 0,
-        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count": 51,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_fill_ready_row_count": 51,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_pass_payload_row_count": 51,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_coordinate_validation_blocked_payload_row_count": 0,
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_verified_count": 51,
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_template_row_fingerprint_mismatch_count": 0,
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_ready_count": 51,
@@ -1873,7 +1879,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_metric_source_artifact_path_present_count": 51,
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_list_present_count": 51,
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_present_count": 51,
-        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_complete_count": 0,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_complete_count": 51,
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_source_payload_fields_present_count": 51,
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_external_engine_calls_zero_count": 51,
         "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count": 510,
@@ -1888,10 +1894,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": 17,
         "public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": 0,
         "public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count": 17,
-        "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count": 17,
+        "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count": 0,
         "public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count": 51,
-        "public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download": 0,
-        "public_benchmark_statistical_support_coordinate_fetch_r4_download_executed": 0,
+        "public_benchmark_statistical_support_coordinate_fetch_r4_authorized_for_external_download": 1,
+        "public_benchmark_statistical_support_coordinate_fetch_r4_download_executed": 1,
         "public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated": 0,
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_ready": 0,
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_row_count": 17,
@@ -1913,6 +1919,20 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_claim_promotion_allowed": 0,
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_external_state_mutated": 0,
         "public_benchmark_statistical_support_coordinate_fetch_operator_receipt_blocker_count": 1,
+        "public_benchmark_bootstrap_driver_operator_chain_closure_ready": 0,
+        "public_benchmark_bootstrap_driver_operator_chain_stage_count": 5,
+        "public_benchmark_bootstrap_driver_operator_chain_stage_artifact_present_count": 5,
+        "public_benchmark_bootstrap_driver_operator_chain_stage_surface_ready_count": 4,
+        "public_benchmark_bootstrap_driver_operator_chain_source_staging_operator_manual_pending_field_count": 66,
+        "public_benchmark_bootstrap_driver_operator_chain_machine_supported_prefilled_field_count": 36,
+        "public_benchmark_bootstrap_driver_operator_chain_operator_only_pending_field_count": 30,
+        "public_benchmark_bootstrap_driver_operator_chain_attestation_blocked_row_count": 6,
+        "public_benchmark_bootstrap_driver_operator_chain_attestation_merge_ready": 0,
+        "public_benchmark_bootstrap_driver_operator_chain_merge_preview_blocked_row_count": 6,
+        "public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_verified_count": 6,
+        "public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_mismatch_count": 0,
+        "public_benchmark_bootstrap_driver_operator_chain_merged_candidate_row_count": 0,
+        "public_benchmark_bootstrap_driver_operator_chain_blocker_count": 3,
         "public_benchmark_work_order_ligand_pose_only_row_count": 0,
         "public_benchmark_work_order_missing_interaction_metric_source_row_count": 8,
         "public_benchmark_work_order_missing_internal_deltaG_source_row_count": 8,
@@ -1922,7 +1942,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "public_benchmark_work_order_seed_distinct_target_count": 284,
         "engine_refinement_receipt_blocked_row_count": 6,
         "external_state_mutated": 0,
-        "blocker_count": 9,
+        "blocker_count": 7,
     }
     assert science_accuracy_frontier_spec["required_text_exact_fields"] == {
         "accuracy_parity_status": "blocked_accuracy_parity",
@@ -2002,10 +2022,19 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
             "refine_tier_public_benchmark_claim_grade_gap_audit_ready"
         ),
         "public_benchmark_claim_grade_gap_audit_top_science_gap_id": (
-            "coordinate_fetch_r4_approval_required"
+            "claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum"
         ),
         "public_benchmark_claim_grade_gap_audit_top_statistical_gap_id": (
-            "claim_grade_public_benchmark_pair_count_below_minimum"
+            "claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum"
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_status": (
+            "blocked_refine_tier_public_benchmark_bootstrap_driver_operator_chain_rollup"
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_final_blocker_stage_id": (
+            "attestation_merge_preview"
+        ),
+        "public_benchmark_bootstrap_driver_operator_chain_final_blocker": (
+            "operator_only_placeholders_unfilled"
         ),
         "engine_refinement_claim_evidence_receipt_status": (
             "blocked_engine_refinement_claim_evidence_receipt"
@@ -4376,6 +4405,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert (
         "runs/refine_tier_public_benchmark_claim_grade_gap_audit_current.json"
+        in science_accuracy_frontier_spec["depends_on"]
+    )
+    assert (
+        "config/refine_tier_public_benchmark_bootstrap_driver_operator_chain_rollup_current.json"
         in science_accuracy_frontier_spec["depends_on"]
     )
     assert "runs/engine_refinement_claim_evidence_receipt_current.json" in science_accuracy_frontier_spec[

@@ -122,6 +122,7 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
         "openmm_schrodinger_public_benchmark_not_promoted_to_canonical_intake",
         "openmm_schrodinger_public_benchmark_statistical_support_not_claim_grade",
         "openmm_schrodinger_public_benchmark_statistical_support_metric_source_payload_operator_receipt_not_ready",
+        "openmm_schrodinger_public_benchmark_bootstrap_driver_operator_chain_not_closed",
         "engine_refinement_claim_evidence_receipt_not_ready",
     ]
     accuracy_top_blockers = _list(accuracy.get("top_blockers"))
@@ -277,6 +278,19 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
             == 2
             and _int(science_frontier.get("gpcr_broad_claim_review_receipt_manual_field_pending_count"))
             == 16
+            and science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_rollup_present") is True
+            and science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_surface_ready") is True
+            and science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_closure_ready") is False
+            and _int(science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_operator_only_pending_field_count"))
+            == 30
+            and _int(science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_verified_count"))
+            == 6
+            and _int(science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_merged_candidate_row_count"))
+            == 0
+            and science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_final_blocker_stage_id")
+            == "attestation_merge_preview"
+            and science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_final_blocker")
+            == "operator_only_placeholders_unfilled"
             and _list(science_frontier.get("blockers")) == expected_science_frontier_blockers
             and _int(science_frontier.get("blocker_count")) == len(expected_science_frontier_blockers),
             (
@@ -355,6 +369,19 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
                 f"{science_frontier.get('public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count')};"
                 f"metric_source_payload_receipt_sha256_complete="
                 f"{science_frontier.get('public_benchmark_statistical_support_metric_source_payload_operator_receipt_required_metric_input_artifact_sha256_list_complete_count')};"
+                f"bootstrap_driver_operator_chain_surface_ready="
+                f"{science_frontier.get('public_benchmark_bootstrap_driver_operator_chain_surface_ready')};"
+                f"bootstrap_driver_operator_chain_closure_ready="
+                f"{science_frontier.get('public_benchmark_bootstrap_driver_operator_chain_closure_ready')};"
+                f"bootstrap_driver_operator_chain_operator_only_pending="
+                f"{science_frontier.get('public_benchmark_bootstrap_driver_operator_chain_operator_only_pending_field_count')};"
+                f"bootstrap_driver_operator_chain_fingerprint_verified="
+                f"{science_frontier.get('public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_verified_count')};"
+                f"bootstrap_driver_operator_chain_merged_candidate_rows="
+                f"{science_frontier.get('public_benchmark_bootstrap_driver_operator_chain_merged_candidate_row_count')};"
+                f"bootstrap_driver_operator_chain_final_blocker="
+                f"{science_frontier.get('public_benchmark_bootstrap_driver_operator_chain_final_blocker_stage_id')}/"
+                f"{science_frontier.get('public_benchmark_bootstrap_driver_operator_chain_final_blocker')};"
                 f"broad_commercial_accuracy_claim_ready={science_frontier.get('broad_commercial_accuracy_claim_ready')};"
                 f"science_frontier_blockers={_csv(science_frontier.get('blockers'))}"
             ),
@@ -399,6 +426,74 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
                 and science_frontier.get("status") == "blocked_science_accuracy_frontier"
             ),
             "science_accuracy_frontier_blockers": science_frontier.get("blockers") or [],
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_rollup_present": bool(
+                science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_rollup_present") is True
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_status": str(
+                science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_status", "")
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_surface_ready": bool(
+                science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_surface_ready") is True
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_closure_ready": bool(
+                science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_closure_ready") is True
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_stage_count": _int(
+                science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_stage_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_stage_artifact_present_count": _int(
+                science_frontier.get(
+                    "public_benchmark_bootstrap_driver_operator_chain_stage_artifact_present_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_stage_surface_ready_count": _int(
+                science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_stage_surface_ready_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_source_staging_operator_manual_pending_field_count": _int(
+                science_frontier.get(
+                    "public_benchmark_bootstrap_driver_operator_chain_source_staging_operator_manual_pending_field_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_machine_supported_prefilled_field_count": _int(
+                science_frontier.get(
+                    "public_benchmark_bootstrap_driver_operator_chain_machine_supported_prefilled_field_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_operator_only_pending_field_count": _int(
+                science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_operator_only_pending_field_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_attestation_blocked_row_count": _int(
+                science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_attestation_blocked_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_attestation_merge_ready": bool(
+                science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_attestation_merge_ready")
+                is True
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_merge_preview_blocked_row_count": _int(
+                science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_merge_preview_blocked_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_verified_count": _int(
+                science_frontier.get(
+                    "public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_verified_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_mismatch_count": _int(
+                science_frontier.get(
+                    "public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_mismatch_count"
+                )
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_merged_candidate_row_count": _int(
+                science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_merged_candidate_row_count")
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_final_blocker_stage_id": str(
+                science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_final_blocker_stage_id", "")
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_final_blocker": str(
+                science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_final_blocker", "")
+            ),
+            "science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_blocker_count": _int(
+                science_frontier.get("public_benchmark_bootstrap_driver_operator_chain_blocker_count")
+            ),
             "science_accuracy_frontier_gpcr_broad_claim_review_receipt_ready": bool(
                 science_frontier.get("gpcr_broad_claim_review_receipt_ready") is True
             ),

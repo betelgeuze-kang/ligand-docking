@@ -20,6 +20,9 @@ from tools.lib.artifacts import (
 )
 
 DEFAULT_SCORES_CSV = "runs/gpcr_drd2_weakbase_false_support_shadow_replay_scores_current.csv"
+DEFAULT_RETAINED_SCORES_CSV = (
+    "runs/gpcr_drd2_weakbase_false_support_shadow_replay_scores_top_rank_retained_top50_current.csv"
+)
 DEFAULT_SCORE_COL = "binding_score_composite_v7_htr2a_oprm1_drd2_weakbase_false_support_shadow"
 DEFAULT_POSE_GAP_JSON = "runs/gpcr_false_support_discriminator_v16_adaptive_frozen_gap_packet_current.json"
 DEFAULT_A1_QUEUE_JSON = "runs/gpcr_a1_accuracy_repair_queue_current.json"
@@ -58,6 +61,43 @@ def _float(value: Any) -> float | None:
 def _int(value: Any) -> int | None:
     out = _float(value)
     return int(out) if out is not None else None
+
+
+def _retained_scores_candidate(scores_csv: str | Path) -> str | Path | None:
+    requested = _resolve(scores_csv)
+    if requested.exists():
+        return scores_csv
+    if requested.name.endswith("_scores_current.csv"):
+        retained = requested.with_name(requested.name.replace("_scores_current.csv", "_scores_top_rank_retained_top50_current.csv"))
+        if retained.exists():
+            return retained
+    default_retained = _resolve(DEFAULT_RETAINED_SCORES_CSV)
+    if str(scores_csv) == DEFAULT_SCORES_CSV and default_retained.exists():
+        return DEFAULT_RETAINED_SCORES_CSV
+    return None
+
+
+def _read_score_rows(scores_csv: str | Path, score_col: str) -> tuple[list[dict[str, Any]], str | Path, str]:
+    selected_scores_csv = _retained_scores_candidate(scores_csv)
+    if selected_scores_csv is None:
+        selected_scores_csv = scores_csv
+    rows = _read_csv(selected_scores_csv)
+    input_mode = "full_score_csv" if _resolve(selected_scores_csv) == _resolve(scores_csv) else "retained_top_rank_score_csv"
+    if input_mode == "full_score_csv":
+        return rows, selected_scores_csv, input_mode
+
+    normalized: list[dict[str, Any]] = []
+    for row in rows:
+        enriched = dict(row)
+        if _float(enriched.get(score_col)) is None:
+            compact_score = _float(enriched.get("score_value"))
+            residual_shadow_score = _float(enriched.get("binding_score_composite_v7_residual_shadow"))
+            if compact_score is not None:
+                enriched[score_col] = compact_score
+            elif residual_shadow_score is not None:
+                enriched[score_col] = residual_shadow_score
+        normalized.append(enriched)
+    return normalized, selected_scores_csv, input_mode
 
 
 def _positive_pairs(pose_gap: dict[str, Any], extra_pairs: list[str] | None = None) -> dict[str, str]:
@@ -289,7 +329,7 @@ def build_review(
     operational_ci_low_positive_min: int = DEFAULT_OPERATIONAL_CI_LOW_POSITIVE_MIN,
     generated_at_local: str | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    rows = _read_csv(scores_csv)
+    rows, selected_scores_csv, input_mode = _read_score_rows(scores_csv, score_col)
     pose_gap = _read_json(pose_gap_json)
     a1_queue = _read_json(a1_queue_json)
     positives = _positive_pairs(pose_gap, positive_pair)
@@ -353,6 +393,8 @@ def build_review(
     diagnostic_warnings: list[str] = [
         "claim_locked_shadow_review_only_not_active_scorer",
     ]
+    if input_mode == "retained_top_rank_score_csv":
+        diagnostic_warnings.append("shadow_input_compacted_top_rank_retained")
     if int(len(ranked)) < 100000:
         diagnostic_warnings.append("shadow_input_not_full_100k_scale")
     if positive_count < kk:
@@ -392,6 +434,9 @@ def build_review(
             "status": status,
             "input_rows": int(len(ranked)),
             "score_col": score_col,
+            "scores_csv_requested": _artifact(scores_csv),
+            "scores_csv_used": _artifact(selected_scores_csv),
+            "score_input_mode": input_mode,
             "positive_count": positive_count,
             "negative_count": negative_count,
             "ranking_pr_auc": pr_auc,
@@ -426,7 +471,8 @@ def build_review(
         "positive_pairs": positives,
         "positive_summaries": positive_summaries,
         "source_artifacts": {
-            "scores_csv": _artifact(scores_csv),
+            "scores_csv": _artifact(selected_scores_csv),
+            "scores_csv_requested": _artifact(scores_csv),
             "pose_gap_json": _artifact(pose_gap_json),
             "a1_queue_json": _artifact(a1_queue_json),
         },

@@ -390,6 +390,23 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_metric_name=dockq`,
   `public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker=operator_placeholders_unfilled`,
   `public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required=APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS`,
+  `public_benchmark_bootstrap_driver_operator_chain_rollup_present=true`,
+  `public_benchmark_bootstrap_driver_operator_chain_surface_ready=true`,
+  `public_benchmark_bootstrap_driver_operator_chain_closure_ready=false`,
+  `public_benchmark_bootstrap_driver_operator_chain_stage_count=5`,
+  `public_benchmark_bootstrap_driver_operator_chain_stage_artifact_present_count=5`,
+  `public_benchmark_bootstrap_driver_operator_chain_stage_surface_ready_count=4`,
+  `public_benchmark_bootstrap_driver_operator_chain_source_staging_operator_manual_pending_field_count=66`,
+  `public_benchmark_bootstrap_driver_operator_chain_machine_supported_prefilled_field_count=36`,
+  `public_benchmark_bootstrap_driver_operator_chain_operator_only_pending_field_count=30`,
+  `public_benchmark_bootstrap_driver_operator_chain_attestation_blocked_row_count=6`,
+  `public_benchmark_bootstrap_driver_operator_chain_attestation_merge_ready=false`,
+  `public_benchmark_bootstrap_driver_operator_chain_merge_preview_blocked_row_count=6`,
+  `public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_verified_count=6`,
+  `public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_mismatch_count=0`,
+  `public_benchmark_bootstrap_driver_operator_chain_merged_candidate_row_count=0`,
+  `public_benchmark_bootstrap_driver_operator_chain_final_blocker_stage_id=attestation_merge_preview`,
+  `public_benchmark_bootstrap_driver_operator_chain_final_blocker=operator_only_placeholders_unfilled`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready=true`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count=17`,
   `public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count=17`,
@@ -416,25 +433,30 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   `public_benchmark_statistical_support_coordinate_fetch_operator_receipt_authorized_for_external_download=false`,
   `public_benchmark_statistical_support_coordinate_fetch_operator_receipt_first_blocked_review_id=r9_statistical_support_coordinate_fetch_001`,
   `public_benchmark_statistical_support_coordinate_fetch_operator_receipt_most_common_row_blocker=operator_placeholders_unfilled`,
-  `blocker_count=6`다. 남은 blockers는
+  `blocker_count=7`다. 남은 blockers는
   `gpcr_broad_claim_review_not_approved`,
   `gpcr_scorer_router_promotion_not_approved`,
   `openmm_schrodinger_public_benchmark_not_promoted_to_canonical_intake`,
   `openmm_schrodinger_public_benchmark_statistical_support_not_claim_grade`,
   `openmm_schrodinger_public_benchmark_statistical_support_metric_source_payload_operator_receipt_not_ready`,
+  `openmm_schrodinger_public_benchmark_bootstrap_driver_operator_chain_not_closed`,
   `engine_refinement_claim_evidence_receipt_not_ready`로,
   coordinate fetch/validation 자체는 닫혔지만 51개 reviewed metric payload receipt와
-  claim-grade sample/holdout/bootstrap support, canonical intake/claim receipt가 아직
+  bootstrap-driver operator-only attestation 30개, claim-grade bootstrap support,
+  canonical intake/claim receipt가 아직
   닫히지 않았음을 accuracy frontier에서 직접 표시한다.
   다만 coordinate receipt template 자체는 현재 R4 preflight row
   fingerprint 17/17개를 mismatch 0으로 고정해, operator가 승인하더라도 stale Target/Action/Impact/Risk/
   Rollback/Verification row를 근거로 실행 승인이 열리는 경로는 fail-closed로 막는다.
   새 metric payload receipt도 metric source template row fingerprint 51/51개를 mismatch 0으로 고정하면서
   실제 DockQ/lDDT-PLI/internal DeltaG 값은 0/51 승인 상태로 분리해, stale template이나 빈 값이
-  reviewed evidence로 승격되는 경로를 막는다. 즉 상용 parity claim의 과학 병목은 더 이상 단일 metric
-  failure가 아니라 GPCR formal claim/router approval, R9 public benchmark/evidence
-  receipt 부재, materialized R9 후보의 통계 support 부족, 그리고 17개 후보의
-  DockQ/lDDT-PLI/internal ΔG source payload 51개 미검토/미승인으로 분리된다.
+  reviewed evidence로 승격되는 경로를 막는다. bootstrap-driver operator chain도
+  prefill row fingerprint 6/6개는 검증하지만 attestation merge preview가 0/6 pass라
+  merged candidate row가 0개로 유지된다. 즉 상용 parity claim의 과학 병목은 더
+  이상 단일 metric failure가 아니라 GPCR formal claim/router approval, R9 public
+  benchmark/evidence receipt 부재, materialized R9 후보의 bootstrap p05 부족,
+  17개 후보의 DockQ/lDDT-PLI/internal ΔG source payload 51개 미검토/미승인,
+  bootstrap-driver operator-only attestation 미완료로 분리된다.
   R9 쪽은 public experimental ΔG가 pAffinity에서
   선채움됐고 ligand pose artifact 8개도 로컬에 있으며, 2026-06-14에는 RCSB
   public PDB coordinate 8개를 로컬 dataset 경로에 배치해 receptor/complex coordinate
@@ -1206,6 +1228,24 @@ full-commercial blocker surface 밖으로 빠지지 않는다.
   evidence/preflight surface가 모두 모였지만, 30개 operator-only attestation
   placeholder가 채워지고 merge/staging apply가 재통과하기 전까지 closure-ready가
   아니다.
+  2026-06-15 KST 추가 science accuracy frontier propagation은 이 rollup을
+  `tools/product/build_science_accuracy_frontier.py`의 상위 blocker 계산에 연결했다.
+  이에 따라 `runs/science_accuracy_frontier_current.json` 재생성 결과는
+  `public_benchmark_bootstrap_driver_operator_chain_rollup_present=true`,
+  `public_benchmark_bootstrap_driver_operator_chain_surface_ready=true`,
+  `public_benchmark_bootstrap_driver_operator_chain_closure_ready=false`,
+  `public_benchmark_bootstrap_driver_operator_chain_operator_only_pending_field_count=30`,
+  `public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_verified_count=6`,
+  `public_benchmark_bootstrap_driver_operator_chain_merged_candidate_row_count=0`,
+  `public_benchmark_bootstrap_driver_operator_chain_final_blocker_stage_id=attestation_merge_preview`,
+  `public_benchmark_bootstrap_driver_operator_chain_final_blocker=operator_only_placeholders_unfilled`,
+  `blockers`에
+  `openmm_schrodinger_public_benchmark_bootstrap_driver_operator_chain_not_closed`를
+  추가해 `blocker_count=7`로 표시한다. `scripts/check_independent_product_readiness.py`
+  도 같은 blocker와 count를 expected science frontier boundary로 검증한다. 다만
+  최신 source-of-truth/final refresh가 semantic blocker 20개와 final-gate blocker
+  3개로 내려왔기 때문에 restricted 제품 readiness도 현재는 보수적으로 blocked이며,
+  full-commercial parity 승격은 operator-only attestation closure 없이는 계속 막힌다.
   `runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json`은
   이 execute 직전 handoff를 R4/operator review packet으로 고정해
   `refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready`,
@@ -2319,17 +2359,17 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `cameo_validation_operations_dossier_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=149`, `pass_count=149`,
-  `blocker_count=0`, `artifact_row_count=93`, `semantic_status_row_count=54`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=149`, `pass_count=129`,
+  `blocker_count=20`, `artifact_row_count=93`, `semantic_status_row_count=54`,
   `release_refresh_command_count=118`, `stale_artifact_count=0`,
-  `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
+  `semantic_status_blocker_count=20`, `readme_drift_count=0`이다.
   final refresh는 마지막 `goal_release_decision_gate` 뒤에
   `goal_operator_action_board`, `goal_release_burndown_work_order`, intake kit,
   bottleneck briefing, full commercial matrix, release bundle, handoff bundle,
   privacy scan, source-of-truth gate까지 downstream 산출물을 한 번 더 재생성하고,
   refresh runner final gate는 source-of-truth, quality gate verification,
   release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=149`,
-  `pass_count=149`, `artifact_row_count=93`, `semantic_status_row_count=54`,
+  `pass_count=129`, `artifact_row_count=93`, `semantic_status_row_count=54`,
   `readme_row_count=2`, `release_refresh_command_count=118`를 exact-check해
   downstream readiness row가 조용히 빠지는 회귀를 막고,
   `product_quality_gate_verification_current.json` final gate는
@@ -2349,11 +2389,11 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   operational quality verifier가 release bundle/source-of-truth/final refresh 안에만
   머물지 않고 operator-facing decision surface에서도 직접 확인된다.
   action board echo는
-  `goal_release_decision_gate_status=goal_release_ready`,
-  `goal_release_allowed=true`, `goal_release_blocker_count=0`이어야 하므로
+  `goal_release_decision_gate_status=blocked_goal_release_decision`,
+  `goal_release_allowed=false`, `goal_release_blocker_count=3`으로 내려왔으므로
   operator-facing 보드가 한 cycle 전 release-decision 상태를 들고 있어도
-  verified refresh로 통과하지 않는다. 이 ready는 restricted independent release
-  기준이며, full-commercial claim은 readiness/frontier에서
+  verified refresh로 통과하지 않는다. 이 blocked 상태는 restricted independent release
+  gate의 현재 보수적 판정이며, full-commercial claim은 readiness/frontier에서
   `full_commercial_release_allowed=false`와 R8/R9/ACCURACY blocker로 별도 잠긴다.
   `goal_bottleneck_briefing`은 burndown row의 `release_observed`/`release_required`
   문자열을 최신 release-decision row에서 보정해, R8/R9 completion-audit blocker
@@ -3056,9 +3096,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 실행 결과는
-  `product_release_current_refresh_verified`, `command_count=118`, `executed_count=118`,
-  `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=true`,
-  `final_gate_count=4`, `final_gate_blocker_count=0`이다.
+  `blocked_product_release_current_refresh`, `command_count=118`, `executed_count=118`,
+  `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=false`,
+  `final_gate_count=4`, `final_gate_blocker_count=3`이다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
   rollout smoke receipt를 분리한 뒤 `deploy_ops_legal_gap_closure_complete`,
   `closed_gap_count=6`, `open_gap_ids=[]`로 닫혔다.
@@ -3178,6 +3218,24 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_metric_name=dockq`,
   `science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker=operator_placeholders_unfilled`,
   `science_accuracy_frontier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required=APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_rollup_present=true`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_surface_ready=true`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_closure_ready=false`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_stage_count=5`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_stage_artifact_present_count=5`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_stage_surface_ready_count=4`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_source_staging_operator_manual_pending_field_count=66`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_machine_supported_prefilled_field_count=36`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_operator_only_pending_field_count=30`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_attestation_blocked_row_count=6`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_attestation_merge_ready=false`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_merge_preview_blocked_row_count=6`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_verified_count=6`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_prefill_row_fingerprint_mismatch_count=0`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_merged_candidate_row_count=0`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_final_blocker_stage_id=attestation_merge_preview`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_final_blocker=operator_only_placeholders_unfilled`,
+  `science_accuracy_frontier_public_benchmark_bootstrap_driver_operator_chain_blocker_count=3`,
   `accuracy_parity_ligand_ranking_metric_thresholds_pass=true`,
   `accuracy_parity_ligand_ranking_metric_blocker_count=0`,
   `accuracy_parity_ligand_ranking_claim_scope_lock_only=true`,
