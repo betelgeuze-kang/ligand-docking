@@ -1840,6 +1840,53 @@ def _engine_refinement_claim_evidence_priority_fields(
         "engine_refinement_claim_evidence_priority_public_benchmark_work_order_apply_blocked_row_count": _int(
             priority.get("public_benchmark_work_order_apply_blocked_row_count")
         ),
+        "engine_refinement_priority_metric_source_payload_receipt_present": bool(
+            priority.get("public_benchmark_statistical_support_metric_source_payload_operator_receipt_present")
+            is True
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_ready": bool(
+            priority.get("public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready")
+            is True
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_status": priority.get(
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_status",
+            "",
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_csv": priority.get(
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_csv",
+            "",
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_blocked_row_count": _int(
+            priority.get(
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count"
+            )
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_first_blocked_template_id": priority.get(
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_template_id",
+            "",
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_most_common_row_blocker": priority.get(
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker",
+            "",
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_approval_token_required": priority.get(
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required",
+            "",
+        ),
+        "engine_refinement_priority_planned_metric_source_payload_count": _int(
+            priority.get(
+                "public_benchmark_statistical_support_metric_materialization_planned_metric_source_payload_count"
+            )
+        ),
+        "engine_refinement_priority_existing_metric_source_payload_count": _int(
+            priority.get(
+                "public_benchmark_statistical_support_metric_materialization_existing_metric_source_payload_count"
+            )
+        ),
+        "engine_refinement_priority_required_metric_source_payloads": priority.get(
+            "public_benchmark_statistical_support_metric_materialization_required_metric_source_payloads",
+            "",
+        ),
         "engine_refinement_claim_evidence_priority_claim_evidence_receipt_status": priority.get(
             "claim_evidence_receipt_status", ""
         ),
