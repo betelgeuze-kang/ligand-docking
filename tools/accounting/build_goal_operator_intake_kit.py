@@ -43,6 +43,11 @@ from tools.product.build_engine_refinement_claim_evidence_receipt import (
     DEFAULT_OUT_JSON as DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON,
     DEFAULT_RECEIPT_CSV as DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_CSV,
 )
+from tools.product.build_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt import (
+    APPROVAL_TOKEN as R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_APPROVAL_TOKEN,
+    DEFAULT_OUT_JSON as DEFAULT_R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON,
+    DEFAULT_RECEIPT_CSV as DEFAULT_R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV,
+)
 from tools.product.build_product_scope_breadth_evidence_receipt import (
     APPROVAL_TOKEN as PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_APPROVAL_TOKEN,
     DEFAULT_OUT_JSON as DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_JSON,
@@ -335,6 +340,22 @@ CATALOG: list[dict[str, Any]] = [
         "recommended_action": (
             "Use the refine-tier claim blocker action board to track public benchmark rows, parameter calibration, "
             "metal/cofactor, protonation/charge, solvent/FEP, and external structure-quality parity evidence."
+        ),
+    },
+    {
+        "kit_entry_id": "r9_statistical_support_metric_source_payload_receipt",
+        "lane_id": "product_engine_refinement",
+        "action_types": ["resolve_refine_tier_claim_promotion_blocker"],
+        "input_kind": "r9_statistical_support_metric_source_payload_receipt",
+        "source_gate_json": DEFAULT_R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON,
+        "template_path": DEFAULT_R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV,
+        "intake_path": DEFAULT_R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV,
+        "approval_token_required": R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_APPROVAL_TOKEN,
+        "release_checks": "engine_refinement_claim_evidence_priority_packet_recorded",
+        "recommended_action": (
+            "Fill the R9 DockQ, lDDT-PLI, and internal DeltaG metric-source payload receipt rows with reviewed "
+            "local payload values, methods, artifact hashes, reviewer metadata, license flags, and the R9 metric "
+            "source payload approval token before materialization or claim promotion."
         ),
     },
     {
@@ -716,8 +737,19 @@ def build_goal_operator_intake_kit(
         (row for row in rows if row["kit_entry_id"] == "production_ai_registry_promotion"),
         {},
     )
+    r9_metric_source_payload_receipt_row = next(
+        (
+            row
+            for row in rows
+            if row["kit_entry_id"] == "r9_statistical_support_metric_source_payload_receipt"
+        ),
+        {},
+    )
     scope_breadth_priority_summary = _summary_or_payload(
         source_packets.get(DEFAULT_PRODUCT_SCOPE_EVIDENCE_PRIORITY_JSON, {})
+    )
+    r9_metric_source_payload_receipt_summary = _summary_or_payload(
+        source_packets.get(DEFAULT_R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON, {})
     )
     template_rows = [row for row in rows if row["template_required"]]
     missing_template_rows = [row for row in template_rows if not row["template_present"]]
@@ -962,6 +994,94 @@ def build_goal_operator_intake_kit(
         ),
         "production_ai_registry_promotion_priority_external_state_mutated": bool(
             production_ai_registry_promotion_row.get("priority_external_state_mutated") is True
+        ),
+        "engine_refinement_priority_action_id": _text(
+            action_board_summary.get("engine_refinement_priority_action_id")
+        ),
+        "engine_refinement_priority_top_item_id": _text(
+            action_board_summary.get("engine_refinement_priority_top_item_id")
+        ),
+        "engine_refinement_priority_top_blocker_id": _text(
+            action_board_summary.get("engine_refinement_priority_top_blocker_id")
+        ),
+        "engine_refinement_priority_top_bucket": _text(
+            action_board_summary.get("engine_refinement_priority_top_bucket")
+        ),
+        "engine_refinement_priority_top_required_input": _text(
+            action_board_summary.get("engine_refinement_priority_top_required_input")
+        ),
+        "engine_refinement_priority_top_acceptance_artifact": _text(
+            action_board_summary.get("engine_refinement_priority_top_acceptance_artifact")
+        ),
+        "engine_refinement_priority_top_verification_command": _text(
+            action_board_summary.get("engine_refinement_priority_top_verification_command")
+        ),
+        "engine_refinement_priority_top_next_operator_step": _text(
+            action_board_summary.get("engine_refinement_priority_top_next_operator_step")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_entry_id": _text(
+            r9_metric_source_payload_receipt_row.get("kit_entry_id")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_kit_status": _text(
+            r9_metric_source_payload_receipt_row.get("kit_status")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_template_path": _text(
+            r9_metric_source_payload_receipt_row.get("template_path")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_kit_template_path": _text(
+            r9_metric_source_payload_receipt_row.get("kit_template_path")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_csv": _text(
+            action_board_summary.get("engine_refinement_priority_metric_source_payload_receipt_csv")
+            or r9_metric_source_payload_receipt_row.get("intake_path")
+            or r9_metric_source_payload_receipt_summary.get("receipt_csv")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_approval_token_required": _text(
+            action_board_summary.get(
+                "engine_refinement_priority_metric_source_payload_receipt_approval_token_required"
+            )
+            or r9_metric_source_payload_receipt_row.get("approval_token_required")
+            or r9_metric_source_payload_receipt_summary.get("approval_token_required")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_status": _text(
+            action_board_summary.get("engine_refinement_priority_metric_source_payload_receipt_status")
+            or r9_metric_source_payload_receipt_summary.get("status")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_ready": bool(
+            r9_metric_source_payload_receipt_summary.get("receipt_ready") is True
+            or r9_metric_source_payload_receipt_summary.get("operator_receipt_ready") is True
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_row_count": _int(
+            r9_metric_source_payload_receipt_summary.get("receipt_row_count")
+            or r9_metric_source_payload_receipt_summary.get("row_count")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_blocked_row_count": _int(
+            action_board_summary.get(
+                "engine_refinement_priority_metric_source_payload_receipt_blocked_row_count"
+            )
+            or r9_metric_source_payload_receipt_summary.get("blocked_row_count")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_first_blocked_template_id": _text(
+            r9_metric_source_payload_receipt_summary.get("first_blocked_template_id")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_most_common_row_blocker": _text(
+            r9_metric_source_payload_receipt_summary.get("most_common_row_blocker")
+        ),
+        "engine_refinement_priority_claim_evidence_receipt_csv": _text(
+            action_board_summary.get("engine_refinement_priority_claim_evidence_receipt_csv")
+        ),
+        "engine_refinement_priority_claim_evidence_receipt_approval_token_required": _text(
+            action_board_summary.get(
+                "engine_refinement_priority_claim_evidence_receipt_approval_token_required"
+            )
+        ),
+        "engine_refinement_priority_claim_evidence_receipt_status": _text(
+            action_board_summary.get("engine_refinement_priority_claim_evidence_receipt_status")
+        ),
+        "engine_refinement_priority_claim_evidence_receipt_blocked_row_count": _int(
+            action_board_summary.get(
+                "engine_refinement_priority_claim_evidence_receipt_blocked_row_count"
+            )
         ),
         "primary_action_id": primary_action_id,
         "top_action_id": _text(action_board_summary.get("top_action_id")) or primary_action_id,
@@ -1284,6 +1404,15 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- production_ai_registry_promotion_priority_status: `{s['production_ai_registry_promotion_priority_status']}`",
         f"- production_ai_registry_promotion_priority_top_gate_id: `{s['production_ai_registry_promotion_priority_top_gate_id']}`",
         f"- production_ai_registry_promotion_priority_top_required_input: `{s['production_ai_registry_promotion_priority_top_required_input']}`",
+        f"- engine_refinement_priority_action_id: `{s['engine_refinement_priority_action_id']}`",
+        f"- engine_refinement_priority_top_blocker_id: `{s['engine_refinement_priority_top_blocker_id']}`",
+        f"- engine_refinement_priority_top_required_input: `{s['engine_refinement_priority_top_required_input']}`",
+        "- engine_refinement_priority_metric_source_payload_receipt_csv: "
+        f"`{s['engine_refinement_priority_metric_source_payload_receipt_csv']}`",
+        "- engine_refinement_priority_metric_source_payload_receipt_approval_token_required: "
+        f"`{s['engine_refinement_priority_metric_source_payload_receipt_approval_token_required']}`",
+        "- engine_refinement_priority_claim_evidence_receipt_csv: "
+        f"`{s['engine_refinement_priority_claim_evidence_receipt_csv']}`",
         f"- approval_required_count: `{s['approval_required_count']}`",
         f"- official_results_required_count: `{s['official_results_required_count']}`",
         f"- policy_decision_required_count: `{s['policy_decision_required_count']}`",
@@ -1359,6 +1488,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--engine-refinement-claim-evidence-receipt-json",
         default=DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON,
     )
+    parser.add_argument(
+        "--r9-metric-source-payload-operator-receipt-json",
+        default=DEFAULT_R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON,
+    )
     parser.add_argument("--accuracy-parity-scorecard-json", default=DEFAULT_ACCURACY_PARITY_SCORECARD_JSON)
     parser.add_argument("--goal-api-surface-contract-json", default=DEFAULT_GOAL_API_SURFACE_CONTRACT_JSON)
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
@@ -1407,6 +1540,9 @@ def main(argv: list[str] | None = None) -> None:
         DEFAULT_PROTECTED_POLICY_GATE_JSON: _read_json_if_present(args.protected_policy_gate_json),
         DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON: _read_json_if_present(
             args.engine_refinement_claim_evidence_receipt_json
+        ),
+        DEFAULT_R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON: _read_json_if_present(
+            args.r9_metric_source_payload_operator_receipt_json
         ),
         DEFAULT_ACCURACY_PARITY_SCORECARD_JSON: _read_json_if_present(
             args.accuracy_parity_scorecard_json
