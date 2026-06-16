@@ -3908,19 +3908,19 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert checkpoint_status_spec["required_int_exact_fields"][
         "production_inference_acceptance_blocked_stage_count"
-    ] == 6
+    ] == 4
     assert checkpoint_status_spec["required_int_exact_fields"][
         "force_gpu_worker_return_receipt_ready"
-    ] == 0
+    ] == 1
     assert checkpoint_status_spec["required_int_exact_fields"][
         "selected_sidecar_ready"
     ] == 0
     assert checkpoint_status_spec["required_text_exact_fields"][
         "production_inference_actionable_blocker_stage_id"
-    ] == "gpu_return_acceptance"
+    ] == "force_derivation_acceptance"
     assert checkpoint_status_spec["required_text_exact_fields"][
         "production_inference_actionable_blocker_check_id"
-    ] == "force_gpu_worker_return_receipt_ready"
+    ] == "delta_force_derivation_validation_ready"
     promotion_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -3928,10 +3928,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert promotion_status_spec["required_int_exact_fields"][
         "post_return_promotion_ladder_blocked_stage_count"
-    ] == 9
-    assert promotion_status_spec["required_text_exact_fields"]["first_blocked_stage_id"] == "gpu_return_receipt"
+    ] == 6
+    assert promotion_status_spec["required_text_exact_fields"]["first_blocked_stage_id"] == "force_derivation_validation"
     assert promotion_status_spec["required_text_exact_fields"]["first_blocked_stage_ready_key"] == (
-        "gpu_worker_return_receipt_ready"
+        "delta_force_derivation_validation_ready"
     )
     registry_receipt_spec = next(
         spec

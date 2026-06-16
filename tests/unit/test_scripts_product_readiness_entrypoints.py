@@ -68,10 +68,12 @@ def test_check_independent_product_readiness_script_reports_current_blockers() -
         "R9_engine_refinement_claim_promotion",
         "ACCURACY:ligand_ranking",
     ]
-    assert summary["blocker_count"] == 1
+    assert summary["blocker_count"] == 3
     assert summary["execution_enabled"] is False
     assert summary["external_state_mutated"] is False
     rows = {row["check"]: row for row in payload["rows"]}
+    assert rows["commercial_independence_restricted_self_hosted"]["status"] == "fail"
+    assert rows["capability_surface_restricted_scope_ready"]["status"] == "fail"
     assert rows["release_source_of_truth_ready"]["status"] == "pass"
     assert rows["release_refresh_final_gates_verified"]["status"] == "fail"
     assert rows["full_commercial_claim_boundaries_explicit"]["status"] == "pass"

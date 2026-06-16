@@ -205,6 +205,53 @@ def test_energy_force_work_order_finds_energy_proxy_candidates_but_blocks_valida
     assert payload["rows"][1]["status"] == "fail"
 
 
+def test_energy_force_work_order_accepts_embedded_supervised_proxy_candidate_rows(tmp_path: Path) -> None:
+    missing_stage5 = tmp_path / "missing_stage5_ranking_rows.csv"
+    supervised_rows = [
+        {
+            "target": "ADRB2_GPCR_BLIND",
+            "ligand_id": f"lig{i}",
+            "source_csv": str(missing_stage5),
+            "delta_energy": -8.0 - i * 0.01,
+            "delta_energy_label_source": "stage3_energy_proxy:binding_energy_mmpbsa_kcal_mol_proxy",
+        }
+        for i in range(6)
+    ]
+
+    payload = mod.build_residual_energy_force_label_evidence_work_order(
+        supervised_dataset_packet=_packet(
+            {
+                "label_fields": ["is_binder", "reference_binding_kcal_mol", "delta_score", "corrected_score", "delta_energy"],
+                "missing_production_output_labels": ["delta_force"],
+            },
+            supervised_rows,
+        ),
+        validation_packet=_packet(
+            {
+                "delta_energy_proxy_validation_ready": False,
+                "joined_energy_proxy_pair_count": 6,
+                "stage3_energy_proxy_pair_count": 0,
+                "embedded_delta_energy_proxy_pair_count": 6,
+                "energy_proxy_source_mode": "embedded_supervised_delta_energy_proxy",
+                "blockers": ["pearson_reference_vs_energy_proxy", "delta_force_derivation_validation"],
+            }
+        ),
+        min_energy_proxy_rows=5,
+        max_sources=4,
+        max_rows_per_source=10,
+    )
+
+    summary = payload["summary"]
+    assert summary["energy_proxy_candidate_ready"] is True
+    assert summary["stage3_energy_proxy_candidate_ready"] is False
+    assert summary["embedded_energy_proxy_candidate_ready"] is True
+    assert summary["validation_embedded_delta_energy_proxy_pair_count"] == 6
+    assert summary["validation_energy_proxy_source_mode"] == "embedded_supervised_delta_energy_proxy"
+    assert payload["rows"][0]["status"] == "pass"
+    assert "embedded_candidate_ready=True" in payload["rows"][0]["observed"]
+    assert payload["rows"][1]["status"] == "fail"
+
+
 def test_energy_force_work_order_ready_with_validation_evidence(tmp_path: Path) -> None:
     stage5 = tmp_path / "a_stage5_ranking_rows.csv"
     _write_stage3(tmp_path / "a_stage3_scores.csv", 3)

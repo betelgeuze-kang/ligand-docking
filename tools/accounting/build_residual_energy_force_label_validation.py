@@ -59,6 +59,7 @@ CLAIM_BOUNDARY = (
     "production models, create checkpoints, promote production mode, upload, submit, email, delete, or mutate external "
     "state."
 )
+EMBEDDED_STAGE3_LABEL_PREFIX = "stage3_energy_proxy"
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -155,6 +156,22 @@ def _metric_row(metric: str, value: float, threshold: float, operator: str) -> d
     }
 
 
+def _embedded_feature_value(row: dict[str, Any], column: str) -> float:
+    value = _float(row.get(column))
+    if value is not None:
+        return value
+    if column in {
+        "binding_energy_mmpbsa_kcal_mol_proxy",
+        "replicate_mean_binding_energy_mmpbsa_kcal_mol_proxy",
+    }:
+        value = _float(row.get("delta_energy"))
+    elif column in {"binding_score_composite_v7", "replicate_mean_active_score"}:
+        value = _float(row.get("raw_score"))
+    elif column == "replicate_mean_mean_min_distance_A":
+        value = _float(row.get("mean_min_distance_A"))
+    return 0.0 if value is None else value
+
+
 def _split_bucket(target: str, ligand_id: str, holdout_percent: int) -> str:
     digest = hashlib.sha256(f"{target}::{ligand_id}".encode("utf-8")).hexdigest()
     bucket = int(digest[:8], 16) % 100
@@ -244,6 +261,7 @@ def _join_energy_proxy_rows(
     *,
     max_sources: int,
     max_rows_per_source: int,
+    embedded_source_label: str,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     references: dict[tuple[str, str], dict[str, Any]] = {}
     for row in supervised_rows:
@@ -258,6 +276,11 @@ def _join_energy_proxy_rows(
             "family": str(row.get("family") or "unknown"),
             "reference_binding_kcal_mol": reference,
             "source_csv": str(row.get("source_csv") or ""),
+            "embedded_delta_energy_proxy": _float(row.get("delta_energy")),
+            "embedded_delta_energy_label_source": str(row.get("delta_energy_label_source") or ""),
+            "embedded_features": {
+                col: _embedded_feature_value(row, col) for col in CALIBRATION_FEATURE_COLUMNS
+            },
         }
 
     stage5_sources = sorted({item["source_csv"] for item in references.values() if item.get("source_csv")})
@@ -329,10 +352,47 @@ def _join_energy_proxy_rows(
             }
         )
 
+    embedded_proxy_rows = 0
+    embedded_proxy_keys: set[tuple[str, str]] = set()
+    for key, ref in references.items():
+        if key in proxy_values:
+            continue
+        embedded_proxy = ref.get("embedded_delta_energy_proxy")
+        embedded_label_source = str(ref.get("embedded_delta_energy_label_source") or "")
+        if embedded_proxy is None or not embedded_label_source.startswith(EMBEDDED_STAGE3_LABEL_PREFIX):
+            continue
+        proxy_values.setdefault(key, []).append(float(embedded_proxy))
+        proxy_columns.setdefault(key, f"embedded:{embedded_label_source}")
+        feature_bucket = feature_values.setdefault(key, {col: [] for col in CALIBRATION_FEATURE_COLUMNS})
+        embedded_features = ref.get("embedded_features") if isinstance(ref.get("embedded_features"), dict) else {}
+        for col in CALIBRATION_FEATURE_COLUMNS:
+            feature_bucket[col].append(float(embedded_features.get(col) or 0.0))
+        embedded_proxy_rows += 1
+        embedded_proxy_keys.add(key)
+    if embedded_proxy_rows:
+        source_rows.append(
+            {
+                "source_csv": embedded_source_label,
+                "status": "embedded_supervised_delta_energy_proxy",
+                "scanned_rows": len(references),
+                "joined_rows": embedded_proxy_rows,
+                "proxy_rows": embedded_proxy_rows,
+                "energy_proxy_columns": "delta_energy",
+                "embedded_delta_energy_label_prefix": EMBEDDED_STAGE3_LABEL_PREFIX,
+                "unique_embedded_energy_proxy_keys": len(embedded_proxy_keys),
+            }
+        )
+
     detail_rows = []
     for key, values in sorted(proxy_values.items()):
         ref = references[key]
         proxy = sum(values) / len(values)
+        proxy_column = proxy_columns.get(key, "")
+        source_kind = (
+            "embedded_supervised_delta_energy_proxy"
+            if proxy_column.startswith("embedded:")
+            else "stage3_score_artifact"
+        )
         detail_rows.append(
             {
                 "target": ref["target"],
@@ -341,9 +401,14 @@ def _join_energy_proxy_rows(
                 "reference_binding_kcal_mol": ref["reference_binding_kcal_mol"],
                 "delta_energy_proxy_kcal_mol": proxy,
                 "proxy_sample_count": len(values),
-                "energy_proxy_column": proxy_columns.get(key, ""),
+                "energy_proxy_column": proxy_column,
+                "energy_proxy_source_kind": source_kind,
                 "abs_error_kcal_mol": abs(proxy - float(ref["reference_binding_kcal_mol"])),
-                "label_source": "joined_stage3_energy_proxy_vs_supervised_reference_binding",
+                "label_source": (
+                    "embedded_supervised_delta_energy_proxy_vs_supervised_reference_binding"
+                    if source_kind == "embedded_supervised_delta_energy_proxy"
+                    else "joined_stage3_energy_proxy_vs_supervised_reference_binding"
+                ),
             }
         )
         feature_bucket = feature_values.get(key, {})
@@ -377,12 +442,25 @@ def build_residual_energy_force_label_validation(
         supervised_rows,
         max_sources=max_sources,
         max_rows_per_source=max_rows_per_source,
+        embedded_source_label=supervised_dataset_path,
     )
     refs = [float(row["reference_binding_kcal_mol"]) for row in detail_rows]
     proxies = [float(row["delta_energy_proxy_kcal_mol"]) for row in detail_rows]
     targets = {str(row["target"]) for row in detail_rows}
     families = {str(row["family"]) for row in detail_rows}
     pair_count = len(detail_rows)
+    embedded_proxy_pair_count = sum(
+        1 for row in detail_rows if row.get("energy_proxy_source_kind") == "embedded_supervised_delta_energy_proxy"
+    )
+    stage3_proxy_pair_count = pair_count - embedded_proxy_pair_count
+    if stage3_proxy_pair_count and embedded_proxy_pair_count:
+        energy_proxy_source_mode = "stage3_score_artifacts_plus_embedded_supervised_delta_energy_proxy"
+    elif embedded_proxy_pair_count:
+        energy_proxy_source_mode = "embedded_supervised_delta_energy_proxy"
+    elif stage3_proxy_pair_count:
+        energy_proxy_source_mode = "stage3_score_artifacts"
+    else:
+        energy_proxy_source_mode = "missing_energy_proxy_rows"
     raw_pearson = _pearson(refs, proxies) if detail_rows else 0.0
     raw_spearman = _spearman(refs, proxies) if detail_rows else 0.0
     raw_mae = sum(abs(a - b) for a, b in zip(refs, proxies)) / pair_count if pair_count else 0.0
@@ -431,6 +509,9 @@ def build_residual_energy_force_label_validation(
         "blocker_count": len(blockers) + len(force_blockers),
         "blockers": blockers + force_blockers,
         "joined_energy_proxy_pair_count": pair_count,
+        "stage3_energy_proxy_pair_count": stage3_proxy_pair_count,
+        "embedded_delta_energy_proxy_pair_count": embedded_proxy_pair_count,
+        "energy_proxy_source_mode": energy_proxy_source_mode,
         "target_count": len(targets),
         "families": sorted(families),
         "energy_proxy_metric_mode": "hash_holdout_ridge_calibrated" if calibration.get("calibration_ready") else "raw_proxy",
@@ -511,6 +592,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], detail_csv: 
         f"- delta_energy_proxy_validation_ready: `{s['delta_energy_proxy_validation_ready']}`",
         f"- delta_force_derivation_validation_ready: `{s['delta_force_derivation_validation_ready']}`",
         f"- joined_energy_proxy_pair_count: `{s['joined_energy_proxy_pair_count']}`",
+        f"- stage3_energy_proxy_pair_count: `{s['stage3_energy_proxy_pair_count']}`",
+        f"- embedded_delta_energy_proxy_pair_count: `{s['embedded_delta_energy_proxy_pair_count']}`",
+        f"- energy_proxy_source_mode: `{s['energy_proxy_source_mode']}`",
         f"- target_count: `{s['target_count']}`",
         f"- energy_proxy_metric_mode: `{s['energy_proxy_metric_mode']}`",
         f"- calibration_train_rows: `{s['calibration_train_rows']}`",

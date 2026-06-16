@@ -304,7 +304,21 @@ def build_residual_energy_force_label_evidence_work_order(
     backmapped_pdb_rows = sum(int(row.get("backmapped_pdb_rows") or 0) for row in source_rows)
     missing_labels = [str(field) for field in supervised.get("missing_production_output_labels") or []]
     label_fields = [str(field) for field in supervised.get("label_fields") or []]
-    energy_proxy_candidate_ready = energy_proxy_key_count >= min_energy_proxy_rows
+    validation_joined_energy_proxy_pair_count = int(validation.get("joined_energy_proxy_pair_count") or 0)
+    validation_stage3_energy_proxy_pair_count = int(validation.get("stage3_energy_proxy_pair_count") or 0)
+    validation_embedded_delta_energy_proxy_pair_count = int(
+        validation.get("embedded_delta_energy_proxy_pair_count") or 0
+    )
+    validation_energy_proxy_source_mode = str(validation.get("energy_proxy_source_mode") or "")
+    stage3_energy_proxy_candidate_ready = energy_proxy_key_count >= min_energy_proxy_rows
+    embedded_energy_proxy_candidate_ready = (
+        validation_embedded_delta_energy_proxy_pair_count >= min_energy_proxy_rows
+        and validation_energy_proxy_source_mode in {
+            "embedded_supervised_delta_energy_proxy",
+            "stage3_score_artifacts_plus_embedded_supervised_delta_energy_proxy",
+        }
+    )
+    energy_proxy_candidate_ready = stage3_energy_proxy_candidate_ready or embedded_energy_proxy_candidate_ready
     energy_validation_ready = _bool(validation.get("delta_energy_proxy_validation_ready"))
     force_validation_ready = _bool(validation.get("delta_force_derivation_validation_ready"))
     validation_blockers = [str(item) for item in validation.get("blockers") or []]
@@ -488,11 +502,22 @@ def build_residual_energy_force_label_evidence_work_order(
             "pass" if energy_proxy_candidate_ready else "fail",
             (
                 f"joined_rows={joined_rows};energy_proxy_rows={energy_proxy_rows};"
-                f"unique_energy_proxy_keys={energy_proxy_key_count};min_energy_proxy_rows={min_energy_proxy_rows}"
+                f"unique_energy_proxy_keys={energy_proxy_key_count};"
+                f"stage3_candidate_ready={stage3_energy_proxy_candidate_ready};"
+                f"validation_joined_energy_proxy_pair_count={validation_joined_energy_proxy_pair_count};"
+                f"validation_stage3_energy_proxy_pair_count={validation_stage3_energy_proxy_pair_count};"
+                f"validation_embedded_delta_energy_proxy_pair_count={validation_embedded_delta_energy_proxy_pair_count};"
+                f"validation_energy_proxy_source_mode={validation_energy_proxy_source_mode};"
+                f"embedded_candidate_ready={embedded_energy_proxy_candidate_ready};"
+                f"min_energy_proxy_rows={min_energy_proxy_rows}"
             ),
-            "stage3 energy-proxy rows join the supervised production residual dataset at target+ligand_id scale",
+            "stage3 energy-proxy rows or embedded supervised stage3 proxy labels join the production residual dataset at target+ligand_id scale",
             supervised_dataset_path,
-            "Join stage3 energy proxy columns into the production residual dataset candidate table.",
+            (
+                "Calibrate or replace the recovered embedded stage3 energy proxy until validation gates pass."
+                if embedded_energy_proxy_candidate_ready and not stage3_energy_proxy_candidate_ready
+                else "Join stage3 energy proxy columns into the production residual dataset candidate table."
+            ),
         ),
         _work_row(
             "delta_energy_proxy_validation",
@@ -619,6 +644,12 @@ def build_residual_energy_force_label_evidence_work_order(
         "delta_energy_label_evidence_ready": delta_energy_evidence_ready,
         "delta_force_label_evidence_ready": delta_force_evidence_ready,
         "energy_proxy_candidate_ready": energy_proxy_candidate_ready,
+        "stage3_energy_proxy_candidate_ready": stage3_energy_proxy_candidate_ready,
+        "embedded_energy_proxy_candidate_ready": embedded_energy_proxy_candidate_ready,
+        "validation_joined_energy_proxy_pair_count": validation_joined_energy_proxy_pair_count,
+        "validation_stage3_energy_proxy_pair_count": validation_stage3_energy_proxy_pair_count,
+        "validation_embedded_delta_energy_proxy_pair_count": validation_embedded_delta_energy_proxy_pair_count,
+        "validation_energy_proxy_source_mode": validation_energy_proxy_source_mode,
         "delta_energy_proxy_validation_ready": energy_validation_ready,
         "delta_force_derivation_validation_ready": force_validation_ready,
         "force_derivation_input_ready": force_derivation_input_ready,
