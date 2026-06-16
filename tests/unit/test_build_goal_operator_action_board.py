@@ -895,6 +895,15 @@ def _product_goal_completion_audit() -> dict:
             "product_scope_evidence_priority_top_item_id": "AQP1.core_binder_01",
             "product_scope_evidence_priority_top_domain": "transporter",
             "product_scope_evidence_priority_top_bucket": "local_crosscheck_review_present_but_exact_quant_required",
+            "product_scope_evidence_priority_top_required_evidence_type": (
+                "exact_transporter_target_pair_quantitative_binder_kcal"
+            ),
+            "product_scope_evidence_priority_top_review_template_artifact": (
+                "runs/transporter_manual_review_intake_template_current.json"
+            ),
+            "product_scope_evidence_priority_top_apply_gate_artifact": (
+                "runs/transporter_binder_promotion_gate_current.json"
+            ),
             "product_scope_evidence_priority_top_next_step": (
                 "Review local crosscheck files, capture exact evidence if present."
             ),
@@ -1502,6 +1511,36 @@ def test_goal_operator_action_board_summary_points_to_primary_product_ai_action(
     assert "full-scope evidence receipt rows" in summary[
         "primary_release_blocker_action_recommended_action"
     ]
+    assert summary["product_scope_breadth_evidence_priority_action_id"] == (
+        "product_scope_expansion:curate_scope_evidence_priority_item"
+    )
+    assert summary["product_scope_breadth_evidence_priority_top_item_id"] == "AQP1.core_binder_01"
+    assert summary["product_scope_breadth_evidence_priority_top_domain"] == "transporter"
+    assert summary["product_scope_breadth_evidence_priority_top_bucket"] == (
+        "local_crosscheck_review_present_but_exact_quant_required"
+    )
+    assert summary["product_scope_breadth_evidence_priority_top_required_evidence_type"] == (
+        "exact_transporter_target_pair_quantitative_binder_kcal"
+    )
+    assert summary["product_scope_breadth_evidence_priority_top_review_template_artifact"] == (
+        "runs/transporter_manual_review_intake_template_current.json"
+    )
+    assert summary["product_scope_breadth_evidence_priority_top_apply_gate_artifact"] == (
+        "runs/transporter_binder_promotion_gate_current.json"
+    )
+    assert summary["product_scope_breadth_evidence_priority_receipt_action_id"] == (
+        "product_scope_expansion:resolve_full_scope_breadth_evidence_receipt"
+    )
+    assert summary["product_scope_breadth_evidence_priority_receipt_csv"] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv"
+    )
+    assert summary["product_scope_breadth_evidence_priority_receipt_approval_token_required"] == (
+        "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+    )
+    assert summary["product_scope_breadth_evidence_priority_receipt_status"] == (
+        "blocked_product_scope_breadth_evidence_receipt"
+    )
+    assert summary["product_scope_breadth_evidence_priority_receipt_blocked_row_count"] == 6
     assert summary["full_commercial_release_allowed"] is False
     assert summary["full_commercial_release_blocker_count"] == 3
     assert summary["full_commercial_release_blocker_ids"] == [
@@ -1693,6 +1732,18 @@ def test_goal_operator_action_board_summary_points_to_primary_product_ai_action(
     assert "does not require production GPU execution" in summary[
         "first_parallel_product_action_precondition"
     ]
+    priority_action = next(
+        row for row in payload["rows"] if row["action_type"] == "curate_scope_evidence_priority_item"
+    )
+    assert priority_action["scope_priority_top_required_evidence_type"] == (
+        "exact_transporter_target_pair_quantitative_binder_kcal"
+    )
+    assert priority_action["scope_priority_top_review_template_artifact"] == (
+        "runs/transporter_manual_review_intake_template_current.json"
+    )
+    assert priority_action["scope_priority_top_apply_gate_artifact"] == (
+        "runs/transporter_binder_promotion_gate_current.json"
+    )
 
 
 def test_goal_operator_action_board_collects_blockers_approvals_and_review_rows(tmp_path: Path) -> None:

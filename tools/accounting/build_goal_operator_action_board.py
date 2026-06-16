@@ -736,6 +736,9 @@ def _product_goal_completion_actions(
                 f"pxr_exact_review_conflict_resolution_required_count={_int(summary.get('product_scope_pxr_exact_review_conflict_resolution_required_count'))}; "
                 f"top_domain={_text(summary.get('product_scope_evidence_priority_top_domain'))}; "
                 f"top_bucket={_text(summary.get('product_scope_evidence_priority_top_bucket'))}; "
+                f"top_required_evidence_type={_text(summary.get('product_scope_evidence_priority_top_required_evidence_type'))}; "
+                f"top_review_template_artifact={_text(summary.get('product_scope_evidence_priority_top_review_template_artifact'))}; "
+                f"top_apply_gate_artifact={_text(summary.get('product_scope_evidence_priority_top_apply_gate_artifact'))}; "
                 f"transporter_top_claim_safe_blocker={_text(summary.get('product_scope_transporter_top_claim_safe_blocker'))}; "
                 f"transporter_top_operator_next_verdict={_text(summary.get('product_scope_transporter_top_operator_next_verdict'))}; "
                 f"next_operator_best_evidence="
@@ -768,6 +771,18 @@ def _product_goal_completion_actions(
                 "scope_priority_top_item_id": _text(summary.get("product_scope_evidence_priority_top_item_id")),
                 "scope_priority_top_domain": _text(summary.get("product_scope_evidence_priority_top_domain")),
                 "scope_priority_top_bucket": _text(summary.get("product_scope_evidence_priority_top_bucket")),
+                "scope_priority_top_required_evidence_type": _text(
+                    summary.get("product_scope_evidence_priority_top_required_evidence_type")
+                ),
+                "scope_priority_top_review_template_artifact": _text(
+                    summary.get("product_scope_evidence_priority_top_review_template_artifact")
+                ),
+                "scope_priority_top_apply_gate_artifact": _text(
+                    summary.get("product_scope_evidence_priority_top_apply_gate_artifact")
+                ),
+                "scope_priority_top_next_step": _text(
+                    summary.get("product_scope_evidence_priority_top_next_step")
+                ),
                 "scope_transporter_top_claim_safe_blocker": _text(
                     summary.get("product_scope_transporter_top_claim_safe_blocker")
                 ),
@@ -1574,6 +1589,24 @@ def build_action_board(
         key=lambda row: (_int(row.get("priority")), _text(row.get("lane_id")), _text(row.get("action_type"))),
     )
     first_parallel_product_action = parallel_product_actions[0] if parallel_product_actions else {}
+    scope_priority_action = next(
+        (
+            row
+            for row in rows
+            if _text(row.get("lane_id")) == "product_scope_expansion"
+            and _text(row.get("action_type")) == "curate_scope_evidence_priority_item"
+        ),
+        {},
+    )
+    scope_receipt_action = next(
+        (
+            row
+            for row in rows
+            if _text(row.get("lane_id")) == "product_scope_expansion"
+            and _text(row.get("action_type")) == "resolve_full_scope_breadth_evidence_receipt"
+        ),
+        {},
+    )
     ligand_ranking_action_types = {
         "repair_ligand_ranking_parity",
         "close_ligand_ranking_claim_scope",
@@ -1619,6 +1652,54 @@ def build_action_board(
         ),
         "product_ai_production_action_count": sum(1 for row in rows if row["lane_id"] == "product_ai_production"),
         "product_scope_expansion_action_count": sum(1 for row in rows if row["lane_id"] == "product_scope_expansion"),
+        "product_scope_breadth_evidence_priority_action_id": (
+            f"{_text(scope_priority_action.get('lane_id'))}:"
+            f"{_text(scope_priority_action.get('action_type'))}"
+            if scope_priority_action
+            else ""
+        ),
+        "product_scope_breadth_evidence_priority_top_item_id": _text(
+            scope_priority_action.get("scope_priority_top_item_id")
+            or scope_priority_action.get("required_input")
+        ),
+        "product_scope_breadth_evidence_priority_top_domain": _text(
+            scope_priority_action.get("scope_priority_top_domain")
+        ),
+        "product_scope_breadth_evidence_priority_top_bucket": _text(
+            scope_priority_action.get("scope_priority_top_bucket")
+        ),
+        "product_scope_breadth_evidence_priority_top_required_evidence_type": _text(
+            scope_priority_action.get("scope_priority_top_required_evidence_type")
+        ),
+        "product_scope_breadth_evidence_priority_top_review_template_artifact": _text(
+            scope_priority_action.get("scope_priority_top_review_template_artifact")
+        ),
+        "product_scope_breadth_evidence_priority_top_apply_gate_artifact": _text(
+            scope_priority_action.get("scope_priority_top_apply_gate_artifact")
+        ),
+        "product_scope_breadth_evidence_priority_top_next_step": _text(
+            scope_priority_action.get("scope_priority_top_next_step")
+            or scope_priority_action.get("recommended_action")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_action_id": (
+            f"{_text(scope_receipt_action.get('lane_id'))}:"
+            f"{_text(scope_receipt_action.get('action_type'))}"
+            if scope_receipt_action
+            else ""
+        ),
+        "product_scope_breadth_evidence_priority_receipt_csv": _text(
+            scope_receipt_action.get("scope_breadth_evidence_receipt_csv")
+            or scope_receipt_action.get("required_input")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_approval_token_required": _text(
+            scope_receipt_action.get("approval_token")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_status": _text(
+            scope_receipt_action.get("scope_breadth_evidence_receipt_status")
+        ),
+        "product_scope_breadth_evidence_priority_receipt_blocked_row_count": _int(
+            scope_receipt_action.get("scope_breadth_evidence_receipt_blocked_row_count")
+        ),
         "product_engine_refinement_action_count": sum(
             1 for row in rows if row["lane_id"] == "product_engine_refinement"
         ),
@@ -2502,6 +2583,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- primary_action_recommended_action: `{s['primary_action_recommended_action']}`",
         f"- product_ai_production_action_count: `{s['product_ai_production_action_count']}`",
         f"- product_scope_expansion_action_count: `{s['product_scope_expansion_action_count']}`",
+        f"- product_scope_breadth_evidence_priority_action_id: `{s['product_scope_breadth_evidence_priority_action_id']}`",
+        f"- product_scope_breadth_evidence_priority_top_item_id: `{s['product_scope_breadth_evidence_priority_top_item_id']}`",
+        f"- product_scope_breadth_evidence_priority_top_required_evidence_type: `{s['product_scope_breadth_evidence_priority_top_required_evidence_type']}`",
+        f"- product_scope_breadth_evidence_priority_top_review_template_artifact: `{s['product_scope_breadth_evidence_priority_top_review_template_artifact']}`",
+        f"- product_scope_breadth_evidence_priority_top_apply_gate_artifact: `{s['product_scope_breadth_evidence_priority_top_apply_gate_artifact']}`",
+        f"- product_scope_breadth_evidence_priority_receipt_csv: `{s['product_scope_breadth_evidence_priority_receipt_csv']}`",
+        f"- product_scope_breadth_evidence_priority_receipt_approval_token_required: `{s['product_scope_breadth_evidence_priority_receipt_approval_token_required']}`",
         f"- product_engine_refinement_action_count: `{s['product_engine_refinement_action_count']}`",
         f"- product_engine_refinement_action_board_csv: `{s['product_engine_refinement_action_board_csv']}`",
         f"- product_engine_refinement_claim_blocker_count: `{s['product_engine_refinement_claim_blocker_count']}`",
