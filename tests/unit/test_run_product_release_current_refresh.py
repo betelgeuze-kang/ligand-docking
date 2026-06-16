@@ -217,6 +217,13 @@ def test_refresh_final_gate_requires_release_decision_bottleneck_receipt_linkage
     assert decision_row["required_text_exact_fields"][
         "production_ai_checkpoint_readiness_actionable_blocker_artifact"
     ] == "runs/residual_model_registry_current.json"
+    assert (
+        "production_ai_checkpoint_readiness_candidate_checkpoint_count"
+        not in decision_row["required_int_exact_fields"]
+    )
+    assert decision_row["required_int_min_fields"][
+        "production_ai_checkpoint_readiness_candidate_checkpoint_count"
+    ] == 1
     assert decision_row["required_int_exact_fields"][
         "production_ai_promotion_workbench_post_return_ladder_ready_stage_count"
     ] == 7
@@ -235,6 +242,55 @@ def test_refresh_final_gate_requires_release_decision_bottleneck_receipt_linkage
     assert decision_row["required_text_exact_fields"][
         "production_ai_promotion_workbench_first_blocked_stage_ready_key"
     ] == "production_promotion_allowed"
+    assert (
+        "production_ai_promotion_workbench_candidate_checkpoint_count"
+        not in decision_row["required_int_exact_fields"]
+    )
+    assert decision_row["required_int_min_fields"][
+        "production_ai_promotion_workbench_candidate_checkpoint_count"
+    ] == 1
+
+
+def test_refresh_final_gate_allows_multiple_production_ai_checkpoint_candidates(
+    tmp_path: Path,
+) -> None:
+    _write_json(
+        tmp_path / "runs" / "product_release_source_of_truth_gate_current.json",
+        _source_of_truth_ready(),
+    )
+    release_decision = _release_decision_ready()
+    release_decision["summary"][
+        "production_ai_checkpoint_readiness_candidate_checkpoint_count"
+    ] = 1462
+    release_decision["summary"][
+        "production_ai_promotion_workbench_candidate_checkpoint_count"
+    ] = 1462
+    _write_json(
+        tmp_path / "runs" / "goal_release_decision_gate_current.json",
+        release_decision,
+    )
+    _write_json(
+        tmp_path / "runs" / "product_quality_gate_verification_current.json",
+        _quality_gate_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_operator_action_board_current.json",
+        _action_board_ready(),
+    )
+
+    payload = mod.run_product_release_current_refresh(
+        execute=True,
+        root=tmp_path,
+        commands=[],
+    )
+
+    decision_row = next(
+        row for row in payload["verification_rows"] if row["gate_id"] == "goal_release_decision_gate"
+    )
+    assert payload["summary"]["status"] == "product_release_current_refresh_verified"
+    assert decision_row["status"] == "pass"
+    assert decision_row["failed_int_exact_fields"] == []
+    assert decision_row["failed_int_min_fields"] == []
 
 
 def test_refresh_final_gate_blocks_missing_release_decision_bottleneck_receipt_linkage(tmp_path: Path) -> None:
