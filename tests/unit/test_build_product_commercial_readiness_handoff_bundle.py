@@ -86,6 +86,39 @@ def _operator_packet(ready: bool = True) -> dict:
             "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
             "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
             "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
+            "engine_refinement_priority_metric_source_payload_receipt_artifact": (
+                "runs/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.json"
+            ),
+            "engine_refinement_priority_metric_source_payload_receipt_csv": (
+                "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+            ),
+            "engine_refinement_priority_metric_source_payload_receipt_status": (
+                "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+            ),
+            "engine_refinement_priority_metric_source_payload_receipt_ready": False,
+            "engine_refinement_priority_metric_source_payload_receipt_row_count": 51,
+            "engine_refinement_priority_metric_source_payload_receipt_pass_row_count": 0,
+            "engine_refinement_priority_metric_source_payload_receipt_blocked_row_count": 51,
+            "engine_refinement_priority_metric_source_payload_receipt_approval_token_required": (
+                "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+            ),
+            "engine_refinement_priority_metric_source_payload_receipt_first_blocked_template_id": (
+                "r9_statistical_support_metric_source_template_001"
+            ),
+            "engine_refinement_priority_metric_source_payload_receipt_first_blocked_metric_name": "dockq",
+            "engine_refinement_priority_metric_source_payload_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "engine_refinement_priority_metric_source_payload_receipt_operator_review_surface_ready_count": 51,
+            "engine_refinement_priority_metric_source_payload_receipt_operator_review_surface_blocked_count": 0,
+            "engine_refinement_priority_metric_source_payload_receipt_manual_field_pending_count": 510,
+            "engine_refinement_priority_metric_source_payload_receipt_approval_token_pending_count": 51,
+            "engine_refinement_priority_metric_source_payload_receipt_external_engine_calls_zero_count": 51,
+            "engine_refinement_priority_metric_source_payload_receipt_payload_write_allowed": False,
+            "engine_refinement_priority_metric_source_payload_receipt_external_state_mutated": False,
+            "engine_refinement_priority_metric_source_payload_receipt_next_required_step": (
+                "Fill all 51 metric-source payload receipt rows."
+            ),
             "engine_refinement_claim_evidence_operator_field_worksheet_claim_promoted": False,
             "engine_refinement_claim_evidence_operator_field_worksheet_external_engine_calls_executed": False,
             "engine_refinement_claim_evidence_operator_field_worksheet_external_state_mutated": False,
@@ -1146,6 +1179,27 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         ]
         == 51
     )
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_artifact"] == (
+        "runs/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.json"
+    )
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_csv"] == (
+        "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+    )
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_status"] == (
+        "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+    )
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_ready"] is False
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_row_count"] == 51
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_blocked_row_count"] == 51
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_approval_token_required"
+    ] == "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_first_blocked_template_id"
+    ] == "r9_statistical_support_metric_source_template_001"
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_manual_field_pending_count"
+    ] == 510
     assert summary["engine_refinement_claim_evidence_operator_staging_apply_status"] == (
         "blocked_engine_refinement_claim_evidence_operator_staging_apply"
     )
@@ -1722,6 +1776,23 @@ def test_product_commercial_readiness_handoff_bundle_ready_when_all_artifacts_re
         row["artifact_id"] == "engine_refinement_claim_evidence_receipt_csv"
         and row["artifact_path"] == "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
         and row["reference_role"] == "local_engine_refinement_claim_receipt_template"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "engine_refinement_priority_metric_source_payload_receipt"
+        and row["artifact_path"]
+        == "runs/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.json"
+        and row["reference_role"] == "local_engine_refinement_metric_source_payload_receipt"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "engine_refinement_priority_metric_source_payload_receipt_csv"
+        and row["artifact_path"]
+        == "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+        and row["reference_role"]
+        == "local_engine_refinement_metric_source_payload_receipt_template"
         and row["required_now"] is True
         for row in summary["artifact_reference_manifest"]
     )

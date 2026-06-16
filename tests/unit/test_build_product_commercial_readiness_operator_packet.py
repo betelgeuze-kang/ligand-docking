@@ -812,6 +812,36 @@ def _engine_refinement_claim_evidence_field_worksheet() -> dict:
             "public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
             "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 0,
             "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_artifact": (
+                "runs/unit_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt.json"
+            ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_status": (
+                "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+            ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready": False,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_pass_row_count": 0,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required": (
+                "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+            ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_template_id": (
+                "r9_statistical_support_metric_source_template_001"
+            ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_metric_name": "dockq",
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_ready_count": 51,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_operator_review_surface_blocked_count": 0,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_manual_field_pending_count": 510,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_approval_token_pending_count": 51,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_external_engine_calls_zero_count": 51,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_payload_write_allowed": False,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_external_state_mutated": False,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_next_required_step": (
+                "Fill all 51 metric-source payload receipt rows."
+            ),
             "claim_promoted": False,
             "external_engine_calls_executed": False,
             "external_state_mutated": False,
@@ -1075,6 +1105,52 @@ def test_build_product_commercial_readiness_operator_packet_flattens_next_action
         ]
         == 51
     )
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_artifact"] == (
+        "runs/unit_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt.json"
+    )
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_csv"] == (
+        mod.DEFAULT_R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV
+    )
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_status"] == (
+        "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+    )
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_ready"] is False
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_row_count"] == 51
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_pass_row_count"] == 0
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_blocked_row_count"] == 51
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_approval_token_required"
+    ] == "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_first_blocked_template_id"
+    ] == "r9_statistical_support_metric_source_template_001"
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_first_blocked_metric_name"
+    ] == "dockq"
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_operator_review_surface_ready_count"
+    ] == 51
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_manual_field_pending_count"
+    ] == 510
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_approval_token_pending_count"
+    ] == 51
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_external_engine_calls_zero_count"
+    ] == 51
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_payload_write_allowed"
+    ] is False
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_external_state_mutated"
+    ] is False
+    assert "51 metric-source payload" in summary[
+        "engine_refinement_priority_metric_source_payload_receipt_next_required_step"
+    ]
     assert summary["engine_refinement_claim_evidence_operator_field_worksheet_claim_promoted"] is False
     assert (
         summary[

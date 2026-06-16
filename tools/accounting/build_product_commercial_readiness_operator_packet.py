@@ -8,6 +8,12 @@ from pathlib import Path
 from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
+from tools.product.build_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt import (
+    DEFAULT_OUT_JSON as DEFAULT_R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON,
+)
+from tools.product.build_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt import (
+    DEFAULT_RECEIPT_CSV as DEFAULT_R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_GOAL_AUDIT_JSON = "runs/product_goal_completion_audit_current.json"
@@ -164,6 +170,63 @@ def _receipt_diagnostics(
         "first_blocked_missing_true_fields": _list(pick("first_blocked_missing_true_fields")),
         "first_blocked_row_blockers": _list(pick("first_blocked_row_blockers")),
         "most_common_row_blocker": _text(pick("most_common_row_blocker")),
+    }
+
+
+def _metric_source_payload_receipt_diagnostics(
+    field_worksheet_summary: dict[str, Any],
+    staging_apply_summary: dict[str, Any],
+) -> dict[str, Any]:
+    field_prefix = "public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+    staging_prefix = (
+        "field_worksheet_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+    )
+    artifact_path = (
+        _text(field_worksheet_summary.get(f"{field_prefix}_artifact"))
+        or _text(staging_apply_summary.get(f"{staging_prefix}_artifact"))
+        or DEFAULT_R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON
+    )
+    receipt_summary = _summary(_read_json_if_present(artifact_path)) if artifact_path else {}
+
+    def pick(receipt_key: str, suffix: str | None = None) -> Any:
+        value = receipt_summary.get(receipt_key)
+        field_key = suffix or receipt_key
+        if value in (None, ""):
+            value = field_worksheet_summary.get(f"{field_prefix}_{field_key}")
+        if value in (None, ""):
+            value = staging_apply_summary.get(f"{staging_prefix}_{field_key}")
+        return value
+
+    return {
+        "artifact": artifact_path,
+        "csv": _text(pick("receipt_csv")) or DEFAULT_R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV,
+        "status": _text(pick("status")),
+        "ready": bool(pick("operator_receipt_ready", "ready") is True),
+        "row_count": _int(pick("receipt_row_count", "row_count")),
+        "pass_row_count": _int(pick("pass_row_count")),
+        "blocked_row_count": _int(pick("blocked_row_count")),
+        "approval_token_required": _text(pick("approval_token_required")),
+        "first_blocked_template_id": _text(pick("first_blocked_template_id")),
+        "first_blocked_metric_name": _text(pick("first_blocked_metric_name")),
+        "most_common_row_blocker": _text(pick("most_common_row_blocker")),
+        "operator_review_surface_ready_count": _int(
+            pick("operator_review_surface_ready_count")
+        ),
+        "operator_review_surface_blocked_count": _int(
+            pick("operator_review_surface_blocked_count")
+        ),
+        "receipt_manual_field_pending_count": _int(
+            pick("receipt_manual_field_pending_count")
+        ),
+        "receipt_approval_token_pending_count": _int(
+            pick("receipt_approval_token_pending_count")
+        ),
+        "external_engine_calls_zero_count": _int(
+            pick("external_engine_calls_zero_count")
+        ),
+        "payload_write_allowed": bool(pick("payload_write_allowed") is True),
+        "external_state_mutated": bool(pick("external_state_mutated") is True),
+        "next_required_step": _text(pick("next_required_step")),
     }
 
 
@@ -683,6 +746,10 @@ def build_product_commercial_readiness_operator_packet(
         prefix="product_scope_breadth_evidence_receipt",
         first_blocked_id_key="first_blocked_scope_blocker_id",
     )
+    metric_source_payload_receipt = _metric_source_payload_receipt_diagnostics(
+        engine_refinement_claim_evidence_field_worksheet,
+        engine_refinement_claim_evidence_staging_apply,
+    )
     source_sha256 = _goal_audit_source_sha256(goal_audit_packet)
     matrix_sha256 = _sha256_json(source_rows)
     packet_ready = bool(rows)
@@ -823,6 +890,63 @@ def build_product_commercial_readiness_operator_packet(
             engine_refinement_claim_evidence_field_worksheet.get(
                 "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
             )
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_artifact": (
+            metric_source_payload_receipt["artifact"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_csv": (
+            metric_source_payload_receipt["csv"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_status": (
+            metric_source_payload_receipt["status"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_ready": (
+            metric_source_payload_receipt["ready"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_row_count": (
+            metric_source_payload_receipt["row_count"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_pass_row_count": (
+            metric_source_payload_receipt["pass_row_count"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_blocked_row_count": (
+            metric_source_payload_receipt["blocked_row_count"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_approval_token_required": (
+            metric_source_payload_receipt["approval_token_required"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_first_blocked_template_id": (
+            metric_source_payload_receipt["first_blocked_template_id"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_first_blocked_metric_name": (
+            metric_source_payload_receipt["first_blocked_metric_name"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_most_common_row_blocker": (
+            metric_source_payload_receipt["most_common_row_blocker"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_operator_review_surface_ready_count": (
+            metric_source_payload_receipt["operator_review_surface_ready_count"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_operator_review_surface_blocked_count": (
+            metric_source_payload_receipt["operator_review_surface_blocked_count"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_manual_field_pending_count": (
+            metric_source_payload_receipt["receipt_manual_field_pending_count"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_approval_token_pending_count": (
+            metric_source_payload_receipt["receipt_approval_token_pending_count"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_external_engine_calls_zero_count": (
+            metric_source_payload_receipt["external_engine_calls_zero_count"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_payload_write_allowed": (
+            metric_source_payload_receipt["payload_write_allowed"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_external_state_mutated": (
+            metric_source_payload_receipt["external_state_mutated"]
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_next_required_step": (
+            metric_source_payload_receipt["next_required_step"]
         ),
         "engine_refinement_claim_evidence_operator_field_worksheet_claim_promoted": bool(
             engine_refinement_claim_evidence_field_worksheet.get("claim_promoted") is True
@@ -2134,6 +2258,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"`{s['engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count']}/"
         f"{s['engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count']}/"
         f"{s['engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count']}`",
+        f"- engine_refinement_priority_metric_source_payload_receipt_csv: `{s['engine_refinement_priority_metric_source_payload_receipt_csv']}`",
+        f"- engine_refinement_priority_metric_source_payload_receipt_status: `{s['engine_refinement_priority_metric_source_payload_receipt_status']}`",
+        f"- engine_refinement_priority_metric_source_payload_receipt_blocked_row_count: `{s['engine_refinement_priority_metric_source_payload_receipt_blocked_row_count']}`",
+        f"- engine_refinement_priority_metric_source_payload_receipt_approval_token_required: `{s['engine_refinement_priority_metric_source_payload_receipt_approval_token_required']}`",
         f"- engine_refinement_claim_evidence_operator_staging_apply_status: `{s['engine_refinement_claim_evidence_operator_staging_apply_status']}`",
         f"- engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_ready: `{s['engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_ready']}`",
         f"- engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_blocked_row_count: `{s['engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_blocked_row_count']}`",

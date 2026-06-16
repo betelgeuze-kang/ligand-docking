@@ -424,6 +424,34 @@ def _build_artifact_reference_manifest(
                 note="Operator-fill template consumed by the engine refinement claim evidence receipt gate.",
             )
         )
+    engine_metric_source_payload_receipt_artifact = _text(
+        summary.get("engine_refinement_priority_metric_source_payload_receipt_artifact")
+    )
+    if engine_metric_source_payload_receipt_artifact:
+        refs.append(
+            _artifact_reference(
+                artifact_id="engine_refinement_priority_metric_source_payload_receipt",
+                artifact_path=engine_metric_source_payload_receipt_artifact,
+                reference_role="local_engine_refinement_metric_source_payload_receipt",
+                required_now=True,
+                expected_from_operator_return=False,
+                note="Local fail-closed receipt for R9 DockQ/lDDT-PLI/internal DeltaG metric-source payload review.",
+            )
+        )
+    engine_metric_source_payload_receipt_csv = _text(
+        summary.get("engine_refinement_priority_metric_source_payload_receipt_csv")
+    )
+    if engine_metric_source_payload_receipt_csv:
+        refs.append(
+            _artifact_reference(
+                artifact_id="engine_refinement_priority_metric_source_payload_receipt_csv",
+                artifact_path=engine_metric_source_payload_receipt_csv,
+                reference_role="local_engine_refinement_metric_source_payload_receipt_template",
+                required_now=True,
+                expected_from_operator_return=False,
+                note="Operator-fill template consumed by the R9 metric-source payload receipt gate.",
+            )
+        )
     engine_field_worksheet_artifact = _text(
         summary.get("engine_refinement_claim_evidence_operator_field_worksheet_artifact")
     )
@@ -846,6 +874,102 @@ def build_product_commercial_readiness_handoff_bundle(
                 "engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count"
             )
             or 0
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_artifact": _text(
+            operator_summary.get("engine_refinement_priority_metric_source_payload_receipt_artifact")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_csv": _text(
+            operator_summary.get("engine_refinement_priority_metric_source_payload_receipt_csv")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_status": _text(
+            operator_summary.get("engine_refinement_priority_metric_source_payload_receipt_status")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_ready": bool(
+            operator_summary.get("engine_refinement_priority_metric_source_payload_receipt_ready")
+            is True
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_row_count": int(
+            operator_summary.get("engine_refinement_priority_metric_source_payload_receipt_row_count")
+            or 0
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_pass_row_count": int(
+            operator_summary.get(
+                "engine_refinement_priority_metric_source_payload_receipt_pass_row_count"
+            )
+            or 0
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_blocked_row_count": int(
+            operator_summary.get(
+                "engine_refinement_priority_metric_source_payload_receipt_blocked_row_count"
+            )
+            or 0
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_approval_token_required": _text(
+            operator_summary.get(
+                "engine_refinement_priority_metric_source_payload_receipt_approval_token_required"
+            )
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_first_blocked_template_id": _text(
+            operator_summary.get(
+                "engine_refinement_priority_metric_source_payload_receipt_first_blocked_template_id"
+            )
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_first_blocked_metric_name": _text(
+            operator_summary.get(
+                "engine_refinement_priority_metric_source_payload_receipt_first_blocked_metric_name"
+            )
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_most_common_row_blocker": _text(
+            operator_summary.get(
+                "engine_refinement_priority_metric_source_payload_receipt_most_common_row_blocker"
+            )
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_operator_review_surface_ready_count": int(
+            operator_summary.get(
+                "engine_refinement_priority_metric_source_payload_receipt_operator_review_surface_ready_count"
+            )
+            or 0
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_operator_review_surface_blocked_count": int(
+            operator_summary.get(
+                "engine_refinement_priority_metric_source_payload_receipt_operator_review_surface_blocked_count"
+            )
+            or 0
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_manual_field_pending_count": int(
+            operator_summary.get(
+                "engine_refinement_priority_metric_source_payload_receipt_manual_field_pending_count"
+            )
+            or 0
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_approval_token_pending_count": int(
+            operator_summary.get(
+                "engine_refinement_priority_metric_source_payload_receipt_approval_token_pending_count"
+            )
+            or 0
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_external_engine_calls_zero_count": int(
+            operator_summary.get(
+                "engine_refinement_priority_metric_source_payload_receipt_external_engine_calls_zero_count"
+            )
+            or 0
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_payload_write_allowed": bool(
+            operator_summary.get(
+                "engine_refinement_priority_metric_source_payload_receipt_payload_write_allowed"
+            )
+            is True
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_external_state_mutated": bool(
+            operator_summary.get(
+                "engine_refinement_priority_metric_source_payload_receipt_external_state_mutated"
+            )
+            is True
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_next_required_step": _text(
+            operator_summary.get(
+                "engine_refinement_priority_metric_source_payload_receipt_next_required_step"
+            )
         ),
         "engine_refinement_claim_evidence_operator_field_worksheet_claim_promoted": bool(
             operator_summary.get(
@@ -3091,6 +3215,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"`{s['engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_template_row_count']}/"
         f"{s['engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count']}/"
         f"{s['engine_refinement_claim_evidence_operator_field_worksheet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count']}`",
+        f"- engine_refinement_priority_metric_source_payload_receipt_csv: `{s['engine_refinement_priority_metric_source_payload_receipt_csv']}`",
+        f"- engine_refinement_priority_metric_source_payload_receipt_status: `{s['engine_refinement_priority_metric_source_payload_receipt_status']}`",
+        f"- engine_refinement_priority_metric_source_payload_receipt_blocked_row_count: `{s['engine_refinement_priority_metric_source_payload_receipt_blocked_row_count']}`",
+        f"- engine_refinement_priority_metric_source_payload_receipt_approval_token_required: `{s['engine_refinement_priority_metric_source_payload_receipt_approval_token_required']}`",
         f"- engine_refinement_claim_evidence_operator_staging_apply_status: `{s['engine_refinement_claim_evidence_operator_staging_apply_status']}`",
         f"- engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_ready: `{s['engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_ready']}`",
         f"- engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_blocked_row_count: `{s['engine_refinement_claim_evidence_operator_staging_apply_candidate_receipt_blocked_row_count']}`",
