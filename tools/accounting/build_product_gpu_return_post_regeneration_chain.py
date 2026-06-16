@@ -21,6 +21,7 @@ POST_RETURN_STEPS: list[tuple[str, list[str]]] = [
     ("tools/build_residual_force_gpu_worker_return_manifest_finalize.py", []),
     ("tools/build_residual_force_gpu_worker_return_receipt.py", []),
     ("tools/build_residual_force_derivation_validation.py", []),
+    ("tools/build_residual_force_gpu_worker_return_receipt.py", []),
     ("tools/build_residual_energy_force_label_validation.py", []),
     ("tools/build_residual_energy_force_label_evidence_work_order.py", []),
     ("tools/build_residual_uncertainty_policy_evidence_contract.py", []),

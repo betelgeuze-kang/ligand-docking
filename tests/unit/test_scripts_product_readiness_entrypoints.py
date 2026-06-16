@@ -66,6 +66,7 @@ def test_check_independent_product_readiness_script_reports_current_blockers() -
     assert summary["full_commercial_release_blocker_ids"] == [
         "R8_full_scope_claim_closure",
         "R9_engine_refinement_claim_promotion",
+        "MASTER:PRODUCT-AI",
         "ACCURACY:ligand_ranking",
     ]
     assert summary["blocker_count"] == 3

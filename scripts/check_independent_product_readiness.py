@@ -30,7 +30,7 @@ DEFAULT_ARTIFACTS = {
 CLAIM_BOUNDARY = (
     "Independent product readiness check only; it reads local current artifacts and verifies the restricted "
     "self-hosted product surface, fail-closed execution posture, release source-of-truth freshness, and explicit "
-    "full-commercial R8/R9/ACCURACY claim blockers. It does not run docking, enable execution, promote claims, "
+    "full-commercial R8/R9/MASTER/ACCURACY claim blockers. It does not run docking, enable execution, promote claims, "
     "deploy, upload, email, delete, commit, push, or mutate external state."
 )
 
@@ -114,6 +114,7 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
     expected_full_commercial_blocker_ids = [
         "R8_full_scope_claim_closure",
         "R9_engine_refinement_claim_promotion",
+        "MASTER:PRODUCT-AI",
         "ACCURACY:ligand_ranking",
     ]
     expected_science_frontier_blockers = [
@@ -253,9 +254,9 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
             and goal_release.get("accuracy_parity_ligand_ranking_commercial_parity_claim_allowed") is False
             and accuracy.get("status") == "blocked_accuracy_parity"
             and accuracy_top_blockers == ["ligand_ranking:broad_gpcr_claim_not_allowed"]
-            and master.get("status") == "master_gap_closure_rollup_complete"
+            and master.get("status") == "blocked_master_gap_closure_rollup"
             and master.get("claim_promotion_allowed") is False
-            and not _list(master.get("open_gap_ids"))
+            and _list(master.get("open_gap_ids")) == ["PRODUCT-AI"]
             and science.get("status") == "science_claim_promotion_gap_closure_complete"
             and science.get("claim_promotion_allowed") is False
             and not _list(science.get("open_gap_ids"))
@@ -385,7 +386,7 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
                 f"broad_commercial_accuracy_claim_ready={science_frontier.get('broad_commercial_accuracy_claim_ready')};"
                 f"science_frontier_blockers={_csv(science_frontier.get('blockers'))}"
             ),
-            "full-commercial claim promotion remains explicitly blocked on R8/R9 receipts and ACCURACY broad claim lock",
+            "full-commercial claim promotion remains explicitly blocked on R8/R9 receipts, MASTER PRODUCT-AI, and ACCURACY broad claim lock",
             release_blocker=False,
         ),
     ]
@@ -1447,7 +1448,7 @@ def build_independent_product_readiness(*, root: Path = ROOT) -> dict[str, Any]:
             "claim_boundary": CLAIM_BOUNDARY,
             "next_required_step": (
                 "Independent restricted product readiness is verified; keep full-commercial claims blocked "
-                "until R8/R9 evidence receipts and ACCURACY broad claim review clear."
+                "until R8/R9 evidence receipts, MASTER PRODUCT-AI, and ACCURACY broad claim review clear."
                 if independent_ready
                 else "Fix the failed readiness checks, rerun the current release refresh, and retry this script."
             ),
