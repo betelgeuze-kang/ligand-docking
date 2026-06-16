@@ -37,9 +37,11 @@ from betelgeuze_ai_md.coarse_md.numpy_ref import (
     SoftcoreContactTerm,
     Trajectory,
     TrajectoryFrame,
+    build_bruteforce_neighbor_list,
     finite_difference_force,
     kabsch,
     smooth_switch,
+    summarize_trajectory,
 )
 
 __all__ = [
@@ -72,7 +74,9 @@ __all__ = [
     "SoftcoreContactTerm",
     "Trajectory",
     "TrajectoryFrame",
+    "build_bruteforce_neighbor_list",
     "finite_difference_force",
     "kabsch",
     "smooth_switch",
+    "summarize_trajectory",
 ]

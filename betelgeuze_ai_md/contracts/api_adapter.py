@@ -69,6 +69,13 @@ def _float(value: Any, default: float = 0.0) -> float:
         return default
 
 
+def _first_present_float(payload: dict[str, Any], *keys: str, default: float = 0.0) -> float:
+    for key in keys:
+        if key in payload and payload[key] is not None:
+            return _float(payload[key], default=default)
+    return default
+
+
 def _source_hashes(
     *,
     request: dict[str, Any],
@@ -196,6 +203,24 @@ def _ai_residual_report(payload: dict[str, Any], result_manifest: dict[str, Any]
         abstained=bool(raw.get("abstained", True) is True),
         calibration_family=_text(raw.get("calibration_family")),
         model_hash=_text(raw.get("model_hash")) or _text(result_manifest.get("model_hash")),
+        residual_delta=_first_present_float(raw, "residual_delta", "score_delta", "delta_score"),
+        bounded_residual_delta=_first_present_float(
+            raw,
+            "bounded_residual_delta",
+            "applied_delta_score",
+            "delta_score",
+        ),
+        max_delta=_first_present_float(raw, "max_delta", "score_max_delta", "emax"),
+        guard=_first_present_float(raw, "guard", "residual_guard"),
+        lambda_ai=_float(raw.get("lambda_ai"), default=1.0),
+        active_score_col=_text(raw.get("active_score_col")),
+        base_score_col=_text(raw.get("base_score_col")),
+        ranking_changed=bool(raw.get("ranking_changed") is True),
+        review_flags=[str(item) for item in _as_list(raw.get("review_flags"))],
+        guard_components={
+            str(key): _float(value)
+            for key, value in _as_dict(raw.get("guard_components")).items()
+        },
         notes=[str(item) for item in _as_list(raw.get("notes"))],
     )
 

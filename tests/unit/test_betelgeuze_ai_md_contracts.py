@@ -139,6 +139,26 @@ def test_contracts_serialize_and_hash_deterministically() -> None:
     assert json.loads(bundle.canonical_json())["bundle_id"] == "bundle_001"
 
 
+def test_trajectory_summary_rejects_nonfinite_or_unbounded_metrics() -> None:
+    with pytest.raises(ContractValidationError, match="energy_trace must be finite"):
+        TrajectorySummary(frame_count=1, energy_trace=[float("nan")])
+
+    with pytest.raises(ContractValidationError, match="contact_trace values must be non-negative"):
+        TrajectorySummary(frame_count=1, contact_trace=[-1.0])
+
+    with pytest.raises(ContractValidationError, match="stability_score must be in"):
+        TrajectorySummary(frame_count=1, stability_score=1.2)
+
+    with pytest.raises(ContractValidationError, match="mean_min_distance must be non-negative"):
+        TrajectorySummary(frame_count=1, mean_min_distance=-0.1)
+
+    with pytest.raises(ContractValidationError, match="escape_fraction must be in"):
+        TrajectorySummary(frame_count=1, escape_fraction=1.1)
+
+    with pytest.raises(ContractValidationError, match="trajectory traces cannot exceed frame_count"):
+        TrajectorySummary(frame_count=1, energy_trace=[0.0, 0.1])
+
+
 def test_claim_safe_bundle_requires_hashes_and_passing_topology() -> None:
     bundle = _bundle()
     source_hashes = dict(bundle.source_hashes)
@@ -150,6 +170,101 @@ def test_claim_safe_bundle_requires_hashes_and_passing_topology() -> None:
     with pytest.raises(ContractValidationError, match="passing topology"):
         EvidenceBundle(
             **{**bundle.to_dict(), "topology_report": {"status": "blocked", "topology_fidelity": TOPOLOGY_FIDELITY_SEQUENCE_MAPPED}}
+        )
+
+
+def test_claim_safe_bundle_requires_product_output_tables() -> None:
+    bundle = _bundle()
+
+    with pytest.raises(ContractValidationError, match="ranked shortlist"):
+        EvidenceBundle(**{**bundle.to_dict(), "ranked_shortlist": []})
+
+    with pytest.raises(ContractValidationError, match="wetlab handoff table"):
+        EvidenceBundle(**{**bundle.to_dict(), "wetlab_handoff_table": []})
+
+
+def test_claim_safe_bundle_requires_coarse_dynamics_summary() -> None:
+    bundle = _bundle()
+
+    with pytest.raises(ContractValidationError, match="trajectory frames"):
+        EvidenceBundle(**{**bundle.to_dict(), "trajectory_summary": {"frame_count": 0}})
+
+    with pytest.raises(ContractValidationError, match="trajectory energy trace"):
+        EvidenceBundle(
+            **{
+                **bundle.to_dict(),
+                "trajectory_summary": {
+                    "frame_count": 1,
+                    "energy_trace": [],
+                    "contact_trace": [0.0],
+                    "stability_score": 0.5,
+                    "mean_min_distance": 2.0,
+                },
+            }
+        )
+
+
+def test_claim_safe_bundle_requires_backmapped_pose_evidence() -> None:
+    bundle = _bundle()
+
+    with pytest.raises(ContractValidationError, match="backmapped poses"):
+        EvidenceBundle(**{**bundle.to_dict(), "backmapped_poses": []})
+
+
+def test_claim_safe_bundle_requires_interaction_evidence() -> None:
+    bundle = _bundle()
+
+    with pytest.raises(ContractValidationError, match="interaction evidence"):
+        EvidenceBundle(
+            **{
+                **bundle.to_dict(),
+                "interaction_report": {"interactions": [], "interaction_confidence": 0.7},
+            }
+        )
+
+    with pytest.raises(ContractValidationError, match="positive interaction confidence"):
+        EvidenceBundle(
+            **{
+                **bundle.to_dict(),
+                "interaction_report": {
+                    "interactions": [
+                        {
+                            "interaction_id": "hbond_001",
+                            "interaction_type": "hbond",
+                            "partners": ["SER:OG", "lig1:O1"],
+                            "occupancy": 0.6,
+                            "confidence": 0.8,
+                        }
+                    ],
+                    "interaction_confidence": 0.0,
+                },
+            }
+        )
+
+
+def test_claim_safe_bundle_rejects_high_ai_uncertainty_or_review_flags() -> None:
+    bundle = _bundle()
+
+    with pytest.raises(ContractValidationError, match="high AI uncertainty"):
+        EvidenceBundle(
+            **{
+                **bundle.to_dict(),
+                "ai_residual_report": {
+                    **bundle.ai_residual_report.to_dict(),
+                    "uncertainty": 0.36,
+                },
+            }
+        )
+
+    with pytest.raises(ContractValidationError, match="AI residual review flags"):
+        EvidenceBundle(
+            **{
+                **bundle.to_dict(),
+                "ai_residual_report": {
+                    **bundle.ai_residual_report.to_dict(),
+                    "review_flags": ["residual_delta_review_required"],
+                },
+            }
         )
 
 
@@ -257,6 +372,44 @@ def test_general_md_accuracy_claim_is_forbidden() -> None:
             topology_fidelity=TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
             accuracy_claim_grade=GENERAL_MD_ACCURACY_CLAIM,
         )
+
+
+def test_ai_residual_report_records_bounded_score_delta_and_review_flag() -> None:
+    report = AIResidualReport(
+        residual_mode="assist",
+        correction_applied=True,
+        uncertainty=0.2,
+        abstained=False,
+        residual_delta=2.0,
+        bounded_residual_delta=0.6,
+        max_delta=1.0,
+        guard=0.75,
+        lambda_ai=1.0,
+        active_score_col="binding_score_composite_v7_residual_active",
+        base_score_col="binding_score_composite_v7",
+        ranking_changed=True,
+        guard_components={"topology": 1.0, "domain": 0.75, "calibration": 1.0},
+    )
+
+    payload = report.to_dict()
+    assert payload["bounded_residual_delta"] == 0.6
+    assert payload["active_score_col"] == "binding_score_composite_v7_residual_active"
+    assert payload["ranking_changed"] is True
+    assert "residual_delta_review_required" in payload["review_flags"]
+
+
+def test_ai_residual_report_rejects_unbounded_or_unreported_ranking_change() -> None:
+    with pytest.raises(ContractValidationError, match="guarded max_delta"):
+        AIResidualReport(
+            residual_mode="assist",
+            correction_applied=True,
+            bounded_residual_delta=1.1,
+            max_delta=1.0,
+            guard=1.0,
+        )
+
+    with pytest.raises(ContractValidationError, match="active_score_col"):
+        AIResidualReport(ranking_changed=True, bounded_residual_delta=0.1, max_delta=1.0, guard=1.0)
 
 
 def test_system_and_state_validation_fail_closed() -> None:

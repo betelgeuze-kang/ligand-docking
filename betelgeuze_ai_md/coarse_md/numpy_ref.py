@@ -190,6 +190,38 @@ class NeighborListBuilder:
         return nbl
 
 
+def build_bruteforce_neighbor_list(
+    x: np.ndarray,
+    *,
+    cutoff: float | None = None,
+    skin: float = 0.0,
+) -> NeighborList:
+    """Build a simple O(N^2) pair list for reference parity checks."""
+
+    coords = _as_array(x, dtype=np.float32, name="x", shape=(None, 3))
+    if cutoff is not None and cutoff <= 0.0:
+        raise ValueError("cutoff must be positive")
+    if skin < 0.0:
+        raise ValueError("skin must be non-negative")
+    list_cutoff = np.inf if cutoff is None else float(cutoff) + float(skin)
+    r2_cut = list_cutoff * list_cutoff
+    pair_i: list[int] = []
+    pair_j: list[int] = []
+    for i in range(coords.shape[0]):
+        for j in range(i + 1, coords.shape[0]):
+            d = coords[i] - coords[j]
+            if float(np.dot(d, d)) <= r2_cut:
+                pair_i.append(i)
+                pair_j.append(j)
+    return NeighborList(
+        pair_i=np.asarray(pair_i, dtype=np.int32),
+        pair_j=np.asarray(pair_j, dtype=np.int32),
+        cutoff=float("inf") if cutoff is None else float(cutoff),
+        skin=float(skin),
+        ref_x=coords.copy(),
+    )
+
+
 class PairMaskBuilder:
     def build(self, state: CoarseState, neighbors: NeighborList) -> PairMask:
         i = neighbors.pair_i
@@ -239,6 +271,12 @@ def smooth_switch(r: np.ndarray, r_switch: float, r_cut: float) -> np.ndarray:
     return 1.0 - 6.0 * x**5 + 15.0 * x**4 - 10.0 * x**3
 
 
+def smooth_switch_derivative(r: np.ndarray, r_switch: float, r_cut: float) -> np.ndarray:
+    width = max(r_cut - r_switch, 1e-6)
+    x = np.clip((r - r_switch) / width, 0.0, 1.0)
+    return (-30.0 * x**4 + 60.0 * x**3 - 30.0 * x**2) / width
+
+
 class SoftcoreContactTerm:
     name = "softcore_contact"
 
@@ -262,11 +300,15 @@ class SoftcoreContactTerm:
         s = 1.0 / (1.0 + np.exp((r - r_contact) / self.tau))
         attr = -eps_attr * s
         switch = smooth_switch(r, self.r_switch, self.r_cut)
-        e_pair = (rep + attr) * switch * m
+        base = rep + attr
+        e_pair = base * switch * m
 
         drep = rep * (-12.0) * r / np.maximum(r_eff * r_eff, 1e-6)
         dattr = eps_attr / self.tau * s * (1.0 - s)
-        dEdr = (drep + dattr) * switch * m
+        dEdr = (
+            (drep + dattr) * switch
+            + base * smooth_switch_derivative(r, self.r_switch, self.r_cut)
+        ) * m
         fij = -dEdr[:, None] * unit
         return EnergyResult(
             energy=float(np.sum(e_pair)),
@@ -293,8 +335,13 @@ class ScreenedElectrostaticTerm:
         pref = COULOMB_KE_KCAL_A * qiqj / self.epsilon_r
         expkr = np.exp(-self.kappa * r)
         switch = smooth_switch(r, self.r_switch, self.r_cut)
-        e_pair = pref * expkr / r * switch * m
-        dEdr = pref * expkr * (-self.kappa / r - 1.0 / (r * r)) * switch * m
+        base = pref * expkr / r
+        e_pair = base * switch * m
+        dbase = pref * expkr * (-self.kappa / r - 1.0 / (r * r))
+        dEdr = (
+            dbase * switch
+            + base * smooth_switch_derivative(r, self.r_switch, self.r_cut)
+        ) * m
         fij = -dEdr[:, None] * unit
         return EnergyResult(
             energy=float(np.sum(e_pair)),
@@ -431,6 +478,71 @@ class TrajectoryFrame:
 @dataclass
 class Trajectory:
     frames: list[TrajectoryFrame]
+
+
+def _frame_min_distance(frame_x: np.ndarray, state: CoarseState, ligand_mol_id: int) -> float:
+    ligand_idx = np.where(state.mol_id == int(ligand_mol_id))[0]
+    other_idx = np.where(state.mol_id != int(ligand_mol_id))[0]
+    if len(ligand_idx) == 0 or len(other_idx) == 0:
+        return 0.0
+    ligand_x = frame_x[ligand_idx]
+    other_x = frame_x[other_idx]
+    distances = np.linalg.norm(ligand_x[:, None, :] - other_x[None, :, :], axis=2)
+    return float(np.min(distances))
+
+
+def _frame_has_clash(
+    frame_x: np.ndarray,
+    state: CoarseState,
+    ligand_mol_id: int,
+    clash_scale: float,
+) -> bool:
+    ligand_idx = np.where(state.mol_id == int(ligand_mol_id))[0]
+    other_idx = np.where(state.mol_id != int(ligand_mol_id))[0]
+    if len(ligand_idx) == 0 or len(other_idx) == 0:
+        return False
+    ligand_x = frame_x[ligand_idx]
+    other_x = frame_x[other_idx]
+    distances = np.linalg.norm(ligand_x[:, None, :] - other_x[None, :, :], axis=2)
+    thresholds = clash_scale * (state.radius[ligand_idx][:, None] + state.radius[other_idx][None, :])
+    return bool(np.any(distances < thresholds))
+
+
+def summarize_trajectory(
+    trajectory: Trajectory,
+    state: CoarseState,
+    *,
+    ligand_mol_id: int = 1,
+    clash_scale: float = 0.75,
+) -> Any:
+    from betelgeuze_ai_md.contracts import TrajectorySummary
+
+    frames = list(trajectory.frames)
+    if not frames:
+        return TrajectorySummary(frame_count=0)
+    energy_trace = [float(frame.energy) for frame in frames]
+    contact_trace = []
+    escape_count = 0
+    min_distances = []
+    clash_count = 0
+    for frame in frames:
+        hbond_count = float(frame.breakdown.get("directional_hbond_proxy", {}).get("hbond_pair_count", 0))
+        hydrophobic_count = float(frame.breakdown.get("hydrophobic_contact", {}).get("hydrophobic_pair_count", 0))
+        contact_trace.append(hbond_count + hydrophobic_count)
+        escape_count += int(bool(frame.breakdown.get("pocket_wall", {}).get("escape", False)))
+        min_distances.append(_frame_min_distance(frame.x, state, ligand_mol_id))
+        clash_count += int(_frame_has_clash(frame.x, state, ligand_mol_id, float(clash_scale)))
+    energy_std = float(np.std(np.asarray(energy_trace, dtype=np.float64)))
+    stability_score = 1.0 / (1.0 + energy_std)
+    return TrajectorySummary(
+        frame_count=len(frames),
+        energy_trace=energy_trace,
+        contact_trace=contact_trace,
+        stability_score=float(np.clip(stability_score, 0.0, 1.0)),
+        mean_min_distance=float(np.mean(min_distances)) if min_distances else 0.0,
+        escape_fraction=float(escape_count / len(frames)),
+        clash_fraction=float(clash_count / len(frames)),
+    )
 
 
 class DampedVelocityVerletIntegrator:

@@ -196,6 +196,72 @@ def _check_claim_widening_guard() -> dict[str, Any]:
     )
 
 
+def _check_ai_residual_report_surface() -> dict[str, Any]:
+    from betelgeuze_ai_md.contracts import AIResidualReport
+    from betelgeuze_ai_md.contracts.errors import ContractValidationError
+
+    bounded = AIResidualReport(
+        residual_mode="assist",
+        correction_applied=True,
+        uncertainty=0.2,
+        abstained=False,
+        residual_delta=2.0,
+        bounded_residual_delta=0.6,
+        max_delta=1.0,
+        guard=0.75,
+        active_score_col="binding_score_composite_v7_residual_active",
+        base_score_col="binding_score_composite_v7",
+        ranking_changed=True,
+        guard_components={"topology": 1.0, "domain": 0.75, "calibration": 1.0},
+    )
+    bounded_ok = (
+        bounded.bounded_residual_delta == 0.6
+        and bounded.active_score_col == "binding_score_composite_v7_residual_active"
+        and bounded.ranking_changed is True
+        and "residual_delta_review_required" in bounded.review_flags
+    )
+    unbounded_blocked = False
+    try:
+        AIResidualReport(
+            residual_mode="assist",
+            correction_applied=True,
+            bounded_residual_delta=1.1,
+            max_delta=1.0,
+            guard=1.0,
+        )
+    except ContractValidationError:
+        unbounded_blocked = True
+    missing_active_score_blocked = False
+    try:
+        AIResidualReport(
+            ranking_changed=True,
+            bounded_residual_delta=0.1,
+            max_delta=1.0,
+            guard=1.0,
+        )
+    except ContractValidationError:
+        missing_active_score_blocked = True
+
+    passed = bounded_ok and unbounded_blocked and missing_active_score_blocked
+    return _row(
+        check_id="ai_residual_report_surface",
+        category="contract_layer",
+        passed=passed,
+        observed=(
+            f"bounded_ok={bounded_ok};unbounded_blocked={unbounded_blocked};"
+            f"missing_active_score_blocked={missing_active_score_blocked}"
+        ),
+        required=(
+            "AIResidualReport records bounded residual delta, active score column, guard components, "
+            "review flag, and blocks unbounded or unreported ranking-changing corrections"
+        ),
+    ) | {
+        "bounded_ok": bounded_ok,
+        "unbounded_blocked": unbounded_blocked,
+        "missing_active_score_blocked": missing_active_score_blocked,
+    }
+
+
 def _check_topology_validity_contract_surface() -> dict[str, Any]:
     from betelgeuze_ai_md.contracts import (
         CLAIM_SCOPE_RESTRICTED_LOCAL,
@@ -222,7 +288,7 @@ def _check_topology_validity_contract_surface() -> dict[str, Any]:
                 status="pass",
                 topology_fidelity=TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE,
             ),
-            ai_residual_report=AIResidualReport(),
+            ai_residual_report=AIResidualReport(uncertainty=0.35),
             failure_flags=[],
             source_hashes={
                 "input_hash": "i" * 64,
@@ -256,7 +322,7 @@ def _check_topology_validity_contract_surface() -> dict[str, Any]:
                 topology_fidelity=TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
                 claim_blockers=["sequence_mapping_unresolved"],
             ),
-            ai_residual_report=AIResidualReport(),
+            ai_residual_report=AIResidualReport(uncertainty=0.35),
             failure_flags=[],
             source_hashes={
                 "input_hash": "i" * 64,
@@ -299,6 +365,588 @@ def _check_topology_validity_contract_surface() -> dict[str, Any]:
         "placeholder_blocked": placeholder_blocked,
         "blocker_blocked": blocker_blocked,
         "fail_closed_ok": fail_closed_ok,
+    }
+
+
+def _check_evidence_bundle_trajectory_claim_gate() -> dict[str, Any]:
+    from betelgeuze_ai_md.contracts import (
+        CLAIM_SCOPE_RESTRICTED_LOCAL,
+        EvidenceBundle,
+        TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+        TopologyValidityReport,
+        Verdict,
+    )
+    from betelgeuze_ai_md.contracts.errors import ContractValidationError
+    from betelgeuze_ai_md.contracts.output_schema import (
+        AIResidualReport,
+        BackmappedPose,
+        InteractionEvidence,
+        InteractionReport,
+        TrajectorySummary,
+    )
+
+    base_payload = {
+        "bundle_id": "trajectory_claim_gate",
+        "project_id": "trajectory_claim_gate",
+        "ranked_shortlist": [{"ligand_id": "lig1", "rank": 1, "score": -1.0}],
+        "backmapped_poses": [
+            BackmappedPose(
+                pose_id="pose_001",
+                structure_path="runs/example/pose_001.sdf",
+                structure_sha256="p" * 64,
+                chemical_validity_summary={"status": "pass"},
+                backmap_confidence=0.8,
+            )
+        ],
+        "interaction_report": InteractionReport(
+            interactions=[
+                InteractionEvidence(
+                    interaction_id="hbond_001",
+                    interaction_type="hbond",
+                    partners=["SER:OG", "lig1:O1"],
+                    occupancy=0.6,
+                    confidence=0.8,
+                )
+            ],
+            interaction_confidence=0.7,
+        ),
+        "topology_report": TopologyValidityReport(
+            status="pass",
+            topology_fidelity=TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+        ),
+        "ai_residual_report": AIResidualReport(uncertainty=0.35),
+        "failure_flags": [],
+        "source_hashes": {
+            "input_hash": "i" * 64,
+            "config_hash": "c" * 64,
+            "model_hash": "m" * 64,
+            "executable_hash": "e" * 64,
+        },
+        "viewer_assets": [],
+        "wetlab_handoff_table": [{"ligand_id": "lig1", "recommendation": "review"}],
+        "verdict": Verdict(
+            claim_safe=True,
+            verdict_label="delivery_ready",
+            claim_scope=CLAIM_SCOPE_RESTRICTED_LOCAL,
+            topology_fidelity=TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+        ),
+    }
+    empty_frame_blocked = False
+    try:
+        EvidenceBundle(**{**base_payload, "trajectory_summary": TrajectorySummary(frame_count=0)})
+    except ContractValidationError as exc:
+        empty_frame_blocked = "trajectory frames" in str(exc)
+    empty_energy_trace_blocked = False
+    try:
+        EvidenceBundle(
+            **{
+                **base_payload,
+                "trajectory_summary": TrajectorySummary(
+                    frame_count=1,
+                    energy_trace=[],
+                    contact_trace=[0.0],
+                    stability_score=0.5,
+                    mean_min_distance=2.0,
+                ),
+            }
+        )
+    except ContractValidationError as exc:
+        empty_energy_trace_blocked = "trajectory energy trace" in str(exc)
+    ok_bundle = EvidenceBundle(
+        **{
+            **base_payload,
+            "trajectory_summary": TrajectorySummary(
+                frame_count=1,
+                energy_trace=[0.0],
+                contact_trace=[0.0],
+                stability_score=0.5,
+                mean_min_distance=2.0,
+            ),
+        }
+    )
+    positive_summary_ok = ok_bundle.trajectory_summary.frame_count == 1 and len(ok_bundle.fingerprint()) == 64
+    passed = empty_frame_blocked and empty_energy_trace_blocked and positive_summary_ok
+    return _row(
+        check_id="evidence_bundle_trajectory_claim_gate",
+        category="contract_layer",
+        passed=passed,
+        observed=(
+            f"empty_frame_blocked={empty_frame_blocked};"
+            f"empty_energy_trace_blocked={empty_energy_trace_blocked};"
+            f"positive_summary_ok={positive_summary_ok}"
+        ),
+        required=(
+            "claim_safe EvidenceBundle requires non-empty coarse dynamics trajectory frames and energy trace, "
+            "while accepting a bounded positive TrajectorySummary"
+        ),
+    ) | {
+        "empty_frame_blocked": empty_frame_blocked,
+        "empty_energy_trace_blocked": empty_energy_trace_blocked,
+        "positive_summary_ok": positive_summary_ok,
+    }
+
+
+def _check_evidence_bundle_backmapped_pose_claim_gate() -> dict[str, Any]:
+    from betelgeuze_ai_md.contracts import (
+        CLAIM_SCOPE_RESTRICTED_LOCAL,
+        EvidenceBundle,
+        TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+        TopologyValidityReport,
+        Verdict,
+    )
+    from betelgeuze_ai_md.contracts.errors import ContractValidationError
+    from betelgeuze_ai_md.contracts.output_schema import (
+        AIResidualReport,
+        BackmappedPose,
+        InteractionEvidence,
+        InteractionReport,
+        TrajectorySummary,
+    )
+
+    base_payload = {
+        "bundle_id": "backmapped_pose_claim_gate",
+        "project_id": "backmapped_pose_claim_gate",
+        "ranked_shortlist": [{"ligand_id": "lig1", "rank": 1, "score": -1.0}],
+        "trajectory_summary": TrajectorySummary(
+            frame_count=1,
+            energy_trace=[0.0],
+            contact_trace=[0.0],
+            stability_score=0.5,
+            mean_min_distance=2.0,
+        ),
+        "interaction_report": InteractionReport(
+            interactions=[
+                InteractionEvidence(
+                    interaction_id="hbond_001",
+                    interaction_type="hbond",
+                    partners=["SER:OG", "lig1:O1"],
+                    occupancy=0.6,
+                    confidence=0.8,
+                )
+            ],
+            interaction_confidence=0.7,
+        ),
+        "topology_report": TopologyValidityReport(
+            status="pass",
+            topology_fidelity=TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+        ),
+        "ai_residual_report": AIResidualReport(uncertainty=0.35),
+        "failure_flags": [],
+        "source_hashes": {
+            "input_hash": "i" * 64,
+            "config_hash": "c" * 64,
+            "model_hash": "m" * 64,
+            "executable_hash": "e" * 64,
+        },
+        "viewer_assets": [],
+        "wetlab_handoff_table": [{"ligand_id": "lig1", "recommendation": "review"}],
+        "verdict": Verdict(
+            claim_safe=True,
+            verdict_label="delivery_ready",
+            claim_scope=CLAIM_SCOPE_RESTRICTED_LOCAL,
+            topology_fidelity=TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+        ),
+    }
+    empty_pose_blocked = False
+    try:
+        EvidenceBundle(**{**base_payload, "backmapped_poses": []})
+    except ContractValidationError as exc:
+        empty_pose_blocked = "backmapped poses" in str(exc)
+    ok_bundle = EvidenceBundle(
+        **{
+            **base_payload,
+            "backmapped_poses": [
+                BackmappedPose(
+                    pose_id="pose_001",
+                    structure_path="runs/example/pose_001.sdf",
+                    structure_sha256="p" * 64,
+                    chemical_validity_summary={"status": "pass"},
+                    backmap_confidence=0.8,
+                )
+            ],
+        }
+    )
+    positive_pose_ok = len(ok_bundle.backmapped_poses) == 1 and len(ok_bundle.fingerprint()) == 64
+    passed = empty_pose_blocked and positive_pose_ok
+    return _row(
+        check_id="evidence_bundle_backmapped_pose_claim_gate",
+        category="contract_layer",
+        passed=passed,
+        observed=f"empty_pose_blocked={empty_pose_blocked};positive_pose_ok={positive_pose_ok}",
+        required=(
+            "claim_safe EvidenceBundle requires at least one all-atom backmapped pose while accepting "
+            "a chemically passing positive pose"
+        ),
+    ) | {
+        "empty_pose_blocked": empty_pose_blocked,
+        "positive_pose_ok": positive_pose_ok,
+    }
+
+
+def _check_evidence_bundle_interaction_claim_gate() -> dict[str, Any]:
+    from betelgeuze_ai_md.contracts import (
+        CLAIM_SCOPE_RESTRICTED_LOCAL,
+        EvidenceBundle,
+        TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+        TopologyValidityReport,
+        Verdict,
+    )
+    from betelgeuze_ai_md.contracts.errors import ContractValidationError
+    from betelgeuze_ai_md.contracts.output_schema import (
+        AIResidualReport,
+        BackmappedPose,
+        InteractionEvidence,
+        InteractionReport,
+        TrajectorySummary,
+    )
+
+    base_payload = {
+        "bundle_id": "interaction_claim_gate",
+        "project_id": "interaction_claim_gate",
+        "ranked_shortlist": [{"ligand_id": "lig1", "rank": 1, "score": -1.0}],
+        "trajectory_summary": TrajectorySummary(
+            frame_count=1,
+            energy_trace=[0.0],
+            contact_trace=[0.0],
+            stability_score=0.5,
+            mean_min_distance=2.0,
+        ),
+        "backmapped_poses": [
+            BackmappedPose(
+                pose_id="pose_001",
+                structure_path="runs/example/pose_001.sdf",
+                structure_sha256="p" * 64,
+                chemical_validity_summary={"status": "pass"},
+                backmap_confidence=0.8,
+            )
+        ],
+        "topology_report": TopologyValidityReport(
+            status="pass",
+            topology_fidelity=TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+        ),
+        "ai_residual_report": AIResidualReport(uncertainty=0.35),
+        "failure_flags": [],
+        "source_hashes": {
+            "input_hash": "i" * 64,
+            "config_hash": "c" * 64,
+            "model_hash": "m" * 64,
+            "executable_hash": "e" * 64,
+        },
+        "viewer_assets": [],
+        "wetlab_handoff_table": [{"ligand_id": "lig1", "recommendation": "review"}],
+        "verdict": Verdict(
+            claim_safe=True,
+            verdict_label="delivery_ready",
+            claim_scope=CLAIM_SCOPE_RESTRICTED_LOCAL,
+            topology_fidelity=TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+        ),
+    }
+    empty_interaction_blocked = False
+    try:
+        EvidenceBundle(
+            **{
+                **base_payload,
+                "interaction_report": InteractionReport(interactions=[], interaction_confidence=0.7),
+            }
+        )
+    except ContractValidationError as exc:
+        empty_interaction_blocked = "interaction evidence" in str(exc)
+    zero_confidence_blocked = False
+    try:
+        EvidenceBundle(
+            **{
+                **base_payload,
+                "interaction_report": InteractionReport(
+                    interactions=[
+                        InteractionEvidence(
+                            interaction_id="hbond_001",
+                            interaction_type="hbond",
+                            partners=["SER:OG", "lig1:O1"],
+                            occupancy=0.6,
+                            confidence=0.8,
+                        )
+                    ],
+                    interaction_confidence=0.0,
+                ),
+            }
+        )
+    except ContractValidationError as exc:
+        zero_confidence_blocked = "positive interaction confidence" in str(exc)
+    ok_bundle = EvidenceBundle(
+        **{
+            **base_payload,
+            "interaction_report": InteractionReport(
+                interactions=[
+                    InteractionEvidence(
+                        interaction_id="hbond_001",
+                        interaction_type="hbond",
+                        partners=["SER:OG", "lig1:O1"],
+                        occupancy=0.6,
+                        confidence=0.8,
+                    )
+                ],
+                interaction_confidence=0.7,
+            ),
+        }
+    )
+    positive_interaction_ok = len(ok_bundle.interaction_report.interactions) == 1 and len(ok_bundle.fingerprint()) == 64
+    passed = empty_interaction_blocked and zero_confidence_blocked and positive_interaction_ok
+    return _row(
+        check_id="evidence_bundle_interaction_claim_gate",
+        category="contract_layer",
+        passed=passed,
+        observed=(
+            f"empty_interaction_blocked={empty_interaction_blocked};"
+            f"zero_confidence_blocked={zero_confidence_blocked};"
+            f"positive_interaction_ok={positive_interaction_ok}"
+        ),
+        required=(
+            "claim_safe EvidenceBundle requires non-empty H-bond/interaction evidence with positive "
+            "interaction confidence while accepting a positive interaction report"
+        ),
+    ) | {
+        "empty_interaction_blocked": empty_interaction_blocked,
+        "zero_confidence_blocked": zero_confidence_blocked,
+        "positive_interaction_ok": positive_interaction_ok,
+    }
+
+
+def _check_evidence_bundle_product_output_claim_gate() -> dict[str, Any]:
+    from betelgeuze_ai_md.contracts import (
+        CLAIM_SCOPE_RESTRICTED_LOCAL,
+        EvidenceBundle,
+        TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+        TopologyValidityReport,
+        Verdict,
+    )
+    from betelgeuze_ai_md.contracts.errors import ContractValidationError
+    from betelgeuze_ai_md.contracts.output_schema import (
+        AIResidualReport,
+        BackmappedPose,
+        InteractionEvidence,
+        InteractionReport,
+        TrajectorySummary,
+    )
+
+    base_payload = {
+        "bundle_id": "product_output_claim_gate",
+        "project_id": "product_output_claim_gate",
+        "trajectory_summary": TrajectorySummary(
+            frame_count=1,
+            energy_trace=[0.0],
+            contact_trace=[0.0],
+            stability_score=0.5,
+            mean_min_distance=2.0,
+        ),
+        "backmapped_poses": [
+            BackmappedPose(
+                pose_id="pose_001",
+                structure_path="runs/example/pose_001.sdf",
+                structure_sha256="p" * 64,
+                chemical_validity_summary={"status": "pass"},
+                backmap_confidence=0.8,
+            )
+        ],
+        "interaction_report": InteractionReport(
+            interactions=[
+                InteractionEvidence(
+                    interaction_id="hbond_001",
+                    interaction_type="hbond",
+                    partners=["SER:OG", "lig1:O1"],
+                    occupancy=0.6,
+                    confidence=0.8,
+                )
+            ],
+            interaction_confidence=0.7,
+        ),
+        "topology_report": TopologyValidityReport(
+            status="pass",
+            topology_fidelity=TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+        ),
+        "ai_residual_report": AIResidualReport(uncertainty=0.35),
+        "failure_flags": [],
+        "source_hashes": {
+            "input_hash": "i" * 64,
+            "config_hash": "c" * 64,
+            "model_hash": "m" * 64,
+            "executable_hash": "e" * 64,
+        },
+        "viewer_assets": [],
+        "verdict": Verdict(
+            claim_safe=True,
+            verdict_label="delivery_ready",
+            claim_scope=CLAIM_SCOPE_RESTRICTED_LOCAL,
+            topology_fidelity=TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+        ),
+    }
+    empty_shortlist_blocked = False
+    try:
+        EvidenceBundle(
+            **{
+                **base_payload,
+                "ranked_shortlist": [],
+                "wetlab_handoff_table": [{"ligand_id": "lig1", "recommendation": "review"}],
+            }
+        )
+    except ContractValidationError as exc:
+        empty_shortlist_blocked = "ranked shortlist" in str(exc)
+    empty_handoff_blocked = False
+    try:
+        EvidenceBundle(
+            **{
+                **base_payload,
+                "ranked_shortlist": [{"ligand_id": "lig1", "rank": 1, "score": -1.0}],
+                "wetlab_handoff_table": [],
+            }
+        )
+    except ContractValidationError as exc:
+        empty_handoff_blocked = "wetlab handoff table" in str(exc)
+    ok_bundle = EvidenceBundle(
+        **{
+            **base_payload,
+            "ranked_shortlist": [{"ligand_id": "lig1", "rank": 1, "score": -1.0}],
+            "wetlab_handoff_table": [{"ligand_id": "lig1", "recommendation": "review"}],
+        }
+    )
+    positive_product_outputs_ok = (
+        len(ok_bundle.ranked_shortlist) == 1
+        and len(ok_bundle.wetlab_handoff_table) == 1
+        and len(ok_bundle.fingerprint()) == 64
+    )
+    passed = empty_shortlist_blocked and empty_handoff_blocked and positive_product_outputs_ok
+    return _row(
+        check_id="evidence_bundle_product_output_claim_gate",
+        category="contract_layer",
+        passed=passed,
+        observed=(
+            f"empty_shortlist_blocked={empty_shortlist_blocked};"
+            f"empty_handoff_blocked={empty_handoff_blocked};"
+            f"positive_product_outputs_ok={positive_product_outputs_ok}"
+        ),
+        required=(
+            "claim_safe EvidenceBundle requires ranked shortlist and wetlab handoff table product outputs "
+            "while accepting positive output tables"
+        ),
+    ) | {
+        "empty_shortlist_blocked": empty_shortlist_blocked,
+        "empty_handoff_blocked": empty_handoff_blocked,
+        "positive_product_outputs_ok": positive_product_outputs_ok,
+    }
+
+
+def _check_evidence_bundle_ai_uncertainty_claim_gate() -> dict[str, Any]:
+    from betelgeuze_ai_md.contracts import (
+        CLAIM_SCOPE_RESTRICTED_LOCAL,
+        EvidenceBundle,
+        TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+        TopologyValidityReport,
+        Verdict,
+    )
+    from betelgeuze_ai_md.contracts.errors import ContractValidationError
+    from betelgeuze_ai_md.contracts.output_schema import (
+        AIResidualReport,
+        BackmappedPose,
+        InteractionEvidence,
+        InteractionReport,
+        TrajectorySummary,
+    )
+
+    base_payload = {
+        "bundle_id": "ai_uncertainty_claim_gate",
+        "project_id": "ai_uncertainty_claim_gate",
+        "ranked_shortlist": [{"ligand_id": "lig1", "rank": 1, "score": -1.0}],
+        "trajectory_summary": TrajectorySummary(
+            frame_count=1,
+            energy_trace=[0.0],
+            contact_trace=[0.0],
+            stability_score=0.5,
+            mean_min_distance=2.0,
+        ),
+        "backmapped_poses": [
+            BackmappedPose(
+                pose_id="pose_001",
+                structure_path="runs/example/pose_001.sdf",
+                structure_sha256="p" * 64,
+                chemical_validity_summary={"status": "pass"},
+                backmap_confidence=0.8,
+            )
+        ],
+        "interaction_report": InteractionReport(
+            interactions=[
+                InteractionEvidence(
+                    interaction_id="hbond_001",
+                    interaction_type="hbond",
+                    partners=["SER:OG", "lig1:O1"],
+                    occupancy=0.6,
+                    confidence=0.8,
+                )
+            ],
+            interaction_confidence=0.7,
+        ),
+        "topology_report": TopologyValidityReport(
+            status="pass",
+            topology_fidelity=TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+        ),
+        "ai_residual_report": AIResidualReport(uncertainty=0.35),
+        "failure_flags": [],
+        "source_hashes": {
+            "input_hash": "i" * 64,
+            "config_hash": "c" * 64,
+            "model_hash": "m" * 64,
+            "executable_hash": "e" * 64,
+        },
+        "viewer_assets": [],
+        "wetlab_handoff_table": [{"ligand_id": "lig1", "recommendation": "review"}],
+        "verdict": Verdict(
+            claim_safe=True,
+            verdict_label="delivery_ready",
+            claim_scope=CLAIM_SCOPE_RESTRICTED_LOCAL,
+            topology_fidelity=TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+        ),
+    }
+    high_uncertainty_blocked = False
+    try:
+        EvidenceBundle(
+            **{
+                **base_payload,
+                "ai_residual_report": AIResidualReport(uncertainty=0.36),
+            }
+        )
+    except ContractValidationError as exc:
+        high_uncertainty_blocked = "high AI uncertainty" in str(exc)
+    review_flag_blocked = False
+    try:
+        EvidenceBundle(
+            **{
+                **base_payload,
+                "ai_residual_report": AIResidualReport(
+                    uncertainty=0.35,
+                    review_flags=["manual_review_required"],
+                ),
+            }
+        )
+    except ContractValidationError as exc:
+        review_flag_blocked = "AI residual review flags" in str(exc)
+    ok_bundle = EvidenceBundle(**base_payload)
+    low_uncertainty_ok = ok_bundle.ai_residual_report.uncertainty == 0.35 and len(ok_bundle.fingerprint()) == 64
+    passed = high_uncertainty_blocked and review_flag_blocked and low_uncertainty_ok
+    return _row(
+        check_id="evidence_bundle_ai_uncertainty_claim_gate",
+        category="contract_layer",
+        passed=passed,
+        observed=(
+            f"high_uncertainty_blocked={high_uncertainty_blocked};"
+            f"review_flag_blocked={review_flag_blocked};"
+            f"low_uncertainty_ok={low_uncertainty_ok}"
+        ),
+        required=(
+            "claim_safe EvidenceBundle rejects high AI uncertainty and any AI residual review flags "
+            "while accepting uncertainty at the review threshold"
+        ),
+    ) | {
+        "high_uncertainty_blocked": high_uncertainty_blocked,
+        "review_flag_blocked": review_flag_blocked,
+        "low_uncertainty_ok": low_uncertainty_ok,
     }
 
 
@@ -698,16 +1346,23 @@ def _check_api_validated_runner_native_evidence_bundle_support(root: Path) -> di
 
 def _check_numpy_reference_oracle() -> dict[str, Any]:
     from betelgeuze_ai_md.coarse_md.numpy_ref import (
+        FEATURE_ACCEPTOR,
+        FEATURE_DONOR,
+        FEATURE_HYDROPHOBE,
         BeadKind,
         CoarseForceField,
         CoarseState,
+        DirectionalHbondTerm,
+        HydrophobicContactTerm,
         NeighborListBuilder,
         ScreenedElectrostaticTerm,
+        SoftcoreContactTerm,
+        build_bruteforce_neighbor_list,
         finite_difference_force,
     )
 
-    state = CoarseState(
-        x=np.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0]], dtype=np.float32),
+    electrostatic_state = CoarseState(
+        x=np.array([[0.0, 0.0, 0.0], [5.5, 0.0, 0.0]], dtype=np.float32),
         v=np.zeros((2, 3), dtype=np.float32),
         mass=np.ones(2, dtype=np.float32) * 12.0,
         charge=np.array([1.0, -1.0], dtype=np.float32),
@@ -718,27 +1373,361 @@ def _check_numpy_reference_oracle() -> dict[str, Any]:
         mol_id=np.array([0, 1], dtype=np.int32),
         fixed=np.zeros(2, dtype=bool),
     )
-    neighbor_builder = NeighborListBuilder(cutoff=6.0, skin=0.0)
-    forcefield = CoarseForceField(
+    electrostatic_neighbor_builder = NeighborListBuilder(cutoff=6.0, skin=0.0)
+    electrostatic_forcefield = CoarseForceField(
         [ScreenedElectrostaticTerm(epsilon_r=20.0, kappa=0.15, r_switch=5.0, r_cut=6.0)],
         force_clip=1_000_000.0,
     )
+    softcore_state = CoarseState(
+        x=np.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0]], dtype=np.float32),
+        v=np.zeros((2, 3), dtype=np.float32),
+        mass=np.ones(2, dtype=np.float32) * 12.0,
+        charge=np.zeros(2, dtype=np.float32),
+        radius=np.ones(2, dtype=np.float32),
+        epsilon=np.ones(2, dtype=np.float32) * 0.2,
+        bead_type=np.array([BeadKind.LIGAND_POLAR, BeadKind.LIGAND_POLAR], dtype=np.int32),
+        feature=np.zeros(2, dtype=np.int32),
+        mol_id=np.array([0, 1], dtype=np.int32),
+        fixed=np.zeros(2, dtype=bool),
+    )
+    softcore_neighbor_builder = NeighborListBuilder(cutoff=5.0, skin=0.0)
+    softcore_forcefield = CoarseForceField(
+        [SoftcoreContactTerm(r_switch=2.5, r_cut=3.5)],
+        force_clip=1_000_000.0,
+    )
+    neighbor_parity_state = CoarseState(
+        x=np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [3.8, 0.2, 0.1],
+                [1.8, 2.6, 0.2],
+                [4.5, 2.8, -0.1],
+            ],
+            dtype=np.float32,
+        ),
+        v=np.zeros((4, 3), dtype=np.float32),
+        mass=np.ones(4, dtype=np.float32) * 12.0,
+        charge=np.array([-0.3, 0.1, 0.2, -0.2], dtype=np.float32),
+        radius=np.ones(4, dtype=np.float32) * 1.8,
+        epsilon=np.ones(4, dtype=np.float32) * 0.2,
+        bead_type=np.array(
+            [
+                BeadKind.PROTEIN_CA,
+                BeadKind.PROTEIN_SC,
+                BeadKind.LIGAND_POLAR,
+                BeadKind.LIGAND_HYDROPHOBE,
+            ],
+            dtype=np.int32,
+        ),
+        feature=np.array(
+            [FEATURE_ACCEPTOR, FEATURE_HYDROPHOBE, FEATURE_DONOR, FEATURE_HYDROPHOBE],
+            dtype=np.int32,
+        ),
+        mol_id=np.array([0, 0, 1, 1], dtype=np.int32),
+        fixed=np.zeros(4, dtype=bool),
+    )
+    neighbor_parity_forcefield = CoarseForceField(
+        [
+            SoftcoreContactTerm(r_switch=5.0, r_cut=6.0),
+            ScreenedElectrostaticTerm(epsilon_r=20.0, kappa=0.15, r_switch=5.0, r_cut=6.0),
+            DirectionalHbondTerm(),
+            HydrophobicContactTerm(),
+        ],
+        force_clip=1_000_000.0,
+    )
 
-    def energy_fn(x: np.ndarray) -> float:
-        shifted = state.with_positions(x)
-        return forcefield.compute(shifted, neighbor_builder.build(shifted.x)).energy
+    def _force_matches(
+        state: CoarseState,
+        forcefield: CoarseForceField,
+        neighbor_builder: NeighborListBuilder,
+    ) -> tuple[bool, bool, bool]:
+        def energy_fn(x: np.ndarray) -> float:
+            shifted = state.with_positions(x)
+            return forcefield.compute(shifted, neighbor_builder.build(shifted.x)).energy
 
-    result = forcefield.compute(state, neighbor_builder.build(state.x))
-    fd_force = finite_difference_force(energy_fn, state.x, h=1e-3)
-    force_matches = bool(np.allclose(result.forces, fd_force, rtol=3e-3, atol=3e-3))
-    passed = bool(np.isfinite(result.energy) and np.isfinite(result.forces).all() and force_matches)
+        result = forcefield.compute(state, neighbor_builder.build(state.x))
+        fd_force = finite_difference_force(energy_fn, state.x, h=1e-3)
+        force_matches = bool(np.allclose(result.forces, fd_force, rtol=3e-3, atol=3e-3))
+        finite = bool(np.isfinite(result.energy) and np.isfinite(result.forces).all())
+        return finite, force_matches, bool(finite and force_matches)
+
+    def _compute_with_cell_neighbors(state: CoarseState, forcefield: CoarseForceField) -> Any:
+        return forcefield.compute(state, NeighborListBuilder(cutoff=6.0, skin=0.0).build(state.x))
+
+    def _permuted_state(state: CoarseState, order: np.ndarray) -> CoarseState:
+        return CoarseState(
+            x=state.x[order],
+            v=state.v[order],
+            mass=state.mass[order],
+            charge=state.charge[order],
+            radius=state.radius[order],
+            epsilon=state.epsilon[order],
+            bead_type=state.bead_type[order],
+            feature=state.feature[order],
+            mol_id=state.mol_id[order],
+            fixed=state.fixed[order],
+        )
+
+    electrostatic_finite, electrostatic_force_matches, electrostatic_passed = _force_matches(
+        electrostatic_state,
+        electrostatic_forcefield,
+        electrostatic_neighbor_builder,
+    )
+    softcore_finite, softcore_force_matches, softcore_passed = _force_matches(
+        softcore_state,
+        softcore_forcefield,
+        softcore_neighbor_builder,
+    )
+    cell_neighbors = NeighborListBuilder(cutoff=6.0, skin=0.0).build(neighbor_parity_state.x)
+    brute_neighbors = build_bruteforce_neighbor_list(neighbor_parity_state.x, cutoff=6.0, skin=0.0)
+    cell_pairs = set(zip(cell_neighbors.pair_i.tolist(), cell_neighbors.pair_j.tolist()))
+    brute_pairs = set(zip(brute_neighbors.pair_i.tolist(), brute_neighbors.pair_j.tolist()))
+    cell_result = neighbor_parity_forcefield.compute(neighbor_parity_state, cell_neighbors)
+    brute_result = neighbor_parity_forcefield.compute(neighbor_parity_state, brute_neighbors)
+    neighbor_pair_matches = cell_pairs == brute_pairs
+    neighbor_energy_matches = bool(np.isclose(cell_result.energy, brute_result.energy, rtol=1e-6, atol=1e-6))
+    neighbor_force_matches = bool(np.allclose(cell_result.forces, brute_result.forces, rtol=1e-6, atol=1e-6))
+    neighbor_full_pair_parity = bool(neighbor_pair_matches and neighbor_energy_matches and neighbor_force_matches)
+    base_result = _compute_with_cell_neighbors(neighbor_parity_state, neighbor_parity_forcefield)
+    shifted_state = neighbor_parity_state.with_positions(
+        neighbor_parity_state.x + np.array([7.0, -3.0, 1.5], dtype=np.float32)
+    )
+    shifted_result = _compute_with_cell_neighbors(shifted_state, neighbor_parity_forcefield)
+    translation_invariant = bool(
+        np.isclose(shifted_result.energy, base_result.energy, rtol=1e-6, atol=1e-6)
+        and np.allclose(shifted_result.forces, base_result.forces, rtol=3e-6, atol=3e-6)
+    )
+    theta = np.pi / 3.0
+    rotation = np.array(
+        [
+            [np.cos(theta), -np.sin(theta), 0.0],
+            [np.sin(theta), np.cos(theta), 0.0],
+            [0.0, 0.0, 1.0],
+        ],
+        dtype=np.float32,
+    )
+    rotated_state = neighbor_parity_state.with_positions(neighbor_parity_state.x @ rotation.T)
+    rotated_result = _compute_with_cell_neighbors(rotated_state, neighbor_parity_forcefield)
+    rotation_invariant = bool(
+        np.isclose(rotated_result.energy, base_result.energy, rtol=1e-5, atol=1e-5)
+        and np.allclose(rotated_result.forces, base_result.forces @ rotation.T, rtol=1e-5, atol=1e-5)
+    )
+    order = np.array([2, 0, 3, 1], dtype=np.int64)
+    inverse_order = np.argsort(order)
+    permuted_result = _compute_with_cell_neighbors(
+        _permuted_state(neighbor_parity_state, order),
+        neighbor_parity_forcefield,
+    )
+    permutation_invariant = bool(
+        np.isclose(permuted_result.energy, base_result.energy, rtol=1e-6, atol=1e-6)
+        and np.allclose(permuted_result.forces[inverse_order], base_result.forces, rtol=1e-6, atol=1e-6)
+    )
+    cutoff_state = CoarseState(
+        x=np.array([[0.0, 0.0, 0.0], [6.0, 0.0, 0.0]], dtype=np.float32),
+        v=np.zeros((2, 3), dtype=np.float32),
+        mass=np.ones(2, dtype=np.float32) * 12.0,
+        charge=np.array([1.0, -1.0], dtype=np.float32),
+        radius=np.ones(2, dtype=np.float32),
+        epsilon=np.ones(2, dtype=np.float32) * 0.2,
+        bead_type=np.array([BeadKind.LIGAND_CHARGED, BeadKind.LIGAND_CHARGED], dtype=np.int32),
+        feature=np.zeros(2, dtype=np.int32),
+        mol_id=np.array([0, 1], dtype=np.int32),
+        fixed=np.zeros(2, dtype=bool),
+    )
+    cutoff_result = _compute_with_cell_neighbors(cutoff_state, neighbor_parity_forcefield)
+    cutoff_boundary_stable = bool(
+        np.isclose(cutoff_result.energy, 0.0, atol=1e-7)
+        and np.allclose(cutoff_result.forces, 0.0, atol=1e-7)
+    )
+    stress_state = cutoff_state.with_positions(
+        np.array([[0.0, 0.0, 0.0], [1e-4, 0.0, 0.0]], dtype=np.float32)
+    )
+    stress_result = _compute_with_cell_neighbors(stress_state, neighbor_parity_forcefield)
+    stress_finite = bool(np.isfinite(stress_result.energy) and np.isfinite(stress_result.forces).all())
+    reference_invariance_ready = bool(
+        translation_invariant
+        and rotation_invariant
+        and permutation_invariant
+        and cutoff_boundary_stable
+        and stress_finite
+    )
+    passed = bool(
+        electrostatic_passed
+        and softcore_passed
+        and neighbor_full_pair_parity
+        and reference_invariance_ready
+    )
     return _row(
         check_id="numpy_reference_oracle_smoke",
         category="numpy_reference_oracle",
         passed=passed,
-        observed=f"finite_energy={np.isfinite(result.energy)};force_matches_finite_difference={force_matches}",
-        required="NumPy reference oracle produces finite energy/forces and matches finite-difference force",
+        observed=(
+            f"electrostatic_switch_finite={electrostatic_finite};"
+            f"electrostatic_switch_force_matches_finite_difference={electrostatic_force_matches};"
+            f"softcore_switch_finite={softcore_finite};"
+            f"softcore_switch_force_matches_finite_difference={softcore_force_matches};"
+            f"neighbor_full_pair_parity={neighbor_full_pair_parity};"
+            f"reference_invariance_ready={reference_invariance_ready}"
+        ),
+        required=(
+            "NumPy reference oracle produces finite energy/forces and matches finite-difference force "
+            "for switched electrostatic and softcore contact terms, and cell-list forcefield output "
+            "matches brute-force full-pair neighbor oracle output with translation, rotation, permutation, "
+            "cutoff-boundary, and stress finite checks"
+        ),
+    ) | {
+        "electrostatic_switch_force_matches": electrostatic_force_matches,
+        "softcore_switch_force_matches": softcore_force_matches,
+        "neighbor_pair_matches": neighbor_pair_matches,
+        "neighbor_energy_matches": neighbor_energy_matches,
+        "neighbor_force_matches": neighbor_force_matches,
+        "neighbor_full_pair_parity": neighbor_full_pair_parity,
+        "translation_invariant": translation_invariant,
+        "rotation_invariant": rotation_invariant,
+        "permutation_invariant": permutation_invariant,
+        "cutoff_boundary_stable": cutoff_boundary_stable,
+        "stress_finite": stress_finite,
+        "reference_invariance_ready": reference_invariance_ready,
+    }
+
+
+def _check_numpy_trajectory_summary_surface() -> dict[str, Any]:
+    from betelgeuze_ai_md.coarse_md.numpy_ref import (
+        FEATURE_ACCEPTOR,
+        FEATURE_DONOR,
+        FEATURE_HYDROPHOBE,
+        BeadKind,
+        CoarseForceField,
+        CoarseState,
+        DirectionalHbondTerm,
+        DynamicsEngine,
+        HydrophobicContactTerm,
+        IntegratorConfig,
+        NeighborListBuilder,
+        PocketWallTerm,
+        ScreenedElectrostaticTerm,
+        SoftcoreContactTerm,
+        summarize_trajectory,
     )
+    from betelgeuze_ai_md.contracts import TrajectorySummary
+    from betelgeuze_ai_md.contracts.errors import ContractValidationError
+
+    x = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [4.0, 0.0, 0.0],
+            [2.0, 1.0, 0.0],
+            [2.8, 1.2, 0.0],
+        ],
+        dtype=np.float32,
+    )
+    state = CoarseState(
+        x=x,
+        v=np.zeros_like(x, dtype=np.float32),
+        mass=np.ones(4, dtype=np.float32) * 12.0,
+        charge=np.array([-0.3, 0.1, 0.2, -0.2], dtype=np.float32),
+        radius=np.ones(4, dtype=np.float32) * 1.8,
+        epsilon=np.ones(4, dtype=np.float32) * 0.2,
+        bead_type=np.array(
+            [
+                BeadKind.PROTEIN_CA,
+                BeadKind.PROTEIN_SC,
+                BeadKind.LIGAND_POLAR,
+                BeadKind.LIGAND_HYDROPHOBE,
+            ],
+            dtype=np.int32,
+        ),
+        feature=np.array(
+            [FEATURE_ACCEPTOR, FEATURE_HYDROPHOBE, FEATURE_DONOR, FEATURE_HYDROPHOBE],
+            dtype=np.int32,
+        ),
+        mol_id=np.array([0, 0, 1, 1], dtype=np.int32),
+        fixed=np.array([True, True, False, False], dtype=bool),
+    )
+    forcefield = CoarseForceField(
+        [
+            SoftcoreContactTerm(),
+            ScreenedElectrostaticTerm(),
+            DirectionalHbondTerm(),
+            HydrophobicContactTerm(),
+            PocketWallTerm(np.array([2.0, 0.5, 0.0], dtype=np.float32), pocket_radius=5.0, ligand_mol_id=1),
+        ],
+        force_clip=250.0,
+    )
+    trajectory = DynamicsEngine(forcefield, NeighborListBuilder(cutoff=10.0, skin=2.0)).run(
+        state,
+        IntegratorConfig(max_steps=12, save_every=3, damping=0.95),
+    )
+    summary = summarize_trajectory(trajectory, state, ligand_mol_id=1)
+    typed = isinstance(summary, TrajectorySummary)
+    frame_count_ok = summary.frame_count == len(trajectory.frames) == 4
+    traces_ok = len(summary.energy_trace) == summary.frame_count and len(summary.contact_trace) == summary.frame_count
+    finite_ok = bool(
+        np.isfinite(summary.energy_trace).all()
+        and np.isfinite(summary.contact_trace).all()
+        and np.isfinite(summary.stability_score)
+        and np.isfinite(summary.mean_min_distance)
+        and np.isfinite(summary.escape_fraction)
+        and np.isfinite(summary.clash_fraction)
+    )
+    bounded_ok = bool(
+        0.0 <= summary.stability_score <= 1.0
+        and 0.0 <= summary.escape_fraction <= 1.0
+        and 0.0 <= summary.clash_fraction <= 1.0
+        and summary.mean_min_distance > 0.0
+    )
+    contract_hash_ok = len(summary.contract_hash()) == 64
+    invalid_trace_blocked = False
+    try:
+        TrajectorySummary(frame_count=1, energy_trace=[float("nan")])
+    except ContractValidationError:
+        invalid_trace_blocked = True
+    invalid_fraction_blocked = False
+    try:
+        TrajectorySummary(frame_count=1, escape_fraction=1.1)
+    except ContractValidationError:
+        invalid_fraction_blocked = True
+    excessive_trace_blocked = False
+    try:
+        TrajectorySummary(frame_count=1, contact_trace=[0.0, 1.0])
+    except ContractValidationError:
+        excessive_trace_blocked = True
+    fail_closed_ok = invalid_trace_blocked and invalid_fraction_blocked and excessive_trace_blocked
+    passed = bool(
+        typed
+        and frame_count_ok
+        and traces_ok
+        and finite_ok
+        and bounded_ok
+        and contract_hash_ok
+        and fail_closed_ok
+    )
+    return _row(
+        check_id="numpy_trajectory_summary_surface",
+        category="numpy_reference_oracle",
+        passed=passed,
+        observed=(
+            f"typed={typed};frame_count_ok={frame_count_ok};traces_ok={traces_ok};"
+            f"finite_ok={finite_ok};bounded_ok={bounded_ok};contract_hash_ok={contract_hash_ok};"
+            f"fail_closed_ok={fail_closed_ok}"
+        ),
+        required=(
+            "NumPy dynamics trajectory summarizes into typed TrajectorySummary with frame-aligned "
+            "energy/contact traces, bounded stability/escape/clash metrics, finite distances, stable hash, "
+            "and fail-closed rejection of invalid summary metrics"
+        ),
+    ) | {
+        "typed": typed,
+        "frame_count_ok": frame_count_ok,
+        "traces_ok": traces_ok,
+        "finite_ok": finite_ok,
+        "bounded_ok": bounded_ok,
+        "contract_hash_ok": contract_hash_ok,
+        "invalid_trace_blocked": invalid_trace_blocked,
+        "invalid_fraction_blocked": invalid_fraction_blocked,
+        "excessive_trace_blocked": excessive_trace_blocked,
+        "fail_closed_ok": fail_closed_ok,
+    }
 
 
 def build_ai_md_contract_source_of_truth_gate(
@@ -752,7 +1741,13 @@ def build_ai_md_contract_source_of_truth_gate(
         lambda: _check_required_source_files(root_path, source_files),
         lambda: _check_pyproject_package_discovery(root_path),
         _check_contract_symbols_exported,
+        _check_ai_residual_report_surface,
         _check_topology_validity_contract_surface,
+        _check_evidence_bundle_trajectory_claim_gate,
+        _check_evidence_bundle_backmapped_pose_claim_gate,
+        _check_evidence_bundle_interaction_claim_gate,
+        _check_evidence_bundle_product_output_claim_gate,
+        _check_evidence_bundle_ai_uncertainty_claim_gate,
         _check_topology_factory_adapter,
         _check_backmapping_interaction_adapter_surface,
         _check_claim_widening_guard,
@@ -762,6 +1757,7 @@ def build_ai_md_contract_source_of_truth_gate(
         lambda: _check_api_worker_attachment(root_path),
         lambda: _check_api_validated_runner_native_evidence_bundle_support(root_path),
         _check_numpy_reference_oracle,
+        _check_numpy_trajectory_summary_surface,
     ]
     rows = [_safe_check(check) for check in checks]
     blockers = [row for row in rows if row["release_blocker"]]
@@ -788,8 +1784,32 @@ def build_ai_md_contract_source_of_truth_gate(
             )
         ),
         "numpy_reference_oracle_ready": bool(category_ready.get("numpy_reference_oracle")),
+        "trajectory_summary_contract_ready": rows_by_id.get("numpy_trajectory_summary_surface", {}).get("status")
+        == "pass",
+        "evidence_bundle_trajectory_claim_ready": rows_by_id.get(
+            "evidence_bundle_trajectory_claim_gate", {}
+        ).get("status")
+        == "pass",
+        "evidence_bundle_backmapped_pose_claim_ready": rows_by_id.get(
+            "evidence_bundle_backmapped_pose_claim_gate", {}
+        ).get("status")
+        == "pass",
+        "evidence_bundle_interaction_claim_ready": rows_by_id.get(
+            "evidence_bundle_interaction_claim_gate", {}
+        ).get("status")
+        == "pass",
+        "evidence_bundle_product_output_claim_ready": rows_by_id.get(
+            "evidence_bundle_product_output_claim_gate", {}
+        ).get("status")
+        == "pass",
+        "evidence_bundle_ai_uncertainty_claim_ready": rows_by_id.get(
+            "evidence_bundle_ai_uncertainty_claim_gate", {}
+        ).get("status")
+        == "pass",
         "claim_widening_guard_ready": bool(category_ready.get("claim_boundary")),
         "contract_source_files_ready": bool(category_ready.get("contract_source_files")),
+        "ai_residual_contract_ready": rows_by_id.get("ai_residual_report_surface", {}).get("status")
+        == "pass",
         "topology_validity_contract_ready": rows_by_id.get("topology_validity_contract_surface", {}).get("status")
         == "pass",
         "topology_factory_adapter_ready": rows_by_id.get("topology_factory_adapter_surface", {}).get("status")
@@ -839,9 +1859,16 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"- blocker_count: `{summary['blocker_count']}`",
         f"- contract_source_files_ready: `{summary['contract_source_files_ready']}`",
         f"- ai_md_contract_layer_ready: `{summary['ai_md_contract_layer_ready']}`",
+        f"- ai_residual_contract_ready: `{summary['ai_residual_contract_ready']}`",
         f"- api_evidence_bundle_attachment_ready: `{summary['api_evidence_bundle_attachment_ready']}`",
         f"- api_runtime_evidence_bundle_surface_ready: `{summary['api_runtime_evidence_bundle_surface_ready']}`",
         f"- numpy_reference_oracle_ready: `{summary['numpy_reference_oracle_ready']}`",
+        f"- trajectory_summary_contract_ready: `{summary['trajectory_summary_contract_ready']}`",
+        f"- evidence_bundle_trajectory_claim_ready: `{summary['evidence_bundle_trajectory_claim_ready']}`",
+        f"- evidence_bundle_backmapped_pose_claim_ready: `{summary['evidence_bundle_backmapped_pose_claim_ready']}`",
+        f"- evidence_bundle_interaction_claim_ready: `{summary['evidence_bundle_interaction_claim_ready']}`",
+        f"- evidence_bundle_product_output_claim_ready: `{summary['evidence_bundle_product_output_claim_ready']}`",
+        f"- evidence_bundle_ai_uncertainty_claim_ready: `{summary['evidence_bundle_ai_uncertainty_claim_ready']}`",
         f"- claim_widening_guard_ready: `{summary['claim_widening_guard_ready']}`",
         "",
         "## Checks",

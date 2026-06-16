@@ -20,9 +20,16 @@ def test_ai_md_contract_source_of_truth_gate_passes_current_contract_surfaces() 
     assert summary["ai_md_contract_source_of_truth_gate_ready"] is True
     assert summary["contract_source_files_ready"] is True
     assert summary["ai_md_contract_layer_ready"] is True
+    assert summary["ai_residual_contract_ready"] is True
     assert summary["api_evidence_bundle_attachment_ready"] is True
     assert summary["api_runtime_evidence_bundle_surface_ready"] is True
     assert summary["numpy_reference_oracle_ready"] is True
+    assert summary["trajectory_summary_contract_ready"] is True
+    assert summary["evidence_bundle_trajectory_claim_ready"] is True
+    assert summary["evidence_bundle_backmapped_pose_claim_ready"] is True
+    assert summary["evidence_bundle_interaction_claim_ready"] is True
+    assert summary["evidence_bundle_product_output_claim_ready"] is True
+    assert summary["evidence_bundle_ai_uncertainty_claim_ready"] is True
     assert summary["claim_widening_guard_ready"] is True
     assert summary["topology_validity_contract_ready"] is True
     assert summary["topology_factory_adapter_ready"] is True
@@ -37,6 +44,10 @@ def test_ai_md_contract_source_of_truth_gate_passes_current_contract_surfaces() 
     assert rows["api_worker_evidence_bundle_attachment"]["status"] == "pass"
     assert rows["api_validated_runner_native_evidence_bundle_support"]["status"] == "pass"
     assert rows["api_validated_runner_native_evidence_bundle_support"]["missing_fragment_count"] == 0
+    assert rows["ai_residual_report_surface"]["status"] == "pass"
+    assert rows["ai_residual_report_surface"]["bounded_ok"] is True
+    assert rows["ai_residual_report_surface"]["unbounded_blocked"] is True
+    assert rows["ai_residual_report_surface"]["missing_active_score_blocked"] is True
     assert "delivery_bundle_validation_not_attached" in rows["api_evidence_bundle_adapter_fail_closed"]["failure_flags"]
     assert rows["api_evidence_bundle_adapter_fail_closed"]["topology_typed"] is True
     assert rows["api_evidence_bundle_adapter_fail_closed"]["topology_fail_closed"] is True
@@ -56,6 +67,48 @@ def test_ai_md_contract_source_of_truth_gate_passes_current_contract_surfaces() 
     assert rows["backmapping_interaction_adapter_surface"]["role_invalid_ok"] is True
     assert rows["backmapping_interaction_adapter_surface"]["unsupported_ok"] is True
     assert rows["numpy_reference_oracle_smoke"]["status"] == "pass"
+    assert rows["numpy_reference_oracle_smoke"]["electrostatic_switch_force_matches"] is True
+    assert rows["numpy_reference_oracle_smoke"]["softcore_switch_force_matches"] is True
+    assert rows["numpy_reference_oracle_smoke"]["neighbor_full_pair_parity"] is True
+    assert rows["numpy_reference_oracle_smoke"]["neighbor_pair_matches"] is True
+    assert rows["numpy_reference_oracle_smoke"]["neighbor_energy_matches"] is True
+    assert rows["numpy_reference_oracle_smoke"]["neighbor_force_matches"] is True
+    assert rows["numpy_reference_oracle_smoke"]["translation_invariant"] is True
+    assert rows["numpy_reference_oracle_smoke"]["rotation_invariant"] is True
+    assert rows["numpy_reference_oracle_smoke"]["permutation_invariant"] is True
+    assert rows["numpy_reference_oracle_smoke"]["cutoff_boundary_stable"] is True
+    assert rows["numpy_reference_oracle_smoke"]["stress_finite"] is True
+    assert rows["numpy_reference_oracle_smoke"]["reference_invariance_ready"] is True
+    assert rows["numpy_trajectory_summary_surface"]["status"] == "pass"
+    assert rows["numpy_trajectory_summary_surface"]["typed"] is True
+    assert rows["numpy_trajectory_summary_surface"]["frame_count_ok"] is True
+    assert rows["numpy_trajectory_summary_surface"]["traces_ok"] is True
+    assert rows["numpy_trajectory_summary_surface"]["finite_ok"] is True
+    assert rows["numpy_trajectory_summary_surface"]["bounded_ok"] is True
+    assert rows["numpy_trajectory_summary_surface"]["contract_hash_ok"] is True
+    assert rows["numpy_trajectory_summary_surface"]["invalid_trace_blocked"] is True
+    assert rows["numpy_trajectory_summary_surface"]["invalid_fraction_blocked"] is True
+    assert rows["numpy_trajectory_summary_surface"]["excessive_trace_blocked"] is True
+    assert rows["numpy_trajectory_summary_surface"]["fail_closed_ok"] is True
+    assert rows["evidence_bundle_trajectory_claim_gate"]["status"] == "pass"
+    assert rows["evidence_bundle_trajectory_claim_gate"]["empty_frame_blocked"] is True
+    assert rows["evidence_bundle_trajectory_claim_gate"]["empty_energy_trace_blocked"] is True
+    assert rows["evidence_bundle_trajectory_claim_gate"]["positive_summary_ok"] is True
+    assert rows["evidence_bundle_backmapped_pose_claim_gate"]["status"] == "pass"
+    assert rows["evidence_bundle_backmapped_pose_claim_gate"]["empty_pose_blocked"] is True
+    assert rows["evidence_bundle_backmapped_pose_claim_gate"]["positive_pose_ok"] is True
+    assert rows["evidence_bundle_interaction_claim_gate"]["status"] == "pass"
+    assert rows["evidence_bundle_interaction_claim_gate"]["empty_interaction_blocked"] is True
+    assert rows["evidence_bundle_interaction_claim_gate"]["zero_confidence_blocked"] is True
+    assert rows["evidence_bundle_interaction_claim_gate"]["positive_interaction_ok"] is True
+    assert rows["evidence_bundle_product_output_claim_gate"]["status"] == "pass"
+    assert rows["evidence_bundle_product_output_claim_gate"]["empty_shortlist_blocked"] is True
+    assert rows["evidence_bundle_product_output_claim_gate"]["empty_handoff_blocked"] is True
+    assert rows["evidence_bundle_product_output_claim_gate"]["positive_product_outputs_ok"] is True
+    assert rows["evidence_bundle_ai_uncertainty_claim_gate"]["status"] == "pass"
+    assert rows["evidence_bundle_ai_uncertainty_claim_gate"]["high_uncertainty_blocked"] is True
+    assert rows["evidence_bundle_ai_uncertainty_claim_gate"]["review_flag_blocked"] is True
+    assert rows["evidence_bundle_ai_uncertainty_claim_gate"]["low_uncertainty_ok"] is True
 
 
 def test_ai_md_contract_source_of_truth_gate_blocks_missing_required_file(tmp_path: Path) -> None:
@@ -106,9 +159,16 @@ def test_product_release_source_of_truth_tracks_ai_md_contract_gate() -> None:
     assert "tests/unit/test_api_validated_runner_adapter.py" in artifact_spec["depends_on"]
     assert "tests/unit/test_api_job_store.py" in artifact_spec["depends_on"]
     assert status_spec["required_status"] == "ai_md_contract_source_of_truth_gate_ready"
+    assert "ai_residual_contract_ready" in status_spec["required_true_fields"]
     assert "api_evidence_bundle_attachment_ready" in status_spec["required_true_fields"]
     assert "api_runtime_evidence_bundle_surface_ready" in status_spec["required_true_fields"]
     assert "numpy_reference_oracle_ready" in status_spec["required_true_fields"]
+    assert "trajectory_summary_contract_ready" in status_spec["required_true_fields"]
+    assert "evidence_bundle_trajectory_claim_ready" in status_spec["required_true_fields"]
+    assert "evidence_bundle_backmapped_pose_claim_ready" in status_spec["required_true_fields"]
+    assert "evidence_bundle_interaction_claim_ready" in status_spec["required_true_fields"]
+    assert "evidence_bundle_product_output_claim_ready" in status_spec["required_true_fields"]
+    assert "evidence_bundle_ai_uncertainty_claim_ready" in status_spec["required_true_fields"]
     assert "topology_validity_contract_ready" in status_spec["required_true_fields"]
     assert "topology_factory_adapter_ready" in status_spec["required_true_fields"]
     assert "backmapping_interaction_adapter_ready" in status_spec["required_true_fields"]

@@ -19,6 +19,7 @@ from betelgeuze_ai_md.contracts.verdict_schema import Verdict
 REQUIRED_SOURCE_HASHES = ("input_hash", "config_hash", "model_hash", "executable_hash")
 PASS_TOPOLOGY_STATUSES = {"pass", "topology_valid"}
 PASS_CHEMICAL_VALIDITY_STATUSES = {"pass", "valid", "chemical_validity_pass"}
+CLAIM_SAFE_MAX_AI_UNCERTAINTY = 0.35
 
 
 @dataclass(frozen=True)
@@ -108,6 +109,20 @@ class EvidenceBundle:
             )
         if self.verdict.claim_safe and self.interaction_report.claim_blockers:
             raise ContractValidationError("claim_safe EvidenceBundle cannot contain interaction claim blockers")
+        if self.verdict.claim_safe and not self.interaction_report.interactions:
+            raise ContractValidationError("claim_safe EvidenceBundle requires interaction evidence")
+        if self.verdict.claim_safe and self.interaction_report.interaction_confidence <= 0.0:
+            raise ContractValidationError("claim_safe EvidenceBundle requires positive interaction confidence")
+        if self.verdict.claim_safe and self.ai_residual_report.uncertainty > CLAIM_SAFE_MAX_AI_UNCERTAINTY:
+            raise ContractValidationError("claim_safe EvidenceBundle cannot contain high AI uncertainty")
+        if self.verdict.claim_safe and self.ai_residual_report.review_flags:
+            raise ContractValidationError("claim_safe EvidenceBundle cannot contain AI residual review flags")
+        if self.verdict.claim_safe and self.trajectory_summary.frame_count <= 0:
+            raise ContractValidationError("claim_safe EvidenceBundle requires trajectory frames")
+        if self.verdict.claim_safe and not self.trajectory_summary.energy_trace:
+            raise ContractValidationError("claim_safe EvidenceBundle requires trajectory energy trace")
+        if self.verdict.claim_safe and not self.backmapped_poses:
+            raise ContractValidationError("claim_safe EvidenceBundle requires backmapped poses")
         if self.verdict.claim_safe:
             for pose in self.backmapped_poses:
                 status = str(pose.chemical_validity_summary.get("status", "") or "").strip()
@@ -120,6 +135,10 @@ class EvidenceBundle:
                     raise ContractValidationError(
                         f"claim_safe EvidenceBundle has chemical validity claim blockers for pose {pose.pose_id}"
                     )
+        if self.verdict.claim_safe and not self.ranked_shortlist:
+            raise ContractValidationError("claim_safe EvidenceBundle requires ranked shortlist")
+        if self.verdict.claim_safe and not self.wetlab_handoff_table:
+            raise ContractValidationError("claim_safe EvidenceBundle requires wetlab handoff table")
         if not self.claim_boundary:
             object.__setattr__(self, "claim_boundary", self.verdict.claim_boundary)
 

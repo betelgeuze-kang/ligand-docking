@@ -68,6 +68,14 @@ def test_build_api_evidence_bundle_is_review_only_even_with_structured_result(tm
             "correction_applied": False,
             "uncertainty": 0.4,
             "abstained": True,
+            "residual_delta": 1.2,
+            "bounded_residual_delta": 0.45,
+            "score_max_delta": 1.0,
+            "guard": 0.5,
+            "active_score_col": "binding_score_composite_v7_residual_active",
+            "base_score_col": "binding_score_composite_v7",
+            "ranking_changed": True,
+            "guard_components": {"topology": 1.0, "domain": 0.5, "calibration": 1.0},
         },
     }
     result_file.write_text(json.dumps(result_payload, sort_keys=True) + "\n", encoding="utf-8")
@@ -97,7 +105,37 @@ def test_build_api_evidence_bundle_is_review_only_even_with_structured_result(tm
     assert isinstance(bundle.topology_report, TopologyValidityReport)
     assert bundle.topology_report.status == "pass"
     assert bundle.topology_report.topology_fidelity == TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE
+    assert bundle.ai_residual_report.bounded_residual_delta == 0.45
+    assert bundle.ai_residual_report.active_score_col == "binding_score_composite_v7_residual_active"
+    assert bundle.ai_residual_report.ranking_changed is True
+    assert bundle.ai_residual_report.guard_components["domain"] == 0.5
     assert len(bundle.fingerprint()) == 64
+
+
+def test_api_adapter_preserves_explicit_zero_ai_residual_deltas(tmp_path: Path) -> None:
+    result_file = tmp_path / "runner_result.json"
+    result_payload = {
+        "ai_residual_report": {
+            "residual_delta": 0.0,
+            "score_delta": 0.9,
+            "bounded_residual_delta": 0.0,
+            "applied_delta_score": 0.8,
+            "max_delta": 1.0,
+            "guard": 1.0,
+        }
+    }
+
+    bundle = build_api_evidence_bundle(
+        job_id="job_ai_residual_zero",
+        request={"target_name": "ADRB2"},
+        result_manifest=_manifest(result_file),
+        result_payload=result_payload,
+        runner_execution={},
+        status_payload={"status": "completed"},
+    )
+
+    assert bundle.ai_residual_report.residual_delta == 0.0
+    assert bundle.ai_residual_report.bounded_residual_delta == 0.0
 
 
 def test_write_api_evidence_bundle_falls_back_for_unstructured_runner_result(tmp_path: Path) -> None:

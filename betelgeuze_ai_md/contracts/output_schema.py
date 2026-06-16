@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -23,6 +24,22 @@ def _as_list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
 
 
+def _finite_float(value: Any, field_name: str) -> float:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ContractValidationError(f"{field_name} must be numeric") from exc
+    if not math.isfinite(numeric):
+        raise ContractValidationError(f"{field_name} must be finite")
+    return numeric
+
+
+def _finite_trace(value: Any, field_name: str) -> list[float]:
+    if not isinstance(value, list):
+        raise ContractValidationError(f"{field_name} must be a list")
+    return [_finite_float(item, field_name) for item in value]
+
+
 @dataclass(frozen=True)
 class TrajectorySummary:
     frame_count: int
@@ -34,11 +51,30 @@ class TrajectorySummary:
     clash_fraction: float = 0.0
 
     def __post_init__(self) -> None:
-        if int(self.frame_count) < 0:
+        try:
+            frame_count = int(self.frame_count)
+        except (TypeError, ValueError) as exc:
+            raise ContractValidationError("frame_count must be an integer") from exc
+        if frame_count < 0:
             raise ContractValidationError("frame_count must be non-negative")
-        object.__setattr__(self, "frame_count", int(self.frame_count))
+        object.__setattr__(self, "frame_count", frame_count)
+        energy_trace = _finite_trace(self.energy_trace, "energy_trace")
+        contact_trace = _finite_trace(self.contact_trace, "contact_trace")
+        if len(energy_trace) > frame_count or len(contact_trace) > frame_count:
+            raise ContractValidationError("trajectory traces cannot exceed frame_count")
+        if any(value < 0.0 for value in contact_trace):
+            raise ContractValidationError("contact_trace values must be non-negative")
+        object.__setattr__(self, "energy_trace", energy_trace)
+        object.__setattr__(self, "contact_trace", contact_trace)
         for key in ("stability_score", "mean_min_distance", "escape_fraction", "clash_fraction"):
-            object.__setattr__(self, key, float(getattr(self, key)))
+            object.__setattr__(self, key, _finite_float(getattr(self, key), key))
+        if not 0.0 <= self.stability_score <= 1.0:
+            raise ContractValidationError("stability_score must be in [0, 1]")
+        if self.mean_min_distance < 0.0:
+            raise ContractValidationError("mean_min_distance must be non-negative")
+        for key in ("escape_fraction", "clash_fraction"):
+            if not 0.0 <= getattr(self, key) <= 1.0:
+                raise ContractValidationError(f"{key} must be in [0, 1]")
 
     def to_dict(self) -> dict[str, Any]:
         return to_plain(self)
@@ -130,6 +166,16 @@ class AIResidualReport:
     abstained: bool = True
     calibration_family: str = ""
     model_hash: str = ""
+    residual_delta: float = 0.0
+    bounded_residual_delta: float = 0.0
+    max_delta: float = 0.0
+    guard: float = 0.0
+    lambda_ai: float = 1.0
+    active_score_col: str = ""
+    base_score_col: str = ""
+    ranking_changed: bool = False
+    review_flags: list[str] = field(default_factory=list)
+    guard_components: dict[str, float] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -137,6 +183,40 @@ class AIResidualReport:
         object.__setattr__(self, "uncertainty", float(self.uncertainty))
         if not 0.0 <= self.uncertainty <= 1.0:
             raise ContractValidationError("uncertainty must be in [0, 1]")
+        for key in ("residual_delta", "bounded_residual_delta", "max_delta", "guard", "lambda_ai"):
+            value = float(getattr(self, key))
+            if not math.isfinite(value):
+                raise ContractValidationError(f"{key} must be finite")
+            object.__setattr__(self, key, value)
+        if self.max_delta < 0.0:
+            raise ContractValidationError("max_delta must be non-negative")
+        if self.lambda_ai < 0.0:
+            raise ContractValidationError("lambda_ai must be non-negative")
+        if not 0.0 <= self.guard <= 1.0:
+            raise ContractValidationError("guard must be in [0, 1]")
+        guard_components = {
+            str(key).strip(): float(value)
+            for key, value in self.guard_components.items()
+            if str(key).strip()
+        }
+        for key, value in guard_components.items():
+            if not math.isfinite(value) or not 0.0 <= value <= 1.0:
+                raise ContractValidationError(f"guard component {key} must be in [0, 1]")
+        object.__setattr__(self, "guard_components", guard_components)
+        object.__setattr__(self, "active_score_col", str(self.active_score_col or "").strip())
+        object.__setattr__(self, "base_score_col", str(self.base_score_col or "").strip())
+        object.__setattr__(self, "ranking_changed", bool(self.ranking_changed is True))
+        if self.ranking_changed and not self.active_score_col:
+            raise ContractValidationError("active_score_col is required when residual changes ranking")
+        if self.max_delta > 0.0:
+            max_abs_delta = self.lambda_ai * self.guard * self.max_delta + 1e-9
+            if abs(self.bounded_residual_delta) > max_abs_delta:
+                raise ContractValidationError("bounded_residual_delta exceeds guarded max_delta")
+        flags = {str(item).strip() for item in self.review_flags if str(item).strip()}
+        if max(abs(self.residual_delta), abs(self.bounded_residual_delta)) > 0.5:
+            flags.add("residual_delta_review_required")
+        object.__setattr__(self, "review_flags", sorted(flags))
+        object.__setattr__(self, "notes", [str(item).strip() for item in self.notes if str(item).strip()])
 
     def to_dict(self) -> dict[str, Any]:
         return to_plain(self)
