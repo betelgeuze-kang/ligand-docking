@@ -800,12 +800,15 @@ def _blocked_engine_refinement_priority_packet() -> dict:
             "public_benchmark_work_order_apply_blocked_row_count": 8,
             "top_blocker_id": "public_benchmark_gate_not_ready",
             "top_priority_bucket": "public_benchmark_work_order_apply_required",
-            "top_required_input": "runs/refine_tier_public_benchmark_work_order_current.csv",
+            "top_required_input": (
+                "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+            ),
             "top_acceptance_artifact": "runs/refine_tier_public_benchmark_readiness_current.json",
             "top_verification_command": (
-                "python3 tools/product/apply_refine_tier_public_benchmark_work_order.py; "
-                "python3 tools/product/build_refine_tier_public_benchmark_readiness.py; "
-                "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py"
+                "python3 tools/product/build_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt.py; "
+                "python3 tools/product/materialize_refine_tier_public_benchmark_statistical_support_metric_candidates.py; "
+                "python3 tools/product/build_refine_tier_public_benchmark_claim_grade_gap_audit.py; "
+                "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py"
             ),
             "top_next_operator_step": (
                 "Fill and validate 8 public benchmark work-order rows; current apply blocked rows=8."
@@ -2268,7 +2271,7 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
         "public_benchmark_work_order_apply_required"
     )
     assert summary["engine_refinement_claim_evidence_priority_packet_top_required_input"] == (
-        "runs/refine_tier_public_benchmark_work_order_current.csv"
+        "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
     )
     assert summary[
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_work_order_apply_blocked_row_count"

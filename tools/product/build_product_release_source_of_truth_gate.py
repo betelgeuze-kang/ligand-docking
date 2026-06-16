@@ -14,6 +14,12 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/product_release_source_of_truth_gate_current.json"
 DEFAULT_OUT_CSV = "runs/product_release_source_of_truth_gate_current.csv"
 DEFAULT_OUT_MD = "runs/product_release_source_of_truth_gate_current.md"
+R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV = (
+    "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+)
+R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON = (
+    "runs/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.json"
+)
 
 CLAIM_BOUNDARY = (
     "Product release source-of-truth gate only; it checks local current artifact freshness, source/dependency "
@@ -1226,6 +1232,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json",
+            R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON,
             "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json",
             "runs/refine_tier_public_benchmark_claim_grade_gap_audit_current.json",
         ],
@@ -1257,6 +1264,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/refine_tier_public_benchmark_statistical_support_metric_materialization_readiness_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json",
             "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json",
+            R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON,
             "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json",
         ],
     },
@@ -3286,6 +3294,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_coordinate_intake_ready",
             "public_benchmark_statistical_support_metric_source_templates_present",
             "public_benchmark_statistical_support_metric_source_templates_ready",
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_present",
             "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present",
             "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready",
             "public_benchmark_claim_grade_gap_audit_present",
@@ -3346,6 +3355,11 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_statistical_support_coordinate_intake_expected_archive_member_example_count": 51,
             "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_pass_row_count": 17,
             "public_benchmark_statistical_support_coordinate_intake_coordinate_validation_blocked_row_count": 0,
+            "public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 51,
+            "public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 0,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready": 0,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count": 51,
             "public_benchmark_statistical_support_coordinate_fetch_r4_row_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": 17,
             "public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": 0,
@@ -3362,7 +3376,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "approval_token_required": "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT",
             "top_blocker_id": "public_benchmark_gate_not_ready",
             "top_priority_bucket": "public_benchmark_work_order_apply_required",
-            "top_required_input": "runs/refine_tier_public_benchmark_work_order_current.csv",
+            "top_required_input": R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV,
             "top_acceptance_artifact": "runs/refine_tier_public_benchmark_readiness_current.json",
             "public_benchmark_statistical_support_work_order_status": (
                 "refine_tier_public_benchmark_statistical_support_work_order_ready"
@@ -3377,6 +3391,21 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
                 "metric_name;target_id;pose_id;value;method;input_artifacts;"
                 "input_artifact_sha256s;operator_id;reviewed_at_utc;license_ok;"
                 "external_engine_calls"
+            ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_status": (
+                "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+            ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_csv": (
+                R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV
+            ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_template_id": (
+                "r9_statistical_support_metric_source_template_001"
+            ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required": (
+                "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
             ),
             "public_benchmark_statistical_support_coordinate_intake_status": (
                 "refine_tier_public_benchmark_statistical_support_coordinate_intake_ready"
@@ -3585,7 +3614,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             ),
             "top_blocker_id": "public_benchmark_gate_not_ready",
             "top_priority_bucket": "public_benchmark_work_order_apply_required",
-            "top_required_input": "runs/refine_tier_public_benchmark_work_order_current.csv",
+            "top_required_input": R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV,
             "public_benchmark_statistical_support_work_order_status": (
                 "refine_tier_public_benchmark_statistical_support_work_order_ready"
             ),
@@ -4209,9 +4238,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             ),
             "product_pose_sampling_readiness_status": "product_pose_sampling_readiness_ready",
             "engine_refinement_priority_top_blocker_id": "public_benchmark_gate_not_ready",
-            "engine_refinement_priority_top_required_input": (
-                "runs/refine_tier_public_benchmark_work_order_current.csv"
-            ),
+            "engine_refinement_priority_top_required_input": R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV,
         },
     },
     {
@@ -4400,6 +4427,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_ready",
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_present",
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_ready",
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_present",
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present",
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready",
             "product_scope_breadth_evidence_priority_packet_ready",
@@ -4461,6 +4489,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 51,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 0,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready": 0,
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count": 51,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_row_count": 17,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": 17,
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": 0,
@@ -4494,6 +4524,21 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             ),
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_status": (
                 "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_status": (
+                "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_csv": (
+                R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV
+            ),
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_template_id": (
+                "r9_statistical_support_metric_source_template_001"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker": (
+                "operator_placeholders_unfilled"
+            ),
+            "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required": (
+                "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
             ),
             "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_status": (
                 "refine_tier_public_benchmark_statistical_support_coordinate_intake_ready"

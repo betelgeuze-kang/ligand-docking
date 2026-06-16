@@ -774,7 +774,11 @@ def _write_inputs(
             ),
             "priority_packet_ready": True,
             "top_blocker_id": "" if ready else "public_benchmark_gate_not_ready",
-            "top_required_input": "" if ready else "runs/refine_tier_public_benchmark_work_order_current.csv",
+            "top_required_input": (
+                ""
+                if ready
+                else "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+            ),
         },
     )
     _write(

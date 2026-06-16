@@ -18,6 +18,9 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/product_release_current_refresh_plan_current.json"
 DEFAULT_OUT_MD = "runs/product_release_current_refresh_plan_current.md"
 DEFAULT_COMMAND_TIMEOUT_SECONDS = 420
+R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV = (
+    "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+)
 TIER_ALPHA_SMOKE_SCRIPT = "tools/product/run_tier_alpha_adrb2_dispatch_smoke.py"
 TIER_ALPHA_DEFAULT_WORKSPACE = "runs/tier_alpha_dispatch_smoke/current"
 TIER_ALPHA_DEFAULT_OUT_JSON = "runs/tier_alpha_adrb2_dispatch_smoke_current.json"
@@ -600,7 +603,7 @@ FINAL_GATE_SPECS = [
                 "public_benchmark_work_order_apply_required"
             ),
             "engine_refinement_claim_evidence_priority_packet_top_required_input": (
-                "runs/refine_tier_public_benchmark_work_order_current.csv"
+                R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV
             ),
             "engine_refinement_claim_evidence_priority_packet_top_acceptance_artifact": (
                 "runs/refine_tier_public_benchmark_readiness_current.json"

@@ -60,6 +60,9 @@ DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON = (
 DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_JSON = (
     "runs/engine_refinement_claim_evidence_priority_packet_current.json"
 )
+R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV = (
+    "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+)
 DEFAULT_REFINE_TIER_PUBLIC_BENCHMARK_READINESS_JSON = (
     "runs/refine_tier_public_benchmark_readiness_current.json"
 )
@@ -528,7 +531,7 @@ def build_goal_release_decision_gate(
         and _text(engine_refinement_priority.get("top_priority_bucket"))
         == "public_benchmark_work_order_apply_required"
         and _text(engine_refinement_priority.get("top_required_input"))
-        == "runs/refine_tier_public_benchmark_work_order_current.csv"
+        == R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV
         and _text(engine_refinement_priority.get("top_acceptance_artifact"))
         == "runs/refine_tier_public_benchmark_readiness_current.json"
         and _text(engine_refinement_priority.get("approval_token_required"))

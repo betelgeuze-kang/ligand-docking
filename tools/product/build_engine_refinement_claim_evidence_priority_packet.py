@@ -42,6 +42,9 @@ DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_INTAKE_JSON = (
 DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_JSON = (
     "runs/refine_tier_public_benchmark_statistical_support_metric_source_templates_current.json"
 )
+DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON = (
+    "runs/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.json"
+)
 DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON = (
     "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json"
 )
@@ -106,6 +109,15 @@ VERIFICATION_COMMANDS = {
         "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py"
     ),
 }
+PUBLIC_BENCHMARK_METRIC_SOURCE_PAYLOAD_RECEIPT_CSV = (
+    "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+)
+PUBLIC_BENCHMARK_METRIC_SOURCE_PAYLOAD_VERIFICATION_COMMAND = (
+    "python3 tools/product/build_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt.py; "
+    "python3 tools/product/materialize_refine_tier_public_benchmark_statistical_support_metric_candidates.py; "
+    "python3 tools/product/build_refine_tier_public_benchmark_claim_grade_gap_audit.py; "
+    "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py"
+)
 
 
 def _resolve(path_like: str | Path, *, root: Path = ROOT) -> Path:
@@ -332,6 +344,48 @@ def _next_operator_step(
     return action_step or "Provide reviewed local evidence JSON and rerun the receipt gate."
 
 
+def _current_required_input(
+    blocker_id: str,
+    *,
+    public_materialized_candidate_ready: bool,
+    public_statistical_support_work_order_ready: bool,
+    public_statistical_support_metric_materialization_readiness_ready: bool,
+    public_statistical_support_metric_source_templates_ready: bool,
+    public_statistical_support_metric_source_payload_operator_receipt_summary: dict[str, Any],
+) -> str:
+    if (
+        blocker_id == PUBLIC_BENCHMARK_BLOCKER
+        and public_materialized_candidate_ready
+        and public_statistical_support_work_order_ready
+        and public_statistical_support_metric_materialization_readiness_ready
+        and public_statistical_support_metric_source_templates_ready
+    ):
+        return (
+            _text(public_statistical_support_metric_source_payload_operator_receipt_summary.get("receipt_csv"))
+            or PUBLIC_BENCHMARK_METRIC_SOURCE_PAYLOAD_RECEIPT_CSV
+        )
+    return REQUIRED_INPUTS.get(blocker_id, "")
+
+
+def _current_verification_command(
+    blocker_id: str,
+    *,
+    public_materialized_candidate_ready: bool,
+    public_statistical_support_work_order_ready: bool,
+    public_statistical_support_metric_materialization_readiness_ready: bool,
+    public_statistical_support_metric_source_templates_ready: bool,
+) -> str:
+    if (
+        blocker_id == PUBLIC_BENCHMARK_BLOCKER
+        and public_materialized_candidate_ready
+        and public_statistical_support_work_order_ready
+        and public_statistical_support_metric_materialization_readiness_ready
+        and public_statistical_support_metric_source_templates_ready
+    ):
+        return PUBLIC_BENCHMARK_METRIC_SOURCE_PAYLOAD_VERIFICATION_COMMAND
+    return VERIFICATION_COMMANDS.get(blocker_id, "")
+
+
 def _row(
     blocker_id: str,
     *,
@@ -354,6 +408,8 @@ def _row(
     public_statistical_support_coordinate_intake_present: bool,
     public_statistical_support_metric_source_templates_summary: dict[str, Any],
     public_statistical_support_metric_source_templates_present: bool,
+    public_statistical_support_metric_source_payload_operator_receipt_summary: dict[str, Any],
+    public_statistical_support_metric_source_payload_operator_receipt_present: bool,
     public_statistical_support_coordinate_fetch_r4_summary: dict[str, Any],
     public_statistical_support_coordinate_fetch_r4_present: bool,
     public_benchmark_claim_grade_gap_audit_summary: dict[str, Any],
@@ -404,9 +460,32 @@ def _row(
         "current_status": _text(action_row.get("current_status")),
         "required_evidence": _text(action_row.get("required_evidence")),
         "owner_action": _text(action_row.get("owner_action")),
-        "required_input": REQUIRED_INPUTS.get(blocker_id, ""),
+        "required_input": _current_required_input(
+            blocker_id,
+            public_materialized_candidate_ready=public_materialized_candidate_ready,
+            public_statistical_support_work_order_ready=public_statistical_support_work_order_ready,
+            public_statistical_support_metric_materialization_readiness_ready=(
+                public_statistical_support_metric_materialization_readiness_ready
+            ),
+            public_statistical_support_metric_source_templates_ready=(
+                public_statistical_support_metric_source_templates_ready
+            ),
+            public_statistical_support_metric_source_payload_operator_receipt_summary=(
+                public_statistical_support_metric_source_payload_operator_receipt_summary
+            ),
+        ),
         "acceptance_artifact": ACCEPTANCE_ARTIFACTS.get(blocker_id, _text(action_row.get("gate_or_artifact"))),
-        "verification_command": VERIFICATION_COMMANDS.get(blocker_id, ""),
+        "verification_command": _current_verification_command(
+            blocker_id,
+            public_materialized_candidate_ready=public_materialized_candidate_ready,
+            public_statistical_support_work_order_ready=public_statistical_support_work_order_ready,
+            public_statistical_support_metric_materialization_readiness_ready=(
+                public_statistical_support_metric_materialization_readiness_ready
+            ),
+            public_statistical_support_metric_source_templates_ready=(
+                public_statistical_support_metric_source_templates_ready
+            ),
+        ),
         "receipt_row_status": _text(receipt_row.get("row_status")) or "missing",
         "receipt_row_blockers": _text(receipt_row.get("blockers")),
         "receipt_evidence_artifact": _text(receipt_row.get("evidence_artifact")),
@@ -716,6 +795,39 @@ def _row(
                 "metric_source_payload_fill_blocked_row_count"
             )
         ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_present": (
+            public_statistical_support_metric_source_payload_operator_receipt_present
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready": bool(
+            public_statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "operator_receipt_ready"
+            )
+            is True
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_status": _text(
+            public_statistical_support_metric_source_payload_operator_receipt_summary.get("status")
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_csv": _text(
+            public_statistical_support_metric_source_payload_operator_receipt_summary.get("receipt_csv")
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count": _int(
+            public_statistical_support_metric_source_payload_operator_receipt_summary.get("blocked_row_count")
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_template_id": _text(
+            public_statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "first_blocked_template_id"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker": _text(
+            public_statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "most_common_row_blocker"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required": _text(
+            public_statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "approval_token_required"
+            )
+        ),
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present": (
             public_statistical_support_coordinate_fetch_r4_present
         ),
@@ -889,6 +1001,8 @@ def build_engine_refinement_claim_evidence_priority_packet(
     | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_INTAKE_JSON,
     public_benchmark_statistical_support_metric_source_templates_json: str
     | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_JSON,
+    public_benchmark_statistical_support_metric_source_payload_operator_receipt_json: str
+    | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON,
     public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json: str
     | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON,
     public_benchmark_claim_grade_gap_audit_json: str
@@ -958,6 +1072,16 @@ def build_engine_refinement_claim_evidence_priority_packet(
         public_statistical_support_metric_source_templates_packet
     )
     (
+        public_statistical_support_metric_source_payload_operator_receipt_packet,
+        public_statistical_support_metric_source_payload_operator_receipt_present,
+    ) = _read_json(
+        public_benchmark_statistical_support_metric_source_payload_operator_receipt_json,
+        root=root_path,
+    )
+    public_statistical_support_metric_source_payload_operator_receipt_summary = _summary(
+        public_statistical_support_metric_source_payload_operator_receipt_packet
+    )
+    (
         public_statistical_support_coordinate_fetch_r4_packet,
         public_statistical_support_coordinate_fetch_r4_present,
     ) = _read_json(
@@ -1020,6 +1144,12 @@ def build_engine_refinement_claim_evidence_priority_packet(
             ),
             public_statistical_support_metric_source_templates_present=(
                 public_statistical_support_metric_source_templates_present
+            ),
+            public_statistical_support_metric_source_payload_operator_receipt_summary=(
+                public_statistical_support_metric_source_payload_operator_receipt_summary
+            ),
+            public_statistical_support_metric_source_payload_operator_receipt_present=(
+                public_statistical_support_metric_source_payload_operator_receipt_present
             ),
             public_statistical_support_coordinate_fetch_r4_summary=(
                 public_statistical_support_coordinate_fetch_r4_summary
@@ -1086,6 +1216,14 @@ def build_engine_refinement_claim_evidence_priority_packet(
         public_materialized_candidate_ready
         and bool(public_statistical_support_work_order_summary.get("work_order_ready") is True)
         and public_statistical_support_metric_materialization_present
+        and public_statistical_support_metric_source_templates_present
+        and not public_statistical_support_metric_source_payload_operator_receipt_present
+    ):
+        blockers.append("public_benchmark_statistical_support_metric_source_payload_operator_receipt_missing")
+    if (
+        public_materialized_candidate_ready
+        and bool(public_statistical_support_work_order_summary.get("work_order_ready") is True)
+        and public_statistical_support_metric_materialization_present
         and not public_statistical_support_coordinate_fetch_r4_present
     ):
         blockers.append("public_benchmark_statistical_support_coordinate_fetch_r4_preflight_missing")
@@ -1135,6 +1273,39 @@ def build_engine_refinement_claim_evidence_priority_packet(
         "public_benchmark_materialization_present": public_materialization_present,
         "public_benchmark_materialized_work_order_present": public_materialized_work_order_present,
         "public_benchmark_materialized_apply_present": public_materialized_apply_present,
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_present": (
+            public_statistical_support_metric_source_payload_operator_receipt_present
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready": bool(
+            public_statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "operator_receipt_ready"
+            )
+            is True
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_status": _text(
+            public_statistical_support_metric_source_payload_operator_receipt_summary.get("status")
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_csv": _text(
+            public_statistical_support_metric_source_payload_operator_receipt_summary.get("receipt_csv")
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count": _int(
+            public_statistical_support_metric_source_payload_operator_receipt_summary.get("blocked_row_count")
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_template_id": _text(
+            public_statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "first_blocked_template_id"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker": _text(
+            public_statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "most_common_row_blocker"
+            )
+        ),
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required": _text(
+            public_statistical_support_metric_source_payload_operator_receipt_summary.get(
+                "approval_token_required"
+            )
+        ),
         "public_benchmark_statistical_support_work_order_present": (
             public_statistical_support_work_order_present
         ),
@@ -1512,6 +1683,7 @@ def build_engine_refinement_claim_evidence_priority_packet(
             str(public_benchmark_statistical_support_metric_materialization_readiness_json),
             str(public_benchmark_statistical_support_coordinate_intake_json),
             str(public_benchmark_statistical_support_metric_source_templates_json),
+            str(public_benchmark_statistical_support_metric_source_payload_operator_receipt_json),
             str(public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json),
             str(public_benchmark_claim_grade_gap_audit_json),
         ],

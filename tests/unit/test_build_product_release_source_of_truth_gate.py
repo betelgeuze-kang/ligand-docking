@@ -536,7 +536,7 @@ def _refresh_release_decision_ready() -> dict:
                 "public_benchmark_work_order_apply_required"
             ),
             "engine_refinement_claim_evidence_priority_packet_top_required_input": (
-                "runs/refine_tier_public_benchmark_work_order_current.csv"
+                "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
             ),
             "engine_refinement_claim_evidence_priority_packet_top_acceptance_artifact": (
                 "runs/refine_tier_public_benchmark_readiness_current.json"
@@ -2048,7 +2048,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "product_pose_sampling_readiness_status": "product_pose_sampling_readiness_ready",
         "engine_refinement_priority_top_blocker_id": "public_benchmark_gate_not_ready",
         "engine_refinement_priority_top_required_input": (
-            "runs/refine_tier_public_benchmark_work_order_current.csv"
+            "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
         ),
     }
     goal_api_status_spec = next(
@@ -2145,6 +2145,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_ready",
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_present",
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_ready",
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_present",
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present",
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready",
         "product_scope_breadth_evidence_priority_packet_ready",
@@ -2206,6 +2207,8 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_template_row_count": 51,
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count": 51,
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count": 0,
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready": 0,
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count": 51,
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_row_count": 17,
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count": 17,
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count": 0,
@@ -2238,6 +2241,21 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert bottleneck_status_spec["required_text_exact_fields"][
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_status"
     ] == "refine_tier_public_benchmark_statistical_support_metric_source_templates_ready"
+    assert bottleneck_status_spec["required_text_exact_fields"][
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_status"
+    ] == "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+    assert bottleneck_status_spec["required_text_exact_fields"][
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_csv"
+    ] == "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+    assert bottleneck_status_spec["required_text_exact_fields"][
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_template_id"
+    ] == "r9_statistical_support_metric_source_template_001"
+    assert bottleneck_status_spec["required_text_exact_fields"][
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    assert bottleneck_status_spec["required_text_exact_fields"][
+        "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required"
+    ] == "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
     assert bottleneck_status_spec["required_text_exact_fields"][
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_intake_status"
     ] == "refine_tier_public_benchmark_statistical_support_coordinate_intake_ready"
@@ -4814,6 +4832,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         in priority_packet_spec["depends_on"]
     )
     assert (
+        "runs/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.json"
+        in priority_packet_spec["depends_on"]
+    )
+    assert (
         "runs/refine_tier_public_benchmark_claim_grade_gap_audit_current.json"
         in priority_packet_spec["depends_on"]
     )
@@ -4861,6 +4883,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert (
         "runs/refine_tier_public_benchmark_statistical_support_coordinate_intake_current.json"
+        in field_worksheet_spec["depends_on"]
+    )
+    assert (
+        "runs/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.json"
         in field_worksheet_spec["depends_on"]
     )
     staging_apply_spec = next(

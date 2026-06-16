@@ -113,11 +113,22 @@ def _current_coordinate_fetch_r4_summary() -> dict:
     return summary
 
 
+def _current_metric_source_payload_operator_receipt_summary() -> dict:
+    path = Path(
+        "runs/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.json"
+    )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    summary = payload.get("summary")
+    assert isinstance(summary, dict)
+    return summary
+
+
 def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work() -> None:
     payload = mod.build_engine_refinement_claim_evidence_priority_packet()
     summary = payload["summary"]
     claim_grade_gap = _current_claim_grade_gap_audit_summary()
     coordinate_fetch_r4 = _current_coordinate_fetch_r4_summary()
+    metric_payload_receipt = _current_metric_source_payload_operator_receipt_summary()
 
     assert summary["status"] == "blocked_engine_refinement_claim_evidence_priority_packet"
     assert summary["priority_packet_ready"] is True
@@ -291,6 +302,30 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
         ]
         == 0
     )
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_present"
+    ] is True
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready"
+    ] is False
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_status"
+    ] == metric_payload_receipt["status"]
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_csv"
+    ] == metric_payload_receipt["receipt_csv"]
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count"
+    ] == metric_payload_receipt["blocked_row_count"]
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_first_blocked_template_id"
+    ] == metric_payload_receipt["first_blocked_template_id"]
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_most_common_row_blocker"
+    ] == metric_payload_receipt["most_common_row_blocker"]
+    assert summary[
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required"
+    ] == metric_payload_receipt["approval_token_required"]
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present"] is True
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"] is True
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status"] == (
@@ -325,8 +360,11 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     )
     assert summary["top_blocker_id"] == "public_benchmark_gate_not_ready"
     assert summary["top_priority_bucket"] == "public_benchmark_work_order_apply_required"
-    assert summary["top_required_input"] == "runs/refine_tier_public_benchmark_work_order_current.csv"
-    assert "apply_refine_tier_public_benchmark_work_order.py" in summary["top_verification_command"]
+    assert summary["top_required_input"] == mod.PUBLIC_BENCHMARK_METRIC_SOURCE_PAYLOAD_RECEIPT_CSV
+    assert (
+        "build_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt.py"
+        in summary["top_verification_command"]
+    )
     assert "Coordinate fetch and validation are complete" in summary["top_next_operator_step"]
     assert f"r4_ready_for_review_row_count={coordinate_fetch_r4['ready_for_r4_review_row_count']}" in summary[
         "top_next_operator_step"
@@ -378,6 +416,15 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     assert payload["rows"][0][
         "public_benchmark_statistical_support_metric_source_templates_template_row_count"
     ] == 51
+    assert payload["rows"][0][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_present"
+    ] is True
+    assert payload["rows"][0][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready"
+    ] is False
+    assert payload["rows"][0][
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count"
+    ] == metric_payload_receipt["blocked_row_count"]
     assert payload["rows"][0][
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
     ] is True

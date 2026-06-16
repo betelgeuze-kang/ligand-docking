@@ -103,10 +103,14 @@ def _priority_packet(*, ready: bool = False) -> dict:
                 if ready
                 else "public_benchmark_work_order_apply_required"
             ),
-            "top_required_input": "runs/refine_tier_public_benchmark_work_order_current.csv",
+            "top_required_input": (
+                "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+            ),
             "top_acceptance_artifact": "runs/refine_tier_public_benchmark_readiness_current.json",
             "top_next_operator_step": "Fill and validate 8 public benchmark work-order rows.",
-            "top_verification_command": "python3 tools/product/apply_refine_tier_public_benchmark_work_order.py",
+            "top_verification_command": (
+                "python3 tools/product/build_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt.py"
+            ),
             "external_state_mutated": False,
         }
     }
@@ -748,14 +752,14 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count"] == 0
     assert summary[
         "public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count"
-    ] == 17
+    ] == 0
     assert summary[
         "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count"
     ] == 0
     assert summary[
         "public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count"
     ] == 51
-    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_download_executed"] is True
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_download_executed"] is False
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated"] is False
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required"] == (
         "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
