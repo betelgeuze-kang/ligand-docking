@@ -116,11 +116,25 @@ def get_simulation_status(job_id: str):
         return StatusResponse(job_id=job_id, status="unknown", message="Status file missing")
 
     status_data = read_status_file(status_file_path)
+    record = job_store.get_job(job_id) or {}
+
+    def _artifact_path(*values: object) -> str | None:
+        for value in values:
+            text = str(value or "").strip()
+            if text:
+                return text
+        return None
 
     return StatusResponse(
         job_id=job_id,
         status=status_data.get("status", "unknown"),
-        message=status_data.get("error", "Running...")
+        message=status_data.get("error", "Running..."),
+        result_manifest=_artifact_path(status_data.get("result_manifest"), record.get("result_manifest_path")),
+        evidence_bundle=_artifact_path(status_data.get("evidence_bundle"), record.get("evidence_bundle_path")),
+        evidence_bundle_sha256=_artifact_path(
+            status_data.get("evidence_bundle_sha256"),
+            record.get("evidence_bundle_sha256"),
+        ),
     )
 
 @app.get("/results/{job_id}", response_model=ResultsResponse)
@@ -136,6 +150,37 @@ def get_simulation_results(job_id: str):
 
     if status_data["status"] != "completed":
         raise HTTPException(status_code=400, detail=f"Job not completed. Status: {status_data['status']}")
+
+    record = job_store.get_job(job_id) or {}
+
+    def _artifact_path(*values: object) -> str:
+        for value in values:
+            text = str(value or "").strip()
+            if text:
+                return text
+        return ""
+
+    manifest_path = _artifact_path(status_data.get("result_manifest"), record.get("result_manifest_path"))
+    evidence_bundle_path = _artifact_path(status_data.get("evidence_bundle"), record.get("evidence_bundle_path"))
+    evidence_bundle_sha256 = _artifact_path(
+        status_data.get("evidence_bundle_sha256"),
+        record.get("evidence_bundle_sha256"),
+    )
+    if not manifest_path or not os.path.exists(manifest_path):
+        raise HTTPException(
+            status_code=403,
+            detail="Completed job missing result manifest provenance",
+        )
+    if not evidence_bundle_path or not os.path.exists(evidence_bundle_path):
+        raise HTTPException(
+            status_code=403,
+            detail="Completed job missing evidence bundle provenance",
+        )
+    if len(evidence_bundle_sha256) != 64:
+        raise HTTPException(
+            status_code=403,
+            detail="Completed job missing evidence bundle fingerprint",
+        )
 
     result_file = status_data.get("result_file")
     if not result_file or not os.path.exists(result_file):

@@ -1293,6 +1293,19 @@ def _finalize_and_write(out_prefix: str, payload: Dict[str, Any], args: argparse
     summary_json = f"{out_prefix}_summary.json"
     with open(summary_json, "w", encoding="utf-8") as f:
         json.dump(out, f, indent=2, ensure_ascii=False)
+    evidence_bundle_path = str(getattr(args, "evidence_bundle", "") or "").strip()
+    if evidence_bundle_path:
+        from betelgeuze_ai_md.contracts.runner_evidence_bundle import maybe_write_runner_native_evidence_bundle
+
+        maybe_write_runner_native_evidence_bundle(
+            evidence_bundle_path,
+            request_json_path=str(getattr(args, "docking_request_json", "") or ""),
+            result_file=summary_json,
+            status="completed" if bool(out.get("pass", out.get("ok", False))) else "failed",
+            runner_script="tools/run_ligand_htvs_pipeline.py",
+            result_payload=out,
+            runner_metadata={"runner_kind": "ligand_htvs_pipeline", "out_prefix": out_prefix},
+        )
     # Keep CLOSEOUT_LATEST in sync at each run finalization for external review handoff.
     if callable(_write_closeout_latest):
         try:
@@ -4447,6 +4460,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--gate-four-bead-topo-correction-delta-max", type=float, default=1.0)
     p.add_argument("--gate-four-bead-no-pass-to-fail-vs-2bead", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--gate-onsps-hbond-angle-score-min", type=float, default=0.0)
+    p.add_argument("--evidence-bundle", type=str, default="")
     return p
 
 

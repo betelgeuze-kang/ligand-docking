@@ -59,6 +59,7 @@ def test_api_runner_profile_promotion_readiness_blocks_unfilled_evidence(tmp_pat
     assert summary["status"] == "blocked_api_runner_profile_promotion_readiness"
     assert summary["profile_count"] == 1
     assert summary["promotion_ready_count"] == 0
+    assert summary["native_evidence_bundle_missing_profile_count"] == 0
     assert row["promotion_ready"] is False
     assert "input_contract_reviewed_not_true" in row["blockers"]
     assert "gate_policy_artifact_missing" in row["blockers"]
@@ -78,6 +79,7 @@ def test_api_runner_profile_promotion_readiness_accepts_enabled_profile_with_pro
         "arguments": [],
         "result_file_template": "{job_results_dir}/runner_result.json",
         "claim_boundary": "reviewed boundary",
+        "evidence_bundle_template": "{job_results_dir}/evidence_bundle.json",
         "production_readiness": {
             "evidence_artifact": "evidence/example.evidence.json",
         },
@@ -97,9 +99,15 @@ def test_api_runner_profile_promotion_readiness_accepts_enabled_profile_with_pro
         evidence_dir=tmp_path / "evidence",
     )
 
-    assert payload["summary"]["status"] == "api_runner_profile_promotion_ready"
+    summary = payload["summary"]
+    assert summary["status"] == "api_runner_profile_promotion_ready"
+    assert summary["native_evidence_bundle_required_profile_count"] == 1
+    assert summary["native_evidence_bundle_missing_profile_count"] == 0
+    assert summary["first_native_evidence_bundle_missing_profile_id"] == ""
     assert payload["rows"][0]["promotion_ready"] is True
     assert payload["rows"][0]["enabled"] is True
+    assert payload["rows"][0]["evidence_bundle_template_declared"] is True
+    assert payload["rows"][0]["requires_native_evidence_bundle"] is True
 
 
 def test_api_runner_profile_promotion_readiness_ready_with_filled_evidence(tmp_path: Path, monkeypatch) -> None:
@@ -115,6 +123,8 @@ def test_api_runner_profile_promotion_readiness_ready_with_filled_evidence(tmp_p
 
     assert payload["summary"]["status"] == "api_runner_profile_promotion_ready"
     assert payload["summary"]["promotion_ready_count"] == 1
+    assert payload["summary"]["native_evidence_bundle_required_profile_count"] == 0
+    assert payload["summary"]["native_evidence_bundle_missing_profile_count"] == 0
     assert payload["rows"][0]["promotion_ready"] is True
     assert payload["rows"][0]["profile_enabled_by_this_tool"] is False
 
@@ -150,6 +160,128 @@ def test_api_runner_profile_promotion_readiness_tool_writes_outputs(tmp_path: Pa
     assert summary["status"] == "blocked_api_runner_profile_promotion_readiness"
     assert summary["operator_template_csv"] == str(template_csv)
     assert out_csv.read_text(encoding="utf-8").startswith("profile_id,profile_path,")
-    assert template_csv.read_text(encoding="utf-8").startswith("profile_id,operator_decision,approval_token,")
+    assert template_csv.read_text(encoding="utf-8").startswith(
+        "profile_id,enabled,delivery_oriented,evidence_bundle_template,evidence_bundle_template_declared,"
+    )
     assert "example," in template_csv.read_text(encoding="utf-8")
     assert "API Runner Profile Promotion Readiness" in out_md.read_text(encoding="utf-8")
+
+
+def test_api_runner_profile_promotion_readiness_blocks_enabled_profile_missing_native_template(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    profile = {
+        "enabled": True,
+        "profile_id": "example",
+        "runner_script": "tools/run_ligand_backmapping_scoring.py",
+        "arguments": [],
+        "result_file_template": "{job_results_dir}/runner_result.json",
+        "claim_boundary": "reviewed boundary",
+        "production_readiness": {
+            "evidence_artifact": "evidence/example.evidence.json",
+        },
+    }
+    (tmp_path / "profiles" / "example.json").parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "profiles" / "example.json").write_text(json.dumps(profile) + "\n", encoding="utf-8")
+    (tmp_path / "tools" / "run_ligand_backmapping_scoring.py").parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "tools" / "run_ligand_backmapping_scoring.py").write_text("# runner\n", encoding="utf-8")
+    _write_evidence(tmp_path, ready=True)
+    (tmp_path / "evidence" / "example.evidence.json").write_text(
+        (tmp_path / "evidence" / "example.evidence.template.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    payload = mod.build_api_runner_profile_promotion_readiness(
+        profiles_dir=tmp_path / "profiles",
+        evidence_dir=tmp_path / "evidence",
+    )
+
+    row = payload["rows"][0]
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_api_runner_profile_promotion_readiness"
+    assert summary["native_evidence_bundle_required_profile_count"] == 1
+    assert summary["native_evidence_bundle_missing_profile_count"] == 1
+    assert summary["first_native_evidence_bundle_missing_profile_id"] == "example"
+    assert "native evidence_bundle_template" in summary["next_required_step"]
+    assert row["promotion_ready"] is False
+    assert row["requires_native_evidence_bundle"] is True
+    assert row["evidence_bundle_template_declared"] is False
+    assert "evidence_bundle_template_missing" in row["blockers"]
+
+
+def test_api_runner_profile_promotion_readiness_blocks_delivery_oriented_disabled_profile(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    profile = {
+        "enabled": False,
+        "profile_id": "example",
+        "runner_script": "tools/run_ligand_backmapping_scoring.py",
+        "arguments": [],
+        "result_file_template": "{job_results_dir}/runner_result.json",
+        "claim_boundary": "delivery scope only",
+        "claim_scope": "restricted_local_delivery_proxy_refinement_only",
+    }
+    (tmp_path / "profiles" / "example.json").parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "profiles" / "example.json").write_text(json.dumps(profile) + "\n", encoding="utf-8")
+    (tmp_path / "tools" / "run_ligand_backmapping_scoring.py").parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "tools" / "run_ligand_backmapping_scoring.py").write_text("# runner\n", encoding="utf-8")
+    _write_evidence(tmp_path, ready=True)
+
+    payload = mod.build_api_runner_profile_promotion_readiness(
+        profiles_dir=tmp_path / "profiles",
+        evidence_dir=tmp_path / "evidence",
+    )
+
+    row = payload["rows"][0]
+    assert payload["summary"]["native_evidence_bundle_required_profile_count"] == 1
+    assert payload["summary"]["native_evidence_bundle_missing_profile_count"] == 1
+    assert payload["summary"]["first_native_evidence_bundle_missing_profile_id"] == "example"
+    assert row["delivery_oriented"] is True
+    assert row["requires_native_evidence_bundle"] is True
+    assert row["evidence_bundle_template_declared"] is False
+    assert "evidence_bundle_template_missing" in row["blockers"]
+    assert row["promotion_ready"] is False
+
+
+def test_api_runner_profile_promotion_readiness_ready_for_delivery_oriented_profile_with_template(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    profile = {
+        "enabled": True,
+        "profile_id": "example",
+        "runner_script": "tools/run_ligand_backmapping_scoring.py",
+        "arguments": [],
+        "result_file_template": "{job_results_dir}/runner_result.json",
+        "claim_boundary": "delivery scope only",
+        "claim_scope": "restricted_local_delivery_proxy_refinement_only",
+        "evidence_bundle_template": "{job_results_dir}/evidence_bundle.json",
+        "production_readiness": {
+            "evidence_artifact": "evidence/example.evidence.json",
+        },
+    }
+    (tmp_path / "profiles" / "example.json").parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "profiles" / "example.json").write_text(json.dumps(profile) + "\n", encoding="utf-8")
+    (tmp_path / "tools" / "run_ligand_backmapping_scoring.py").parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "tools" / "run_ligand_backmapping_scoring.py").write_text("# runner\n", encoding="utf-8")
+    _write_evidence(tmp_path, ready=True)
+    (tmp_path / "evidence" / "example.evidence.json").write_text(
+        (tmp_path / "evidence" / "example.evidence.template.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    payload = mod.build_api_runner_profile_promotion_readiness(
+        profiles_dir=tmp_path / "profiles",
+        evidence_dir=tmp_path / "evidence",
+    )
+
+    row = payload["rows"][0]
+    assert payload["summary"]["status"] == "api_runner_profile_promotion_ready"
+    assert payload["summary"]["native_evidence_bundle_required_profile_count"] == 1
+    assert payload["summary"]["native_evidence_bundle_missing_profile_count"] == 0
+    assert row["promotion_ready"] is True
+    assert row["delivery_oriented"] is True
+    assert row["evidence_bundle_template_declared"] is True
+    assert "evidence_bundle_template_missing" not in row["blockers"]

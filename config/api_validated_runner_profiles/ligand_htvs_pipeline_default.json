@@ -27,15 +27,18 @@
     "proxy",
     "--no-traj-require-rust-hip",
     "--no-require-native-path",
-    "--no-run-ranking-eval"
+    "--no-run-ranking-eval",
+    "--evidence-bundle",
+    "{evidence_bundle}"
   ],
   "result_file_template": "{job_results_dir}/htvs_summary.json",
+  "evidence_bundle_template": "{job_results_dir}/evidence_bundle.json",
   "claim_boundary": "Operator-approved HTVS pipeline dispatch. Execution remains fail-closed for customer pose emission until delivery bundle validation is green.",
   "production_readiness": {
     "approved_by": "operator-gap-closure",
     "approved_at_utc": "2026-06-06T12:00:00+00:00",
     "claim_scope": "restricted_local_delivery_proxy_refinement_only",
     "evidence_artifact": "config/api_validated_runner_profiles/evidence/ligand_htvs_pipeline_default.evidence.json",
-        "runner_script_sha256": "b98c07ef8ff39b3f1d8ca509b218780ffc241bd861a98c2d4da257995dceb7e2"
+    "runner_script_sha256": "ea39495baee375a7442f65f2752a3c0945b8eb77df0282aecc34efcf4db556c1"
   }
 }

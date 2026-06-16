@@ -18,6 +18,7 @@ betelgeuze-cleanup = "betelgeuze_cleanup.cli:main"
 include = [
   "api*",
   "core*",
+  "betelgeuze_ai_md*",
   "betelgeuze_product*",
   "betelgeuze_cameo*",
   "betelgeuze_cleanup*",

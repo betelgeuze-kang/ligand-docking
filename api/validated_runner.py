@@ -15,6 +15,8 @@ from typing import Any
 
 from api.config import settings
 from api.request_privacy import sanitize_request_for_ledger
+from betelgeuze_ai_md.contracts import EvidenceBundle
+from betelgeuze_ai_md.contracts.errors import ContractValidationError
 
 ALLOWED_RUNNER_SCRIPTS = {
     "tools/run_ligand_htvs_pipeline.py",
@@ -203,6 +205,8 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
     )
 
     result_file_template = str(profile.get("result_file_template", "{job_results_dir}/runner_result.json") or "")
+    evidence_bundle_template = str(profile.get("evidence_bundle_template", "") or "").strip()
+    has_evidence_bundle_template = bool(evidence_bundle_template)
     context = {
         "job_id": job_id,
         "job_results_dir": str(results_dir),
@@ -210,6 +214,16 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
         "result_file": _render_template(result_file_template, {"job_id": job_id, "job_results_dir": str(results_dir), "request_json_path": str(request_json_path)}),
     }
     context["result_file"] = _render_template(result_file_template, context)
+    if has_evidence_bundle_template:
+        context["evidence_bundle"] = _render_template(
+            evidence_bundle_template,
+            {
+                "job_id": job_id,
+                "job_results_dir": str(results_dir),
+                "request_json_path": str(request_json_path),
+                "result_file": context["result_file"],
+            },
+        )
 
     args = profile.get("arguments", [])
     if not isinstance(args, list) or not all(isinstance(item, str) for item in args):
@@ -231,6 +245,8 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
     ended = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
 
     result_file = Path(context["result_file"])
+    evidence_bundle_path_value = context.get("evidence_bundle", "")
+    evidence_bundle_path = Path(evidence_bundle_path_value) if evidence_bundle_path_value else None
     execution_record = {
         "adapter_version": "api_validated_runner_v1",
         "job_id": job_id,
@@ -249,6 +265,9 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
         "stdout_tail": "\n".join(str(completed["stdout"] or "").splitlines()[-40:]),
         "stderr_tail": "\n".join(str(completed["stderr"] or "").splitlines()[-40:]),
         "result_file": str(result_file),
+        "evidence_bundle_template": evidence_bundle_template or "",
+        "native_evidence_bundle": str(evidence_bundle_path) if evidence_bundle_path else "",
+        "native_evidence_bundle_sha256": "",
         "claim_boundary": (
             "Validated runner adapter only. It executes an operator-approved local profile and records provenance; "
             "scientific claim scope remains governed by the profile and downstream gates."
@@ -276,6 +295,109 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
     if not result_file.exists() or not result_file.is_file():
         raise FileNotFoundError(f"validated runner did not produce expected result_file: {result_file}")
 
+    native_bundle_record: dict[str, str] = {}
+    if has_evidence_bundle_template:
+        if evidence_bundle_path is None or not evidence_bundle_path.exists() or not evidence_bundle_path.is_file():
+            error = (
+                f"validated_runner_missing_native_evidence_bundle:{evidence_bundle_path_value}"
+            )
+            execution_record["native_evidence_bundle_error"] = error
+            execution_record_path.write_text(
+                json.dumps(execution_record, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            _write_status(
+                job_id,
+                {
+                    "job_id": job_id,
+                    "status": "failed",
+                    "error": error,
+                    "runner_execution": str(execution_record_path),
+                },
+            )
+            raise FileNotFoundError(
+                f"validated runner did not produce expected native evidence bundle: {evidence_bundle_path_value}"
+            )
+        try:
+            raw_payload = json.loads(evidence_bundle_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            error = (
+                f"validated_runner_native_evidence_bundle_not_json:{evidence_bundle_path_value}"
+            )
+            execution_record["native_evidence_bundle_error"] = error
+            execution_record_path.write_text(
+                json.dumps(execution_record, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            _write_status(
+                job_id,
+                {
+                    "job_id": job_id,
+                    "status": "failed",
+                    "error": error,
+                    "runner_execution": str(execution_record_path),
+                },
+            )
+            raise PermissionError(
+                f"native evidence bundle is not valid JSON: {evidence_bundle_path_value}"
+            ) from exc
+        if not isinstance(raw_payload, dict):
+            error = (
+                f"validated_runner_native_evidence_bundle_not_object:{evidence_bundle_path_value}"
+            )
+            execution_record["native_evidence_bundle_error"] = error
+            execution_record_path.write_text(
+                json.dumps(execution_record, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            _write_status(
+                job_id,
+                {
+                    "job_id": job_id,
+                    "status": "failed",
+                    "error": error,
+                    "runner_execution": str(execution_record_path),
+                },
+            )
+            raise PermissionError(
+                f"native evidence bundle must be a JSON object: {evidence_bundle_path_value}"
+            )
+        try:
+            bundle = EvidenceBundle(**raw_payload)
+        except (ContractValidationError, TypeError) as exc:
+            error = (
+                f"validated_runner_native_evidence_bundle_invalid:{exc}"
+            )
+            execution_record["native_evidence_bundle_error"] = error
+            execution_record_path.write_text(
+                json.dumps(execution_record, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            _write_status(
+                job_id,
+                {
+                    "job_id": job_id,
+                    "status": "failed",
+                    "error": error,
+                    "runner_execution": str(execution_record_path),
+                },
+            )
+            raise PermissionError(
+                f"native evidence bundle failed EvidenceBundle validation: {exc}"
+            ) from exc
+        bundle_fingerprint = bundle.fingerprint()
+        native_bundle_record = {
+            "evidence_bundle": str(evidence_bundle_path),
+            "evidence_bundle_sha256": bundle_fingerprint,
+            "evidence_bundle_source": "validated_runner_native",
+        }
+        execution_record["native_evidence_bundle"] = str(evidence_bundle_path)
+        execution_record["native_evidence_bundle_sha256"] = bundle_fingerprint
+        execution_record_path.write_text(
+            json.dumps(execution_record, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+
     status_payload = {
         "job_id": job_id,
         "status": "completed",
@@ -285,5 +407,6 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
         "result_file_sha256": _sha256_file(result_file),
         "runner_execution": str(execution_record_path),
     }
+    status_payload.update(native_bundle_record)
     _write_status(job_id, status_payload)
     return status_payload

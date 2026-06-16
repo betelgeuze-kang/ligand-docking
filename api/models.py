@@ -43,6 +43,9 @@ class StatusResponse(BaseModel):
     status: str # "running", "completed", "failed"
     progress: Optional[float] = None # 0.0 to 1.0
     message: Optional[str] = None
+    result_manifest: Optional[str] = None
+    evidence_bundle: Optional[str] = None
+    evidence_bundle_sha256: Optional[str] = None
 
 class ResultsResponse(BaseModel):
     job_id: str

@@ -280,6 +280,21 @@ def build_delivery(args: argparse.Namespace) -> Dict[str, Any]:
         f.write("\n".join(lines) + "\n")
     payload["summary_json"] = out_json
     payload["summary_md"] = out_md
+
+    evidence_bundle_path = str(getattr(args, "evidence_bundle", "") or "").strip()
+    if evidence_bundle_path:
+        from betelgeuze_ai_md.contracts.runner_evidence_bundle import maybe_write_runner_native_evidence_bundle
+
+        maybe_write_runner_native_evidence_bundle(
+            evidence_bundle_path,
+            request_json_path=str(getattr(args, "docking_request_json", "") or ""),
+            result_file=out_json,
+            status="completed" if bool(payload.get("ok")) else "failed",
+            runner_script="tools/run_ligand_topk_delivery.py",
+            result_payload=payload,
+            runner_metadata={"runner_kind": "ligand_topk_delivery"},
+        )
+
     return payload
 
 
@@ -301,6 +316,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--workers", type=int, default=0)
     p.add_argument("--parallel-threshold", type=int, default=2)
     p.add_argument("--make-bundle-zip", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--evidence-bundle", type=str, default="")
     return p
 
 

@@ -31,6 +31,9 @@ REQUIRED_TRUE_EVIDENCE = (
     "gate_policy_reviewed",
     "fake_result_emission_forbidden",
 )
+DELIVERY_PROXY_REFINEMENT_SCOPES = (
+    "restricted_local_delivery_proxy_refinement_only",
+)
 CLAIM_BOUNDARY = (
     "API runner profile promotion readiness only; it validates disabled profile metadata and operator evidence "
     "before a separate approval/edit step. It does not enable profiles, edit JSON, run scientific runners, submit jobs, "
@@ -65,6 +68,10 @@ def _write_operator_template(path_like: str | Path, rows: list[dict[str, Any]]) 
     path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = [
         "profile_id",
+        "enabled",
+        "delivery_oriented",
+        "evidence_bundle_template",
+        "evidence_bundle_template_declared",
         "operator_decision",
         "approval_token",
         "input_contract_reviewed",
@@ -84,6 +91,10 @@ def _write_operator_template(path_like: str | Path, rows: list[dict[str, Any]]) 
             writer.writerow(
                 {
                     "profile_id": "OPERATOR_FILL_PROFILE_ID",
+                    "enabled": "",
+                    "delivery_oriented": "",
+                    "evidence_bundle_template": "",
+                    "evidence_bundle_template_declared": "",
                     "operator_decision": "",
                     "approval_token": "",
                     "input_contract_reviewed": "",
@@ -102,6 +113,10 @@ def _write_operator_template(path_like: str | Path, rows: list[dict[str, Any]]) 
             writer.writerow(
                 {
                     "profile_id": row["profile_id"],
+                    "enabled": row["enabled"],
+                    "delivery_oriented": row["delivery_oriented"],
+                    "evidence_bundle_template": row["evidence_bundle_template"],
+                    "evidence_bundle_template_declared": row["evidence_bundle_template_declared"],
                     "operator_decision": "",
                     "approval_token": "",
                     "input_contract_reviewed": "",
@@ -164,6 +179,24 @@ def _evidence_status(evidence: dict[str, Any]) -> tuple[bool, list[str]]:
     return not blockers, blockers
 
 
+def _claim_scope(profile: dict[str, Any]) -> str:
+    production_readiness = profile.get("production_readiness")
+    if isinstance(production_readiness, dict):
+        scope = _text(production_readiness.get("claim_scope"))
+        if scope:
+            return scope
+    return _text(profile.get("claim_scope"))
+
+
+def _is_delivery_oriented(profile: dict[str, Any]) -> bool:
+    scope = _claim_scope(profile)
+    return any(marker in scope for marker in DELIVERY_PROXY_REFINEMENT_SCOPES)
+
+
+def _requires_native_bundle(profile: dict[str, Any]) -> bool:
+    return _bool(profile.get("enabled")) or _is_delivery_oriented(profile)
+
+
 def build_api_runner_profile_promotion_readiness(
     *,
     profiles_dir: str | Path = DEFAULT_PROFILES_DIR,
@@ -190,6 +223,11 @@ def build_api_runner_profile_promotion_readiness(
         production_evidence = _read_json_if_present(production_evidence_path) if production_evidence_path else {}
         production_evidence_ready, _ = _evidence_status(production_evidence) if production_evidence else (False, [])
         already_promoted = enabled and production_evidence_ready
+        delivery_oriented = _is_delivery_oriented(profile)
+        claim_scope_value = _claim_scope(profile)
+        evidence_bundle_template = _text(profile.get("evidence_bundle_template"))
+        evidence_bundle_template_declared = bool(evidence_bundle_template)
+        requires_native_bundle = _requires_native_bundle(profile)
         profile_blockers: list[str] = []
         if enabled and not already_promoted:
             profile_blockers.append("profile_already_enabled")
@@ -205,20 +243,28 @@ def build_api_runner_profile_promotion_readiness(
             profile_blockers.append("claim_boundary_missing")
         if not evidence_path.is_file() and not production_evidence_path:
             profile_blockers.append("evidence_file_missing")
+        if requires_native_bundle and not evidence_bundle_template_declared:
+            profile_blockers.append("evidence_bundle_template_missing")
         if not already_promoted:
             profile_blockers.extend(evidence_blockers)
-        ready = already_promoted or not profile_blockers
+        ready = not profile_blockers
         rows.append(
             {
                 "profile_id": profile_id,
                 "profile_path": str(profile_path.relative_to(ROOT) if profile_path.is_relative_to(ROOT) else profile_path),
                 "enabled": enabled,
+                "already_promoted": already_promoted,
+                "delivery_oriented": delivery_oriented,
+                "claim_scope": claim_scope_value,
                 "runner_script": runner_script,
                 "runner_exists": runner_exists,
                 "runner_allowlisted": runner_allowlisted,
                 "runner_script_sha256": runner_hash,
                 "evidence_artifact": str(evidence_path.relative_to(ROOT) if evidence_path.is_relative_to(ROOT) else evidence_path),
                 "evidence_ready": evidence_ready,
+                "evidence_bundle_template": evidence_bundle_template,
+                "evidence_bundle_template_declared": evidence_bundle_template_declared,
+                "requires_native_evidence_bundle": requires_native_bundle,
                 "promotion_ready": ready,
                 "blocker_count": len(profile_blockers),
                 "blockers": ",".join(profile_blockers),
@@ -230,6 +276,11 @@ def build_api_runner_profile_promotion_readiness(
         )
     ready_count = sum(1 for row in rows if row["promotion_ready"])
     blocked_count = len(rows) - ready_count
+    native_bundle_missing_rows = [
+        row
+        for row in rows
+        if row["requires_native_evidence_bundle"] and not row["evidence_bundle_template_declared"]
+    ]
     summary = {
         "packet_type": "api_runner_profile_promotion_readiness",
         "status": "api_runner_profile_promotion_ready" if rows and blocked_count == 0 else "blocked_api_runner_profile_promotion_readiness",
@@ -239,6 +290,13 @@ def build_api_runner_profile_promotion_readiness(
         "promotion_ready_count": ready_count,
         "blocked_profile_count": blocked_count,
         "enabled_profile_count": sum(1 for row in rows if row["enabled"]),
+        "native_evidence_bundle_required_profile_count": sum(
+            1 for row in rows if row["requires_native_evidence_bundle"]
+        ),
+        "native_evidence_bundle_missing_profile_count": len(native_bundle_missing_rows),
+        "first_native_evidence_bundle_missing_profile_id": (
+            native_bundle_missing_rows[0]["profile_id"] if native_bundle_missing_rows else ""
+        ),
         "approval_token_required": APPROVAL_TOKEN,
         "operator_template_csv": str(operator_template_csv),
         "profile_enabled_by_this_tool": False,
@@ -247,8 +305,13 @@ def build_api_runner_profile_promotion_readiness(
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
             "Apply a separate operator-approved profile edit only after reviewing this readiness packet."
-            if ready_count
-            else "Fill profile evidence artifacts and required review fields before any profile can be promoted."
+            if rows and blocked_count == 0
+            else (
+                "Add native evidence_bundle_template to each delivery/proxy-refinement profile and confirm "
+                "runner-native EvidenceBundle emission before any delivery profile can be promoted."
+                if native_bundle_missing_rows
+                else "Fill profile evidence artifacts and required review fields before any profile can be promoted."
+            )
         ),
     }
     return {"summary": summary, "rows": rows}
@@ -273,13 +336,14 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Profiles",
         "",
-        "| profile | enabled | runner | evidence | ready | blockers |",
-        "| --- | --- | --- | --- | --- | --- |",
+        "| profile | enabled | delivery_oriented | runner | evidence | native_bundle_template | ready | blockers |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
-            f"| `{row['profile_id']}` | `{row['enabled']}` | `{row['runner_script']}` | "
-            f"`{row['evidence_artifact']}` | `{row['promotion_ready']}` | `{row['blockers']}` |"
+            f"| `{row['profile_id']}` | `{row['enabled']}` | `{row['delivery_oriented']}` | "
+            f"`{row['runner_script']}` | `{row['evidence_artifact']}` | "
+            f"`{row['evidence_bundle_template']}` | `{row['promotion_ready']}` | `{row['blockers']}` |"
         )
     lines.extend(["", "## Claim Boundary", "", s["claim_boundary"], "", "## Next Step", "", f"- {s['next_required_step']}", ""])
     path.parent.mkdir(parents=True, exist_ok=True)

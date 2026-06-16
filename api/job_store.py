@@ -47,6 +47,8 @@ class SQLiteJobStore:
                     error TEXT NOT NULL DEFAULT '',
                     result_file TEXT NOT NULL DEFAULT '',
                     result_manifest_path TEXT NOT NULL DEFAULT '',
+                    evidence_bundle_path TEXT NOT NULL DEFAULT '',
+                    evidence_bundle_sha256 TEXT NOT NULL DEFAULT '',
                     worker_id TEXT NOT NULL DEFAULT '',
                     lease_expires_at_utc TEXT NOT NULL DEFAULT '',
                     heartbeat_at_utc TEXT NOT NULL DEFAULT '',
@@ -64,6 +66,14 @@ class SQLiteJobStore:
             if "result_manifest_path" not in columns:
                 conn.execute(
                     "ALTER TABLE simulation_jobs ADD COLUMN result_manifest_path TEXT NOT NULL DEFAULT ''"
+                )
+            if "evidence_bundle_path" not in columns:
+                conn.execute(
+                    "ALTER TABLE simulation_jobs ADD COLUMN evidence_bundle_path TEXT NOT NULL DEFAULT ''"
+                )
+            if "evidence_bundle_sha256" not in columns:
+                conn.execute(
+                    "ALTER TABLE simulation_jobs ADD COLUMN evidence_bundle_sha256 TEXT NOT NULL DEFAULT ''"
                 )
             if "worker_id" not in columns:
                 conn.execute("ALTER TABLE simulation_jobs ADD COLUMN worker_id TEXT NOT NULL DEFAULT ''")
@@ -107,6 +117,8 @@ class SQLiteJobStore:
                     error='',
                     result_file='',
                     result_manifest_path='',
+                    evidence_bundle_path='',
+                    evidence_bundle_sha256='',
                     worker_id='',
                     lease_expires_at_utc='',
                     heartbeat_at_utc='',
@@ -126,6 +138,8 @@ class SQLiteJobStore:
         error: str = "",
         result_file: str = "",
         result_manifest_path: str | None = None,
+        evidence_bundle_path: str | None = None,
+        evidence_bundle_sha256: str | None = None,
     ) -> dict[str, Any]:
         now = _utc_now()
         terminal_status = status in {"completed", "failed"}
@@ -151,12 +165,54 @@ class SQLiteJobStore:
                         """,
                         (status, error, result_file, now, job_id),
                     )
+            elif evidence_bundle_path is not None and evidence_bundle_sha256 is not None:
+                if terminal_status:
+                    conn.execute(
+                        """
+                        UPDATE simulation_jobs
+                        SET status=?, error=?, result_file=?, result_manifest_path=?,
+                            evidence_bundle_path=?, evidence_bundle_sha256=?,
+                            worker_id='', lease_expires_at_utc='', heartbeat_at_utc='',
+                            updated_at_utc=?
+                        WHERE job_id=?
+                        """,
+                        (
+                            status,
+                            error,
+                            result_file,
+                            result_manifest_path,
+                            evidence_bundle_path,
+                            evidence_bundle_sha256,
+                            now,
+                            job_id,
+                        ),
+                    )
+                else:
+                    conn.execute(
+                        """
+                        UPDATE simulation_jobs
+                        SET status=?, error=?, result_file=?, result_manifest_path=?,
+                            evidence_bundle_path=?, evidence_bundle_sha256=?, updated_at_utc=?
+                        WHERE job_id=?
+                        """,
+                        (
+                            status,
+                            error,
+                            result_file,
+                            result_manifest_path,
+                            evidence_bundle_path,
+                            evidence_bundle_sha256,
+                            now,
+                            job_id,
+                        ),
+                    )
             else:
                 if terminal_status:
                     conn.execute(
                         """
                         UPDATE simulation_jobs
                         SET status=?, error=?, result_file=?, result_manifest_path=?,
+                            evidence_bundle_path='', evidence_bundle_sha256='',
                             worker_id='', lease_expires_at_utc='', heartbeat_at_utc='',
                             updated_at_utc=?
                         WHERE job_id=?
@@ -167,7 +223,8 @@ class SQLiteJobStore:
                     conn.execute(
                         """
                         UPDATE simulation_jobs
-                        SET status=?, error=?, result_file=?, result_manifest_path=?, updated_at_utc=?
+                        SET status=?, error=?, result_file=?, result_manifest_path=?,
+                            evidence_bundle_path='', evidence_bundle_sha256='', updated_at_utc=?
                         WHERE job_id=?
                         """,
                         (status, error, result_file, result_manifest_path, now, job_id),

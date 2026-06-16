@@ -37,6 +37,12 @@ DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOAD_OPERATOR_RECE
 DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_CANDIDATE_FILL_JSON = (
     "config/refine_tier_public_benchmark_statistical_support_metric_source_candidate_fill_current.json"
 )
+DEFAULT_PUBLIC_BENCHMARK_RESIDUAL_METRIC_PAYLOAD_PRIORITY_PACKET_JSON = (
+    "config/refine_tier_public_benchmark_residual_metric_payload_priority_packet_current.json"
+)
+DEFAULT_PUBLIC_BENCHMARK_SEEDED_METRIC_PAYLOAD_RECEIPT_BACKFILL_PACKET_JSON = (
+    "config/refine_tier_public_benchmark_seeded_metric_payload_receipt_backfill_packet_current.json"
+)
 DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON = (
     "runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json"
 )
@@ -167,6 +173,10 @@ def build_science_accuracy_frontier(
     | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON,
     public_benchmark_statistical_support_metric_source_candidate_fill_json: str
     | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_CANDIDATE_FILL_JSON,
+    public_benchmark_residual_metric_payload_priority_packet_json: str
+    | Path = DEFAULT_PUBLIC_BENCHMARK_RESIDUAL_METRIC_PAYLOAD_PRIORITY_PACKET_JSON,
+    public_benchmark_seeded_metric_payload_receipt_backfill_packet_json: str
+    | Path = DEFAULT_PUBLIC_BENCHMARK_SEEDED_METRIC_PAYLOAD_RECEIPT_BACKFILL_PACKET_JSON,
     public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json: str
     | Path = DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON,
     public_benchmark_statistical_support_coordinate_fetch_operator_receipt_json: str
@@ -203,6 +213,12 @@ def build_science_accuracy_frontier(
     metric_source_candidate_fill_payload, metric_source_candidate_fill_present = _read_json(
         public_benchmark_statistical_support_metric_source_candidate_fill_json
     )
+    residual_metric_payload_priority_packet_payload, residual_metric_payload_priority_packet_present = (
+        _read_json(public_benchmark_residual_metric_payload_priority_packet_json)
+    )
+    seeded_metric_payload_receipt_backfill_packet_payload, seeded_metric_payload_receipt_backfill_packet_present = (
+        _read_json(public_benchmark_seeded_metric_payload_receipt_backfill_packet_json)
+    )
     coordinate_fetch_r4_preflight_payload, coordinate_fetch_r4_preflight_present = _read_json(
         public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json
     )
@@ -231,6 +247,10 @@ def build_science_accuracy_frontier(
     metric_source_templates = _summary(metric_source_templates_payload)
     metric_source_payload_operator_receipt = _summary(metric_source_payload_operator_receipt_payload)
     metric_source_candidate_fill = _summary(metric_source_candidate_fill_payload)
+    residual_metric_payload_priority_packet = _summary(residual_metric_payload_priority_packet_payload)
+    seeded_metric_payload_receipt_backfill_packet = _summary(
+        seeded_metric_payload_receipt_backfill_packet_payload
+    )
     coordinate_fetch_r4_preflight = _summary(coordinate_fetch_r4_preflight_payload)
     coordinate_fetch_operator_receipt = _summary(coordinate_fetch_operator_receipt_payload)
     claim_grade_gap_audit = _summary(claim_grade_gap_audit_payload)
@@ -330,6 +350,18 @@ def build_science_accuracy_frontier(
         == "refine_tier_public_benchmark_statistical_support_metric_candidates_ready"
         and _int(metric_source_candidate_fill.get("candidate_blocked_row_count")) == 0
         and _int(metric_source_candidate_fill.get("combined_pair_count")) > 0
+    )
+    public_residual_metric_payload_priority_packet_ready = bool(
+        residual_metric_payload_priority_packet_present
+        and residual_metric_payload_priority_packet.get("status")
+        == "refine_tier_public_benchmark_residual_metric_payload_priority_packet_ready"
+        and _int(residual_metric_payload_priority_packet.get("metric_payload_priority_row_count")) > 0
+    )
+    public_seeded_metric_payload_receipt_backfill_packet_ready = bool(
+        seeded_metric_payload_receipt_backfill_packet_present
+        and seeded_metric_payload_receipt_backfill_packet.get("status")
+        == "refine_tier_public_benchmark_seeded_metric_payload_receipt_backfill_packet_ready"
+        and _int(seeded_metric_payload_receipt_backfill_packet.get("seeded_backfill_row_count")) > 0
     )
     public_statistical_support_coordinate_fetch_r4_preflight_ready = bool(
         coordinate_fetch_r4_preflight_present
@@ -516,7 +548,11 @@ def build_science_accuracy_frontier(
             "Restricted science accuracy and the current 25-pair R9 metric candidate preview are ready, "
             f"but bootstrap Spearman p05={_float(metric_source_candidate_fill.get('free_energy_spearman_bootstrap_p05'))} "
             "is below the claim-grade 0.5 floor. Keep commercial parity blocked until candidate/score quality, "
-            "operator-reviewed metric payload receipt, and R9 evidence receipts close; remaining blockers: "
+            "operator-reviewed metric payload receipt, seeded-payload receipt backfill, and R9 evidence receipts "
+            "close; seeded receipt gap="
+            f"{_int(residual_metric_payload_priority_packet.get('operator_receipt_missing_payload_count'))} "
+            f"missing rows/{_int(seeded_metric_payload_receipt_backfill_packet.get('seeded_backfill_row_count'))} "
+            "backfill rows; remaining blockers: "
             + ("; ".join(_blocker_label(blocker) for blocker in blockers) if blockers else "none")
             + "."
         )
@@ -1146,6 +1182,134 @@ def build_science_accuracy_frontier(
         "public_benchmark_statistical_support_metric_source_candidate_fill_claim_promotion_allowed": bool(
             metric_source_candidate_fill.get("claim_promotion_allowed") is True
         ),
+        "public_benchmark_residual_metric_payload_priority_packet_present": (
+            residual_metric_payload_priority_packet_present
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_ready": (
+            public_residual_metric_payload_priority_packet_ready
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_status": str(
+            residual_metric_payload_priority_packet.get("status", "")
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_metric_payload_priority_row_count": _int(
+            residual_metric_payload_priority_packet.get("metric_payload_priority_row_count")
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_candidate_fill_matched_payload_count": _int(
+            residual_metric_payload_priority_packet.get("candidate_fill_matched_payload_count")
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_operator_receipt_matched_payload_count": _int(
+            residual_metric_payload_priority_packet.get("operator_receipt_matched_payload_count")
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_operator_receipt_missing_payload_count": _int(
+            residual_metric_payload_priority_packet.get("operator_receipt_missing_payload_count")
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_operator_receipt_blocked_payload_count": _int(
+            residual_metric_payload_priority_packet.get("operator_receipt_blocked_payload_count")
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_existing_metric_source_artifact_present_without_receipt_count": _int(
+            residual_metric_payload_priority_packet.get(
+                "existing_metric_source_artifact_present_without_receipt_count"
+            )
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_metric_source_artifact_present_count": _int(
+            residual_metric_payload_priority_packet.get("metric_source_artifact_present_count")
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_operator_manual_pending_field_count": _int(
+            residual_metric_payload_priority_packet.get("operator_manual_pending_field_count")
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_residual_leverage_payload_count": _int(
+            residual_metric_payload_priority_packet.get("residual_leverage_payload_count")
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_cv_worse_payload_count": _int(
+            residual_metric_payload_priority_packet.get("cv_worse_payload_count")
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_top_priority_target_id": str(
+            residual_metric_payload_priority_packet.get("top_priority_target_id", "")
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_top_priority_pose_id": str(
+            residual_metric_payload_priority_packet.get("top_priority_pose_id", "")
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_top_priority_metric_name": str(
+            residual_metric_payload_priority_packet.get("top_priority_metric_name", "")
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_first_missing_receipt_target_id": str(
+            residual_metric_payload_priority_packet.get("first_missing_receipt_target_id", "")
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_first_missing_receipt_pose_id": str(
+            residual_metric_payload_priority_packet.get("first_missing_receipt_pose_id", "")
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_payload_write_allowed": bool(
+            residual_metric_payload_priority_packet.get("payload_write_allowed") is True
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_claim_promotion_allowed": bool(
+            residual_metric_payload_priority_packet.get("claim_promotion_allowed") is True
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_production_score_mutation_allowed": bool(
+            residual_metric_payload_priority_packet.get("production_score_mutation_allowed") is True
+        ),
+        "public_benchmark_residual_metric_payload_priority_packet_external_state_mutated": bool(
+            residual_metric_payload_priority_packet.get("external_state_mutated") is True
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_present": (
+            seeded_metric_payload_receipt_backfill_packet_present
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_ready": (
+            public_seeded_metric_payload_receipt_backfill_packet_ready
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_status": str(
+            seeded_metric_payload_receipt_backfill_packet.get("status", "")
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_payload_priority_json_present": bool(
+            seeded_metric_payload_receipt_backfill_packet.get("payload_priority_json_present") is True
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_seeded_backfill_row_count": _int(
+            seeded_metric_payload_receipt_backfill_packet.get("seeded_backfill_row_count")
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_seeded_backfill_target_count": _int(
+            seeded_metric_payload_receipt_backfill_packet.get("seeded_backfill_target_count")
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_seeded_backfill_targets": str(
+            seeded_metric_payload_receipt_backfill_packet.get("seeded_backfill_targets", "")
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_metric_source_artifact_present_count": _int(
+            seeded_metric_payload_receipt_backfill_packet.get("metric_source_artifact_present_count")
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_payload_schema_valid_count": _int(
+            seeded_metric_payload_receipt_backfill_packet.get("payload_schema_valid_count")
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_payload_schema_blocked_count": _int(
+            seeded_metric_payload_receipt_backfill_packet.get("payload_schema_blocked_count")
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_input_artifact_sha256_verified_row_count": _int(
+            seeded_metric_payload_receipt_backfill_packet.get("input_artifact_sha256_verified_row_count")
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_operator_manual_pending_field_count": _int(
+            seeded_metric_payload_receipt_backfill_packet.get("operator_manual_pending_field_count")
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_operator_receipt_backfill_ready": bool(
+            seeded_metric_payload_receipt_backfill_packet.get("operator_receipt_backfill_ready") is True
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_canonical_receipt_write_allowed": bool(
+            seeded_metric_payload_receipt_backfill_packet.get("canonical_receipt_write_allowed") is True
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_payload_write_allowed": bool(
+            seeded_metric_payload_receipt_backfill_packet.get("payload_write_allowed") is True
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_canonical_intake_promotion_allowed": bool(
+            seeded_metric_payload_receipt_backfill_packet.get("canonical_intake_promotion_allowed") is True
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_claim_promotion_allowed": bool(
+            seeded_metric_payload_receipt_backfill_packet.get("claim_promotion_allowed") is True
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_production_score_mutation_allowed": bool(
+            seeded_metric_payload_receipt_backfill_packet.get("production_score_mutation_allowed") is True
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_external_state_mutated": bool(
+            seeded_metric_payload_receipt_backfill_packet.get("external_state_mutated") is True
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_approval_token_required": str(
+            seeded_metric_payload_receipt_backfill_packet.get("approval_token_required", "")
+        ),
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present": (
             coordinate_fetch_r4_preflight_present
         ),
@@ -1587,6 +1751,12 @@ def build_science_accuracy_frontier(
             "refine_tier_public_benchmark_statistical_support_metric_source_candidate_fill": str(
                 public_benchmark_statistical_support_metric_source_candidate_fill_json
             ),
+            "refine_tier_public_benchmark_residual_metric_payload_priority_packet": str(
+                public_benchmark_residual_metric_payload_priority_packet_json
+            ),
+            "refine_tier_public_benchmark_seeded_metric_payload_receipt_backfill_packet": str(
+                public_benchmark_seeded_metric_payload_receipt_backfill_packet_json
+            ),
             "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight": str(
                 public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json
             ),
@@ -1705,6 +1875,28 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"{summary['public_benchmark_statistical_support_metric_source_candidate_fill_spearman_bootstrap_p05']}`",
         "- public_benchmark_statistical_support_metric_source_candidate_fill_payload_write_allowed: "
         f"`{summary['public_benchmark_statistical_support_metric_source_candidate_fill_payload_write_allowed']}`",
+        "- public_benchmark_residual_metric_payload_priority_packet_ready/priority_rows/missing_receipts: "
+        f"`{summary['public_benchmark_residual_metric_payload_priority_packet_ready']}/"
+        f"{summary['public_benchmark_residual_metric_payload_priority_packet_metric_payload_priority_row_count']}/"
+        f"{summary['public_benchmark_residual_metric_payload_priority_packet_operator_receipt_missing_payload_count']}`",
+        "- public_benchmark_residual_metric_payload_priority_packet_existing_seeded_without_receipt/blocked_receipts: "
+        f"`{summary['public_benchmark_residual_metric_payload_priority_packet_existing_metric_source_artifact_present_without_receipt_count']}/"
+        f"{summary['public_benchmark_residual_metric_payload_priority_packet_operator_receipt_blocked_payload_count']}`",
+        "- public_benchmark_residual_metric_payload_priority_packet_top_and_first_missing: "
+        f"`{summary['public_benchmark_residual_metric_payload_priority_packet_top_priority_target_id']}/"
+        f"{summary['public_benchmark_residual_metric_payload_priority_packet_top_priority_pose_id']}/"
+        f"{summary['public_benchmark_residual_metric_payload_priority_packet_first_missing_receipt_target_id']}/"
+        f"{summary['public_benchmark_residual_metric_payload_priority_packet_first_missing_receipt_pose_id']}`",
+        "- public_benchmark_seeded_metric_payload_receipt_backfill_packet_ready/rows/targets: "
+        f"`{summary['public_benchmark_seeded_metric_payload_receipt_backfill_packet_ready']}/"
+        f"{summary['public_benchmark_seeded_metric_payload_receipt_backfill_packet_seeded_backfill_row_count']}/"
+        f"{summary['public_benchmark_seeded_metric_payload_receipt_backfill_packet_seeded_backfill_targets']}`",
+        "- public_benchmark_seeded_metric_payload_receipt_backfill_packet_schema/hash/manual_pending: "
+        f"`{summary['public_benchmark_seeded_metric_payload_receipt_backfill_packet_payload_schema_valid_count']}/"
+        f"{summary['public_benchmark_seeded_metric_payload_receipt_backfill_packet_input_artifact_sha256_verified_row_count']}/"
+        f"{summary['public_benchmark_seeded_metric_payload_receipt_backfill_packet_operator_manual_pending_field_count']}`",
+        "- public_benchmark_seeded_metric_payload_receipt_backfill_packet_operator_receipt_backfill_ready: "
+        f"`{summary['public_benchmark_seeded_metric_payload_receipt_backfill_packet_operator_receipt_backfill_ready']}`",
         "- public_benchmark_statistical_support_coordinate_fetch_r4_ready/review/fetch_required: "
         f"`{summary['public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready']}/"
         f"{summary['public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count']}/"
@@ -1798,6 +1990,14 @@ def main(argv: list[str] | None = None) -> None:
         default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_CANDIDATE_FILL_JSON,
     )
     parser.add_argument(
+        "--public-benchmark-residual-metric-payload-priority-packet-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_RESIDUAL_METRIC_PAYLOAD_PRIORITY_PACKET_JSON,
+    )
+    parser.add_argument(
+        "--public-benchmark-seeded-metric-payload-receipt-backfill-packet-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_SEEDED_METRIC_PAYLOAD_RECEIPT_BACKFILL_PACKET_JSON,
+    )
+    parser.add_argument(
         "--public-benchmark-statistical-support-coordinate-fetch-r4-preflight-json",
         default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON,
     )
@@ -1843,6 +2043,12 @@ def main(argv: list[str] | None = None) -> None:
         ),
         public_benchmark_statistical_support_metric_source_candidate_fill_json=(
             args.public_benchmark_statistical_support_metric_source_candidate_fill_json
+        ),
+        public_benchmark_residual_metric_payload_priority_packet_json=(
+            args.public_benchmark_residual_metric_payload_priority_packet_json
+        ),
+        public_benchmark_seeded_metric_payload_receipt_backfill_packet_json=(
+            args.public_benchmark_seeded_metric_payload_receipt_backfill_packet_json
         ),
         public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json=(
             args.public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json

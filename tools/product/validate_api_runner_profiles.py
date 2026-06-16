@@ -26,6 +26,7 @@ def validate_profiles(profiles_dir: Path) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     enabled_count = 0
     failed_count = 0
+    enabled_missing_native_bundle_count = 0
     for path in profiles:
         row: dict[str, Any] = {
             "profile_path": str(path),
@@ -33,6 +34,8 @@ def validate_profiles(profiles_dir: Path) -> dict[str, Any]:
             "enabled": False,
             "status": "unknown",
             "error": "",
+            "evidence_bundle_template": "",
+            "evidence_bundle_template_declared": False,
         }
         try:
             profile = _load_json(path)
@@ -48,17 +51,32 @@ def validate_profiles(profiles_dir: Path) -> dict[str, Any]:
                 row["runner_script"] = str(profile.get("runner_script", "") or "")
                 row["claim_scope"] = readiness["claim_scope"]
                 row["evidence_artifact"] = readiness["evidence_artifact"]
+                evidence_bundle_template = str(profile.get("evidence_bundle_template", "") or "").strip()
+                row["evidence_bundle_template"] = evidence_bundle_template
+                row["evidence_bundle_template_declared"] = bool(evidence_bundle_template)
+                if not evidence_bundle_template:
+                    enabled_missing_native_bundle_count += 1
         except Exception as exc:
             failed_count += 1
             row["status"] = "failed"
             row["error"] = str(exc)
         rows.append(row)
+    first_missing_native_bundle_profile_id = next(
+        (
+            str(row.get("profile_id", ""))
+            for row in rows
+            if row.get("enabled") is True and row.get("evidence_bundle_template_declared") is not True
+        ),
+        "",
+    )
     return {
         "status": "pass" if failed_count == 0 else "failed",
         "profiles_dir": str(profiles_dir),
         "profile_count": len(profiles),
         "enabled_profile_count": enabled_count,
         "failed_profile_count": failed_count,
+        "enabled_native_evidence_bundle_missing_count": enabled_missing_native_bundle_count,
+        "first_enabled_native_evidence_bundle_missing_profile_id": first_missing_native_bundle_profile_id,
         "rows": rows,
     }
 

@@ -206,6 +206,9 @@ def test_worker_process_next_job_writes_completed_manifest(
     assert completed["status"] == "completed"
     assert completed["result_file"]
     assert completed["result_manifest_path"]
+    assert completed["evidence_bundle_path"]
+    assert completed["evidence_bundle_sha256"]
+    assert len(completed["evidence_bundle_sha256"]) == 64
     assert completed["worker_id"] == ""
 
     manifest = json.loads(Path(completed["result_manifest_path"]).read_text(encoding="utf-8"))
@@ -215,6 +218,15 @@ def test_worker_process_next_job_writes_completed_manifest(
         manifest,
         signing_key=worker.settings.api_result_manifest_signing_key,
     )
+
+    status = json.loads(Path(worker.job_status_path("job_worker_ok")).read_text(encoding="utf-8"))
+    evidence_bundle = Path(status["evidence_bundle"])
+    assert evidence_bundle.exists()
+    assert len(status["evidence_bundle_sha256"]) == 64
+    bundle = json.loads(evidence_bundle.read_text(encoding="utf-8"))
+    assert bundle["bundle_schema_version"] == "ai_md_evidence_bundle_v1"
+    assert bundle["verdict"]["claim_safe"] is False
+    assert "delivery_bundle_validation_not_attached" in bundle["failure_flags"]
 
 
 def test_worker_extends_lease_while_runner_is_active(
@@ -362,3 +374,436 @@ def test_run_simulation_wrapper_updates_durable_store(tmp_path: Path, monkeypatc
     status_path = tmp_path / "results" / "job_wrapper" / "status.json"
     status_data = json.loads(status_path.read_text(encoding="utf-8"))
     assert status_data["result_manifest"] == str(manifest_path)
+
+
+def test_sqlite_job_store_migrates_evidence_bundle_columns(tmp_path: Path) -> None:
+    db_path = tmp_path / "legacy_api_jobs.sqlite3"
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            """
+            CREATE TABLE simulation_jobs (
+                job_id TEXT PRIMARY KEY,
+                status TEXT NOT NULL,
+                request_json TEXT NOT NULL,
+                error TEXT NOT NULL DEFAULT '',
+                result_file TEXT NOT NULL DEFAULT '',
+                result_manifest_path TEXT NOT NULL DEFAULT '',
+                worker_id TEXT NOT NULL DEFAULT '',
+                lease_expires_at_utc TEXT NOT NULL DEFAULT '',
+                heartbeat_at_utc TEXT NOT NULL DEFAULT '',
+                attempt_count INTEGER NOT NULL DEFAULT 0,
+                max_attempts INTEGER NOT NULL DEFAULT 3,
+                created_at_utc TEXT NOT NULL,
+                updated_at_utc TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO simulation_jobs(
+                job_id, status, request_json, created_at_utc, updated_at_utc
+            ) VALUES(?, ?, ?, ?, ?)
+            """,
+            ("legacy_job", "submitted", '{"target_name":"Chignolin"}', "2026-06-16T00:00:00+00:00", "2026-06-16T00:00:00+00:00"),
+        )
+
+    store = SQLiteJobStore(db_path)
+    record = store.get_job("legacy_job")
+    assert record is not None
+    assert record["evidence_bundle_path"] == ""
+    assert record["evidence_bundle_sha256"] == ""
+
+
+def test_sqlite_job_store_create_job_clears_result_pointers_on_recreate(tmp_path: Path) -> None:
+    store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
+    store.create_job("job_reset", {"target_name": "Chignolin"}, status="submitted")
+    store.update_job(
+        "job_reset",
+        status="completed",
+        result_file="/tmp/result.pdb",
+        result_manifest_path="/tmp/result_manifest.json",
+        evidence_bundle_path="/tmp/evidence_bundle.json",
+        evidence_bundle_sha256="a" * 64,
+    )
+
+    recreated = store.create_job("job_reset", {"target_name": "Chignolin"}, status="submitted")
+    assert recreated["result_file"] == ""
+    assert recreated["result_manifest_path"] == ""
+    assert recreated["evidence_bundle_path"] == ""
+    assert recreated["evidence_bundle_sha256"] == ""
+
+
+def test_sqlite_job_store_update_job_persists_evidence_bundle_together(tmp_path: Path) -> None:
+    store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
+    store.create_job("job_evidence", {"target_name": "Chignolin"}, status="submitted")
+
+    updated = store.update_job(
+        "job_evidence",
+        status="completed",
+        result_file="/tmp/result.pdb",
+        result_manifest_path="/tmp/result_manifest.json",
+        evidence_bundle_path="/tmp/evidence_bundle.json",
+        evidence_bundle_sha256="b" * 64,
+    )
+
+    assert updated["result_manifest_path"] == "/tmp/result_manifest.json"
+    assert updated["evidence_bundle_path"] == "/tmp/evidence_bundle.json"
+    assert updated["evidence_bundle_sha256"] == "b" * 64
+
+    reopened = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
+    record = reopened.get_job("job_evidence")
+    assert record is not None
+    assert record["evidence_bundle_path"] == "/tmp/evidence_bundle.json"
+    assert record["evidence_bundle_sha256"] == "b" * 64
+
+    manifest_only = store.update_job(
+        "job_evidence",
+        status="failed",
+        error="runner failed after retry",
+        result_manifest_path="/tmp/failed_manifest.json",
+    )
+    assert manifest_only["result_manifest_path"] == "/tmp/failed_manifest.json"
+    assert manifest_only["evidence_bundle_path"] == ""
+    assert manifest_only["evidence_bundle_sha256"] == ""
+
+
+def test_get_status_exposes_evidence_bundle_provenance(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.main as main
+
+    store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
+    store.create_job("job_status", {"target_name": "Chignolin"}, status="completed")
+    monkeypatch.setattr(main, "job_store", store)
+    monkeypatch.setattr(main.settings, "results_storage_path", str(tmp_path / "results"))
+
+    results_dir = tmp_path / "results" / "job_status"
+    results_dir.mkdir(parents=True)
+    manifest_path = results_dir / "result_manifest.json"
+    bundle_path = results_dir / "evidence_bundle.json"
+    manifest_path.write_text('{"status":"completed"}\n', encoding="utf-8")
+    bundle_path.write_text('{"bundle_schema_version":"ai_md_evidence_bundle_v1"}\n', encoding="utf-8")
+    main.write_status_file(
+        main.job_status_path("job_status"),
+        {
+            "job_id": "job_status",
+            "status": "completed",
+            "result_manifest": str(manifest_path),
+            "evidence_bundle": str(bundle_path),
+            "evidence_bundle_sha256": "c" * 64,
+        },
+    )
+    store.update_job(
+        "job_status",
+        status="completed",
+        result_file=str(results_dir / "result.pdb"),
+        result_manifest_path=str(manifest_path),
+        evidence_bundle_path=str(bundle_path),
+        evidence_bundle_sha256="c" * 64,
+    )
+
+    from fastapi.testclient import TestClient
+
+    response = TestClient(main.app).get("/status/job_status")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["result_manifest"] == str(manifest_path)
+    assert payload["evidence_bundle"] == str(bundle_path)
+    assert payload["evidence_bundle_sha256"] == "c" * 64
+
+
+def test_get_results_fail_closed_without_evidence_bundle_provenance(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.main as main
+
+    store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
+    store.create_job("job_raw_only", {"target_name": "Chignolin"}, status="completed")
+    monkeypatch.setattr(main, "job_store", store)
+    monkeypatch.setattr(main.settings, "results_storage_path", str(tmp_path / "results"))
+
+    results_dir = tmp_path / "results" / "job_raw_only"
+    results_dir.mkdir(parents=True)
+    result_file = results_dir / "result.pdb"
+    result_file.write_text("ATOM\n", encoding="utf-8")
+    main.write_status_file(
+        main.job_status_path("job_raw_only"),
+        {
+            "job_id": "job_raw_only",
+            "status": "completed",
+            "result_file": str(result_file),
+        },
+    )
+    store.update_job("job_raw_only", status="completed", result_file=str(result_file))
+
+    from fastapi.testclient import TestClient
+
+    client = TestClient(main.app)
+    response = client.get("/results/job_raw_only")
+    assert response.status_code == 403
+    assert "result manifest provenance" in response.json()["detail"]
+
+
+def test_get_results_fail_closed_without_evidence_bundle_fingerprint(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.main as main
+
+    store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
+    store.create_job("job_no_bundle_hash", {"target_name": "Chignolin"}, status="completed")
+    monkeypatch.setattr(main, "job_store", store)
+    monkeypatch.setattr(main.settings, "results_storage_path", str(tmp_path / "results"))
+
+    results_dir = tmp_path / "results" / "job_no_bundle_hash"
+    results_dir.mkdir(parents=True)
+    result_file = results_dir / "result.pdb"
+    manifest_path = results_dir / "result_manifest.json"
+    bundle_path = results_dir / "evidence_bundle.json"
+    result_file.write_text("ATOM\n", encoding="utf-8")
+    manifest_path.write_text('{"status":"completed"}\n', encoding="utf-8")
+    bundle_path.write_text('{"bundle_schema_version":"ai_md_evidence_bundle_v1"}\n', encoding="utf-8")
+    main.write_status_file(
+        main.job_status_path("job_no_bundle_hash"),
+        {
+            "job_id": "job_no_bundle_hash",
+            "status": "completed",
+            "result_file": str(result_file),
+            "result_manifest": str(manifest_path),
+            "evidence_bundle": str(bundle_path),
+        },
+    )
+    store.update_job(
+        "job_no_bundle_hash",
+        status="completed",
+        result_file=str(result_file),
+        result_manifest_path=str(manifest_path),
+        evidence_bundle_path=str(bundle_path),
+        evidence_bundle_sha256="",
+    )
+
+    from fastapi.testclient import TestClient
+
+    response = TestClient(main.app).get("/results/job_no_bundle_hash")
+    assert response.status_code == 403
+    assert "evidence bundle fingerprint" in response.json()["detail"]
+
+
+def test_adopt_validated_runner_native_evidence_bundle_returns_none_without_provenance(
+    tmp_path: Path,
+) -> None:
+    import api.worker as worker
+
+    assert (
+        worker.adopt_validated_runner_native_evidence_bundle(
+            job_id="job_missing",
+            status_data={"status": "completed"},
+        )
+        is None
+    )
+
+
+def test_adopt_validated_runner_native_evidence_bundle_returns_none_when_file_missing(
+    tmp_path: Path,
+) -> None:
+    import api.worker as worker
+
+    missing_path = tmp_path / "does_not_exist.json"
+    assert (
+        worker.adopt_validated_runner_native_evidence_bundle(
+            job_id="job_missing_file",
+            status_data={
+                "evidence_bundle": str(missing_path),
+                "evidence_bundle_sha256": "a" * 64,
+                "evidence_bundle_source": "validated_runner_native",
+            },
+        )
+        is None
+    )
+
+
+def test_adopt_validated_runner_native_evidence_bundle_adopts_validated_bundle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.worker as worker
+    from betelgeuze_ai_md.contracts import EvidenceBundle
+
+    monkeypatch.setattr(worker.settings, "results_storage_path", str(tmp_path / "results"))
+    bundle = EvidenceBundle(
+        bundle_id="native_adopted",
+        project_id="native_adopted",
+        ranked_shortlist=[],
+        trajectory_summary={"frame_count": 0},
+        backmapped_poses=[],
+        interaction_report={},
+        topology_report={
+            "status": "not_assessed",
+            "topology_fidelity": "placeholder_alanine",
+            "claim_blockers": ["topology_validity_not_assessed"],
+        },
+        ai_residual_report={"residual_mode": "disabled", "uncertainty": 1.0, "abstained": True},
+        failure_flags=["delivery_bundle_validation_not_attached"],
+        source_hashes={
+            "input_hash": "i" * 64,
+            "config_hash": "c" * 64,
+            "model_hash": "m" * 64,
+            "executable_hash": "e" * 64,
+        },
+        viewer_assets=[],
+        wetlab_handoff_table=[],
+        verdict={
+            "claim_safe": False,
+            "verdict_label": "native_runner_review_only",
+            "claim_scope": "restricted_local_delivery_proxy_refinement_only",
+            "topology_fidelity": "placeholder_alanine",
+            "accuracy_claim_grade": "restricted-local-delivery",
+            "failure_flags": ["delivery_bundle_validation_not_attached"],
+        },
+    )
+    bundle_path = tmp_path / "native" / "runner_native_bundle.json"
+    bundle_path.parent.mkdir(parents=True, exist_ok=True)
+    bundle_path.write_text(
+        json.dumps(bundle.to_dict(), sort_keys=True, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    fingerprint = bundle.fingerprint()
+
+    adopted = worker.adopt_validated_runner_native_evidence_bundle(
+        job_id="job_adopt",
+        status_data={
+            "evidence_bundle": str(bundle_path),
+            "evidence_bundle_sha256": fingerprint,
+            "evidence_bundle_source": "validated_runner_native",
+        },
+    )
+
+    final_path = tmp_path / "results" / "job_adopt" / "evidence_bundle.json"
+    assert adopted is not None
+    assert adopted == (str(final_path), fingerprint)
+    assert final_path.exists()
+    assert json.loads(final_path.read_text(encoding="utf-8"))["bundle_id"] == "native_adopted"
+
+
+def test_adopt_validated_runner_native_evidence_bundle_rejects_fingerprint_mismatch(
+    tmp_path: Path,
+) -> None:
+    import api.worker as worker
+    from betelgeuze_ai_md.contracts import EvidenceBundle
+
+    bundle = EvidenceBundle(
+        bundle_id="native_mismatch",
+        project_id="native_mismatch",
+        ranked_shortlist=[],
+        trajectory_summary={"frame_count": 0},
+        backmapped_poses=[],
+        interaction_report={},
+        topology_report={
+            "status": "not_assessed",
+            "topology_fidelity": "placeholder_alanine",
+            "claim_blockers": ["topology_validity_not_assessed"],
+        },
+        ai_residual_report={"residual_mode": "disabled", "uncertainty": 1.0, "abstained": True},
+        failure_flags=["delivery_bundle_validation_not_attached"],
+        source_hashes={
+            "input_hash": "i" * 64,
+            "config_hash": "c" * 64,
+            "model_hash": "m" * 64,
+            "executable_hash": "e" * 64,
+        },
+        viewer_assets=[],
+        wetlab_handoff_table=[],
+        verdict={
+            "claim_safe": False,
+            "verdict_label": "native_runner_review_only",
+            "claim_scope": "restricted_local_delivery_proxy_refinement_only",
+            "topology_fidelity": "placeholder_alanine",
+            "accuracy_claim_grade": "restricted-local-delivery",
+            "failure_flags": ["delivery_bundle_validation_not_attached"],
+        },
+    )
+    bundle_path = tmp_path / "evidence_bundle.json"
+    bundle_path.write_text(
+        json.dumps(bundle.to_dict(), sort_keys=True, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    assert (
+        worker.adopt_validated_runner_native_evidence_bundle(
+            job_id="job_mismatch",
+            status_data={
+                "evidence_bundle": str(bundle_path),
+                "evidence_bundle_sha256": "0" * 64,
+                "evidence_bundle_source": "validated_runner_native",
+            },
+        )
+        is None
+    )
+
+
+def test_write_job_evidence_bundle_prefers_native_evidence_bundle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.worker as worker
+    from betelgeuze_ai_md.contracts import EvidenceBundle
+
+    monkeypatch.setattr(worker.settings, "results_storage_path", str(tmp_path / "results"))
+    bundle = EvidenceBundle(
+        bundle_id="native_preferred",
+        project_id="native_preferred",
+        ranked_shortlist=[],
+        trajectory_summary={"frame_count": 0},
+        backmapped_poses=[],
+        interaction_report={},
+        topology_report={
+            "status": "not_assessed",
+            "topology_fidelity": "placeholder_alanine",
+            "claim_blockers": ["topology_validity_not_assessed"],
+        },
+        ai_residual_report={"residual_mode": "disabled", "uncertainty": 1.0, "abstained": True},
+        failure_flags=["delivery_bundle_validation_not_attached"],
+        source_hashes={
+            "input_hash": "i" * 64,
+            "config_hash": "c" * 64,
+            "model_hash": "m" * 64,
+            "executable_hash": "e" * 64,
+        },
+        viewer_assets=[],
+        wetlab_handoff_table=[],
+        verdict={
+            "claim_safe": False,
+            "verdict_label": "native_runner_review_only",
+            "claim_scope": "restricted_local_delivery_proxy_refinement_only",
+            "topology_fidelity": "placeholder_alanine",
+            "accuracy_claim_grade": "restricted-local-delivery",
+            "failure_flags": ["delivery_bundle_validation_not_attached"],
+        },
+    )
+    fingerprint = bundle.fingerprint()
+    job_id = "job_native_preferred"
+    bundle_path = tmp_path / "native" / job_id / "runner_bundle.json"
+    bundle_path.parent.mkdir(parents=True, exist_ok=True)
+    bundle_path.write_text(
+        json.dumps(bundle.to_dict(), sort_keys=True, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    bundle_path_returned, fingerprint_returned = worker.write_job_evidence_bundle(
+        job_id=job_id,
+        request_data={"target_name": "Chignolin"},
+        result_manifest_path="",
+        status_data={
+            "evidence_bundle": str(bundle_path),
+            "evidence_bundle_sha256": fingerprint,
+            "evidence_bundle_source": "validated_runner_native",
+        },
+    )
+
+    final_path = tmp_path / "results" / job_id / "evidence_bundle.json"
+    assert bundle_path_returned == str(final_path)
+    assert fingerprint_returned == fingerprint
+    assert final_path.exists()
+    assert json.loads(final_path.read_text(encoding="utf-8"))["bundle_id"] == "native_preferred"

@@ -39,6 +39,12 @@ def _write_inputs(
         "public_benchmark_statistical_support_metric_source_candidate_fill_json": (
             tmp_path / "public_stat_metric_source_candidate_fill.json"
         ),
+        "public_benchmark_residual_metric_payload_priority_packet_json": (
+            tmp_path / "public_residual_metric_payload_priority_packet.json"
+        ),
+        "public_benchmark_seeded_metric_payload_receipt_backfill_packet_json": (
+            tmp_path / "public_seeded_metric_payload_receipt_backfill_packet.json"
+        ),
         "public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json": (
             tmp_path / "public_stat_coordinate_fetch_r4_preflight.json"
         ),
@@ -494,6 +500,64 @@ def _write_inputs(
             "operator_receipt_approval_filled": False,
             "canonical_intake_promotion_allowed": False,
             "claim_promotion_allowed": False,
+        },
+    )
+    _write(
+        paths["public_benchmark_residual_metric_payload_priority_packet_json"],
+        {
+            "status": (
+                "refine_tier_public_benchmark_residual_metric_payload_priority_packet_ready"
+                if materialized_candidate_ready
+                else "blocked_refine_tier_public_benchmark_residual_metric_payload_priority_packet"
+            ),
+            "metric_payload_priority_row_count": 36 if materialized_candidate_ready else 0,
+            "candidate_fill_matched_payload_count": 27 if materialized_candidate_ready else 0,
+            "operator_receipt_matched_payload_count": 27 if materialized_candidate_ready else 0,
+            "operator_receipt_missing_payload_count": 9 if materialized_candidate_ready else 0,
+            "operator_receipt_blocked_payload_count": 27 if materialized_candidate_ready else 0,
+            "existing_metric_source_artifact_present_without_receipt_count": (
+                9 if materialized_candidate_ready else 0
+            ),
+            "metric_source_artifact_present_count": 9 if materialized_candidate_ready else 0,
+            "operator_manual_pending_field_count": 270 if materialized_candidate_ready else 0,
+            "residual_leverage_payload_count": 6 if materialized_candidate_ready else 0,
+            "cv_worse_payload_count": 15 if materialized_candidate_ready else 0,
+            "top_priority_target_id": "3n86" if materialized_candidate_ready else "",
+            "top_priority_pose_id": "3n86_99" if materialized_candidate_ready else "",
+            "top_priority_metric_name": "dockq" if materialized_candidate_ready else "",
+            "first_missing_receipt_target_id": "2j7h" if materialized_candidate_ready else "",
+            "first_missing_receipt_pose_id": "2j7h_48" if materialized_candidate_ready else "",
+            "payload_write_allowed": False,
+            "claim_promotion_allowed": False,
+            "production_score_mutation_allowed": False,
+            "external_state_mutated": False,
+        },
+    )
+    _write(
+        paths["public_benchmark_seeded_metric_payload_receipt_backfill_packet_json"],
+        {
+            "status": (
+                "refine_tier_public_benchmark_seeded_metric_payload_receipt_backfill_packet_ready"
+                if materialized_candidate_ready
+                else "blocked_refine_tier_public_benchmark_seeded_metric_payload_receipt_backfill_packet"
+            ),
+            "payload_priority_json_present": materialized_candidate_ready,
+            "seeded_backfill_row_count": 9 if materialized_candidate_ready else 0,
+            "seeded_backfill_target_count": 3 if materialized_candidate_ready else 0,
+            "seeded_backfill_targets": "1syi;2j7h;4e5w" if materialized_candidate_ready else "",
+            "metric_source_artifact_present_count": 9 if materialized_candidate_ready else 0,
+            "payload_schema_valid_count": 9 if materialized_candidate_ready else 0,
+            "payload_schema_blocked_count": 0,
+            "input_artifact_sha256_verified_row_count": 9 if materialized_candidate_ready else 0,
+            "operator_manual_pending_field_count": 99 if materialized_candidate_ready else 0,
+            "operator_receipt_backfill_ready": False,
+            "canonical_receipt_write_allowed": False,
+            "payload_write_allowed": False,
+            "canonical_intake_promotion_allowed": False,
+            "claim_promotion_allowed": False,
+            "production_score_mutation_allowed": False,
+            "external_state_mutated": False,
+            "approval_token_required": "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS",
         },
     )
     _write(
@@ -1437,8 +1501,35 @@ def test_science_accuracy_frontier_surfaces_candidate_fill_quality_gap(
         == 0
     )
     assert summary["public_benchmark_statistical_support_metric_source_candidate_fill_payload_write_allowed"] is False
+    assert summary["public_benchmark_residual_metric_payload_priority_packet_present"] is True
+    assert summary["public_benchmark_residual_metric_payload_priority_packet_ready"] is True
+    assert (
+        summary[
+            "public_benchmark_residual_metric_payload_priority_packet_operator_receipt_missing_payload_count"
+        ]
+        == 9
+    )
+    assert (
+        summary[
+            "public_benchmark_residual_metric_payload_priority_packet_existing_metric_source_artifact_present_without_receipt_count"
+        ]
+        == 9
+    )
+    assert summary["public_benchmark_residual_metric_payload_priority_packet_first_missing_receipt_target_id"] == "2j7h"
+    assert summary["public_benchmark_seeded_metric_payload_receipt_backfill_packet_present"] is True
+    assert summary["public_benchmark_seeded_metric_payload_receipt_backfill_packet_ready"] is True
+    assert summary["public_benchmark_seeded_metric_payload_receipt_backfill_packet_seeded_backfill_row_count"] == 9
+    assert (
+        summary["public_benchmark_seeded_metric_payload_receipt_backfill_packet_seeded_backfill_targets"]
+        == "1syi;2j7h;4e5w"
+    )
+    assert (
+        summary["public_benchmark_seeded_metric_payload_receipt_backfill_packet_operator_receipt_backfill_ready"]
+        is False
+    )
     assert "25-pair R9 metric candidate preview" in summary["next_required_step"]
     assert "below the claim-grade 0.5 floor" in summary["next_required_step"]
+    assert "seeded receipt gap=9 missing rows/9 backfill rows" in summary["next_required_step"]
 
 
 def test_science_accuracy_frontier_can_turn_ready_when_claim_evidence_is_ready(
@@ -1487,6 +1578,10 @@ def test_science_accuracy_frontier_cli_writes_json_and_markdown(tmp_path: Path) 
             str(paths["public_benchmark_statistical_support_metric_source_payload_operator_receipt_json"]),
             "--public-benchmark-statistical-support-metric-source-candidate-fill-json",
             str(paths["public_benchmark_statistical_support_metric_source_candidate_fill_json"]),
+            "--public-benchmark-residual-metric-payload-priority-packet-json",
+            str(paths["public_benchmark_residual_metric_payload_priority_packet_json"]),
+            "--public-benchmark-seeded-metric-payload-receipt-backfill-packet-json",
+            str(paths["public_benchmark_seeded_metric_payload_receipt_backfill_packet_json"]),
             "--public-benchmark-statistical-support-coordinate-fetch-r4-preflight-json",
             str(paths["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json"]),
             "--public-benchmark-statistical-support-coordinate-fetch-operator-receipt-json",

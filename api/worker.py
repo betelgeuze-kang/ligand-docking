@@ -6,11 +6,13 @@ from typing import Any
 import asyncio
 import json
 import os
+from pathlib import Path
 
 from api.config import settings
 from api.job_store import SQLiteJobStore
 from api.result_manifest import write_result_manifest
 from api.tasks import run_simulation_async
+from betelgeuze_ai_md.contracts.api_adapter import write_api_evidence_bundle
 
 SimulationRunner = Callable[[str, dict[str, Any]], Awaitable[None]]
 
@@ -60,11 +62,26 @@ def job_manifest_path(job_id: str) -> str:
     return os.path.join(job_results_dir(job_id), "result_manifest.json")
 
 
+def job_evidence_bundle_path(job_id: str) -> str:
+    return os.path.join(job_results_dir(job_id), "evidence_bundle.json")
+
+
 def read_status_file(status_file_path: str) -> dict[str, Any]:
     if not os.path.exists(status_file_path):
         return {}
     with open(status_file_path, "r", encoding="utf-8") as sf:
         return json.load(sf)
+
+
+def read_json_object_file(file_path: str) -> dict[str, Any]:
+    if not file_path or not os.path.exists(file_path):
+        return {}
+    try:
+        with open(file_path, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
 def write_status_file(status_file_path: str, status_data: dict[str, Any]) -> None:
@@ -93,6 +110,84 @@ def write_job_result_manifest(
         key_id=settings.api_result_manifest_key_id,
     )
     return manifest_path
+
+
+def write_job_evidence_bundle(
+    *,
+    job_id: str,
+    request_data: dict[str, Any],
+    result_manifest_path: str,
+    status_data: dict[str, Any],
+) -> tuple[str, str]:
+    adopted_native = adopt_validated_runner_native_evidence_bundle(
+        job_id=job_id,
+        status_data=status_data,
+    )
+    if adopted_native is not None:
+        return adopted_native
+    result_manifest = read_json_object_file(result_manifest_path)
+    result_payload = {}
+    result_file = str(result_manifest.get("result_file", "") or status_data.get("result_file", "") or "")
+    if result_file:
+        result_payload = read_json_object_file(result_file)
+    runner_execution = {}
+    runner_execution_path = str(status_data.get("runner_execution", "") or "")
+    if runner_execution_path:
+        runner_execution = read_json_object_file(runner_execution_path)
+    bundle_path = job_evidence_bundle_path(job_id)
+    bundle = write_api_evidence_bundle(
+        bundle_path,
+        job_id=job_id,
+        request=request_data,
+        result_manifest=result_manifest,
+        result_payload=result_payload,
+        runner_execution=runner_execution,
+        status_payload=status_data,
+    )
+    return bundle_path, bundle.fingerprint()
+
+
+def adopt_validated_runner_native_evidence_bundle(
+    *,
+    job_id: str,
+    status_data: dict[str, Any],
+) -> tuple[str, str] | None:
+    """Adopt a validated-runner-native EvidenceBundle as the final worker bundle.
+
+    Returns ``(bundle_path, fingerprint)`` when a validated native bundle is recorded
+    in the status file. Returns ``None`` when the runner did not produce or validate
+    a native bundle so the caller can fall back to the API-generated review bundle.
+    """
+    if str(status_data.get("evidence_bundle_source", "") or "").strip() != "validated_runner_native":
+        return None
+    bundle_path_value = str(status_data.get("evidence_bundle", "") or "").strip()
+    bundle_sha_value = str(status_data.get("evidence_bundle_sha256", "") or "").strip()
+    if not bundle_path_value or not bundle_sha_value:
+        return None
+    if len(bundle_sha_value) != 64:
+        return None
+    bundle_path = Path(bundle_path_value)
+    if not bundle_path.exists() or not bundle_path.is_file():
+        return None
+    payload = read_json_object_file(str(bundle_path))
+    if not payload:
+        return None
+    try:
+        from betelgeuze_ai_md.contracts import EvidenceBundle
+        from betelgeuze_ai_md.contracts.errors import ContractValidationError
+
+        bundle = EvidenceBundle(**payload)
+    except (ContractValidationError, TypeError):
+        return None
+    if bundle.fingerprint() != bundle_sha_value:
+        return None
+    final_path = Path(job_evidence_bundle_path(job_id))
+    final_path.parent.mkdir(parents=True, exist_ok=True)
+    final_path.write_text(
+        json.dumps(bundle.to_dict(), indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return str(final_path), bundle.fingerprint()
 
 
 async def run_job_once(
@@ -138,7 +233,21 @@ async def run_job_once(
             status="completed",
             result_file=result_file,
         )
-        status_data.update({"job_id": job_id, "status": "completed", "result_manifest": manifest_path})
+        bundle_path, bundle_hash = write_job_evidence_bundle(
+            job_id=job_id,
+            request_data=request_data,
+            result_manifest_path=manifest_path,
+            status_data=status_data,
+        )
+        status_data.update(
+            {
+                "job_id": job_id,
+                "status": "completed",
+                "result_manifest": manifest_path,
+                "evidence_bundle": bundle_path,
+                "evidence_bundle_sha256": bundle_hash,
+            }
+        )
         write_status_file(status_file_path, status_data)
         _sync_docking_ledger_if_needed(
             job_id=job_id,
@@ -152,6 +261,8 @@ async def run_job_once(
             status="completed",
             result_file=result_file,
             result_manifest_path=manifest_path,
+            evidence_bundle_path=bundle_path,
+            evidence_bundle_sha256=bundle_hash,
         )
     except Exception as exc:
         error = str(exc)

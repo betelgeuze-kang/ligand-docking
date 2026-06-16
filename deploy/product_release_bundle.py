@@ -275,7 +275,9 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
         {
             "check": "api_runner_profile_promotion_operator_template_recorded",
             "passed": (
-                runner_promotion_template.startswith("profile_id,operator_decision,approval_token,")
+                runner_promotion_template.startswith(
+                    "profile_id,enabled,delivery_oriented,evidence_bundle_template,evidence_bundle_template_declared,operator_decision,approval_token,"
+                )
                 and "APPROVE_API_RUNNER_PROFILE_PROMOTION" in str(runner_promotion.get("approval_token_required"))
                 and str(runner_promotion.get("operator_template_csv", ""))
                 == DEFAULT_ARTIFACTS["api_runner_profile_promotion_operator_template"]

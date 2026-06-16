@@ -1,0 +1,78 @@
+"""Reference coarse-dynamics utilities for parity checks.
+
+The modules in this package are deliberately not the production hot path. They
+provide small, deterministic NumPy oracles that Torch/Rust/HIP implementations
+can be checked against during refactors.
+"""
+
+from __future__ import annotations
+
+from betelgeuze_ai_md.coarse_md.numpy_ref import (
+    COULOMB_KE_KCAL_A,
+    FEATURE_ACCEPTOR,
+    FEATURE_ANION,
+    FEATURE_AROMATIC,
+    FEATURE_BACKBONE,
+    FEATURE_CATION,
+    FEATURE_DONOR,
+    FEATURE_HALOGEN,
+    FEATURE_HYDROPHOBE,
+    FEATURE_METAL,
+    FEATURE_SIDECHAIN,
+    BeadKind,
+    CoarseForceField,
+    CoarseState,
+    DampedVelocityVerletIntegrator,
+    DirectionalHbondTerm,
+    DynamicsEngine,
+    EnergyResult,
+    HydrophobicContactTerm,
+    IntegratorConfig,
+    NeighborList,
+    NeighborListBuilder,
+    PairMask,
+    PairMaskBuilder,
+    PocketWallTerm,
+    ScreenedElectrostaticTerm,
+    SoftcoreContactTerm,
+    Trajectory,
+    TrajectoryFrame,
+    finite_difference_force,
+    kabsch,
+    smooth_switch,
+)
+
+__all__ = [
+    "COULOMB_KE_KCAL_A",
+    "FEATURE_ACCEPTOR",
+    "FEATURE_ANION",
+    "FEATURE_AROMATIC",
+    "FEATURE_BACKBONE",
+    "FEATURE_CATION",
+    "FEATURE_DONOR",
+    "FEATURE_HALOGEN",
+    "FEATURE_HYDROPHOBE",
+    "FEATURE_METAL",
+    "FEATURE_SIDECHAIN",
+    "BeadKind",
+    "CoarseForceField",
+    "CoarseState",
+    "DampedVelocityVerletIntegrator",
+    "DirectionalHbondTerm",
+    "DynamicsEngine",
+    "EnergyResult",
+    "HydrophobicContactTerm",
+    "IntegratorConfig",
+    "NeighborList",
+    "NeighborListBuilder",
+    "PairMask",
+    "PairMaskBuilder",
+    "PocketWallTerm",
+    "ScreenedElectrostaticTerm",
+    "SoftcoreContactTerm",
+    "Trajectory",
+    "TrajectoryFrame",
+    "finite_difference_force",
+    "kabsch",
+    "smooth_switch",
+]

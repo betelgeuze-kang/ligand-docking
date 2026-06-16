@@ -14,6 +14,16 @@ if str(_ROOT) not in sys.path:
 
 from api.validated_runner import ALLOWED_RUNNER_SCRIPTS
 
+DELIVERY_PROXY_REFINEMENT_SCOPES = (
+    "restricted_local_delivery_proxy_refinement_only",
+)
+NATIVE_BUNDLE_OPERATOR_ACTION = (
+    "For enabled or delivery/proxy-refinement profiles, declare a native evidence_bundle_template "
+    "(or confirm the existing one) and confirm the runner emits a valid EvidenceBundle. Do not flip "
+    "*_reviewed to true until that template is recorded in the profile JSON."
+)
+NATIVE_BUNDLE_BLOCKER_LABEL = "evidence_bundle_template_missing"
+
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
@@ -41,7 +51,37 @@ def _resolve_runner(script: str) -> Path:
     return path
 
 
+def _text(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _claim_scope(profile: dict[str, Any]) -> str:
+    production_readiness = profile.get("production_readiness")
+    if isinstance(production_readiness, dict):
+        scope = _text(production_readiness.get("claim_scope"))
+        if scope:
+            return scope
+    return _text(profile.get("claim_scope"))
+
+
+def _is_delivery_oriented(profile: dict[str, Any]) -> bool:
+    scope = _claim_scope(profile)
+    return any(marker in scope for marker in DELIVERY_PROXY_REFINEMENT_SCOPES)
+
+
+def _requires_native_bundle(profile: dict[str, Any]) -> bool:
+    return bool(profile.get("enabled") is True) or _is_delivery_oriented(profile)
+
+
 def _evidence_template(profile_id: str, profile: dict[str, Any]) -> dict[str, Any]:
+    delivery_oriented = _is_delivery_oriented(profile)
+    requires_native_bundle = _requires_native_bundle(profile)
+    base_action = (
+        "Set every *_reviewed field to true only after reviewing the exact profile inputs, outputs, "
+        "claim boundary, and downstream gate policy. Do not enable the profile from this template alone."
+    )
+    if requires_native_bundle:
+        base_action = f"{base_action} {NATIVE_BUNDLE_OPERATOR_ACTION}"
     return {
         "profile_id": profile_id,
         "input_contract_reviewed": False,
@@ -54,10 +94,12 @@ def _evidence_template(profile_id: str, profile: dict[str, Any]) -> dict[str, An
         "reviewed_at_utc": "",
         "notes": "",
         "claim_boundary": str(profile.get("claim_boundary", "") or ""),
-        "required_operator_action": (
-            "Set every *_reviewed field to true only after reviewing the exact profile inputs, outputs, "
-            "claim boundary, and downstream gate policy. Do not enable the profile from this template alone."
-        ),
+        "claim_scope": _claim_scope(profile),
+        "delivery_oriented": delivery_oriented,
+        "evidence_bundle_template": _text(profile.get("evidence_bundle_template")),
+        "evidence_bundle_template_declared": bool(_text(profile.get("evidence_bundle_template"))),
+        "requires_native_evidence_bundle": requires_native_bundle,
+        "required_operator_action": base_action,
     }
 
 
@@ -73,6 +115,10 @@ def build_work_order(profiles_dir: Path, *, evidence_dir: Path | None = None, wr
         runner_exists = bool(runner_script and runner_path.exists())
         runner_hash = _sha256(runner_path) if runner_exists else ""
         runner_allowlisted = runner_script in ALLOWED_RUNNER_SCRIPTS
+        evidence_bundle_template = _text(profile.get("evidence_bundle_template"))
+        evidence_bundle_template_declared = bool(evidence_bundle_template)
+        delivery_oriented = _is_delivery_oriented(profile)
+        requires_native_bundle = _requires_native_bundle(profile)
         template_rel = ""
         template_path = None
         if evidence_dir is not None:
@@ -86,23 +132,39 @@ def build_work_order(profiles_dir: Path, *, evidence_dir: Path | None = None, wr
                     encoding="utf-8",
                 )
 
+        if not enabled:
+            next_required_step = (
+                "Fill evidence_template, add production_readiness with this runner_script_sha256, then set "
+                "enabled=true only after operator approval."
+            )
+        else:
+            next_required_step = (
+                "Already enabled; validate with tools/product/validate_api_runner_profiles.py."
+            )
+        if requires_native_bundle and not evidence_bundle_template_declared:
+            next_required_step = (
+                f"Add native evidence_bundle_template to the profile and confirm the runner emits a valid "
+                f"EvidenceBundle. {NATIVE_BUNDLE_BLOCKER_LABEL} currently blocks promotion readiness; "
+                f"do not flip *_reviewed to true until the template is declared."
+            )
+
         rows.append(
             {
                 "profile_id": profile_id,
                 "profile_path": str(profile_path),
                 "enabled": enabled,
+                "delivery_oriented": delivery_oriented,
+                "claim_scope": _claim_scope(profile),
                 "runner_script": runner_script,
                 "runner_exists": runner_exists,
                 "runner_allowlisted": runner_allowlisted,
                 "runner_script_sha256": runner_hash,
                 "evidence_template": template_rel,
+                "evidence_bundle_template": evidence_bundle_template,
+                "evidence_bundle_template_declared": evidence_bundle_template_declared,
+                "requires_native_evidence_bundle": requires_native_bundle,
                 "ready_for_operator_review": bool((not enabled) and runner_exists and runner_allowlisted),
-                "next_required_step": (
-                    "Fill evidence_template, add production_readiness with this runner_script_sha256, then set "
-                    "enabled=true only after operator approval."
-                    if not enabled
-                    else "Already enabled; validate with tools/product/validate_api_runner_profiles.py."
-                ),
+                "next_required_step": next_required_step,
             }
         )
 
@@ -112,6 +174,22 @@ def build_work_order(profiles_dir: Path, *, evidence_dir: Path | None = None, wr
         "profile_count": len(profiles),
         "disabled_profile_count": sum(1 for row in rows if not row["enabled"]),
         "enabled_profile_count": sum(1 for row in rows if row["enabled"]),
+        "native_evidence_bundle_required_profile_count": sum(
+            1 for row in rows if row["requires_native_evidence_bundle"]
+        ),
+        "native_evidence_bundle_missing_profile_count": sum(
+            1
+            for row in rows
+            if row["requires_native_evidence_bundle"] and not row["evidence_bundle_template_declared"]
+        ),
+        "first_native_evidence_bundle_missing_profile_id": next(
+            (
+                row["profile_id"]
+                for row in rows
+                if row["requires_native_evidence_bundle"] and not row["evidence_bundle_template_declared"]
+            ),
+            "",
+        ),
         "work_order_only": True,
         "claim_boundary": (
             "Profile enablement work order only. It does not approve, enable, or execute scientific runners."
@@ -128,14 +206,18 @@ def _markdown(payload: dict[str, Any]) -> str:
         f"- profile_count: `{payload['profile_count']}`",
         f"- disabled_profile_count: `{payload['disabled_profile_count']}`",
         f"- enabled_profile_count: `{payload['enabled_profile_count']}`",
+        f"- native_evidence_bundle_required_profile_count: `{payload['native_evidence_bundle_required_profile_count']}`",
+        f"- native_evidence_bundle_missing_profile_count: `{payload['native_evidence_bundle_missing_profile_count']}`",
+        f"- first_native_evidence_bundle_missing_profile_id: `{payload['first_native_evidence_bundle_missing_profile_id']}`",
         f"- claim_boundary: {payload['claim_boundary']}",
         "",
-        "| Profile | Enabled | Runner | Allowlisted | Runner SHA256 | Evidence Template | Next Step |",
-        "|---|---:|---|---:|---|---|---|",
+        "| Profile | Enabled | Delivery | Runner | Allowlisted | Native Bundle Template | Evidence Template | Next Step |",
+        "|---|---:|---:|---|---:|---|---|---|",
     ]
     for row in payload["rows"]:
         lines.append(
-            "| `{profile_id}` | `{enabled}` | `{runner_script}` | `{runner_allowlisted}` | `{runner_script_sha256}` | `{evidence_template}` | {next_required_step} |".format(
+            "| `{profile_id}` | `{enabled}` | `{delivery_oriented}` | `{runner_script}` | `{runner_allowlisted}` | "
+            "`{evidence_bundle_template}` | `{evidence_template}` | {next_required_step} |".format(
                 **row
             )
         )

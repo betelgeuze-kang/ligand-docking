@@ -97,9 +97,27 @@ def _work_order(path: Path) -> None:
     _write_csv(path, rows, ["work_order_id", "target_input_csv", "template_row_index"])
 
 
+def _current_claim_grade_gap_audit_summary() -> dict:
+    path = Path("runs/refine_tier_public_benchmark_claim_grade_gap_audit_current.json")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    summary = payload.get("summary")
+    assert isinstance(summary, dict)
+    return summary
+
+
+def _current_coordinate_fetch_r4_summary() -> dict:
+    path = Path("runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    summary = payload.get("summary")
+    assert isinstance(summary, dict)
+    return summary
+
+
 def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work() -> None:
     payload = mod.build_engine_refinement_claim_evidence_priority_packet()
     summary = payload["summary"]
+    claim_grade_gap = _current_claim_grade_gap_audit_summary()
+    coordinate_fetch_r4 = _current_coordinate_fetch_r4_summary()
 
     assert summary["status"] == "blocked_engine_refinement_claim_evidence_priority_packet"
     assert summary["priority_packet_ready"] is True
@@ -130,22 +148,34 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
         "refine_tier_public_benchmark_claim_grade_gap_audit_ready"
     )
     assert summary["public_benchmark_claim_grade_gap_audit_claim_grade_statistical_support_ready"] is False
-    assert summary["public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count"] == 8
-    assert summary["public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count"] == 3
-    assert summary["public_benchmark_claim_grade_gap_audit_minimum_new_pair_count"] == 17
-    assert summary["public_benchmark_claim_grade_gap_audit_minimum_new_holdout_pair_count"] == 5
+    assert summary["public_benchmark_claim_grade_gap_audit_observed_public_benchmark_pair_count"] == (
+        claim_grade_gap["observed_public_benchmark_pair_count"]
+    )
+    assert summary["public_benchmark_claim_grade_gap_audit_observed_holdout_pair_count"] == (
+        claim_grade_gap["observed_holdout_pair_count"]
+    )
+    assert summary["public_benchmark_claim_grade_gap_audit_minimum_new_pair_count"] == (
+        claim_grade_gap["minimum_new_pair_count"]
+    )
+    assert summary["public_benchmark_claim_grade_gap_audit_minimum_new_holdout_pair_count"] == (
+        claim_grade_gap["minimum_new_holdout_pair_count"]
+    )
     assert summary["public_benchmark_claim_grade_gap_audit_coordinate_validation_pass_row_count"] == 17
     assert summary["public_benchmark_claim_grade_gap_audit_coordinate_validation_blocked_row_count"] == 0
     assert summary["public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_ready_row_count"] == 51
     assert summary["public_benchmark_claim_grade_gap_audit_metric_source_payload_fill_blocked_row_count"] == 0
     assert summary["public_benchmark_claim_grade_gap_audit_gap_row_count"] == 5
-    assert summary["public_benchmark_claim_grade_gap_audit_blocked_gap_row_count"] == 3
-    assert summary["public_benchmark_claim_grade_gap_audit_blocker_count"] == 3
+    assert summary["public_benchmark_claim_grade_gap_audit_blocked_gap_row_count"] == (
+        claim_grade_gap["blocked_gap_row_count"]
+    )
+    assert summary["public_benchmark_claim_grade_gap_audit_blocker_count"] == claim_grade_gap[
+        "blocker_count"
+    ]
     assert summary["public_benchmark_claim_grade_gap_audit_top_science_gap_id"] == (
-        "claim_grade_public_benchmark_pair_count_below_minimum"
+        claim_grade_gap["top_science_gap_id"]
     )
     assert summary["public_benchmark_claim_grade_gap_audit_top_statistical_gap_id"] == (
-        "claim_grade_public_benchmark_pair_count_below_minimum"
+        claim_grade_gap["top_statistical_gap_id"]
     )
     assert summary["public_benchmark_statistical_support_work_order_present"] is True
     assert summary["public_benchmark_statistical_support_work_order_ready"] is True
@@ -266,34 +296,45 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_preflight_status"] == (
         "refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_ready"
     )
-    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_row_count"] == 17
+    assert summary[
+        "public_benchmark_statistical_support_coordinate_fetch_r4_row_count"
+    ] == coordinate_fetch_r4["r4_row_count"]
     assert summary[
         "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count"
-    ] == 17
-    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count"] == 0
-    assert summary[
-        "public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count"
-    ] == 17
-    assert summary[
-        "public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count"
-    ] == 0
+    ] == coordinate_fetch_r4["ready_for_r4_review_row_count"]
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_blocked_row_count"] == (
+        coordinate_fetch_r4["blocked_r4_row_count"]
+    )
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_fetch_required_row_count"] == (
+        coordinate_fetch_r4["fetch_required_row_count"]
+    )
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_metric_materialization_blocked_row_count"] == (
+        coordinate_fetch_r4["metric_materialization_blocked_row_count"]
+    )
     assert summary[
         "public_benchmark_statistical_support_coordinate_fetch_r4_planned_metric_source_payload_count"
-    ] == 51
-    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_download_executed"] is True
-    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated"] is False
+    ] == coordinate_fetch_r4["planned_metric_source_payload_count"]
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_download_executed"] == (
+        coordinate_fetch_r4["download_executed"]
+    )
+    assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_external_state_mutated"] == (
+        coordinate_fetch_r4["external_state_mutated"]
+    )
     assert summary["public_benchmark_statistical_support_coordinate_fetch_r4_approval_token_required"] == (
-        "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
+        coordinate_fetch_r4["approval_token_required"]
     )
     assert summary["top_blocker_id"] == "public_benchmark_gate_not_ready"
     assert summary["top_priority_bucket"] == "public_benchmark_work_order_apply_required"
     assert summary["top_required_input"] == "runs/refine_tier_public_benchmark_work_order_current.csv"
     assert "apply_refine_tier_public_benchmark_work_order.py" in summary["top_verification_command"]
     assert "Coordinate fetch and validation are complete" in summary["top_next_operator_step"]
-    assert "r4_ready_for_review_row_count=17" in summary["top_next_operator_step"]
-    assert "approval_token_required=APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD" in summary[
+    assert f"r4_ready_for_review_row_count={coordinate_fetch_r4['ready_for_r4_review_row_count']}" in summary[
         "top_next_operator_step"
     ]
+    assert f"fetch_required_row_count={coordinate_fetch_r4['fetch_required_row_count']}" in summary[
+        "top_next_operator_step"
+    ]
+    assert f"approval_token_required={coordinate_fetch_r4['approval_token_required']}" in summary["top_next_operator_step"]
     assert "required_input_artifacts=34/34/0" in summary["top_next_operator_step"]
     assert "local_coordinate_present_targets=17" in summary["top_next_operator_step"]
     assert "local_coordinate_missing_targets=0" in summary["top_next_operator_step"]
@@ -308,10 +349,12 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     assert payload["rows"][0]["public_benchmark_materialized_candidate_ready"] is True
     assert payload["rows"][0]["public_benchmark_materialized_claim_grade_statistical_support_ready"] is False
     assert payload["rows"][0]["public_benchmark_claim_grade_gap_audit_ready"] is True
-    assert payload["rows"][0]["public_benchmark_claim_grade_gap_audit_blocked_gap_row_count"] == 3
+    assert payload["rows"][0]["public_benchmark_claim_grade_gap_audit_blocked_gap_row_count"] == (
+        claim_grade_gap["blocked_gap_row_count"]
+    )
     assert (
         payload["rows"][0]["public_benchmark_claim_grade_gap_audit_top_science_gap_id"]
-        == "claim_grade_public_benchmark_pair_count_below_minimum"
+        == claim_grade_gap["top_science_gap_id"]
     )
     assert payload["rows"][0]["public_benchmark_statistical_support_work_order_expansion_slot_count"] == 17
     assert payload["rows"][0][
@@ -340,7 +383,7 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     ] is True
     assert payload["rows"][0][
         "public_benchmark_statistical_support_coordinate_fetch_r4_ready_for_review_row_count"
-    ] == 17
+    ] == coordinate_fetch_r4["ready_for_r4_review_row_count"]
     assert "Coordinate fetch and validation are complete" in payload["rows"][0][
         "next_operator_step"
     ]

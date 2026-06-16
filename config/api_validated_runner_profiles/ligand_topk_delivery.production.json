@@ -14,15 +14,18 @@
     "--docking-request-json",
     "{request_json_path}",
     "--out-summary-json",
-    "{result_file}"
+    "{result_file}",
+    "--evidence-bundle",
+    "{evidence_bundle}"
   ],
   "result_file_template": "{job_results_dir}/runner_result.json",
+  "evidence_bundle_template": "{job_results_dir}/evidence_bundle.json",
   "claim_boundary": "Operator-approved top-K pose delivery scaffold. Customer pose emission remains gated until delivery bundle validation is green.",
   "production_readiness": {
     "approved_by": "operator-gap-closure",
     "approved_at_utc": "2026-06-06T18:00:00+00:00",
     "claim_scope": "restricted_local_delivery_proxy_refinement_only",
     "evidence_artifact": "config/api_validated_runner_profiles/evidence/ligand_topk_delivery.production.evidence.json",
-        "runner_script_sha256": "c4428efee3f29586a22df55276bfd62f51ab6ee691f977ec974e9a7c653af6a2"
+    "runner_script_sha256": "c4428efee3f29586a22df55276bfd62f51ab6ee691f977ec974e9a7c653af6a2"
   }
 }

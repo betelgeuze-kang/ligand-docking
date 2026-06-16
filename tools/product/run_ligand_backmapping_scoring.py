@@ -4556,6 +4556,20 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         with open(out_json, "w", encoding="utf-8") as f:
             json.dump(summary, f, indent=2, ensure_ascii=False)
 
+    evidence_bundle_path = str(getattr(args, "evidence_bundle", "") or "").strip()
+    if evidence_bundle_path:
+        from betelgeuze_ai_md.contracts.runner_evidence_bundle import maybe_write_runner_native_evidence_bundle
+
+        maybe_write_runner_native_evidence_bundle(
+            evidence_bundle_path,
+            request_json_path=str(getattr(args, "docking_request_json", "") or ""),
+            result_file=out_json,
+            status="completed",
+            runner_script="tools/run_ligand_backmapping_scoring.py",
+            result_payload=summary,
+            runner_metadata={"runner_kind": "ligand_backmapping_scoring"},
+        )
+
     return {
         "summary": summary,
         "scores_csv": result_csv,
@@ -4636,6 +4650,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--score-only", action=argparse.BooleanOptionalAction, default=False)
     p.add_argument("--make-bundle-zip", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--bundle-base", type=str, default="")
+    p.add_argument("--evidence-bundle", type=str, default="")
     return p
 
 

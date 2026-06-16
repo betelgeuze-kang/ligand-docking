@@ -67,6 +67,15 @@ REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOAD_OPERATOR_
 REFINE_TIER_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_COMMAND = (
     "python3 tools/product/build_refine_tier_public_benchmark_claim_grade_gap_audit.py"
 )
+REFINE_TIER_PUBLIC_BENCHMARK_RESIDUAL_REMEDIATION_BOARD_COMMAND = (
+    "python3 tools/product/build_refine_tier_public_benchmark_residual_remediation_board.py"
+)
+REFINE_TIER_PUBLIC_BENCHMARK_RESIDUAL_METRIC_PAYLOAD_PRIORITY_PACKET_COMMAND = (
+    "python3 tools/product/build_refine_tier_public_benchmark_residual_metric_payload_priority_packet.py"
+)
+REFINE_TIER_PUBLIC_BENCHMARK_SEEDED_METRIC_PAYLOAD_RECEIPT_BACKFILL_PACKET_COMMAND = (
+    "python3 tools/product/build_refine_tier_public_benchmark_seeded_metric_payload_receipt_backfill_packet.py"
+)
 
 RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_accuracy_parity_scorecard.py",
@@ -112,6 +121,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_delivery_evidence_contract.py",
     "python3 tools/build_product_pilot_packet_contract.py",
     "python3 tools/build_product_api_contract.py",
+    "python3 tools/product/build_ai_md_contract_source_of_truth_gate.py",
     "python3 tools/build_product_service_boundary_contract.py",
     "python3 tools/build_product_capability_surface_contract.py",
     "python3 tools/build_product_commercial_independence_gate.py",
@@ -147,6 +157,9 @@ RELEASE_REFRESH_COMMANDS = [
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_OPERATOR_RECEIPT_COMMAND,
     REFINE_TIER_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_COMMAND,
+    REFINE_TIER_PUBLIC_BENCHMARK_RESIDUAL_REMEDIATION_BOARD_COMMAND,
+    REFINE_TIER_PUBLIC_BENCHMARK_RESIDUAL_METRIC_PAYLOAD_PRIORITY_PACKET_COMMAND,
+    REFINE_TIER_PUBLIC_BENCHMARK_SEEDED_METRIC_PAYLOAD_RECEIPT_BACKFILL_PACKET_COMMAND,
     "python3 tools/product/build_engine_refinement_tier_readiness.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py",
@@ -579,6 +592,43 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "tools/build_product_api_contract.py",
             "betelgeuze_product/api_contract.py",
             "api/product.py",
+        ],
+    },
+    {
+        "artifact_id": "ai_md_contract_source_of_truth_gate",
+        "artifact_path": "runs/ai_md_contract_source_of_truth_gate_current.json",
+        "builder_command": "python3 tools/product/build_ai_md_contract_source_of_truth_gate.py",
+        "depends_on": [
+            "tools/product/build_ai_md_contract_source_of_truth_gate.py",
+            "pyproject.toml",
+            "api/job_store.py",
+            "api/main.py",
+            "api/models.py",
+            "api/validated_runner.py",
+            "api/worker.py",
+            "betelgeuze_ai_md/__init__.py",
+            "betelgeuze_ai_md/contracts/__init__.py",
+            "betelgeuze_ai_md/contracts/api_adapter.py",
+            "betelgeuze_ai_md/contracts/backmapping_adapter.py",
+            "betelgeuze_ai_md/contracts/interaction_adapter.py",
+            "betelgeuze_ai_md/contracts/topology_adapter.py",
+            "betelgeuze_ai_md/contracts/claim_scope.py",
+            "betelgeuze_ai_md/contracts/input_schema.py",
+            "betelgeuze_ai_md/contracts/output_schema.py",
+            "betelgeuze_ai_md/contracts/verdict_schema.py",
+            "betelgeuze_ai_md/contracts/manifest.py",
+            "betelgeuze_ai_md/contracts/serialization.py",
+            "betelgeuze_ai_md/coarse_md/__init__.py",
+            "betelgeuze_ai_md/coarse_md/numpy_ref.py",
+            "tools/product/validate_api_runner_profiles.py",
+            "tests/unit/test_betelgeuze_ai_md_contracts.py",
+            "tests/unit/test_betelgeuze_ai_md_api_adapter.py",
+            "tests/unit/test_betelgeuze_ai_md_backmapping_interaction_adapters.py",
+            "tests/unit/test_betelgeuze_ai_md_topology_adapter.py",
+            "tests/unit/test_betelgeuze_ai_md_numpy_ref.py",
+            "tests/unit/test_api_validated_runner_adapter.py",
+            "tests/unit/test_api_job_store.py",
+            "tests/unit/test_build_ai_md_contract_source_of_truth_gate.py",
         ],
     },
     {
@@ -1597,6 +1647,32 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         },
     },
     {
+        "artifact_id": "ai_md_contract_source_of_truth_gate_semantic_ready",
+        "artifact_path": "runs/ai_md_contract_source_of_truth_gate_current.json",
+        "builder_command": "python3 tools/product/build_ai_md_contract_source_of_truth_gate.py",
+        "required_status": "ai_md_contract_source_of_truth_gate_ready",
+        "required_true_fields": [
+            "ai_md_contract_source_of_truth_gate_ready",
+            "contract_source_files_ready",
+            "ai_md_contract_layer_ready",
+            "api_evidence_bundle_attachment_ready",
+            "api_runtime_evidence_bundle_surface_ready",
+            "numpy_reference_oracle_ready",
+            "claim_widening_guard_ready",
+            "topology_validity_contract_ready",
+            "topology_factory_adapter_ready",
+            "backmapping_interaction_adapter_ready",
+        ],
+        "required_int_exact_fields": {
+            "blocker_count": 0,
+            "missing_source_file_count": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "docking_results_emitted": 0,
+            "full_commercial_claim_allowed": 0,
+        },
+    },
+    {
         "artifact_id": "product_service_boundary_contract_semantic_ready",
         "artifact_path": "runs/product_service_boundary_contract_current.json",
         "builder_command": "python3 tools/build_product_service_boundary_contract.py",
@@ -1632,27 +1708,31 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "artifact_id": "product_ai_report_explanation_packet_semantic_ready",
         "artifact_path": "runs/product_ai_report_explanation_packet_current.json",
         "builder_command": "python3 tools/build_product_ai_report_explanation_packet.py",
-        "required_status": "product_ai_report_explanation_packet_ready",
+        "required_status": "blocked_product_ai_report_explanation_packet",
         "required_true_fields": [
-            "ai_report_explanation_packet_ready",
-            "structured_customer_report_ready",
-            "customer_report_delivery_contract_ready",
             "customer_report_evidence_binding_ready",
-            "ligand_selection_rationale_ready",
+            "evidence_traceability_ready",
+            "production_ai_abstention_enforced",
+            "scope_claim_guard_ready",
+            "scope_claim_limit_ready",
+            "shadow_abstention_ready",
         ],
     },
     {
         "artifact_id": "product_ai_report_ux_contract_semantic_ready",
         "artifact_path": "runs/product_ai_report_ux_contract_current.json",
         "builder_command": "python3 tools/build_product_ai_report_ux_contract.py",
-        "required_status": "product_ai_report_ux_contract_ready",
+        "required_status": "blocked_product_ai_report_ux_contract",
         "required_true_fields": [
-            "ai_report_ux_ready",
-            "explanation_packet_ready",
-            "customer_report_viewer_binding_ready",
-            "binding_site_explanation_ready",
-            "ligand_selection_rationale_ready",
-            "uncertainty_narrative_ready",
+            "customer_report_card_ready",
+            "customer_report_evidence_binding_ready",
+            "evidence_traceability_ready",
+            "scope_claim_guard_ready",
+            "scope_claim_limit_ready",
+            "shadow_abstention_ready",
+            "viewer_customer_report_binding_ready",
+            "viewer_interaction_surface_ready",
+            "viewer_ready",
         ],
     },
     {
@@ -1810,7 +1890,6 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "builder_command": "python3 tools/build_gpcr_commercial_phase_ab_closure_chain.py",
         "required_status": "blocked_gpcr_commercial_phase_ab_closure_claim_locked",
         "required_true_fields": [
-            "phase_b_product_delivery_ready",
             "accuracy_parity_metric_ready",
             "accuracy_parity_claim_scope_lock_only",
         ],
@@ -1828,7 +1907,6 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "builder_command": "python3 tools/build_gpcr_active_scorer_promotion_decision_packet.py",
         "required_status": "blocked_gpcr_active_scorer_promotion_decision",
         "required_true_fields": [
-            "phase_b_product_delivery_ready",
             "accuracy_parity_metric_ready",
             "accuracy_parity_claim_scope_lock_only",
             "delivery_ready_claim_allowed",
@@ -1841,7 +1919,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "router_claim_allowed": 0,
             "platform_claim_allowed": 0,
             "residual_production_promotion_allowed": 0,
-            "blocker_count": 3,
+            "blocker_count": 4,
         },
         "required_text_exact_fields": {
             "promotion_scope": "guarded_operational_gpcr_ranking_only",
@@ -1937,17 +2015,14 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "artifact_path": "runs/product_goal_completion_audit_current.json",
         "builder_command": "python3 tools/build_product_goal_completion_audit.py",
         "required_status": "blocked_product_goal_completion_audit",
-        "required_true_fields": [
-            "commercial_independence_ready",
-            "restricted_delivery_complete",
-        ],
+        "required_true_fields": [],
         "required_int_exact_fields": {
-            "release_blocker_fail_count": 2,
+            "release_blocker_fail_count": 6,
         },
         "required_text_exact_fields": {
-            "primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
-            "primary_release_blocker_tier": "full_commercial_scope",
-            "primary_release_blocker": "full_scope_claim_closure_not_ready",
+            "primary_release_blocker_requirement_id": "R1_local_self_hosted_product",
+            "primary_release_blocker_tier": "release",
+            "primary_release_blocker": "local_product_surface_not_ready",
         },
     },
     {
@@ -4148,19 +4223,15 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_status": "operator_actions_required",
         "required_true_fields": [],
         "required_int_exact_fields": {
-            "product_goal_release_blocker_fail_count": 2,
+            "product_goal_release_blocker_fail_count": 6,
         },
         "required_text_exact_fields": {
-            "product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
-            "product_goal_primary_release_blocker_tier": "full_commercial_scope",
-            "product_goal_primary_release_blocker": "full_scope_claim_closure_not_ready",
-            "primary_release_blocker_action_id": (
-                "product_scope_expansion:resolve_full_scope_breadth_evidence_receipt"
-            ),
-            "primary_release_blocker_action_required_input": (
-                "config/product_scope_breadth_evidence_receipt_current.csv"
-            ),
-            "primary_release_blocker_action_status": "required",
+            "product_goal_primary_release_blocker_requirement_id": "R1_local_self_hosted_product",
+            "product_goal_primary_release_blocker_tier": "release",
+            "product_goal_primary_release_blocker": "local_product_surface_not_ready",
+            "primary_release_blocker_action_id": "",
+            "primary_release_blocker_action_required_input": "",
+            "primary_release_blocker_action_status": "",
         },
     },
     {
@@ -4173,7 +4244,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "production_ai_registry_promotion_priority_packet_ready",
         ],
         "required_int_exact_fields": {
-            "product_goal_release_blocker_fail_count": 2,
+            "product_goal_release_blocker_fail_count": 6,
             "full_commercial_evidence_receipt_entry_count": 2,
             "full_commercial_evidence_receipt_operator_input_required_count": 2,
             "full_commercial_evidence_receipt_current_action_required_count": 2,
@@ -4239,16 +4310,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "product_scope_breadth_evidence_priority_receipt_approval_token_required": (
                 "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
             ),
-            "product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
-            "product_goal_primary_release_blocker_tier": "full_commercial_scope",
-            "product_goal_primary_release_blocker": "full_scope_claim_closure_not_ready",
-            "primary_release_blocker_action_id": (
-                "product_scope_expansion:resolve_full_scope_breadth_evidence_receipt"
-            ),
-            "primary_release_blocker_action_required_input": (
-                "config/product_scope_breadth_evidence_receipt_current.csv"
-            ),
-            "primary_release_blocker_action_status": "required",
+            "product_goal_primary_release_blocker_requirement_id": "R1_local_self_hosted_product",
+            "product_goal_primary_release_blocker_tier": "release",
+            "product_goal_primary_release_blocker": "local_product_surface_not_ready",
+            "primary_release_blocker_action_id": "",
+            "primary_release_blocker_action_required_input": "",
+            "primary_release_blocker_action_status": "",
             "full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
                 "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"
@@ -4309,7 +4376,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "production_ai_registry_promotion_priority_packet_ready",
         ],
         "required_int_exact_fields": {
-            "completion_audit_release_blocker_bottleneck_count": 2,
+            "completion_audit_release_blocker_bottleneck_count": 6,
             "full_commercial_evidence_receipt_entry_count": 2,
             "full_commercial_evidence_receipt_operator_input_required_count": 2,
             "full_commercial_evidence_receipt_current_action_required_count": 2,
