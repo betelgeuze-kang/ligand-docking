@@ -1126,9 +1126,10 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
         "accuracy_parity_ligand_ranking_metric_blocker_count"
     ) == 1
     assert release_row["required_true_fields"].count("master_gap_closure_rollup_recorded") == 1
-    assert release_row["required_true_fields"].count(
+    assert (
         "master_gap_closure_rollup_all_gaps_closed"
-    ) == 1
+        not in release_row["required_true_fields"]
+    )
     assert release_row["required_true_fields"].count(
         "science_claim_promotion_gap_closure_all_gaps_closed"
     ) == 1
@@ -1138,15 +1139,15 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     assert release_row["required_zero_fields"].count(
         "science_claim_promotion_gap_closure_gpcr_release_blocker"
     ) == 1
-    assert release_row["required_int_exact_fields"][
-        "master_gap_closure_rollup_open_gap_count"
-    ] == 0
+    assert "master_gap_closure_rollup_open_gap_count" not in release_row[
+        "required_int_exact_fields"
+    ]
     assert release_row["required_int_exact_fields"][
         "master_gap_closure_rollup_release_blocker_row_count"
     ] == 0
-    assert release_row["required_text_exact_fields"][
-        "master_gap_closure_rollup_open_gap_ids_joined"
-    ] == ""
+    assert "master_gap_closure_rollup_open_gap_ids_joined" not in release_row[
+        "required_text_exact_fields"
+    ]
     assert release_row["required_text_exact_fields"][
         "master_gap_closure_rollup_science_claim_rollup_status"
     ] == "science_claim_promotion_gap_closure_complete"

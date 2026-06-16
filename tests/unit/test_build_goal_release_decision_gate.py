@@ -932,6 +932,33 @@ def _full_commercial_bottleneck_briefing() -> dict:
                 "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT;"
                 "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
             ),
+            "product_scope_breadth_evidence_priority_top_item_id": "AQP1.core_binder_01",
+            "product_scope_breadth_evidence_priority_top_domain": "transporter",
+            "product_scope_breadth_evidence_priority_top_bucket": (
+                "local_crosscheck_review_present_but_exact_quant_required"
+            ),
+            "product_scope_breadth_evidence_priority_top_required_evidence_type": (
+                "exact_transporter_target_pair_quantitative_binder_kcal"
+            ),
+            "product_scope_breadth_evidence_priority_top_review_template_artifact": (
+                "runs/transporter_manual_review_intake_template_current.json"
+            ),
+            "product_scope_breadth_evidence_priority_top_apply_gate_artifact": (
+                "runs/transporter_binder_promotion_gate_current.json"
+            ),
+            "product_scope_breadth_evidence_priority_top_next_step": (
+                "Review local crosscheck files, capture exact evidence if present."
+            ),
+            "product_scope_breadth_evidence_priority_receipt_csv": (
+                "config/product_scope_breadth_evidence_receipt_current.csv"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_approval_token_required": (
+                "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_status": (
+                "blocked_product_scope_breadth_evidence_receipt"
+            ),
+            "product_scope_breadth_evidence_priority_receipt_blocked_row_count": 6,
             "production_ai_registry_promotion_priority_source_json": (
                 "runs/production_ai_registry_promotion_priority_packet_current.json"
             ),
@@ -2038,6 +2065,33 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
         "Fill the R8/R9 receipt CSVs"
     )
     assert summary["full_commercial_release_next_required_step"].startswith("Fill the R8/R9 receipt CSVs")
+    assert summary["product_scope_breadth_evidence_priority_top_item_id"] == "AQP1.core_binder_01"
+    assert summary["product_scope_breadth_evidence_priority_top_domain"] == "transporter"
+    assert summary["product_scope_breadth_evidence_priority_top_bucket"] == (
+        "local_crosscheck_review_present_but_exact_quant_required"
+    )
+    assert summary["product_scope_breadth_evidence_priority_top_required_evidence_type"] == (
+        "exact_transporter_target_pair_quantitative_binder_kcal"
+    )
+    assert summary["product_scope_breadth_evidence_priority_top_review_template_artifact"] == (
+        "runs/transporter_manual_review_intake_template_current.json"
+    )
+    assert summary["product_scope_breadth_evidence_priority_top_apply_gate_artifact"] == (
+        "runs/transporter_binder_promotion_gate_current.json"
+    )
+    assert "Review local crosscheck files" in summary[
+        "product_scope_breadth_evidence_priority_top_next_step"
+    ]
+    assert summary["product_scope_breadth_evidence_priority_receipt_csv"] == (
+        "config/product_scope_breadth_evidence_receipt_current.csv"
+    )
+    assert summary["product_scope_breadth_evidence_priority_receipt_approval_token_required"] == (
+        "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+    )
+    assert summary["product_scope_breadth_evidence_priority_receipt_status"] == (
+        "blocked_product_scope_breadth_evidence_receipt"
+    )
+    assert summary["product_scope_breadth_evidence_priority_receipt_blocked_row_count"] == 6
     assert summary["product_full_commercial_blocker_evidence_matrix_gate_present"] is True
     assert summary["product_full_commercial_blocker_evidence_matrix_status"] == (
         "blocked_product_full_commercial_blocker_evidence_matrix"

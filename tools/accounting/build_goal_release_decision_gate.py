@@ -174,6 +174,22 @@ def _dict_get(value: Any, key: str) -> Any:
     return value.get(key) if isinstance(value, dict) else None
 
 
+def _first_text(*values: Any) -> str:
+    for value in values:
+        text = _text(value)
+        if text:
+            return text
+    return ""
+
+
+def _first_int(*values: Any) -> int:
+    for value in values:
+        text = _text(value)
+        if text:
+            return _int(value)
+    return 0
+
+
 def _full_commercial_blocker_tier(blocker_id: str) -> str:
     if blocker_id == "R8_full_scope_claim_closure":
         return "full_commercial_scope"
@@ -2616,6 +2632,62 @@ def build_goal_release_decision_gate(
             or bool(accuracy_parity.get("overall_commercial_tool_accuracy_parity_allowed") is True)
         )
     )
+    product_scope_priority_action_id = _first_text(
+        actions.get("product_scope_breadth_evidence_priority_action_id"),
+        goal_bottleneck_briefing.get("product_scope_breadth_evidence_priority_action_id"),
+    )
+    product_scope_priority_top_item_id = _first_text(
+        actions.get("product_scope_breadth_evidence_priority_top_item_id"),
+        goal_bottleneck_briefing.get("product_scope_breadth_evidence_priority_top_item_id"),
+    )
+    product_scope_priority_top_domain = _first_text(
+        actions.get("product_scope_breadth_evidence_priority_top_domain"),
+        goal_bottleneck_briefing.get("product_scope_breadth_evidence_priority_top_domain"),
+    )
+    product_scope_priority_top_bucket = _first_text(
+        actions.get("product_scope_breadth_evidence_priority_top_bucket"),
+        goal_bottleneck_briefing.get("product_scope_breadth_evidence_priority_top_bucket"),
+    )
+    product_scope_priority_top_required_evidence_type = _first_text(
+        actions.get("product_scope_breadth_evidence_priority_top_required_evidence_type"),
+        goal_bottleneck_briefing.get("product_scope_breadth_evidence_priority_top_required_evidence_type"),
+    )
+    product_scope_priority_top_review_template_artifact = _first_text(
+        actions.get("product_scope_breadth_evidence_priority_top_review_template_artifact"),
+        goal_bottleneck_briefing.get("product_scope_breadth_evidence_priority_top_review_template_artifact"),
+    )
+    product_scope_priority_top_apply_gate_artifact = _first_text(
+        actions.get("product_scope_breadth_evidence_priority_top_apply_gate_artifact"),
+        goal_bottleneck_briefing.get("product_scope_breadth_evidence_priority_top_apply_gate_artifact"),
+    )
+    product_scope_priority_top_next_step = _first_text(
+        actions.get("product_scope_breadth_evidence_priority_top_next_step"),
+        goal_bottleneck_briefing.get("product_scope_breadth_evidence_priority_top_next_step"),
+    )
+    product_scope_priority_receipt_action_id = _first_text(
+        actions.get("product_scope_breadth_evidence_priority_receipt_action_id"),
+        goal_bottleneck_briefing.get("product_scope_breadth_evidence_priority_receipt_action_id"),
+    )
+    product_scope_priority_receipt_csv = _first_text(
+        actions.get("product_scope_breadth_evidence_priority_receipt_csv"),
+        goal_bottleneck_briefing.get("product_scope_breadth_evidence_priority_receipt_csv"),
+        primary_full_commercial_release_blocker_receipt_csv,
+    )
+    product_scope_priority_receipt_approval_token_required = _first_text(
+        actions.get("product_scope_breadth_evidence_priority_receipt_approval_token_required"),
+        goal_bottleneck_briefing.get("product_scope_breadth_evidence_priority_receipt_approval_token_required"),
+        primary_full_commercial_release_blocker_approval_token_required,
+    )
+    product_scope_priority_receipt_status = _first_text(
+        actions.get("product_scope_breadth_evidence_priority_receipt_status"),
+        goal_bottleneck_briefing.get("product_scope_breadth_evidence_priority_receipt_status"),
+        product_scope_receipt.get("status"),
+    )
+    product_scope_priority_receipt_blocked_row_count = _first_int(
+        actions.get("product_scope_breadth_evidence_priority_receipt_blocked_row_count"),
+        goal_bottleneck_briefing.get("product_scope_breadth_evidence_priority_receipt_blocked_row_count"),
+        product_scope_receipt.get("blocked_row_count"),
+    )
     next_required_items: list[str] = []
     if not product_bundle_validated or not product_ready or not product_claim_allowed:
         next_required_items.append("product bundle validation")
@@ -2742,6 +2814,29 @@ def build_goal_release_decision_gate(
                 or _text(master_gap_rollup.get("current_next_action"))
                 or "Close full-commercial release blockers before claiming full-commercial release."
             )
+        ),
+        "product_scope_breadth_evidence_priority_action_id": product_scope_priority_action_id,
+        "product_scope_breadth_evidence_priority_top_item_id": product_scope_priority_top_item_id,
+        "product_scope_breadth_evidence_priority_top_domain": product_scope_priority_top_domain,
+        "product_scope_breadth_evidence_priority_top_bucket": product_scope_priority_top_bucket,
+        "product_scope_breadth_evidence_priority_top_required_evidence_type": (
+            product_scope_priority_top_required_evidence_type
+        ),
+        "product_scope_breadth_evidence_priority_top_review_template_artifact": (
+            product_scope_priority_top_review_template_artifact
+        ),
+        "product_scope_breadth_evidence_priority_top_apply_gate_artifact": (
+            product_scope_priority_top_apply_gate_artifact
+        ),
+        "product_scope_breadth_evidence_priority_top_next_step": product_scope_priority_top_next_step,
+        "product_scope_breadth_evidence_priority_receipt_action_id": product_scope_priority_receipt_action_id,
+        "product_scope_breadth_evidence_priority_receipt_csv": product_scope_priority_receipt_csv,
+        "product_scope_breadth_evidence_priority_receipt_approval_token_required": (
+            product_scope_priority_receipt_approval_token_required
+        ),
+        "product_scope_breadth_evidence_priority_receipt_status": product_scope_priority_receipt_status,
+        "product_scope_breadth_evidence_priority_receipt_blocked_row_count": (
+            product_scope_priority_receipt_blocked_row_count
         ),
         "commercial_independent_product_ready": product_release_ready,
         "cameo_architecture_validation_ready": cameo_architecture_validation_ready,
@@ -4461,6 +4556,17 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- primary_full_commercial_release_blocker_receipt_csv: `{s['primary_full_commercial_release_blocker_receipt_csv']}`",
         f"- primary_full_commercial_release_blocker_approval_token_required: `{s['primary_full_commercial_release_blocker_approval_token_required']}`",
         f"- primary_full_commercial_release_blocker_next_required_step: `{s['primary_full_commercial_release_blocker_next_required_step']}`",
+        f"- product_scope_breadth_evidence_priority_action_id: `{s['product_scope_breadth_evidence_priority_action_id']}`",
+        f"- product_scope_breadth_evidence_priority_top_item_id: `{s['product_scope_breadth_evidence_priority_top_item_id']}`",
+        "- product_scope_breadth_evidence_priority_top_required_evidence_type: "
+        f"`{s['product_scope_breadth_evidence_priority_top_required_evidence_type']}`",
+        "- product_scope_breadth_evidence_priority_top_review_template_artifact: "
+        f"`{s['product_scope_breadth_evidence_priority_top_review_template_artifact']}`",
+        "- product_scope_breadth_evidence_priority_top_apply_gate_artifact: "
+        f"`{s['product_scope_breadth_evidence_priority_top_apply_gate_artifact']}`",
+        f"- product_scope_breadth_evidence_priority_receipt_csv: `{s['product_scope_breadth_evidence_priority_receipt_csv']}`",
+        "- product_scope_breadth_evidence_priority_receipt_approval_token_required: "
+        f"`{s['product_scope_breadth_evidence_priority_receipt_approval_token_required']}`",
         f"- commercial_independent_product_ready: `{s['commercial_independent_product_ready']}`",
         f"- product_architecture_local_surface_ready: `{s['product_architecture_local_surface_ready']}`",
         f"- product_architecture_release_ready: `{s['product_architecture_release_ready']}`",
