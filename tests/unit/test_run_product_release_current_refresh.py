@@ -201,51 +201,40 @@ def test_refresh_final_gate_requires_release_decision_bottleneck_receipt_linkage
     )
     assert decision_row["required_int_exact_fields"][
         "production_ai_checkpoint_readiness_production_inference_acceptance_ready_stage_count"
-    ] == 2
+    ] == 7
     assert decision_row["required_int_exact_fields"][
         "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_count"
-    ] == 6
+    ] == 1
     assert decision_row["required_text_exact_fields"][
         "production_ai_checkpoint_readiness_production_inference_acceptance_blocked_stage_ids"
-    ] == (
-        "gpu_return_acceptance;force_derivation_acceptance;"
-        "production_training_data_acceptance;production_score_model_acceptance;"
-        "checkpoint_sidecar_acceptance;"
-        "registry_guarded_promotion_acceptance"
-    )
+    ] == "registry_guarded_promotion_acceptance"
     assert decision_row["required_text_exact_fields"][
         "production_ai_checkpoint_readiness_actionable_blocker_stage_id"
-    ] == "gpu_return_acceptance"
+    ] == "registry_guarded_promotion_acceptance"
     assert decision_row["required_text_exact_fields"][
         "production_ai_checkpoint_readiness_actionable_blocker_check_id"
-    ] == "force_gpu_worker_return_receipt_ready"
+    ] == "registry_customer_facing_promotion_allowed"
     assert decision_row["required_text_exact_fields"][
         "production_ai_checkpoint_readiness_actionable_blocker_artifact"
-    ] == "runs/residual_force_gpu_worker_return_receipt_current.json"
+    ] == "runs/residual_model_registry_current.json"
     assert decision_row["required_int_exact_fields"][
         "production_ai_promotion_workbench_post_return_ladder_ready_stage_count"
-    ] == 1
+    ] == 7
     assert decision_row["required_int_exact_fields"][
         "production_ai_promotion_workbench_post_return_ladder_blocked_stage_count"
-    ] == 9
+    ] == 3
     assert decision_row["required_text_exact_fields"][
         "production_ai_promotion_workbench_blocked_stage_ids"
-    ] == (
-        "gpu_return_receipt;force_derivation_validation;energy_force_label_evidence;"
-        "production_training_data_contract;production_checkpoint_sidecar;"
-        "production_checkpoint_preflight;residual_model_registry;"
-        "product_ai_architecture_gap_closure;"
-        "product_goal_completion_audit"
-    )
+    ] == "residual_model_registry;product_ai_architecture_gap_closure;product_goal_completion_audit"
     assert decision_row["required_text_exact_fields"][
         "production_ai_promotion_workbench_first_blocked_stage_id"
-    ] == "gpu_return_receipt"
+    ] == "residual_model_registry"
     assert decision_row["required_text_exact_fields"][
         "production_ai_promotion_workbench_first_blocked_stage_artifact"
-    ] == "runs/residual_force_gpu_worker_return_receipt_current.json"
+    ] == "runs/residual_model_registry_current.json"
     assert decision_row["required_text_exact_fields"][
         "production_ai_promotion_workbench_first_blocked_stage_ready_key"
-    ] == "gpu_worker_return_receipt_ready"
+    ] == "production_promotion_allowed"
 
 
 def test_refresh_final_gate_blocks_missing_release_decision_bottleneck_receipt_linkage(tmp_path: Path) -> None:
