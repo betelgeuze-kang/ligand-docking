@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/master_gap_closure_rollup_current.json"
 DEFAULT_OUT_CSV = "runs/master_gap_closure_rollup_current.csv"
 DEFAULT_OUT_MD = "runs/master_gap_closure_rollup_current.md"
+DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON = "runs/product_ai_architecture_execution_backlog_current.json"
 
 CLAIM_BOUNDARY = (
     "Master gap closure rollup only; it aggregates local accounting closure status across commercial, product AI, "
@@ -97,6 +98,13 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _int(value: Any) -> int:
+    try:
+        return int(float(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 def _row(
     gap_id: str,
     area: str,
@@ -106,6 +114,7 @@ def _row(
     next_action: str,
     *,
     rollup_status: str = "",
+    release_blocker: bool | None = None,
 ) -> dict[str, Any]:
     return {
         "gap_id": gap_id,
@@ -115,7 +124,7 @@ def _row(
         "observed": observed,
         "next_action": next_action,
         "rollup_status": rollup_status,
-        "release_blocker": status != "closed",
+        "release_blocker": status != "closed" if release_blocker is None else release_blocker,
         "execution_enabled": False,
         "external_state_mutated": False,
     }
@@ -132,6 +141,7 @@ def build_master_gap_closure_rollup(
     storage_packet: dict[str, Any] | None = None,
     tools_packet: dict[str, Any] | None = None,
     api_runner_packet: dict[str, Any] | None = None,
+    product_ai_execution_backlog_packet: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     packet_overrides = {
         "COMMERCIAL": commercial_packet,
@@ -144,6 +154,15 @@ def build_master_gap_closure_rollup(
         "TOOLS": tools_packet,
         "API-RUNNER": api_runner_packet,
     }
+    if product_ai_execution_backlog_packet is None:
+        product_ai_execution_backlog_packet = _read_json_if_present(DEFAULT_PRODUCT_AI_EXECUTION_BACKLOG_JSON)
+    product_ai_backlog = _summary(product_ai_execution_backlog_packet)
+    product_ai_release_blocking_work_item_count = _int(
+        product_ai_backlog.get(
+            "release_blocking_work_item_count",
+            product_ai_backlog.get("work_item_count", 1),
+        )
+    )
     rows: list[dict[str, Any]] = []
     for gap_id, area, artifact, complete_status in ROLLUP_SPECS:
         packet = packet_overrides.get(gap_id)
@@ -152,16 +171,25 @@ def build_master_gap_closure_rollup(
         summary = _summary(packet)
         rollup_status = _text(summary.get("status"))
         closed = bool(summary.get("all_gaps_closed") is True or rollup_status == complete_status)
+        release_blocker = not closed
+        observed = f"rollup_status={rollup_status or 'missing'}; all_gaps_closed={summary.get('all_gaps_closed')}"
+        if gap_id == "PRODUCT-AI" and not closed:
+            release_blocker = product_ai_release_blocking_work_item_count > 0
+            observed = (
+                f"{observed}; "
+                f"release_blocking_work_item_count={product_ai_release_blocking_work_item_count}"
+            )
         rows.append(
             _row(
                 gap_id,
                 area,
                 "closed" if closed else "open",
                 artifact,
-                f"rollup_status={rollup_status or 'missing'}; all_gaps_closed={summary.get('all_gaps_closed')}",
+                observed,
                 _text(summary.get("current_next_action") or summary.get("next_required_step"))
                 or f"Rebuild {artifact} until status={complete_status}.",
                 rollup_status=rollup_status,
+                release_blocker=release_blocker,
             )
         )
     closed_rows = [row for row in rows if row["status"] == "closed"]

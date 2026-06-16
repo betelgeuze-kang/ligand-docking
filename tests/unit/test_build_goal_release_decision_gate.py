@@ -505,6 +505,29 @@ def _blocked_product_ai_backlog() -> dict:
     }
 
 
+def _optional_product_ai_backlog() -> dict:
+    return {
+        "summary": {
+            "status": "product_ai_architecture_execution_backlog_ready",
+            "backlog_clear": False,
+            "work_item_count": 12,
+            "release_blocking_work_item_count": 0,
+            "primary_work_item_id": "scope_breadth.transporter.AQP1.core_non_binder_01",
+            "scope_closure_detail": (
+                "scope_closure_blocker_classes=exact_negative_quantitative_value_missing=6;"
+                "scope_closure_authoritative_apply_allowed=False"
+            ),
+        },
+        "rows": [
+            {
+                "work_item_id": "scope_breadth.transporter.AQP1.core_non_binder_01",
+                "observed": "candidate_reference_binding_kcal_mol=none",
+                "next_action": "Keep optional AI scope and promotion backlog deferred.",
+            }
+        ],
+    }
+
+
 def _blocked_source_of_truth() -> dict:
     return {
         "summary": {
@@ -2975,6 +2998,40 @@ def test_goal_release_decision_gate_requires_product_ai_architecture_closure_whe
     assert "gpu_worker_return_queue_fingerprints=768" in row["reason"]
     assert "scope_closure_authoritative_apply_allowed=False" in row["reason"]
     assert "product AI architecture gap closure" in summary["next_required_step"]
+
+
+def test_goal_release_decision_gate_accepts_optional_product_ai_backlog_when_nonblocking() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_ready_cameo_validation(),
+        cameo_capability_packet=_ready_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+        product_ai_architecture_gap_packet=_blocked_product_ai_gap(),
+        product_ai_execution_backlog_packet=_optional_product_ai_backlog(),
+    )
+
+    summary = payload["summary"]
+    row = next(row for row in payload["rows"] if row["check"] == "product_ai_architecture_gap_closure_ready")
+    assert summary["status"] == "goal_release_ready"
+    assert summary["release_allowed"] is True
+    assert summary["product_ai_architecture_ready"] is True
+    assert summary["product_ai_architecture_open_gap_count"] == 1
+    assert summary["product_ai_execution_backlog_work_item_count"] == 12
+    assert summary["product_ai_execution_backlog_release_blocking_work_item_count"] == 0
+    assert summary["product_ai_execution_backlog_optional_work_item_count"] == 12
+    assert row["status"] == "pass"
+    assert "release_blocking_work_item_count=0" in row["observed"]
+    assert "optional_work_item_count=12" in row["observed"]
+    assert "optional/non-release-blocking" in row["reason"]
+    assert "product AI architecture gap closure" not in summary["next_required_step"]
 
 
 def test_goal_release_decision_gate_accepts_product_ai_architecture_closure_when_supplied() -> None:

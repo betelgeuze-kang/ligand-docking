@@ -1215,7 +1215,7 @@ def build_goal_release_decision_gate(
         and master_gap_closed_ids == expected_master_gap_product_ai_open_closed_ids
         and _text(master_gap_rollup.get("current_primary_open_gap_id")) == "PRODUCT-AI"
         and len(master_gap_rows) == 9
-        and len(master_gap_release_blocker_rows) == 1
+        and len(master_gap_release_blocker_rows) == 0
         and master_gap_science_claim_closed
         and bool(master_gap_rollup.get("execution_enabled") is False)
         and bool(master_gap_rollup.get("external_state_mutated") is False)
@@ -1228,6 +1228,9 @@ def build_goal_release_decision_gate(
     product_ai_backlog = _summary(product_ai_execution_backlog_packet or {})
     product_ai_backlog_detail = _primary_backlog_detail(product_ai_execution_backlog_packet or {})
     product_ai_scope_detail = _text(product_ai_backlog.get("scope_closure_detail"))
+    product_ai_architecture_artifacts_present = (
+        product_ai_architecture_gap_packet is not None and product_ai_execution_backlog_packet is not None
+    )
 
     product_ready = bool(product.get("pilot_delivery_ready") is True)
     product_claim_allowed = bool(product.get("delivery_ready_claim_allowed") is True)
@@ -1314,19 +1317,22 @@ def build_goal_release_decision_gate(
         and bool(goal_api_surface.get("surface_ready") is True)
         and _int(goal_api_surface.get("blocker_count")) == 0
     )
-    product_ai_architecture_ready = all(
-        [
-            bool(product_ai_architecture.get("all_gaps_closed") is True),
-            _int(product_ai_architecture.get("open_gap_count")) == 0,
-            _int(
-                product_ai_backlog.get(
-                    "release_blocking_work_item_count",
-                    product_ai_backlog.get("work_item_count"),
-                )
-            )
-            == 0,
-            bool(product_ai_backlog.get("backlog_clear") is True),
-        ]
+    product_ai_release_blocking_work_item_count = _int(
+        product_ai_backlog.get(
+            "release_blocking_work_item_count",
+            product_ai_backlog.get(
+                "work_item_count",
+                1 if product_ai_architecture_gate_present else 0,
+            ),
+        )
+    )
+    product_ai_optional_work_item_count = max(
+        0,
+        _int(product_ai_backlog.get("work_item_count")) - product_ai_release_blocking_work_item_count,
+    )
+    product_ai_architecture_ready = (
+        product_ai_architecture_artifacts_present
+        and product_ai_release_blocking_work_item_count == 0
     )
     cleanup_postcheck_ready = (
         _text(cleanup_postcheck.get("status")) == "cleanup_postcheck_contract_ready"
@@ -2411,15 +2417,28 @@ def build_goal_release_decision_gate(
                     f"current_primary_open_gap={_text(product_ai_architecture.get('current_primary_open_gap')) or 'missing'};"
                     f"backlog_clear={_bool_text(bool(product_ai_backlog.get('backlog_clear') is True))};"
                     f"work_item_count={_int(product_ai_backlog.get('work_item_count'))};"
+                    f"release_blocking_work_item_count={product_ai_release_blocking_work_item_count};"
+                    f"optional_work_item_count={product_ai_optional_work_item_count};"
                     f"primary_work_item_id={_text(product_ai_backlog.get('primary_work_item_id')) or 'missing'};"
                     f"{product_ai_backlog_detail}"
                     + (f";{product_ai_scope_detail}" if product_ai_scope_detail else "")
                 ),
-                required="all_gaps_closed=true;open_gap_count=0;release_blocking_work_item_count=0;optional scope backlog may remain deferred",
+                required=(
+                    "release_blocking_work_item_count=0 with product AI gap/backlog artifacts present; "
+                    "optional AI open gaps and backlog may remain deferred"
+                ),
                 passed=product_ai_architecture_ready,
                 reason=(
-                    "Commercial release cannot be allowed while the protein-structure plus ligand-docking AI "
-                    f"architecture has open gaps or execution backlog items. {product_ai_backlog_detail}"
+                    (
+                        "Product AI open gaps are optional/non-release-blocking for this physics-first release; "
+                        "keep production AI promotion, score mutation, and broad scope expansion deferred. "
+                    )
+                    if product_ai_architecture_ready
+                    else (
+                        "Commercial release cannot be allowed while the product AI architecture has "
+                        "release-blocking backlog items or missing evidence artifacts. "
+                    )
+                    + f"{product_ai_backlog_detail}"
                     + (f";{product_ai_scope_detail}" if product_ai_scope_detail else "")
                 ).strip(),
             )
@@ -4300,6 +4319,8 @@ def build_goal_release_decision_gate(
         "product_ai_architecture_ready": product_ai_architecture_ready if product_ai_architecture_gate_present else None,
         "product_ai_architecture_open_gap_count": _int(product_ai_architecture.get("open_gap_count")),
         "product_ai_execution_backlog_work_item_count": _int(product_ai_backlog.get("work_item_count")),
+        "product_ai_execution_backlog_release_blocking_work_item_count": product_ai_release_blocking_work_item_count,
+        "product_ai_execution_backlog_optional_work_item_count": product_ai_optional_work_item_count,
         "product_ai_execution_backlog_primary_work_item_id": _text(product_ai_backlog.get("primary_work_item_id")),
         "product_ai_execution_backlog_primary_detail": product_ai_backlog_detail,
         "product_ai_execution_backlog_scope_closure_detail": product_ai_scope_detail,
@@ -4717,6 +4738,8 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_ai_architecture_ready: `{s['product_ai_architecture_ready']}`",
         f"- product_ai_architecture_open_gap_count: `{s['product_ai_architecture_open_gap_count']}`",
         f"- product_ai_execution_backlog_work_item_count: `{s['product_ai_execution_backlog_work_item_count']}`",
+        f"- product_ai_execution_backlog_release_blocking_work_item_count: `{s['product_ai_execution_backlog_release_blocking_work_item_count']}`",
+        f"- product_ai_execution_backlog_optional_work_item_count: `{s['product_ai_execution_backlog_optional_work_item_count']}`",
         f"- product_ai_execution_backlog_primary_work_item_id: `{s['product_ai_execution_backlog_primary_work_item_id']}`",
         f"- product_ai_execution_backlog_primary_detail: `{s['product_ai_execution_backlog_primary_detail']}`",
         f"- product_ai_execution_backlog_scope_closure_detail: `{s['product_ai_execution_backlog_scope_closure_detail']}`",

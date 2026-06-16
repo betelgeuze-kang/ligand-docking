@@ -251,6 +251,52 @@ def test_refresh_final_gate_requires_release_decision_bottleneck_receipt_linkage
     ] == 1
 
 
+def test_refresh_final_gate_accepts_nonblocking_product_ai_master_gap(tmp_path: Path) -> None:
+    _write_json(
+        tmp_path / "runs" / "product_release_source_of_truth_gate_current.json",
+        _source_of_truth_ready(),
+    )
+    release_decision = _release_decision_ready()
+    release_decision["summary"].update(
+        {
+            "master_gap_closure_rollup_all_gaps_closed": False,
+            "master_gap_closure_rollup_status": "blocked_master_gap_closure_rollup",
+            "master_gap_closure_rollup_open_gap_count": 1,
+            "master_gap_closure_rollup_closed_gap_count": 8,
+            "master_gap_closure_rollup_open_gap_ids_joined": "PRODUCT-AI",
+            "master_gap_closure_rollup_current_primary_open_gap_id": "PRODUCT-AI",
+            "master_gap_closure_rollup_release_blocker_row_count": 0,
+        }
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_release_decision_gate_current.json",
+        release_decision,
+    )
+    _write_json(
+        tmp_path / "runs" / "product_quality_gate_verification_current.json",
+        _quality_gate_ready(),
+    )
+    _write_json(
+        tmp_path / "runs" / "goal_operator_action_board_current.json",
+        _action_board_ready(),
+    )
+
+    payload = mod.run_product_release_current_refresh(
+        execute=True,
+        root=tmp_path,
+        commands=[],
+    )
+
+    decision_row = next(
+        row for row in payload["verification_rows"] if row["gate_id"] == "goal_release_decision_gate"
+    )
+    assert payload["summary"]["final_gate_verification_ready"] is True
+    assert decision_row["status"] == "pass"
+    assert "master_gap_closure_rollup_all_gaps_closed" not in decision_row["required_true_fields"]
+    assert "master_gap_closure_rollup_open_gap_count" not in decision_row["required_int_exact_fields"]
+    assert decision_row["required_int_exact_fields"]["master_gap_closure_rollup_release_blocker_row_count"] == 0
+
+
 def test_refresh_final_gate_allows_multiple_production_ai_checkpoint_candidates(
     tmp_path: Path,
 ) -> None:

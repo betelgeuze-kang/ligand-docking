@@ -232,6 +232,19 @@ def _blocked_product_ai_backlog() -> dict:
     }
 
 
+def _optional_product_ai_backlog() -> dict:
+    return {
+        "summary": {
+            "status": "product_ai_architecture_execution_backlog_ready",
+            "backlog_clear": False,
+            "work_item_count": 12,
+            "release_blocking_work_item_count": 0,
+            "primary_work_item_id": "scope_breadth.transporter.AQP1.core_non_binder_01",
+            "next_required_step": "Keep optional AI scope and promotion backlog deferred.",
+        }
+    }
+
+
 def test_goal_readiness_rollup_blocks_when_cameo_validation_blocked() -> None:
     payload = mod.build_rollup(
         product_readiness_packet=_product_readiness(),
@@ -364,11 +377,39 @@ def test_goal_readiness_rollup_blocks_on_product_ai_architecture_backlog_when_su
     assert summary["product_ai_architecture_ready"] is False
     assert summary["product_ai_architecture_open_gap_count"] == 1
     assert summary["product_ai_execution_backlog_work_item_count"] == 21
+    assert summary["product_ai_execution_backlog_release_blocking_work_item_count"] == 21
     assert summary["product_ai_execution_backlog_primary_work_item_id"] == "scope_breadth.transporter.AQP1.core_binder_01"
     assert rows["product_ai_architecture"]["lane_status"] == "blocked"
     assert rows["product_ai_architecture"]["blocker_count"] == 21
     assert "scope_breadth_expansion" in rows["product_ai_architecture"]["current_primary_open_gap"]
     assert "Close transporter/PXR scientific rows first." in rows["product_ai_architecture"]["next_required_step"]
+
+
+def test_goal_readiness_rollup_defers_optional_product_ai_backlog_when_nonblocking() -> None:
+    payload = mod.build_rollup(
+        product_readiness_packet=_product_readiness(),
+        product_preflight_packet=_product_preflight(),
+        product_delivery_evidence_packet=_product_delivery_evidence(),
+        product_pilot_packet=_product_pilot_packet(),
+        product_architecture_packet=_product_architecture(blocked_lane_count=0, approval_required_lane_count=0, release_ready=True),
+        cameo_readiness_packet=_cameo("cameo_validation_evidence_ready", 0),
+        transition_cleanup_packet=_transition_cleanup(),
+        ligand_cleanup_packet=_ligand_cleanup(),
+        product_ai_architecture_gap_packet=_blocked_product_ai_gap(),
+        product_ai_execution_backlog_packet=_optional_product_ai_backlog(),
+    )
+
+    rows = {row["lane_id"]: row for row in payload["rows"]}
+    summary = payload["summary"]
+    assert summary["blocked_lane_count"] == 0
+    assert summary["product_ai_architecture_ready"] is True
+    assert summary["product_ai_architecture_open_gap_count"] == 1
+    assert summary["product_ai_execution_backlog_work_item_count"] == 12
+    assert summary["product_ai_execution_backlog_release_blocking_work_item_count"] == 0
+    assert summary["product_ai_execution_backlog_optional_work_item_count"] == 12
+    assert rows["product_ai_architecture"]["lane_status"] == "evidence_ready"
+    assert rows["product_ai_architecture"]["blocker_count"] == 0
+    assert "non-release-blocking optional work" in rows["product_ai_architecture"]["next_required_step"]
 
 
 def test_goal_readiness_rollup_accepts_product_ai_architecture_clear_when_supplied() -> None:

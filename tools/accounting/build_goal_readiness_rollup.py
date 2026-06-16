@@ -251,9 +251,10 @@ def _product_ai_architecture_lane(
     backlog_clear = bool(backlog.get("backlog_clear") is True)
     work_item_count = _int(backlog.get("work_item_count"))
     release_blocking_work_item_count = _int(
-        backlog.get("release_blocking_work_item_count", work_item_count)
+        backlog.get("release_blocking_work_item_count", work_item_count if backlog_packet else 1)
     )
-    ready = all_gaps_closed and open_gap_count == 0 and release_blocking_work_item_count == 0
+    ready = bool(gap_packet and backlog_packet) and release_blocking_work_item_count == 0
+    optional_work_item_count = max(0, work_item_count - release_blocking_work_item_count)
     if not gap_packet or not backlog_packet:
         lane_status = "blocked_missing_artifact"
     elif ready:
@@ -270,14 +271,22 @@ def _product_ai_architecture_lane(
             f"open_gap_count={open_gap_count};"
             f"backlog_clear={backlog_clear};"
             f"work_item_count={work_item_count};"
+            f"release_blocking_work_item_count={release_blocking_work_item_count};"
             f"primary_work_item_id={_text(backlog.get('primary_work_item_id')) or 'missing'}"
         ),
         lane_status=lane_status,
-        blocker_count=0 if ready else max(1, open_gap_count, work_item_count),
+        blocker_count=0 if ready else max(1, release_blocking_work_item_count),
         next_required_step=(
-            _text(backlog.get("next_required_step"))
-            or _text(gap.get("current_next_action"))
-            or "Close product AI architecture gaps before release."
+            (
+                "Product AI open gaps are non-release-blocking optional work; keep them deferred "
+                "until an explicit AI promotion decision."
+            )
+            if ready and (open_gap_count > 0 or optional_work_item_count > 0 or not all_gaps_closed)
+            else (
+                _text(backlog.get("next_required_step"))
+                or _text(gap.get("current_next_action"))
+                or "Close release-blocking product AI architecture work before release."
+            )
         ),
     )
     lane["all_gaps_closed"] = all_gaps_closed
@@ -285,6 +294,8 @@ def _product_ai_architecture_lane(
     lane["current_primary_open_gap"] = _text(gap.get("current_primary_open_gap"))
     lane["backlog_clear"] = backlog_clear
     lane["work_item_count"] = work_item_count
+    lane["release_blocking_work_item_count"] = release_blocking_work_item_count
+    lane["optional_work_item_count"] = optional_work_item_count
     lane["primary_work_item_id"] = _text(backlog.get("primary_work_item_id"))
     return lane
 
@@ -613,6 +624,12 @@ def build_rollup(
         "product_ai_execution_backlog_work_item_count": _int(
             next((row for row in rows if row["lane_id"] == "product_ai_architecture"), {}).get("work_item_count")
         ),
+        "product_ai_execution_backlog_release_blocking_work_item_count": _int(
+            next((row for row in rows if row["lane_id"] == "product_ai_architecture"), {}).get("release_blocking_work_item_count")
+        ),
+        "product_ai_execution_backlog_optional_work_item_count": _int(
+            next((row for row in rows if row["lane_id"] == "product_ai_architecture"), {}).get("optional_work_item_count")
+        ),
         "product_ai_execution_backlog_primary_work_item_id": _text(
             next((row for row in rows if row["lane_id"] == "product_ai_architecture"), {}).get("primary_work_item_id")
         ),
@@ -726,6 +743,8 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_ai_architecture_ready: `{s['product_ai_architecture_ready']}`",
         f"- product_ai_architecture_open_gap_count: `{s['product_ai_architecture_open_gap_count']}`",
         f"- product_ai_execution_backlog_work_item_count: `{s['product_ai_execution_backlog_work_item_count']}`",
+        f"- product_ai_execution_backlog_release_blocking_work_item_count: `{s['product_ai_execution_backlog_release_blocking_work_item_count']}`",
+        f"- product_ai_execution_backlog_optional_work_item_count: `{s['product_ai_execution_backlog_optional_work_item_count']}`",
         f"- product_ai_execution_backlog_primary_work_item_id: `{s['product_ai_execution_backlog_primary_work_item_id']}`",
         f"- product_cli_approval_token_count: `{s['product_cli_approval_token_count']}`",
         f"- product_cli_operations_blocked_stage_count: `{s['product_cli_operations_blocked_stage_count']}`",

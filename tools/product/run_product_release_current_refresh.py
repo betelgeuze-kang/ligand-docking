@@ -101,7 +101,6 @@ FINAL_GATE_SPECS = [
             "accuracy_parity_ligand_ranking_metric_thresholds_pass",
             "accuracy_parity_ligand_ranking_claim_scope_lock_only",
             "master_gap_closure_rollup_recorded",
-            "master_gap_closure_rollup_all_gaps_closed",
             "science_claim_promotion_gap_closure_recorded",
             "science_claim_promotion_gap_closure_all_gaps_closed",
             "api_runner_profile_promotion_operator_receipt_recorded",
@@ -316,8 +315,6 @@ FINAL_GATE_SPECS = [
             "refine_tier_public_benchmark_work_order_apply_metric_evidence_pass_row_count": 0,
             "refine_tier_public_benchmark_work_order_apply_metric_evidence_blocked_row_count": 8,
             "refine_tier_public_benchmark_work_order_apply_metric_evidence_missing_row_count": 0,
-            "master_gap_closure_rollup_open_gap_count": 0,
-            "master_gap_closure_rollup_closed_gap_count": 9,
             "master_gap_closure_rollup_release_blocker_row_count": 0,
             "science_claim_promotion_gap_closure_open_gap_count": 0,
             "science_claim_promotion_gap_closure_closed_gap_count": 5,
@@ -506,12 +503,6 @@ FINAL_GATE_SPECS = [
             "accuracy_parity_ligand_ranking_score_col_used": (
                 "binding_score_composite_v7_coverage_v2_crossfit_rank_rescue_shadow"
             ),
-            "master_gap_closure_rollup_status": "master_gap_closure_rollup_complete",
-            "master_gap_closure_rollup_open_gap_ids_joined": "",
-            "master_gap_closure_rollup_closed_gap_ids_joined": (
-                "COMMERCIAL;PRODUCT-AI;DATA-SCIENCE;INFRA;SCI-CLAIM;DEPLOY-OPS;STORAGE;TOOLS;API-RUNNER"
-            ),
-            "master_gap_closure_rollup_current_primary_open_gap_id": "none",
             "master_gap_closure_rollup_science_claim_rollup_status": (
                 "science_claim_promotion_gap_closure_complete"
             ),
