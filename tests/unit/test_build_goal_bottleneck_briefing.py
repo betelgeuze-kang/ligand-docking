@@ -1225,6 +1225,10 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
     assert summary["top_action_id"] == summary["primary_action_id"]
     assert summary["primary_action_status"] == "required"
     assert "replacement_reference_binding_kcal_mol" in summary["primary_bottleneck_required_external_return"]
+    assert "R8 full-scope claim evidence receipt" in summary["next_required_step"]
+    assert "config/product_scope_breadth_evidence_receipt_current.csv" in summary["next_required_step"]
+    assert "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT" in summary["next_required_step"]
+    assert "product AI architecture scope closure" not in summary["next_required_step"]
     assert "engine refinement claim evidence" in summary["next_required_step"]
     assert by_id["R8_full_scope_claim_closure"]["row_source"] == "completion_audit"
     assert by_id["R8_full_scope_claim_closure"]["root_cause_category"] == "external_exact_scope_evidence"

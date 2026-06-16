@@ -679,7 +679,42 @@ def _root_cause_fields(row: dict[str, Any], *, required_inputs: list[str], sourc
     }
 
 
-def _next_required_step(*, kind_counts: dict[str, int], cleanup_objective_ready: bool) -> str:
+def _has_r8_full_scope_bottleneck(rows: list[dict[str, Any]] | None) -> bool:
+    for row in rows or []:
+        if _text(row.get("bottleneck_kind")) != "scientific_scope_evidence_required":
+            continue
+        markers = {
+            _text(row.get("bottleneck_id")),
+            _text(row.get("phase")),
+            _text(row.get("lane_id")),
+            _text(row.get("completion_audit_requirement_id")),
+            _text(row.get("completion_audit_requirement_tier")),
+        }
+        if "R8_full_scope_claim_closure" in markers or "full_commercial_scope" in markers:
+            return True
+    return False
+
+
+def _r8_full_scope_next_item(*, receipt_csv: str, approval_token: str) -> str:
+    item = "R8 full-scope claim evidence receipt"
+    details = []
+    if receipt_csv:
+        details.append(f"fill {receipt_csv}")
+    if approval_token:
+        details.append(f"return {approval_token}")
+    if details:
+        return f"{item} ({'; '.join(details)})"
+    return item
+
+
+def _next_required_step(
+    *,
+    kind_counts: dict[str, int],
+    cleanup_objective_ready: bool,
+    current_rows: list[dict[str, Any]] | None = None,
+    primary_full_commercial_receipt_csv: str = "",
+    primary_full_commercial_approval_token: str = "",
+) -> str:
     items: list[str] = []
 
     def add(item: str) -> None:
@@ -687,7 +722,15 @@ def _next_required_step(*, kind_counts: dict[str, int], cleanup_objective_ready:
             items.append(item)
 
     if kind_counts.get("scientific_scope_evidence_required"):
-        add("product AI architecture scope closure")
+        if _has_r8_full_scope_bottleneck(current_rows):
+            add(
+                _r8_full_scope_next_item(
+                    receipt_csv=primary_full_commercial_receipt_csv,
+                    approval_token=primary_full_commercial_approval_token,
+                )
+            )
+        else:
+            add("product AI architecture scope closure")
     if kind_counts.get("engine_refinement_claim_promotion_required"):
         add("engine refinement claim evidence and calibration")
     if kind_counts.get("production_ai_checkpoint_evidence_required"):
@@ -1435,7 +1478,17 @@ def build_goal_bottleneck_briefing(
         "kind_counts": kind_counts,
         **_mutation_flags(),
         "claim_boundary": CLAIM_BOUNDARY,
-        "next_required_step": _next_required_step(kind_counts=kind_counts, cleanup_objective_ready=cleanup_objective_ready),
+        "next_required_step": _next_required_step(
+            kind_counts=kind_counts,
+            cleanup_objective_ready=cleanup_objective_ready,
+            current_rows=current_rows,
+            primary_full_commercial_receipt_csv=_text(
+                intake.get("primary_full_commercial_release_blocker_receipt_csv")
+            ),
+            primary_full_commercial_approval_token=_text(
+                intake.get("primary_full_commercial_release_blocker_approval_token_required")
+            ),
+        ),
     }
     return {"summary": summary, "rows": rows}
 
