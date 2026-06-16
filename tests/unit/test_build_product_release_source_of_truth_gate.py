@@ -3908,19 +3908,19 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert checkpoint_status_spec["required_int_exact_fields"][
         "production_inference_acceptance_blocked_stage_count"
-    ] == 4
+    ] == 5
     assert checkpoint_status_spec["required_int_exact_fields"][
         "force_gpu_worker_return_receipt_ready"
-    ] == 1
+    ] == 0
     assert checkpoint_status_spec["required_int_exact_fields"][
         "selected_sidecar_ready"
     ] == 0
     assert checkpoint_status_spec["required_text_exact_fields"][
         "production_inference_actionable_blocker_stage_id"
-    ] == "force_derivation_acceptance"
+    ] == "gpu_return_acceptance"
     assert checkpoint_status_spec["required_text_exact_fields"][
         "production_inference_actionable_blocker_check_id"
-    ] == "delta_force_derivation_validation_ready"
+    ] == "force_gpu_worker_return_receipt_ready"
     promotion_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -3928,10 +3928,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert promotion_status_spec["required_int_exact_fields"][
         "post_return_promotion_ladder_blocked_stage_count"
-    ] == 6
-    assert promotion_status_spec["required_text_exact_fields"]["first_blocked_stage_id"] == "force_derivation_validation"
+    ] == 7
+    assert promotion_status_spec["required_text_exact_fields"]["first_blocked_stage_id"] == "gpu_return_receipt"
     assert promotion_status_spec["required_text_exact_fields"]["first_blocked_stage_ready_key"] == (
-        "delta_force_derivation_validation_ready"
+        "gpu_worker_return_receipt_ready"
     )
     registry_receipt_spec = next(
         spec
@@ -5113,6 +5113,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_model_registry.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_model_registry.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_force_gpu_worker_return_manifest_finalize.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_force_gpu_worker_return_manifest_finalize.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_force_gpu_worker_return_receipt.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_force_gpu_worker_return_receipt.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_force_derivation_validation.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_residual_force_derivation_validation.py") < (
