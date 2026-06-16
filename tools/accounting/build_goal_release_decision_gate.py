@@ -1154,7 +1154,17 @@ def build_goal_release_decision_gate(
     master_gap_release_blocker_rows = [
         row for row in master_gap_rows if bool(row.get("release_blocker") is True)
     ]
-    expected_master_gap_closed_ids = [
+    expected_master_gap_product_ai_open_closed_ids = [
+        "COMMERCIAL",
+        "DATA-SCIENCE",
+        "INFRA",
+        "SCI-CLAIM",
+        "DEPLOY-OPS",
+        "STORAGE",
+        "TOOLS",
+        "API-RUNNER",
+    ]
+    expected_master_gap_complete_closed_ids = [
         "COMMERCIAL",
         "PRODUCT-AI",
         "DATA-SCIENCE",
@@ -1165,19 +1175,8 @@ def build_goal_release_decision_gate(
         "TOOLS",
         "API-RUNNER",
     ]
-    master_gap_rollup_recorded = (
-        _text(master_gap_rollup.get("status")) == "master_gap_closure_rollup_complete"
-        and bool(master_gap_rollup.get("all_gaps_closed") is True)
-        and bool(master_gap_rollup.get("claim_promotion_allowed") is False)
-        and _int(master_gap_rollup.get("gap_count")) == 9
-        and _int(master_gap_rollup.get("closed_gap_count")) == 9
-        and _int(master_gap_rollup.get("open_gap_count")) == 0
-        and master_gap_open_ids == []
-        and master_gap_closed_ids == expected_master_gap_closed_ids
-        and _text(master_gap_rollup.get("current_primary_open_gap_id")) == "none"
-        and len(master_gap_rows) == 9
-        and len(master_gap_release_blocker_rows) == 0
-        and _text(master_gap_science_claim_row.get("status")) == "closed"
+    master_gap_science_claim_closed = (
+        _text(master_gap_science_claim_row.get("status")) == "closed"
         and _text(master_gap_science_claim_row.get("rollup_status"))
         == "science_claim_promotion_gap_closure_complete"
         and _text(master_gap_science_claim_row.get("evidence"))
@@ -1185,9 +1184,40 @@ def build_goal_release_decision_gate(
         and bool(master_gap_science_claim_row.get("release_blocker") is False)
         and bool(master_gap_science_claim_row.get("execution_enabled") is False)
         and bool(master_gap_science_claim_row.get("external_state_mutated") is False)
+    )
+    master_gap_complete_recorded = (
+        _text(master_gap_rollup.get("status")) == "master_gap_closure_rollup_complete"
+        and bool(master_gap_rollup.get("all_gaps_closed") is True)
+        and bool(master_gap_rollup.get("claim_promotion_allowed") is False)
+        and _int(master_gap_rollup.get("gap_count")) == 9
+        and _int(master_gap_rollup.get("closed_gap_count")) == 9
+        and _int(master_gap_rollup.get("open_gap_count")) == 0
+        and master_gap_open_ids == []
+        and master_gap_closed_ids == expected_master_gap_complete_closed_ids
+        and _text(master_gap_rollup.get("current_primary_open_gap_id")) == "none"
+        and len(master_gap_rows) == 9
+        and len(master_gap_release_blocker_rows) == 0
+        and master_gap_science_claim_closed
         and bool(master_gap_rollup.get("execution_enabled") is False)
         and bool(master_gap_rollup.get("external_state_mutated") is False)
     )
+    master_gap_product_ai_open_recorded = (
+        _text(master_gap_rollup.get("status")) == "blocked_master_gap_closure_rollup"
+        and bool(master_gap_rollup.get("all_gaps_closed") is False)
+        and bool(master_gap_rollup.get("claim_promotion_allowed") is False)
+        and _int(master_gap_rollup.get("gap_count")) == 9
+        and _int(master_gap_rollup.get("closed_gap_count")) == 8
+        and _int(master_gap_rollup.get("open_gap_count")) == 1
+        and master_gap_open_ids == ["PRODUCT-AI"]
+        and master_gap_closed_ids == expected_master_gap_product_ai_open_closed_ids
+        and _text(master_gap_rollup.get("current_primary_open_gap_id")) == "PRODUCT-AI"
+        and len(master_gap_rows) == 9
+        and len(master_gap_release_blocker_rows) == 1
+        and master_gap_science_claim_closed
+        and bool(master_gap_rollup.get("execution_enabled") is False)
+        and bool(master_gap_rollup.get("external_state_mutated") is False)
+    )
+    master_gap_rollup_recorded = master_gap_complete_recorded or master_gap_product_ai_open_recorded
     product_ai_architecture_gate_present = (
         product_ai_architecture_gap_packet is not None or product_ai_execution_backlog_packet is not None
     )

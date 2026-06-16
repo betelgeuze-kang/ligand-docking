@@ -114,6 +114,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/product/run_tier_alpha_adrb2_dispatch_smoke.py --timeout-seconds 420",
     "python3 tools/build_api_docking_dispatch_e2e_evidence.py",
     "python3 tools/build_product_job_orchestration_contract.py",
+    "python3 tools/build_architecture_validation_package_report.py",
     "python3 tools/product/build_restricted_unattended_execution_readiness.py",
     "python3 tools/build_product_security_deployment_contract.py",
     "python3 tools/build_product_execution_work_order.py",
@@ -466,6 +467,31 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "artifact_id": "architecture_validation_package_report",
+        "artifact_path": "runs/architecture_validation_package_report_current.json",
+        "builder_command": "python3 tools/build_architecture_validation_package_report.py",
+        "depends_on": [
+            "tools/product/build_architecture_validation_package_report.py",
+            "tools/build_architecture_validation_package_report.py",
+            "docs/architecture_validation_test_packages.md",
+            "runs/product_gpcr_adrb2_after_approval_summary.json",
+            "runs/external_validation_2026-05-11_ligand_speedpack_ab_v4_set1_core_blind_ion_trpv1_chembl20_full_p0_n10000_r1_stage5_ranking_summary.json",
+            "runs/external_validation_2026-05-12_scaleup_1m_pilot_v1_ligandonly_enum4_csvfast_gpu_set1_core_blind_kinase_core_full_p0_n1000000_r1_stage5_ranking_summary.json",
+            "runs/product_public_benchmark_contract_current.json",
+            "runs/public_benchmark_residual_assist_comparison_gate_current.json",
+            "runs/residual_energy_force_label_validation_current.json",
+            "runs/residual_shadow_ab_current.json",
+            "runs/api_docking_dispatch_e2e_evidence_current.json",
+            "runs/local_delivery_verdict_gate_current.json",
+            "runs/local_delivery/bundle_product_gpcr_adrb2/validation.json",
+            "runs/architecture_validation_public_benchmark_subset_manifests_current.json",
+            "runs/architecture_validation_speedpack_ab_retrospective_current.json",
+            "runs/biorxiv_external_validation_audit_current.json",
+            "runs/competition_benchmark_rollup_current.json",
+            "casp17/casp17_historical_winner_normalized_bands_current.json",
+        ],
+    },
+    {
         "artifact_id": "restricted_unattended_execution_readiness",
         "artifact_path": "runs/restricted_unattended_execution_readiness_current.json",
         "builder_command": "python3 tools/product/build_restricted_unattended_execution_readiness.py",
@@ -474,6 +500,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/api_docking_dispatch_e2e_evidence_current.json",
             "runs/api_runner_profile_promotion_readiness_current.json",
             "runs/tier_alpha_adrb2_dispatch_smoke_current.json",
+            "runs/architecture_validation_package_report_current.json",
         ],
     },
     {
@@ -1711,7 +1738,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "artifact_id": "product_ai_report_explanation_packet_semantic_ready",
         "artifact_path": "runs/product_ai_report_explanation_packet_current.json",
         "builder_command": "python3 tools/build_product_ai_report_explanation_packet.py",
-        "required_status": "blocked_product_ai_report_explanation_packet",
+        "required_status": "product_ai_report_explanation_packet_ready",
         "required_true_fields": [
             "customer_report_evidence_binding_ready",
             "evidence_traceability_ready",
@@ -1725,7 +1752,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "artifact_id": "product_ai_report_ux_contract_semantic_ready",
         "artifact_path": "runs/product_ai_report_ux_contract_current.json",
         "builder_command": "python3 tools/build_product_ai_report_ux_contract.py",
-        "required_status": "blocked_product_ai_report_ux_contract",
+        "required_status": "product_ai_report_ux_contract_ready",
         "required_true_fields": [
             "customer_report_card_ready",
             "customer_report_evidence_binding_ready",
@@ -1922,7 +1949,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "router_claim_allowed": 0,
             "platform_claim_allowed": 0,
             "residual_production_promotion_allowed": 0,
-            "blocker_count": 4,
+            "blocker_count": 3,
         },
         "required_text_exact_fields": {
             "promotion_scope": "guarded_operational_gpcr_ranking_only",
@@ -2020,12 +2047,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_status": "blocked_product_goal_completion_audit",
         "required_true_fields": [],
         "required_int_exact_fields": {
-            "release_blocker_fail_count": 6,
+            "release_blocker_fail_count": 2,
         },
         "required_text_exact_fields": {
-            "primary_release_blocker_requirement_id": "R1_local_self_hosted_product",
-            "primary_release_blocker_tier": "release",
-            "primary_release_blocker": "local_product_surface_not_ready",
+            "primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+            "primary_release_blocker_tier": "full_commercial_scope",
+            "primary_release_blocker": "full_scope_claim_closure_not_ready",
         },
     },
     {
@@ -4226,15 +4253,15 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_status": "operator_actions_required",
         "required_true_fields": [],
         "required_int_exact_fields": {
-            "product_goal_release_blocker_fail_count": 6,
+            "product_goal_release_blocker_fail_count": 2,
         },
         "required_text_exact_fields": {
-            "product_goal_primary_release_blocker_requirement_id": "R1_local_self_hosted_product",
-            "product_goal_primary_release_blocker_tier": "release",
-            "product_goal_primary_release_blocker": "local_product_surface_not_ready",
-            "primary_release_blocker_action_id": "",
-            "primary_release_blocker_action_required_input": "",
-            "primary_release_blocker_action_status": "",
+            "product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+            "product_goal_primary_release_blocker_tier": "full_commercial_scope",
+            "product_goal_primary_release_blocker": "full_scope_claim_closure_not_ready",
+            "primary_release_blocker_action_id": "product_scope_expansion:resolve_full_scope_breadth_evidence_receipt",
+            "primary_release_blocker_action_required_input": "config/product_scope_breadth_evidence_receipt_current.csv",
+            "primary_release_blocker_action_status": "required",
         },
     },
     {
@@ -4247,7 +4274,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "production_ai_registry_promotion_priority_packet_ready",
         ],
         "required_int_exact_fields": {
-            "product_goal_release_blocker_fail_count": 6,
+            "product_goal_release_blocker_fail_count": 2,
             "full_commercial_evidence_receipt_entry_count": 2,
             "full_commercial_evidence_receipt_operator_input_required_count": 2,
             "full_commercial_evidence_receipt_current_action_required_count": 2,
@@ -4313,12 +4340,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "product_scope_breadth_evidence_priority_receipt_approval_token_required": (
                 "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
             ),
-            "product_goal_primary_release_blocker_requirement_id": "R1_local_self_hosted_product",
-            "product_goal_primary_release_blocker_tier": "release",
-            "product_goal_primary_release_blocker": "local_product_surface_not_ready",
-            "primary_release_blocker_action_id": "",
-            "primary_release_blocker_action_required_input": "",
-            "primary_release_blocker_action_status": "",
+            "product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+            "product_goal_primary_release_blocker_tier": "full_commercial_scope",
+            "product_goal_primary_release_blocker": "full_scope_claim_closure_not_ready",
+            "primary_release_blocker_action_id": "product_scope_expansion:resolve_full_scope_breadth_evidence_receipt",
+            "primary_release_blocker_action_required_input": "config/product_scope_breadth_evidence_receipt_current.csv",
+            "primary_release_blocker_action_status": "required",
             "full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
                 "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"
@@ -4379,7 +4406,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "production_ai_registry_promotion_priority_packet_ready",
         ],
         "required_int_exact_fields": {
-            "completion_audit_release_blocker_bottleneck_count": 6,
+            "completion_audit_release_blocker_bottleneck_count": 2,
             "full_commercial_evidence_receipt_entry_count": 2,
             "full_commercial_evidence_receipt_operator_input_required_count": 2,
             "full_commercial_evidence_receipt_current_action_required_count": 2,

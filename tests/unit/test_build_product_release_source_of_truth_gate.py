@@ -148,7 +148,7 @@ def _refresh_release_decision_ready() -> dict:
             "product_ledger_privacy_scan_execution_enabled": False,
             "product_ledger_privacy_scan_external_state_mutated": False,
             "source_goal_bottleneck_briefing_status": "goal_bottleneck_briefing_ready",
-            "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 6,
+            "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_operator_input_required_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_current_action_required_count": 2,
@@ -1559,7 +1559,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert active_scorer_status_spec["required_status"] == "blocked_gpcr_active_scorer_promotion_decision"
     assert "phase_a_claim_closure_ready" not in active_scorer_status_spec["required_true_fields"]
     assert "accuracy_parity_claim_scope_lock_only" in active_scorer_status_spec["required_true_fields"]
-    assert active_scorer_status_spec["required_int_exact_fields"]["blocker_count"] == 4
+    assert active_scorer_status_spec["required_int_exact_fields"]["blocker_count"] == 3
     assert active_scorer_status_spec["required_int_exact_fields"]["claim_promotion_allowed"] == 0
     assert active_scorer_status_spec["required_text_exact_fields"] == {
         "promotion_scope": "guarded_operational_gpcr_ranking_only",
@@ -2068,7 +2068,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         if spec["artifact_id"] == "goal_operator_intake_kit_primary_release_blocker_semantic_ready"
     )
     assert intake_kit_status_spec["required_int_exact_fields"] == {
-        "product_goal_release_blocker_fail_count": 6,
+        "product_goal_release_blocker_fail_count": 2,
         "full_commercial_evidence_receipt_entry_count": 2,
         "full_commercial_evidence_receipt_operator_input_required_count": 2,
         "full_commercial_evidence_receipt_current_action_required_count": 2,
@@ -2151,7 +2151,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "production_ai_registry_promotion_priority_packet_ready",
     ]
     assert bottleneck_status_spec["required_int_exact_fields"] == {
-        "completion_audit_release_blocker_bottleneck_count": 6,
+        "completion_audit_release_blocker_bottleneck_count": 2,
         "full_commercial_evidence_receipt_entry_count": 2,
         "full_commercial_evidence_receipt_operator_input_required_count": 2,
         "full_commercial_evidence_receipt_current_action_required_count": 2,
@@ -4471,6 +4471,28 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "runs/product_full_commercial_blocker_evidence_matrix_current.json" in release_bundle_spec[
         "depends_on"
     ]
+    architecture_validation_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "architecture_validation_package_report"
+    )
+    assert architecture_validation_spec["builder_command"] == (
+        "python3 tools/build_architecture_validation_package_report.py"
+    )
+    assert "runs/residual_energy_force_label_validation_current.json" in architecture_validation_spec[
+        "depends_on"
+    ]
+    assert "runs/api_docking_dispatch_e2e_evidence_current.json" in architecture_validation_spec[
+        "depends_on"
+    ]
+    restricted_unattended_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "restricted_unattended_execution_readiness"
+    )
+    assert "runs/architecture_validation_package_report_current.json" in restricted_unattended_spec[
+        "depends_on"
+    ]
     quality_gate_verification_spec = next(
         spec for spec in mod.DEFAULT_ARTIFACT_SPECS if spec["artifact_id"] == "product_quality_gate_verification"
     )
@@ -4929,6 +4951,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         in mod.RELEASE_REFRESH_COMMANDS
     )
     assert "python3 tools/build_product_job_orchestration_contract.py" in mod.RELEASE_REFRESH_COMMANDS
+    assert "python3 tools/build_architecture_validation_package_report.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_goal_operator_intake_kit.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_goal_api_surface_contract.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "python3 tools/build_goal_bottleneck_briefing.py" in mod.RELEASE_REFRESH_COMMANDS
@@ -5160,7 +5183,13 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_job_orchestration_contract.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_job_orchestration_contract.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_architecture_validation_package_report.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_architecture_validation_package_report.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_restricted_unattended_execution_readiness.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/product/build_restricted_unattended_execution_readiness.py") < (
+        mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_api_customer_flow_release_evidence.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index(
         "python3 tools/build_local_delivery_environment_manifest.py --accelerator-env "
