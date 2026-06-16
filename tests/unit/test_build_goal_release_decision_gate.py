@@ -836,6 +836,17 @@ def _blocked_engine_refinement_priority_packet() -> dict:
             "top_next_operator_step": (
                 "Fill and validate 8 public benchmark work-order rows; current apply blocked rows=8."
             ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_csv": (
+                "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+            ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required": (
+                "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+            ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_status": (
+                "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+            ),
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready": False,
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count": 51,
             "approval_token_required": "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT",
             "approval_token_count": 1,
             "external_state_mutated": False,
@@ -959,6 +970,46 @@ def _full_commercial_bottleneck_briefing() -> dict:
                 "blocked_product_scope_breadth_evidence_receipt"
             ),
             "product_scope_breadth_evidence_priority_receipt_blocked_row_count": 6,
+            "engine_refinement_priority_action_id": (
+                "product_engine_refinement:resolve_refine_tier_claim_promotion_blocker"
+            ),
+            "engine_refinement_priority_top_item_id": "public_benchmark_gate_not_ready",
+            "engine_refinement_priority_top_blocker_id": "public_benchmark_gate_not_ready",
+            "engine_refinement_priority_top_bucket": "public_benchmark_work_order_apply_required",
+            "engine_refinement_priority_top_required_input": (
+                "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+            ),
+            "engine_refinement_priority_top_acceptance_artifact": (
+                "runs/refine_tier_public_benchmark_readiness_current.json"
+            ),
+            "engine_refinement_priority_top_verification_command": (
+                "python3 tools/product/build_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt.py; "
+                "python3 tools/product/materialize_refine_tier_public_benchmark_statistical_support_metric_candidates.py; "
+                "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py"
+            ),
+            "engine_refinement_priority_top_next_operator_step": (
+                "Fill and review the 51 DockQ/lDDT-PLI/internal DeltaG metric source payloads."
+            ),
+            "engine_refinement_priority_metric_source_payload_receipt_csv": (
+                "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+            ),
+            "engine_refinement_priority_metric_source_payload_receipt_approval_token_required": (
+                "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+            ),
+            "engine_refinement_priority_metric_source_payload_receipt_status": (
+                "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+            ),
+            "engine_refinement_priority_metric_source_payload_receipt_blocked_row_count": 51,
+            "engine_refinement_priority_claim_evidence_receipt_csv": (
+                "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+            ),
+            "engine_refinement_priority_claim_evidence_receipt_approval_token_required": (
+                "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+            ),
+            "engine_refinement_priority_claim_evidence_receipt_status": (
+                "blocked_engine_refinement_claim_evidence_receipt"
+            ),
+            "engine_refinement_priority_claim_evidence_receipt_blocked_row_count": 6,
             "production_ai_registry_promotion_priority_source_json": (
                 "runs/production_ai_registry_promotion_priority_packet_current.json"
             ),
@@ -2092,6 +2143,49 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
         "blocked_product_scope_breadth_evidence_receipt"
     )
     assert summary["product_scope_breadth_evidence_priority_receipt_blocked_row_count"] == 6
+    assert summary["engine_refinement_priority_action_id"] == (
+        "product_engine_refinement:resolve_refine_tier_claim_promotion_blocker"
+    )
+    assert summary["engine_refinement_priority_top_item_id"] == "public_benchmark_gate_not_ready"
+    assert summary["engine_refinement_priority_top_blocker_id"] == "public_benchmark_gate_not_ready"
+    assert summary["engine_refinement_priority_top_bucket"] == (
+        "public_benchmark_work_order_apply_required"
+    )
+    assert summary["engine_refinement_priority_top_required_input"] == (
+        "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+    )
+    assert summary["engine_refinement_priority_top_acceptance_artifact"] == (
+        "runs/refine_tier_public_benchmark_readiness_current.json"
+    )
+    assert "materialize_refine_tier_public_benchmark" in summary[
+        "engine_refinement_priority_top_verification_command"
+    ]
+    assert "51 DockQ/lDDT-PLI/internal DeltaG" in summary[
+        "engine_refinement_priority_top_next_operator_step"
+    ]
+    assert summary["engine_refinement_priority_receipt_action_id"] == (
+        "product_engine_refinement:resolve_refine_tier_claim_promotion_blocker"
+    )
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_csv"] == (
+        "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+    )
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_approval_token_required"
+    ] == "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_status"
+    ] == "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_blocked_row_count"] == 51
+    assert summary["engine_refinement_priority_claim_evidence_receipt_csv"] == (
+        "config/engine_refinement_claim_promotion_evidence_receipt_current.csv"
+    )
+    assert summary["engine_refinement_priority_claim_evidence_receipt_approval_token_required"] == (
+        "APPROVE_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT"
+    )
+    assert summary["engine_refinement_priority_claim_evidence_receipt_status"] == (
+        "blocked_engine_refinement_claim_evidence_receipt"
+    )
+    assert summary["engine_refinement_priority_claim_evidence_receipt_blocked_row_count"] == 6
     assert summary["product_full_commercial_blocker_evidence_matrix_gate_present"] is True
     assert summary["product_full_commercial_blocker_evidence_matrix_status"] == (
         "blocked_product_full_commercial_blocker_evidence_matrix"

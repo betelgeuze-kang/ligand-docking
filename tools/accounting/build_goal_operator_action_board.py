@@ -68,6 +68,9 @@ DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_JSON = (
 DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON = (
     "runs/engine_refinement_claim_evidence_receipt_current.json"
 )
+DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_JSON = (
+    "runs/engine_refinement_claim_evidence_priority_packet_current.json"
+)
 
 CLAIM_BOUNDARY = (
     "Goal operator action board only; it consolidates approval tokens, blocked CAMEO operator inputs, and cleanup review rows "
@@ -236,6 +239,27 @@ def _primary_release_blocker_action(
                 and _text(row.get("action_type")) == "resolve_refine_tier_claim_promotion_blocker"
             ):
                 return row
+    return {}
+
+
+def _engine_refinement_priority_action(
+    rows: list[dict[str, Any]],
+    top_blocker_id: str,
+) -> dict[str, Any]:
+    for row in rows:
+        if (
+            _text(row.get("lane_id")) == "product_engine_refinement"
+            and _text(row.get("action_type")) == "resolve_refine_tier_claim_promotion_blocker"
+            and top_blocker_id
+            and _text(row.get("claim_blocker_id")) == top_blocker_id
+        ):
+            return row
+    for row in rows:
+        if (
+            _text(row.get("lane_id")) == "product_engine_refinement"
+            and _text(row.get("action_type")) == "resolve_refine_tier_claim_promotion_blocker"
+        ):
+            return row
     return {}
 
 
@@ -1353,6 +1377,7 @@ def build_action_board(
     product_goal_completion_audit_packet: dict[str, Any] | None = None,
     product_scope_breadth_evidence_receipt_packet: dict[str, Any] | None = None,
     engine_refinement_claim_evidence_receipt_packet: dict[str, Any] | None = None,
+    engine_refinement_claim_evidence_priority_packet: dict[str, Any] | None = None,
     goal_release_decision_gate_packet: dict[str, Any] | None = None,
     goal_release_burndown_work_order_packet: dict[str, Any] | None = None,
     cameo_runtime_repair_work_order_packet: dict[str, Any] | None = None,
@@ -1393,6 +1418,9 @@ def build_action_board(
     product_scope_breadth_evidence_receipt_path: str = DEFAULT_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT_JSON,
     engine_refinement_claim_evidence_receipt_path: str = (
         DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON
+    ),
+    engine_refinement_claim_evidence_priority_packet_path: str = (
+        DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_JSON
     ),
     goal_release_decision_gate_path: str = DEFAULT_GOAL_RELEASE_DECISION_GATE_JSON,
     goal_release_burndown_work_order_path: str = DEFAULT_GOAL_RELEASE_BURNDOWN_WORK_ORDER_JSON,
@@ -1623,6 +1651,12 @@ def build_action_board(
     accuracy_scorecard_summary = _summary(accuracy_parity_scorecard_packet or {})
     scope_receipt_summary = _receipt_summary(product_scope_breadth_evidence_receipt_packet)
     engine_receipt_summary = _receipt_summary(engine_refinement_claim_evidence_receipt_packet)
+    engine_priority_summary = _summary(engine_refinement_claim_evidence_priority_packet or {})
+    engine_priority_top_blocker_id = (
+        _text(engine_priority_summary.get("top_blocker_id"))
+        or _text(engine_receipt_summary.get("first_blocked_blocker_id"))
+    )
+    engine_priority_action = _engine_refinement_priority_action(rows, engine_priority_top_blocker_id)
     summary = {
         "packet_type": "goal_operator_action_board",
         "status": "operator_actions_required" if rows else "goal_operator_actions_clear",
@@ -1709,6 +1743,87 @@ def build_action_board(
             else ""
         ),
         "product_engine_refinement_claim_blocker_count": len(engine_refinement_claim_action_board_rows or []),
+        "engine_refinement_priority_action_id": _action_identifier(engine_priority_action),
+        "engine_refinement_priority_top_item_id": engine_priority_top_blocker_id,
+        "engine_refinement_priority_top_blocker_id": engine_priority_top_blocker_id,
+        "engine_refinement_priority_top_bucket": _text(
+            engine_priority_summary.get("top_priority_bucket")
+        ),
+        "engine_refinement_priority_top_required_input": _text(
+            engine_priority_summary.get("top_required_input")
+            or engine_priority_action.get("required_input")
+        ),
+        "engine_refinement_priority_top_acceptance_artifact": _text(
+            engine_priority_summary.get("top_acceptance_artifact")
+            or engine_priority_action.get("claim_blocker_gate_or_artifact")
+            or engine_priority_action.get("artifact_path")
+        ),
+        "engine_refinement_priority_top_verification_command": _text(
+            engine_priority_summary.get("top_verification_command")
+            or engine_priority_action.get("command")
+        ),
+        "engine_refinement_priority_top_next_operator_step": _text(
+            engine_priority_summary.get("top_next_operator_step")
+            or engine_priority_action.get("claim_blocker_next_required_step")
+            or engine_priority_action.get("recommended_action")
+        ),
+        "engine_refinement_priority_packet_status": _text(
+            engine_priority_summary.get("status")
+        ),
+        "engine_refinement_priority_packet_json": (
+            engine_refinement_claim_evidence_priority_packet_path
+            if engine_refinement_claim_evidence_priority_packet
+            else ""
+        ),
+        "engine_refinement_priority_packet_ready": bool(
+            engine_priority_summary.get("priority_packet_ready") is True
+        ),
+        "engine_refinement_priority_claim_promotion_allowed": bool(
+            engine_priority_summary.get("claim_promotion_allowed") is True
+        ),
+        "engine_refinement_priority_receipt_action_id": _action_identifier(engine_priority_action),
+        "engine_refinement_priority_claim_evidence_receipt_csv": _text(
+            engine_receipt_summary.get("receipt_csv")
+            or product_goal_completion_audit.get("engine_refinement_claim_evidence_receipt_csv")
+        ),
+        "engine_refinement_priority_claim_evidence_receipt_approval_token_required": _text(
+            engine_receipt_summary.get("approval_token_required")
+        ),
+        "engine_refinement_priority_claim_evidence_receipt_status": _text(
+            engine_receipt_summary.get("status")
+            or engine_priority_summary.get("claim_evidence_receipt_status")
+        ),
+        "engine_refinement_priority_claim_evidence_receipt_blocked_row_count": _int(
+            engine_receipt_summary.get("blocked_row_count")
+            or product_goal_completion_audit.get("engine_refinement_claim_evidence_receipt_blocked_row_count")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_csv": _text(
+            engine_priority_summary.get(
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_csv"
+            )
+            or engine_priority_summary.get("top_required_input")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_approval_token_required": _text(
+            engine_priority_summary.get(
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required"
+            )
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_status": _text(
+            engine_priority_summary.get(
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_status"
+            )
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_ready": bool(
+            engine_priority_summary.get(
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready"
+            )
+            is True
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_blocked_row_count": _int(
+            engine_priority_summary.get(
+                "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count"
+            )
+        ),
         "product_accuracy_parity_action_count": sum(
             1 for row in rows if row["lane_id"] == "product_accuracy_parity"
         ),
@@ -2593,6 +2708,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_engine_refinement_action_count: `{s['product_engine_refinement_action_count']}`",
         f"- product_engine_refinement_action_board_csv: `{s['product_engine_refinement_action_board_csv']}`",
         f"- product_engine_refinement_claim_blocker_count: `{s['product_engine_refinement_claim_blocker_count']}`",
+        f"- engine_refinement_priority_action_id: `{s['engine_refinement_priority_action_id']}`",
+        f"- engine_refinement_priority_top_blocker_id: `{s['engine_refinement_priority_top_blocker_id']}`",
+        f"- engine_refinement_priority_top_required_input: `{s['engine_refinement_priority_top_required_input']}`",
+        f"- engine_refinement_priority_top_acceptance_artifact: `{s['engine_refinement_priority_top_acceptance_artifact']}`",
+        f"- engine_refinement_priority_metric_source_payload_receipt_csv: `{s['engine_refinement_priority_metric_source_payload_receipt_csv']}`",
+        f"- engine_refinement_priority_metric_source_payload_receipt_approval_token_required: `{s['engine_refinement_priority_metric_source_payload_receipt_approval_token_required']}`",
+        f"- engine_refinement_priority_claim_evidence_receipt_csv: `{s['engine_refinement_priority_claim_evidence_receipt_csv']}`",
         f"- product_accuracy_parity_action_count: `{s['product_accuracy_parity_action_count']}`",
         f"- product_accuracy_parity_ligand_ranking_action_present: `{s['product_accuracy_parity_ligand_ranking_action_present']}`",
         f"- product_accuracy_parity_ligand_ranking_status: `{s['product_accuracy_parity_ligand_ranking_status']}`",
@@ -2973,6 +3095,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--engine-refinement-claim-evidence-receipt-json",
         default=DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_RECEIPT_JSON,
     )
+    parser.add_argument(
+        "--engine-refinement-claim-evidence-priority-packet-json",
+        default=DEFAULT_ENGINE_REFINEMENT_CLAIM_EVIDENCE_PRIORITY_PACKET_JSON,
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -2999,6 +3125,9 @@ def main(argv: list[str] | None = None) -> None:
         ),
         engine_refinement_claim_evidence_receipt_packet=_read_json_if_present(
             args.engine_refinement_claim_evidence_receipt_json
+        ),
+        engine_refinement_claim_evidence_priority_packet=_read_json_if_present(
+            args.engine_refinement_claim_evidence_priority_packet_json
         ),
         goal_release_decision_gate_packet=_read_json_if_present(args.goal_release_decision_gate_json),
         goal_release_burndown_work_order_packet=_read_json_if_present(args.goal_release_burndown_work_order_json),
@@ -3041,6 +3170,9 @@ def main(argv: list[str] | None = None) -> None:
         product_goal_completion_audit_path=args.product_goal_completion_audit_json,
         product_scope_breadth_evidence_receipt_path=args.product_scope_breadth_evidence_receipt_json,
         engine_refinement_claim_evidence_receipt_path=args.engine_refinement_claim_evidence_receipt_json,
+        engine_refinement_claim_evidence_priority_packet_path=(
+            args.engine_refinement_claim_evidence_priority_packet_json
+        ),
         goal_release_decision_gate_path=args.goal_release_decision_gate_json,
         goal_release_burndown_work_order_path=args.goal_release_burndown_work_order_json,
         cameo_runtime_repair_work_order_path=args.cameo_runtime_repair_work_order_json,

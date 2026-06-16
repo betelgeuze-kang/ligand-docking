@@ -2688,6 +2688,108 @@ def build_goal_release_decision_gate(
         goal_bottleneck_briefing.get("product_scope_breadth_evidence_priority_receipt_blocked_row_count"),
         product_scope_receipt.get("blocked_row_count"),
     )
+    engine_refinement_priority_action_id = _first_text(
+        actions.get("engine_refinement_priority_action_id"),
+        goal_bottleneck_briefing.get("engine_refinement_priority_action_id"),
+    )
+    engine_refinement_priority_top_item_id = _first_text(
+        actions.get("engine_refinement_priority_top_item_id"),
+        actions.get("engine_refinement_priority_top_blocker_id"),
+        goal_bottleneck_briefing.get("engine_refinement_priority_top_item_id"),
+        goal_bottleneck_briefing.get("engine_refinement_priority_top_blocker_id"),
+        engine_refinement_priority.get("top_blocker_id"),
+        engine_refinement_receipt.get("first_blocked_blocker_id"),
+    )
+    engine_refinement_priority_top_blocker_id = _first_text(
+        actions.get("engine_refinement_priority_top_blocker_id"),
+        goal_bottleneck_briefing.get("engine_refinement_priority_top_blocker_id"),
+        engine_refinement_priority_top_item_id,
+    )
+    engine_refinement_priority_top_bucket = _first_text(
+        actions.get("engine_refinement_priority_top_bucket"),
+        goal_bottleneck_briefing.get("engine_refinement_priority_top_bucket"),
+        engine_refinement_priority.get("top_priority_bucket"),
+    )
+    engine_refinement_priority_top_required_input = _first_text(
+        actions.get("engine_refinement_priority_top_required_input"),
+        goal_bottleneck_briefing.get("engine_refinement_priority_top_required_input"),
+        engine_refinement_priority.get("top_required_input"),
+    )
+    engine_refinement_priority_top_acceptance_artifact = _first_text(
+        actions.get("engine_refinement_priority_top_acceptance_artifact"),
+        goal_bottleneck_briefing.get("engine_refinement_priority_top_acceptance_artifact"),
+        engine_refinement_priority.get("top_acceptance_artifact"),
+    )
+    engine_refinement_priority_top_verification_command = _first_text(
+        actions.get("engine_refinement_priority_top_verification_command"),
+        goal_bottleneck_briefing.get("engine_refinement_priority_top_verification_command"),
+        engine_refinement_priority.get("top_verification_command"),
+    )
+    engine_refinement_priority_top_next_operator_step = _first_text(
+        actions.get("engine_refinement_priority_top_next_operator_step"),
+        goal_bottleneck_briefing.get("engine_refinement_priority_top_next_operator_step"),
+        engine_refinement_priority.get("top_next_operator_step"),
+    )
+    engine_refinement_priority_receipt_action_id = _first_text(
+        actions.get("engine_refinement_priority_receipt_action_id"),
+        goal_bottleneck_briefing.get("engine_refinement_priority_receipt_action_id"),
+        engine_refinement_priority_action_id,
+    )
+    engine_refinement_priority_claim_receipt_csv = _first_text(
+        actions.get("engine_refinement_priority_claim_evidence_receipt_csv"),
+        goal_bottleneck_briefing.get("engine_refinement_priority_claim_evidence_receipt_csv"),
+        engine_refinement_receipt.get("receipt_csv"),
+    )
+    engine_refinement_priority_claim_receipt_approval_token_required = _first_text(
+        actions.get("engine_refinement_priority_claim_evidence_receipt_approval_token_required"),
+        goal_bottleneck_briefing.get("engine_refinement_priority_claim_evidence_receipt_approval_token_required"),
+        engine_refinement_receipt.get("approval_token_required"),
+        engine_refinement_priority.get("approval_token_required"),
+    )
+    engine_refinement_priority_claim_receipt_status = _first_text(
+        actions.get("engine_refinement_priority_claim_evidence_receipt_status"),
+        goal_bottleneck_briefing.get("engine_refinement_priority_claim_evidence_receipt_status"),
+        engine_refinement_receipt.get("status"),
+        engine_refinement_priority.get("claim_evidence_receipt_status"),
+    )
+    engine_refinement_priority_claim_receipt_blocked_row_count = _first_int(
+        actions.get("engine_refinement_priority_claim_evidence_receipt_blocked_row_count"),
+        goal_bottleneck_briefing.get("engine_refinement_priority_claim_evidence_receipt_blocked_row_count"),
+        engine_refinement_receipt.get("blocked_row_count"),
+    )
+    engine_refinement_priority_metric_receipt_csv = _first_text(
+        actions.get("engine_refinement_priority_metric_source_payload_receipt_csv"),
+        goal_bottleneck_briefing.get("engine_refinement_priority_metric_source_payload_receipt_csv"),
+        engine_refinement_priority.get(
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_receipt_csv"
+        ),
+        engine_refinement_priority_top_required_input,
+    )
+    engine_refinement_priority_metric_receipt_approval_token_required = _first_text(
+        actions.get("engine_refinement_priority_metric_source_payload_receipt_approval_token_required"),
+        goal_bottleneck_briefing.get(
+            "engine_refinement_priority_metric_source_payload_receipt_approval_token_required"
+        ),
+        engine_refinement_priority.get(
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required"
+        ),
+    )
+    engine_refinement_priority_metric_receipt_status = _first_text(
+        actions.get("engine_refinement_priority_metric_source_payload_receipt_status"),
+        goal_bottleneck_briefing.get("engine_refinement_priority_metric_source_payload_receipt_status"),
+        engine_refinement_priority.get(
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_status"
+        ),
+    )
+    engine_refinement_priority_metric_receipt_blocked_row_count = _first_int(
+        actions.get("engine_refinement_priority_metric_source_payload_receipt_blocked_row_count"),
+        goal_bottleneck_briefing.get(
+            "engine_refinement_priority_metric_source_payload_receipt_blocked_row_count"
+        ),
+        engine_refinement_priority.get(
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count"
+        ),
+    )
     next_required_items: list[str] = []
     if not product_bundle_validated or not product_ready or not product_claim_allowed:
         next_required_items.append("product bundle validation")
@@ -2837,6 +2939,45 @@ def build_goal_release_decision_gate(
         "product_scope_breadth_evidence_priority_receipt_status": product_scope_priority_receipt_status,
         "product_scope_breadth_evidence_priority_receipt_blocked_row_count": (
             product_scope_priority_receipt_blocked_row_count
+        ),
+        "engine_refinement_priority_action_id": engine_refinement_priority_action_id,
+        "engine_refinement_priority_top_item_id": engine_refinement_priority_top_item_id,
+        "engine_refinement_priority_top_blocker_id": engine_refinement_priority_top_blocker_id,
+        "engine_refinement_priority_top_bucket": engine_refinement_priority_top_bucket,
+        "engine_refinement_priority_top_required_input": engine_refinement_priority_top_required_input,
+        "engine_refinement_priority_top_acceptance_artifact": (
+            engine_refinement_priority_top_acceptance_artifact
+        ),
+        "engine_refinement_priority_top_verification_command": (
+            engine_refinement_priority_top_verification_command
+        ),
+        "engine_refinement_priority_top_next_operator_step": (
+            engine_refinement_priority_top_next_operator_step
+        ),
+        "engine_refinement_priority_receipt_action_id": engine_refinement_priority_receipt_action_id,
+        "engine_refinement_priority_claim_evidence_receipt_csv": (
+            engine_refinement_priority_claim_receipt_csv
+        ),
+        "engine_refinement_priority_claim_evidence_receipt_approval_token_required": (
+            engine_refinement_priority_claim_receipt_approval_token_required
+        ),
+        "engine_refinement_priority_claim_evidence_receipt_status": (
+            engine_refinement_priority_claim_receipt_status
+        ),
+        "engine_refinement_priority_claim_evidence_receipt_blocked_row_count": (
+            engine_refinement_priority_claim_receipt_blocked_row_count
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_csv": (
+            engine_refinement_priority_metric_receipt_csv
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_approval_token_required": (
+            engine_refinement_priority_metric_receipt_approval_token_required
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_status": (
+            engine_refinement_priority_metric_receipt_status
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_blocked_row_count": (
+            engine_refinement_priority_metric_receipt_blocked_row_count
         ),
         "commercial_independent_product_ready": product_release_ready,
         "cameo_architecture_validation_ready": cameo_architecture_validation_ready,
@@ -4567,6 +4708,16 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_scope_breadth_evidence_priority_receipt_csv: `{s['product_scope_breadth_evidence_priority_receipt_csv']}`",
         "- product_scope_breadth_evidence_priority_receipt_approval_token_required: "
         f"`{s['product_scope_breadth_evidence_priority_receipt_approval_token_required']}`",
+        f"- engine_refinement_priority_action_id: `{s['engine_refinement_priority_action_id']}`",
+        f"- engine_refinement_priority_top_blocker_id: `{s['engine_refinement_priority_top_blocker_id']}`",
+        f"- engine_refinement_priority_top_required_input: `{s['engine_refinement_priority_top_required_input']}`",
+        f"- engine_refinement_priority_top_acceptance_artifact: `{s['engine_refinement_priority_top_acceptance_artifact']}`",
+        "- engine_refinement_priority_metric_source_payload_receipt_csv: "
+        f"`{s['engine_refinement_priority_metric_source_payload_receipt_csv']}`",
+        "- engine_refinement_priority_metric_source_payload_receipt_approval_token_required: "
+        f"`{s['engine_refinement_priority_metric_source_payload_receipt_approval_token_required']}`",
+        "- engine_refinement_priority_claim_evidence_receipt_csv: "
+        f"`{s['engine_refinement_priority_claim_evidence_receipt_csv']}`",
         f"- commercial_independent_product_ready: `{s['commercial_independent_product_ready']}`",
         f"- product_architecture_local_surface_ready: `{s['product_architecture_local_surface_ready']}`",
         f"- product_architecture_release_ready: `{s['product_architecture_release_ready']}`",
