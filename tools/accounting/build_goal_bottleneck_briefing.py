@@ -450,6 +450,52 @@ def _engine_refinement_claim_evidence_priority_packet_fields(
     return fields
 
 
+def _engine_refinement_priority_alias_fields(fields: dict[str, Any]) -> dict[str, Any]:
+    metric_receipt_prefix = (
+        "engine_refinement_claim_evidence_priority_packet_"
+        "public_benchmark_statistical_support_metric_source_payload_operator_receipt_"
+    )
+    metric_materialization_prefix = (
+        "engine_refinement_claim_evidence_priority_packet_"
+        "public_benchmark_statistical_support_metric_materialization_"
+    )
+    return {
+        "engine_refinement_priority_metric_source_payload_receipt_present": bool(
+            fields.get(f"{metric_receipt_prefix}present") is True
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_ready": bool(
+            fields.get(f"{metric_receipt_prefix}ready") is True
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_status": _text(
+            fields.get(f"{metric_receipt_prefix}status")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_csv": _text(
+            fields.get(f"{metric_receipt_prefix}receipt_csv")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_blocked_row_count": _int(
+            fields.get(f"{metric_receipt_prefix}blocked_row_count")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_first_blocked_template_id": _text(
+            fields.get(f"{metric_receipt_prefix}first_blocked_template_id")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_most_common_row_blocker": _text(
+            fields.get(f"{metric_receipt_prefix}most_common_row_blocker")
+        ),
+        "engine_refinement_priority_metric_source_payload_receipt_approval_token_required": _text(
+            fields.get(f"{metric_receipt_prefix}approval_token_required")
+        ),
+        "engine_refinement_priority_planned_metric_source_payload_count": _int(
+            fields.get(f"{metric_materialization_prefix}planned_metric_source_payload_count")
+        ),
+        "engine_refinement_priority_existing_metric_source_payload_count": _int(
+            fields.get(f"{metric_materialization_prefix}existing_metric_source_payload_count")
+        ),
+        "engine_refinement_priority_required_metric_source_payloads": _text(
+            fields.get(f"{metric_materialization_prefix}required_metric_source_payloads")
+        ),
+    }
+
+
 def _release_row_by_check(release_gate_packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
     rows_by_check: dict[str, dict[str, Any]] = {}
     for row in _rows(release_gate_packet):
@@ -800,6 +846,9 @@ def build_goal_bottleneck_briefing(
             source_json=engine_refinement_claim_evidence_priority_packet_path,
         )
     )
+    engine_refinement_priority_alias_fields = _engine_refinement_priority_alias_fields(
+        engine_refinement_claim_evidence_priority_fields
+    )
     engine_refinement_claim_evidence_priority_artifacts = _unique(
         [engine_refinement_claim_evidence_priority_packet_path]
         + _text_list(engine_refinement_claim_evidence_priority.get("source_artifacts"))
@@ -1103,6 +1152,7 @@ def build_goal_bottleneck_briefing(
         )
         if kind == "engine_refinement_claim_promotion_required":
             row.update(engine_refinement_claim_evidence_priority_fields)
+            row.update(engine_refinement_priority_alias_fields)
             top_operator_step = _text(
                 row.get("engine_refinement_claim_evidence_priority_packet_top_next_operator_step")
             )
@@ -1289,6 +1339,7 @@ def build_goal_bottleneck_briefing(
             )
         ),
         **engine_refinement_claim_evidence_priority_fields,
+        **engine_refinement_priority_alias_fields,
         **_product_scope_breadth_evidence_priority_intake_fields(intake),
         **_production_ai_registry_promotion_priority_intake_fields(intake),
         "public_benchmark_work_order_status": _text(public_benchmark_work_order.get("status")),
@@ -1559,6 +1610,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"`{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_template_row_count']}/"
         f"{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_ready_row_count']}/"
         f"{s['engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_templates_metric_source_payload_fill_blocked_row_count']}`",
+        f"- engine_refinement_priority_metric_source_payload_receipt_csv: `{s['engine_refinement_priority_metric_source_payload_receipt_csv']}`",
+        f"- engine_refinement_priority_metric_source_payload_receipt_status: `{s['engine_refinement_priority_metric_source_payload_receipt_status']}`",
+        f"- engine_refinement_priority_metric_source_payload_receipt_blocked_row_count: `{s['engine_refinement_priority_metric_source_payload_receipt_blocked_row_count']}`",
+        f"- engine_refinement_priority_metric_source_payload_receipt_approval_token_required: `{s['engine_refinement_priority_metric_source_payload_receipt_approval_token_required']}`",
         f"- production_ai_registry_promotion_priority_status: `{s['production_ai_registry_promotion_priority_status']}`",
         f"- production_ai_registry_promotion_priority_top_gate_id: `{s['production_ai_registry_promotion_priority_top_gate_id']}`",
         f"- production_ai_registry_promotion_priority_top_required_input: `{s['production_ai_registry_promotion_priority_top_required_input']}`",

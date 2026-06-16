@@ -1169,6 +1169,29 @@ def test_goal_bottleneck_briefing_keeps_full_commercial_completion_blockers_when
     assert summary[
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_metric_source_payload_operator_receipt_approval_token_required"
     ] == "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_present"] is True
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_ready"] is False
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_status"] == (
+        "blocked_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt"
+    )
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_csv"] == (
+        "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+    )
+    assert summary["engine_refinement_priority_metric_source_payload_receipt_blocked_row_count"] == 51
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_first_blocked_template_id"
+    ] == "r9_statistical_support_metric_source_template_001"
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_most_common_row_blocker"
+    ] == "operator_placeholders_unfilled"
+    assert summary[
+        "engine_refinement_priority_metric_source_payload_receipt_approval_token_required"
+    ] == "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+    assert summary["engine_refinement_priority_planned_metric_source_payload_count"] == 51
+    assert summary["engine_refinement_priority_existing_metric_source_payload_count"] == 0
+    assert summary["engine_refinement_priority_required_metric_source_payloads"] == (
+        "dockq;lddt_pli;internal_deltaG"
+    )
     assert summary[
         "engine_refinement_claim_evidence_priority_packet_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_present"
     ] is True
