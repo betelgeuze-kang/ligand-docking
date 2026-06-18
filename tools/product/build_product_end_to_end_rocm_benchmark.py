@@ -20,6 +20,8 @@ DEFAULT_STAGE5_SUMMARY_JSON = "runs/product_gpcr_adrb2_after_approval_stage5_ran
 DEFAULT_SLA_SUMMARY_JSON = "runs/product_gpcr_adrb2_after_approval_sla_summary.json"
 DEFAULT_OUT_JSON = "runs/product_end_to_end_rocm_benchmark_current.json"
 DEFAULT_BACKMAPPING_SMOKE_JSON = "runs/backmapping_scoring_batch_smoke_benchmark_current.json"
+DEFAULT_AI_MD_ENGINE_KPI_JSON = "runs/ai_md_engine_kpi_report_current.json"
+DEFAULT_PRODUCT_IMAGE_SMOKE_PREFLIGHT_JSON = "runs/product_image_smoke_preflight_current.json"
 DEFAULT_OUT_CSV = "runs/product_end_to_end_rocm_benchmark_current.csv"
 DEFAULT_OUT_MD = "runs/product_end_to_end_rocm_benchmark_current.md"
 
@@ -124,6 +126,8 @@ def build_product_end_to_end_rocm_benchmark(
     stage5_packet: dict[str, Any],
     sla_packet: dict[str, Any] | None = None,
     backmapping_smoke_packet: dict[str, Any] | None = None,
+    ai_md_engine_kpi_packet: dict[str, Any] | None = None,
+    product_image_smoke_preflight_packet: dict[str, Any] | None = None,
     run_summary_path: str = DEFAULT_RUN_SUMMARY_JSON,
     rocm_manifest_path: str = DEFAULT_ROCM_MANIFEST_JSON,
     bundle_manifest_path: str = DEFAULT_BUNDLE_MANIFEST_JSON,
@@ -134,6 +138,8 @@ def build_product_end_to_end_rocm_benchmark(
     stage5_path: str = DEFAULT_STAGE5_SUMMARY_JSON,
     sla_path: str = DEFAULT_SLA_SUMMARY_JSON,
     backmapping_smoke_path: str = DEFAULT_BACKMAPPING_SMOKE_JSON,
+    ai_md_engine_kpi_path: str = DEFAULT_AI_MD_ENGINE_KPI_JSON,
+    product_image_smoke_preflight_path: str = DEFAULT_PRODUCT_IMAGE_SMOKE_PREFLIGHT_JSON,
 ) -> dict[str, Any]:
     run_summary = _summary(run_summary_packet)
     rocm = _summary(rocm_manifest_packet)
@@ -149,8 +155,41 @@ def build_product_end_to_end_rocm_benchmark(
     backmapping_smoke = _summary(backmapping_smoke_packet)
     backmapping_batch_frames_per_sec = _float(backmapping_smoke.get("batch_frames_per_sec"))
     backmapping_smoke_ready = _text(backmapping_smoke.get("status")) == "backmapping_scoring_batch_smoke_benchmark_ready"
+    ai_md_engine_kpi = _summary(ai_md_engine_kpi_packet or {})
+    ai_md_engine_kpi_present = bool(ai_md_engine_kpi)
+    product_image_smoke_preflight = _summary(product_image_smoke_preflight_packet or {})
+    pose_ranking_hbond = (
+        ai_md_engine_kpi.get("pose_ranking_hbond_benchmark")
+        if isinstance(ai_md_engine_kpi.get("pose_ranking_hbond_benchmark"), dict)
+        else {}
+    )
+    clean_container_smoke_ready = bool(
+        product_image_smoke_preflight.get("clean_container_smoke_ready") is True
+        and product_image_smoke_preflight.get("receipt_status") == "product_image_smoke_ready"
+        and product_image_smoke_preflight.get("receipt_mode") == "rocm-runtime"
+        and product_image_smoke_preflight.get("product_runner_smoke_ready") is True
+        and _int(product_image_smoke_preflight.get("receipt_simulate_missing_profile_http")) == 422
+    )
+    ai_md_engine_kpi_ready = (
+        _text(ai_md_engine_kpi.get("status")) == "ai_md_engine_kpi_report_ready"
+        and ai_md_engine_kpi.get("report_ready") is True
+        and pose_ranking_hbond.get("benchmark_ready") is True
+        and ai_md_engine_kpi.get("product_bundle_evidence_export_ready") is True
+        and clean_container_smoke_ready
+    )
 
-    rocm_ready = _text(rocm.get("status")) == "rocm_environment_manifest_ready" and rocm.get("manifest_ready") is True
+    visible_device_count = _int(rocm.get("visible_device_count"))
+    production_execution_ready = rocm.get("production_execution_ready")
+    production_ready = bool(production_execution_ready) if production_execution_ready is not None else visible_device_count > 0
+    device_nodes_ready = rocm.get("device_nodes_ready", True) is True
+    rocm_ready = bool(
+        _text(rocm.get("status")) == "rocm_environment_manifest_ready"
+        and rocm.get("manifest_ready") is True
+        and rocm.get("torch_rocm_ready") is True
+        and visible_device_count > 0
+        and device_nodes_ready
+        and production_ready
+    )
     full_run_pass = run_summary.get("pass") is True and _text(run_summary.get("run_scope")) == "full"
     stages_ok, failed_stages = _stages_ok(run_summary)
     artifacts = run_summary.get("artifacts") if isinstance(run_summary.get("artifacts"), dict) else {}
@@ -178,7 +217,20 @@ def build_product_end_to_end_rocm_benchmark(
     )
 
     rows = [
-        _status_row("rocm_environment", "pass" if rocm_ready else "fail", _text(rocm.get("status")) or "missing", "rocm_environment_manifest_ready", "ROCm/HIP runtime must be visible before AMD-native claims.", rocm_manifest_path),
+        _status_row(
+            "rocm_environment",
+            "pass" if rocm_ready else "fail",
+            (
+                f"status={_text(rocm.get('status')) or 'missing'}; "
+                f"torch_rocm_ready={rocm.get('torch_rocm_ready')}; "
+                f"visible_device_count={visible_device_count}; "
+                f"device_nodes_ready={device_nodes_ready}; "
+                f"production_execution_ready={production_ready}"
+            ),
+            "rocm_environment_manifest_ready with torch_rocm_ready=true, visible_device_count>0, and device_nodes_ready=true",
+            "ROCm/HIP runtime must be visible to PyTorch before AMD-native product claims.",
+            rocm_manifest_path,
+        ),
         _status_row("full_run_summary", "pass" if full_run_pass else "fail", f"pass={run_summary.get('pass')}; run_scope={run_summary.get('run_scope')}", "pass=true and run_scope=full", "End-to-end evidence must come from a completed full local run.", run_summary_path),
         _status_row("required_stage_chain", "pass" if stages_ok else "fail", "failed=" + ",".join(failed_stages) if failed_stages else "all required stages ok", "stage0/stage1/stage2/stage3/stage45/stage5 ok=true", "The run must include leakage, preparation, trajectory, scoring, integrity, and ranking stages.", run_summary_path),
         _status_row("rust_hip_trajectory_evidence", "pass" if rust_hip_evidence else "fail", f"trajectory_engine_mode={trajectory_engine_mode}; require_rust_hip={stage2.get('require_rust_hip')}", "trajectory_engine_mode=rust_hip and require_rust_hip=true", "The local run must prove the AMD-native trajectory path was required.", f"{run_summary_path}; {stage2_path}"),
@@ -194,7 +246,42 @@ def build_product_end_to_end_rocm_benchmark(
             "Vectorized backmapping scoring should expose a recent local smoke throughput guard.",
             backmapping_smoke_path,
         ),
+        _status_row(
+            "clean_container_rocm_runtime_smoke",
+            "pass" if clean_container_smoke_ready else "fail",
+            (
+                f"status={product_image_smoke_preflight.get('status') or 'missing'}; "
+                f"clean_container_smoke_ready="
+                f"{product_image_smoke_preflight.get('clean_container_smoke_ready')}; "
+                f"receipt_mode={product_image_smoke_preflight.get('receipt_mode')}; "
+                f"receipt_status={product_image_smoke_preflight.get('receipt_status')}; "
+                f"product_runner_smoke_ready="
+                f"{product_image_smoke_preflight.get('product_runner_smoke_ready')}; "
+                f"simulate_missing_profile_http="
+                f"{product_image_smoke_preflight.get('receipt_simulate_missing_profile_http')}"
+            ),
+            "product_image_smoke_preflight_ready with rocm-runtime receipt, runner smoke, and /simulate 422",
+            "Local ROCm/HIP evidence must also survive the clean product container runtime before product claims.",
+            product_image_smoke_preflight_path,
+        ),
     ]
+    if ai_md_engine_kpi_present:
+        rows.append(
+            _status_row(
+                "ai_md_engine_kpi_report",
+                "pass" if ai_md_engine_kpi_ready else "warn",
+                (
+                    f"status={ai_md_engine_kpi.get('status')}; "
+                    f"pose_ranking_hbond_ready={pose_ranking_hbond.get('benchmark_ready')}; "
+                    f"product_bundle_evidence_export_ready="
+                    f"{ai_md_engine_kpi.get('product_bundle_evidence_export_ready')}; "
+                    f"clean_container_smoke_ready={clean_container_smoke_ready}"
+                ),
+                "ai_md_engine_kpi_report_ready with pose/ranking/H-bond benchmark and clean-container smoke ready",
+                "The ROCm handoff should carry a local engine KPI evidence report, not only the GPCR run summary.",
+                ai_md_engine_kpi_path,
+            )
+        )
     fail_rows = [row for row in rows if row["status"] == "fail"]
     warn_rows = [row for row in rows if row["status"] == "warn"]
     benchmark_ready = not fail_rows
@@ -210,6 +297,9 @@ def build_product_end_to_end_rocm_benchmark(
         "family": "gpcr",
         "trajectory_engine_mode": trajectory_engine_mode,
         "rust_hip_evidence_ready": rust_hip_evidence,
+        "rocm_hip_rust_runtime_ready": rocm_ready,
+        "rocm_visible_device_count": visible_device_count,
+        "rocm_device_nodes_ready": device_nodes_ready,
         "production_trajectory_profile_enabled": production_profile_enabled,
         "processed_jobs": processed_jobs,
         "failed_jobs": failed_jobs,
@@ -223,6 +313,26 @@ def build_product_end_to_end_rocm_benchmark(
         "backmapping_batch_smoke_ready": backmapping_smoke_ready,
         "backmapping_batch_frames_per_sec": backmapping_batch_frames_per_sec,
         "backmapping_batch_smoke_json": backmapping_smoke_path,
+        "ai_md_engine_kpi_report_present": ai_md_engine_kpi_present,
+        "ai_md_engine_kpi_report_ready": ai_md_engine_kpi_ready,
+        "ai_md_engine_kpi_json": ai_md_engine_kpi_path if ai_md_engine_kpi_present else "",
+        "ai_md_engine_kpi_pose_ranking_hbond_ready": pose_ranking_hbond.get("benchmark_ready") is True,
+        "ai_md_engine_kpi_product_bundle_evidence_export_ready": (
+            ai_md_engine_kpi.get("product_bundle_evidence_export_ready") is True
+        ),
+        "product_image_smoke_preflight_status": _text(
+            product_image_smoke_preflight.get("status")
+        ),
+        "clean_container_smoke_ready": clean_container_smoke_ready,
+        "product_image_smoke_receipt_mode": _text(
+            product_image_smoke_preflight.get("receipt_mode")
+        ),
+        "product_image_smoke_receipt_status": _text(
+            product_image_smoke_preflight.get("receipt_status")
+        ),
+        "product_image_smoke_product_runner_smoke_ready": bool(
+            product_image_smoke_preflight.get("product_runner_smoke_ready") is True
+        ),
         "bundle_zip_present": bundle_zip_present,
         "bundle_validation_ok": bundle_validation_ok,
         "component_count": len(rows),
@@ -237,6 +347,8 @@ def build_product_end_to_end_rocm_benchmark(
         "next_required_step": (
             "Use this as the current single-target GPCR ROCm end-to-end benchmark baseline; harden production trajectory profile next."
             if benchmark_ready
+            else "Run PRODUCT_IMAGE_VERIFY_MODE=rocm-runtime bash deploy/verify_product_image.sh and regenerate this benchmark."
+            if not clean_container_smoke_ready
             else "Run or ingest a full local ROCm/HIP docking execution with stage and bundle evidence."
         ),
     }
@@ -266,6 +378,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- unique_ligands_per_hour: `{s['unique_ligands_per_hour']}`",
         f"- failure_rate: `{s['failure_rate']}`",
         f"- docking_results_emitted: `{s['docking_results_emitted']}`",
+        f"- ai_md_engine_kpi_report_ready: `{s['ai_md_engine_kpi_report_ready']}`",
+        f"- ai_md_engine_kpi_pose_ranking_hbond_ready: `{s['ai_md_engine_kpi_pose_ranking_hbond_ready']}`",
+        f"- clean_container_smoke_ready: `{s['clean_container_smoke_ready']}`",
+        f"- product_image_smoke_receipt_mode: `{s['product_image_smoke_receipt_mode']}`",
         "",
         "## Components",
         "",
@@ -291,6 +407,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--stage5-summary-json", default=DEFAULT_STAGE5_SUMMARY_JSON)
     parser.add_argument("--sla-summary-json", default=DEFAULT_SLA_SUMMARY_JSON)
     parser.add_argument("--backmapping-smoke-json", default=DEFAULT_BACKMAPPING_SMOKE_JSON)
+    parser.add_argument("--ai-md-engine-kpi-json", default=DEFAULT_AI_MD_ENGINE_KPI_JSON)
+    parser.add_argument(
+        "--product-image-smoke-preflight-json",
+        default=DEFAULT_PRODUCT_IMAGE_SMOKE_PREFLIGHT_JSON,
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -310,6 +431,10 @@ def main(argv: list[str] | None = None) -> None:
         stage5_packet=_read_json_if_present(args.stage5_summary_json),
         sla_packet=_read_json_if_present(args.sla_summary_json),
         backmapping_smoke_packet=_read_json_if_present(args.backmapping_smoke_json),
+        ai_md_engine_kpi_packet=_read_json_if_present(args.ai_md_engine_kpi_json),
+        product_image_smoke_preflight_packet=_read_json_if_present(
+            args.product_image_smoke_preflight_json
+        ),
         run_summary_path=args.run_summary_json,
         rocm_manifest_path=args.rocm_manifest_json,
         bundle_manifest_path=args.bundle_manifest_json,
@@ -320,6 +445,8 @@ def main(argv: list[str] | None = None) -> None:
         stage5_path=args.stage5_summary_json,
         sla_path=args.sla_summary_json,
         backmapping_smoke_path=args.backmapping_smoke_json,
+        ai_md_engine_kpi_path=args.ai_md_engine_kpi_json,
+        product_image_smoke_preflight_path=args.product_image_smoke_preflight_json,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

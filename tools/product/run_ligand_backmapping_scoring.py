@@ -32,6 +32,9 @@ from betelgeuze_product.residual_mode_policy import (
     residual_ranking_apply_active,
     residual_runtime_status,
 )
+from betelgeuze_engine.contracts import default_claim_metadata
+from betelgeuze_engine.interactions import evaluate_hbond_evidence
+from betelgeuze_engine.topology import ligand_topology_from_smiles
 from core.mm_gbsa import REFINE_LIGAND_MODEL, mm_gbsa_binding_energy
 from core.onsps_backmap import backmap_4bead_onsps, hbond_angle_score, needs_onsps_4bead, onsps_site_count
 from core.score_residual import apply_score_residual
@@ -3552,6 +3555,242 @@ def _inline_score_from_row(row: Dict[str, Any], ligand_model: str) -> Optional[D
     }
 
 
+def _flatten_hbond_evidence_for_runner(
+    *,
+    smiles: str,
+    protein_xyz: np.ndarray,
+    ligand_xyz: np.ndarray,
+) -> Dict[str, Any]:
+    try:
+        evidence = evaluate_hbond_evidence(
+            smiles=str(smiles or ""),
+            protein_xyz=protein_xyz if protein_xyz.size else None,
+            ligand_xyz=ligand_xyz if ligand_xyz.size else None,
+        )
+    except Exception as exc:
+        return {
+            "hbond_evidence_schema_version": "hbond_evidence_v1",
+            "hbond_evidence_status": "error",
+            "hbond_claim_safe": False,
+            "hbond_blocked_reason": "hbond_evidence_error",
+            "hbond_abstention_reason": "hbond_evidence_error",
+            "hbond_error": str(exc),
+            "hbond_site_count": 0,
+            "hbond_pair_count": 0,
+            "hbond_confidence": 0.0,
+            "hbond_distance_pass_fraction": 0.0,
+            "hbond_angle_pass_fraction": 0.0,
+            "hbond_unsatisfied_donor_count": 0,
+            "hbond_unsatisfied_acceptor_count": 0,
+            "hbond_overanchoring_flag": False,
+            "hbond_missing_expected_anchor_flag": True,
+            "onsps_backmap_schema_version": "onsps_backmap_evidence_v1",
+            "onsps_backmap_status": "error",
+            "onsps_backmap_source": "",
+            "onsps_backmap_claim_safe": False,
+            "onsps_backmap_blocked_reason": "hbond_evidence_error",
+            "onsps_backmap_site_count": 0,
+            "onsps_backmap_mapped_site_count": 0,
+        }
+    onsps_meta = evidence.onsps_backmap_metadata if isinstance(evidence.onsps_backmap_metadata, dict) else {}
+    return {
+        "hbond_evidence_schema_version": str(evidence.schema_version),
+        "hbond_evidence_status": str(evidence.status),
+        "hbond_claim_safe": bool(evidence.claim_safe),
+        "hbond_blocked_reason": str(evidence.blocked_reason or ""),
+        "hbond_abstention_reason": str(evidence.abstention_reason or ""),
+        "hbond_error": "",
+        "hbond_site_count": int(evidence.site_count),
+        "hbond_pair_count": int(len(evidence.donor_acceptor_pairs)),
+        "hbond_confidence": float(evidence.hbond_confidence),
+        "hbond_distance_pass_fraction": float(evidence.distance_pass_fraction),
+        "hbond_angle_pass_fraction": float(evidence.angle_pass_fraction),
+        "hbond_unsatisfied_donor_count": int(evidence.unsatisfied_donor_count),
+        "hbond_unsatisfied_acceptor_count": int(evidence.unsatisfied_acceptor_count),
+        "hbond_overanchoring_flag": bool(evidence.overanchoring_flag),
+        "hbond_missing_expected_anchor_flag": bool(evidence.missing_expected_anchor_flag),
+        "onsps_backmap_schema_version": str(onsps_meta.get("schema_version") or "onsps_backmap_evidence_v1"),
+        "onsps_backmap_status": str(onsps_meta.get("backmap_status") or ""),
+        "onsps_backmap_source": str(onsps_meta.get("mapping_source") or ""),
+        "onsps_backmap_claim_safe": bool(onsps_meta.get("claim_safe") is True),
+        "onsps_backmap_blocked_reason": str(onsps_meta.get("blocked_reason") or ""),
+        "onsps_backmap_site_count": int(onsps_meta.get("site_count") or 0),
+        "onsps_backmap_mapped_site_count": int(onsps_meta.get("mapped_site_count") or 0),
+    }
+
+
+def _flatten_ligand_topology_for_runner(smiles: str) -> Dict[str, Any]:
+    topology = ligand_topology_from_smiles(str(smiles or ""))
+    validity = topology.validity if isinstance(topology.validity, dict) else {}
+    blockers = [
+        str(value)
+        for value in validity.get("claim_safe_blockers", [])
+        if str(value)
+    ]
+    blocked_reason = str(validity.get("blocked_reason") or "")
+    if blocked_reason and blocked_reason not in blockers:
+        blockers.append(blocked_reason)
+    return {
+        "ligand_topology_valid": bool(validity.get("valid") is True),
+        "ligand_topology_claim_safe": bool(validity.get("claim_safe") is True),
+        "ligand_topology_reason": str(validity.get("reason") or ""),
+        "ligand_topology_source": str(validity.get("source") or ""),
+        "ligand_topology_blocked_reason": ";".join(dict.fromkeys(blockers)),
+        "ligand_topology_atom_count": int(validity.get("atom_count") or len(topology.atom_elements)),
+        "ligand_topology_hbond_site_count": int(validity.get("hbond_site_count") or 0),
+        "ligand_topology_ring_atom_count": int(validity.get("ring_atom_count") or 0),
+        "ligand_topology_formal_charge_sum": int(validity.get("formal_charge_sum") or 0),
+        "ligand_topology_chiral_center_count": int(validity.get("chiral_center_count") or 0),
+        "ligand_topology_specified_chiral_center_count": int(
+            validity.get("specified_chiral_center_count") or 0
+        ),
+        "ligand_topology_unassigned_chiral_center_count": int(
+            validity.get("unassigned_chiral_center_count") or 0
+        ),
+        "ligand_topology_chirality_status": str(validity.get("chirality_status") or "not_assessed"),
+        "ligand_topology_chirality_valid": bool(validity.get("chirality_valid") is True),
+        "ligand_topology_ring_status": str(validity.get("ring_status") or "not_assessed"),
+        "ligand_topology_ring_valid": bool(validity.get("ring_valid") is True),
+        "ligand_topology_protonation_status": str(validity.get("protonation_status") or "not_assessed"),
+        "ligand_topology_protonation_valid": bool(validity.get("protonation_valid") is True),
+        "ligand_topology_tautomer_status": str(validity.get("tautomer_status") or "not_assessed"),
+        "ligand_topology_tautomer_valid": bool(validity.get("tautomer_valid") is True),
+    }
+
+
+def _count_values(values: Sequence[Any]) -> Dict[str, int]:
+    out: Dict[str, int] = {}
+    for value in values:
+        key = str(value or "").strip()
+        if not key:
+            continue
+        out[key] = int(out.get(key, 0) + 1)
+    return dict(sorted(out.items()))
+
+
+def _summarize_hbond_evidence(result_df: pd.DataFrame, topk: list[dict[str, Any]]) -> Dict[str, Any]:
+    if result_df.empty or "hbond_evidence_schema_version" not in result_df.columns:
+        return {
+            "schema_version": "hbond_evidence_v1",
+            "status": "not_assessed",
+            "evaluated_row_count": 0,
+            "claim_safe_row_count": 0,
+            "claim_safe_rate": 0.0,
+            "blocked_row_count": 0,
+            "blocked_reason_counts": {},
+            "topk_claim_safe_row_count": 0,
+            "topk_blocked_reason_counts": {},
+            "onsps_backmap_schema_version": "onsps_backmap_evidence_v1",
+            "onsps_backmap_claim_safe_row_count": 0,
+            "unsatisfied_donor_count": 0,
+            "unsatisfied_acceptor_count": 0,
+            "overanchored_row_count": 0,
+            "missing_expected_anchor_row_count": 0,
+        }
+    evaluated = result_df["hbond_evidence_schema_version"].astype(str).eq("hbond_evidence_v1")
+    claim_safe = result_df["hbond_claim_safe"].fillna(False).astype(bool) if "hbond_claim_safe" in result_df.columns else pd.Series(False, index=result_df.index)
+    evaluated_count = int(evaluated.sum())
+    claim_safe_count = int((evaluated & claim_safe).sum())
+    blocked_count = int(max(evaluated_count - claim_safe_count, 0))
+    topk_claim_safe_count = int(sum(1 for row in topk if bool(row.get("hbond_claim_safe") is True)))
+    return {
+        "schema_version": "hbond_evidence_v1",
+        "status": "pass" if evaluated_count > 0 and blocked_count == 0 else "review",
+        "evaluated_row_count": evaluated_count,
+        "claim_safe_row_count": claim_safe_count,
+        "claim_safe_rate": float(claim_safe_count / max(evaluated_count, 1)),
+        "blocked_row_count": blocked_count,
+        "blocked_reason_counts": _count_values(result_df.loc[evaluated & ~claim_safe, "hbond_blocked_reason"].tolist()),
+        "topk_claim_safe_row_count": topk_claim_safe_count,
+        "topk_blocked_reason_counts": _count_values(
+            [row.get("hbond_blocked_reason") for row in topk if row.get("hbond_claim_safe") is not True]
+        ),
+        "onsps_backmap_schema_version": "onsps_backmap_evidence_v1",
+        "onsps_backmap_claim_safe_row_count": int(
+            result_df.get("onsps_backmap_claim_safe", pd.Series(False, index=result_df.index)).fillna(False).astype(bool).sum()
+        ),
+        "unsatisfied_donor_count": int(
+            pd.to_numeric(result_df.get("hbond_unsatisfied_donor_count", pd.Series([], dtype=float)), errors="coerce").fillna(0).sum()
+        ),
+        "unsatisfied_acceptor_count": int(
+            pd.to_numeric(result_df.get("hbond_unsatisfied_acceptor_count", pd.Series([], dtype=float)), errors="coerce").fillna(0).sum()
+        ),
+        "overanchored_row_count": int(
+            result_df.get("hbond_overanchoring_flag", pd.Series(False, index=result_df.index)).fillna(False).astype(bool).sum()
+        ),
+        "missing_expected_anchor_row_count": int(
+            result_df.get("hbond_missing_expected_anchor_flag", pd.Series(False, index=result_df.index)).fillna(False).astype(bool).sum()
+        ),
+    }
+
+
+def _runner_claim_metadata(result_df: pd.DataFrame, hbond_summary: Dict[str, Any]) -> Dict[str, Any]:
+    protein_ready = bool(
+        (not result_df.empty)
+        and "protein_structure_source_available" in result_df.columns
+        and result_df["protein_structure_source_available"].fillna(False).astype(bool).all()
+    )
+    if (not result_df.empty) and "ligand_topology_valid" in result_df.columns:
+        ligand_valid_series = result_df["ligand_topology_valid"].fillna(False).astype(bool)
+        ligand_claim_safe_series = (
+            result_df["ligand_topology_claim_safe"].fillna(False).astype(bool)
+            if "ligand_topology_claim_safe" in result_df.columns
+            else ligand_valid_series
+        )
+        ligand_valid = bool(ligand_valid_series.all())
+        ligand_topology_claim_safe = bool(ligand_claim_safe_series.all())
+        ligand_topology_valid_row_count = int(ligand_valid_series.sum())
+        ligand_topology_claim_safe_row_count = int(ligand_claim_safe_series.sum())
+        ligand_topology_invalid_row_count = int(max(len(result_df) - ligand_topology_valid_row_count, 0))
+        ligand_topology_blocker_counts = _count_values(
+            result_df.loc[~ligand_claim_safe_series, "ligand_topology_blocked_reason"].tolist()
+            if "ligand_topology_blocked_reason" in result_df.columns
+            else []
+        )
+    else:
+        ligand_valid = bool(
+            (not result_df.empty)
+            and "hbond_evidence_status" in result_df.columns
+            and not result_df["hbond_evidence_status"].astype(str).eq("invalid_smiles").any()
+        )
+        ligand_topology_claim_safe = ligand_valid
+        ligand_topology_valid_row_count = int(len(result_df)) if ligand_valid else 0
+        ligand_topology_claim_safe_row_count = ligand_topology_valid_row_count
+        ligand_topology_invalid_row_count = int(max(len(result_df) - ligand_topology_valid_row_count, 0))
+        ligand_topology_blocker_counts = {}
+    hbond_status = str(hbond_summary.get("status") or "not_assessed")
+    blockers = ["runner_summary_not_claim_promoted"]
+    if not protein_ready:
+        blockers.append("protein_topology_missing")
+    if not ligand_valid:
+        blockers.append("ligand_topology_invalid")
+    elif not ligand_topology_claim_safe:
+        blockers.append("ligand_topology_not_claim_safe")
+    if hbond_status != "pass":
+        blockers.append("hbond_evidence_review_required")
+    metadata = default_claim_metadata(
+        topology_fidelity="sequence_mapped" if protein_ready else "placeholder_alanine",
+        ligand_topology_valid=ligand_valid,
+        ligand_topology_claim_safe=ligand_topology_claim_safe,
+        hbond_evidence_status=hbond_status,
+        force_residual_applied=False,
+        claim_safe=False,
+        blocked_reason=";".join(dict.fromkeys(blockers)),
+    )
+    metadata.update(
+        {
+            "hbond_claim_safe_row_count": int(hbond_summary.get("claim_safe_row_count") or 0),
+            "hbond_evaluated_row_count": int(hbond_summary.get("evaluated_row_count") or 0),
+            "onsps_backmap_claim_safe_row_count": int(hbond_summary.get("onsps_backmap_claim_safe_row_count") or 0),
+            "ligand_topology_valid_row_count": ligand_topology_valid_row_count,
+            "ligand_topology_claim_safe_row_count": ligand_topology_claim_safe_row_count,
+            "ligand_topology_invalid_row_count": ligand_topology_invalid_row_count,
+            "ligand_topology_blocker_counts": ligand_topology_blocker_counts,
+        }
+    )
+    return metadata
+
+
 def _process_queue_row(row: Dict[str, Any], cfg: Dict[str, Any]) -> Dict[str, Any]:
     queue_id = str(row.get("queue_id", "")).strip()
     if not queue_id:
@@ -3615,6 +3854,14 @@ def _process_queue_row(row: Dict[str, Any], cfg: Dict[str, Any]) -> Dict[str, An
     representative_ligand = np.asarray(score.get("representative_ligand_xyz", []), dtype=np.float32)
     if representative_ligand.ndim != 2 or representative_ligand.shape[1] != 3 or representative_ligand.shape[0] <= 0:
         representative_ligand = ligand_default
+    hbond_evidence = _flatten_hbond_evidence_for_runner(
+        smiles=str(row.get("ligand_smiles", row.get("smiles", "")) or ""),
+        protein_xyz=native_ca,
+        ligand_xyz=representative_ligand,
+    )
+    ligand_topology_evidence = _flatten_ligand_topology_for_runner(
+        str(row.get("ligand_smiles", row.get("smiles", "")) or "")
+    )
     backmap_stats: Dict[str, Any] = {
         "protein_residues": int(native_ca.shape[0]) if native_ca.ndim == 2 else 0,
         "protein_atoms": 0,
@@ -3761,6 +4008,8 @@ def _process_queue_row(row: Dict[str, Any], cfg: Dict[str, Any]) -> Dict[str, An
         "backmapped_protein_residues": int(backmap_stats.get("protein_residues", 0) or 0),
         "backmapped_ligand_atoms": int(backmap_stats.get("ligand_atoms", 0) or 0),
     }
+    result.update(ligand_topology_evidence)
+    result.update(hbond_evidence)
     return result
 
 
@@ -4358,6 +4607,8 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     result_df.to_csv(result_csv, index=False)
 
     topk = result_df.head(int(max(args.topk_report, 1))).to_dict(orient="records")
+    hbond_evidence_summary = _summarize_hbond_evidence(result_df, topk)
+    runner_claim_metadata = _runner_claim_metadata(result_df, hbond_evidence_summary)
     replicate_group_count = (
         int(result_df["replicate_group_key"].nunique())
         if (not result_df.empty) and ("replicate_group_key" in result_df.columns)
@@ -4414,6 +4665,8 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         "min_frames_required": int(args.min_frames),
         "replicate_export_schema_version": "backmapping_replicate_metrics_v1",
         "physics_export_schema_version": "backmapping_physics_support_v1",
+        "hbond_evidence_summary": hbond_evidence_summary,
+        "claim_metadata": runner_claim_metadata,
         "score_reference_scaling": {
             key: value
             for key, value in score_reference_scaling.items()
@@ -4516,6 +4769,10 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         f"- avg_pre_repair_binding_energy_proxy: {summary['avg_pre_repair_binding_energy_proxy']}",
         f"- avg_clash_relief_frame_fraction: {summary['avg_clash_relief_frame_fraction']}",
         f"- avg_physics_net_support_proxy: {summary['avg_physics_net_support_proxy']}",
+        f"- hbond_evidence_status: {summary['hbond_evidence_summary']['status']}",
+        f"- hbond_claim_safe_row_count: {summary['hbond_evidence_summary']['claim_safe_row_count']}",
+        f"- claim_safe: {summary['claim_metadata']['claim_safe']}",
+        f"- blocked_reason: {summary['claim_metadata']['blocked_reason']}",
         f"- avg_replicate_consistency_score: {summary['avg_replicate_consistency_score']}",
         f"- ranking_score_col_used: {summary['ranking_score_col_used']}",
         f"- scores_csv: `{result_csv}`",

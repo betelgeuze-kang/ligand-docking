@@ -1,6 +1,8 @@
 # core/forcefield.py
 
 import os
+from typing import Any, Iterable
+
 import torch
 import torch.nn as nn
 from .spatial import GridSpatialHash
@@ -11,6 +13,15 @@ from .sequence_topology import (
     residue_coarse_charges_from_indices,
     residue_nonbonded_params_from_indices,
 )
+from betelgeuze_engine.contracts import EnergyForces, EngineState
+from betelgeuze_engine.physics import ProductForceField, default_force_term_registry
+from betelgeuze_engine.physics.neighbor import NeighborPairs
+
+
+def default_product_forcefield(*, term_names: Iterable[str] | None = None) -> ProductForceField:
+    """Return the product engine forcefield while keeping this legacy module import path."""
+    return ProductForceField.from_registry(default_force_term_registry(), names=term_names)
+
 
 class ForceField(nn.Module):
     """
@@ -55,6 +66,86 @@ class ForceField(nn.Module):
         self._rust_nb_shape = None
         self._rust_nb_call_counter = 0
         self._rust_nb_last_displacement_check = -1
+
+    def _engine_atom_types_for_coords(
+        self,
+        coords: torch.Tensor,
+        atom_types: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        if atom_types is not None:
+            out = atom_types.to(device=coords.device, dtype=torch.long).reshape(-1)
+            if int(out.shape[0]) != int(coords.shape[1]):
+                raise ValueError("atom_types length must match coords N")
+            return out
+        residue_types = None
+        if hasattr(self.top, "residue_types_for_coordinate_count"):
+            residue_types = self.top.residue_types_for_coordinate_count(int(coords.shape[1]))
+        if residue_types is not None:
+            return residue_types.to(device=coords.device, dtype=torch.long).reshape(-1)
+        return torch.zeros(int(coords.shape[1]), dtype=torch.long, device=coords.device)
+
+    def _engine_metadata_for_coords(
+        self,
+        coords: torch.Tensor,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        top_claim = getattr(self.top, "claim_metadata", None)
+        if isinstance(top_claim, dict):
+            out.update(dict(top_claim))
+        fidelity = str(out.get("topology_fidelity") or "placeholder_alanine")
+        out.setdefault("ligand_topology_valid", False)
+        out.setdefault("hbond_evidence_status", "not_assessed")
+        out.setdefault("force_residual_applied", False)
+        out.setdefault("claim_safe", False)
+        out.setdefault(
+            "blocked_reason",
+            "" if out.get("claim_safe") is True else (
+                "placeholder_alanine_topology"
+                if fidelity != "sequence_mapped"
+                else "core_forcefield_bridge_claim_not_promoted"
+            ),
+        )
+        if "hbond_roles" not in out and hasattr(self.top, "hbond_roles"):
+            roles = list(self.top.hbond_roles())
+            if len(roles) == int(coords.shape[1]):
+                out["hbond_roles"] = roles
+        if metadata:
+            out.update(dict(metadata))
+        return out
+
+    def engine_state(
+        self,
+        coords: torch.Tensor,
+        *,
+        atom_types: torch.Tensor | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> EngineState:
+        """Build the product-engine state from this legacy topology without changing compute()."""
+        if coords.ndim != 3 or coords.shape[-1] != 3:
+            raise ValueError("coords must have shape [B, N, 3]")
+        return EngineState(
+            coords=coords,
+            atom_types=self._engine_atom_types_for_coords(coords, atom_types),
+            residue_types=getattr(self.top, "residue_types", None),
+            box=getattr(self.top, "box_size", None),
+            metadata=self._engine_metadata_for_coords(coords, metadata),
+        )
+
+    def product_energy_forces(
+        self,
+        coords: torch.Tensor,
+        pairs: NeighborPairs | None = None,
+        *,
+        atom_types: torch.Tensor | None = None,
+        metadata: dict[str, Any] | None = None,
+        claim_metadata: dict[str, Any] | None = None,
+        term_names: Iterable[str] | None = None,
+    ) -> EnergyForces:
+        """Compatibility bridge to betelgeuze_engine ProductForceField with claim metadata."""
+        state = self.engine_state(coords, atom_types=atom_types, metadata=metadata)
+        product_forcefield = default_product_forcefield(term_names=term_names)
+        return product_forcefield.energy_forces(state, pairs, claim_metadata=claim_metadata)
 
     def _minimum_image(self, dr, box):
         return dr - box * torch.floor(dr / box + 0.5)

@@ -271,6 +271,21 @@ def _release_gate(*, ready: bool = False) -> dict:
     }
 
 
+def _product_image_smoke_preflight(*, ready: bool = True) -> dict:
+    return {
+        "summary": {
+            "status": "product_image_smoke_preflight_ready"
+            if ready
+            else "blocked_product_image_smoke_preflight",
+            "clean_container_smoke_ready": ready,
+            "receipt_status": "product_image_smoke_ready" if ready else "blocked_product_image_smoke",
+            "receipt_mode": "rocm-runtime" if ready else "build",
+            "product_runner_smoke_ready": ready,
+            "receipt_simulate_missing_profile_http": 422 if ready else 0,
+        }
+    }
+
+
 def _bottleneck() -> dict:
     return {
         "summary": {
@@ -4202,6 +4217,61 @@ def test_product_goal_completion_audit_passes_when_all_evidence_is_ready() -> No
     assert payload["summary"]["fail_count"] == 0
     assert payload["summary"]["next_command_candidate_count"] == 0
     assert all(row["status"] == "pass" for row in payload["rows"])
+
+
+def test_product_goal_completion_audit_blocks_restricted_delivery_without_clean_container_smoke() -> None:
+    payload = mod.build_product_goal_completion_audit(
+        architecture_packet=_architecture(release_ready=True, commercial_ready=True),
+        release_dossier_packet=_release_dossier(release_ready=True, commercial_ready=True),
+        public_benchmark_packet=_public_benchmark(),
+        commercial_independence_packet=_commercial(ready=True),
+        license_work_order_packet=_license_work_order(ready=True),
+        cameo_architecture_packet=_cameo(),
+        release_gate_packet=_release_gate(ready=True),
+        bottleneck_packet={"summary": {"approval_tokens_required": []}},
+        burndown_packet={"summary": {}, "rows": []},
+        product_ai_architecture_gap_packet=_ai_gap(),
+        product_ai_execution_backlog_packet=_ai_backlog(),
+        product_scope_breadth_contract_packet=_scope_contract_ready(),
+        scope_closure_acceptance_packet=_scope_closure_acceptance_ready(),
+        scope_breadth_evidence_receipt_packet=_scope_breadth_evidence_receipt(ready=True),
+        product_image_smoke_preflight_packet=_product_image_smoke_preflight(ready=False),
+    )
+
+    summary = payload["summary"]
+    by_id = {row["requirement_id"]: row for row in payload["rows"]}
+    assert summary["status"] == "blocked_product_goal_completion_audit"
+    assert summary["goal_complete"] is False
+    assert summary["restricted_delivery_complete"] is False
+    assert summary["product_image_smoke_preflight_gate_present"] is True
+    assert summary["clean_container_smoke_ready"] is False
+    assert by_id["R7_restricted_local_delivery_ready"]["status"] == "fail"
+
+
+def test_product_goal_completion_audit_accepts_ready_clean_container_smoke() -> None:
+    payload = mod.build_product_goal_completion_audit(
+        architecture_packet=_architecture(release_ready=True, commercial_ready=True),
+        release_dossier_packet=_release_dossier(release_ready=True, commercial_ready=True),
+        public_benchmark_packet=_public_benchmark(),
+        commercial_independence_packet=_commercial(ready=True),
+        license_work_order_packet=_license_work_order(ready=True),
+        cameo_architecture_packet=_cameo(),
+        release_gate_packet=_release_gate(ready=True),
+        bottleneck_packet={"summary": {"approval_tokens_required": []}},
+        burndown_packet={"summary": {}, "rows": []},
+        product_ai_architecture_gap_packet=_ai_gap(),
+        product_ai_execution_backlog_packet=_ai_backlog(),
+        product_scope_breadth_contract_packet=_scope_contract_ready(),
+        scope_closure_acceptance_packet=_scope_closure_acceptance_ready(),
+        scope_breadth_evidence_receipt_packet=_scope_breadth_evidence_receipt(ready=True),
+        product_image_smoke_preflight_packet=_product_image_smoke_preflight(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "product_goal_completion_audit_pass"
+    assert summary["goal_complete"] is True
+    assert summary["restricted_delivery_complete"] is True
+    assert summary["clean_container_smoke_ready"] is True
 
 
 def test_build_product_goal_completion_audit_tool_writes_outputs(tmp_path: Path) -> None:

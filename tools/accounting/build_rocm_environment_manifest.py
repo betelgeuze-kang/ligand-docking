@@ -32,6 +32,7 @@ ROCM_ENV_KEYS = (
     "RUST_HIP_NBLIST_AUTOGROW",
     "LD_LIBRARY_PATH",
 )
+DEVICE_NODE_PATHS = ("/dev/kfd", "/dev/dri/renderD128")
 
 PROBE_COMMANDS: dict[str, list[str]] = {
     "rocminfo": ["rocminfo"],
@@ -149,6 +150,28 @@ def _collect_torch_probe() -> dict[str, Any]:
     }
 
 
+def _collect_device_node_probe() -> dict[str, Any]:
+    rows = []
+    for path_text in DEVICE_NODE_PATHS:
+        path = Path(path_text)
+        exists = path.exists()
+        rows.append(
+            {
+                "path": path_text,
+                "exists": exists,
+                "readable": bool(exists and os.access(path, os.R_OK)),
+                "writable": bool(exists and os.access(path, os.W_OK)),
+            }
+        )
+    return {
+        "required_paths": list(DEVICE_NODE_PATHS),
+        "rows": rows,
+        "all_exist": all(row["exists"] for row in rows),
+        "all_readable": all(row["readable"] for row in rows),
+        "all_writable": all(row["writable"] for row in rows),
+    }
+
+
 def _extract_rocm_version(env: Mapping[str, str], command_probes: Mapping[str, dict[str, Any]]) -> str:
     if env.get("ROCM_VERSION"):
         return str(env["ROCM_VERSION"])
@@ -170,6 +193,7 @@ def build_rocm_environment_manifest(
     env: Mapping[str, str] | None = None,
     command_runner: Callable[[Sequence[str], int], dict[str, Any]] | None = None,
     torch_probe: dict[str, Any] | None = None,
+    device_node_probe: dict[str, Any] | None = None,
     probe_commands: bool = True,
 ) -> dict[str, Any]:
     effective_env = dict(os.environ if env is None else env)
@@ -195,6 +219,7 @@ def build_rocm_environment_manifest(
         command_probes[label] = probe
 
     torch_info = torch_probe if torch_probe is not None else _collect_torch_probe()
+    device_nodes = device_node_probe if device_node_probe is not None else _collect_device_node_probe()
     runtime_env_vars = {key: effective_env[key] for key in ROCM_ENV_KEYS if effective_env.get(key)}
     torch_hip_version = str(torch_info.get("hip_version") or "")
     rocm_tooling_present = any(bool(probe.get("available")) for probe in command_probes.values())
@@ -203,7 +228,8 @@ def build_rocm_environment_manifest(
     amd_gpu_detected = bool(torch_info.get("device_count")) or bool(command_probes.get("rocm_smi", {}).get("ok"))
     rocm_stack_detected = bool(runtime_env_vars or rocm_tooling_present or torch_hip_version)
     manifest_ready = bool(rocm_stack_detected and (torch_rocm_ready or (rocm_tooling_ok and amd_gpu_detected)))
-    production_execution_ready = bool(torch_rocm_ready and int(torch_info.get("device_count") or 0) > 0)
+    device_nodes_ready = bool(device_nodes.get("all_exist") and device_nodes.get("all_readable") and device_nodes.get("all_writable"))
+    production_execution_ready = bool(torch_rocm_ready and int(torch_info.get("device_count") or 0) > 0 and device_nodes_ready)
     rocm_version = _extract_rocm_version(effective_env, command_probes)
 
     uname = platform.uname()
@@ -223,6 +249,7 @@ def build_rocm_environment_manifest(
         "pytorch_hip_version": bool(torch_hip_version),
         "torch_cuda_available": "cuda_available" in torch_info,
         "visible_device_count": "device_count" in torch_info,
+        "device_nodes": device_nodes_ready,
         "runtime_env_vars": bool(runtime_env_vars),
         "manifest_generation_command": True,
     }
@@ -235,6 +262,7 @@ def build_rocm_environment_manifest(
         "generated_at": _now_local(),
         "commercial_compute_default": "rocm_hip",
         "cpu_fallback_available": True,
+        "cpu_fallback_allowed_for_product": False,
         "rocm_stack_detected": rocm_stack_detected,
         "rocm_tooling_present": rocm_tooling_present,
         "rocm_tooling_ok": rocm_tooling_ok,
@@ -246,6 +274,9 @@ def build_rocm_environment_manifest(
         "torch_cuda_available": bool(torch_info.get("cuda_available")),
         "visible_device_count": int(torch_info.get("device_count") or 0),
         "device_names": list(torch_info.get("device_names") or []),
+        "device_nodes_ready": device_nodes_ready,
+        "device_node_required_paths": list(device_nodes.get("required_paths") or DEVICE_NODE_PATHS),
+        "production_execution_ready": production_execution_ready,
         "rocm_version": rocm_version,
         "hipcc_present": bool(command_probes.get("hipcc", {}).get("available")),
         "hipcc_ok": bool(command_probes.get("hipcc", {}).get("ok")),
@@ -268,6 +299,10 @@ def build_rocm_environment_manifest(
         "gpu_visibility_diagnostic_completion_rule": (
             "manifest_ready=true; rocm_stack_detected=true; torch_rocm_ready=true; "
             "amd_gpu_detected=true; visible_device_count>0; device_names nonempty"
+        ),
+        "product_runtime_completion_rule": (
+            "commercial_compute_default=rocm_hip; torch_rocm_ready=true; "
+            "visible_device_count>0; device_nodes_ready=true; cpu_fallback_allowed_for_product=false"
         ),
         "gpu_visibility_diagnostic_return_artifacts": [
             "runs/rocm_environment_manifest_current.json",
@@ -303,6 +338,7 @@ def build_rocm_environment_manifest(
             "python_version": platform.python_version(),
         },
         "torch": torch_info,
+        "device_nodes": device_nodes,
         "command_probes": command_probes,
     }
 
@@ -323,6 +359,7 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- manifest_ready: `{s['manifest_ready']}`",
         f"- commercial_compute_default: `{s['commercial_compute_default']}`",
         f"- cpu_fallback_available: `{s['cpu_fallback_available']}`",
+        f"- cpu_fallback_allowed_for_product: `{s['cpu_fallback_allowed_for_product']}`",
         f"- rocm_stack_detected: `{s['rocm_stack_detected']}`",
         f"- rocm_tooling_ok: `{s['rocm_tooling_ok']}`",
         f"- amd_gpu_detected: `{s['amd_gpu_detected']}`",
@@ -330,10 +367,13 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- torch_version: `{s['torch_version']}`",
         f"- torch_hip_version: `{s['torch_hip_version']}`",
         f"- visible_device_count: `{s['visible_device_count']}`",
+        f"- device_nodes_ready: `{s['device_nodes_ready']}`",
+        f"- production_execution_ready: `{s['production_execution_ready']}`",
         f"- rocm_version: `{s['rocm_version']}`",
         f"- gpu_visibility_diagnostic_packet_ready: `{s['gpu_visibility_diagnostic_packet_ready']}`",
         f"- gpu_visibility_diagnostic_command_count: `{s['gpu_visibility_diagnostic_command_count']}`",
         f"- gpu_visibility_diagnostic_completion_rule: `{s['gpu_visibility_diagnostic_completion_rule']}`",
+        f"- product_runtime_completion_rule: `{s['product_runtime_completion_rule']}`",
         f"- missing_manifest_field_count: `{s['missing_manifest_field_count']}`",
         f"- execution_enabled: `{s['execution_enabled']}`",
         f"- benchmark_executed: `{s['benchmark_executed']}`",

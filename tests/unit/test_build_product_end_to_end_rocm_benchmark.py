@@ -24,7 +24,18 @@ def _run_summary() -> dict[str, object]:
 
 
 def _rocm() -> dict[str, object]:
-    return {"summary": {"status": "rocm_environment_manifest_ready", "manifest_ready": True}}
+    return {
+        "summary": {
+            "status": "rocm_environment_manifest_ready",
+            "manifest_ready": True,
+            "torch_rocm_ready": True,
+            "visible_device_count": 1,
+            "device_nodes_ready": True,
+            "production_execution_ready": True,
+            "commercial_compute_default": "rocm_hip",
+            "cpu_fallback_allowed_for_product": False,
+        }
+    }
 
 
 def _stage1() -> dict[str, object]:
@@ -43,6 +54,46 @@ def _stage5() -> dict[str, object]:
     return {"pass": True, "rows_scores": 640, "rows_eval": 200, "observed_expected_score_coverage_ratio": 1.0}
 
 
+def _ai_md_kpi() -> dict[str, object]:
+    return {
+        "packet_type": "ai_md_engine_kpi_report",
+        "status": "ai_md_engine_kpi_report_ready",
+        "report_ready": True,
+        "product_bundle_evidence_export_ready": True,
+        "pose_ranking_hbond_benchmark": {
+            "benchmark_ready": True,
+            "top1_pose_id": "amide_near_hbond_pose",
+            "overanchored_decoys_blocked": True,
+        },
+    }
+
+
+def _product_image_preflight(*, ready: bool = True) -> dict[str, object]:
+    return {
+        "summary": {
+            "status": "product_image_smoke_preflight_ready"
+            if ready
+            else "blocked_product_image_smoke_preflight",
+            "preflight_ready": ready,
+            "clean_container_smoke_ready": ready,
+            "receipt_present": ready,
+            "receipt_status": "product_image_smoke_ready" if ready else "blocked_product_image_smoke",
+            "receipt_mode": "rocm-runtime" if ready else "build",
+            "receipt_simulate_missing_profile_http": 422 if ready else 0,
+            "product_runner_smoke_ready": ready,
+        }
+    }
+
+
+def _backmapping_smoke() -> dict[str, object]:
+    return {
+        "summary": {
+            "status": "backmapping_scoring_batch_smoke_benchmark_ready",
+            "batch_frames_per_sec": 250.0,
+        }
+    }
+
+
 def _payload(tmp_path: Path, **overrides: dict[str, object]) -> dict[str, object]:
     bundle_dir = tmp_path / "bundle_product_gpcr_adrb2"
     bundle_dir.mkdir()
@@ -57,6 +108,9 @@ def _payload(tmp_path: Path, **overrides: dict[str, object]) -> dict[str, object
         "stage3_packet": _stage3(),
         "stage5_packet": _stage5(),
         "sla_packet": {"total_latency_sec": 30.0},
+        "backmapping_smoke_packet": _backmapping_smoke(),
+        "ai_md_engine_kpi_packet": _ai_md_kpi(),
+        "product_image_smoke_preflight_packet": _product_image_preflight(),
     }
     packets.update(overrides)
     return mod.build_product_end_to_end_rocm_benchmark(**packets)
@@ -72,8 +126,15 @@ def test_product_end_to_end_rocm_benchmark_ready(tmp_path: Path) -> None:
     assert summary["unique_ligands_scored"] == 200
     assert summary["jobs_per_hour"] > 0
     assert summary["trajectory_engine_mode"] == "rust_hip"
+    assert summary["rocm_hip_rust_runtime_ready"] is True
+    assert summary["rocm_visible_device_count"] == 1
+    assert summary["rocm_device_nodes_ready"] is True
     assert summary["production_trajectory_profile_enabled"] is False
     assert summary["warning_component_count"] == 1
+    assert summary["ai_md_engine_kpi_report_ready"] is True
+    assert summary["ai_md_engine_kpi_pose_ranking_hbond_ready"] is True
+    assert summary["clean_container_smoke_ready"] is True
+    assert summary["product_image_smoke_receipt_mode"] == "rocm-runtime"
     assert summary["docking_results_emitted"] is True
     assert summary["external_state_mutated"] is False
 
@@ -90,6 +151,37 @@ def test_product_end_to_end_rocm_benchmark_blocks_missing_stage(tmp_path: Path) 
     assert summary["fail_component_count"] >= 1
 
 
+def test_product_end_to_end_rocm_benchmark_blocks_when_rocm_gpu_not_visible(tmp_path: Path) -> None:
+    rocm = _rocm()
+    rocm["summary"]["torch_rocm_ready"] = False  # type: ignore[index]
+    rocm["summary"]["visible_device_count"] = 0  # type: ignore[index]
+    rocm["summary"]["device_nodes_ready"] = False  # type: ignore[index]
+    rocm["summary"]["production_execution_ready"] = False  # type: ignore[index]
+
+    payload = _payload(tmp_path, rocm_manifest_packet=rocm)
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_product_end_to_end_rocm_benchmark"
+    assert summary["rocm_hip_rust_runtime_ready"] is False
+    assert summary["rocm_visible_device_count"] == 0
+    assert summary["rocm_device_nodes_ready"] is False
+
+
+def test_product_end_to_end_rocm_benchmark_blocks_without_clean_container_smoke(
+    tmp_path: Path,
+) -> None:
+    payload = _payload(
+        tmp_path,
+        product_image_smoke_preflight_packet=_product_image_preflight(ready=False),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_product_end_to_end_rocm_benchmark"
+    assert summary["benchmark_ready"] is False
+    assert summary["clean_container_smoke_ready"] is False
+    assert any(row["component"] == "clean_container_rocm_runtime_smoke" for row in payload["rows"])
+
+
 def test_product_end_to_end_rocm_benchmark_cli_writes_outputs(tmp_path: Path) -> None:
     bundle_dir = tmp_path / "bundle_product_gpcr_adrb2"
     bundle_dir.mkdir()
@@ -104,6 +196,9 @@ def test_product_end_to_end_rocm_benchmark_cli_writes_outputs(tmp_path: Path) ->
         "stage3.json": _stage3(),
         "stage5.json": _stage5(),
         "sla.json": {"total_latency_sec": 30.0},
+        "backmapping.json": _backmapping_smoke(),
+        "kpi.json": _ai_md_kpi(),
+        "preflight.json": _product_image_preflight(),
     }
     for name, packet in files.items():
         (tmp_path / name).write_text(json.dumps(packet) + "\n", encoding="utf-8")
@@ -131,6 +226,12 @@ def test_product_end_to_end_rocm_benchmark_cli_writes_outputs(tmp_path: Path) ->
             str(tmp_path / "stage5.json"),
             "--sla-summary-json",
             str(tmp_path / "sla.json"),
+            "--backmapping-smoke-json",
+            str(tmp_path / "backmapping.json"),
+            "--ai-md-engine-kpi-json",
+            str(tmp_path / "kpi.json"),
+            "--product-image-smoke-preflight-json",
+            str(tmp_path / "preflight.json"),
             "--out-json",
             str(out_json),
             "--out-csv",
@@ -141,5 +242,6 @@ def test_product_end_to_end_rocm_benchmark_cli_writes_outputs(tmp_path: Path) ->
     )
 
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["benchmark_ready"] is True
+    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["ai_md_engine_kpi_report_ready"] is True
     assert "component" in out_csv.read_text(encoding="utf-8")
     assert "Product End-to-End ROCm Benchmark" in out_md.read_text(encoding="utf-8")

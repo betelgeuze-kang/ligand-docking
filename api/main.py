@@ -1,10 +1,13 @@
 # api/main.py
 
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.responses import FileResponse
+from fastapi.responses import JSONResponse
 from fastapi.responses import PlainTextResponse
+import json
 import uuid
 import os
 from api.cameo import router as cameo_router
@@ -39,7 +42,34 @@ app.include_router(cleanup_router)
 app.include_router(goal_router)
 app.include_router(product_router)
 
-job_store = SQLiteJobStore(settings.api_job_store_path)
+job_store: SQLiteJobStore | None = None
+_job_store_path: str | None = None
+
+
+def _normalized_path(path_like: object) -> str:
+    return str(Path(str(path_like)).expanduser())
+
+
+def get_job_store() -> SQLiteJobStore:
+    """Return a config-aware job store without pinning settings at import time."""
+    global job_store, _job_store_path
+
+    configured_path = _normalized_path(settings.api_job_store_path)
+    if job_store is None:
+        job_store = SQLiteJobStore(configured_path)
+        _job_store_path = configured_path
+        return job_store
+
+    current_store_path = _normalized_path(getattr(job_store, "path", configured_path))
+    if _job_store_path is not None and current_store_path != _job_store_path:
+        # Preserve legacy tests and callers that monkeypatch main.job_store directly.
+        return job_store
+    if _job_store_path is not None and _job_store_path != configured_path:
+        job_store = SQLiteJobStore(configured_path)
+        _job_store_path = configured_path
+    elif _job_store_path is None:
+        _job_store_path = current_store_path
+    return job_store
 
 
 @app.get("/metrics", response_class=PlainTextResponse)
@@ -69,7 +99,8 @@ async def submit_simulation(request: SimulationRequest, background_tasks: Backgr
             },
         ) from exc
 
-    job_store.create_job(job_id, request_data, status="submitted")
+    store = get_job_store()
+    store.create_job(job_id, request_data, status="submitted")
 
     # Create status file
     results_dir = job_results_dir(job_id)
@@ -80,7 +111,7 @@ async def submit_simulation(request: SimulationRequest, background_tasks: Backgr
     if settings.api_inline_worker_enabled:
         background_tasks.add_task(
             process_next_job_once,
-            job_store,
+            store,
             worker_id=f"api-inline-{job_id}",
             runner=run_simulation_async,
             lease_seconds=settings.api_worker_lease_seconds,
@@ -98,7 +129,7 @@ async def submit_simulation(request: SimulationRequest, background_tasks: Backgr
 async def run_simulation_async_wrapper(job_id: str, request_data: dict[str, Any]):
     """Wrapper to handle the async task and update job status."""
     return await run_job_once(
-        job_store,
+        get_job_store(),
         job_id=job_id,
         request_data=request_data,
         runner=run_simulation_async,
@@ -107,7 +138,8 @@ async def run_simulation_async_wrapper(job_id: str, request_data: dict[str, Any]
 
 @app.get("/status/{job_id}", response_model=StatusResponse)
 def get_simulation_status(job_id: str):
-    if not job_store.job_exists(job_id):
+    store = get_job_store()
+    if not store.job_exists(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
 
     # Read status from file
@@ -116,7 +148,7 @@ def get_simulation_status(job_id: str):
         return StatusResponse(job_id=job_id, status="unknown", message="Status file missing")
 
     status_data = read_status_file(status_file_path)
-    record = job_store.get_job(job_id) or {}
+    record = store.get_job(job_id) or {}
 
     def _artifact_path(*values: object) -> str | None:
         for value in values:
@@ -139,7 +171,8 @@ def get_simulation_status(job_id: str):
 
 @app.get("/results/{job_id}", response_model=ResultsResponse)
 def get_simulation_results(job_id: str):
-    if not job_store.job_exists(job_id):
+    store = get_job_store()
+    if not store.job_exists(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
 
     status_file_path = job_status_path(job_id)
@@ -151,7 +184,7 @@ def get_simulation_results(job_id: str):
     if status_data["status"] != "completed":
         raise HTTPException(status_code=400, detail=f"Job not completed. Status: {status_data['status']}")
 
-    record = job_store.get_job(job_id) or {}
+    record = store.get_job(job_id) or {}
 
     def _artifact_path(*values: object) -> str:
         for value in values:
@@ -186,8 +219,21 @@ def get_simulation_results(job_id: str):
     if not result_file or not os.path.exists(result_file):
         raise HTTPException(status_code=404, detail="Result file not found")
 
-    # Return the result file
-    return FileResponse(result_file, media_type='chemical/x-pdb', filename=os.path.basename(result_file))
+    result_path = Path(result_file)
+    suffix = result_path.suffix.lower()
+    if suffix == ".json":
+        try:
+            payload = json.loads(result_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise HTTPException(status_code=500, detail="Result JSON artifact is invalid") from exc
+        return JSONResponse(payload)
+    media_type = {
+        ".pdb": "chemical/x-pdb",
+        ".sdf": "chemical/x-mdl-sdfile",
+        ".mol": "chemical/x-mdl-molfile",
+        ".zip": "application/zip",
+    }.get(suffix, "application/octet-stream")
+    return FileResponse(result_file, media_type=media_type, filename=os.path.basename(result_file))
     # Or return a ResultsResponse object with a download link if serving via URL is preferred
     # return ResultsResponse(job_id=job_id, status="completed", result_url=f"/download/{job_id}")
 

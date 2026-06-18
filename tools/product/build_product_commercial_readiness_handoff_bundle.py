@@ -19,6 +19,9 @@ DEFAULT_GPU_WORKER_RETURN_BUNDLE_PACKAGER_SH = "runs/residual_force_gpu_worker_r
 DEFAULT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON = (
     "runs/product_full_commercial_blocker_evidence_matrix_current.json"
 )
+DEFAULT_AI_MD_ENGINE_KPI_JSON = "runs/ai_md_engine_kpi_report_current.json"
+DEFAULT_AI_MD_ENGINE_KPI_MD = "runs/ai_md_engine_kpi_report_current.md"
+DEFAULT_PRODUCT_IMAGE_SMOKE_PREFLIGHT_JSON = "runs/product_image_smoke_preflight_current.json"
 DEFAULT_OUT_JSON = "runs/product_commercial_readiness_handoff_bundle_current.json"
 DEFAULT_OUT_CSV = "runs/product_commercial_readiness_handoff_bundle_current.csv"
 DEFAULT_OUT_MD = "runs/product_commercial_readiness_handoff_bundle_current.md"
@@ -66,6 +69,13 @@ def _sha256_file_if_present(path_like: str | Path) -> str:
 def _summary(packet: dict[str, Any]) -> dict[str, Any]:
     summary = packet.get("summary")
     return summary if isinstance(summary, dict) else {}
+
+
+def _summary_or_packet(packet: dict[str, Any]) -> dict[str, Any]:
+    summary = packet.get("summary")
+    if isinstance(summary, dict):
+        return summary
+    return packet if isinstance(packet, dict) else {}
 
 
 def _rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
@@ -204,6 +214,9 @@ def _build_artifact_reference_manifest(
     gpu_worker_execution_runbook_script_path: str = DEFAULT_GPU_WORKER_EXECUTION_RUNBOOK_SH,
     gpu_worker_return_bundle_packager_script_path: str = DEFAULT_GPU_WORKER_RETURN_BUNDLE_PACKAGER_SH,
     full_commercial_blocker_evidence_matrix_path: str = DEFAULT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON,
+    ai_md_engine_kpi_json_path: str = DEFAULT_AI_MD_ENGINE_KPI_JSON,
+    ai_md_engine_kpi_md_path: str = DEFAULT_AI_MD_ENGINE_KPI_MD,
+    product_image_smoke_preflight_path: str = DEFAULT_PRODUCT_IMAGE_SMOKE_PREFLIGHT_JSON,
 ) -> list[dict[str, Any]]:
     refs = [
         _artifact_reference(
@@ -263,6 +276,40 @@ def _build_artifact_reference_manifest(
             note="Local matrix aggregating R8/R9 full-commercial evidence receipt blockers into one operator acceptance surface.",
         ),
     ]
+    if summary.get("ai_md_engine_kpi_report_present") is True:
+        refs.append(
+            _artifact_reference(
+                artifact_id="ai_md_engine_kpi_report_json",
+                artifact_path=ai_md_engine_kpi_json_path,
+                reference_role="local_ai_md_engine_kpi_evidence",
+                required_now=True,
+                expected_from_operator_return=False,
+                note="Local AI-MD engine KPI evidence for ROCm/HIP/Rust runtime, pose/ranking/H-bond smoke, and guarded claim blocking.",
+            )
+        )
+        refs.append(
+            _artifact_reference(
+                artifact_id="ai_md_engine_kpi_report_md",
+                artifact_path=ai_md_engine_kpi_md_path,
+                reference_role="local_ai_md_engine_kpi_evidence_markdown",
+                required_now=True,
+                expected_from_operator_return=False,
+                note="Human-readable AI-MD engine KPI report paired with the JSON evidence artifact.",
+            )
+        )
+        refs.append(
+            _artifact_reference(
+                artifact_id="product_image_smoke_preflight",
+                artifact_path=product_image_smoke_preflight_path,
+                reference_role="clean_container_rocm_runtime_smoke_gate",
+                required_now=True,
+                expected_from_operator_return=False,
+                note=(
+                    "Fail-closed preflight for PRODUCT_IMAGE_VERIFY_MODE=rocm-runtime; "
+                    "required before AI-MD product claim promotion."
+                ),
+            )
+        )
     for row in artifact_rows:
         refs.append(
             _artifact_reference(
@@ -663,14 +710,44 @@ def build_product_commercial_readiness_handoff_bundle(
     operator_packet: dict[str, Any],
     freshness_packet: dict[str, Any],
     execution_ladder_packet: dict[str, Any],
+    ai_md_engine_kpi_packet: dict[str, Any] | None = None,
+    product_image_smoke_preflight_packet: dict[str, Any] | None = None,
     operator_packet_path: str = DEFAULT_OPERATOR_PACKET_JSON,
     freshness_path: str = DEFAULT_FRESHNESS_JSON,
     execution_ladder_path: str = DEFAULT_EXECUTION_LADDER_JSON,
+    ai_md_engine_kpi_json_path: str = DEFAULT_AI_MD_ENGINE_KPI_JSON,
+    ai_md_engine_kpi_md_path: str = DEFAULT_AI_MD_ENGINE_KPI_MD,
+    product_image_smoke_preflight_path: str = DEFAULT_PRODUCT_IMAGE_SMOKE_PREFLIGHT_JSON,
 ) -> dict[str, Any]:
     operator_summary = _summary(operator_packet)
     freshness_summary = _summary(freshness_packet)
     ladder_summary = _summary(execution_ladder_packet)
     ladder_rows = _rows(execution_ladder_packet)
+    ai_md_engine_kpi_summary = _summary_or_packet(ai_md_engine_kpi_packet or {})
+    ai_md_engine_kpi_present = bool(ai_md_engine_kpi_summary)
+    ai_md_pose_ranking_hbond = (
+        ai_md_engine_kpi_summary.get("pose_ranking_hbond_benchmark")
+        if isinstance(ai_md_engine_kpi_summary.get("pose_ranking_hbond_benchmark"), dict)
+        else {}
+    )
+    product_image_smoke_preflight = _summary_or_packet(product_image_smoke_preflight_packet or {})
+    product_image_smoke_preflight_present = bool(product_image_smoke_preflight)
+    ai_md_clean_container_smoke_ready = bool(
+        product_image_smoke_preflight.get("clean_container_smoke_ready") is True
+        and product_image_smoke_preflight.get("receipt_status") == "product_image_smoke_ready"
+        and product_image_smoke_preflight.get("receipt_mode") == "rocm-runtime"
+        and product_image_smoke_preflight.get("product_runner_smoke_ready") is True
+        and int(product_image_smoke_preflight.get("receipt_simulate_missing_profile_http") or 0)
+        == 422
+    )
+    ai_md_engine_kpi_ready = bool(
+        ai_md_engine_kpi_present
+        and _text(ai_md_engine_kpi_summary.get("status")) == "ai_md_engine_kpi_report_ready"
+        and ai_md_engine_kpi_summary.get("report_ready") is True
+        and ai_md_pose_ranking_hbond.get("benchmark_ready") is True
+        and ai_md_engine_kpi_summary.get("product_bundle_evidence_export_ready") is True
+        and ai_md_clean_container_smoke_ready
+    )
     artifact_rows = [
         _artifact_row(
             artifact_id="operator_packet",
@@ -697,6 +774,38 @@ def build_product_commercial_readiness_handoff_bundle(
             sha256=_sha256_file_if_present(execution_ladder_path),
         ),
     ]
+    if ai_md_engine_kpi_present:
+        artifact_rows.extend(
+            [
+                _artifact_row(
+                    artifact_id="ai_md_engine_kpi_report_json",
+                    artifact_path=ai_md_engine_kpi_json_path,
+                    ready_key="ai_md_engine_kpi_report_ready",
+                    ready=ai_md_engine_kpi_ready,
+                    status=_text(ai_md_engine_kpi_summary.get("status")),
+                    sha256=_sha256_file_if_present(ai_md_engine_kpi_json_path),
+                ),
+                _artifact_row(
+                    artifact_id="ai_md_engine_kpi_report_md",
+                    artifact_path=ai_md_engine_kpi_md_path,
+                    ready_key="ai_md_engine_kpi_report_md_present",
+                    ready=bool(_resolve(ai_md_engine_kpi_md_path).exists()),
+                    status="ai_md_engine_kpi_report_md_present"
+                    if _resolve(ai_md_engine_kpi_md_path).exists()
+                    else "missing_ai_md_engine_kpi_report_md",
+                    sha256=_sha256_file_if_present(ai_md_engine_kpi_md_path),
+                ),
+                _artifact_row(
+                    artifact_id="product_image_smoke_preflight",
+                    artifact_path=product_image_smoke_preflight_path,
+                    ready_key="clean_container_smoke_ready",
+                    ready=ai_md_clean_container_smoke_ready,
+                    status=_text(product_image_smoke_preflight.get("status"))
+                    or "missing_product_image_smoke_preflight",
+                    sha256=_sha256_file_if_present(product_image_smoke_preflight_path),
+                ),
+            ]
+        )
     blocked_artifacts = [row for row in artifact_rows if row["release_blocker"]]
     first_ladder = ladder_rows[0] if ladder_rows else {}
     handoff_ready = not blocked_artifacts and bool(ladder_rows)
@@ -1654,6 +1763,35 @@ def build_product_commercial_readiness_handoff_bundle(
                 "product_scope_transporter_p0_external_operator_staging_apply_claim_safe_approved_count"
             )
             or 0
+        ),
+        "ai_md_engine_kpi_report_present": ai_md_engine_kpi_present,
+        "ai_md_engine_kpi_report_ready": ai_md_engine_kpi_ready,
+        "ai_md_engine_kpi_report_json": ai_md_engine_kpi_json_path if ai_md_engine_kpi_present else "",
+        "ai_md_engine_kpi_report_md": ai_md_engine_kpi_md_path if ai_md_engine_kpi_present else "",
+        "ai_md_engine_kpi_status": _text(ai_md_engine_kpi_summary.get("status")),
+        "ai_md_engine_kpi_pose_ranking_hbond_ready": (
+            ai_md_pose_ranking_hbond.get("benchmark_ready") is True
+        ),
+        "ai_md_engine_kpi_top1_pose_id": _text(ai_md_pose_ranking_hbond.get("top1_pose_id")),
+        "ai_md_engine_kpi_product_bundle_evidence_export_ready": bool(
+            ai_md_engine_kpi_summary.get("product_bundle_evidence_export_ready") is True
+        ),
+        "product_image_smoke_preflight_present": product_image_smoke_preflight_present,
+        "product_image_smoke_preflight_status": _text(
+            product_image_smoke_preflight.get("status")
+        ),
+        "clean_container_smoke_ready": ai_md_clean_container_smoke_ready,
+        "product_image_smoke_receipt_mode": _text(
+            product_image_smoke_preflight.get("receipt_mode")
+        ),
+        "product_image_smoke_receipt_status": _text(
+            product_image_smoke_preflight.get("receipt_status")
+        ),
+        "product_image_smoke_product_runner_smoke_ready": bool(
+            product_image_smoke_preflight.get("product_runner_smoke_ready") is True
+        ),
+        "product_image_smoke_receipt_simulate_missing_profile_http": int(
+            product_image_smoke_preflight.get("receipt_simulate_missing_profile_http") or 0
         ),
         "artifact_count": len(artifact_rows),
         "ready_artifact_count": len(artifact_rows) - len(blocked_artifacts),
@@ -3152,6 +3290,9 @@ def build_product_commercial_readiness_handoff_bundle(
         operator_packet_path=operator_packet_path,
         freshness_path=freshness_path,
         execution_ladder_path=execution_ladder_path,
+        ai_md_engine_kpi_json_path=ai_md_engine_kpi_json_path,
+        ai_md_engine_kpi_md_path=ai_md_engine_kpi_md_path,
+        product_image_smoke_preflight_path=product_image_smoke_preflight_path,
     )
     local_missing_references = [
         row for row in artifact_reference_manifest if row.get("missing_now") is True
@@ -3259,6 +3400,15 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_scope_transporter_p0_return_bundle_next_artifact_id: `{s['product_scope_transporter_p0_return_bundle_next_artifact_id']}`",
         f"- product_scope_transporter_p0_return_bundle_next_artifact_path: `{s['product_scope_transporter_p0_return_bundle_next_artifact_path']}`",
         f"- product_scope_transporter_p0_return_bundle_required_artifacts: `{';'.join(s['product_scope_transporter_p0_return_bundle_required_artifacts'])}`",
+        f"- ai_md_engine_kpi_report_present: `{s['ai_md_engine_kpi_report_present']}`",
+        f"- ai_md_engine_kpi_report_ready: `{s['ai_md_engine_kpi_report_ready']}`",
+        f"- ai_md_engine_kpi_pose_ranking_hbond_ready: `{s['ai_md_engine_kpi_pose_ranking_hbond_ready']}`",
+        f"- ai_md_engine_kpi_top1_pose_id: `{s['ai_md_engine_kpi_top1_pose_id']}`",
+        f"- ai_md_engine_kpi_report_json: `{s['ai_md_engine_kpi_report_json']}`",
+        f"- ai_md_engine_kpi_report_md: `{s['ai_md_engine_kpi_report_md']}`",
+        f"- clean_container_smoke_ready: `{s['clean_container_smoke_ready']}`",
+        f"- product_image_smoke_preflight_status: `{s['product_image_smoke_preflight_status']}`",
+        f"- product_image_smoke_receipt_mode: `{s['product_image_smoke_receipt_mode']}`",
         f"- artifact_count: `{s['artifact_count']}`",
         f"- blocked_artifact_count: `{s['blocked_artifact_count']}`",
         f"- artifact_reference_contract_ready: `{s['artifact_reference_contract_ready']}`",
@@ -3346,6 +3496,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--operator-packet-json", default=DEFAULT_OPERATOR_PACKET_JSON)
     parser.add_argument("--freshness-json", default=DEFAULT_FRESHNESS_JSON)
     parser.add_argument("--execution-ladder-json", default=DEFAULT_EXECUTION_LADDER_JSON)
+    parser.add_argument("--ai-md-engine-kpi-json", default=DEFAULT_AI_MD_ENGINE_KPI_JSON)
+    parser.add_argument("--ai-md-engine-kpi-md", default=DEFAULT_AI_MD_ENGINE_KPI_MD)
+    parser.add_argument(
+        "--product-image-smoke-preflight-json",
+        default=DEFAULT_PRODUCT_IMAGE_SMOKE_PREFLIGHT_JSON,
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -3358,9 +3514,16 @@ def main(argv: list[str] | None = None) -> None:
         operator_packet=_read_json_if_present(args.operator_packet_json),
         freshness_packet=_read_json_if_present(args.freshness_json),
         execution_ladder_packet=_read_json_if_present(args.execution_ladder_json),
+        ai_md_engine_kpi_packet=_read_json_if_present(args.ai_md_engine_kpi_json),
+        product_image_smoke_preflight_packet=_read_json_if_present(
+            args.product_image_smoke_preflight_json
+        ),
         operator_packet_path=args.operator_packet_json,
         freshness_path=args.freshness_json,
         execution_ladder_path=args.execution_ladder_json,
+        ai_md_engine_kpi_json_path=args.ai_md_engine_kpi_json,
+        ai_md_engine_kpi_md_path=args.ai_md_engine_kpi_md,
+        product_image_smoke_preflight_path=args.product_image_smoke_preflight_json,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

@@ -4,23 +4,106 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE="${PRODUCT_IMAGE:-betelgeuze-md-product:local}"
 DOCKERFILE="${ROOT}/Dockerfile.product"
+VERIFY_MODE="${PRODUCT_IMAGE_VERIFY_MODE:-build}"
+RUNNER_TIMEOUT_SECONDS="${PRODUCT_IMAGE_RUNNER_TIMEOUT_SECONDS:-600}"
+RUNNER_PROFILE_TIMEOUT_SECONDS="${PRODUCT_IMAGE_RUNNER_PROFILE_TIMEOUT_SECONDS:-300}"
+RECEIPT_JSON="${PRODUCT_IMAGE_SMOKE_RECEIPT_JSON:-${ROOT}/runs/product_image_smoke_receipt_current.json}"
+if [[ "${RECEIPT_JSON}" != /* ]]; then
+  RECEIPT_JSON="${ROOT}/${RECEIPT_JSON}"
+fi
+RUNNER_SMOKE_DIR="${PRODUCT_IMAGE_RUNNER_SMOKE_DIR:-${ROOT}/runs/product_image_smoke_runner_artifacts}"
+if [[ "${RUNNER_SMOKE_DIR}" != /* ]]; then
+  RUNNER_SMOKE_DIR="${ROOT}/${RUNNER_SMOKE_DIR}"
+fi
+
+case "${VERIFY_MODE}" in
+  build|rocm-runtime)
+    ;;
+  *)
+    echo '{"status":"blocked_product_image_smoke","reason":"unsupported_verify_mode","supported_modes":["build","rocm-runtime"]}'
+    exit 2
+    ;;
+esac
 
 if ! command -v docker >/dev/null 2>&1; then
-  echo '{"status":"docker_cli_missing","claim_boundary":"Verify script requires docker CLI; skipped in this environment."}'
-  exit 0
+  echo '{"status":"blocked_product_image_smoke","reason":"docker_cli_missing","claim_boundary":"Verify script requires docker CLI and does not mark missing Docker as green."}'
+  exit 2
+fi
+
+DOCKER_RUN_ARGS=(--rm)
+DOCKER_DAEMON_ARGS=()
+if [[ "${VERIFY_MODE}" == "rocm-runtime" ]]; then
+  if [[ ! -e /dev/kfd || ! -e /dev/dri ]]; then
+    echo '{"status":"blocked_product_image_rocm_runtime_smoke","reason":"rocm_device_nodes_missing","required":["/dev/kfd","/dev/dri"]}'
+    exit 3
+  fi
+  DOCKER_RUN_ARGS+=(--device=/dev/kfd --device=/dev/dri --ipc=host)
+  DOCKER_DAEMON_ARGS+=(--device=/dev/kfd --device=/dev/dri --ipc=host)
+  if getent group video >/dev/null 2>&1; then
+    DOCKER_RUN_ARGS+=(--group-add video)
+    DOCKER_DAEMON_ARGS+=(--group-add video)
+  fi
+  if getent group render >/dev/null 2>&1; then
+    DOCKER_RUN_ARGS+=(--group-add render)
+    DOCKER_DAEMON_ARGS+=(--group-add render)
+  fi
 fi
 
 echo "Building product image: ${IMAGE}" >&2
 docker build -f "${DOCKERFILE}" -t "${IMAGE}" "${ROOT}"
 
-echo "Running import smoke inside container" >&2
-docker run --rm "${IMAGE}" python -c "import api.main; import betelgeuze_product.cli"
+echo "Running ROCm/HIP/Rust import smoke inside container" >&2
+if [[ "${VERIFY_MODE}" == "rocm-runtime" ]]; then
+  mkdir -p "${RUNNER_SMOKE_DIR}"
+  docker run "${DOCKER_RUN_ARGS[@]}" \
+    -v "${RUNNER_SMOKE_DIR}:/smoke" \
+    "${IMAGE}" \
+    python -c "import json, pathlib, torch; from dataclasses import asdict; import ldi_arc_rust; import tools.run_ligand_backmapping_scoring; import api.main; import betelgeuze_product.cli; from core.rust_hip_backend import probe_rust_hip_backend; proof_path=pathlib.Path('/smoke/rocm_container_runtime_proof.json'); cgroup=pathlib.Path('/proc/1/cgroup').read_text(errors='ignore') if pathlib.Path('/proc/1/cgroup').exists() else ''; probe=probe_rust_hip_backend(device=torch.device('cuda')); payload={'schema_version':'rocm_container_runtime_proof_v1','in_container': pathlib.Path('/.dockerenv').exists() or 'docker' in cgroup or 'kubepods' in cgroup,'dev_kfd_present': pathlib.Path('/dev/kfd').exists(),'dev_dri_present': pathlib.Path('/dev/dri').exists(),'torch_hip_version': str(getattr(torch.version, 'hip', '') or ''),'torch_rocm_ready': bool(getattr(torch.version, 'hip', None)),'torch_cuda_available': bool(torch.cuda.is_available()),'visible_device_count': int(torch.cuda.device_count()) if torch.cuda.is_available() else 0,'visible_device_name': str(torch.cuda.get_device_name(0)) if torch.cuda.is_available() and torch.cuda.device_count() > 0 else '','ldi_arc_rust_import_ready': True,'product_runner_import_ready': True,'api_import_ready': True,'rust_hip_backend_enabled': bool(probe.enabled),'rust_hip_backend_reason': str(probe.reason),'rust_hip_kernel_name': str(probe.kernel_name or ''),'rust_hip_module_loaded': bool(probe.module_loaded)}; payload['proof_ready']=bool(payload['in_container'] and payload['dev_kfd_present'] and payload['dev_dri_present'] and payload['torch_rocm_ready'] and payload['torch_cuda_available'] and payload['visible_device_count'] > 0 and payload['ldi_arc_rust_import_ready'] and payload['product_runner_import_ready'] and payload['api_import_ready'] and payload['rust_hip_backend_enabled']); proof_path.write_text(json.dumps(payload, sort_keys=True)+'\n', encoding='utf-8'); print(json.dumps(payload, sort_keys=True)); assert payload['proof_ready'], payload"
+else
+  docker run "${DOCKER_RUN_ARGS[@]}" "${IMAGE}" python -c "import torch; assert torch.version.hip; import ldi_arc_rust; import tools.run_ligand_backmapping_scoring; import api.main; import betelgeuze_product.cli; print('product image build import ok')"
+fi
 
 echo "Running betelgeuze-product --help smoke" >&2
-docker run --rm "${IMAGE}" betelgeuze-product capabilities --root /app >/dev/null
+docker run "${DOCKER_RUN_ARGS[@]}" "${IMAGE}" betelgeuze-product capabilities --root /app >/dev/null
+
+if [[ "${VERIFY_MODE}" == "rocm-runtime" ]]; then
+  cat > "${RUNNER_SMOKE_DIR}/backmapping_queue.csv" <<'CSV'
+queue_id,target,ligand_id,ligand_smiles,pocket_x,pocket_y,pocket_z,ligand_bead0_x,ligand_bead0_y,ligand_bead0_z,ligand_bead1_x,ligand_bead1_y,ligand_bead1_z
+q1,container,l1,CC(=O)N,0,0,0,0,0,0,1.6,0,0
+q2,container,l2,CCCC,0,0,0,0,0,0,1.6,0,0
+CSV
+  echo "Running real validated runner dispatch smoke inside ROCm container" >&2
+  docker run "${DOCKER_RUN_ARGS[@]}" \
+    -v "${RUNNER_SMOKE_DIR}:/smoke" \
+    -e API_VALIDATED_RUNNER_ENABLED=1 \
+    "${IMAGE}" \
+    python tools/product/run_tier_alpha_adrb2_dispatch_smoke.py \
+      --timeout-seconds "${RUNNER_TIMEOUT_SECONDS}" \
+      --runner-timeout-seconds "${RUNNER_PROFILE_TIMEOUT_SECONDS}" \
+      --out-json /smoke/tier_alpha_adrb2_dispatch_smoke.json
+
+  echo "Running backmapping scoring claim-metadata smoke inside ROCm container" >&2
+  docker run "${DOCKER_RUN_ARGS[@]}" \
+    -v "${RUNNER_SMOKE_DIR}:/smoke" \
+    "${IMAGE}" \
+    python tools/run_ligand_backmapping_scoring.py \
+      --queue-csv /smoke/backmapping_queue.csv \
+      --score-only \
+      --no-two-pass-scoring \
+      --ligand-model 4bead_onsps_hbond \
+      --allow-missing-trajectory \
+      --min-frames 1 \
+      --max-jobs 2 \
+      --workers 0 \
+      --parallel-threshold 99 \
+      --topk-report 2 \
+      --out-dir /smoke/backmapping_out \
+      --out-summary-json /smoke/backmapping_summary.json \
+      --out-scores-csv /smoke/backmapping_scores.csv
+fi
 
 echo "Running /simulate scope gate smoke (expect 422 without runner_profile_id)" >&2
-cid="$(docker run -d -p 127.0.0.1::8000 -e PRODUCT_API_AUTH_REQUIRED=0 "${IMAGE}")"
+cid="$(docker run -d -p 127.0.0.1::8000 -e PRODUCT_API_AUTH_REQUIRED=0 "${DOCKER_DAEMON_ARGS[@]}" "${IMAGE}")"
 trap 'docker rm -f "${cid}" >/dev/null 2>&1 || true' EXIT
 port="$(docker port "${cid}" 8000/tcp | head -1 | awk -F: '{print $NF}')"
 for _ in $(seq 1 30); do
@@ -37,4 +120,139 @@ if [[ "${code}" != "422" ]]; then
   exit 1
 fi
 
-echo '{"status":"product_image_smoke_ready","image":"'"${IMAGE}"'","simulate_missing_profile_http":422}'
+clean_container_smoke_ready=false
+product_runner_smoke_ready=false
+if [[ "${VERIFY_MODE}" == "rocm-runtime" ]]; then
+  clean_container_smoke_ready=true
+  product_runner_smoke_ready=true
+fi
+
+RECEIPT_JSON="${RECEIPT_JSON}" \
+RUNNER_SMOKE_DIR="${RUNNER_SMOKE_DIR}" \
+VERIFY_MODE="${VERIFY_MODE}" \
+IMAGE="${IMAGE}" \
+CLEAN_CONTAINER_SMOKE_READY="${clean_container_smoke_ready}" \
+PRODUCT_RUNNER_SMOKE_READY="${product_runner_smoke_ready}" \
+python - <<'PY'
+import json
+import os
+from pathlib import Path
+
+def _read_json(path: Path) -> dict:
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+path = Path(os.environ["RECEIPT_JSON"])
+smoke_dir = Path(os.environ["RUNNER_SMOKE_DIR"])
+runtime_proof = _read_json(smoke_dir / "rocm_container_runtime_proof.json")
+tier_alpha = _read_json(smoke_dir / "tier_alpha_adrb2_dispatch_smoke.json")
+tier_summary = tier_alpha.get("summary") if isinstance(tier_alpha.get("summary"), dict) else {}
+backmapping = _read_json(smoke_dir / "backmapping_summary.json")
+hbond_summary = backmapping.get("hbond_evidence_summary") if isinstance(backmapping.get("hbond_evidence_summary"), dict) else {}
+claim_metadata = backmapping.get("claim_metadata") if isinstance(backmapping.get("claim_metadata"), dict) else {}
+container_runtime_proof_ready = bool(
+    os.environ["VERIFY_MODE"] == "rocm-runtime"
+    and runtime_proof.get("schema_version") == "rocm_container_runtime_proof_v1"
+    and runtime_proof.get("proof_ready") is True
+    and runtime_proof.get("in_container") is True
+    and runtime_proof.get("dev_kfd_present") is True
+    and runtime_proof.get("dev_dri_present") is True
+    and runtime_proof.get("torch_rocm_ready") is True
+    and runtime_proof.get("torch_cuda_available") is True
+    and int(runtime_proof.get("visible_device_count") or 0) > 0
+    and runtime_proof.get("ldi_arc_rust_import_ready") is True
+    and runtime_proof.get("rust_hip_backend_enabled") is True
+)
+backmapping_ligand_topology_ready = bool(
+    claim_metadata.get("ligand_topology_valid") is True
+    and claim_metadata.get("ligand_topology_claim_safe") is True
+    and int(claim_metadata.get("ligand_topology_claim_safe_row_count") or 0) >= 1
+    and int(claim_metadata.get("ligand_topology_invalid_row_count") or 0) == 0
+)
+backmapping_claim_metadata_ready = bool(
+    os.environ["VERIFY_MODE"] == "rocm-runtime"
+    and backmapping
+    and hbond_summary.get("schema_version") == "hbond_evidence_v1"
+    and hbond_summary.get("onsps_backmap_schema_version") == "onsps_backmap_evidence_v1"
+    and int(hbond_summary.get("evaluated_row_count") or 0) >= 1
+    and "claim_safe" in claim_metadata
+    and claim_metadata.get("hbond_evidence_status") in {"pass", "review"}
+    and backmapping_ligand_topology_ready
+)
+tier_alpha_manifest_ready = bool(
+    os.environ["VERIFY_MODE"] == "rocm-runtime"
+    and tier_alpha.get("result_manifest_exists") is True
+    and tier_alpha.get("result_manifest_signature_verified") is True
+    and tier_alpha.get("result_manifest_status") == "completed"
+)
+product_runner_claim_metadata_ready = bool(tier_alpha_manifest_ready and backmapping_claim_metadata_ready)
+payload = {
+    "status": "product_image_smoke_ready",
+    "mode": os.environ["VERIFY_MODE"],
+    "image": os.environ["IMAGE"],
+    "runner_smoke_dir": str(smoke_dir),
+    "simulate_missing_profile_http": 422,
+    "clean_container_smoke_ready": bool(
+        os.environ["CLEAN_CONTAINER_SMOKE_READY"] == "true"
+        and container_runtime_proof_ready
+    ),
+    "container_runtime_proof_present": bool(runtime_proof),
+    "container_runtime_proof_schema_version": str(runtime_proof.get("schema_version") or ""),
+    "container_runtime_proof_ready": container_runtime_proof_ready,
+    "container_runtime_in_container": runtime_proof.get("in_container") is True,
+    "container_runtime_device_nodes_ready": bool(
+        runtime_proof.get("dev_kfd_present") is True
+        and runtime_proof.get("dev_dri_present") is True
+    ),
+    "container_runtime_torch_rocm_ready": runtime_proof.get("torch_rocm_ready") is True,
+    "container_runtime_torch_cuda_available": runtime_proof.get("torch_cuda_available") is True,
+    "container_runtime_visible_device_count": int(runtime_proof.get("visible_device_count") or 0),
+    "container_runtime_visible_device_name": str(runtime_proof.get("visible_device_name") or ""),
+    "container_runtime_rust_hip_backend_enabled": runtime_proof.get("rust_hip_backend_enabled") is True,
+    "container_runtime_rust_hip_kernel_name": str(runtime_proof.get("rust_hip_kernel_name") or ""),
+    "container_runtime_rust_hip_backend_reason": str(runtime_proof.get("rust_hip_backend_reason") or ""),
+    "product_runner_smoke_ready": os.environ["PRODUCT_RUNNER_SMOKE_READY"] == "true",
+    "product_runner_claim_metadata_ready": product_runner_claim_metadata_ready,
+    "tier_alpha_dispatch_smoke_status": str(tier_summary.get("status") or ""),
+    "tier_alpha_result_manifest_exists": tier_alpha.get("result_manifest_exists") is True,
+    "tier_alpha_result_manifest_signature_verified": tier_alpha.get("result_manifest_signature_verified") is True,
+    "tier_alpha_result_manifest_status": str(tier_alpha.get("result_manifest_status") or ""),
+    "backmapping_runner_summary_present": bool(backmapping),
+    "backmapping_runner_claim_metadata_ready": backmapping_claim_metadata_ready,
+    "backmapping_claim_safe": claim_metadata.get("claim_safe") if claim_metadata else None,
+    "backmapping_blocked_reason": str(claim_metadata.get("blocked_reason") or "") if claim_metadata else "",
+    "backmapping_ligand_topology_valid": claim_metadata.get("ligand_topology_valid") is True,
+    "backmapping_ligand_topology_claim_safe": claim_metadata.get("ligand_topology_claim_safe") is True,
+    "backmapping_ligand_topology_claim_safe_row_count": int(
+        claim_metadata.get("ligand_topology_claim_safe_row_count") or 0
+    ),
+    "backmapping_ligand_topology_invalid_row_count": int(
+        claim_metadata.get("ligand_topology_invalid_row_count") or 0
+    ),
+    "backmapping_ligand_topology_receipt_ready": backmapping_ligand_topology_ready,
+    "backmapping_hbond_evidence_status": str(claim_metadata.get("hbond_evidence_status") or "") if claim_metadata else "",
+    "backmapping_hbond_evidence_schema_version": str(hbond_summary.get("schema_version") or ""),
+    "backmapping_onsps_backmap_schema_version": str(hbond_summary.get("onsps_backmap_schema_version") or ""),
+    "backmapping_hbond_evaluated_row_count": int(hbond_summary.get("evaluated_row_count") or 0),
+    "backmapping_onsps_backmap_claim_safe_row_count": int(hbond_summary.get("onsps_backmap_claim_safe_row_count") or 0),
+    "rocm_runtime_visible_device_required": os.environ["VERIFY_MODE"] == "rocm-runtime",
+    "docker_state_mutated": True,
+    "external_service_mutated": False,
+    "external_state_mutated": False,
+    "claim_boundary": (
+        "Receipt means deploy/verify_product_image.sh completed all checks in the selected mode; "
+        "product claim promotion requires mode=rocm-runtime, product_runner_smoke_ready=true, "
+        "product_runner_claim_metadata_ready=true, container_runtime_proof_ready=true, "
+        "container_runtime_rust_hip_backend_enabled=true, and backmapping_ligand_topology_claim_safe=true."
+    ),
+}
+path.parent.mkdir(parents=True, exist_ok=True)
+text = json.dumps(payload, sort_keys=True)
+path.write_text(text + "\n", encoding="utf-8")
+print(text)
+PY

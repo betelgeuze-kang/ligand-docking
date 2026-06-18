@@ -41,6 +41,31 @@ def _sha256_file(path_like: str | Path) -> str:
     return digest.hexdigest()
 
 
+def _read_json_object(path_like: str | Path) -> dict[str, Any]:
+    path = Path(path_like)
+    if not path.exists() or not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _extract_result_metadata(path_like: str | Path) -> dict[str, dict[str, Any]]:
+    payload = _read_json_object(path_like)
+    if not payload:
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    claim_metadata = payload.get("claim_metadata")
+    if isinstance(claim_metadata, dict):
+        out["result_claim_metadata"] = dict(claim_metadata)
+    hbond_summary = payload.get("hbond_evidence_summary")
+    if isinstance(hbond_summary, dict):
+        out["hbond_evidence_summary"] = dict(hbond_summary)
+    return out
+
+
 def build_result_manifest(
     *,
     job_id: str,
@@ -54,6 +79,8 @@ def build_result_manifest(
     fidelity: str = TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE,
     topology_fidelity: str | None = None,
     accuracy_claim_grade: str = "restricted-local-delivery",
+    result_claim_metadata: dict[str, Any] | None = None,
+    hbond_evidence_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     resolved_fidelity = str(topology_fidelity or fidelity or TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE)
     resolved_scope = str(claim_scope or CLAIM_SCOPE_PRODUCT_LIGAND)
@@ -86,6 +113,10 @@ def build_result_manifest(
             f"{PRODUCT_CLAIM_BOUNDARY_TEXT}"
         ),
     }
+    if isinstance(result_claim_metadata, dict):
+        payload["result_claim_metadata"] = dict(result_claim_metadata)
+    if isinstance(hbond_evidence_summary, dict):
+        payload["hbond_evidence_summary"] = dict(hbond_evidence_summary)
     validate_manifest_claim_fields(payload)
     signature = hmac.new(signing_key.encode("utf-8"), _canonical_json(payload), hashlib.sha256).hexdigest()
     payload["signature"] = signature
@@ -115,9 +146,12 @@ def write_result_manifest(
     fidelity: str = TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE,
     topology_fidelity: str | None = None,
     accuracy_claim_grade: str = "restricted-local-delivery",
+    result_claim_metadata: dict[str, Any] | None = None,
+    hbond_evidence_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     path = Path(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)
+    extracted_metadata = _extract_result_metadata(result_file) if result_file else {}
     manifest = build_result_manifest(
         job_id=job_id,
         request=request,
@@ -130,6 +164,16 @@ def write_result_manifest(
         fidelity=fidelity,
         topology_fidelity=topology_fidelity,
         accuracy_claim_grade=accuracy_claim_grade,
+        result_claim_metadata=(
+            result_claim_metadata
+            if result_claim_metadata is not None
+            else extracted_metadata.get("result_claim_metadata")
+        ),
+        hbond_evidence_summary=(
+            hbond_evidence_summary
+            if hbond_evidence_summary is not None
+            else extracted_metadata.get("hbond_evidence_summary")
+        ),
     )
     path.write_text(json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
     return manifest

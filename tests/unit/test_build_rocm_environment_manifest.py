@@ -23,6 +23,19 @@ def _runner(cmd: Sequence[str], _timeout_seconds: int) -> dict[str, Any]:
     }
 
 
+def _device_nodes(ready: bool) -> dict[str, object]:
+    return {
+        "required_paths": ["/dev/kfd", "/dev/dri/renderD128"],
+        "rows": [
+            {"path": "/dev/kfd", "exists": ready, "readable": ready, "writable": ready},
+            {"path": "/dev/dri/renderD128", "exists": ready, "readable": ready, "writable": ready},
+        ],
+        "all_exist": ready,
+        "all_readable": ready,
+        "all_writable": ready,
+    }
+
+
 def test_build_rocm_environment_manifest_ready_with_rocm_torch_probe() -> None:
     payload = mod.build_rocm_environment_manifest(
         env={
@@ -41,6 +54,7 @@ def test_build_rocm_environment_manifest_ready_with_rocm_torch_probe() -> None:
             "device_count": 1,
             "device_names": ["AMD Radeon RX 7900 XTX"],
         },
+        device_node_probe=_device_nodes(True),
     )
 
     summary = payload["summary"]
@@ -48,8 +62,12 @@ def test_build_rocm_environment_manifest_ready_with_rocm_torch_probe() -> None:
     assert summary["manifest_ready"] is True
     assert summary["commercial_compute_default"] == "rocm_hip"
     assert summary["cpu_fallback_available"] is True
+    assert summary["cpu_fallback_allowed_for_product"] is False
     assert summary["rocm_version"] == "6.0.2"
     assert summary["torch_rocm_ready"] is True
+    assert summary["production_execution_ready"] is True
+    assert summary["device_nodes_ready"] is True
+    assert summary["device_node_required_paths"] == ["/dev/kfd", "/dev/dri/renderD128"]
     assert summary["device_names"] == ["AMD Radeon RX 7900 XTX"]
     assert summary["next_required_step"] == "Build AMD hardware throughput scorecard next."
     assert summary["gpu_visibility_diagnostic_packet_ready"] is True
@@ -69,6 +87,10 @@ def test_build_rocm_environment_manifest_ready_with_rocm_torch_probe() -> None:
         "torch_hip_version",
     ]
     assert "visible_device_count>0" in summary["gpu_visibility_diagnostic_completion_rule"]
+    assert summary["product_runtime_completion_rule"] == (
+        "commercial_compute_default=rocm_hip; torch_rocm_ready=true; "
+        "visible_device_count>0; device_nodes_ready=true; cpu_fallback_allowed_for_product=false"
+    )
     assert summary["execution_enabled"] is False
     assert summary["benchmark_executed"] is False
     assert summary["external_state_mutated"] is False
@@ -90,6 +112,7 @@ def test_build_rocm_environment_manifest_keeps_gpu_visibility_as_next_step() -> 
             "device_count": 0,
             "device_names": [],
         },
+        device_node_probe=_device_nodes(False),
     )
 
     summary = payload["summary"]
@@ -97,6 +120,9 @@ def test_build_rocm_environment_manifest_keeps_gpu_visibility_as_next_step() -> 
     assert summary["manifest_ready"] is True
     assert summary["torch_rocm_ready"] is False
     assert summary["visible_device_count"] == 0
+    assert summary["production_execution_ready"] is False
+    assert summary["device_nodes_ready"] is False
+    assert summary["cpu_fallback_allowed_for_product"] is False
     assert summary["gpu_visibility_torch_probe_command"].startswith("python3 -c")
     assert summary["next_required_step"] == (
         "Expose a visible ROCm/HIP AMD GPU device to PyTorch before production regeneration."
@@ -115,6 +141,7 @@ def test_build_rocm_environment_manifest_blocks_without_rocm_torch() -> None:
             "device_count": 0,
             "device_names": [],
         },
+        device_node_probe=_device_nodes(False),
         probe_commands=False,
     )
 
@@ -123,6 +150,35 @@ def test_build_rocm_environment_manifest_blocks_without_rocm_torch() -> None:
     assert summary["manifest_ready"] is False
     assert summary["torch_rocm_ready"] is False
     assert summary["missing_manifest_field_count"] > 0
+
+
+def test_build_rocm_environment_manifest_blocks_product_execution_without_device_nodes() -> None:
+    payload = mod.build_rocm_environment_manifest(
+        env={
+            "ROCM_PATH": "/opt/rocm-6.0.2",
+            "HSA_OVERRIDE_GFX_VERSION": "11.0.0",
+            "PYTORCH_ROCM_ARCH": "gfx1100",
+        },
+        command_runner=_runner,
+        torch_probe={
+            "present": True,
+            "import_error": "",
+            "version": "2.4.0+rocm6.0",
+            "hip_version": "6.0.2",
+            "cuda_available": True,
+            "device_count": 1,
+            "device_names": ["AMD Radeon RX 7900 XTX"],
+        },
+        device_node_probe=_device_nodes(False),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "rocm_environment_manifest_ready"
+    assert summary["manifest_ready"] is True
+    assert summary["torch_rocm_ready"] is True
+    assert summary["visible_device_count"] == 1
+    assert summary["device_nodes_ready"] is False
+    assert summary["production_execution_ready"] is False
 
 
 def test_rocm_environment_manifest_cli_writes_json_and_markdown(tmp_path: Path) -> None:

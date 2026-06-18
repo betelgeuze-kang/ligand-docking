@@ -1,25 +1,55 @@
-FROM python:3.11-slim
+ARG PRODUCT_ROCM_BASE=rocm/pytorch:rocm6.1.2_ubuntu22.04_py3.10_pytorch_release_2.6.0
+FROM ${PRODUCT_ROCM_BASE}
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     BETELGEUZE_REPO_ROOT=/app \
+    ROCM_PATH=/opt/rocm \
+    HIP_PATH=/opt/rocm \
+    PATH=/opt/rocm/bin:${PATH} \
+    LD_LIBRARY_PATH=/opt/rocm/lib:/opt/rocm/lib64:${LD_LIBRARY_PATH} \
     PRODUCT_API_AUTH_REQUIRED=1 \
     API_VALIDATED_RUNNER_ENABLED=0 \
+    FORCE_RUST_HIP=1 \
+    RUST_HIP_USE_GPU_NBLIST_BUILDER=1 \
+    TORCH_BLAS_PREFER_HIPBLASLT=0 \
     PRODUCT_API_MAX_PAYLOAD_BYTES=10485760 \
     PRODUCT_API_RATE_LIMIT_PER_MINUTE=120
 
 WORKDIR /app
-COPY requirements-package.txt requirements-api.txt requirements-deploy.txt pyproject.toml ./
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        build-essential \
+        cargo \
+        ca-certificates \
+        pkg-config \
+        python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-package.txt requirements-api.txt requirements-deploy.txt requirements.txt requirements-rocm.txt requirements-product-rocm.txt pyproject.toml ./
 COPY api ./api
 COPY core ./core
+COPY betelgeuze_engine ./betelgeuze_engine
 COPY betelgeuze_product ./betelgeuze_product
 COPY betelgeuze_cameo ./betelgeuze_cameo
 COPY betelgeuze_cleanup ./betelgeuze_cleanup
 COPY tools ./tools
 COPY config ./config
+COPY rust_engine ./rust_engine
+COPY third_party ./third_party
 RUN python -m pip install --no-cache-dir --upgrade pip \
     && python -m pip install --no-cache-dir . \
-    && python -m pip install --no-cache-dir -r requirements-api.txt -r requirements-deploy.txt
+    && python -m pip install --no-cache-dir -r requirements-api.txt -r requirements-deploy.txt -r requirements-product-rocm.txt \
+    && python tools/build_rust_hip_engine.py --output /app \
+    && python - <<'PY'
+import importlib
+import torch
+
+assert torch.version.hip, "Product image must use a PyTorch ROCm/HIP build"
+importlib.import_module("ldi_arc_rust")
+importlib.import_module("tools.run_ligand_backmapping_scoring")
+print("product rocm hip rust import ok")
+PY
 
 EXPOSE 8000
 CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

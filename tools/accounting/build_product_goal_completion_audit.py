@@ -41,6 +41,7 @@ DEFAULT_SERVICE_BOUNDARY_JSON = "runs/product_service_boundary_contract_current.
 DEFAULT_PRODUCT_API_CONTRACT_JSON = "runs/product_api_contract_current.json"
 DEFAULT_JOB_ORCHESTRATION_JSON = "runs/product_job_orchestration_contract_current.json"
 DEFAULT_ENGINE_REFINEMENT_TIER_READINESS_JSON = "runs/engine_refinement_tier_readiness_current.json"
+DEFAULT_PRODUCT_IMAGE_SMOKE_PREFLIGHT_JSON = "runs/product_image_smoke_preflight_current.json"
 DEFAULT_OUT_JSON = "runs/product_goal_completion_audit_current.json"
 DEFAULT_OUT_CSV = "runs/product_goal_completion_audit_current.csv"
 DEFAULT_OUT_MD = "runs/product_goal_completion_audit_current.md"
@@ -1684,6 +1685,7 @@ def build_product_goal_completion_audit(
     product_api_contract_packet: dict[str, Any] | None = None,
     job_orchestration_packet: dict[str, Any] | None = None,
     engine_refinement_tier_readiness_packet: dict[str, Any] | None = None,
+    product_image_smoke_preflight_packet: dict[str, Any] | None = None,
     architecture_path: str = DEFAULT_ARCHITECTURE_JSON,
     release_dossier_path: str = DEFAULT_RELEASE_DOSSIER_JSON,
     public_benchmark_path: str = DEFAULT_PUBLIC_BENCHMARK_JSON,
@@ -1716,6 +1718,7 @@ def build_product_goal_completion_audit(
     product_api_contract_path: str = DEFAULT_PRODUCT_API_CONTRACT_JSON,
     job_orchestration_path: str = DEFAULT_JOB_ORCHESTRATION_JSON,
     engine_refinement_tier_readiness_path: str = DEFAULT_ENGINE_REFINEMENT_TIER_READINESS_JSON,
+    product_image_smoke_preflight_path: str = DEFAULT_PRODUCT_IMAGE_SMOKE_PREFLIGHT_JSON,
 ) -> dict[str, Any]:
     architecture = _summary(architecture_packet)
     release_dossier = _summary(release_dossier_packet)
@@ -1725,6 +1728,19 @@ def build_product_goal_completion_audit(
     cameo = _summary(cameo_architecture_packet)
     release_gate = _summary(release_gate_packet)
     bottleneck = _summary(bottleneck_packet)
+    product_image_smoke = _summary(product_image_smoke_preflight_packet or {})
+    product_image_smoke_gate_present = product_image_smoke_preflight_packet is not None
+    clean_container_smoke_ready = bool(
+        not product_image_smoke_gate_present
+        or (
+            _text(product_image_smoke.get("status")) == "product_image_smoke_preflight_ready"
+            and _bool(product_image_smoke.get("clean_container_smoke_ready"))
+            and _text(product_image_smoke.get("receipt_status")) == "product_image_smoke_ready"
+            and _text(product_image_smoke.get("receipt_mode")) == "rocm-runtime"
+            and _bool(product_image_smoke.get("product_runner_smoke_ready"))
+            and _int(product_image_smoke.get("receipt_simulate_missing_profile_http")) == 422
+        )
+    )
     product_ai_architecture = _summary(product_ai_architecture_gap_packet or {})
     product_ai_backlog = _summary(product_ai_execution_backlog_packet or {})
     residual_model_registry = _summary(residual_model_registry_packet or {})
@@ -2073,6 +2089,7 @@ def build_product_goal_completion_audit(
             _bool(release_dossier.get("bundle_validation_passed")),
             _bool(release_dossier.get("delivery_ready_claim_allowed")),
             _bool(release_dossier.get("pilot_delivery_ready")),
+            clean_container_smoke_ready,
         ]
     )
     product_ai_all_gaps_closed = _bool(product_ai_architecture.get("all_gaps_closed"))
@@ -2235,10 +2252,19 @@ def build_product_goal_completion_audit(
                 f"bundle_validation_passed={_bool(release_dossier.get('bundle_validation_passed'))};"
                 f"delivery_ready_claim_allowed={_bool(release_dossier.get('delivery_ready_claim_allowed'))};"
                 f"pilot_delivery_ready={_bool(release_dossier.get('pilot_delivery_ready'))};"
+                f"clean_container_smoke_ready={clean_container_smoke_ready};"
+                f"product_image_smoke_status={_text(product_image_smoke.get('status'))};"
+                f"product_image_smoke_receipt_mode={_text(product_image_smoke.get('receipt_mode'))};"
                 f"release_gate_status={_text(release_gate.get('status'))}"
             ),
-            required="local product surfaces ready; bundle_validation_passed=true; delivery_ready_claim_allowed=true; pilot_delivery_ready=true",
-            evidence_artifacts=_join([release_dossier_path, architecture_path]),
+            required=(
+                "local product surfaces ready; bundle_validation_passed=true; "
+                "delivery_ready_claim_allowed=true; pilot_delivery_ready=true; "
+                "clean_container_smoke_ready=true with rocm-runtime receipt"
+            ),
+            evidence_artifacts=_join(
+                [release_dossier_path, architecture_path, product_image_smoke_preflight_path]
+            ),
             blocker="restricted_local_delivery_not_ready",
             requirement_tier="restricted_delivery",
         ),
@@ -2409,6 +2435,17 @@ def build_product_goal_completion_audit(
         "optional_requirement_fail_count": len(optional_failed),
         "goal_complete": not release_failed,
         "restricted_delivery_complete": restricted_delivery_ready,
+        "product_image_smoke_preflight_gate_present": product_image_smoke_gate_present,
+        "clean_container_smoke_ready": clean_container_smoke_ready,
+        "product_image_smoke_preflight_status": _text(product_image_smoke.get("status")),
+        "product_image_smoke_receipt_mode": _text(product_image_smoke.get("receipt_mode")),
+        "product_image_smoke_receipt_status": _text(product_image_smoke.get("receipt_status")),
+        "product_image_smoke_product_runner_smoke_ready": _bool(
+            product_image_smoke.get("product_runner_smoke_ready")
+        ),
+        "product_image_smoke_receipt_simulate_missing_profile_http": _int(
+            product_image_smoke.get("receipt_simulate_missing_profile_http")
+        ),
         "product_ai_optional_lane_ready": product_ai_optional_lane_ready,
         "product_ai_scope_deferred_work_item_count": product_ai_scope_deferred_work_item_count,
         "product_scope_breadth_evidence_receipt_status": _text(
@@ -5112,6 +5149,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- status: `{s['status']}`",
         f"- goal_complete: `{s['goal_complete']}`",
         f"- restricted_delivery_complete: `{s['restricted_delivery_complete']}`",
+        f"- product_image_smoke_preflight_gate_present: `{s['product_image_smoke_preflight_gate_present']}`",
+        f"- clean_container_smoke_ready: `{s['clean_container_smoke_ready']}`",
+        f"- product_image_smoke_preflight_status: `{s['product_image_smoke_preflight_status']}`",
+        f"- product_image_smoke_receipt_mode: `{s['product_image_smoke_receipt_mode']}`",
         f"- release_blocker_fail_count: `{s['release_blocker_fail_count']}`",
         f"- optional_requirement_fail_count: `{s['optional_requirement_fail_count']}`",
         f"- product_ai_optional_lane_ready: `{s['product_ai_optional_lane_ready']}`",
@@ -5498,6 +5539,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--engine-refinement-tier-readiness-json",
         default=DEFAULT_ENGINE_REFINEMENT_TIER_READINESS_JSON,
     )
+    parser.add_argument(
+        "--product-image-smoke-preflight-json",
+        default=DEFAULT_PRODUCT_IMAGE_SMOKE_PREFLIGHT_JSON,
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -5541,6 +5586,9 @@ def main(argv: list[str] | None = None) -> None:
         product_api_contract_packet=_read_json_if_present(args.product_api_contract_json),
         job_orchestration_packet=_read_json_if_present(args.job_orchestration_json),
         engine_refinement_tier_readiness_packet=_read_json_if_present(args.engine_refinement_tier_readiness_json),
+        product_image_smoke_preflight_packet=_read_json_if_present(
+            args.product_image_smoke_preflight_json
+        ),
         architecture_path=args.architecture_json,
         release_dossier_path=args.release_dossier_json,
         public_benchmark_path=args.public_benchmark_json,
@@ -5573,6 +5621,7 @@ def main(argv: list[str] | None = None) -> None:
         product_api_contract_path=args.product_api_contract_json,
         job_orchestration_path=args.job_orchestration_json,
         engine_refinement_tier_readiness_path=args.engine_refinement_tier_readiness_json,
+        product_image_smoke_preflight_path=args.product_image_smoke_preflight_json,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

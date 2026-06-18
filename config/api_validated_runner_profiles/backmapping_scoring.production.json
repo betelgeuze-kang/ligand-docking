@@ -25,6 +25,6 @@
     "approved_at_utc": "2026-06-06T12:00:00+00:00",
     "claim_scope": "restricted_local_delivery_proxy_refinement_only",
     "evidence_artifact": "config/api_validated_runner_profiles/evidence/backmapping_scoring.production.evidence.json",
-    "runner_script_sha256": "54294fcbd8291a5fa025a71e45d1f1a43374dce0d65432606d94667b13b49b91"
+    "runner_script_sha256": "6984a000674595d01438a9596dc01207773a5fbc0dce509927941b056fe2b7a6"
   }
 }

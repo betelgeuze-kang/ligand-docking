@@ -18,6 +18,11 @@ def test_product_compose_runs_api_and_worker_with_shared_queue() -> None:
     assert "micf-product-results:/data" in compose
     assert "tools/run_api_simulation_worker.py" in compose
     assert "--worker-id api-worker-$${HOSTNAME}" in compose
+    assert "FORCE_RUST_HIP" in compose
+    assert "RUST_HIP_USE_GPU_NBLIST_BUILDER" in compose
+    assert "TORCH_BLAS_PREFER_HIPBLASLT" in compose
+    assert "/dev/kfd:/dev/kfd" in compose
+    assert "/dev/dri:/dev/dri" in compose
     assert "API_RESULT_MANIFEST_SIGNING_KEY: \"${API_RESULT_MANIFEST_SIGNING_KEY:?set API_RESULT_MANIFEST_SIGNING_KEY}\"" in compose
     assert "PRODUCT_API_TOKEN: \"${PRODUCT_API_TOKEN:?set PRODUCT_API_TOKEN}\"" in compose
     assert 'PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED: "${PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED:-1}"' in compose
@@ -82,6 +87,10 @@ def test_product_dockerfile_contains_worker_entrypoint_assets() -> None:
     assert "COPY api ./api" in dockerfile
     assert "COPY tools ./tools" in dockerfile
     assert "COPY config ./config" in dockerfile
+    assert "COPY rust_engine ./rust_engine" in dockerfile
+    assert "requirements-product-rocm.txt" in dockerfile
+    assert "tools/build_rust_hip_engine.py --output /app" in dockerfile
+    assert "FORCE_RUST_HIP=1" in dockerfile
     assert "API_VALIDATED_RUNNER_ENABLED=0" in dockerfile
     assert 'CMD ["uvicorn", "api.main:app"' in dockerfile
 

@@ -15,6 +15,10 @@ from .sequence_topology import (
     residue_indices_from_sequence,
     virtual_hbond_offset_for_residue_index,
 )
+from betelgeuze_engine.topology.protein import (
+    ProteinTopology,
+    protein_topology_from_residue_indices,
+)
 
 _ADRESS_PRODUCTION_ALLOWED = str(os.getenv("ADRESS_PRODUCTION_ALLOWED", "0")).strip().lower() in {
     "1",
@@ -36,6 +40,7 @@ class TopologyFactory:
         self.target_name = target_name
         self.strategy_type = strategy_type
         self.residue_types_source = TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE
+        self.protein_topology: ProteinTopology | None = None
         self.claim_metadata = default_topology_claim_metadata(
             residue_types_source=self.residue_types_source
         )
@@ -69,10 +74,15 @@ class TopologyFactory:
         # Placeholder: All residues are Alanine (index 1) for simplicity
         # In practice, this would come from a sequence or PDB file
         self.residue_types_source = TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE
+        self.protein_topology = protein_topology_from_residue_indices(
+            torch.ones(self.n_res, dtype=torch.long, device=self.device),
+            fidelity=TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE,
+            device=self.device,
+        )
         self.claim_metadata = default_topology_claim_metadata(
             residue_types_source=self.residue_types_source
         )
-        return torch.ones(self.n_res, dtype=torch.long, device=self.device) # Example: all Alanine
+        return self.protein_topology.residue_indices # Example: all Alanine
 
     def set_residue_types_from_sequence(self, residue_type_indices: torch.Tensor) -> None:
         """Inject sequence-mapped residue types when authoritative sequence data exists."""
@@ -80,6 +90,11 @@ class TopologyFactory:
             raise ValueError("residue_type_indices length must match n_res")
         self.residue_types = residue_type_indices.to(dtype=torch.long, device=self.device)
         self.residue_types_source = TOPOLOGY_FIDELITY_SEQUENCE_MAPPED
+        self.protein_topology = protein_topology_from_residue_indices(
+            self.residue_types,
+            fidelity=TOPOLOGY_FIDELITY_SEQUENCE_MAPPED,
+            device=self.device,
+        )
         self.claim_metadata = default_topology_claim_metadata(
             residue_types_source=self.residue_types_source
         )
@@ -116,10 +131,15 @@ class TopologyFactory:
             c_sc: [B, N_res, 3]
         """
         # Fixed local offset baseline for the lightweight CA-SC model.
-        offsets = []
-        for idx in self.residue_types.detach().cpu().tolist():
-            offsets.append(virtual_hbond_offset_for_residue_index(int(idx)))
-        offset_t = torch.tensor(offsets, dtype=c_ca.dtype, device=c_ca.device).unsqueeze(0)
+        if self.protein_topology is not None and int(self.protein_topology.virtual_site_offsets.shape[0]) == int(
+            self.residue_types.shape[0]
+        ):
+            offset_t = self.protein_topology.virtual_site_offsets.to(dtype=c_ca.dtype, device=c_ca.device).unsqueeze(0)
+        else:
+            offsets = []
+            for idx in self.residue_types.detach().cpu().tolist():
+                offsets.append(virtual_hbond_offset_for_residue_index(int(idx)))
+            offset_t = torch.tensor(offsets, dtype=c_ca.dtype, device=c_ca.device).unsqueeze(0)
         return c_ca + offset_t
 
     def compute_virtual_hbond_bead_coords(self, c_ca: torch.Tensor) -> torch.Tensor:
@@ -127,6 +147,10 @@ class TopologyFactory:
         return self.compute_virtual_sc_coords(c_ca)
 
     def hbond_roles(self) -> list[str]:
+        if self.protein_topology is not None and int(len(self.protein_topology.hbond_roles)) == int(
+            self.residue_types.shape[0]
+        ):
+            return list(self.protein_topology.hbond_roles)
         return [hbond_role_for_residue_index(int(v)) for v in self.residue_types.detach().cpu().tolist()]
 
     def expand_residue_types_for_virtual_sc(self):

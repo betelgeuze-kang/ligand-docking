@@ -334,6 +334,53 @@ def test_result_manifest_signs_request_and_result_file(tmp_path: Path) -> None:
     assert verify_result_manifest(tampered, signing_key="test-signing-key") is False
 
 
+def test_result_manifest_signs_runner_claim_metadata_from_json_result(tmp_path: Path) -> None:
+    result_file = tmp_path / "runner_result.json"
+    result_file.write_text(
+        json.dumps(
+            {
+                "claim_metadata": {
+                    "topology_fidelity": "placeholder_alanine",
+                    "ligand_topology_valid": True,
+                    "hbond_evidence_status": "review",
+                    "force_residual_applied": False,
+                    "claim_safe": False,
+                    "blocked_reason": "protein_topology_missing",
+                },
+                "hbond_evidence_summary": {
+                    "schema_version": "hbond_evidence_v1",
+                    "status": "review",
+                    "evaluated_row_count": 1,
+                    "claim_safe_row_count": 0,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    manifest_path = tmp_path / "result_manifest.json"
+
+    manifest = write_result_manifest(
+        manifest_path,
+        job_id="job_manifest_claim_metadata",
+        request={"target_name": "Chignolin"},
+        status="completed",
+        result_file=str(result_file),
+        signing_key="test-signing-key",
+        key_id="test-key",
+    )
+
+    assert manifest["result_claim_metadata"]["claim_safe"] is False
+    assert manifest["result_claim_metadata"]["blocked_reason"] == "protein_topology_missing"
+    assert manifest["hbond_evidence_summary"]["schema_version"] == "hbond_evidence_v1"
+    assert verify_result_manifest(manifest, signing_key="test-signing-key") is True
+
+    tampered = json.loads(json.dumps(manifest))
+    tampered["result_claim_metadata"]["claim_safe"] = True
+    assert verify_result_manifest(tampered, signing_key="test-signing-key") is False
+
+
 def test_api_main_no_longer_declares_in_memory_job_dict() -> None:
     source = Path("api/main.py").read_text(encoding="utf-8")
     assert "jobs = {}" not in source

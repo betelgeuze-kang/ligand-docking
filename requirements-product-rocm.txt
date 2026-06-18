@@ -1,0 +1,3 @@
+# Product ROCm/HIP/Rust runner dependencies.
+# Reuses the repository's pinned PyTorch ROCm profile instead of CPU wheels.
+-r requirements-rocm.txt

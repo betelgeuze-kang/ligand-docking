@@ -1,4 +1,4 @@
-"""Compatibility shim; canonical module: tools.product.run_ligand_topk_delivery."""
+"""Compatibility shim; canonical module: betelgeuze_engine.product.runners.topk_delivery."""
 
 from __future__ import annotations
 
@@ -10,10 +10,10 @@ _repo = _Path(__file__).resolve().parent
 if str(_repo.parent) not in _sys.path:
     _sys.path.insert(0, str(_repo.parent))
 
-from tools.product.run_ligand_topk_delivery import *  # noqa: F401,F403
-from tools.product.run_ligand_topk_delivery import main as _main
+from betelgeuze_engine.product.runners.topk_delivery import *  # noqa: F401,F403
+from betelgeuze_engine.product.runners.topk_delivery import main as _main
 
-_module = _import_module("tools.product.run_ligand_topk_delivery")
+_module = _import_module("betelgeuze_engine.product.runners.topk_delivery")
 _sys.modules[__name__] = _module
 
 if __name__ == "__main__":

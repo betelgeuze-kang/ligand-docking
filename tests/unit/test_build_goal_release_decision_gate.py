@@ -1573,6 +1573,21 @@ def _ready_api_customer_flow() -> dict:
     }
 
 
+def _product_image_smoke_preflight(*, ready: bool = True) -> dict:
+    return {
+        "summary": {
+            "status": "product_image_smoke_preflight_ready"
+            if ready
+            else "blocked_product_image_smoke_preflight",
+            "clean_container_smoke_ready": ready,
+            "receipt_status": "product_image_smoke_ready" if ready else "blocked_product_image_smoke",
+            "receipt_mode": "rocm-runtime" if ready else "build",
+            "product_runner_smoke_ready": ready,
+            "receipt_simulate_missing_profile_http": 422 if ready else 0,
+        }
+    }
+
+
 def test_goal_release_decision_gate_blocks_current_incomplete_goal() -> None:
     payload = mod.build_goal_release_decision_gate(
         product_pilot_packet=_blocked_product(),
@@ -2828,6 +2843,60 @@ def test_goal_release_decision_gate_passes_ready_api_customer_flow_release_evide
     assert next(row for row in payload["rows"] if row["check"] == "api_customer_flow_release_evidence_ready")[
         "status"
     ] == "pass"
+
+
+def test_goal_release_decision_gate_blocks_without_clean_container_rocm_runtime_smoke() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_ready_cameo_validation(),
+        cameo_capability_packet=_ready_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+        api_customer_flow_release_evidence_packet=_ready_api_customer_flow(),
+        product_image_smoke_preflight_packet=_product_image_smoke_preflight(ready=False),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_goal_release_decision"
+    assert summary["release_allowed"] is False
+    assert summary["product_image_smoke_preflight_gate_present"] is True
+    assert summary["clean_container_smoke_ready"] is False
+    row = next(row for row in payload["rows"] if row["check"] == "clean_container_rocm_runtime_smoke_ready")
+    assert row["status"] == "fail"
+    assert row["release_blocker"] is True
+
+
+def test_goal_release_decision_gate_passes_ready_clean_container_rocm_runtime_smoke() -> None:
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_ready_cameo_validation(),
+        cameo_capability_packet=_ready_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+        api_customer_flow_release_evidence_packet=_ready_api_customer_flow(),
+        product_image_smoke_preflight_packet=_product_image_smoke_preflight(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "goal_release_ready"
+    assert summary["release_allowed"] is True
+    assert summary["clean_container_smoke_ready"] is True
+    row = next(row for row in payload["rows"] if row["check"] == "clean_container_rocm_runtime_smoke_ready")
+    assert row["status"] == "pass"
 
 
 def test_goal_release_decision_gate_does_not_block_on_optional_cameo_live_validation() -> None:

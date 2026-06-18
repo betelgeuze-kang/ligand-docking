@@ -1069,6 +1069,35 @@ def _ladder(ready: bool = True) -> dict:
     }
 
 
+def _ai_md_kpi() -> dict:
+    return {
+        "packet_type": "ai_md_engine_kpi_report",
+        "status": "ai_md_engine_kpi_report_ready",
+        "report_ready": True,
+        "product_bundle_evidence_export_ready": True,
+        "pose_ranking_hbond_benchmark": {
+            "benchmark_ready": True,
+            "top1_pose_id": "amide_near_hbond_pose",
+            "overanchored_decoys_blocked": True,
+        },
+    }
+
+
+def _product_image_preflight(*, clean_ready: bool = True) -> dict:
+    return {
+        "summary": {
+            "status": "product_image_smoke_preflight_ready" if clean_ready else "blocked_product_image_smoke_preflight",
+            "preflight_ready": True,
+            "clean_container_smoke_ready": clean_ready,
+            "receipt_present": clean_ready,
+            "receipt_status": "product_image_smoke_ready" if clean_ready else "",
+            "receipt_mode": "rocm-runtime" if clean_ready else "",
+            "receipt_simulate_missing_profile_http": 422 if clean_ready else 0,
+            "product_runner_smoke_ready": clean_ready,
+        }
+    }
+
+
 def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -1907,6 +1936,102 @@ def test_product_commercial_readiness_handoff_bundle_blocks_when_freshness_block
     assert payload["blockers"][0]["artifact_id"] == "operator_packet_freshness"
 
 
+def test_product_commercial_readiness_handoff_bundle_includes_ai_md_kpi_evidence(tmp_path: Path) -> None:
+    operator_path = tmp_path / "operator.json"
+    freshness_path = tmp_path / "freshness.json"
+    ladder_path = tmp_path / "ladder.json"
+    kpi_json_path = tmp_path / "ai_md_engine_kpi_report_current.json"
+    kpi_md_path = tmp_path / "ai_md_engine_kpi_report_current.md"
+    product_image_preflight_path = tmp_path / "product_image_smoke_preflight_current.json"
+    _write_json(operator_path, _operator_packet())
+    _write_json(freshness_path, _freshness())
+    _write_json(ladder_path, _ladder())
+    _write_json(kpi_json_path, _ai_md_kpi())
+    _write_json(product_image_preflight_path, _product_image_preflight())
+    kpi_md_path.write_text("# AI-MD Engine KPI Report\n", encoding="utf-8")
+
+    payload = mod.build_product_commercial_readiness_handoff_bundle(
+        operator_packet=_operator_packet(),
+        freshness_packet=_freshness(),
+        execution_ladder_packet=_ladder(),
+        ai_md_engine_kpi_packet=_ai_md_kpi(),
+        product_image_smoke_preflight_packet=_product_image_preflight(),
+        operator_packet_path=str(operator_path),
+        freshness_path=str(freshness_path),
+        execution_ladder_path=str(ladder_path),
+        ai_md_engine_kpi_json_path=str(kpi_json_path),
+        ai_md_engine_kpi_md_path=str(kpi_md_path),
+        product_image_smoke_preflight_path=str(product_image_preflight_path),
+    )
+
+    summary = payload["summary"]
+    assert summary["handoff_bundle_ready"] is True
+    assert summary["ai_md_engine_kpi_report_present"] is True
+    assert summary["ai_md_engine_kpi_report_ready"] is True
+    assert summary["ai_md_engine_kpi_pose_ranking_hbond_ready"] is True
+    assert summary["ai_md_engine_kpi_top1_pose_id"] == "amide_near_hbond_pose"
+    assert summary["clean_container_smoke_ready"] is True
+    assert summary["product_image_smoke_receipt_mode"] == "rocm-runtime"
+    assert summary["product_image_smoke_product_runner_smoke_ready"] is True
+    assert summary["artifact_count"] == 6
+    assert any(row["artifact_id"] == "ai_md_engine_kpi_report_json" for row in payload["rows"])
+    assert any(
+        row["artifact_id"] == "ai_md_engine_kpi_report_json"
+        and row["reference_role"] == "local_ai_md_engine_kpi_evidence"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "ai_md_engine_kpi_report_md"
+        and row["reference_role"] == "local_ai_md_engine_kpi_evidence_markdown"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+    assert any(
+        row["artifact_id"] == "product_image_smoke_preflight"
+        and row["reference_role"] == "clean_container_rocm_runtime_smoke_gate"
+        and row["required_now"] is True
+        for row in summary["artifact_reference_manifest"]
+    )
+
+
+def test_product_commercial_readiness_handoff_blocks_ai_md_kpi_without_clean_container_smoke(
+    tmp_path: Path,
+) -> None:
+    operator_path = tmp_path / "operator.json"
+    freshness_path = tmp_path / "freshness.json"
+    ladder_path = tmp_path / "ladder.json"
+    kpi_json_path = tmp_path / "ai_md_engine_kpi_report_current.json"
+    kpi_md_path = tmp_path / "ai_md_engine_kpi_report_current.md"
+    product_image_preflight_path = tmp_path / "product_image_smoke_preflight_current.json"
+    _write_json(operator_path, _operator_packet())
+    _write_json(freshness_path, _freshness())
+    _write_json(ladder_path, _ladder())
+    _write_json(kpi_json_path, _ai_md_kpi())
+    _write_json(product_image_preflight_path, _product_image_preflight(clean_ready=False))
+    kpi_md_path.write_text("# AI-MD Engine KPI Report\n", encoding="utf-8")
+
+    payload = mod.build_product_commercial_readiness_handoff_bundle(
+        operator_packet=_operator_packet(),
+        freshness_packet=_freshness(),
+        execution_ladder_packet=_ladder(),
+        ai_md_engine_kpi_packet=_ai_md_kpi(),
+        product_image_smoke_preflight_packet=_product_image_preflight(clean_ready=False),
+        operator_packet_path=str(operator_path),
+        freshness_path=str(freshness_path),
+        execution_ladder_path=str(ladder_path),
+        ai_md_engine_kpi_json_path=str(kpi_json_path),
+        ai_md_engine_kpi_md_path=str(kpi_md_path),
+        product_image_smoke_preflight_path=str(product_image_preflight_path),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_product_commercial_readiness_handoff_bundle"
+    assert summary["ai_md_engine_kpi_report_ready"] is False
+    assert summary["clean_container_smoke_ready"] is False
+    assert "product_image_smoke_preflight" in summary["blocked_artifact_ids"]
+
+
 def test_product_commercial_readiness_handoff_bundle_tool_writes_outputs(tmp_path: Path) -> None:
     operator_path = tmp_path / "operator.json"
     freshness_path = tmp_path / "freshness.json"
@@ -1926,6 +2051,10 @@ def test_product_commercial_readiness_handoff_bundle_tool_writes_outputs(tmp_pat
             str(freshness_path),
             "--execution-ladder-json",
             str(ladder_path),
+            "--ai-md-engine-kpi-json",
+            str(tmp_path / "missing_kpi.json"),
+            "--ai-md-engine-kpi-md",
+            str(tmp_path / "missing_kpi.md"),
             "--out-json",
             str(out_json),
             "--out-csv",

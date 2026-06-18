@@ -48,6 +48,7 @@ DEFAULT_PRODUCT_QUALITY_GATE_VERIFICATION_JSON = "runs/product_quality_gate_veri
 DEFAULT_PRODUCT_POSE_SAMPLING_READINESS_JSON = "runs/product_pose_sampling_readiness_current.json"
 DEFAULT_PRODUCT_LEDGER_PRIVACY_SCAN_JSON = "runs/product_ledger_privacy_scan_current.json"
 DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON = "runs/api_customer_flow_release_evidence_current.json"
+DEFAULT_PRODUCT_IMAGE_SMOKE_PREFLIGHT_JSON = "runs/product_image_smoke_preflight_current.json"
 DEFAULT_API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_JSON = (
     "runs/api_runner_profile_promotion_operator_receipt_current.json"
 )
@@ -271,6 +272,7 @@ def build_goal_release_decision_gate(
     product_pose_sampling_readiness_packet: dict[str, Any] | None = None,
     product_ledger_privacy_scan_packet: dict[str, Any] | None = None,
     api_customer_flow_release_evidence_packet: dict[str, Any] | None = None,
+    product_image_smoke_preflight_packet: dict[str, Any] | None = None,
     api_runner_profile_promotion_operator_receipt_packet: dict[str, Any] | None = None,
     product_scope_breadth_evidence_receipt_packet: dict[str, Any] | None = None,
     engine_refinement_claim_evidence_receipt_packet: dict[str, Any] | None = None,
@@ -317,6 +319,7 @@ def build_goal_release_decision_gate(
     product_pose_sampling_readiness_path: str = DEFAULT_PRODUCT_POSE_SAMPLING_READINESS_JSON,
     product_ledger_privacy_scan_path: str = DEFAULT_PRODUCT_LEDGER_PRIVACY_SCAN_JSON,
     api_customer_flow_release_evidence_path: str = DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON,
+    product_image_smoke_preflight_path: str = DEFAULT_PRODUCT_IMAGE_SMOKE_PREFLIGHT_JSON,
     api_runner_profile_promotion_operator_receipt_path: str = (
         DEFAULT_API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_JSON
     ),
@@ -984,6 +987,19 @@ def build_goal_release_decision_gate(
         and bool(api_customer_flow.get("bundle_validation_ready") is True)
         and bool(api_customer_flow.get("restricted_unattended_runtime_ready") is True)
         and _int(api_customer_flow.get("blocker_count")) == 0
+    )
+    product_image_smoke = _summary(product_image_smoke_preflight_packet or {})
+    product_image_smoke_gate_present = product_image_smoke_preflight_packet is not None
+    clean_container_smoke_ready = bool(
+        not product_image_smoke_gate_present
+        or (
+            _text(product_image_smoke.get("status")) == "product_image_smoke_preflight_ready"
+            and bool(product_image_smoke.get("clean_container_smoke_ready") is True)
+            and _text(product_image_smoke.get("receipt_status")) == "product_image_smoke_ready"
+            and _text(product_image_smoke.get("receipt_mode")) == "rocm-runtime"
+            and bool(product_image_smoke.get("product_runner_smoke_ready") is True)
+            and _int(product_image_smoke.get("receipt_simulate_missing_profile_http")) == 422
+        )
     )
     full_commercial_matrix = _summary(product_full_commercial_blocker_evidence_matrix_packet or {})
     full_commercial_matrix_gate_present = (
@@ -2420,6 +2436,34 @@ def build_goal_release_decision_gate(
                 reason="Customer-facing API release claims require live end-to-end evidence, not only static wiring or synthetic ledger sync.",
             )
         )
+    if product_image_smoke_gate_present:
+        rows.append(
+            _row(
+                lane_id="commercial_product_release",
+                check="clean_container_rocm_runtime_smoke_ready",
+                artifact_path=product_image_smoke_preflight_path,
+                observed=(
+                    f"{_text(product_image_smoke.get('status')) or 'missing'};"
+                    f"clean_container_smoke_ready="
+                    f"{_bool_text(bool(product_image_smoke.get('clean_container_smoke_ready') is True))};"
+                    f"receipt_mode={_text(product_image_smoke.get('receipt_mode')) or 'missing'};"
+                    f"receipt_status={_text(product_image_smoke.get('receipt_status')) or 'missing'};"
+                    f"product_runner_smoke_ready="
+                    f"{_bool_text(bool(product_image_smoke.get('product_runner_smoke_ready') is True))};"
+                    f"simulate_missing_profile_http="
+                    f"{_int(product_image_smoke.get('receipt_simulate_missing_profile_http'))}"
+                ),
+                required=(
+                    "product_image_smoke_preflight_ready with clean_container_smoke_ready=true, "
+                    "receipt_mode=rocm-runtime, product runner smoke ready, and /simulate 422"
+                ),
+                passed=clean_container_smoke_ready,
+                reason=(
+                    "ROCm/HIP/Rust product claims require the clean product container runtime smoke, "
+                    "not only host-local GPU evidence."
+                ),
+            )
+        )
     if product_ai_architecture_gate_present:
         rows.append(
             _row(
@@ -2561,6 +2605,7 @@ def build_goal_release_decision_gate(
         and product_claim_allowed
         and product_bundle_validated
         and product_commercial_independence_ready
+        and clean_container_smoke_ready
     )
     cameo_architecture_validation_ready = cameo_evidence_ready and cameo_official_used and (
         (cameo_public_registration_allowed and cameo_capability_ready) or cameo_registration_gate_ready
@@ -4551,6 +4596,17 @@ def build_goal_release_decision_gate(
             api_customer_flow.get("restricted_unattended_runtime_ready") is True
         ),
         "api_customer_flow_blocker_count": _int(api_customer_flow.get("blocker_count")),
+        "product_image_smoke_preflight_gate_present": product_image_smoke_gate_present,
+        "product_image_smoke_preflight_status": _text(product_image_smoke.get("status")),
+        "clean_container_smoke_ready": clean_container_smoke_ready if product_image_smoke_gate_present else None,
+        "product_image_smoke_receipt_mode": _text(product_image_smoke.get("receipt_mode")),
+        "product_image_smoke_receipt_status": _text(product_image_smoke.get("receipt_status")),
+        "product_image_smoke_product_runner_smoke_ready": bool(
+            product_image_smoke.get("product_runner_smoke_ready") is True
+        ),
+        "product_image_smoke_receipt_simulate_missing_profile_http": _int(
+            product_image_smoke.get("receipt_simulate_missing_profile_http")
+        ),
         "product_ai_architecture_gate_present": product_ai_architecture_gate_present,
         "product_ai_architecture_ready": product_ai_architecture_ready if product_ai_architecture_gate_present else None,
         "product_ai_architecture_open_gap_count": _int(product_ai_architecture.get("open_gap_count")),
@@ -4991,6 +5047,11 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- api_customer_flow_bundle_validation_ready: `{s['api_customer_flow_bundle_validation_ready']}`",
         f"- api_customer_flow_restricted_runtime_ready: `{s['api_customer_flow_restricted_runtime_ready']}`",
         f"- api_customer_flow_blocker_count: `{s['api_customer_flow_blocker_count']}`",
+        f"- product_image_smoke_preflight_gate_present: `{s['product_image_smoke_preflight_gate_present']}`",
+        f"- product_image_smoke_preflight_status: `{s['product_image_smoke_preflight_status']}`",
+        f"- clean_container_smoke_ready: `{s['clean_container_smoke_ready']}`",
+        f"- product_image_smoke_receipt_mode: `{s['product_image_smoke_receipt_mode']}`",
+        f"- product_image_smoke_receipt_status: `{s['product_image_smoke_receipt_status']}`",
         f"- product_ai_architecture_gate_present: `{s['product_ai_architecture_gate_present']}`",
         f"- product_ai_architecture_ready: `{s['product_ai_architecture_ready']}`",
         f"- product_ai_architecture_open_gap_count: `{s['product_ai_architecture_open_gap_count']}`",
@@ -5125,6 +5186,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--api-customer-flow-release-evidence-json", default=DEFAULT_API_CUSTOMER_FLOW_RELEASE_EVIDENCE_JSON)
     parser.add_argument(
+        "--product-image-smoke-preflight-json",
+        default=DEFAULT_PRODUCT_IMAGE_SMOKE_PREFLIGHT_JSON,
+    )
+    parser.add_argument(
         "--api-runner-profile-promotion-operator-receipt-json",
         default=DEFAULT_API_RUNNER_PROFILE_PROMOTION_OPERATOR_RECEIPT_JSON,
     )
@@ -5226,6 +5291,9 @@ def main(argv: list[str] | None = None) -> None:
         api_customer_flow_release_evidence_packet=_read_json_if_present(
             args.api_customer_flow_release_evidence_json
         ),
+        product_image_smoke_preflight_packet=_read_json_if_present(
+            args.product_image_smoke_preflight_json
+        ),
         api_runner_profile_promotion_operator_receipt_packet=_read_json_if_present(
             args.api_runner_profile_promotion_operator_receipt_json
         ),
@@ -5294,6 +5362,7 @@ def main(argv: list[str] | None = None) -> None:
         product_pose_sampling_readiness_path=args.product_pose_sampling_readiness_json,
         product_ledger_privacy_scan_path=args.product_ledger_privacy_scan_json,
         api_customer_flow_release_evidence_path=args.api_customer_flow_release_evidence_json,
+        product_image_smoke_preflight_path=args.product_image_smoke_preflight_json,
         api_runner_profile_promotion_operator_receipt_path=(
             args.api_runner_profile_promotion_operator_receipt_json
         ),

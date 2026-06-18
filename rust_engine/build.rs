@@ -2,7 +2,9 @@ use std::process::Command;
 use std::path::PathBuf;
 
 fn main() {
-    let rocm_path = "/opt/rocm-6.0.2";
+    let rocm_path = std::env::var("ROCM_PATH")
+        .or_else(|_| std::env::var("HIP_PATH"))
+        .unwrap_or_else(|_| "/opt/rocm-6.0.2".to_string());
     let out_dir = std::env::var("OUT_DIR").unwrap();
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
 

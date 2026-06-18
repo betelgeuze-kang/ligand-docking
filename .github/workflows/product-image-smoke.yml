@@ -9,11 +9,17 @@ on:
       - Dockerfile.product
       - pyproject.toml
       - requirements-package.txt
+      - requirements.txt
       - requirements-api.txt
       - requirements-deploy.txt
+      - requirements-rocm.txt
+      - requirements-product-rocm.txt
       - api/**
       - core/**
+      - betelgeuze_engine/**
       - betelgeuze_product/**
+      - rust_engine/**
+      - third_party/rocm_device_libs_pkg/**
       - deploy/verify_product_image.sh
   workflow_dispatch:
 
@@ -23,4 +29,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Verify product image
+        env:
+          PRODUCT_IMAGE_VERIFY_MODE: build
         run: bash deploy/verify_product_image.sh
