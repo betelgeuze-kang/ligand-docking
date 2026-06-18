@@ -35,6 +35,7 @@ def topology_claim_metadata(complex_topology: ComplexTopology) -> dict[str, Any]
         claim_safe=claim_safe,
         blocked_reason=blocked,
         claim_scope=complex_topology.claim_scope,
+        ligand_topology_schema_version=str(validity.get("schema_version") or ""),
         ligand_topology_claim_safe=ligand_claim_safe,
         ligand_topology_source=str(validity.get("source") or ""),
         ligand_atom_count=int(validity.get("atom_count") or len(complex_topology.ligand.atom_elements)),

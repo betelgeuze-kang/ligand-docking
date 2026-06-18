@@ -59,12 +59,17 @@ def _write_product_evidence_bundle(
                 "ready": True,
                 "manifest_ligand_topology_valid": True,
                 "manifest_ligand_topology_claim_safe": True,
+                "manifest_ligand_topology_schema_version": "ligand_topology_validity_v1",
+                "manifest_ligand_topology_schema_ready_row_count": 2,
                 "manifest_ligand_topology_claim_safe_row_count": 2,
+                "manifest_hbond_evidence_schema_version": "hbond_evidence_v1",
+                "manifest_hbond_evidence_schema_ready_row_count": 2,
             },
             "force_term_claim_metadata_ready": True,
             "force_term_claim_metadata_smoke": {
                 "ready": True,
                 "forcefield_claim_metadata_schema_version": "force_term_claim_metadata_v1",
+                "forcefield_hbond_evidence_schema_version": "hbond_evidence_v1",
                 "forcefield_claim_safe_count": 3,
                 "forcefield_blocked_count": 0,
                 "forcefield_claim_rows": [
@@ -73,6 +78,8 @@ def _write_product_evidence_bundle(
                         "force_term_status": "pass",
                         "claim_safe": True,
                         "blocked_reason": "",
+                        "hbond_evidence_schema_version": "hbond_evidence_v1",
+                        "hbond_evidence_schema_ready": True,
                     },
                     {
                         "force_term_name": "hydrophobic_contact",
@@ -90,10 +97,14 @@ def _write_product_evidence_bundle(
             },
             "guarded_force_term_plugin_ready": True,
             "guarded_force_term_plugin_smoke": {"ready": True},
+            "engine_topology_factory_facade_ready": True,
+            "engine_topology_factory_facade_smoke": {"ready": True},
             "core_forcefield_bridge_ready": True,
             "core_forcefield_bridge_smoke": {"ready": True},
             "core_compatibility_layer_ready": True,
             "core_compatibility_layer_smoke": {"ready": True},
+            "job_store_lazy_factory_ready": True,
+            "job_store_lazy_factory_smoke": {"ready": True},
         },
         "pm_kpi_summary": {
             "runtime": {
@@ -107,8 +118,10 @@ def _write_product_evidence_bundle(
                 "runner_claim_metadata_signed": True,
                 "force_term_claim_metadata_ready": True,
                 "guarded_force_term_plugin_ready": True,
+                "engine_topology_factory_facade_ready": True,
                 "core_forcefield_bridge_ready": True,
                 "core_compatibility_layer_ready": True,
+                "job_store_lazy_factory_ready": True,
             }
         },
     }
@@ -150,12 +163,18 @@ def _write_product_evidence_bundle(
             "tier_alpha_result_manifest_signature_verified": clean_ready,
             "tier_alpha_result_manifest_status": "completed" if clean_ready else "",
             "backmapping_runner_claim_metadata_ready": clean_ready,
+            "backmapping_ligand_topology_schema_version": "ligand_topology_validity_v1"
+            if clean_ready
+            else "",
+            "backmapping_ligand_topology_schema_ready_row_count": 2 if clean_ready else 0,
             "backmapping_ligand_topology_valid": clean_ready,
             "backmapping_ligand_topology_claim_safe": clean_ready,
             "backmapping_ligand_topology_claim_safe_row_count": 2 if clean_ready else 0,
             "backmapping_ligand_topology_invalid_row_count": 0,
             "backmapping_ligand_topology_receipt_ready": clean_ready,
             "backmapping_hbond_evidence_schema_version": "hbond_evidence_v1" if clean_ready else "",
+            "backmapping_hbond_claim_metadata_schema_version": "hbond_evidence_v1" if clean_ready else "",
+            "backmapping_hbond_claim_metadata_schema_ready_row_count": 2 if clean_ready else 0,
             "backmapping_onsps_backmap_schema_version": "onsps_backmap_evidence_v1" if clean_ready else "",
             "backmapping_hbond_evaluated_row_count": 2 if clean_ready else 0,
             "backmapping_onsps_backmap_claim_safe_row_count": 1 if clean_ready else 0,
@@ -239,8 +258,12 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert runner_manifest_smoke["manifest_claim_safe"] is False
     assert runner_manifest_smoke["manifest_ligand_topology_valid"] is True
     assert runner_manifest_smoke["manifest_ligand_topology_claim_safe"] is True
+    assert runner_manifest_smoke["manifest_ligand_topology_schema_version"] == "ligand_topology_validity_v1"
+    assert runner_manifest_smoke["manifest_ligand_topology_schema_ready_row_count"] == 2
     assert runner_manifest_smoke["manifest_ligand_topology_claim_safe_row_count"] == 2
     assert runner_manifest_smoke["manifest_hbond_evidence_status"] == "review"
+    assert runner_manifest_smoke["manifest_hbond_evidence_schema_version"] == "hbond_evidence_v1"
+    assert runner_manifest_smoke["manifest_hbond_evidence_schema_ready_row_count"] == 2
     assert report["product_kpi"]["bundle_validation_pass"] is True
     assert report["product_kpi"]["bundle_validation_error_count"] == 0
     assert report["product_kpi"]["force_term_plugin_registry_ready"] is True
@@ -255,6 +278,24 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert report["pm_kpi_summary"]["product"]["force_term_result_contract_ready"] is True
     assert report["product_kpi"]["guarded_force_term_plugin_ready"] is True
     assert report["pm_kpi_summary"]["product"]["guarded_force_term_plugin_ready"] is True
+    assert report["product_kpi"]["engine_topology_factory_facade_ready"] is True
+    assert report["pm_kpi_summary"]["product"]["engine_topology_factory_facade_ready"] is True
+    topology_factory_smoke = report["product_kpi"]["engine_topology_factory_facade_smoke"]
+    assert topology_factory_smoke["facade"] == "betelgeuze_engine.topology.TopologyFactoryFacade"
+    assert topology_factory_smoke["valid_claim_safe"] is True
+    assert topology_factory_smoke["valid_ligand_topology_schema_version"] == "ligand_topology_validity_v1"
+    assert topology_factory_smoke["placeholder_blocked_reason"] == "placeholder_alanine_topology"
+    assert topology_factory_smoke["invalid_ligand_blocked_reason"] == "invalid_smiles"
+    assert report["product_kpi"]["onsps_backmap_evidence_schema_ready"] is True
+    assert report["pm_kpi_summary"]["product"]["onsps_backmap_evidence_schema_ready"] is True
+    onsps_schema_smoke = report["product_kpi"]["onsps_backmap_evidence_schema_smoke"]
+    assert onsps_schema_smoke["schema_version"] == "onsps_backmap_evidence_v1"
+    assert onsps_schema_smoke["valid_claim_safe"] is True
+    assert onsps_schema_smoke["valid_backmap_status"] == "ok"
+    assert onsps_schema_smoke["valid_mapped_site_count"] >= 1
+    assert onsps_schema_smoke["empty_blocked_reason"] == "invalid_two_bead_geometry"
+    assert onsps_schema_smoke["no_sites_blocked_reason"] == "no_onsps_sites"
+    assert onsps_schema_smoke["hbond_onsps_schema_version"] == "onsps_backmap_evidence_v1"
     guarded_plugin = report["product_kpi"]["guarded_force_term_plugin_smoke"]
     assert guarded_plugin["ready"] is True
     assert guarded_plugin["default_registry_names"] == [
@@ -279,6 +320,7 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert force_term_smoke["forcefield_claim_safe"] is True
     assert force_term_smoke["forcefield_blocked_reason"] == ""
     assert force_term_smoke["forcefield_hbond_evidence_status"] == "pass"
+    assert force_term_smoke["forcefield_hbond_evidence_schema_version"] == "hbond_evidence_v1"
     assert force_term_smoke["forcefield_claim_metadata_schema_version"] == "force_term_claim_metadata_v1"
     assert force_term_smoke["forcefield_claim_safe_count"] == 3
     assert force_term_smoke["forcefield_blocked_count"] == 0
@@ -287,6 +329,12 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
         for row in force_term_smoke["forcefield_claim_rows"]
     } == {"directional_hbond", "hydrophobic_contact", "legacy_lj"}
     assert all(row["claim_safe"] is True for row in force_term_smoke["forcefield_claim_rows"])
+    assert any(
+        row["force_term_name"] == "directional_hbond"
+        and row["hbond_evidence_schema_version"] == "hbond_evidence_v1"
+        and row["hbond_evidence_schema_ready"] is True
+        for row in force_term_smoke["forcefield_claim_rows"]
+    )
     assert force_term_smoke["term_count"] == 3
     assert force_term_smoke["term_result_contract_ready"] is True
     assert len(force_term_smoke["term_result_contract_rows"]) == 3
@@ -318,6 +366,13 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
         "forcefield_product_bridge",
     }
     assert all(row["ready"] is True for row in core_compatibility["rows"])
+    assert report["product_kpi"]["job_store_lazy_factory_ready"] is True
+    assert report["pm_kpi_summary"]["product"]["job_store_lazy_factory_ready"] is True
+    job_store_smoke = report["product_kpi"]["job_store_lazy_factory_smoke"]
+    assert job_store_smoke["ready"] is True
+    assert job_store_smoke["factory"] == "api.job_store.get_configured_job_store"
+    assert job_store_smoke["same_path_reused"] is True
+    assert job_store_smoke["changed_path_reopened"] is True
     assert report["product_kpi"]["allowlisted_runner_shim_contract_ready"] is True
     assert report["pm_kpi_summary"]["product"]["allowlisted_runner_shim_contract_ready"] is True
     shim_contract = report["product_kpi"]["allowlisted_runner_shim_contract"]
@@ -408,14 +463,29 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
         report["chemistry_kpi"]["hbond_evidence_schema_ready_count"]
         == report["chemistry_kpi"]["fixture_count"]
     )
+    assert report["chemistry_kpi"]["ligand_topology_validity_schema_ready"] is True
+    assert (
+        report["chemistry_kpi"]["ligand_topology_validity_schema_ready_count"]
+        == report["chemistry_kpi"]["fixture_count"]
+    )
+    assert report["pm_kpi_summary"]["chemistry"]["ligand_topology_validity_schema_ready"] is True
     assert report["chemistry_kpi"]["hbond_donor_site_count"] >= 1
     assert report["chemistry_kpi"]["hbond_acceptor_site_count"] >= 1
     assert report["pm_kpi_summary"]["chemistry"]["hbond_donor_site_count"] == report["chemistry_kpi"]["hbond_donor_site_count"]
     assert report["pm_kpi_summary"]["chemistry"]["hbond_acceptor_site_count"] == report["chemistry_kpi"]["hbond_acceptor_site_count"]
     assert report["chemistry_kpi"]["chirality_preservation_fixture_count"] >= 1
+    assert report["chemistry_kpi"]["unassigned_chirality_blocked_fixture_count"] >= 1
+    assert report["chemistry_kpi"]["chirality_preservation_ready"] is True
+    assert report["pm_kpi_summary"]["chemistry"]["chirality_preservation_ready"] is True
     assert report["chemistry_kpi"]["ring_validity_fixture_count"] >= 1
+    assert report["chemistry_kpi"]["ring_validity_ready"] is True
+    assert report["pm_kpi_summary"]["chemistry"]["ring_validity_ready"] is True
     assert report["chemistry_kpi"]["tautomer_validity_fixture_count"] >= 1
+    assert report["chemistry_kpi"]["tautomer_validity_ready"] is True
+    assert report["pm_kpi_summary"]["chemistry"]["tautomer_validity_ready"] is True
     assert report["chemistry_kpi"]["protonation_validity_fixture_count"] >= 1
+    assert report["chemistry_kpi"]["protonation_validity_ready"] is True
+    assert report["pm_kpi_summary"]["chemistry"]["protonation_validity_ready"] is True
     assert report["chemistry_kpi"]["backmap_evaluable_fixture_count"] >= 1
     assert report["chemistry_kpi"]["backmap_claim_safe_fixture_count"] >= 1
     assert report["chemistry_kpi"]["backmapping_failure_rate"] == 0.0
@@ -428,6 +498,11 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert report["pm_kpi_summary"]["chemistry"]["unsatisfied_donor_acceptor_fixture_count"] == report["chemistry_kpi"]["unsatisfied_donor_acceptor_fixture_count"]
     assert any(row["hbond_schema_version"] == "hbond_evidence_v1" for row in report["chemistry_kpi"]["rows"])
     assert all(row["hbond_schema_ready"] is True for row in report["chemistry_kpi"]["rows"])
+    assert all(
+        row["ligand_validity_schema_version"] == "ligand_topology_validity_v1"
+        and row["ligand_validity_schema_ready"] is True
+        for row in report["chemistry_kpi"]["rows"]
+    )
     assert all(
         row["hbond_role_site_count"] == row["site_count"]
         for row in report["chemistry_kpi"]["rows"]
@@ -459,6 +534,14 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert chiral_row["backmap_evaluable"] is True
     assert chiral_row["backmap_claim_safe"] is True
     assert chiral_row["backmap_source"] == "rdkit_etkdg"
+    unassigned_chiral_row = next(
+        row for row in report["chemistry_kpi"]["rows"] if row["fixture"] == "unassigned_chiral_lactic_acid"
+    )
+    assert unassigned_chiral_row["ligand_valid"] is True
+    assert unassigned_chiral_row["ligand_topology_claim_safe"] is False
+    assert unassigned_chiral_row["unassigned_chiral_center_count"] == 1
+    assert unassigned_chiral_row["chirality_status"] == "unassigned_chiral_centers"
+    assert "unassigned_ligand_chirality" in unassigned_chiral_row["ligand_validity_blockers"]
     protonated_row = next(row for row in report["chemistry_kpi"]["rows"] if row["fixture"] == "protonated_amine")
     assert protonated_row["protonation_status"] == "charged_state_parsed"
     ring_row = next(row for row in report["chemistry_kpi"]["rows"] if row["fixture"] == "aromatic_ring")

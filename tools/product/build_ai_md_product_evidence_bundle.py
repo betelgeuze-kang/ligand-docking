@@ -105,6 +105,10 @@ def _validate_kpi_claim_metadata_gates(
         errors.append(f"kpi_core_forcefield_bridge_not_ready:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "core_compatibility_layer_ready"):
         errors.append(f"kpi_core_compatibility_layer_not_ready:{artifact_id}")
+    if not _bool_nested(payload, "product_kpi", "job_store_lazy_factory_ready"):
+        errors.append(f"kpi_job_store_lazy_factory_not_ready:{artifact_id}")
+    if not _bool_nested(payload, "product_kpi", "engine_topology_factory_facade_ready"):
+        errors.append(f"kpi_engine_topology_factory_facade_not_ready:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "runner_claim_metadata_manifest_smoke", "ready"):
         errors.append(f"kpi_runner_claim_metadata_manifest_smoke_not_ready:{artifact_id}")
     manifest_smoke = (
@@ -118,8 +122,16 @@ def _validate_kpi_claim_metadata_gates(
         errors.append(f"kpi_manifest_ligand_topology_valid_missing:{artifact_id}")
     if manifest_smoke.get("manifest_ligand_topology_claim_safe") is not True:
         errors.append(f"kpi_manifest_ligand_topology_claim_safe_missing:{artifact_id}")
+    if manifest_smoke.get("manifest_ligand_topology_schema_version") != "ligand_topology_validity_v1":
+        errors.append(f"kpi_manifest_ligand_topology_schema_missing:{artifact_id}")
+    if _int_value(manifest_smoke.get("manifest_ligand_topology_schema_ready_row_count")) < 1:
+        errors.append(f"kpi_manifest_ligand_topology_schema_rows_missing:{artifact_id}")
     if _int_value(manifest_smoke.get("manifest_ligand_topology_claim_safe_row_count")) < 1:
         errors.append(f"kpi_manifest_ligand_topology_claim_safe_rows_missing:{artifact_id}")
+    if manifest_smoke.get("manifest_hbond_evidence_schema_version") != "hbond_evidence_v1":
+        errors.append(f"kpi_manifest_hbond_evidence_schema_missing:{artifact_id}")
+    if _int_value(manifest_smoke.get("manifest_hbond_evidence_schema_ready_row_count")) < 1:
+        errors.append(f"kpi_manifest_hbond_evidence_schema_rows_missing:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "force_term_claim_metadata_smoke", "ready"):
         errors.append(f"kpi_force_term_claim_metadata_smoke_not_ready:{artifact_id}")
     force_term_smoke = (
@@ -134,6 +146,8 @@ def _validate_kpi_claim_metadata_gates(
         forcefield_claim_rows = []
     if force_term_smoke.get("forcefield_claim_metadata_schema_version") != "force_term_claim_metadata_v1":
         errors.append(f"kpi_force_term_claim_metadata_schema_missing:{artifact_id}")
+    if force_term_smoke.get("forcefield_hbond_evidence_schema_version") != "hbond_evidence_v1":
+        errors.append(f"kpi_forcefield_hbond_evidence_schema_missing:{artifact_id}")
     if _int_value(force_term_smoke.get("forcefield_claim_safe_count")) < 1:
         errors.append(f"kpi_force_term_claim_safe_rows_missing:{artifact_id}")
     if _int_value(force_term_smoke.get("forcefield_blocked_count")) != 0:
@@ -148,10 +162,20 @@ def _validate_kpi_claim_metadata_gates(
         for row in forcefield_claim_rows
     ):
         errors.append(f"kpi_force_term_claim_rows_not_safe:{artifact_id}")
+    if not any(
+        isinstance(row, dict)
+        and row.get("force_term_name") == "directional_hbond"
+        and row.get("hbond_evidence_schema_version") == "hbond_evidence_v1"
+        and row.get("hbond_evidence_schema_ready") is True
+        for row in forcefield_claim_rows
+    ):
+        errors.append(f"kpi_force_term_hbond_schema_row_missing:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "core_forcefield_bridge_smoke", "ready"):
         errors.append(f"kpi_core_forcefield_bridge_smoke_not_ready:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "core_compatibility_layer_smoke", "ready"):
         errors.append(f"kpi_core_compatibility_layer_smoke_not_ready:{artifact_id}")
+    if not _bool_nested(payload, "product_kpi", "job_store_lazy_factory_smoke", "ready"):
+        errors.append(f"kpi_job_store_lazy_factory_smoke_not_ready:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "product", "runner_claim_metadata_signed"):
         errors.append(f"pm_runner_claim_metadata_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "product", "force_term_claim_metadata_ready"):
@@ -160,6 +184,8 @@ def _validate_kpi_claim_metadata_gates(
         errors.append(f"pm_core_forcefield_bridge_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "product", "core_compatibility_layer_ready"):
         errors.append(f"pm_core_compatibility_layer_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "product", "job_store_lazy_factory_ready"):
+        errors.append(f"pm_job_store_lazy_factory_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "runtime", "force_residual_bounded_policy_ready"):
         errors.append(f"pm_force_residual_bounded_policy_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "runtime", "force_residual_confidence_abstention_ready"):
@@ -438,11 +464,14 @@ def build_payload(
     force_term_claim_metadata_ready = bool(product_kpi.get("force_term_claim_metadata_ready") is True)
     core_forcefield_bridge_ready = bool(product_kpi.get("core_forcefield_bridge_ready") is True)
     core_compatibility_layer_ready = bool(product_kpi.get("core_compatibility_layer_ready") is True)
+    job_store_lazy_factory_ready = bool(product_kpi.get("job_store_lazy_factory_ready") is True)
     rocm_ready = _rocm_product_runtime_ready(rocm_summary)
     image_hbond_evidence_receipt_ready = bool(
         image_summary.get("backmapping_hbond_evidence_receipt_ready") is True
         or (
             image_summary.get("backmapping_hbond_evidence_schema_version") == "hbond_evidence_v1"
+            and image_summary.get("backmapping_hbond_claim_metadata_schema_version") == "hbond_evidence_v1"
+            and _int_value(image_summary.get("backmapping_hbond_claim_metadata_schema_ready_row_count")) >= 1
             and _int_value(image_summary.get("backmapping_hbond_evaluated_row_count")) >= 1
         )
     )
@@ -454,12 +483,16 @@ def build_payload(
         )
     )
     image_ligand_topology_receipt_ready = bool(
-        image_summary.get("backmapping_ligand_topology_receipt_ready") is True
-        or (
-            image_summary.get("backmapping_ligand_topology_valid") is True
+        image_summary.get("backmapping_ligand_topology_schema_version") == "ligand_topology_validity_v1"
+        and _int_value(image_summary.get("backmapping_ligand_topology_schema_ready_row_count")) >= 1
+        and (
+            image_summary.get("backmapping_ligand_topology_receipt_ready") is True
+            or (
+                image_summary.get("backmapping_ligand_topology_valid") is True
             and image_summary.get("backmapping_ligand_topology_claim_safe") is True
             and _int_value(image_summary.get("backmapping_ligand_topology_claim_safe_row_count")) >= 1
             and _int_value(image_summary.get("backmapping_ligand_topology_invalid_row_count")) == 0
+            )
         )
     )
     image_container_runtime_receipt_ready = bool(
@@ -514,6 +547,7 @@ def build_payload(
         and force_term_claim_metadata_ready
         and core_forcefield_bridge_ready
         and core_compatibility_layer_ready
+        and job_store_lazy_factory_ready
         and validation["kpi_claim_metadata_gates_validated"] is True
     )
     if product_claim_ready:
@@ -537,6 +571,7 @@ def build_payload(
         "force_term_claim_metadata_ready": force_term_claim_metadata_ready,
         "core_forcefield_bridge_ready": core_forcefield_bridge_ready,
         "core_compatibility_layer_ready": core_compatibility_layer_ready,
+        "job_store_lazy_factory_ready": job_store_lazy_factory_ready,
         "kpi_claim_metadata_gates_validated": bool(validation["kpi_claim_metadata_gates_validated"]),
         "kpi_claim_metadata_gate_count": int(validation["kpi_claim_metadata_gate_count"]),
         "kpi_claim_metadata_gate_validated_count": int(validation["kpi_claim_metadata_gate_validated_count"]),
@@ -574,6 +609,12 @@ def build_payload(
             image_summary.get("backmapping_runner_claim_metadata_ready") is True
         ),
         "backmapping_ligand_topology_receipt_ready": image_ligand_topology_receipt_ready,
+        "backmapping_ligand_topology_schema_version": str(
+            image_summary.get("backmapping_ligand_topology_schema_version") or ""
+        ),
+        "backmapping_ligand_topology_schema_ready_row_count": _int_value(
+            image_summary.get("backmapping_ligand_topology_schema_ready_row_count")
+        ),
         "backmapping_ligand_topology_valid": bool(
             image_summary.get("backmapping_ligand_topology_valid") is True
         ),
@@ -590,6 +631,12 @@ def build_payload(
         "backmapping_onsps_backmap_receipt_ready": image_onsps_backmap_receipt_ready,
         "backmapping_hbond_evidence_schema_version": str(
             image_summary.get("backmapping_hbond_evidence_schema_version") or ""
+        ),
+        "backmapping_hbond_claim_metadata_schema_version": str(
+            image_summary.get("backmapping_hbond_claim_metadata_schema_version") or ""
+        ),
+        "backmapping_hbond_claim_metadata_schema_ready_row_count": _int_value(
+            image_summary.get("backmapping_hbond_claim_metadata_schema_ready_row_count")
         ),
         "backmapping_onsps_backmap_schema_version": str(
             image_summary.get("backmapping_onsps_backmap_schema_version") or ""
@@ -645,6 +692,8 @@ def build_payload(
         blockers.append({"code": "core_forcefield_bridge_not_ready"})
     if bundle_ready and not core_compatibility_layer_ready:
         blockers.append({"code": "core_compatibility_layer_not_ready"})
+    if bundle_ready and not job_store_lazy_factory_ready:
+        blockers.append({"code": "job_store_lazy_factory_not_ready"})
     if bundle_ready and validation["kpi_claim_metadata_gates_validated"] is not True:
         blockers.append({"code": "kpi_claim_metadata_gates_not_validated"})
     if bundle_ready and not clean_container_smoke_ready:

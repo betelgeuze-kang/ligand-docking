@@ -83,7 +83,11 @@ def test_flatten_hbond_evidence_for_runner_emits_claim_boundary_fields():
     assert row["onsps_backmap_schema_version"] == "onsps_backmap_evidence_v1"
     assert isinstance(row["onsps_backmap_claim_safe"], bool)
     assert row["hbond_site_count"] >= 0
+    assert row["hbond_donor_site_count"] >= 0
+    assert row["hbond_acceptor_site_count"] >= 0
     assert row["hbond_pair_count"] >= 0
+    assert isinstance(row["hbond_geometry_evaluated"], bool)
+    assert isinstance(row["hbond_geometry_complete"], bool)
 
 
 def test_flatten_ligand_topology_for_runner_emits_product_validity_fields():
@@ -92,6 +96,7 @@ def test_flatten_ligand_topology_for_runner_emits_product_validity_fields():
 
     assert valid["ligand_topology_valid"] is True
     assert valid["ligand_topology_claim_safe"] is True
+    assert valid["ligand_topology_schema_version"] == "ligand_topology_validity_v1"
     assert valid["ligand_topology_source"] == "rdkit"
     assert valid["ligand_topology_chirality_status"] == "specified"
     assert valid["ligand_topology_unassigned_chiral_center_count"] == 0
@@ -108,6 +113,7 @@ def test_hbond_evidence_summary_and_runner_claim_metadata_stay_claim_safe_bounde
                 "protein_structure_source_available": True,
                 "ligand_topology_valid": True,
                 "ligand_topology_claim_safe": True,
+                "ligand_topology_schema_version": "ligand_topology_validity_v1",
                 "ligand_topology_blocked_reason": "",
                 "hbond_evidence_schema_version": "hbond_evidence_v1",
                 "hbond_evidence_status": "ok",
@@ -117,6 +123,8 @@ def test_hbond_evidence_summary_and_runner_claim_metadata_stay_claim_safe_bounde
                 "hbond_unsatisfied_acceptor_count": 0,
                 "hbond_overanchoring_flag": False,
                 "hbond_missing_expected_anchor_flag": False,
+                "hbond_geometry_evaluated": True,
+                "hbond_geometry_complete": True,
                 "onsps_backmap_claim_safe": True,
             }
         ]
@@ -127,15 +135,23 @@ def test_hbond_evidence_summary_and_runner_claim_metadata_stay_claim_safe_bounde
     metadata = mod._runner_claim_metadata(result_df, summary)
 
     assert summary["status"] == "pass"
+    assert summary["schema_version"] == "hbond_evidence_v1"
+    assert summary["schema_ready_row_count"] == 1
     assert summary["claim_safe_row_count"] == 1
     assert summary["topk_claim_safe_row_count"] == 1
     assert summary["onsps_backmap_claim_safe_row_count"] == 1
     assert metadata["topology_fidelity"] == "sequence_mapped"
     assert metadata["ligand_topology_valid"] is True
     assert metadata["ligand_topology_claim_safe"] is True
+    assert metadata["ligand_topology_schema_version"] == "ligand_topology_validity_v1"
+    assert metadata["ligand_topology_schema_ready_row_count"] == 1
     assert metadata["ligand_topology_valid_row_count"] == 1
     assert metadata["ligand_topology_claim_safe_row_count"] == 1
     assert metadata["hbond_evidence_status"] == "pass"
+    assert metadata["hbond_evidence_schema_version"] == "hbond_evidence_v1"
+    assert metadata["hbond_evidence_schema_ready_row_count"] == 1
+    assert metadata["hbond_geometry_evaluated_row_count"] == 1
+    assert metadata["hbond_geometry_complete_row_count"] == 1
     assert metadata["claim_safe"] is False
     assert "runner_summary_not_claim_promoted" in metadata["blocked_reason"]
 
@@ -147,6 +163,7 @@ def test_hbond_evidence_summary_blocks_invalid_runner_ligand_claim():
                 "protein_structure_source_available": True,
                 "ligand_topology_valid": False,
                 "ligand_topology_claim_safe": False,
+                "ligand_topology_schema_version": "ligand_topology_validity_v1",
                 "ligand_topology_blocked_reason": "invalid_smiles",
                 "hbond_evidence_schema_version": "hbond_evidence_v1",
                 "hbond_evidence_status": "invalid_smiles",
@@ -168,10 +185,73 @@ def test_hbond_evidence_summary_blocks_invalid_runner_ligand_claim():
     assert summary["blocked_reason_counts"] == {"invalid_smiles": 1}
     assert metadata["ligand_topology_valid"] is False
     assert metadata["ligand_topology_claim_safe"] is False
+    assert metadata["ligand_topology_schema_version"] == "ligand_topology_validity_v1"
+    assert metadata["ligand_topology_schema_ready_row_count"] == 1
     assert metadata["ligand_topology_invalid_row_count"] == 1
     assert metadata["ligand_topology_blocker_counts"] == {"invalid_smiles": 1}
     assert "ligand_topology_invalid" in metadata["blocked_reason"]
     assert "hbond_evidence_review_required" in metadata["blocked_reason"]
+
+
+def test_runner_claim_metadata_blocks_missing_ligand_topology_schema():
+    result_df = pd.DataFrame(
+        [
+            {
+                "protein_structure_source_available": True,
+                "ligand_topology_valid": True,
+                "ligand_topology_claim_safe": True,
+                "ligand_topology_blocked_reason": "",
+                "hbond_evidence_schema_version": "hbond_evidence_v1",
+                "hbond_evidence_status": "ok",
+                "hbond_claim_safe": True,
+                "hbond_blocked_reason": "",
+                "hbond_unsatisfied_donor_count": 0,
+                "hbond_unsatisfied_acceptor_count": 0,
+                "hbond_overanchoring_flag": False,
+                "hbond_missing_expected_anchor_flag": False,
+                "onsps_backmap_claim_safe": True,
+            }
+        ]
+    )
+
+    summary = mod._summarize_hbond_evidence(result_df, result_df.to_dict(orient="records"))
+    metadata = mod._runner_claim_metadata(result_df, summary)
+
+    assert metadata["ligand_topology_valid"] is True
+    assert metadata["ligand_topology_claim_safe"] is True
+    assert metadata["ligand_topology_schema_version"] == ""
+    assert metadata["ligand_topology_schema_ready_row_count"] == 0
+    assert "ligand_topology_schema_missing" in metadata["blocked_reason"]
+
+
+def test_runner_claim_metadata_blocks_missing_hbond_evidence_schema():
+    result_df = pd.DataFrame(
+        [
+            {
+                "protein_structure_source_available": True,
+                "ligand_topology_valid": True,
+                "ligand_topology_claim_safe": True,
+                "ligand_topology_schema_version": "ligand_topology_validity_v1",
+                "ligand_topology_blocked_reason": "",
+                "hbond_evidence_status": "ok",
+                "hbond_claim_safe": True,
+                "hbond_blocked_reason": "",
+                "hbond_unsatisfied_donor_count": 0,
+                "hbond_unsatisfied_acceptor_count": 0,
+                "hbond_overanchoring_flag": False,
+                "hbond_missing_expected_anchor_flag": False,
+                "onsps_backmap_claim_safe": True,
+            }
+        ]
+    )
+
+    summary = mod._summarize_hbond_evidence(result_df, result_df.to_dict(orient="records"))
+    metadata = mod._runner_claim_metadata(result_df, summary)
+
+    assert summary["status"] == "not_assessed"
+    assert metadata["hbond_evidence_schema_version"] == ""
+    assert metadata["hbond_evidence_schema_ready_row_count"] == 0
+    assert "hbond_evidence_schema_missing" in metadata["blocked_reason"]
 
 
 def test_load_native_target_coords_prefers_explicit_pdb_and_marks_provenance(tmp_path):

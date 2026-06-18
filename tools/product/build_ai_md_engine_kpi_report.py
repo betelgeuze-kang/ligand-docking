@@ -7,6 +7,7 @@ import hashlib
 import io
 import json
 import resource
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -15,7 +16,11 @@ import numpy as np
 import torch
 
 from api.result_manifest import build_result_manifest, verify_result_manifest
-from betelgeuze_engine.backmapping.onsps import backmap_4bead_onsps, evaluate_onsps_backmap_evidence
+from betelgeuze_engine.backmapping.onsps import (
+    ONSPS_BACKMAP_SCHEMA_VERSION,
+    backmap_4bead_onsps,
+    evaluate_onsps_backmap_evidence,
+)
 from betelgeuze_engine.contracts import EngineState
 from betelgeuze_engine.interactions.hbond_evidence import evaluate_hbond_evidence
 from betelgeuze_engine.physics import ProductForceField, default_force_term_registry, guarded_force_term_registry
@@ -24,6 +29,7 @@ from betelgeuze_engine.physics.terms import DirectionalHBondTerm, HydrophobicCon
 from betelgeuze_engine.residual import ForceResidualPolicy, apply_guarded_force_residual, decide_force_residual
 from betelgeuze_engine.topology import (
     ComplexTopology,
+    TopologyFactoryFacade,
     ligand_topology_from_smiles,
     protein_topology_from_sequence,
     topology_claim_metadata,
@@ -51,6 +57,7 @@ CHEMISTRY_FIXTURES = {
     "phosphate": "COP(=O)(O)O",
     "heteroaryl_nitrogen": "c1ccncc1",
     "chiral_lactic_acid": "C[C@H](O)C(=O)O",
+    "unassigned_chiral_lactic_acid": "CC(O)C(=O)O",
     "aromatic_ring": "c1ccccc1",
     "protonated_amine": "C[NH3+]",
     "keto_tautomer_smoke": "CC(=O)C",
@@ -431,9 +438,11 @@ def _chemistry_kpis() -> dict[str, Any]:
     backmap_claim_safe_count = 0
     backmap_failure_count = 0
     chirality_preserved = 0
+    unassigned_chirality_blocked = 0
     ring_valid = 0
     protonation_valid = 0
     tautomer_valid = 0
+    ligand_validity_schema_ready_count = 0
     unsatisfied_donor_total = 0
     unsatisfied_acceptor_total = 0
     unsatisfied_fixture_count = 0
@@ -451,6 +460,31 @@ def _chemistry_kpis() -> dict[str, Any]:
         chirality_present = int(validity.get("specified_chiral_center_count") or 0) > 0
         ring_atom_count = int(validity.get("ring_atom_count") or 0)
         formal_charge_sum = int(validity.get("formal_charge_sum") or 0)
+        blockers = [str(v) for v in list(validity.get("claim_safe_blockers") or [])]
+        ligand_validity_schema_ready = bool(
+            validity.get("schema_version") == "ligand_topology_validity_v1"
+            and isinstance(validity.get("valid"), bool)
+            and isinstance(validity.get("claim_safe"), bool)
+            and isinstance(validity.get("blocked_reason"), str)
+            and isinstance(validity.get("claim_safe_blockers"), list)
+            and isinstance(validity.get("source"), str)
+            and isinstance(validity.get("reason"), str)
+            and isinstance(validity.get("atom_count"), int)
+            and isinstance(validity.get("hbond_site_count"), int)
+            and isinstance(validity.get("ring_atom_count"), int)
+            and isinstance(validity.get("formal_charge_sum"), int)
+            and isinstance(validity.get("chiral_center_count"), int)
+            and isinstance(validity.get("specified_chiral_center_count"), int)
+            and isinstance(validity.get("unassigned_chiral_center_count"), int)
+            and isinstance(validity.get("chirality_valid"), bool)
+            and isinstance(validity.get("chirality_status"), str)
+            and isinstance(validity.get("ring_valid"), bool)
+            and isinstance(validity.get("ring_status"), str)
+            and isinstance(validity.get("protonation_valid"), bool)
+            and isinstance(validity.get("protonation_status"), str)
+            and isinstance(validity.get("tautomer_valid"), bool)
+            and isinstance(validity.get("tautomer_status"), str)
+        )
         valid_count += int(valid)
         invalid_count += int(not valid)
         hbond_positive += int(evidence.site_count > 0)
@@ -459,9 +493,16 @@ def _chemistry_kpis() -> dict[str, Any]:
         backmap_claim_safe_count += int(backmap_evaluable and backmap.claim_safe)
         backmap_failure_count += int(backmap_evaluable and not backmap.claim_safe)
         chirality_preserved += int(valid and chirality_present and validity.get("chirality_valid") is True)
+        unassigned_chirality_blocked += int(
+            valid
+            and int(validity.get("unassigned_chiral_center_count") or 0) > 0
+            and validity.get("claim_safe") is False
+            and "unassigned_ligand_chirality" in blockers
+        )
         ring_valid += int(valid and ring_atom_count > 0 and validity.get("ring_valid") is True)
         protonation_valid += int(valid and formal_charge_sum != 0 and validity.get("protonation_valid") is True)
         tautomer_valid += int(valid and "tautomer" in label and validity.get("tautomer_valid") is True)
+        ligand_validity_schema_ready_count += int(ligand_validity_schema_ready)
         unsatisfied_total = int(evidence.unsatisfied_donor_count) + int(evidence.unsatisfied_acceptor_count)
         unsatisfied_donor_total += int(evidence.unsatisfied_donor_count)
         unsatisfied_acceptor_total += int(evidence.unsatisfied_acceptor_count)
@@ -487,6 +528,8 @@ def _chemistry_kpis() -> dict[str, Any]:
                 "fixture": label,
                 "smiles": smiles,
                 "ligand_valid": valid,
+                "ligand_validity_schema_version": validity.get("schema_version", ""),
+                "ligand_validity_schema_ready": ligand_validity_schema_ready,
                 "validity_reason": ligand.validity.get("reason", ""),
                 "ligand_topology_claim_safe": validity.get("claim_safe") is True,
                 "ligand_topology_source": validity.get("source", ""),
@@ -548,10 +591,19 @@ def _chemistry_kpis() -> dict[str, Any]:
         "backmap_evaluable_fixture_count": backmap_evaluable_count,
         "backmap_claim_safe_fixture_count": backmap_claim_safe_count,
         "backmap_failure_count": backmap_failure_count,
+        "ligand_topology_validity_schema_ready": bool(
+            ligand_validity_schema_ready_count == len(CHEMISTRY_FIXTURES)
+        ),
+        "ligand_topology_validity_schema_ready_count": ligand_validity_schema_ready_count,
         "chirality_preservation_fixture_count": chirality_preserved,
+        "unassigned_chirality_blocked_fixture_count": unassigned_chirality_blocked,
+        "chirality_preservation_ready": bool(chirality_preserved > 0 and unassigned_chirality_blocked > 0),
         "ring_validity_fixture_count": ring_valid,
+        "ring_validity_ready": bool(ring_valid > 0),
         "protonation_validity_fixture_count": protonation_valid,
+        "protonation_validity_ready": bool(protonation_valid > 0),
         "tautomer_validity_fixture_count": tautomer_valid,
+        "tautomer_validity_ready": bool(tautomer_valid > 0),
         "unsatisfied_donor_count": unsatisfied_donor_total,
         "unsatisfied_acceptor_count": unsatisfied_acceptor_total,
         "unsatisfied_donor_acceptor_fixture_count": unsatisfied_fixture_count,
@@ -721,8 +773,16 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
                 "has_required_claim_keys": required_keys.issubset(term_metadata),
                 "force_term_name": str(term_metadata.get("force_term_name") or ""),
                 "force_term_status": str(term_metadata.get("force_term_status") or ""),
+                "hbond_evidence_schema_version": str(
+                    term_metadata.get("hbond_evidence_schema_version") or ""
+                ),
+                "hbond_evidence_schema_ready": term_metadata.get("hbond_evidence_schema_ready") is True,
             }
         )
+    hbond_schema_ready = bool(
+        result.claim_metadata.get("hbond_evidence_schema_version") == "hbond_evidence_v1"
+        and result.claim_metadata.get("hbond_evidence_schema_ready") is True
+    )
     ready = bool(
         result.claim_metadata.get("claim_safe") is True
         and result.claim_metadata.get("force_term_claim_metadata_ready") is True
@@ -732,6 +792,7 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
         and int(result.claim_metadata.get("force_term_blocked_count") or 0) == 0
         and isinstance(result.claim_metadata.get("force_term_claim_rows"), list)
         and len(result.claim_metadata.get("force_term_claim_rows") or []) == len(force_term_plugins)
+        and hbond_schema_ready
         and len(rows) == len(force_term_plugins)
         and all(
             row["claim_safe"] is True
@@ -752,6 +813,10 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
         "forcefield_claim_safe": result.claim_metadata.get("claim_safe") is True,
         "forcefield_blocked_reason": str(result.claim_metadata.get("blocked_reason") or ""),
         "forcefield_hbond_evidence_status": str(result.claim_metadata.get("hbond_evidence_status") or ""),
+        "forcefield_hbond_evidence_schema_version": str(
+            result.claim_metadata.get("hbond_evidence_schema_version") or ""
+        ),
+        "forcefield_hbond_evidence_schema_ready": hbond_schema_ready,
         "forcefield_claim_metadata_schema_version": str(
             result.claim_metadata.get("force_term_claim_metadata_schema_version") or ""
         ),
@@ -879,11 +944,17 @@ def _signed_runner_claim_metadata_kpi() -> dict[str, Any]:
         "topology_fidelity": "placeholder_alanine",
         "ligand_topology_valid": True,
         "ligand_topology_claim_safe": True,
+        "ligand_topology_schema_version": "ligand_topology_validity_v1",
+        "ligand_topology_schema_ready_row_count": 2,
         "ligand_topology_valid_row_count": 2,
         "ligand_topology_claim_safe_row_count": 2,
         "ligand_topology_invalid_row_count": 0,
         "ligand_topology_blocker_counts": {},
         "hbond_evidence_status": "review",
+        "hbond_evidence_schema_version": "hbond_evidence_v1",
+        "hbond_evidence_schema_ready_row_count": 2,
+        "hbond_geometry_evaluated_row_count": 2,
+        "hbond_geometry_complete_row_count": 0,
         "force_residual_applied": False,
         "claim_safe": False,
         "blocked_reason": "runner_summary_not_claim_promoted;protein_topology_missing",
@@ -892,6 +963,7 @@ def _signed_runner_claim_metadata_kpi() -> dict[str, Any]:
         "schema_version": "hbond_evidence_v1",
         "status": "review",
         "evaluated_row_count": 2,
+        "schema_ready_row_count": 2,
         "claim_safe_row_count": 0,
         "onsps_backmap_schema_version": "onsps_backmap_evidence_v1",
     }
@@ -911,7 +983,12 @@ def _signed_runner_claim_metadata_kpi() -> dict[str, Any]:
         and manifest.get("result_claim_metadata") == runner_claim_metadata
         and manifest.get("hbond_evidence_summary") == hbond_summary
         and manifest["result_claim_metadata"].get("claim_safe") is False
+        and manifest["result_claim_metadata"].get("hbond_evidence_schema_version") == "hbond_evidence_v1"
+        and int(manifest["result_claim_metadata"].get("hbond_evidence_schema_ready_row_count") or 0) == 2
         and manifest["result_claim_metadata"].get("ligand_topology_claim_safe") is True
+        and manifest["result_claim_metadata"].get("ligand_topology_schema_version")
+        == "ligand_topology_validity_v1"
+        and int(manifest["result_claim_metadata"].get("ligand_topology_schema_ready_row_count") or 0) == 2
         and int(manifest["result_claim_metadata"].get("ligand_topology_claim_safe_row_count") or 0) == 2
         and manifest["hbond_evidence_summary"].get("schema_version") == "hbond_evidence_v1"
     )
@@ -925,10 +1002,100 @@ def _signed_runner_claim_metadata_kpi() -> dict[str, Any]:
         "manifest_ligand_topology_claim_safe": manifest.get("result_claim_metadata", {}).get(
             "ligand_topology_claim_safe"
         ),
+        "manifest_ligand_topology_schema_version": manifest.get("result_claim_metadata", {}).get(
+            "ligand_topology_schema_version"
+        ),
+        "manifest_ligand_topology_schema_ready_row_count": int(
+            manifest.get("result_claim_metadata", {}).get("ligand_topology_schema_ready_row_count") or 0
+        ),
         "manifest_ligand_topology_claim_safe_row_count": int(
             manifest.get("result_claim_metadata", {}).get("ligand_topology_claim_safe_row_count") or 0
         ),
         "manifest_hbond_evidence_status": manifest.get("hbond_evidence_summary", {}).get("status"),
+        "manifest_hbond_evidence_schema_version": manifest.get("result_claim_metadata", {}).get(
+            "hbond_evidence_schema_version"
+        ),
+        "manifest_hbond_evidence_schema_ready_row_count": int(
+            manifest.get("result_claim_metadata", {}).get("hbond_evidence_schema_ready_row_count") or 0
+        ),
+    }
+
+
+def _engine_topology_factory_facade_kpi() -> dict[str, Any]:
+    factory = TopologyFactoryFacade(device="cpu", default_claim_scope="kpi_smoke")
+    valid = factory.from_sequence_and_smiles(
+        sequence="ACD",
+        smiles="C[C@H](O)C(=O)O",
+        pocket_residue_indices=[1],
+    )
+    placeholder = factory.from_sequence_and_smiles(
+        sequence="",
+        smiles="C[C@H](O)C(=O)O",
+        n_res=3,
+    )
+    invalid_ligand = factory.from_sequence_and_smiles(
+        sequence="ACD",
+        smiles="C1(",
+    )
+    ready = bool(
+        valid.complex_topology.protein.fidelity == "sequence_mapped"
+        and valid.complex_topology.claim_scope == "kpi_smoke"
+        and valid.complex_topology.pocket_residue_indices == [1]
+        and valid.claim_metadata.get("claim_safe") is True
+        and valid.claim_metadata.get("ligand_topology_schema_version") == "ligand_topology_validity_v1"
+        and placeholder.claim_metadata.get("claim_safe") is False
+        and placeholder.claim_metadata.get("blocked_reason") == "placeholder_alanine_topology"
+        and invalid_ligand.claim_metadata.get("claim_safe") is False
+        and invalid_ligand.claim_metadata.get("blocked_reason") == "invalid_smiles"
+    )
+    return {
+        "ready": ready,
+        "facade": "betelgeuze_engine.topology.TopologyFactoryFacade",
+        "valid_claim_safe": valid.claim_metadata.get("claim_safe") is True,
+        "valid_topology_fidelity": str(valid.claim_metadata.get("topology_fidelity") or ""),
+        "valid_ligand_topology_schema_version": str(
+            valid.claim_metadata.get("ligand_topology_schema_version") or ""
+        ),
+        "placeholder_blocked_reason": str(placeholder.claim_metadata.get("blocked_reason") or ""),
+        "invalid_ligand_blocked_reason": str(invalid_ligand.claim_metadata.get("blocked_reason") or ""),
+    }
+
+
+def _onsps_backmap_evidence_schema_kpi() -> dict[str, Any]:
+    two_bead = np.asarray([[0.0, 0.0, 0.0], [1.6, 0.0, 0.0]], dtype=np.float32)
+    valid = evaluate_onsps_backmap_evidence(two_bead, "CC(=O)N")
+    empty = evaluate_onsps_backmap_evidence(np.zeros((1, 3), dtype=np.float32), "CC(=O)N")
+    no_sites = evaluate_onsps_backmap_evidence(two_bead, "CCCC")
+    hbond = evaluate_hbond_evidence(smiles="CC(=O)N", ligand_xyz=two_bead)
+    hbond_onsps = hbond.onsps_backmap_metadata
+    ready = bool(
+        valid.schema_version == ONSPS_BACKMAP_SCHEMA_VERSION
+        and valid.claim_safe is True
+        and valid.backmap_status == "ok"
+        and valid.mapped_site_count > 0
+        and isinstance(valid.role_counts, dict)
+        and empty.schema_version == ONSPS_BACKMAP_SCHEMA_VERSION
+        and empty.claim_safe is False
+        and empty.backmap_status == "empty_input"
+        and empty.blocked_reason == "invalid_two_bead_geometry"
+        and no_sites.schema_version == ONSPS_BACKMAP_SCHEMA_VERSION
+        and no_sites.claim_safe is False
+        and no_sites.blocked_reason == "no_onsps_sites"
+        and hbond_onsps.get("schema_version") == ONSPS_BACKMAP_SCHEMA_VERSION
+        and isinstance(hbond_onsps.get("role_counts"), dict)
+    )
+    return {
+        "ready": ready,
+        "schema_version": ONSPS_BACKMAP_SCHEMA_VERSION,
+        "valid_claim_safe": valid.claim_safe is True,
+        "valid_backmap_status": valid.backmap_status,
+        "valid_mapping_source": valid.mapping_source,
+        "valid_mapped_site_count": int(valid.mapped_site_count),
+        "valid_role_counts": dict(valid.role_counts),
+        "empty_blocked_reason": empty.blocked_reason,
+        "no_sites_blocked_reason": no_sites.blocked_reason,
+        "hbond_onsps_schema_version": str(hbond_onsps.get("schema_version") or ""),
+        "hbond_onsps_claim_safe": hbond_onsps.get("claim_safe") is True,
     }
 
 
@@ -1177,15 +1344,48 @@ def _allowlisted_runner_shim_contract_kpi(profiles_dir: str | Path) -> dict[str,
     }
 
 
+def _job_store_lazy_factory_kpi() -> dict[str, Any]:
+    from api.job_store import get_configured_job_store, reset_configured_job_store_for_tests
+
+    with tempfile.TemporaryDirectory(prefix="betelgeuze_job_store_kpi_") as tmp:
+        first_path = Path(tmp) / "first.sqlite3"
+        second_path = Path(tmp) / "second.sqlite3"
+        reset_configured_job_store_for_tests()
+        first = get_configured_job_store(first_path)
+        reused = get_configured_job_store(first_path)
+        second = get_configured_job_store(second_path)
+        ready = bool(
+            first is reused
+            and second is not first
+            and first.path == first_path
+            and second.path == second_path
+            and first_path.exists()
+            and second_path.exists()
+        )
+    reset_configured_job_store_for_tests()
+    return {
+        "ready": ready,
+        "factory": "api.job_store.get_configured_job_store",
+        "contract": "config_aware_lazy_sqlite_job_store_factory",
+        "same_path_reused": first is reused,
+        "changed_path_reopened": second is not first,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+    }
+
+
 def _product_kpis(profiles_dir: str, product_evidence_bundle_json_path: str) -> dict[str, Any]:
     profile_payload = validate_profiles(Path(profiles_dir))
     force_term_plugins = default_force_term_registry().names()
     force_term_claim_metadata = _force_term_claim_metadata_kpi(force_term_plugins)
     guarded_force_term_plugin = _guarded_force_term_plugin_kpi()
     signed_runner_claim_metadata = _signed_runner_claim_metadata_kpi()
+    engine_topology_factory_facade = _engine_topology_factory_facade_kpi()
+    onsps_backmap_evidence_schema = _onsps_backmap_evidence_schema_kpi()
     core_forcefield_bridge = _core_forcefield_bridge_kpi()
     core_compatibility_layer = _core_compatibility_layer_kpi(core_forcefield_bridge)
     allowlisted_runner_shims = _allowlisted_runner_shim_contract_kpi(profiles_dir)
+    job_store_lazy_factory = _job_store_lazy_factory_kpi()
     bundle_validation = _product_bundle_validation_kpi(product_evidence_bundle_json_path)
     manifest = build_result_manifest(
         job_id="kpi_smoke",
@@ -1235,10 +1435,20 @@ def _product_kpis(profiles_dir: str, product_evidence_bundle_json_path: str) -> 
         ),
         "guarded_force_term_plugin_ready": bool(guarded_force_term_plugin.get("ready") is True),
         "guarded_force_term_plugin_smoke": guarded_force_term_plugin,
+        "engine_topology_factory_facade_ready": bool(
+            engine_topology_factory_facade.get("ready") is True
+        ),
+        "engine_topology_factory_facade_smoke": engine_topology_factory_facade,
+        "onsps_backmap_evidence_schema_ready": bool(
+            onsps_backmap_evidence_schema.get("ready") is True
+        ),
+        "onsps_backmap_evidence_schema_smoke": onsps_backmap_evidence_schema,
         "core_forcefield_bridge_ready": bool(core_forcefield_bridge.get("ready") is True),
         "core_forcefield_bridge_smoke": core_forcefield_bridge,
         "core_compatibility_layer_ready": bool(core_compatibility_layer.get("ready") is True),
         "core_compatibility_layer_smoke": core_compatibility_layer,
+        "job_store_lazy_factory_ready": bool(job_store_lazy_factory.get("ready") is True),
+        "job_store_lazy_factory_smoke": job_store_lazy_factory,
         "allowlisted_runner_shim_contract_ready": bool(allowlisted_runner_shims.get("ready") is True),
         "allowlisted_runner_shim_contract": allowlisted_runner_shims,
         "blocked_claim_correctly_blocked": metadata["claim_safe"] is False
@@ -1395,8 +1605,11 @@ def _pm_kpi_summary(
         "force_term_claim_metadata_ready": product.get("force_term_claim_metadata_ready") is True,
         "force_term_result_contract_ready": product.get("force_term_result_contract_ready") is True,
         "guarded_force_term_plugin_ready": product.get("guarded_force_term_plugin_ready") is True,
+        "engine_topology_factory_facade_ready": product.get("engine_topology_factory_facade_ready") is True,
+        "onsps_backmap_evidence_schema_ready": product.get("onsps_backmap_evidence_schema_ready") is True,
         "core_forcefield_bridge_ready": product.get("core_forcefield_bridge_ready") is True,
         "core_compatibility_layer_ready": product.get("core_compatibility_layer_ready") is True,
+        "job_store_lazy_factory_ready": product.get("job_store_lazy_factory_ready") is True,
         "allowlisted_runner_shim_contract_ready": product.get("allowlisted_runner_shim_contract_ready") is True,
         "blocked_claim_correctly_blocked": product.get("blocked_claim_correctly_blocked") is True,
         "rocm_hip_rust_runtime_ready": rocm_runtime_ready,
@@ -1429,14 +1642,17 @@ def _pm_kpi_summary(
     hbond_recovery_pose_count = int(pose_ranking_hbond.get("hbond_recovery_pose_count") or 0)
     chemistry_gate_values = {
         "hbond_evidence_schema_ready": chemistry.get("hbond_evidence_schema_ready") is True,
+        "ligand_topology_validity_schema_ready": (
+            chemistry.get("ligand_topology_validity_schema_ready") is True
+        ),
         "hbond_recovery_present": hbond_recovery_pose_count > 0,
         "unsatisfied_donor_acceptor_detection": unsatisfied_donor_acceptor_detected,
         "topology_invalid_rate_tracked": "topology_invalid_rate" in chemistry,
         "backmapping_failure_rate_tracked": "backmapping_failure_rate" in chemistry,
-        "chirality_preservation_present": int(chemistry.get("chirality_preservation_fixture_count") or 0) > 0,
-        "ring_validity_present": int(chemistry.get("ring_validity_fixture_count") or 0) > 0,
-        "tautomer_validity_present": int(chemistry.get("tautomer_validity_fixture_count") or 0) > 0,
-        "protonation_validity_present": int(chemistry.get("protonation_validity_fixture_count") or 0) > 0,
+        "chirality_preservation_ready": chemistry.get("chirality_preservation_ready") is True,
+        "ring_validity_ready": chemistry.get("ring_validity_ready") is True,
+        "tautomer_validity_ready": chemistry.get("tautomer_validity_ready") is True,
+        "protonation_validity_ready": chemistry.get("protonation_validity_ready") is True,
     }
     gate_values = {
         **product_gate_values,
@@ -1503,6 +1719,12 @@ def _pm_kpi_summary(
             "hbond_evidence_schema_ready_count": int(
                 chemistry.get("hbond_evidence_schema_ready_count") or 0
             ),
+            "ligand_topology_validity_schema_ready": (
+                chemistry.get("ligand_topology_validity_schema_ready") is True
+            ),
+            "ligand_topology_validity_schema_ready_count": int(
+                chemistry.get("ligand_topology_validity_schema_ready_count") or 0
+            ),
             "hbond_donor_site_count": int(chemistry.get("hbond_donor_site_count") or 0),
             "hbond_acceptor_site_count": int(chemistry.get("hbond_acceptor_site_count") or 0),
             "hbond_geometry_evaluated_fixture_count": int(
@@ -1530,13 +1752,20 @@ def _pm_kpi_summary(
             "chirality_preservation_fixture_count": int(
                 chemistry.get("chirality_preservation_fixture_count") or 0
             ),
+            "unassigned_chirality_blocked_fixture_count": int(
+                chemistry.get("unassigned_chirality_blocked_fixture_count") or 0
+            ),
+            "chirality_preservation_ready": chemistry.get("chirality_preservation_ready") is True,
             "ring_validity_fixture_count": int(chemistry.get("ring_validity_fixture_count") or 0),
+            "ring_validity_ready": chemistry.get("ring_validity_ready") is True,
             "tautomer_validity_fixture_count": int(
                 chemistry.get("tautomer_validity_fixture_count") or 0
             ),
+            "tautomer_validity_ready": chemistry.get("tautomer_validity_ready") is True,
             "protonation_validity_fixture_count": int(
                 chemistry.get("protonation_validity_fixture_count") or 0
             ),
+            "protonation_validity_ready": chemistry.get("protonation_validity_ready") is True,
         },
         "product": product_gate_values,
     }
@@ -1585,6 +1814,7 @@ def build_report(
         and product["guarded_force_term_plugin_ready"] is True
         and product["core_forcefield_bridge_ready"] is True
         and product["core_compatibility_layer_ready"] is True
+        and product["job_store_lazy_factory_ready"] is True
         and product["allowlisted_runner_shim_contract_ready"] is True
         and product["blocked_claim_correctly_blocked"] is True
         and runtime["top10_force_residual"]["bounded_correction_policy_ready"] is True
@@ -1671,6 +1901,14 @@ def _write_md(path: Path, report: dict[str, Any]) -> None:
             f"- fixture_count: `{report['chemistry_kpi']['fixture_count']}`",
             f"- hbond_evidence_schema_ready: `{report['chemistry_kpi']['hbond_evidence_schema_ready']}`",
             f"- hbond_evidence_schema_ready_count: `{report['chemistry_kpi']['hbond_evidence_schema_ready_count']}`",
+            (
+                "- ligand_topology_validity_schema_ready: "
+                f"`{report['chemistry_kpi']['ligand_topology_validity_schema_ready']}`"
+            ),
+            (
+                "- ligand_topology_validity_schema_ready_count: "
+                f"`{report['chemistry_kpi']['ligand_topology_validity_schema_ready_count']}`"
+            ),
             f"- hbond_donor_site_count: `{report['chemistry_kpi']['hbond_donor_site_count']}`",
             f"- hbond_acceptor_site_count: `{report['chemistry_kpi']['hbond_acceptor_site_count']}`",
             f"- hbond_recovery_fixture_count: `{report['chemistry_kpi']['hbond_recovery_fixture_count']}`",
@@ -1683,9 +1921,17 @@ def _write_md(path: Path, report: dict[str, Any]) -> None:
             f"- unsatisfied_donor_count: `{report['chemistry_kpi']['unsatisfied_donor_count']}`",
             f"- unsatisfied_acceptor_count: `{report['chemistry_kpi']['unsatisfied_acceptor_count']}`",
             f"- chirality_preservation_fixture_count: `{report['chemistry_kpi']['chirality_preservation_fixture_count']}`",
+            (
+                "- unassigned_chirality_blocked_fixture_count: "
+                f"`{report['chemistry_kpi']['unassigned_chirality_blocked_fixture_count']}`"
+            ),
+            f"- chirality_preservation_ready: `{report['chemistry_kpi']['chirality_preservation_ready']}`",
             f"- ring_validity_fixture_count: `{report['chemistry_kpi']['ring_validity_fixture_count']}`",
+            f"- ring_validity_ready: `{report['chemistry_kpi']['ring_validity_ready']}`",
             f"- tautomer_validity_fixture_count: `{report['chemistry_kpi']['tautomer_validity_fixture_count']}`",
+            f"- tautomer_validity_ready: `{report['chemistry_kpi']['tautomer_validity_ready']}`",
             f"- protonation_validity_fixture_count: `{report['chemistry_kpi']['protonation_validity_fixture_count']}`",
+            f"- protonation_validity_ready: `{report['chemistry_kpi']['protonation_validity_ready']}`",
             "",
             "## Pose Ranking H-Bond Benchmark",
             f"- benchmark_ready: `{report['pose_ranking_hbond_benchmark']['benchmark_ready']}`",

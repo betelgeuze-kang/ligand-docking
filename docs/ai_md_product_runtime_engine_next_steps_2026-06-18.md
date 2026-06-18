@@ -317,6 +317,7 @@ class ComplexTopology:
 - `topology_claim_metadata()`는 ligand product validity를 `ligand_topology_claim_safe`, `ligand_chirality_status`, `ligand_protonation_status`, `ligand_tautomer_status`, `ligand_validity_blockers`로 엔진 claim metadata에 연결한다.
 - sequence-mapped protein이라도 unassigned ligand chirality가 있으면 `unassigned_ligand_chirality`로 fail-closed된다.
 - PM chemistry KPI는 별도 휴리스틱이 아니라 `LigandTopology.validity`에서 나온 상태를 집계한다.
+- `betelgeuze_engine.topology.TopologyFactoryFacade`는 product module 내부에서 `ProteinTopology`, `LigandTopology`, `ComplexTopology`, `topology_claim_metadata()`를 한 번에 생성하는 facade로 추가됐다. `engine_topology_factory_facade_ready` Product KPI는 sequence+valid ligand claim-safe, placeholder protein blocked, invalid ligand blocked를 함께 검증한다.
 
 합격 기준:
 
@@ -427,6 +428,7 @@ class HbondEvidence:
 - `backmap_4bead_onsps()`는 기존 tuple 반환을 유지하면서 metadata에 ONSPS evidence dict를 싣는다.
 - `HbondEvidence`는 2-bead ligand 입력에서 ONSPS metadata를 `onsps_backmap_metadata`로 포함한다.
 - `HbondEvidence`는 top-level `donor_site_count`, `acceptor_site_count`, `distance_pass_count`, `angle_pass_count`, `geometry_evaluated`, `geometry_complete`를 포함해 PM/KPI가 nested pair list 없이 schema readiness를 검증할 수 있다.
+- `ONSPS_BACKMAP_SCHEMA_VERSION`은 `betelgeuze_engine.backmapping`에서 공개되며, `onsps_backmap_evidence_schema_ready` Product KPI는 valid RDKit ETKDG mapping, empty geometry fail-closed, no-site ligand fail-closed, H-bond embedded ONSPS metadata schema를 함께 검증한다.
 - ONSPS가 RDKit ETKDG 기반 claim-safe backmap이 아니면 H-bond claim도 fail-closed된다.
 - pose/ranking/H-bond KPI harness는 active fixture를 2-bead ONSPS path로 평가하고, top1 row에 `onsps_backmap_evidence_v1` provenance를 남긴다.
 - pose/ranking/H-bond KPI harness는 `amide_overanchored_decoy_pose`를 `overanchored_decoy`로 차단하고 `overanchored_decoys_blocked=true`를 summary gate로 기록한다.
@@ -711,6 +713,9 @@ Chemistry KPI 현재 반영 상태:
 - `hbond_evidence_schema_ready`는 fixture 전체에서 `hbond_evidence_v1`, ONSPS metadata, donor/acceptor role count, distance/angle pass count, geometry flags가 모두 존재하는지 확인한다.
 - `unsatisfied_donor_acceptor_detection`은 더 이상 상수 gate가 아니다. `HbondEvidence.unsatisfied_donor_count`와 `unsatisfied_acceptor_count`를 fixture/pose benchmark에서 집계하고, 실제 unsatisfied donor/acceptor evidence가 있을 때만 PM chemistry gate를 통과한다.
 - pose/ranking H-bond benchmark는 far-decoy와 overanchored-decoy row의 unsatisfied/blocked evidence를 함께 기록해 H-bond recovery와 decoy rejection을 같은 schema에서 추적한다.
+- `ligand_topology_validity_schema_ready`는 fixture 전체에서 `ligand_topology_validity_v1`, claim-safe blocker list, chirality/ring/protonation/tautomer status, charge/ring/chiral counts가 모두 존재하는지 확인한다.
+- `chirality_preservation_ready`는 specified chiral fixture 보존뿐 아니라 unassigned stereocenter fixture가 `unassigned_ligand_chirality`로 fail-closed될 때만 통과한다.
+- `ring_validity_ready`, `tautomer_validity_ready`, `protonation_validity_ready`는 각 chemistry fixture의 ligand topology validity schema에서 PM chemistry gate로 직접 승격한다.
 
 ## 바로 실행할 순서
 

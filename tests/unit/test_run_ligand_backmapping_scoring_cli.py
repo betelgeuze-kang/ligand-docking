@@ -92,6 +92,8 @@ def test_backmapping_scoring_summary_exports_hbond_evidence_and_claim_metadata(t
     assert claim["claim_safe"] is False
     assert claim["ligand_topology_valid"] is True
     assert claim["ligand_topology_claim_safe"] is True
+    assert claim["ligand_topology_schema_version"] == "ligand_topology_validity_v1"
+    assert claim["ligand_topology_schema_ready_row_count"] == 2
     assert claim["ligand_topology_valid_row_count"] == 2
     assert claim["ligand_topology_claim_safe_row_count"] == 2
     assert claim["ligand_topology_invalid_row_count"] == 0
@@ -102,6 +104,7 @@ def test_backmapping_scoring_summary_exports_hbond_evidence_and_claim_metadata(t
     top = payload["topk"][0]
     assert top["ligand_topology_valid"] is True
     assert top["ligand_topology_claim_safe"] is True
+    assert top["ligand_topology_schema_version"] == "ligand_topology_validity_v1"
     assert top["ligand_topology_source"] == "rdkit"
     assert top["hbond_evidence_schema_version"] == "hbond_evidence_v1"
     assert top["onsps_backmap_schema_version"] == "onsps_backmap_evidence_v1"

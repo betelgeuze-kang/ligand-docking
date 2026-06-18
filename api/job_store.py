@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from api.config import settings
 from api.request_privacy import sanitize_request_for_ledger
 
 
@@ -23,6 +24,32 @@ def _utc_now() -> str:
 
 def _utc_after(seconds: int) -> str:
     return _format_utc(_utc_now_dt() + timedelta(seconds=seconds))
+
+
+_configured_job_store: "SQLiteJobStore | None" = None
+_configured_job_store_path: str | None = None
+
+
+def _normalized_path(path_like: object) -> str:
+    return str(Path(str(path_like)).expanduser())
+
+
+def get_configured_job_store(path: str | Path | None = None) -> "SQLiteJobStore":
+    """Return the configured SQLite store lazily, after runtime settings are patched."""
+    global _configured_job_store, _configured_job_store_path
+
+    configured_path = _normalized_path(path if path is not None else settings.api_job_store_path)
+    if _configured_job_store is None or _configured_job_store_path != configured_path:
+        _configured_job_store = SQLiteJobStore(configured_path)
+        _configured_job_store_path = configured_path
+    return _configured_job_store
+
+
+def reset_configured_job_store_for_tests() -> None:
+    global _configured_job_store, _configured_job_store_path
+
+    _configured_job_store = None
+    _configured_job_store_path = None
 
 
 class SQLiteJobStore:

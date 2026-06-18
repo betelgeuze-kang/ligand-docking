@@ -8,7 +8,7 @@ import sys
 
 from fastapi.testclient import TestClient
 
-from api.job_store import SQLiteJobStore
+from api.job_store import SQLiteJobStore, get_configured_job_store, reset_configured_job_store_for_tests
 
 
 def _write_completed_job(
@@ -53,6 +53,7 @@ def test_get_job_store_uses_late_configured_path(tmp_path: Path, monkeypatch) ->
     import api.main as main
 
     store_path = tmp_path / "late_config_jobs.sqlite3"
+    reset_configured_job_store_for_tests()
     monkeypatch.setattr(main, "job_store", None)
     monkeypatch.setattr(main, "_job_store_path", None)
     monkeypatch.setattr(main.settings, "api_job_store_path", str(store_path))
@@ -61,6 +62,67 @@ def test_get_job_store_uses_late_configured_path(tmp_path: Path, monkeypatch) ->
 
     assert store.path == store_path
     assert store_path.exists()
+
+
+def test_configured_job_store_lazy_factory_tracks_runtime_settings(tmp_path: Path, monkeypatch) -> None:
+    import api.job_store as job_store_mod
+
+    first_path = tmp_path / "first.sqlite3"
+    second_path = tmp_path / "second.sqlite3"
+    reset_configured_job_store_for_tests()
+
+    monkeypatch.setattr(job_store_mod.settings, "api_job_store_path", str(first_path))
+    first = get_configured_job_store()
+    again = get_configured_job_store()
+
+    assert first is again
+    assert first.path == first_path
+
+    monkeypatch.setattr(job_store_mod.settings, "api_job_store_path", str(second_path))
+    second = get_configured_job_store()
+
+    assert second is not first
+    assert second.path == second_path
+    assert second_path.exists()
+
+
+def test_docking_dispatch_uses_configured_job_store_when_store_not_injected(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import api.docking_dispatch as docking_dispatch
+    import api.job_store as job_store_mod
+
+    store_path = tmp_path / "dispatch.sqlite3"
+    reset_configured_job_store_for_tests()
+    monkeypatch.setattr(job_store_mod.settings, "api_job_store_path", str(store_path))
+    monkeypatch.setattr(docking_dispatch.settings, "api_job_store_path", str(store_path))
+    monkeypatch.setattr(docking_dispatch, "is_dispatch_eligible", lambda record: (True, "eligible"))
+    monkeypatch.setattr(
+        docking_dispatch,
+        "mark_ledger_dispatched",
+        lambda jobs_dir, job_id, worker_id="": {"progress_state": "worker_dispatch_enqueued"},
+    )
+
+    outcome = docking_dispatch.dispatch_docking_job_if_eligible(
+        {
+            "job_id": "dock_job_1",
+            "target_id": "ADRB2",
+            "request_sha256": "a" * 64,
+            "family": "gpcr",
+            "ligand_count": 1,
+            "structure_source_kind": "operator_supplied_pdb",
+            "engine_dispatch_manifest": {"runner_profile_id": "backmapping_scoring.production"},
+        },
+        jobs_dir=tmp_path / "jobs",
+        store=None,
+    )
+
+    assert outcome["dispatched"] is True
+    record = SQLiteJobStore(store_path).get_job("dock_job_1")
+    assert record is not None
+    assert record["status"] == "submitted"
+    assert record["request"]["runner_profile_id"] == "backmapping_scoring.production"
 
 
 def test_results_endpoint_returns_json_artifact_as_json(tmp_path: Path, monkeypatch) -> None:

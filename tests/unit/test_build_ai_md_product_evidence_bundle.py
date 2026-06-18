@@ -21,6 +21,7 @@ def _kpi_packet(
     force_term_claim_metadata_schema_ready: bool = True,
     core_forcefield_bridge_ready: bool = True,
     core_compatibility_layer_ready: bool = True,
+    job_store_lazy_factory_ready: bool = True,
     force_residual_bounded_policy_ready: bool = True,
     force_residual_confidence_abstention_ready: bool = True,
     force_term_physics_validation_ready: bool = True,
@@ -32,6 +33,8 @@ def _kpi_packet(
             "force_term_status": "pass",
             "claim_safe": True,
             "blocked_reason": "",
+            "hbond_evidence_schema_version": "hbond_evidence_v1",
+            "hbond_evidence_schema_ready": True,
         },
         {
             "force_term_name": "hydrophobic_contact",
@@ -56,8 +59,20 @@ def _kpi_packet(
                 "ready": runner_claim_metadata_signed,
                 "manifest_ligand_topology_valid": manifest_ligand_topology_claim_safe,
                 "manifest_ligand_topology_claim_safe": manifest_ligand_topology_claim_safe,
+                "manifest_ligand_topology_schema_version": "ligand_topology_validity_v1"
+                if manifest_ligand_topology_claim_safe
+                else "",
+                "manifest_ligand_topology_schema_ready_row_count": 2
+                if manifest_ligand_topology_claim_safe
+                else 0,
                 "manifest_ligand_topology_claim_safe_row_count": 2
                 if manifest_ligand_topology_claim_safe
+                else 0,
+                "manifest_hbond_evidence_schema_version": "hbond_evidence_v1"
+                if runner_claim_metadata_signed
+                else "",
+                "manifest_hbond_evidence_schema_ready_row_count": 2
+                if runner_claim_metadata_signed
                 else 0,
             },
             "force_term_claim_metadata_ready": force_term_claim_metadata_ready,
@@ -66,14 +81,21 @@ def _kpi_packet(
                 "forcefield_claim_metadata_schema_version": "force_term_claim_metadata_v1"
                 if force_term_claim_metadata_schema_ready
                 else "",
+                "forcefield_hbond_evidence_schema_version": "hbond_evidence_v1"
+                if force_term_claim_metadata_schema_ready
+                else "",
                 "forcefield_claim_safe_count": len(force_term_rows),
                 "forcefield_blocked_count": 0,
                 "forcefield_claim_rows": force_term_rows,
             },
+            "engine_topology_factory_facade_ready": True,
+            "engine_topology_factory_facade_smoke": {"ready": True},
             "core_forcefield_bridge_ready": core_forcefield_bridge_ready,
             "core_forcefield_bridge_smoke": {"ready": core_forcefield_bridge_ready},
             "core_compatibility_layer_ready": core_compatibility_layer_ready,
             "core_compatibility_layer_smoke": {"ready": core_compatibility_layer_ready},
+            "job_store_lazy_factory_ready": job_store_lazy_factory_ready,
+            "job_store_lazy_factory_smoke": {"ready": job_store_lazy_factory_ready},
         },
         "pm_kpi_summary": {
             "runtime": {
@@ -86,8 +108,10 @@ def _kpi_packet(
             "product": {
                 "runner_claim_metadata_signed": runner_claim_metadata_signed,
                 "force_term_claim_metadata_ready": force_term_claim_metadata_ready,
+                "engine_topology_factory_facade_ready": True,
                 "core_forcefield_bridge_ready": core_forcefield_bridge_ready,
                 "core_compatibility_layer_ready": core_compatibility_layer_ready,
+                "job_store_lazy_factory_ready": job_store_lazy_factory_ready,
             }
         },
     }
@@ -135,8 +159,14 @@ def _image_preflight_packet(*, clean_ready: bool) -> dict:
             "backmapping_ligand_topology_claim_safe": clean_ready,
             "backmapping_ligand_topology_claim_safe_row_count": 2 if clean_ready else 0,
             "backmapping_ligand_topology_invalid_row_count": 0,
+            "backmapping_ligand_topology_schema_version": "ligand_topology_validity_v1"
+            if clean_ready
+            else "",
+            "backmapping_ligand_topology_schema_ready_row_count": 2 if clean_ready else 0,
             "backmapping_ligand_topology_receipt_ready": clean_ready,
             "backmapping_hbond_evidence_schema_version": "hbond_evidence_v1" if clean_ready else "",
+            "backmapping_hbond_claim_metadata_schema_version": "hbond_evidence_v1" if clean_ready else "",
+            "backmapping_hbond_claim_metadata_schema_ready_row_count": 2 if clean_ready else 0,
             "backmapping_onsps_backmap_schema_version": "onsps_backmap_evidence_v1" if clean_ready else "",
             "backmapping_hbond_evaluated_row_count": 2 if clean_ready else 0,
             "backmapping_onsps_backmap_claim_safe_row_count": 1 if clean_ready else 0,
@@ -201,6 +231,7 @@ def test_ai_md_product_evidence_bundle_exports_claim_ready_tar(tmp_path: Path) -
     assert summary["force_term_claim_metadata_ready"] is True
     assert summary["core_forcefield_bridge_ready"] is True
     assert summary["core_compatibility_layer_ready"] is True
+    assert summary["job_store_lazy_factory_ready"] is True
     assert summary["kpi_claim_metadata_gates_validated"] is True
     assert summary["kpi_claim_metadata_gate_count"] == 1
     assert summary["kpi_claim_metadata_gate_validated_count"] == 1
@@ -218,6 +249,8 @@ def test_ai_md_product_evidence_bundle_exports_claim_ready_tar(tmp_path: Path) -
     assert summary["tier_alpha_result_manifest_signature_verified"] is True
     assert summary["tier_alpha_result_manifest_status"] == "completed"
     assert summary["backmapping_runner_claim_metadata_ready"] is True
+    assert summary["backmapping_ligand_topology_schema_version"] == "ligand_topology_validity_v1"
+    assert summary["backmapping_ligand_topology_schema_ready_row_count"] == 2
     assert summary["backmapping_ligand_topology_receipt_ready"] is True
     assert summary["backmapping_ligand_topology_valid"] is True
     assert summary["backmapping_ligand_topology_claim_safe"] is True
@@ -226,6 +259,8 @@ def test_ai_md_product_evidence_bundle_exports_claim_ready_tar(tmp_path: Path) -
     assert summary["backmapping_hbond_evidence_receipt_ready"] is True
     assert summary["backmapping_onsps_backmap_receipt_ready"] is True
     assert summary["backmapping_hbond_evidence_schema_version"] == "hbond_evidence_v1"
+    assert summary["backmapping_hbond_claim_metadata_schema_version"] == "hbond_evidence_v1"
+    assert summary["backmapping_hbond_claim_metadata_schema_ready_row_count"] == 2
     assert summary["backmapping_onsps_backmap_schema_version"] == "onsps_backmap_evidence_v1"
     assert summary["backmapping_hbond_evaluated_row_count"] == 2
     assert summary["backmapping_onsps_backmap_claim_safe_row_count"] == 1
@@ -345,6 +380,30 @@ def test_ai_md_product_evidence_bundle_rejects_clean_container_without_ligand_to
     assert {"code": "clean_container_smoke_not_ready"} in payload["blockers"]
 
 
+def test_ai_md_product_evidence_bundle_rejects_clean_container_without_ligand_topology_schema(tmp_path: Path) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    image_packet = _image_preflight_packet(clean_ready=True)
+    image_packet["summary"]["backmapping_ligand_topology_schema_version"] = ""
+    image_packet["summary"]["backmapping_ligand_topology_schema_ready_row_count"] = 0
+
+    payload = mod.build_payload(
+        kpi_packet=_kpi_packet(ready=True),
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=image_packet,
+        artifact_specs=_artifact_specs(tmp_path),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["product_claim_ready"] is False
+    assert summary["clean_container_smoke_ready"] is False
+    assert summary["backmapping_ligand_topology_schema_version"] == ""
+    assert summary["backmapping_ligand_topology_schema_ready_row_count"] == 0
+    assert summary["backmapping_ligand_topology_receipt_ready"] is False
+    assert {"code": "clean_container_smoke_not_ready"} in payload["blockers"]
+
+
 def test_ai_md_product_evidence_bundle_rejects_clean_container_without_runtime_proof(tmp_path: Path) -> None:
     out_tar = tmp_path / "bundle.tar.gz"
     image_packet = _image_preflight_packet(clean_ready=True)
@@ -419,6 +478,14 @@ def test_ai_md_product_evidence_bundle_blocks_without_signed_ligand_topology_met
     assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
     assert any(
         error.startswith("kpi_manifest_ligand_topology_claim_safe_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_manifest_ligand_topology_schema_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_manifest_ligand_topology_schema_rows_missing:")
         for error in summary["bundle_validation_errors"]
     )
     assert any(
@@ -504,6 +571,34 @@ def test_ai_md_product_evidence_bundle_blocks_product_claim_without_core_compati
     assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
     assert any(
         error.startswith("kpi_core_compatibility_layer_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_without_job_store_lazy_factory_gate(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True, job_store_lazy_factory_ready=False)
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert summary["job_store_lazy_factory_ready"] is False
+    assert summary["kpi_claim_metadata_gates_validated"] is False
+    assert {"code": "job_store_lazy_factory_not_ready"} in payload["blockers"]
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_job_store_lazy_factory_not_ready:")
         for error in summary["bundle_validation_errors"]
     )
 

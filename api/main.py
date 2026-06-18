@@ -23,7 +23,7 @@ from api.simulation_scope import (
 )
 from api.tasks import run_simulation_async
 from api.config import settings
-from api.job_store import SQLiteJobStore
+from api.job_store import SQLiteJobStore, get_configured_job_store
 from api.security import ProductSecurityMiddleware, security_metrics_text
 from api.worker import (
     job_results_dir,
@@ -56,7 +56,7 @@ def get_job_store() -> SQLiteJobStore:
 
     configured_path = _normalized_path(settings.api_job_store_path)
     if job_store is None:
-        job_store = SQLiteJobStore(configured_path)
+        job_store = get_configured_job_store(configured_path)
         _job_store_path = configured_path
         return job_store
 
@@ -65,7 +65,7 @@ def get_job_store() -> SQLiteJobStore:
         # Preserve legacy tests and callers that monkeypatch main.job_store directly.
         return job_store
     if _job_store_path is not None and _job_store_path != configured_path:
-        job_store = SQLiteJobStore(configured_path)
+        job_store = get_configured_job_store(configured_path)
         _job_store_path = configured_path
     elif _job_store_path is None:
         _job_store_path = current_store_path

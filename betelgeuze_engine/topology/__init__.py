@@ -1,6 +1,7 @@
 """Product topology contracts."""
 
 from betelgeuze_engine.topology.complex import ComplexTopology
+from betelgeuze_engine.topology.factory import TopologyFactoryFacade, TopologyFactoryResult
 from betelgeuze_engine.topology.ligand import LigandTopology, ligand_topology_from_smiles
 from betelgeuze_engine.topology.protein import (
     ProteinTopology,
@@ -13,6 +14,8 @@ __all__ = [
     "ComplexTopology",
     "LigandTopology",
     "ProteinTopology",
+    "TopologyFactoryFacade",
+    "TopologyFactoryResult",
     "ligand_topology_from_smiles",
     "protein_topology_from_residue_indices",
     "protein_topology_from_sequence",

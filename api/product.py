@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from api.config import settings
 from api.docking_dispatch import dispatch_docking_job_if_eligible
-from api.job_store import SQLiteJobStore
+from api.job_store import get_configured_job_store
 from betelgeuze_product.docking_request import build_docking_job_record, persist_docking_job_record
 from betelgeuze_product.job_orchestration import (
     cancel_job_record,
@@ -269,7 +269,7 @@ async def submit_docking_job(payload: DockingJobRequest, request: Request) -> di
     dispatch_outcome = dispatch_docking_job_if_eligible(
         record,
         jobs_dir=_jobs_dir(),
-        store=SQLiteJobStore(settings.api_job_store_path),
+        store=get_configured_job_store(),
     )
     return {
         "job_id": record["job_id"],

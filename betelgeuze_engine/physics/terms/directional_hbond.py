@@ -6,6 +6,7 @@ import torch
 
 from betelgeuze_engine.contracts.result import TermResult
 from betelgeuze_engine.contracts.state import EngineState
+from betelgeuze_engine.interactions import HBOND_EVIDENCE_SCHEMA_VERSION
 from betelgeuze_engine.physics.neighbor import NeighborPairs, full_neighbor_pairs
 from betelgeuze_engine.physics.term_claim_metadata import term_claim_metadata
 
@@ -33,7 +34,11 @@ class DirectionalHBondTerm:
                     status="roles_missing",
                     blocked_reason="hbond_roles_missing",
                     hbond_evidence_status="roles_missing",
-                    extras={"force_term_active_pair_count": 0},
+                    extras={
+                        "force_term_active_pair_count": 0,
+                        "hbond_evidence_schema_version": HBOND_EVIDENCE_SCHEMA_VERSION,
+                        "hbond_evidence_schema_ready": False,
+                    },
                 ),
             )
         donor = torch.tensor([r in {"donor", "both"} for r in roles], dtype=torch.bool, device=coords.device)
@@ -63,6 +68,8 @@ class DirectionalHBondTerm:
                     "force_term_active_pair_count": active_pair_count,
                     "force_term_ideal_dist": float(self.ideal_dist),
                     "force_term_width": float(self.width),
+                    "hbond_evidence_schema_version": HBOND_EVIDENCE_SCHEMA_VERSION,
+                    "hbond_evidence_schema_ready": active_pair_count > 0,
                 },
             ),
         )

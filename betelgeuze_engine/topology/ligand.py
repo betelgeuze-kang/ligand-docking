@@ -46,6 +46,7 @@ def _base_validity(
         blocker_values.append("unassigned_ligand_chirality")
     blocked_reason = ";".join(dict.fromkeys(blocker_values))
     return {
+        "schema_version": "ligand_topology_validity_v1",
         "valid": bool(valid),
         "claim_safe": bool(claim_safe and not blocked_reason),
         "reason": str(reason),

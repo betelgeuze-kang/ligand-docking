@@ -1,6 +1,8 @@
 """Backmapping adapters for product engine modules."""
 
 from betelgeuze_engine.backmapping.onsps import (
+    MAX_ONSPS_SITES,
+    ONSPS_BACKMAP_SCHEMA_VERSION,
     OnspsBackmapEvidence,
     OnspsSite,
     backmap_4bead_onsps,
@@ -12,6 +14,8 @@ from betelgeuze_engine.backmapping.onsps import (
 )
 
 __all__ = [
+    "MAX_ONSPS_SITES",
+    "ONSPS_BACKMAP_SCHEMA_VERSION",
     "OnspsBackmapEvidence",
     "OnspsSite",
     "backmap_4bead_onsps",

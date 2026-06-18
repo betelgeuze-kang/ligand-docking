@@ -7,6 +7,7 @@ import numpy as np
 
 from betelgeuze_engine.backmapping.onsps import (
     MAX_ONSPS_SITES,
+    ONSPS_BACKMAP_SCHEMA_VERSION,
     backmap_4bead_onsps,
     hbond_angle_score,
     onsps_hbond_sites_from_smiles,
@@ -16,6 +17,8 @@ try:
     from rdkit import Chem  # type: ignore
 except Exception:  # pragma: no cover
     Chem = None
+
+HBOND_EVIDENCE_SCHEMA_VERSION = "hbond_evidence_v1"
 
 
 @dataclass
@@ -37,7 +40,7 @@ class HbondEvidence:
     hbond_confidence: float
     claim_safe: bool
     status: str = "not_assessed"
-    schema_version: str = "hbond_evidence_v1"
+    schema_version: str = HBOND_EVIDENCE_SCHEMA_VERSION
     abstention_reason: str = ""
     blocked_reason: str = ""
     thresholds: dict[str, float] = field(default_factory=dict)
@@ -80,7 +83,7 @@ def _onsps_backmap_not_claim_safe_metadata(
 ) -> dict[str, Any]:
     reason = str(blocked_reason or "onsps_backmap_not_evaluated")
     return {
-        "schema_version": "onsps_backmap_evidence_v1",
+        "schema_version": ONSPS_BACKMAP_SCHEMA_VERSION,
         "site_count": int(site_count),
         "mapped_site_count": 0,
         "elements": [],

@@ -95,6 +95,10 @@ def _merge_claim_metadata(
                 "claim_safe": term_metadata.get("claim_safe") is True,
                 "blocked_reason": str(term_metadata.get("blocked_reason") or ""),
                 "hbond_evidence_status": str(term_metadata.get("hbond_evidence_status") or ""),
+                "hbond_evidence_schema_version": str(
+                    term_metadata.get("hbond_evidence_schema_version") or ""
+                ),
+                "hbond_evidence_schema_ready": term_metadata.get("hbond_evidence_schema_ready") is True,
                 "ligand_topology_valid": term_metadata.get("ligand_topology_valid") is True,
             }
         )
@@ -122,6 +126,10 @@ def _merge_claim_metadata(
         and int(hbond_diag.get("active_pair_count") or 0) > 0
     ):
         metadata["hbond_evidence_status"] = "pass"
+    hbond_rows = [row for row in term_claim_rows if row["force_term_name"] == "directional_hbond"]
+    if hbond_rows:
+        metadata["hbond_evidence_schema_version"] = hbond_rows[0]["hbond_evidence_schema_version"]
+        metadata["hbond_evidence_schema_ready"] = hbond_rows[0]["hbond_evidence_schema_ready"]
     blockers = list(dict.fromkeys(diagnostic_blockers + explicit_term_blockers + unscoped_term_blockers))
     metadata["force_residual_applied"] = bool(metadata.get("force_residual_applied", False))
     metadata["claim_safe"] = bool(metadata.get("claim_safe") is True and not blockers)

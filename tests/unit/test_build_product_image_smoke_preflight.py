@@ -22,6 +22,13 @@ def _container_runtime_proof_fields() -> dict[str, object]:
     }
 
 
+def _hbond_claim_metadata_schema_fields() -> dict[str, object]:
+    return {
+        "backmapping_hbond_claim_metadata_schema_version": "hbond_evidence_v1",
+        "backmapping_hbond_claim_metadata_schema_ready_row_count": 2,
+    }
+
+
 def test_product_image_smoke_preflight_contract_ready_with_docker_path() -> None:
     payload = mod.build_product_image_smoke_preflight(docker_cli_path="/usr/bin/docker")
     summary = payload["summary"]
@@ -73,8 +80,11 @@ def test_product_image_smoke_preflight_accepts_rocm_runtime_receipt(tmp_path: Pa
                 "backmapping_ligand_topology_claim_safe": True,
                 "backmapping_ligand_topology_claim_safe_row_count": 2,
                 "backmapping_ligand_topology_invalid_row_count": 0,
+                "backmapping_ligand_topology_schema_version": "ligand_topology_validity_v1",
+                "backmapping_ligand_topology_schema_ready_row_count": 2,
                 "backmapping_ligand_topology_receipt_ready": True,
                 "backmapping_hbond_evidence_schema_version": "hbond_evidence_v1",
+                **_hbond_claim_metadata_schema_fields(),
                 "backmapping_onsps_backmap_schema_version": "onsps_backmap_evidence_v1",
                 "backmapping_hbond_evaluated_row_count": 2,
                 "backmapping_onsps_backmap_claim_safe_row_count": 1,
@@ -107,10 +117,14 @@ def test_product_image_smoke_preflight_accepts_rocm_runtime_receipt(tmp_path: Pa
     assert summary["backmapping_runner_claim_metadata_ready"] is True
     assert summary["backmapping_ligand_topology_valid"] is True
     assert summary["backmapping_ligand_topology_claim_safe"] is True
+    assert summary["backmapping_ligand_topology_schema_version"] == "ligand_topology_validity_v1"
+    assert summary["backmapping_ligand_topology_schema_ready_row_count"] == 2
     assert summary["backmapping_ligand_topology_claim_safe_row_count"] == 2
     assert summary["backmapping_ligand_topology_invalid_row_count"] == 0
     assert summary["backmapping_ligand_topology_receipt_ready"] is True
     assert summary["backmapping_hbond_evidence_schema_version"] == "hbond_evidence_v1"
+    assert summary["backmapping_hbond_claim_metadata_schema_version"] == "hbond_evidence_v1"
+    assert summary["backmapping_hbond_claim_metadata_schema_ready_row_count"] == 2
     assert summary["backmapping_onsps_backmap_schema_version"] == "onsps_backmap_evidence_v1"
     assert summary["backmapping_hbond_evaluated_row_count"] == 2
     assert summary["backmapping_onsps_backmap_claim_safe_row_count"] == 1
@@ -264,6 +278,46 @@ def test_product_image_smoke_preflight_rejects_rocm_receipt_without_ligand_topol
     assert summary["backmapping_runner_claim_metadata_ready"] is True
     assert summary["backmapping_ligand_topology_valid"] is True
     assert summary["backmapping_ligand_topology_claim_safe"] is False
+    assert summary["backmapping_ligand_topology_receipt_ready"] is False
+
+
+def test_product_image_smoke_preflight_rejects_rocm_receipt_without_ligand_topology_schema(tmp_path: Path) -> None:
+    receipt_json = tmp_path / "receipt.json"
+    receipt_json.write_text(
+        json.dumps(
+            {
+                "status": "product_image_smoke_ready",
+                "mode": "rocm-runtime",
+                "simulate_missing_profile_http": 422,
+                "clean_container_smoke_ready": True,
+                "product_runner_smoke_ready": True,
+                "product_runner_claim_metadata_ready": True,
+                "tier_alpha_result_manifest_signature_verified": True,
+                "tier_alpha_result_manifest_status": "completed",
+                "backmapping_runner_claim_metadata_ready": True,
+                **_container_runtime_proof_fields(),
+                "backmapping_ligand_topology_valid": True,
+                "backmapping_ligand_topology_claim_safe": True,
+                "backmapping_ligand_topology_claim_safe_row_count": 2,
+                "backmapping_ligand_topology_invalid_row_count": 0,
+                "backmapping_ligand_topology_receipt_ready": True,
+                "backmapping_hbond_evidence_schema_version": "hbond_evidence_v1",
+                "backmapping_onsps_backmap_schema_version": "onsps_backmap_evidence_v1",
+                "backmapping_hbond_evaluated_row_count": 2,
+                "backmapping_onsps_backmap_claim_safe_row_count": 1,
+                "rocm_runtime_visible_device_required": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = mod.build_product_image_smoke_preflight(docker_cli_path="/usr/bin/docker", receipt_json=receipt_json)
+    summary = payload["summary"]
+
+    assert summary["preflight_ready"] is True
+    assert summary["clean_container_smoke_ready"] is False
+    assert summary["backmapping_ligand_topology_schema_version"] == ""
+    assert summary["backmapping_ligand_topology_schema_ready_row_count"] == 0
     assert summary["backmapping_ligand_topology_receipt_ready"] is False
 
 

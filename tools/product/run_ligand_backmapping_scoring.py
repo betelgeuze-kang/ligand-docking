@@ -33,7 +33,7 @@ from betelgeuze_product.residual_mode_policy import (
     residual_runtime_status,
 )
 from betelgeuze_engine.contracts import default_claim_metadata
-from betelgeuze_engine.interactions import evaluate_hbond_evidence
+from betelgeuze_engine.interactions import HBOND_EVIDENCE_SCHEMA_VERSION, evaluate_hbond_evidence
 from betelgeuze_engine.topology import ligand_topology_from_smiles
 from core.mm_gbsa import REFINE_LIGAND_MODEL, mm_gbsa_binding_energy
 from core.onsps_backmap import backmap_4bead_onsps, hbond_angle_score, needs_onsps_4bead, onsps_site_count
@@ -3569,13 +3569,15 @@ def _flatten_hbond_evidence_for_runner(
         )
     except Exception as exc:
         return {
-            "hbond_evidence_schema_version": "hbond_evidence_v1",
+            "hbond_evidence_schema_version": HBOND_EVIDENCE_SCHEMA_VERSION,
             "hbond_evidence_status": "error",
             "hbond_claim_safe": False,
             "hbond_blocked_reason": "hbond_evidence_error",
             "hbond_abstention_reason": "hbond_evidence_error",
             "hbond_error": str(exc),
             "hbond_site_count": 0,
+            "hbond_donor_site_count": 0,
+            "hbond_acceptor_site_count": 0,
             "hbond_pair_count": 0,
             "hbond_confidence": 0.0,
             "hbond_distance_pass_fraction": 0.0,
@@ -3584,6 +3586,8 @@ def _flatten_hbond_evidence_for_runner(
             "hbond_unsatisfied_acceptor_count": 0,
             "hbond_overanchoring_flag": False,
             "hbond_missing_expected_anchor_flag": True,
+            "hbond_geometry_evaluated": False,
+            "hbond_geometry_complete": False,
             "onsps_backmap_schema_version": "onsps_backmap_evidence_v1",
             "onsps_backmap_status": "error",
             "onsps_backmap_source": "",
@@ -3601,6 +3605,8 @@ def _flatten_hbond_evidence_for_runner(
         "hbond_abstention_reason": str(evidence.abstention_reason or ""),
         "hbond_error": "",
         "hbond_site_count": int(evidence.site_count),
+        "hbond_donor_site_count": int(evidence.donor_site_count),
+        "hbond_acceptor_site_count": int(evidence.acceptor_site_count),
         "hbond_pair_count": int(len(evidence.donor_acceptor_pairs)),
         "hbond_confidence": float(evidence.hbond_confidence),
         "hbond_distance_pass_fraction": float(evidence.distance_pass_fraction),
@@ -3609,6 +3615,8 @@ def _flatten_hbond_evidence_for_runner(
         "hbond_unsatisfied_acceptor_count": int(evidence.unsatisfied_acceptor_count),
         "hbond_overanchoring_flag": bool(evidence.overanchoring_flag),
         "hbond_missing_expected_anchor_flag": bool(evidence.missing_expected_anchor_flag),
+        "hbond_geometry_evaluated": bool(evidence.geometry_evaluated),
+        "hbond_geometry_complete": bool(evidence.geometry_complete),
         "onsps_backmap_schema_version": str(onsps_meta.get("schema_version") or "onsps_backmap_evidence_v1"),
         "onsps_backmap_status": str(onsps_meta.get("backmap_status") or ""),
         "onsps_backmap_source": str(onsps_meta.get("mapping_source") or ""),
@@ -3633,6 +3641,7 @@ def _flatten_ligand_topology_for_runner(smiles: str) -> Dict[str, Any]:
     return {
         "ligand_topology_valid": bool(validity.get("valid") is True),
         "ligand_topology_claim_safe": bool(validity.get("claim_safe") is True),
+        "ligand_topology_schema_version": str(validity.get("schema_version") or ""),
         "ligand_topology_reason": str(validity.get("reason") or ""),
         "ligand_topology_source": str(validity.get("source") or ""),
         "ligand_topology_blocked_reason": ";".join(dict.fromkeys(blockers)),
@@ -3671,9 +3680,10 @@ def _count_values(values: Sequence[Any]) -> Dict[str, int]:
 def _summarize_hbond_evidence(result_df: pd.DataFrame, topk: list[dict[str, Any]]) -> Dict[str, Any]:
     if result_df.empty or "hbond_evidence_schema_version" not in result_df.columns:
         return {
-            "schema_version": "hbond_evidence_v1",
+            "schema_version": HBOND_EVIDENCE_SCHEMA_VERSION,
             "status": "not_assessed",
             "evaluated_row_count": 0,
+            "schema_ready_row_count": 0,
             "claim_safe_row_count": 0,
             "claim_safe_rate": 0.0,
             "blocked_row_count": 0,
@@ -3686,17 +3696,20 @@ def _summarize_hbond_evidence(result_df: pd.DataFrame, topk: list[dict[str, Any]
             "unsatisfied_acceptor_count": 0,
             "overanchored_row_count": 0,
             "missing_expected_anchor_row_count": 0,
+            "geometry_evaluated_row_count": 0,
+            "geometry_complete_row_count": 0,
         }
-    evaluated = result_df["hbond_evidence_schema_version"].astype(str).eq("hbond_evidence_v1")
+    evaluated = result_df["hbond_evidence_schema_version"].astype(str).eq(HBOND_EVIDENCE_SCHEMA_VERSION)
     claim_safe = result_df["hbond_claim_safe"].fillna(False).astype(bool) if "hbond_claim_safe" in result_df.columns else pd.Series(False, index=result_df.index)
     evaluated_count = int(evaluated.sum())
     claim_safe_count = int((evaluated & claim_safe).sum())
     blocked_count = int(max(evaluated_count - claim_safe_count, 0))
     topk_claim_safe_count = int(sum(1 for row in topk if bool(row.get("hbond_claim_safe") is True)))
     return {
-        "schema_version": "hbond_evidence_v1",
+        "schema_version": HBOND_EVIDENCE_SCHEMA_VERSION,
         "status": "pass" if evaluated_count > 0 and blocked_count == 0 else "review",
         "evaluated_row_count": evaluated_count,
+        "schema_ready_row_count": evaluated_count,
         "claim_safe_row_count": claim_safe_count,
         "claim_safe_rate": float(claim_safe_count / max(evaluated_count, 1)),
         "blocked_row_count": blocked_count,
@@ -3721,6 +3734,12 @@ def _summarize_hbond_evidence(result_df: pd.DataFrame, topk: list[dict[str, Any]
         "missing_expected_anchor_row_count": int(
             result_df.get("hbond_missing_expected_anchor_flag", pd.Series(False, index=result_df.index)).fillna(False).astype(bool).sum()
         ),
+        "geometry_evaluated_row_count": int(
+            result_df.get("hbond_geometry_evaluated", pd.Series(False, index=result_df.index)).fillna(False).astype(bool).sum()
+        ),
+        "geometry_complete_row_count": int(
+            result_df.get("hbond_geometry_complete", pd.Series(False, index=result_df.index)).fillna(False).astype(bool).sum()
+        ),
     }
 
 
@@ -3742,6 +3761,17 @@ def _runner_claim_metadata(result_df: pd.DataFrame, hbond_summary: Dict[str, Any
         ligand_topology_valid_row_count = int(ligand_valid_series.sum())
         ligand_topology_claim_safe_row_count = int(ligand_claim_safe_series.sum())
         ligand_topology_invalid_row_count = int(max(len(result_df) - ligand_topology_valid_row_count, 0))
+        ligand_schema_series = (
+            result_df["ligand_topology_schema_version"].astype(str).eq("ligand_topology_validity_v1")
+            if "ligand_topology_schema_version" in result_df.columns
+            else pd.Series(False, index=result_df.index)
+        )
+        ligand_topology_schema_version = (
+            "ligand_topology_validity_v1"
+            if bool(ligand_schema_series.all()) and len(ligand_schema_series) > 0
+            else ""
+        )
+        ligand_topology_schema_ready_row_count = int(ligand_schema_series.sum())
         ligand_topology_blocker_counts = _count_values(
             result_df.loc[~ligand_claim_safe_series, "ligand_topology_blocked_reason"].tolist()
             if "ligand_topology_blocked_reason" in result_df.columns
@@ -3757,8 +3787,21 @@ def _runner_claim_metadata(result_df: pd.DataFrame, hbond_summary: Dict[str, Any
         ligand_topology_valid_row_count = int(len(result_df)) if ligand_valid else 0
         ligand_topology_claim_safe_row_count = ligand_topology_valid_row_count
         ligand_topology_invalid_row_count = int(max(len(result_df) - ligand_topology_valid_row_count, 0))
+        ligand_topology_schema_version = ""
+        ligand_topology_schema_ready_row_count = 0
         ligand_topology_blocker_counts = {}
     hbond_status = str(hbond_summary.get("status") or "not_assessed")
+    hbond_schema_version = (
+        HBOND_EVIDENCE_SCHEMA_VERSION
+        if (
+            hbond_summary.get("schema_version") == HBOND_EVIDENCE_SCHEMA_VERSION
+            and int(hbond_summary.get("schema_ready_row_count") or hbond_summary.get("evaluated_row_count") or 0) >= 1
+        )
+        else ""
+    )
+    hbond_schema_ready_row_count = int(
+        hbond_summary.get("schema_ready_row_count") or hbond_summary.get("evaluated_row_count") or 0
+    )
     blockers = ["runner_summary_not_claim_promoted"]
     if not protein_ready:
         blockers.append("protein_topology_missing")
@@ -3766,6 +3809,10 @@ def _runner_claim_metadata(result_df: pd.DataFrame, hbond_summary: Dict[str, Any
         blockers.append("ligand_topology_invalid")
     elif not ligand_topology_claim_safe:
         blockers.append("ligand_topology_not_claim_safe")
+    if ligand_topology_schema_version != "ligand_topology_validity_v1":
+        blockers.append("ligand_topology_schema_missing")
+    if hbond_schema_version != HBOND_EVIDENCE_SCHEMA_VERSION:
+        blockers.append("hbond_evidence_schema_missing")
     if hbond_status != "pass":
         blockers.append("hbond_evidence_review_required")
     metadata = default_claim_metadata(
@@ -3779,9 +3826,15 @@ def _runner_claim_metadata(result_df: pd.DataFrame, hbond_summary: Dict[str, Any
     )
     metadata.update(
         {
+            "hbond_evidence_schema_version": hbond_schema_version,
+            "hbond_evidence_schema_ready_row_count": hbond_schema_ready_row_count,
             "hbond_claim_safe_row_count": int(hbond_summary.get("claim_safe_row_count") or 0),
             "hbond_evaluated_row_count": int(hbond_summary.get("evaluated_row_count") or 0),
+            "hbond_geometry_evaluated_row_count": int(hbond_summary.get("geometry_evaluated_row_count") or 0),
+            "hbond_geometry_complete_row_count": int(hbond_summary.get("geometry_complete_row_count") or 0),
             "onsps_backmap_claim_safe_row_count": int(hbond_summary.get("onsps_backmap_claim_safe_row_count") or 0),
+            "ligand_topology_schema_version": ligand_topology_schema_version,
+            "ligand_topology_schema_ready_row_count": ligand_topology_schema_ready_row_count,
             "ligand_topology_valid_row_count": ligand_topology_valid_row_count,
             "ligand_topology_claim_safe_row_count": ligand_topology_claim_safe_row_count,
             "ligand_topology_invalid_row_count": ligand_topology_invalid_row_count,

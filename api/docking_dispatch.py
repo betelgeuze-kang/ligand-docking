@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from api.config import settings
-from api.job_store import SQLiteJobStore
+from api.job_store import SQLiteJobStore, get_configured_job_store
 from api.validated_runner import _runner_script, validate_profile_readiness
 from betelgeuze_product.engine_dispatch import DEFAULT_RUNNER_PROFILE, engine_roadmap_ready
 from betelgeuze_product.job_orchestration import append_job_event, read_job_record, write_job_record
@@ -161,7 +161,7 @@ def dispatch_docking_job_if_eligible(
     eligible, reason = is_dispatch_eligible(record)
     if not eligible:
         return {"dispatched": False, "reason": reason, "job_id": str(record.get("job_id", ""))}
-    job_store = store or SQLiteJobStore(settings.api_job_store_path)
+    job_store = store or get_configured_job_store()
     enqueue_payload = enqueue_docking_job(job_store, record)
     ledger = mark_ledger_dispatched(jobs_dir, str(record.get("job_id", "")))
     return {
@@ -179,7 +179,7 @@ def dispatch_ready_docking_jobs(
     store: SQLiteJobStore | None = None,
     limit: int = 1,
 ) -> list[dict[str, Any]]:
-    job_store = store or SQLiteJobStore(settings.api_job_store_path)
+    job_store = store or get_configured_job_store()
     results: list[dict[str, Any]] = []
     if not jobs_dir.exists():
         return results

@@ -6,7 +6,11 @@ import torch
 
 from betelgeuze_engine.contracts import EngineState, TermResult
 from betelgeuze_engine.interactions.hbond_evidence import evaluate_hbond_evidence
-from betelgeuze_engine.backmapping.onsps import backmap_4bead_onsps, evaluate_onsps_backmap_evidence
+from betelgeuze_engine.backmapping.onsps import (
+    ONSPS_BACKMAP_SCHEMA_VERSION,
+    backmap_4bead_onsps,
+    evaluate_onsps_backmap_evidence,
+)
 from betelgeuze_engine.physics.terms import (
     DirectionalHBondTerm,
     HydrophobicContactTerm,
@@ -17,6 +21,7 @@ from betelgeuze_engine.physics import ProductForceField, default_force_term_regi
 from betelgeuze_engine.topology import (
     ComplexTopology,
     ProteinTopology,
+    TopologyFactoryFacade,
     ligand_topology_from_smiles,
     protein_topology_from_sequence,
     topology_claim_metadata,
@@ -54,6 +59,9 @@ def test_engine_terms_return_energy_forces_and_diagnostics() -> None:
         assert result.claim_metadata["topology_fidelity"] == "sequence_mapped"
         assert result.claim_metadata["ligand_topology_valid"] is True
         assert result.claim_metadata["hbond_evidence_status"] == "pass"
+        if term.name == "directional_hbond":
+            assert result.claim_metadata["hbond_evidence_schema_version"] == "hbond_evidence_v1"
+            assert result.claim_metadata["hbond_evidence_schema_ready"] is True
         assert result.claim_metadata["force_residual_applied"] is False
         assert torch.isfinite(result.energy).all()
         assert torch.isfinite(result.forces).all()
@@ -168,6 +176,8 @@ def test_product_forcefield_plugin_registry_aggregates_terms_and_claim_metadata(
     assert result.claim_metadata["topology_fidelity"] == "sequence_mapped"
     assert result.claim_metadata["ligand_topology_valid"] is True
     assert result.claim_metadata["hbond_evidence_status"] == "pass"
+    assert result.claim_metadata["hbond_evidence_schema_version"] == "hbond_evidence_v1"
+    assert result.claim_metadata["hbond_evidence_schema_ready"] is True
     assert result.claim_metadata["force_term_plugin_count"] == 3
     assert result.claim_metadata["force_term_claim_metadata_ready"] is True
     assert result.claim_metadata["force_term_claim_metadata_schema_version"] == "force_term_claim_metadata_v1"
@@ -179,6 +189,12 @@ def test_product_forcefield_plugin_registry_aggregates_terms_and_claim_metadata(
     } == {"legacy_lj", "directional_hbond", "hydrophobic_contact"}
     assert all(row["claim_safe"] is True for row in result.claim_metadata["force_term_claim_rows"])
     assert all(row["blocked_reason"] == "" for row in result.claim_metadata["force_term_claim_rows"])
+    assert any(
+        row["force_term_name"] == "directional_hbond"
+        and row["hbond_evidence_schema_version"] == "hbond_evidence_v1"
+        and row["hbond_evidence_schema_ready"] is True
+        for row in result.claim_metadata["force_term_claim_rows"]
+    )
     for term_name, diagnostics in result.diagnostics["term_diagnostics"].items():
         term_metadata = diagnostics["claim_metadata"]
         assert term_metadata["claim_safe"] is True
@@ -327,6 +343,8 @@ def test_product_forcefield_plugin_registry_blocks_missing_metadata_or_bad_term_
     term_metadata = result.diagnostics["term_diagnostics"]["directional_hbond"]["claim_metadata"]
     assert term_metadata["force_term_status"] == "roles_missing"
     assert term_metadata["blocked_reason"] == "hbond_roles_missing"
+    assert term_metadata["hbond_evidence_schema_version"] == "hbond_evidence_v1"
+    assert term_metadata["hbond_evidence_schema_ready"] is False
 
 
 def test_hbond_evidence_uses_onsps_roles_distance_and_angle() -> None:
@@ -359,7 +377,7 @@ def test_hbond_evidence_uses_onsps_roles_distance_and_angle() -> None:
     assert evidence.abstention_reason == ""
     assert evidence.blocked_reason == ""
     assert evidence.thresholds["claim_safe_confidence_min"] == 0.5
-    assert evidence.onsps_backmap_metadata["schema_version"] == "onsps_backmap_evidence_v1"
+    assert evidence.onsps_backmap_metadata["schema_version"] == ONSPS_BACKMAP_SCHEMA_VERSION
     assert evidence.onsps_backmap_metadata["backmap_status"] == "ok"
     assert evidence.onsps_backmap_metadata["mapping_source"] == "rdkit_etkdg"
     assert evidence.onsps_backmap_metadata["claim_safe"] is True
@@ -370,10 +388,13 @@ def test_hbond_evidence_uses_onsps_roles_distance_and_angle() -> None:
 
 
 def test_onsps_backmap_evidence_schema_and_fail_closed_geometry() -> None:
+    from betelgeuze_engine.backmapping import ONSPS_BACKMAP_SCHEMA_VERSION as exported_schema
+
+    assert exported_schema == ONSPS_BACKMAP_SCHEMA_VERSION
     two_bead = np.asarray([[0.0, 0.0, 0.0], [1.6, 0.0, 0.0]], dtype=np.float32)
     evidence = evaluate_onsps_backmap_evidence(two_bead, "CCO")
 
-    assert evidence.schema_version == "onsps_backmap_evidence_v1"
+    assert evidence.schema_version == ONSPS_BACKMAP_SCHEMA_VERSION
     assert evidence.backmap_status == "ok"
     assert evidence.site_count >= 1
     assert evidence.mapped_site_count == evidence.site_count
@@ -388,12 +409,14 @@ def test_onsps_backmap_evidence_schema_and_fail_closed_geometry() -> None:
         assert evidence.blocked_reason == "onsps_fallback_not_claim_safe"
 
     invalid = evaluate_onsps_backmap_evidence(np.asarray([[0.0, 0.0, 0.0]], dtype=np.float32), "CCO")
+    assert invalid.schema_version == ONSPS_BACKMAP_SCHEMA_VERSION
     assert invalid.claim_safe is False
     assert invalid.backmap_status == "empty_input"
     assert invalid.blocked_reason == "invalid_two_bead_geometry"
     assert invalid.abstention_reason == "invalid_two_bead_geometry"
 
     no_sites = evaluate_onsps_backmap_evidence(two_bead, "CCCC")
+    assert no_sites.schema_version == ONSPS_BACKMAP_SCHEMA_VERSION
     assert no_sites.claim_safe is False
     assert no_sites.backmap_status == "no_onsps_sites"
     assert no_sites.blocked_reason == "no_onsps_sites"
@@ -413,7 +436,7 @@ def test_hbond_evidence_fail_closed_schema_for_invalid_or_missing_anchor() -> No
     assert invalid.angle_pass_count == 0
     assert invalid.geometry_evaluated is False
     assert invalid.geometry_complete is False
-    assert invalid.onsps_backmap_metadata["schema_version"] == "onsps_backmap_evidence_v1"
+    assert invalid.onsps_backmap_metadata["schema_version"] == ONSPS_BACKMAP_SCHEMA_VERSION
     assert invalid.onsps_backmap_metadata["backmap_status"] == "invalid_smiles"
     assert invalid.onsps_backmap_metadata["claim_safe"] is False
     assert invalid.onsps_backmap_metadata["blocked_reason"] == "invalid_smiles"
@@ -434,7 +457,7 @@ def test_hbond_evidence_fail_closed_schema_for_invalid_or_missing_anchor() -> No
     assert no_pose_geometry.abstention_reason == "pose_geometry_missing"
     assert no_pose_geometry.geometry_evaluated is False
     assert no_pose_geometry.geometry_complete is False
-    assert no_pose_geometry.onsps_backmap_metadata["schema_version"] == "onsps_backmap_evidence_v1"
+    assert no_pose_geometry.onsps_backmap_metadata["schema_version"] == ONSPS_BACKMAP_SCHEMA_VERSION
     assert no_pose_geometry.onsps_backmap_metadata["backmap_status"] == "not_evaluated"
     assert no_pose_geometry.onsps_backmap_metadata["claim_safe"] is False
     assert no_pose_geometry.onsps_backmap_metadata["blocked_reason"] == "ligand_geometry_missing"
@@ -459,7 +482,7 @@ def test_hbond_evidence_rejects_overanchored_decoy_contact() -> None:
     assert evidence.geometry_evaluated is True
     assert evidence.geometry_complete is True
     assert evidence.thresholds["overanchor_distance"] == 2.1
-    assert evidence.onsps_backmap_metadata["schema_version"] == "onsps_backmap_evidence_v1"
+    assert evidence.onsps_backmap_metadata["schema_version"] == ONSPS_BACKMAP_SCHEMA_VERSION
     assert evidence.onsps_backmap_metadata["claim_safe"] is True
 
 
@@ -500,6 +523,7 @@ def test_topology_claim_metadata_carries_ligand_product_validity_status() -> Non
     assert metadata["topology_fidelity"] == "sequence_mapped"
     assert metadata["ligand_topology_valid"] is True
     assert metadata["ligand_topology_claim_safe"] is True
+    assert metadata["ligand_topology_schema_version"] == "ligand_topology_validity_v1"
     assert metadata["ligand_topology_source"] == "rdkit"
     assert metadata["ligand_atom_count"] == 6
     assert metadata["ligand_hbond_site_count"] >= 1
@@ -536,11 +560,58 @@ def test_topology_claim_metadata_blocks_unassigned_ligand_chirality() -> None:
     assert metadata["claim_safe"] is False
     assert metadata["ligand_topology_valid"] is True
     assert metadata["ligand_topology_claim_safe"] is False
+    assert metadata["ligand_topology_schema_version"] == "ligand_topology_validity_v1"
     assert metadata["ligand_unassigned_chiral_center_count"] == 1
     assert metadata["ligand_chirality_status"] == "unassigned_chiral_centers"
     assert metadata["ligand_chirality_valid"] is False
     assert "unassigned_ligand_chirality" in metadata["blocked_reason"]
     assert "unassigned_ligand_chirality" in metadata["ligand_validity_blockers"]
+
+
+def test_engine_topology_factory_facade_builds_claim_metadata() -> None:
+    factory = TopologyFactoryFacade(device="cpu", default_claim_scope="unit_test")
+    result = factory.from_sequence_and_smiles(
+        sequence="ACD",
+        smiles="C[C@H](O)C(=O)O",
+        pocket_residue_indices=[1, 2],
+    )
+
+    assert isinstance(result.complex_topology, ComplexTopology)
+    assert result.complex_topology.protein.fidelity == "sequence_mapped"
+    assert result.complex_topology.claim_scope == "unit_test"
+    assert result.complex_topology.pocket_residue_indices == [1, 2]
+    if result.claim_metadata.get("ligand_topology_source") != "rdkit":
+        pytest.skip("RDKit topology validity is required for claim-safe ligand metadata")
+    assert result.claim_metadata["topology_fidelity"] == "sequence_mapped"
+    assert result.claim_metadata["ligand_topology_valid"] is True
+    assert result.claim_metadata["ligand_topology_claim_safe"] is True
+    assert result.claim_metadata["ligand_topology_schema_version"] == "ligand_topology_validity_v1"
+    assert result.claim_metadata["claim_safe"] is True
+    assert result.claim_metadata["blocked_reason"] == ""
+
+
+def test_engine_topology_factory_facade_blocks_placeholder_or_ligand_invalidity() -> None:
+    factory = TopologyFactoryFacade(device="cpu")
+    placeholder = factory.from_sequence_and_smiles(
+        sequence="",
+        smiles="C[C@H](O)C(=O)O",
+        n_res=3,
+    )
+    if placeholder.claim_metadata.get("ligand_topology_source") != "rdkit":
+        pytest.skip("RDKit topology validity is required for topology factory blocker metadata")
+    assert placeholder.claim_metadata["topology_fidelity"] == "placeholder_alanine"
+    assert placeholder.claim_metadata["ligand_topology_valid"] is True
+    assert placeholder.claim_metadata["claim_safe"] is False
+    assert placeholder.claim_metadata["blocked_reason"] == "placeholder_alanine_topology"
+
+    invalid_ligand = factory.from_sequence_and_smiles(
+        sequence="ACD",
+        smiles="C1(",
+    )
+    assert invalid_ligand.claim_metadata["topology_fidelity"] == "sequence_mapped"
+    assert invalid_ligand.claim_metadata["ligand_topology_valid"] is False
+    assert invalid_ligand.claim_metadata["claim_safe"] is False
+    assert invalid_ligand.claim_metadata["blocked_reason"] == "invalid_smiles"
 
 
 def test_core_topology_factory_facades_engine_protein_topology() -> None:

@@ -169,7 +169,9 @@ container_runtime_proof_ready = bool(
     and runtime_proof.get("rust_hip_backend_enabled") is True
 )
 backmapping_ligand_topology_ready = bool(
-    claim_metadata.get("ligand_topology_valid") is True
+    claim_metadata.get("ligand_topology_schema_version") == "ligand_topology_validity_v1"
+    and int(claim_metadata.get("ligand_topology_schema_ready_row_count") or 0) >= 1
+    and claim_metadata.get("ligand_topology_valid") is True
     and claim_metadata.get("ligand_topology_claim_safe") is True
     and int(claim_metadata.get("ligand_topology_claim_safe_row_count") or 0) >= 1
     and int(claim_metadata.get("ligand_topology_invalid_row_count") or 0) == 0
@@ -182,6 +184,8 @@ backmapping_claim_metadata_ready = bool(
     and int(hbond_summary.get("evaluated_row_count") or 0) >= 1
     and "claim_safe" in claim_metadata
     and claim_metadata.get("hbond_evidence_status") in {"pass", "review"}
+    and claim_metadata.get("hbond_evidence_schema_version") == "hbond_evidence_v1"
+    and int(claim_metadata.get("hbond_evidence_schema_ready_row_count") or 0) >= 1
     and backmapping_ligand_topology_ready
 )
 tier_alpha_manifest_ready = bool(
@@ -228,6 +232,12 @@ payload = {
     "backmapping_blocked_reason": str(claim_metadata.get("blocked_reason") or "") if claim_metadata else "",
     "backmapping_ligand_topology_valid": claim_metadata.get("ligand_topology_valid") is True,
     "backmapping_ligand_topology_claim_safe": claim_metadata.get("ligand_topology_claim_safe") is True,
+    "backmapping_ligand_topology_schema_version": str(
+        claim_metadata.get("ligand_topology_schema_version") or ""
+    ),
+    "backmapping_ligand_topology_schema_ready_row_count": int(
+        claim_metadata.get("ligand_topology_schema_ready_row_count") or 0
+    ),
     "backmapping_ligand_topology_claim_safe_row_count": int(
         claim_metadata.get("ligand_topology_claim_safe_row_count") or 0
     ),
@@ -237,6 +247,12 @@ payload = {
     "backmapping_ligand_topology_receipt_ready": backmapping_ligand_topology_ready,
     "backmapping_hbond_evidence_status": str(claim_metadata.get("hbond_evidence_status") or "") if claim_metadata else "",
     "backmapping_hbond_evidence_schema_version": str(hbond_summary.get("schema_version") or ""),
+    "backmapping_hbond_claim_metadata_schema_version": str(
+        claim_metadata.get("hbond_evidence_schema_version") or ""
+    ),
+    "backmapping_hbond_claim_metadata_schema_ready_row_count": int(
+        claim_metadata.get("hbond_evidence_schema_ready_row_count") or 0
+    ),
     "backmapping_onsps_backmap_schema_version": str(hbond_summary.get("onsps_backmap_schema_version") or ""),
     "backmapping_hbond_evaluated_row_count": int(hbond_summary.get("evaluated_row_count") or 0),
     "backmapping_onsps_backmap_claim_safe_row_count": int(hbond_summary.get("onsps_backmap_claim_safe_row_count") or 0),
@@ -248,7 +264,8 @@ payload = {
         "Receipt means deploy/verify_product_image.sh completed all checks in the selected mode; "
         "product claim promotion requires mode=rocm-runtime, product_runner_smoke_ready=true, "
         "product_runner_claim_metadata_ready=true, container_runtime_proof_ready=true, "
-        "container_runtime_rust_hip_backend_enabled=true, and backmapping_ligand_topology_claim_safe=true."
+        "container_runtime_rust_hip_backend_enabled=true, hbond_evidence_schema_version=hbond_evidence_v1, "
+        "and backmapping_ligand_topology_claim_safe=true."
     ),
 }
 path.parent.mkdir(parents=True, exist_ok=True)

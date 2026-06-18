@@ -1,5 +1,9 @@
 """Interaction evidence modules."""
 
-from betelgeuze_engine.interactions.hbond_evidence import HbondEvidence, evaluate_hbond_evidence
+from betelgeuze_engine.interactions.hbond_evidence import (
+    HBOND_EVIDENCE_SCHEMA_VERSION,
+    HbondEvidence,
+    evaluate_hbond_evidence,
+)
 
-__all__ = ["HbondEvidence", "evaluate_hbond_evidence"]
+__all__ = ["HBOND_EVIDENCE_SCHEMA_VERSION", "HbondEvidence", "evaluate_hbond_evidence"]

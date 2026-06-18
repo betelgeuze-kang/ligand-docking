@@ -34,12 +34,21 @@ This repository is operated with Codex native goal mode and optional Cursor/Open
 - For OpenCode delegation, create a run-specific prompt under `docs/ai/dispatch/` and call `./scripts/ai-worker-opencode.sh <prompt-file>`.
 - Use one worker slice at a time. Codex reviews the worker summary first and opens full logs/diffs only when the summary, risk level, or tests require it.
 
+## Delegation Bias
+
+- At the start of each non-trivial task, Codex should explicitly choose one path: direct implementation, OpenCode worker slice, or Cursor worker slice.
+- Bias toward using a worker when the work is broad, repetitive, uncertain, or likely to benefit from independent exploration before Codex final review.
+- Consider OpenCode for work expected to touch 50+ LOC, 3+ files, 10+ minutes of repository exploration, repeated test repair, broad grep/sweep, long-log review, or mechanical documentation/code updates.
+- Consider Cursor when IDE-attached context matters, including open files, selections, current editor state, or user-guided local edits.
+- Codex may still handle narrow single-file fixes, obvious docs edits, tiny tests, and urgent safety corrections directly.
+- Delegation does not change ownership: Codex still defines the slice, preserves safety boundaries, reviews the worker summary, inspects targeted hunks when needed, runs verification, and decides completion.
+
 ## Worker Selection
 
 - Prefer OpenCode for broad repository sweeps, long logs/docs, large mechanical edits, and repeated low-cost implementation passes.
 - Prefer Cursor for IDE-attached edits where open files, selections, and current editor state matter.
-- Do not delegate small tasks: expected changes under roughly 100-200 LOC, simple docs, tiny tests, or obvious single-file fixes.
-- Delegate large mechanical work, broad exploration, repeated test repair, and multi-file refactors.
+- Do not delegate truly small tasks: simple docs, tiny tests, obvious single-file fixes, or changes that Codex can safely complete faster than creating and reviewing a worker slice.
+- Delegate broad exploration, repeated test repair, multi-file refactors, and mechanical work once it crosses the Delegation Bias thresholds.
 - Workers implement; they do not redesign, broaden scope, decide completion, or change safety boundaries.
 - Workers own local exploration, implementation, focused tests, and a concise return summary.
 - Worker returns must not include full logs. They should include changed files, tests run, failed test names, key diff summary, and blockers.

@@ -15,6 +15,7 @@ except Exception:  # pragma: no cover - optional
     AllChem = None
 
 MAX_ONSPS_SITES = 4
+ONSPS_BACKMAP_SCHEMA_VERSION = "onsps_backmap_evidence_v1"
 _ELEMENT_PRIORITY = {"O": 0, "N": 1, "S": 2, "P": 3}
 _ACCEPTOR_ATOMIC_NUM = {8, 7, 16, 15}
 
@@ -39,7 +40,7 @@ class OnspsBackmapEvidence:
     input_bead_count: int
     output_shape: list[int]
     claim_safe: bool
-    schema_version: str = "onsps_backmap_evidence_v1"
+    schema_version: str = ONSPS_BACKMAP_SCHEMA_VERSION
     abstention_reason: str = ""
     blocked_reason: str = ""
     max_onsps_sites: int = MAX_ONSPS_SITES
@@ -280,7 +281,7 @@ def evaluate_onsps_backmap_evidence(two_bead_xyz: np.ndarray, smiles: str) -> On
         input_bead_count=int(meta.get("input_bead_count") or 0),
         output_shape=[int(v) for v in meta.get("output_shape") or []],
         claim_safe=bool(meta.get("claim_safe") is True),
-        schema_version=str(meta.get("schema_version") or "onsps_backmap_evidence_v1"),
+        schema_version=str(meta.get("schema_version") or ONSPS_BACKMAP_SCHEMA_VERSION),
         abstention_reason=str(meta.get("abstention_reason") or ""),
         blocked_reason=str(meta.get("blocked_reason") or ""),
         max_onsps_sites=int(meta.get("max_onsps_sites") or MAX_ONSPS_SITES),
@@ -323,6 +324,7 @@ def hbond_angle_score(protein_xyz: np.ndarray, ligand_bead: np.ndarray, pocket_c
 
 __all__ = [
     "MAX_ONSPS_SITES",
+    "ONSPS_BACKMAP_SCHEMA_VERSION",
     "OnspsBackmapEvidence",
     "OnspsSite",
     "backmap_4bead_onsps",

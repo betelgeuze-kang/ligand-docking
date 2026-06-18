@@ -166,11 +166,12 @@ def build_product_image_smoke_preflight(
             "tools/run_ligand_backmapping_scoring.py" in verify_script
             and "backmapping_summary.json" in verify_script
             and "hbond_evidence_v1" in verify_script
+            and "ligand_topology_validity_v1" in verify_script
             and "product_runner_claim_metadata_ready" in verify_script,
             "backmapping claim metadata smoke present"
             if "product_runner_claim_metadata_ready" in verify_script
             else "missing",
-            "rocm-runtime mode runs backmapping scoring smoke and records H-bond/ONSPS claim metadata",
+            "rocm-runtime mode runs backmapping scoring smoke and records H-bond/ONSPS/ligand topology schema claim metadata",
             "deploy/verify_product_image.sh",
         ),
         _contract_row(
@@ -238,6 +239,12 @@ def build_product_image_smoke_preflight(
     backmapping_hbond_evidence_schema_version = str(
         receipt.get("backmapping_hbond_evidence_schema_version") or ""
     )
+    backmapping_hbond_claim_metadata_schema_version = str(
+        receipt.get("backmapping_hbond_claim_metadata_schema_version") or ""
+    )
+    backmapping_hbond_claim_metadata_schema_ready_row_count = _int_value(
+        receipt.get("backmapping_hbond_claim_metadata_schema_ready_row_count")
+    )
     backmapping_onsps_backmap_schema_version = str(
         receipt.get("backmapping_onsps_backmap_schema_version") or ""
     )
@@ -249,6 +256,12 @@ def build_product_image_smoke_preflight(
     backmapping_ligand_topology_claim_safe = bool(
         receipt.get("backmapping_ligand_topology_claim_safe") is True
     )
+    backmapping_ligand_topology_schema_version = str(
+        receipt.get("backmapping_ligand_topology_schema_version") or ""
+    )
+    backmapping_ligand_topology_schema_ready_row_count = _int_value(
+        receipt.get("backmapping_ligand_topology_schema_ready_row_count")
+    )
     backmapping_ligand_topology_claim_safe_row_count = _int_value(
         receipt.get("backmapping_ligand_topology_claim_safe_row_count")
     )
@@ -256,16 +269,22 @@ def build_product_image_smoke_preflight(
         receipt.get("backmapping_ligand_topology_invalid_row_count")
     )
     backmapping_ligand_topology_receipt_ready = bool(
-        receipt.get("backmapping_ligand_topology_receipt_ready") is True
-        or (
-            backmapping_ligand_topology_valid
-            and backmapping_ligand_topology_claim_safe
-            and backmapping_ligand_topology_claim_safe_row_count >= 1
-            and backmapping_ligand_topology_invalid_row_count == 0
+        backmapping_ligand_topology_schema_version == "ligand_topology_validity_v1"
+        and backmapping_ligand_topology_schema_ready_row_count >= 1
+        and (
+            receipt.get("backmapping_ligand_topology_receipt_ready") is True
+            or (
+                backmapping_ligand_topology_valid
+                and backmapping_ligand_topology_claim_safe
+                and backmapping_ligand_topology_claim_safe_row_count >= 1
+                and backmapping_ligand_topology_invalid_row_count == 0
+            )
         )
     )
     backmapping_hbond_evidence_receipt_ready = bool(
         backmapping_hbond_evidence_schema_version == "hbond_evidence_v1"
+        and backmapping_hbond_claim_metadata_schema_version == "hbond_evidence_v1"
+        and backmapping_hbond_claim_metadata_schema_ready_row_count >= 1
         and backmapping_hbond_evaluated_row_count >= 1
     )
     backmapping_onsps_backmap_receipt_ready = bool(
@@ -332,11 +351,17 @@ def build_product_image_smoke_preflight(
         "tier_alpha_result_manifest_status": tier_alpha_manifest_status,
         "backmapping_runner_claim_metadata_ready": backmapping_runner_claim_metadata_ready,
         "backmapping_hbond_evidence_schema_version": backmapping_hbond_evidence_schema_version,
+        "backmapping_hbond_claim_metadata_schema_version": backmapping_hbond_claim_metadata_schema_version,
+        "backmapping_hbond_claim_metadata_schema_ready_row_count": (
+            backmapping_hbond_claim_metadata_schema_ready_row_count
+        ),
         "backmapping_onsps_backmap_schema_version": backmapping_onsps_backmap_schema_version,
         "backmapping_hbond_evaluated_row_count": backmapping_hbond_evaluated_row_count,
         "backmapping_onsps_backmap_claim_safe_row_count": backmapping_onsps_backmap_claim_safe_row_count,
         "backmapping_ligand_topology_valid": backmapping_ligand_topology_valid,
         "backmapping_ligand_topology_claim_safe": backmapping_ligand_topology_claim_safe,
+        "backmapping_ligand_topology_schema_version": backmapping_ligand_topology_schema_version,
+        "backmapping_ligand_topology_schema_ready_row_count": backmapping_ligand_topology_schema_ready_row_count,
         "backmapping_ligand_topology_claim_safe_row_count": backmapping_ligand_topology_claim_safe_row_count,
         "backmapping_ligand_topology_invalid_row_count": backmapping_ligand_topology_invalid_row_count,
         "backmapping_ligand_topology_receipt_ready": backmapping_ligand_topology_receipt_ready,
