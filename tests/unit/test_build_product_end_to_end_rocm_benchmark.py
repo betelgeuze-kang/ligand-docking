@@ -80,6 +80,14 @@ def _product_image_preflight(*, ready: bool = True) -> dict[str, object]:
             "receipt_status": "product_image_smoke_ready" if ready else "blocked_product_image_smoke",
             "receipt_mode": "rocm-runtime" if ready else "build",
             "receipt_simulate_missing_profile_http": 422 if ready else 0,
+            "container_runtime_receipt_ready": ready,
+            "container_runtime_proof_schema_version": "rocm_container_runtime_proof_v1" if ready else "",
+            "container_runtime_in_container": ready,
+            "container_runtime_device_nodes_ready": ready,
+            "container_runtime_torch_rocm_ready": ready,
+            "container_runtime_torch_cuda_available": ready,
+            "container_runtime_visible_device_count": 1 if ready else 0,
+            "container_runtime_rust_hip_backend_enabled": ready,
             "product_runner_smoke_ready": ready,
         }
     }
@@ -135,6 +143,8 @@ def test_product_end_to_end_rocm_benchmark_ready(tmp_path: Path) -> None:
     assert summary["ai_md_engine_kpi_pose_ranking_hbond_ready"] is True
     assert summary["clean_container_smoke_ready"] is True
     assert summary["product_image_smoke_receipt_mode"] == "rocm-runtime"
+    assert summary["product_image_smoke_container_runtime_receipt_ready"] is True
+    assert summary["product_image_smoke_container_runtime_rust_hip_backend_enabled"] is True
     assert summary["docking_results_emitted"] is True
     assert summary["external_state_mutated"] is False
 

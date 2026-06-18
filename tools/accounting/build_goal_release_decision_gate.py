@@ -997,6 +997,15 @@ def build_goal_release_decision_gate(
             and bool(product_image_smoke.get("clean_container_smoke_ready") is True)
             and _text(product_image_smoke.get("receipt_status")) == "product_image_smoke_ready"
             and _text(product_image_smoke.get("receipt_mode")) == "rocm-runtime"
+            and bool(product_image_smoke.get("container_runtime_receipt_ready") is True)
+            and _text(product_image_smoke.get("container_runtime_proof_schema_version"))
+            == "rocm_container_runtime_proof_v1"
+            and bool(product_image_smoke.get("container_runtime_in_container") is True)
+            and bool(product_image_smoke.get("container_runtime_device_nodes_ready") is True)
+            and bool(product_image_smoke.get("container_runtime_torch_rocm_ready") is True)
+            and bool(product_image_smoke.get("container_runtime_torch_cuda_available") is True)
+            and _int(product_image_smoke.get("container_runtime_visible_device_count")) > 0
+            and bool(product_image_smoke.get("container_runtime_rust_hip_backend_enabled") is True)
             and bool(product_image_smoke.get("product_runner_smoke_ready") is True)
             and _int(product_image_smoke.get("receipt_simulate_missing_profile_http")) == 422
         )
@@ -2448,6 +2457,10 @@ def build_goal_release_decision_gate(
                     f"{_bool_text(bool(product_image_smoke.get('clean_container_smoke_ready') is True))};"
                     f"receipt_mode={_text(product_image_smoke.get('receipt_mode')) or 'missing'};"
                     f"receipt_status={_text(product_image_smoke.get('receipt_status')) or 'missing'};"
+                    f"container_runtime_receipt_ready="
+                    f"{_bool_text(bool(product_image_smoke.get('container_runtime_receipt_ready') is True))};"
+                    f"container_runtime_rust_hip_backend_enabled="
+                    f"{_bool_text(bool(product_image_smoke.get('container_runtime_rust_hip_backend_enabled') is True))};"
                     f"product_runner_smoke_ready="
                     f"{_bool_text(bool(product_image_smoke.get('product_runner_smoke_ready') is True))};"
                     f"simulate_missing_profile_http="
@@ -2455,7 +2468,8 @@ def build_goal_release_decision_gate(
                 ),
                 required=(
                     "product_image_smoke_preflight_ready with clean_container_smoke_ready=true, "
-                    "receipt_mode=rocm-runtime, product runner smoke ready, and /simulate 422"
+                    "receipt_mode=rocm-runtime, in-container ROCm/HIP/Rust proof, product runner smoke ready, "
+                    "and /simulate 422"
                 ),
                 passed=clean_container_smoke_ready,
                 reason=(
@@ -4601,6 +4615,12 @@ def build_goal_release_decision_gate(
         "clean_container_smoke_ready": clean_container_smoke_ready if product_image_smoke_gate_present else None,
         "product_image_smoke_receipt_mode": _text(product_image_smoke.get("receipt_mode")),
         "product_image_smoke_receipt_status": _text(product_image_smoke.get("receipt_status")),
+        "product_image_smoke_container_runtime_receipt_ready": bool(
+            product_image_smoke.get("container_runtime_receipt_ready") is True
+        ),
+        "product_image_smoke_container_runtime_rust_hip_backend_enabled": bool(
+            product_image_smoke.get("container_runtime_rust_hip_backend_enabled") is True
+        ),
         "product_image_smoke_product_runner_smoke_ready": bool(
             product_image_smoke.get("product_runner_smoke_ready") is True
         ),

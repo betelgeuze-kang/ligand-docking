@@ -1737,6 +1737,15 @@ def build_product_goal_completion_audit(
             and _bool(product_image_smoke.get("clean_container_smoke_ready"))
             and _text(product_image_smoke.get("receipt_status")) == "product_image_smoke_ready"
             and _text(product_image_smoke.get("receipt_mode")) == "rocm-runtime"
+            and _bool(product_image_smoke.get("container_runtime_receipt_ready"))
+            and _text(product_image_smoke.get("container_runtime_proof_schema_version"))
+            == "rocm_container_runtime_proof_v1"
+            and _bool(product_image_smoke.get("container_runtime_in_container"))
+            and _bool(product_image_smoke.get("container_runtime_device_nodes_ready"))
+            and _bool(product_image_smoke.get("container_runtime_torch_rocm_ready"))
+            and _bool(product_image_smoke.get("container_runtime_torch_cuda_available"))
+            and _int(product_image_smoke.get("container_runtime_visible_device_count")) > 0
+            and _bool(product_image_smoke.get("container_runtime_rust_hip_backend_enabled"))
             and _bool(product_image_smoke.get("product_runner_smoke_ready"))
             and _int(product_image_smoke.get("receipt_simulate_missing_profile_http")) == 422
         )
@@ -2255,12 +2264,16 @@ def build_product_goal_completion_audit(
                 f"clean_container_smoke_ready={clean_container_smoke_ready};"
                 f"product_image_smoke_status={_text(product_image_smoke.get('status'))};"
                 f"product_image_smoke_receipt_mode={_text(product_image_smoke.get('receipt_mode'))};"
+                f"container_runtime_receipt_ready="
+                f"{_bool(product_image_smoke.get('container_runtime_receipt_ready'))};"
+                f"container_runtime_rust_hip_backend_enabled="
+                f"{_bool(product_image_smoke.get('container_runtime_rust_hip_backend_enabled'))};"
                 f"release_gate_status={_text(release_gate.get('status'))}"
             ),
             required=(
                 "local product surfaces ready; bundle_validation_passed=true; "
                 "delivery_ready_claim_allowed=true; pilot_delivery_ready=true; "
-                "clean_container_smoke_ready=true with rocm-runtime receipt"
+                "clean_container_smoke_ready=true with rocm-runtime receipt and in-container ROCm/HIP/Rust proof"
             ),
             evidence_artifacts=_join(
                 [release_dossier_path, architecture_path, product_image_smoke_preflight_path]
@@ -2440,6 +2453,12 @@ def build_product_goal_completion_audit(
         "product_image_smoke_preflight_status": _text(product_image_smoke.get("status")),
         "product_image_smoke_receipt_mode": _text(product_image_smoke.get("receipt_mode")),
         "product_image_smoke_receipt_status": _text(product_image_smoke.get("receipt_status")),
+        "product_image_smoke_container_runtime_receipt_ready": _bool(
+            product_image_smoke.get("container_runtime_receipt_ready")
+        ),
+        "product_image_smoke_container_runtime_rust_hip_backend_enabled": _bool(
+            product_image_smoke.get("container_runtime_rust_hip_backend_enabled")
+        ),
         "product_image_smoke_product_runner_smoke_ready": _bool(
             product_image_smoke.get("product_runner_smoke_ready")
         ),

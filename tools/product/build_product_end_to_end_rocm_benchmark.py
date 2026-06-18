@@ -167,6 +167,15 @@ def build_product_end_to_end_rocm_benchmark(
         product_image_smoke_preflight.get("clean_container_smoke_ready") is True
         and product_image_smoke_preflight.get("receipt_status") == "product_image_smoke_ready"
         and product_image_smoke_preflight.get("receipt_mode") == "rocm-runtime"
+        and product_image_smoke_preflight.get("container_runtime_receipt_ready") is True
+        and product_image_smoke_preflight.get("container_runtime_proof_schema_version")
+        == "rocm_container_runtime_proof_v1"
+        and product_image_smoke_preflight.get("container_runtime_in_container") is True
+        and product_image_smoke_preflight.get("container_runtime_device_nodes_ready") is True
+        and product_image_smoke_preflight.get("container_runtime_torch_rocm_ready") is True
+        and product_image_smoke_preflight.get("container_runtime_torch_cuda_available") is True
+        and _int(product_image_smoke_preflight.get("container_runtime_visible_device_count")) > 0
+        and product_image_smoke_preflight.get("container_runtime_rust_hip_backend_enabled") is True
         and product_image_smoke_preflight.get("product_runner_smoke_ready") is True
         and _int(product_image_smoke_preflight.get("receipt_simulate_missing_profile_http")) == 422
     )
@@ -255,6 +264,10 @@ def build_product_end_to_end_rocm_benchmark(
                 f"{product_image_smoke_preflight.get('clean_container_smoke_ready')}; "
                 f"receipt_mode={product_image_smoke_preflight.get('receipt_mode')}; "
                 f"receipt_status={product_image_smoke_preflight.get('receipt_status')}; "
+                f"container_runtime_receipt_ready="
+                f"{product_image_smoke_preflight.get('container_runtime_receipt_ready')}; "
+                f"container_runtime_rust_hip_backend_enabled="
+                f"{product_image_smoke_preflight.get('container_runtime_rust_hip_backend_enabled')}; "
                 f"product_runner_smoke_ready="
                 f"{product_image_smoke_preflight.get('product_runner_smoke_ready')}; "
                 f"simulate_missing_profile_http="
@@ -329,6 +342,12 @@ def build_product_end_to_end_rocm_benchmark(
         ),
         "product_image_smoke_receipt_status": _text(
             product_image_smoke_preflight.get("receipt_status")
+        ),
+        "product_image_smoke_container_runtime_receipt_ready": bool(
+            product_image_smoke_preflight.get("container_runtime_receipt_ready") is True
+        ),
+        "product_image_smoke_container_runtime_rust_hip_backend_enabled": bool(
+            product_image_smoke_preflight.get("container_runtime_rust_hip_backend_enabled") is True
         ),
         "product_image_smoke_product_runner_smoke_ready": bool(
             product_image_smoke_preflight.get("product_runner_smoke_ready") is True

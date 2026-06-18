@@ -280,6 +280,16 @@ def _product_image_smoke_preflight(*, ready: bool = True) -> dict:
             "clean_container_smoke_ready": ready,
             "receipt_status": "product_image_smoke_ready" if ready else "blocked_product_image_smoke",
             "receipt_mode": "rocm-runtime" if ready else "build",
+            "container_runtime_receipt_ready": ready,
+            "container_runtime_proof_schema_version": "rocm_container_runtime_proof_v1"
+            if ready
+            else "",
+            "container_runtime_in_container": ready,
+            "container_runtime_device_nodes_ready": ready,
+            "container_runtime_torch_rocm_ready": ready,
+            "container_runtime_torch_cuda_available": ready,
+            "container_runtime_visible_device_count": 1 if ready else 0,
+            "container_runtime_rust_hip_backend_enabled": ready,
             "product_runner_smoke_ready": ready,
             "receipt_simulate_missing_profile_http": 422 if ready else 0,
         }
@@ -4272,6 +4282,8 @@ def test_product_goal_completion_audit_accepts_ready_clean_container_smoke() -> 
     assert summary["goal_complete"] is True
     assert summary["restricted_delivery_complete"] is True
     assert summary["clean_container_smoke_ready"] is True
+    assert summary["product_image_smoke_container_runtime_receipt_ready"] is True
+    assert summary["product_image_smoke_container_runtime_rust_hip_backend_enabled"] is True
 
 
 def test_build_product_goal_completion_audit_tool_writes_outputs(tmp_path: Path) -> None:

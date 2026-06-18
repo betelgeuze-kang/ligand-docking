@@ -1760,12 +1760,22 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "script_contract_ready",
             "workflow_contract_ready",
             "clean_container_smoke_ready",
+            "container_runtime_receipt_ready",
+            "container_runtime_in_container",
+            "container_runtime_device_nodes_ready",
+            "container_runtime_torch_rocm_ready",
+            "container_runtime_torch_cuda_available",
+            "container_runtime_rust_hip_backend_enabled",
             "product_runner_smoke_ready",
         ],
         "required_int_exact_fields": {
             "receipt_simulate_missing_profile_http": 422,
         },
+        "required_int_min_fields": {
+            "container_runtime_visible_device_count": 1,
+        },
         "required_text_exact_fields": {
+            "container_runtime_proof_schema_version": "rocm_container_runtime_proof_v1",
             "receipt_mode": "rocm-runtime",
             "receipt_status": "product_image_smoke_ready",
         },

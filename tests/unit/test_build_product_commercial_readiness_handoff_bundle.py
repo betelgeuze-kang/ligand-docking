@@ -1093,6 +1093,16 @@ def _product_image_preflight(*, clean_ready: bool = True) -> dict:
             "receipt_status": "product_image_smoke_ready" if clean_ready else "",
             "receipt_mode": "rocm-runtime" if clean_ready else "",
             "receipt_simulate_missing_profile_http": 422 if clean_ready else 0,
+            "container_runtime_receipt_ready": clean_ready,
+            "container_runtime_proof_schema_version": "rocm_container_runtime_proof_v1"
+            if clean_ready
+            else "",
+            "container_runtime_in_container": clean_ready,
+            "container_runtime_device_nodes_ready": clean_ready,
+            "container_runtime_torch_rocm_ready": clean_ready,
+            "container_runtime_torch_cuda_available": clean_ready,
+            "container_runtime_visible_device_count": 1 if clean_ready else 0,
+            "container_runtime_rust_hip_backend_enabled": clean_ready,
             "product_runner_smoke_ready": clean_ready,
         }
     }
@@ -1972,6 +1982,8 @@ def test_product_commercial_readiness_handoff_bundle_includes_ai_md_kpi_evidence
     assert summary["ai_md_engine_kpi_top1_pose_id"] == "amide_near_hbond_pose"
     assert summary["clean_container_smoke_ready"] is True
     assert summary["product_image_smoke_receipt_mode"] == "rocm-runtime"
+    assert summary["product_image_smoke_container_runtime_receipt_ready"] is True
+    assert summary["product_image_smoke_container_runtime_rust_hip_backend_enabled"] is True
     assert summary["product_image_smoke_product_runner_smoke_ready"] is True
     assert summary["artifact_count"] == 6
     assert any(row["artifact_id"] == "ai_md_engine_kpi_report_json" for row in payload["rows"])
