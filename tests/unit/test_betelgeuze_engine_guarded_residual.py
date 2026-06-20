@@ -12,6 +12,7 @@ from betelgeuze_engine.residual import (
     ForceResidualPolicy,
     apply_guarded_force_residual,
     decide_force_residual,
+    validate_force_residual_report_contract,
 )
 from betelgeuze_engine.validation import (
     energy_drift_smoke_pct,
@@ -307,6 +308,40 @@ def test_guarded_force_residual_abstains_on_low_confidence_threshold() -> None:
     assert metadata["force_residual_abstention_reason"] == "uncertainty_abstained"
     assert metadata["force_residual_abstain_threshold"] == 0.75
     assert torch.equal(updated, coords)
+
+
+def test_guarded_force_residual_report_contract_blocks_metadata_drift() -> None:
+    coords = torch.zeros(1, 2, 3)
+    forces = torch.ones_like(coords)
+    policy = ForceResidualPolicy(max_force_norm=5.0, max_displacement=0.05, step_size=0.10)
+    decision = decide_force_residual(
+        rank_pct=0.01,
+        topology_valid=True,
+        uncertainty=0.1,
+        delta_score=0.2,
+        policy=policy,
+    )
+    _updated, report = apply_guarded_force_residual(coords, forces, decision=decision, policy=policy)
+    metadata = report.to_claim_metadata(
+        {
+            "topology_fidelity": "sequence_mapped",
+            "ligand_topology_valid": True,
+            "claim_safe": True,
+            "blocked_reason": "",
+        }
+    )
+
+    validate_force_residual_report_contract(report, claim_metadata=metadata)
+
+    missing = dict(metadata)
+    missing.pop("force_residual_policy_caps")
+    with pytest.raises(ValueError, match="force residual claim metadata missing keys"):
+        validate_force_residual_report_contract(report, claim_metadata=missing)
+
+    drifted = dict(metadata)
+    drifted["force_residual_observed_caps_ready"] = False
+    with pytest.raises(ValueError, match="observed caps mismatch"):
+        validate_force_residual_report_contract(report, claim_metadata=drifted)
 
 
 def test_force_validation_helpers_cover_finite_difference_and_translation() -> None:

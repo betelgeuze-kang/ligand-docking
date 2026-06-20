@@ -29,6 +29,7 @@ def _kpi_packet(
     allowlisted_runner_shim_contract_ready: bool = True,
     force_residual_bounded_policy_ready: bool = True,
     force_residual_observed_caps_ready: bool = True,
+    force_residual_contract_ready: bool = True,
     force_residual_confidence_abstention_ready: bool = True,
     force_term_physics_validation_ready: bool = True,
     force_term_physics_validation_claim_safe_ready: bool = True,
@@ -194,6 +195,7 @@ def _kpi_packet(
                 ),
                 "manifest_force_residual_policy_caps_ready": force_residual_summary_signed,
                 "manifest_force_residual_observed_caps_ready": force_residual_summary_signed,
+                "manifest_force_residual_contract_ready": force_residual_summary_signed,
             },
             "force_term_claim_metadata_ready": force_term_claim_metadata_ready,
             "force_term_claim_metadata_smoke": {
@@ -431,6 +433,7 @@ def _kpi_packet(
                 "applied_count": 3,
                 "bounded_correction_policy_ready": force_residual_bounded_policy_ready,
                 "observed_caps_ready": force_residual_observed_caps_ready,
+                "contract_ready": force_residual_contract_ready,
                 "confidence_abstention_ready": force_residual_confidence_abstention_ready,
                 "top_k_policy_ready": True,
                 "duration_sec": 0.03,
@@ -471,6 +474,7 @@ def _kpi_packet(
                 "neighbor_list_rebuild_frequency_tracked": True,
                 "force_residual_bounded_policy_ready": force_residual_bounded_policy_ready,
                 "force_residual_observed_caps_ready": force_residual_observed_caps_ready,
+                "force_residual_contract_ready": force_residual_contract_ready,
                 "force_residual_confidence_abstention_ready": force_residual_confidence_abstention_ready,
             },
             "physics": {
@@ -1774,6 +1778,35 @@ def test_ai_md_product_evidence_bundle_blocks_without_force_residual_observed_ca
     assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
     assert any(
         error.startswith("pm_force_residual_observed_caps_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_without_force_residual_contract_gate(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True, force_residual_contract_ready=False)
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_runtime_top10_force_residual_contract_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_force_residual_contract_gate_missing:")
         for error in summary["bundle_validation_errors"]
     )
 

@@ -33,7 +33,12 @@ from betelgeuze_engine.physics.terms import (
     LegacyLJTerm,
     ScreenedElectrostaticsTerm,
 )
-from betelgeuze_engine.residual import ForceResidualPolicy, apply_guarded_force_residual, decide_force_residual
+from betelgeuze_engine.residual import (
+    ForceResidualPolicy,
+    apply_guarded_force_residual,
+    decide_force_residual,
+    validate_force_residual_report_contract,
+)
 from betelgeuze_engine.topology import (
     ComplexTopology,
     TopologyFactoryFacade,
@@ -268,6 +273,7 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
                     "blocked_reason": "",
                 }
             )
+            validate_force_residual_report_contract(report, claim_metadata=last_metadata)
         return applied, {"last_metadata": last_metadata, "last_report": last_report}
 
     _label, elapsed, runtime_value = _timed("guarded_force_residual", run)
@@ -308,14 +314,54 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
         decision=outside_top_k_decision,
         policy=policy,
     )
+    cap_metadata = cap_report.to_claim_metadata(
+        {
+            "topology_fidelity": "sequence_mapped",
+            "ligand_topology_valid": True,
+            "claim_safe": True,
+            "blocked_reason": "",
+        }
+    )
+    uncertainty_metadata = uncertainty_report.to_claim_metadata(
+        {
+            "topology_fidelity": "sequence_mapped",
+            "ligand_topology_valid": True,
+            "claim_safe": True,
+            "blocked_reason": "",
+        }
+    )
+    outside_top_k_metadata = outside_top_k_report.to_claim_metadata(
+        {
+            "topology_fidelity": "sequence_mapped",
+            "ligand_topology_valid": True,
+            "claim_safe": True,
+            "blocked_reason": "",
+        }
+    )
+    validate_force_residual_report_contract(cap_report, claim_metadata=cap_metadata)
+    validate_force_residual_report_contract(uncertainty_report, claim_metadata=uncertainty_metadata)
+    validate_force_residual_report_contract(outside_top_k_report, claim_metadata=outside_top_k_metadata)
     policy_caps = cap_report.to_dict()["policy_caps"]
+    contract_ready = bool(
+        last_report.get("claim_metadata_schema_version") == "force_residual_claim_metadata_v1"
+        and last_metadata.get("force_residual_claim_metadata_schema_version")
+        == "force_residual_claim_metadata_v1"
+        and last_metadata.get("force_residual_policy_caps") == last_report.get("policy_caps")
+        and cap_metadata.get("force_residual_policy_caps") == cap_report.to_dict().get("policy_caps")
+        and uncertainty_metadata.get("force_residual_policy_caps")
+        == uncertainty_report.to_dict().get("policy_caps")
+        and outside_top_k_metadata.get("force_residual_policy_caps")
+        == outside_top_k_report.to_dict().get("policy_caps")
+    )
     bounded_policy_ready = bool(
-        required_policy_caps.issubset(policy_caps)
+        contract_ready
+        and required_policy_caps.issubset(policy_caps)
         and last_metadata.get("force_residual_policy_caps_ready") is True
         and last_report.get("policy_caps_ready") is True
     )
     observed_caps_ready = bool(
-        last_report.get("all_observed_caps_within_policy") is True
+        contract_ready
+        and last_report.get("all_observed_caps_within_policy") is True
         and last_metadata.get("force_residual_all_observed_caps_within_policy") is True
         and last_metadata.get("force_residual_observed_caps_ready") is True
         and last_report.get("observed_caps_ready") is True
@@ -324,13 +370,15 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
         and outside_top_k_report.to_dict().get("all_observed_caps_within_policy") is True
     )
     confidence_abstention_ready = bool(
-        uncertainty_report.applied is False
+        contract_ready
+        and uncertainty_report.applied is False
         and uncertainty_report.skipped_reason == "uncertainty_abstained"
         and uncertainty_report.uncertainty >= float(policy.abstain_threshold)
         and uncertainty_report.confidence <= 1.0 - float(policy.abstain_threshold)
     )
     top_k_policy_ready = bool(
-        outside_top_k_report.applied is False
+        contract_ready
+        and outside_top_k_report.applied is False
         and outside_top_k_report.skipped_reason == "outside_top_k_policy"
         and outside_top_k_report.top_k_eligible is False
         and outside_top_k_report.rank_pct > float(policy.top_k_rank_pct)
@@ -349,6 +397,7 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
         ),
         "bounded_correction_policy_ready": bounded_policy_ready,
         "observed_caps_ready": observed_caps_ready,
+        "contract_ready": contract_ready,
         "confidence_abstention_ready": confidence_abstention_ready,
         "top_k_policy_ready": top_k_policy_ready,
         "required_policy_caps": sorted(required_policy_caps),
@@ -1189,6 +1238,7 @@ def _signed_runner_claim_metadata_kpi() -> dict[str, Any]:
         "reason": "disabled",
         "policy_caps_ready": True,
         "observed_caps_ready": True,
+        "contract_ready": True,
     }
     manifest = build_result_manifest(
         job_id="kpi_runner_claim_metadata_smoke",
@@ -1217,6 +1267,7 @@ def _signed_runner_claim_metadata_kpi() -> dict[str, Any]:
         and int(manifest["result_claim_metadata"].get("ligand_topology_schema_ready_row_count") or 0) == 2
         and int(manifest["result_claim_metadata"].get("ligand_topology_claim_safe_row_count") or 0) == 2
         and manifest["hbond_evidence_summary"].get("schema_version") == "hbond_evidence_v1"
+        and manifest["force_residual_summary"].get("contract_ready") is True
     )
     return {
         "ready": ready,
@@ -1256,6 +1307,9 @@ def _signed_runner_claim_metadata_kpi() -> dict[str, Any]:
         ),
         "manifest_force_residual_observed_caps_ready": manifest.get("force_residual_summary", {}).get(
             "observed_caps_ready"
+        ),
+        "manifest_force_residual_contract_ready": manifest.get("force_residual_summary", {}).get(
+            "contract_ready"
         ),
     }
 
@@ -2043,6 +2097,7 @@ def _pm_kpi_summary(
         ),
         "force_residual_bounded_policy_ready": runtime_residual.get("bounded_correction_policy_ready") is True,
         "force_residual_observed_caps_ready": runtime_residual.get("observed_caps_ready") is True,
+        "force_residual_contract_ready": runtime_residual.get("contract_ready") is True,
         "force_residual_confidence_abstention_ready": runtime_residual.get("confidence_abstention_ready") is True,
         "force_residual_top_k_policy_ready": runtime_residual.get("top_k_policy_ready") is True,
     }
@@ -2137,6 +2192,7 @@ def _pm_kpi_summary(
             ),
             "force_residual_bounded_policy_ready": runtime_residual.get("bounded_correction_policy_ready") is True,
             "force_residual_observed_caps_ready": runtime_residual.get("observed_caps_ready") is True,
+            "force_residual_contract_ready": runtime_residual.get("contract_ready") is True,
             "force_residual_confidence_abstention_ready": runtime_residual.get("confidence_abstention_ready") is True,
             "force_residual_top_k_policy_ready": runtime_residual.get("top_k_policy_ready") is True,
             "force_residual_abstain_threshold": float(

@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import torch
 
-from betelgeuze_engine.contracts import EngineState, TermResult
+from betelgeuze_engine.contracts import EngineState, TermResult, validate_term_result_contract
 from betelgeuze_engine.interactions.hbond_evidence import evaluate_hbond_evidence
 from betelgeuze_engine.backmapping.onsps import (
     ONSPS_BACKMAP_SCHEMA_VERSION,
@@ -458,6 +458,46 @@ def test_product_forcefield_enforces_term_result_contract_before_claim_merge() -
                 },
             )
 
+    class MissingBaseClaimKeyTerm:
+        name = "missing_base_claim_key"
+
+        def energy_forces(self, state: EngineState, pairs=None) -> TermResult:
+            return TermResult(
+                energy=torch.zeros(state.coords.shape[0]),
+                forces=torch.zeros_like(state.coords),
+                diagnostics={"term": self.name, "status": "pass"},
+                claim_metadata={
+                    "topology_fidelity": "sequence_mapped",
+                    "ligand_topology_valid": True,
+                    "hbond_evidence_status": "pass",
+                    "force_residual_applied": False,
+                    "claim_safe": True,
+                    "force_term_name": self.name,
+                    "force_term_status": "pass",
+                },
+            )
+
+    class UnboundedCorrectionTerm:
+        name = "unbounded_correction"
+
+        def energy_forces(self, state: EngineState, pairs=None) -> TermResult:
+            return TermResult(
+                energy=torch.zeros(state.coords.shape[0]),
+                forces=torch.zeros_like(state.coords),
+                diagnostics={"term": self.name, "status": "pass"},
+                claim_metadata={
+                    "topology_fidelity": "sequence_mapped",
+                    "ligand_topology_valid": True,
+                    "hbond_evidence_status": "pass",
+                    "force_residual_applied": False,
+                    "claim_safe": True,
+                    "blocked_reason": "",
+                    "force_term_name": self.name,
+                    "force_term_status": "pass",
+                    "force_term_bounded_correction_required": True,
+                },
+            )
+
     state = EngineState(coords=torch.zeros(1, 2, 3), atom_types=torch.tensor([0, 1]))
     claim_metadata = {
         "topology_fidelity": "sequence_mapped",
@@ -473,6 +513,37 @@ def test_product_forcefield_enforces_term_result_contract_before_claim_merge() -
         ProductForceField([NonfiniteForceTerm()]).energy_forces(state, claim_metadata=claim_metadata)
     with pytest.raises(ValueError, match="mismatched claim metadata term"):
         ProductForceField([MismatchedMetadataTerm()]).energy_forces(state, claim_metadata=claim_metadata)
+    with pytest.raises(ValueError, match="missing claim metadata keys: blocked_reason"):
+        ProductForceField([MissingBaseClaimKeyTerm()]).energy_forces(state, claim_metadata=claim_metadata)
+    with pytest.raises(ValueError, match="missing bounded correction keys"):
+        ProductForceField([UnboundedCorrectionTerm()]).energy_forces(state, claim_metadata=claim_metadata)
+
+
+def test_term_result_contract_exposes_bounded_correction_validator() -> None:
+    coords = torch.zeros(1, 2, 3)
+    result = TermResult(
+        energy=torch.zeros(1),
+        forces=torch.zeros_like(coords),
+        diagnostics={"term": "bounded_proxy", "status": "pass"},
+        claim_metadata={
+            "topology_fidelity": "sequence_mapped",
+            "ligand_topology_valid": True,
+            "hbond_evidence_status": "pass",
+            "force_residual_applied": False,
+            "claim_safe": True,
+            "blocked_reason": "",
+            "force_term_name": "bounded_proxy",
+            "force_term_status": "pass",
+            "force_term_policy_caps": {"max_abs_energy": 1.0, "max_force_norm": 1.0},
+            "force_term_policy_caps_ready": True,
+            "force_term_observed_caps_ready": True,
+            "force_term_bounded_correction_ready": True,
+            "force_term_abs_energy_within_cap": True,
+            "force_term_force_norm_within_cap": True,
+        },
+    )
+
+    validate_term_result_contract(name="bounded_proxy", result=result, coords=coords)
 
 
 def test_hbond_evidence_uses_onsps_roles_distance_and_angle() -> None:

@@ -43,11 +43,13 @@ def test_product_ci_runtime_gate_blocks_github_billing_without_mutation(tmp_path
         product_api_worker_conclusion="failure",
         product_api_worker_job_started=False,
         product_api_worker_annotation=annotation,
+        product_api_worker_created_at_utc="2026-06-20T15:26:47Z",
         product_image_smoke_run_id="27770546783",
         product_image_smoke_url="https://github.com/example/actions/runs/27770546783",
         product_image_smoke_conclusion="failure",
         product_image_smoke_job_started=False,
         product_image_smoke_annotation=annotation,
+        product_image_smoke_created_at_utc="2026-06-20T15:26:47Z",
     )
     summary = payload["summary"]
 
@@ -59,6 +61,8 @@ def test_product_ci_runtime_gate_blocks_github_billing_without_mutation(tmp_path
     assert summary["blocker_code"] == "github_actions_billing_or_spending_limit"
     assert summary["local_rocm_clean_container_ready"] is True
     assert summary["workflow_dispatch_executed"] is False
+    assert summary["latest_github_actions_record_kst_date"] == "2026-06-21"
+    assert summary["github_actions_record_dates_kst"] == ["2026-06-21"]
     assert summary["billing_mutated"] is False
     assert summary["external_state_mutated"] is False
     assert {"code": "github_actions_billing_or_spending_limit"} in payload["blockers"]
@@ -66,6 +70,7 @@ def test_product_ci_runtime_gate_blocks_github_billing_without_mutation(tmp_path
     assert {"code": "product-image-smoke_not_green"} in payload["blockers"]
     assert any("Billing & plans" in step for step in summary["next_required_steps"])
     assert all(row["external_state_mutated"] is False for row in payload["rows"])
+    assert {row["created_at_kst_date"] for row in payload["rows"]} == {"2026-06-21"}
 
 
 def test_product_ci_runtime_gate_ready_requires_remote_green_and_local_rocm_preflight(

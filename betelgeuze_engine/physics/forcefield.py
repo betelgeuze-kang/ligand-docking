@@ -7,7 +7,7 @@ from typing import Any
 import torch
 
 from betelgeuze_engine.contracts.claim import default_claim_metadata
-from betelgeuze_engine.contracts.result import EnergyForces, TermResult
+from betelgeuze_engine.contracts.result import EnergyForces, TermResult, validate_term_result_contract
 from betelgeuze_engine.contracts.state import EngineState
 from betelgeuze_engine.physics.force_term import ForceTerm
 from betelgeuze_engine.physics.neighbor import NeighborPairs, full_neighbor_pairs
@@ -69,32 +69,7 @@ def _term_name(term: ForceTerm) -> str:
 
 
 def _validate_term_result(name: str, result: TermResult, coords: torch.Tensor) -> None:
-    expected_energy_shape = (int(coords.shape[0]),)
-    if tuple(result.energy.shape) != expected_energy_shape:
-        raise ValueError(
-            f"force term {name} returned energy with wrong shape: "
-            f"{tuple(result.energy.shape)} != {expected_energy_shape}"
-        )
-    if result.forces.shape != coords.shape:
-        raise ValueError(f"force term {name} returned forces with wrong shape")
-    if not torch.isfinite(result.energy).all():
-        raise ValueError(f"force term {name} returned nonfinite energy")
-    if not torch.isfinite(result.forces).all():
-        raise ValueError(f"force term {name} returned nonfinite forces")
-
-    diagnostic_term = str(result.diagnostics.get("term") or "")
-    diagnostic_status = str(result.diagnostics.get("status") or "")
-    if diagnostic_term != name:
-        raise ValueError(f"force term {name} returned mismatched diagnostic term: {diagnostic_term}")
-    if not diagnostic_status:
-        raise ValueError(f"force term {name} returned missing diagnostic status")
-
-    metadata_term = str(result.claim_metadata.get("force_term_name") or "")
-    metadata_status = str(result.claim_metadata.get("force_term_status") or "")
-    if metadata_term != name:
-        raise ValueError(f"force term {name} returned mismatched claim metadata term: {metadata_term}")
-    if not metadata_status:
-        raise ValueError(f"force term {name} returned missing claim metadata status")
+    validate_term_result_contract(name=name, result=result, coords=coords)
 
 
 def _merge_claim_metadata(

@@ -161,6 +161,8 @@ def _validate_kpi_claim_metadata_gates(
         or _int_value(runtime_residual.get("applied_count")) < 1
     ):
         errors.append(f"kpi_runtime_top10_force_residual_missing:{artifact_id}")
+    if runtime_residual.get("contract_ready") is not True:
+        errors.append(f"kpi_runtime_top10_force_residual_contract_not_ready:{artifact_id}")
     if _float_value(runtime.get("memory_peak_mb")) <= 0.0:
         errors.append(f"kpi_runtime_memory_peak_missing:{artifact_id}")
     if (
@@ -264,6 +266,8 @@ def _validate_kpi_claim_metadata_gates(
         errors.append(f"kpi_manifest_force_residual_policy_caps_not_ready:{artifact_id}")
     if manifest_smoke.get("manifest_force_residual_observed_caps_ready") is not True:
         errors.append(f"kpi_manifest_force_residual_observed_caps_not_ready:{artifact_id}")
+    if manifest_smoke.get("manifest_force_residual_contract_ready") is not True:
+        errors.append(f"kpi_manifest_force_residual_contract_not_ready:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "force_term_claim_metadata_smoke", "ready"):
         errors.append(f"kpi_force_term_claim_metadata_smoke_not_ready:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "guarded_force_term_plugin_smoke", "ready"):
@@ -548,6 +552,8 @@ def _validate_kpi_claim_metadata_gates(
         errors.append(f"pm_force_residual_bounded_policy_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "runtime", "force_residual_observed_caps_ready"):
         errors.append(f"pm_force_residual_observed_caps_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "runtime", "force_residual_contract_ready"):
+        errors.append(f"pm_force_residual_contract_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "runtime", "force_residual_confidence_abstention_ready"):
         errors.append(f"pm_force_residual_confidence_abstention_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "runtime", "score_only_1k_runtime_tracked"):
@@ -975,6 +981,7 @@ def build_payload(
         == "force_residual_claim_metadata_v1"
         and runner_manifest_smoke.get("manifest_force_residual_policy_caps_ready") is True
         and runner_manifest_smoke.get("manifest_force_residual_observed_caps_ready") is True
+        and runner_manifest_smoke.get("manifest_force_residual_contract_ready") is True
     )
     force_term_claim_metadata_ready = bool(product_kpi.get("force_term_claim_metadata_ready") is True)
     force_term_result_contract_ready = bool(product_kpi.get("force_term_result_contract_ready") is True)

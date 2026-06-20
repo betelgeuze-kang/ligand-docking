@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone, timedelta
 import json
 from pathlib import Path
 from typing import Any
@@ -56,6 +57,7 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- blocker_code: `{s['blocker_code']}`",
         f"- product_api_worker_conclusion: `{s['product_api_worker_conclusion']}`",
         f"- product_image_smoke_conclusion: `{s['product_image_smoke_conclusion']}`",
+        f"- latest_github_actions_record_kst_date: `{s['latest_github_actions_record_kst_date']}`",
         f"- local_rocm_clean_container_ready: `{s['local_rocm_clean_container_ready']}`",
         f"- workflow_dispatch_executed: `{s['workflow_dispatch_executed']}`",
         f"- external_state_mutated: `{s['external_state_mutated']}`",
@@ -69,6 +71,8 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
                 f"### {row['workflow']}",
                 "",
                 f"- run_id: `{row['run_id']}`",
+                f"- created_at_utc: `{row['created_at_utc']}`",
+                f"- created_at_kst_date: `{row['created_at_kst_date']}`",
                 f"- conclusion: `{row['conclusion']}`",
                 f"- job_started: `{row['job_started']}`",
                 f"- url: {row['url'] or 'n/a'}",
@@ -94,6 +98,17 @@ def _billing_blocked(*messages: str) -> bool:
     return "payments have failed" in joined or "spending limit" in joined or "billing" in joined
 
 
+def _kst_date_from_utc(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return ""
+    return parsed.astimezone(timezone(timedelta(hours=9))).date().isoformat()
+
+
 def _summary(packet: dict[str, Any]) -> dict[str, Any]:
     summary = packet.get("summary")
     return summary if isinstance(summary, dict) else {}
@@ -107,6 +122,8 @@ def _workflow_row(
     conclusion: str,
     job_started: bool,
     annotation: str,
+    created_at_utc: str = "",
+    updated_at_utc: str = "",
 ) -> dict[str, Any]:
     green = conclusion == "success" and job_started
     return {
@@ -116,6 +133,9 @@ def _workflow_row(
         "conclusion": conclusion,
         "job_started": job_started,
         "annotation": annotation,
+        "created_at_utc": created_at_utc,
+        "updated_at_utc": updated_at_utc,
+        "created_at_kst_date": _kst_date_from_utc(created_at_utc),
         "green": green,
         "release_blocker": not green,
         "external_state_mutated": False,
@@ -131,11 +151,15 @@ def build_product_ci_runtime_gate(
     product_api_worker_conclusion: str = "",
     product_api_worker_job_started: bool = False,
     product_api_worker_annotation: str = "",
+    product_api_worker_created_at_utc: str = "",
+    product_api_worker_updated_at_utc: str = "",
     product_image_smoke_run_id: str = "",
     product_image_smoke_url: str = "",
     product_image_smoke_conclusion: str = "",
     product_image_smoke_job_started: bool = False,
     product_image_smoke_annotation: str = "",
+    product_image_smoke_created_at_utc: str = "",
+    product_image_smoke_updated_at_utc: str = "",
 ) -> dict[str, Any]:
     root_path = Path(root)
     preflight_summary = _summary(_read_json(root_path, product_image_preflight_json))
@@ -156,6 +180,8 @@ def build_product_ci_runtime_gate(
             conclusion=product_api_worker_conclusion,
             job_started=product_api_worker_job_started,
             annotation=product_api_worker_annotation,
+            created_at_utc=product_api_worker_created_at_utc,
+            updated_at_utc=product_api_worker_updated_at_utc,
         ),
         _workflow_row(
             workflow="product-image-smoke",
@@ -164,8 +190,11 @@ def build_product_ci_runtime_gate(
             conclusion=product_image_smoke_conclusion,
             job_started=product_image_smoke_job_started,
             annotation=product_image_smoke_annotation,
+            created_at_utc=product_image_smoke_created_at_utc,
+            updated_at_utc=product_image_smoke_updated_at_utc,
         ),
     ]
+    observed_dates = sorted({row["created_at_kst_date"] for row in rows if row["created_at_kst_date"]})
     billing_blocked = _billing_blocked(product_api_worker_annotation, product_image_smoke_annotation)
     remote_product_ci_green = all(row["green"] for row in rows)
     github_actions_started = all(row["job_started"] for row in rows)
@@ -207,10 +236,16 @@ def build_product_ci_runtime_gate(
         "product_api_worker_url": product_api_worker_url,
         "product_api_worker_conclusion": product_api_worker_conclusion,
         "product_api_worker_job_started": product_api_worker_job_started,
+        "product_api_worker_created_at_utc": product_api_worker_created_at_utc,
+        "product_api_worker_created_at_kst_date": _kst_date_from_utc(product_api_worker_created_at_utc),
         "product_image_smoke_run_id": product_image_smoke_run_id,
         "product_image_smoke_url": product_image_smoke_url,
         "product_image_smoke_conclusion": product_image_smoke_conclusion,
         "product_image_smoke_job_started": product_image_smoke_job_started,
+        "product_image_smoke_created_at_utc": product_image_smoke_created_at_utc,
+        "product_image_smoke_created_at_kst_date": _kst_date_from_utc(product_image_smoke_created_at_utc),
+        "latest_github_actions_record_kst_date": observed_dates[-1] if observed_dates else "",
+        "github_actions_record_dates_kst": observed_dates,
         "product_image_preflight_json": str(product_image_preflight_json),
         "local_rocm_clean_container_ready": local_rocm_clean_container_ready,
         "local_product_image_preflight_status": str(preflight_summary.get("status") or ""),
@@ -236,11 +271,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--product-api-worker-conclusion", default="")
     parser.add_argument("--product-api-worker-job-started", default="false")
     parser.add_argument("--product-api-worker-annotation", default="")
+    parser.add_argument("--product-api-worker-created-at-utc", default="")
+    parser.add_argument("--product-api-worker-updated-at-utc", default="")
     parser.add_argument("--product-image-smoke-run-id", default="")
     parser.add_argument("--product-image-smoke-url", default="")
     parser.add_argument("--product-image-smoke-conclusion", default="")
     parser.add_argument("--product-image-smoke-job-started", default="false")
     parser.add_argument("--product-image-smoke-annotation", default="")
+    parser.add_argument("--product-image-smoke-created-at-utc", default="")
+    parser.add_argument("--product-image-smoke-updated-at-utc", default="")
     return parser.parse_args(argv)
 
 
@@ -253,11 +292,15 @@ def main(argv: list[str] | None = None) -> int:
         product_api_worker_conclusion=args.product_api_worker_conclusion,
         product_api_worker_job_started=_is_truthy_text(args.product_api_worker_job_started),
         product_api_worker_annotation=args.product_api_worker_annotation,
+        product_api_worker_created_at_utc=args.product_api_worker_created_at_utc,
+        product_api_worker_updated_at_utc=args.product_api_worker_updated_at_utc,
         product_image_smoke_run_id=args.product_image_smoke_run_id,
         product_image_smoke_url=args.product_image_smoke_url,
         product_image_smoke_conclusion=args.product_image_smoke_conclusion,
         product_image_smoke_job_started=_is_truthy_text(args.product_image_smoke_job_started),
         product_image_smoke_annotation=args.product_image_smoke_annotation,
+        product_image_smoke_created_at_utc=args.product_image_smoke_created_at_utc,
+        product_image_smoke_updated_at_utc=args.product_image_smoke_updated_at_utc,
     )
     _write_json(args.out_json, payload)
     _write_markdown(args.out_md, payload)

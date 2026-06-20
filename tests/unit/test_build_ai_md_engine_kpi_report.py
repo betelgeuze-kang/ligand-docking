@@ -71,6 +71,7 @@ def _write_product_evidence_bundle(
                 "manifest_force_residual_schema_version": "force_residual_claim_metadata_v1",
                 "manifest_force_residual_policy_caps_ready": True,
                 "manifest_force_residual_observed_caps_ready": True,
+                "manifest_force_residual_contract_ready": True,
             },
             "force_term_claim_metadata_ready": True,
             "force_term_claim_metadata_smoke": {
@@ -404,6 +405,7 @@ def _write_product_evidence_bundle(
                 "applied_count": 3,
                 "bounded_correction_policy_ready": True,
                 "observed_caps_ready": True,
+                "contract_ready": True,
                 "confidence_abstention_ready": True,
                 "top_k_policy_ready": True,
                 "duration_sec": 0.03,
@@ -440,6 +442,7 @@ def _write_product_evidence_bundle(
                 "neighbor_list_rebuild_frequency_tracked": True,
                 "force_residual_bounded_policy_ready": True,
                 "force_residual_observed_caps_ready": True,
+                "force_residual_contract_ready": True,
                 "force_residual_confidence_abstention_ready": True,
             },
             "physics": {
@@ -637,6 +640,7 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert runner_manifest_smoke["manifest_force_residual_schema_version"] == "force_residual_claim_metadata_v1"
     assert runner_manifest_smoke["manifest_force_residual_policy_caps_ready"] is True
     assert runner_manifest_smoke["manifest_force_residual_observed_caps_ready"] is True
+    assert runner_manifest_smoke["manifest_force_residual_contract_ready"] is True
     assert report["product_kpi"]["bundle_validation_pass"] is True
     assert report["product_kpi"]["bundle_validation_error_count"] == 0
     assert report["product_kpi"]["source_artifacts_fresh"] is True
@@ -861,10 +865,12 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert residual_kpi["outside_top_k_abstention_count"] == 1
     assert residual_kpi["bounded_correction_policy_ready"] is True
     assert residual_kpi["observed_caps_ready"] is True
+    assert residual_kpi["contract_ready"] is True
     assert residual_kpi["confidence_abstention_ready"] is True
     assert residual_kpi["top_k_policy_ready"] is True
     assert report["pm_kpi_summary"]["runtime"]["force_residual_bounded_policy_ready"] is True
     assert report["pm_kpi_summary"]["runtime"]["force_residual_observed_caps_ready"] is True
+    assert report["pm_kpi_summary"]["runtime"]["force_residual_contract_ready"] is True
     assert report["pm_kpi_summary"]["runtime"]["force_residual_confidence_abstention_ready"] is True
     assert report["pm_kpi_summary"]["runtime"]["force_residual_top_k_policy_ready"] is True
     assert report["pm_kpi_summary"]["runtime"]["force_residual_abstain_threshold"] == 0.75

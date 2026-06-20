@@ -18,6 +18,51 @@ REQUIRED_POLICY_CAP_KEYS = (
     "abstain_threshold",
     "top_k_rank_pct",
 )
+REQUIRED_FORCE_RESIDUAL_REPORT_KEYS = (
+    "applied",
+    "max_force_norm",
+    "energy_drift_pct",
+    "displacement_rmsd",
+    "skipped_reason",
+    "delta_score",
+    "uncertainty",
+    "confidence",
+    "rank_pct",
+    "top_k_eligible",
+    "abstention_reason",
+    "claim_safe",
+    "policy_caps",
+    "force_norm_within_cap",
+    "energy_drift_within_cap",
+    "displacement_within_cap",
+    "delta_score_within_cap",
+    "all_observed_caps_within_policy",
+    "policy_caps_ready",
+    "observed_caps_ready",
+    "claim_metadata_schema_version",
+)
+REQUIRED_FORCE_RESIDUAL_CLAIM_KEYS = (
+    "force_residual_claim_metadata_schema_version",
+    "force_residual_applied",
+    "force_residual_claim_safe",
+    "force_residual_delta_score",
+    "force_residual_uncertainty",
+    "force_residual_confidence",
+    "force_residual_rank_pct",
+    "force_residual_top_k_rank_pct",
+    "force_residual_top_k_eligible",
+    "force_residual_force_norm_within_cap",
+    "force_residual_energy_drift_within_cap",
+    "force_residual_displacement_within_cap",
+    "force_residual_delta_score_within_cap",
+    "force_residual_all_observed_caps_within_policy",
+    "force_residual_abstain_threshold",
+    "force_residual_policy_caps",
+    "force_residual_required_policy_caps",
+    "force_residual_policy_caps_ready",
+    "force_residual_observed_caps_ready",
+    "force_residual_status",
+)
 
 
 @dataclass(frozen=True)
@@ -250,6 +295,83 @@ def _policy_caps_ready(policy_caps: dict[str, Any]) -> bool:
         and math.isfinite(top_k_rank_pct)
         and 0.0 <= top_k_rank_pct <= 1.0
     )
+
+
+def _missing_keys(payload: dict[str, Any], keys: tuple[str, ...]) -> list[str]:
+    return [key for key in keys if key not in payload]
+
+
+def validate_force_residual_report_contract(
+    report: ForceResidualReport,
+    *,
+    claim_metadata: dict[str, Any] | None = None,
+) -> None:
+    """Validate guarded residual report and optional claim metadata contracts."""
+
+    report_dict = report.to_dict()
+    missing_report_keys = _missing_keys(report_dict, REQUIRED_FORCE_RESIDUAL_REPORT_KEYS)
+    if missing_report_keys:
+        raise ValueError(
+            "force residual report missing keys: " + ",".join(missing_report_keys)
+        )
+    if report_dict.get("claim_metadata_schema_version") != FORCE_RESIDUAL_CLAIM_METADATA_SCHEMA_VERSION:
+        raise ValueError("force residual report schema version mismatch")
+    if not isinstance(report_dict.get("policy_caps"), dict) or not report_dict.get("policy_caps"):
+        raise ValueError("force residual report missing policy caps")
+    if not _policy_caps_ready(dict(report_dict["policy_caps"])):
+        raise ValueError("force residual report policy caps invalid")
+    if report.applied and report.skipped_reason:
+        raise ValueError("force residual report applied with skipped_reason")
+    if report.applied and report.abstention_reason:
+        raise ValueError("force residual report applied with abstention_reason")
+    if report.claim_safe and not report.applied:
+        raise ValueError("force residual report claim_safe without applied correction")
+    if report.claim_safe and not report.observed_caps_ready:
+        raise ValueError("force residual report claim_safe without observed caps")
+    if report.confidence < 0.0 or report.confidence > 1.0:
+        raise ValueError("force residual report confidence out of range")
+    for key in (
+        "force_norm_within_cap",
+        "energy_drift_within_cap",
+        "displacement_within_cap",
+        "delta_score_within_cap",
+        "all_observed_caps_within_policy",
+        "policy_caps_ready",
+        "observed_caps_ready",
+    ):
+        if not isinstance(report_dict.get(key), bool):
+            raise ValueError(f"force residual report non-boolean key: {key}")
+
+    if claim_metadata is None:
+        return
+
+    metadata = dict(claim_metadata)
+    missing_metadata_keys = _missing_keys(metadata, REQUIRED_FORCE_RESIDUAL_CLAIM_KEYS)
+    if missing_metadata_keys:
+        raise ValueError(
+            "force residual claim metadata missing keys: " + ",".join(missing_metadata_keys)
+        )
+    if metadata.get("force_residual_claim_metadata_schema_version") != (
+        FORCE_RESIDUAL_CLAIM_METADATA_SCHEMA_VERSION
+    ):
+        raise ValueError("force residual claim metadata schema version mismatch")
+    if metadata.get("force_residual_policy_caps") != report.policy_caps:
+        raise ValueError("force residual claim metadata policy caps mismatch")
+    if metadata.get("force_residual_applied") is not report.applied:
+        raise ValueError("force residual claim metadata applied mismatch")
+    if metadata.get("force_residual_claim_safe") is not report.claim_safe:
+        raise ValueError("force residual claim metadata claim_safe mismatch")
+    if metadata.get("force_residual_observed_caps_ready") is not report.observed_caps_ready:
+        raise ValueError("force residual claim metadata observed caps mismatch")
+    if metadata.get("force_residual_policy_caps_ready") is not report.policy_caps_ready:
+        raise ValueError("force residual claim metadata policy caps mismatch")
+    if metadata.get("force_residual_all_observed_caps_within_policy") is not (
+        report.all_observed_caps_within_policy
+    ):
+        raise ValueError("force residual claim metadata observed cap detail mismatch")
+    required_caps = set(metadata.get("force_residual_required_policy_caps") or [])
+    if not set(REQUIRED_POLICY_CAP_KEYS).issubset(required_caps):
+        raise ValueError("force residual claim metadata required policy caps incomplete")
 
 
 def _report(
