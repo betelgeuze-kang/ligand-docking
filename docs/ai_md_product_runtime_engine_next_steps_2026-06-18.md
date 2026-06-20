@@ -163,8 +163,10 @@ Definition of Done:
 
 현재 진행:
 
-- 2026-06-21 KST 기준 current branch `codex/commercialization-accounting-closure`의 최신 GitHub Actions run은 current remote HEAD `4bf2d0ffa3dc2309f85ce24f9c47556e003fa77f`에서 생성됐으며, 코드/테스트 실패가 아니라 GitHub billing/spending-limit 문제로 job이 시작되지 않았다.
-- `product-api-worker` run `27875494322`와 `product-image-smoke` run `27875494313` 모두 2026-06-20T15:26:47Z(2026-06-21 KST)에 생성됐고, annotation이 "recent account payments have failed or your spending limit needs to be increased" 계열로 기록되며, 따라서 원격 CI green claim은 아직 금지한다.
+- 2026-06-21 KST 기준 current branch `codex/commercialization-accounting-closure`의 GitHub Actions run은 코드/테스트 실패가 아니라 GitHub billing/spending-limit 문제로 job이 시작되지 않았다.
+- `product-api-worker`의 최신 run은 `27875494322`이며 2026-06-20T15:26:47Z(2026-06-21 KST)에 remote head `4bf2d0ffa3dc2309f85ce24f9c47556e003fa77f`에서 생성됐다.
+- `product-image-smoke`의 최신 post-push run은 `27876028178`이며 2026-06-20T15:46:39Z(2026-06-21 KST)에 current remote head `4b3b470e20223430ccf41ea4be080120870680cc`에서 생성됐다.
+- 두 workflow 모두 annotation이 "recent account payments have failed or your spending limit needs to be increased" 계열로 기록되며, 따라서 원격 CI green claim은 아직 금지한다.
 - `runs/product_ci_runtime_gate_current.json` / `.md`는 최신 2026-06-21 KST Actions record를 `latest_github_actions_record_kst_date=2026-06-21`로 기록하고, `status=blocked_product_ci_runtime_gate`, `github_actions_started=false`, `external_blocker=true`, `blocker_code=github_actions_billing_or_spending_limit`, `workflow_dispatch_executed=false`, `external_state_mutated=false`로 fail-closed 상태를 기록한다.
 - 같은 gate는 local ROCm clean-container 증거(`runs/product_image_smoke_preflight_current.json`)를 함께 읽어 `local_rocm_clean_container_ready=true`를 기록하므로, 남은 차단은 owner가 GitHub Billing & plans/spending-limit를 복구한 뒤 `product-api-worker.yml`, `product-image-smoke.yml` build mode, self-hosted ROCm `rocm-runtime` mode를 재실행하는 것이다.
 
