@@ -14,6 +14,13 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
+ROOT_TEXT = str(ROOT)
+if sys.path[:1] != [ROOT_TEXT]:
+    try:
+        sys.path.remove(ROOT_TEXT)
+    except ValueError:
+        pass
+    sys.path.insert(0, ROOT_TEXT)
 
 DEFAULT_WORKSPACE = "runs/tier_alpha_dispatch_smoke/current"
 DEFAULT_OUT_JSON = "runs/tier_alpha_adrb2_dispatch_smoke_current.json"
@@ -121,8 +128,8 @@ def run_tier_alpha_adrb2_dispatch_smoke(
         store=SQLiteJobStore(settings.api_job_store_path),
     )
 
-    store = SQLiteJobStore(settings.api_job_store_path)
     worker_id = "tier-alpha-adrb2-smoke-worker"
+    store = SQLiteJobStore(settings.api_job_store_path)
     deadline = time.monotonic() + max(30, int(timeout_seconds))
     worker_ran = False
     sqlite_status = ""
@@ -155,11 +162,14 @@ def run_tier_alpha_adrb2_dispatch_smoke(
                 return
             await asyncio.sleep(float(poll_seconds))
 
-    try:
-        asyncio.run(asyncio.wait_for(_drain_queue(), timeout=max(1.0, deadline - time.monotonic())))
-    except asyncio.TimeoutError:
-        drain_timed_out = True
-        last_error = "tier_alpha_dispatch_smoke_timeout"
+    if dispatch_outcome.get("dispatched") is not True:
+        last_error = f"dispatch_not_enqueued:{_text(dispatch_outcome.get('reason'))}"
+    else:
+        try:
+            asyncio.run(asyncio.wait_for(_drain_queue(), timeout=max(1.0, deadline - time.monotonic())))
+        except asyncio.TimeoutError:
+            drain_timed_out = True
+            last_error = "tier_alpha_dispatch_smoke_timeout"
 
     ledger = read_job_record(jobs_dir, resolved_job_id) or {}
     worker_state = _text(ledger.get("worker_state"))

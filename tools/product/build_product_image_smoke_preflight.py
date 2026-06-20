@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -14,8 +15,9 @@ DEFAULT_RECEIPT_JSON = "runs/product_image_smoke_receipt_current.json"
 
 CLAIM_BOUNDARY = (
     "Product image smoke preflight only; checks local Docker availability and verifies that the product image "
-    "smoke script/workflow fail closed and expose ROCm-runtime runner validation commands. It does not build images, "
-    "run containers, run docking, mutate Docker state, upload, deploy, submit, email, or delete files."
+    "smoke script/workflow fail closed and expose Docker-host preparation plus ROCm-runtime runner validation "
+    "commands. It does not build images, run containers, run docking, mutate Docker state, upload, deploy, "
+    "submit, email, or delete files."
 )
 
 
@@ -49,6 +51,30 @@ def _int_value(value: Any) -> int:
         return 0
 
 
+def _requirement_lines(text: str) -> set[str]:
+    return {
+        line.strip()
+        for line in text.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    }
+
+
+def _docker_daemon_reachable(docker_cli: str) -> bool:
+    if not docker_cli:
+        return False
+    try:
+        result = subprocess.run(
+            [docker_cli, "info"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0
+
+
 def _write_json(path_like: str | Path, payload: dict[str, Any]) -> None:
     path = _resolve(ROOT, path_like)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -64,6 +90,7 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         f"- status: `{s['status']}`",
         f"- docker_cli_present: `{s['docker_cli_present']}`",
+        f"- docker_daemon_reachable: `{s['docker_daemon_reachable']}`",
         f"- script_contract_ready: `{s['script_contract_ready']}`",
         f"- workflow_contract_ready: `{s['workflow_contract_ready']}`",
         f"- clean_container_smoke_ready: `{s['clean_container_smoke_ready']}`",
@@ -72,6 +99,8 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- container_runtime_receipt_ready: `{s['container_runtime_receipt_ready']}`",
         f"- container_runtime_visible_device_count: `{s['container_runtime_visible_device_count']}`",
         f"- container_runtime_rust_hip_backend_enabled: `{s['container_runtime_rust_hip_backend_enabled']}`",
+        f"- docker_host_setup_command: `{s['docker_host_setup_command']}`",
+        f"- docker_cmd_override_example: `{s['docker_cmd_override_example']}`",
         f"- product_runner_smoke_ready: `{s['product_runner_smoke_ready']}`",
         f"- rocm_runtime_runner_smoke_command: `{s['rocm_runtime_runner_smoke_command']}`",
         "",
@@ -101,23 +130,77 @@ def build_product_image_smoke_preflight(
     *,
     root: str | Path = ROOT,
     docker_cli_path: str | None = None,
+    docker_daemon_ready: bool | None = None,
     receipt_json: str | Path = DEFAULT_RECEIPT_JSON,
 ) -> dict[str, Any]:
     root_path = Path(root)
     docker_cli = docker_cli_path if docker_cli_path is not None else shutil.which("docker")
     docker_cli_present = bool(docker_cli)
+    if docker_daemon_ready is None:
+        docker_daemon_ready = (
+            docker_cli_present
+            if docker_cli_path is not None
+            else _docker_daemon_reachable(str(docker_cli or ""))
+        )
     verify_script = _read_text(root_path, "deploy/verify_product_image.sh")
+    host_setup_script = _read_text(root_path, "scripts/prepare_product_docker_host.sh")
     workflow = _read_text(root_path, ".github/workflows/product-image-smoke.yml")
     dockerfile = _read_text(root_path, "Dockerfile.product")
+    base_requirements = _read_text(root_path, "requirements-base.txt")
+    default_requirements = _read_text(root_path, "requirements.txt")
+    rocm_requirements = _read_text(root_path, "requirements-rocm.txt")
+    product_rocm_requirements = _read_text(root_path, "requirements-product-rocm.txt")
     receipt = _read_json(root_path, receipt_json)
+    base_requirement_lines = _requirement_lines(base_requirements)
+    default_requirement_lines = _requirement_lines(default_requirements)
+    rocm_requirement_lines = _requirement_lines(rocm_requirements)
+    product_rocm_requirement_lines = _requirement_lines(product_rocm_requirements)
+    product_rocm_preserves_base_torch = bool(
+        "-r requirements-base.txt" in product_rocm_requirement_lines
+        and "-r requirements-rocm.txt" not in product_rocm_requirement_lines
+        and "-r requirements.txt" not in product_rocm_requirement_lines
+        and "torch==2.6.0" not in product_rocm_requirement_lines
+        and "-r requirements-base.txt" in rocm_requirement_lines
+        and "-r requirements.txt" not in rocm_requirement_lines
+        and "torch==2.6.0+rocm6.1" in rocm_requirement_lines
+        and "torch==2.6.0" not in rocm_requirement_lines
+        and "-r requirements-base.txt" in default_requirement_lines
+        and "torch==2.6.0" in default_requirement_lines
+        and base_requirement_lines
+        and "torch==2.6.0" not in base_requirement_lines
+        and "requirements-base.txt" in dockerfile
+    )
 
     rows = [
         _contract_row(
             "docker_missing_fail_closed",
-            "docker_cli_missing" in verify_script and "exit 2" in verify_script and "not mark missing Docker as green" in verify_script,
+            "docker_cli_missing" in verify_script
+            and "docker_daemon_unreachable" in verify_script
+            and "exit 2" in verify_script
+            and "not mark missing Docker as green" in verify_script,
             "docker_cli_missing guarded" if "docker_cli_missing" in verify_script else "missing",
-            "missing Docker exits nonzero and is not treated as green",
+            "missing Docker or inaccessible daemon exits nonzero and is not treated as green",
             "deploy/verify_product_image.sh",
+        ),
+        _contract_row(
+            "docker_cmd_override_declared",
+            "DOCKER_CMD" in verify_script
+            and "DOCKER_BIN" in verify_script
+            and "docker_cmd" in verify_script,
+            "DOCKER_CMD override present" if "DOCKER_CMD" in verify_script else "missing",
+            "operator can run the smoke with a Docker-compatible command such as sudo docker",
+            "deploy/verify_product_image.sh",
+        ),
+        _contract_row(
+            "docker_host_setup_script_declared",
+            "docker.io" in host_setup_script
+            and "systemctl enable --now docker" in host_setup_script
+            and "PRODUCT_IMAGE_VERIFY_MODE=rocm-runtime" in host_setup_script
+            and "/dev/kfd" in host_setup_script
+            and "/dev/dri" in host_setup_script,
+            "Docker host setup helper present" if "docker.io" in host_setup_script else "missing",
+            "host helper installs/starts Docker, checks ROCm device nodes, and prints rocm-runtime smoke command",
+            "scripts/prepare_product_docker_host.sh",
         ),
         _contract_row(
             "verify_modes_declared",
@@ -184,6 +267,17 @@ def build_product_image_smoke_preflight(
             "deploy/verify_product_image.sh",
         ),
         _contract_row(
+            "build_mode_receipt_not_product_claim_ready",
+            "product_image_build_smoke_ready" in verify_script
+            and "blocked_product_image_rocm_runtime_smoke" in verify_script
+            and "receipt_ready" in verify_script,
+            "mode-specific receipt status present"
+            if "product_image_build_smoke_ready" in verify_script
+            else "missing",
+            "build-only receipt must not use product_image_smoke_ready claim status",
+            "deploy/verify_product_image.sh",
+        ),
+        _contract_row(
             "workflow_build_mode_declared",
             "PRODUCT_IMAGE_VERIFY_MODE: build" in workflow,
             "build mode in workflow" if "PRODUCT_IMAGE_VERIFY_MODE: build" in workflow else "missing",
@@ -191,16 +285,83 @@ def build_product_image_smoke_preflight(
             ".github/workflows/product-image-smoke.yml",
         ),
         _contract_row(
+            "workflow_pull_request_trigger_declared",
+            "pull_request:" in workflow and "deploy/verify_product_image.sh" in workflow,
+            "pull_request path trigger present" if "pull_request:" in workflow else "missing",
+            "product image smoke runs on PRs for relevant product runtime path changes",
+            ".github/workflows/product-image-smoke.yml",
+        ),
+        _contract_row(
+            "workflow_manual_verify_mode_choice_declared",
+            "workflow_dispatch:" in workflow
+            and "verify_mode:" in workflow
+            and "- build" in workflow
+            and "- rocm-runtime" in workflow,
+            "workflow_dispatch verify_mode choice present" if "verify_mode:" in workflow else "missing",
+            "manual workflow dispatch exposes build vs rocm-runtime mode explicitly",
+            ".github/workflows/product-image-smoke.yml",
+        ),
+        _contract_row(
+            "workflow_rocm_runtime_self_hosted_runner_declared",
+            "product-image-rocm-runtime-smoke" in workflow
+            and "runs-on: [self-hosted, linux, rocm]" in workflow
+            and "PRODUCT_IMAGE_VERIFY_MODE: rocm-runtime" in workflow,
+            "self-hosted rocm runtime job present"
+            if "product-image-rocm-runtime-smoke" in workflow
+            else "missing",
+            "rocm-runtime workflow path must run only on a self-hosted ROCm runner",
+            ".github/workflows/product-image-smoke.yml",
+        ),
+        _contract_row(
+            "workflow_hosted_build_summary_not_product_claim",
+            "product runtime claim: `false`" in workflow
+            and "required runtime claim mode: `rocm-runtime on self-hosted ROCm runner`" in workflow,
+            "hosted build summary claim boundary present"
+            if "product runtime claim: `false`" in workflow
+            else "missing",
+            "hosted CI summary must state build smoke is not product runtime readiness",
+            ".github/workflows/product-image-smoke.yml",
+        ),
+        _contract_row(
             "dockerfile_rocm_hip_rust_contract",
-            "rocm/pytorch" in dockerfile and "torch.version.hip" in dockerfile and "tools/build_rust_hip_engine.py --output /app" in dockerfile,
+            "rocm/pytorch" in dockerfile
+            and "torch.version.hip" in dockerfile
+            and "tools/build_rust_hip_engine.py --output /app" in dockerfile
+            and "requirements-base.txt" in dockerfile,
             "ROCm/HIP/Rust product Dockerfile" if "rocm/pytorch" in dockerfile else "missing",
-            "Dockerfile.product builds ROCm PyTorch and Rust HIP extension",
+            "Dockerfile.product builds ROCm PyTorch and Rust HIP extension and copies split requirement files",
             "Dockerfile.product",
         ),
+        _contract_row(
+            "product_rocm_requirements_no_cpu_torch_pin",
+            product_rocm_preserves_base_torch,
+            (
+                "product_rocm_includes_base="
+                f"{'-r requirements-base.txt' in product_rocm_requirement_lines};"
+                "product_rocm_includes_rocm="
+                f"{'-r requirements-rocm.txt' in product_rocm_requirement_lines};"
+                "product_rocm_includes_default="
+                f"{'-r requirements.txt' in product_rocm_requirement_lines};"
+                "product_rocm_cpu_torch_pin="
+                f"{'torch==2.6.0' in product_rocm_requirement_lines};"
+                "rocm_includes_base="
+                f"{'-r requirements-base.txt' in rocm_requirement_lines};"
+                "rocm_includes_default="
+                f"{'-r requirements.txt' in rocm_requirement_lines};"
+                "rocm_cpu_torch_pin="
+                f"{'torch==2.6.0' in rocm_requirement_lines};"
+                "rocm_torch_pin="
+                f"{'torch==2.6.0+rocm6.1' in rocm_requirement_lines}"
+            ),
+            "product ROCm requirements must install base dependencies only and preserve Dockerfile.product's ROCm PyTorch base build",
+            "requirements-product-rocm.txt",
+        ),
     ]
-    script_contract_ready = all(row["passed"] for row in rows if row["source"] in {"deploy/verify_product_image.sh", "Dockerfile.product"})
+    script_contract_ready = all(row["passed"] for row in rows if row["source"] != ".github/workflows/product-image-smoke.yml")
     workflow_contract_ready = all(row["passed"] for row in rows if row["source"] == ".github/workflows/product-image-smoke.yml")
-    preflight_ready = bool(docker_cli_present and script_contract_ready and workflow_contract_ready)
+    preflight_ready = bool(
+        docker_cli_present and docker_daemon_ready and script_contract_ready and workflow_contract_ready
+    )
     receipt_present = bool(receipt)
     receipt_status = str(receipt.get("status") or "")
     receipt_mode = str(receipt.get("mode") or "")
@@ -311,6 +472,8 @@ def build_product_image_smoke_preflight(
     blockers = []
     if not docker_cli_present:
         blockers.append({"code": "docker_cli_missing"})
+    elif not docker_daemon_ready:
+        blockers.append({"code": "docker_daemon_unreachable"})
     for row in rows:
         if not row["passed"]:
             blockers.append({"code": row["check_id"]})
@@ -320,6 +483,7 @@ def build_product_image_smoke_preflight(
         "preflight_ready": preflight_ready,
         "docker_cli_present": docker_cli_present,
         "docker_cli_path": docker_cli or "",
+        "docker_daemon_reachable": bool(docker_daemon_ready),
         "script_contract_ready": script_contract_ready,
         "workflow_contract_ready": workflow_contract_ready,
         "clean_container_smoke_ready": clean_container_smoke_ready,
@@ -368,6 +532,10 @@ def build_product_image_smoke_preflight(
         "backmapping_hbond_evidence_receipt_ready": backmapping_hbond_evidence_receipt_ready,
         "backmapping_onsps_backmap_receipt_ready": backmapping_onsps_backmap_receipt_ready,
         "build_contract_command": "PRODUCT_IMAGE_VERIFY_MODE=build bash deploy/verify_product_image.sh",
+        "docker_host_setup_command": "bash scripts/prepare_product_docker_host.sh",
+        "docker_cmd_override_example": (
+            "DOCKER_CMD='sudo docker' PRODUCT_IMAGE_VERIFY_MODE=rocm-runtime bash deploy/verify_product_image.sh"
+        ),
         "rocm_runtime_runner_smoke_command": "PRODUCT_IMAGE_VERIFY_MODE=rocm-runtime bash deploy/verify_product_image.sh",
         "required_runtime_mode_for_product_claim": "rocm-runtime",
         "execution_enabled": False,
@@ -377,9 +545,19 @@ def build_product_image_smoke_preflight(
         "external_state_mutated": False,
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
-            "Run PRODUCT_IMAGE_VERIFY_MODE=rocm-runtime bash deploy/verify_product_image.sh on a Docker-enabled ROCm host."
-            if not clean_container_smoke_ready
-            else "Attach clean container smoke receipt to the product evidence bundle."
+            "Run bash scripts/prepare_product_docker_host.sh on this ROCm host, then run "
+            "PRODUCT_IMAGE_VERIFY_MODE=rocm-runtime bash deploy/verify_product_image.sh."
+            if not docker_cli_present
+            else (
+                "Start Docker or refresh this shell's docker group access, then rerun "
+                "PRODUCT_IMAGE_VERIFY_MODE=rocm-runtime bash deploy/verify_product_image.sh."
+                if not docker_daemon_ready
+                else (
+                    "Run PRODUCT_IMAGE_VERIFY_MODE=rocm-runtime bash deploy/verify_product_image.sh on a Docker-enabled ROCm host."
+                    if not clean_container_smoke_ready
+                    else "Attach clean container smoke receipt to the product evidence bundle."
+                )
+            )
         ),
     }
     return {"summary": summary, "rows": rows, "blockers": blockers}

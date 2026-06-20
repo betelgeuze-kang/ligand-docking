@@ -4,9 +4,11 @@ from __future__ import annotations
 import argparse
 import contextlib
 import hashlib
+import importlib
 import io
 import json
 import resource
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -25,7 +27,12 @@ from betelgeuze_engine.contracts import EngineState
 from betelgeuze_engine.interactions.hbond_evidence import evaluate_hbond_evidence
 from betelgeuze_engine.physics import ProductForceField, default_force_term_registry, guarded_force_term_registry
 from betelgeuze_engine.physics.neighbor import full_neighbor_pairs
-from betelgeuze_engine.physics.terms import DirectionalHBondTerm, HydrophobicContactTerm, LegacyLJTerm
+from betelgeuze_engine.physics.terms import (
+    DirectionalHBondTerm,
+    HydrophobicContactTerm,
+    LegacyLJTerm,
+    ScreenedElectrostaticsTerm,
+)
 from betelgeuze_engine.residual import ForceResidualPolicy, apply_guarded_force_residual, decide_force_residual
 from betelgeuze_engine.topology import (
     ComplexTopology,
@@ -66,36 +73,71 @@ CHEMISTRY_FIXTURES = {
 POSE_RANKING_HBOND_FIXTURES = (
     {
         "pose_id": "amide_near_hbond_pose",
+        "benchmark_role": "hbond_recovery_pose",
         "smiles": "CC(=O)N",
         "expected_top1": True,
+        "expected_claim_safe": True,
+        "expected_hbond_status": "pass",
+        "expected_blocked_reason": "",
+        "expect_unsatisfied_donor_acceptor": False,
+        "expect_missing_anchor": False,
+        "expect_overanchored": False,
         "rmsd_proxy_A": 0.35,
         "ligand_xyz": [[2.8, 0.0, 0.0], [0.0, 2.8, 0.0], [1.0, 1.0, 1.0]],
     },
     {
         "pose_id": "ethanol_near_hbond_pose",
+        "benchmark_role": "unsatisfied_donor_pose",
         "smiles": "CCO",
         "expected_top1": False,
+        "expected_claim_safe": False,
+        "expected_hbond_status": "review",
+        "expected_blocked_reason": "missing_expected_anchor",
+        "expect_unsatisfied_donor_acceptor": True,
+        "expect_missing_anchor": True,
+        "expect_overanchored": False,
         "rmsd_proxy_A": 0.85,
         "ligand_xyz": [[2.9, 0.1, 0.0], [0.2, 2.9, 0.0], [1.0, 1.0, 1.0]],
     },
     {
         "pose_id": "amide_far_decoy_pose",
+        "benchmark_role": "far_decoy_pose",
         "smiles": "CC(=O)N",
         "expected_top1": False,
+        "expected_claim_safe": False,
+        "expected_hbond_status": "review",
+        "expected_blocked_reason": "missing_expected_anchor",
+        "expect_unsatisfied_donor_acceptor": True,
+        "expect_missing_anchor": True,
+        "expect_overanchored": False,
         "rmsd_proxy_A": 4.5,
         "ligand_xyz": [[8.0, 0.0, 0.0], [0.0, 8.0, 0.0], [8.0, 8.0, 8.0]],
     },
     {
         "pose_id": "amide_overanchored_decoy_pose",
+        "benchmark_role": "overanchored_decoy_pose",
         "smiles": "CC(=O)N",
         "expected_top1": False,
+        "expected_claim_safe": False,
+        "expected_hbond_status": "review",
+        "expected_blocked_reason": "overanchored_decoy",
+        "expect_unsatisfied_donor_acceptor": True,
+        "expect_missing_anchor": True,
+        "expect_overanchored": True,
         "rmsd_proxy_A": 3.5,
         "ligand_xyz": [[0.0, 0.0, 0.0], [1.6, 0.0, 0.0], [0.5, 0.5, 0.0]],
     },
     {
         "pose_id": "invalid_ligand_pose",
+        "benchmark_role": "invalid_ligand_pose",
         "smiles": "C1(",
         "expected_top1": False,
+        "expected_claim_safe": False,
+        "expected_hbond_status": "invalid_smiles",
+        "expected_blocked_reason": "invalid_smiles",
+        "expect_unsatisfied_donor_acceptor": False,
+        "expect_missing_anchor": True,
+        "expect_overanchored": False,
         "rmsd_proxy_A": 9.0,
         "ligand_xyz": [[2.8, 0.0, 0.0], [0.0, 2.8, 0.0], [1.0, 1.0, 1.0]],
     },
@@ -206,6 +248,7 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
     def run() -> tuple[int, dict[str, Any]]:
         applied = 0
         last_metadata: dict[str, Any] = {}
+        last_report: dict[str, Any] = {}
         for _ in range(row_count):
             decision = decide_force_residual(
                 rank_pct=0.01,
@@ -216,6 +259,7 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
             )
             _updated, report = apply_guarded_force_residual(coords, forces, decision=decision, policy=policy)
             applied += int(report.applied)
+            last_report = report.to_dict()
             last_metadata = report.to_claim_metadata(
                 {
                     "topology_fidelity": "sequence_mapped",
@@ -224,10 +268,12 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
                     "blocked_reason": "",
                 }
             )
-        return applied, last_metadata
+        return applied, {"last_metadata": last_metadata, "last_report": last_report}
 
     _label, elapsed, runtime_value = _timed("guarded_force_residual", run)
-    applied, last_metadata = runtime_value
+    applied, runtime_payload = runtime_value
+    last_metadata = dict(runtime_payload.get("last_metadata") or {})
+    last_report = dict(runtime_payload.get("last_report") or {})
     cap_decision = decide_force_residual(
         rank_pct=0.01,
         topology_valid=True,
@@ -263,7 +309,20 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
         policy=policy,
     )
     policy_caps = cap_report.to_dict()["policy_caps"]
-    bounded_policy_ready = bool(required_policy_caps.issubset(policy_caps))
+    bounded_policy_ready = bool(
+        required_policy_caps.issubset(policy_caps)
+        and last_metadata.get("force_residual_policy_caps_ready") is True
+        and last_report.get("policy_caps_ready") is True
+    )
+    observed_caps_ready = bool(
+        last_report.get("all_observed_caps_within_policy") is True
+        and last_metadata.get("force_residual_all_observed_caps_within_policy") is True
+        and last_metadata.get("force_residual_observed_caps_ready") is True
+        and last_report.get("observed_caps_ready") is True
+        and cap_report.to_dict().get("delta_score_within_cap") is False
+        and uncertainty_report.to_dict().get("all_observed_caps_within_policy") is True
+        and outside_top_k_report.to_dict().get("all_observed_caps_within_policy") is True
+    )
     confidence_abstention_ready = bool(
         uncertainty_report.applied is False
         and uncertainty_report.skipped_reason == "uncertainty_abstained"
@@ -289,10 +348,12 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
             and outside_top_k_report.skipped_reason == "outside_top_k_policy"
         ),
         "bounded_correction_policy_ready": bounded_policy_ready,
+        "observed_caps_ready": observed_caps_ready,
         "confidence_abstention_ready": confidence_abstention_ready,
         "top_k_policy_ready": top_k_policy_ready,
         "required_policy_caps": sorted(required_policy_caps),
         "last_claim_metadata": last_metadata,
+        "last_report": last_report,
         "delta_score_cap_report": cap_report.to_dict(),
         "uncertainty_abstention_report": uncertainty_report.to_dict(),
         "outside_top_k_report": outside_top_k_report.to_dict(),
@@ -302,21 +363,53 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
 
 
 def _neighbor_rebuild_kpi(frame_count: int = 12, rebuild_stride: int = 3) -> dict[str, Any]:
-    coords = torch.zeros(1, 16, 3)
+    base_x = torch.arange(16, dtype=torch.float32).view(1, 16, 1) * 4.0
+    coords = torch.cat([base_x, torch.zeros(1, 16, 2, dtype=torch.float32)], dim=-1)
+    forcefield = ProductForceField.from_registry(names=["legacy_lj"])
+    state = EngineState(
+        coords=coords,
+        atom_types=torch.zeros(16, dtype=torch.long),
+        metadata={
+            "topology_fidelity": "sequence_mapped",
+            "ligand_topology_valid": True,
+            "hbond_evidence_status": "pass",
+            "claim_safe": True,
+            "blocked_reason": "",
+        },
+    )
     rebuild_count = 0
     pair_count = 0
+    forcefield_pair_count = 0
+    forcefield_neighbor_source = ""
+    forcefield_neighbor_pairs_provided = False
     for frame_idx in range(int(frame_count)):
         coords = coords + 0.001
         if frame_idx % int(rebuild_stride) == 0:
             pairs = full_neighbor_pairs(coords, cutoff=8.0)
             rebuild_count += 1
             pair_count = int(pairs.mask.sum().item())
+            state = EngineState(coords=coords, atom_types=state.atom_types, metadata=state.metadata)
+            result = forcefield.energy_forces(state, pairs=pairs)
+            forcefield_pair_count = int(result.diagnostics.get("neighbor_pair_count") or 0)
+            forcefield_neighbor_source = str(result.diagnostics.get("neighbor_source") or "")
+            forcefield_neighbor_pairs_provided = bool(
+                result.diagnostics.get("neighbor_pairs_provided") is True
+            )
+    engine_neighbor_diagnostics_ready = bool(
+        forcefield_pair_count == pair_count
+        and forcefield_neighbor_pairs_provided
+        and forcefield_neighbor_source == "provided"
+    )
     return {
         "frame_count": int(frame_count),
         "rebuild_stride": int(rebuild_stride),
         "neighbor_list_rebuild_count": int(rebuild_count),
         "neighbor_list_rebuild_frequency": float(rebuild_count / max(int(frame_count), 1)),
         "last_neighbor_pair_count": int(pair_count),
+        "last_forcefield_neighbor_pair_count": int(forcefield_pair_count),
+        "forcefield_neighbor_source": forcefield_neighbor_source,
+        "forcefield_neighbor_pairs_provided": forcefield_neighbor_pairs_provided,
+        "engine_neighbor_diagnostics_ready": engine_neighbor_diagnostics_ready,
     }
 
 
@@ -328,6 +421,12 @@ def _physics_kpis() -> dict[str, Any]:
         metadata={
             "hbond_roles": ["donor", "acceptor", "none"],
             "hydrophobic_mask": torch.tensor([False, True, True]),
+            "topology_fidelity": "sequence_mapped",
+            "ligand_topology_valid": True,
+            "hbond_evidence_status": "pass",
+            "force_residual_applied": False,
+            "claim_safe": True,
+            "blocked_reason": "",
         },
     )
     term = LegacyLJTerm(sigma=1.0, epsilon=0.5)
@@ -375,9 +474,18 @@ def _physics_kpis() -> dict[str, Any]:
                 "energy_drift_smoke_pct": float(drift_pct),
                 "claim_safe": term_result.claim_metadata.get("claim_safe") is True,
                 "force_term_status": str(term_result.claim_metadata.get("force_term_status") or ""),
+                "blocked_reason": str(term_result.claim_metadata.get("blocked_reason") or ""),
             }
         )
     force_term_validation_ready = bool(force_term_validation_rows and all(row["ready"] for row in force_term_validation_rows))
+    force_term_validation_claim_safe_count = int(
+        sum(1 for row in force_term_validation_rows if row["claim_safe"] is True)
+    )
+    force_term_validation_claim_safe_ready = bool(
+        force_term_validation_rows
+        and force_term_validation_claim_safe_count == len(force_term_validation_rows)
+        and all(str(row["blocked_reason"] or "") == "" for row in force_term_validation_rows)
+    )
     return {
         "finite_difference_force_error": finite_difference_force_error(term, state, atom_index=0, coord_index=0),
         "translation_invariance_error": translation_invariance_error(
@@ -403,6 +511,8 @@ def _physics_kpis() -> dict[str, Any]:
         "force_term_physics_validation_thresholds": force_term_validation_thresholds,
         "force_term_physics_validation_rows": force_term_validation_rows,
         "force_term_physics_validation_term_count": len(force_term_validation_rows),
+        "force_term_physics_validation_claim_safe_count": force_term_validation_claim_safe_count,
+        "force_term_physics_validation_claim_safe_ready": force_term_validation_claim_safe_ready,
         "force_term_finite_difference_max_error": float(
             max(row["finite_difference_force_error"] for row in force_term_validation_rows)
             if force_term_validation_rows
@@ -628,24 +738,60 @@ def _product_bundle_validation_kpi(product_evidence_bundle_json_path: str) -> di
             "product_image_receipt_mode": "",
             "product_image_receipt_status": "",
             "product_claim_ready": False,
+            "product_image_preflight_blocker_codes": [],
+            "clean_install_missing_requirements": [
+                "clean_container_smoke_ready",
+                "product_runner_smoke_ready",
+                "product_image_receipt_present",
+                "product_image_receipt_mode_rocm_runtime",
+            ],
+            "clean_install_missing_requirement_count": 4,
+            "clean_container_missing_requirements": [],
+            "clean_container_missing_requirement_count": 0,
+            "source_artifacts_fresh": False,
+            "source_artifact_fresh_count": 0,
+            "source_artifact_stale_count": 0,
+            "source_artifact_stale_ids": [],
         }
     validation = validate_product_evidence_bundle(bundle_packet=packet)
     summary = packet.get("summary") if isinstance(packet.get("summary"), dict) else packet
+    clean_install_requirements = {
+        "clean_container_smoke_ready": summary.get("clean_container_smoke_ready") is True,
+        "product_runner_smoke_ready": summary.get("product_runner_smoke_ready") is True,
+        "product_image_receipt_present": summary.get("product_image_receipt_present") is True,
+        "product_image_receipt_mode_rocm_runtime": summary.get("product_image_receipt_mode") == "rocm-runtime",
+    }
+    clean_install_missing_requirements = [
+        requirement for requirement, passed in clean_install_requirements.items() if passed is not True
+    ]
     clean_install_success = bool(
-        summary.get("clean_container_smoke_ready") is True
-        and summary.get("product_runner_smoke_ready") is True
-        and summary.get("product_image_receipt_present") is True
-        and summary.get("product_image_receipt_mode") == "rocm-runtime"
+        not clean_install_missing_requirements
     )
     validation.update(
         {
             "clean_install_success": clean_install_success,
+            "clean_install_requirements": clean_install_requirements,
+            "clean_install_missing_requirements": clean_install_missing_requirements,
+            "clean_install_missing_requirement_count": len(clean_install_missing_requirements),
             "clean_container_smoke_ready": bool(summary.get("clean_container_smoke_ready") is True),
             "product_runner_smoke_ready": bool(summary.get("product_runner_smoke_ready") is True),
             "product_image_receipt_present": bool(summary.get("product_image_receipt_present") is True),
             "product_image_receipt_mode": str(summary.get("product_image_receipt_mode") or ""),
             "product_image_receipt_status": str(summary.get("product_image_receipt_status") or ""),
             "product_claim_ready": bool(summary.get("product_claim_ready") is True),
+            "product_image_preflight_blocker_codes": list(
+                summary.get("product_image_preflight_blocker_codes") or []
+            ),
+            "clean_container_missing_requirements": list(
+                summary.get("clean_container_missing_requirements") or []
+            ),
+            "clean_container_missing_requirement_count": int(
+                summary.get("clean_container_missing_requirement_count") or 0
+            ),
+            "source_artifacts_fresh": bool(validation.get("source_artifacts_fresh") is True),
+            "source_artifact_fresh_count": int(validation.get("source_artifact_fresh_count") or 0),
+            "source_artifact_stale_count": int(validation.get("source_artifact_stale_count") or 0),
+            "source_artifact_stale_ids": list(validation.get("source_artifact_stale_ids") or []),
         }
     )
     return validation
@@ -690,6 +836,12 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
     term_diagnostics = result.diagnostics.get("term_diagnostics")
     if not isinstance(term_diagnostics, dict):
         term_diagnostics = {}
+    forcefield_neighbor_pair_count = int(result.diagnostics.get("neighbor_pair_count") or 0)
+    forcefield_neighbor_diagnostics_ready = bool(
+        forcefield_neighbor_pair_count > 0
+        and result.diagnostics.get("neighbor_pairs_provided") is False
+        and result.diagnostics.get("neighbor_source") == "full_neighbor_pairs"
+    )
     term_result_contract_rows: list[dict[str, Any]] = []
     for term in default_force_term_registry().create(force_term_plugins):
         term_name = str(getattr(term, "name", term.__class__.__name__))
@@ -785,6 +937,7 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
     )
     ready = bool(
         result.claim_metadata.get("claim_safe") is True
+        and forcefield_neighbor_diagnostics_ready
         and result.claim_metadata.get("force_term_claim_metadata_ready") is True
         and result.claim_metadata.get("force_term_claim_metadata_schema_version")
         == "force_term_claim_metadata_v1"
@@ -811,6 +964,12 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
         "ready": ready,
         "term_result_contract_ready": term_result_contract_ready,
         "forcefield_claim_safe": result.claim_metadata.get("claim_safe") is True,
+        "forcefield_neighbor_diagnostics_ready": forcefield_neighbor_diagnostics_ready,
+        "forcefield_neighbor_pair_count": forcefield_neighbor_pair_count,
+        "forcefield_neighbor_pairs_provided": bool(
+            result.diagnostics.get("neighbor_pairs_provided") is True
+        ),
+        "forcefield_neighbor_source": str(result.diagnostics.get("neighbor_source") or ""),
         "forcefield_blocked_reason": str(result.claim_metadata.get("blocked_reason") or ""),
         "forcefield_hbond_evidence_status": str(result.claim_metadata.get("hbond_evidence_status") or ""),
         "forcefield_hbond_evidence_schema_version": str(
@@ -870,6 +1029,9 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
             },
         )
     )
+    cap_exceeded = ScreenedElectrostaticsTerm(scale=4.0, debye_kappa=0.2, max_force_norm=1e-12).energy_forces(
+        state
+    )
     forcefield = ProductForceField.from_registry(registry, names=["screened_electrostatics"])
     forcefield_result = forcefield.energy_forces(
         EngineState(
@@ -888,6 +1050,23 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
             "claim_safe": True,
             "blocked_reason": "",
         },
+    )
+    forcefield_claim_rows = list(forcefield_result.claim_metadata.get("force_term_claim_rows") or [])
+    forcefield_guarded_row = next(
+        (
+            row
+            for row in forcefield_claim_rows
+            if isinstance(row, dict) and row.get("force_term_name") == "screened_electrostatics"
+        ),
+        {},
+    )
+    forcefield_bounded_row_ready = bool(
+        forcefield_guarded_row.get("policy_caps_ready") is True
+        and forcefield_guarded_row.get("observed_caps_ready") is True
+        and forcefield_guarded_row.get("bounded_correction_ready") is True
+        and forcefield_guarded_row.get("abs_energy_within_cap") is True
+        and forcefield_guarded_row.get("force_norm_within_cap") is True
+        and forcefield_guarded_row.get("active_pair_count_within_cap") is True
     )
     ready = bool(
         default_names == ["directional_hbond", "hydrophobic_contact", "legacy_lj"]
@@ -911,8 +1090,21 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
         and unvalidated.claim_metadata.get("force_term_status") == "charge_model_unvalidated"
         and unvalidated.claim_metadata.get("blocked_reason")
         == "screened_electrostatics_charge_model_unvalidated"
+        and result.claim_metadata.get("force_term_policy_caps_ready") is True
+        and result.claim_metadata.get("force_term_observed_caps_ready") is True
+        and result.claim_metadata.get("force_term_bounded_correction_ready") is True
+        and result.claim_metadata.get("force_term_abs_energy_within_cap") is True
+        and result.claim_metadata.get("force_term_force_norm_within_cap") is True
+        and result.claim_metadata.get("force_term_active_pair_count_within_cap") is True
+        and cap_exceeded.claim_metadata.get("claim_safe") is False
+        and cap_exceeded.claim_metadata.get("force_term_status") == "policy_cap_exceeded"
+        and cap_exceeded.claim_metadata.get("blocked_reason")
+        == "screened_electrostatics_policy_cap_exceeded"
+        and cap_exceeded.claim_metadata.get("force_term_observed_caps_ready") is False
+        and cap_exceeded.claim_metadata.get("force_term_bounded_correction_ready") is False
         and forcefield_result.claim_metadata.get("claim_safe") is True
         and forcefield_result.claim_metadata.get("force_term_plugins") == ["screened_electrostatics"]
+        and forcefield_bounded_row_ready
     )
     return {
         "ready": ready,
@@ -927,6 +1119,30 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
         "finite_difference_force_error": float(fd_error),
         "claim_safe": result.claim_metadata.get("claim_safe") is True,
         "force_term_status": str(result.claim_metadata.get("force_term_status") or ""),
+        "policy_caps_ready": result.claim_metadata.get("force_term_policy_caps_ready") is True,
+        "observed_caps_ready": result.claim_metadata.get("force_term_observed_caps_ready") is True,
+        "bounded_correction_ready": result.claim_metadata.get(
+            "force_term_bounded_correction_ready"
+        )
+        is True,
+        "abs_energy_within_cap": result.claim_metadata.get("force_term_abs_energy_within_cap") is True,
+        "force_norm_within_cap": result.claim_metadata.get("force_term_force_norm_within_cap") is True,
+        "active_pair_count_within_cap": result.claim_metadata.get(
+            "force_term_active_pair_count_within_cap"
+        )
+        is True,
+        "policy_cap_exceeded_blocked": bool(
+            cap_exceeded.claim_metadata.get("claim_safe") is False
+            and cap_exceeded.claim_metadata.get("force_term_status") == "policy_cap_exceeded"
+            and cap_exceeded.claim_metadata.get("blocked_reason")
+            == "screened_electrostatics_policy_cap_exceeded"
+            and cap_exceeded.claim_metadata.get("force_term_observed_caps_ready") is False
+        ),
+        "forcefield_bounded_row_ready": forcefield_bounded_row_ready,
+        "forcefield_guarded_claim_row": dict(forcefield_guarded_row),
+        "policy_caps": dict(result.claim_metadata.get("force_term_policy_caps") or {}),
+        "observed_abs_energy": float(result.claim_metadata.get("force_term_abs_energy") or 0.0),
+        "observed_force_norm": float(result.claim_metadata.get("force_term_observed_force_norm") or 0.0),
         "missing_charge_blocked": bool(
             missing.claim_metadata.get("claim_safe") is False
             and missing.claim_metadata.get("force_term_status") == "charges_missing"
@@ -967,6 +1183,13 @@ def _signed_runner_claim_metadata_kpi() -> dict[str, Any]:
         "claim_safe_row_count": 0,
         "onsps_backmap_schema_version": "onsps_backmap_evidence_v1",
     }
+    force_residual_summary = {
+        "schema_version": "force_residual_claim_metadata_v1",
+        "applied": False,
+        "reason": "disabled",
+        "policy_caps_ready": True,
+        "observed_caps_ready": True,
+    }
     manifest = build_result_manifest(
         job_id="kpi_runner_claim_metadata_smoke",
         request={"target_name": "kpi", "runner_profile_id": "backmapping_scoring.production"},
@@ -976,13 +1199,16 @@ def _signed_runner_claim_metadata_kpi() -> dict[str, Any]:
         key_id="kpi-test",
         result_claim_metadata=runner_claim_metadata,
         hbond_evidence_summary=hbond_summary,
+        force_residual_summary=force_residual_summary,
     )
     signed = verify_result_manifest(manifest, signing_key="kpi-test-key")
     ready = bool(
         signed
         and manifest.get("result_claim_metadata") == runner_claim_metadata
         and manifest.get("hbond_evidence_summary") == hbond_summary
+        and manifest.get("force_residual_summary") == force_residual_summary
         and manifest["result_claim_metadata"].get("claim_safe") is False
+        and str(manifest["result_claim_metadata"].get("blocked_reason") or "")
         and manifest["result_claim_metadata"].get("hbond_evidence_schema_version") == "hbond_evidence_v1"
         and int(manifest["result_claim_metadata"].get("hbond_evidence_schema_ready_row_count") or 0) == 2
         and manifest["result_claim_metadata"].get("ligand_topology_claim_safe") is True
@@ -997,7 +1223,11 @@ def _signed_runner_claim_metadata_kpi() -> dict[str, Any]:
         "signature_verified": signed,
         "result_claim_metadata_present": isinstance(manifest.get("result_claim_metadata"), dict),
         "hbond_evidence_summary_present": isinstance(manifest.get("hbond_evidence_summary"), dict),
+        "force_residual_summary_present": isinstance(manifest.get("force_residual_summary"), dict),
         "manifest_claim_safe": manifest.get("result_claim_metadata", {}).get("claim_safe"),
+        "manifest_blocked_reason": str(
+            manifest.get("result_claim_metadata", {}).get("blocked_reason") or ""
+        ),
         "manifest_ligand_topology_valid": manifest.get("result_claim_metadata", {}).get("ligand_topology_valid"),
         "manifest_ligand_topology_claim_safe": manifest.get("result_claim_metadata", {}).get(
             "ligand_topology_claim_safe"
@@ -1018,6 +1248,15 @@ def _signed_runner_claim_metadata_kpi() -> dict[str, Any]:
         "manifest_hbond_evidence_schema_ready_row_count": int(
             manifest.get("result_claim_metadata", {}).get("hbond_evidence_schema_ready_row_count") or 0
         ),
+        "manifest_force_residual_schema_version": manifest.get("force_residual_summary", {}).get(
+            "schema_version"
+        ),
+        "manifest_force_residual_policy_caps_ready": manifest.get("force_residual_summary", {}).get(
+            "policy_caps_ready"
+        ),
+        "manifest_force_residual_observed_caps_ready": manifest.get("force_residual_summary", {}).get(
+            "observed_caps_ready"
+        ),
     }
 
 
@@ -1033,6 +1272,11 @@ def _engine_topology_factory_facade_kpi() -> dict[str, Any]:
         smiles="C[C@H](O)C(=O)O",
         n_res=3,
     )
+    empty_protein = factory.from_sequence_and_smiles(
+        sequence="",
+        smiles="C[C@H](O)C(=O)O",
+        n_res=0,
+    )
     invalid_ligand = factory.from_sequence_and_smiles(
         sequence="ACD",
         smiles="C1(",
@@ -1042,9 +1286,17 @@ def _engine_topology_factory_facade_kpi() -> dict[str, Any]:
         and valid.complex_topology.claim_scope == "kpi_smoke"
         and valid.complex_topology.pocket_residue_indices == [1]
         and valid.claim_metadata.get("claim_safe") is True
+        and int(valid.claim_metadata.get("protein_residue_count") or 0) == 3
+        and valid.claim_metadata.get("protein_topology_valid") is True
         and valid.claim_metadata.get("ligand_topology_schema_version") == "ligand_topology_validity_v1"
         and placeholder.claim_metadata.get("claim_safe") is False
         and placeholder.claim_metadata.get("blocked_reason") == "placeholder_alanine_topology"
+        and int(placeholder.claim_metadata.get("protein_residue_count") or 0) == 3
+        and placeholder.claim_metadata.get("protein_topology_valid") is True
+        and empty_protein.claim_metadata.get("claim_safe") is False
+        and empty_protein.claim_metadata.get("blocked_reason") == "empty_protein_topology"
+        and int(empty_protein.claim_metadata.get("protein_residue_count", -1)) == 0
+        and empty_protein.claim_metadata.get("protein_topology_valid") is False
         and invalid_ligand.claim_metadata.get("claim_safe") is False
         and invalid_ligand.claim_metadata.get("blocked_reason") == "invalid_smiles"
     )
@@ -1053,10 +1305,19 @@ def _engine_topology_factory_facade_kpi() -> dict[str, Any]:
         "facade": "betelgeuze_engine.topology.TopologyFactoryFacade",
         "valid_claim_safe": valid.claim_metadata.get("claim_safe") is True,
         "valid_topology_fidelity": str(valid.claim_metadata.get("topology_fidelity") or ""),
+        "valid_protein_residue_count": int(valid.claim_metadata.get("protein_residue_count") or 0),
+        "valid_protein_topology_valid": valid.claim_metadata.get("protein_topology_valid") is True,
         "valid_ligand_topology_schema_version": str(
             valid.claim_metadata.get("ligand_topology_schema_version") or ""
         ),
+        "placeholder_protein_residue_count": int(
+            placeholder.claim_metadata.get("protein_residue_count") or 0
+        ),
+        "placeholder_protein_topology_valid": placeholder.claim_metadata.get("protein_topology_valid") is True,
         "placeholder_blocked_reason": str(placeholder.claim_metadata.get("blocked_reason") or ""),
+        "empty_protein_residue_count": int(empty_protein.claim_metadata.get("protein_residue_count") or 0),
+        "empty_protein_topology_valid": empty_protein.claim_metadata.get("protein_topology_valid") is True,
+        "empty_protein_blocked_reason": str(empty_protein.claim_metadata.get("blocked_reason") or ""),
         "invalid_ligand_blocked_reason": str(invalid_ligand.claim_metadata.get("blocked_reason") or ""),
     }
 
@@ -1151,10 +1412,17 @@ def _core_forcefield_bridge_kpi() -> dict[str, Any]:
             },
         )
         registry_names = default_product_forcefield(term_names=["legacy_lj"]).terms[0].name
+        neighbor_pair_count = int(result.diagnostics.get("neighbor_pair_count") or 0)
+        neighbor_diagnostics_ready = bool(
+            neighbor_pair_count > 0
+            and result.diagnostics.get("neighbor_pairs_provided") is False
+            and result.diagnostics.get("neighbor_source") == "full_neighbor_pairs"
+        )
         ready = bool(
             result.claim_metadata.get("claim_safe") is True
             and result.claim_metadata.get("force_term_claim_metadata_ready") is True
             and result.claim_metadata.get("force_term_plugins") == ["legacy_lj"]
+            and neighbor_diagnostics_ready
             and registry_names == "legacy_lj"
         )
         return {
@@ -1164,6 +1432,10 @@ def _core_forcefield_bridge_kpi() -> dict[str, Any]:
             "force_term_plugins": list(result.claim_metadata.get("force_term_plugins") or []),
             "energy_shape": list(result.energy.shape),
             "forces_shape": list(result.forces.shape),
+            "neighbor_diagnostics_ready": neighbor_diagnostics_ready,
+            "neighbor_pair_count": neighbor_pair_count,
+            "neighbor_pairs_provided": bool(result.diagnostics.get("neighbor_pairs_provided") is True),
+            "neighbor_source": str(result.diagnostics.get("neighbor_source") or ""),
             "bridge_execution_scope": "metadata_contract_only_not_runtime_gpu_claim",
         }
     except Exception as exc:
@@ -1258,6 +1530,10 @@ def _core_compatibility_layer_kpi(core_forcefield_bridge: dict[str, Any] | None 
             "result_claim_safe": forcefield_bridge.get("result_claim_safe") is True,
             "force_term_claim_metadata_ready": forcefield_bridge.get("force_term_claim_metadata_ready") is True,
             "force_term_plugins": list(forcefield_bridge.get("force_term_plugins") or []),
+            "neighbor_diagnostics_ready": forcefield_bridge.get("neighbor_diagnostics_ready") is True,
+            "neighbor_pair_count": int(forcefield_bridge.get("neighbor_pair_count") or 0),
+            "neighbor_pairs_provided": forcefield_bridge.get("neighbor_pairs_provided") is True,
+            "neighbor_source": str(forcefield_bridge.get("neighbor_source") or ""),
             "error": str(forcefield_bridge.get("error") or ""),
         }
     )
@@ -1276,32 +1552,42 @@ def _allowlisted_runner_shim_contract_kpi(profiles_dir: str | Path) -> dict[str,
             "ligand_htvs_pipeline_default",
             Path("tools/run_ligand_htvs_pipeline.py"),
             "betelgeuze_engine.product.runners.htvs_pipeline",
+            ("main", "build_parser"),
         ),
         (
             "backmapping_scoring.production",
             Path("tools/run_ligand_backmapping_scoring.py"),
             "betelgeuze_engine.product.runners.backmapping_scoring",
+            ("main", "_frame_mmpbsa_proxy"),
         ),
         (
             "ligand_topk_delivery.production",
             Path("tools/run_ligand_topk_delivery.py"),
             "betelgeuze_engine.product.runners.topk_delivery",
+            ("main", "build_delivery"),
         ),
     ]
     root = Path(profiles_dir)
     rows: list[dict[str, Any]] = []
-    for profile_id, script_path, adapter_import in cases:
+    for profile_id, script_path, adapter_import, required_symbols in cases:
         profile_path = root / f"{profile_id}.json"
+        legacy_import = ".".join(script_path.with_suffix("").parts)
         script_hash = ""
         profile_hash = ""
         profile_script = ""
         error = ""
         adapter_present = False
+        runtime_adapter_identity_ready = False
+        missing_runtime_symbols: list[str] = []
+        runtime_adapter_error = ""
+        adapter_module: Any | None = None
         if script_path.exists():
             script_bytes = script_path.read_bytes()
+            script_text = script_bytes.decode("utf-8", errors="ignore")
             script_hash = hashlib.sha256(script_bytes).hexdigest()
-            adapter_present = adapter_import in script_bytes.decode("utf-8", errors="ignore")
+            adapter_present = adapter_import in script_text
         else:
+            script_text = ""
             error = "runner_script_missing"
         if profile_path.exists():
             try:
@@ -1316,6 +1602,44 @@ def _allowlisted_runner_shim_contract_kpi(profiles_dir: str | Path) -> dict[str,
                 error = error or "profile_json_invalid"
         else:
             error = error or "runner_profile_missing"
+        if not error and adapter_present:
+            try:
+                legacy_module = importlib.import_module(legacy_import)
+                adapter_module = importlib.import_module(adapter_import)
+                missing_runtime_symbols = [
+                    name
+                    for name in required_symbols
+                    if not hasattr(legacy_module, name) or not hasattr(adapter_module, name)
+                ]
+                runtime_adapter_identity_ready = bool(
+                    not missing_runtime_symbols
+                    and all(
+                        getattr(legacy_module, name) is getattr(adapter_module, name)
+                        for name in required_symbols
+                    )
+                )
+            except Exception as exc:  # pragma: no cover - report evidence, do not hide import failures.
+                runtime_adapter_error = f"{type(exc).__name__}: {exc}"
+        elif not adapter_present:
+            runtime_adapter_error = "adapter_import_missing_from_shim"
+        legacy_alias = sys.modules.get(legacy_import)
+        sys_modules_alias_ready = bool(
+            runtime_adapter_identity_ready
+            and adapter_module is not None
+            and legacy_alias is adapter_module
+        ) if adapter_present and not runtime_adapter_error else False
+        has_module_alias_assignment = (
+            "sys.modules[__name__]" in script_text or "_sys.modules[__name__]" in script_text
+        )
+        self_implementation_blocked = bool(
+            has_module_alias_assignment
+            and "_module = _import_module" in script_text
+            and "def main(" not in script_text
+            and "argparse.ArgumentParser" not in script_text
+        )
+        shim_contract_type = (
+            "canonical_module_alias" if sys_modules_alias_ready and self_implementation_blocked else "unknown"
+        )
         rows.append(
             {
                 "profile_id": profile_id,
@@ -1323,11 +1647,22 @@ def _allowlisted_runner_shim_contract_kpi(profiles_dir: str | Path) -> dict[str,
                 "profile_runner_script": profile_script,
                 "adapter_import": adapter_import,
                 "adapter_import_present": adapter_present,
+                "shim_contract_type": shim_contract_type,
+                "sys_modules_alias_ready": sys_modules_alias_ready,
+                "runtime_module_name": str(getattr(adapter_module, "__name__", "")) if adapter_module is not None else "",
+                "self_implementation_blocked": self_implementation_blocked,
+                "required_runtime_symbols": list(required_symbols),
+                "runtime_adapter_identity_ready": runtime_adapter_identity_ready,
+                "missing_runtime_symbols": missing_runtime_symbols,
+                "runtime_adapter_error": runtime_adapter_error,
                 "script_hash": script_hash,
                 "profile_runner_script_sha256": profile_hash,
                 "hash_matches": bool(script_hash and profile_hash and script_hash == profile_hash),
                 "ready": bool(
                     adapter_present
+                    and sys_modules_alias_ready
+                    and self_implementation_blocked
+                    and runtime_adapter_identity_ready
                     and profile_script == str(script_path)
                     and script_hash
                     and profile_hash
@@ -1414,7 +1749,24 @@ def _product_kpis(profiles_dir: str, product_evidence_bundle_json_path: str) -> 
         "product_image_receipt_mode": str(bundle_validation.get("product_image_receipt_mode") or ""),
         "product_image_receipt_status": str(bundle_validation.get("product_image_receipt_status") or ""),
         "product_claim_ready": bool(bundle_validation.get("product_claim_ready") is True),
+        "clean_install_requirements": dict(bundle_validation.get("clean_install_requirements") or {}),
+        "clean_install_missing_requirements": list(
+            bundle_validation.get("clean_install_missing_requirements") or []
+        ),
+        "clean_install_missing_requirement_count": int(
+            bundle_validation.get("clean_install_missing_requirement_count") or 0
+        ),
+        "product_image_preflight_blocker_codes": list(
+            bundle_validation.get("product_image_preflight_blocker_codes") or []
+        ),
+        "clean_container_missing_requirements": list(
+            bundle_validation.get("clean_container_missing_requirements") or []
+        ),
+        "clean_container_missing_requirement_count": int(
+            bundle_validation.get("clean_container_missing_requirement_count") or 0
+        ),
         "runner_profile_validation_status": profile_payload.get("status"),
+        "runner_profile_validation_pass": profile_payload.get("status") == "pass",
         "enabled_profile_count": int(profile_payload.get("enabled_profile_count", 0)),
         "failed_profile_count": int(profile_payload.get("failed_profile_count", 0)),
         "signed_manifest_verification_pass": verify_result_manifest(manifest, signing_key="kpi-test-key"),
@@ -1424,6 +1776,10 @@ def _product_kpis(profiles_dir: str, product_evidence_bundle_json_path: str) -> 
         "bundle_validation_checked": bool(bundle_validation.get("bundle_validation_checked") is True),
         "bundle_validation_error_count": int(bundle_validation.get("bundle_validation_error_count") or 0),
         "bundle_validation_errors": list(bundle_validation.get("bundle_validation_errors") or []),
+        "source_artifacts_fresh": bool(bundle_validation.get("source_artifacts_fresh") is True),
+        "source_artifact_fresh_count": int(bundle_validation.get("source_artifact_fresh_count") or 0),
+        "source_artifact_stale_count": int(bundle_validation.get("source_artifact_stale_count") or 0),
+        "source_artifact_stale_ids": list(bundle_validation.get("source_artifact_stale_ids") or []),
         "bundle_validation_contract": "opens_ai_md_product_evidence_tar_and_verifies_manifest_sha_members",
         "force_term_plugin_registry_ready": force_term_plugins
         == ["directional_hbond", "hydrophobic_contact", "legacy_lj"],
@@ -1478,11 +1834,33 @@ def _pose_ranking_hbond_benchmark() -> dict[str, Any]:
         )
         validity_bonus = 0.0 if ligand.validity.get("valid") is True else -10.0
         score = float((evidence.hbond_confidence * 10.0) - float(fixture["rmsd_proxy_A"]) + validity_bonus)
+        unsatisfied_site_count = int(evidence.unsatisfied_donor_count) + int(evidence.unsatisfied_acceptor_count)
+        expected_blocked_reason = str(fixture.get("expected_blocked_reason") or "")
+        expected_claim_safe = bool(fixture.get("expected_claim_safe") is True)
+        expected_status = str(fixture.get("expected_hbond_status") or "")
+        expect_unsatisfied = bool(fixture.get("expect_unsatisfied_donor_acceptor") is True)
+        expect_missing_anchor = bool(fixture.get("expect_missing_anchor") is True)
+        expect_overanchored = bool(fixture.get("expect_overanchored") is True)
+        role_contract_checks = {
+            "claim_safe_matches": evidence.claim_safe is expected_claim_safe,
+            "status_matches": evidence.status == expected_status,
+            "blocked_reason_matches": str(evidence.blocked_reason or "") == expected_blocked_reason,
+            "unsatisfied_expectation_matches": (unsatisfied_site_count > 0) is expect_unsatisfied,
+            "missing_anchor_expectation_matches": evidence.missing_expected_anchor_flag is expect_missing_anchor,
+            "overanchored_expectation_matches": evidence.overanchoring_flag is expect_overanchored,
+        }
         rows.append(
             {
                 "pose_id": fixture["pose_id"],
+                "benchmark_role": fixture["benchmark_role"],
                 "smiles": fixture["smiles"],
                 "expected_top1": fixture["expected_top1"],
+                "expected_claim_safe": expected_claim_safe,
+                "expected_hbond_status": expected_status,
+                "expected_blocked_reason": expected_blocked_reason,
+                "expected_unsatisfied_donor_acceptor": expect_unsatisfied,
+                "expected_missing_anchor": expect_missing_anchor,
+                "expected_overanchored": expect_overanchored,
                 "ligand_valid": ligand.validity.get("valid") is True,
                 "hbond_status": evidence.status,
                 "hbond_schema_version": evidence.schema_version,
@@ -1506,6 +1884,8 @@ def _pose_ranking_hbond_benchmark() -> dict[str, Any]:
                 "onsps_backmap_claim_safe": evidence.onsps_backmap_metadata.get("claim_safe"),
                 "onsps_backmap_blocked_reason": evidence.onsps_backmap_metadata.get("blocked_reason", ""),
                 "missing_expected_anchor_flag": evidence.missing_expected_anchor_flag,
+                "benchmark_contract_checks": role_contract_checks,
+                "benchmark_contract_pass": all(role_contract_checks.values()),
                 "rmsd_proxy_A": float(fixture["rmsd_proxy_A"]),
                 "ranking_score": score,
             }
@@ -1537,9 +1917,23 @@ def _pose_ranking_hbond_benchmark() -> dict[str, Any]:
     ]
     far_decoys_blocked = all(
         row["missing_expected_anchor_flag"] is True
+        and row["hbond_claim_safe"] is False
+        and row["hbond_blocked_reason"] == "missing_expected_anchor"
         for row in rows
         if str(row["pose_id"]).endswith("_decoy_pose")
         and "overanchored" not in str(row["pose_id"])
+    )
+    required_roles = {
+        "hbond_recovery_pose",
+        "unsatisfied_donor_pose",
+        "far_decoy_pose",
+        "overanchored_decoy_pose",
+        "invalid_ligand_pose",
+    }
+    observed_roles = {str(row["benchmark_role"]) for row in rows}
+    row_contracts_ready = bool(
+        required_roles.issubset(observed_roles)
+        and all(row["benchmark_contract_pass"] is True for row in rows)
     )
     return {
         "benchmark_ready": bool(
@@ -1548,8 +1942,14 @@ def _pose_ranking_hbond_benchmark() -> dict[str, Any]:
             and invalid_blocked
             and far_decoys_blocked
             and overanchored_decoys_blocked
+            and bool(unsatisfied_rows)
+            and row_contracts_ready
         ),
         "fixture_count": len(rows),
+        "required_pose_roles": sorted(required_roles),
+        "observed_pose_roles": sorted(observed_roles),
+        "row_contracts_ready": row_contracts_ready,
+        "row_contract_pass_count": sum(1 for row in rows if row["benchmark_contract_pass"] is True),
         "top1_pose_id": str(top1.get("pose_id", "")),
         "top1_expected_pose_id": "amide_near_hbond_pose",
         "top1_pass": top1_pass,
@@ -1602,6 +2002,8 @@ def _pm_kpi_summary(
         "signed_manifest_verification_pass": product.get("signed_manifest_verification_pass") is True,
         "runner_claim_metadata_signed": product.get("runner_claim_metadata_signed") is True,
         "bundle_validation_pass": product.get("bundle_validation_pass") is True,
+        "source_artifacts_fresh": product.get("source_artifacts_fresh") is True,
+        "force_term_plugin_registry_ready": product.get("force_term_plugin_registry_ready") is True,
         "force_term_claim_metadata_ready": product.get("force_term_claim_metadata_ready") is True,
         "force_term_result_contract_ready": product.get("force_term_result_contract_ready") is True,
         "guarded_force_term_plugin_ready": product.get("guarded_force_term_plugin_ready") is True,
@@ -1615,7 +2017,32 @@ def _pm_kpi_summary(
         "rocm_hip_rust_runtime_ready": rocm_runtime_ready,
     }
     runtime_gate_values = {
+        "score_only_1k_runtime_tracked": (
+            int(runtime_score.get("row_count") or 0) > 0
+            and float(runtime_score.get("duration_sec") or 0.0) > 0.0
+            and float(runtime_score.get("rows_per_sec") or 0.0) > 0.0
+        ),
+        "top100_4bead_rescoring_runtime_tracked": (
+            int(runtime_onsps.get("row_count") or 0) > 0
+            and float(runtime_onsps.get("duration_sec") or 0.0) > 0.0
+            and float(runtime_onsps.get("rows_per_sec") or 0.0) > 0.0
+            and int(runtime_onsps.get("onsps_backmap_claim_safe_count") or 0) > 0
+        ),
+        "top10_force_residual_runtime_tracked": (
+            int(runtime_residual.get("row_count") or 0) > 0
+            and float(runtime_residual.get("duration_sec") or 0.0) > 0.0
+            and float(runtime_residual.get("rows_per_sec") or 0.0) > 0.0
+            and int(runtime_residual.get("applied_count") or 0) > 0
+        ),
+        "memory_peak_tracked": float(runtime.get("memory_peak_mb") or 0.0) > 0.0,
+        "neighbor_list_rebuild_frequency_tracked": (
+            int(neighbor.get("frame_count") or 0) > 0
+            and int(neighbor.get("neighbor_list_rebuild_count") or 0) > 0
+            and float(neighbor.get("neighbor_list_rebuild_frequency") or 0.0) > 0.0
+            and neighbor.get("engine_neighbor_diagnostics_ready") is True
+        ),
         "force_residual_bounded_policy_ready": runtime_residual.get("bounded_correction_policy_ready") is True,
+        "force_residual_observed_caps_ready": runtime_residual.get("observed_caps_ready") is True,
         "force_residual_confidence_abstention_ready": runtime_residual.get("confidence_abstention_ready") is True,
         "force_residual_top_k_policy_ready": runtime_residual.get("top_k_policy_ready") is True,
     }
@@ -1626,6 +2053,9 @@ def _pm_kpi_summary(
         "neighbor_list_parity_pass": float(physics.get("neighbor_list_parity_error") or 0.0) == 0.0,
         "energy_drift_pass": float(physics.get("energy_drift_smoke_pct") or 0.0) < 1e-2,
         "force_term_physics_validation_ready": physics.get("force_term_physics_validation_ready") is True,
+        "force_term_physics_validation_claim_safe_ready": (
+            physics.get("force_term_physics_validation_claim_safe_ready") is True
+        ),
         "topology_invalid_rate_pass": (
             "topology_invalid_rate" in physics
             and float(physics.get("topology_invalid_rate") or 0.0) < 0.2
@@ -1662,6 +2092,24 @@ def _pm_kpi_summary(
         "pose_ranking_hbond_benchmark_ready": pose_ranking_hbond.get("benchmark_ready") is True,
     }
     failed = [key for key, value in gate_values.items() if value is not True]
+    product_summary_values = {
+        **product_gate_values,
+        "clean_install_missing_requirement_count": int(
+            product.get("clean_install_missing_requirement_count") or 0
+        ),
+        "clean_install_missing_requirements": list(
+            product.get("clean_install_missing_requirements") or []
+        ),
+        "product_image_preflight_blocker_codes": list(
+            product.get("product_image_preflight_blocker_codes") or []
+        ),
+        "clean_container_missing_requirement_count": int(
+            product.get("clean_container_missing_requirement_count") or 0
+        ),
+        "clean_container_missing_requirements": list(
+            product.get("clean_container_missing_requirements") or []
+        ),
+    }
     return {
         "summary_ready": not failed,
         "failed_gate_ids": failed,
@@ -1676,7 +2124,19 @@ def _pm_kpi_summary(
             "neighbor_list_rebuild_frequency": float(
                 neighbor.get("neighbor_list_rebuild_frequency") or 0.0
             ),
+            "score_only_1k_runtime_tracked": runtime_gate_values["score_only_1k_runtime_tracked"],
+            "top100_4bead_rescoring_runtime_tracked": (
+                runtime_gate_values["top100_4bead_rescoring_runtime_tracked"]
+            ),
+            "top10_force_residual_runtime_tracked": (
+                runtime_gate_values["top10_force_residual_runtime_tracked"]
+            ),
+            "memory_peak_tracked": runtime_gate_values["memory_peak_tracked"],
+            "neighbor_list_rebuild_frequency_tracked": (
+                runtime_gate_values["neighbor_list_rebuild_frequency_tracked"]
+            ),
             "force_residual_bounded_policy_ready": runtime_residual.get("bounded_correction_policy_ready") is True,
+            "force_residual_observed_caps_ready": runtime_residual.get("observed_caps_ready") is True,
             "force_residual_confidence_abstention_ready": runtime_residual.get("confidence_abstention_ready") is True,
             "force_residual_top_k_policy_ready": runtime_residual.get("top_k_policy_ready") is True,
             "force_residual_abstain_threshold": float(
@@ -1692,14 +2152,26 @@ def _pm_kpi_summary(
         },
         "physics": {
             "finite_difference_force_error": float(physics.get("finite_difference_force_error") or 0.0),
+            "finite_difference_force_error_pass": physics_gate_values["finite_difference_force_error_pass"],
             "energy_drift_smoke_pct": float(physics.get("energy_drift_smoke_pct") or 0.0),
+            "energy_drift_pass": physics_gate_values["energy_drift_pass"],
             "rotation_equivariance_error": float(physics.get("rotation_equivariance_error") or 0.0),
+            "rotation_equivariance_pass": physics_gate_values["rotation_equivariance_pass"],
             "neighbor_list_parity_error": float(physics.get("neighbor_list_parity_error") or 0.0),
+            "neighbor_list_parity_pass": physics_gate_values["neighbor_list_parity_pass"],
             "topology_invalid_rate": float(physics.get("topology_invalid_rate") or 0.0),
+            "topology_invalid_rate_pass": physics_gate_values["topology_invalid_rate_pass"],
             "backmapping_failure_rate": float(physics.get("backmapping_failure_rate") or 0.0),
+            "backmapping_failure_rate_pass": physics_gate_values["backmapping_failure_rate_pass"],
             "force_term_physics_validation_ready": physics.get("force_term_physics_validation_ready") is True,
             "force_term_physics_validation_term_count": int(
                 physics.get("force_term_physics_validation_term_count") or 0
+            ),
+            "force_term_physics_validation_claim_safe_ready": (
+                physics.get("force_term_physics_validation_claim_safe_ready") is True
+            ),
+            "force_term_physics_validation_claim_safe_count": int(
+                physics.get("force_term_physics_validation_claim_safe_count") or 0
             ),
             "force_term_finite_difference_max_error": float(
                 physics.get("force_term_finite_difference_max_error") or 0.0
@@ -1767,7 +2239,7 @@ def _pm_kpi_summary(
             ),
             "protonation_validity_ready": chemistry.get("protonation_validity_ready") is True,
         },
-        "product": product_gate_values,
+        "product": product_summary_values,
     }
 
 
@@ -1788,12 +2260,39 @@ def build_report(
         "memory_peak_mb": _memory_peak_mb(),
         "neighbor_list_rebuild": _neighbor_rebuild_kpi(),
     }
+    runtime["score_only_1k_runtime_sec"] = float(runtime["score_only_1k"].get("duration_sec") or 0.0)
+    runtime["top100_4bead_rescoring_runtime_sec"] = float(
+        runtime["top100_4bead_rescoring"].get("duration_sec") or 0.0
+    )
+    runtime["top10_force_residual_runtime_sec"] = float(
+        runtime["top10_force_residual"].get("duration_sec") or 0.0
+    )
+    runtime["neighbor_list_rebuild_frequency"] = float(
+        runtime["neighbor_list_rebuild"].get("neighbor_list_rebuild_frequency") or 0.0
+    )
     physics = _physics_kpis()
     chemistry = _chemistry_kpis()
     physics["topology_invalid_rate"] = float(chemistry.get("topology_invalid_rate") or 0.0)
     physics["backmapping_failure_rate"] = float(chemistry.get("backmapping_failure_rate") or 0.0)
     product = _product_kpis(profiles_dir, product_evidence_bundle_json_path)
     pose_ranking_hbond = _pose_ranking_hbond_benchmark()
+    hbond_recovery_pose_count = int(pose_ranking_hbond.get("hbond_recovery_pose_count") or 0)
+    chemistry["hbond_recovery_present"] = hbond_recovery_pose_count > 0
+    chemistry["hbond_recovery_pose_count"] = hbond_recovery_pose_count
+    chemistry["hbond_recovery_pose_ids"] = list(pose_ranking_hbond.get("hbond_recovery_pose_ids") or [])
+    chemistry["hbond_recovery_confidence_min"] = float(
+        pose_ranking_hbond.get("hbond_recovery_confidence_min") or 0.0
+    )
+    chemistry["unsatisfied_donor_acceptor_detection"] = bool(
+        int(chemistry.get("unsatisfied_donor_acceptor_fixture_count") or 0) > 0
+        or pose_ranking_hbond.get("unsatisfied_donor_acceptor_detected") is True
+    )
+    chemistry["unsatisfied_donor_acceptor_pose_count"] = int(
+        pose_ranking_hbond.get("unsatisfied_donor_acceptor_pose_count") or 0
+    )
+    chemistry["overanchored_decoy_rejection"] = (
+        pose_ranking_hbond.get("overanchored_decoys_blocked") is True
+    )
     rocm_summary = {}
     rocm_path = Path(rocm_manifest_path)
     if rocm_path.exists():
@@ -1802,35 +2301,6 @@ def build_report(
         except json.JSONDecodeError:
             rocm_summary = {"status": "invalid_rocm_manifest"}
     rocm_runtime_ready = _rocm_product_runtime_ready(rocm_summary)
-    ready = (
-        product["clean_install_success"] is True
-        and product["runner_profile_validation_status"] == "pass"
-        and product["signed_manifest_verification_pass"] is True
-        and product["runner_claim_metadata_signed"] is True
-        and product["bundle_validation_pass"] is True
-        and product["force_term_plugin_registry_ready"] is True
-        and product["force_term_claim_metadata_ready"] is True
-        and product["force_term_result_contract_ready"] is True
-        and product["guarded_force_term_plugin_ready"] is True
-        and product["core_forcefield_bridge_ready"] is True
-        and product["core_compatibility_layer_ready"] is True
-        and product["job_store_lazy_factory_ready"] is True
-        and product["allowlisted_runner_shim_contract_ready"] is True
-        and product["blocked_claim_correctly_blocked"] is True
-        and runtime["top10_force_residual"]["bounded_correction_policy_ready"] is True
-        and runtime["top10_force_residual"]["confidence_abstention_ready"] is True
-        and physics["finite_difference_force_error"] < 1e-3
-        and physics["translation_invariance_error"] < 1e-9
-        and physics["rotation_equivariance_error"] < 1e-9
-        and physics["neighbor_list_parity_error"] == 0.0
-        and physics["energy_drift_smoke_pct"] < 1e-2
-        and physics["force_term_physics_validation_ready"] is True
-        and chemistry["hbond_evidence_schema_ready"] is True
-        and physics["topology_invalid_rate"] < 0.2
-        and physics["backmapping_failure_rate"] < 0.5
-        and pose_ranking_hbond["benchmark_ready"] is True
-        and rocm_runtime_ready
-    )
     pm_summary = _pm_kpi_summary(
         runtime=runtime,
         physics=physics,
@@ -1839,6 +2309,7 @@ def build_report(
         product=product,
         rocm_runtime_ready=rocm_runtime_ready,
     )
+    ready = bool(pm_summary.get("summary_ready") is True)
     return {
         "packet_type": "ai_md_engine_kpi_report",
         "status": "ai_md_engine_kpi_report_ready" if ready else "blocked_ai_md_engine_kpi_report",

@@ -8,6 +8,7 @@ import pytest
 from betelgeuze_engine.contracts import EngineState
 from betelgeuze_engine.physics.terms import LegacyLJTerm
 from betelgeuze_engine.residual import (
+    FORCE_RESIDUAL_CLAIM_METADATA_SCHEMA_VERSION,
     ForceResidualPolicy,
     apply_guarded_force_residual,
     decide_force_residual,
@@ -140,6 +141,16 @@ def test_guarded_force_residual_enforces_delta_score_cap_and_claim_metadata() ->
     assert metadata["blocked_reason"] == "delta_score_cap_exceeded"
     assert metadata["force_residual_policy_caps"]["max_abs_delta_score"] == 0.25
     assert metadata["force_residual_policy_caps"]["abstain_threshold"] == policy.abstain_threshold
+    assert metadata["force_residual_delta_score_within_cap"] is False
+    assert metadata["force_residual_all_observed_caps_within_policy"] is False
+    assert metadata["force_residual_claim_metadata_schema_version"] == FORCE_RESIDUAL_CLAIM_METADATA_SCHEMA_VERSION
+    assert metadata["force_residual_policy_caps_ready"] is True
+    assert metadata["force_residual_observed_caps_ready"] is False
+    assert report.to_dict()["claim_metadata_schema_version"] == FORCE_RESIDUAL_CLAIM_METADATA_SCHEMA_VERSION
+    assert report.to_dict()["policy_caps_ready"] is True
+    assert report.to_dict()["observed_caps_ready"] is False
+    assert report.to_dict()["delta_score_within_cap"] is False
+    assert report.to_dict()["all_observed_caps_within_policy"] is False
 
 
 def test_guarded_force_residual_enforces_caps_and_rollback() -> None:
@@ -168,11 +179,25 @@ def test_guarded_force_residual_enforces_caps_and_rollback() -> None:
     assert metadata["force_residual_claim_safe"] is True
     assert metadata["force_residual_confidence"] == 0.9
     assert metadata["force_residual_status"] == "applied"
+    assert metadata["force_residual_force_norm_within_cap"] is True
+    assert metadata["force_residual_energy_drift_within_cap"] is True
+    assert metadata["force_residual_displacement_within_cap"] is True
+    assert metadata["force_residual_delta_score_within_cap"] is True
+    assert metadata["force_residual_all_observed_caps_within_policy"] is True
+    assert metadata["force_residual_claim_metadata_schema_version"] == FORCE_RESIDUAL_CLAIM_METADATA_SCHEMA_VERSION
+    assert metadata["force_residual_policy_caps_ready"] is True
+    assert metadata["force_residual_observed_caps_ready"] is True
+    assert set(metadata["force_residual_required_policy_caps"]).issuperset(
+        {"max_abs_delta_score", "max_force_norm", "max_displacement", "max_energy_drift", "abstain_threshold"}
+    )
     assert report.policy_caps["max_abs_delta_score"] == policy.max_abs_delta_score
     assert report.policy_caps["max_force_norm"] == policy.max_force_norm
     assert report.policy_caps["abstain_threshold"] == policy.abstain_threshold
     assert report.policy_caps["max_energy_drift"] == policy.max_energy_drift
     assert report.displacement_rmsd <= policy.max_displacement + 1e-7
+    assert report.to_dict()["all_observed_caps_within_policy"] is True
+    assert report.to_dict()["policy_caps_ready"] is True
+    assert report.to_dict()["observed_caps_ready"] is True
     assert torch.isfinite(updated).all()
 
     too_large = torch.ones_like(coords) * 100.0
@@ -181,6 +206,8 @@ def test_guarded_force_residual_enforces_caps_and_rollback() -> None:
     assert capped.claim_safe is False
     assert capped.skipped_reason == "max_force_norm_exceeded"
     assert capped.abstention_reason == "max_force_norm_exceeded"
+    assert capped.to_dict()["force_norm_within_cap"] is False
+    assert capped.to_dict()["all_observed_caps_within_policy"] is False
     assert torch.equal(rolled_back, coords)
 
 
@@ -204,6 +231,45 @@ def test_guarded_force_residual_rolls_back_on_energy_drift() -> None:
     assert report.abstention_reason == "energy_drift_exceeded"
     assert report.policy_caps["max_energy_drift_pct"] == policy.max_energy_drift_pct
     assert report.policy_caps["max_energy_drift"] == policy.max_energy_drift
+    assert report.to_dict()["energy_drift_within_cap"] is False
+    assert report.to_dict()["all_observed_caps_within_policy"] is False
+    assert torch.equal(updated, coords)
+
+
+def test_guarded_force_residual_rejects_invalid_policy_caps_before_apply() -> None:
+    coords = torch.zeros(1, 2, 3)
+    forces = torch.ones_like(coords)
+    policy = ForceResidualPolicy(max_force_norm=0.0)
+
+    decision = decide_force_residual(
+        rank_pct=0.01,
+        topology_valid=True,
+        uncertainty=0.1,
+        delta_score=0.1,
+        policy=policy,
+    )
+    updated, report = apply_guarded_force_residual(coords, forces, decision=decision, policy=policy)
+    metadata = report.to_claim_metadata(
+        {
+            "topology_fidelity": "sequence_mapped",
+            "ligand_topology_valid": True,
+            "claim_safe": True,
+            "blocked_reason": "",
+        }
+    )
+
+    assert policy.policy_caps_ready() is False
+    assert decision.apply is False
+    assert decision.reason == "policy_caps_invalid"
+    assert report.applied is False
+    assert report.policy_caps_ready is False
+    assert report.observed_caps_ready is False
+    assert report.to_dict()["policy_caps_ready"] is False
+    assert report.to_dict()["observed_caps_ready"] is False
+    assert metadata["claim_safe"] is False
+    assert metadata["force_residual_policy_caps_ready"] is False
+    assert metadata["force_residual_observed_caps_ready"] is False
+    assert metadata["blocked_reason"] == "policy_caps_invalid"
     assert torch.equal(updated, coords)
 
 

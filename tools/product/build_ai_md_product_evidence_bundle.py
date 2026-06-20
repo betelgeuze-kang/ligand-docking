@@ -80,6 +80,13 @@ def _int_value(value: Any) -> int:
         return 0
 
 
+def _float_value(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _bool_nested(payload: dict[str, Any], *keys: str) -> bool:
     current: Any = payload
     for key in keys:
@@ -99,16 +106,129 @@ def _validate_kpi_claim_metadata_gates(
         errors.append(f"kpi_json_packet_type_invalid:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "runner_claim_metadata_signed"):
         errors.append(f"kpi_runner_claim_metadata_not_signed:{artifact_id}")
+    if not _bool_nested(payload, "product_kpi", "runner_profile_validation_pass"):
+        errors.append(f"kpi_runner_profile_validation_not_pass:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "force_term_claim_metadata_ready"):
         errors.append(f"kpi_force_term_claim_metadata_not_ready:{artifact_id}")
+    if not _bool_nested(payload, "product_kpi", "force_term_result_contract_ready"):
+        errors.append(f"kpi_force_term_result_contract_not_ready:{artifact_id}")
+    if not _bool_nested(payload, "product_kpi", "guarded_force_term_plugin_ready"):
+        errors.append(f"kpi_guarded_force_term_plugin_not_ready:{artifact_id}")
+    if not _bool_nested(payload, "product_kpi", "onsps_backmap_evidence_schema_ready"):
+        errors.append(f"kpi_onsps_backmap_evidence_schema_not_ready:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "core_forcefield_bridge_ready"):
         errors.append(f"kpi_core_forcefield_bridge_not_ready:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "core_compatibility_layer_ready"):
         errors.append(f"kpi_core_compatibility_layer_not_ready:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "job_store_lazy_factory_ready"):
         errors.append(f"kpi_job_store_lazy_factory_not_ready:{artifact_id}")
+    if not _bool_nested(payload, "product_kpi", "allowlisted_runner_shim_contract_ready"):
+        errors.append(f"kpi_allowlisted_runner_shim_contract_not_ready:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "engine_topology_factory_facade_ready"):
         errors.append(f"kpi_engine_topology_factory_facade_not_ready:{artifact_id}")
+    runtime = payload.get("runtime_kpi")
+    if not isinstance(runtime, dict):
+        runtime = {}
+    runtime_score = runtime.get("score_only_1k")
+    if not isinstance(runtime_score, dict):
+        runtime_score = {}
+    runtime_onsps = runtime.get("top100_4bead_rescoring")
+    if not isinstance(runtime_onsps, dict):
+        runtime_onsps = {}
+    runtime_residual = runtime.get("top10_force_residual")
+    if not isinstance(runtime_residual, dict):
+        runtime_residual = {}
+    neighbor = runtime.get("neighbor_list_rebuild")
+    if not isinstance(neighbor, dict):
+        neighbor = {}
+    if (
+        _int_value(runtime_score.get("row_count")) < 1
+        or _float_value(runtime_score.get("duration_sec")) <= 0.0
+        or _float_value(runtime_score.get("rows_per_sec")) <= 0.0
+    ):
+        errors.append(f"kpi_runtime_score_only_1k_missing:{artifact_id}")
+    if (
+        _int_value(runtime_onsps.get("row_count")) < 1
+        or _float_value(runtime_onsps.get("duration_sec")) <= 0.0
+        or _float_value(runtime_onsps.get("rows_per_sec")) <= 0.0
+        or _int_value(runtime_onsps.get("onsps_backmap_claim_safe_count")) < 1
+    ):
+        errors.append(f"kpi_runtime_top100_4bead_rescoring_missing:{artifact_id}")
+    if (
+        _int_value(runtime_residual.get("row_count")) < 1
+        or _float_value(runtime_residual.get("duration_sec")) <= 0.0
+        or _float_value(runtime_residual.get("rows_per_sec")) <= 0.0
+        or _int_value(runtime_residual.get("applied_count")) < 1
+    ):
+        errors.append(f"kpi_runtime_top10_force_residual_missing:{artifact_id}")
+    if _float_value(runtime.get("memory_peak_mb")) <= 0.0:
+        errors.append(f"kpi_runtime_memory_peak_missing:{artifact_id}")
+    if (
+        _int_value(neighbor.get("frame_count")) < 1
+        or _int_value(neighbor.get("neighbor_list_rebuild_count")) < 1
+        or _float_value(neighbor.get("neighbor_list_rebuild_frequency")) <= 0.0
+        or neighbor.get("engine_neighbor_diagnostics_ready") is not True
+        or _int_value(neighbor.get("last_forcefield_neighbor_pair_count"))
+        != _int_value(neighbor.get("last_neighbor_pair_count"))
+        or neighbor.get("forcefield_neighbor_pairs_provided") is not True
+        or neighbor.get("forcefield_neighbor_source") != "provided"
+    ):
+        errors.append(f"kpi_runtime_neighbor_list_rebuild_missing:{artifact_id}")
+    physics = payload.get("physics_kpi")
+    if not isinstance(physics, dict):
+        physics = {}
+    if (
+        "finite_difference_force_error" not in physics
+        or _float_value(physics.get("finite_difference_force_error")) >= 1e-3
+    ):
+        errors.append(f"kpi_physics_finite_difference_force_error_high:{artifact_id}")
+    if (
+        "energy_drift_smoke_pct" not in physics
+        or _float_value(physics.get("energy_drift_smoke_pct")) >= 1e-2
+    ):
+        errors.append(f"kpi_physics_energy_drift_high:{artifact_id}")
+    if (
+        "neighbor_list_parity_error" not in physics
+        or _float_value(physics.get("neighbor_list_parity_error")) != 0.0
+    ):
+        errors.append(f"kpi_physics_neighbor_list_parity_error:{artifact_id}")
+    if "topology_invalid_rate" not in physics or _float_value(physics.get("topology_invalid_rate")) >= 0.2:
+        errors.append(f"kpi_physics_topology_invalid_rate_high:{artifact_id}")
+    if "backmapping_failure_rate" not in physics or _float_value(physics.get("backmapping_failure_rate")) >= 0.5:
+        errors.append(f"kpi_physics_backmapping_failure_rate_high:{artifact_id}")
+    topology_smoke = (
+        payload.get("product_kpi", {}).get("engine_topology_factory_facade_smoke", {})
+        if isinstance(payload.get("product_kpi"), dict)
+        else {}
+    )
+    if not isinstance(topology_smoke, dict):
+        topology_smoke = {}
+    if topology_smoke.get("facade") != "betelgeuze_engine.topology.TopologyFactoryFacade":
+        errors.append(f"kpi_topology_factory_facade_identity_invalid:{artifact_id}")
+    if topology_smoke.get("valid_claim_safe") is not True:
+        errors.append(f"kpi_topology_factory_valid_claim_not_safe:{artifact_id}")
+    if topology_smoke.get("valid_topology_fidelity") != "sequence_mapped":
+        errors.append(f"kpi_topology_factory_valid_fidelity_invalid:{artifact_id}")
+    if _int_value(topology_smoke.get("valid_protein_residue_count")) < 1:
+        errors.append(f"kpi_topology_factory_valid_protein_residues_missing:{artifact_id}")
+    if topology_smoke.get("valid_protein_topology_valid") is not True:
+        errors.append(f"kpi_topology_factory_valid_protein_not_valid:{artifact_id}")
+    if topology_smoke.get("valid_ligand_topology_schema_version") != "ligand_topology_validity_v1":
+        errors.append(f"kpi_topology_factory_valid_ligand_schema_missing:{artifact_id}")
+    if _int_value(topology_smoke.get("placeholder_protein_residue_count")) < 1:
+        errors.append(f"kpi_topology_factory_placeholder_protein_residues_missing:{artifact_id}")
+    if topology_smoke.get("placeholder_protein_topology_valid") is not True:
+        errors.append(f"kpi_topology_factory_placeholder_protein_not_valid:{artifact_id}")
+    if topology_smoke.get("placeholder_blocked_reason") != "placeholder_alanine_topology":
+        errors.append(f"kpi_topology_factory_placeholder_blocker_invalid:{artifact_id}")
+    if _int_value(topology_smoke.get("empty_protein_residue_count")) != 0:
+        errors.append(f"kpi_topology_factory_empty_protein_count_invalid:{artifact_id}")
+    if topology_smoke.get("empty_protein_topology_valid") is not False:
+        errors.append(f"kpi_topology_factory_empty_protein_not_blocked:{artifact_id}")
+    if topology_smoke.get("empty_protein_blocked_reason") != "empty_protein_topology":
+        errors.append(f"kpi_topology_factory_empty_protein_blocker_invalid:{artifact_id}")
+    if topology_smoke.get("invalid_ligand_blocked_reason") != "invalid_smiles":
+        errors.append(f"kpi_topology_factory_invalid_ligand_blocker_invalid:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "runner_claim_metadata_manifest_smoke", "ready"):
         errors.append(f"kpi_runner_claim_metadata_manifest_smoke_not_ready:{artifact_id}")
     manifest_smoke = (
@@ -132,8 +252,24 @@ def _validate_kpi_claim_metadata_gates(
         errors.append(f"kpi_manifest_hbond_evidence_schema_missing:{artifact_id}")
     if _int_value(manifest_smoke.get("manifest_hbond_evidence_schema_ready_row_count")) < 1:
         errors.append(f"kpi_manifest_hbond_evidence_schema_rows_missing:{artifact_id}")
+    if manifest_smoke.get("manifest_claim_safe") is not False:
+        errors.append(f"kpi_manifest_blocked_claim_not_blocked:{artifact_id}")
+    if not str(manifest_smoke.get("manifest_blocked_reason") or ""):
+        errors.append(f"kpi_manifest_blocked_reason_missing:{artifact_id}")
+    if manifest_smoke.get("force_residual_summary_present") is not True:
+        errors.append(f"kpi_manifest_force_residual_summary_missing:{artifact_id}")
+    if manifest_smoke.get("manifest_force_residual_schema_version") != "force_residual_claim_metadata_v1":
+        errors.append(f"kpi_manifest_force_residual_schema_missing:{artifact_id}")
+    if manifest_smoke.get("manifest_force_residual_policy_caps_ready") is not True:
+        errors.append(f"kpi_manifest_force_residual_policy_caps_not_ready:{artifact_id}")
+    if manifest_smoke.get("manifest_force_residual_observed_caps_ready") is not True:
+        errors.append(f"kpi_manifest_force_residual_observed_caps_not_ready:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "force_term_claim_metadata_smoke", "ready"):
         errors.append(f"kpi_force_term_claim_metadata_smoke_not_ready:{artifact_id}")
+    if not _bool_nested(payload, "product_kpi", "guarded_force_term_plugin_smoke", "ready"):
+        errors.append(f"kpi_guarded_force_term_plugin_smoke_not_ready:{artifact_id}")
+    if not _bool_nested(payload, "product_kpi", "onsps_backmap_evidence_schema_smoke", "ready"):
+        errors.append(f"kpi_onsps_backmap_evidence_schema_smoke_not_ready:{artifact_id}")
     force_term_smoke = (
         payload.get("product_kpi", {}).get("force_term_claim_metadata_smoke", {})
         if isinstance(payload.get("product_kpi"), dict)
@@ -144,10 +280,40 @@ def _validate_kpi_claim_metadata_gates(
     forcefield_claim_rows = force_term_smoke.get("forcefield_claim_rows")
     if not isinstance(forcefield_claim_rows, list):
         forcefield_claim_rows = []
+    force_term_contract_rows = force_term_smoke.get("term_result_contract_rows")
+    if not isinstance(force_term_contract_rows, list):
+        force_term_contract_rows = []
     if force_term_smoke.get("forcefield_claim_metadata_schema_version") != "force_term_claim_metadata_v1":
         errors.append(f"kpi_force_term_claim_metadata_schema_missing:{artifact_id}")
     if force_term_smoke.get("forcefield_hbond_evidence_schema_version") != "hbond_evidence_v1":
         errors.append(f"kpi_forcefield_hbond_evidence_schema_missing:{artifact_id}")
+    if (
+        force_term_smoke.get("forcefield_neighbor_diagnostics_ready") is not True
+        or _int_value(force_term_smoke.get("forcefield_neighbor_pair_count")) < 1
+        or force_term_smoke.get("forcefield_neighbor_pairs_provided") is not False
+        or force_term_smoke.get("forcefield_neighbor_source") != "full_neighbor_pairs"
+    ):
+        errors.append(f"kpi_forcefield_neighbor_diagnostics_missing:{artifact_id}")
+    if force_term_smoke.get("term_result_contract_ready") is not True:
+        errors.append(f"kpi_force_term_result_contract_smoke_not_ready:{artifact_id}")
+    if not force_term_contract_rows:
+        errors.append(f"kpi_force_term_result_contract_rows_missing:{artifact_id}")
+    elif not all(
+        isinstance(row, dict)
+        and row.get("ready") is True
+        and row.get("energy_shape") == [1]
+        and isinstance(row.get("forces_shape"), list)
+        and row.get("energy_finite") is True
+        and row.get("forces_finite") is True
+        and row.get("diagnostics_keys_present") is True
+        and row.get("claim_metadata_keys_present") is True
+        and str(row.get("term") or "") == str(row.get("diagnostics_term") or "")
+        and str(row.get("term") or "") == str(row.get("claim_force_term_name") or "")
+        and str(row.get("diagnostics_status") or "") == "pass"
+        and str(row.get("claim_force_term_status") or "") == "pass"
+        for row in force_term_contract_rows
+    ):
+        errors.append(f"kpi_force_term_result_contract_rows_invalid:{artifact_id}")
     if _int_value(force_term_smoke.get("forcefield_claim_safe_count")) < 1:
         errors.append(f"kpi_force_term_claim_safe_rows_missing:{artifact_id}")
     if _int_value(force_term_smoke.get("forcefield_blocked_count")) != 0:
@@ -170,28 +336,318 @@ def _validate_kpi_claim_metadata_gates(
         for row in forcefield_claim_rows
     ):
         errors.append(f"kpi_force_term_hbond_schema_row_missing:{artifact_id}")
+    guarded_smoke = (
+        payload.get("product_kpi", {}).get("guarded_force_term_plugin_smoke", {})
+        if isinstance(payload.get("product_kpi"), dict)
+        else {}
+    )
+    if not isinstance(guarded_smoke, dict):
+        guarded_smoke = {}
+    if guarded_smoke.get("term") != "screened_electrostatics":
+        errors.append(f"kpi_guarded_force_term_plugin_term_missing:{artifact_id}")
+    if guarded_smoke.get("claim_safe") is not True:
+        errors.append(f"kpi_guarded_force_term_plugin_claim_not_safe:{artifact_id}")
+    if guarded_smoke.get("force_term_status") != "pass":
+        errors.append(f"kpi_guarded_force_term_plugin_status_not_pass:{artifact_id}")
+    if guarded_smoke.get("missing_charge_blocked") is not True:
+        errors.append(f"kpi_guarded_force_term_plugin_missing_charge_not_blocked:{artifact_id}")
+    if guarded_smoke.get("unvalidated_charge_blocked") is not True:
+        errors.append(f"kpi_guarded_force_term_plugin_unvalidated_charge_not_blocked:{artifact_id}")
+    if guarded_smoke.get("forcefield_claim_safe") is not True:
+        errors.append(f"kpi_guarded_force_term_plugin_forcefield_not_claim_safe:{artifact_id}")
+    if float(guarded_smoke.get("finite_difference_force_error") or 1.0) >= 1e-5:
+        errors.append(f"kpi_guarded_force_term_plugin_finite_difference_high:{artifact_id}")
+    if guarded_smoke.get("policy_caps_ready") is not True:
+        errors.append(f"kpi_guarded_force_term_plugin_policy_caps_not_ready:{artifact_id}")
+    if guarded_smoke.get("observed_caps_ready") is not True:
+        errors.append(f"kpi_guarded_force_term_plugin_observed_caps_not_ready:{artifact_id}")
+    if guarded_smoke.get("bounded_correction_ready") is not True:
+        errors.append(f"kpi_guarded_force_term_plugin_bounded_correction_not_ready:{artifact_id}")
+    if guarded_smoke.get("policy_cap_exceeded_blocked") is not True:
+        errors.append(f"kpi_guarded_force_term_plugin_cap_exceeded_not_blocked:{artifact_id}")
+    if guarded_smoke.get("forcefield_bounded_row_ready") is not True:
+        errors.append(f"kpi_guarded_force_term_plugin_forcefield_bounded_row_missing:{artifact_id}")
+    if (
+        guarded_smoke.get("abs_energy_within_cap") is not True
+        or guarded_smoke.get("force_norm_within_cap") is not True
+        or guarded_smoke.get("active_pair_count_within_cap") is not True
+    ):
+        errors.append(f"kpi_guarded_force_term_plugin_observed_cap_flags_invalid:{artifact_id}")
+    forcefield_guarded_row = guarded_smoke.get("forcefield_guarded_claim_row")
+    if not isinstance(forcefield_guarded_row, dict):
+        forcefield_guarded_row = {}
+    if (
+        forcefield_guarded_row.get("force_term_name") != "screened_electrostatics"
+        or forcefield_guarded_row.get("policy_caps_ready") is not True
+        or forcefield_guarded_row.get("observed_caps_ready") is not True
+        or forcefield_guarded_row.get("bounded_correction_ready") is not True
+    ):
+        errors.append(f"kpi_guarded_force_term_plugin_forcefield_bounded_row_invalid:{artifact_id}")
+    onsps_smoke = (
+        payload.get("product_kpi", {}).get("onsps_backmap_evidence_schema_smoke", {})
+        if isinstance(payload.get("product_kpi"), dict)
+        else {}
+    )
+    if not isinstance(onsps_smoke, dict):
+        onsps_smoke = {}
+    if onsps_smoke.get("schema_version") != "onsps_backmap_evidence_v1":
+        errors.append(f"kpi_onsps_backmap_schema_version_missing:{artifact_id}")
+    if onsps_smoke.get("valid_claim_safe") is not True:
+        errors.append(f"kpi_onsps_backmap_valid_claim_not_safe:{artifact_id}")
+    if onsps_smoke.get("valid_backmap_status") != "ok":
+        errors.append(f"kpi_onsps_backmap_valid_status_not_ok:{artifact_id}")
+    if _int_value(onsps_smoke.get("valid_mapped_site_count")) < 1:
+        errors.append(f"kpi_onsps_backmap_valid_mapped_sites_missing:{artifact_id}")
+    if onsps_smoke.get("empty_blocked_reason") != "invalid_two_bead_geometry":
+        errors.append(f"kpi_onsps_backmap_empty_blocker_missing:{artifact_id}")
+    if onsps_smoke.get("no_sites_blocked_reason") != "no_onsps_sites":
+        errors.append(f"kpi_onsps_backmap_no_sites_blocker_missing:{artifact_id}")
+    if onsps_smoke.get("hbond_onsps_schema_version") != "onsps_backmap_evidence_v1":
+        errors.append(f"kpi_hbond_onsps_backmap_schema_missing:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "core_forcefield_bridge_smoke", "ready"):
         errors.append(f"kpi_core_forcefield_bridge_smoke_not_ready:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "core_compatibility_layer_smoke", "ready"):
         errors.append(f"kpi_core_compatibility_layer_smoke_not_ready:{artifact_id}")
+    core_forcefield_smoke = (
+        payload.get("product_kpi", {}).get("core_forcefield_bridge_smoke", {})
+        if isinstance(payload.get("product_kpi"), dict)
+        else {}
+    )
+    if not isinstance(core_forcefield_smoke, dict):
+        core_forcefield_smoke = {}
+    if core_forcefield_smoke.get("result_claim_safe") is not True:
+        errors.append(f"kpi_core_forcefield_bridge_claim_not_safe:{artifact_id}")
+    if core_forcefield_smoke.get("force_term_claim_metadata_ready") is not True:
+        errors.append(f"kpi_core_forcefield_bridge_claim_metadata_not_ready:{artifact_id}")
+    if core_forcefield_smoke.get("force_term_plugins") != ["legacy_lj"]:
+        errors.append(f"kpi_core_forcefield_bridge_plugins_invalid:{artifact_id}")
+    if core_forcefield_smoke.get("energy_shape") != [1]:
+        errors.append(f"kpi_core_forcefield_bridge_energy_shape_invalid:{artifact_id}")
+    if not isinstance(core_forcefield_smoke.get("forces_shape"), list):
+        errors.append(f"kpi_core_forcefield_bridge_forces_shape_missing:{artifact_id}")
+    if (
+        core_forcefield_smoke.get("neighbor_diagnostics_ready") is not True
+        or _int_value(core_forcefield_smoke.get("neighbor_pair_count")) < 1
+        or core_forcefield_smoke.get("neighbor_pairs_provided") is not False
+        or core_forcefield_smoke.get("neighbor_source") != "full_neighbor_pairs"
+    ):
+        errors.append(f"kpi_core_forcefield_bridge_neighbor_diagnostics_missing:{artifact_id}")
+    if core_forcefield_smoke.get("bridge_execution_scope") != "metadata_contract_only_not_runtime_gpu_claim":
+        errors.append(f"kpi_core_forcefield_bridge_scope_invalid:{artifact_id}")
+    core_compat_smoke = (
+        payload.get("product_kpi", {}).get("core_compatibility_layer_smoke", {})
+        if isinstance(payload.get("product_kpi"), dict)
+        else {}
+    )
+    if not isinstance(core_compat_smoke, dict):
+        core_compat_smoke = {}
+    compat_rows = core_compat_smoke.get("rows")
+    if not isinstance(compat_rows, list):
+        compat_rows = []
+    expected_compat_contracts = {
+        "onsps_backmap_shim": ("core.onsps_backmap", "betelgeuze_engine.backmapping.onsps", "import_identity"),
+        "topology_protein_bridge": ("core.topology", "betelgeuze_engine.topology.protein", "engine_dataclass_bridge"),
+        "forcefield_product_bridge": ("core.forcefield", "betelgeuze_engine.physics", "energy_forces_claim_metadata_bridge"),
+    }
+    compat_by_contract = {
+        str(row.get("contract") or ""): row
+        for row in compat_rows
+        if isinstance(row, dict)
+    }
+    if int(core_compat_smoke.get("row_count") or 0) != len(expected_compat_contracts):
+        errors.append(f"kpi_core_compatibility_layer_row_count_invalid:{artifact_id}")
+    if set(compat_by_contract) != set(expected_compat_contracts):
+        errors.append(f"kpi_core_compatibility_layer_contracts_invalid:{artifact_id}")
+    for contract, (legacy_module, canonical_module, bridge_type) in expected_compat_contracts.items():
+        row = compat_by_contract.get(contract)
+        if not isinstance(row, dict):
+            continue
+        if row.get("ready") is not True:
+            errors.append(f"kpi_core_compatibility_layer_row_not_ready:{artifact_id}:{contract}")
+        if row.get("legacy_module") != legacy_module:
+            errors.append(f"kpi_core_compatibility_layer_legacy_module_invalid:{artifact_id}:{contract}")
+        if row.get("canonical_module") != canonical_module:
+            errors.append(f"kpi_core_compatibility_layer_canonical_module_invalid:{artifact_id}:{contract}")
+        if row.get("bridge_type") != bridge_type:
+            errors.append(f"kpi_core_compatibility_layer_bridge_type_invalid:{artifact_id}:{contract}")
+        if str(row.get("error") or ""):
+            errors.append(f"kpi_core_compatibility_layer_row_error:{artifact_id}:{contract}")
+    topology_row = compat_by_contract.get("topology_protein_bridge", {})
+    if isinstance(topology_row, dict):
+        if topology_row.get("topology_fidelity") != "sequence_mapped":
+            errors.append(f"kpi_core_topology_bridge_fidelity_invalid:{artifact_id}")
+        if topology_row.get("protein_topology_type") != "ProteinTopology":
+            errors.append(f"kpi_core_topology_bridge_type_invalid:{artifact_id}")
+        if _int_value(topology_row.get("hbond_role_count")) < 1:
+            errors.append(f"kpi_core_topology_bridge_hbond_roles_missing:{artifact_id}")
+    forcefield_row = compat_by_contract.get("forcefield_product_bridge", {})
+    if isinstance(forcefield_row, dict):
+        if forcefield_row.get("result_claim_safe") is not True:
+            errors.append(f"kpi_core_forcefield_compat_claim_not_safe:{artifact_id}")
+        if forcefield_row.get("force_term_claim_metadata_ready") is not True:
+            errors.append(f"kpi_core_forcefield_compat_claim_metadata_not_ready:{artifact_id}")
+        if forcefield_row.get("force_term_plugins") != ["legacy_lj"]:
+            errors.append(f"kpi_core_forcefield_compat_plugins_invalid:{artifact_id}")
+        if (
+            forcefield_row.get("neighbor_diagnostics_ready") is not True
+            or _int_value(forcefield_row.get("neighbor_pair_count")) < 1
+            or forcefield_row.get("neighbor_pairs_provided") is not False
+            or forcefield_row.get("neighbor_source") != "full_neighbor_pairs"
+        ):
+            errors.append(f"kpi_core_forcefield_compat_neighbor_diagnostics_missing:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "job_store_lazy_factory_smoke", "ready"):
         errors.append(f"kpi_job_store_lazy_factory_smoke_not_ready:{artifact_id}")
+    if not _bool_nested(payload, "product_kpi", "allowlisted_runner_shim_contract", "ready"):
+        errors.append(f"kpi_allowlisted_runner_shim_contract_smoke_not_ready:{artifact_id}")
+    runner_shim = (
+        payload.get("product_kpi", {}).get("allowlisted_runner_shim_contract", {})
+        if isinstance(payload.get("product_kpi"), dict)
+        else {}
+    )
+    if not isinstance(runner_shim, dict):
+        runner_shim = {}
+    runner_rows = runner_shim.get("rows")
+    if not isinstance(runner_rows, list):
+        runner_rows = []
+    if not runner_rows:
+        errors.append(f"kpi_allowlisted_runner_shim_rows_missing:{artifact_id}")
+    elif not all(
+        isinstance(row, dict)
+        and row.get("shim_contract_type") == "canonical_module_alias"
+        and row.get("sys_modules_alias_ready") is True
+        and row.get("self_implementation_blocked") is True
+        and row.get("runtime_adapter_identity_ready") is True
+        for row in runner_rows
+    ):
+        errors.append(f"kpi_allowlisted_runner_shim_contract_rows_invalid:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "product", "runner_claim_metadata_signed"):
         errors.append(f"pm_runner_claim_metadata_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "product", "runner_profile_validation_pass"):
+        errors.append(f"pm_runner_profile_validation_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "product", "force_term_claim_metadata_ready"):
         errors.append(f"pm_force_term_claim_metadata_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "product", "force_term_result_contract_ready"):
+        errors.append(f"pm_force_term_result_contract_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "product", "guarded_force_term_plugin_ready"):
+        errors.append(f"pm_guarded_force_term_plugin_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "product", "onsps_backmap_evidence_schema_ready"):
+        errors.append(f"pm_onsps_backmap_evidence_schema_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "product", "core_forcefield_bridge_ready"):
         errors.append(f"pm_core_forcefield_bridge_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "product", "core_compatibility_layer_ready"):
         errors.append(f"pm_core_compatibility_layer_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "product", "job_store_lazy_factory_ready"):
         errors.append(f"pm_job_store_lazy_factory_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "product", "allowlisted_runner_shim_contract_ready"):
+        errors.append(f"pm_allowlisted_runner_shim_contract_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "product_kpi", "blocked_claim_correctly_blocked"):
+        errors.append(f"kpi_blocked_claim_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "product", "blocked_claim_correctly_blocked"):
+        errors.append(f"pm_blocked_claim_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "runtime", "force_residual_bounded_policy_ready"):
         errors.append(f"pm_force_residual_bounded_policy_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "runtime", "force_residual_observed_caps_ready"):
+        errors.append(f"pm_force_residual_observed_caps_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "runtime", "force_residual_confidence_abstention_ready"):
         errors.append(f"pm_force_residual_confidence_abstention_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "runtime", "score_only_1k_runtime_tracked"):
+        errors.append(f"pm_score_only_1k_runtime_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "runtime", "top100_4bead_rescoring_runtime_tracked"):
+        errors.append(f"pm_top100_4bead_rescoring_runtime_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "runtime", "top10_force_residual_runtime_tracked"):
+        errors.append(f"pm_top10_force_residual_runtime_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "runtime", "memory_peak_tracked"):
+        errors.append(f"pm_memory_peak_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "runtime", "neighbor_list_rebuild_frequency_tracked"):
+        errors.append(f"pm_neighbor_list_rebuild_frequency_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "physics", "force_term_physics_validation_ready"):
         errors.append(f"pm_force_term_physics_validation_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "physics", "force_term_physics_validation_claim_safe_ready"):
+        errors.append(f"pm_force_term_physics_validation_claim_safe_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "physics", "finite_difference_force_error_pass"):
+        errors.append(f"pm_finite_difference_force_error_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "physics", "energy_drift_pass"):
+        errors.append(f"pm_energy_drift_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "physics", "neighbor_list_parity_pass"):
+        errors.append(f"pm_neighbor_list_parity_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "physics", "topology_invalid_rate_pass"):
+        errors.append(f"pm_topology_invalid_rate_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "physics", "backmapping_failure_rate_pass"):
+        errors.append(f"pm_backmapping_failure_rate_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "chemistry", "hbond_evidence_schema_ready"):
+        errors.append(f"pm_hbond_evidence_schema_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "chemistry", "ligand_topology_validity_schema_ready"):
+        errors.append(f"pm_ligand_topology_validity_schema_gate_missing:{artifact_id}")
+    if _int_value(
+        payload.get("pm_kpi_summary", {}).get("chemistry", {}).get("hbond_recovery_pose_count")
+        if isinstance(payload.get("pm_kpi_summary"), dict)
+        else 0
+    ) < 1:
+        errors.append(f"pm_hbond_recovery_pose_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "chemistry", "unsatisfied_donor_acceptor_detection"):
+        errors.append(f"pm_unsatisfied_donor_acceptor_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "chemistry", "overanchored_decoy_rejection"):
+        errors.append(f"pm_overanchored_decoy_rejection_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "chemistry", "chirality_preservation_ready"):
+        errors.append(f"pm_chirality_preservation_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "chemistry", "ring_validity_ready"):
+        errors.append(f"pm_ring_validity_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "chemistry", "tautomer_validity_ready"):
+        errors.append(f"pm_tautomer_validity_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "chemistry", "protonation_validity_ready"):
+        errors.append(f"pm_protonation_validity_gate_missing:{artifact_id}")
+    pose_benchmark = payload.get("pose_ranking_hbond_benchmark")
+    if not isinstance(pose_benchmark, dict):
+        pose_benchmark = {}
+    if pose_benchmark.get("benchmark_ready") is not True:
+        errors.append(f"kpi_pose_ranking_hbond_benchmark_not_ready:{artifact_id}")
+    if pose_benchmark.get("top1_pose_id") != pose_benchmark.get("top1_expected_pose_id"):
+        errors.append(f"kpi_pose_ranking_top1_not_expected:{artifact_id}")
+    if _int_value(pose_benchmark.get("hbond_recovery_pose_count")) < 1:
+        errors.append(f"kpi_pose_ranking_hbond_recovery_missing:{artifact_id}")
+    if pose_benchmark.get("overanchored_decoys_blocked") is not True:
+        errors.append(f"kpi_pose_ranking_overanchored_decoy_not_blocked:{artifact_id}")
+    if pose_benchmark.get("unsatisfied_donor_acceptor_detected") is not True:
+        errors.append(f"kpi_pose_ranking_unsatisfied_donor_acceptor_missing:{artifact_id}")
+    required_pose_roles = {
+        "hbond_recovery_pose",
+        "unsatisfied_donor_pose",
+        "far_decoy_pose",
+        "overanchored_decoy_pose",
+        "invalid_ligand_pose",
+    }
+    observed_pose_roles = {
+        str(role)
+        for role in pose_benchmark.get("observed_pose_roles", [])
+        if str(role)
+    }
+    pose_rows = pose_benchmark.get("rows")
+    if not isinstance(pose_rows, list) or not pose_rows:
+        errors.append(f"kpi_pose_ranking_rows_missing:{artifact_id}")
+        pose_rows = []
+    row_roles = {
+        str(row.get("benchmark_role") or "")
+        for row in pose_rows
+        if isinstance(row, dict) and str(row.get("benchmark_role") or "")
+    }
+    if not required_pose_roles.issubset(observed_pose_roles | row_roles):
+        errors.append(f"kpi_pose_ranking_required_roles_missing:{artifact_id}")
+    if pose_benchmark.get("row_contracts_ready") is not True:
+        errors.append(f"kpi_pose_ranking_row_contracts_not_ready:{artifact_id}")
+    for row in pose_rows:
+        if not isinstance(row, dict):
+            errors.append(f"kpi_pose_ranking_row_invalid:{artifact_id}")
+            continue
+        pose_id = str(row.get("pose_id") or "unknown_pose")
+        if row.get("benchmark_contract_pass") is not True:
+            errors.append(f"kpi_pose_ranking_row_contract_failed:{artifact_id}:{pose_id}")
+        if not isinstance(row.get("benchmark_contract_checks"), dict):
+            errors.append(f"kpi_pose_ranking_row_contract_checks_missing:{artifact_id}:{pose_id}")
+        if row.get("hbond_claim_safe") is not row.get("expected_claim_safe"):
+            errors.append(f"kpi_pose_ranking_row_claim_expectation_mismatch:{artifact_id}:{pose_id}")
+        expected_blocked_reason = str(row.get("expected_blocked_reason") or "")
+        if str(row.get("hbond_blocked_reason") or "") != expected_blocked_reason:
+            errors.append(f"kpi_pose_ranking_row_blocked_reason_mismatch:{artifact_id}:{pose_id}")
     return errors
 
 
@@ -265,6 +721,18 @@ def _default_artifacts(
             "artifact_id": "product_rocm_requirements",
             "artifact_path": "requirements-product-rocm.txt",
             "role": "torch_rocm_dependency_contract",
+            "required": True,
+        },
+        {
+            "artifact_id": "product_rocm_requirements_profile",
+            "artifact_path": "requirements-rocm.txt",
+            "role": "torch_rocm_dependency_profile",
+            "required": True,
+        },
+        {
+            "artifact_id": "product_requirements_base",
+            "artifact_path": "requirements-base.txt",
+            "role": "shared_non_torch_dependency_profile",
             "required": True,
         },
         {
@@ -426,6 +894,20 @@ def validate_product_evidence_bundle(
             if actual_sha and str(row.get("sha256") or "") != actual_sha:
                 errors.append(f"artifact_sha256_mismatch:{row.get('artifact_id')}")
 
+    source_fresh_ids: list[str] = []
+    source_stale_ids: list[str] = []
+    for row in included_rows:
+        artifact_path = str(row.get("artifact_path") or "")
+        path = Path(artifact_path)
+        resolved = path if path.is_absolute() else root_path / path
+        artifact_id = str(row.get("artifact_id") or artifact_path)
+        actual_sha = _sha256_file(resolved)
+        expected_sha = str(row.get("sha256") or "")
+        if actual_sha and actual_sha == expected_sha:
+            source_fresh_ids.append(artifact_id)
+        else:
+            source_stale_ids.append(artifact_id)
+
     pass_ready = bool(summary.get("bundle_export_ready") is True and included_rows and not errors)
     return {
         "bundle_validation_pass": pass_ready,
@@ -440,6 +922,10 @@ def validate_product_evidence_bundle(
             kpi_claim_metadata_gate_count > 0
             and kpi_claim_metadata_gate_validated_count == kpi_claim_metadata_gate_count
         ),
+        "source_artifacts_fresh": bool(included_rows and not source_stale_ids),
+        "source_artifact_fresh_count": len(source_fresh_ids),
+        "source_artifact_stale_count": len(source_stale_ids),
+        "source_artifact_stale_ids": source_stale_ids,
         "execution_enabled": False,
         "external_state_mutated": False,
     }
@@ -458,13 +944,69 @@ def build_payload(
     kpi_summary = _summary(kpi_packet)
     rocm_summary = _summary(rocm_manifest_packet)
     image_summary = _summary(product_image_preflight_packet)
+    image_preflight_blocker_codes = [
+        str(row.get("code") or "")
+        for row in product_image_preflight_packet.get("blockers", [])
+        if isinstance(row, dict) and str(row.get("code") or "")
+    ]
     kpi_ready = bool(kpi_summary.get("status") == "ai_md_engine_kpi_report_ready" and kpi_summary.get("report_ready") is True)
     product_kpi = kpi_summary.get("product_kpi") if isinstance(kpi_summary.get("product_kpi"), dict) else {}
+    pm_kpi_summary = kpi_summary.get("pm_kpi_summary") if isinstance(kpi_summary.get("pm_kpi_summary"), dict) else {}
+    pm_chemistry = pm_kpi_summary.get("chemistry") if isinstance(pm_kpi_summary.get("chemistry"), dict) else {}
+    kpi_failed_gate_ids = [
+        str(gate_id)
+        for gate_id in pm_kpi_summary.get("failed_gate_ids", [])
+        if str(gate_id)
+    ] if isinstance(pm_kpi_summary, dict) else []
+    pose_benchmark = (
+        kpi_summary.get("pose_ranking_hbond_benchmark")
+        if isinstance(kpi_summary.get("pose_ranking_hbond_benchmark"), dict)
+        else {}
+    )
     runner_claim_metadata_signed = bool(product_kpi.get("runner_claim_metadata_signed") is True)
+    runner_manifest_smoke = (
+        product_kpi.get("runner_claim_metadata_manifest_smoke")
+        if isinstance(product_kpi.get("runner_claim_metadata_manifest_smoke"), dict)
+        else {}
+    )
+    force_residual_summary_signed = bool(
+        runner_manifest_smoke.get("force_residual_summary_present") is True
+        and runner_manifest_smoke.get("manifest_force_residual_schema_version")
+        == "force_residual_claim_metadata_v1"
+        and runner_manifest_smoke.get("manifest_force_residual_policy_caps_ready") is True
+        and runner_manifest_smoke.get("manifest_force_residual_observed_caps_ready") is True
+    )
     force_term_claim_metadata_ready = bool(product_kpi.get("force_term_claim_metadata_ready") is True)
+    force_term_result_contract_ready = bool(product_kpi.get("force_term_result_contract_ready") is True)
+    guarded_force_term_plugin_ready = bool(product_kpi.get("guarded_force_term_plugin_ready") is True)
+    onsps_backmap_evidence_schema_ready = bool(
+        product_kpi.get("onsps_backmap_evidence_schema_ready") is True
+    )
     core_forcefield_bridge_ready = bool(product_kpi.get("core_forcefield_bridge_ready") is True)
     core_compatibility_layer_ready = bool(product_kpi.get("core_compatibility_layer_ready") is True)
     job_store_lazy_factory_ready = bool(product_kpi.get("job_store_lazy_factory_ready") is True)
+    allowlisted_runner_shim_contract_ready = bool(
+        product_kpi.get("allowlisted_runner_shim_contract_ready") is True
+    )
+    chemistry_pm_gates_ready = bool(
+        pm_chemistry.get("hbond_evidence_schema_ready") is True
+        and pm_chemistry.get("ligand_topology_validity_schema_ready") is True
+        and _int_value(pm_chemistry.get("hbond_recovery_pose_count")) >= 1
+        and pm_chemistry.get("unsatisfied_donor_acceptor_detection") is True
+        and pm_chemistry.get("overanchored_decoy_rejection") is True
+        and pm_chemistry.get("chirality_preservation_ready") is True
+        and pm_chemistry.get("ring_validity_ready") is True
+        and pm_chemistry.get("tautomer_validity_ready") is True
+        and pm_chemistry.get("protonation_validity_ready") is True
+    )
+    pose_ranking_hbond_benchmark_ready = bool(
+        pose_benchmark.get("benchmark_ready") is True
+        and pose_benchmark.get("top1_pose_id") == pose_benchmark.get("top1_expected_pose_id")
+        and _int_value(pose_benchmark.get("hbond_recovery_pose_count")) >= 1
+        and pose_benchmark.get("overanchored_decoys_blocked") is True
+        and pose_benchmark.get("unsatisfied_donor_acceptor_detected") is True
+        and pose_benchmark.get("row_contracts_ready") is True
+    )
     rocm_ready = _rocm_product_runtime_ready(rocm_summary)
     image_hbond_evidence_receipt_ready = bool(
         image_summary.get("backmapping_hbond_evidence_receipt_ready") is True
@@ -505,20 +1047,32 @@ def build_payload(
         and _int_value(image_summary.get("container_runtime_visible_device_count")) > 0
         and image_summary.get("container_runtime_rust_hip_backend_enabled") is True
     )
+    clean_container_requirements = {
+        "clean_container_smoke_receipt_ready": image_summary.get("clean_container_smoke_ready") is True,
+        "product_image_receipt_status_ready": image_summary.get("receipt_status") == "product_image_smoke_ready",
+        "product_image_receipt_mode_rocm_runtime": image_summary.get("receipt_mode") == "rocm-runtime",
+        "container_runtime_receipt_ready": image_container_runtime_receipt_ready,
+        "product_runner_smoke_ready": image_summary.get("product_runner_smoke_ready") is True,
+        "product_runner_claim_metadata_ready": image_summary.get("product_runner_claim_metadata_ready") is True,
+        "tier_alpha_result_manifest_signature_verified": (
+            image_summary.get("tier_alpha_result_manifest_signature_verified") is True
+        ),
+        "tier_alpha_result_manifest_completed": image_summary.get("tier_alpha_result_manifest_status") == "completed",
+        "backmapping_runner_claim_metadata_ready": (
+            image_summary.get("backmapping_runner_claim_metadata_ready") is True
+        ),
+        "backmapping_ligand_topology_receipt_ready": image_ligand_topology_receipt_ready,
+        "backmapping_hbond_evidence_receipt_ready": image_hbond_evidence_receipt_ready,
+        "backmapping_onsps_backmap_receipt_ready": image_onsps_backmap_receipt_ready,
+        "simulate_missing_profile_returns_422": (
+            _int_value(image_summary.get("receipt_simulate_missing_profile_http")) == 422
+        ),
+    }
+    clean_container_missing_requirements = [
+        requirement for requirement, passed in clean_container_requirements.items() if passed is not True
+    ]
     clean_container_smoke_ready = bool(
-        image_summary.get("clean_container_smoke_ready") is True
-        and image_summary.get("receipt_status") == "product_image_smoke_ready"
-        and image_summary.get("receipt_mode") == "rocm-runtime"
-        and image_container_runtime_receipt_ready
-        and image_summary.get("product_runner_smoke_ready") is True
-        and image_summary.get("product_runner_claim_metadata_ready") is True
-        and image_summary.get("tier_alpha_result_manifest_signature_verified") is True
-        and image_summary.get("tier_alpha_result_manifest_status") == "completed"
-        and image_summary.get("backmapping_runner_claim_metadata_ready") is True
-        and image_ligand_topology_receipt_ready
-        and image_hbond_evidence_receipt_ready
-        and image_onsps_backmap_receipt_ready
-        and _int_value(image_summary.get("receipt_simulate_missing_profile_http")) == 422
+        not clean_container_missing_requirements
     )
     bundle_input_ready = not missing_required and bool(rows)
     tar_exists = False
@@ -544,10 +1098,17 @@ def build_payload(
         and rocm_ready
         and clean_container_smoke_ready
         and runner_claim_metadata_signed
+        and force_residual_summary_signed
         and force_term_claim_metadata_ready
+        and force_term_result_contract_ready
+        and guarded_force_term_plugin_ready
+        and onsps_backmap_evidence_schema_ready
         and core_forcefield_bridge_ready
         and core_compatibility_layer_ready
         and job_store_lazy_factory_ready
+        and allowlisted_runner_shim_contract_ready
+        and chemistry_pm_gates_ready
+        and pose_ranking_hbond_benchmark_ready
         and validation["kpi_claim_metadata_gates_validated"] is True
     )
     if product_claim_ready:
@@ -567,16 +1128,44 @@ def build_payload(
         "bundle_export_ready": bundle_ready,
         "product_claim_ready": product_claim_ready,
         "kpi_report_ready": kpi_ready,
+        "kpi_failed_gate_count": len(kpi_failed_gate_ids),
+        "kpi_failed_gate_ids": kpi_failed_gate_ids,
         "runner_claim_metadata_signed": runner_claim_metadata_signed,
+        "force_residual_summary_signed": force_residual_summary_signed,
         "force_term_claim_metadata_ready": force_term_claim_metadata_ready,
+        "force_term_result_contract_ready": force_term_result_contract_ready,
+        "guarded_force_term_plugin_ready": guarded_force_term_plugin_ready,
+        "onsps_backmap_evidence_schema_ready": onsps_backmap_evidence_schema_ready,
         "core_forcefield_bridge_ready": core_forcefield_bridge_ready,
         "core_compatibility_layer_ready": core_compatibility_layer_ready,
         "job_store_lazy_factory_ready": job_store_lazy_factory_ready,
+        "allowlisted_runner_shim_contract_ready": allowlisted_runner_shim_contract_ready,
+        "chemistry_pm_gates_ready": chemistry_pm_gates_ready,
+        "pose_ranking_hbond_benchmark_ready": pose_ranking_hbond_benchmark_ready,
+        "pose_ranking_hbond_row_contracts_ready": bool(
+            pose_benchmark.get("row_contracts_ready") is True
+        ),
+        "pose_ranking_hbond_row_contract_pass_count": _int_value(
+            pose_benchmark.get("row_contract_pass_count")
+        ),
+        "hbond_recovery_pose_count": _int_value(pm_chemistry.get("hbond_recovery_pose_count")),
+        "overanchored_decoy_rejection": bool(pm_chemistry.get("overanchored_decoy_rejection") is True),
+        "unsatisfied_donor_acceptor_detection": bool(
+            pm_chemistry.get("unsatisfied_donor_acceptor_detection") is True
+        ),
         "kpi_claim_metadata_gates_validated": bool(validation["kpi_claim_metadata_gates_validated"]),
         "kpi_claim_metadata_gate_count": int(validation["kpi_claim_metadata_gate_count"]),
         "kpi_claim_metadata_gate_validated_count": int(validation["kpi_claim_metadata_gate_validated_count"]),
         "rocm_hip_rust_runtime_ready": rocm_ready,
         "clean_container_smoke_ready": clean_container_smoke_ready,
+        "clean_container_missing_requirement_count": len(clean_container_missing_requirements),
+        "clean_container_missing_requirements": clean_container_missing_requirements,
+        "product_image_preflight_status": str(image_summary.get("status") or ""),
+        "product_image_preflight_ready": bool(image_summary.get("preflight_ready") is True),
+        "product_image_docker_cli_present": bool(image_summary.get("docker_cli_present") is True),
+        "product_image_preflight_blocker_count": len(image_preflight_blocker_codes),
+        "product_image_preflight_blocker_codes": image_preflight_blocker_codes,
+        "product_image_preflight_next_required_step": str(image_summary.get("next_required_step") or ""),
         "product_image_receipt_present": bool(image_summary.get("receipt_present") is True),
         "container_runtime_receipt_ready": image_container_runtime_receipt_ready,
         "container_runtime_proof_schema_version": str(
@@ -661,6 +1250,10 @@ def build_payload(
         "bundle_validation_checked": bool(validation["bundle_validation_checked"]),
         "bundle_validation_error_count": int(validation["bundle_validation_error_count"]),
         "bundle_validation_errors": list(validation["bundle_validation_errors"]),
+        "source_artifacts_fresh": bool(validation["source_artifacts_fresh"]),
+        "source_artifact_fresh_count": int(validation["source_artifact_fresh_count"]),
+        "source_artifact_stale_count": int(validation["source_artifact_stale_count"]),
+        "source_artifact_stale_ids": list(validation["source_artifact_stale_ids"]),
         "product_runtime_completion_rule": (
             "commercial_compute_default=rocm_hip; torch_rocm_ready=true; visible_device_count>0; "
             "device_nodes_ready=true; cpu_fallback_allowed_for_product=false"
@@ -683,21 +1276,52 @@ def build_payload(
     if bundle_ready and not rocm_ready:
         blockers.append({"code": "rocm_hip_rust_runtime_not_ready"})
     if bundle_ready and not kpi_ready:
-        blockers.append({"code": "kpi_report_not_ready"})
+        blockers.append(
+            {
+                "code": "kpi_report_not_ready",
+                "failed_gate_ids": kpi_failed_gate_ids,
+            }
+        )
     if bundle_ready and not runner_claim_metadata_signed:
         blockers.append({"code": "runner_claim_metadata_not_signed"})
+    if bundle_ready and not force_residual_summary_signed:
+        blockers.append({"code": "force_residual_summary_not_signed"})
     if bundle_ready and not force_term_claim_metadata_ready:
         blockers.append({"code": "force_term_claim_metadata_not_ready"})
+    if bundle_ready and not force_term_result_contract_ready:
+        blockers.append({"code": "force_term_result_contract_not_ready"})
+    if bundle_ready and not guarded_force_term_plugin_ready:
+        blockers.append({"code": "guarded_force_term_plugin_not_ready"})
+    if bundle_ready and not onsps_backmap_evidence_schema_ready:
+        blockers.append({"code": "onsps_backmap_evidence_schema_not_ready"})
     if bundle_ready and not core_forcefield_bridge_ready:
         blockers.append({"code": "core_forcefield_bridge_not_ready"})
     if bundle_ready and not core_compatibility_layer_ready:
         blockers.append({"code": "core_compatibility_layer_not_ready"})
     if bundle_ready and not job_store_lazy_factory_ready:
         blockers.append({"code": "job_store_lazy_factory_not_ready"})
+    if bundle_ready and not allowlisted_runner_shim_contract_ready:
+        blockers.append({"code": "allowlisted_runner_shim_contract_not_ready"})
+    if bundle_ready and not chemistry_pm_gates_ready:
+        blockers.append({"code": "chemistry_pm_gates_not_ready"})
+    if bundle_ready and not pose_ranking_hbond_benchmark_ready:
+        blockers.append({"code": "pose_ranking_hbond_benchmark_not_ready"})
     if bundle_ready and validation["kpi_claim_metadata_gates_validated"] is not True:
         blockers.append({"code": "kpi_claim_metadata_gates_not_validated"})
     if bundle_ready and not clean_container_smoke_ready:
-        blockers.append({"code": "clean_container_smoke_not_ready"})
+        blockers.append(
+            {
+                "code": "clean_container_smoke_not_ready",
+                "missing_requirements": clean_container_missing_requirements,
+            }
+        )
+    if bundle_ready and not clean_container_smoke_ready and image_preflight_blocker_codes:
+        blockers.append(
+            {
+                "code": "product_image_preflight_blocked",
+                "preflight_blockers": image_preflight_blocker_codes,
+            }
+        )
     if bundle_ready and validation["bundle_validation_pass"] is not True:
         blockers.append({"code": "bundle_validation_failed", "errors": list(validation["bundle_validation_errors"])})
     return {"summary": summary, "rows": rows, "blockers": blockers}
@@ -716,6 +1340,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- kpi_report_ready: `{s['kpi_report_ready']}`",
         f"- rocm_hip_rust_runtime_ready: `{s['rocm_hip_rust_runtime_ready']}`",
         f"- clean_container_smoke_ready: `{s['clean_container_smoke_ready']}`",
+        f"- product_image_preflight_status: `{s['product_image_preflight_status']}`",
+        f"- product_image_preflight_blocker_codes: `{','.join(s['product_image_preflight_blocker_codes'])}`",
+        f"- allowlisted_runner_shim_contract_ready: `{s['allowlisted_runner_shim_contract_ready']}`",
         f"- bundle_tar_path: `{s['bundle_tar_path']}`",
         f"- bundle_tar_sha256: `{s['bundle_tar_sha256']}`",
         f"- required_artifact_missing_count: `{s['required_artifact_missing_count']}`",

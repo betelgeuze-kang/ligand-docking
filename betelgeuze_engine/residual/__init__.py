@@ -1,6 +1,7 @@
 """Guarded residual correction contracts."""
 
 from betelgeuze_engine.residual.guarded_force import (
+    FORCE_RESIDUAL_CLAIM_METADATA_SCHEMA_VERSION,
     ForceResidualDecision,
     ForceResidualPolicy,
     ForceResidualReport,
@@ -9,6 +10,7 @@ from betelgeuze_engine.residual.guarded_force import (
 )
 
 __all__ = [
+    "FORCE_RESIDUAL_CLAIM_METADATA_SCHEMA_VERSION",
     "ForceResidualDecision",
     "ForceResidualPolicy",
     "ForceResidualReport",

@@ -3,8 +3,12 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE="${PRODUCT_IMAGE:-betelgeuze-md-product:local}"
+DOCKER_CMD="${DOCKER_CMD:-docker}"
+read -r -a DOCKER_BIN <<< "${DOCKER_CMD}"
+DOCKER_DISPLAY="${DOCKER_BIN[*]}"
 DOCKERFILE="${ROOT}/Dockerfile.product"
 VERIFY_MODE="${PRODUCT_IMAGE_VERIFY_MODE:-build}"
+HOST_PYTHON="${PRODUCT_IMAGE_HOST_PYTHON:-python3}"
 RUNNER_TIMEOUT_SECONDS="${PRODUCT_IMAGE_RUNNER_TIMEOUT_SECONDS:-600}"
 RUNNER_PROFILE_TIMEOUT_SECONDS="${PRODUCT_IMAGE_RUNNER_PROFILE_TIMEOUT_SECONDS:-300}"
 RECEIPT_JSON="${PRODUCT_IMAGE_SMOKE_RECEIPT_JSON:-${ROOT}/runs/product_image_smoke_receipt_current.json}"
@@ -25,8 +29,16 @@ case "${VERIFY_MODE}" in
     ;;
 esac
 
-if ! command -v docker >/dev/null 2>&1; then
-  echo '{"status":"blocked_product_image_smoke","reason":"docker_cli_missing","claim_boundary":"Verify script requires docker CLI and does not mark missing Docker as green."}'
+if [[ "${#DOCKER_BIN[@]}" -eq 0 ]] || ! command -v "${DOCKER_BIN[0]}" >/dev/null 2>&1; then
+  echo '{"status":"blocked_product_image_smoke","reason":"docker_cli_missing","claim_boundary":"Verify script requires docker CLI and does not mark missing Docker as green.","operator_hint":"Install Docker with scripts/prepare_product_docker_host.sh or set DOCKER_CMD to a Docker-compatible command."}'
+  exit 2
+fi
+if ! "${DOCKER_BIN[@]}" info >/dev/null 2>&1; then
+  echo '{"status":"blocked_product_image_smoke","reason":"docker_daemon_unreachable","claim_boundary":"Verify script requires an accessible Docker daemon and does not mark daemon access failures as green.","operator_hint":"Start Docker or run with DOCKER_CMD=\"sudo docker\" after authenticating in the operator shell."}'
+  exit 2
+fi
+if ! command -v "${HOST_PYTHON}" >/dev/null 2>&1; then
+  echo '{"status":"blocked_product_image_smoke","reason":"host_python_missing","claim_boundary":"Verify script requires a host Python interpreter to write the receipt JSON.","operator_hint":"Install python3 or set PRODUCT_IMAGE_HOST_PYTHON to a valid interpreter."}'
   exit 2
 fi
 
@@ -50,30 +62,42 @@ if [[ "${VERIFY_MODE}" == "rocm-runtime" ]]; then
 fi
 
 echo "Building product image: ${IMAGE}" >&2
-docker build -f "${DOCKERFILE}" -t "${IMAGE}" "${ROOT}"
+"${DOCKER_BIN[@]}" build -f "${DOCKERFILE}" -t "${IMAGE}" "${ROOT}"
 
 echo "Running ROCm/HIP/Rust import smoke inside container" >&2
 if [[ "${VERIFY_MODE}" == "rocm-runtime" ]]; then
   mkdir -p "${RUNNER_SMOKE_DIR}"
-  docker run "${DOCKER_RUN_ARGS[@]}" \
+  "${DOCKER_BIN[@]}" run "${DOCKER_RUN_ARGS[@]}" \
     -v "${RUNNER_SMOKE_DIR}:/smoke" \
     "${IMAGE}" \
     python -c "import json, pathlib, torch; from dataclasses import asdict; import ldi_arc_rust; import tools.run_ligand_backmapping_scoring; import api.main; import betelgeuze_product.cli; from core.rust_hip_backend import probe_rust_hip_backend; proof_path=pathlib.Path('/smoke/rocm_container_runtime_proof.json'); cgroup=pathlib.Path('/proc/1/cgroup').read_text(errors='ignore') if pathlib.Path('/proc/1/cgroup').exists() else ''; probe=probe_rust_hip_backend(device=torch.device('cuda')); payload={'schema_version':'rocm_container_runtime_proof_v1','in_container': pathlib.Path('/.dockerenv').exists() or 'docker' in cgroup or 'kubepods' in cgroup,'dev_kfd_present': pathlib.Path('/dev/kfd').exists(),'dev_dri_present': pathlib.Path('/dev/dri').exists(),'torch_hip_version': str(getattr(torch.version, 'hip', '') or ''),'torch_rocm_ready': bool(getattr(torch.version, 'hip', None)),'torch_cuda_available': bool(torch.cuda.is_available()),'visible_device_count': int(torch.cuda.device_count()) if torch.cuda.is_available() else 0,'visible_device_name': str(torch.cuda.get_device_name(0)) if torch.cuda.is_available() and torch.cuda.device_count() > 0 else '','ldi_arc_rust_import_ready': True,'product_runner_import_ready': True,'api_import_ready': True,'rust_hip_backend_enabled': bool(probe.enabled),'rust_hip_backend_reason': str(probe.reason),'rust_hip_kernel_name': str(probe.kernel_name or ''),'rust_hip_module_loaded': bool(probe.module_loaded)}; payload['proof_ready']=bool(payload['in_container'] and payload['dev_kfd_present'] and payload['dev_dri_present'] and payload['torch_rocm_ready'] and payload['torch_cuda_available'] and payload['visible_device_count'] > 0 and payload['ldi_arc_rust_import_ready'] and payload['product_runner_import_ready'] and payload['api_import_ready'] and payload['rust_hip_backend_enabled']); proof_path.write_text(json.dumps(payload, sort_keys=True)+'\n', encoding='utf-8'); print(json.dumps(payload, sort_keys=True)); assert payload['proof_ready'], payload"
 else
-  docker run "${DOCKER_RUN_ARGS[@]}" "${IMAGE}" python -c "import torch; assert torch.version.hip; import ldi_arc_rust; import tools.run_ligand_backmapping_scoring; import api.main; import betelgeuze_product.cli; print('product image build import ok')"
+  "${DOCKER_BIN[@]}" run "${DOCKER_RUN_ARGS[@]}" "${IMAGE}" python -c "import torch; assert torch.version.hip; import ldi_arc_rust; import tools.run_ligand_backmapping_scoring; import api.main; import betelgeuze_product.cli; print('product image build import ok')"
 fi
 
 echo "Running betelgeuze-product --help smoke" >&2
-docker run "${DOCKER_RUN_ARGS[@]}" "${IMAGE}" betelgeuze-product capabilities --root /app >/dev/null
+"${DOCKER_BIN[@]}" run "${DOCKER_RUN_ARGS[@]}" "${IMAGE}" betelgeuze-product capabilities --root /app >/dev/null
 
 if [[ "${VERIFY_MODE}" == "rocm-runtime" ]]; then
+  cat > "${RUNNER_SMOKE_DIR}/container_native.pdb" <<'PDB'
+ATOM      1  N   GLY A   1       0.000   0.000   0.000  1.00 10.00           N
+ATOM      2  CA  GLY A   1       1.450   0.000   0.000  1.00 10.00           C
+ATOM      3  C   GLY A   1       2.050   1.250   0.000  1.00 10.00           C
+ATOM      4  O   GLY A   1       1.500   2.300   0.000  1.00 10.00           O
+ATOM      5  N   SER A   2       3.250   1.150   0.000  1.00 10.00           N
+ATOM      6  CA  SER A   2       3.950   2.350   0.000  1.00 10.00           C
+ATOM      7  C   SER A   2       5.350   2.100   0.000  1.00 10.00           C
+ATOM      8  O   SER A   2       5.950   3.050   0.000  1.00 10.00           O
+ATOM      9  OG  SER A   2       3.200   3.450   0.000  1.00 10.00           O
+END
+PDB
   cat > "${RUNNER_SMOKE_DIR}/backmapping_queue.csv" <<'CSV'
-queue_id,target,ligand_id,ligand_smiles,pocket_x,pocket_y,pocket_z,ligand_bead0_x,ligand_bead0_y,ligand_bead0_z,ligand_bead1_x,ligand_bead1_y,ligand_bead1_z
-q1,container,l1,CC(=O)N,0,0,0,0,0,0,1.6,0,0
-q2,container,l2,CCCC,0,0,0,0,0,0,1.6,0,0
+queue_id,target,ligand_id,ligand_smiles,native_pdb_path,pocket_x,pocket_y,pocket_z,ligand_bead0_x,ligand_bead0_y,ligand_bead0_z,ligand_bead1_x,ligand_bead1_y,ligand_bead1_z
+q1,container,l1,CC(=O)N,/smoke/container_native.pdb,0,0,0,0,0,0,1.6,0,0
+q2,container,l2,CCCC,/smoke/container_native.pdb,0,0,0,0,0,0,1.6,0,0
 CSV
   echo "Running real validated runner dispatch smoke inside ROCm container" >&2
-  docker run "${DOCKER_RUN_ARGS[@]}" \
+  "${DOCKER_BIN[@]}" run "${DOCKER_RUN_ARGS[@]}" \
     -v "${RUNNER_SMOKE_DIR}:/smoke" \
     -e API_VALIDATED_RUNNER_ENABLED=1 \
     "${IMAGE}" \
@@ -83,7 +107,7 @@ CSV
       --out-json /smoke/tier_alpha_adrb2_dispatch_smoke.json
 
   echo "Running backmapping scoring claim-metadata smoke inside ROCm container" >&2
-  docker run "${DOCKER_RUN_ARGS[@]}" \
+  "${DOCKER_BIN[@]}" run "${DOCKER_RUN_ARGS[@]}" \
     -v "${RUNNER_SMOKE_DIR}:/smoke" \
     "${IMAGE}" \
     python tools/run_ligand_backmapping_scoring.py \
@@ -103,9 +127,12 @@ CSV
 fi
 
 echo "Running /simulate scope gate smoke (expect 422 without runner_profile_id)" >&2
-cid="$(docker run -d -p 127.0.0.1::8000 -e PRODUCT_API_AUTH_REQUIRED=0 "${DOCKER_DAEMON_ARGS[@]}" "${IMAGE}")"
-trap 'docker rm -f "${cid}" >/dev/null 2>&1 || true' EXIT
-port="$(docker port "${cid}" 8000/tcp | head -1 | awk -F: '{print $NF}')"
+cid="$("${DOCKER_BIN[@]}" run -d -p 127.0.0.1::8000 -e PRODUCT_API_AUTH_REQUIRED=0 "${DOCKER_DAEMON_ARGS[@]}" "${IMAGE}")"
+cleanup_container() {
+  "${DOCKER_BIN[@]}" rm -f "${cid}" >/dev/null 2>&1 || true
+}
+trap cleanup_container EXIT
+port="$("${DOCKER_BIN[@]}" port "${cid}" 8000/tcp | head -1 | awk -F: '{print $NF}')"
 for _ in $(seq 1 30); do
   if curl -sf "http://127.0.0.1:${port}/docs" >/dev/null; then
     break
@@ -131,9 +158,10 @@ RECEIPT_JSON="${RECEIPT_JSON}" \
 RUNNER_SMOKE_DIR="${RUNNER_SMOKE_DIR}" \
 VERIFY_MODE="${VERIFY_MODE}" \
 IMAGE="${IMAGE}" \
+DOCKER_CMD_DISPLAY="${DOCKER_DISPLAY}" \
 CLEAN_CONTAINER_SMOKE_READY="${clean_container_smoke_ready}" \
 PRODUCT_RUNNER_SMOKE_READY="${product_runner_smoke_ready}" \
-python - <<'PY'
+"${HOST_PYTHON}" - <<'PY'
 import json
 import os
 from pathlib import Path
@@ -195,10 +223,25 @@ tier_alpha_manifest_ready = bool(
     and tier_alpha.get("result_manifest_status") == "completed"
 )
 product_runner_claim_metadata_ready = bool(tier_alpha_manifest_ready and backmapping_claim_metadata_ready)
+receipt_ready = bool(
+    os.environ["VERIFY_MODE"] == "rocm-runtime"
+    and container_runtime_proof_ready
+    and product_runner_claim_metadata_ready
+)
+receipt_status = (
+    "product_image_smoke_ready"
+    if receipt_ready
+    else (
+        "blocked_product_image_rocm_runtime_smoke"
+        if os.environ["VERIFY_MODE"] == "rocm-runtime"
+        else "product_image_build_smoke_ready"
+    )
+)
 payload = {
-    "status": "product_image_smoke_ready",
+    "status": receipt_status,
     "mode": os.environ["VERIFY_MODE"],
     "image": os.environ["IMAGE"],
+    "docker_cmd": os.environ["DOCKER_CMD_DISPLAY"],
     "runner_smoke_dir": str(smoke_dir),
     "simulate_missing_profile_http": 422,
     "clean_container_smoke_ready": bool(

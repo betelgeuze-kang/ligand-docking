@@ -63,10 +63,12 @@ def _resolve_path(path_like: str | Path, *, base_dir: Path | None = None) -> Pat
 
 def _relative_path(path_like: str | Path) -> str:
     path = Path(path_like).resolve()
-    try:
-        return str(path.relative_to(ROOT))
-    except ValueError:
-        return str(path)
+    for base in (ROOT, Path.cwd()):
+        try:
+            return str(path.relative_to(base.resolve()))
+        except ValueError:
+            continue
+    return str(path)
 
 
 def _normalize_name(value: str) -> str:

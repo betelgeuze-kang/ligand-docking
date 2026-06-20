@@ -52,6 +52,28 @@ def _read_json_object(path_like: str | Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
+_RESULT_ARTIFACT_TYPES: dict[str, tuple[str, str]] = {
+    ".json": ("json", "application/json"),
+    ".pdb": ("pdb", "chemical/x-pdb"),
+    ".sdf": ("sdf", "chemical/x-mdl-sdfile"),
+    ".mol": ("mol", "chemical/x-mdl-molfile"),
+    ".zip": ("zip", "application/zip"),
+}
+
+
+def infer_result_artifact_metadata(path_like: str | Path) -> dict[str, str]:
+    suffix = Path(path_like).suffix.lower()
+    artifact_type, media_type = _RESULT_ARTIFACT_TYPES.get(
+        suffix,
+        ("binary", "application/octet-stream"),
+    )
+    return {
+        "result_file_suffix": suffix,
+        "result_artifact_type": artifact_type,
+        "result_file_media_type": media_type,
+    }
+
+
 def _extract_result_metadata(path_like: str | Path) -> dict[str, dict[str, Any]]:
     payload = _read_json_object(path_like)
     if not payload:
@@ -63,6 +85,11 @@ def _extract_result_metadata(path_like: str | Path) -> dict[str, dict[str, Any]]
     hbond_summary = payload.get("hbond_evidence_summary")
     if isinstance(hbond_summary, dict):
         out["hbond_evidence_summary"] = dict(hbond_summary)
+    force_residual = payload.get("force_residual_summary")
+    if not isinstance(force_residual, dict):
+        force_residual = payload.get("force_residual_shortlist")
+    if isinstance(force_residual, dict):
+        out["force_residual_summary"] = dict(force_residual)
     return out
 
 
@@ -81,6 +108,7 @@ def build_result_manifest(
     accuracy_claim_grade: str = "restricted-local-delivery",
     result_claim_metadata: dict[str, Any] | None = None,
     hbond_evidence_summary: dict[str, Any] | None = None,
+    force_residual_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     resolved_fidelity = str(topology_fidelity or fidelity or TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE)
     resolved_scope = str(claim_scope or CLAIM_SCOPE_PRODUCT_LIGAND)
@@ -113,10 +141,14 @@ def build_result_manifest(
             f"{PRODUCT_CLAIM_BOUNDARY_TEXT}"
         ),
     }
+    if result_file:
+        payload.update(infer_result_artifact_metadata(result_file))
     if isinstance(result_claim_metadata, dict):
         payload["result_claim_metadata"] = dict(result_claim_metadata)
     if isinstance(hbond_evidence_summary, dict):
         payload["hbond_evidence_summary"] = dict(hbond_evidence_summary)
+    if isinstance(force_residual_summary, dict):
+        payload["force_residual_summary"] = dict(force_residual_summary)
     validate_manifest_claim_fields(payload)
     signature = hmac.new(signing_key.encode("utf-8"), _canonical_json(payload), hashlib.sha256).hexdigest()
     payload["signature"] = signature
@@ -148,6 +180,7 @@ def write_result_manifest(
     accuracy_claim_grade: str = "restricted-local-delivery",
     result_claim_metadata: dict[str, Any] | None = None,
     hbond_evidence_summary: dict[str, Any] | None = None,
+    force_residual_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     path = Path(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -173,6 +206,11 @@ def write_result_manifest(
             hbond_evidence_summary
             if hbond_evidence_summary is not None
             else extracted_metadata.get("hbond_evidence_summary")
+        ),
+        force_residual_summary=(
+            force_residual_summary
+            if force_residual_summary is not None
+            else extracted_metadata.get("force_residual_summary")
         ),
     )
     path.write_text(json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")

@@ -15,7 +15,8 @@ from api.casp17 import router as casp17_router
 from api.cleanup import router as cleanup_router
 from api.goal import router as goal_router
 from api.product import router as product_router
-from api.models import SimulationRequest, SimulationResponse, StatusResponse, ResultsResponse
+from api.result_manifest import infer_result_artifact_metadata
+from api.models import SimulationRequest, SimulationResponse, StatusResponse
 from api.simulation_scope import (
     PRODUCT_SIMULATION_SCOPE,
     UnsupportedSimulationScopeError,
@@ -169,7 +170,22 @@ def get_simulation_status(job_id: str):
         ),
     )
 
-@app.get("/results/{job_id}", response_model=ResultsResponse)
+@app.get(
+    "/results/{job_id}",
+    responses={
+        200: {
+            "description": "Completed result artifact. JSON artifacts are returned inline; file artifacts are downloaded with their artifact media type.",
+            "content": {
+                "application/json": {},
+                "chemical/x-pdb": {},
+                "chemical/x-mdl-sdfile": {},
+                "chemical/x-mdl-molfile": {},
+                "application/zip": {},
+                "application/octet-stream": {},
+            },
+        }
+    },
+)
 def get_simulation_results(job_id: str):
     store = get_job_store()
     if not store.job_exists(job_id):
@@ -220,19 +236,27 @@ def get_simulation_results(job_id: str):
         raise HTTPException(status_code=404, detail="Result file not found")
 
     result_path = Path(result_file)
-    suffix = result_path.suffix.lower()
-    if suffix == ".json":
+    manifest_payload: dict[str, Any] = {}
+    try:
+        loaded_manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+        manifest_payload = loaded_manifest if isinstance(loaded_manifest, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        manifest_payload = {}
+    artifact_metadata = infer_result_artifact_metadata(result_path)
+    media_type = str(
+        manifest_payload.get("result_file_media_type")
+        or artifact_metadata["result_file_media_type"]
+    )
+    artifact_type = str(
+        manifest_payload.get("result_artifact_type")
+        or artifact_metadata["result_artifact_type"]
+    )
+    if artifact_type == "json" or media_type == "application/json":
         try:
             payload = json.loads(result_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
             raise HTTPException(status_code=500, detail="Result JSON artifact is invalid") from exc
         return JSONResponse(payload)
-    media_type = {
-        ".pdb": "chemical/x-pdb",
-        ".sdf": "chemical/x-mdl-sdfile",
-        ".mol": "chemical/x-mdl-molfile",
-        ".zip": "application/zip",
-    }.get(suffix, "application/octet-stream")
     return FileResponse(result_file, media_type=media_type, filename=os.path.basename(result_file))
     # Or return a ResultsResponse object with a download link if serving via URL is preferred
     # return ResultsResponse(job_id=job_id, status="completed", result_url=f"/download/{job_id}")

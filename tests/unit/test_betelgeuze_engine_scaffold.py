@@ -172,6 +172,9 @@ def test_product_forcefield_plugin_registry_aggregates_terms_and_claim_metadata(
     assert result.forces.shape == coords.shape
     assert set(result.terms) == {"legacy_lj", "directional_hbond", "hydrophobic_contact"}
     assert result.diagnostics["term_count"] == 3
+    assert result.diagnostics["neighbor_pair_count"] == 6
+    assert result.diagnostics["neighbor_pairs_provided"] is False
+    assert result.diagnostics["neighbor_source"] == "full_neighbor_pairs"
     assert result.claim_metadata["claim_safe"] is True
     assert result.claim_metadata["topology_fidelity"] == "sequence_mapped"
     assert result.claim_metadata["ligand_topology_valid"] is True
@@ -247,11 +250,20 @@ def test_screened_electrostatics_term_is_guarded_and_claim_scoped() -> None:
     assert result.diagnostics["term"] == "screened_electrostatics"
     assert result.diagnostics["status"] == "pass"
     assert result.diagnostics["active_pair_count"] == 3
+    assert result.diagnostics["force_term_policy_caps_ready"] is True
+    assert result.diagnostics["force_term_observed_caps_ready"] is True
+    assert result.diagnostics["force_term_bounded_correction_ready"] is True
     assert result.claim_metadata["claim_safe"] is True
     assert result.claim_metadata["blocked_reason"] == ""
     assert result.claim_metadata["force_term_name"] == "screened_electrostatics"
     assert result.claim_metadata["force_term_status"] == "pass"
     assert result.claim_metadata["force_term_charge_model_valid"] is True
+    assert result.claim_metadata["force_term_policy_caps_ready"] is True
+    assert result.claim_metadata["force_term_observed_caps_ready"] is True
+    assert result.claim_metadata["force_term_bounded_correction_ready"] is True
+    assert result.claim_metadata["force_term_abs_energy_within_cap"] is True
+    assert result.claim_metadata["force_term_force_norm_within_cap"] is True
+    assert result.claim_metadata["force_term_active_pair_count_within_cap"] is True
     assert finite_difference_force_error(term, state, atom_index=0, coord_index=0) < 1e-5
 
     missing = term.energy_forces(
@@ -281,6 +293,19 @@ def test_screened_electrostatics_term_is_guarded_and_claim_scoped() -> None:
     assert unvalidated.claim_metadata["claim_safe"] is False
     assert unvalidated.claim_metadata["force_term_status"] == "charge_model_unvalidated"
     assert unvalidated.claim_metadata["blocked_reason"] == "screened_electrostatics_charge_model_unvalidated"
+
+    capped = ScreenedElectrostaticsTerm(scale=2.0, debye_kappa=0.15, max_force_norm=1e-12)
+    capped_result = capped.energy_forces(state)
+    assert capped_result.claim_metadata["claim_safe"] is False
+    assert capped_result.claim_metadata["force_term_status"] == "policy_cap_exceeded"
+    assert capped_result.claim_metadata["blocked_reason"] == "screened_electrostatics_policy_cap_exceeded"
+    assert capped_result.claim_metadata["force_term_charge_model_valid"] is True
+    assert capped_result.claim_metadata["force_term_policy_caps_ready"] is True
+    assert capped_result.claim_metadata["force_term_observed_caps_ready"] is False
+    assert capped_result.claim_metadata["force_term_bounded_correction_ready"] is False
+    assert capped_result.claim_metadata["force_term_force_norm_within_cap"] is False
+    assert torch.count_nonzero(capped_result.forces).item() == 0
+    assert torch.count_nonzero(capped_result.energy).item() == 0
 
 
 def test_product_forcefield_can_execute_guarded_screened_electrostatics_plugin() -> None:
@@ -315,6 +340,29 @@ def test_product_forcefield_can_execute_guarded_screened_electrostatics_plugin()
     assert result.claim_metadata["claim_safe"] is True
     assert result.claim_metadata["force_term_plugins"] == ["screened_electrostatics"]
     assert result.claim_metadata["force_term_claim_metadata_ready"] is True
+    assert result.claim_metadata["force_term_claim_rows"] == [
+        {
+            "force_term_name": "screened_electrostatics",
+            "force_term_status": "pass",
+            "claim_safe": True,
+            "blocked_reason": "",
+            "hbond_evidence_status": "pass",
+            "hbond_evidence_schema_version": "",
+            "hbond_evidence_schema_ready": False,
+            "ligand_topology_valid": True,
+            "policy_caps_ready": True,
+            "observed_caps_ready": True,
+            "bounded_correction_ready": True,
+            "policy_caps": {
+                "max_abs_energy": 50.0,
+                "max_force_norm": 25.0,
+                "max_active_pair_count": 4096.0,
+            },
+            "abs_energy_within_cap": True,
+            "force_norm_within_cap": True,
+            "active_pair_count_within_cap": True,
+        }
+    ]
     assert result.diagnostics["term_diagnostics"]["screened_electrostatics"]["status"] == "pass"
 
 
@@ -345,6 +393,86 @@ def test_product_forcefield_plugin_registry_blocks_missing_metadata_or_bad_term_
     assert term_metadata["blocked_reason"] == "hbond_roles_missing"
     assert term_metadata["hbond_evidence_schema_version"] == "hbond_evidence_v1"
     assert term_metadata["hbond_evidence_schema_ready"] is False
+
+
+def test_product_forcefield_enforces_term_result_contract_before_claim_merge() -> None:
+    class BadEnergyShapeTerm:
+        name = "bad_energy_shape"
+
+        def energy_forces(self, state: EngineState, pairs=None) -> TermResult:
+            return TermResult(
+                energy=torch.zeros(1, 1),
+                forces=torch.zeros_like(state.coords),
+                diagnostics={"term": self.name, "status": "pass"},
+                claim_metadata={
+                    "topology_fidelity": "sequence_mapped",
+                    "ligand_topology_valid": True,
+                    "hbond_evidence_status": "pass",
+                    "force_residual_applied": False,
+                    "claim_safe": True,
+                    "blocked_reason": "",
+                    "force_term_name": self.name,
+                    "force_term_status": "pass",
+                },
+            )
+
+    class NonfiniteForceTerm:
+        name = "nonfinite_force"
+
+        def energy_forces(self, state: EngineState, pairs=None) -> TermResult:
+            forces = torch.zeros_like(state.coords)
+            forces[0, 0, 0] = torch.nan
+            return TermResult(
+                energy=torch.zeros(state.coords.shape[0]),
+                forces=forces,
+                diagnostics={"term": self.name, "status": "pass"},
+                claim_metadata={
+                    "topology_fidelity": "sequence_mapped",
+                    "ligand_topology_valid": True,
+                    "hbond_evidence_status": "pass",
+                    "force_residual_applied": False,
+                    "claim_safe": True,
+                    "blocked_reason": "",
+                    "force_term_name": self.name,
+                    "force_term_status": "pass",
+                },
+            )
+
+    class MismatchedMetadataTerm:
+        name = "mismatched_metadata"
+
+        def energy_forces(self, state: EngineState, pairs=None) -> TermResult:
+            return TermResult(
+                energy=torch.zeros(state.coords.shape[0]),
+                forces=torch.zeros_like(state.coords),
+                diagnostics={"term": self.name, "status": "pass"},
+                claim_metadata={
+                    "topology_fidelity": "sequence_mapped",
+                    "ligand_topology_valid": True,
+                    "hbond_evidence_status": "pass",
+                    "force_residual_applied": False,
+                    "claim_safe": True,
+                    "blocked_reason": "",
+                    "force_term_name": "other_term",
+                    "force_term_status": "pass",
+                },
+            )
+
+    state = EngineState(coords=torch.zeros(1, 2, 3), atom_types=torch.tensor([0, 1]))
+    claim_metadata = {
+        "topology_fidelity": "sequence_mapped",
+        "ligand_topology_valid": True,
+        "hbond_evidence_status": "pass",
+        "claim_safe": True,
+        "blocked_reason": "",
+    }
+
+    with pytest.raises(ValueError, match="energy with wrong shape"):
+        ProductForceField([BadEnergyShapeTerm()]).energy_forces(state, claim_metadata=claim_metadata)
+    with pytest.raises(ValueError, match="nonfinite forces"):
+        ProductForceField([NonfiniteForceTerm()]).energy_forces(state, claim_metadata=claim_metadata)
+    with pytest.raises(ValueError, match="mismatched claim metadata term"):
+        ProductForceField([MismatchedMetadataTerm()]).energy_forces(state, claim_metadata=claim_metadata)
 
 
 def test_hbond_evidence_uses_onsps_roles_distance_and_angle() -> None:
@@ -385,6 +513,25 @@ def test_hbond_evidence_uses_onsps_roles_distance_and_angle() -> None:
         evidence.onsps_backmap_metadata["role_counts"]["donor"]
         + evidence.onsps_backmap_metadata["role_counts"]["acceptor"]
     ) >= 1
+    assert evidence.schema_ready() is True
+    metadata = evidence.to_claim_metadata(
+        topology_fidelity="sequence_mapped",
+        ligand_topology_valid=True,
+        product_claim_promoted=True,
+    )
+    assert metadata["hbond_claim_metadata_schema_version"] == "hbond_claim_metadata_v1"
+    assert metadata["hbond_evidence_schema_version"] == "hbond_evidence_v1"
+    assert metadata["hbond_evidence_schema_ready"] is True
+    assert metadata["hbond_claim_safe"] is True
+    assert metadata["hbond_distance_pass_count"] >= 1
+    assert metadata["hbond_angle_pass_count"] >= 1
+    assert metadata["onsps_backmap_schema_version"] == ONSPS_BACKMAP_SCHEMA_VERSION
+    assert metadata["onsps_backmap_metadata_schema_ready"] is True
+    assert metadata["onsps_backmap_claim_safe"] is True
+    assert metadata["topology_fidelity"] == "sequence_mapped"
+    assert metadata["ligand_topology_valid"] is True
+    assert metadata["claim_safe"] is True
+    assert metadata["blocked_reason"] == ""
 
 
 def test_onsps_backmap_evidence_schema_and_fail_closed_geometry() -> None:
@@ -440,6 +587,17 @@ def test_hbond_evidence_fail_closed_schema_for_invalid_or_missing_anchor() -> No
     assert invalid.onsps_backmap_metadata["backmap_status"] == "invalid_smiles"
     assert invalid.onsps_backmap_metadata["claim_safe"] is False
     assert invalid.onsps_backmap_metadata["blocked_reason"] == "invalid_smiles"
+    invalid_metadata = invalid.to_claim_metadata(
+        topology_fidelity="sequence_mapped",
+        ligand_topology_valid=False,
+        product_claim_promoted=True,
+    )
+    assert invalid.schema_ready() is True
+    assert invalid_metadata["hbond_evidence_schema_ready"] is True
+    assert invalid_metadata["hbond_claim_safe"] is False
+    assert invalid_metadata["claim_safe"] is False
+    assert "ligand_topology_invalid" in invalid_metadata["blocked_reason"]
+    assert "invalid_smiles" in invalid_metadata["blocked_reason"]
 
     missing = evaluate_hbond_evidence(
         smiles="CCO",
@@ -461,6 +619,14 @@ def test_hbond_evidence_fail_closed_schema_for_invalid_or_missing_anchor() -> No
     assert no_pose_geometry.onsps_backmap_metadata["backmap_status"] == "not_evaluated"
     assert no_pose_geometry.onsps_backmap_metadata["claim_safe"] is False
     assert no_pose_geometry.onsps_backmap_metadata["blocked_reason"] == "ligand_geometry_missing"
+    no_pose_metadata = no_pose_geometry.to_claim_metadata(
+        topology_fidelity="sequence_mapped",
+        ligand_topology_valid=True,
+        product_claim_promoted=False,
+    )
+    assert no_pose_metadata["claim_safe"] is False
+    assert "pose_geometry_missing" in no_pose_metadata["blocked_reason"]
+    assert "hbond_evidence_not_product_claim_promoted" in no_pose_metadata["blocked_reason"]
 
 
 def test_hbond_evidence_rejects_overanchored_decoy_contact() -> None:
@@ -521,6 +687,9 @@ def test_topology_claim_metadata_carries_ligand_product_validity_status() -> Non
     assert metadata["claim_safe"] is True
     assert metadata["blocked_reason"] == ""
     assert metadata["topology_fidelity"] == "sequence_mapped"
+    assert metadata["protein_residue_count"] == 3
+    assert metadata["protein_topology_valid"] is True
+    assert metadata["protein_topology_blocker"] == ""
     assert metadata["ligand_topology_valid"] is True
     assert metadata["ligand_topology_claim_safe"] is True
     assert metadata["ligand_topology_schema_version"] == "ligand_topology_validity_v1"
@@ -539,6 +708,30 @@ def test_topology_claim_metadata_carries_ligand_product_validity_status() -> Non
     assert metadata["ligand_tautomer_status"] == "connectivity_parsed_tautomer_not_canonicalized"
     assert metadata["ligand_tautomer_valid"] is True
     assert metadata["ligand_validity_blockers"] == []
+
+
+def test_topology_claim_metadata_blocks_empty_protein_topology() -> None:
+    protein = protein_topology_from_sequence("", n_res=0)
+    ligand = ligand_topology_from_smiles("C[C@H](O)C(=O)O")
+    complex_topology = ComplexTopology(
+        protein=protein,
+        ligand=ligand,
+        pocket_residue_indices=[],
+        claim_scope="unit-test",
+    )
+
+    metadata = topology_claim_metadata(complex_topology)
+
+    if ligand.validity.get("source") != "rdkit":
+        pytest.skip("RDKit topology validity is required for empty protein blocker metadata")
+    assert metadata["topology_fidelity"] == "placeholder_alanine"
+    assert metadata["protein_residue_count"] == 0
+    assert metadata["protein_topology_valid"] is False
+    assert metadata["protein_topology_blocker"] == "empty_protein_topology"
+    assert metadata["ligand_topology_valid"] is True
+    assert metadata["ligand_topology_claim_safe"] is True
+    assert metadata["claim_safe"] is False
+    assert metadata["blocked_reason"] == "empty_protein_topology"
 
 
 def test_topology_claim_metadata_blocks_unassigned_ligand_chirality() -> None:
@@ -583,6 +776,8 @@ def test_engine_topology_factory_facade_builds_claim_metadata() -> None:
     if result.claim_metadata.get("ligand_topology_source") != "rdkit":
         pytest.skip("RDKit topology validity is required for claim-safe ligand metadata")
     assert result.claim_metadata["topology_fidelity"] == "sequence_mapped"
+    assert result.claim_metadata["protein_residue_count"] == 3
+    assert result.claim_metadata["protein_topology_valid"] is True
     assert result.claim_metadata["ligand_topology_valid"] is True
     assert result.claim_metadata["ligand_topology_claim_safe"] is True
     assert result.claim_metadata["ligand_topology_schema_version"] == "ligand_topology_validity_v1"
@@ -600,6 +795,8 @@ def test_engine_topology_factory_facade_blocks_placeholder_or_ligand_invalidity(
     if placeholder.claim_metadata.get("ligand_topology_source") != "rdkit":
         pytest.skip("RDKit topology validity is required for topology factory blocker metadata")
     assert placeholder.claim_metadata["topology_fidelity"] == "placeholder_alanine"
+    assert placeholder.claim_metadata["protein_residue_count"] == 3
+    assert placeholder.claim_metadata["protein_topology_valid"] is True
     assert placeholder.claim_metadata["ligand_topology_valid"] is True
     assert placeholder.claim_metadata["claim_safe"] is False
     assert placeholder.claim_metadata["blocked_reason"] == "placeholder_alanine_topology"

@@ -327,6 +327,9 @@ def test_result_manifest_signs_request_and_result_file(tmp_path: Path) -> None:
     assert manifest_path.exists()
     assert manifest["signature_algorithm"] == "hmac-sha256"
     assert manifest["result_file_sha256"]
+    assert manifest["result_file_suffix"] == ".pdb"
+    assert manifest["result_artifact_type"] == "pdb"
+    assert manifest["result_file_media_type"] == "chemical/x-pdb"
     assert verify_result_manifest(manifest, signing_key="test-signing-key") is True
 
     tampered = dict(manifest)
@@ -353,6 +356,13 @@ def test_result_manifest_signs_runner_claim_metadata_from_json_result(tmp_path: 
                     "evaluated_row_count": 1,
                     "claim_safe_row_count": 0,
                 },
+                "force_residual_shortlist": {
+                    "schema_version": "force_residual_claim_metadata_v1",
+                    "applied": False,
+                    "reason": "disabled",
+                    "policy_caps_ready": True,
+                    "observed_caps_ready": True,
+                },
             },
             sort_keys=True,
         )
@@ -374,11 +384,19 @@ def test_result_manifest_signs_runner_claim_metadata_from_json_result(tmp_path: 
     assert manifest["result_claim_metadata"]["claim_safe"] is False
     assert manifest["result_claim_metadata"]["blocked_reason"] == "protein_topology_missing"
     assert manifest["hbond_evidence_summary"]["schema_version"] == "hbond_evidence_v1"
+    assert manifest["force_residual_summary"]["schema_version"] == "force_residual_claim_metadata_v1"
+    assert manifest["force_residual_summary"]["policy_caps_ready"] is True
+    assert manifest["force_residual_summary"]["observed_caps_ready"] is True
+    assert manifest["result_artifact_type"] == "json"
+    assert manifest["result_file_media_type"] == "application/json"
     assert verify_result_manifest(manifest, signing_key="test-signing-key") is True
 
     tampered = json.loads(json.dumps(manifest))
     tampered["result_claim_metadata"]["claim_safe"] = True
     assert verify_result_manifest(tampered, signing_key="test-signing-key") is False
+    tampered_force = json.loads(json.dumps(manifest))
+    tampered_force["force_residual_summary"]["observed_caps_ready"] = False
+    assert verify_result_manifest(tampered_force, signing_key="test-signing-key") is False
 
 
 def test_api_main_no_longer_declares_in_memory_job_dict() -> None:

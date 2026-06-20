@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from typing import Any
 
 import torch
@@ -25,7 +26,51 @@ class ScreenedElectrostaticsTerm:
     scale: float = 4.0
     debye_kappa: float = 0.2
     cutoff: float | None = None
+    max_abs_energy: float = 50.0
+    max_force_norm: float = 25.0
+    max_active_pair_count: int = 4096
     name: str = "screened_electrostatics"
+
+    def _policy_caps(self) -> dict[str, float]:
+        return {
+            "max_abs_energy": float(self.max_abs_energy),
+            "max_force_norm": float(self.max_force_norm),
+            "max_active_pair_count": float(self.max_active_pair_count),
+        }
+
+    def _policy_caps_ready(self) -> bool:
+        return bool(
+            math.isfinite(float(self.max_abs_energy))
+            and float(self.max_abs_energy) >= 0.0
+            and math.isfinite(float(self.max_force_norm))
+            and float(self.max_force_norm) > 0.0
+            and int(self.max_active_pair_count) >= 0
+        )
+
+    def _cap_metadata(self, *, abs_energy: float, force_norm: float, active_pair_count: int) -> dict[str, Any]:
+        energy_within_cap = bool(abs_energy <= float(self.max_abs_energy) + 1e-7)
+        force_within_cap = bool(force_norm <= float(self.max_force_norm) + 1e-7)
+        pair_count_within_cap = bool(int(active_pair_count) <= int(self.max_active_pair_count))
+        observed_caps_ready = bool(
+            self._policy_caps_ready()
+            and energy_within_cap
+            and force_within_cap
+            and pair_count_within_cap
+        )
+        return {
+            "force_term_policy_caps": self._policy_caps(),
+            "force_term_policy_caps_ready": self._policy_caps_ready(),
+            "force_term_observed_caps_ready": observed_caps_ready,
+            "force_term_bounded_correction_ready": observed_caps_ready,
+            "force_term_abs_energy": float(abs_energy),
+            "force_term_observed_force_norm": float(force_norm),
+            "force_term_max_abs_energy": float(self.max_abs_energy),
+            "force_term_max_force_norm": float(self.max_force_norm),
+            "force_term_max_active_pair_count": int(self.max_active_pair_count),
+            "force_term_abs_energy_within_cap": energy_within_cap,
+            "force_term_force_norm_within_cap": force_within_cap,
+            "force_term_active_pair_count_within_cap": pair_count_within_cap,
+        }
 
     def _zero_result(
         self,
@@ -35,18 +80,29 @@ class ScreenedElectrostaticsTerm:
         status: str,
         blocked_reason: str,
         charge_source: str = "",
+        charge_model_valid: bool = False,
+        charge_count: int = 0,
+        active_pair_count: int = 0,
+        abs_energy: float = 0.0,
+        force_norm: float = 0.0,
     ) -> TermResult:
         zero = torch.zeros(coords.shape[0], dtype=coords.dtype, device=coords.device)
+        cap_metadata = self._cap_metadata(
+            abs_energy=float(abs_energy),
+            force_norm=float(force_norm),
+            active_pair_count=int(active_pair_count),
+        )
         return TermResult(
             energy=zero,
             forces=torch.zeros_like(coords),
             diagnostics={
                 "term": self.name,
                 "status": status,
-                "active_pair_count": 0,
+                "active_pair_count": int(active_pair_count),
                 "charge_source": charge_source,
                 "scale": float(self.scale),
                 "debye_kappa": float(self.debye_kappa),
+                **cap_metadata,
             },
             claim_metadata=term_claim_metadata(
                 state=state,
@@ -54,11 +110,13 @@ class ScreenedElectrostaticsTerm:
                 status=status,
                 blocked_reason=blocked_reason,
                 extras={
-                    "force_term_active_pair_count": 0,
+                    "force_term_active_pair_count": int(active_pair_count),
                     "force_term_charge_source": charge_source,
-                    "force_term_charge_model_valid": False,
+                    "force_term_charge_model_valid": bool(charge_model_valid),
+                    "force_term_charge_count": int(charge_count),
                     "force_term_debye_kappa": float(self.debye_kappa),
                     "force_term_scale": float(self.scale),
+                    **cap_metadata,
                 },
             ),
         )
@@ -106,9 +164,30 @@ class ScreenedElectrostaticsTerm:
         energy = (pair_energy * mask.to(dtype=pair_energy.dtype)).sum(dim=(1, 2))
         grad = torch.autograd.grad(energy.sum(), coords, create_graph=False, retain_graph=False)[0]
         active_pair_count = int(mask.sum().item())
+        forces = -grad
+        abs_energy = float(energy.detach().abs().max().cpu().item()) if energy.numel() else 0.0
+        force_norm = float(forces.detach().norm(dim=-1).max().cpu().item()) if forces.numel() else 0.0
+        cap_metadata = self._cap_metadata(
+            abs_energy=abs_energy,
+            force_norm=force_norm,
+            active_pair_count=active_pair_count,
+        )
+        if not cap_metadata["force_term_observed_caps_ready"]:
+            return self._zero_result(
+                state,
+                coords,
+                status="policy_cap_exceeded",
+                blocked_reason="screened_electrostatics_policy_cap_exceeded",
+                charge_source=charge_source,
+                charge_model_valid=True,
+                charge_count=int(charges.numel()),
+                active_pair_count=active_pair_count,
+                abs_energy=abs_energy,
+                force_norm=force_norm,
+            )
         return TermResult(
             energy=energy.detach(),
-            forces=(-grad).detach(),
+            forces=forces.detach(),
             diagnostics={
                 "term": self.name,
                 "status": "pass",
@@ -117,6 +196,7 @@ class ScreenedElectrostaticsTerm:
                 "charge_count": int(charges.numel()),
                 "scale": float(self.scale),
                 "debye_kappa": float(self.debye_kappa),
+                **cap_metadata,
             },
             claim_metadata=term_claim_metadata(
                 state=state,
@@ -129,6 +209,7 @@ class ScreenedElectrostaticsTerm:
                     "force_term_charge_count": int(charges.numel()),
                     "force_term_debye_kappa": float(self.debye_kappa),
                     "force_term_scale": float(self.scale),
+                    **cap_metadata,
                 },
             ),
         )

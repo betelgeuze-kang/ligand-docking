@@ -3570,6 +3570,8 @@ def _flatten_hbond_evidence_for_runner(
     except Exception as exc:
         return {
             "hbond_evidence_schema_version": HBOND_EVIDENCE_SCHEMA_VERSION,
+            "hbond_claim_metadata_schema_version": "hbond_claim_metadata_v1",
+            "hbond_evidence_schema_ready": False,
             "hbond_evidence_status": "error",
             "hbond_claim_safe": False,
             "hbond_blocked_reason": "hbond_evidence_error",
@@ -3580,6 +3582,8 @@ def _flatten_hbond_evidence_for_runner(
             "hbond_acceptor_site_count": 0,
             "hbond_pair_count": 0,
             "hbond_confidence": 0.0,
+            "hbond_distance_pass_count": 0,
+            "hbond_angle_pass_count": 0,
             "hbond_distance_pass_fraction": 0.0,
             "hbond_angle_pass_fraction": 0.0,
             "hbond_unsatisfied_donor_count": 0,
@@ -3592,13 +3596,23 @@ def _flatten_hbond_evidence_for_runner(
             "onsps_backmap_status": "error",
             "onsps_backmap_source": "",
             "onsps_backmap_claim_safe": False,
+            "onsps_backmap_metadata_schema_ready": False,
             "onsps_backmap_blocked_reason": "hbond_evidence_error",
             "onsps_backmap_site_count": 0,
             "onsps_backmap_mapped_site_count": 0,
         }
     onsps_meta = evidence.onsps_backmap_metadata if isinstance(evidence.onsps_backmap_metadata, dict) else {}
+    claim_metadata = evidence.to_claim_metadata(
+        topology_fidelity="sequence_mapped",
+        ligand_topology_valid=True,
+        product_claim_promoted=False,
+    )
     return {
         "hbond_evidence_schema_version": str(evidence.schema_version),
+        "hbond_claim_metadata_schema_version": str(
+            claim_metadata.get("hbond_claim_metadata_schema_version") or "hbond_claim_metadata_v1"
+        ),
+        "hbond_evidence_schema_ready": bool(claim_metadata.get("hbond_evidence_schema_ready") is True),
         "hbond_evidence_status": str(evidence.status),
         "hbond_claim_safe": bool(evidence.claim_safe),
         "hbond_blocked_reason": str(evidence.blocked_reason or ""),
@@ -3609,6 +3623,8 @@ def _flatten_hbond_evidence_for_runner(
         "hbond_acceptor_site_count": int(evidence.acceptor_site_count),
         "hbond_pair_count": int(len(evidence.donor_acceptor_pairs)),
         "hbond_confidence": float(evidence.hbond_confidence),
+        "hbond_distance_pass_count": int(evidence.distance_pass_count),
+        "hbond_angle_pass_count": int(evidence.angle_pass_count),
         "hbond_distance_pass_fraction": float(evidence.distance_pass_fraction),
         "hbond_angle_pass_fraction": float(evidence.angle_pass_fraction),
         "hbond_unsatisfied_donor_count": int(evidence.unsatisfied_donor_count),
@@ -3621,6 +3637,9 @@ def _flatten_hbond_evidence_for_runner(
         "onsps_backmap_status": str(onsps_meta.get("backmap_status") or ""),
         "onsps_backmap_source": str(onsps_meta.get("mapping_source") or ""),
         "onsps_backmap_claim_safe": bool(onsps_meta.get("claim_safe") is True),
+        "onsps_backmap_metadata_schema_ready": bool(
+            claim_metadata.get("onsps_backmap_metadata_schema_ready") is True
+        ),
         "onsps_backmap_blocked_reason": str(onsps_meta.get("blocked_reason") or ""),
         "onsps_backmap_site_count": int(onsps_meta.get("site_count") or 0),
         "onsps_backmap_mapped_site_count": int(onsps_meta.get("mapped_site_count") or 0),
@@ -3701,7 +3720,24 @@ def _summarize_hbond_evidence(result_df: pd.DataFrame, topk: list[dict[str, Any]
         }
     evaluated = result_df["hbond_evidence_schema_version"].astype(str).eq(HBOND_EVIDENCE_SCHEMA_VERSION)
     claim_safe = result_df["hbond_claim_safe"].fillna(False).astype(bool) if "hbond_claim_safe" in result_df.columns else pd.Series(False, index=result_df.index)
+    claim_metadata_schema_ready = (
+        result_df["hbond_claim_metadata_schema_version"].astype(str).eq("hbond_claim_metadata_v1")
+        if "hbond_claim_metadata_schema_version" in result_df.columns
+        else pd.Series(False, index=result_df.index)
+    )
+    hbond_schema_ready = (
+        result_df["hbond_evidence_schema_ready"].fillna(False).astype(bool)
+        if "hbond_evidence_schema_ready" in result_df.columns
+        else evaluated
+    )
+    onsps_metadata_schema_ready = (
+        result_df["onsps_backmap_metadata_schema_ready"].fillna(False).astype(bool)
+        if "onsps_backmap_metadata_schema_ready" in result_df.columns
+        else pd.Series(False, index=result_df.index)
+    )
     evaluated_count = int(evaluated.sum())
+    schema_ready_count = int((evaluated & hbond_schema_ready).sum())
+    claim_metadata_schema_ready_count = int((evaluated & claim_metadata_schema_ready).sum())
     claim_safe_count = int((evaluated & claim_safe).sum())
     blocked_count = int(max(evaluated_count - claim_safe_count, 0))
     topk_claim_safe_count = int(sum(1 for row in topk if bool(row.get("hbond_claim_safe") is True)))
@@ -3709,7 +3745,9 @@ def _summarize_hbond_evidence(result_df: pd.DataFrame, topk: list[dict[str, Any]
         "schema_version": HBOND_EVIDENCE_SCHEMA_VERSION,
         "status": "pass" if evaluated_count > 0 and blocked_count == 0 else "review",
         "evaluated_row_count": evaluated_count,
-        "schema_ready_row_count": evaluated_count,
+        "schema_ready_row_count": schema_ready_count,
+        "claim_metadata_schema_version": "hbond_claim_metadata_v1" if claim_metadata_schema_ready_count else "",
+        "claim_metadata_schema_ready_row_count": claim_metadata_schema_ready_count,
         "claim_safe_row_count": claim_safe_count,
         "claim_safe_rate": float(claim_safe_count / max(evaluated_count, 1)),
         "blocked_row_count": blocked_count,
@@ -3719,8 +3757,15 @@ def _summarize_hbond_evidence(result_df: pd.DataFrame, topk: list[dict[str, Any]
             [row.get("hbond_blocked_reason") for row in topk if row.get("hbond_claim_safe") is not True]
         ),
         "onsps_backmap_schema_version": "onsps_backmap_evidence_v1",
+        "onsps_backmap_metadata_schema_ready_row_count": int((evaluated & onsps_metadata_schema_ready).sum()),
         "onsps_backmap_claim_safe_row_count": int(
             result_df.get("onsps_backmap_claim_safe", pd.Series(False, index=result_df.index)).fillna(False).astype(bool).sum()
+        ),
+        "distance_pass_count": int(
+            pd.to_numeric(result_df.get("hbond_distance_pass_count", pd.Series([], dtype=float)), errors="coerce").fillna(0).sum()
+        ),
+        "angle_pass_count": int(
+            pd.to_numeric(result_df.get("hbond_angle_pass_count", pd.Series([], dtype=float)), errors="coerce").fillna(0).sum()
         ),
         "unsatisfied_donor_count": int(
             pd.to_numeric(result_df.get("hbond_unsatisfied_donor_count", pd.Series([], dtype=float)), errors="coerce").fillna(0).sum()
@@ -3828,10 +3873,21 @@ def _runner_claim_metadata(result_df: pd.DataFrame, hbond_summary: Dict[str, Any
         {
             "hbond_evidence_schema_version": hbond_schema_version,
             "hbond_evidence_schema_ready_row_count": hbond_schema_ready_row_count,
+            "hbond_claim_metadata_schema_version": str(hbond_summary.get("claim_metadata_schema_version") or ""),
+            "hbond_claim_metadata_schema_ready_row_count": int(
+                hbond_summary.get("claim_metadata_schema_ready_row_count") or 0
+            ),
             "hbond_claim_safe_row_count": int(hbond_summary.get("claim_safe_row_count") or 0),
             "hbond_evaluated_row_count": int(hbond_summary.get("evaluated_row_count") or 0),
+            "hbond_distance_pass_count": int(hbond_summary.get("distance_pass_count") or 0),
+            "hbond_angle_pass_count": int(hbond_summary.get("angle_pass_count") or 0),
+            "hbond_unsatisfied_donor_count": int(hbond_summary.get("unsatisfied_donor_count") or 0),
+            "hbond_unsatisfied_acceptor_count": int(hbond_summary.get("unsatisfied_acceptor_count") or 0),
             "hbond_geometry_evaluated_row_count": int(hbond_summary.get("geometry_evaluated_row_count") or 0),
             "hbond_geometry_complete_row_count": int(hbond_summary.get("geometry_complete_row_count") or 0),
+            "onsps_backmap_metadata_schema_ready_row_count": int(
+                hbond_summary.get("onsps_backmap_metadata_schema_ready_row_count") or 0
+            ),
             "onsps_backmap_claim_safe_row_count": int(hbond_summary.get("onsps_backmap_claim_safe_row_count") or 0),
             "ligand_topology_schema_version": ligand_topology_schema_version,
             "ligand_topology_schema_ready_row_count": ligand_topology_schema_ready_row_count,

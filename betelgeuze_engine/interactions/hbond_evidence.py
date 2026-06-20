@@ -12,6 +12,7 @@ from betelgeuze_engine.backmapping.onsps import (
     hbond_angle_score,
     onsps_hbond_sites_from_smiles,
 )
+from betelgeuze_engine.contracts.claim import default_claim_metadata
 
 try:
     from rdkit import Chem  # type: ignore
@@ -19,6 +20,18 @@ except Exception:  # pragma: no cover
     Chem = None
 
 HBOND_EVIDENCE_SCHEMA_VERSION = "hbond_evidence_v1"
+HBOND_CLAIM_METADATA_SCHEMA_VERSION = "hbond_claim_metadata_v1"
+
+
+def _onsps_metadata_schema_ready(metadata: dict[str, Any]) -> bool:
+    return bool(
+        isinstance(metadata, dict)
+        and metadata.get("schema_version") == ONSPS_BACKMAP_SCHEMA_VERSION
+        and "site_count" in metadata
+        and "mapped_site_count" in metadata
+        and "claim_safe" in metadata
+        and "blocked_reason" in metadata
+    )
 
 
 @dataclass
@@ -48,6 +61,90 @@ class HbondEvidence:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+    def schema_ready(self) -> bool:
+        """Return whether the evidence carries the product H-bond/ONSPS schema surface."""
+        return bool(
+            self.schema_version == HBOND_EVIDENCE_SCHEMA_VERSION
+            and self.site_count >= 0
+            and self.donor_site_count >= 0
+            and self.acceptor_site_count >= 0
+            and self.distance_pass_count >= 0
+            and self.angle_pass_count >= 0
+            and self.unsatisfied_donor_count >= 0
+            and self.unsatisfied_acceptor_count >= 0
+            and isinstance(self.donor_acceptor_pairs, list)
+            and _onsps_metadata_schema_ready(self.onsps_backmap_metadata)
+        )
+
+    def to_claim_metadata(
+        self,
+        *,
+        topology_fidelity: str = "not_assessed",
+        ligand_topology_valid: bool = False,
+        force_residual_applied: bool = False,
+        product_claim_promoted: bool = False,
+        extra_blocked_reasons: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Convert H-bond evidence into the shared product claim metadata contract.
+
+        H-bond evidence can prove the interaction schema is ready, but it should not
+        promote a product claim by itself. Callers must opt in with
+        ``product_claim_promoted`` after topology, manifest, and runner gates pass.
+        """
+        blockers: list[str] = []
+        schema_ready = self.schema_ready()
+        if str(topology_fidelity or "") != "sequence_mapped":
+            blockers.append("topology_not_sequence_mapped")
+        if not ligand_topology_valid:
+            blockers.append("ligand_topology_invalid")
+        if not schema_ready:
+            blockers.append("hbond_evidence_schema_not_ready")
+        if self.status != "pass" or not self.claim_safe:
+            blockers.append(str(self.blocked_reason or "hbond_evidence_review_required"))
+        if not product_claim_promoted:
+            blockers.append("hbond_evidence_not_product_claim_promoted")
+        if extra_blocked_reasons:
+            blockers.extend(str(reason) for reason in extra_blocked_reasons if str(reason or ""))
+        blockers = list(dict.fromkeys(reason for reason in blockers if reason))
+        claim_safe = bool(product_claim_promoted and not blockers)
+        onsps_meta = self.onsps_backmap_metadata if isinstance(self.onsps_backmap_metadata, dict) else {}
+        return default_claim_metadata(
+            topology_fidelity=str(topology_fidelity or "not_assessed"),
+            ligand_topology_valid=bool(ligand_topology_valid),
+            hbond_evidence_status=str(self.status or "not_assessed"),
+            force_residual_applied=bool(force_residual_applied),
+            claim_safe=claim_safe,
+            blocked_reason="" if claim_safe else ";".join(blockers),
+            hbond_claim_metadata_schema_version=HBOND_CLAIM_METADATA_SCHEMA_VERSION,
+            hbond_evidence_schema_version=str(self.schema_version),
+            hbond_evidence_schema_ready=schema_ready,
+            hbond_claim_safe=bool(self.claim_safe),
+            hbond_site_count=int(self.site_count),
+            hbond_donor_site_count=int(self.donor_site_count),
+            hbond_acceptor_site_count=int(self.acceptor_site_count),
+            hbond_distance_pass_count=int(self.distance_pass_count),
+            hbond_angle_pass_count=int(self.angle_pass_count),
+            hbond_distance_pass_fraction=float(self.distance_pass_fraction),
+            hbond_angle_pass_fraction=float(self.angle_pass_fraction),
+            hbond_unsatisfied_donor_count=int(self.unsatisfied_donor_count),
+            hbond_unsatisfied_acceptor_count=int(self.unsatisfied_acceptor_count),
+            hbond_overanchoring_flag=bool(self.overanchoring_flag),
+            hbond_missing_expected_anchor_flag=bool(self.missing_expected_anchor_flag),
+            hbond_geometry_evaluated=bool(self.geometry_evaluated),
+            hbond_geometry_complete=bool(self.geometry_complete),
+            hbond_confidence=float(self.hbond_confidence),
+            onsps_backmap_schema_version=str(
+                onsps_meta.get("schema_version") or ONSPS_BACKMAP_SCHEMA_VERSION
+            ),
+            onsps_backmap_metadata_schema_ready=_onsps_metadata_schema_ready(onsps_meta),
+            onsps_backmap_claim_safe=bool(onsps_meta.get("claim_safe") is True),
+            onsps_backmap_status=str(onsps_meta.get("backmap_status") or ""),
+            onsps_backmap_source=str(onsps_meta.get("mapping_source") or ""),
+            onsps_backmap_blocked_reason=str(onsps_meta.get("blocked_reason") or ""),
+            onsps_backmap_site_count=int(onsps_meta.get("site_count") or 0),
+            onsps_backmap_mapped_site_count=int(onsps_meta.get("mapped_site_count") or 0),
+        )
 
 
 def _invalid_smiles(smiles: str) -> bool:

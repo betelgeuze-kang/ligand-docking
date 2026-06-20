@@ -77,15 +77,20 @@ def test_flatten_hbond_evidence_for_runner_emits_claim_boundary_fields():
     )
 
     assert row["hbond_evidence_schema_version"] == "hbond_evidence_v1"
+    assert row["hbond_claim_metadata_schema_version"] == "hbond_claim_metadata_v1"
+    assert isinstance(row["hbond_evidence_schema_ready"], bool)
     assert isinstance(row["hbond_claim_safe"], bool)
     assert isinstance(row["hbond_blocked_reason"], str)
     assert isinstance(row["hbond_abstention_reason"], str)
     assert row["onsps_backmap_schema_version"] == "onsps_backmap_evidence_v1"
+    assert isinstance(row["onsps_backmap_metadata_schema_ready"], bool)
     assert isinstance(row["onsps_backmap_claim_safe"], bool)
     assert row["hbond_site_count"] >= 0
     assert row["hbond_donor_site_count"] >= 0
     assert row["hbond_acceptor_site_count"] >= 0
     assert row["hbond_pair_count"] >= 0
+    assert row["hbond_distance_pass_count"] >= 0
+    assert row["hbond_angle_pass_count"] >= 0
     assert isinstance(row["hbond_geometry_evaluated"], bool)
     assert isinstance(row["hbond_geometry_complete"], bool)
 
@@ -116,15 +121,20 @@ def test_hbond_evidence_summary_and_runner_claim_metadata_stay_claim_safe_bounde
                 "ligand_topology_schema_version": "ligand_topology_validity_v1",
                 "ligand_topology_blocked_reason": "",
                 "hbond_evidence_schema_version": "hbond_evidence_v1",
+                "hbond_claim_metadata_schema_version": "hbond_claim_metadata_v1",
+                "hbond_evidence_schema_ready": True,
                 "hbond_evidence_status": "ok",
                 "hbond_claim_safe": True,
                 "hbond_blocked_reason": "",
+                "hbond_distance_pass_count": 1,
+                "hbond_angle_pass_count": 1,
                 "hbond_unsatisfied_donor_count": 0,
                 "hbond_unsatisfied_acceptor_count": 0,
                 "hbond_overanchoring_flag": False,
                 "hbond_missing_expected_anchor_flag": False,
                 "hbond_geometry_evaluated": True,
                 "hbond_geometry_complete": True,
+                "onsps_backmap_metadata_schema_ready": True,
                 "onsps_backmap_claim_safe": True,
             }
         ]
@@ -137,8 +147,13 @@ def test_hbond_evidence_summary_and_runner_claim_metadata_stay_claim_safe_bounde
     assert summary["status"] == "pass"
     assert summary["schema_version"] == "hbond_evidence_v1"
     assert summary["schema_ready_row_count"] == 1
+    assert summary["claim_metadata_schema_version"] == "hbond_claim_metadata_v1"
+    assert summary["claim_metadata_schema_ready_row_count"] == 1
     assert summary["claim_safe_row_count"] == 1
     assert summary["topk_claim_safe_row_count"] == 1
+    assert summary["distance_pass_count"] == 1
+    assert summary["angle_pass_count"] == 1
+    assert summary["onsps_backmap_metadata_schema_ready_row_count"] == 1
     assert summary["onsps_backmap_claim_safe_row_count"] == 1
     assert metadata["topology_fidelity"] == "sequence_mapped"
     assert metadata["ligand_topology_valid"] is True
@@ -150,6 +165,11 @@ def test_hbond_evidence_summary_and_runner_claim_metadata_stay_claim_safe_bounde
     assert metadata["hbond_evidence_status"] == "pass"
     assert metadata["hbond_evidence_schema_version"] == "hbond_evidence_v1"
     assert metadata["hbond_evidence_schema_ready_row_count"] == 1
+    assert metadata["hbond_claim_metadata_schema_version"] == "hbond_claim_metadata_v1"
+    assert metadata["hbond_claim_metadata_schema_ready_row_count"] == 1
+    assert metadata["hbond_distance_pass_count"] == 1
+    assert metadata["hbond_angle_pass_count"] == 1
+    assert metadata["onsps_backmap_metadata_schema_ready_row_count"] == 1
     assert metadata["hbond_geometry_evaluated_row_count"] == 1
     assert metadata["hbond_geometry_complete_row_count"] == 1
     assert metadata["claim_safe"] is False

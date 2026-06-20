@@ -68,6 +68,35 @@ def _term_name(term: ForceTerm) -> str:
     return str(getattr(term, "name", term.__class__.__name__))
 
 
+def _validate_term_result(name: str, result: TermResult, coords: torch.Tensor) -> None:
+    expected_energy_shape = (int(coords.shape[0]),)
+    if tuple(result.energy.shape) != expected_energy_shape:
+        raise ValueError(
+            f"force term {name} returned energy with wrong shape: "
+            f"{tuple(result.energy.shape)} != {expected_energy_shape}"
+        )
+    if result.forces.shape != coords.shape:
+        raise ValueError(f"force term {name} returned forces with wrong shape")
+    if not torch.isfinite(result.energy).all():
+        raise ValueError(f"force term {name} returned nonfinite energy")
+    if not torch.isfinite(result.forces).all():
+        raise ValueError(f"force term {name} returned nonfinite forces")
+
+    diagnostic_term = str(result.diagnostics.get("term") or "")
+    diagnostic_status = str(result.diagnostics.get("status") or "")
+    if diagnostic_term != name:
+        raise ValueError(f"force term {name} returned mismatched diagnostic term: {diagnostic_term}")
+    if not diagnostic_status:
+        raise ValueError(f"force term {name} returned missing diagnostic status")
+
+    metadata_term = str(result.claim_metadata.get("force_term_name") or "")
+    metadata_status = str(result.claim_metadata.get("force_term_status") or "")
+    if metadata_term != name:
+        raise ValueError(f"force term {name} returned mismatched claim metadata term: {metadata_term}")
+    if not metadata_status:
+        raise ValueError(f"force term {name} returned missing claim metadata status")
+
+
 def _merge_claim_metadata(
     *,
     base_claim_metadata: dict[str, Any] | None,
@@ -100,6 +129,15 @@ def _merge_claim_metadata(
                 ),
                 "hbond_evidence_schema_ready": term_metadata.get("hbond_evidence_schema_ready") is True,
                 "ligand_topology_valid": term_metadata.get("ligand_topology_valid") is True,
+                "policy_caps_ready": term_metadata.get("force_term_policy_caps_ready"),
+                "observed_caps_ready": term_metadata.get("force_term_observed_caps_ready"),
+                "bounded_correction_ready": term_metadata.get("force_term_bounded_correction_ready"),
+                "policy_caps": dict(term_metadata.get("force_term_policy_caps") or {}),
+                "abs_energy_within_cap": term_metadata.get("force_term_abs_energy_within_cap"),
+                "force_norm_within_cap": term_metadata.get("force_term_force_norm_within_cap"),
+                "active_pair_count_within_cap": term_metadata.get(
+                    "force_term_active_pair_count_within_cap"
+                ),
             }
         )
     diagnostic_blockers = [
@@ -178,7 +216,9 @@ class ProductForceField:
         if state.coords.ndim != 3:
             raise ValueError("state.coords must have shape [B, N, 3]")
         state_for_terms = state_with_claim_metadata(state, claim_metadata)
+        neighbor_pairs_provided = pairs is not None
         pairs = pairs or full_neighbor_pairs(state_for_terms.coords)
+        neighbor_pair_count = int(pairs.mask.sum().detach().cpu().item())
         total_energy = torch.zeros(
             state_for_terms.coords.shape[0],
             dtype=state_for_terms.coords.dtype,
@@ -191,8 +231,7 @@ class ProductForceField:
         for term in self.terms:
             name = _term_name(term)
             result = term.energy_forces(state_for_terms, pairs)
-            if result.forces.shape != state_for_terms.coords.shape:
-                raise ValueError(f"force term {name} returned forces with wrong shape")
+            _validate_term_result(name, result, state_for_terms.coords)
             total_energy = total_energy + result.energy.to(dtype=total_energy.dtype, device=total_energy.device)
             total_forces = total_forces + result.forces.to(dtype=total_forces.dtype, device=total_forces.device)
             term_values[name] = float(result.energy.detach().sum().cpu().item())
@@ -211,6 +250,9 @@ class ProductForceField:
             diagnostics={
                 "forcefield": self.name,
                 "term_count": len(term_results),
+                "neighbor_pair_count": neighbor_pair_count,
+                "neighbor_pairs_provided": neighbor_pairs_provided,
+                "neighbor_source": "provided" if neighbor_pairs_provided else "full_neighbor_pairs",
                 "term_diagnostics": term_diagnostics,
             },
             claim_metadata=merged_claim_metadata,

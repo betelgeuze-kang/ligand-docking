@@ -169,13 +169,98 @@ def test_results_endpoint_keeps_pdb_content_type(tmp_path: Path, monkeypatch) ->
     assert "ATOM" in response.text
 
 
+def test_results_endpoint_returns_unknown_artifact_as_octet_stream(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import api.main as main
+
+    store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
+    monkeypatch.setattr(main, "job_store", store)
+    monkeypatch.setattr(main.settings, "results_storage_path", str(tmp_path / "results"))
+    result_file = tmp_path / "results" / "job_binary" / "result.bin"
+    _write_completed_job(
+        main=main,
+        store=store,
+        job_id="job_binary",
+        result_file=result_file,
+        result_payload="opaque-bytes\n",
+    )
+
+    response = TestClient(main.app).get("/results/job_binary")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/octet-stream")
+    assert response.content == b"opaque-bytes\n"
+
+
+def test_results_endpoint_uses_manifest_artifact_type_metadata(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import api.main as main
+
+    store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
+    monkeypatch.setattr(main, "job_store", store)
+    monkeypatch.setattr(main.settings, "results_storage_path", str(tmp_path / "results"))
+    result_file = tmp_path / "results" / "job_manifest_json" / "runner_result.artifact"
+    _write_completed_job(
+        main=main,
+        store=store,
+        job_id="job_manifest_json",
+        result_file=result_file,
+        result_payload=json.dumps({"ok": True, "source": "manifest_metadata"}) + "\n",
+        result_manifest_payload=json.dumps(
+            {
+                "status": "completed",
+                "result_artifact_type": "json",
+                "result_file_media_type": "application/json",
+            }
+        )
+        + "\n",
+    )
+
+    response = TestClient(main.app).get("/results/job_manifest_json")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json()["source"] == "manifest_metadata"
+
+
+def test_results_endpoint_openapi_matches_polymorphic_artifact_responses() -> None:
+    import api.main as main
+
+    operation = TestClient(main.app).get("/openapi.json").json()["paths"]["/results/{job_id}"]["get"]
+    response_200 = operation["responses"]["200"]
+
+    assert response_200.get("content", {}).get("application/json", {}).get("schema", {}) == {}
+    assert "ResultsResponse" not in json.dumps(response_200)
+    assert set(response_200["content"]) >= {
+        "application/json",
+        "chemical/x-pdb",
+        "chemical/x-mdl-sdfile",
+        "chemical/x-mdl-molfile",
+        "application/zip",
+        "application/octet-stream",
+    }
+
+
 def test_product_rocm_hip_rust_requirements_are_installed_by_product_dockerfile() -> None:
     dockerfile = Path("Dockerfile.product").read_text(encoding="utf-8")
-    requirements = Path("requirements-product-rocm.txt").read_text(encoding="utf-8")
+    base_requirements = Path("requirements-base.txt").read_text(encoding="utf-8")
+    default_requirements = Path("requirements.txt").read_text(encoding="utf-8")
+    rocm_requirements = Path("requirements-rocm.txt").read_text(encoding="utf-8")
+    product_rocm_requirements = Path("requirements-product-rocm.txt").read_text(encoding="utf-8")
+    base_requirement_lines = set(base_requirements.splitlines())
+    default_requirement_lines = set(default_requirements.splitlines())
+    rocm_requirement_lines = set(rocm_requirements.splitlines())
+    product_rocm_requirement_lines = set(product_rocm_requirements.splitlines())
 
     assert "rocm/pytorch" in dockerfile
+    assert "requirements-base.txt" in dockerfile
     assert "requirements-product-rocm.txt" in dockerfile
     assert "-r requirements-product-rocm.txt" in dockerfile
+    assert "runs/independent_engine_roadmap_status_current.json" in dockerfile
     assert "requirements.txt" in dockerfile
     assert "FORCE_RUST_HIP=1" in dockerfile
     assert "RUST_HIP_USE_GPU_NBLIST_BUILDER=1" in dockerfile
@@ -185,7 +270,18 @@ def test_product_rocm_hip_rust_requirements_are_installed_by_product_dockerfile(
     assert "tools/build_rust_hip_engine.py --output /app" in dockerfile
     assert "torch.version.hip" in dockerfile
     assert "ldi_arc_rust" in dockerfile
-    assert "-r requirements-rocm.txt" in requirements
+    assert "torch==2.6.0" not in base_requirement_lines
+    assert "-r requirements-base.txt" in default_requirement_lines
+    assert "torch==2.6.0" in default_requirement_lines
+    assert "-r requirements-base.txt" in product_rocm_requirement_lines
+    assert "rdkit-pypi==2022.9.5" in product_rocm_requirement_lines
+    assert "-r requirements-rocm.txt" not in product_rocm_requirement_lines
+    assert "-r requirements.txt" not in product_rocm_requirement_lines
+    assert "torch==2.6.0" not in product_rocm_requirement_lines
+    assert "-r requirements-base.txt" in rocm_requirement_lines
+    assert "-r requirements.txt" not in rocm_requirement_lines
+    assert "torch==2.6.0" not in rocm_requirement_lines
+    assert "torch==2.6.0+rocm6.1" in rocm_requirement_lines
 
 
 def test_product_image_smoke_script_is_fail_closed_and_has_rocm_runtime_mode() -> None:
@@ -197,6 +293,9 @@ def test_product_image_smoke_script_is_fail_closed_and_has_rocm_runtime_mode() -
     assert "build|rocm-runtime" in script
     assert "docker_cli_missing" in script
     assert "does not mark missing Docker as green" in script
+    assert 'HOST_PYTHON="${PRODUCT_IMAGE_HOST_PYTHON:-python3}"' in script
+    assert "host_python_missing" in script
+    assert '"${HOST_PYTHON}" - <<' in script
     assert "exit 2" in script
     assert "--device=/dev/kfd" in script
     assert "--device=/dev/dri" in script
@@ -207,6 +306,8 @@ def test_product_image_smoke_script_is_fail_closed_and_has_rocm_runtime_mode() -
     assert "tier_alpha_adrb2_dispatch_smoke.json" in script
     assert "tools/run_ligand_backmapping_scoring.py" in script
     assert "backmapping_summary.json" in script
+    assert "container_native.pdb" in script
+    assert "native_pdb_path" in script
     assert "hbond_evidence_v1" in script
     assert "onsps_backmap_evidence_v1" in script
     assert "clean_container_smoke_ready" in script
@@ -216,7 +317,14 @@ def test_product_image_smoke_script_is_fail_closed_and_has_rocm_runtime_mode() -
     assert "backmapping_ligand_topology_receipt_ready" in script
     assert "product claim promotion requires mode=rocm-runtime" in script
     assert "product_runner_claim_metadata_ready=true" in script
+    assert "pull_request:" in workflow
+    assert "workflow_dispatch:" in workflow
+    assert "verify_mode:" in workflow
     assert "PRODUCT_IMAGE_VERIFY_MODE: build" in workflow
+    assert "product-image-rocm-runtime-smoke" in workflow
+    assert "runs-on: [self-hosted, linux, rocm]" in workflow
+    assert "PRODUCT_IMAGE_VERIFY_MODE: rocm-runtime" in workflow
+    assert "product runtime claim: `false`" in workflow
 
 
 def test_rust_hip_builder_shim_accepts_cli_arguments() -> None:

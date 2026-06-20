@@ -8,6 +8,17 @@ import torch
 
 from betelgeuze_engine.contracts.claim import default_claim_metadata
 
+FORCE_RESIDUAL_CLAIM_METADATA_SCHEMA_VERSION = "force_residual_claim_metadata_v1"
+REQUIRED_POLICY_CAP_KEYS = (
+    "max_abs_delta_score",
+    "max_force_norm",
+    "max_displacement",
+    "max_energy_drift",
+    "max_energy_drift_pct",
+    "abstain_threshold",
+    "top_k_rank_pct",
+)
+
 
 @dataclass(frozen=True)
 class ForceResidualPolicy:
@@ -28,6 +39,26 @@ class ForceResidualPolicy:
     def max_energy_drift(self) -> float:
         """Product-facing alias for the percent energy-drift cap."""
         return float(self.max_energy_drift_pct)
+
+    def policy_caps_ready(self) -> bool:
+        values = _policy_caps(self)
+        return bool(
+            all(key in values for key in REQUIRED_POLICY_CAP_KEYS)
+            and math.isfinite(float(self.max_abs_delta_score))
+            and float(self.max_abs_delta_score) >= 0.0
+            and math.isfinite(float(self.max_force_norm))
+            and float(self.max_force_norm) > 0.0
+            and math.isfinite(float(self.max_displacement))
+            and float(self.max_displacement) >= 0.0
+            and math.isfinite(float(self.max_energy_drift_pct))
+            and float(self.max_energy_drift_pct) >= 0.0
+            and math.isfinite(float(self.abstain_uncertainty))
+            and 0.0 <= float(self.abstain_uncertainty) <= 1.0
+            and math.isfinite(float(self.top_k_rank_pct))
+            and 0.0 <= float(self.top_k_rank_pct) <= 1.0
+            and math.isfinite(float(self.step_size))
+            and float(self.step_size) >= 0.0
+        )
 
 
 @dataclass(frozen=True)
@@ -63,6 +94,48 @@ class ForceResidualReport:
     def confidence(self) -> float:
         return float(max(0.0, min(1.0, 1.0 - float(self.uncertainty))))
 
+    @property
+    def force_norm_within_cap(self) -> bool:
+        cap = float(self.policy_caps.get("max_force_norm", 0.0))
+        return bool(cap > 0.0 and float(self.max_force_norm) <= cap + 1e-7)
+
+    @property
+    def energy_drift_within_cap(self) -> bool:
+        cap = float(
+            self.policy_caps.get(
+                "max_energy_drift",
+                self.policy_caps.get("max_energy_drift_pct", 0.0),
+            )
+        )
+        return bool(cap >= 0.0 and float(self.energy_drift_pct) <= cap + 1e-7)
+
+    @property
+    def displacement_within_cap(self) -> bool:
+        cap = float(self.policy_caps.get("max_displacement", 0.0))
+        return bool(cap >= 0.0 and float(self.displacement_rmsd) <= cap + 1e-7)
+
+    @property
+    def delta_score_within_cap(self) -> bool:
+        cap = float(self.policy_caps.get("max_abs_delta_score", 0.0))
+        return bool(cap >= 0.0 and abs(float(self.delta_score)) <= cap + 1e-7)
+
+    @property
+    def all_observed_caps_within_policy(self) -> bool:
+        return bool(
+            self.force_norm_within_cap
+            and self.energy_drift_within_cap
+            and self.displacement_within_cap
+            and self.delta_score_within_cap
+        )
+
+    @property
+    def policy_caps_ready(self) -> bool:
+        return _policy_caps_ready(self.policy_caps)
+
+    @property
+    def observed_caps_ready(self) -> bool:
+        return bool(self.policy_caps_ready and self.all_observed_caps_within_policy)
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "applied": bool(self.applied),
@@ -78,12 +151,21 @@ class ForceResidualReport:
             "abstention_reason": str(self.abstention_reason),
             "claim_safe": bool(self.claim_safe),
             "policy_caps": dict(self.policy_caps),
+            "force_norm_within_cap": bool(self.force_norm_within_cap),
+            "energy_drift_within_cap": bool(self.energy_drift_within_cap),
+            "displacement_within_cap": bool(self.displacement_within_cap),
+            "delta_score_within_cap": bool(self.delta_score_within_cap),
+            "all_observed_caps_within_policy": bool(self.all_observed_caps_within_policy),
+            "policy_caps_ready": bool(self.policy_caps_ready),
+            "observed_caps_ready": bool(self.observed_caps_ready),
+            "claim_metadata_schema_version": FORCE_RESIDUAL_CLAIM_METADATA_SCHEMA_VERSION,
         }
 
     def to_claim_metadata(self, base_claim_metadata: dict[str, Any] | None = None) -> dict[str, Any]:
         metadata = default_claim_metadata(**dict(base_claim_metadata or {}))
         metadata.update(
             {
+                "force_residual_claim_metadata_schema_version": FORCE_RESIDUAL_CLAIM_METADATA_SCHEMA_VERSION,
                 "force_residual_applied": bool(self.applied),
                 "force_residual_claim_safe": bool(self.claim_safe),
                 "force_residual_delta_score": float(self.delta_score),
@@ -95,6 +177,13 @@ class ForceResidualReport:
                 "force_residual_max_force_norm": float(self.max_force_norm),
                 "force_residual_energy_drift_pct": float(self.energy_drift_pct),
                 "force_residual_displacement_rmsd": float(self.displacement_rmsd),
+                "force_residual_force_norm_within_cap": bool(self.force_norm_within_cap),
+                "force_residual_energy_drift_within_cap": bool(self.energy_drift_within_cap),
+                "force_residual_displacement_within_cap": bool(self.displacement_within_cap),
+                "force_residual_delta_score_within_cap": bool(self.delta_score_within_cap),
+                "force_residual_all_observed_caps_within_policy": bool(
+                    self.all_observed_caps_within_policy
+                ),
                 "force_residual_skipped_reason": str(self.skipped_reason),
                 "force_residual_abstention_reason": str(self.abstention_reason),
                 "force_residual_abstain_threshold": float(
@@ -104,12 +193,19 @@ class ForceResidualReport:
                     )
                 ),
                 "force_residual_policy_caps": dict(self.policy_caps),
+                "force_residual_required_policy_caps": list(REQUIRED_POLICY_CAP_KEYS),
+                "force_residual_policy_caps_ready": bool(self.policy_caps_ready),
+                "force_residual_observed_caps_ready": bool(self.observed_caps_ready),
                 "force_residual_status": "applied" if self.applied else "abstained",
             }
         )
-        if not self.applied:
+        if not self.applied or not self.observed_caps_ready:
             metadata["claim_safe"] = False
-            metadata["blocked_reason"] = str(self.skipped_reason or metadata.get("blocked_reason") or "force_residual_abstained")
+            metadata["blocked_reason"] = str(
+                self.skipped_reason
+                or metadata.get("blocked_reason")
+                or "force_residual_observed_caps_not_ready"
+            )
         return metadata
 
 
@@ -124,6 +220,36 @@ def _policy_caps(policy: ForceResidualPolicy) -> dict[str, float]:
         "abstain_threshold": float(policy.abstain_threshold),
         "top_k_rank_pct": float(policy.top_k_rank_pct),
     }
+
+
+def _policy_caps_ready(policy_caps: dict[str, Any]) -> bool:
+    try:
+        max_abs_delta_score = float(policy_caps.get("max_abs_delta_score"))
+        max_force_norm = float(policy_caps.get("max_force_norm"))
+        max_displacement = float(policy_caps.get("max_displacement"))
+        max_energy_drift = float(policy_caps.get("max_energy_drift"))
+        max_energy_drift_pct = float(policy_caps.get("max_energy_drift_pct"))
+        abstain_threshold = float(policy_caps.get("abstain_threshold"))
+        top_k_rank_pct = float(policy_caps.get("top_k_rank_pct"))
+    except (TypeError, ValueError):
+        return False
+    return bool(
+        all(key in policy_caps for key in REQUIRED_POLICY_CAP_KEYS)
+        and math.isfinite(max_abs_delta_score)
+        and max_abs_delta_score >= 0.0
+        and math.isfinite(max_force_norm)
+        and max_force_norm > 0.0
+        and math.isfinite(max_displacement)
+        and max_displacement >= 0.0
+        and math.isfinite(max_energy_drift)
+        and max_energy_drift >= 0.0
+        and math.isfinite(max_energy_drift_pct)
+        and max_energy_drift_pct >= 0.0
+        and math.isfinite(abstain_threshold)
+        and 0.0 <= abstain_threshold <= 1.0
+        and math.isfinite(top_k_rank_pct)
+        and 0.0 <= top_k_rank_pct <= 1.0
+    )
 
 
 def _report(
@@ -165,6 +291,15 @@ def decide_force_residual(
     policy: ForceResidualPolicy | None = None,
 ) -> ForceResidualDecision:
     policy = policy or ForceResidualPolicy()
+    if not policy.policy_caps_ready():
+        return ForceResidualDecision(
+            False,
+            "policy_caps_invalid",
+            float(rank_pct),
+            bool(topology_valid),
+            float(uncertainty),
+            float(delta_score),
+        )
     rank = float(rank_pct)
     unc = float(uncertainty)
     delta = float(delta_score)

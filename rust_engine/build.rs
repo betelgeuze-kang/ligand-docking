@@ -2,17 +2,32 @@ use std::process::Command;
 use std::path::PathBuf;
 
 fn main() {
+    println!("cargo:rerun-if-env-changed=ROCM_PATH");
+    println!("cargo:rerun-if-env-changed=HIP_PATH");
+    println!("cargo:rerun-if-env-changed=ROCM_DEVICE_LIB_PATH");
+
     let rocm_path = std::env::var("ROCM_PATH")
         .or_else(|_| std::env::var("HIP_PATH"))
-        .unwrap_or_else(|_| "/opt/rocm-6.0.2".to_string());
+        .unwrap_or_else(|_| "/opt/rocm".to_string());
     let out_dir = std::env::var("OUT_DIR").unwrap();
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
 
-    let device_lib_path = std::env::var("ROCM_DEVICE_LIB_PATH").ok().or_else(|| {
-        let candidate = PathBuf::from(&manifest_dir)
+    let device_lib_path = std::env::var("ROCM_DEVICE_LIB_PATH").ok().filter(|path| !path.is_empty()).or_else(|| {
+        ["20", "19", "18", "17"]
+            .iter()
+            .map(|clang_version| {
+                PathBuf::from(&rocm_path)
+                    .join("lib/llvm/lib/clang")
+                    .join(clang_version)
+                    .join("lib/amdgcn/bitcode")
+            })
+            .find(|candidate| candidate.exists())
+            .map(|candidate| candidate.to_string_lossy().to_string())
+    }).or_else(|| {
+        let fallback = PathBuf::from(&manifest_dir)
             .join("../third_party/rocm_device_libs_pkg/extracted/opt/rocm-5.7.1/amdgcn/bitcode");
-        if candidate.exists() {
-            Some(candidate.to_string_lossy().to_string())
+        if fallback.exists() {
+            Some(fallback.to_string_lossy().to_string())
         } else {
             None
         }
@@ -55,6 +70,7 @@ fn main() {
     println!("cargo:rustc-link-search=native={}", out_dir);
     println!("cargo:rustc-link-lib=static=nonbonded_kernel");
     println!("cargo:rustc-link-search=native={}/lib", rocm_path);
+    println!("cargo:rustc-link-search=native={}/lib64", rocm_path);
     println!("cargo:rustc-link-lib=dylib=amdhip64");
     println!("cargo:rustc-link-lib=dylib=hiprtc");
 }

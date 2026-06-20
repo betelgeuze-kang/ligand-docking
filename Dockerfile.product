@@ -1,4 +1,4 @@
-ARG PRODUCT_ROCM_BASE=rocm/pytorch:rocm6.1.2_ubuntu22.04_py3.10_pytorch_release_2.6.0
+ARG PRODUCT_ROCM_BASE=rocm/pytorch:rocm7.1_ubuntu22.04_py3.10_pytorch_release_2.6.0
 FROM ${PRODUCT_ROCM_BASE}
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -6,8 +6,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     BETELGEUZE_REPO_ROOT=/app \
     ROCM_PATH=/opt/rocm \
     HIP_PATH=/opt/rocm \
-    PATH=/opt/rocm/bin:${PATH} \
     LD_LIBRARY_PATH=/opt/rocm/lib:/opt/rocm/lib64:${LD_LIBRARY_PATH} \
+    RUSTUP_HOME=/opt/rustup \
+    CARGO_HOME=/opt/cargo \
+    PATH=/opt/cargo/bin:/opt/rocm/bin:${PATH} \
     PRODUCT_API_AUTH_REQUIRED=1 \
     API_VALIDATED_RUNNER_ENABLED=0 \
     FORCE_RUST_HIP=1 \
@@ -20,16 +22,24 @@ WORKDIR /app
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         build-essential \
-        cargo \
         ca-certificates \
+        curl \
         pkg-config \
         python3-dev \
+        rocm-device-libs \
     && rm -rf /var/lib/apt/lists/*
+RUN curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs -o /tmp/rustup-init.sh \
+    && sh /tmp/rustup-init.sh -y --profile minimal --default-toolchain 1.93.0 \
+    && rm -f /tmp/rustup-init.sh \
+    && rustc --version \
+    && cargo --version
 
-COPY requirements-package.txt requirements-api.txt requirements-deploy.txt requirements.txt requirements-rocm.txt requirements-product-rocm.txt pyproject.toml ./
+COPY requirements-package.txt requirements-api.txt requirements-deploy.txt requirements-base.txt requirements.txt requirements-rocm.txt requirements-product-rocm.txt pyproject.toml ./
+COPY runs/independent_engine_roadmap_status_current.json ./runs/independent_engine_roadmap_status_current.json
 COPY api ./api
 COPY core ./core
 COPY betelgeuze_engine ./betelgeuze_engine
+COPY betelgeuze_ai_md ./betelgeuze_ai_md
 COPY betelgeuze_product ./betelgeuze_product
 COPY betelgeuze_cameo ./betelgeuze_cameo
 COPY betelgeuze_cleanup ./betelgeuze_cleanup

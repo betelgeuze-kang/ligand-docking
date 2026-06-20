@@ -9,6 +9,25 @@ on:
       - Dockerfile.product
       - pyproject.toml
       - requirements-package.txt
+      - requirements-base.txt
+      - requirements.txt
+      - requirements-api.txt
+      - requirements-deploy.txt
+      - requirements-rocm.txt
+      - requirements-product-rocm.txt
+      - api/**
+      - core/**
+      - betelgeuze_engine/**
+      - betelgeuze_product/**
+      - rust_engine/**
+      - third_party/rocm_device_libs_pkg/**
+      - deploy/verify_product_image.sh
+  pull_request:
+    paths:
+      - Dockerfile.product
+      - pyproject.toml
+      - requirements-package.txt
+      - requirements-base.txt
       - requirements.txt
       - requirements-api.txt
       - requirements-deploy.txt
@@ -22,13 +41,107 @@ on:
       - third_party/rocm_device_libs_pkg/**
       - deploy/verify_product_image.sh
   workflow_dispatch:
+    inputs:
+      verify_mode:
+        description: "Product image smoke mode. build is hosted CI; rocm-runtime requires a self-hosted ROCm runner."
+        required: true
+        default: build
+        type: choice
+        options:
+          - build
+          - rocm-runtime
+
+permissions:
+  contents: read
 
 jobs:
-  product-image-smoke:
+  product-image-build-smoke:
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.verify_mode == 'build' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify product image
+      - name: Verify product image build smoke
         env:
           PRODUCT_IMAGE_VERIFY_MODE: build
         run: bash deploy/verify_product_image.sh
+      - name: Summarize product image build boundary
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          receipt = Path("runs/product_image_smoke_receipt_current.json")
+          payload = {}
+          if receipt.is_file():
+              try:
+                  payload = json.loads(receipt.read_text(encoding="utf-8"))
+              except json.JSONDecodeError:
+                  payload = {"status": "receipt_json_invalid"}
+          lines = [
+              "## Product Image Build Smoke",
+              "",
+              f"- mode: `{payload.get('mode', 'build')}`",
+              f"- status: `{payload.get('status', 'missing_receipt')}`",
+              f"- product runtime claim: `false`",
+              f"- required runtime claim mode: `rocm-runtime on self-hosted ROCm runner`",
+              "",
+              payload.get(
+                  "claim_boundary",
+                  "Hosted build smoke verifies image build/import scope only; product claim promotion requires a rocm-runtime receipt.",
+              ),
+              "",
+          ]
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary_path:
+              Path(summary_path).write_text("\n".join(lines), encoding="utf-8")
+          else:
+              print("\n".join(lines))
+          PY
+
+  product-image-rocm-runtime-smoke:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.verify_mode == 'rocm-runtime' }}
+    runs-on: [self-hosted, linux, rocm]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify product image ROCm/HIP/Rust runtime smoke
+        env:
+          PRODUCT_IMAGE_VERIFY_MODE: rocm-runtime
+        run: bash deploy/verify_product_image.sh
+      - name: Summarize product image ROCm runtime boundary
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          receipt = Path("runs/product_image_smoke_receipt_current.json")
+          payload = {}
+          if receipt.is_file():
+              try:
+                  payload = json.loads(receipt.read_text(encoding="utf-8"))
+              except json.JSONDecodeError:
+                  payload = {"status": "receipt_json_invalid"}
+          lines = [
+              "## Product Image ROCm Runtime Smoke",
+              "",
+              f"- mode: `{payload.get('mode', 'rocm-runtime')}`",
+              f"- status: `{payload.get('status', 'missing_receipt')}`",
+              f"- clean_container_smoke_ready: `{payload.get('clean_container_smoke_ready', False)}`",
+              f"- container_runtime_proof_ready: `{payload.get('container_runtime_proof_ready', False)}`",
+              f"- product_runner_claim_metadata_ready: `{payload.get('product_runner_claim_metadata_ready', False)}`",
+              "",
+              payload.get(
+                  "claim_boundary",
+                  "ROCm runtime smoke must prove in-container ROCm/HIP/Rust runtime and signed runner claim metadata.",
+              ),
+              "",
+          ]
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary_path:
+              Path(summary_path).write_text("\n".join(lines), encoding="utf-8")
+          else:
+              print("\n".join(lines))
+          PY

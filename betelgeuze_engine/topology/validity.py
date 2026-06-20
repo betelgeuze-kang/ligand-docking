@@ -20,11 +20,15 @@ def topology_claim_metadata(complex_topology: ComplexTopology) -> dict[str, Any]
     ligand_valid = bool(validity.get("valid"))
     ligand_claim_safe = bool(validity.get("claim_safe") is True)
     fidelity = str(complex_topology.protein.fidelity)
-    claim_safe = ligand_claim_safe and fidelity == "sequence_mapped"
+    protein_residue_count = int(complex_topology.protein.residue_indices.numel())
+    protein_topology_valid = protein_residue_count > 0
+    claim_safe = ligand_claim_safe and fidelity == "sequence_mapped" and protein_topology_valid
     if not ligand_valid:
         blocked = _ligand_validity_blocked_reason(validity)
     elif not ligand_claim_safe:
         blocked = _ligand_validity_blocked_reason(validity)
+    elif not protein_topology_valid:
+        blocked = "empty_protein_topology"
     elif fidelity != "sequence_mapped":
         blocked = "placeholder_alanine_topology"
     else:
@@ -35,6 +39,9 @@ def topology_claim_metadata(complex_topology: ComplexTopology) -> dict[str, Any]
         claim_safe=claim_safe,
         blocked_reason=blocked,
         claim_scope=complex_topology.claim_scope,
+        protein_residue_count=protein_residue_count,
+        protein_topology_valid=protein_topology_valid,
+        protein_topology_blocker="" if protein_topology_valid else "empty_protein_topology",
         ligand_topology_schema_version=str(validity.get("schema_version") or ""),
         ligand_topology_claim_safe=ligand_claim_safe,
         ligand_topology_source=str(validity.get("source") or ""),
