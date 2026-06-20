@@ -21,6 +21,25 @@ except Exception:  # pragma: no cover
 
 HBOND_EVIDENCE_SCHEMA_VERSION = "hbond_evidence_v1"
 HBOND_CLAIM_METADATA_SCHEMA_VERSION = "hbond_claim_metadata_v1"
+HBOND_EVIDENCE_STATUSES = {"pass", "review", "invalid_smiles", "not_assessed"}
+HBOND_SITE_ROLES = {"donor", "acceptor"}
+HBOND_PAIR_REQUIRED_KEYS = {
+    "site_index",
+    "atom_idx",
+    "element",
+    "role",
+    "nearest_distance",
+    "distance_pass",
+    "angle_score",
+    "angle_pass",
+}
+HBOND_THRESHOLD_REQUIRED_KEYS = {
+    "min_distance",
+    "max_distance",
+    "overanchor_distance",
+    "angle_threshold",
+    "claim_safe_confidence_min",
+}
 
 
 def _onsps_metadata_schema_ready(metadata: dict[str, Any]) -> bool:
@@ -32,6 +51,58 @@ def _onsps_metadata_schema_ready(metadata: dict[str, Any]) -> bool:
         and "claim_safe" in metadata
         and "blocked_reason" in metadata
     )
+
+
+def _finite_float(value: Any) -> float | None:
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not np.isfinite(out):
+        return None
+    return out
+
+
+def _threshold_schema_ready(thresholds: dict[str, Any]) -> bool:
+    if not isinstance(thresholds, dict) or not HBOND_THRESHOLD_REQUIRED_KEYS.issubset(thresholds):
+        return False
+    min_distance = _finite_float(thresholds.get("min_distance"))
+    max_distance = _finite_float(thresholds.get("max_distance"))
+    overanchor_distance = _finite_float(thresholds.get("overanchor_distance"))
+    angle_threshold = _finite_float(thresholds.get("angle_threshold"))
+    confidence_min = _finite_float(thresholds.get("claim_safe_confidence_min"))
+    if None in {min_distance, max_distance, overanchor_distance, angle_threshold, confidence_min}:
+        return False
+    return bool(
+        0.0 < overanchor_distance <= min_distance <= max_distance
+        and 0.0 <= angle_threshold <= 1.0
+        and 0.0 <= confidence_min <= 1.0
+    )
+
+
+def _pair_schema_ready(pair: dict[str, Any], *, geometry_evaluated: bool) -> bool:
+    if not isinstance(pair, dict) or not HBOND_PAIR_REQUIRED_KEYS.issubset(pair):
+        return False
+    try:
+        site_index = int(pair.get("site_index"))
+        atom_idx = int(pair.get("atom_idx"))
+        nearest_distance = float(pair.get("nearest_distance"))
+        angle_score = float(pair.get("angle_score"))
+    except (TypeError, ValueError, OverflowError):
+        return False
+    if site_index < 0 or atom_idx < 0:
+        return False
+    if str(pair.get("role") or "") not in HBOND_SITE_ROLES:
+        return False
+    if not str(pair.get("element") or ""):
+        return False
+    if not isinstance(pair.get("distance_pass"), bool) or not isinstance(pair.get("angle_pass"), bool):
+        return False
+    if not np.isfinite(angle_score):
+        return False
+    if geometry_evaluated:
+        return bool(np.isfinite(nearest_distance) and nearest_distance >= 0.0)
+    return bool(np.isfinite(nearest_distance) or np.isinf(nearest_distance))
 
 
 @dataclass
@@ -62,18 +133,53 @@ class HbondEvidence:
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
+    def threshold_schema_ready(self) -> bool:
+        return _threshold_schema_ready(self.thresholds)
+
+    def pair_schema_ready(self) -> bool:
+        return bool(
+            len(self.donor_acceptor_pairs) == int(self.site_count)
+            and all(
+                _pair_schema_ready(row, geometry_evaluated=bool(self.geometry_evaluated))
+                for row in self.donor_acceptor_pairs
+            )
+        )
+
+    def geometry_flags_ready(self) -> bool:
+        return bool(
+            isinstance(self.geometry_evaluated, bool)
+            and isinstance(self.geometry_complete, bool)
+            and isinstance(self.overanchoring_flag, bool)
+            and isinstance(self.missing_expected_anchor_flag, bool)
+        )
+
     def schema_ready(self) -> bool:
         """Return whether the evidence carries the product H-bond/ONSPS schema surface."""
+        confidence = _finite_float(self.hbond_confidence)
+        distance_fraction = _finite_float(self.distance_pass_fraction)
+        angle_fraction = _finite_float(self.angle_pass_fraction)
         return bool(
             self.schema_version == HBOND_EVIDENCE_SCHEMA_VERSION
+            and str(self.status or "") in HBOND_EVIDENCE_STATUSES
             and self.site_count >= 0
             and self.donor_site_count >= 0
             and self.acceptor_site_count >= 0
+            and self.donor_site_count + self.acceptor_site_count == self.site_count
             and self.distance_pass_count >= 0
             and self.angle_pass_count >= 0
+            and self.distance_pass_count <= max(self.site_count, 0)
+            and self.angle_pass_count <= max(self.site_count, 0)
             and self.unsatisfied_donor_count >= 0
             and self.unsatisfied_acceptor_count >= 0
-            and isinstance(self.donor_acceptor_pairs, list)
+            and confidence is not None
+            and 0.0 <= confidence <= 1.0
+            and distance_fraction is not None
+            and 0.0 <= distance_fraction <= 1.0
+            and angle_fraction is not None
+            and 0.0 <= angle_fraction <= 1.0
+            and self.threshold_schema_ready()
+            and self.geometry_flags_ready()
+            and self.pair_schema_ready()
             and _onsps_metadata_schema_ready(self.onsps_backmap_metadata)
         )
 
@@ -119,6 +225,11 @@ class HbondEvidence:
             hbond_claim_metadata_schema_version=HBOND_CLAIM_METADATA_SCHEMA_VERSION,
             hbond_evidence_schema_version=str(self.schema_version),
             hbond_evidence_schema_ready=schema_ready,
+            hbond_threshold_schema_ready=self.threshold_schema_ready(),
+            hbond_pair_schema_ready=self.pair_schema_ready(),
+            hbond_geometry_flags_ready=self.geometry_flags_ready(),
+            hbond_status=str(self.status or "not_assessed"),
+            hbond_abstention_reason=str(self.abstention_reason or ""),
             hbond_claim_safe=bool(self.claim_safe),
             hbond_site_count=int(self.site_count),
             hbond_donor_site_count=int(self.donor_site_count),

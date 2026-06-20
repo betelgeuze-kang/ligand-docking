@@ -38,15 +38,15 @@ This repository is operated with Codex native goal mode and optional Cursor/Open
 
 - At the start of each non-trivial task, Codex should explicitly choose one path: direct implementation, OpenCode worker slice, or Cursor worker slice.
 - Bias toward using a worker when the work is broad, repetitive, uncertain, or likely to benefit from independent exploration before Codex final review.
-- Consider OpenCode for work expected to touch 50+ LOC, 3+ files, 10+ minutes of repository exploration, repeated test repair, broad grep/sweep, long-log review, or mechanical documentation/code updates.
-- Consider Cursor when IDE-attached context matters, including open files, selections, current editor state, or user-guided local edits.
+- Consider Cursor as the default implementation worker for scoped code/test changes, repeated test repair, multi-file edits, and work where IDE-attached context may help.
+- Consider OpenCode for broad repository exploration, broad grep/sweep, long-log review, large mechanical documentation/code updates, or other large-context passes.
 - Codex may still handle narrow single-file fixes, obvious docs edits, tiny tests, and urgent safety corrections directly.
 - Delegation does not change ownership: Codex still defines the slice, preserves safety boundaries, reviews the worker summary, inspects targeted hunks when needed, runs verification, and decides completion.
 
 ## Worker Selection
 
-- Prefer OpenCode for broad repository sweeps, long logs/docs, large mechanical edits, and repeated low-cost implementation passes.
-- Prefer Cursor for IDE-attached edits where open files, selections, and current editor state matter.
+- Prefer Cursor for most scoped implementation slices, especially code/test edits, local repair loops, and IDE-attached edits where open files, selections, and current editor state matter.
+- Prefer OpenCode for broad repository sweeps, long logs/docs, large mechanical edits, and large-context exploration.
 - Do not delegate truly small tasks: simple docs, tiny tests, obvious single-file fixes, or changes that Codex can safely complete faster than creating and reviewing a worker slice.
 - Delegate broad exploration, repeated test repair, multi-file refactors, and mechanical work once it crosses the Delegation Bias thresholds.
 - Workers implement; they do not redesign, broaden scope, decide completion, or change safety boundaries.

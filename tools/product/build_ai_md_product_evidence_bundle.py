@@ -28,6 +28,24 @@ CLAIM_BOUNDARY = (
     "promote claims, upload, submit, email, delete files, or mutate external state."
 )
 
+EXPECTED_ALLOWLISTED_RUNNER_SHIMS = (
+    {
+        "profile_id": "ligand_htvs_pipeline_default",
+        "runner_script": "tools/run_ligand_htvs_pipeline.py",
+        "adapter_import": "betelgeuze_engine.product.runners.htvs_pipeline",
+    },
+    {
+        "profile_id": "backmapping_scoring.production",
+        "runner_script": "tools/run_ligand_backmapping_scoring.py",
+        "adapter_import": "betelgeuze_engine.product.runners.backmapping_scoring",
+    },
+    {
+        "profile_id": "ligand_topk_delivery.production",
+        "runner_script": "tools/run_ligand_topk_delivery.py",
+        "adapter_import": "betelgeuze_engine.product.runners.topk_delivery",
+    },
+)
+
 
 def _resolve(path_like: str | Path) -> Path:
     path = Path(path_like)
@@ -106,8 +124,14 @@ def _validate_kpi_claim_metadata_gates(
         errors.append(f"kpi_json_packet_type_invalid:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "runner_claim_metadata_signed"):
         errors.append(f"kpi_runner_claim_metadata_not_signed:{artifact_id}")
+    if not _bool_nested(payload, "product_kpi", "signed_manifest_verification_pass"):
+        errors.append(f"kpi_signed_manifest_verification_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "runner_profile_validation_pass"):
         errors.append(f"kpi_runner_profile_validation_not_pass:{artifact_id}")
+    if _int_value(payload.get("product_kpi", {}).get("enabled_profile_count")) < 3:
+        errors.append(f"kpi_runner_profile_enabled_count_low:{artifact_id}")
+    if _int_value(payload.get("product_kpi", {}).get("failed_profile_count")) != 0:
+        errors.append(f"kpi_runner_profile_failed_count_nonzero:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "force_term_claim_metadata_ready"):
         errors.append(f"kpi_force_term_claim_metadata_not_ready:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "force_term_result_contract_ready"):
@@ -126,6 +150,8 @@ def _validate_kpi_claim_metadata_gates(
         errors.append(f"kpi_allowlisted_runner_shim_contract_not_ready:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "engine_topology_factory_facade_ready"):
         errors.append(f"kpi_engine_topology_factory_facade_not_ready:{artifact_id}")
+    if not _bool_nested(payload, "product_kpi", "source_artifacts_fresh"):
+        errors.append(f"kpi_source_artifacts_not_fresh:{artifact_id}")
     runtime = payload.get("runtime_kpi")
     if not isinstance(runtime, dict):
         runtime = {}
@@ -163,6 +189,47 @@ def _validate_kpi_claim_metadata_gates(
         errors.append(f"kpi_runtime_top10_force_residual_missing:{artifact_id}")
     if runtime_residual.get("contract_ready") is not True:
         errors.append(f"kpi_runtime_top10_force_residual_contract_not_ready:{artifact_id}")
+    if runtime_residual.get("top_k_policy_ready") is not True:
+        errors.append(f"kpi_runtime_top10_force_residual_top_k_policy_not_ready:{artifact_id}")
+    outside_top_k_report = runtime_residual.get("outside_top_k_report")
+    if not isinstance(outside_top_k_report, dict):
+        outside_top_k_report = {}
+    outside_policy_caps = outside_top_k_report.get("policy_caps")
+    if not isinstance(outside_policy_caps, dict):
+        outside_policy_caps = {}
+    if (
+        outside_top_k_report.get("skipped_reason") != "outside_top_k_policy"
+        or outside_top_k_report.get("applied") is not False
+        or outside_top_k_report.get("top_k_eligible") is not False
+        or _float_value(outside_top_k_report.get("rank_pct"))
+        <= _float_value(outside_policy_caps.get("top_k_rank_pct"))
+    ):
+        errors.append(f"kpi_runtime_top10_force_residual_top_k_report_invalid:{artifact_id}")
+    if _int_value(runtime_residual.get("nonfinite_uncertainty_abstention_count")) < 1:
+        errors.append(f"kpi_runtime_force_residual_nonfinite_uncertainty_abstention_missing:{artifact_id}")
+    if _int_value(runtime_residual.get("nonfinite_delta_score_abstention_count")) < 1:
+        errors.append(f"kpi_runtime_force_residual_nonfinite_delta_abstention_missing:{artifact_id}")
+    nonfinite_uncertainty_report = runtime_residual.get("nonfinite_uncertainty_report")
+    if not isinstance(nonfinite_uncertainty_report, dict):
+        nonfinite_uncertainty_report = {}
+    if (
+        nonfinite_uncertainty_report.get("skipped_reason") != "uncertainty_nonfinite"
+        or nonfinite_uncertainty_report.get("applied") is not False
+        or _float_value(nonfinite_uncertainty_report.get("uncertainty")) != 1.0
+        or _float_value(nonfinite_uncertainty_report.get("confidence")) != 0.0
+        or nonfinite_uncertainty_report.get("observed_caps_ready") is not True
+    ):
+        errors.append(f"kpi_runtime_force_residual_nonfinite_uncertainty_report_invalid:{artifact_id}")
+    nonfinite_delta_report = runtime_residual.get("nonfinite_delta_score_report")
+    if not isinstance(nonfinite_delta_report, dict):
+        nonfinite_delta_report = {}
+    if (
+        nonfinite_delta_report.get("skipped_reason") != "delta_score_nonfinite"
+        or nonfinite_delta_report.get("applied") is not False
+        or _float_value(nonfinite_delta_report.get("delta_score")) != 0.0
+        or nonfinite_delta_report.get("observed_caps_ready") is not True
+    ):
+        errors.append(f"kpi_runtime_force_residual_nonfinite_delta_report_invalid:{artifact_id}")
     if _float_value(runtime.get("memory_peak_mb")) <= 0.0:
         errors.append(f"kpi_runtime_memory_peak_missing:{artifact_id}")
     if (
@@ -176,6 +243,43 @@ def _validate_kpi_claim_metadata_gates(
         or neighbor.get("forcefield_neighbor_source") != "provided"
     ):
         errors.append(f"kpi_runtime_neighbor_list_rebuild_missing:{artifact_id}")
+    pm_runtime = (
+        payload.get("pm_kpi_summary", {}).get("runtime", {})
+        if isinstance(payload.get("pm_kpi_summary"), dict)
+        else {}
+    )
+    if not isinstance(pm_runtime, dict):
+        pm_runtime = {}
+    if _float_value(pm_runtime.get("score_only_1k_runtime_sec")) != _float_value(
+        runtime_score.get("duration_sec")
+    ):
+        errors.append(f"pm_runtime_score_only_duration_mismatch:{artifact_id}")
+    if _float_value(pm_runtime.get("score_only_1k_rows_per_sec")) != _float_value(
+        runtime_score.get("rows_per_sec")
+    ):
+        errors.append(f"pm_runtime_score_only_rows_per_sec_mismatch:{artifact_id}")
+    if _float_value(pm_runtime.get("top100_4bead_rescoring_runtime_sec")) != _float_value(
+        runtime_onsps.get("duration_sec")
+    ):
+        errors.append(f"pm_runtime_top100_4bead_duration_mismatch:{artifact_id}")
+    if _float_value(pm_runtime.get("top100_4bead_rescoring_rows_per_sec")) != _float_value(
+        runtime_onsps.get("rows_per_sec")
+    ):
+        errors.append(f"pm_runtime_top100_4bead_rows_per_sec_mismatch:{artifact_id}")
+    if _float_value(pm_runtime.get("top10_force_residual_runtime_sec")) != _float_value(
+        runtime_residual.get("duration_sec")
+    ):
+        errors.append(f"pm_runtime_top10_force_residual_duration_mismatch:{artifact_id}")
+    if _float_value(pm_runtime.get("top10_force_residual_rows_per_sec")) != _float_value(
+        runtime_residual.get("rows_per_sec")
+    ):
+        errors.append(f"pm_runtime_top10_force_residual_rows_per_sec_mismatch:{artifact_id}")
+    if _float_value(pm_runtime.get("memory_peak_mb")) != _float_value(runtime.get("memory_peak_mb")):
+        errors.append(f"pm_runtime_memory_peak_mismatch:{artifact_id}")
+    if _float_value(pm_runtime.get("neighbor_list_rebuild_frequency")) != _float_value(
+        neighbor.get("neighbor_list_rebuild_frequency")
+    ):
+        errors.append(f"pm_runtime_neighbor_list_rebuild_frequency_mismatch:{artifact_id}")
     physics = payload.get("physics_kpi")
     if not isinstance(physics, dict):
         physics = {}
@@ -194,10 +298,157 @@ def _validate_kpi_claim_metadata_gates(
         or _float_value(physics.get("neighbor_list_parity_error")) != 0.0
     ):
         errors.append(f"kpi_physics_neighbor_list_parity_error:{artifact_id}")
+    force_term_thresholds = physics.get("force_term_physics_validation_thresholds")
+    if not isinstance(force_term_thresholds, dict):
+        force_term_thresholds = {}
+    fd_limit = _float_value(force_term_thresholds.get("finite_difference_force_error_max"))
+    translation_limit = _float_value(force_term_thresholds.get("translation_invariance_error_max"))
+    rotation_limit = _float_value(force_term_thresholds.get("rotation_equivariance_error_max"))
+    drift_limit = _float_value(force_term_thresholds.get("energy_drift_smoke_pct_max"))
+    if fd_limit <= 0.0 or translation_limit <= 0.0 or rotation_limit <= 0.0 or drift_limit <= 0.0:
+        errors.append(f"kpi_physics_force_term_thresholds_invalid:{artifact_id}")
+    force_term_rows = physics.get("force_term_physics_validation_rows")
+    if not isinstance(force_term_rows, list):
+        force_term_rows = []
+    expected_force_terms = {"directional_hbond", "hydrophobic_contact", "legacy_lj"}
+    observed_force_terms = {
+        str(row.get("term") or "")
+        for row in force_term_rows
+        if isinstance(row, dict) and str(row.get("term") or "")
+    }
+    if observed_force_terms != expected_force_terms:
+        errors.append(f"kpi_physics_force_term_validation_terms_invalid:{artifact_id}")
+    if _int_value(physics.get("force_term_physics_validation_term_count")) != len(expected_force_terms):
+        errors.append(f"kpi_physics_force_term_validation_term_count_invalid:{artifact_id}")
+    if _int_value(physics.get("force_term_physics_validation_claim_safe_count")) != len(expected_force_terms):
+        errors.append(f"kpi_physics_force_term_validation_claim_safe_count_invalid:{artifact_id}")
+    if physics.get("force_term_physics_validation_ready") is not True:
+        errors.append(f"kpi_physics_force_term_validation_not_ready:{artifact_id}")
+    if physics.get("force_term_physics_validation_claim_safe_ready") is not True:
+        errors.append(f"kpi_physics_force_term_validation_claim_safe_not_ready:{artifact_id}")
+    if _float_value(physics.get("force_term_finite_difference_max_error")) >= fd_limit:
+        errors.append(f"kpi_physics_force_term_finite_difference_high:{artifact_id}")
+    if _float_value(physics.get("force_term_translation_invariance_max_error")) >= translation_limit:
+        errors.append(f"kpi_physics_force_term_translation_invariance_high:{artifact_id}")
+    if _float_value(physics.get("force_term_rotation_equivariance_max_error")) >= rotation_limit:
+        errors.append(f"kpi_physics_force_term_rotation_equivariance_high:{artifact_id}")
+    if _float_value(physics.get("force_term_energy_drift_max_pct")) >= drift_limit:
+        errors.append(f"kpi_physics_force_term_energy_drift_high:{artifact_id}")
+    for row in force_term_rows:
+        if not isinstance(row, dict):
+            errors.append(f"kpi_physics_force_term_validation_row_invalid:{artifact_id}")
+            continue
+        term = str(row.get("term") or "unknown_term")
+        if row.get("ready") is not True:
+            errors.append(f"kpi_physics_force_term_validation_row_not_ready:{artifact_id}:{term}")
+        if row.get("status") != "pass" or row.get("force_term_status") != "pass":
+            errors.append(f"kpi_physics_force_term_validation_row_status_invalid:{artifact_id}:{term}")
+        if row.get("claim_safe") is not True or str(row.get("blocked_reason") or ""):
+            errors.append(f"kpi_physics_force_term_validation_row_claim_not_safe:{artifact_id}:{term}")
+        if _float_value(row.get("finite_difference_force_error")) >= fd_limit:
+            errors.append(f"kpi_physics_force_term_validation_row_finite_difference_high:{artifact_id}:{term}")
+        if _float_value(row.get("translation_invariance_error")) >= translation_limit:
+            errors.append(f"kpi_physics_force_term_validation_row_translation_high:{artifact_id}:{term}")
+        if _float_value(row.get("rotation_equivariance_error")) >= rotation_limit:
+            errors.append(f"kpi_physics_force_term_validation_row_rotation_high:{artifact_id}:{term}")
+        if _float_value(row.get("energy_drift_smoke_pct")) >= drift_limit:
+            errors.append(f"kpi_physics_force_term_validation_row_energy_drift_high:{artifact_id}:{term}")
     if "topology_invalid_rate" not in physics or _float_value(physics.get("topology_invalid_rate")) >= 0.2:
         errors.append(f"kpi_physics_topology_invalid_rate_high:{artifact_id}")
     if "backmapping_failure_rate" not in physics or _float_value(physics.get("backmapping_failure_rate")) >= 0.5:
         errors.append(f"kpi_physics_backmapping_failure_rate_high:{artifact_id}")
+    chemistry = payload.get("chemistry_kpi")
+    if not isinstance(chemistry, dict):
+        chemistry = {}
+        errors.append(f"kpi_chemistry_missing:{artifact_id}")
+    chemistry_fixture_count = _int_value(chemistry.get("fixture_count"))
+    chemistry_rows = chemistry.get("rows")
+    if not isinstance(chemistry_rows, list):
+        chemistry_rows = []
+    if chemistry_fixture_count < 7:
+        errors.append(f"kpi_chemistry_fixture_count_low:{artifact_id}")
+    if len(chemistry_rows) != chemistry_fixture_count:
+        errors.append(f"kpi_chemistry_rows_count_mismatch:{artifact_id}")
+    chemistry_fixtures = {
+        str(row.get("fixture") or "")
+        for row in chemistry_rows
+        if isinstance(row, dict) and str(row.get("fixture") or "")
+    }
+    required_chemistry_fixtures = {
+        "ethanol",
+        "amide",
+        "tertiary_amine",
+        "carboxylate",
+        "phosphate",
+        "heteroaryl_nitrogen",
+        "invalid_smiles",
+    }
+    if not required_chemistry_fixtures.issubset(chemistry_fixtures):
+        errors.append(f"kpi_chemistry_required_fixtures_missing:{artifact_id}")
+    if chemistry.get("hbond_evidence_schema_ready") is not True:
+        errors.append(f"kpi_chemistry_hbond_schema_not_ready:{artifact_id}")
+    if _int_value(chemistry.get("hbond_evidence_schema_ready_count")) != chemistry_fixture_count:
+        errors.append(f"kpi_chemistry_hbond_schema_ready_count_mismatch:{artifact_id}")
+    if chemistry.get("ligand_topology_validity_schema_ready") is not True:
+        errors.append(f"kpi_chemistry_ligand_topology_schema_not_ready:{artifact_id}")
+    if _int_value(chemistry.get("ligand_topology_validity_schema_ready_count")) != chemistry_fixture_count:
+        errors.append(f"kpi_chemistry_ligand_topology_schema_ready_count_mismatch:{artifact_id}")
+    if _int_value(chemistry.get("hbond_donor_site_count")) < 1:
+        errors.append(f"kpi_chemistry_hbond_donor_sites_missing:{artifact_id}")
+    if _int_value(chemistry.get("hbond_acceptor_site_count")) < 1:
+        errors.append(f"kpi_chemistry_hbond_acceptor_sites_missing:{artifact_id}")
+    if _int_value(chemistry.get("hbond_recovery_fixture_count")) < 1:
+        errors.append(f"kpi_chemistry_hbond_recovery_missing:{artifact_id}")
+    if _int_value(chemistry.get("unsatisfied_donor_acceptor_fixture_count")) < 1:
+        errors.append(f"kpi_chemistry_unsatisfied_fixture_missing:{artifact_id}")
+    if (
+        _int_value(chemistry.get("unsatisfied_donor_count"))
+        + _int_value(chemistry.get("unsatisfied_acceptor_count"))
+        < 1
+    ):
+        errors.append(f"kpi_chemistry_unsatisfied_counts_missing:{artifact_id}")
+    if chemistry.get("chirality_preservation_ready") is not True:
+        errors.append(f"kpi_chemistry_chirality_not_ready:{artifact_id}")
+    if (
+        _int_value(chemistry.get("chirality_preservation_fixture_count")) < 1
+        or _int_value(chemistry.get("unassigned_chirality_blocked_fixture_count")) < 1
+    ):
+        errors.append(f"kpi_chemistry_chirality_fixture_missing:{artifact_id}")
+    if chemistry.get("ring_validity_ready") is not True or _int_value(
+        chemistry.get("ring_validity_fixture_count")
+    ) < 1:
+        errors.append(f"kpi_chemistry_ring_validity_missing:{artifact_id}")
+    if chemistry.get("tautomer_validity_ready") is not True or _int_value(
+        chemistry.get("tautomer_validity_fixture_count")
+    ) < 1:
+        errors.append(f"kpi_chemistry_tautomer_validity_missing:{artifact_id}")
+    if chemistry.get("protonation_validity_ready") is not True or _int_value(
+        chemistry.get("protonation_validity_fixture_count")
+    ) < 1:
+        errors.append(f"kpi_chemistry_protonation_validity_missing:{artifact_id}")
+    if _int_value(chemistry.get("backmap_evaluable_fixture_count")) < 1:
+        errors.append(f"kpi_chemistry_backmap_evaluable_missing:{artifact_id}")
+    if _int_value(chemistry.get("backmap_claim_safe_fixture_count")) < 1:
+        errors.append(f"kpi_chemistry_backmap_claim_safe_missing:{artifact_id}")
+    if "backmapping_failure_rate" not in chemistry or _float_value(
+        chemistry.get("backmapping_failure_rate")
+    ) >= 0.5:
+        errors.append(f"kpi_chemistry_backmapping_failure_rate_high:{artifact_id}")
+    for row in chemistry_rows:
+        if not isinstance(row, dict):
+            errors.append(f"kpi_chemistry_row_invalid:{artifact_id}")
+            continue
+        fixture = str(row.get("fixture") or "unknown_fixture")
+        if row.get("hbond_schema_ready") is not True:
+            errors.append(f"kpi_chemistry_row_hbond_schema_not_ready:{artifact_id}:{fixture}")
+        if row.get("hbond_threshold_schema_ready") is not True:
+            errors.append(f"kpi_chemistry_row_hbond_threshold_schema_not_ready:{artifact_id}:{fixture}")
+        if row.get("hbond_pair_schema_ready") is not True:
+            errors.append(f"kpi_chemistry_row_hbond_pair_schema_not_ready:{artifact_id}:{fixture}")
+        if row.get("hbond_geometry_flags_ready") is not True:
+            errors.append(f"kpi_chemistry_row_hbond_geometry_flags_not_ready:{artifact_id}:{fixture}")
+        if row.get("ligand_validity_schema_ready") is not True:
+            errors.append(f"kpi_chemistry_row_ligand_topology_schema_not_ready:{artifact_id}:{fixture}")
     topology_smoke = (
         payload.get("product_kpi", {}).get("engine_topology_factory_facade_smoke", {})
         if isinstance(payload.get("product_kpi"), dict)
@@ -385,6 +636,11 @@ def _validate_kpi_claim_metadata_gates(
         or forcefield_guarded_row.get("policy_caps_ready") is not True
         or forcefield_guarded_row.get("observed_caps_ready") is not True
         or forcefield_guarded_row.get("bounded_correction_ready") is not True
+        or forcefield_guarded_row.get("abs_energy_within_cap") is not True
+        or forcefield_guarded_row.get("force_norm_within_cap") is not True
+        or forcefield_guarded_row.get("active_pair_count_within_cap") is not True
+        or not isinstance(forcefield_guarded_row.get("policy_caps"), dict)
+        or not forcefield_guarded_row.get("policy_caps")
     ):
         errors.append(f"kpi_guarded_force_term_plugin_forcefield_bounded_row_invalid:{artifact_id}")
     onsps_smoke = (
@@ -513,19 +769,62 @@ def _validate_kpi_claim_metadata_gates(
     runner_rows = runner_shim.get("rows")
     if not isinstance(runner_rows, list):
         runner_rows = []
-    if not runner_rows:
-        errors.append(f"kpi_allowlisted_runner_shim_rows_missing:{artifact_id}")
-    elif not all(
-        isinstance(row, dict)
-        and row.get("shim_contract_type") == "canonical_module_alias"
-        and row.get("sys_modules_alias_ready") is True
-        and row.get("self_implementation_blocked") is True
-        and row.get("runtime_adapter_identity_ready") is True
+    expected_runner_count = len(EXPECTED_ALLOWLISTED_RUNNER_SHIMS)
+    if _int_value(runner_shim.get("runner_count")) != expected_runner_count:
+        errors.append(f"kpi_allowlisted_runner_shim_runner_count_mismatch:{artifact_id}")
+    if len(runner_rows) != expected_runner_count:
+        errors.append(f"kpi_allowlisted_runner_shim_rows_count_mismatch:{artifact_id}")
+    rows_by_profile = {
+        str(row.get("profile_id") or ""): row
         for row in runner_rows
-    ):
-        errors.append(f"kpi_allowlisted_runner_shim_contract_rows_invalid:{artifact_id}")
+        if isinstance(row, dict)
+    }
+    expected_profile_ids = {entry["profile_id"] for entry in EXPECTED_ALLOWLISTED_RUNNER_SHIMS}
+    if set(rows_by_profile) != expected_profile_ids:
+        errors.append(f"kpi_allowlisted_runner_shim_profile_identities_invalid:{artifact_id}")
+    for entry in EXPECTED_ALLOWLISTED_RUNNER_SHIMS:
+        profile_id = entry["profile_id"]
+        row = rows_by_profile.get(profile_id)
+        if not isinstance(row, dict):
+            errors.append(f"kpi_allowlisted_runner_shim_row_missing:{artifact_id}:{profile_id}")
+            continue
+        if str(row.get("profile_id") or "") != profile_id:
+            errors.append(f"kpi_allowlisted_runner_shim_profile_id_invalid:{artifact_id}:{profile_id}")
+        if str(row.get("runner_script") or "") != entry["runner_script"]:
+            errors.append(f"kpi_allowlisted_runner_shim_runner_script_invalid:{artifact_id}:{profile_id}")
+        if str(row.get("profile_runner_script") or "") != entry["runner_script"]:
+            errors.append(f"kpi_allowlisted_runner_shim_profile_runner_script_invalid:{artifact_id}:{profile_id}")
+        if str(row.get("adapter_import") or "") != entry["adapter_import"]:
+            errors.append(f"kpi_allowlisted_runner_shim_adapter_import_invalid:{artifact_id}:{profile_id}")
+        if row.get("adapter_import_present") is not True:
+            errors.append(f"kpi_allowlisted_runner_shim_adapter_import_not_present:{artifact_id}:{profile_id}")
+        if row.get("shim_contract_type") != "canonical_module_alias":
+            errors.append(f"kpi_allowlisted_runner_shim_contract_type_invalid:{artifact_id}:{profile_id}")
+        if row.get("sys_modules_alias_ready") is not True:
+            errors.append(f"kpi_allowlisted_runner_shim_sys_modules_alias_not_ready:{artifact_id}:{profile_id}")
+        if row.get("self_implementation_blocked") is not True:
+            errors.append(f"kpi_allowlisted_runner_shim_self_implementation_not_blocked:{artifact_id}:{profile_id}")
+        if row.get("runtime_adapter_identity_ready") is not True:
+            errors.append(f"kpi_allowlisted_runner_shim_runtime_adapter_identity_not_ready:{artifact_id}:{profile_id}")
+        missing_symbols = row.get("missing_runtime_symbols")
+        if not isinstance(missing_symbols, list) or missing_symbols:
+            errors.append(f"kpi_allowlisted_runner_shim_missing_runtime_symbols:{artifact_id}:{profile_id}")
+        if str(row.get("runtime_adapter_error") or ""):
+            errors.append(f"kpi_allowlisted_runner_shim_runtime_adapter_error:{artifact_id}:{profile_id}")
+        if str(row.get("error") or ""):
+            errors.append(f"kpi_allowlisted_runner_shim_row_error:{artifact_id}:{profile_id}")
+        if row.get("ready") is not True:
+            errors.append(f"kpi_allowlisted_runner_shim_row_not_ready:{artifact_id}:{profile_id}")
+        script_hash = str(row.get("script_hash") or "")
+        profile_hash = str(row.get("profile_runner_script_sha256") or "")
+        if not script_hash or not profile_hash or script_hash != profile_hash:
+            errors.append(f"kpi_allowlisted_runner_shim_hash_mismatch:{artifact_id}:{profile_id}")
+        if row.get("hash_matches") is not True:
+            errors.append(f"kpi_allowlisted_runner_shim_hash_matches_not_true:{artifact_id}:{profile_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "product", "runner_claim_metadata_signed"):
         errors.append(f"pm_runner_claim_metadata_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "product", "signed_manifest_verification_pass"):
+        errors.append(f"pm_signed_manifest_verification_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "product", "runner_profile_validation_pass"):
         errors.append(f"pm_runner_profile_validation_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "product", "force_term_claim_metadata_ready"):
@@ -544,10 +843,66 @@ def _validate_kpi_claim_metadata_gates(
         errors.append(f"pm_job_store_lazy_factory_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "product", "allowlisted_runner_shim_contract_ready"):
         errors.append(f"pm_allowlisted_runner_shim_contract_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "product", "source_artifacts_fresh"):
+        errors.append(f"pm_source_artifacts_fresh_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "blocked_claim_correctly_blocked"):
         errors.append(f"kpi_blocked_claim_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "product", "blocked_claim_correctly_blocked"):
         errors.append(f"pm_blocked_claim_gate_missing:{artifact_id}")
+    product_kpi = payload.get("product_kpi")
+    if not isinstance(product_kpi, dict):
+        product_kpi = {}
+    pm_product = (
+        payload.get("pm_kpi_summary", {}).get("product", {})
+        if isinstance(payload.get("pm_kpi_summary"), dict)
+        else {}
+    )
+    if not isinstance(pm_product, dict):
+        pm_product = {}
+    if (product_kpi.get("bundle_validation_pass") is True) != (
+        pm_product.get("bundle_validation_pass") is True
+    ):
+        errors.append(f"pm_product_bundle_validation_gate_mismatch:{artifact_id}")
+    if _int_value(pm_product.get("clean_install_missing_requirement_count")) != _int_value(
+        product_kpi.get("clean_install_missing_requirement_count")
+    ):
+        errors.append(f"pm_product_clean_install_missing_count_mismatch:{artifact_id}")
+    if list(pm_product.get("clean_install_missing_requirements") or []) != list(
+        product_kpi.get("clean_install_missing_requirements") or []
+    ):
+        errors.append(f"pm_product_clean_install_missing_requirements_mismatch:{artifact_id}")
+    if list(pm_product.get("product_image_preflight_blocker_codes") or []) != list(
+        product_kpi.get("product_image_preflight_blocker_codes") or []
+    ):
+        errors.append(f"pm_product_image_preflight_blocker_codes_mismatch:{artifact_id}")
+    if _int_value(pm_product.get("clean_container_missing_requirement_count")) != _int_value(
+        product_kpi.get("clean_container_missing_requirement_count")
+    ):
+        errors.append(f"pm_product_clean_container_missing_count_mismatch:{artifact_id}")
+    if list(pm_product.get("clean_container_missing_requirements") or []) != list(
+        product_kpi.get("clean_container_missing_requirements") or []
+    ):
+        errors.append(f"pm_product_clean_container_missing_requirements_mismatch:{artifact_id}")
+    if _int_value(pm_product.get("source_artifact_fresh_count")) != _int_value(
+        product_kpi.get("source_artifact_fresh_count")
+    ):
+        errors.append(f"pm_product_source_artifact_fresh_count_mismatch:{artifact_id}")
+    if _int_value(pm_product.get("source_artifact_stale_count")) != _int_value(
+        product_kpi.get("source_artifact_stale_count")
+    ):
+        errors.append(f"pm_product_source_artifact_stale_count_mismatch:{artifact_id}")
+    if list(pm_product.get("source_artifact_stale_ids") or []) != list(
+        product_kpi.get("source_artifact_stale_ids") or []
+    ):
+        errors.append(f"pm_product_source_artifact_stale_ids_mismatch:{artifact_id}")
+    if _int_value(pm_product.get("enabled_profile_count")) != _int_value(
+        product_kpi.get("enabled_profile_count")
+    ):
+        errors.append(f"pm_product_enabled_profile_count_mismatch:{artifact_id}")
+    if _int_value(pm_product.get("failed_profile_count")) != _int_value(
+        product_kpi.get("failed_profile_count")
+    ):
+        errors.append(f"pm_product_failed_profile_count_mismatch:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "runtime", "force_residual_bounded_policy_ready"):
         errors.append(f"pm_force_residual_bounded_policy_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "runtime", "force_residual_observed_caps_ready"):
@@ -556,6 +911,8 @@ def _validate_kpi_claim_metadata_gates(
         errors.append(f"pm_force_residual_contract_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "runtime", "force_residual_confidence_abstention_ready"):
         errors.append(f"pm_force_residual_confidence_abstention_gate_missing:{artifact_id}")
+    if not _bool_nested(payload, "pm_kpi_summary", "runtime", "force_residual_top_k_policy_ready"):
+        errors.append(f"pm_force_residual_top_k_policy_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "runtime", "score_only_1k_runtime_tracked"):
         errors.append(f"pm_score_only_1k_runtime_gate_missing:{artifact_id}")
     if not _bool_nested(payload, "pm_kpi_summary", "runtime", "top100_4bead_rescoring_runtime_tracked"):
@@ -605,6 +962,81 @@ def _validate_kpi_claim_metadata_gates(
     pose_benchmark = payload.get("pose_ranking_hbond_benchmark")
     if not isinstance(pose_benchmark, dict):
         pose_benchmark = {}
+    pm_chemistry = (
+        payload.get("pm_kpi_summary", {}).get("chemistry", {})
+        if isinstance(payload.get("pm_kpi_summary"), dict)
+        else {}
+    )
+    if not isinstance(pm_chemistry, dict):
+        pm_chemistry = {}
+    if _int_value(pm_chemistry.get("hbond_evidence_schema_ready_count")) != _int_value(
+        chemistry.get("hbond_evidence_schema_ready_count")
+    ):
+        errors.append(f"pm_chemistry_hbond_schema_ready_count_mismatch:{artifact_id}")
+    if _int_value(pm_chemistry.get("ligand_topology_validity_schema_ready_count")) != _int_value(
+        chemistry.get("ligand_topology_validity_schema_ready_count")
+    ):
+        errors.append(f"pm_chemistry_ligand_topology_schema_ready_count_mismatch:{artifact_id}")
+    if _int_value(pm_chemistry.get("hbond_donor_site_count")) != _int_value(
+        chemistry.get("hbond_donor_site_count")
+    ):
+        errors.append(f"pm_chemistry_hbond_donor_site_count_mismatch:{artifact_id}")
+    if _int_value(pm_chemistry.get("hbond_acceptor_site_count")) != _int_value(
+        chemistry.get("hbond_acceptor_site_count")
+    ):
+        errors.append(f"pm_chemistry_hbond_acceptor_site_count_mismatch:{artifact_id}")
+    if _int_value(pm_chemistry.get("hbond_recovery_fixture_count")) != _int_value(
+        chemistry.get("hbond_recovery_fixture_count")
+    ):
+        errors.append(f"pm_chemistry_hbond_recovery_fixture_count_mismatch:{artifact_id}")
+    if _int_value(pm_chemistry.get("hbond_recovery_pose_count")) != _int_value(
+        pose_benchmark.get("hbond_recovery_pose_count")
+    ):
+        errors.append(f"pm_chemistry_hbond_recovery_pose_count_mismatch:{artifact_id}")
+    if list(pm_chemistry.get("hbond_recovery_pose_ids") or []) != list(
+        pose_benchmark.get("hbond_recovery_pose_ids") or []
+    ):
+        errors.append(f"pm_chemistry_hbond_recovery_pose_ids_mismatch:{artifact_id}")
+    if _float_value(pm_chemistry.get("hbond_recovery_confidence_min")) != _float_value(
+        pose_benchmark.get("hbond_recovery_confidence_min")
+    ):
+        errors.append(f"pm_chemistry_hbond_recovery_confidence_mismatch:{artifact_id}")
+    if _int_value(pm_chemistry.get("unsatisfied_donor_acceptor_fixture_count")) != _int_value(
+        chemistry.get("unsatisfied_donor_acceptor_fixture_count")
+    ):
+        errors.append(f"pm_chemistry_unsatisfied_fixture_count_mismatch:{artifact_id}")
+    if _int_value(pm_chemistry.get("unsatisfied_donor_count")) != _int_value(
+        chemistry.get("unsatisfied_donor_count")
+    ):
+        errors.append(f"pm_chemistry_unsatisfied_donor_count_mismatch:{artifact_id}")
+    if _int_value(pm_chemistry.get("unsatisfied_acceptor_count")) != _int_value(
+        chemistry.get("unsatisfied_acceptor_count")
+    ):
+        errors.append(f"pm_chemistry_unsatisfied_acceptor_count_mismatch:{artifact_id}")
+    if _int_value(pm_chemistry.get("unsatisfied_donor_acceptor_pose_count")) != _int_value(
+        pose_benchmark.get("unsatisfied_donor_acceptor_pose_count")
+    ):
+        errors.append(f"pm_chemistry_unsatisfied_pose_count_mismatch:{artifact_id}")
+    if _int_value(pm_chemistry.get("chirality_preservation_fixture_count")) != _int_value(
+        chemistry.get("chirality_preservation_fixture_count")
+    ):
+        errors.append(f"pm_chemistry_chirality_fixture_count_mismatch:{artifact_id}")
+    if _int_value(pm_chemistry.get("unassigned_chirality_blocked_fixture_count")) != _int_value(
+        chemistry.get("unassigned_chirality_blocked_fixture_count")
+    ):
+        errors.append(f"pm_chemistry_unassigned_chirality_count_mismatch:{artifact_id}")
+    if _int_value(pm_chemistry.get("ring_validity_fixture_count")) != _int_value(
+        chemistry.get("ring_validity_fixture_count")
+    ):
+        errors.append(f"pm_chemistry_ring_fixture_count_mismatch:{artifact_id}")
+    if _int_value(pm_chemistry.get("tautomer_validity_fixture_count")) != _int_value(
+        chemistry.get("tautomer_validity_fixture_count")
+    ):
+        errors.append(f"pm_chemistry_tautomer_fixture_count_mismatch:{artifact_id}")
+    if _int_value(pm_chemistry.get("protonation_validity_fixture_count")) != _int_value(
+        chemistry.get("protonation_validity_fixture_count")
+    ):
+        errors.append(f"pm_chemistry_protonation_fixture_count_mismatch:{artifact_id}")
     if pose_benchmark.get("benchmark_ready") is not True:
         errors.append(f"kpi_pose_ranking_hbond_benchmark_not_ready:{artifact_id}")
     if pose_benchmark.get("top1_pose_id") != pose_benchmark.get("top1_expected_pose_id"):
@@ -649,11 +1081,140 @@ def _validate_kpi_claim_metadata_gates(
             errors.append(f"kpi_pose_ranking_row_contract_failed:{artifact_id}:{pose_id}")
         if not isinstance(row.get("benchmark_contract_checks"), dict):
             errors.append(f"kpi_pose_ranking_row_contract_checks_missing:{artifact_id}:{pose_id}")
+        if row.get("hbond_schema_ready") is not True:
+            errors.append(f"kpi_pose_ranking_row_hbond_schema_not_ready:{artifact_id}:{pose_id}")
+        if row.get("hbond_threshold_schema_ready") is not True:
+            errors.append(f"kpi_pose_ranking_row_hbond_threshold_schema_not_ready:{artifact_id}:{pose_id}")
+        if row.get("hbond_pair_schema_ready") is not True:
+            errors.append(f"kpi_pose_ranking_row_hbond_pair_schema_not_ready:{artifact_id}:{pose_id}")
+        if row.get("hbond_geometry_flags_ready") is not True:
+            errors.append(f"kpi_pose_ranking_row_hbond_geometry_flags_not_ready:{artifact_id}:{pose_id}")
         if row.get("hbond_claim_safe") is not row.get("expected_claim_safe"):
             errors.append(f"kpi_pose_ranking_row_claim_expectation_mismatch:{artifact_id}:{pose_id}")
         expected_blocked_reason = str(row.get("expected_blocked_reason") or "")
         if str(row.get("hbond_blocked_reason") or "") != expected_blocked_reason:
             errors.append(f"kpi_pose_ranking_row_blocked_reason_mismatch:{artifact_id}:{pose_id}")
+    if _int_value(pose_benchmark.get("fixture_count")) != len(pose_rows):
+        errors.append(f"kpi_pose_ranking_fixture_count_mismatch:{artifact_id}")
+    expected_row_contract_pass_count = sum(
+        1
+        for row in pose_rows
+        if isinstance(row, dict) and row.get("benchmark_contract_pass") is True
+    )
+    if _int_value(pose_benchmark.get("row_contract_pass_count")) != expected_row_contract_pass_count:
+        errors.append(f"kpi_pose_ranking_row_contract_pass_count_mismatch:{artifact_id}")
+    canonical_required_roles = {
+        "hbond_recovery_pose",
+        "unsatisfied_donor_pose",
+        "far_decoy_pose",
+        "overanchored_decoy_pose",
+        "invalid_ligand_pose",
+    }
+    payload_required_roles = {
+        str(role)
+        for role in (pose_benchmark.get("required_pose_roles") or [])
+        if str(role)
+    }
+    if payload_required_roles != canonical_required_roles:
+        errors.append(f"kpi_pose_ranking_required_pose_roles_drift:{artifact_id}")
+    row_role_set = {
+        str(row.get("benchmark_role") or "")
+        for row in pose_rows
+        if isinstance(row, dict) and str(row.get("benchmark_role") or "")
+    }
+    payload_observed_roles = {
+        str(role)
+        for role in (pose_benchmark.get("observed_pose_roles") or [])
+        if str(role)
+    }
+    if payload_observed_roles != row_role_set:
+        errors.append(f"kpi_pose_ranking_observed_pose_roles_drift:{artifact_id}")
+    ranking_order = pose_benchmark.get("ranking_order")
+    if not isinstance(ranking_order, list) or not ranking_order:
+        errors.append(f"kpi_pose_ranking_ranking_order_missing:{artifact_id}")
+        ranking_order_str: list[str] = []
+    else:
+        ranking_order_str = [str(pose_id) for pose_id in ranking_order]
+    row_pose_ids = [
+        str(row.get("pose_id") or "")
+        for row in pose_rows
+        if isinstance(row, dict) and str(row.get("pose_id") or "")
+    ]
+    if sorted(ranking_order_str) != sorted(row_pose_ids):
+        errors.append(f"kpi_pose_ranking_ranking_order_membership_drift:{artifact_id}")
+    if len(set(ranking_order_str)) != len(ranking_order_str):
+        errors.append(f"kpi_pose_ranking_ranking_order_duplicates:{artifact_id}")
+    if ranking_order_str and str(pose_benchmark.get("top1_pose_id") or "") != ranking_order_str[0]:
+        errors.append(f"kpi_pose_ranking_top1_not_ranking_order_head:{artifact_id}")
+    rows_by_pose_id = {
+        str(row.get("pose_id") or ""): row
+        for row in pose_rows
+        if isinstance(row, dict) and str(row.get("pose_id") or "")
+    }
+    hbond_recovery_rows = [
+        row
+        for row in pose_rows
+        if isinstance(row, dict)
+        and str(row.get("benchmark_role") or "") == "hbond_recovery_pose"
+        and row.get("hbond_claim_safe") is True
+    ]
+    if _int_value(pose_benchmark.get("hbond_recovery_pose_count")) != len(hbond_recovery_rows):
+        errors.append(f"kpi_pose_ranking_hbond_recovery_count_drift:{artifact_id}")
+    payload_recovery_ids = [
+        str(pose_id) for pose_id in (pose_benchmark.get("hbond_recovery_pose_ids") or [])
+    ]
+    expected_recovery_ids = [str(row.get("pose_id") or "") for row in hbond_recovery_rows]
+    if payload_recovery_ids != expected_recovery_ids:
+        errors.append(f"kpi_pose_ranking_hbond_recovery_ids_drift:{artifact_id}")
+    top1_pose_id = str(pose_benchmark.get("top1_pose_id") or "")
+    if top1_pose_id and top1_pose_id not in rows_by_pose_id:
+        errors.append(f"kpi_pose_ranking_top1_pose_id_not_in_rows:{artifact_id}")
+    elif top1_pose_id:
+        top1_row = rows_by_pose_id[top1_pose_id]
+        if str(top1_row.get("benchmark_role") or "") != "hbond_recovery_pose":
+            errors.append(f"kpi_pose_ranking_top1_role_not_hbond_recovery:{artifact_id}")
+        if top1_row.get("hbond_claim_safe") is not True:
+            errors.append(f"kpi_pose_ranking_top1_not_claim_safe:{artifact_id}")
+    overanchored_rows = [
+        row
+        for row in pose_rows
+        if isinstance(row, dict)
+        and str(row.get("benchmark_role") or "") == "overanchored_decoy_pose"
+    ]
+    expected_overanchored_blocked = bool(overanchored_rows) and all(
+        row.get("hbond_claim_safe") is False for row in overanchored_rows
+    )
+    if (pose_benchmark.get("overanchored_decoys_blocked") is True) != expected_overanchored_blocked:
+        errors.append(f"kpi_pose_ranking_overanchored_summary_drift:{artifact_id}")
+    unsatisfied_rows = [
+        row
+        for row in pose_rows
+        if isinstance(row, dict)
+        and (
+            _int_value(row.get("unsatisfied_donor_count")) > 0
+            or _int_value(row.get("unsatisfied_acceptor_count")) > 0
+        )
+    ]
+    if (pose_benchmark.get("unsatisfied_donor_acceptor_detected") is True) != bool(unsatisfied_rows):
+        errors.append(f"kpi_pose_ranking_unsatisfied_detected_summary_drift:{artifact_id}")
+    if _int_value(pose_benchmark.get("unsatisfied_donor_acceptor_pose_count")) != len(unsatisfied_rows):
+        errors.append(f"kpi_pose_ranking_unsatisfied_pose_count_drift:{artifact_id}")
+    for role in (
+        "far_decoy_pose",
+        "overanchored_decoy_pose",
+        "unsatisfied_donor_pose",
+        "invalid_ligand_pose",
+    ):
+        role_rows = [
+            row
+            for row in pose_rows
+            if isinstance(row, dict)
+            and str(row.get("benchmark_role") or "") == role
+        ]
+        if not role_rows:
+            continue
+        if not all(row.get("hbond_claim_safe") is False for row in role_rows):
+            errors.append(f"kpi_pose_ranking_blocked_role_not_blocked:{artifact_id}:{role}")
     return errors
 
 

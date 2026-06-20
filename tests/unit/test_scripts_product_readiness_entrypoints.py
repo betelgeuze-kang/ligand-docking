@@ -20,7 +20,7 @@ def _run_script(path: str, *, check: bool = True) -> dict:
     return json.loads(proc.stdout)
 
 
-def test_check_independent_product_readiness_script_reports_current_blockers() -> None:
+def test_check_independent_product_readiness_script_reports_current_state() -> None:
     payload = _run_script("scripts/check_independent_product_readiness.py", check=False)
     summary = payload["summary"]
 
@@ -28,7 +28,7 @@ def test_check_independent_product_readiness_script_reports_current_blockers() -
         "independent_product_readiness_verified",
         "blocked_independent_product_readiness",
     }
-    assert summary["independent_restricted_product_ready"] is False
+    assert summary["independent_restricted_product_ready"] is True
     assert summary["full_commercial_claim_promotion_ready"] is False
     assert summary["full_commercial_science_claim_blocked"] is True
     assert summary["full_commercial_claim_boundaries_explicit"] is True
@@ -69,14 +69,14 @@ def test_check_independent_product_readiness_script_reports_current_blockers() -
         "MASTER:PRODUCT-AI",
         "ACCURACY:ligand_ranking",
     ]
-    assert summary["blocker_count"] == 3
+    assert summary["blocker_count"] == 0
     assert summary["execution_enabled"] is False
     assert summary["external_state_mutated"] is False
     rows = {row["check"]: row for row in payload["rows"]}
-    assert rows["commercial_independence_restricted_self_hosted"]["status"] == "fail"
-    assert rows["capability_surface_restricted_scope_ready"]["status"] == "fail"
+    assert rows["commercial_independence_restricted_self_hosted"]["status"] == "pass"
+    assert rows["capability_surface_restricted_scope_ready"]["status"] == "pass"
     assert rows["release_source_of_truth_ready"]["status"] == "pass"
-    assert rows["release_refresh_final_gates_verified"]["status"] == "fail"
+    assert rows["release_refresh_final_gates_verified"]["status"] == "pass"
     assert rows["full_commercial_claim_boundaries_explicit"]["status"] == "pass"
     boundary = rows["full_commercial_claim_boundaries_explicit"]
     assert "ligand_metric_thresholds_pass=True" in boundary["observed"]

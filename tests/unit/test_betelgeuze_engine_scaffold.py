@@ -26,7 +26,12 @@ from betelgeuze_engine.topology import (
     protein_topology_from_sequence,
     topology_claim_metadata,
 )
-from betelgeuze_engine.validation import finite_difference_force_error, rotation_equivariance_error
+from betelgeuze_engine.validation import (
+    energy_drift_smoke_pct,
+    finite_difference_force_error,
+    rotation_equivariance_error,
+    translation_invariance_error,
+)
 
 
 def test_engine_terms_return_energy_forces_and_diagnostics() -> None:
@@ -139,6 +144,45 @@ def test_legacy_lj_rotation_equivariance() -> None:
     )
 
     assert rotation_equivariance_error(term, state, rotation) < 1e-9
+
+
+def test_default_force_terms_pass_physics_validation_surface() -> None:
+    coords = torch.tensor(
+        [[[0.0, 0.0, 0.0], [4.0, 0.0, 0.0], [8.2, 0.0, 0.0]]],
+        dtype=torch.float64,
+    )
+    state = EngineState(
+        coords=coords,
+        atom_types=torch.tensor([0, 1, 2]),
+        metadata={
+            "hbond_roles": ["donor", "acceptor", "none"],
+            "hydrophobic_mask": torch.tensor([False, True, True]),
+            "topology_fidelity": "sequence_mapped",
+            "ligand_topology_valid": True,
+            "hbond_evidence_status": "pass",
+            "claim_safe": True,
+            "blocked_reason": "",
+        },
+    )
+    rotation = torch.tensor(
+        [
+            [0.0, -1.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ],
+        dtype=torch.float64,
+    )
+    shift = torch.tensor([[[4.0, -2.0, 1.0]]], dtype=torch.float64)
+
+    for term in default_force_term_registry().create():
+        result = term.energy_forces(state)
+        assert result.claim_metadata["claim_safe"] is True
+        assert result.claim_metadata["blocked_reason"] == ""
+        assert result.diagnostics["status"] == "pass"
+        assert finite_difference_force_error(term, state, atom_index=1, coord_index=0) < 1e-4
+        assert translation_invariance_error(term, state, shift) < 1e-9
+        assert rotation_equivariance_error(term, state, rotation) < 1e-9
+        assert energy_drift_smoke_pct(term, state, step_size=1e-4) < 5e-2
 
 
 def test_product_forcefield_plugin_registry_aggregates_terms_and_claim_metadata() -> None:
@@ -585,6 +629,9 @@ def test_hbond_evidence_uses_onsps_roles_distance_and_angle() -> None:
         + evidence.onsps_backmap_metadata["role_counts"]["acceptor"]
     ) >= 1
     assert evidence.schema_ready() is True
+    assert evidence.threshold_schema_ready() is True
+    assert evidence.pair_schema_ready() is True
+    assert evidence.geometry_flags_ready() is True
     metadata = evidence.to_claim_metadata(
         topology_fidelity="sequence_mapped",
         ligand_topology_valid=True,
@@ -593,6 +640,11 @@ def test_hbond_evidence_uses_onsps_roles_distance_and_angle() -> None:
     assert metadata["hbond_claim_metadata_schema_version"] == "hbond_claim_metadata_v1"
     assert metadata["hbond_evidence_schema_version"] == "hbond_evidence_v1"
     assert metadata["hbond_evidence_schema_ready"] is True
+    assert metadata["hbond_threshold_schema_ready"] is True
+    assert metadata["hbond_pair_schema_ready"] is True
+    assert metadata["hbond_geometry_flags_ready"] is True
+    assert metadata["hbond_status"] == "pass"
+    assert metadata["hbond_abstention_reason"] == ""
     assert metadata["hbond_claim_safe"] is True
     assert metadata["hbond_distance_pass_count"] >= 1
     assert metadata["hbond_angle_pass_count"] >= 1
@@ -664,7 +716,15 @@ def test_hbond_evidence_fail_closed_schema_for_invalid_or_missing_anchor() -> No
         product_claim_promoted=True,
     )
     assert invalid.schema_ready() is True
+    assert invalid.threshold_schema_ready() is True
+    assert invalid.pair_schema_ready() is True
+    assert invalid.geometry_flags_ready() is True
     assert invalid_metadata["hbond_evidence_schema_ready"] is True
+    assert invalid_metadata["hbond_threshold_schema_ready"] is True
+    assert invalid_metadata["hbond_pair_schema_ready"] is True
+    assert invalid_metadata["hbond_geometry_flags_ready"] is True
+    assert invalid_metadata["hbond_status"] == "invalid_smiles"
+    assert invalid_metadata["hbond_abstention_reason"] == "invalid_smiles"
     assert invalid_metadata["hbond_claim_safe"] is False
     assert invalid_metadata["claim_safe"] is False
     assert "ligand_topology_invalid" in invalid_metadata["blocked_reason"]
@@ -698,6 +758,17 @@ def test_hbond_evidence_fail_closed_schema_for_invalid_or_missing_anchor() -> No
     assert no_pose_metadata["claim_safe"] is False
     assert "pose_geometry_missing" in no_pose_metadata["blocked_reason"]
     assert "hbond_evidence_not_product_claim_promoted" in no_pose_metadata["blocked_reason"]
+
+    broken_thresholds = evaluate_hbond_evidence(smiles="CCO")
+    broken_thresholds.thresholds = {"min_distance": 2.4}
+    assert broken_thresholds.threshold_schema_ready() is False
+    assert broken_thresholds.schema_ready() is False
+
+    broken_pair = evaluate_hbond_evidence(smiles="CCO")
+    if broken_pair.donor_acceptor_pairs:
+        broken_pair.donor_acceptor_pairs[0].pop("role", None)
+        assert broken_pair.pair_schema_ready() is False
+        assert broken_pair.schema_ready() is False
 
 
 def test_hbond_evidence_rejects_overanchored_decoy_contact() -> None:

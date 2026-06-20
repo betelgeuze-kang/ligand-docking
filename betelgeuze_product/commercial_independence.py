@@ -133,6 +133,30 @@ def _is_pinned_runtime_requirement(line: str) -> bool:
     return "==" in line or " @ " in line
 
 
+def _runtime_include_pinned(line: str, base_dir: Path, *, _seen: set[Path] | None = None) -> bool:
+    if not line.startswith("-r "):
+        return False
+    include_path = (base_dir / line[3:].strip()).resolve()
+    if _seen and include_path in _seen:
+        return False
+    seen = (_seen or set()) | {include_path}
+    if not include_path.is_file():
+        return False
+    for raw in include_path.read_text(encoding="utf-8").splitlines():
+        sub = raw.strip()
+        if not sub or sub.startswith("#"):
+            continue
+        if sub.startswith("-r "):
+            if not _runtime_include_pinned(sub, include_path.parent, _seen=seen):
+                return False
+            continue
+        if sub.startswith("--"):
+            continue
+        if not ("==" in sub or " @ " in sub):
+            return False
+    return True
+
+
 def _read_pyproject_metadata(path: Path) -> dict[str, Any]:
     if not path.is_file():
         return {"project": {}, "scripts": {}, "package_includes": ()}
@@ -290,7 +314,12 @@ def build_product_commercial_independence_gate(
     console_entrypoint_targets_present = not missing_entrypoint_targets and len(entrypoint_statuses) == len(REQUIRED_CONSOLE_SCRIPTS)
     package_discovery_present = all(pattern in package_includes for pattern in REQUIRED_PACKAGE_PATTERNS)
     runtime_requirements_present = runtime_path.is_file() and bool(runtime_lines)
-    loose_runtime = [line for line in runtime_lines if not _is_pinned_runtime_requirement(line)]
+    loose_runtime = [
+        line
+        for line in runtime_lines
+        if not _is_pinned_runtime_requirement(line)
+        and not _runtime_include_pinned(line, runtime_path.parent)
+    ]
     runtime_dependencies_pinned = runtime_requirements_present and not loose_runtime
     external_api_runtime = sorted(runtime_names & EXTERNAL_API_RUNTIME_DEPENDENCIES)
     non_core_runtime = sorted(runtime_names & NON_CORE_RUNTIME_DEPENDENCIES)

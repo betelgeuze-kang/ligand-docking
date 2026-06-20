@@ -5255,13 +5255,20 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         for index, command in enumerate(mod.RELEASE_REFRESH_COMMANDS)
         if command == "python3 tools/build_ai_md_product_evidence_bundle.py"
     ]
-    assert len(ai_md_kpi_indices) == 2
-    assert len(ai_md_bundle_indices) == 2
+    assert len(ai_md_kpi_indices) == 3
+    assert len(ai_md_bundle_indices) == 3
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_image_smoke_preflight.py") < (
         ai_md_kpi_indices[0]
     )
-    assert ai_md_kpi_indices[0] < ai_md_bundle_indices[0] < ai_md_kpi_indices[1] < ai_md_bundle_indices[1]
-    assert ai_md_bundle_indices[1] < (
+    assert (
+        ai_md_kpi_indices[0]
+        < ai_md_bundle_indices[0]
+        < ai_md_kpi_indices[1]
+        < ai_md_bundle_indices[1]
+        < ai_md_kpi_indices[2]
+        < ai_md_bundle_indices[2]
+    )
+    assert ai_md_bundle_indices[2] < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_gpcr_commercial_phase_ab_closure_chain.py")
     )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_commercial_independence_gate.py") < (

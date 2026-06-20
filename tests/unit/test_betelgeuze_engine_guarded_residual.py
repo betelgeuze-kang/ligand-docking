@@ -96,8 +96,78 @@ def test_guarded_force_residual_rejects_nonfinite_rank_pct() -> None:
     assert decision.reason == "rank_pct_nonfinite"
     assert report.applied is False
     assert report.skipped_reason == "rank_pct_nonfinite"
+    assert report.rank_pct == pytest.approx(1.0)
+    assert math.isfinite(report.to_dict()["rank_pct"])
     assert report.top_k_eligible is False
     assert torch.equal(updated, coords)
+
+
+def test_guarded_force_residual_sanitizes_nonfinite_confidence_inputs() -> None:
+    policy = ForceResidualPolicy(top_k_rank_pct=0.05)
+    coords = torch.zeros(1, 2, 3)
+    forces = torch.ones_like(coords)
+
+    uncertainty_decision = decide_force_residual(
+        rank_pct=0.01,
+        topology_valid=True,
+        uncertainty=math.nan,
+        delta_score=0.1,
+        policy=policy,
+    )
+    _updated, uncertainty_report = apply_guarded_force_residual(
+        coords,
+        forces,
+        decision=uncertainty_decision,
+        policy=policy,
+    )
+    uncertainty_metadata = uncertainty_report.to_claim_metadata(
+        {
+            "topology_fidelity": "sequence_mapped",
+            "ligand_topology_valid": True,
+            "claim_safe": True,
+            "blocked_reason": "",
+        }
+    )
+
+    assert uncertainty_decision.apply is False
+    assert uncertainty_decision.reason == "uncertainty_nonfinite"
+    assert uncertainty_decision.confidence == 0.0
+    assert uncertainty_report.applied is False
+    assert uncertainty_report.uncertainty == pytest.approx(1.0)
+    assert uncertainty_report.confidence == pytest.approx(0.0)
+    assert uncertainty_metadata["force_residual_uncertainty"] == pytest.approx(1.0)
+    assert uncertainty_metadata["force_residual_confidence"] == pytest.approx(0.0)
+    assert uncertainty_metadata["blocked_reason"] == "uncertainty_nonfinite"
+    validate_force_residual_report_contract(uncertainty_report, claim_metadata=uncertainty_metadata)
+
+    delta_decision = decide_force_residual(
+        rank_pct=0.01,
+        topology_valid=True,
+        uncertainty=0.1,
+        delta_score=math.inf,
+        policy=policy,
+    )
+    _updated, delta_report = apply_guarded_force_residual(
+        coords,
+        forces,
+        decision=delta_decision,
+        policy=policy,
+    )
+    delta_metadata = delta_report.to_claim_metadata(
+        {
+            "topology_fidelity": "sequence_mapped",
+            "ligand_topology_valid": True,
+            "claim_safe": True,
+            "blocked_reason": "",
+        }
+    )
+
+    assert delta_decision.apply is False
+    assert delta_decision.reason == "delta_score_nonfinite"
+    assert delta_report.delta_score == pytest.approx(0.0)
+    assert delta_metadata["force_residual_delta_score"] == pytest.approx(0.0)
+    assert delta_metadata["blocked_reason"] == "delta_score_nonfinite"
+    validate_force_residual_report_contract(delta_report, claim_metadata=delta_metadata)
 
 
 def test_guarded_force_residual_enforces_delta_score_cap_and_claim_metadata() -> None:

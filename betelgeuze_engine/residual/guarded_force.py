@@ -65,6 +65,41 @@ REQUIRED_FORCE_RESIDUAL_CLAIM_KEYS = (
 )
 
 
+def _float_or_nan(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return math.nan
+
+
+def _safe_rank_pct(value: Any) -> float:
+    rank = _float_or_nan(value)
+    if not math.isfinite(rank):
+        return 1.0
+    return float(max(0.0, min(1.0, rank)))
+
+
+def _safe_uncertainty(value: Any) -> float:
+    uncertainty = _float_or_nan(value)
+    if not math.isfinite(uncertainty):
+        return 1.0
+    return float(max(0.0, min(1.0, uncertainty)))
+
+
+def _safe_delta_score(value: Any) -> float:
+    delta = _float_or_nan(value)
+    if not math.isfinite(delta):
+        return 0.0
+    return float(delta)
+
+
+def _confidence_from_uncertainty(value: Any) -> float:
+    uncertainty = _float_or_nan(value)
+    if not math.isfinite(uncertainty):
+        return 0.0
+    return float(max(0.0, min(1.0, 1.0 - uncertainty)))
+
+
 @dataclass(frozen=True)
 class ForceResidualPolicy:
     max_abs_delta_score: float = 2.0
@@ -117,7 +152,7 @@ class ForceResidualDecision:
 
     @property
     def confidence(self) -> float:
-        return float(max(0.0, min(1.0, 1.0 - float(self.uncertainty))))
+        return _confidence_from_uncertainty(self.uncertainty)
 
 
 @dataclass(frozen=True)
@@ -137,7 +172,7 @@ class ForceResidualReport:
 
     @property
     def confidence(self) -> float:
-        return float(max(0.0, min(1.0, 1.0 - float(self.uncertainty))))
+        return _confidence_from_uncertainty(self.uncertainty)
 
     @property
     def force_norm_within_cap(self) -> bool:
@@ -328,6 +363,22 @@ def validate_force_residual_report_contract(
         raise ValueError("force residual report claim_safe without applied correction")
     if report.claim_safe and not report.observed_caps_ready:
         raise ValueError("force residual report claim_safe without observed caps")
+    finite_fields = {
+        "max_force_norm": report.max_force_norm,
+        "energy_drift_pct": report.energy_drift_pct,
+        "displacement_rmsd": report.displacement_rmsd,
+        "delta_score": report.delta_score,
+        "uncertainty": report.uncertainty,
+        "rank_pct": report.rank_pct,
+        "confidence": report.confidence,
+    }
+    for key, value in finite_fields.items():
+        if not math.isfinite(float(value)):
+            raise ValueError(f"force residual report non-finite field: {key}")
+    if not 0.0 <= float(report.uncertainty) <= 1.0:
+        raise ValueError("force residual report uncertainty out of range")
+    if not 0.0 <= float(report.rank_pct) <= 1.0:
+        raise ValueError("force residual report rank_pct out of range")
     if report.confidence < 0.0 or report.confidence > 1.0:
         raise ValueError("force residual report confidence out of range")
     for key in (
@@ -386,7 +437,7 @@ def _report(
     uncertainty: float = 0.0,
     rank_pct: float = 1.0,
 ) -> ForceResidualReport:
-    rank = float(rank_pct)
+    rank = _safe_rank_pct(rank_pct)
     top_k_eligible = bool(math.isfinite(rank) and 0.0 <= rank <= float(policy.top_k_rank_pct))
     return ForceResidualReport(
         applied=applied,
@@ -394,8 +445,8 @@ def _report(
         energy_drift_pct=energy_drift_pct,
         displacement_rmsd=displacement_rmsd,
         skipped_reason=skipped_reason,
-        delta_score=float(delta_score),
-        uncertainty=float(uncertainty),
+        delta_score=_safe_delta_score(delta_score),
+        uncertainty=_safe_uncertainty(uncertainty),
         rank_pct=rank,
         top_k_eligible=top_k_eligible,
         abstention_reason="" if applied else skipped_reason,
@@ -413,24 +464,56 @@ def decide_force_residual(
     policy: ForceResidualPolicy | None = None,
 ) -> ForceResidualDecision:
     policy = policy or ForceResidualPolicy()
+    rank = _float_or_nan(rank_pct)
+    unc = _float_or_nan(uncertainty)
+    delta = _float_or_nan(delta_score)
     if not policy.policy_caps_ready():
         return ForceResidualDecision(
             False,
             "policy_caps_invalid",
-            float(rank_pct),
+            _safe_rank_pct(rank),
             bool(topology_valid),
-            float(uncertainty),
-            float(delta_score),
+            _safe_uncertainty(unc),
+            _safe_delta_score(delta),
         )
-    rank = float(rank_pct)
-    unc = float(uncertainty)
-    delta = float(delta_score)
     if not math.isfinite(rank):
-        return ForceResidualDecision(False, "rank_pct_nonfinite", rank, bool(topology_valid), unc, delta)
+        return ForceResidualDecision(
+            False,
+            "rank_pct_nonfinite",
+            _safe_rank_pct(rank),
+            bool(topology_valid),
+            _safe_uncertainty(unc),
+            _safe_delta_score(delta),
+        )
     if rank < 0.0 or rank > 1.0:
-        return ForceResidualDecision(False, "rank_pct_out_of_range", rank, bool(topology_valid), unc, delta)
+        return ForceResidualDecision(
+            False,
+            "rank_pct_out_of_range",
+            _safe_rank_pct(rank),
+            bool(topology_valid),
+            _safe_uncertainty(unc),
+            _safe_delta_score(delta),
+        )
+    if not math.isfinite(unc):
+        return ForceResidualDecision(
+            False,
+            "uncertainty_nonfinite",
+            rank,
+            bool(topology_valid),
+            _safe_uncertainty(unc),
+            _safe_delta_score(delta),
+        )
+    if unc < 0.0 or unc > 1.0:
+        return ForceResidualDecision(
+            False,
+            "uncertainty_out_of_range",
+            rank,
+            bool(topology_valid),
+            _safe_uncertainty(unc),
+            _safe_delta_score(delta),
+        )
     if not math.isfinite(delta):
-        return ForceResidualDecision(False, "delta_score_nonfinite", rank, bool(topology_valid), unc, delta)
+        return ForceResidualDecision(False, "delta_score_nonfinite", rank, bool(topology_valid), unc, _safe_delta_score(delta))
     if abs(delta) > float(policy.max_abs_delta_score):
         return ForceResidualDecision(False, "delta_score_cap_exceeded", rank, bool(topology_valid), unc, delta)
     if rank > float(policy.top_k_rank_pct):

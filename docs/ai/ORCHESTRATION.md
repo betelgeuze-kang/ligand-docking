@@ -15,8 +15,8 @@ There is no repository-local autonomous runner. Do not add local goal runners or
 ## Roles
 
 - Codex: native goal tracking, short task specs, risk boundaries, targeted review, and final acceptance.
-- OpenCode: broad or large-context exploration, implementation, focused tests, and concise summary.
-- Cursor: IDE-attached exploration, implementation, focused tests, and concise summary.
+- Cursor: primary scoped implementation worker for code/test edits, local repair loops, IDE-attached exploration, focused tests, and concise summary.
+- OpenCode: broad or large-context exploration, large mechanical passes, long-log/docs review, focused tests, and concise summary.
 - `scripts/ai-verify.sh`: local smoke verification for orchestration and optional project gates.
 - Human owner: push, merge, deployment, publication, CASP submission, production mutation, billing, and final accountability.
 
@@ -50,6 +50,8 @@ Delegate:
 - multi-file refactors
 - long logs/docs where the worker can summarize
 - implementation slices where the worker can run focused tests and return a compact result
+
+Use Cursor first for scoped implementation slices and repeated local repair loops. Use OpenCode first when the slice is mainly broad search, long-context review, or large mechanical rewriting.
 
 ## Short Task Spec
 

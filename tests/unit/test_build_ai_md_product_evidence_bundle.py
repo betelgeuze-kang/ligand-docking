@@ -13,6 +13,108 @@ def _write(path: Path, payload: str = "artifact\n") -> Path:
     return path
 
 
+def _chemistry_kpi_packet(*, ready: bool = True) -> dict:
+    fixtures = [
+        "ethanol",
+        "amide",
+        "tertiary_amine",
+        "carboxylate",
+        "phosphate",
+        "heteroaryl_nitrogen",
+        "chiral_lactic_acid",
+        "unassigned_chiral_lactic_acid",
+        "aromatic_ring",
+        "protonated_amine",
+        "keto_tautomer_smoke",
+        "invalid_smiles",
+    ]
+    rows = [
+        {
+            "fixture": fixture,
+            "hbond_schema_ready": ready,
+            "hbond_threshold_schema_ready": ready,
+            "hbond_pair_schema_ready": ready,
+            "hbond_geometry_flags_ready": ready,
+            "ligand_validity_schema_ready": ready,
+        }
+        for fixture in fixtures
+    ] if ready else []
+    fixture_count = len(rows)
+    return {
+        "fixture_count": fixture_count,
+        "hbond_evidence_schema_ready": ready,
+        "hbond_evidence_schema_ready_count": fixture_count if ready else 0,
+        "ligand_topology_validity_schema_ready": ready,
+        "ligand_topology_validity_schema_ready_count": fixture_count if ready else 0,
+        "hbond_donor_site_count": 4 if ready else 0,
+        "hbond_acceptor_site_count": 5 if ready else 0,
+        "hbond_recovery_fixture_count": 5 if ready else 0,
+        "unsatisfied_donor_acceptor_fixture_count": 1 if ready else 0,
+        "unsatisfied_donor_count": 1 if ready else 0,
+        "unsatisfied_acceptor_count": 1 if ready else 0,
+        "chirality_preservation_ready": ready,
+        "chirality_preservation_fixture_count": 1 if ready else 0,
+        "unassigned_chirality_blocked_fixture_count": 1 if ready else 0,
+        "ring_validity_ready": ready,
+        "ring_validity_fixture_count": 1 if ready else 0,
+        "tautomer_validity_ready": ready,
+        "tautomer_validity_fixture_count": 1 if ready else 0,
+        "protonation_validity_ready": ready,
+        "protonation_validity_fixture_count": 1 if ready else 0,
+        "backmap_evaluable_fixture_count": 6 if ready else 0,
+        "backmap_claim_safe_fixture_count": 5 if ready else 0,
+        "backmapping_failure_rate": 0.0 if ready else 1.0,
+        "rows": rows,
+    }
+
+
+def _force_term_physics_validation_packet(*, ready: bool = True) -> dict:
+    thresholds = {
+        "finite_difference_force_error_max": 1e-4,
+        "translation_invariance_error_max": 1e-9,
+        "rotation_equivariance_error_max": 1e-9,
+        "energy_drift_smoke_pct_max": 5e-2,
+    }
+    rows = [
+        {
+            "term": term,
+            "ready": ready,
+            "status": "pass" if ready else "blocked",
+            "active_pair_count": 1,
+            "finite_difference_force_error": 1e-7 if ready else 1.0,
+            "translation_invariance_error": 0.0 if ready else 1.0,
+            "rotation_equivariance_error": 0.0 if ready else 1.0,
+            "energy_drift_smoke_pct": 1e-4 if ready else 1.0,
+            "claim_safe": ready,
+            "force_term_status": "pass" if ready else "blocked",
+            "blocked_reason": "" if ready else "physics_validation_failed",
+        }
+        for term in ("directional_hbond", "hydrophobic_contact", "legacy_lj")
+    ] if ready else []
+    return {
+        "thresholds": thresholds,
+        "rows": rows,
+        "term_count": len(rows),
+        "claim_safe_count": sum(1 for row in rows if row["claim_safe"] is True),
+        "finite_difference_max_error": max(
+            (row["finite_difference_force_error"] for row in rows),
+            default=0.0,
+        ),
+        "translation_invariance_max_error": max(
+            (row["translation_invariance_error"] for row in rows),
+            default=0.0,
+        ),
+        "rotation_equivariance_max_error": max(
+            (row["rotation_equivariance_error"] for row in rows),
+            default=0.0,
+        ),
+        "energy_drift_max_pct": max(
+            (row["energy_drift_smoke_pct"] for row in rows),
+            default=0.0,
+        ),
+    }
+
+
 def _kpi_packet(
     *,
     ready: bool,
@@ -114,6 +216,8 @@ def _kpi_packet(
             "expected_blocked_reason": "",
             "hbond_claim_safe": True,
             "hbond_blocked_reason": "",
+            "unsatisfied_donor_count": 0,
+            "unsatisfied_acceptor_count": 0,
             "benchmark_contract_checks": {"claim_safe_matches": True},
             "benchmark_contract_pass": True,
         },
@@ -124,6 +228,8 @@ def _kpi_packet(
             "expected_blocked_reason": "missing_expected_anchor",
             "hbond_claim_safe": False,
             "hbond_blocked_reason": "missing_expected_anchor",
+            "unsatisfied_donor_count": 1,
+            "unsatisfied_acceptor_count": 0,
             "benchmark_contract_checks": {"claim_safe_matches": True},
             "benchmark_contract_pass": True,
         },
@@ -134,6 +240,8 @@ def _kpi_packet(
             "expected_blocked_reason": "missing_expected_anchor",
             "hbond_claim_safe": False,
             "hbond_blocked_reason": "missing_expected_anchor",
+            "unsatisfied_donor_count": 0,
+            "unsatisfied_acceptor_count": 0,
             "benchmark_contract_checks": {"claim_safe_matches": True},
             "benchmark_contract_pass": True,
         },
@@ -144,6 +252,8 @@ def _kpi_packet(
             "expected_blocked_reason": "overanchored_decoy",
             "hbond_claim_safe": False,
             "hbond_blocked_reason": "overanchored_decoy",
+            "unsatisfied_donor_count": 0,
+            "unsatisfied_acceptor_count": 0,
             "benchmark_contract_checks": {"claim_safe_matches": True},
             "benchmark_contract_pass": True,
         },
@@ -154,17 +264,51 @@ def _kpi_packet(
             "expected_blocked_reason": "invalid_smiles",
             "hbond_claim_safe": False,
             "hbond_blocked_reason": "invalid_smiles",
+            "unsatisfied_donor_count": 0,
+            "unsatisfied_acceptor_count": 0,
             "benchmark_contract_checks": {"claim_safe_matches": True},
             "benchmark_contract_pass": True,
         },
     ] if pose_ranking_hbond_benchmark_ready else []
+    for row in pose_rows:
+        row.update(
+            {
+                "hbond_schema_ready": True,
+                "hbond_threshold_schema_ready": True,
+                "hbond_pair_schema_ready": True,
+                "hbond_geometry_flags_ready": True,
+            }
+        )
     pose_roles = sorted({str(row["benchmark_role"]) for row in pose_rows})
+    ranking_order = (
+        ["amide_near_hbond_pose"] + [row["pose_id"] for row in pose_rows if row["pose_id"] != "amide_near_hbond_pose"]
+        if pose_ranking_hbond_benchmark_ready
+        else []
+    )
+    force_term_physics = _force_term_physics_validation_packet(
+        ready=force_term_physics_validation_ready
+        and force_term_physics_validation_claim_safe_ready
+    )
+    chemistry_kpi = _chemistry_kpi_packet(ready=chemistry_pm_gates_ready)
     return {
         "packet_type": "ai_md_engine_kpi_report",
         "status": "ai_md_engine_kpi_report_ready" if ready else "blocked_ai_md_engine_kpi_report",
         "report_ready": ready,
         "product_kpi": {
             "runner_claim_metadata_signed": runner_claim_metadata_signed,
+            "signed_manifest_verification_pass": runner_claim_metadata_signed,
+            "bundle_validation_pass": ready,
+            "clean_install_missing_requirement_count": 0,
+            "clean_install_missing_requirements": [],
+            "product_image_preflight_blocker_codes": [],
+            "clean_container_missing_requirement_count": 0,
+            "clean_container_missing_requirements": [],
+            "source_artifacts_fresh": ready,
+            "source_artifact_fresh_count": 4 if ready else 0,
+            "source_artifact_stale_count": 0,
+            "source_artifact_stale_ids": [],
+            "enabled_profile_count": 3 if ready else 0,
+            "failed_profile_count": 0 if ready else 1,
             "runner_profile_validation_pass": ready,
             "runner_claim_metadata_manifest_smoke": {
                 "ready": runner_claim_metadata_signed,
@@ -245,6 +389,11 @@ def _kpi_packet(
                     "abs_energy_within_cap": True,
                     "force_norm_within_cap": True,
                     "active_pair_count_within_cap": True,
+                    "policy_caps": {
+                        "max_abs_energy": 50.0,
+                        "max_force_norm": 25.0,
+                        "max_active_pair_count": 4096.0,
+                    },
                 } if guarded_force_term_plugin_ready else {},
                 "abs_energy_within_cap": guarded_force_term_plugin_ready,
                 "force_norm_within_cap": guarded_force_term_plugin_ready,
@@ -357,38 +506,62 @@ def _kpi_packet(
                     {
                         "profile_id": "ligand_htvs_pipeline_default",
                         "runner_script": "tools/run_ligand_htvs_pipeline.py",
+                        "profile_runner_script": "tools/run_ligand_htvs_pipeline.py",
                         "adapter_import": "betelgeuze_engine.product.runners.htvs_pipeline",
+                        "adapter_import_present": True,
                         "shim_contract_type": "canonical_module_alias",
                         "sys_modules_alias_ready": True,
+                        "runtime_module_name": "betelgeuze_engine.product.runners.htvs_pipeline",
                         "self_implementation_blocked": True,
+                        "required_runtime_symbols": ["main", "build_parser"],
                         "runtime_adapter_identity_ready": True,
                         "missing_runtime_symbols": [],
                         "runtime_adapter_error": "",
+                        "script_hash": "a" * 64,
+                        "profile_runner_script_sha256": "a" * 64,
+                        "hash_matches": True,
                         "ready": True,
+                        "error": "",
                     },
                     {
                         "profile_id": "backmapping_scoring.production",
                         "runner_script": "tools/run_ligand_backmapping_scoring.py",
+                        "profile_runner_script": "tools/run_ligand_backmapping_scoring.py",
                         "adapter_import": "betelgeuze_engine.product.runners.backmapping_scoring",
+                        "adapter_import_present": True,
                         "shim_contract_type": "canonical_module_alias",
                         "sys_modules_alias_ready": True,
+                        "runtime_module_name": "betelgeuze_engine.product.runners.backmapping_scoring",
                         "self_implementation_blocked": True,
+                        "required_runtime_symbols": ["main", "_frame_mmpbsa_proxy"],
                         "runtime_adapter_identity_ready": True,
                         "missing_runtime_symbols": [],
                         "runtime_adapter_error": "",
+                        "script_hash": "b" * 64,
+                        "profile_runner_script_sha256": "b" * 64,
+                        "hash_matches": True,
                         "ready": True,
+                        "error": "",
                     },
                     {
                         "profile_id": "ligand_topk_delivery.production",
                         "runner_script": "tools/run_ligand_topk_delivery.py",
+                        "profile_runner_script": "tools/run_ligand_topk_delivery.py",
                         "adapter_import": "betelgeuze_engine.product.runners.topk_delivery",
+                        "adapter_import_present": True,
                         "shim_contract_type": "canonical_module_alias",
                         "sys_modules_alias_ready": True,
+                        "runtime_module_name": "betelgeuze_engine.product.runners.topk_delivery",
                         "self_implementation_blocked": True,
+                        "required_runtime_symbols": ["main", "build_delivery"],
                         "runtime_adapter_identity_ready": True,
                         "missing_runtime_symbols": [],
                         "runtime_adapter_error": "",
+                        "script_hash": "c" * 64,
+                        "profile_runner_script_sha256": "c" * 64,
+                        "hash_matches": True,
                         "ready": True,
+                        "error": "",
                     },
                 ] if allowlisted_runner_shim_contract_ready else [],
             },
@@ -400,8 +573,11 @@ def _kpi_packet(
             "top1_expected_pose_id": "amide_near_hbond_pose",
             "hbond_recovery_pose_count": 1 if pose_ranking_hbond_benchmark_ready else 0,
             "hbond_recovery_pose_ids": ["amide_near_hbond_pose"] if pose_ranking_hbond_benchmark_ready else [],
+            "hbond_recovery_confidence_min": 0.9 if pose_ranking_hbond_benchmark_ready else 0.0,
             "overanchored_decoys_blocked": pose_ranking_hbond_benchmark_ready,
             "unsatisfied_donor_acceptor_detected": pose_ranking_hbond_benchmark_ready,
+            "unsatisfied_donor_acceptor_pose_count": 1 if pose_ranking_hbond_benchmark_ready else 0,
+            "fixture_count": len(pose_rows),
             "required_pose_roles": [
                 "far_decoy_pose",
                 "hbond_recovery_pose",
@@ -410,6 +586,7 @@ def _kpi_packet(
                 "unsatisfied_donor_pose",
             ],
             "observed_pose_roles": pose_roles,
+            "ranking_order": ranking_order,
             "row_contracts_ready": pose_ranking_hbond_benchmark_ready,
             "row_contract_pass_count": len(pose_rows),
             "rows": pose_rows,
@@ -435,7 +612,30 @@ def _kpi_packet(
                 "observed_caps_ready": force_residual_observed_caps_ready,
                 "contract_ready": force_residual_contract_ready,
                 "confidence_abstention_ready": force_residual_confidence_abstention_ready,
+                "nonfinite_uncertainty_abstention_count": 1,
+                "nonfinite_delta_score_abstention_count": 1,
+                "nonfinite_uncertainty_report": {
+                    "applied": False,
+                    "skipped_reason": "uncertainty_nonfinite",
+                    "uncertainty": 1.0,
+                    "confidence": 0.0,
+                    "observed_caps_ready": True,
+                },
+                "nonfinite_delta_score_report": {
+                    "applied": False,
+                    "skipped_reason": "delta_score_nonfinite",
+                    "delta_score": 0.0,
+                    "confidence": 0.9,
+                    "observed_caps_ready": True,
+                },
                 "top_k_policy_ready": True,
+                "outside_top_k_report": {
+                    "applied": False,
+                    "skipped_reason": "outside_top_k_policy",
+                    "rank_pct": 0.06,
+                    "top_k_eligible": False,
+                    "policy_caps": {"top_k_rank_pct": 0.05},
+                },
                 "duration_sec": 0.03,
                 "rows_per_sec": 100.0,
             },
@@ -462,11 +662,36 @@ def _kpi_packet(
             "force_term_physics_validation_claim_safe_ready": (
                 force_term_physics_validation_claim_safe_ready
             ),
+            "force_term_physics_validation_thresholds": force_term_physics["thresholds"],
+            "force_term_physics_validation_rows": force_term_physics["rows"],
+            "force_term_physics_validation_term_count": force_term_physics["term_count"],
+            "force_term_physics_validation_claim_safe_count": (
+                force_term_physics["claim_safe_count"]
+            ),
+            "force_term_finite_difference_max_error": (
+                force_term_physics["finite_difference_max_error"]
+            ),
+            "force_term_translation_invariance_max_error": (
+                force_term_physics["translation_invariance_max_error"]
+            ),
+            "force_term_rotation_equivariance_max_error": (
+                force_term_physics["rotation_equivariance_max_error"]
+            ),
+            "force_term_energy_drift_max_pct": force_term_physics["energy_drift_max_pct"],
         },
+        "chemistry_kpi": chemistry_kpi,
         "pm_kpi_summary": {
             "summary_ready": ready,
             "failed_gate_ids": [] if ready else ["clean_install_success"],
             "runtime": {
+                "score_only_1k_runtime_sec": 0.01,
+                "score_only_1k_rows_per_sec": 800.0,
+                "top100_4bead_rescoring_runtime_sec": 0.02,
+                "top100_4bead_rescoring_rows_per_sec": 350.0,
+                "top10_force_residual_runtime_sec": 0.03,
+                "top10_force_residual_rows_per_sec": 100.0,
+                "memory_peak_mb": 256.0,
+                "neighbor_list_rebuild_frequency": 0.3333333333,
                 "score_only_1k_runtime_tracked": True,
                 "top100_4bead_rescoring_runtime_tracked": True,
                 "top10_force_residual_runtime_tracked": True,
@@ -476,6 +701,7 @@ def _kpi_packet(
                 "force_residual_observed_caps_ready": force_residual_observed_caps_ready,
                 "force_residual_contract_ready": force_residual_contract_ready,
                 "force_residual_confidence_abstention_ready": force_residual_confidence_abstention_ready,
+                "force_residual_top_k_policy_ready": True,
             },
             "physics": {
                 "finite_difference_force_error_pass": True,
@@ -491,6 +717,19 @@ def _kpi_packet(
             },
             "product": {
                 "runner_claim_metadata_signed": runner_claim_metadata_signed,
+                "signed_manifest_verification_pass": runner_claim_metadata_signed,
+                "bundle_validation_pass": ready,
+                "clean_install_missing_requirement_count": 0,
+                "clean_install_missing_requirements": [],
+                "product_image_preflight_blocker_codes": [],
+                "clean_container_missing_requirement_count": 0,
+                "clean_container_missing_requirements": [],
+                "source_artifacts_fresh": ready,
+                "source_artifact_fresh_count": 4 if ready else 0,
+                "source_artifact_stale_count": 0,
+                "source_artifact_stale_ids": [],
+                "enabled_profile_count": 3 if ready else 0,
+                "failed_profile_count": 0 if ready else 1,
                 "runner_profile_validation_pass": ready,
                 "force_term_claim_metadata_ready": force_term_claim_metadata_ready,
                 "force_term_result_contract_ready": force_term_result_contract_ready,
@@ -505,14 +744,37 @@ def _kpi_packet(
             },
             "chemistry": {
                 "hbond_evidence_schema_ready": chemistry_pm_gates_ready,
+                "hbond_evidence_schema_ready_count": chemistry_kpi["hbond_evidence_schema_ready_count"],
                 "ligand_topology_validity_schema_ready": chemistry_pm_gates_ready,
+                "ligand_topology_validity_schema_ready_count": (
+                    chemistry_kpi["ligand_topology_validity_schema_ready_count"]
+                ),
+                "hbond_donor_site_count": chemistry_kpi["hbond_donor_site_count"],
+                "hbond_acceptor_site_count": chemistry_kpi["hbond_acceptor_site_count"],
+                "hbond_recovery_fixture_count": chemistry_kpi["hbond_recovery_fixture_count"],
                 "hbond_recovery_pose_count": 1 if chemistry_pm_gates_ready else 0,
                 "hbond_recovery_pose_ids": ["amide_near_hbond_pose"] if chemistry_pm_gates_ready else [],
+                "hbond_recovery_confidence_min": 0.9 if chemistry_pm_gates_ready else 0.0,
                 "unsatisfied_donor_acceptor_detection": chemistry_pm_gates_ready,
+                "unsatisfied_donor_acceptor_fixture_count": (
+                    chemistry_kpi["unsatisfied_donor_acceptor_fixture_count"]
+                ),
+                "unsatisfied_donor_count": chemistry_kpi["unsatisfied_donor_count"],
+                "unsatisfied_acceptor_count": chemistry_kpi["unsatisfied_acceptor_count"],
+                "unsatisfied_donor_acceptor_pose_count": 1 if chemistry_pm_gates_ready else 0,
                 "overanchored_decoy_rejection": chemistry_pm_gates_ready,
+                "chirality_preservation_fixture_count": (
+                    chemistry_kpi["chirality_preservation_fixture_count"]
+                ),
+                "unassigned_chirality_blocked_fixture_count": (
+                    chemistry_kpi["unassigned_chirality_blocked_fixture_count"]
+                ),
                 "chirality_preservation_ready": chemistry_pm_gates_ready,
+                "ring_validity_fixture_count": chemistry_kpi["ring_validity_fixture_count"],
                 "ring_validity_ready": chemistry_pm_gates_ready,
+                "tautomer_validity_fixture_count": chemistry_kpi["tautomer_validity_fixture_count"],
                 "tautomer_validity_ready": chemistry_pm_gates_ready,
+                "protonation_validity_fixture_count": chemistry_kpi["protonation_validity_fixture_count"],
                 "protonation_validity_ready": chemistry_pm_gates_ready,
             },
         },
@@ -987,6 +1249,166 @@ def test_ai_md_product_evidence_bundle_blocks_product_claim_without_signed_runne
         error.startswith("kpi_runner_claim_metadata_not_signed:")
         for error in summary["bundle_validation_errors"]
     )
+    assert any(
+        error.startswith("kpi_signed_manifest_verification_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_signed_manifest_verification_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_without_signed_manifest_verification_gate(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    kpi_packet["product_kpi"]["signed_manifest_verification_pass"] = False
+    kpi_packet["pm_kpi_summary"]["product"]["signed_manifest_verification_pass"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_signed_manifest_verification_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_signed_manifest_verification_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_bundle_validation_pm_mismatch(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    kpi_packet["product_kpi"]["bundle_validation_pass"] = False
+    kpi_packet["pm_kpi_summary"]["product"]["bundle_validation_pass"] = True
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("pm_product_bundle_validation_gate_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_product_pm_missing_requirement_mismatch(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    pm_product = kpi_packet["pm_kpi_summary"]["product"]
+    pm_product["clean_install_missing_requirement_count"] = 1
+    pm_product["clean_install_missing_requirements"] = ["unexpected_clean_install_gap"]
+    pm_product["product_image_preflight_blocker_codes"] = ["unexpected_blocker"]
+    pm_product["clean_container_missing_requirement_count"] = 1
+    pm_product["clean_container_missing_requirements"] = ["unexpected_container_gap"]
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("pm_product_clean_install_missing_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_product_clean_install_missing_requirements_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_product_image_preflight_blocker_codes_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_product_clean_container_missing_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_product_clean_container_missing_requirements_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_source_artifact_freshness_mismatch(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    product = kpi_packet["product_kpi"]
+    pm_product = kpi_packet["pm_kpi_summary"]["product"]
+    product["source_artifacts_fresh"] = False
+    product["source_artifact_fresh_count"] = 3
+    product["source_artifact_stale_count"] = 1
+    product["source_artifact_stale_ids"] = ["kpi_json"]
+    pm_product["source_artifacts_fresh"] = True
+    pm_product["source_artifact_fresh_count"] = 4
+    pm_product["source_artifact_stale_count"] = 0
+    pm_product["source_artifact_stale_ids"] = []
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_source_artifacts_not_fresh:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_product_source_artifact_fresh_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_product_source_artifact_stale_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_product_source_artifact_stale_ids_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
 
 
 def test_ai_md_product_evidence_bundle_blocks_when_manifest_claim_is_not_blocked(tmp_path: Path) -> None:
@@ -1105,6 +1527,46 @@ def test_ai_md_product_evidence_bundle_blocks_without_runtime_kpi_tracking(tmp_p
     )
     assert any(
         error.startswith("pm_neighbor_list_rebuild_frequency_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_runtime_pm_numeric_mismatch(tmp_path: Path) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    pm_runtime = kpi_packet["pm_kpi_summary"]["runtime"]
+    pm_runtime["score_only_1k_runtime_sec"] = 99.0
+    pm_runtime["top10_force_residual_rows_per_sec"] = 1.0
+    pm_runtime["memory_peak_mb"] = 1.0
+    pm_runtime["neighbor_list_rebuild_frequency"] = 0.01
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("pm_runtime_score_only_duration_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_runtime_top10_force_residual_rows_per_sec_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_runtime_memory_peak_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_runtime_neighbor_list_rebuild_frequency_mismatch:")
         for error in summary["bundle_validation_errors"]
     )
 
@@ -1299,6 +1761,49 @@ def test_ai_md_product_evidence_bundle_blocks_without_runner_profile_validation_
     )
 
 
+def test_ai_md_product_evidence_bundle_blocks_runner_profile_count_mismatch(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    product = kpi_packet["product_kpi"]
+    pm_product = kpi_packet["pm_kpi_summary"]["product"]
+    product["enabled_profile_count"] = 2
+    product["failed_profile_count"] = 1
+    pm_product["enabled_profile_count"] = 3
+    pm_product["failed_profile_count"] = 0
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_runner_profile_enabled_count_low:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_runner_profile_failed_count_nonzero:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_product_enabled_profile_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_product_failed_profile_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
 def test_ai_md_product_evidence_bundle_blocks_without_guarded_force_term_plugin_gate(
     tmp_path: Path,
 ) -> None:
@@ -1468,6 +1973,69 @@ def test_ai_md_product_evidence_bundle_blocks_guarded_plugin_without_bounded_cap
         error.startswith("kpi_guarded_force_term_plugin_forcefield_bounded_row_missing:")
         for error in summary["bundle_validation_errors"]
     )
+    assert any(
+        error.startswith("kpi_guarded_force_term_plugin_forcefield_bounded_row_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_guarded_plugin_aggregate_row_cap_metadata_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    guarded = kpi_packet["product_kpi"]["guarded_force_term_plugin_smoke"]
+    guarded["forcefield_guarded_claim_row"]["abs_energy_within_cap"] = False
+    guarded["forcefield_guarded_claim_row"]["force_norm_within_cap"] = False
+    guarded["forcefield_guarded_claim_row"]["active_pair_count_within_cap"] = False
+    guarded["forcefield_guarded_claim_row"]["policy_caps"] = {}
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_guarded_force_term_plugin_forcefield_bounded_row_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_guarded_plugin_aggregate_row_missing_cap_metadata(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    guarded = kpi_packet["product_kpi"]["guarded_force_term_plugin_smoke"]
+    for key in (
+        "abs_energy_within_cap",
+        "force_norm_within_cap",
+        "active_pair_count_within_cap",
+        "policy_caps",
+    ):
+        guarded["forcefield_guarded_claim_row"].pop(key, None)
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
     assert any(
         error.startswith("kpi_guarded_force_term_plugin_forcefield_bounded_row_invalid:")
         for error in summary["bundle_validation_errors"]
@@ -1645,6 +2213,209 @@ def test_ai_md_product_evidence_bundle_blocks_core_compatibility_layer_detail_mi
     )
 
 
+def test_ai_md_product_evidence_bundle_blocks_core_forcefield_bridge_energy_forces_shape_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    bridge = kpi_packet["product_kpi"]["core_forcefield_bridge_smoke"]
+    bridge["energy_shape"] = [2]
+    bridge["forces_shape"] = "not_a_list"
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_core_forcefield_bridge_energy_shape_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_core_forcefield_bridge_forces_shape_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_core_forcefield_bridge_claim_metadata_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    bridge = kpi_packet["product_kpi"]["core_forcefield_bridge_smoke"]
+    bridge["result_claim_safe"] = False
+    bridge["force_term_claim_metadata_ready"] = False
+    rows = kpi_packet["product_kpi"]["core_compatibility_layer_smoke"]["rows"]
+    forcefield_row = next(row for row in rows if row["contract"] == "forcefield_product_bridge")
+    forcefield_row["result_claim_safe"] = False
+    forcefield_row["force_term_claim_metadata_ready"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_core_forcefield_bridge_claim_not_safe:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_core_forcefield_bridge_claim_metadata_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_core_forcefield_compat_claim_not_safe:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_core_forcefield_compat_claim_metadata_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_core_forcefield_bridge_execution_scope_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    kpi_packet["product_kpi"]["core_forcefield_bridge_smoke"]["bridge_execution_scope"] = (
+        "runtime_gpu_product_engine_claim"
+    )
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_core_forcefield_bridge_scope_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_core_topology_bridge_sequence_mapped_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    rows = kpi_packet["product_kpi"]["core_compatibility_layer_smoke"]["rows"]
+    topology_row = next(row for row in rows if row["contract"] == "topology_protein_bridge")
+    topology_row["topology_fidelity"] = "placeholder_alanine"
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_core_topology_bridge_fidelity_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_core_topology_bridge_protein_type_and_hbond_roles_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    rows = kpi_packet["product_kpi"]["core_compatibility_layer_smoke"]["rows"]
+    topology_row = next(row for row in rows if row["contract"] == "topology_protein_bridge")
+    topology_row["protein_topology_type"] = "LegacyTopology"
+    topology_row["hbond_role_count"] = 0
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_core_topology_bridge_type_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_core_topology_bridge_hbond_roles_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_core_onsps_backmap_shim_import_identity_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    rows = kpi_packet["product_kpi"]["core_compatibility_layer_smoke"]["rows"]
+    onsps_row = next(row for row in rows if row["contract"] == "onsps_backmap_shim")
+    onsps_row["legacy_module"] = "core.onsps"
+    onsps_row["canonical_module"] = "betelgeuze_engine.backmapping.legacy_onsps"
+    onsps_row["bridge_type"] = "reexport_wrapper"
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_core_compatibility_layer_legacy_module_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_core_compatibility_layer_canonical_module_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_core_compatibility_layer_bridge_type_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
 def test_ai_md_product_evidence_bundle_blocks_without_job_store_lazy_factory_gate(
     tmp_path: Path,
 ) -> None:
@@ -1729,7 +2500,167 @@ def test_ai_md_product_evidence_bundle_blocks_allowlisted_runner_self_implementa
     assert summary["product_claim_ready"] is False
     assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
     assert any(
-        error.startswith("kpi_allowlisted_runner_shim_contract_rows_invalid:")
+        error.startswith("kpi_allowlisted_runner_shim_contract_type_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_allowlisted_runner_shim_sys_modules_alias_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_allowlisted_runner_shim_self_implementation_not_blocked:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_allowlisted_runner_identity_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    row = kpi_packet["product_kpi"]["allowlisted_runner_shim_contract"]["rows"][1]
+    row["runner_script"] = "tools/run_ligand_backmapping_scoring_drift.py"
+    row["profile_runner_script"] = "tools/run_ligand_backmapping_scoring_drift.py"
+    row["adapter_import"] = "betelgeuze_engine.product.runners.backmapping_drift"
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_allowlisted_runner_shim_runner_script_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_allowlisted_runner_shim_profile_runner_script_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_allowlisted_runner_shim_adapter_import_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_allowlisted_runner_profile_id_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    row = kpi_packet["product_kpi"]["allowlisted_runner_shim_contract"]["rows"][1]
+    row["profile_id"] = "backmapping_scoring.drifted"
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert any(
+        error.startswith("kpi_allowlisted_runner_shim_profile_identities_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_allowlisted_runner_shim_row_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_allowlisted_runner_hash_and_runtime_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    row = kpi_packet["product_kpi"]["allowlisted_runner_shim_contract"]["rows"][2]
+    row["script_hash"] = "d" * 64
+    row["profile_runner_script_sha256"] = "e" * 64
+    row["hash_matches"] = False
+    row["missing_runtime_symbols"] = "main"
+    row["runtime_adapter_error"] = "ImportError: missing adapter"
+    row["runtime_adapter_identity_ready"] = False
+    row["error"] = "runner_profile_missing"
+    row["ready"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_allowlisted_runner_shim_hash_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_allowlisted_runner_shim_hash_matches_not_true:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_allowlisted_runner_shim_missing_runtime_symbols:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_allowlisted_runner_shim_runtime_adapter_error:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_allowlisted_runner_shim_runtime_adapter_identity_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_allowlisted_runner_shim_row_error:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_allowlisted_runner_shim_row_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_allowlisted_runner_extra_row(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    contract = kpi_packet["product_kpi"]["allowlisted_runner_shim_contract"]
+    contract["runner_count"] = 4
+    contract["rows"].append(dict(contract["rows"][0]))
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert any(
+        error.startswith("kpi_allowlisted_runner_shim_runner_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_allowlisted_runner_shim_rows_count_mismatch:")
         for error in summary["bundle_validation_errors"]
     )
 
@@ -1811,6 +2742,75 @@ def test_ai_md_product_evidence_bundle_blocks_without_force_residual_contract_ga
     )
 
 
+def test_ai_md_product_evidence_bundle_blocks_without_nonfinite_force_residual_smoke(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    residual = kpi_packet["runtime_kpi"]["top10_force_residual"]
+    residual["nonfinite_uncertainty_abstention_count"] = 0
+    residual["nonfinite_delta_score_report"]["skipped_reason"] = ""
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_runtime_force_residual_nonfinite_uncertainty_abstention_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_runtime_force_residual_nonfinite_delta_report_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_without_force_residual_top_k_policy_gate(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    residual = kpi_packet["runtime_kpi"]["top10_force_residual"]
+    residual["top_k_policy_ready"] = False
+    residual["outside_top_k_report"]["top_k_eligible"] = True
+    kpi_packet["pm_kpi_summary"]["runtime"]["force_residual_top_k_policy_ready"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_runtime_top10_force_residual_top_k_policy_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_runtime_top10_force_residual_top_k_report_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_force_residual_top_k_policy_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
 def test_ai_md_product_evidence_bundle_blocks_without_force_term_physics_gate(tmp_path: Path) -> None:
     out_tar = tmp_path / "bundle.tar.gz"
     kpi_packet = _kpi_packet(ready=True, force_term_physics_validation_ready=False)
@@ -1862,6 +2862,43 @@ def test_ai_md_product_evidence_bundle_blocks_without_force_term_physics_claim_s
     )
 
 
+def test_ai_md_product_evidence_bundle_blocks_without_raw_force_term_physics_rows(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    physics = kpi_packet["physics_kpi"]
+    physics["force_term_finite_difference_max_error"] = 1.0
+    physics["force_term_physics_validation_rows"][0]["ready"] = False
+    physics["force_term_physics_validation_rows"][0]["finite_difference_force_error"] = 1.0
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_physics_force_term_finite_difference_high:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_physics_force_term_validation_row_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_physics_force_term_validation_row_finite_difference_high:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
 def test_ai_md_product_evidence_bundle_blocks_without_chemistry_pm_gates(
     tmp_path: Path,
 ) -> None:
@@ -1897,6 +2934,85 @@ def test_ai_md_product_evidence_bundle_blocks_without_chemistry_pm_gates(
     )
     assert any(
         error.startswith("pm_overanchored_decoy_rejection_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_chemistry_pm_numeric_mismatch(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    pm_chemistry = kpi_packet["pm_kpi_summary"]["chemistry"]
+    pm_chemistry["hbond_donor_site_count"] = 999
+    pm_chemistry["hbond_recovery_pose_ids"] = ["wrong_pose"]
+    pm_chemistry["unsatisfied_donor_count"] = 999
+    pm_chemistry["ring_validity_fixture_count"] = 0
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("pm_chemistry_hbond_donor_site_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_chemistry_hbond_recovery_pose_ids_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_chemistry_unsatisfied_donor_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_chemistry_ring_fixture_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_without_raw_chemistry_kpi_evidence(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    chemistry = kpi_packet["chemistry_kpi"]
+    chemistry["hbond_evidence_schema_ready_count"] = 0
+    chemistry["chirality_preservation_fixture_count"] = 0
+    chemistry["rows"][0]["hbond_pair_schema_ready"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_chemistry_hbond_schema_ready_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_chemistry_chirality_fixture_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_chemistry_row_hbond_pair_schema_not_ready:")
         for error in summary["bundle_validation_errors"]
     )
 
@@ -1940,6 +3056,213 @@ def test_ai_md_product_evidence_bundle_blocks_without_pose_ranking_hbond_benchma
     )
     assert any(
         error.startswith("kpi_pose_ranking_rows_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_pose_row_without_hbond_schema_contract(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    kpi_packet["pose_ranking_hbond_benchmark"]["rows"][0]["hbond_pair_schema_ready"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_pose_ranking_row_hbond_pair_schema_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def _pose_drift_payload(
+    tmp_path: Path,
+    *,
+    mutate,
+) -> dict:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    mutate(kpi_packet["pose_ranking_hbond_benchmark"])
+    return mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+
+def test_ai_md_product_evidence_bundle_rejects_pose_benchmark_fixture_count_drift(tmp_path: Path) -> None:
+    payload = _pose_drift_payload(
+        tmp_path,
+        mutate=lambda bench: bench.__setitem__("fixture_count", bench["fixture_count"] + 1),
+    )
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_pose_ranking_fixture_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_rejects_pose_benchmark_row_contract_pass_count_drift(tmp_path: Path) -> None:
+    payload = _pose_drift_payload(
+        tmp_path,
+        mutate=lambda bench: bench.__setitem__("row_contract_pass_count", bench["row_contract_pass_count"] + 1),
+    )
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert any(
+        error.startswith("kpi_pose_ranking_row_contract_pass_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_rejects_pose_benchmark_required_pose_roles_drift(tmp_path: Path) -> None:
+    payload = _pose_drift_payload(
+        tmp_path,
+        mutate=lambda bench: bench.__setitem__("required_pose_roles", bench["required_pose_roles"][:-1]),
+    )
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert any(
+        error.startswith("kpi_pose_ranking_required_pose_roles_drift:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_rejects_pose_benchmark_observed_pose_roles_drift(tmp_path: Path) -> None:
+    payload = _pose_drift_payload(
+        tmp_path,
+        mutate=lambda bench: bench.__setitem__("observed_pose_roles", bench["observed_pose_roles"] + ["phantom_role"]),
+    )
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert any(
+        error.startswith("kpi_pose_ranking_observed_pose_roles_drift:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_rejects_pose_benchmark_ranking_order_missing(tmp_path: Path) -> None:
+    payload = _pose_drift_payload(
+        tmp_path,
+        mutate=lambda bench: bench.pop("ranking_order"),
+    )
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert any(
+        error.startswith("kpi_pose_ranking_ranking_order_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_rejects_pose_benchmark_ranking_order_head_drift(tmp_path: Path) -> None:
+    def mutate(bench):
+        order = list(bench["ranking_order"])
+        order.reverse()
+        bench["ranking_order"] = order
+
+    payload = _pose_drift_payload(tmp_path, mutate=mutate)
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert any(
+        error.startswith("kpi_pose_ranking_top1_not_ranking_order_head:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_rejects_pose_benchmark_top1_not_hbond_recovery(tmp_path: Path) -> None:
+    def mutate(bench):
+        bench["top1_pose_id"] = "amide_far_decoy_pose"
+        bench["top1_expected_pose_id"] = "amide_far_decoy_pose"
+
+    payload = _pose_drift_payload(tmp_path, mutate=mutate)
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert any(
+        error.startswith("kpi_pose_ranking_top1_role_not_hbond_recovery:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_rejects_pose_benchmark_hbond_recovery_count_drift(tmp_path: Path) -> None:
+    payload = _pose_drift_payload(
+        tmp_path,
+        mutate=lambda bench: bench.__setitem__("hbond_recovery_pose_count", bench["hbond_recovery_pose_count"] + 1),
+    )
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert any(
+        error.startswith("kpi_pose_ranking_hbond_recovery_count_drift:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_rejects_pose_benchmark_overanchored_summary_drift(tmp_path: Path) -> None:
+    payload = _pose_drift_payload(
+        tmp_path,
+        mutate=lambda bench: bench.__setitem__("overanchored_decoys_blocked", False),
+    )
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert any(
+        error.startswith("kpi_pose_ranking_overanchored_summary_drift:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_rejects_pose_benchmark_unsatisfied_detected_summary_drift(tmp_path: Path) -> None:
+    payload = _pose_drift_payload(
+        tmp_path,
+        mutate=lambda bench: bench.__setitem__("unsatisfied_donor_acceptor_detected", False),
+    )
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert any(
+        error.startswith("kpi_pose_ranking_unsatisfied_detected_summary_drift:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_rejects_pose_benchmark_blocked_role_not_blocked(tmp_path: Path) -> None:
+    def mutate(bench):
+        for row in bench["rows"]:
+            if row["benchmark_role"] == "far_decoy_pose":
+                row["hbond_claim_safe"] = True
+                row["expected_claim_safe"] = True
+                row["hbond_blocked_reason"] = ""
+                row["expected_blocked_reason"] = ""
+
+    payload = _pose_drift_payload(tmp_path, mutate=mutate)
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert any(
+        error.startswith("kpi_pose_ranking_blocked_role_not_blocked:")
+        and error.endswith(":far_decoy_pose")
         for error in summary["bundle_validation_errors"]
     )
 

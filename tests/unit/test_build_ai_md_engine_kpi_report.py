@@ -41,6 +41,108 @@ def _write(path: Path, payload: str = "artifact\n") -> Path:
     return path
 
 
+def _chemistry_kpi_packet(*, ready: bool = True) -> dict:
+    fixtures = [
+        "ethanol",
+        "amide",
+        "tertiary_amine",
+        "carboxylate",
+        "phosphate",
+        "heteroaryl_nitrogen",
+        "chiral_lactic_acid",
+        "unassigned_chiral_lactic_acid",
+        "aromatic_ring",
+        "protonated_amine",
+        "keto_tautomer_smoke",
+        "invalid_smiles",
+    ]
+    rows = [
+        {
+            "fixture": fixture,
+            "hbond_schema_ready": ready,
+            "hbond_threshold_schema_ready": ready,
+            "hbond_pair_schema_ready": ready,
+            "hbond_geometry_flags_ready": ready,
+            "ligand_validity_schema_ready": ready,
+        }
+        for fixture in fixtures
+    ] if ready else []
+    fixture_count = len(rows)
+    return {
+        "fixture_count": fixture_count,
+        "hbond_evidence_schema_ready": ready,
+        "hbond_evidence_schema_ready_count": fixture_count if ready else 0,
+        "ligand_topology_validity_schema_ready": ready,
+        "ligand_topology_validity_schema_ready_count": fixture_count if ready else 0,
+        "hbond_donor_site_count": 4 if ready else 0,
+        "hbond_acceptor_site_count": 5 if ready else 0,
+        "hbond_recovery_fixture_count": 5 if ready else 0,
+        "unsatisfied_donor_acceptor_fixture_count": 1 if ready else 0,
+        "unsatisfied_donor_count": 1 if ready else 0,
+        "unsatisfied_acceptor_count": 1 if ready else 0,
+        "chirality_preservation_ready": ready,
+        "chirality_preservation_fixture_count": 1 if ready else 0,
+        "unassigned_chirality_blocked_fixture_count": 1 if ready else 0,
+        "ring_validity_ready": ready,
+        "ring_validity_fixture_count": 1 if ready else 0,
+        "tautomer_validity_ready": ready,
+        "tautomer_validity_fixture_count": 1 if ready else 0,
+        "protonation_validity_ready": ready,
+        "protonation_validity_fixture_count": 1 if ready else 0,
+        "backmap_evaluable_fixture_count": 6 if ready else 0,
+        "backmap_claim_safe_fixture_count": 5 if ready else 0,
+        "backmapping_failure_rate": 0.0 if ready else 1.0,
+        "rows": rows,
+    }
+
+
+def _force_term_physics_validation_packet(*, ready: bool = True) -> dict:
+    thresholds = {
+        "finite_difference_force_error_max": 1e-4,
+        "translation_invariance_error_max": 1e-9,
+        "rotation_equivariance_error_max": 1e-9,
+        "energy_drift_smoke_pct_max": 5e-2,
+    }
+    rows = [
+        {
+            "term": term,
+            "ready": ready,
+            "status": "pass" if ready else "blocked",
+            "active_pair_count": 1,
+            "finite_difference_force_error": 1e-7 if ready else 1.0,
+            "translation_invariance_error": 0.0 if ready else 1.0,
+            "rotation_equivariance_error": 0.0 if ready else 1.0,
+            "energy_drift_smoke_pct": 1e-4 if ready else 1.0,
+            "claim_safe": ready,
+            "force_term_status": "pass" if ready else "blocked",
+            "blocked_reason": "" if ready else "physics_validation_failed",
+        }
+        for term in ("directional_hbond", "hydrophobic_contact", "legacy_lj")
+    ] if ready else []
+    return {
+        "thresholds": thresholds,
+        "rows": rows,
+        "term_count": len(rows),
+        "claim_safe_count": sum(1 for row in rows if row["claim_safe"] is True),
+        "finite_difference_max_error": max(
+            (row["finite_difference_force_error"] for row in rows),
+            default=0.0,
+        ),
+        "translation_invariance_max_error": max(
+            (row["translation_invariance_error"] for row in rows),
+            default=0.0,
+        ),
+        "rotation_equivariance_max_error": max(
+            (row["rotation_equivariance_error"] for row in rows),
+            default=0.0,
+        ),
+        "energy_drift_max_pct": max(
+            (row["energy_drift_smoke_pct"] for row in rows),
+            default=0.0,
+        ),
+    }
+
+
 def _write_product_evidence_bundle(
     path: Path,
     *,
@@ -49,12 +151,27 @@ def _write_product_evidence_bundle(
 ) -> Path:
     root = path.parent
     out_tar = root / "bundle.tar.gz"
+    force_term_physics = _force_term_physics_validation_packet(ready=ready)
+    chemistry_kpi = _chemistry_kpi_packet(ready=ready)
     kpi_packet = {
         "packet_type": "ai_md_engine_kpi_report",
         "status": "ai_md_engine_kpi_report_ready" if ready else "blocked_ai_md_engine_kpi_report",
         "report_ready": ready,
         "product_kpi": {
             "runner_claim_metadata_signed": True,
+            "signed_manifest_verification_pass": True,
+            "bundle_validation_pass": True,
+            "clean_install_missing_requirement_count": 0,
+            "clean_install_missing_requirements": [],
+            "product_image_preflight_blocker_codes": [],
+            "clean_container_missing_requirement_count": 0,
+            "clean_container_missing_requirements": [],
+            "source_artifacts_fresh": True,
+            "source_artifact_fresh_count": 4,
+            "source_artifact_stale_count": 0,
+            "source_artifact_stale_ids": [],
+            "enabled_profile_count": 3,
+            "failed_profile_count": 0,
             "runner_profile_validation_pass": True,
             "runner_claim_metadata_manifest_smoke": {
                 "ready": True,
@@ -173,6 +290,14 @@ def _write_product_evidence_bundle(
                     "policy_caps_ready": True,
                     "observed_caps_ready": True,
                     "bounded_correction_ready": True,
+                    "abs_energy_within_cap": True,
+                    "force_norm_within_cap": True,
+                    "active_pair_count_within_cap": True,
+                    "policy_caps": {
+                        "max_abs_energy": 50.0,
+                        "max_force_norm": 25.0,
+                        "max_active_pair_count": 4096.0,
+                    },
                 },
                 "abs_energy_within_cap": True,
                 "force_norm_within_cap": True,
@@ -272,38 +397,62 @@ def _write_product_evidence_bundle(
                     {
                         "profile_id": "ligand_htvs_pipeline_default",
                         "runner_script": "tools/run_ligand_htvs_pipeline.py",
+                        "profile_runner_script": "tools/run_ligand_htvs_pipeline.py",
                         "adapter_import": "betelgeuze_engine.product.runners.htvs_pipeline",
+                        "adapter_import_present": True,
                         "shim_contract_type": "canonical_module_alias",
                         "sys_modules_alias_ready": True,
+                        "runtime_module_name": "betelgeuze_engine.product.runners.htvs_pipeline",
                         "self_implementation_blocked": True,
+                        "required_runtime_symbols": ["main", "build_parser"],
                         "runtime_adapter_identity_ready": True,
                         "missing_runtime_symbols": [],
                         "runtime_adapter_error": "",
+                        "script_hash": "a" * 64,
+                        "profile_runner_script_sha256": "a" * 64,
+                        "hash_matches": True,
                         "ready": True,
+                        "error": "",
                     },
                     {
                         "profile_id": "backmapping_scoring.production",
                         "runner_script": "tools/run_ligand_backmapping_scoring.py",
+                        "profile_runner_script": "tools/run_ligand_backmapping_scoring.py",
                         "adapter_import": "betelgeuze_engine.product.runners.backmapping_scoring",
+                        "adapter_import_present": True,
                         "shim_contract_type": "canonical_module_alias",
                         "sys_modules_alias_ready": True,
+                        "runtime_module_name": "betelgeuze_engine.product.runners.backmapping_scoring",
                         "self_implementation_blocked": True,
+                        "required_runtime_symbols": ["main", "_frame_mmpbsa_proxy"],
                         "runtime_adapter_identity_ready": True,
                         "missing_runtime_symbols": [],
                         "runtime_adapter_error": "",
+                        "script_hash": "b" * 64,
+                        "profile_runner_script_sha256": "b" * 64,
+                        "hash_matches": True,
                         "ready": True,
+                        "error": "",
                     },
                     {
                         "profile_id": "ligand_topk_delivery.production",
                         "runner_script": "tools/run_ligand_topk_delivery.py",
+                        "profile_runner_script": "tools/run_ligand_topk_delivery.py",
                         "adapter_import": "betelgeuze_engine.product.runners.topk_delivery",
+                        "adapter_import_present": True,
                         "shim_contract_type": "canonical_module_alias",
                         "sys_modules_alias_ready": True,
+                        "runtime_module_name": "betelgeuze_engine.product.runners.topk_delivery",
                         "self_implementation_blocked": True,
+                        "required_runtime_symbols": ["main", "build_delivery"],
                         "runtime_adapter_identity_ready": True,
                         "missing_runtime_symbols": [],
                         "runtime_adapter_error": "",
+                        "script_hash": "c" * 64,
+                        "profile_runner_script_sha256": "c" * 64,
+                        "hash_matches": True,
                         "ready": True,
+                        "error": "",
                     },
                 ],
             },
@@ -315,8 +464,11 @@ def _write_product_evidence_bundle(
             "top1_expected_pose_id": "amide_near_hbond_pose",
             "hbond_recovery_pose_count": 1,
             "hbond_recovery_pose_ids": ["amide_near_hbond_pose"],
+            "hbond_recovery_confidence_min": 0.9,
             "overanchored_decoys_blocked": True,
             "unsatisfied_donor_acceptor_detected": True,
+            "unsatisfied_donor_acceptor_pose_count": 1,
+            "fixture_count": 5,
             "required_pose_roles": [
                 "far_decoy_pose",
                 "hbond_recovery_pose",
@@ -331,6 +483,13 @@ def _write_product_evidence_bundle(
                 "overanchored_decoy_pose",
                 "unsatisfied_donor_pose",
             ],
+            "ranking_order": [
+                "amide_near_hbond_pose",
+                "ethanol_near_hbond_pose",
+                "amide_far_decoy_pose",
+                "amide_overanchored_decoy_pose",
+                "invalid_ligand_pose",
+            ],
             "row_contracts_ready": True,
             "row_contract_pass_count": 5,
             "rows": [
@@ -341,6 +500,12 @@ def _write_product_evidence_bundle(
                     "expected_blocked_reason": "",
                     "hbond_claim_safe": True,
                     "hbond_blocked_reason": "",
+                    "unsatisfied_donor_count": 0,
+                    "unsatisfied_acceptor_count": 0,
+                    "hbond_schema_ready": True,
+                    "hbond_threshold_schema_ready": True,
+                    "hbond_pair_schema_ready": True,
+                    "hbond_geometry_flags_ready": True,
                     "benchmark_contract_checks": {"claim_safe_matches": True},
                     "benchmark_contract_pass": True,
                 },
@@ -351,6 +516,12 @@ def _write_product_evidence_bundle(
                     "expected_blocked_reason": "missing_expected_anchor",
                     "hbond_claim_safe": False,
                     "hbond_blocked_reason": "missing_expected_anchor",
+                    "unsatisfied_donor_count": 1,
+                    "unsatisfied_acceptor_count": 0,
+                    "hbond_schema_ready": True,
+                    "hbond_threshold_schema_ready": True,
+                    "hbond_pair_schema_ready": True,
+                    "hbond_geometry_flags_ready": True,
                     "benchmark_contract_checks": {"claim_safe_matches": True},
                     "benchmark_contract_pass": True,
                 },
@@ -361,6 +532,12 @@ def _write_product_evidence_bundle(
                     "expected_blocked_reason": "missing_expected_anchor",
                     "hbond_claim_safe": False,
                     "hbond_blocked_reason": "missing_expected_anchor",
+                    "unsatisfied_donor_count": 0,
+                    "unsatisfied_acceptor_count": 0,
+                    "hbond_schema_ready": True,
+                    "hbond_threshold_schema_ready": True,
+                    "hbond_pair_schema_ready": True,
+                    "hbond_geometry_flags_ready": True,
                     "benchmark_contract_checks": {"claim_safe_matches": True},
                     "benchmark_contract_pass": True,
                 },
@@ -371,6 +548,12 @@ def _write_product_evidence_bundle(
                     "expected_blocked_reason": "overanchored_decoy",
                     "hbond_claim_safe": False,
                     "hbond_blocked_reason": "overanchored_decoy",
+                    "unsatisfied_donor_count": 0,
+                    "unsatisfied_acceptor_count": 0,
+                    "hbond_schema_ready": True,
+                    "hbond_threshold_schema_ready": True,
+                    "hbond_pair_schema_ready": True,
+                    "hbond_geometry_flags_ready": True,
                     "benchmark_contract_checks": {"claim_safe_matches": True},
                     "benchmark_contract_pass": True,
                 },
@@ -381,6 +564,12 @@ def _write_product_evidence_bundle(
                     "expected_blocked_reason": "invalid_smiles",
                     "hbond_claim_safe": False,
                     "hbond_blocked_reason": "invalid_smiles",
+                    "unsatisfied_donor_count": 0,
+                    "unsatisfied_acceptor_count": 0,
+                    "hbond_schema_ready": True,
+                    "hbond_threshold_schema_ready": True,
+                    "hbond_pair_schema_ready": True,
+                    "hbond_geometry_flags_ready": True,
                     "benchmark_contract_checks": {"claim_safe_matches": True},
                     "benchmark_contract_pass": True,
                 },
@@ -407,7 +596,30 @@ def _write_product_evidence_bundle(
                 "observed_caps_ready": True,
                 "contract_ready": True,
                 "confidence_abstention_ready": True,
+                "nonfinite_uncertainty_abstention_count": 1,
+                "nonfinite_delta_score_abstention_count": 1,
+                "nonfinite_uncertainty_report": {
+                    "applied": False,
+                    "skipped_reason": "uncertainty_nonfinite",
+                    "uncertainty": 1.0,
+                    "confidence": 0.0,
+                    "observed_caps_ready": True,
+                },
+                "nonfinite_delta_score_report": {
+                    "applied": False,
+                    "skipped_reason": "delta_score_nonfinite",
+                    "delta_score": 0.0,
+                    "confidence": 0.9,
+                    "observed_caps_ready": True,
+                },
                 "top_k_policy_ready": True,
+                "outside_top_k_report": {
+                    "applied": False,
+                    "skipped_reason": "outside_top_k_policy",
+                    "rank_pct": 0.06,
+                    "top_k_eligible": False,
+                    "policy_caps": {"top_k_rank_pct": 0.05},
+                },
                 "duration_sec": 0.03,
                 "rows_per_sec": 100.0,
             },
@@ -432,9 +644,34 @@ def _write_product_evidence_bundle(
             "backmapping_failure_rate": 0.0,
             "force_term_physics_validation_ready": True,
             "force_term_physics_validation_claim_safe_ready": True,
+            "force_term_physics_validation_thresholds": force_term_physics["thresholds"],
+            "force_term_physics_validation_rows": force_term_physics["rows"],
+            "force_term_physics_validation_term_count": force_term_physics["term_count"],
+            "force_term_physics_validation_claim_safe_count": (
+                force_term_physics["claim_safe_count"]
+            ),
+            "force_term_finite_difference_max_error": (
+                force_term_physics["finite_difference_max_error"]
+            ),
+            "force_term_translation_invariance_max_error": (
+                force_term_physics["translation_invariance_max_error"]
+            ),
+            "force_term_rotation_equivariance_max_error": (
+                force_term_physics["rotation_equivariance_max_error"]
+            ),
+            "force_term_energy_drift_max_pct": force_term_physics["energy_drift_max_pct"],
         },
+        "chemistry_kpi": chemistry_kpi,
         "pm_kpi_summary": {
             "runtime": {
+                "score_only_1k_runtime_sec": 0.01,
+                "score_only_1k_rows_per_sec": 800.0,
+                "top100_4bead_rescoring_runtime_sec": 0.02,
+                "top100_4bead_rescoring_rows_per_sec": 350.0,
+                "top10_force_residual_runtime_sec": 0.03,
+                "top10_force_residual_rows_per_sec": 100.0,
+                "memory_peak_mb": 256.0,
+                "neighbor_list_rebuild_frequency": 0.3333333333,
                 "score_only_1k_runtime_tracked": True,
                 "top100_4bead_rescoring_runtime_tracked": True,
                 "top10_force_residual_runtime_tracked": True,
@@ -444,6 +681,7 @@ def _write_product_evidence_bundle(
                 "force_residual_observed_caps_ready": True,
                 "force_residual_contract_ready": True,
                 "force_residual_confidence_abstention_ready": True,
+                "force_residual_top_k_policy_ready": True,
             },
             "physics": {
                 "finite_difference_force_error_pass": True,
@@ -457,6 +695,19 @@ def _write_product_evidence_bundle(
             },
             "product": {
                 "runner_claim_metadata_signed": True,
+                "signed_manifest_verification_pass": True,
+                "bundle_validation_pass": True,
+                "clean_install_missing_requirement_count": 0,
+                "clean_install_missing_requirements": [],
+                "product_image_preflight_blocker_codes": [],
+                "clean_container_missing_requirement_count": 0,
+                "clean_container_missing_requirements": [],
+                "source_artifacts_fresh": True,
+                "source_artifact_fresh_count": 4,
+                "source_artifact_stale_count": 0,
+                "source_artifact_stale_ids": [],
+                "enabled_profile_count": 3,
+                "failed_profile_count": 0,
                 "runner_profile_validation_pass": True,
                 "force_term_claim_metadata_ready": True,
                 "force_term_result_contract_ready": True,
@@ -471,14 +722,37 @@ def _write_product_evidence_bundle(
             },
             "chemistry": {
                 "hbond_evidence_schema_ready": True,
+                "hbond_evidence_schema_ready_count": chemistry_kpi["hbond_evidence_schema_ready_count"],
                 "ligand_topology_validity_schema_ready": True,
+                "ligand_topology_validity_schema_ready_count": (
+                    chemistry_kpi["ligand_topology_validity_schema_ready_count"]
+                ),
+                "hbond_donor_site_count": chemistry_kpi["hbond_donor_site_count"],
+                "hbond_acceptor_site_count": chemistry_kpi["hbond_acceptor_site_count"],
+                "hbond_recovery_fixture_count": chemistry_kpi["hbond_recovery_fixture_count"],
                 "hbond_recovery_pose_count": 1,
                 "hbond_recovery_pose_ids": ["amide_near_hbond_pose"],
+                "hbond_recovery_confidence_min": 0.9,
                 "unsatisfied_donor_acceptor_detection": True,
+                "unsatisfied_donor_acceptor_fixture_count": (
+                    chemistry_kpi["unsatisfied_donor_acceptor_fixture_count"]
+                ),
+                "unsatisfied_donor_count": chemistry_kpi["unsatisfied_donor_count"],
+                "unsatisfied_acceptor_count": chemistry_kpi["unsatisfied_acceptor_count"],
+                "unsatisfied_donor_acceptor_pose_count": 1,
                 "overanchored_decoy_rejection": True,
+                "chirality_preservation_fixture_count": (
+                    chemistry_kpi["chirality_preservation_fixture_count"]
+                ),
+                "unassigned_chirality_blocked_fixture_count": (
+                    chemistry_kpi["unassigned_chirality_blocked_fixture_count"]
+                ),
                 "chirality_preservation_ready": True,
+                "ring_validity_fixture_count": chemistry_kpi["ring_validity_fixture_count"],
                 "ring_validity_ready": True,
+                "tautomer_validity_fixture_count": chemistry_kpi["tautomer_validity_fixture_count"],
                 "tautomer_validity_ready": True,
+                "protonation_validity_fixture_count": chemistry_kpi["protonation_validity_fixture_count"],
                 "protonation_validity_ready": True,
             }
         },
@@ -862,6 +1136,8 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert residual_kpi["applied_count"] == 3
     assert residual_kpi["delta_score_cap_abstention_count"] == 1
     assert residual_kpi["uncertainty_abstention_count"] == 1
+    assert residual_kpi["nonfinite_uncertainty_abstention_count"] == 1
+    assert residual_kpi["nonfinite_delta_score_abstention_count"] == 1
     assert residual_kpi["outside_top_k_abstention_count"] == 1
     assert residual_kpi["bounded_correction_policy_ready"] is True
     assert residual_kpi["observed_caps_ready"] is True
@@ -917,6 +1193,14 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert residual_kpi["uncertainty_abstention_report"]["confidence"] < 0.25
     assert residual_kpi["uncertainty_abstention_report"]["all_observed_caps_within_policy"] is True
     assert residual_kpi["uncertainty_abstention_report"]["policy_caps"]["abstain_threshold"] == 0.75
+    assert residual_kpi["nonfinite_uncertainty_report"]["skipped_reason"] == "uncertainty_nonfinite"
+    assert residual_kpi["nonfinite_uncertainty_report"]["uncertainty"] == 1.0
+    assert residual_kpi["nonfinite_uncertainty_report"]["confidence"] == 0.0
+    assert residual_kpi["nonfinite_uncertainty_report"]["observed_caps_ready"] is True
+    assert residual_kpi["nonfinite_delta_score_report"]["skipped_reason"] == "delta_score_nonfinite"
+    assert residual_kpi["nonfinite_delta_score_report"]["delta_score"] == 0.0
+    assert residual_kpi["nonfinite_delta_score_report"]["confidence"] == 0.9
+    assert residual_kpi["nonfinite_delta_score_report"]["observed_caps_ready"] is True
     assert residual_kpi["outside_top_k_report"]["skipped_reason"] == "outside_top_k_policy"
     assert residual_kpi["outside_top_k_report"]["rank_pct"] > residual_kpi["outside_top_k_report"]["policy_caps"]["top_k_rank_pct"]
     assert residual_kpi["outside_top_k_report"]["top_k_eligible"] is False
@@ -1050,6 +1334,10 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert top_pose["onsps_backmap_schema_version"] == "onsps_backmap_evidence_v1"
     assert top_pose["onsps_backmap_status"] == "ok"
     assert top_pose["onsps_backmap_claim_safe"] is True
+    assert top_pose["hbond_schema_ready"] is True
+    assert top_pose["hbond_threshold_schema_ready"] is True
+    assert top_pose["hbond_pair_schema_ready"] is True
+    assert top_pose["hbond_geometry_flags_ready"] is True
     assert top_pose["hbond_donor_site_count"] + top_pose["hbond_acceptor_site_count"] == top_pose["hbond_site_count"]
     assert top_pose["hbond_distance_pass_count"] >= 1
     assert top_pose["hbond_angle_pass_count"] >= 1
@@ -1068,6 +1356,10 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert overanchored_pose["expected_overanchored"] is True
     assert overanchored_pose["benchmark_contract_pass"] is True
     assert overanchored_pose["onsps_backmap_schema_version"] == "onsps_backmap_evidence_v1"
+    assert overanchored_pose["hbond_schema_ready"] is True
+    assert overanchored_pose["hbond_threshold_schema_ready"] is True
+    assert overanchored_pose["hbond_pair_schema_ready"] is True
+    assert overanchored_pose["hbond_geometry_flags_ready"] is True
     assert overanchored_pose["hbond_geometry_evaluated"] is True
     assert overanchored_pose["hbond_geometry_complete"] is True
     assert any(

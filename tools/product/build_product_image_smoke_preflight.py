@@ -359,9 +359,6 @@ def build_product_image_smoke_preflight(
     ]
     script_contract_ready = all(row["passed"] for row in rows if row["source"] != ".github/workflows/product-image-smoke.yml")
     workflow_contract_ready = all(row["passed"] for row in rows if row["source"] == ".github/workflows/product-image-smoke.yml")
-    preflight_ready = bool(
-        docker_cli_present and docker_daemon_ready and script_contract_ready and workflow_contract_ready
-    )
     receipt_present = bool(receipt)
     receipt_status = str(receipt.get("status") or "")
     receipt_mode = str(receipt.get("mode") or "")
@@ -469,10 +466,16 @@ def build_product_image_smoke_preflight(
         and container_runtime_receipt_ready
         and receipt.get("rocm_runtime_visible_device_required") is True
     )
+    docker_access_ready = bool(docker_cli_present and docker_daemon_ready)
+    preflight_ready = bool(
+        script_contract_ready
+        and workflow_contract_ready
+        and (docker_access_ready or clean_container_smoke_ready)
+    )
     blockers = []
-    if not docker_cli_present:
+    if not clean_container_smoke_ready and not docker_cli_present:
         blockers.append({"code": "docker_cli_missing"})
-    elif not docker_daemon_ready:
+    elif not clean_container_smoke_ready and not docker_daemon_ready:
         blockers.append({"code": "docker_daemon_unreachable"})
     for row in rows:
         if not row["passed"]:
@@ -545,17 +548,17 @@ def build_product_image_smoke_preflight(
         "external_state_mutated": False,
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
-            "Run bash scripts/prepare_product_docker_host.sh on this ROCm host, then run "
-            "PRODUCT_IMAGE_VERIFY_MODE=rocm-runtime bash deploy/verify_product_image.sh."
-            if not docker_cli_present
+            "Attach clean container smoke receipt to the product evidence bundle."
+            if clean_container_smoke_ready
             else (
-                "Start Docker or refresh this shell's docker group access, then rerun "
+                "Run bash scripts/prepare_product_docker_host.sh on this ROCm host, then run "
                 "PRODUCT_IMAGE_VERIFY_MODE=rocm-runtime bash deploy/verify_product_image.sh."
-                if not docker_daemon_ready
+                if not docker_cli_present
                 else (
-                    "Run PRODUCT_IMAGE_VERIFY_MODE=rocm-runtime bash deploy/verify_product_image.sh on a Docker-enabled ROCm host."
-                    if not clean_container_smoke_ready
-                    else "Attach clean container smoke receipt to the product evidence bundle."
+                    "Start Docker or refresh this shell's docker group access, then rerun "
+                    "PRODUCT_IMAGE_VERIFY_MODE=rocm-runtime bash deploy/verify_product_image.sh."
+                    if not docker_daemon_ready
+                    else "Run PRODUCT_IMAGE_VERIFY_MODE=rocm-runtime bash deploy/verify_product_image.sh on a Docker-enabled ROCm host."
                 )
             )
         ),

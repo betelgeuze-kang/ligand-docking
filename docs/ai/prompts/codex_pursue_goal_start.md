@@ -15,7 +15,7 @@ Operating model:
 3. Run `./scripts/ai-preflight.sh`.
 4. Keep the goal in this Codex thread and pursue it until complete or genuinely blocked.
 5. Codex owns risk boundaries, short task specs, targeted code review, and final acceptance.
-6. Use Cursor/OpenCode workers only when delegation should save context: broad exploration, large mechanical edits, repeated test repair, or multi-file refactors.
+6. Use Cursor/OpenCode workers when delegation should save context: scoped implementation, broad exploration, large mechanical edits, repeated test repair, or multi-file refactors. Prefer Cursor for scoped code/test implementation and repair loops; prefer OpenCode for broad search, long-context review, and large mechanical passes.
 7. Do not delegate small work: simple docs, tiny tests, obvious single-file fixes, or expected changes under roughly 100-200 LOC.
 8. For Cursor delegation, create a prompt under `docs/ai/dispatch/` from `docs/ai/prompts/cursor_worker_slice.md`, then run:
 

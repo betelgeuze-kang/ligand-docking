@@ -314,6 +314,32 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
         decision=outside_top_k_decision,
         policy=policy,
     )
+    nonfinite_uncertainty_decision = decide_force_residual(
+        rank_pct=0.01,
+        topology_valid=True,
+        uncertainty=float("nan"),
+        delta_score=0.25,
+        policy=policy,
+    )
+    _nonfinite_uncertainty_updated, nonfinite_uncertainty_report = apply_guarded_force_residual(
+        coords,
+        forces,
+        decision=nonfinite_uncertainty_decision,
+        policy=policy,
+    )
+    nonfinite_delta_decision = decide_force_residual(
+        rank_pct=0.01,
+        topology_valid=True,
+        uncertainty=0.1,
+        delta_score=float("inf"),
+        policy=policy,
+    )
+    _nonfinite_delta_updated, nonfinite_delta_report = apply_guarded_force_residual(
+        coords,
+        forces,
+        decision=nonfinite_delta_decision,
+        policy=policy,
+    )
     cap_metadata = cap_report.to_claim_metadata(
         {
             "topology_fidelity": "sequence_mapped",
@@ -338,9 +364,30 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
             "blocked_reason": "",
         }
     )
+    nonfinite_uncertainty_metadata = nonfinite_uncertainty_report.to_claim_metadata(
+        {
+            "topology_fidelity": "sequence_mapped",
+            "ligand_topology_valid": True,
+            "claim_safe": True,
+            "blocked_reason": "",
+        }
+    )
+    nonfinite_delta_metadata = nonfinite_delta_report.to_claim_metadata(
+        {
+            "topology_fidelity": "sequence_mapped",
+            "ligand_topology_valid": True,
+            "claim_safe": True,
+            "blocked_reason": "",
+        }
+    )
     validate_force_residual_report_contract(cap_report, claim_metadata=cap_metadata)
     validate_force_residual_report_contract(uncertainty_report, claim_metadata=uncertainty_metadata)
     validate_force_residual_report_contract(outside_top_k_report, claim_metadata=outside_top_k_metadata)
+    validate_force_residual_report_contract(
+        nonfinite_uncertainty_report,
+        claim_metadata=nonfinite_uncertainty_metadata,
+    )
+    validate_force_residual_report_contract(nonfinite_delta_report, claim_metadata=nonfinite_delta_metadata)
     policy_caps = cap_report.to_dict()["policy_caps"]
     contract_ready = bool(
         last_report.get("claim_metadata_schema_version") == "force_residual_claim_metadata_v1"
@@ -352,6 +399,10 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
         == uncertainty_report.to_dict().get("policy_caps")
         and outside_top_k_metadata.get("force_residual_policy_caps")
         == outside_top_k_report.to_dict().get("policy_caps")
+        and nonfinite_uncertainty_metadata.get("force_residual_policy_caps")
+        == nonfinite_uncertainty_report.to_dict().get("policy_caps")
+        and nonfinite_delta_metadata.get("force_residual_policy_caps")
+        == nonfinite_delta_report.to_dict().get("policy_caps")
     )
     bounded_policy_ready = bool(
         contract_ready
@@ -375,6 +426,11 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
         and uncertainty_report.skipped_reason == "uncertainty_abstained"
         and uncertainty_report.uncertainty >= float(policy.abstain_threshold)
         and uncertainty_report.confidence <= 1.0 - float(policy.abstain_threshold)
+        and nonfinite_uncertainty_report.applied is False
+        and nonfinite_uncertainty_report.skipped_reason == "uncertainty_nonfinite"
+        and nonfinite_uncertainty_report.confidence == 0.0
+        and nonfinite_delta_report.applied is False
+        and nonfinite_delta_report.skipped_reason == "delta_score_nonfinite"
     )
     top_k_policy_ready = bool(
         contract_ready
@@ -391,6 +447,14 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
         "applied_count": int(applied),
         "delta_score_cap_abstention_count": int(cap_report.applied is False and cap_report.skipped_reason == "delta_score_cap_exceeded"),
         "uncertainty_abstention_count": int(confidence_abstention_ready),
+        "nonfinite_uncertainty_abstention_count": int(
+            nonfinite_uncertainty_report.applied is False
+            and nonfinite_uncertainty_report.skipped_reason == "uncertainty_nonfinite"
+        ),
+        "nonfinite_delta_score_abstention_count": int(
+            nonfinite_delta_report.applied is False
+            and nonfinite_delta_report.skipped_reason == "delta_score_nonfinite"
+        ),
         "outside_top_k_abstention_count": int(
             outside_top_k_report.applied is False
             and outside_top_k_report.skipped_reason == "outside_top_k_policy"
@@ -405,6 +469,8 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
         "last_report": last_report,
         "delta_score_cap_report": cap_report.to_dict(),
         "uncertainty_abstention_report": uncertainty_report.to_dict(),
+        "nonfinite_uncertainty_report": nonfinite_uncertainty_report.to_dict(),
+        "nonfinite_delta_score_report": nonfinite_delta_report.to_dict(),
         "outside_top_k_report": outside_top_k_report.to_dict(),
         "duration_sec": elapsed,
         "rows_per_sec": float(row_count / elapsed) if elapsed > 0 else 0.0,
@@ -667,16 +733,7 @@ def _chemistry_kpis() -> dict[str, Any]:
         unsatisfied_acceptor_total += int(evidence.unsatisfied_acceptor_count)
         unsatisfied_fixture_count += int(unsatisfied_total > 0)
         hbond_role_site_count = int(evidence.donor_site_count) + int(evidence.acceptor_site_count)
-        hbond_schema_ready = bool(
-            evidence.schema_version == "hbond_evidence_v1"
-            and hbond_role_site_count == int(evidence.site_count)
-            and isinstance(evidence.geometry_evaluated, bool)
-            and isinstance(evidence.geometry_complete, bool)
-            and isinstance(evidence.distance_pass_count, int)
-            and isinstance(evidence.angle_pass_count, int)
-            and isinstance(evidence.onsps_backmap_metadata, dict)
-            and evidence.onsps_backmap_metadata.get("schema_version") == "onsps_backmap_evidence_v1"
-        )
+        hbond_schema_ready = bool(evidence.schema_ready())
         hbond_donor_site_total += int(evidence.donor_site_count)
         hbond_acceptor_site_total += int(evidence.acceptor_site_count)
         hbond_schema_ready_count += int(hbond_schema_ready)
@@ -706,6 +763,9 @@ def _chemistry_kpis() -> dict[str, Any]:
                 "tautomer_fixture_valid": bool(valid and "tautomer" in label),
                 "hbond_schema_version": evidence.schema_version,
                 "hbond_schema_ready": hbond_schema_ready,
+                "hbond_threshold_schema_ready": evidence.threshold_schema_ready(),
+                "hbond_pair_schema_ready": evidence.pair_schema_ready(),
+                "hbond_geometry_flags_ready": evidence.geometry_flags_ready(),
                 "hbond_donor_site_count": int(evidence.donor_site_count),
                 "hbond_acceptor_site_count": int(evidence.acceptor_site_count),
                 "hbond_role_site_count": hbond_role_site_count,
@@ -1918,6 +1978,10 @@ def _pose_ranking_hbond_benchmark() -> dict[str, Any]:
                 "ligand_valid": ligand.validity.get("valid") is True,
                 "hbond_status": evidence.status,
                 "hbond_schema_version": evidence.schema_version,
+                "hbond_schema_ready": evidence.schema_ready(),
+                "hbond_threshold_schema_ready": evidence.threshold_schema_ready(),
+                "hbond_pair_schema_ready": evidence.pair_schema_ready(),
+                "hbond_geometry_flags_ready": evidence.geometry_flags_ready(),
                 "hbond_confidence": evidence.hbond_confidence,
                 "hbond_site_count": evidence.site_count,
                 "hbond_donor_site_count": int(evidence.donor_site_count),
@@ -2164,6 +2228,11 @@ def _pm_kpi_summary(
         "clean_container_missing_requirements": list(
             product.get("clean_container_missing_requirements") or []
         ),
+        "source_artifact_fresh_count": int(product.get("source_artifact_fresh_count") or 0),
+        "source_artifact_stale_count": int(product.get("source_artifact_stale_count") or 0),
+        "source_artifact_stale_ids": list(product.get("source_artifact_stale_ids") or []),
+        "enabled_profile_count": int(product.get("enabled_profile_count") or 0),
+        "failed_profile_count": int(product.get("failed_profile_count") or 0),
     }
     return {
         "summary_ready": not failed,

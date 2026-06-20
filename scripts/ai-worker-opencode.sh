@@ -8,7 +8,7 @@ if [[ ! -f "$prompt_file" ]]; then
   exit 2
 fi
 
-OPENCODE_MODEL="${OPENCODE_MODEL:-opencode-go/minimax-m3}"
+OPENCODE_MODEL="${OPENCODE_MODEL:-opencode-go/deepseek-v4-pro}"
 
 if ! command -v opencode >/dev/null 2>&1; then
   if [ -x "${HOME}/.local/bin/opencode" ]; then

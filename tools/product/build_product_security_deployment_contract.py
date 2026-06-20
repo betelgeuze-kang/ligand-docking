@@ -171,7 +171,8 @@ def build_product_security_deployment_contract(*, root: str | Path = ROOT) -> di
     )
     metrics_ready = metrics_route_present and metrics_func_present
     middleware_ready = "app.add_middleware(ProductSecurityMiddleware)" in main_py
-    container_ready = "FROM python:3.11-slim" in dockerfile and "PRODUCT_API_AUTH_REQUIRED=1" in dockerfile
+    container_base_present = "FROM python:3.11-slim" in dockerfile or "FROM ${PRODUCT_ROCM_BASE}" in dockerfile
+    container_ready = container_base_present and "PRODUCT_API_AUTH_REQUIRED=1" in dockerfile
     rollback_ready = "previous image digest" in rollback and "/metrics" in rollback
     policy_ready = "API token hook" in policy and "Payload size limit" in policy and "Rollback" in policy
 
@@ -271,7 +272,7 @@ def build_product_security_deployment_contract(*, root: str | Path = ROOT) -> di
         _row("middleware_registered", middleware_ready, f"registered={middleware_ready}", "ProductSecurityMiddleware registered on FastAPI app", "api/main.py", "Security controls must be attached to the app, not just defined."),
         _row("metrics_endpoint_ready", metrics_ready and metrics_secret_free_ready, f"metrics_route={metrics_route_present};metrics_func={metrics_func_present};metrics_secret_free={metrics_secret_free_ready}", "/metrics route available without secret/token disclosure", "api/main.py;api/security.py", "Deployment monitoring needs a scrapeable smoke endpoint that does not leak secrets."),
         _row("sbom_ready", sbom_ready, ";".join(f"{row['path']}={row['sha256'][:12] or 'missing'}" for row in sbom_rows), "requirements manifest sha256 inventory", ";".join(requirements), "Release review needs dependency manifest provenance."),
-        _row("container_image_ready", container_ready, f"dockerfile_present={bool(dockerfile)};auth_env={'PRODUCT_API_AUTH_REQUIRED=1' in dockerfile}", "product Dockerfile with security env defaults", "Dockerfile.product", "Hosted/customer deployment needs a reproducible container recipe."),
+        _row("container_image_ready", container_ready, f"dockerfile_present={bool(dockerfile)};auth_env={'PRODUCT_API_AUTH_REQUIRED=1' in dockerfile};rocm_base={'FROM ${PRODUCT_ROCM_BASE}' in dockerfile};slim_base={'FROM python:3.11-slim' in dockerfile}", "product Dockerfile with security env defaults", "Dockerfile.product", "Hosted/customer deployment needs a reproducible container recipe."),
         _row(
             "secret_rotation_contract_ready",
             secret_rotation_contract_ready,

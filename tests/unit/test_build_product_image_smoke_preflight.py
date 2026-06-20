@@ -81,10 +81,13 @@ def test_product_image_smoke_preflight_blocks_without_docker_cli(tmp_path: Path)
     assert "DOCKER_CMD='sudo docker'" in summary["docker_cmd_override_example"]
 
 
-def test_product_image_smoke_preflight_blocks_when_docker_daemon_unreachable() -> None:
+def test_product_image_smoke_preflight_blocks_when_docker_daemon_unreachable_without_receipt(
+    tmp_path: Path,
+) -> None:
     payload = mod.build_product_image_smoke_preflight(
         docker_cli_path="/usr/bin/docker",
         docker_daemon_ready=False,
+        receipt_json=tmp_path / "missing_receipt.json",
     )
     summary = payload["summary"]
 
@@ -268,6 +271,19 @@ def test_product_image_smoke_preflight_accepts_rocm_runtime_receipt(tmp_path: Pa
     assert summary["product_runner_claim_metadata_ready"] is True
     assert summary["tier_alpha_result_manifest_signature_verified"] is True
     assert summary["backmapping_runner_claim_metadata_ready"] is True
+
+    payload_without_live_docker = mod.build_product_image_smoke_preflight(
+        docker_cli_path="/usr/bin/docker",
+        docker_daemon_ready=False,
+        receipt_json=receipt_json,
+    )
+    summary_without_live_docker = payload_without_live_docker["summary"]
+
+    assert summary_without_live_docker["status"] == "product_image_smoke_preflight_ready"
+    assert summary_without_live_docker["preflight_ready"] is True
+    assert summary_without_live_docker["docker_daemon_reachable"] is False
+    assert summary_without_live_docker["clean_container_smoke_ready"] is True
+    assert {"code": "docker_daemon_unreachable"} not in payload_without_live_docker["blockers"]
     assert summary["backmapping_ligand_topology_valid"] is True
     assert summary["backmapping_ligand_topology_claim_safe"] is True
     assert summary["backmapping_ligand_topology_schema_version"] == "ligand_topology_validity_v1"
