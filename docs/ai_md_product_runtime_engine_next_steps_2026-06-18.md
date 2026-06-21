@@ -163,10 +163,10 @@ Definition of Done:
 
 현재 진행:
 
-- 2026-06-21 KST 기준 current branch `codex/commercialization-accounting-closure`의 GitHub Actions run은 코드/테스트 실패가 아니라 GitHub billing/spending-limit 문제로 job이 시작되지 않았다.
-- `product-api-worker`의 최신 run은 `27875494322`이며 2026-06-20T15:26:47Z(2026-06-21 KST)에 run head `4bf2d0ffa3dc2309f85ce24f9c47556e003fa77f`에서 생성됐다.
-- `product-image-smoke`의 최신 post-push run은 `27892240733`이며 2026-06-21T03:28:55Z(2026-06-21 KST)에 run head `abc08ef772306b569d413ff85c702ca1cf619a94`에서 생성됐다.
-- `product-api-worker`의 최신 blocker와 `product-image-smoke`의 최신 `abc08ef7` blocker 모두 annotation이 "recent account payments have failed or your spending limit needs to be increased" 계열로 기록되며, 따라서 원격 CI green claim은 아직 금지한다.
+- 2026-06-21 KST 기준 `main`의 latest product GitHub Actions run은 코드/테스트 실패가 아니라 GitHub billing/spending-limit 문제로 job이 시작되지 않았다.
+- `product-api-worker`의 최신 main run은 `27892472205`이며 2026-06-21T03:40:03Z(2026-06-21 KST)에 run head `2d44452910cc97f1585a7ebc95162f2f2883ca9a`에서 생성됐다.
+- `product-image-smoke`의 최신 main run은 `27892472214`이며 2026-06-21T03:40:03Z(2026-06-21 KST)에 run head `2d44452910cc97f1585a7ebc95162f2f2883ca9a`에서 생성됐다.
+- `product-api-worker`의 최신 main blocker와 `product-image-smoke`의 최신 main blocker 모두 annotation이 "recent account payments have failed or your spending limit needs to be increased" 계열로 기록되며, 따라서 원격 CI green claim은 아직 금지한다.
 - `runs/product_ci_runtime_gate_current.json` / `.md`는 최신 2026-06-21 KST Actions record를 `latest_github_actions_record_kst_date=2026-06-21`로 기록하고, `status=blocked_product_ci_runtime_gate`, `github_actions_started=false`, `external_blocker=true`, `blocker_code=github_actions_billing_or_spending_limit`, `workflow_dispatch_executed=false`, `external_state_mutated=false`로 fail-closed 상태를 기록한다.
 - 같은 gate는 local ROCm clean-container 증거(`runs/product_image_smoke_preflight_current.json`)를 함께 읽어 `local_rocm_clean_container_ready=true`를 기록하므로, 남은 차단은 owner가 GitHub Billing & plans/spending-limit를 복구한 뒤 `product-api-worker.yml`, `product-image-smoke.yml` build mode, self-hosted ROCm `rocm-runtime` mode를 재실행하는 것이다.
 - `ai_md_product_evidence_bundle`과 `ai_md_engine_kpi_report`는 local product evidence claim과 remote release claim을 분리한다. Current local evidence는 `product_claim_ready=true`와 `bundle_validation_pass=true`를 유지하지만, GitHub Actions billing blocker 때문에 `release_claim_ready=false`, `release_claim_blocked_reason=github_actions_billing_or_spending_limit`, `product_ci_runtime_gate_ready=false`, `product_ci_external_blocker=true`를 함께 노출한다.
