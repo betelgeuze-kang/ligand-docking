@@ -46,6 +46,33 @@ def _resolve_job_id(request: dict[str, Any], request_json_path: str) -> str:
     return profile_id or "runner_native_job"
 
 
+def _extract_refine_element_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    sources: list[dict[str, Any]] = []
+    if isinstance(payload, dict):
+        sources.append(payload)
+        score = payload.get("score")
+        if isinstance(score, dict):
+            sources.append(score)
+    keys = (
+        "refine_element_model",
+        "refine_element_fallback_used",
+        "refine_protein_element_fallback_used",
+        "refine_ligand_element_fallback_used",
+        "refine_protein_element_count",
+        "refine_ligand_element_count",
+        "refine_protein_element_source",
+        "refine_protein_element_projection_used",
+        "refine_protein_element_sequence_mapped",
+        "refine_ligand_element_source",
+        "refine_ligand_element_projection_used",
+        "refine_ligand_element_topology_valid",
+    )
+    for source in sources:
+        if any(key in source for key in keys):
+            return {key: source.get(key) for key in keys if key in source}
+    return {}
+
+
 def maybe_write_runner_native_evidence_bundle(
     evidence_bundle_path: str | Path | None,
     *,
@@ -101,6 +128,9 @@ def maybe_write_runner_native_evidence_bundle(
         "accuracy_claim_grade": accuracy_claim_grade,
         "runner_metadata": metadata,
     }
+    refine_element_summary = _extract_refine_element_summary(result_payload)
+    if refine_element_summary:
+        result_manifest["refine_element_summary"] = refine_element_summary
 
     return write_api_evidence_bundle(
         path_value,

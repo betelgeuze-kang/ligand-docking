@@ -363,6 +363,13 @@ def test_result_manifest_signs_runner_claim_metadata_from_json_result(tmp_path: 
                     "policy_caps_ready": True,
                     "observed_caps_ready": True,
                 },
+                "score": {
+                    "refine_element_model": "typed_pairwise",
+                    "refine_element_fallback_used": False,
+                    "refine_protein_element_source": "sequence_residue_element_proxy",
+                    "refine_ligand_element_source": "rdkit_atom_elements_projected_to_model_coords",
+                    "refine_ligand_element_topology_valid": True,
+                },
             },
             sort_keys=True,
         )
@@ -387,6 +394,12 @@ def test_result_manifest_signs_runner_claim_metadata_from_json_result(tmp_path: 
     assert manifest["force_residual_summary"]["schema_version"] == "force_residual_claim_metadata_v1"
     assert manifest["force_residual_summary"]["policy_caps_ready"] is True
     assert manifest["force_residual_summary"]["observed_caps_ready"] is True
+    assert manifest["refine_element_summary"]["refine_element_model"] == "typed_pairwise"
+    assert manifest["refine_element_summary"]["refine_element_fallback_used"] is False
+    assert (
+        manifest["refine_element_summary"]["refine_ligand_element_source"]
+        == "rdkit_atom_elements_projected_to_model_coords"
+    )
     assert manifest["result_artifact_type"] == "json"
     assert manifest["result_file_media_type"] == "application/json"
     assert verify_result_manifest(manifest, signing_key="test-signing-key") is True
@@ -397,6 +410,9 @@ def test_result_manifest_signs_runner_claim_metadata_from_json_result(tmp_path: 
     tampered_force = json.loads(json.dumps(manifest))
     tampered_force["force_residual_summary"]["observed_caps_ready"] = False
     assert verify_result_manifest(tampered_force, signing_key="test-signing-key") is False
+    tampered_refine = json.loads(json.dumps(manifest))
+    tampered_refine["refine_element_summary"]["refine_element_model"] = "single_element_proxy"
+    assert verify_result_manifest(tampered_refine, signing_key="test-signing-key") is False
 
 
 def test_api_main_no_longer_declares_in_memory_job_dict() -> None:

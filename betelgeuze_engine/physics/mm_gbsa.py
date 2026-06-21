@@ -32,6 +32,35 @@ def _refine_claim_metadata() -> dict[str, Any]:
     }
 
 
+def _normalized_elements(
+    elements: list[str] | None,
+    atom_count: int,
+    *,
+    default: str = "C",
+) -> tuple[list[str], bool]:
+    count = int(atom_count)
+    if elements is None or len(elements) != count:
+        return [str(default)] * count, True
+    return [str(element or default) for element in elements], False
+
+
+def _element_metadata(
+    protein_elements: list[str],
+    ligand_elements: list[str],
+    protein_fallback: bool,
+    ligand_fallback: bool,
+) -> dict[str, Any]:
+    fallback_used = bool(protein_fallback or ligand_fallback)
+    return {
+        "element_model": "single_element_proxy" if fallback_used else "typed_pairwise",
+        "element_fallback_used": fallback_used,
+        "protein_element_fallback_used": bool(protein_fallback),
+        "ligand_element_fallback_used": bool(ligand_fallback),
+        "protein_element_count": int(len(protein_elements)),
+        "ligand_element_count": int(len(ligand_elements)),
+    }
+
+
 def mm_gbsa_binding_energy(
     protein_xyz: np.ndarray,
     ligand_xyz: np.ndarray,
@@ -39,6 +68,8 @@ def mm_gbsa_binding_energy(
     contact_cutoff_a: float = 8.0,
     props: dict[str, float] | None = None,
     ligand_charge_scale: float = 0.0,
+    protein_elements: list[str] | None = None,
+    ligand_elements: list[str] | None = None,
 ) -> dict[str, Any]:
     """Compute refine-tier MM-GBSA proxy binding free energy (kcal/mol).
 
@@ -48,6 +79,9 @@ def mm_gbsa_binding_energy(
     props = dict(props or {})
     prot = np.asarray(protein_xyz, dtype=np.float32)
     lig = np.asarray(ligand_xyz, dtype=np.float32)
+    protein_element_list, protein_fallback = _normalized_elements(protein_elements, int(prot.shape[0]))
+    ligand_element_list, ligand_fallback = _normalized_elements(ligand_elements, int(lig.shape[0]))
+    element_meta = _element_metadata(protein_element_list, ligand_element_list, protein_fallback, ligand_fallback)
     claim_metadata = _refine_claim_metadata()
     if prot.size == 0 or lig.size == 0:
         return {
@@ -66,11 +100,18 @@ def mm_gbsa_binding_energy(
             "e_solvation": 5.0,
             "ligand_model": REFINE_LIGAND_MODEL,
             "refine_tier": "gb_sa_v1",
+            **element_meta,
             **claim_metadata,
             "claim_metadata": claim_metadata,
         }
 
-    vdw = cross_vdw_energy(prot, lig, contact_cutoff_a=float(contact_cutoff_a))
+    vdw = cross_vdw_energy(
+        prot,
+        lig,
+        protein_elements=protein_element_list,
+        ligand_elements=ligand_element_list,
+        contact_cutoff_a=float(contact_cutoff_a),
+    )
     d = np.linalg.norm(prot[:, None, :] - lig[None, :, :], axis=2)
     min_d = float(vdw["min_distance_a"])
     denom = float(max(int(d.size), 1))
@@ -132,6 +173,7 @@ def mm_gbsa_binding_energy(
         "e_solvation": float(e_solv),
         "ligand_model": REFINE_LIGAND_MODEL,
         "refine_tier": "gb_sa_v1",
+        **element_meta,
         **claim_metadata,
         "claim_metadata": claim_metadata,
     }
@@ -146,11 +188,19 @@ def mm_gbsa_refinement_delta(
     protein_xyz: np.ndarray | None = None,
     ligand_xyz: np.ndarray | None = None,
     props: dict[str, float] | None = None,
+    protein_elements: list[str] | None = None,
+    ligand_elements: list[str] | None = None,
 ) -> dict[str, Any]:
     """Refinement adjustment when coords are available or proxy features only."""
     claim_metadata = _refine_claim_metadata()
     if protein_xyz is not None and ligand_xyz is not None:
-        refined = mm_gbsa_binding_energy(protein_xyz, ligand_xyz, props=props or {})
+        refined = mm_gbsa_binding_energy(
+            protein_xyz,
+            ligand_xyz,
+            props=props or {},
+            protein_elements=protein_elements,
+            ligand_elements=ligand_elements,
+        )
         delta = float(refined["deltaG_mm_gbsa_kcal_mol"] - float(base_proxy_kcal))
         confidence = float(np.clip(1.0 / (1.0 + 0.25 * abs(delta) + 0.1 * refined["clash_count"]), 0.05, 0.99))
         return {
@@ -158,6 +208,10 @@ def mm_gbsa_refinement_delta(
             "refinement_delta_kcal_mol": float(max(delta, 0.05)),
             "confidence": confidence,
             "backend": "internal_gb_sa_v1",
+            "element_model": refined.get("element_model", "single_element_proxy"),
+            "element_fallback_used": bool(refined.get("element_fallback_used", True)),
+            "protein_element_fallback_used": bool(refined.get("protein_element_fallback_used", True)),
+            "ligand_element_fallback_used": bool(refined.get("ligand_element_fallback_used", True)),
             **claim_metadata,
             "claim_metadata": claim_metadata,
         }
@@ -184,6 +238,8 @@ def compute_full_refine_stack(
     props: dict[str, float] | None = None,
     include_explicit: bool = True,
     include_fep: bool = True,
+    protein_elements: list[str] | None = None,
+    ligand_elements: list[str] | None = None,
 ) -> dict[str, Any]:
     """Run GB/SA -> all-atom -> explicit shell -> FEP stack when coords available."""
     from core.allatom_forcefield import allatom_energy
@@ -191,15 +247,26 @@ def compute_full_refine_stack(
     from core.fep import estimate_binding_fep
 
     claim_metadata = _refine_claim_metadata()
-    gb = mm_gbsa_binding_energy(protein_xyz, ligand_xyz, props=props or {})
+    prot = np.asarray(protein_xyz, dtype=np.float32)
+    lig = np.asarray(ligand_xyz, dtype=np.float32)
+    protein_element_list, protein_fallback = _normalized_elements(protein_elements, int(prot.shape[0]))
+    ligand_element_list, ligand_fallback = _normalized_elements(ligand_elements, int(lig.shape[0]))
+    element_meta = _element_metadata(protein_element_list, ligand_element_list, protein_fallback, ligand_fallback)
+    gb = mm_gbsa_binding_energy(
+        protein_xyz,
+        ligand_xyz,
+        props=props or {},
+        protein_elements=protein_element_list,
+        ligand_elements=ligand_element_list,
+    )
     complex_coords = np.vstack([np.asarray(protein_xyz, dtype=np.float32), np.asarray(ligand_xyz, dtype=np.float32)])
-    n_prot = int(np.asarray(protein_xyz).shape[0])
-    elements = ["C"] * n_prot + ["C"] * int(np.asarray(ligand_xyz).shape[0])
+    elements = protein_element_list + ligand_element_list
     aa = allatom_energy(complex_coords, elements)
     out: dict[str, Any] = {
         "refine_stack": ["gb_sa", "allatom"],
         "gb_sa": gb,
         "allatom": aa,
+        **element_meta,
         **claim_metadata,
         "claim_metadata": claim_metadata,
     }
@@ -208,7 +275,14 @@ def compute_full_refine_stack(
         out["explicit"] = explicit
         out["refine_stack"].append("explicit_tip3p_shell")
     if include_fep:
-        fep = estimate_binding_fep(protein_xyz, ligand_xyz, n_windows=7, n_bootstrap=4)
+        fep = estimate_binding_fep(
+            protein_xyz,
+            ligand_xyz,
+            n_windows=7,
+            n_bootstrap=4,
+            protein_elements=protein_element_list,
+            ligand_elements=ligand_element_list,
+        )
         out["fep"] = fep
         out["refine_stack"].append("fep")
     return out

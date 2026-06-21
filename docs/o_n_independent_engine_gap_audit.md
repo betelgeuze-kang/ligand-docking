@@ -51,6 +51,32 @@ Current status: `blocked_p0_o_n_neighbor_path`.
   - `python3 -m pytest -q tests/unit/test_betelgeuze_engine_scaffold.py tests/unit/test_build_ai_md_engine_kpi_report.py tests/unit/test_build_ai_md_product_evidence_bundle.py tests/unit/test_product_neighbor_entrypoint_static_guards.py tests/unit/test_runtime_neighbor_release_scaling.py tests/unit/test_rust_hip_neighbor_provider_parity.py -x --tb=short` passed with `167 passed` after the default product-neighbor-required flip.
   - `python3 -m pytest -q tests/unit/test_product_neighbor_entrypoint_static_guards.py tests/unit/test_betelgeuze_engine_scaffold.py tests/unit/test_build_ai_md_engine_kpi_report.py -x --tb=short` passed with `56 passed` after adding the KPI force-term dense-fallback static guard.
 
+## Current P1 Evidence
+
+- OpenCode read-only audit identified the first P1 scientific-contract blocker as all-atom/refine paths erasing typed atoms with `["C"] * n` before internal all-atom, explicit-solvent, and FEP surfaces.
+- `core/refine_physics.py::cross_vdw_energy()` now accepts per-protein/per-ligand element lists and uses pairwise mixed LJ parameters when typed elements are provided. It still preserves the single-element proxy fallback for legacy callers and reports fallback metadata.
+- `core/fep.py::fep_lambda_energies()` and `estimate_binding_fep()` now accept `protein_elements` and `ligand_elements`; ligand internal all-atom energy and protein-ligand soft-core cross energy use typed elements when provided. FEP remains `fep_estimate_ready` only inside the existing internal claim boundary.
+- `betelgeuze_engine/physics/mm_gbsa.py::mm_gbsa_binding_energy()`, `mm_gbsa_refinement_delta()`, and `compute_full_refine_stack()` now accept typed protein/ligand elements and propagate them into GB/SA cross VDW, all-atom, explicit shell, and FEP. They continue to return `claim_safe=false`, `blocked_reason=internal_gb_sa_proxy_uncalibrated`, and `calibration_status=internal_solvent_fep_proxy_uncalibrated`.
+- `betelgeuze_engine/product/runners/backmapping_scoring.py` now wires typed elements into product-runner MM-GBSA refine calls:
+  - ligand elements come from RDKit ligand topology and are either exact per-coordinate elements or explicitly marked as projected from RDKit atoms to coarse/model coordinates.
+  - protein elements come from sequence-derived residue element proxies when a sequence is present, otherwise the old carbon fallback is retained and reported.
+  - score/result rows expose refine element provenance fields such as `refine_element_model`, `refine_ligand_element_source`, and `refine_protein_element_source`.
+- `tests/unit/test_product_neighbor_entrypoint_static_guards.py` now statically requires product runner `mm_gbsa_binding_energy(...)` calls to pass both `protein_elements=` and `ligand_elements=`.
+- `api/result_manifest.py` now signs `refine_element_summary` from result JSON, including nested runner `score.refine_*` fields, so element provenance is covered by the same HMAC result-manifest verification as claim metadata and force residual summaries.
+- `betelgeuze_ai_md/contracts/manifest.py` and `betelgeuze_ai_md/contracts/api_adapter.py` now preserve `result_manifest` inside review-only native EvidenceBundle payloads, including `refine_element_summary` when emitted by validated runners.
+- `tools/product/build_ai_md_product_evidence_bundle.py` now blocks product EvidenceBundle readiness if the signed runner manifest lacks typed refine element provenance or reports fallback element mode.
+- Focused local verification after this P1 typed-element slice:
+  - `python3 -m pytest -q tests/unit/test_abcd_product_capabilities.py tests/unit/test_abcd_product_capabilities_phase2.py -x --tb=short` passed with `30 passed`.
+  - `python3 -m pytest -q tests/unit/test_abcd_product_capabilities.py tests/unit/test_abcd_product_capabilities_phase2.py tests/unit/test_product_neighbor_entrypoint_static_guards.py -x --tb=short` passed with `34 passed`.
+  - `python3 -m pytest -q tests/unit/test_abcd_product_capabilities.py tests/unit/test_abcd_product_capabilities_phase2.py tests/unit/test_product_neighbor_entrypoint_static_guards.py tests/unit/test_betelgeuze_engine_scaffold.py tests/unit/test_build_ai_md_engine_kpi_report.py -x --tb=short` passed with `88 passed`.
+  - `python3 -m pytest -q tests/unit/test_run_ligand_backmapping_scoring_cli.py -x --tb=short` passed with `2 passed`.
+  - `python3 -m pytest -q tests/unit/test_build_ai_md_product_evidence_bundle.py -x --tb=short` passed with `106 passed`.
+  - `python3 -m pytest -q tests/unit/test_betelgeuze_ai_md_api_adapter.py tests/unit/test_api_job_store.py tests/unit/test_build_ai_md_engine_kpi_report.py tests/unit/test_build_ai_md_product_evidence_bundle.py -x --tb=short` passed with `141 passed`.
+  - `python3 -m pytest -q tests/unit/test_abcd_product_capabilities.py tests/unit/test_abcd_product_capabilities_phase2.py tests/unit/test_product_neighbor_entrypoint_static_guards.py tests/unit/test_betelgeuze_engine_scaffold.py tests/unit/test_build_ai_md_engine_kpi_report.py tests/unit/test_build_ai_md_product_evidence_bundle.py tests/unit/test_api_job_store.py tests/unit/test_betelgeuze_ai_md_api_adapter.py -x --tb=short` passed with `224 passed`.
+  - `git diff --check` passed.
+  - `./scripts/ai-verify.sh` passed with `verify ok (smoke)`.
+  - The new tests verify typed elements change raw VDW/FEP cross energies versus C-only inputs while keeping MM-GBSA/FEP/refine-stack claims blocked.
+
 ## Remaining P0 Blockers
 
 1. Direct forcefield dense fallback now requires explicit reference opt-out.
@@ -105,10 +131,11 @@ Current status: `blocked_p0_o_n_neighbor_path`.
 | EvidenceBundle | Runtime neighbor-cap gate rejects NxN rows and product image receipt requires release scaling readiness | Keep product-image receipt attached and public benchmark blockers honest |
 | Product-adjacent tools | Contact/clash/overlap diagnostics use `CellListNeighborProvider` and fail closed on overflow | Keep claim boundary closed until release-scale evidence covers these paths |
 | Rust/HIP parity | Tensor adapter tests and real ROCm `N={216,1000}` provider parity exist | Keep self-hosted parity receipt current; broaden performance parity after direct fallback lock |
+| All-atom/refine typed atoms | FEP/MM-GBSA/refine stack and product runner refine calls accept typed protein/ligand elements; signed manifest/EvidenceBundle now preserves refine element provenance and keeps internal proxy claim blocked | Promote exact all-atom ligand/protein coordinate elements where available; keep coarse projection provenance visible |
 | Restricted families | Profiles/gates exist elsewhere | Tie `gpcr/kinase/ion_channel` pilot semantic gates to product E2E |
 
 ## Next Implementation Slices
 
-1. Keep the ROCm product-image release-scaling and Rust/HIP provider-parity receipts current in GitHub Actions after commit/push.
-2. Add broader static/contract coverage for any future product term entry points that could bypass provider pairs.
-3. Move from P0 runtime locking into the first P1 topology/manifest blocker once the self-hosted receipts are green on the pushed source.
+1. Promote exact all-atom ligand/protein coordinate elements from manifest/API inputs when available, while keeping coarse projection provenance visible for bead/model coordinates.
+2. Add manifest/API negative tests for unassigned chirality, unsupported metal/cofactor, and placeholder protein topology across signed result manifests and EvidenceBundle payloads.
+3. Continue broad static/contract coverage for future product term entry points that could bypass provider pairs.

@@ -2463,6 +2463,120 @@ def _virtual_third_bead(ligand_xyz: np.ndarray) -> np.ndarray:
     return np.stack([a, b, c], axis=0)
 
 
+_ELEMENT_PRIORITY = {"N": 0, "O": 1, "S": 2, "P": 3, "F": 4, "CL": 5, "BR": 6, "I": 7, "C": 8, "H": 9}
+_RESIDUE_ELEMENT_PROXY = {
+    "D": "O",
+    "E": "O",
+    "S": "O",
+    "T": "O",
+    "Y": "O",
+    "N": "N",
+    "Q": "N",
+    "H": "N",
+    "K": "N",
+    "R": "N",
+    "C": "S",
+    "M": "S",
+}
+
+
+def _normalize_element_symbol(value: Any) -> str:
+    raw = str(value or "C").strip().upper()
+    if raw[:2] in {"CL", "BR"}:
+        return raw[:2]
+    return raw[:1] or "C"
+
+
+def _project_elements_to_count(elements: Sequence[Any], count: int) -> List[str]:
+    target = int(count)
+    if target <= 0:
+        return []
+    normalized = [_normalize_element_symbol(element) for element in elements if str(element or "").strip()]
+    if not normalized:
+        return ["C"] * target
+    if len(normalized) == target:
+        return normalized
+    buckets = np.array_split(np.arange(len(normalized)), target)
+    projected: List[str] = []
+    for bucket in buckets:
+        bucket_elements = [normalized[int(idx)] for idx in bucket.tolist()]
+        if not bucket_elements:
+            projected.append("C")
+            continue
+        projected.append(sorted(bucket_elements, key=lambda item: _ELEMENT_PRIORITY.get(item, 99))[0])
+    return projected
+
+
+def _ligand_elements_for_model_coords(smiles: str, ligand_xyz: np.ndarray) -> tuple[List[str], Dict[str, Any]]:
+    count = int(np.asarray(ligand_xyz).shape[0]) if np.asarray(ligand_xyz).ndim >= 2 else 0
+    topology = ligand_topology_from_smiles(str(smiles or ""))
+    atom_elements = list(getattr(topology, "atom_elements", []) or [])
+    validity = topology.validity if isinstance(topology.validity, dict) else {}
+    if count <= 0:
+        return [], {
+            "ligand_element_source": "empty_ligand_coords",
+            "ligand_element_projection_used": False,
+            "ligand_element_topology_valid": bool(validity.get("valid") is True),
+        }
+    if atom_elements:
+        projected = _project_elements_to_count(atom_elements, count)
+        return projected, {
+            "ligand_element_source": (
+                "rdkit_atom_elements"
+                if len(atom_elements) == count
+                else "rdkit_atom_elements_projected_to_model_coords"
+            ),
+            "ligand_element_projection_used": bool(len(atom_elements) != count),
+            "ligand_element_topology_valid": bool(validity.get("valid") is True),
+            "ligand_element_topology_atom_count": int(len(atom_elements)),
+            "ligand_element_model_coord_count": int(count),
+        }
+    return ["C"] * count, {
+        "ligand_element_source": "carbon_fallback_missing_ligand_topology",
+        "ligand_element_projection_used": False,
+        "ligand_element_topology_valid": bool(validity.get("valid") is True),
+        "ligand_element_topology_atom_count": 0,
+        "ligand_element_model_coord_count": int(count),
+    }
+
+
+def _protein_elements_for_model_coords(row: Dict[str, Any], protein_xyz: np.ndarray) -> tuple[List[str], Dict[str, Any]]:
+    count = int(np.asarray(protein_xyz).shape[0]) if np.asarray(protein_xyz).ndim >= 2 else 0
+    sequence = ""
+    for key in ("protein_sequence", "target_sequence", "sequence"):
+        text = str(row.get(key, "") or "").strip().upper()
+        if text:
+            sequence = text
+            break
+    if count <= 0:
+        return [], {
+            "protein_element_source": "empty_protein_coords",
+            "protein_element_projection_used": False,
+            "protein_element_sequence_mapped": bool(sequence),
+        }
+    if sequence:
+        residue_elements = [_RESIDUE_ELEMENT_PROXY.get(residue, "C") for residue in sequence]
+        projected = _project_elements_to_count(residue_elements, count)
+        return projected, {
+            "protein_element_source": (
+                "sequence_residue_element_proxy"
+                if len(residue_elements) == count
+                else "sequence_residue_element_proxy_projected_to_model_coords"
+            ),
+            "protein_element_projection_used": bool(len(residue_elements) != count),
+            "protein_element_sequence_mapped": True,
+            "protein_element_sequence_length": int(len(sequence)),
+            "protein_element_model_coord_count": int(count),
+        }
+    return ["C"] * count, {
+        "protein_element_source": "carbon_fallback_missing_sequence",
+        "protein_element_projection_used": False,
+        "protein_element_sequence_mapped": False,
+        "protein_element_sequence_length": 0,
+        "protein_element_model_coord_count": int(count),
+    }
+
+
 def _frame_mmpbsa_proxy(
     protein_xyz: np.ndarray,
     ligand_xyz: np.ndarray,
@@ -2471,6 +2585,7 @@ def _frame_mmpbsa_proxy(
     ligand_model: str = "2bead",
     hbond_onsps_weight: float = 1.0,
     smiles: str = "",
+    protein_elements: Sequence[str] | None = None,
 ) -> Dict[str, float]:
     prot = np.asarray(protein_xyz, dtype=np.float32)
     lig = np.asarray(ligand_xyz, dtype=np.float32)
@@ -2482,8 +2597,19 @@ def _frame_mmpbsa_proxy(
         two_bead = lig[:2] if lig.shape[0] >= 2 else lig
         lig, backmap_meta = backmap_4bead_onsps(two_bead, str(smiles or ""))
     elif model in {REFINE_LIGAND_MODEL, "refine_gb_sa"}:
-        refined = mm_gbsa_binding_energy(prot, lig, contact_cutoff_a=float(contact_cutoff_A), props=props)
+        ligand_elements, ligand_element_meta = _ligand_elements_for_model_coords(smiles, lig)
+        refined = mm_gbsa_binding_energy(
+            prot,
+            lig,
+            contact_cutoff_a=float(contact_cutoff_A),
+            props=props,
+            protein_elements=list(protein_elements) if protein_elements is not None else None,
+            ligand_elements=ligand_elements,
+        )
         refined["ligand_model"] = REFINE_LIGAND_MODEL
+        refined["min_distance_A"] = float(refined["min_distance_a"])
+        refined["deltaG_mmpbsa_proxy_kcal_mol"] = float(refined["deltaG_mm_gbsa_kcal_mol"])
+        refined.update(ligand_element_meta)
         return refined
     if prot.size == 0 or lig.size == 0:
         return {
@@ -2628,6 +2754,7 @@ def _frame_mmpbsa_proxy_batch(
     ligand_model: str = "2bead",
     hbond_onsps_weight: float = 1.0,
     smiles: str = "",
+    protein_elements: Sequence[str] | None = None,
 ) -> Dict[str, np.ndarray]:
     """Vectorized MM/PBSA-like proxy across trajectory frames (same protein, F ligand poses)."""
     prot = np.asarray(protein_xyz, dtype=np.float32)
@@ -2654,11 +2781,22 @@ def _frame_mmpbsa_proxy_batch(
 
     model = str(ligand_model).strip().lower()
     if model in {REFINE_LIGAND_MODEL, "refine_gb_sa"}:
+        ligand_elements, ligand_element_meta = _ligand_elements_for_model_coords(
+            smiles,
+            frames[0] if frame_count > 0 else np.zeros((0, 3), dtype=np.float32),
+        )
         per_frame = [
-            mm_gbsa_binding_energy(prot, frames[i], contact_cutoff_a=float(contact_cutoff_A), props=props)
+            mm_gbsa_binding_energy(
+                prot,
+                frames[i],
+                contact_cutoff_a=float(contact_cutoff_A),
+                props=props,
+                protein_elements=list(protein_elements) if protein_elements is not None else None,
+                ligand_elements=ligand_elements,
+            )
             for i in range(frame_count)
         ]
-        return {
+        out = {
             "min_distance_A": np.asarray([r["min_distance_a"] for r in per_frame], dtype=np.float64),
             "contact_fraction": np.asarray([r["contact_fraction"] for r in per_frame], dtype=np.float64),
             "contact_count": np.asarray([r["contact_count"] for r in per_frame], dtype=np.float64),
@@ -2670,6 +2808,18 @@ def _frame_mmpbsa_proxy_batch(
             "e_nonpolar": np.asarray([r["e_nonpolar"] for r in per_frame], dtype=np.float64),
             "e_solvation": np.asarray([r["e_solvation"] for r in per_frame], dtype=np.float64),
         }
+        if per_frame:
+            for key in (
+                "element_model",
+                "element_fallback_used",
+                "protein_element_fallback_used",
+                "ligand_element_fallback_used",
+                "protein_element_count",
+                "ligand_element_count",
+            ):
+                out[key] = per_frame[0].get(key)
+        out.update(ligand_element_meta)
+        return out
 
     cutoff = float(contact_cutoff_A)
     d = np.linalg.norm(prot[:, None, None, :] - frames[None, :, :, :], axis=-1)  # P,F,L
@@ -2959,11 +3109,33 @@ def _score_frames(
     smiles = str(row.get("ligand_smiles", row.get("smiles", "")) or "")
     relief_mode = str(clash_relief_mode or "off").strip().lower()
     relief_enabled = relief_mode not in {"", "off", "none", "disabled", "false", "0"}
+    refine_element_meta: Dict[str, Any] = {}
+
+    def _capture_refine_element_meta(payload: Dict[str, Any], protein_meta: Dict[str, Any]) -> None:
+        if "element_model" not in payload:
+            return
+        for key in (
+            "element_model",
+            "element_fallback_used",
+            "protein_element_fallback_used",
+            "ligand_element_fallback_used",
+            "protein_element_count",
+            "ligand_element_count",
+            "ligand_element_source",
+            "ligand_element_projection_used",
+            "ligand_element_topology_valid",
+            "ligand_element_topology_atom_count",
+            "ligand_element_model_coord_count",
+        ):
+            if key in payload:
+                refine_element_meta[key] = payload.get(key)
+        refine_element_meta.update(protein_meta)
 
     def _score_one_frame(prot_xyz: np.ndarray, lig_xyz: np.ndarray) -> Dict[str, float]:
         nonlocal representative_ligand_xyz
         prot_arr = np.asarray(prot_xyz, dtype=np.float32)
         lig_arr = np.asarray(lig_xyz, dtype=np.float32)
+        protein_elements, protein_element_meta = _protein_elements_for_model_coords(row, prot_arr)
         scored_lig = lig_arr
         if relief_enabled:
             pre_ff = _frame_mmpbsa_proxy(
@@ -2974,7 +3146,9 @@ def _score_frames(
                 ligand_model=str(ligand_model),
                 hbond_onsps_weight=float(hbond_onsps_weight),
                 smiles=smiles,
+                protein_elements=protein_elements,
             )
+            _capture_refine_element_meta(pre_ff, protein_element_meta)
             scored_lig, repair_meta = _relieve_ligand_clashes(
                 protein_xyz=prot_arr,
                 ligand_xyz=lig_arr,
@@ -2998,7 +3172,9 @@ def _score_frames(
             ligand_model=str(ligand_model),
             hbond_onsps_weight=float(hbond_onsps_weight),
             smiles=smiles,
+            protein_elements=protein_elements,
         )
+        _capture_refine_element_meta(ff, protein_element_meta)
         if representative_ligand_xyz is None or (relief_enabled and clash_relief_applied and clash_relief_applied[-1]):
             representative_ligand_xyz = np.asarray(scored_lig, dtype=np.float32)
         return ff
@@ -3024,7 +3200,9 @@ def _score_frames(
                         ligand_model=str(ligand_model),
                         hbond_onsps_weight=float(hbond_onsps_weight),
                         smiles=smiles,
+                        protein_elements=_protein_elements_for_model_coords(row, prot)[0],
                     )
+                    _capture_refine_element_meta(pre_ff, _protein_elements_for_model_coords(row, prot)[1])
                     repaired_first, repair_meta = _relieve_ligand_clashes(
                         protein_xyz=prot,
                         ligand_xyz=first_lig,
@@ -3044,6 +3222,7 @@ def _score_frames(
                     clash_relief_applied.append(bool(repair_meta.get("applied", False)))
                     representative_ligand_xyz = np.asarray(repaired_first, dtype=np.float32)
                 if int(batch_frames.shape[0]) > 1 and (not relief_enabled or int(lig_frames.shape[0]) > 1):
+                    protein_elements, protein_element_meta = _protein_elements_for_model_coords(row, prot)
                     batch_ff = _frame_mmpbsa_proxy_batch(
                         protein_xyz=prot,
                         ligand_frames_xyz=batch_frames,
@@ -3052,7 +3231,9 @@ def _score_frames(
                         ligand_model=str(ligand_model),
                         hbond_onsps_weight=float(hbond_onsps_weight),
                         smiles=smiles,
+                        protein_elements=protein_elements,
                     )
+                    _capture_refine_element_meta(batch_ff, protein_element_meta)
                     batch_count = int(batch_ff["min_distance_A"].shape[0])
                     if batch_count > 0:
                         if relief_enabled and len(clash_relief_applied) == 1 and batch_count > 1:
@@ -3281,6 +3462,18 @@ def _score_frames(
         "ligand_h_donors": float(props.get("h_donors", 0.0)),
         "ligand_h_acceptors": float(props.get("h_acceptors", 0.0)),
         "ligand_model": str(ligand_model),
+        "refine_element_model": str(refine_element_meta.get("element_model", "")),
+        "refine_element_fallback_used": refine_element_meta.get("element_fallback_used"),
+        "refine_protein_element_fallback_used": refine_element_meta.get("protein_element_fallback_used"),
+        "refine_ligand_element_fallback_used": refine_element_meta.get("ligand_element_fallback_used"),
+        "refine_protein_element_count": refine_element_meta.get("protein_element_count"),
+        "refine_ligand_element_count": refine_element_meta.get("ligand_element_count"),
+        "refine_protein_element_source": refine_element_meta.get("protein_element_source"),
+        "refine_protein_element_projection_used": refine_element_meta.get("protein_element_projection_used"),
+        "refine_protein_element_sequence_mapped": refine_element_meta.get("protein_element_sequence_mapped"),
+        "refine_ligand_element_source": refine_element_meta.get("ligand_element_source"),
+        "refine_ligand_element_projection_used": refine_element_meta.get("ligand_element_projection_used"),
+        "refine_ligand_element_topology_valid": refine_element_meta.get("ligand_element_topology_valid"),
     }
     if str(ligand_model) == "4bead_onsps_hbond":
         rep_lig = (
@@ -4060,6 +4253,18 @@ def _process_queue_row(row: Dict[str, Any], cfg: Dict[str, Any]) -> Dict[str, An
         "ligand_h_donors": float(score.get("ligand_h_donors", 0.0)),
         "ligand_h_acceptors": float(score.get("ligand_h_acceptors", 0.0)),
         "ligand_model": str(score.get("ligand_model", str(cfg["ligand_model"]))),
+        "refine_element_model": score.get("refine_element_model"),
+        "refine_element_fallback_used": score.get("refine_element_fallback_used"),
+        "refine_protein_element_fallback_used": score.get("refine_protein_element_fallback_used"),
+        "refine_ligand_element_fallback_used": score.get("refine_ligand_element_fallback_used"),
+        "refine_protein_element_count": score.get("refine_protein_element_count"),
+        "refine_ligand_element_count": score.get("refine_ligand_element_count"),
+        "refine_protein_element_source": score.get("refine_protein_element_source"),
+        "refine_protein_element_projection_used": score.get("refine_protein_element_projection_used"),
+        "refine_protein_element_sequence_mapped": score.get("refine_protein_element_sequence_mapped"),
+        "refine_ligand_element_source": score.get("refine_ligand_element_source"),
+        "refine_ligand_element_projection_used": score.get("refine_ligand_element_projection_used"),
+        "refine_ligand_element_topology_valid": score.get("refine_ligand_element_topology_valid"),
         "onsps_site_count": score.get("onsps_site_count"),
         "onsps_min_distances": score.get("onsps_min_distances"),
         "onsps_angle_scores": score.get("onsps_angle_scores"),

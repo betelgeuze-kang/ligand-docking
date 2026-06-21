@@ -358,6 +358,7 @@ def _kpi_packet(
     ready: bool,
     runner_claim_metadata_signed: bool = True,
     force_residual_summary_signed: bool = True,
+    refine_element_summary_signed: bool = True,
     force_term_claim_metadata_ready: bool = True,
     force_term_claim_metadata_schema_ready: bool = True,
     force_term_result_contract_ready: bool = True,
@@ -686,6 +687,23 @@ def _kpi_packet(
                 "manifest_force_residual_policy_caps_ready": force_residual_summary_signed,
                 "manifest_force_residual_observed_caps_ready": force_residual_summary_signed,
                 "manifest_force_residual_contract_ready": force_residual_summary_signed,
+                "refine_element_summary_present": refine_element_summary_signed,
+                "manifest_refine_element_model": "typed_pairwise"
+                if refine_element_summary_signed
+                else "",
+                "manifest_refine_element_fallback_used": False
+                if refine_element_summary_signed
+                else True,
+                "manifest_refine_ligand_element_source": (
+                    "rdkit_atom_elements_projected_to_model_coords"
+                    if refine_element_summary_signed
+                    else ""
+                ),
+                "manifest_refine_protein_element_source": (
+                    "sequence_residue_element_proxy"
+                    if refine_element_summary_signed
+                    else ""
+                ),
             },
             "force_term_claim_metadata_ready": force_term_claim_metadata_ready,
             "force_term_claim_metadata_smoke": {
@@ -2629,6 +2647,37 @@ def test_ai_md_product_evidence_bundle_blocks_without_signed_force_residual_summ
     )
     assert any(
         error.startswith("kpi_manifest_force_residual_observed_caps_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_without_signed_refine_element_summary(tmp_path: Path) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True, refine_element_summary_signed=False)
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert summary["runner_claim_metadata_signed"] is True
+    assert summary["refine_element_summary_signed"] is False
+    assert summary["kpi_claim_metadata_gates_validated"] is False
+    assert {"code": "refine_element_summary_not_signed"} in payload["blockers"]
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_manifest_refine_element_summary_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_manifest_refine_element_model_invalid:")
         for error in summary["bundle_validation_errors"]
     )
 

@@ -34,6 +34,18 @@ def softcore_lj_at_lambda(
     return lj_energy(r, float(sigma_a), scaled_eps)
 
 
+def _normalized_elements(
+    elements: list[str] | None,
+    atom_count: int,
+    *,
+    default: str = "C",
+) -> tuple[list[str], bool]:
+    count = int(atom_count)
+    if elements is None or len(elements) != count:
+        return [str(default)] * count, True
+    return [str(element or default) for element in elements], False
+
+
 def _ligand_protein_cross_energy(
     protein_xyz: np.ndarray,
     ligand_xyz: np.ndarray,
@@ -41,16 +53,41 @@ def _ligand_protein_cross_energy(
     lam: float,
     protein_element: str = "C",
     ligand_element: str = "C",
+    protein_elements: list[str] | None = None,
+    ligand_elements: list[str] | None = None,
 ) -> float:
     prot = np.asarray(protein_xyz, dtype=np.float64)
     lig = np.asarray(ligand_xyz, dtype=np.float64)
     if prot.size == 0 or lig.size == 0:
         return 0.0
     d = np.linalg.norm(prot[:, None, :] - lig[None, :, :], axis=-1)
-    ps, pe = vdw_params_for_element(protein_element)
-    ls, le = vdw_params_for_element(ligand_element)
-    sigma, epsilon = mixing_sigma_epsilon(ps, pe, ls, le)
-    return float(np.sum(softcore_lj_at_lambda(d, sigma, epsilon, lam=float(lam))))
+    prot_elements, _ = _normalized_elements(protein_elements, int(prot.shape[0]), default=protein_element)
+    lig_elements, _ = _normalized_elements(ligand_elements, int(lig.shape[0]), default=ligand_element)
+    total = 0.0
+    for i, prot_element in enumerate(prot_elements):
+        ps, pe = vdw_params_for_element(prot_element)
+        for j, lig_element in enumerate(lig_elements):
+            ls, le = vdw_params_for_element(lig_element)
+            sigma, epsilon = mixing_sigma_epsilon(ps, pe, ls, le)
+            total += float(softcore_lj_at_lambda(np.asarray([d[i, j]], dtype=np.float64), sigma, epsilon, lam=float(lam))[0])
+    return float(total)
+
+
+def _element_metadata(
+    protein_element_fallback_used: bool,
+    ligand_element_fallback_used: bool,
+    protein_element_count: int,
+    ligand_element_count: int,
+) -> dict[str, Any]:
+    fallback_used = bool(protein_element_fallback_used or ligand_element_fallback_used)
+    return {
+        "element_model": "single_element_proxy" if fallback_used else "typed_pairwise",
+        "element_fallback_used": fallback_used,
+        "protein_element_fallback_used": bool(protein_element_fallback_used),
+        "ligand_element_fallback_used": bool(ligand_element_fallback_used),
+        "protein_element_count": int(protein_element_count),
+        "ligand_element_count": int(ligand_element_count),
+    }
 
 
 def fep_lambda_energies(
@@ -58,15 +95,28 @@ def fep_lambda_energies(
     ligand_xyz: np.ndarray,
     *,
     n_windows: int = 11,
+    protein_elements: list[str] | None = None,
+    ligand_elements: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Energy at each lambda for protein–ligand annihilation path."""
+    protein_atom_count = int(np.asarray(protein_xyz).shape[0])
+    ligand_atom_count = int(np.asarray(ligand_xyz).shape[0])
+    protein_element_list, protein_fallback = _normalized_elements(protein_elements, protein_atom_count)
+    ligand_element_list, ligand_fallback = _normalized_elements(ligand_elements, ligand_atom_count)
+    element_meta = _element_metadata(protein_fallback, ligand_fallback, protein_atom_count, ligand_atom_count)
     schedule = lambda_schedule(n_windows)
-    lig_internal = allatom_energy(ligand_xyz, ["C"] * int(np.asarray(ligand_xyz).shape[0]))
+    lig_internal = allatom_energy(ligand_xyz, ligand_element_list)
     rows: list[dict[str, Any]] = []
     for lam in schedule:
-        cross = _ligand_protein_cross_energy(protein_xyz, ligand_xyz, lam=float(lam))
+        cross = _ligand_protein_cross_energy(
+            protein_xyz,
+            ligand_xyz,
+            lam=float(lam),
+            protein_elements=protein_element_list,
+            ligand_elements=ligand_element_list,
+        )
         total = float(lig_internal["e_total"]) + cross
-        rows.append({"lambda": float(lam), "e_cross": cross, "e_total": total})
+        rows.append({"lambda": float(lam), "e_cross": cross, "e_total": total, **element_meta})
     return rows
 
 
@@ -91,9 +141,17 @@ def estimate_binding_fep(
     *,
     n_windows: int = 11,
     n_bootstrap: int = 8,
+    protein_elements: list[str] | None = None,
+    ligand_elements: list[str] | None = None,
 ) -> dict[str, Any]:
     """Estimate alchemical decoupling free energy (positive = penalty to remove ligand)."""
-    windows = fep_lambda_energies(protein_xyz, ligand_xyz, n_windows=n_windows)
+    windows = fep_lambda_energies(
+        protein_xyz,
+        ligand_xyz,
+        n_windows=n_windows,
+        protein_elements=protein_elements,
+        ligand_elements=ligand_elements,
+    )
     base = float(windows[0]["e_total"])
     delta_by_window = [np.asarray([row["e_total"] - base], dtype=np.float64) for row in windows]
     dg = bar_free_energy(delta_by_window)
@@ -110,5 +168,11 @@ def estimate_binding_fep(
         "delta_g_fep_kcal_mol": dg,
         "delta_g_fep_std_kcal_mol": float(np.std(bootstrap)) if bootstrap else 0.0,
         "windows": windows,
+        "element_model": str(windows[0].get("element_model", "single_element_proxy")) if windows else "single_element_proxy",
+        "element_fallback_used": bool(windows[0].get("element_fallback_used", True)) if windows else True,
+        "protein_element_fallback_used": bool(windows[0].get("protein_element_fallback_used", True)) if windows else True,
+        "ligand_element_fallback_used": bool(windows[0].get("ligand_element_fallback_used", True)) if windows else True,
+        "protein_element_count": int(windows[0].get("protein_element_count", 0)) if windows else 0,
+        "ligand_element_count": int(windows[0].get("ligand_element_count", 0)) if windows else 0,
         "claim_boundary": FEP_CLAIM_BOUNDARY,
     }

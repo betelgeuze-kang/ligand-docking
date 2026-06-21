@@ -20,7 +20,7 @@ from core.structure_metrics import (
     parse_pdb_atoms_with_coords,
     tm_score_proxy,
 )
-from tools.run_ligand_backmapping_scoring import _frame_mmpbsa_proxy
+from tools.run_ligand_backmapping_scoring import _frame_mmpbsa_proxy, _score_frames
 
 
 def _sample_protein() -> np.ndarray:
@@ -62,6 +62,31 @@ def test_mm_gbsa_binding_energy_refine_tier():
     assert np.isfinite(out["deltaG_mm_gbsa_kcal_mol"])
 
 
+def test_mm_gbsa_binding_energy_accepts_typed_elements_without_opening_claim():
+    protein = _sample_protein()
+    ligand = _sample_ligand()
+    carbon_only = mm_gbsa_binding_energy(
+        protein,
+        ligand,
+        protein_elements=["C"] * int(protein.shape[0]),
+        ligand_elements=["C"] * int(ligand.shape[0]),
+    )
+    typed = mm_gbsa_binding_energy(
+        protein,
+        ligand,
+        protein_elements=["N", "C", "O", "S", "C"],
+        ligand_elements=["N", "O"],
+    )
+
+    assert typed["element_model"] == "typed_pairwise"
+    assert typed["element_fallback_used"] is False
+    assert typed["protein_element_count"] == int(protein.shape[0])
+    assert typed["ligand_element_count"] == int(ligand.shape[0])
+    assert typed["raw_e_vdw"] != carbon_only["raw_e_vdw"]
+    assert typed["claim_safe"] is False
+    assert typed["blocked_reason"] == "internal_gb_sa_proxy_uncalibrated"
+
+
 def test_mm_gbsa_contact_normalized_score_prefers_contact_rich_pose():
     protein = _sample_protein()
     near_ligand = _sample_ligand()
@@ -81,9 +106,38 @@ def test_backmapping_refine_gb_sa_model():
         props={"polar_norm": 0.4},
         contact_cutoff_A=8.0,
         ligand_model=REFINE_LIGAND_MODEL,
+        smiles="NCO",
+        protein_elements=["N", "C", "O", "S", "C"],
     )
     assert out["ligand_model"] == REFINE_LIGAND_MODEL
     assert "deltaG_mm_gbsa_kcal_mol" in out
+    assert out["deltaG_mmpbsa_proxy_kcal_mol"] == out["deltaG_mm_gbsa_kcal_mol"]
+    assert out["element_model"] == "typed_pairwise"
+    assert out["ligand_element_source"] == "rdkit_atom_elements_projected_to_model_coords"
+
+
+def test_backmapping_refine_score_frames_records_topology_element_sources():
+    protein = _sample_protein()
+    ligand = _sample_ligand()
+
+    score = _score_frames(
+        frame_paths=[],
+        trajectory_npz_path="",
+        protein_default=protein,
+        ligand_default=ligand,
+        contact_cutoff_A=8.0,
+        row={"ligand_smiles": "NCO", "protein_sequence": "DCKST"},
+        min_frames=1,
+        ligand_model=REFINE_LIGAND_MODEL,
+        hbond_onsps_weight=1.0,
+    )
+
+    assert score["refine_element_model"] == "typed_pairwise"
+    assert score["refine_element_fallback_used"] is False
+    assert score["refine_protein_element_source"] == "sequence_residue_element_proxy"
+    assert score["refine_protein_element_sequence_mapped"] is True
+    assert score["refine_ligand_element_source"] == "rdkit_atom_elements_projected_to_model_coords"
+    assert score["refine_ligand_element_topology_valid"] is True
 
 
 def test_pocket_detection_geometric_and_ligand_guided():

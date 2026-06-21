@@ -79,6 +79,51 @@ def test_allatom_explicit_fep_stack():
     assert "fep_holdout_calibration_not_validated" in calibration["blockers"]
 
 
+def test_refine_stack_and_fep_use_typed_elements_when_provided():
+    protein = _prot()
+    ligand = _lig()
+    protein_elements = ["N", "C", "O", "S"]
+    ligand_elements = ["N", "O"]
+
+    fep = estimate_binding_fep(
+        protein,
+        ligand,
+        n_windows=5,
+        n_bootstrap=2,
+        protein_elements=protein_elements,
+        ligand_elements=ligand_elements,
+    )
+    carbon_fep = estimate_binding_fep(
+        protein,
+        ligand,
+        n_windows=5,
+        n_bootstrap=2,
+        protein_elements=["C"] * int(protein.shape[0]),
+        ligand_elements=["C"] * int(ligand.shape[0]),
+    )
+    assert fep["status"] == "fep_estimate_ready"
+    assert fep["element_model"] == "typed_pairwise"
+    assert fep["element_fallback_used"] is False
+    assert fep["windows"][0]["e_cross"] != carbon_fep["windows"][0]["e_cross"]
+
+    stack = compute_full_refine_stack(
+        protein,
+        ligand,
+        include_explicit=True,
+        include_fep=True,
+        protein_elements=protein_elements,
+        ligand_elements=ligand_elements,
+    )
+    assert stack["element_model"] == "typed_pairwise"
+    assert stack["element_fallback_used"] is False
+    assert stack["gb_sa"]["element_model"] == "typed_pairwise"
+    assert stack["fep"]["element_model"] == "typed_pairwise"
+    assert stack["allatom"]["atom_types"][0].startswith("N_")
+    assert stack["allatom"]["atom_types"][-1].startswith("O_")
+    assert stack["claim_safe"] is False
+    assert stack["calibration_status"] == "internal_solvent_fep_proxy_uncalibrated"
+
+
 def test_structure_quality_interface_proxy_is_reported_but_claim_blocked():
     atoms = [
         {"record": "ATOM", "atom_name": "CA", "resname": "ALA", "chain_id": "A", "residue_id": "1", "element": "C", "xyz": np.asarray([0.0, 0.0, 0.0])},

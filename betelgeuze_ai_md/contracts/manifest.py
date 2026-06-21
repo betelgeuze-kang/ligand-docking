@@ -37,6 +37,7 @@ class EvidenceBundle:
     viewer_assets: list[str]
     wetlab_handoff_table: list[dict[str, Any]]
     verdict: Verdict
+    result_manifest: dict[str, Any] = field(default_factory=dict)
     bundle_schema_version: str = "ai_md_evidence_bundle_v1"
     claim_boundary: str = ""
 
@@ -47,6 +48,8 @@ class EvidenceBundle:
             object.__setattr__(self, "ai_residual_report", AIResidualReport(**self.ai_residual_report))
         if isinstance(self.verdict, dict):
             object.__setattr__(self, "verdict", Verdict(**self.verdict))
+        if not isinstance(self.result_manifest, dict):
+            object.__setattr__(self, "result_manifest", {})
         if isinstance(self.interaction_report, dict):
             interactions = [
                 item if isinstance(item, dict) else to_plain(item)

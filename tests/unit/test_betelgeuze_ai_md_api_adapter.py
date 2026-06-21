@@ -221,6 +221,12 @@ def test_maybe_write_runner_native_evidence_bundle_writes_valid_review_only_bund
     result_payload = {
         "model_hash": "m" * 64,
         "ranked_shortlist": [{"ligand_id": "lig1", "rank": 1, "score": -7.2}],
+        "score": {
+            "refine_element_model": "typed_pairwise",
+            "refine_element_fallback_used": False,
+            "refine_protein_element_source": "sequence_residue_element_proxy",
+            "refine_ligand_element_source": "rdkit_atom_elements_projected_to_model_coords",
+        },
     }
     result_file.write_text(json.dumps(result_payload, sort_keys=True) + "\n", encoding="utf-8")
     bundle_file = tmp_path / "evidence_bundle.json"
@@ -245,6 +251,14 @@ def test_maybe_write_runner_native_evidence_bundle_writes_valid_review_only_bund
     assert bundle.source_hashes["input_hash"]
     assert bundle.source_hashes["model_hash"] == "m" * 64
     assert bundle.source_hashes["executable_hash"]
+    assert (
+        payload["result_manifest"]["refine_element_summary"]["refine_element_model"]
+        == "typed_pairwise"
+    )
+    assert (
+        payload["result_manifest"]["refine_element_summary"]["refine_ligand_element_source"]
+        == "rdkit_atom_elements_projected_to_model_coords"
+    )
 
 
 def test_maybe_write_runner_native_evidence_bundle_requires_result_file(tmp_path: Path) -> None:

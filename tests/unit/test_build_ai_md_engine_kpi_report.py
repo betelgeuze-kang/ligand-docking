@@ -451,6 +451,11 @@ def _write_product_evidence_bundle(
                 "manifest_force_residual_policy_caps_ready": True,
                 "manifest_force_residual_observed_caps_ready": True,
                 "manifest_force_residual_contract_ready": True,
+                "refine_element_summary_present": True,
+                "manifest_refine_element_model": "typed_pairwise",
+                "manifest_refine_element_fallback_used": False,
+                "manifest_refine_ligand_element_source": "rdkit_atom_elements_projected_to_model_coords",
+                "manifest_refine_protein_element_source": "sequence_residue_element_proxy",
             },
             "force_term_claim_metadata_ready": True,
             "force_term_claim_metadata_smoke": {
@@ -2121,6 +2126,14 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert runner_manifest_smoke["manifest_force_residual_policy_caps_ready"] is True
     assert runner_manifest_smoke["manifest_force_residual_observed_caps_ready"] is True
     assert runner_manifest_smoke["manifest_force_residual_contract_ready"] is True
+    assert runner_manifest_smoke["refine_element_summary_present"] is True
+    assert runner_manifest_smoke["manifest_refine_element_model"] == "typed_pairwise"
+    assert runner_manifest_smoke["manifest_refine_element_fallback_used"] is False
+    assert (
+        runner_manifest_smoke["manifest_refine_ligand_element_source"]
+        == "rdkit_atom_elements_projected_to_model_coords"
+    )
+    assert runner_manifest_smoke["manifest_refine_protein_element_source"] == "sequence_residue_element_proxy"
     assert report["product_kpi"]["bundle_validation_pass"] is True
     assert report["product_kpi"]["bundle_validation_error_count"] == 0
     assert report["product_kpi"]["source_artifacts_fresh"] is True

@@ -90,7 +90,39 @@ def _extract_result_metadata(path_like: str | Path) -> dict[str, dict[str, Any]]
         force_residual = payload.get("force_residual_shortlist")
     if isinstance(force_residual, dict):
         out["force_residual_summary"] = dict(force_residual)
+    refine_element = _extract_refine_element_summary(payload)
+    if refine_element:
+        out["refine_element_summary"] = refine_element
     return out
+
+
+def _extract_refine_element_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    sources: list[dict[str, Any]] = []
+    if isinstance(payload, dict):
+        sources.append(payload)
+        score = payload.get("score")
+        if isinstance(score, dict):
+            sources.append(score)
+
+    keys = (
+        "refine_element_model",
+        "refine_element_fallback_used",
+        "refine_protein_element_fallback_used",
+        "refine_ligand_element_fallback_used",
+        "refine_protein_element_count",
+        "refine_ligand_element_count",
+        "refine_protein_element_source",
+        "refine_protein_element_projection_used",
+        "refine_protein_element_sequence_mapped",
+        "refine_ligand_element_source",
+        "refine_ligand_element_projection_used",
+        "refine_ligand_element_topology_valid",
+    )
+    for source in sources:
+        if not any(key in source for key in keys):
+            continue
+        return {key: source.get(key) for key in keys if key in source}
+    return {}
 
 
 def build_result_manifest(
@@ -109,6 +141,7 @@ def build_result_manifest(
     result_claim_metadata: dict[str, Any] | None = None,
     hbond_evidence_summary: dict[str, Any] | None = None,
     force_residual_summary: dict[str, Any] | None = None,
+    refine_element_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     resolved_fidelity = str(topology_fidelity or fidelity or TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE)
     resolved_scope = str(claim_scope or CLAIM_SCOPE_PRODUCT_LIGAND)
@@ -149,6 +182,8 @@ def build_result_manifest(
         payload["hbond_evidence_summary"] = dict(hbond_evidence_summary)
     if isinstance(force_residual_summary, dict):
         payload["force_residual_summary"] = dict(force_residual_summary)
+    if isinstance(refine_element_summary, dict):
+        payload["refine_element_summary"] = dict(refine_element_summary)
     validate_manifest_claim_fields(payload)
     signature = hmac.new(signing_key.encode("utf-8"), _canonical_json(payload), hashlib.sha256).hexdigest()
     payload["signature"] = signature
@@ -181,6 +216,7 @@ def write_result_manifest(
     result_claim_metadata: dict[str, Any] | None = None,
     hbond_evidence_summary: dict[str, Any] | None = None,
     force_residual_summary: dict[str, Any] | None = None,
+    refine_element_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     path = Path(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -211,6 +247,11 @@ def write_result_manifest(
             force_residual_summary
             if force_residual_summary is not None
             else extracted_metadata.get("force_residual_summary")
+        ),
+        refine_element_summary=(
+            refine_element_summary
+            if refine_element_summary is not None
+            else extracted_metadata.get("refine_element_summary")
         ),
     )
     path.write_text(json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")

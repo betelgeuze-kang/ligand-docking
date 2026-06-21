@@ -2398,6 +2398,17 @@ def _signed_runner_claim_metadata_kpi() -> dict[str, Any]:
         "observed_caps_ready": True,
         "contract_ready": True,
     }
+    refine_element_summary = {
+        "refine_element_model": "typed_pairwise",
+        "refine_element_fallback_used": False,
+        "refine_protein_element_fallback_used": False,
+        "refine_ligand_element_fallback_used": False,
+        "refine_protein_element_count": 3,
+        "refine_ligand_element_count": 2,
+        "refine_protein_element_source": "sequence_residue_element_proxy",
+        "refine_ligand_element_source": "rdkit_atom_elements_projected_to_model_coords",
+        "refine_ligand_element_topology_valid": True,
+    }
     manifest = build_result_manifest(
         job_id="kpi_runner_claim_metadata_smoke",
         request={"target_name": "kpi", "runner_profile_id": "backmapping_scoring.production"},
@@ -2408,6 +2419,7 @@ def _signed_runner_claim_metadata_kpi() -> dict[str, Any]:
         result_claim_metadata=runner_claim_metadata,
         hbond_evidence_summary=hbond_summary,
         force_residual_summary=force_residual_summary,
+        refine_element_summary=refine_element_summary,
     )
     signed = verify_result_manifest(manifest, signing_key="kpi-test-key")
     ready = bool(
@@ -2415,6 +2427,7 @@ def _signed_runner_claim_metadata_kpi() -> dict[str, Any]:
         and manifest.get("result_claim_metadata") == runner_claim_metadata
         and manifest.get("hbond_evidence_summary") == hbond_summary
         and manifest.get("force_residual_summary") == force_residual_summary
+        and manifest.get("refine_element_summary") == refine_element_summary
         and manifest["result_claim_metadata"].get("claim_safe") is False
         and str(manifest["result_claim_metadata"].get("blocked_reason") or "")
         and manifest["result_claim_metadata"].get("hbond_evidence_schema_version") == "hbond_evidence_v1"
@@ -2433,6 +2446,7 @@ def _signed_runner_claim_metadata_kpi() -> dict[str, Any]:
         "result_claim_metadata_present": isinstance(manifest.get("result_claim_metadata"), dict),
         "hbond_evidence_summary_present": isinstance(manifest.get("hbond_evidence_summary"), dict),
         "force_residual_summary_present": isinstance(manifest.get("force_residual_summary"), dict),
+        "refine_element_summary_present": isinstance(manifest.get("refine_element_summary"), dict),
         "manifest_claim_safe": manifest.get("result_claim_metadata", {}).get("claim_safe"),
         "manifest_blocked_reason": str(
             manifest.get("result_claim_metadata", {}).get("blocked_reason") or ""
@@ -2468,6 +2482,18 @@ def _signed_runner_claim_metadata_kpi() -> dict[str, Any]:
         ),
         "manifest_force_residual_contract_ready": manifest.get("force_residual_summary", {}).get(
             "contract_ready"
+        ),
+        "manifest_refine_element_model": manifest.get("refine_element_summary", {}).get(
+            "refine_element_model"
+        ),
+        "manifest_refine_element_fallback_used": manifest.get("refine_element_summary", {}).get(
+            "refine_element_fallback_used"
+        ),
+        "manifest_refine_ligand_element_source": manifest.get("refine_element_summary", {}).get(
+            "refine_ligand_element_source"
+        ),
+        "manifest_refine_protein_element_source": manifest.get("refine_element_summary", {}).get(
+            "refine_protein_element_source"
         ),
     }
 

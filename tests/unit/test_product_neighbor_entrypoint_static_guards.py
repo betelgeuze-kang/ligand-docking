@@ -73,3 +73,18 @@ def test_product_kpi_force_term_smokes_do_not_use_implicit_dense_fallback() -> N
             violations.append(f"{path}:{call.lineno}:{receiver}.energy_forces")
 
     assert violations == []
+
+
+def test_product_runner_refine_calls_require_typed_elements() -> None:
+    path = "betelgeuze_engine/product/runners/backmapping_scoring.py"
+
+    violations: list[str] = []
+    for call in _calls_in(path):
+        func = call.func
+        if not isinstance(func, ast.Name) or func.id != "mm_gbsa_binding_energy":
+            continue
+        keyword_names = _keyword_names(call)
+        if "protein_elements" not in keyword_names or "ligand_elements" not in keyword_names:
+            violations.append(f"{path}:{call.lineno}:mm_gbsa_binding_energy")
+
+    assert violations == []

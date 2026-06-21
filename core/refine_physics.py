@@ -121,24 +121,55 @@ def cross_vdw_energy(
     *,
     protein_element: str = "C",
     ligand_element: str = "C",
+    protein_elements: list[str] | None = None,
+    ligand_elements: list[str] | None = None,
     contact_cutoff_a: float = 10.0,
 ) -> dict[str, Any]:
     """Cross LJ interaction energy between protein and ligand beads."""
     d = pairwise_min_distances(protein_xyz, ligand_xyz)
     if d.size == 0:
         return {"e_vdw": 0.0, "contact_count": 0, "clash_count": 0, "min_distance_a": 999.0}
-    ps, pe = vdw_params_for_element(protein_element)
-    ls, le = vdw_params_for_element(ligand_element)
-    sigma, epsilon = mixing_sigma_epsilon(ps, pe, ls, le)
     mask = d < float(contact_cutoff_a)
-    e = lj_energy(d[mask], sigma, epsilon)
+    prot_count, lig_count = d.shape
+    protein_element_list = (
+        list(protein_elements)
+        if protein_elements is not None and len(protein_elements) == int(prot_count)
+        else [str(protein_element)] * int(prot_count)
+    )
+    ligand_element_list = (
+        list(ligand_elements)
+        if ligand_elements is not None and len(ligand_elements) == int(lig_count)
+        else [str(ligand_element)] * int(lig_count)
+    )
+    protein_fallback = bool(protein_elements is None or len(protein_elements) != int(prot_count))
+    ligand_fallback = bool(ligand_elements is None or len(ligand_elements) != int(lig_count))
+    fallback_used = bool(protein_fallback or ligand_fallback)
+    e_total = 0.0
+    sigma_values: list[float] = []
+    epsilon_values: list[float] = []
+    for i in range(int(prot_count)):
+        ps, pe = vdw_params_for_element(protein_element_list[i])
+        for j in range(int(lig_count)):
+            if not bool(mask[i, j]):
+                continue
+            ls, le = vdw_params_for_element(ligand_element_list[j])
+            sigma, epsilon = mixing_sigma_epsilon(ps, pe, ls, le)
+            e_total += float(lj_energy(np.asarray([d[i, j]], dtype=np.float64), sigma, epsilon)[0])
+            sigma_values.append(float(sigma))
+            epsilon_values.append(float(epsilon))
     min_d = float(np.min(d))
     clash = int(np.sum(d < 2.0))
     return {
-        "e_vdw": float(np.sum(e)) if e.size else 0.0,
+        "e_vdw": float(e_total),
         "contact_count": int(np.sum(mask)),
         "clash_count": clash,
         "min_distance_a": min_d,
-        "sigma_a": sigma,
-        "epsilon_kcal": epsilon,
+        "sigma_a": float(np.mean(sigma_values)) if sigma_values else 0.0,
+        "epsilon_kcal": float(np.mean(epsilon_values)) if epsilon_values else 0.0,
+        "element_model": "single_element_proxy" if fallback_used else "typed_pairwise",
+        "element_fallback_used": fallback_used,
+        "protein_element_count": int(prot_count),
+        "ligand_element_count": int(lig_count),
+        "protein_element_fallback_used": protein_fallback,
+        "ligand_element_fallback_used": ligand_fallback,
     }

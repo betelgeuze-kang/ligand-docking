@@ -283,6 +283,7 @@ def build_api_evidence_bundle(
         viewer_assets=[str(item) for item in _as_list(result_payload.get("viewer_assets") or summary.get("viewer_assets"))],
         wetlab_handoff_table=_as_list(result_payload.get("wetlab_handoff_table") or summary.get("wetlab_handoff_table")),
         verdict=verdict,
+        result_manifest=result_manifest,
         claim_boundary=verdict.claim_boundary,
     )
 

@@ -806,6 +806,16 @@ def _validate_kpi_claim_metadata_gates(
         errors.append(f"kpi_manifest_force_residual_observed_caps_not_ready:{artifact_id}")
     if manifest_smoke.get("manifest_force_residual_contract_ready") is not True:
         errors.append(f"kpi_manifest_force_residual_contract_not_ready:{artifact_id}")
+    if manifest_smoke.get("refine_element_summary_present") is not True:
+        errors.append(f"kpi_manifest_refine_element_summary_missing:{artifact_id}")
+    if manifest_smoke.get("manifest_refine_element_model") != "typed_pairwise":
+        errors.append(f"kpi_manifest_refine_element_model_invalid:{artifact_id}")
+    if manifest_smoke.get("manifest_refine_element_fallback_used") is not False:
+        errors.append(f"kpi_manifest_refine_element_fallback_invalid:{artifact_id}")
+    if not str(manifest_smoke.get("manifest_refine_ligand_element_source") or ""):
+        errors.append(f"kpi_manifest_refine_ligand_element_source_missing:{artifact_id}")
+    if not str(manifest_smoke.get("manifest_refine_protein_element_source") or ""):
+        errors.append(f"kpi_manifest_refine_protein_element_source_missing:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "force_term_claim_metadata_smoke", "ready"):
         errors.append(f"kpi_force_term_claim_metadata_smoke_not_ready:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "guarded_force_term_plugin_smoke", "ready"):
@@ -2658,6 +2668,13 @@ def build_payload(
         and runner_manifest_smoke.get("manifest_force_residual_observed_caps_ready") is True
         and runner_manifest_smoke.get("manifest_force_residual_contract_ready") is True
     )
+    refine_element_summary_signed = bool(
+        runner_manifest_smoke.get("refine_element_summary_present") is True
+        and runner_manifest_smoke.get("manifest_refine_element_model") == "typed_pairwise"
+        and runner_manifest_smoke.get("manifest_refine_element_fallback_used") is False
+        and bool(str(runner_manifest_smoke.get("manifest_refine_ligand_element_source") or ""))
+        and bool(str(runner_manifest_smoke.get("manifest_refine_protein_element_source") or ""))
+    )
     force_term_claim_metadata_ready = bool(product_kpi.get("force_term_claim_metadata_ready") is True)
     force_term_result_contract_ready = bool(product_kpi.get("force_term_result_contract_ready") is True)
     forcefield_energy_forces_contract_ready = bool(
@@ -2838,6 +2855,7 @@ def build_payload(
         and clean_container_smoke_ready
         and runner_claim_metadata_signed
         and force_residual_summary_signed
+        and refine_element_summary_signed
         and force_term_claim_metadata_ready
         and force_term_result_contract_ready
         and forcefield_energy_forces_contract_ready
@@ -2974,6 +2992,7 @@ def build_payload(
         "kpi_failed_gate_ids": kpi_failed_gate_ids,
         "runner_claim_metadata_signed": runner_claim_metadata_signed,
         "force_residual_summary_signed": force_residual_summary_signed,
+        "refine_element_summary_signed": refine_element_summary_signed,
         "force_term_claim_metadata_ready": force_term_claim_metadata_ready,
         "force_term_result_contract_ready": force_term_result_contract_ready,
         "forcefield_energy_forces_contract_ready": forcefield_energy_forces_contract_ready,
@@ -3182,6 +3201,8 @@ def build_payload(
         blockers.append({"code": "runner_claim_metadata_not_signed"})
     if bundle_ready and not force_residual_summary_signed:
         blockers.append({"code": "force_residual_summary_not_signed"})
+    if bundle_ready and not refine_element_summary_signed:
+        blockers.append({"code": "refine_element_summary_not_signed"})
     if bundle_ready and not force_term_claim_metadata_ready:
         blockers.append({"code": "force_term_claim_metadata_not_ready"})
     if bundle_ready and not force_term_result_contract_ready:
