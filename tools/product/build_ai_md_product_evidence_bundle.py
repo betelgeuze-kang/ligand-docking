@@ -826,22 +826,30 @@ def _validate_kpi_claim_metadata_gates(
         errors.append(f"kpi_forcefield_unsafe_base_claim_not_blocked:{artifact_id}")
     if not force_term_contract_rows:
         errors.append(f"kpi_force_term_result_contract_rows_missing:{artifact_id}")
-    elif not all(
-        isinstance(row, dict)
-        and row.get("ready") is True
-        and row.get("energy_shape") == [1]
-        and isinstance(row.get("forces_shape"), list)
-        and row.get("energy_finite") is True
-        and row.get("forces_finite") is True
-        and row.get("diagnostics_keys_present") is True
-        and row.get("claim_metadata_keys_present") is True
-        and str(row.get("term") or "") == str(row.get("diagnostics_term") or "")
-        and str(row.get("term") or "") == str(row.get("claim_force_term_name") or "")
-        and str(row.get("diagnostics_status") or "") == "pass"
-        and str(row.get("claim_force_term_status") or "") == "pass"
-        for row in force_term_contract_rows
-    ):
-        errors.append(f"kpi_force_term_result_contract_rows_invalid:{artifact_id}")
+    else:
+        contract_terms = {
+            str(row.get("term") or "")
+            for row in force_term_contract_rows
+            if isinstance(row, dict) and str(row.get("term") or "")
+        }
+        if contract_terms != expected_force_terms or len(force_term_contract_rows) != len(expected_force_terms):
+            errors.append(f"kpi_force_term_result_contract_terms_invalid:{artifact_id}")
+        if not all(
+            isinstance(row, dict)
+            and row.get("ready") is True
+            and row.get("energy_shape") == [1]
+            and isinstance(row.get("forces_shape"), list)
+            and row.get("energy_finite") is True
+            and row.get("forces_finite") is True
+            and row.get("diagnostics_keys_present") is True
+            and row.get("claim_metadata_keys_present") is True
+            and str(row.get("term") or "") == str(row.get("diagnostics_term") or "")
+            and str(row.get("term") or "") == str(row.get("claim_force_term_name") or "")
+            and str(row.get("diagnostics_status") or "") == "pass"
+            and str(row.get("claim_force_term_status") or "") == "pass"
+            for row in force_term_contract_rows
+        ):
+            errors.append(f"kpi_force_term_result_contract_rows_invalid:{artifact_id}")
     if _int_value(force_term_smoke.get("forcefield_claim_safe_count")) < 1:
         errors.append(f"kpi_force_term_claim_safe_rows_missing:{artifact_id}")
     if _int_value(force_term_smoke.get("forcefield_blocked_count")) != 0:

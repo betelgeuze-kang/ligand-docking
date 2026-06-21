@@ -2948,6 +2948,33 @@ def test_ai_md_product_evidence_bundle_blocks_force_term_contract_detail_mismatc
     )
 
 
+def test_ai_md_product_evidence_bundle_blocks_force_term_contract_term_set_mismatch(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    rows = kpi_packet["product_kpi"]["force_term_claim_metadata_smoke"]["term_result_contract_rows"]
+    rows[2] = dict(rows[1])
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_force_term_result_contract_terms_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
 def test_ai_md_product_evidence_bundle_blocks_guarded_plugin_detail_mismatch(
     tmp_path: Path,
 ) -> None:
