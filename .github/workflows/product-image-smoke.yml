@@ -25,6 +25,7 @@ on:
       - tests/unit/test_betelgeuze_ai_md_*.py
       - third_party/rocm_device_libs_pkg/**
       - deploy/verify_product_image.sh
+      - .github/workflows/product-image-smoke.yml
   pull_request:
     paths:
       - Dockerfile.product
@@ -46,6 +47,7 @@ on:
       - tests/unit/test_betelgeuze_ai_md_*.py
       - third_party/rocm_device_libs_pkg/**
       - deploy/verify_product_image.sh
+      - .github/workflows/product-image-smoke.yml
   workflow_dispatch:
     inputs:
       verify_mode:
