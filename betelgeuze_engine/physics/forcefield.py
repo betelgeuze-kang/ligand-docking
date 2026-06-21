@@ -238,7 +238,7 @@ class ProductForceField:
         pairs: NeighborPairs | None = None,
         *,
         claim_metadata: dict[str, Any] | None = None,
-        product_neighbor_required: bool = False,
+        product_neighbor_required: bool = True,
     ) -> EnergyForces:
         if state.coords.ndim != 3:
             raise ValueError("state.coords must have shape [B, N, 3]")

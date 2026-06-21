@@ -55,3 +55,21 @@ def test_product_kpi_forcefield_entrypoints_require_provider_neighbors() -> None
                 violations.append(f"{path}:{call.lineno}:{func.attr}")
 
     assert violations == []
+
+
+def test_product_kpi_force_term_smokes_do_not_use_implicit_dense_fallback() -> None:
+    dense_fallback_receivers = {"term", "hbond", "hydrophobic", "force_term"}
+    path = "tools/product/build_ai_md_engine_kpi_report.py"
+
+    violations: list[str] = []
+    for call in _calls_in(path):
+        func = call.func
+        if not isinstance(func, ast.Attribute) or func.attr != "energy_forces":
+            continue
+        receiver = _receiver_name(call)
+        if receiver not in dense_fallback_receivers:
+            continue
+        if len(call.args) < 2 and "pairs" not in _keyword_names(call):
+            violations.append(f"{path}:{call.lineno}:{receiver}.energy_forces")
+
+    assert violations == []

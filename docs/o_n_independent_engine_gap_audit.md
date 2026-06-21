@@ -6,7 +6,7 @@ Scope: current `betelgeuze-kang/ligand-docking` product runtime path for restric
 
 ## Executive Verdict
 
-The P0 neighbor path is materially improved but not complete. The product KPI/evidence smoke path now requires provided cell-list neighbors for the forcefield and core compatibility bridge, product-required contracts reject reference `full_neighbor_pairs`/NxN diagnostics, product-adjacent diagnostics use `CellListNeighborProvider` instead of dense `torch.cdist`, and the runtime scaling gate records fixed-density coordinates, `nxn_allocation_observed`, memory-per-atom, and rebuild telemetry. Local and ROCm clean-container fixed-density release scaling for `N={1000,2000,4000,8000}` are ready with no blockers. Real ROCm clean-container `RustHipNeighborProvider` parity for `N={216,1000}` is ready with no blockers after normalizing Rust/HIP adapter distances to the product PBC minimum-image contract. The remaining release blockers are direct reference-mode dense fallbacks and keeping the self-hosted workflow receipt current after the uncommitted source changes are pushed.
+The P0 neighbor path is materially improved but not complete. The product KPI/evidence smoke path now requires provided cell-list neighbors for the forcefield and core compatibility bridge, product-required contracts reject reference `full_neighbor_pairs`/NxN diagnostics, product-adjacent diagnostics use `CellListNeighborProvider` instead of dense `torch.cdist`, and the runtime scaling gate records fixed-density coordinates, `nxn_allocation_observed`, memory-per-atom, and rebuild telemetry. Local and ROCm clean-container fixed-density release scaling for `N={1000,2000,4000,8000}` are ready with no blockers. Real ROCm clean-container `RustHipNeighborProvider` parity for `N={216,1000}` is ready with no blockers after normalizing Rust/HIP adapter distances to the product PBC minimum-image contract. Direct `ProductForceField.energy_forces()` now defaults to product-neighbor-required mode, and KPI force-term smokes for dense-fallback terms pass provider pairs. The remaining release blockers are direct term-level reference fallbacks for small reference use and keeping the self-hosted workflow receipt current after the uncommitted source changes are pushed.
 
 Current status: `blocked_p0_o_n_neighbor_path`.
 
@@ -17,7 +17,7 @@ Current status: `blocked_p0_o_n_neighbor_path`.
   - `neighbor_pairs_from_rust_hip_tensors()` and `RustHipNeighborProvider`, which adapt Rust/HIP compact tensors and fail closed without CUDA/backend support.
   - Rust/HIP adapter distances are recomputed from the adapter's PBC minimum-image displacement tensor, so `NeighborPairs.dist` matches the product compact-neighbor contract even when backend raw distance tensors are not already PBC-normalized.
   - `full_neighbor_pairs()` remains, marked by diagnostics as `reference_only` with `nxn_allocation_observed=true`.
-- `betelgeuze_engine/physics/forcefield.py` supports `product_neighbor_required=True`; when enabled it rejects missing neighbors, overflow, `nxn_allocation_observed=true`, and reference neighbor sources.
+- `betelgeuze_engine/physics/forcefield.py` defaults `product_neighbor_required=True`; it rejects missing neighbors, overflow, `nxn_allocation_observed=true`, and reference neighbor sources unless a small reference test explicitly opts out with `product_neighbor_required=False`.
 - `betelgeuze_engine/contracts/result.py` now rejects product-required aggregate results with `full_neighbor_pairs`, `reference_full_pairs`, overflow, or `nxn_allocation_observed=true`, while keeping small reference validation legal outside product-required mode.
 - `core/forcefield.py::ForceField.product_energy_forces()` now defaults `product_neighbor_required=True`, and the KPI/transition shim callers pass explicit `provided_cell_list` pairs.
 - `monitor/physics_guard.py`, `tools/product/collect_feature_matrix.py`, and `tools/product/report_sparse_checkpoints.py` now use `CellListNeighborProvider` for overlap/contact/clash diagnostics instead of dense `torch.cdist`; provider overflow is fail-closed.
@@ -30,8 +30,9 @@ Current status: `blocked_p0_o_n_neighbor_path`.
   - `max_memory_peak_mb_per_atom`
   - `total_rebuild_count`
   - row-level provider status, overflow, memory-per-atom, and rebuild cost.
-- `tools/product/build_ai_md_engine_kpi_report.py` and `tools/product/build_ai_md_product_evidence_bundle.py` now gate runtime neighbor-cap evidence on `provided_cell_list`, provider-ready rows, no overflow, no NxN allocation, bounded memory-per-atom, and rebuild evidence. KPI aggregate forcefield smokes also pass provider pairs with `product_neighbor_required=True`.
-- `tests/unit/test_product_neighbor_entrypoint_static_guards.py` statically guards product KPI/runtime aggregate forcefield calls so future regressions must include explicit `pairs=` and `product_neighbor_required=True`.
+- `tools/product/build_ai_md_engine_kpi_report.py` and `tools/product/build_ai_md_product_evidence_bundle.py` now gate runtime neighbor-cap evidence on `provided_cell_list`, provider-ready rows, no overflow, no NxN allocation, bounded memory-per-atom, and rebuild evidence. KPI aggregate forcefield smokes pass provider pairs with `product_neighbor_required=True`, and KPI force-term smokes for `legacy_lj`, `directional_hbond`, `hydrophobic_contact`, and `screened_electrostatics` pass provider pairs instead of relying on term-level dense fallback.
+- `betelgeuze_engine/validation/force_checks.py` still supports small reference validation by default, but now accepts an optional provider pair builder so KPI finite-difference, invariance, and drift checks can run without implicit dense reference allocation.
+- `tests/unit/test_product_neighbor_entrypoint_static_guards.py` statically guards product KPI/runtime aggregate forcefield calls so future regressions must include explicit `pairs=` and `product_neighbor_required=True`; it also blocks KPI force-term smoke calls for dense-fallback term aliases when no pairs are supplied.
 - `tools/product/run_runtime_neighbor_release_scaling.py` provides the self-hosted release-scale CLI. Its default atom counts are `1000,2000,4000,8000`; it writes compact JSON/MD/SVG evidence and exits nonzero if the configured release atom counts are not covered.
 - `deploy/verify_product_image.sh` runs the release-scale scaling CLI inside the ROCm product container during `PRODUCT_IMAGE_VERIFY_MODE=rocm-runtime`, and the product image receipt now requires `runtime_neighbor_release_scaling_ready=true` for `product_image_smoke_ready`.
 - `tools/product/run_rust_hip_neighbor_provider_parity.py` compares CPU `CellListNeighborProvider` and real `RustHipNeighborProvider` compact pair sets, PBC-normalized distances, and LJ energy/force results. `deploy/verify_product_image.sh` now runs it inside the ROCm product container and requires `rust_hip_neighbor_provider_parity_ready=true` for `product_image_smoke_ready`.
@@ -47,18 +48,22 @@ Current status: `blocked_p0_o_n_neighbor_path`.
   - `python3 -m pytest -q tests/unit/test_betelgeuze_engine_scaffold.py tests/unit/test_rust_hip_neighbor_provider_parity.py -x --tb=short` passed with `50 passed`.
   - ROCm clean-container Rust/HIP provider parity ran inside `deploy/verify_product_image.sh` from the rebuilt product image. Receipt summary: status `rust_hip_neighbor_provider_parity_ready`, blockers `[]`, atom counts `{216,1000}`, CPU/Rust-HIP pair counts `{1296,6000}`, max distance absolute delta `0.0`, max energy absolute error `4.7683716e-07`, max energy relative error `1.4503823e-07`, max force absolute error `0.0`, `nxn_allocation_observed=False`, all rows ready.
   - `python3 -m pytest -q tests/unit/test_runtime_neighbor_release_scaling.py` passed and verifies ready evidence for configured counts plus fail-closed `release_atom_counts_not_covered` behavior.
+  - `python3 -m pytest -q tests/unit/test_betelgeuze_engine_scaffold.py tests/unit/test_build_ai_md_engine_kpi_report.py tests/unit/test_build_ai_md_product_evidence_bundle.py tests/unit/test_product_neighbor_entrypoint_static_guards.py tests/unit/test_runtime_neighbor_release_scaling.py tests/unit/test_rust_hip_neighbor_provider_parity.py -x --tb=short` passed with `167 passed` after the default product-neighbor-required flip.
+  - `python3 -m pytest -q tests/unit/test_product_neighbor_entrypoint_static_guards.py tests/unit/test_betelgeuze_engine_scaffold.py tests/unit/test_build_ai_md_engine_kpi_report.py -x --tb=short` passed with `56 passed` after adding the KPI force-term dense-fallback static guard.
 
 ## Remaining P0 Blockers
 
-1. Dense fallback is still reachable in direct reference mode.
-   - `betelgeuze_engine/physics/forcefield.py` still defaults `product_neighbor_required=False`.
-   - If `pairs is None` and product mode is not enabled, it calls `full_neighbor_pairs()`.
-   - The core compatibility shim now defaults to product-required mode, but direct `ProductForceField.energy_forces()` reference mode still exists for small tests.
-   - Required state: product runners/API paths must always pass provider pairs and set `product_neighbor_required=True`; dense fallback must remain reference-only and unavailable to claim/evidence paths.
+1. Direct forcefield dense fallback now requires explicit reference opt-out.
+   - `betelgeuze_engine/physics/forcefield.py` defaults `product_neighbor_required=True`.
+   - If `pairs is None`, default calls fail closed before `full_neighbor_pairs()` can run.
+   - Explicit `product_neighbor_required=False` still permits `full_neighbor_pairs()` for small reference tests only.
+   - Required state: keep product runners/API paths on provider pairs and prevent new claim/evidence paths from opting out.
 
 2. Term-level fallback can still allocate dense reference pairs.
    - `legacy_lj`, `directional_hbond`, `hydrophobic_contact`, and `screened_electrostatics` call `full_neighbor_pairs()` when invoked without `pairs`.
-   - Their math is compact-safe when pairs are supplied through `neighbor_displacements()` and `neighbor_upper_mask()`, but product entry points must not call terms without pairs.
+   - Their math is compact-safe when pairs are supplied through `neighbor_displacements()` and `neighbor_upper_mask()`.
+   - KPI force-term smokes and validations now pass provider pairs, and static guards block known KPI dense-fallback aliases.
+   - Required state: keep this fallback limited to small direct term reference tests and validation defaults; add broader guards if new product term entry points appear.
 
 3. Fixed-density release-scale benchmark has local and ROCm clean-container evidence.
    - The runtime benchmark supports fixed-density coordinates and explicit `release_atom_counts`.
@@ -94,8 +99,8 @@ Current status: `blocked_p0_o_n_neighbor_path`.
 | Area | Current state | Required state |
 | --- | --- | --- |
 | Neighbor provider | Python cell-list and Rust/HIP adapter exist; current product KPI/runtime aggregate calls have static guards | Product runners/API always require provider pairs |
-| Dense fallback | Direct reference mode still exists; core shim defaults product-required | Reference-only mode unavailable to claim/evidence/API paths |
-| Force terms | Compact-safe with pairs, dense fallback without pairs | Product path never invokes terms without provider pairs |
+| Dense fallback | Product forcefield defaults product-required; explicit reference opt-out remains for small tests | Prevent claim/evidence/API paths from opting out |
+| Force terms | Compact-safe with pairs; KPI dense-fallback term smokes now pass provider pairs; direct term fallback remains for small tests | Product path never invokes terms without provider pairs |
 | Scaling gate | Fixed-density fast smoke plus local and ROCm clean-container `1k,2k,4k,8k` release evidence ready | Keep required self-hosted workflow receipt current after push |
 | EvidenceBundle | Runtime neighbor-cap gate rejects NxN rows and product image receipt requires release scaling readiness | Keep product-image receipt attached and public benchmark blockers honest |
 | Product-adjacent tools | Contact/clash/overlap diagnostics use `CellListNeighborProvider` and fail closed on overflow | Keep claim boundary closed until release-scale evidence covers these paths |
@@ -105,5 +110,5 @@ Current status: `blocked_p0_o_n_neighbor_path`.
 ## Next Implementation Slices
 
 1. Keep the ROCm product-image release-scaling and Rust/HIP provider-parity receipts current in GitHub Actions after commit/push.
-2. Close direct reference-mode dense fallback exposure from product claim/evidence/API paths while preserving small reference tests.
+2. Add broader static/contract coverage for any future product term entry points that could bypass provider pairs.
 3. Move from P0 runtime locking into the first P1 topology/manifest blocker once the self-hosted receipts are green on the pushed source.

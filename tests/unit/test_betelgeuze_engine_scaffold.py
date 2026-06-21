@@ -479,6 +479,38 @@ def test_product_forcefield_rejects_reference_pairs_when_product_neighbors_requi
         forcefield.energy_forces(state, pairs=pairs, product_neighbor_required=True)
 
 
+def test_product_forcefield_defaults_to_requiring_product_neighbors() -> None:
+    coords = torch.tensor([[[0.0, 0.0, 0.0], [2.2, 0.0, 0.0]]], dtype=torch.float64)
+    state = EngineState(coords=coords, atom_types=torch.tensor([0, 0]))
+    forcefield = ProductForceField(terms=[LegacyLJTerm(sigma=1.0, epsilon=0.1)])
+
+    with pytest.raises(ValueError, match="product neighbor provider required"):
+        forcefield.energy_forces(state)
+
+
+def test_product_forcefield_reference_fallback_requires_explicit_opt_out() -> None:
+    coords = torch.tensor([[[0.0, 0.0, 0.0], [2.2, 0.0, 0.0]]], dtype=torch.float64)
+    state = EngineState(
+        coords=coords,
+        atom_types=torch.tensor([0, 0]),
+        metadata={
+            "topology_fidelity": "sequence_mapped",
+            "ligand_topology_valid": True,
+            "hbond_evidence_status": "pass",
+            "claim_safe": True,
+            "blocked_reason": "",
+        },
+    )
+    forcefield = ProductForceField(terms=[LegacyLJTerm(sigma=1.0, epsilon=0.1)])
+
+    result = forcefield.energy_forces(state, product_neighbor_required=False)
+
+    assert result.diagnostics["neighbor_pairs_provided"] is False
+    assert result.diagnostics["neighbor_source"] == "full_neighbor_pairs"
+    assert result.diagnostics["neighbor_diagnostics"]["reference_only"] is True
+    assert result.diagnostics["neighbor_diagnostics"]["nxn_allocation_observed"] is True
+
+
 def test_legacy_lj_compact_neighbor_path_matches_dense_reference() -> None:
     coords = torch.tensor(
         [[[0.0, 0.0, 0.0], [2.2, 0.0, 0.0], [0.0, 2.5, 0.0], [6.0, 0.0, 0.0]]],
@@ -583,9 +615,13 @@ def test_product_forcefield_plugin_registry_aggregates_terms_and_claim_metadata(
             "hydrophobic_mask": torch.tensor([False, True, True]),
         },
     )
+    pairs = CellListNeighborProvider(
+        NeighborProviderConfig(cutoff=6.1, max_neighbor_count=4, max_atoms_per_cell=8)
+    ).build(coords)
 
     result = forcefield.energy_forces(
         state,
+        pairs=pairs,
         claim_metadata={
             "topology_fidelity": "sequence_mapped",
             "ligand_topology_valid": True,
@@ -599,8 +635,9 @@ def test_product_forcefield_plugin_registry_aggregates_terms_and_claim_metadata(
     assert set(result.terms) == {"legacy_lj", "directional_hbond", "hydrophobic_contact"}
     assert result.diagnostics["term_count"] == 3
     assert result.diagnostics["neighbor_pair_count"] == 6
-    assert result.diagnostics["neighbor_pairs_provided"] is False
-    assert result.diagnostics["neighbor_source"] == "full_neighbor_pairs"
+    assert result.diagnostics["neighbor_pairs_provided"] is True
+    assert result.diagnostics["neighbor_source"] == "provided_cell_list"
+    assert result.diagnostics["neighbor_product_required"] is True
     assert result.claim_metadata["claim_safe"] is True
     assert result.claim_metadata["topology_fidelity"] == "sequence_mapped"
     assert result.claim_metadata["ligand_topology_valid"] is True
@@ -1567,9 +1604,13 @@ def test_product_forcefield_can_execute_guarded_screened_electrostatics_plugin()
             "charge_model_valid": True,
         },
     )
+    pairs = CellListNeighborProvider(
+        NeighborProviderConfig(cutoff=5.0, max_neighbor_count=2, max_atoms_per_cell=8)
+    ).build(coords)
 
     result = forcefield.energy_forces(
         state,
+        pairs=pairs,
         claim_metadata={
             "topology_fidelity": "sequence_mapped",
             "ligand_topology_valid": True,
@@ -1621,9 +1662,13 @@ def test_product_forcefield_plugin_registry_blocks_missing_metadata_or_bad_term_
         atom_types=torch.tensor([0, 1]),
         metadata={},
     )
+    pairs = CellListNeighborProvider(
+        NeighborProviderConfig(cutoff=3.0, max_neighbor_count=2, max_atoms_per_cell=8)
+    ).build(state.coords)
 
     result = forcefield.energy_forces(
         state,
+        pairs=pairs,
         claim_metadata={
             "topology_fidelity": "sequence_mapped",
             "ligand_topology_valid": True,
@@ -1754,17 +1799,40 @@ def test_product_forcefield_enforces_term_result_contract_before_claim_merge() -
         "claim_safe": True,
         "blocked_reason": "",
     }
+    pairs = CellListNeighborProvider(
+        NeighborProviderConfig(cutoff=3.0, max_neighbor_count=4, max_atoms_per_cell=8)
+    ).build(state.coords)
 
     with pytest.raises(ValueError, match="energy with wrong shape"):
-        ProductForceField([BadEnergyShapeTerm()]).energy_forces(state, claim_metadata=claim_metadata)
+        ProductForceField([BadEnergyShapeTerm()]).energy_forces(
+            state,
+            pairs=pairs,
+            claim_metadata=claim_metadata,
+        )
     with pytest.raises(ValueError, match="nonfinite forces"):
-        ProductForceField([NonfiniteForceTerm()]).energy_forces(state, claim_metadata=claim_metadata)
+        ProductForceField([NonfiniteForceTerm()]).energy_forces(
+            state,
+            pairs=pairs,
+            claim_metadata=claim_metadata,
+        )
     with pytest.raises(ValueError, match="mismatched claim metadata term"):
-        ProductForceField([MismatchedMetadataTerm()]).energy_forces(state, claim_metadata=claim_metadata)
+        ProductForceField([MismatchedMetadataTerm()]).energy_forces(
+            state,
+            pairs=pairs,
+            claim_metadata=claim_metadata,
+        )
     with pytest.raises(ValueError, match="missing claim metadata keys: blocked_reason"):
-        ProductForceField([MissingBaseClaimKeyTerm()]).energy_forces(state, claim_metadata=claim_metadata)
+        ProductForceField([MissingBaseClaimKeyTerm()]).energy_forces(
+            state,
+            pairs=pairs,
+            claim_metadata=claim_metadata,
+        )
     with pytest.raises(ValueError, match="missing bounded correction keys"):
-        ProductForceField([UnboundedCorrectionTerm()]).energy_forces(state, claim_metadata=claim_metadata)
+        ProductForceField([UnboundedCorrectionTerm()]).energy_forces(
+            state,
+            pairs=pairs,
+            claim_metadata=claim_metadata,
+        )
 
 
 def test_term_result_contract_exposes_bounded_correction_validator() -> None:

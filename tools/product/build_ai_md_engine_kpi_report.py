@@ -689,8 +689,14 @@ def _physics_kpis() -> dict[str, Any]:
     term = LegacyLJTerm(sigma=1.0, epsilon=0.5)
     hbond = DirectionalHBondTerm()
     hydrophobic = HydrophobicContactTerm()
-    hbond_result = hbond.energy_forces(state)
-    hydrophobic_result = hydrophobic.energy_forces(state)
+    term_pair_config = NeighborProviderConfig(cutoff=6.1, max_neighbor_count=8, max_atoms_per_cell=8)
+
+    def _term_pairs(candidate_state: EngineState):
+        return CellListNeighborProvider(term_pair_config).build(candidate_state.coords)
+
+    pairs = _term_pairs(state)
+    hbond_result = hbond.energy_forces(state, pairs)
+    hydrophobic_result = hydrophobic.energy_forces(state, pairs)
     force_term_validation_rows = []
     force_term_validation_thresholds = {
         "finite_difference_force_error_max": 1e-4,
@@ -708,11 +714,32 @@ def _physics_kpis() -> dict[str, Any]:
     )
     shift = torch.tensor([[[7.0, -2.0, 1.0]]], dtype=torch.float64)
     for force_term in (term, hbond, hydrophobic):
-        term_result = force_term.energy_forces(state)
-        fd_error = finite_difference_force_error(force_term, state, atom_index=1, coord_index=0)
-        translation_error = translation_invariance_error(force_term, state, shift)
-        rotation_error = rotation_equivariance_error(force_term, state, rotation)
-        drift_pct = energy_drift_smoke_pct(force_term, state, step_size=1e-4)
+        term_result = force_term.energy_forces(state, pairs)
+        fd_error = finite_difference_force_error(
+            force_term,
+            state,
+            atom_index=1,
+            coord_index=0,
+            pair_builder=_term_pairs,
+        )
+        translation_error = translation_invariance_error(
+            force_term,
+            state,
+            shift,
+            pair_builder=_term_pairs,
+        )
+        rotation_error = rotation_equivariance_error(
+            force_term,
+            state,
+            rotation,
+            pair_builder=_term_pairs,
+        )
+        drift_pct = energy_drift_smoke_pct(
+            force_term,
+            state,
+            step_size=1e-4,
+            pair_builder=_term_pairs,
+        )
         ready = bool(
             fd_error < force_term_validation_thresholds["finite_difference_force_error_max"]
             and translation_error < force_term_validation_thresholds["translation_invariance_error_max"]
@@ -1370,7 +1397,7 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
     for term in default_force_term_registry().create(force_term_plugins):
         term_name = str(getattr(term, "name", term.__class__.__name__))
         try:
-            term_result = term.energy_forces(state)
+            term_result = term.energy_forces(state, pairs)
             energy_is_tensor = isinstance(term_result.energy, torch.Tensor)
             forces_is_tensor = isinstance(term_result.forces, torch.Tensor)
             diagnostics_is_dict = isinstance(term_result.diagnostics, dict)
@@ -1609,8 +1636,20 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
     }
     state = EngineState(coords=coords, atom_types=atom_types, metadata=charge_metadata)
     term = registry.create(["screened_electrostatics"])[0]
-    result = term.energy_forces(state)
-    fd_error = finite_difference_force_error(term, state, atom_index=0, coord_index=0)
+    screened_pair_config = NeighborProviderConfig(cutoff=6.1, max_neighbor_count=4, max_atoms_per_cell=8)
+
+    def _screened_pairs(candidate_state: EngineState):
+        return CellListNeighborProvider(screened_pair_config).build(candidate_state.coords)
+
+    screened_pairs = _screened_pairs(state)
+    result = term.energy_forces(state, screened_pairs)
+    fd_error = finite_difference_force_error(
+        term,
+        state,
+        atom_index=0,
+        coord_index=0,
+        pair_builder=_screened_pairs,
+    )
     pocket_coords = torch.tensor(
         [[[0.0, 0.0, 0.0], [2.0, 0.0, 0.0], [4.0, 0.0, 0.0]]],
         dtype=torch.float64,
@@ -1718,26 +1757,31 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
         atom_index=0,
         coord_index=0,
     )
+    missing_state = EngineState(
+        coords=coords,
+        atom_types=atom_types,
+        metadata={"claim_safe": True, "blocked_reason": ""},
+    )
     missing = term.energy_forces(
-        EngineState(
+        missing_state,
+        _screened_pairs(missing_state),
+    )
+    unvalidated_state = EngineState(
             coords=coords,
             atom_types=atom_types,
-            metadata={"claim_safe": True, "blocked_reason": ""},
-        )
+        metadata={
+            "partial_charges": torch.tensor([1.0, -1.0, 0.5], dtype=torch.float64),
+            "claim_safe": True,
+            "blocked_reason": "",
+        },
     )
     unvalidated = term.energy_forces(
-        EngineState(
-            coords=coords,
-            atom_types=atom_types,
-            metadata={
-                "partial_charges": torch.tensor([1.0, -1.0, 0.5], dtype=torch.float64),
-                "claim_safe": True,
-                "blocked_reason": "",
-            },
-        )
+        unvalidated_state,
+        _screened_pairs(unvalidated_state),
     )
     cap_exceeded = ScreenedElectrostaticsTerm(scale=4.0, debye_kappa=0.2, max_force_norm=1e-12).energy_forces(
-        state
+        state,
+        screened_pairs,
     )
     pocket_missing = pocket_term.energy_forces(
         EngineState(
