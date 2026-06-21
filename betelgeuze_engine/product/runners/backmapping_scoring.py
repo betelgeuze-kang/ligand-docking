@@ -64,6 +64,15 @@ _GPCR_BASIC_AMINE_PATTERNS = (
 )
 
 
+def run_tier_beta_vertical_slice_compat(payload: dict[str, Any]) -> Any:
+    """Compatibility hook: delegate restricted Tier-beta jobs to canonical service."""
+    from betelgeuze_engine.product.runners.tier_beta_runner_compat import (
+        run_tier_beta_vertical_slice_compat as _run_tier_beta_vertical_slice_compat,
+    )
+
+    return _run_tier_beta_vertical_slice_compat(payload)
+
+
 class _AuxMLP(nn.Module):
     def __init__(self, in_dim: int, hidden_dim: int = 64):
         super().__init__()

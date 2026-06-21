@@ -64,12 +64,14 @@ test -x scripts/ai-worker-opencode.sh
 echo "==> python syntax smoke"
 python3 -m py_compile \
   scripts/verify_quality_gate.py \
-  scripts/check_independent_product_readiness.py
+  scripts/check_independent_product_readiness.py \
+  scripts/verify_product_capability_matrix.py
 
 if [[ "$MODE" == "product" || "$MODE" == "full" ]]; then
   echo "==> product quality smoke"
   run_packet_check "quality_gate" scripts/verify_quality_gate.py
   run_packet_check "independent_product_readiness" scripts/check_independent_product_readiness.py
+  run_packet_check "product_capability_matrix" scripts/verify_product_capability_matrix.py
 fi
 
 if [[ "$MODE" == "full" ]]; then

@@ -14,7 +14,22 @@ from api.cameo import router as cameo_router
 from api.casp17 import router as casp17_router
 from api.cleanup import router as cleanup_router
 from api.goal import router as goal_router
+from api.product_ai_surface import router as product_ai_surface_router
+from api.product_architecture import router as product_architecture_router
+from api.product_scope import router as product_scope_router
 from api.product import router as product_router
+from api.product_benchmark import router as product_benchmark_router
+from api.product_cameo_runner import router as product_cameo_runner_router
+from api.product_capabilities import router as product_capabilities_router
+from api.product_commercial_readiness import router as product_commercial_readiness_router
+from api.product_evidence_goal import router as product_evidence_goal_router
+from api.product_docking import router as product_docking_router
+from api.product_license import router as product_license_router
+from api.product_operational import router as product_operational_router
+from api.product_production_ai import router as product_production_ai_router
+from api.product_release_ops import router as product_release_ops_router
+from api.product_service_contracts import router as product_service_contracts_router
+from api.product_tier_beta import router as product_tier_beta_router
 from api.result_manifest import infer_result_artifact_metadata
 from api.models import SimulationRequest, SimulationResponse, StatusResponse
 from api.simulation_scope import (
@@ -34,6 +49,7 @@ from api.worker import (
     run_job_once,
     write_status_file,
 )
+from betelgeuze_product.tier_beta_vertical_slice import is_tier_beta_vertical_slice_request
 
 app = FastAPI(title=settings.app_name)
 app.add_middleware(ProductSecurityMiddleware)
@@ -41,7 +57,22 @@ app.include_router(cameo_router)
 app.include_router(casp17_router)
 app.include_router(cleanup_router)
 app.include_router(goal_router)
+app.include_router(product_architecture_router)
+app.include_router(product_capabilities_router)
+app.include_router(product_docking_router)
+app.include_router(product_service_contracts_router)
+app.include_router(product_operational_router)
+app.include_router(product_release_ops_router)
+app.include_router(product_license_router)
+app.include_router(product_benchmark_router)
+app.include_router(product_cameo_runner_router)
+app.include_router(product_ai_surface_router)
+app.include_router(product_production_ai_router)
+app.include_router(product_scope_router)
+app.include_router(product_commercial_readiness_router)
+app.include_router(product_evidence_goal_router)
 app.include_router(product_router)
+app.include_router(product_tier_beta_router)
 
 job_store: SQLiteJobStore | None = None
 _job_store_path: str | None = None
@@ -116,6 +147,7 @@ async def submit_simulation(request: SimulationRequest, background_tasks: Backgr
             worker_id=f"api-inline-{job_id}",
             runner=run_simulation_async,
             lease_seconds=settings.api_worker_lease_seconds,
+            retry_on_failure=not is_tier_beta_vertical_slice_request(request_data),
         )
 
     return SimulationResponse(

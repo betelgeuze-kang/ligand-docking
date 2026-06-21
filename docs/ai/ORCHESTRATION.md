@@ -16,7 +16,7 @@ There is no repository-local autonomous runner. Do not add local goal runners or
 
 - Codex: native goal tracking, short task specs, risk boundaries, targeted review, and final acceptance.
 - Cursor: primary scoped implementation worker for code/test edits, local repair loops, IDE-attached exploration, focused tests, and concise summary.
-- OpenCode: broad or large-context exploration, large mechanical passes, long-log/docs review, focused tests, and concise summary.
+- OpenCode-named wrapper: compatibility entry point for broad or large-context slices; currently routes to Cursor Composer 2.5 instead of invoking OpenCode.
 - `scripts/ai-verify.sh`: local smoke verification for orchestration and optional project gates.
 - Human owner: push, merge, deployment, publication, CASP submission, production mutation, billing, and final accountability.
 
@@ -51,7 +51,9 @@ Delegate:
 - long logs/docs where the worker can summarize
 - implementation slices where the worker can run focused tests and return a compact result
 
-Use Cursor first for scoped implementation slices and repeated local repair loops. Use OpenCode first when the slice is mainly broad search, long-context review, or large mechanical rewriting.
+Use Cursor first for scoped implementation slices and repeated local repair loops. OpenCode-named broad search, long-context review, and large mechanical rewriting slices currently run through Cursor Composer 2.5 via `scripts/ai-worker-opencode.sh`.
+
+The routed Cursor model defaults to `composer-2.5`. Override with `OPENCODE_ROUTED_CURSOR_MODEL=<cursor-model>` only when the human owner wants a different Cursor model for OpenCode-named assignments.
 
 ## Short Task Spec
 

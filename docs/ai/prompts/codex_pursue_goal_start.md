@@ -15,7 +15,7 @@ Operating model:
 3. Run `./scripts/ai-preflight.sh`.
 4. Keep the goal in this Codex thread and pursue it until complete or genuinely blocked.
 5. Codex owns risk boundaries, short task specs, targeted code review, and final acceptance.
-6. Use Cursor/OpenCode workers when delegation should save context: scoped implementation, broad exploration, large mechanical edits, repeated test repair, or multi-file refactors. Prefer Cursor for scoped code/test implementation and repair loops; prefer OpenCode for broad search, long-context review, and large mechanical passes.
+6. Use Cursor/OpenCode-named workers when delegation should save context: scoped implementation, broad exploration, large mechanical edits, repeated test repair, or multi-file refactors. Prefer Cursor for scoped code/test implementation and repair loops. OpenCode-named assignments currently route to Cursor Composer 2.5 for broad search, long-context review, and large mechanical passes.
 7. Do not delegate small work: simple docs, tiny tests, obvious single-file fixes, or expected changes under roughly 100-200 LOC.
 8. For Cursor delegation, create a prompt under `docs/ai/dispatch/` from `docs/ai/prompts/cursor_worker_slice.md`, then run:
 
@@ -23,11 +23,13 @@ Operating model:
    ./scripts/ai-worker-cursor.sh docs/ai/dispatch/<task-id>.md
    ```
 
-9. For OpenCode delegation, create a prompt under `docs/ai/dispatch/` from `docs/ai/prompts/opencode_worker_slice.md`, then run:
+9. For OpenCode-named delegation, create a prompt under `docs/ai/dispatch/` from `docs/ai/prompts/opencode_worker_slice.md`, then run:
 
    ```bash
    ./scripts/ai-worker-opencode.sh docs/ai/dispatch/<task-id>.md
    ```
+
+   This wrapper currently runs the assignment with Cursor `composer-2.5`, not OpenCode.
 
 10. Worker prompts should be short: goal, scope, likely files/search targets, verification, and stop conditions.
 11. After worker output, read the worker summary first. Open full logs or large diffs only when tests, risk, or blockers require it.

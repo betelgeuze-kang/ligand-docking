@@ -23,8 +23,36 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     pytest.importorskip("fastapi")
     main = importlib.import_module("api.main")
     product = importlib.import_module("api.product")
+    product_architecture = importlib.import_module("api.product_architecture")
+    product_benchmark = importlib.import_module("api.product_benchmark")
+    product_capabilities = importlib.import_module("api.product_capabilities")
+    product_docking = importlib.import_module("api.product_docking")
+    product_service_contracts = importlib.import_module("api.product_service_contracts")
+    product_operational = importlib.import_module("api.product_operational")
+    product_release_ops = importlib.import_module("api.product_release_ops")
+    product_ai_surface = importlib.import_module("api.product_ai_surface")
+    product_cameo_runner = importlib.import_module("api.product_cameo_runner")
+    product_license = importlib.import_module("api.product_license")
+    product_production_ai = importlib.import_module("api.product_production_ai")
+    product_scope = importlib.import_module("api.product_scope")
+    product_commercial_readiness = importlib.import_module("api.product_commercial_readiness")
+    product_evidence_goal = importlib.import_module("api.product_evidence_goal")
 
     paths = {route.path for route in main.app.routes}
+    architecture_router_paths = {route.path for route in product_architecture.router.routes}
+    benchmark_router_paths = {route.path for route in product_benchmark.router.routes}
+    capability_router_paths = {route.path for route in product_capabilities.router.routes}
+    docking_router_paths = {route.path for route in product_docking.router.routes}
+    service_contract_router_paths = {route.path for route in product_service_contracts.router.routes}
+    operational_router_paths = {route.path for route in product_operational.router.routes}
+    release_ops_router_paths = {route.path for route in product_release_ops.router.routes}
+    ai_surface_router_paths = {route.path for route in product_ai_surface.router.routes}
+    cameo_runner_router_paths = {route.path for route in product_cameo_runner.router.routes}
+    license_router_paths = {route.path for route in product_license.router.routes}
+    production_ai_router_paths = {route.path for route in product_production_ai.router.routes}
+    scope_router_paths = {route.path for route in product_scope.router.routes}
+    commercial_readiness_router_paths = {route.path for route in product_commercial_readiness.router.routes}
+    evidence_goal_router_paths = {route.path for route in product_evidence_goal.router.routes}
     assert "/product/capabilities" in paths
     assert "/product/architecture" in paths
     assert "/product/architecture-validation" in paths
@@ -82,6 +110,161 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "/product/docking/jobs/{job_id}/history" in paths
     assert "/product/docking/jobs/{job_id}/cancel" in paths
     assert "/product/docking/jobs/{job_id}/retry" in paths
+    assert "/product/tier-beta/docking/jobs" in paths
+    assert "/product/architecture" in architecture_router_paths
+    assert "/product/architecture-validation" in architecture_router_paths
+    assert "/product/capabilities" in capability_router_paths
+    assert "/product/docking/jobs" in docking_router_paths
+    assert "/product/structure/analyze" in docking_router_paths
+    assert "/product/service-boundary" in service_contract_router_paths
+    assert "/product/api-contract" in service_contract_router_paths
+    assert "/product/operational-quality" in operational_router_paths
+    assert "/product/security-deployment-contract" in operational_router_paths
+    assert "/product/operations" in release_ops_router_paths
+    assert "/product/commercial-independence" in release_ops_router_paths
+    assert "/product/release-readiness" in release_ops_router_paths
+    assert "/product/job-orchestration-contract" in release_ops_router_paths
+    assert "/product/external-metrics" in benchmark_router_paths
+    assert "/product/public-benchmark" in benchmark_router_paths
+    assert "/product/trajectory-sla-contract" in benchmark_router_paths
+    assert "/product/rollout-execution-smoke-receipt" in benchmark_router_paths
+    assert "/product/ai-decision-graph" in ai_surface_router_paths
+    assert "/product/pose-sampling-readiness" in ai_surface_router_paths
+    assert "/product/ai-report-ux" in ai_surface_router_paths
+    assert "/product/residual-model-registry" in ai_surface_router_paths
+    assert "/product/cameo-live-validation" in cameo_runner_router_paths
+    assert "/product/cameo-official-result-fetch-preflight" in cameo_runner_router_paths
+    assert "/product/api-runner-profile-promotion-operator-receipt" in cameo_runner_router_paths
+    assert "/product/api-runner-profile-promotion-operator-staging-apply" in cameo_runner_router_paths
+    assert "/product/license-decision" in license_router_paths
+    assert "/product/license-options" in license_router_paths
+    assert "/product/license-file-work-order" in license_router_paths
+    assert "/product/self-hosted-license-distribution-audit" in license_router_paths
+    assert "/product/production-ai-checkpoint-readiness" in production_ai_router_paths
+    assert "/product/production-ai-gpu-worker-dispatch-manifest" in production_ai_router_paths
+    assert "/product/production-ai-gpu-worker-dispatch-bundle" in production_ai_router_paths
+    assert "/product/production-ai-gpu-worker-execution-runbook" in production_ai_router_paths
+    assert "/product/production-ai-gpu-return-intake" in production_ai_router_paths
+    assert "/product/production-ai-promotion-workbench" in production_ai_router_paths
+    assert "/product/production-ai-registry-promotion-operator-receipt" in production_ai_router_paths
+    assert "/product/production-ai-registry-promotion-priority" in production_ai_router_paths
+    assert "/product/scope-breadth-contract" in scope_router_paths
+    assert "/product/scope-claim-guard" in scope_router_paths
+    assert "/product/scope-evidence-priority" in scope_router_paths
+    assert "/product/scope-evidence-intake-readiness" in scope_router_paths
+    assert "/product/transporter-manual-review-intake" in scope_router_paths
+    assert "/product/pxr-exact-review-intake" in scope_router_paths
+    assert "/product/aqp1-operator-validation-candidate" in scope_router_paths
+    assert "/product/aqp1-direct-binding-procurement-packet" in scope_router_paths
+    assert "/product/commercial-readiness-operator-packet" in commercial_readiness_router_paths
+    assert "/product/commercial-readiness-operator-packet-freshness" in commercial_readiness_router_paths
+    assert "/product/commercial-readiness-execution-ladder" in commercial_readiness_router_paths
+    assert "/product/commercial-readiness-handoff-bundle" in commercial_readiness_router_paths
+    assert "/product/scope-breadth-evidence-receipt" in evidence_goal_router_paths
+    assert "/product/engine-refinement-claim-evidence-receipt" in evidence_goal_router_paths
+    assert "/product/engine-refinement-claim-evidence-priority" in evidence_goal_router_paths
+    assert "/product/full-commercial-blocker-evidence-matrix" in evidence_goal_router_paths
+    assert "/product/goal-completion-audit" in evidence_goal_router_paths
+    assert sum(1 for route in main.app.routes if route.path == "/product/architecture") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/architecture-validation") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/capabilities") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/service-boundary") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/api-contract") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/operational-quality") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/security-deployment-contract") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/operations") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/commercial-independence") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/release-readiness") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/job-orchestration-contract") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/external-metrics") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/public-benchmark") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/trajectory-sla-contract") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/rollout-execution-smoke-receipt") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/ai-decision-graph") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/pose-sampling-readiness") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/ai-report-ux") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/residual-model-registry") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/cameo-live-validation") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/cameo-official-result-fetch-preflight") == 1
+    assert (
+        sum(
+            1
+            for route in main.app.routes
+            if route.path == "/product/api-runner-profile-promotion-operator-receipt"
+        )
+        == 1
+    )
+    assert (
+        sum(
+            1
+            for route in main.app.routes
+            if route.path == "/product/api-runner-profile-promotion-operator-staging-apply"
+        )
+        == 1
+    )
+    assert sum(1 for route in main.app.routes if route.path == "/product/license-decision") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/license-options") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/license-file-work-order") == 1
+    assert (
+        sum(1 for route in main.app.routes if route.path == "/product/self-hosted-license-distribution-audit")
+        == 1
+    )
+    assert sum(1 for route in main.app.routes if route.path == "/product/production-ai-checkpoint-readiness") == 1
+    assert (
+        sum(1 for route in main.app.routes if route.path == "/product/production-ai-gpu-worker-dispatch-manifest")
+        == 1
+    )
+    assert (
+        sum(1 for route in main.app.routes if route.path == "/product/production-ai-gpu-worker-dispatch-bundle")
+        == 1
+    )
+    assert (
+        sum(1 for route in main.app.routes if route.path == "/product/production-ai-gpu-worker-execution-runbook")
+        == 1
+    )
+    assert sum(1 for route in main.app.routes if route.path == "/product/production-ai-gpu-return-intake") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/production-ai-promotion-workbench") == 1
+    assert (
+        sum(
+            1
+            for route in main.app.routes
+            if route.path == "/product/production-ai-registry-promotion-operator-receipt"
+        )
+        == 1
+    )
+    assert (
+        sum(1 for route in main.app.routes if route.path == "/product/production-ai-registry-promotion-priority")
+        == 1
+    )
+    assert sum(1 for route in main.app.routes if route.path == "/product/scope-breadth-contract") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/scope-claim-guard") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/scope-evidence-priority") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/scope-evidence-intake-readiness") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/transporter-manual-review-intake") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/pxr-exact-review-intake") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/aqp1-operator-validation-candidate") == 1
+    assert (
+        sum(1 for route in main.app.routes if route.path == "/product/aqp1-direct-binding-procurement-packet")
+        == 1
+    )
+    assert sum(1 for route in main.app.routes if route.path == "/product/commercial-readiness-operator-packet") == 1
+    assert (
+        sum(1 for route in main.app.routes if route.path == "/product/commercial-readiness-operator-packet-freshness")
+        == 1
+    )
+    assert sum(1 for route in main.app.routes if route.path == "/product/commercial-readiness-execution-ladder") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/commercial-readiness-handoff-bundle") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/scope-breadth-evidence-receipt") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/engine-refinement-claim-evidence-receipt") == 1
+    assert (
+        sum(1 for route in main.app.routes if route.path == "/product/engine-refinement-claim-evidence-priority")
+        == 1
+    )
+    assert (
+        sum(1 for route in main.app.routes if route.path == "/product/full-commercial-blocker-evidence-matrix")
+        == 1
+    )
+    assert sum(1 for route in main.app.routes if route.path == "/product/goal-completion-audit") == 1
 
     capabilities = asyncio.run(product.get_product_capabilities())
     assert capabilities["status"] == "product_capability_surface_contract_ready"
