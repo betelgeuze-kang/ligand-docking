@@ -8,7 +8,12 @@ import torch
 
 from betelgeuze_engine.contracts.result import TermResult
 from betelgeuze_engine.contracts.state import EngineState
-from betelgeuze_engine.physics.neighbor import NeighborPairs, full_neighbor_pairs
+from betelgeuze_engine.physics.neighbor import (
+    NeighborPairs,
+    full_neighbor_pairs,
+    neighbor_displacements,
+    neighbor_upper_mask,
+)
 from betelgeuze_engine.physics.term_claim_metadata import term_claim_metadata
 
 
@@ -154,10 +159,11 @@ class ScreenedElectrostaticsTerm:
             )
 
         pairs = pairs or full_neighbor_pairs(coords, cutoff=self.cutoff)
-        dist = (coords.unsqueeze(2) - coords.unsqueeze(1)).norm(dim=-1).clamp_min(1e-4)
-        upper = torch.triu(torch.ones_like(pairs.mask, dtype=torch.bool), diagonal=1)
-        mask = pairs.mask & upper
-        q_pair = charges.view(1, -1, 1) * charges.view(1, 1, -1)
+        dist = neighbor_displacements(coords, pairs).norm(dim=-1).clamp_min(1e-4)
+        mask = neighbor_upper_mask(pairs).to(device=coords.device)
+        charge_idx = pairs.idx.clamp(min=0, max=max(int(charges.numel()) - 1, 0)).to(device=coords.device)
+        q_j = charges.view(1, 1, -1).expand(coords.shape[0], coords.shape[1], -1).gather(2, charge_idx)
+        q_pair = charges.view(1, -1, 1) * q_j
         kappa = torch.tensor(float(self.debye_kappa), dtype=coords.dtype, device=coords.device).clamp_min(0.0)
         scale = torch.tensor(float(self.scale), dtype=coords.dtype, device=coords.device)
         pair_energy = scale * q_pair * torch.exp(-kappa * dist) / dist

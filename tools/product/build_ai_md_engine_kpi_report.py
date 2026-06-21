@@ -23,11 +23,20 @@ from betelgeuze_engine.backmapping.onsps import (
     backmap_4bead_onsps,
     evaluate_onsps_backmap_evidence,
 )
-from betelgeuze_engine.benchmark import run_runtime_scaling_benchmark, write_runtime_scaling_svg
+from betelgeuze_engine.benchmark import (
+    HBOND_RECOVERY_BENCHMARK_SCHEMA_VERSION,
+    build_hbond_recovery_benchmark,
+    run_runtime_scaling_benchmark,
+    write_runtime_scaling_svg,
+)
 from betelgeuze_engine.contracts import EngineState, validate_energy_forces_contract
 from betelgeuze_engine.interactions.hbond_evidence import evaluate_hbond_evidence
 from betelgeuze_engine.physics import ProductForceField, default_force_term_registry, guarded_force_term_registry
-from betelgeuze_engine.physics.neighbor import full_neighbor_pairs
+from betelgeuze_engine.physics.neighbor import (
+    CellListNeighborProvider,
+    NeighborProviderConfig,
+    full_neighbor_pairs,
+)
 from betelgeuze_engine.physics.terms import (
     DirectionalHBondTerm,
     HydrophobicContactTerm,
@@ -593,6 +602,14 @@ def _neighbor_rebuild_kpi(frame_count: int = 12, rebuild_stride: int = 3) -> dic
     base_x = torch.arange(16, dtype=torch.float32).view(1, 16, 1) * 4.0
     coords = torch.cat([base_x, torch.zeros(1, 16, 2, dtype=torch.float32)], dim=-1)
     forcefield = ProductForceField.from_registry(names=["legacy_lj"])
+    provider = CellListNeighborProvider(
+        NeighborProviderConfig(
+            cutoff=8.0,
+            max_neighbor_count=8,
+            max_atoms_per_cell=16,
+            rebuild_stride=int(rebuild_stride),
+        )
+    )
     state = EngineState(
         coords=coords,
         atom_types=torch.zeros(16, dtype=torch.long),
@@ -609,23 +626,34 @@ def _neighbor_rebuild_kpi(frame_count: int = 12, rebuild_stride: int = 3) -> dic
     forcefield_pair_count = 0
     forcefield_neighbor_source = ""
     forcefield_neighbor_pairs_provided = False
+    provider_status = ""
+    provider_overflow = False
+    provider_nxn_allocation_observed = True
     for frame_idx in range(int(frame_count)):
         coords = coords + 0.001
-        if frame_idx % int(rebuild_stride) == 0:
-            pairs = full_neighbor_pairs(coords, cutoff=8.0)
+        pairs = provider.build(coords, step=frame_idx)
+        if bool(pairs.diagnostics.get("rebuilt")):
             rebuild_count += 1
-            pair_count = int(pairs.mask.sum().item())
-            state = EngineState(coords=coords, atom_types=state.atom_types, metadata=state.metadata)
-            result = forcefield.energy_forces(state, pairs=pairs)
-            forcefield_pair_count = int(result.diagnostics.get("neighbor_pair_count") or 0)
-            forcefield_neighbor_source = str(result.diagnostics.get("neighbor_source") or "")
-            forcefield_neighbor_pairs_provided = bool(
-                result.diagnostics.get("neighbor_pairs_provided") is True
-            )
+        pair_count = int(pairs.mask.sum().item())
+        provider_status = str(pairs.diagnostics.get("status") or "")
+        provider_overflow = bool(pairs.diagnostics.get("overflow") is True)
+        provider_nxn_allocation_observed = bool(
+            pairs.diagnostics.get("nxn_allocation_observed") is True
+        )
+        state = EngineState(coords=coords, atom_types=state.atom_types, metadata=state.metadata)
+        result = forcefield.energy_forces(state, pairs=pairs, product_neighbor_required=True)
+        forcefield_pair_count = int(result.diagnostics.get("neighbor_pair_count") or 0)
+        forcefield_neighbor_source = str(result.diagnostics.get("neighbor_source") or "")
+        forcefield_neighbor_pairs_provided = bool(
+            result.diagnostics.get("neighbor_pairs_provided") is True
+        )
     engine_neighbor_diagnostics_ready = bool(
         forcefield_pair_count == pair_count
         and forcefield_neighbor_pairs_provided
-        and forcefield_neighbor_source == "provided"
+        and forcefield_neighbor_source == "provided_cell_list"
+        and provider_status == "neighbor_provider_ready"
+        and provider_overflow is False
+        and provider_nxn_allocation_observed is False
     )
     return {
         "frame_count": int(frame_count),
@@ -636,6 +664,9 @@ def _neighbor_rebuild_kpi(frame_count: int = 12, rebuild_stride: int = 3) -> dic
         "last_forcefield_neighbor_pair_count": int(forcefield_pair_count),
         "forcefield_neighbor_source": forcefield_neighbor_source,
         "forcefield_neighbor_pairs_provided": forcefield_neighbor_pairs_provided,
+        "neighbor_provider_status": provider_status,
+        "neighbor_provider_overflow": provider_overflow,
+        "neighbor_provider_nxn_allocation_observed": provider_nxn_allocation_observed,
         "engine_neighbor_diagnostics_ready": engine_neighbor_diagnostics_ready,
     }
 
@@ -3790,6 +3821,12 @@ def _pose_ranking_hbond_benchmark() -> dict[str, Any]:
         and row["hbond_blocked_reason"] == "delta_backmap_yellow_band"
         for row in rows
     )
+    hbond_recovery_benchmark = build_hbond_recovery_benchmark().to_dict()
+    hbond_recovery_summary = (
+        hbond_recovery_benchmark.get("summary")
+        if isinstance(hbond_recovery_benchmark.get("summary"), dict)
+        else {}
+    )
     return {
         "benchmark_ready": bool(
             top1_pass
@@ -3823,6 +3860,18 @@ def _pose_ranking_hbond_benchmark() -> dict[str, Any]:
         "unsatisfied_donor_acceptor_pose_count": len(unsatisfied_rows),
         "unsatisfied_donor_count": int(sum(int(row["unsatisfied_donor_count"]) for row in unsatisfied_rows)),
         "unsatisfied_acceptor_count": int(sum(int(row["unsatisfied_acceptor_count"]) for row in unsatisfied_rows)),
+        "hbond_recovery_benchmark_schema_version": str(
+            hbond_recovery_summary.get("schema_version") or ""
+        ),
+        "hbond_recovery_benchmark_ready": hbond_recovery_benchmark.get("ready") is True,
+        "hbond_recovery_benchmark_status": str(hbond_recovery_benchmark.get("status") or ""),
+        "hbond_recovery_benchmark_fixture_count": int(
+            hbond_recovery_summary.get("fixture_count") or 0
+        ),
+        "hbond_recovery_benchmark_contract_pass_count": int(
+            hbond_recovery_summary.get("benchmark_contract_pass_count") or 0
+        ),
+        "hbond_recovery_benchmark": hbond_recovery_benchmark,
         "ranking_order": [str(row["pose_id"]) for row in ranked],
         "rows": rows,
     }
@@ -3966,12 +4015,18 @@ def _pm_kpi_summary(
         or pose_ranking_hbond.get("unsatisfied_donor_acceptor_detected") is True
     )
     hbond_recovery_pose_count = int(pose_ranking_hbond.get("hbond_recovery_pose_count") or 0)
+    hbond_recovery_benchmark_ready = bool(
+        pose_ranking_hbond.get("hbond_recovery_benchmark_ready") is True
+        and pose_ranking_hbond.get("hbond_recovery_benchmark_schema_version")
+        == HBOND_RECOVERY_BENCHMARK_SCHEMA_VERSION
+    )
     chemistry_gate_values = {
         "hbond_evidence_schema_ready": chemistry.get("hbond_evidence_schema_ready") is True,
         "ligand_topology_validity_schema_ready": (
             chemistry.get("ligand_topology_validity_schema_ready") is True
         ),
         "hbond_recovery_present": hbond_recovery_pose_count > 0,
+        "hbond_recovery_benchmark_ready": hbond_recovery_benchmark_ready,
         "unsatisfied_donor_acceptor_detection": unsatisfied_donor_acceptor_detected,
         "topology_invalid_rate_tracked": "topology_invalid_rate" in chemistry,
         "backmapping_failure_rate_tracked": "backmapping_failure_rate" in chemistry,
@@ -4223,6 +4278,16 @@ def _pm_kpi_summary(
             "hbond_recovery_confidence_min": float(
                 pose_ranking_hbond.get("hbond_recovery_confidence_min") or 0.0
             ),
+            "hbond_recovery_benchmark_ready": hbond_recovery_benchmark_ready,
+            "hbond_recovery_benchmark_schema_version": str(
+                pose_ranking_hbond.get("hbond_recovery_benchmark_schema_version") or ""
+            ),
+            "hbond_recovery_benchmark_fixture_count": int(
+                pose_ranking_hbond.get("hbond_recovery_benchmark_fixture_count") or 0
+            ),
+            "hbond_recovery_benchmark_contract_pass_count": int(
+                pose_ranking_hbond.get("hbond_recovery_benchmark_contract_pass_count") or 0
+            ),
             "unsatisfied_donor_acceptor_detection": unsatisfied_donor_acceptor_detected,
             "unsatisfied_donor_acceptor_fixture_count": int(
                 chemistry.get("unsatisfied_donor_acceptor_fixture_count") or 0
@@ -4324,6 +4389,18 @@ def build_report(
     chemistry["hbond_recovery_pose_ids"] = list(pose_ranking_hbond.get("hbond_recovery_pose_ids") or [])
     chemistry["hbond_recovery_confidence_min"] = float(
         pose_ranking_hbond.get("hbond_recovery_confidence_min") or 0.0
+    )
+    chemistry["hbond_recovery_benchmark_ready"] = (
+        pose_ranking_hbond.get("hbond_recovery_benchmark_ready") is True
+    )
+    chemistry["hbond_recovery_benchmark_schema_version"] = str(
+        pose_ranking_hbond.get("hbond_recovery_benchmark_schema_version") or ""
+    )
+    chemistry["hbond_recovery_benchmark_fixture_count"] = int(
+        pose_ranking_hbond.get("hbond_recovery_benchmark_fixture_count") or 0
+    )
+    chemistry["hbond_recovery_benchmark_contract_pass_count"] = int(
+        pose_ranking_hbond.get("hbond_recovery_benchmark_contract_pass_count") or 0
     )
     chemistry["unsatisfied_donor_acceptor_detection"] = bool(
         int(chemistry.get("unsatisfied_donor_acceptor_fixture_count") or 0) > 0

@@ -6,6 +6,8 @@ IMAGE="${PRODUCT_IMAGE:-betelgeuze-md-product:local}"
 DOCKER_CMD="${DOCKER_CMD:-docker}"
 read -r -a DOCKER_BIN <<< "${DOCKER_CMD}"
 DOCKER_DISPLAY="${DOCKER_BIN[*]}"
+DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}"
+PRODUCT_IMAGE_PRUNE_BEFORE_BUILD="${PRODUCT_IMAGE_PRUNE_BEFORE_BUILD:-0}"
 DOCKERFILE="${ROOT}/Dockerfile.product"
 VERIFY_MODE="${PRODUCT_IMAGE_VERIFY_MODE:-build}"
 HOST_PYTHON="${PRODUCT_IMAGE_HOST_PYTHON:-python3}"
@@ -42,6 +44,8 @@ if ! command -v "${HOST_PYTHON}" >/dev/null 2>&1; then
   exit 2
 fi
 
+export DOCKER_BUILDKIT
+
 DOCKER_RUN_ARGS=(--rm)
 DOCKER_DAEMON_ARGS=()
 if [[ "${VERIFY_MODE}" == "rocm-runtime" ]]; then
@@ -61,8 +65,14 @@ if [[ "${VERIFY_MODE}" == "rocm-runtime" ]]; then
   fi
 fi
 
+if [[ "${PRODUCT_IMAGE_PRUNE_BEFORE_BUILD}" == "1" ]]; then
+  echo "Pruning stopped containers and dangling images before product image build" >&2
+  "${DOCKER_BIN[@]}" container prune -f >/dev/null || true
+  "${DOCKER_BIN[@]}" image prune -f >/dev/null || true
+fi
+
 echo "Building product image: ${IMAGE}" >&2
-"${DOCKER_BIN[@]}" build -f "${DOCKERFILE}" -t "${IMAGE}" "${ROOT}"
+"${DOCKER_BIN[@]}" build --progress=plain -f "${DOCKERFILE}" -t "${IMAGE}" "${ROOT}"
 
 echo "Running ROCm/HIP/Rust import smoke inside container" >&2
 if [[ "${VERIFY_MODE}" == "rocm-runtime" ]]; then

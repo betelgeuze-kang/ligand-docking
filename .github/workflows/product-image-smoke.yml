@@ -75,6 +75,8 @@ jobs:
       - name: Verify product image build smoke
         env:
           PRODUCT_IMAGE_VERIFY_MODE: build
+          DOCKER_BUILDKIT: "1"
+          PRODUCT_IMAGE_PRUNE_BEFORE_BUILD: "1"
         run: bash deploy/verify_product_image.sh
       - name: Summarize product image build boundary
         if: always()
@@ -120,6 +122,8 @@ jobs:
       - name: Verify product image ROCm/HIP/Rust runtime smoke
         env:
           PRODUCT_IMAGE_VERIFY_MODE: rocm-runtime
+          DOCKER_BUILDKIT: "1"
+          PRODUCT_IMAGE_PRUNE_BEFORE_BUILD: "1"
         run: bash deploy/verify_product_image.sh
       - name: Summarize product image ROCm runtime boundary
         if: always()

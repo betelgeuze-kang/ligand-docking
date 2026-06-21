@@ -238,13 +238,21 @@ class ProductForceField:
         pairs: NeighborPairs | None = None,
         *,
         claim_metadata: dict[str, Any] | None = None,
+        product_neighbor_required: bool = False,
     ) -> EnergyForces:
         if state.coords.ndim != 3:
             raise ValueError("state.coords must have shape [B, N, 3]")
         state_for_terms = state_with_claim_metadata(state, claim_metadata)
         neighbor_pairs_provided = pairs is not None
-        pairs = pairs or full_neighbor_pairs(state_for_terms.coords)
+        if pairs is None:
+            if product_neighbor_required:
+                raise ValueError("product neighbor provider required; reference full pairs are not product-safe")
+            pairs = full_neighbor_pairs(state_for_terms.coords)
+        pair_diagnostics = dict(getattr(pairs, "diagnostics", {}) or {})
+        if product_neighbor_required and pair_diagnostics.get("overflow") is True:
+            raise ValueError("product neighbor provider overflow; refusing claim-unsafe forcefield evaluation")
         neighbor_pair_count = int(pairs.mask.sum().detach().cpu().item())
+        neighbor_source = str(getattr(pairs, "source", "") or ("provided" if neighbor_pairs_provided else "full_neighbor_pairs"))
         total_energy = torch.zeros(
             state_for_terms.coords.shape[0],
             dtype=state_for_terms.coords.dtype,
@@ -278,7 +286,9 @@ class ProductForceField:
                 "term_count": len(term_results),
                 "neighbor_pair_count": neighbor_pair_count,
                 "neighbor_pairs_provided": neighbor_pairs_provided,
-                "neighbor_source": "provided" if neighbor_pairs_provided else "full_neighbor_pairs",
+                "neighbor_source": neighbor_source,
+                "neighbor_product_required": bool(product_neighbor_required),
+                "neighbor_diagnostics": pair_diagnostics,
                 "term_diagnostics": term_diagnostics,
             },
             claim_metadata=merged_claim_metadata,

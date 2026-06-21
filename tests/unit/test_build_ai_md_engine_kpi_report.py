@@ -266,6 +266,60 @@ def _chemistry_kpi_packet(*, ready: bool = True) -> dict:
     }
 
 
+def _hbond_recovery_benchmark_packet(*, ready: bool = True) -> dict:
+    rows = [
+        {
+            "pose_id": "active_hbond_recovered_pose",
+            "benchmark_role": "active_recovery_pose",
+            "schema_version": "hbond_recovery_benchmark_v1",
+            "hbond_claim_safe": True,
+            "hbond_blocked_reason": "",
+            "hbond_unsatisfied_total_count": 0,
+            "overanchoring_flag": False,
+            "benchmark_contract_pass": True,
+        },
+        {
+            "pose_id": "unsatisfied_donor_acceptor_pose",
+            "benchmark_role": "unsatisfied_donor_pose",
+            "schema_version": "hbond_recovery_benchmark_v1",
+            "hbond_claim_safe": False,
+            "hbond_blocked_reason": "missing_expected_anchor",
+            "hbond_unsatisfied_total_count": 1,
+            "overanchoring_flag": False,
+            "benchmark_contract_pass": True,
+        },
+        {
+            "pose_id": "amide_overanchored_decoy_pose",
+            "benchmark_role": "overanchored_decoy_pose",
+            "schema_version": "hbond_recovery_benchmark_v1",
+            "hbond_claim_safe": False,
+            "hbond_blocked_reason": "overanchored_decoy",
+            "hbond_unsatisfied_total_count": 2,
+            "overanchoring_flag": True,
+            "benchmark_contract_pass": True,
+        },
+    ] if ready else []
+    return {
+        "ready": ready,
+        "status": "hbond_recovery_benchmark_ready" if ready else "blocked_hbond_recovery_benchmark",
+        "summary": {
+            "schema_version": "hbond_recovery_benchmark_v1",
+            "ready": ready,
+            "fixture_count": len(rows),
+            "benchmark_contract_pass_count": len(rows) if ready else 0,
+        },
+        "rows": rows,
+        "claim_metadata": {
+            "claim_safe": False,
+            "blocked_reason": (
+                "hbond_recovery_benchmark_not_product_claim_promoted"
+                if ready
+                else "hbond_recovery_benchmark_not_ready"
+            ),
+        },
+    }
+
+
 def _force_term_physics_validation_packet(*, ready: bool = True) -> dict:
     thresholds = {
         "finite_difference_force_error_max": 1e-4,
@@ -1092,6 +1146,12 @@ def _write_product_evidence_bundle(
             "hbond_recovery_pose_count": 1,
             "hbond_recovery_pose_ids": ["amide_near_hbond_pose"],
             "hbond_recovery_confidence_min": 0.9,
+            "hbond_recovery_benchmark_schema_version": "hbond_recovery_benchmark_v1",
+            "hbond_recovery_benchmark_ready": True,
+            "hbond_recovery_benchmark_status": "hbond_recovery_benchmark_ready",
+            "hbond_recovery_benchmark_fixture_count": 3,
+            "hbond_recovery_benchmark_contract_pass_count": 3,
+            "hbond_recovery_benchmark": _hbond_recovery_benchmark_packet(),
             "overanchored_decoys_blocked": True,
             "delta_backmap_yellow_band_abstention_ready": True,
             "unsatisfied_donor_acceptor_detected": True,
@@ -1477,8 +1537,11 @@ def _write_product_evidence_bundle(
                 "neighbor_list_rebuild_frequency": 0.3333333333,
                 "last_neighbor_pair_count": 240,
                 "last_forcefield_neighbor_pair_count": 240,
-                "forcefield_neighbor_source": "provided",
+                "forcefield_neighbor_source": "provided_cell_list",
                 "forcefield_neighbor_pairs_provided": True,
+                "neighbor_provider_status": "neighbor_provider_ready",
+                "neighbor_provider_overflow": False,
+                "neighbor_provider_nxn_allocation_observed": False,
                 "engine_neighbor_diagnostics_ready": True,
             },
             "neighbor_cap_scaling": {
@@ -1701,6 +1764,10 @@ def _write_product_evidence_bundle(
                 "hbond_recovery_pose_count": 1,
                 "hbond_recovery_pose_ids": ["amide_near_hbond_pose"],
                 "hbond_recovery_confidence_min": 0.9,
+                "hbond_recovery_benchmark_ready": True,
+                "hbond_recovery_benchmark_schema_version": "hbond_recovery_benchmark_v1",
+                "hbond_recovery_benchmark_fixture_count": 3,
+                "hbond_recovery_benchmark_contract_pass_count": 3,
                 "unsatisfied_donor_acceptor_detection": True,
                 "unsatisfied_donor_acceptor_fixture_count": (
                     chemistry_kpi["unsatisfied_donor_acceptor_fixture_count"]
@@ -2574,7 +2641,10 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert report["runtime_kpi"]["neighbor_list_rebuild"]["neighbor_list_rebuild_frequency"] > 0
     assert report["runtime_kpi"]["neighbor_list_rebuild"]["engine_neighbor_diagnostics_ready"] is True
     assert report["runtime_kpi"]["neighbor_list_rebuild"]["forcefield_neighbor_pairs_provided"] is True
-    assert report["runtime_kpi"]["neighbor_list_rebuild"]["forcefield_neighbor_source"] == "provided"
+    assert report["runtime_kpi"]["neighbor_list_rebuild"]["forcefield_neighbor_source"] == "provided_cell_list"
+    assert report["runtime_kpi"]["neighbor_list_rebuild"]["neighbor_provider_status"] == "neighbor_provider_ready"
+    assert report["runtime_kpi"]["neighbor_list_rebuild"]["neighbor_provider_overflow"] is False
+    assert report["runtime_kpi"]["neighbor_list_rebuild"]["neighbor_provider_nxn_allocation_observed"] is False
     assert (
         report["runtime_kpi"]["neighbor_list_rebuild"]["last_forcefield_neighbor_pair_count"]
         == report["runtime_kpi"]["neighbor_list_rebuild"]["last_neighbor_pair_count"]
@@ -2641,6 +2711,13 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert report["pm_kpi_summary"]["chemistry"]["hbond_recovery_pose_count"] >= 1
     assert report["pm_kpi_summary"]["chemistry"]["hbond_recovery_confidence_min"] >= 0.5
     assert report["pm_kpi_summary"]["chemistry"]["hbond_recovery_pose_ids"] == ["amide_near_hbond_pose"]
+    assert report["pm_kpi_summary"]["chemistry"]["hbond_recovery_benchmark_ready"] is True
+    assert (
+        report["pm_kpi_summary"]["chemistry"]["hbond_recovery_benchmark_schema_version"]
+        == "hbond_recovery_benchmark_v1"
+    )
+    assert report["pm_kpi_summary"]["chemistry"]["hbond_recovery_benchmark_fixture_count"] == 3
+    assert report["pm_kpi_summary"]["chemistry"]["hbond_recovery_benchmark_contract_pass_count"] == 3
     assert report["chemistry_kpi"]["unsatisfied_donor_acceptor_fixture_count"] >= 1
     assert report["chemistry_kpi"]["unsatisfied_donor_count"] + report["chemistry_kpi"]["unsatisfied_acceptor_count"] >= 1
     assert report["pm_kpi_summary"]["chemistry"]["unsatisfied_donor_acceptor_detection"] is True
@@ -2717,6 +2794,14 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert report["pose_ranking_hbond_benchmark"]["hbond_recovery_pose_count"] == 1
     assert report["pose_ranking_hbond_benchmark"]["hbond_recovery_pose_ids"] == ["amide_near_hbond_pose"]
     assert report["pose_ranking_hbond_benchmark"]["hbond_recovery_confidence_min"] >= 0.5
+    assert (
+        report["pose_ranking_hbond_benchmark"]["hbond_recovery_benchmark_schema_version"]
+        == "hbond_recovery_benchmark_v1"
+    )
+    assert report["pose_ranking_hbond_benchmark"]["hbond_recovery_benchmark_ready"] is True
+    assert report["pose_ranking_hbond_benchmark"]["hbond_recovery_benchmark_fixture_count"] == 3
+    assert report["pose_ranking_hbond_benchmark"]["hbond_recovery_benchmark_contract_pass_count"] == 3
+    assert report["pose_ranking_hbond_benchmark"]["hbond_recovery_benchmark"]["ready"] is True
     assert report["pose_ranking_hbond_benchmark"]["invalid_ligand_blocked"] is True
     assert report["pose_ranking_hbond_benchmark"]["overanchored_decoys_blocked"] is True
     assert report["pose_ranking_hbond_benchmark"]["delta_backmap_yellow_band_abstention_ready"] is True

@@ -277,7 +277,13 @@ def validate_energy_forces_contract(
         raise ValueError("product forcefield returned missing diagnostic neighbor_pair_count")
     if not isinstance(result.diagnostics.get("neighbor_pairs_provided"), bool):
         raise ValueError("product forcefield returned missing diagnostic neighbor_pairs_provided")
-    if str(result.diagnostics.get("neighbor_source") or "") not in {"provided", "full_neighbor_pairs"}:
+    if str(result.diagnostics.get("neighbor_source") or "") not in {
+        "provided",
+        "full_neighbor_pairs",
+        "provided_cell_list",
+        "rust_hip_cell_list",
+        "reference_full_pairs",
+    }:
         raise ValueError("product forcefield returned invalid diagnostic neighbor_source")
     term_diagnostics = result.diagnostics.get("term_diagnostics")
     if not isinstance(term_diagnostics, dict):

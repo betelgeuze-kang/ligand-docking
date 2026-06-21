@@ -192,6 +192,19 @@ def build_product_image_smoke_preflight(
             "deploy/verify_product_image.sh",
         ),
         _contract_row(
+            "docker_buildkit_and_runner_cleanup_declared",
+            "DOCKER_BUILDKIT" in verify_script
+            and "PRODUCT_IMAGE_PRUNE_BEFORE_BUILD" in verify_script
+            and "container prune -f" in verify_script
+            and "image prune -f" in verify_script
+            and "build --progress=plain" in verify_script,
+            "BuildKit and opt-in Docker cleanup present"
+            if "PRODUCT_IMAGE_PRUNE_BEFORE_BUILD" in verify_script
+            else "missing",
+            "self-hosted Docker smoke uses BuildKit and can prune stale containers/dangling images before build",
+            "deploy/verify_product_image.sh",
+        ),
+        _contract_row(
             "docker_host_setup_script_declared",
             "docker.io" in host_setup_script
             and "systemctl enable --now docker" in host_setup_script
@@ -279,9 +292,11 @@ def build_product_image_smoke_preflight(
         ),
         _contract_row(
             "workflow_build_mode_declared",
-            "PRODUCT_IMAGE_VERIFY_MODE: build" in workflow,
+            "PRODUCT_IMAGE_VERIFY_MODE: build" in workflow
+            and 'DOCKER_BUILDKIT: "1"' in workflow
+            and 'PRODUCT_IMAGE_PRUNE_BEFORE_BUILD: "1"' in workflow,
             "build mode in workflow" if "PRODUCT_IMAGE_VERIFY_MODE: build" in workflow else "missing",
-            "hosted CI uses build contract mode explicitly",
+            "self-hosted CI uses build contract mode explicitly with BuildKit and stale Docker cleanup",
             ".github/workflows/product-image-smoke.yml",
         ),
         _contract_row(

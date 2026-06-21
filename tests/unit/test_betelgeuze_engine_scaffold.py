@@ -37,7 +37,12 @@ from betelgeuze_engine.physics.terms import (
     WaterDisplacementProxyTerm,
 )
 from betelgeuze_engine.physics import ProductForceField, default_force_term_registry, guarded_force_term_registry
-from betelgeuze_engine.physics.neighbor import NeighborPairs, full_neighbor_pairs
+from betelgeuze_engine.physics.neighbor import (
+    CellListNeighborProvider,
+    NeighborPairs,
+    NeighborProviderConfig,
+    full_neighbor_pairs,
+)
 from betelgeuze_engine.topology import (
     ComplexTopology,
     ProteinTopology,
@@ -360,6 +365,91 @@ def test_neighbor_list_parity_checks_mask_distance_and_index() -> None:
         cutoff=5.0,
         candidate_pairs=no_pair_pairs,
     ) == 0.0
+
+
+def _pair_set_from_neighbors(pairs: NeighborPairs) -> set[tuple[int, int]]:
+    found: set[tuple[int, int]] = set()
+    mask = pairs.mask.detach().cpu()
+    idx = pairs.idx.detach().cpu()
+    for i in range(mask.shape[1]):
+        for slot in range(mask.shape[2]):
+            if bool(mask[0, i, slot].item()):
+                found.add((i, int(idx[0, i, slot].item())))
+    return found
+
+
+def test_cell_list_neighbor_provider_matches_small_dense_reference() -> None:
+    coords = torch.tensor(
+        [[[0.0, 0.0, 0.0], [2.0, 0.0, 0.0], [4.9, 0.0, 0.0], [8.0, 0.0, 0.0]]],
+        dtype=torch.float64,
+    )
+    provider = CellListNeighborProvider(
+        NeighborProviderConfig(cutoff=3.1, max_neighbor_count=4, max_atoms_per_cell=8)
+    )
+
+    sparse = provider.build(coords)
+    dense = full_neighbor_pairs(coords, cutoff=3.1)
+
+    assert sparse.source == "provided_cell_list"
+    assert sparse.diagnostics["status"] == "neighbor_provider_ready"
+    assert sparse.diagnostics["overflow"] is False
+    assert sparse.diagnostics["nxn_allocation_observed"] is False
+    assert _pair_set_from_neighbors(sparse) == _pair_set_from_neighbors(dense)
+    for i, j in _pair_set_from_neighbors(sparse):
+        slot = (sparse.idx[0, i] == j).nonzero(as_tuple=False)[0, 0]
+        assert sparse.dist[0, i, slot].item() == pytest.approx(dense.dist[0, i, j].item())
+
+
+def test_cell_list_neighbor_provider_uses_periodic_minimum_image() -> None:
+    coords = torch.tensor([[[0.2, 0.0, 0.0], [9.8, 0.0, 0.0], [5.0, 0.0, 0.0]]], dtype=torch.float64)
+    provider = CellListNeighborProvider(
+        NeighborProviderConfig(cutoff=1.0, max_neighbor_count=2, max_atoms_per_cell=4, box_size=10.0)
+    )
+
+    sparse = provider.build(coords)
+
+    assert (0, 1) in _pair_set_from_neighbors(sparse)
+    assert (1, 0) in _pair_set_from_neighbors(sparse)
+    slot = (sparse.idx[0, 0] == 1).nonzero(as_tuple=False)[0, 0]
+    assert sparse.dist[0, 0, slot].item() == pytest.approx(0.4)
+    assert sparse.diagnostics["pbc_enabled"] is True
+
+
+def test_product_forcefield_rejects_overflowing_product_neighbors() -> None:
+    coords = torch.tensor([[[0.0, 0.0, 0.0], [0.5, 0.0, 0.0], [0.9, 0.0, 0.0]]], dtype=torch.float64)
+    provider = CellListNeighborProvider(
+        NeighborProviderConfig(cutoff=2.0, max_neighbor_count=1, max_atoms_per_cell=8)
+    )
+    pairs = provider.build(coords)
+    forcefield = ProductForceField(terms=[LegacyLJTerm(sigma=1.0, epsilon=0.1)])
+
+    assert pairs.diagnostics["overflow"] is True
+    with pytest.raises(ValueError, match="overflow"):
+        forcefield.energy_forces(
+            EngineState(coords=coords, atom_types=torch.tensor([0, 0, 0])),
+            pairs=pairs,
+            product_neighbor_required=True,
+        )
+
+
+def test_legacy_lj_compact_neighbor_path_matches_dense_reference() -> None:
+    coords = torch.tensor(
+        [[[0.0, 0.0, 0.0], [2.2, 0.0, 0.0], [0.0, 2.5, 0.0], [6.0, 0.0, 0.0]]],
+        dtype=torch.float64,
+    )
+    state = EngineState(coords=coords, atom_types=torch.tensor([0, 0, 0, 0]))
+    term = LegacyLJTerm(sigma=1.0, epsilon=0.2, cutoff=3.0)
+    dense = full_neighbor_pairs(coords, cutoff=3.0)
+    sparse = CellListNeighborProvider(
+        NeighborProviderConfig(cutoff=3.0, max_neighbor_count=4, max_atoms_per_cell=8)
+    ).build(coords)
+
+    dense_result = term.energy_forces(state, dense)
+    sparse_result = term.energy_forces(state, sparse)
+
+    assert sparse.diagnostics["nxn_allocation_observed"] is False
+    assert torch.allclose(sparse_result.energy, dense_result.energy, atol=1e-10, rtol=1e-10)
+    assert torch.allclose(sparse_result.forces, dense_result.forces, atol=1e-10, rtol=1e-10)
 
 
 def test_product_forcefield_plugin_registry_aggregates_terms_and_claim_metadata() -> None:

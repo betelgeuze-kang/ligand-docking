@@ -49,6 +49,7 @@ EXPECTED_ALLOWLISTED_RUNNER_SHIMS = (
     },
 )
 EXPECTED_PRODUCT_FORCE_TERMS = ("directional_hbond", "hydrophobic_contact", "legacy_lj")
+EXPECTED_HBOND_RECOVERY_BENCHMARK_SCHEMA_VERSION = "hbond_recovery_benchmark_v1"
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -324,7 +325,10 @@ def _validate_kpi_claim_metadata_gates(
         or _int_value(neighbor.get("last_forcefield_neighbor_pair_count"))
         != _int_value(neighbor.get("last_neighbor_pair_count"))
         or neighbor.get("forcefield_neighbor_pairs_provided") is not True
-        or neighbor.get("forcefield_neighbor_source") != "provided"
+        or neighbor.get("forcefield_neighbor_source") != "provided_cell_list"
+        or neighbor.get("neighbor_provider_status") != "neighbor_provider_ready"
+        or neighbor.get("neighbor_provider_overflow") is not False
+        or neighbor.get("neighbor_provider_nxn_allocation_observed") is not False
     ):
         errors.append(f"kpi_runtime_neighbor_list_rebuild_missing:{artifact_id}")
     scaling_rows = runtime_scaling.get("rows")
@@ -1787,6 +1791,18 @@ def _validate_kpi_claim_metadata_gates(
     pose_benchmark = payload.get("pose_ranking_hbond_benchmark")
     if not isinstance(pose_benchmark, dict):
         pose_benchmark = {}
+    hbond_recovery_benchmark = pose_benchmark.get("hbond_recovery_benchmark")
+    if not isinstance(hbond_recovery_benchmark, dict):
+        hbond_recovery_benchmark = {}
+    hbond_recovery_summary = hbond_recovery_benchmark.get("summary")
+    if not isinstance(hbond_recovery_summary, dict):
+        hbond_recovery_summary = {}
+    hbond_recovery_claim_metadata = hbond_recovery_benchmark.get("claim_metadata")
+    if not isinstance(hbond_recovery_claim_metadata, dict):
+        hbond_recovery_claim_metadata = {}
+    hbond_recovery_rows = hbond_recovery_benchmark.get("rows")
+    if not isinstance(hbond_recovery_rows, list):
+        hbond_recovery_rows = []
     confidence_report = payload.get("confidence_calibration_report")
     if not isinstance(confidence_report, dict):
         confidence_report = {}
@@ -1837,6 +1853,22 @@ def _validate_kpi_claim_metadata_gates(
         pose_benchmark.get("hbond_recovery_confidence_min")
     ):
         errors.append(f"pm_chemistry_hbond_recovery_confidence_mismatch:{artifact_id}")
+    if (pm_chemistry.get("hbond_recovery_benchmark_ready") is True) != (
+        hbond_recovery_benchmark.get("ready") is True
+    ):
+        errors.append(f"pm_chemistry_hbond_recovery_benchmark_ready_mismatch:{artifact_id}")
+    if str(pm_chemistry.get("hbond_recovery_benchmark_schema_version") or "") != str(
+        hbond_recovery_summary.get("schema_version") or ""
+    ):
+        errors.append(f"pm_chemistry_hbond_recovery_benchmark_schema_mismatch:{artifact_id}")
+    if _int_value(pm_chemistry.get("hbond_recovery_benchmark_fixture_count")) != _int_value(
+        hbond_recovery_summary.get("fixture_count")
+    ):
+        errors.append(f"pm_chemistry_hbond_recovery_benchmark_fixture_count_mismatch:{artifact_id}")
+    if _int_value(pm_chemistry.get("hbond_recovery_benchmark_contract_pass_count")) != _int_value(
+        hbond_recovery_summary.get("benchmark_contract_pass_count")
+    ):
+        errors.append(f"pm_chemistry_hbond_recovery_benchmark_contract_count_mismatch:{artifact_id}")
     if _int_value(pm_chemistry.get("unsatisfied_donor_acceptor_fixture_count")) != _int_value(
         chemistry.get("unsatisfied_donor_acceptor_fixture_count")
     ):
@@ -1883,6 +1915,52 @@ def _validate_kpi_claim_metadata_gates(
         errors.append(f"kpi_pose_ranking_overanchored_decoy_not_blocked:{artifact_id}")
     if pose_benchmark.get("unsatisfied_donor_acceptor_detected") is not True:
         errors.append(f"kpi_pose_ranking_unsatisfied_donor_acceptor_missing:{artifact_id}")
+    if pose_benchmark.get("hbond_recovery_benchmark_schema_version") != (
+        EXPECTED_HBOND_RECOVERY_BENCHMARK_SCHEMA_VERSION
+    ):
+        errors.append(f"kpi_pose_ranking_hbond_recovery_benchmark_schema_missing:{artifact_id}")
+    if pose_benchmark.get("hbond_recovery_benchmark_ready") is not True:
+        errors.append(f"kpi_pose_ranking_hbond_recovery_benchmark_not_ready:{artifact_id}")
+    if hbond_recovery_benchmark.get("ready") is not True:
+        errors.append(f"kpi_hbond_recovery_benchmark_not_ready:{artifact_id}")
+    if hbond_recovery_benchmark.get("status") != "hbond_recovery_benchmark_ready":
+        errors.append(f"kpi_hbond_recovery_benchmark_status_invalid:{artifact_id}")
+    if hbond_recovery_summary.get("schema_version") != EXPECTED_HBOND_RECOVERY_BENCHMARK_SCHEMA_VERSION:
+        errors.append(f"kpi_hbond_recovery_benchmark_summary_schema_missing:{artifact_id}")
+    if _int_value(hbond_recovery_summary.get("fixture_count")) != len(hbond_recovery_rows):
+        errors.append(f"kpi_hbond_recovery_benchmark_fixture_count_mismatch:{artifact_id}")
+    if _int_value(hbond_recovery_summary.get("benchmark_contract_pass_count")) != sum(
+        1 for row in hbond_recovery_rows if isinstance(row, dict) and row.get("benchmark_contract_pass") is True
+    ):
+        errors.append(f"kpi_hbond_recovery_benchmark_contract_pass_count_mismatch:{artifact_id}")
+    if not any(
+        isinstance(row, dict)
+        and str(row.get("benchmark_role") or "") == "active_recovery_pose"
+        and row.get("hbond_claim_safe") is True
+        for row in hbond_recovery_rows
+    ):
+        errors.append(f"kpi_hbond_recovery_benchmark_active_pose_missing:{artifact_id}")
+    if not any(
+        isinstance(row, dict)
+        and _int_value(row.get("hbond_unsatisfied_total_count")) > 0
+        for row in hbond_recovery_rows
+    ):
+        errors.append(f"kpi_hbond_recovery_benchmark_unsatisfied_evidence_missing:{artifact_id}")
+    if not any(
+        isinstance(row, dict)
+        and str(row.get("benchmark_role") or "") == "overanchored_decoy_pose"
+        and row.get("overanchoring_flag") is True
+        and row.get("hbond_claim_safe") is False
+        and str(row.get("hbond_blocked_reason") or "") == "overanchored_decoy"
+        for row in hbond_recovery_rows
+    ):
+        errors.append(f"kpi_hbond_recovery_benchmark_overanchored_decoy_missing:{artifact_id}")
+    if hbond_recovery_claim_metadata.get("claim_safe") is not False:
+        errors.append(f"kpi_hbond_recovery_benchmark_claim_metadata_not_blocked:{artifact_id}")
+    if str(hbond_recovery_claim_metadata.get("blocked_reason") or "") != (
+        "hbond_recovery_benchmark_not_product_claim_promoted"
+    ):
+        errors.append(f"kpi_hbond_recovery_benchmark_claim_metadata_reason_invalid:{artifact_id}")
     if confidence_report.get("schema_version") != "confidence_calibration_v1":
         errors.append(f"kpi_confidence_calibration_schema_missing:{artifact_id}")
     if (
@@ -2507,6 +2585,12 @@ def build_payload(
         if isinstance(kpi_summary.get("pose_ranking_hbond_benchmark"), dict)
         else {}
     )
+    hbond_recovery_benchmark = pose_benchmark.get("hbond_recovery_benchmark")
+    if not isinstance(hbond_recovery_benchmark, dict):
+        hbond_recovery_benchmark = {}
+    hbond_recovery_summary = hbond_recovery_benchmark.get("summary")
+    if not isinstance(hbond_recovery_summary, dict):
+        hbond_recovery_summary = {}
     confidence_report = (
         kpi_summary.get("confidence_calibration_report")
         if isinstance(kpi_summary.get("confidence_calibration_report"), dict)
@@ -2565,6 +2649,7 @@ def build_payload(
         and _int_value(pm_chemistry.get("hbond_geometry_evaluated_fixture_count")) >= 1
         and _int_value(pm_chemistry.get("hbond_geometry_complete_fixture_count")) >= 1
         and _int_value(pm_chemistry.get("hbond_recovery_pose_count")) >= 1
+        and pm_chemistry.get("hbond_recovery_benchmark_ready") is True
         and pm_chemistry.get("unsatisfied_donor_acceptor_detection") is True
         and pm_chemistry.get("overanchored_decoy_rejection") is True
         and pm_chemistry.get("chirality_preservation_ready") is True
@@ -2577,6 +2662,12 @@ def build_payload(
         pose_benchmark.get("benchmark_ready") is True
         and pose_benchmark.get("top1_pose_id") == pose_benchmark.get("top1_expected_pose_id")
         and _int_value(pose_benchmark.get("hbond_recovery_pose_count")) >= 1
+        and pose_benchmark.get("hbond_recovery_benchmark_ready") is True
+        and pose_benchmark.get("hbond_recovery_benchmark_schema_version")
+        == EXPECTED_HBOND_RECOVERY_BENCHMARK_SCHEMA_VERSION
+        and hbond_recovery_benchmark.get("ready") is True
+        and hbond_recovery_summary.get("schema_version")
+        == EXPECTED_HBOND_RECOVERY_BENCHMARK_SCHEMA_VERSION
         and pose_benchmark.get("overanchored_decoys_blocked") is True
         and pose_benchmark.get("unsatisfied_donor_acceptor_detected") is True
         and pose_benchmark.get("row_contracts_ready") is True
@@ -2855,6 +2946,18 @@ def build_payload(
             pose_benchmark.get("row_contract_pass_count")
         ),
         "hbond_recovery_pose_count": _int_value(pm_chemistry.get("hbond_recovery_pose_count")),
+        "hbond_recovery_benchmark_ready": bool(
+            pm_chemistry.get("hbond_recovery_benchmark_ready") is True
+        ),
+        "hbond_recovery_benchmark_schema_version": str(
+            pm_chemistry.get("hbond_recovery_benchmark_schema_version") or ""
+        ),
+        "hbond_recovery_benchmark_fixture_count": _int_value(
+            pm_chemistry.get("hbond_recovery_benchmark_fixture_count")
+        ),
+        "hbond_recovery_benchmark_contract_pass_count": _int_value(
+            pm_chemistry.get("hbond_recovery_benchmark_contract_pass_count")
+        ),
         "overanchored_decoy_rejection": bool(pm_chemistry.get("overanchored_decoy_rejection") is True),
         "unsatisfied_donor_acceptor_detection": bool(
             pm_chemistry.get("unsatisfied_donor_acceptor_detection") is True

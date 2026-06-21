@@ -7,7 +7,12 @@ import torch
 from betelgeuze_engine.contracts.result import TermResult
 from betelgeuze_engine.contracts.state import EngineState
 from betelgeuze_engine.interactions import HBOND_EVIDENCE_SCHEMA_VERSION
-from betelgeuze_engine.physics.neighbor import NeighborPairs, full_neighbor_pairs
+from betelgeuze_engine.physics.neighbor import (
+    NeighborPairs,
+    full_neighbor_pairs,
+    neighbor_displacements,
+    neighbor_upper_mask,
+)
 from betelgeuze_engine.physics.term_claim_metadata import term_claim_metadata
 
 
@@ -43,12 +48,12 @@ class DirectionalHBondTerm:
             )
         donor = torch.tensor([r in {"donor", "both"} for r in roles], dtype=torch.bool, device=coords.device)
         acceptor = torch.tensor([r in {"acceptor", "both"} for r in roles], dtype=torch.bool, device=coords.device)
-        pair_role = (donor.view(1, -1, 1) & acceptor.view(1, 1, -1)) | (
-            acceptor.view(1, -1, 1) & donor.view(1, 1, -1)
-        )
-        upper = torch.triu(torch.ones_like(pairs.mask, dtype=torch.bool), diagonal=1)
-        mask = pairs.mask & pair_role & upper
-        dist = (coords.unsqueeze(2) - coords.unsqueeze(1)).norm(dim=-1).clamp_min(1e-4)
+        role_idx = pairs.idx.clamp(min=0, max=max(int(coords.shape[1]) - 1, 0)).to(device=coords.device)
+        donor_j = donor.view(1, 1, -1).expand(coords.shape[0], coords.shape[1], -1).gather(2, role_idx)
+        acceptor_j = acceptor.view(1, 1, -1).expand(coords.shape[0], coords.shape[1], -1).gather(2, role_idx)
+        pair_role = (donor.view(1, -1, 1) & acceptor_j) | (acceptor.view(1, -1, 1) & donor_j)
+        mask = neighbor_upper_mask(pairs).to(device=coords.device) & pair_role
+        dist = neighbor_displacements(coords, pairs).norm(dim=-1).clamp_min(1e-4)
         width = torch.tensor(float(self.width), dtype=coords.dtype, device=coords.device).clamp_min(1e-4)
         ideal = torch.tensor(float(self.ideal_dist), dtype=coords.dtype, device=coords.device)
         weight = torch.exp(-((dist - ideal) / width).pow(2))
