@@ -545,6 +545,7 @@ class ForceResidualReport:
 - residual claim metadata는 `force_residual_required_policy_caps`, `force_residual_policy_caps_ready`, `force_residual_observed_caps_ready`, `force_residual_all_observed_caps_within_policy`를 포함해 policy cap 자체가 finite/in-range인지와 관측된 correction이 cap 안인지 분리해 검증한다.
 - local PC KPI report는 top10 residual runtime과 별도로 `delta_score_cap_exceeded`, `uncertainty_abstained`, `outside_top_k_policy` abstention smoke를 기록한다.
 - PM runtime KPI는 `force_residual_bounded_policy_ready`, `force_residual_observed_caps_ready`, `force_residual_confidence_abstention_ready`, `force_residual_top_k_policy_ready`, `force_residual_top_k_rank_pct`를 노출한다.
+- `runtime_kpi.top10_force_residual`은 `contract_expected_report_count=6`, `contract_validated_report_count=6`, `contract_validation_ready=true`, `contract_validated_report_labels`를 노출하며 product evidence bundle validator는 count 누락/미달/불일치를 fail-closed 처리한다.
 
 합격 기준:
 

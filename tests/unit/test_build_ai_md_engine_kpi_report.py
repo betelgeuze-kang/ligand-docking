@@ -1407,6 +1407,17 @@ def _write_product_evidence_bundle(
                     "observed_caps_ready": True,
                 },
                 "top_k_policy_ready": True,
+                "contract_expected_report_count": 6,
+                "contract_validated_report_count": 6,
+                "contract_validation_ready": True,
+                "contract_validated_report_labels": [
+                    "applied_runtime_last",
+                    "delta_score_cap",
+                    "uncertainty_abstention",
+                    "outside_top_k",
+                    "nonfinite_uncertainty",
+                    "nonfinite_delta_score",
+                ],
                 "outside_top_k_report": {
                     "applied": False,
                     "skipped_reason": "outside_top_k_policy",
@@ -2317,6 +2328,17 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert residual_kpi["contract_ready"] is True
     assert residual_kpi["confidence_abstention_ready"] is True
     assert residual_kpi["top_k_policy_ready"] is True
+    assert residual_kpi["contract_expected_report_count"] == 6
+    assert residual_kpi["contract_validated_report_count"] == 6
+    assert residual_kpi["contract_validation_ready"] is True
+    assert residual_kpi["contract_validated_report_labels"] == [
+        "applied_runtime_last",
+        "delta_score_cap",
+        "uncertainty_abstention",
+        "outside_top_k",
+        "nonfinite_uncertainty",
+        "nonfinite_delta_score",
+    ]
     assert report["pm_kpi_summary"]["runtime"]["force_residual_bounded_policy_ready"] is True
     assert report["pm_kpi_summary"]["runtime"]["force_residual_observed_caps_ready"] is True
     assert report["pm_kpi_summary"]["runtime"]["force_residual_contract_ready"] is True

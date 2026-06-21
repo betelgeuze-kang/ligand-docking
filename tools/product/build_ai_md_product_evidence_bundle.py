@@ -217,6 +217,19 @@ def _validate_kpi_claim_metadata_gates(
         errors.append(f"kpi_runtime_top10_force_residual_missing:{artifact_id}")
     if runtime_residual.get("contract_ready") is not True:
         errors.append(f"kpi_runtime_top10_force_residual_contract_not_ready:{artifact_id}")
+    contract_expected = _int_value(runtime_residual.get("contract_expected_report_count"))
+    contract_validated = _int_value(runtime_residual.get("contract_validated_report_count"))
+    if contract_expected < 6:
+        errors.append(f"kpi_runtime_top10_force_residual_contract_expected_count_low:{artifact_id}")
+    if contract_validated < contract_expected:
+        errors.append(f"kpi_runtime_top10_force_residual_contract_validated_count_low:{artifact_id}")
+    if runtime_residual.get("contract_validation_ready") is not True:
+        errors.append(f"kpi_runtime_top10_force_residual_contract_validation_not_ready:{artifact_id}")
+    if (
+        runtime_residual.get("contract_ready") is True
+        and runtime_residual.get("contract_validation_ready") is not True
+    ):
+        errors.append(f"kpi_runtime_top10_force_residual_contract_count_inconsistent:{artifact_id}")
     if runtime_residual.get("top_k_policy_ready") is not True:
         errors.append(f"kpi_runtime_top10_force_residual_top_k_policy_not_ready:{artifact_id}")
     applied_report = runtime_residual.get("last_report")

@@ -471,14 +471,20 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
             "blocked_reason": "",
         }
     )
+    validated_report_labels = ["applied_runtime_last"] if last_report and last_metadata else []
     validate_force_residual_report_contract(cap_report, claim_metadata=cap_metadata)
+    validated_report_labels.append("delta_score_cap")
     validate_force_residual_report_contract(uncertainty_report, claim_metadata=uncertainty_metadata)
+    validated_report_labels.append("uncertainty_abstention")
     validate_force_residual_report_contract(outside_top_k_report, claim_metadata=outside_top_k_metadata)
+    validated_report_labels.append("outside_top_k")
     validate_force_residual_report_contract(
         nonfinite_uncertainty_report,
         claim_metadata=nonfinite_uncertainty_metadata,
     )
+    validated_report_labels.append("nonfinite_uncertainty")
     validate_force_residual_report_contract(nonfinite_delta_report, claim_metadata=nonfinite_delta_metadata)
+    validated_report_labels.append("nonfinite_delta_score")
     policy_caps = cap_report.to_dict()["policy_caps"]
     contract_ready = bool(
         last_report.get("claim_metadata_schema_version") == "force_residual_claim_metadata_v1"
@@ -533,6 +539,16 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
         and last_metadata.get("force_residual_top_k_eligible") is True
         and last_metadata.get("force_residual_rank_pct") <= float(policy.top_k_rank_pct)
     )
+    contract_expected_report_count = 6
+    contract_validated_report_count = len(validated_report_labels)
+    contract_validation_ready = bool(
+        contract_validated_report_count >= contract_expected_report_count
+        and contract_ready
+        and bounded_policy_ready
+        and observed_caps_ready
+        and confidence_abstention_ready
+        and top_k_policy_ready
+    )
     return {
         "row_count": int(row_count),
         "applied_count": int(applied),
@@ -555,6 +571,10 @@ def _force_residual_runtime(row_count: int) -> dict[str, Any]:
         "contract_ready": contract_ready,
         "confidence_abstention_ready": confidence_abstention_ready,
         "top_k_policy_ready": top_k_policy_ready,
+        "contract_expected_report_count": contract_expected_report_count,
+        "contract_validated_report_count": contract_validated_report_count,
+        "contract_validation_ready": contract_validation_ready,
+        "contract_validated_report_labels": validated_report_labels,
         "required_policy_caps": sorted(required_policy_caps),
         "last_claim_metadata": last_metadata,
         "last_report": last_report,

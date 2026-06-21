@@ -1328,6 +1328,17 @@ def _kpi_packet(
                     "observed_caps_ready": True,
                 },
                 "top_k_policy_ready": True,
+                "contract_expected_report_count": 6,
+                "contract_validated_report_count": 6,
+                "contract_validation_ready": True,
+                "contract_validated_report_labels": [
+                    "applied_runtime_last",
+                    "delta_score_cap",
+                    "uncertainty_abstention",
+                    "outside_top_k",
+                    "nonfinite_uncertainty",
+                    "nonfinite_delta_score",
+                ],
                 "outside_top_k_report": {
                     "applied": False,
                     "skipped_reason": "outside_top_k_policy",
@@ -4370,6 +4381,99 @@ def test_ai_md_product_evidence_bundle_blocks_without_force_residual_top_k_polic
     )
     assert any(
         error.startswith("pm_force_residual_top_k_policy_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_without_force_residual_contract_count_fields(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    residual = kpi_packet["runtime_kpi"]["top10_force_residual"]
+    del residual["contract_expected_report_count"]
+    residual["contract_validated_report_count"] = 5
+    residual["contract_validation_ready"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_runtime_top10_force_residual_contract_expected_count_low:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_runtime_top10_force_residual_contract_validation_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_force_residual_contract_count_too_low(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    residual = kpi_packet["runtime_kpi"]["top10_force_residual"]
+    residual["contract_expected_report_count"] = 6
+    residual["contract_validated_report_count"] = 3
+    residual["contract_validation_ready"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_runtime_top10_force_residual_contract_validated_count_low:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_runtime_top10_force_residual_contract_validation_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_force_residual_contract_count_inconsistent(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    residual = kpi_packet["runtime_kpi"]["top10_force_residual"]
+    residual["contract_validation_ready"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_runtime_top10_force_residual_contract_count_inconsistent:")
         for error in summary["bundle_validation_errors"]
     )
 
