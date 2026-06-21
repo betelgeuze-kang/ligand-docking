@@ -3,12 +3,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from tools.builder_table_utils import write_csv_rows
 
-ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_API_FLOW_JSON = "runs/api_customer_flow_release_evidence_current.json"
 DEFAULT_ROLLOUT_JSON = "runs/product_rollout_execution_readiness_current.json"
 DEFAULT_RELEASE_BUNDLE_JSON = "runs/product_release_bundle_current.json"
