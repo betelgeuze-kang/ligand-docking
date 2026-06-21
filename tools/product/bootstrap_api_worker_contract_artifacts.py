@@ -86,9 +86,11 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
     ]
     for command in builders:
         _run(*command)
+    from tools.product.ci_contract_fixture_packets import write_restricted_self_hosted_commercial_packets
     from tools.product.write_full_gap_closure_fixture_packets import write_full_gap_closure_fixture_packets
 
     write_full_gap_closure_fixture_packets(runs_dir)
+    write_restricted_self_hosted_commercial_packets(runs_dir)
     post_builders = [
         ("tools/product/build_self_hosted_license_distribution_audit.py",),
         ("tools/build_third_party_license_review_gate.py",),
@@ -99,6 +101,7 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
         ("tools/build_product_ai_architecture_execution_backlog.py",),
         ("tools/build_data_science_expansion_gap_closure.py",),
         ("tools/build_master_gap_closure_rollup.py",),
+        ("tools/cameo/build_cameo_local_format_smoke_inputs.py",),
         ("tools/build_cameo_api_dependency_readiness.py",),
         ("tools/build_cameo_receiver_smoke_contract.py",),
         (

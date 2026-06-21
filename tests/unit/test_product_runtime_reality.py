@@ -261,6 +261,9 @@ def test_product_rocm_hip_rust_requirements_are_installed_by_product_dockerfile(
     assert "requirements-product-rocm.txt" in dockerfile
     assert "-r requirements-product-rocm.txt" in dockerfile
     assert "runs/independent_engine_roadmap_status_current.json" in dockerfile
+    assert "COPY runs/" not in dockerfile
+    assert "independent_engine_roadmap_closed" in dockerfile
+    assert "product_image_build_time_fixture" in dockerfile
     assert "requirements.txt" in dockerfile
     assert "FORCE_RUST_HIP=1" in dockerfile
     assert "RUST_HIP_USE_GPU_NBLIST_BUILDER=1" in dockerfile

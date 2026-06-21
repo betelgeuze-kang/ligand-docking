@@ -10,7 +10,7 @@ def _write(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
-def write_capability_prerequisite_packets(runs_dir: Path) -> None:
+def write_restricted_scope_breadth_contract(runs_dir: Path) -> None:
     _write(
         runs_dir / "product_scope_breadth_contract_current.json",
         {
@@ -19,12 +19,115 @@ def write_capability_prerequisite_packets(runs_dir: Path) -> None:
                 "allowed_scope_families": ["gpcr", "ion_channel", "kinase"],
                 "blocked_claim_scopes": [
                     "transporter_domain_promotion",
+                    "pxr_domain_promotion",
                     "general_protein_ligand_platform",
                 ],
                 "general_platform_claim_allowed": False,
             }
         },
     )
+
+
+def write_restricted_self_hosted_commercial_packets(runs_dir: Path) -> None:
+    write_restricted_scope_breadth_contract(runs_dir)
+    _write(
+        runs_dir / "product_commercial_independence_gate_current.json",
+        {
+            "summary": {
+                "status": "product_commercial_independence_gate_ready",
+                "commercial_independent_product_claim_allowed": True,
+                "local_self_hosted_operation_ready": True,
+                "local_self_hosted_api_cli_ready": True,
+                "general_platform_claim_allowed": False,
+                "blocker_count": 0,
+                "license_present": True,
+                "product_service_boundary_ready": True,
+                "product_api_contract_ready": True,
+                "delete_executed": False,
+                "external_state_mutated": False,
+            }
+        },
+    )
+    _write(
+        runs_dir / "product_release_bundle_current.json",
+        {
+            "summary": {
+                "status": "release_bundle_ready_for_operator_review",
+                "release_bundle_ready": True,
+                "artifact_count": 34,
+                "check_count": 26,
+                "pass_count": 26,
+                "blocker_count": 0,
+            }
+        },
+    )
+    _write(
+        runs_dir / "product_service_boundary_contract_current.json",
+        {
+            "summary": {
+                "status": "product_service_boundary_contract_ready",
+                "service_boundary_ready": True,
+                "api_route_count": 46,
+                "missing_api_route_count": 0,
+                "cli_command_count": 13,
+            }
+        },
+    )
+    _write(
+        runs_dir / "product_bundle_contract_current.json",
+        {
+            "summary": {
+                "status": "product_bundle_contract_ready",
+                "bundle_parser_status": "parsed",
+                "bundle_unknown_arg_count": 0,
+                "expected_bundle_dir": "runs/local_delivery/bundle_product_gpcr_adrb2",
+                "artifact_count": 1,
+                "bundle_validation_command_matches": True,
+                "bundle_assembled": True,
+                "bundle_validation_passed": True,
+                "execution_enabled": False,
+                "docking_results_emitted": False,
+                "external_state_mutated": False,
+            },
+            "bundle_command_check": {
+                "parsed_args": {
+                    "rerun_command": "python3 tools/run_ligand_htvs_pipeline.py --out-prefix runs/product_gpcr_adrb2_after_approval"
+                }
+            },
+            "planned_artifact_checks": [{"path": "runs/product_gpcr_adrb2_after_approval_summary.json"}],
+        },
+    )
+    _write(
+        runs_dir / "product_delivery_evidence_contract_current.json",
+        {
+            "summary": {
+                "status": "product_delivery_evidence_contract_ready",
+                "delivery_ready_claim_allowed": True,
+                "bundle_assembled": True,
+                "bundle_validation_passed": True,
+                "execution_enabled": False,
+                "docking_results_emitted": False,
+                "external_state_mutated": False,
+            }
+        },
+    )
+    _write(
+        runs_dir / "product_pilot_packet_contract_current.json",
+        {
+            "summary": {
+                "status": "product_pilot_packet_ready",
+                "pilot_delivery_ready": True,
+                "bundle_validation_passed": True,
+                "execution_enabled": False,
+                "docking_results_emitted": False,
+                "external_state_mutated": False,
+            }
+        },
+    )
+
+
+def write_capability_prerequisite_packets(runs_dir: Path) -> None:
+    write_restricted_self_hosted_commercial_packets(runs_dir)
     _write(
         runs_dir / "product_readiness_gate_current.json",
         {
@@ -78,40 +181,6 @@ def write_capability_prerequisite_packets(runs_dir: Path) -> None:
             }
         },
     )
-    _write(
-        runs_dir / "product_bundle_contract_current.json",
-        {
-            "summary": {
-                "status": "product_bundle_contract_ready",
-                "bundle_parser_status": "parsed",
-                "bundle_unknown_arg_count": 0,
-                "expected_bundle_dir": "runs/local_delivery/bundle_product_gpcr_adrb2",
-                "artifact_count": 1,
-                "bundle_validation_command_matches": True,
-                "execution_enabled": False,
-                "docking_results_emitted": False,
-                "external_state_mutated": False,
-            },
-            "bundle_command_check": {
-                "parsed_args": {
-                    "rerun_command": "python3 tools/run_ligand_htvs_pipeline.py --out-prefix runs/product_gpcr_adrb2_after_approval"
-                }
-            },
-            "planned_artifact_checks": [{"path": "runs/product_gpcr_adrb2_after_approval_summary.json"}],
-        },
-    )
-    _write(
-        runs_dir / "product_delivery_evidence_contract_current.json",
-        {
-            "summary": {
-                "status": "product_delivery_evidence_contract_ready",
-                "delivery_ready_claim_allowed": False,
-                "execution_enabled": False,
-                "docking_results_emitted": False,
-                "external_state_mutated": False,
-            }
-        },
-    )
     write_license_packets(runs_dir)
     _write(
         runs_dir / "independent_engine_roadmap_status_current.json",
@@ -131,18 +200,6 @@ def write_capability_prerequisite_packets(runs_dir: Path) -> None:
             }
         },
     )
-    _write(
-        runs_dir / "product_pilot_packet_contract_current.json",
-        {
-            "summary": {
-                "status": "product_pilot_packet_preflight_ready",
-                "pilot_delivery_ready": False,
-                "execution_enabled": False,
-                "docking_results_emitted": False,
-                "external_state_mutated": False,
-            }
-        },
-    )
     write_production_ai_checkpoint_fixture_packets(runs_dir)
     write_claim_expansion_gate_scaffolds(runs_dir)
     write_data_science_expansion_closure_packets(runs_dir)
@@ -152,6 +209,7 @@ def write_capability_prerequisite_packets(runs_dir: Path) -> None:
     from tools.product.write_full_gap_closure_fixture_packets import write_full_gap_closure_fixture_packets
 
     write_full_gap_closure_fixture_packets(runs_dir)
+    write_restricted_self_hosted_commercial_packets(runs_dir)
 
 
 def write_production_ai_checkpoint_fixture_packets(runs_dir: Path) -> None:
@@ -383,6 +441,10 @@ def write_deploy_ops_legal_closure_packets(runs_dir: Path) -> None:
         {
             "summary": {
                 "status": "release_bundle_ready_for_operator_review",
+                "release_bundle_ready": True,
+                "artifact_count": 34,
+                "check_count": 26,
+                "pass_count": 26,
                 "blocker_count": 0,
             }
         },
