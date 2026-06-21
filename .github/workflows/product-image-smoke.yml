@@ -51,13 +51,17 @@ on:
   workflow_dispatch:
     inputs:
       verify_mode:
-        description: "Product image smoke mode. build is hosted CI; rocm-runtime requires a self-hosted ROCm runner."
+        description: "Product image smoke mode. build defaults to self-hosted Linux; rocm-runtime requires a self-hosted ROCm runner."
         required: true
         default: build
         type: choice
         options:
           - build
           - rocm-runtime
+      build_runner_labels_json:
+        description: "JSON array for build smoke runner labels. Default self-hosted avoids GitHub-hosted minutes; use [\"ubuntu-latest\"] only by explicit choice."
+        required: true
+        default: '["self-hosted","linux"]'
 
 permissions:
   contents: read
@@ -65,7 +69,7 @@ permissions:
 jobs:
   product-image-build-smoke:
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.verify_mode == 'build' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(inputs.build_runner_labels_json || '["self-hosted","linux"]') }}
     steps:
       - uses: actions/checkout@v4
       - name: Verify product image build smoke
@@ -97,7 +101,7 @@ jobs:
               "",
               payload.get(
                   "claim_boundary",
-                  "Hosted build smoke verifies image build/import scope only; product claim promotion requires a rocm-runtime receipt.",
+                  "Build smoke verifies image build/import scope only; product claim promotion requires a rocm-runtime receipt on a self-hosted ROCm runner.",
               ),
               "",
           ]

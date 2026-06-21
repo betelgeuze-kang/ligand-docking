@@ -58,10 +58,15 @@ on:
       - "tests/unit/test_api_security_middleware.py"
       - ".github/workflows/product-api-worker.yml"
   workflow_dispatch:
+    inputs:
+      runner_labels_json:
+        description: "JSON array for runner labels. Default self-hosted avoids GitHub-hosted minutes; use [\"ubuntu-latest\"] only by explicit choice."
+        required: true
+        default: '["self-hosted","linux"]'
 
 jobs:
   api-worker-contract:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(inputs.runner_labels_json || '["self-hosted","linux"]') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

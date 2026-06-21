@@ -57,6 +57,7 @@ def test_product_image_smoke_preflight_contract_ready_with_docker_path(tmp_path:
     assert rows_by_id["docker_host_setup_script_declared"]["passed"] is True
     assert rows_by_id["workflow_pull_request_trigger_declared"]["passed"] is True
     assert rows_by_id["workflow_manual_verify_mode_choice_declared"]["passed"] is True
+    assert rows_by_id["workflow_build_smoke_self_hosted_by_default"]["passed"] is True
     assert rows_by_id["workflow_rocm_runtime_self_hosted_runner_declared"]["passed"] is True
     assert rows_by_id["workflow_hosted_build_summary_not_product_claim"]["passed"] is True
     assert all(row["execution_enabled"] is False for row in payload["rows"])
@@ -162,9 +163,12 @@ def test_product_image_smoke_preflight_blocks_rocm_requirements_that_include_cpu
                 "pull_request:",
                 "workflow_dispatch:",
                 "verify_mode:",
+                "build_runner_labels_json:",
                 "- build",
                 "- rocm-runtime",
                 "product-image-build-smoke:",
+                "fromJSON(inputs.build_runner_labels_json || '[\"self-hosted\",\"linux\"]')",
+                "use [\"ubuntu-latest\"] only by explicit choice",
                 "PRODUCT_IMAGE_VERIFY_MODE: build",
                 "product runtime claim: `false`",
                 "required runtime claim mode: `rocm-runtime on self-hosted ROCm runner`",

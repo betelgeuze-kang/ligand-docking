@@ -69,6 +69,7 @@ DEFAULT_RUNTIME_SCALING_PLOT = "runs/ai_md_runtime_scaling_plot_current.svg"
 DEFAULT_ROCM_MANIFEST_JSON = "runs/rocm_environment_manifest_current.json"
 DEFAULT_PRODUCT_EVIDENCE_BUNDLE_JSON = "runs/ai_md_product_evidence_bundle_current.json"
 DEFAULT_PRODUCT_CI_RUNTIME_GATE_JSON = "runs/product_ci_runtime_gate_current.json"
+EXPECTED_PRODUCT_FORCE_TERMS = ["directional_hbond", "hydrophobic_contact", "legacy_lj"]
 CHEMISTRY_FIXTURES = {
     "ethanol": "CCO",
     "amide": "CC(=O)N",
@@ -995,6 +996,24 @@ def _product_bundle_validation_kpi(product_evidence_bundle_json_path: str) -> di
             "product_ci_github_actions_started": False,
             "product_ci_external_blocker": False,
             "product_ci_blocker_code": "",
+            "product_ci_billing_free_self_hosted_path_recommended": False,
+            "product_ci_billing_free_self_hosted_api_worker_command": "",
+            "product_ci_billing_free_self_hosted_rocm_runtime_command": "",
+            "product_ci_hosted_spending_limit_increase_required": False,
+            "product_ci_self_hosted_runner_inventory_present": False,
+            "product_ci_self_hosted_runner_total_count": 0,
+            "product_ci_self_hosted_linux_runner_online": False,
+            "product_ci_self_hosted_linux_runner_count": 0,
+            "product_ci_self_hosted_rocm_runner_online": False,
+            "product_ci_self_hosted_rocm_runner_count": 0,
+            "product_ci_self_hosted_runner_inventory_external_state_mutated": False,
+            "product_ci_self_hosted_runner_host_preflight_present": False,
+            "product_ci_self_hosted_runner_host_preflight_status": "",
+            "product_ci_self_hosted_runner_host_local_ready": False,
+            "product_ci_self_hosted_runner_host_repo_ready": False,
+            "product_ci_self_hosted_runner_host_registration_required": False,
+            "product_ci_self_hosted_runner_host_github_registration_token_requested": False,
+            "product_ci_self_hosted_runner_host_external_state_mutated": False,
             "product_image_preflight_blocker_codes": [],
             "clean_install_missing_requirements": [
                 "clean_container_smoke_ready",
@@ -1071,6 +1090,60 @@ def _product_bundle_validation_kpi(product_evidence_bundle_json_path: str) -> di
             ),
             "product_ci_external_blocker": bool(summary.get("product_ci_external_blocker") is True),
             "product_ci_blocker_code": str(summary.get("product_ci_blocker_code") or ""),
+            "product_ci_billing_free_self_hosted_path_recommended": bool(
+                summary.get("product_ci_billing_free_self_hosted_path_recommended") is True
+            ),
+            "product_ci_billing_free_self_hosted_api_worker_command": str(
+                summary.get("product_ci_billing_free_self_hosted_api_worker_command") or ""
+            ),
+            "product_ci_billing_free_self_hosted_rocm_runtime_command": str(
+                summary.get("product_ci_billing_free_self_hosted_rocm_runtime_command") or ""
+            ),
+            "product_ci_hosted_spending_limit_increase_required": bool(
+                summary.get("product_ci_hosted_spending_limit_increase_required") is True
+            ),
+            "product_ci_self_hosted_runner_inventory_present": bool(
+                summary.get("product_ci_self_hosted_runner_inventory_present") is True
+            ),
+            "product_ci_self_hosted_runner_total_count": int(
+                summary.get("product_ci_self_hosted_runner_total_count") or 0
+            ),
+            "product_ci_self_hosted_linux_runner_online": bool(
+                summary.get("product_ci_self_hosted_linux_runner_online") is True
+            ),
+            "product_ci_self_hosted_linux_runner_count": int(
+                summary.get("product_ci_self_hosted_linux_runner_count") or 0
+            ),
+            "product_ci_self_hosted_rocm_runner_online": bool(
+                summary.get("product_ci_self_hosted_rocm_runner_online") is True
+            ),
+            "product_ci_self_hosted_rocm_runner_count": int(
+                summary.get("product_ci_self_hosted_rocm_runner_count") or 0
+            ),
+            "product_ci_self_hosted_runner_inventory_external_state_mutated": bool(
+                summary.get("product_ci_self_hosted_runner_inventory_external_state_mutated") is True
+            ),
+            "product_ci_self_hosted_runner_host_preflight_present": bool(
+                summary.get("product_ci_self_hosted_runner_host_preflight_present") is True
+            ),
+            "product_ci_self_hosted_runner_host_preflight_status": str(
+                summary.get("product_ci_self_hosted_runner_host_preflight_status") or ""
+            ),
+            "product_ci_self_hosted_runner_host_local_ready": bool(
+                summary.get("product_ci_self_hosted_runner_host_local_ready") is True
+            ),
+            "product_ci_self_hosted_runner_host_repo_ready": bool(
+                summary.get("product_ci_self_hosted_runner_host_repo_ready") is True
+            ),
+            "product_ci_self_hosted_runner_host_registration_required": bool(
+                summary.get("product_ci_self_hosted_runner_host_registration_required") is True
+            ),
+            "product_ci_self_hosted_runner_host_github_registration_token_requested": bool(
+                summary.get("product_ci_self_hosted_runner_host_github_registration_token_requested") is True
+            ),
+            "product_ci_self_hosted_runner_host_external_state_mutated": bool(
+                summary.get("product_ci_self_hosted_runner_host_external_state_mutated") is True
+            ),
             "product_image_preflight_blocker_codes": list(
                 summary.get("product_image_preflight_blocker_codes") or []
             ),
@@ -1104,6 +1177,60 @@ def _product_ci_runtime_gate_kpi(product_ci_runtime_gate_json_path: str) -> dict
         "product_ci_github_actions_started": bool(summary.get("github_actions_started") is True),
         "product_ci_external_blocker": external_blocker,
         "product_ci_blocker_code": str(summary.get("blocker_code") or ""),
+        "product_ci_billing_free_self_hosted_path_recommended": bool(
+            summary.get("billing_free_self_hosted_path_recommended") is True
+        ),
+        "product_ci_billing_free_self_hosted_api_worker_command": str(
+            summary.get("billing_free_self_hosted_api_worker_command") or ""
+        ),
+        "product_ci_billing_free_self_hosted_rocm_runtime_command": str(
+            summary.get("billing_free_self_hosted_rocm_runtime_command") or ""
+        ),
+        "product_ci_hosted_spending_limit_increase_required": bool(
+            summary.get("hosted_spending_limit_increase_required") is True
+        ),
+        "product_ci_self_hosted_runner_inventory_present": bool(
+            summary.get("self_hosted_runner_inventory_present") is True
+        ),
+        "product_ci_self_hosted_runner_total_count": int(
+            summary.get("self_hosted_runner_total_count") or 0
+        ),
+        "product_ci_self_hosted_linux_runner_online": bool(
+            summary.get("self_hosted_linux_runner_online") is True
+        ),
+        "product_ci_self_hosted_linux_runner_count": int(
+            summary.get("self_hosted_linux_runner_count") or 0
+        ),
+        "product_ci_self_hosted_rocm_runner_online": bool(
+            summary.get("self_hosted_rocm_runner_online") is True
+        ),
+        "product_ci_self_hosted_rocm_runner_count": int(
+            summary.get("self_hosted_rocm_runner_count") or 0
+        ),
+        "product_ci_self_hosted_runner_inventory_external_state_mutated": bool(
+            summary.get("self_hosted_runner_inventory_external_state_mutated") is True
+        ),
+        "product_ci_self_hosted_runner_host_preflight_present": bool(
+            summary.get("self_hosted_runner_host_preflight_present") is True
+        ),
+        "product_ci_self_hosted_runner_host_preflight_status": str(
+            summary.get("self_hosted_runner_host_preflight_status") or ""
+        ),
+        "product_ci_self_hosted_runner_host_local_ready": bool(
+            summary.get("self_hosted_runner_host_local_ready") is True
+        ),
+        "product_ci_self_hosted_runner_host_repo_ready": bool(
+            summary.get("self_hosted_runner_host_repo_ready") is True
+        ),
+        "product_ci_self_hosted_runner_host_registration_required": bool(
+            summary.get("self_hosted_runner_host_registration_required") is True
+        ),
+        "product_ci_self_hosted_runner_host_github_registration_token_requested": bool(
+            summary.get("self_hosted_runner_host_github_registration_token_requested") is True
+        ),
+        "product_ci_self_hosted_runner_host_external_state_mutated": bool(
+            summary.get("self_hosted_runner_host_external_state_mutated") is True
+        ),
         "product_ci_latest_github_actions_record_kst_date": str(
             summary.get("latest_github_actions_record_kst_date") or ""
         ),
@@ -1345,9 +1472,22 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
         len(term_result_contract_rows) == len(force_term_plugins)
         and all(row["ready"] is True for row in term_result_contract_rows)
     )
+    term_result_contract_terms = [
+        str(row.get("term") or "")
+        for row in term_result_contract_rows
+        if isinstance(row, dict) and str(row.get("term") or "")
+    ]
+    term_result_contract_term_set_ready = bool(
+        set(term_result_contract_terms) == set(EXPECTED_PRODUCT_FORCE_TERMS)
+        and len(term_result_contract_rows) == len(EXPECTED_PRODUCT_FORCE_TERMS)
+    )
     return {
         "ready": ready,
         "term_result_contract_ready": term_result_contract_ready,
+        "term_result_contract_term_set_ready": term_result_contract_term_set_ready,
+        "term_result_contract_term_count": len(term_result_contract_rows),
+        "term_result_contract_terms": term_result_contract_terms,
+        "term_result_contract_expected_terms": list(EXPECTED_PRODUCT_FORCE_TERMS),
         "forcefield_energy_forces_contract_ready": forcefield_energy_forces_contract_ready,
         "forcefield_energy_forces_contract_error": forcefield_energy_forces_contract_error,
         "forcefield_energy_shape": list(result.energy.shape),
@@ -3448,13 +3588,23 @@ def _product_kpis(
         "source_artifact_stale_ids": list(bundle_validation.get("source_artifact_stale_ids") or []),
         "bundle_validation_contract": "opens_ai_md_product_evidence_tar_and_verifies_manifest_sha_members",
         "force_term_plugin_registry_ready": force_term_plugins
-        == ["directional_hbond", "hydrophobic_contact", "legacy_lj"],
+        == EXPECTED_PRODUCT_FORCE_TERMS,
         "force_term_plugins": force_term_plugins,
         "force_term_claim_metadata_ready": bool(force_term_claim_metadata.get("ready") is True),
         "force_term_claim_metadata_smoke": force_term_claim_metadata,
         "force_term_result_contract_ready": bool(
             force_term_claim_metadata.get("term_result_contract_ready") is True
         ),
+        "force_term_result_contract_term_set_ready": bool(
+            force_term_claim_metadata.get("term_result_contract_term_set_ready") is True
+        ),
+        "force_term_result_contract_term_count": int(
+            force_term_claim_metadata.get("term_result_contract_term_count") or 0
+        ),
+        "force_term_result_contract_terms": list(
+            force_term_claim_metadata.get("term_result_contract_terms") or []
+        ),
+        "force_term_result_contract_expected_terms": list(EXPECTED_PRODUCT_FORCE_TERMS),
         "forcefield_energy_forces_contract_ready": bool(
             force_term_claim_metadata.get("forcefield_energy_forces_contract_ready") is True
         ),
@@ -3719,6 +3869,9 @@ def _pm_kpi_summary(
         "force_term_plugin_registry_ready": product.get("force_term_plugin_registry_ready") is True,
         "force_term_claim_metadata_ready": product.get("force_term_claim_metadata_ready") is True,
         "force_term_result_contract_ready": product.get("force_term_result_contract_ready") is True,
+        "force_term_result_contract_term_set_ready": (
+            product.get("force_term_result_contract_term_set_ready") is True
+        ),
         "forcefield_energy_forces_contract_ready": (
             product.get("forcefield_energy_forces_contract_ready") is True
         ),
@@ -3858,6 +4011,60 @@ def _pm_kpi_summary(
         "product_ci_github_actions_started": product.get("product_ci_github_actions_started") is True,
         "product_ci_external_blocker": product.get("product_ci_external_blocker") is True,
         "product_ci_blocker_code": str(product.get("product_ci_blocker_code") or ""),
+        "product_ci_billing_free_self_hosted_path_recommended": (
+            product.get("product_ci_billing_free_self_hosted_path_recommended") is True
+        ),
+        "product_ci_billing_free_self_hosted_api_worker_command": str(
+            product.get("product_ci_billing_free_self_hosted_api_worker_command") or ""
+        ),
+        "product_ci_billing_free_self_hosted_rocm_runtime_command": str(
+            product.get("product_ci_billing_free_self_hosted_rocm_runtime_command") or ""
+        ),
+        "product_ci_hosted_spending_limit_increase_required": (
+            product.get("product_ci_hosted_spending_limit_increase_required") is True
+        ),
+        "product_ci_self_hosted_runner_inventory_present": (
+            product.get("product_ci_self_hosted_runner_inventory_present") is True
+        ),
+        "product_ci_self_hosted_runner_total_count": int(
+            product.get("product_ci_self_hosted_runner_total_count") or 0
+        ),
+        "product_ci_self_hosted_linux_runner_online": (
+            product.get("product_ci_self_hosted_linux_runner_online") is True
+        ),
+        "product_ci_self_hosted_linux_runner_count": int(
+            product.get("product_ci_self_hosted_linux_runner_count") or 0
+        ),
+        "product_ci_self_hosted_rocm_runner_online": (
+            product.get("product_ci_self_hosted_rocm_runner_online") is True
+        ),
+        "product_ci_self_hosted_rocm_runner_count": int(
+            product.get("product_ci_self_hosted_rocm_runner_count") or 0
+        ),
+        "product_ci_self_hosted_runner_inventory_external_state_mutated": (
+            product.get("product_ci_self_hosted_runner_inventory_external_state_mutated") is True
+        ),
+        "product_ci_self_hosted_runner_host_preflight_present": (
+            product.get("product_ci_self_hosted_runner_host_preflight_present") is True
+        ),
+        "product_ci_self_hosted_runner_host_preflight_status": str(
+            product.get("product_ci_self_hosted_runner_host_preflight_status") or ""
+        ),
+        "product_ci_self_hosted_runner_host_local_ready": (
+            product.get("product_ci_self_hosted_runner_host_local_ready") is True
+        ),
+        "product_ci_self_hosted_runner_host_repo_ready": (
+            product.get("product_ci_self_hosted_runner_host_repo_ready") is True
+        ),
+        "product_ci_self_hosted_runner_host_registration_required": (
+            product.get("product_ci_self_hosted_runner_host_registration_required") is True
+        ),
+        "product_ci_self_hosted_runner_host_github_registration_token_requested": (
+            product.get("product_ci_self_hosted_runner_host_github_registration_token_requested") is True
+        ),
+        "product_ci_self_hosted_runner_host_external_state_mutated": (
+            product.get("product_ci_self_hosted_runner_host_external_state_mutated") is True
+        ),
         "product_ci_latest_github_actions_record_kst_date": str(
             product.get("product_ci_latest_github_actions_record_kst_date") or ""
         ),
@@ -3881,6 +4088,15 @@ def _pm_kpi_summary(
         "source_artifact_stale_ids": list(product.get("source_artifact_stale_ids") or []),
         "enabled_profile_count": int(product.get("enabled_profile_count") or 0),
         "failed_profile_count": int(product.get("failed_profile_count") or 0),
+        "force_term_result_contract_term_count": int(
+            product.get("force_term_result_contract_term_count") or 0
+        ),
+        "force_term_result_contract_terms": list(
+            product.get("force_term_result_contract_terms") or []
+        ),
+        "force_term_result_contract_expected_terms": list(
+            product.get("force_term_result_contract_expected_terms") or []
+        ),
     }
     return {
         "summary_ready": not failed,

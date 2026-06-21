@@ -560,6 +560,24 @@ def _kpi_packet(
             "product_ci_github_actions_started": False,
             "product_ci_external_blocker": False,
             "product_ci_blocker_code": "",
+            "product_ci_billing_free_self_hosted_path_recommended": False,
+            "product_ci_billing_free_self_hosted_api_worker_command": "",
+            "product_ci_billing_free_self_hosted_rocm_runtime_command": "",
+            "product_ci_hosted_spending_limit_increase_required": False,
+            "product_ci_self_hosted_runner_inventory_present": False,
+            "product_ci_self_hosted_runner_total_count": 0,
+            "product_ci_self_hosted_linux_runner_online": False,
+            "product_ci_self_hosted_linux_runner_count": 0,
+            "product_ci_self_hosted_rocm_runner_online": False,
+            "product_ci_self_hosted_rocm_runner_count": 0,
+            "product_ci_self_hosted_runner_inventory_external_state_mutated": False,
+            "product_ci_self_hosted_runner_host_preflight_present": False,
+            "product_ci_self_hosted_runner_host_preflight_status": "",
+            "product_ci_self_hosted_runner_host_local_ready": False,
+            "product_ci_self_hosted_runner_host_repo_ready": False,
+            "product_ci_self_hosted_runner_host_registration_required": False,
+            "product_ci_self_hosted_runner_host_github_registration_token_requested": False,
+            "product_ci_self_hosted_runner_host_external_state_mutated": False,
             "product_ci_latest_github_actions_record_kst_date": "",
             "product_ci_workflow_dispatch_executed": False,
             "product_ci_external_state_mutated": False,
@@ -610,6 +628,18 @@ def _kpi_packet(
             "force_term_claim_metadata_smoke": {
                 "ready": force_term_claim_metadata_ready,
                 "term_result_contract_ready": force_term_result_contract_ready,
+                "term_result_contract_term_set_ready": force_term_result_contract_ready,
+                "term_result_contract_term_count": len(force_term_contract_rows),
+                "term_result_contract_terms": [
+                    "directional_hbond",
+                    "hydrophobic_contact",
+                    "legacy_lj",
+                ] if force_term_claim_metadata_schema_ready else [],
+                "term_result_contract_expected_terms": [
+                    "directional_hbond",
+                    "hydrophobic_contact",
+                    "legacy_lj",
+                ],
                 "forcefield_neighbor_diagnostics_ready": force_term_claim_metadata_ready,
                 "forcefield_neighbor_pair_count": 6 if force_term_claim_metadata_ready else 0,
                 "forcefield_neighbor_pairs_provided": False,
@@ -662,6 +692,18 @@ def _kpi_packet(
                 "term_result_contract_rows": force_term_contract_rows,
             },
             "force_term_result_contract_ready": force_term_result_contract_ready,
+            "force_term_result_contract_term_set_ready": force_term_result_contract_ready,
+            "force_term_result_contract_term_count": len(force_term_contract_rows),
+            "force_term_result_contract_terms": [
+                "directional_hbond",
+                "hydrophobic_contact",
+                "legacy_lj",
+            ] if force_term_claim_metadata_schema_ready else [],
+            "force_term_result_contract_expected_terms": [
+                "directional_hbond",
+                "hydrophobic_contact",
+                "legacy_lj",
+            ],
             "forcefield_energy_forces_contract_ready": force_term_result_contract_ready,
             "guarded_force_term_plugin_ready": guarded_force_term_plugin_ready,
             "guarded_force_term_plugin_smoke": {
@@ -1506,6 +1548,24 @@ def _kpi_packet(
                 "product_ci_github_actions_started": False,
                 "product_ci_external_blocker": False,
                 "product_ci_blocker_code": "",
+                "product_ci_billing_free_self_hosted_path_recommended": False,
+                "product_ci_billing_free_self_hosted_api_worker_command": "",
+                "product_ci_billing_free_self_hosted_rocm_runtime_command": "",
+                "product_ci_hosted_spending_limit_increase_required": False,
+                "product_ci_self_hosted_runner_inventory_present": False,
+                "product_ci_self_hosted_runner_total_count": 0,
+                "product_ci_self_hosted_linux_runner_online": False,
+                "product_ci_self_hosted_linux_runner_count": 0,
+                "product_ci_self_hosted_rocm_runner_online": False,
+                "product_ci_self_hosted_rocm_runner_count": 0,
+                "product_ci_self_hosted_runner_inventory_external_state_mutated": False,
+                "product_ci_self_hosted_runner_host_preflight_present": False,
+                "product_ci_self_hosted_runner_host_preflight_status": "",
+                "product_ci_self_hosted_runner_host_local_ready": False,
+                "product_ci_self_hosted_runner_host_repo_ready": False,
+                "product_ci_self_hosted_runner_host_registration_required": False,
+                "product_ci_self_hosted_runner_host_github_registration_token_requested": False,
+                "product_ci_self_hosted_runner_host_external_state_mutated": False,
                 "product_ci_latest_github_actions_record_kst_date": "",
                 "clean_install_missing_requirement_count": 0,
                 "clean_install_missing_requirements": [],
@@ -1521,6 +1581,18 @@ def _kpi_packet(
                 "runner_profile_validation_pass": ready,
                 "force_term_claim_metadata_ready": force_term_claim_metadata_ready,
                 "force_term_result_contract_ready": force_term_result_contract_ready,
+                "force_term_result_contract_term_set_ready": force_term_result_contract_ready,
+                "force_term_result_contract_term_count": len(force_term_contract_rows),
+                "force_term_result_contract_terms": [
+                    "directional_hbond",
+                    "hydrophobic_contact",
+                    "legacy_lj",
+                ] if force_term_claim_metadata_schema_ready else [],
+                "force_term_result_contract_expected_terms": [
+                    "directional_hbond",
+                    "hydrophobic_contact",
+                    "legacy_lj",
+                ],
                 "forcefield_energy_forces_contract_ready": force_term_result_contract_ready,
                 "guarded_force_term_plugin_ready": guarded_force_term_plugin_ready,
                 "onsps_backmap_evidence_schema_ready": onsps_backmap_evidence_schema_ready,
@@ -1850,6 +1922,69 @@ def test_ai_md_product_evidence_bundle_exports_claim_ready_tar(tmp_path: Path) -
     assert validation_after_local_change["source_artifacts_fresh"] is False
     assert validation_after_local_change["source_artifact_stale_count"] == 1
     assert validation_after_local_change["source_artifact_stale_ids"] == ["kpi_json"]
+
+
+def test_ai_md_product_evidence_bundle_keeps_local_claim_ready_when_self_hosted_runners_missing(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    ci_packet = {
+        "summary": {
+            "status": "blocked_product_ci_runtime_gate",
+            "runtime_gate_ready": False,
+            "remote_product_ci_green": False,
+            "github_actions_started": False,
+            "external_blocker": True,
+            "blocker_code": "github_actions_billing_or_spending_limit",
+            "billing_free_self_hosted_path_recommended": True,
+            "billing_free_self_hosted_api_worker_command": (
+                "gh workflow run product-api-worker.yml -f runner_labels_json='[\"self-hosted\",\"linux\"]'"
+            ),
+            "billing_free_self_hosted_rocm_runtime_command": (
+                "gh workflow run product-image-smoke.yml -f verify_mode=rocm-runtime"
+            ),
+            "hosted_spending_limit_increase_required": False,
+            "self_hosted_runner_inventory_present": True,
+            "self_hosted_runner_total_count": 0,
+            "self_hosted_linux_runner_online": False,
+            "self_hosted_linux_runner_count": 0,
+            "self_hosted_rocm_runner_online": False,
+            "self_hosted_rocm_runner_count": 0,
+            "self_hosted_runner_inventory_external_state_mutated": False,
+            "self_hosted_runner_host_preflight_present": True,
+            "self_hosted_runner_host_preflight_status": "blocked_github_self_hosted_runner_registration_required",
+            "self_hosted_runner_host_local_ready": True,
+            "self_hosted_runner_host_repo_ready": False,
+            "self_hosted_runner_host_registration_required": True,
+            "self_hosted_runner_host_github_registration_token_requested": False,
+            "self_hosted_runner_host_external_state_mutated": False,
+            "latest_github_actions_record_kst_date": "2026-06-21",
+            "workflow_dispatch_executed": False,
+            "external_state_mutated": False,
+        }
+    }
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        product_ci_runtime_gate_packet=ci_packet,
+        out_tar=str(out_tar),
+    )
+    summary = payload["summary"]
+
+    assert summary["bundle_validation_pass"] is True
+    assert summary["product_claim_ready"] is True
+    assert summary["release_claim_ready"] is False
+    assert summary["release_claim_blocked_reason"] == "github_actions_billing_or_spending_limit"
+    assert summary["product_ci_billing_free_self_hosted_path_recommended"] is True
+    assert summary["product_ci_self_hosted_runner_inventory_present"] is True
+    assert summary["product_ci_self_hosted_runner_total_count"] == 0
+    assert summary["product_ci_self_hosted_linux_runner_online"] is False
+    assert summary["product_ci_self_hosted_rocm_runner_online"] is False
+    assert "register/start repo self-hosted Linux and ROCm runners" in summary["next_required_step"]
 
 
 def test_ai_md_product_evidence_bundle_exports_blocked_claim_when_gpu_not_visible(tmp_path: Path) -> None:
@@ -2971,6 +3106,42 @@ def test_ai_md_product_evidence_bundle_blocks_force_term_contract_term_set_misma
     assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
     assert any(
         error.startswith("kpi_force_term_result_contract_terms_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_pm_force_term_contract_term_set_mismatch(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    pm_product = kpi_packet["pm_kpi_summary"]["product"]
+    pm_product["force_term_result_contract_term_set_ready"] = False
+    pm_product["force_term_result_contract_terms"] = [
+        "directional_hbond",
+        "hydrophobic_contact",
+        "hydrophobic_contact",
+    ]
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("pm_force_term_result_contract_term_set_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_force_term_result_contract_terms_mismatch:")
         for error in summary["bundle_validation_errors"]
     )
 

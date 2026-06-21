@@ -348,6 +348,24 @@ def _write_product_evidence_bundle(
             "product_ci_github_actions_started": True,
             "product_ci_external_blocker": False,
             "product_ci_blocker_code": "",
+            "product_ci_billing_free_self_hosted_path_recommended": False,
+            "product_ci_billing_free_self_hosted_api_worker_command": "",
+            "product_ci_billing_free_self_hosted_rocm_runtime_command": "",
+            "product_ci_hosted_spending_limit_increase_required": False,
+            "product_ci_self_hosted_runner_inventory_present": True,
+            "product_ci_self_hosted_runner_total_count": 2,
+            "product_ci_self_hosted_linux_runner_online": True,
+            "product_ci_self_hosted_linux_runner_count": 2,
+            "product_ci_self_hosted_rocm_runner_online": True,
+            "product_ci_self_hosted_rocm_runner_count": 1,
+            "product_ci_self_hosted_runner_inventory_external_state_mutated": False,
+            "product_ci_self_hosted_runner_host_preflight_present": True,
+            "product_ci_self_hosted_runner_host_preflight_status": "github_self_hosted_runner_host_preflight_ready",
+            "product_ci_self_hosted_runner_host_local_ready": True,
+            "product_ci_self_hosted_runner_host_repo_ready": True,
+            "product_ci_self_hosted_runner_host_registration_required": False,
+            "product_ci_self_hosted_runner_host_github_registration_token_requested": False,
+            "product_ci_self_hosted_runner_host_external_state_mutated": False,
             "product_ci_latest_github_actions_record_kst_date": "2026-06-21",
             "product_ci_workflow_dispatch_executed": False,
             "product_ci_external_state_mutated": False,
@@ -384,6 +402,18 @@ def _write_product_evidence_bundle(
             "force_term_claim_metadata_smoke": {
                 "ready": True,
                 "term_result_contract_ready": True,
+                "term_result_contract_term_set_ready": True,
+                "term_result_contract_term_count": 3,
+                "term_result_contract_terms": [
+                    "directional_hbond",
+                    "hydrophobic_contact",
+                    "legacy_lj",
+                ],
+                "term_result_contract_expected_terms": [
+                    "directional_hbond",
+                    "hydrophobic_contact",
+                    "legacy_lj",
+                ],
                 "forcefield_neighbor_diagnostics_ready": True,
                 "forcefield_neighbor_pair_count": 6,
                 "forcefield_neighbor_pairs_provided": False,
@@ -505,6 +535,18 @@ def _write_product_evidence_bundle(
                 ],
             },
             "force_term_result_contract_ready": True,
+            "force_term_result_contract_term_set_ready": True,
+            "force_term_result_contract_term_count": 3,
+            "force_term_result_contract_terms": [
+                "directional_hbond",
+                "hydrophobic_contact",
+                "legacy_lj",
+            ],
+            "force_term_result_contract_expected_terms": [
+                "directional_hbond",
+                "hydrophobic_contact",
+                "legacy_lj",
+            ],
             "forcefield_energy_forces_contract_ready": True,
             "guarded_force_term_plugin_ready": True,
             "guarded_force_term_plugin_smoke": {
@@ -1579,6 +1621,24 @@ def _write_product_evidence_bundle(
                 "product_ci_github_actions_started": True,
                 "product_ci_external_blocker": False,
                 "product_ci_blocker_code": "",
+                "product_ci_billing_free_self_hosted_path_recommended": False,
+                "product_ci_billing_free_self_hosted_api_worker_command": "",
+                "product_ci_billing_free_self_hosted_rocm_runtime_command": "",
+                "product_ci_hosted_spending_limit_increase_required": False,
+                "product_ci_self_hosted_runner_inventory_present": True,
+                "product_ci_self_hosted_runner_total_count": 2,
+                "product_ci_self_hosted_linux_runner_online": True,
+                "product_ci_self_hosted_linux_runner_count": 2,
+                "product_ci_self_hosted_rocm_runner_online": True,
+                "product_ci_self_hosted_rocm_runner_count": 1,
+                "product_ci_self_hosted_runner_inventory_external_state_mutated": False,
+                "product_ci_self_hosted_runner_host_preflight_present": True,
+                "product_ci_self_hosted_runner_host_preflight_status": "github_self_hosted_runner_host_preflight_ready",
+                "product_ci_self_hosted_runner_host_local_ready": True,
+                "product_ci_self_hosted_runner_host_repo_ready": True,
+                "product_ci_self_hosted_runner_host_registration_required": False,
+                "product_ci_self_hosted_runner_host_github_registration_token_requested": False,
+                "product_ci_self_hosted_runner_host_external_state_mutated": False,
                 "product_ci_latest_github_actions_record_kst_date": "2026-06-21",
                 "clean_install_missing_requirement_count": 0,
                 "clean_install_missing_requirements": [],
@@ -1594,6 +1654,18 @@ def _write_product_evidence_bundle(
                 "runner_profile_validation_pass": True,
                 "force_term_claim_metadata_ready": True,
                 "force_term_result_contract_ready": True,
+                "force_term_result_contract_term_set_ready": True,
+                "force_term_result_contract_term_count": 3,
+                "force_term_result_contract_terms": [
+                    "directional_hbond",
+                    "hydrophobic_contact",
+                    "legacy_lj",
+                ],
+                "force_term_result_contract_expected_terms": [
+                    "directional_hbond",
+                    "hydrophobic_contact",
+                    "legacy_lj",
+                ],
                 "forcefield_energy_forces_contract_ready": True,
                 "guarded_force_term_plugin_ready": True,
                 "onsps_backmap_evidence_schema_ready": True,
@@ -1727,6 +1799,24 @@ def _write_product_evidence_bundle(
             "github_actions_started": True,
             "external_blocker": False,
             "blocker_code": "",
+            "billing_free_self_hosted_path_recommended": False,
+            "billing_free_self_hosted_api_worker_command": "",
+            "billing_free_self_hosted_rocm_runtime_command": "",
+            "hosted_spending_limit_increase_required": False,
+            "self_hosted_runner_inventory_present": True,
+            "self_hosted_runner_total_count": 2,
+            "self_hosted_linux_runner_online": True,
+            "self_hosted_linux_runner_count": 2,
+            "self_hosted_rocm_runner_online": True,
+            "self_hosted_rocm_runner_count": 1,
+            "self_hosted_runner_inventory_external_state_mutated": False,
+            "self_hosted_runner_host_preflight_present": True,
+            "self_hosted_runner_host_preflight_status": "github_self_hosted_runner_host_preflight_ready",
+            "self_hosted_runner_host_local_ready": True,
+            "self_hosted_runner_host_repo_ready": True,
+            "self_hosted_runner_host_registration_required": False,
+            "self_hosted_runner_host_github_registration_token_requested": False,
+            "self_hosted_runner_host_external_state_mutated": False,
             "latest_github_actions_record_kst_date": "2026-06-21",
             "workflow_dispatch_executed": False,
             "external_state_mutated": False,
@@ -1800,6 +1890,46 @@ def _write_product_evidence_bundle(
 def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     rocm = tmp_path / "rocm.json"
     bundle_json = _write_product_evidence_bundle(tmp_path / "bundle.json")
+    product_ci = tmp_path / "product_ci_runtime_gate.json"
+    product_ci.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "product_ci_runtime_gate_ready",
+                    "runtime_gate_ready": True,
+                    "remote_product_ci_green": True,
+                    "github_actions_started": True,
+                    "external_blocker": False,
+                    "blocker_code": "",
+                    "billing_free_self_hosted_path_recommended": False,
+                    "billing_free_self_hosted_api_worker_command": "",
+                    "billing_free_self_hosted_rocm_runtime_command": "",
+                    "hosted_spending_limit_increase_required": False,
+                    "self_hosted_runner_inventory_present": True,
+                    "self_hosted_runner_total_count": 2,
+                    "self_hosted_linux_runner_online": True,
+                    "self_hosted_linux_runner_count": 2,
+                    "self_hosted_rocm_runner_online": True,
+                    "self_hosted_rocm_runner_count": 1,
+                    "self_hosted_runner_inventory_external_state_mutated": False,
+                    "self_hosted_runner_host_preflight_present": True,
+                    "self_hosted_runner_host_preflight_status": "github_self_hosted_runner_host_preflight_ready",
+                    "self_hosted_runner_host_local_ready": True,
+                    "self_hosted_runner_host_repo_ready": True,
+                    "self_hosted_runner_host_registration_required": False,
+                    "self_hosted_runner_host_github_registration_token_requested": False,
+                    "self_hosted_runner_host_external_state_mutated": False,
+                    "latest_github_actions_record_kst_date": "2026-06-21",
+                    "workflow_dispatch_executed": False,
+                    "external_state_mutated": False,
+                    "claim_boundary": "test fixture product CI runtime gate",
+                }
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     _write_rocm_manifest(rocm, ready=True)
     report = build_report(
         profiles_dir="config/api_validated_runner_profiles",
@@ -1808,6 +1938,7 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
         residual_rows=3,
         rocm_manifest_path=str(rocm),
         product_evidence_bundle_json_path=str(bundle_json),
+        product_ci_runtime_gate_json_path=str(product_ci),
     )
 
     assert report["packet_type"] == "ai_md_engine_kpi_report"
@@ -1818,6 +1949,18 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert report["pm_kpi_summary"]["product"]["clean_install_success"] is True
     assert report["product_kpi"]["runner_profile_validation_status"] == "pass"
     assert report["product_kpi"]["clean_install_success"] is True
+    assert report["product_kpi"]["product_ci_billing_free_self_hosted_path_recommended"] is False
+    assert report["pm_kpi_summary"]["product"]["product_ci_billing_free_self_hosted_path_recommended"] is False
+    assert report["product_kpi"]["product_ci_hosted_spending_limit_increase_required"] is False
+    assert report["pm_kpi_summary"]["product"]["product_ci_hosted_spending_limit_increase_required"] is False
+    assert report["product_kpi"]["product_ci_self_hosted_runner_inventory_present"] is True
+    assert report["pm_kpi_summary"]["product"]["product_ci_self_hosted_runner_inventory_present"] is True
+    assert report["product_kpi"]["product_ci_self_hosted_runner_total_count"] == 2
+    assert report["pm_kpi_summary"]["product"]["product_ci_self_hosted_runner_total_count"] == 2
+    assert report["product_kpi"]["product_ci_self_hosted_linux_runner_online"] is True
+    assert report["pm_kpi_summary"]["product"]["product_ci_self_hosted_linux_runner_online"] is True
+    assert report["product_kpi"]["product_ci_self_hosted_rocm_runner_online"] is True
+    assert report["pm_kpi_summary"]["product"]["product_ci_self_hosted_rocm_runner_online"] is True
     assert report["product_kpi"]["clean_container_smoke_ready"] is True
     assert report["product_kpi"]["product_runner_smoke_ready"] is True
     assert report["product_kpi"]["product_image_receipt_mode"] == "rocm-runtime"
@@ -1871,6 +2014,20 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert report["pm_kpi_summary"]["product"]["force_term_claim_metadata_ready"] is True
     assert report["product_kpi"]["force_term_result_contract_ready"] is True
     assert report["pm_kpi_summary"]["product"]["force_term_result_contract_ready"] is True
+    assert report["product_kpi"]["force_term_result_contract_term_set_ready"] is True
+    assert report["pm_kpi_summary"]["product"]["force_term_result_contract_term_set_ready"] is True
+    assert report["product_kpi"]["force_term_result_contract_term_count"] == 3
+    assert report["pm_kpi_summary"]["product"]["force_term_result_contract_term_count"] == 3
+    assert report["product_kpi"]["force_term_result_contract_terms"] == [
+        "directional_hbond",
+        "hydrophobic_contact",
+        "legacy_lj",
+    ]
+    assert report["pm_kpi_summary"]["product"]["force_term_result_contract_terms"] == [
+        "directional_hbond",
+        "hydrophobic_contact",
+        "legacy_lj",
+    ]
     assert report["product_kpi"]["forcefield_energy_forces_contract_ready"] is True
     assert report["pm_kpi_summary"]["product"]["forcefield_energy_forces_contract_ready"] is True
     assert report["product_kpi"]["guarded_force_term_plugin_ready"] is True
@@ -2043,6 +2200,18 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     )
     assert force_term_smoke["term_count"] == 3
     assert force_term_smoke["term_result_contract_ready"] is True
+    assert force_term_smoke["term_result_contract_term_set_ready"] is True
+    assert force_term_smoke["term_result_contract_term_count"] == 3
+    assert force_term_smoke["term_result_contract_terms"] == [
+        "directional_hbond",
+        "hydrophobic_contact",
+        "legacy_lj",
+    ]
+    assert force_term_smoke["term_result_contract_expected_terms"] == [
+        "directional_hbond",
+        "hydrophobic_contact",
+        "legacy_lj",
+    ]
     assert len(force_term_smoke["term_result_contract_rows"]) == 3
     assert all(row["ready"] is True for row in force_term_smoke["term_result_contract_rows"])
     assert all(row["energy_shape"] == [1] for row in force_term_smoke["term_result_contract_rows"])

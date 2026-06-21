@@ -295,10 +295,23 @@ def build_product_image_smoke_preflight(
             "workflow_manual_verify_mode_choice_declared",
             "workflow_dispatch:" in workflow
             and "verify_mode:" in workflow
+            and "build_runner_labels_json:" in workflow
             and "- build" in workflow
             and "- rocm-runtime" in workflow,
             "workflow_dispatch verify_mode choice present" if "verify_mode:" in workflow else "missing",
-            "manual workflow dispatch exposes build vs rocm-runtime mode explicitly",
+            "manual workflow dispatch exposes build vs rocm-runtime mode and explicit build runner labels",
+            ".github/workflows/product-image-smoke.yml",
+        ),
+        _contract_row(
+            "workflow_build_smoke_self_hosted_by_default",
+            "product-image-build-smoke" in workflow
+            and "inputs.build_runner_labels_json" in workflow
+            and "'[\"self-hosted\",\"linux\"]'" in workflow
+            and "Default self-hosted avoids GitHub-hosted minutes" in workflow,
+            "self-hosted build runner default present"
+            if "product-image-build-smoke" in workflow
+            else "missing",
+            "build smoke must default to self-hosted Linux to avoid private-repo GitHub-hosted minutes",
             ".github/workflows/product-image-smoke.yml",
         ),
         _contract_row(
@@ -316,10 +329,10 @@ def build_product_image_smoke_preflight(
             "workflow_hosted_build_summary_not_product_claim",
             "product runtime claim: `false`" in workflow
             and "required runtime claim mode: `rocm-runtime on self-hosted ROCm runner`" in workflow,
-            "hosted build summary claim boundary present"
+            "build summary claim boundary present"
             if "product runtime claim: `false`" in workflow
             else "missing",
-            "hosted CI summary must state build smoke is not product runtime readiness",
+            "build smoke summary must state build scope is not product runtime readiness",
             ".github/workflows/product-image-smoke.yml",
         ),
         _contract_row(

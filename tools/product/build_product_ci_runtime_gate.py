@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/product_ci_runtime_gate_current.json"
 DEFAULT_OUT_MD = "runs/product_ci_runtime_gate_current.md"
 DEFAULT_PRODUCT_IMAGE_PREFLIGHT_JSON = "runs/product_image_smoke_preflight_current.json"
+DEFAULT_SELF_HOSTED_RUNNER_INVENTORY_JSON = "runs/github_self_hosted_runner_inventory_current.json"
+DEFAULT_SELF_HOSTED_RUNNER_HOST_PREFLIGHT_JSON = "runs/github_self_hosted_runner_host_preflight_current.json"
 
 CLAIM_BOUNDARY = (
     "Product CI runtime gate only; records observed GitHub Actions run status and local ROCm product "
@@ -19,6 +21,14 @@ CLAIM_BOUNDARY = (
 )
 
 BILLING_BLOCKER_CODE = "github_actions_billing_or_spending_limit"
+SELF_HOSTED_API_WORKER_COMMAND = (
+    "gh workflow run product-api-worker.yml -f runner_labels_json='[\"self-hosted\",\"linux\"]'"
+)
+SELF_HOSTED_ROCM_RUNTIME_COMMAND = (
+    "gh workflow run product-image-smoke.yml -f verify_mode=rocm-runtime"
+)
+SELF_HOSTED_LINUX_LABELS = ("self-hosted", "linux")
+SELF_HOSTED_ROCM_LABELS = ("self-hosted", "linux", "rocm")
 
 
 def _resolve(root: Path, path_like: str | Path) -> Path:
@@ -59,6 +69,18 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- product_image_smoke_conclusion: `{s['product_image_smoke_conclusion']}`",
         f"- latest_github_actions_record_kst_date: `{s['latest_github_actions_record_kst_date']}`",
         f"- local_rocm_clean_container_ready: `{s['local_rocm_clean_container_ready']}`",
+        f"- billing_free_self_hosted_path_recommended: `{s['billing_free_self_hosted_path_recommended']}`",
+        f"- hosted_spending_limit_increase_required: `{s['hosted_spending_limit_increase_required']}`",
+        f"- self_hosted_runner_inventory_present: `{s['self_hosted_runner_inventory_present']}`",
+        f"- self_hosted_runner_total_count: `{s['self_hosted_runner_total_count']}`",
+        f"- self_hosted_linux_runner_online: `{s['self_hosted_linux_runner_online']}`",
+        f"- self_hosted_linux_runner_count: `{s['self_hosted_linux_runner_count']}`",
+        f"- self_hosted_rocm_runner_online: `{s['self_hosted_rocm_runner_online']}`",
+        f"- self_hosted_rocm_runner_count: `{s['self_hosted_rocm_runner_count']}`",
+        f"- self_hosted_runner_host_preflight_present: `{s['self_hosted_runner_host_preflight_present']}`",
+        f"- self_hosted_runner_host_preflight_status: `{s['self_hosted_runner_host_preflight_status']}`",
+        f"- self_hosted_runner_host_local_ready: `{s['self_hosted_runner_host_local_ready']}`",
+        f"- self_hosted_runner_host_registration_required: `{s['self_hosted_runner_host_registration_required']}`",
         f"- workflow_dispatch_executed: `{s['workflow_dispatch_executed']}`",
         f"- external_state_mutated: `{s['external_state_mutated']}`",
         "",
@@ -114,6 +136,105 @@ def _summary(packet: dict[str, Any]) -> dict[str, Any]:
     return summary if isinstance(summary, dict) else {}
 
 
+def _runner_label_names(runner: dict[str, Any]) -> set[str]:
+    labels = runner.get("labels")
+    names: set[str] = set()
+    if isinstance(labels, list):
+        for label in labels:
+            if isinstance(label, dict):
+                value = label.get("name")
+            else:
+                value = label
+            if value:
+                names.add(str(value).strip().lower())
+    elif isinstance(labels, dict):
+        for key, value in labels.items():
+            if value is True:
+                names.add(str(key).strip().lower())
+            elif isinstance(value, str):
+                names.add(value.strip().lower())
+    elif isinstance(labels, str):
+        names.update(part.strip().lower() for part in labels.split(",") if part.strip())
+    return names
+
+
+def _runner_online(runner: dict[str, Any]) -> bool:
+    return str(runner.get("status") or "").strip().lower() == "online"
+
+
+def _runner_has_labels(runner: dict[str, Any], required: tuple[str, ...]) -> bool:
+    labels = _runner_label_names(runner)
+    return all(label in labels for label in required)
+
+
+def _runner_inventory_summary(root: Path, path_like: str | Path) -> dict[str, Any]:
+    path = _resolve(root, path_like)
+    packet = _read_json(root, path_like)
+    runners = packet.get("runners")
+    if not isinstance(runners, list):
+        runners = []
+    linux_runners = [
+        runner
+        for runner in runners
+        if isinstance(runner, dict) and _runner_online(runner) and _runner_has_labels(runner, SELF_HOSTED_LINUX_LABELS)
+    ]
+    rocm_runners = [
+        runner
+        for runner in runners
+        if isinstance(runner, dict) and _runner_online(runner) and _runner_has_labels(runner, SELF_HOSTED_ROCM_LABELS)
+    ]
+    total_count = packet.get("total_count")
+    if not isinstance(total_count, int):
+        total_count = len(runners)
+    return {
+        "self_hosted_runner_inventory_json": str(path_like),
+        "self_hosted_runner_inventory_present": path.exists() and path.is_file() and bool(packet),
+        "self_hosted_runner_total_count": int(total_count),
+        "self_hosted_linux_runner_online": bool(linux_runners),
+        "self_hosted_linux_runner_count": len(linux_runners),
+        "self_hosted_rocm_runner_online": bool(rocm_runners),
+        "self_hosted_rocm_runner_count": len(rocm_runners),
+        "self_hosted_linux_required_labels": list(SELF_HOSTED_LINUX_LABELS),
+        "self_hosted_rocm_required_labels": list(SELF_HOSTED_ROCM_LABELS),
+        "self_hosted_runner_inventory_external_state_mutated": False,
+    }
+
+
+def _runner_host_preflight_summary(root: Path, path_like: str | Path) -> dict[str, Any]:
+    path = _resolve(root, path_like)
+    packet = _read_json(root, path_like)
+    summary = _summary(packet)
+    return {
+        "self_hosted_runner_host_preflight_json": str(path_like),
+        "self_hosted_runner_host_preflight_present": path.exists() and path.is_file() and bool(summary),
+        "self_hosted_runner_host_preflight_status": str(summary.get("status") or ""),
+        "self_hosted_runner_host_local_ready": bool(summary.get("local_runner_host_ready") is True),
+        "self_hosted_runner_host_repo_ready": bool(summary.get("repo_self_hosted_runner_ready") is True),
+        "self_hosted_runner_host_registration_required": bool(
+            summary.get("repo_runner_registration_required") is True
+        ),
+        "self_hosted_runner_host_docker_daemon_accessible": bool(
+            summary.get("docker_daemon_accessible") is True
+        ),
+        "self_hosted_runner_host_rocm_device_nodes_ready": bool(
+            summary.get("rocm_device_nodes_ready") is True
+        ),
+        "self_hosted_runner_host_product_image_rocm_runtime_ready": bool(
+            summary.get("product_image_rocm_runtime_ready") is True
+        ),
+        "self_hosted_runner_host_github_registration_token_requested": bool(
+            summary.get("github_registration_token_requested") is True
+        ),
+        "self_hosted_runner_host_runner_configured": bool(summary.get("runner_configured") is True),
+        "self_hosted_runner_host_runner_service_started": bool(
+            summary.get("runner_service_started") is True
+        ),
+        "self_hosted_runner_host_external_state_mutated": bool(
+            summary.get("external_state_mutated") is True
+        ),
+    }
+
+
 def _workflow_row(
     *,
     workflow: str,
@@ -146,6 +267,8 @@ def build_product_ci_runtime_gate(
     *,
     root: str | Path = ROOT,
     product_image_preflight_json: str | Path = DEFAULT_PRODUCT_IMAGE_PREFLIGHT_JSON,
+    self_hosted_runner_inventory_json: str | Path = DEFAULT_SELF_HOSTED_RUNNER_INVENTORY_JSON,
+    self_hosted_runner_host_preflight_json: str | Path = DEFAULT_SELF_HOSTED_RUNNER_HOST_PREFLIGHT_JSON,
     product_api_worker_run_id: str = "",
     product_api_worker_url: str = "",
     product_api_worker_conclusion: str = "",
@@ -163,6 +286,8 @@ def build_product_ci_runtime_gate(
 ) -> dict[str, Any]:
     root_path = Path(root)
     preflight_summary = _summary(_read_json(root_path, product_image_preflight_json))
+    runner_inventory = _runner_inventory_summary(root_path, self_hosted_runner_inventory_json)
+    runner_host_preflight = _runner_host_preflight_summary(root_path, self_hosted_runner_host_preflight_json)
     local_rocm_clean_container_ready = bool(
         preflight_summary.get("status") == "product_image_smoke_preflight_ready"
         and preflight_summary.get("clean_container_smoke_ready") is True
@@ -199,9 +324,27 @@ def build_product_ci_runtime_gate(
     remote_product_ci_green = all(row["green"] for row in rows)
     github_actions_started = all(row["job_started"] for row in rows)
     runtime_gate_ready = bool(remote_product_ci_green and local_rocm_clean_container_ready)
+    billing_free_self_hosted_path_recommended = bool(billing_blocked and not remote_product_ci_green)
+    hosted_spending_limit_increase_required = False
     blockers: list[dict[str, str]] = []
     if billing_blocked:
         blockers.append({"code": BILLING_BLOCKER_CODE})
+    if (
+        billing_free_self_hosted_path_recommended
+        and runner_inventory["self_hosted_linux_runner_online"] is not True
+    ):
+        blockers.append({"code": "self_hosted_linux_runner_missing"})
+    if (
+        billing_free_self_hosted_path_recommended
+        and runner_inventory["self_hosted_rocm_runner_online"] is not True
+    ):
+        blockers.append({"code": "self_hosted_rocm_runner_missing"})
+    if (
+        billing_free_self_hosted_path_recommended
+        and runner_host_preflight["self_hosted_runner_host_local_ready"] is True
+        and runner_host_preflight["self_hosted_runner_host_registration_required"] is True
+    ):
+        blockers.append({"code": "self_hosted_runner_registration_required"})
     if not local_rocm_clean_container_ready:
         blockers.append({"code": "local_rocm_clean_container_evidence_missing"})
     for row in rows:
@@ -210,10 +353,13 @@ def build_product_ci_runtime_gate(
     status = "product_ci_runtime_gate_ready" if runtime_gate_ready else "blocked_product_ci_runtime_gate"
     next_required_steps = (
         [
-            "Owner resolves GitHub Billing & plans payment/spending-limit status.",
-            "After billing is restored, rerun: gh workflow run product-api-worker.yml",
-            "Rerun hosted build smoke: gh workflow run product-image-smoke.yml -f verify_mode=build",
-            "On a self-hosted ROCm runner, rerun: gh workflow run product-image-smoke.yml -f verify_mode=rocm-runtime",
+            "Cost-free path: keep the hosted Actions spending hard stop in place and use self-hosted runners.",
+            "Register/start a repo self-hosted Linux runner with labels: self-hosted, linux.",
+            "Register/start a repo self-hosted ROCm runner with labels: self-hosted, linux, rocm.",
+            "If local host preflight is ready, only GitHub runner registration/service online remains before rerun.",
+            f"Run API worker contract on a local self-hosted Linux runner: {SELF_HOSTED_API_WORKER_COMMAND}",
+            f"Run ROCm runtime smoke on a local self-hosted ROCm runner: {SELF_HOSTED_ROCM_RUNTIME_COMMAND}",
+            "Only raise GitHub-hosted Actions spending limits if intentionally choosing hosted CI.",
         ]
         if billing_blocked
         else (
@@ -232,6 +378,12 @@ def build_product_ci_runtime_gate(
         "github_actions_started": github_actions_started,
         "external_blocker": billing_blocked,
         "blocker_code": BILLING_BLOCKER_CODE if billing_blocked else "",
+        "billing_free_self_hosted_path_recommended": billing_free_self_hosted_path_recommended,
+        "billing_free_self_hosted_api_worker_command": SELF_HOSTED_API_WORKER_COMMAND,
+        "billing_free_self_hosted_rocm_runtime_command": SELF_HOSTED_ROCM_RUNTIME_COMMAND,
+        "hosted_spending_limit_increase_required": hosted_spending_limit_increase_required,
+        **runner_inventory,
+        **runner_host_preflight,
         "product_api_worker_run_id": product_api_worker_run_id,
         "product_api_worker_url": product_api_worker_url,
         "product_api_worker_conclusion": product_api_worker_conclusion,
@@ -266,6 +418,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
     parser.add_argument("--product-image-preflight-json", default=DEFAULT_PRODUCT_IMAGE_PREFLIGHT_JSON)
+    parser.add_argument("--self-hosted-runner-inventory-json", default=DEFAULT_SELF_HOSTED_RUNNER_INVENTORY_JSON)
+    parser.add_argument(
+        "--self-hosted-runner-host-preflight-json",
+        default=DEFAULT_SELF_HOSTED_RUNNER_HOST_PREFLIGHT_JSON,
+    )
     parser.add_argument("--product-api-worker-run-id", default="")
     parser.add_argument("--product-api-worker-url", default="")
     parser.add_argument("--product-api-worker-conclusion", default="")
@@ -287,6 +444,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     payload = build_product_ci_runtime_gate(
         product_image_preflight_json=args.product_image_preflight_json,
+        self_hosted_runner_inventory_json=args.self_hosted_runner_inventory_json,
+        self_hosted_runner_host_preflight_json=args.self_hosted_runner_host_preflight_json,
         product_api_worker_run_id=args.product_api_worker_run_id,
         product_api_worker_url=args.product_api_worker_url,
         product_api_worker_conclusion=args.product_api_worker_conclusion,

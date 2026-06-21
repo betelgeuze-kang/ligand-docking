@@ -197,6 +197,10 @@ def test_product_api_worker_ci_workflow_runs_contract_checks() -> None:
     workflow = Path(".github/workflows/product-api-worker.yml").read_text(encoding="utf-8")
 
     assert "api-worker-contract:" in workflow
+    assert "runner_labels_json:" in workflow
+    assert "self-hosted" in workflow
+    assert "Default self-hosted avoids GitHub-hosted minutes" in workflow
+    assert "fromJSON(inputs.runner_labels_json || '[\"self-hosted\",\"linux\"]')" in workflow
     assert "monitoring/**" in workflow
     assert "viewer/**" in workflow
     assert "tests/unit/test_deploy_model_registry.py" in workflow
