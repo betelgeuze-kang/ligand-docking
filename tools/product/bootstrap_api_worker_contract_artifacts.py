@@ -67,6 +67,7 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
         ("tools/build_goal_operator_action_board.py",),
         ("tools/build_goal_operator_intake_kit.py",),
         ("tools/build_goal_api_surface_contract.py",),
+        ("tools/product/build_api_runner_profile_promotion_operator_receipt.py",),
         ("tools/product/build_self_hosted_license_distribution_audit.py",),
         ("tools/build_third_party_license_review_gate.py",),
         ("tools/build_gpcr_conditional_prior_promotion_gate.py",),
@@ -89,6 +90,7 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
         _run(*command)
     from tools.product.ci_contract_fixture_packets import (
         write_production_ai_checkpoint_fixture_packets,
+        write_deploy_ops_legal_closure_packets,
         write_restricted_goal_bottleneck_briefing,
         write_restricted_commercial_readiness_handoff_bundle,
         write_restricted_production_ai_checkpoint_readiness_contract,
@@ -159,10 +161,19 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
     write_restricted_production_ai_checkpoint_readiness_contract(runs_dir)
     _run("tools/build_product_commercial_readiness_handoff_bundle.py")
     write_restricted_commercial_readiness_handoff_bundle(runs_dir)
-    _run("tools/build_product_goal_completion_audit.py")
-    write_restricted_product_goal_completion_audit(runs_dir)
     final_builders = [
         ("tools/product/build_product_production_ai_promotion_workbench.py",),
+        ("tools/product/build_production_ai_registry_promotion_operator_receipt.py",),
+        ("tools/product/build_production_ai_registry_promotion_priority_packet.py",),
+        ("tools/product/build_product_pose_sampling_readiness.py",),
+        ("scripts/verify_quality_gate.py", "--quiet", "--out-json", "runs/product_quality_gate_verification_current.json"),
+        ("tools/product/build_engine_refinement_tier_readiness.py",),
+        ("tools/product/build_engine_refinement_claim_evidence_receipt.py",),
+        ("tools/product/build_engine_refinement_tier_readiness.py",),
+        ("tools/product/build_product_scope_breadth_evidence_receipt.py",),
+        ("tools/build_product_goal_completion_audit.py",),
+        ("tools/product/build_product_full_commercial_blocker_evidence_matrix.py",),
+        ("tools/build_product_goal_completion_audit.py",),
         ("tools/build_goal_readiness_rollup.py",),
         ("tools/build_goal_release_decision_gate.py",),
         ("tools/build_goal_release_burndown_work_order.py",),
@@ -173,7 +184,13 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
     ]
     for command in final_builders:
         _run(*command)
+    write_deploy_ops_legal_closure_packets(runs_dir)
+    _run("tools/product/build_self_hosted_license_distribution_audit.py")
+    write_restricted_product_goal_completion_audit(runs_dir)
+    _run("tools/product/build_product_full_commercial_blocker_evidence_matrix.py")
     write_restricted_goal_bottleneck_briefing(runs_dir)
+    _run("tools/product/build_product_full_commercial_blocker_evidence_matrix.py")
+    _run("tools/product/build_product_launch_r4_preflight.py")
     _run("tools/build_goal_api_surface_contract.py")
 
 

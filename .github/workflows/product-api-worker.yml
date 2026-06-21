@@ -16,8 +16,17 @@ on:
       - "tools/accounting/build_product_scope_breadth_closure_checklist.py"
       - "tools/product/bootstrap_api_worker_contract_artifacts.py"
       - "tools/product/ci_contract_fixture_packets.py"
+      - "tools/product/build_api_runner_profile_promotion_operator_receipt.py"
+      - "tools/product/build_production_ai_registry_promotion_operator_receipt.py"
+      - "tools/product/build_production_ai_registry_promotion_priority_packet.py"
+      - "tools/product/build_product_pose_sampling_readiness.py"
       - "tools/product/build_product_launch_r4_preflight.py"
       - "tools/product/build_self_hosted_license_distribution_audit.py"
+      - "tools/product/build_engine_refinement_tier_readiness.py"
+      - "tools/product/build_engine_refinement_claim_evidence_receipt.py"
+      - "tools/product/build_product_scope_breadth_evidence_receipt.py"
+      - "tools/product/build_product_full_commercial_blocker_evidence_matrix.py"
+      - "scripts/verify_quality_gate.py"
       - "deploy/**"
       - "monitoring/**"
       - "viewer/**"
@@ -54,8 +63,17 @@ on:
       - "tools/accounting/build_product_scope_breadth_closure_checklist.py"
       - "tools/product/bootstrap_api_worker_contract_artifacts.py"
       - "tools/product/ci_contract_fixture_packets.py"
+      - "tools/product/build_api_runner_profile_promotion_operator_receipt.py"
+      - "tools/product/build_production_ai_registry_promotion_operator_receipt.py"
+      - "tools/product/build_production_ai_registry_promotion_priority_packet.py"
+      - "tools/product/build_product_pose_sampling_readiness.py"
       - "tools/product/build_product_launch_r4_preflight.py"
       - "tools/product/build_self_hosted_license_distribution_audit.py"
+      - "tools/product/build_engine_refinement_tier_readiness.py"
+      - "tools/product/build_engine_refinement_claim_evidence_receipt.py"
+      - "tools/product/build_product_scope_breadth_evidence_receipt.py"
+      - "tools/product/build_product_full_commercial_blocker_evidence_matrix.py"
+      - "scripts/verify_quality_gate.py"
       - "deploy/**"
       - "monitoring/**"
       - "viewer/**"
@@ -120,16 +138,27 @@ jobs:
             deploy/product_rollout.py \
             tools/run_api_simulation_worker.py \
             tools/smoke_alert_delivery.py \
+            scripts/verify_quality_gate.py \
+            tools/product/bootstrap_api_worker_contract_artifacts.py \
+            tools/product/build_api_runner_profile_promotion_operator_receipt.py \
+            tools/product/build_production_ai_registry_promotion_operator_receipt.py \
+            tools/product/build_production_ai_registry_promotion_priority_packet.py \
+            tools/product/build_product_pose_sampling_readiness.py \
             tools/product/build_product_launch_r4_preflight.py \
             tools/product/build_refine_tier_public_benchmark_readiness.py \
             tools/product/apply_refine_tier_public_benchmark_work_order.py \
             tools/product/validate_api_runner_profiles.py \
             tools/product/build_api_runner_profile_enablement_work_order.py \
             tools/build_viewer_asset_base_url_decision.py \
+            tools/product/build_engine_refinement_tier_readiness.py \
+            tools/product/build_engine_refinement_claim_evidence_receipt.py \
+            tools/product/build_product_scope_breadth_evidence_receipt.py \
+            tools/product/build_product_full_commercial_blocker_evidence_matrix.py \
             tools/product/build_self_hosted_license_distribution_audit.py
 
       - name: Refresh release bundle local decision artifacts
         run: |
+          python3 tools/product/bootstrap_api_worker_contract_artifacts.py
           python3 tools/build_viewer_asset_base_url_decision.py \
             --out-json runs/viewer_asset_base_url_decision_current.json
           python3 tools/build_product_commercial_independence_gate.py
