@@ -9,6 +9,7 @@ import torch
 from betelgeuze_engine.contracts import (
     EnergyForces,
     EngineState,
+    PRODUCT_CORRECTION_POLICY_CAP_KEYS,
     TermResult,
     validate_energy_forces_contract,
     validate_term_result_contract,
@@ -680,6 +681,12 @@ def test_pocket_wall_term_is_guarded_bounded_and_claim_scoped() -> None:
     assert result.claim_metadata["force_term_name"] == "pocket_wall"
     assert result.claim_metadata["force_term_status"] == "pass"
     assert result.claim_metadata["force_term_policy_caps_ready"] is True
+    assert set(PRODUCT_CORRECTION_POLICY_CAP_KEYS).issubset(
+        result.claim_metadata["force_term_policy_caps"]
+    )
+    assert result.claim_metadata["force_term_policy_caps"]["max_abs_delta_score"] == 10.0
+    assert result.claim_metadata["force_term_policy_caps"]["max_displacement"] == 0.0
+    assert result.claim_metadata["force_term_policy_caps"]["abstain_threshold"] == 1.0
     assert result.claim_metadata["force_term_observed_caps_ready"] is True
     assert result.claim_metadata["force_term_bounded_correction_ready"] is True
     assert result.claim_metadata["force_term_abs_energy_within_cap"] is True
@@ -1352,6 +1359,10 @@ def test_product_forcefield_can_execute_guarded_screened_electrostatics_plugin()
                 "max_abs_energy": 50.0,
                 "max_force_norm": 25.0,
                 "max_active_pair_count": 4096.0,
+                "max_abs_delta_score": 50.0,
+                "max_displacement": 0.0,
+                "max_energy_drift": 50.0,
+                "abstain_threshold": 1.0,
             },
             "abs_energy_within_cap": True,
             "force_norm_within_cap": True,
@@ -1533,6 +1544,10 @@ def test_term_result_contract_exposes_bounded_correction_validator() -> None:
                 "max_abs_energy": 1.0,
                 "max_force_norm": 1.0,
                 "max_active_pair_count": 16.0,
+                "max_abs_delta_score": 1.0,
+                "max_displacement": 0.0,
+                "max_energy_drift": 1.0,
+                "abstain_threshold": 1.0,
             },
             "force_term_policy_caps_ready": True,
             "force_term_observed_caps_ready": True,
@@ -1571,6 +1586,10 @@ def test_term_result_contract_exposes_bounded_correction_validator() -> None:
                 "max_abs_energy": 1.0,
                 "max_force_norm": float("inf"),
                 "max_active_pair_count": 16.0,
+                "max_abs_delta_score": 1.0,
+                "max_displacement": 0.0,
+                "max_energy_drift": 1.0,
+                "abstain_threshold": 1.0,
             },
         },
     )
@@ -1590,6 +1609,10 @@ def test_term_result_contract_exposes_bounded_correction_validator() -> None:
             "force_term_policy_caps": {
                 "max_abs_energy": 1.0,
                 "max_force_norm": 1.0,
+                "max_abs_delta_score": 1.0,
+                "max_displacement": 0.0,
+                "max_energy_drift": 1.0,
+                "abstain_threshold": 1.0,
             },
         },
     )
@@ -1610,6 +1633,10 @@ def test_term_result_contract_exposes_bounded_correction_validator() -> None:
                 "max_abs_energy": 1.0,
                 "max_force_norm": 1.0,
                 "max_active_pair_count": -1.0,
+                "max_abs_delta_score": 1.0,
+                "max_displacement": 0.0,
+                "max_energy_drift": 1.0,
+                "abstain_threshold": 1.0,
             },
         },
     )

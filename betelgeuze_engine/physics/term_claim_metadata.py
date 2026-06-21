@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from betelgeuze_engine.contracts.claim import default_claim_metadata
+from betelgeuze_engine.contracts.result import normalize_bounded_correction_policy_caps
 from betelgeuze_engine.contracts.state import EngineState
 
 CLAIM_METADATA_KEYS = (
@@ -88,5 +89,9 @@ def term_claim_metadata(
         }
     )
     if extras:
-        metadata.update(dict(extras))
+        normalized_extras = dict(extras)
+        caps = normalized_extras.get("force_term_policy_caps")
+        if isinstance(caps, dict):
+            normalized_extras["force_term_policy_caps"] = normalize_bounded_correction_policy_caps(caps)
+        metadata.update(normalized_extras)
     return metadata

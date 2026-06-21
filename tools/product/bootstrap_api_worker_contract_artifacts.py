@@ -39,6 +39,7 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
         ("tools/build_product_operational_quality_contract.py",),
         ("tools/build_product_security_deployment_contract.py",),
         ("tools/build_product_job_orchestration_contract.py",),
+        ("tools/build_product_production_ai_checkpoint_readiness.py",),
         ("tools/build_product_release_operations_dossier.py",),
         ("deploy/product_rollout.py", "--out-json", "runs/product_rollout_plan_current.json"),
         (
@@ -86,21 +87,36 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
     ]
     for command in builders:
         _run(*command)
-    from tools.product.ci_contract_fixture_packets import write_restricted_self_hosted_commercial_packets
+    from tools.product.ci_contract_fixture_packets import (
+        write_production_ai_checkpoint_fixture_packets,
+        write_restricted_goal_bottleneck_briefing,
+        write_restricted_commercial_readiness_handoff_bundle,
+        write_restricted_production_ai_checkpoint_readiness_contract,
+        write_restricted_product_goal_completion_audit,
+        write_restricted_self_hosted_commercial_packets,
+    )
     from tools.product.write_full_gap_closure_fixture_packets import write_full_gap_closure_fixture_packets
 
     write_full_gap_closure_fixture_packets(runs_dir)
     write_restricted_self_hosted_commercial_packets(runs_dir)
     post_builders = [
+        ("tools/build_product_scope_breadth_evidence_intake_readiness.py",),
+        ("tools/build_product_scope_breadth_evidence_acquisition_queue.py",),
+        ("tools/build_product_scope_breadth_evidence_priority_packet.py",),
+        ("tools/build_product_scope_breadth_contract.py",),
+        ("tools/build_general_protein_ligand_claim_blocker_packet.py",),
+        ("tools/build_product_scope_breadth_closure_checklist.py",),
         ("tools/product/build_self_hosted_license_distribution_audit.py",),
         ("tools/build_third_party_license_review_gate.py",),
         ("tools/build_product_rollout_execution_smoke_receipt.py",),
         ("tools/build_deploy_ops_legal_gap_closure.py",),
         ("tools/build_commercial_gap_closure_status.py",),
+        ("tools/build_product_production_ai_checkpoint_readiness.py",),
         ("tools/build_product_ai_architecture_gap_closure.py",),
         ("tools/build_product_ai_architecture_execution_backlog.py",),
         ("tools/build_data_science_expansion_gap_closure.py",),
         ("tools/build_master_gap_closure_rollup.py",),
+        ("tools/build_accuracy_parity_scorecard.py",),
         ("tools/cameo/build_cameo_local_format_smoke_inputs.py",),
         ("tools/build_cameo_api_dependency_readiness.py",),
         ("tools/build_cameo_receiver_smoke_contract.py",),
@@ -120,10 +136,45 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
         ("tools/build_competition_benchmark_rollup.py",),
         ("tools/build_architecture_validation_package_report.py",),
         ("tools/build_goal_readiness_rollup.py",),
+        ("tools/build_goal_release_decision_gate.py",),
+        ("tools/build_goal_release_burndown_work_order.py",),
+        ("tools/build_goal_bottleneck_briefing.py",),
         ("tools/build_goal_operator_action_board.py",),
+        ("tools/build_goal_operator_intake_kit.py",),
+        ("tools/build_product_release_operations_dossier.py",),
+        ("tools/build_product_goal_completion_audit.py",),
+        ("tools/build_goal_readiness_rollup.py",),
+        ("tools/build_goal_release_decision_gate.py",),
+        ("tools/build_goal_release_burndown_work_order.py",),
+        ("tools/build_goal_bottleneck_briefing.py",),
+        ("tools/build_goal_operator_action_board.py",),
+        ("tools/build_goal_operator_intake_kit.py",),
+        ("tools/build_goal_api_surface_contract.py",),
     ]
     for command in post_builders:
         _run(*command)
+    write_restricted_self_hosted_commercial_packets(runs_dir)
+    write_production_ai_checkpoint_fixture_packets(runs_dir)
+    _run("tools/build_product_production_ai_checkpoint_readiness.py")
+    write_restricted_production_ai_checkpoint_readiness_contract(runs_dir)
+    _run("tools/build_product_commercial_readiness_handoff_bundle.py")
+    write_restricted_commercial_readiness_handoff_bundle(runs_dir)
+    _run("tools/build_product_goal_completion_audit.py")
+    write_restricted_product_goal_completion_audit(runs_dir)
+    final_builders = [
+        ("tools/product/build_product_production_ai_promotion_workbench.py",),
+        ("tools/build_goal_readiness_rollup.py",),
+        ("tools/build_goal_release_decision_gate.py",),
+        ("tools/build_goal_release_burndown_work_order.py",),
+        ("tools/build_goal_bottleneck_briefing.py",),
+        ("tools/build_goal_operator_action_board.py",),
+        ("tools/build_goal_operator_intake_kit.py",),
+        ("tools/build_goal_api_surface_contract.py",),
+    ]
+    for command in final_builders:
+        _run(*command)
+    write_restricted_goal_bottleneck_briefing(runs_dir)
+    _run("tools/build_goal_api_surface_contract.py")
 
 
 def main(argv: list[str] | None = None) -> int:

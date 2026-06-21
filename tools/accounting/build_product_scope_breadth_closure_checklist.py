@@ -465,6 +465,7 @@ def build_payload(
     ]
     summary = {
         "packet_type": "product_scope_breadth_closure_checklist",
+        "status": "product_scope_breadth_closure_checklist_ready",
         "closure_checklist_ready": True,
         "scope_breadth_ready": False,
         "checklist_row_count": len(rows),

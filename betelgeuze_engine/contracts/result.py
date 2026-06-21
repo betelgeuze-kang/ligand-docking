@@ -34,6 +34,18 @@ BOUNDED_CORRECTION_POLICY_CAP_KEYS = (
     "max_abs_energy",
     "max_force_norm",
     "max_active_pair_count",
+    "max_abs_delta_score",
+    "max_displacement",
+    "max_energy_drift",
+    "abstain_threshold",
+)
+
+PRODUCT_CORRECTION_POLICY_CAP_KEYS = (
+    "max_abs_delta_score",
+    "max_force_norm",
+    "max_displacement",
+    "max_energy_drift",
+    "abstain_threshold",
 )
 
 
@@ -77,6 +89,27 @@ class EnergyForces:
 
 def _missing_keys(payload: dict[str, Any], keys: tuple[str, ...]) -> list[str]:
     return [key for key in keys if key not in payload]
+
+
+def normalize_bounded_correction_policy_caps(caps: dict[str, Any]) -> dict[str, Any]:
+    """Return policy caps with legacy force-term and product correction names.
+
+    Early analytic force terms exposed energy/force/pair-count caps. Product
+    correction contracts also require delta-score, displacement, energy-drift,
+    and abstention caps so PM/runtime evidence can audit every correction with
+    the same bounded policy surface.
+    """
+
+    normalized = dict(caps)
+    if "max_abs_delta_score" not in normalized and "max_abs_energy" in normalized:
+        normalized["max_abs_delta_score"] = normalized["max_abs_energy"]
+    if "max_displacement" not in normalized:
+        normalized["max_displacement"] = 0.0
+    if "max_energy_drift" not in normalized:
+        normalized["max_energy_drift"] = normalized.get("max_abs_energy", 0.0)
+    if "abstain_threshold" not in normalized:
+        normalized["abstain_threshold"] = 1.0
+    return normalized
 
 
 def term_result_requests_bounded_correction_validation(result: TermResult) -> bool:
@@ -183,6 +216,11 @@ def validate_term_result_contract(
             raise ValueError(
                 f"force term {name} returned invalid bounded correction policy cap: {key}"
             )
+    abstain_threshold = float(caps["abstain_threshold"])
+    if not 0.0 <= abstain_threshold <= 1.0:
+        raise ValueError(
+            f"force term {name} returned invalid bounded correction policy cap: abstain_threshold"
+        )
     for key in (
         "force_term_policy_caps_ready",
         "force_term_observed_caps_ready",
