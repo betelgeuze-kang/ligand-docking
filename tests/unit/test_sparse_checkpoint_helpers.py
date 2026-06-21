@@ -53,3 +53,12 @@ def test_clash_pairs_excludes_bonded_neighbors():
         dtype=torch.float32,
     )
     assert sparse._clash_pairs(c, clash_cutoff=1.1) == 1
+
+
+def test_clash_pairs_provider_overflow_blocks_claim_unsafe_diagnostics():
+    c = torch.zeros(4, 3, dtype=torch.float32)
+    try:
+        sparse._clash_pairs(c, clash_cutoff=1.1, max_neighbors=1)
+        assert False, "expected neighbor provider overflow"
+    except ValueError as exc:
+        assert "sparse_checkpoint_clash_pairs neighbor provider overflow" in str(exc)

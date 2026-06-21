@@ -16,8 +16,14 @@ from core.config import config
 from core.definitions import ResearchConstants
 from core.forcefield import ForceField
 from core.topology import TopologyFactory
+from betelgeuze_engine.physics.neighbor import (
+    CellListNeighborProvider,
+    NeighborProviderConfig,
+)
 from run_validation import calculate_proxy_energy, calculate_rg, calculate_sasa_proxy
 from tools.pdb_loader import load_native_structure
+
+DEFAULT_CLASH_DIAGNOSTIC_MAX_NEIGHBORS = 128
 
 
 def _parse_targets(spec: str) -> List[str]:
@@ -61,17 +67,41 @@ def _rmsd_aligned(coords1: torch.Tensor, coords2: torch.Tensor) -> float:
     return float(torch.sqrt(diff.pow(2).sum(dim=-1).mean()).item())
 
 
-def _clash_pairs(coords: torch.Tensor, clash_cutoff: float) -> int:
+def _clash_pairs(
+    coords: torch.Tensor,
+    clash_cutoff: float,
+    *,
+    max_dense_atoms: int = DEFAULT_CLASH_DIAGNOSTIC_MAX_NEIGHBORS,
+    max_neighbors: int | None = None,
+) -> int:
     n = int(coords.shape[0])
     if n < 2:
         return 0
-    dmat = torch.cdist(coords, coords)
-    idx = torch.arange(n, device=coords.device)
-    ii = idx.view(-1, 1)
-    jj = idx.view(1, -1)
-    nonbond_mask = (torch.abs(ii - jj) > 1) & (ii < jj)
-    clashes = (dmat < float(clash_cutoff)) & nonbond_mask
-    return int(clashes.sum().item())
+    neighbor_cap = int(max_neighbors if max_neighbors is not None else max_dense_atoms)
+    pairs = CellListNeighborProvider(
+        NeighborProviderConfig(
+            cutoff=float(clash_cutoff),
+            max_neighbor_count=neighbor_cap,
+            max_atoms_per_cell=max(8, neighbor_cap),
+        )
+    ).build(coords.reshape(1, n, 3))
+    diagnostics = dict(pairs.diagnostics)
+    if diagnostics.get("overflow") is True:
+        raise ValueError(
+            "sparse_checkpoint_clash_pairs neighbor provider overflow; "
+            f"max_observed_neighbors={diagnostics.get('max_observed_neighbors')}"
+        )
+    idx_cpu = pairs.idx[0].detach().cpu()
+    mask_cpu = pairs.mask[0].detach().cpu()
+    clashes: set[tuple[int, int]] = set()
+    for i in range(n):
+        for j in idx_cpu[i][mask_cpu[i]].tolist():
+            j = int(j)
+            if abs(i - j) <= 1:
+                continue
+            a, b = (i, j) if i < j else (j, i)
+            clashes.add((a, b))
+    return int(len(clashes))
 
 
 def _make_forcefield(target: str, force_backend: str, neighbor_settings: Dict[str, Any]) -> ForceField:
@@ -179,7 +209,13 @@ def run_sparse_checkpoint_report(args: argparse.Namespace) -> Dict[str, Any]:
                         "energy_drift_ratio": float(abs(energy - start_energy) / (abs(start_energy) + 1e-8)),
                         "proxy_energy": float(proxy_e),
                         "proxy_energy_drift_ratio": float(abs(proxy_e - native_proxy_e) / (abs(native_proxy_e) + 1e-8)),
-                        "clash_pairs": int(_clash_pairs(coords, clash_cutoff=float(args.clash_cutoff))),
+                        "clash_pairs": int(
+                            _clash_pairs(
+                                coords,
+                                clash_cutoff=float(args.clash_cutoff),
+                                max_neighbors=int(args.clash_diagnostic_max_neighbors),
+                            )
+                        ),
                         "overflow_flag": int(
                             int(getattr(ff.sh, "_last_neighbor_saturated_atoms", 0)) > 0
                             or bool((getattr(ff.rust_backend, "last_neighbor_build_stats", {}) or {}).get("cell_overflow", False))
@@ -272,6 +308,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--force-rust", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--force-backend", type=str, default="auto", choices=["auto", "pytorch"])
     parser.add_argument("--clash-cutoff", type=float, default=2.0)
+    parser.add_argument(
+        "--clash-diagnostic-max-neighbors",
+        type=int,
+        default=DEFAULT_CLASH_DIAGNOSTIC_MAX_NEIGHBORS,
+    )
+    parser.add_argument(
+        "--max-dense-diagnostic-atoms",
+        type=int,
+        default=DEFAULT_CLASH_DIAGNOSTIC_MAX_NEIGHBORS,
+        help=argparse.SUPPRESS,
+    )
     parser.add_argument("--aligned-rmsd-threshold", type=float, default=2.0)
     parser.add_argument("--energy-drift-threshold", type=float, default=0.30)
     parser.add_argument("--rg-delta-threshold", type=float, default=1.0)

@@ -342,6 +342,14 @@ def _validate_kpi_claim_metadata_gates(
         or runtime_scaling.get("status") != "runtime_neighbor_cap_scaling_ready"
         or runtime_scaling.get("forcefield_contract_ready") is not True
         or runtime_scaling.get("neighbor_cap_scaling_ready") is not True
+        or runtime_scaling.get("nxn_allocation_observed") is not False
+        or runtime_scaling.get("fixed_density_ready") is not True
+        or _float_value(runtime_scaling.get("target_number_density")) <= 0.0
+        or "max_density_relative_error" not in runtime_scaling
+        or _float_value(runtime_scaling.get("max_density_relative_error")) > 1e-9
+        or runtime_scaling.get("memory_per_atom_linear_ready") is not True
+        or _float_value(runtime_scaling.get("max_memory_peak_mb_per_atom")) <= 0.0
+        or _int_value(runtime_scaling.get("total_rebuild_count")) <= 0
         or len(scaling_rows) < 3
         or len(scaling_rows) != len(scaling_atom_counts)
         or _float_value(runtime_scaling.get("neighbor_pair_count_slope")) < 0.85
@@ -366,7 +374,17 @@ def _validate_kpi_claim_metadata_gates(
         and _int_value(row.get("neighbor_pair_count")) > 0
         and _float_value(row.get("duration_per_repeat_sec")) > 0.0
         and row.get("neighbor_pairs_provided") is True
-        and row.get("neighbor_source") == "provided"
+        and row.get("neighbor_source") == "provided_cell_list"
+        and row.get("neighbor_provider_status") == "neighbor_provider_ready"
+        and row.get("neighbor_provider_overflow") is False
+        and row.get("nxn_allocation_observed") is False
+        and row.get("fixed_density") is True
+        and row.get("coordinate_mode") == "fixed_density_grid"
+        and _float_value(row.get("box_size")) > 0.0
+        and _float_value(row.get("target_number_density")) > 0.0
+        and "density_relative_error" in row
+        and _float_value(row.get("density_relative_error")) <= 1e-9
+        and _float_value(row.get("memory_peak_mb_per_atom")) > 0.0
         and row.get("energy_finite") is True
         and row.get("forces_finite") is True
         and row.get("claim_safe") is True
@@ -415,6 +433,12 @@ def _validate_kpi_claim_metadata_gates(
         errors.append(f"pm_runtime_neighbor_cap_scaling_gate_missing:{artifact_id}")
     if pm_runtime.get("runtime_neighbor_cap_scaling_plot_ready") is not True:
         errors.append(f"pm_runtime_neighbor_cap_scaling_plot_gate_missing:{artifact_id}")
+    if pm_runtime.get("runtime_neighbor_cap_scaling_nxn_allocation_observed") is not False:
+        errors.append(f"pm_runtime_neighbor_cap_scaling_nxn_gate_missing:{artifact_id}")
+    if pm_runtime.get("runtime_neighbor_cap_scaling_fixed_density_ready") is not True:
+        errors.append(f"pm_runtime_neighbor_cap_scaling_fixed_density_gate_missing:{artifact_id}")
+    if pm_runtime.get("runtime_neighbor_cap_scaling_memory_per_atom_linear_ready") is not True:
+        errors.append(f"pm_runtime_neighbor_cap_scaling_memory_gate_missing:{artifact_id}")
     if _float_value(pm_runtime.get("runtime_neighbor_cap_scaling_pair_count_slope")) != _float_value(
         runtime_scaling.get("neighbor_pair_count_slope")
     ):
@@ -431,6 +455,30 @@ def _validate_kpi_claim_metadata_gates(
         runtime_scaling.get("plot_sha256") or ""
     ):
         errors.append(f"pm_runtime_neighbor_cap_scaling_plot_sha_mismatch:{artifact_id}")
+    if _float_value(
+        pm_runtime.get("runtime_neighbor_cap_scaling_max_memory_peak_mb_per_atom")
+    ) != _float_value(runtime_scaling.get("max_memory_peak_mb_per_atom")):
+        errors.append(f"pm_runtime_neighbor_cap_scaling_memory_peak_mismatch:{artifact_id}")
+    if _int_value(pm_runtime.get("runtime_neighbor_cap_scaling_total_rebuild_count")) != _int_value(
+        runtime_scaling.get("total_rebuild_count")
+    ):
+        errors.append(f"pm_runtime_neighbor_cap_scaling_rebuild_count_mismatch:{artifact_id}")
+    if _float_value(
+        pm_runtime.get("runtime_neighbor_cap_scaling_target_number_density")
+    ) != _float_value(runtime_scaling.get("target_number_density")):
+        errors.append(f"pm_runtime_neighbor_cap_scaling_density_mismatch:{artifact_id}")
+    if _float_value(
+        pm_runtime.get("runtime_neighbor_cap_scaling_max_density_relative_error")
+    ) != _float_value(runtime_scaling.get("max_density_relative_error")):
+        errors.append(f"pm_runtime_neighbor_cap_scaling_density_error_mismatch:{artifact_id}")
+    if list(pm_runtime.get("runtime_neighbor_cap_scaling_release_atom_counts") or []) != list(
+        runtime_scaling.get("release_atom_counts") or []
+    ):
+        errors.append(f"pm_runtime_neighbor_cap_scaling_release_counts_mismatch:{artifact_id}")
+    if bool(pm_runtime.get("runtime_neighbor_cap_scaling_release_atom_counts_ready") is True) != bool(
+        runtime_scaling.get("release_atom_counts_ready") is True
+    ):
+        errors.append(f"pm_runtime_neighbor_cap_scaling_release_counts_ready_mismatch:{artifact_id}")
     physics = payload.get("physics_kpi")
     if not isinstance(physics, dict):
         physics = {}
@@ -793,8 +841,8 @@ def _validate_kpi_claim_metadata_gates(
     if (
         force_term_smoke.get("forcefield_neighbor_diagnostics_ready") is not True
         or _int_value(force_term_smoke.get("forcefield_neighbor_pair_count")) < 1
-        or force_term_smoke.get("forcefield_neighbor_pairs_provided") is not False
-        or force_term_smoke.get("forcefield_neighbor_source") != "full_neighbor_pairs"
+        or force_term_smoke.get("forcefield_neighbor_pairs_provided") is not True
+        or force_term_smoke.get("forcefield_neighbor_source") != "provided_cell_list"
     ):
         errors.append(f"kpi_forcefield_neighbor_diagnostics_missing:{artifact_id}")
     if force_term_smoke.get("term_result_contract_ready") is not True:
@@ -1144,8 +1192,8 @@ def _validate_kpi_claim_metadata_gates(
     if (
         core_forcefield_smoke.get("neighbor_diagnostics_ready") is not True
         or _int_value(core_forcefield_smoke.get("neighbor_pair_count")) < 1
-        or core_forcefield_smoke.get("neighbor_pairs_provided") is not False
-        or core_forcefield_smoke.get("neighbor_source") != "full_neighbor_pairs"
+        or core_forcefield_smoke.get("neighbor_pairs_provided") is not True
+        or core_forcefield_smoke.get("neighbor_source") != "provided_cell_list"
     ):
         errors.append(f"kpi_core_forcefield_bridge_neighbor_diagnostics_missing:{artifact_id}")
     if core_forcefield_smoke.get("bridge_execution_scope") != "metadata_contract_only_not_runtime_gpu_claim":
@@ -1250,8 +1298,8 @@ def _validate_kpi_claim_metadata_gates(
         if (
             forcefield_row.get("neighbor_diagnostics_ready") is not True
             or _int_value(forcefield_row.get("neighbor_pair_count")) < 1
-            or forcefield_row.get("neighbor_pairs_provided") is not False
-            or forcefield_row.get("neighbor_source") != "full_neighbor_pairs"
+            or forcefield_row.get("neighbor_pairs_provided") is not True
+            or forcefield_row.get("neighbor_source") != "provided_cell_list"
         ):
             errors.append(f"kpi_core_forcefield_compat_neighbor_diagnostics_missing:{artifact_id}")
     if not _bool_nested(payload, "product_kpi", "job_store_lazy_factory_smoke", "ready"):
@@ -2727,11 +2775,22 @@ def build_payload(
         and _int_value(image_summary.get("container_runtime_visible_device_count")) > 0
         and image_summary.get("container_runtime_rust_hip_backend_enabled") is True
     )
+    image_runtime_neighbor_release_scaling_ready = bool(
+        image_summary.get("runtime_neighbor_release_scaling_ready") is True
+        and image_summary.get("runtime_neighbor_release_scaling_status")
+        == "runtime_neighbor_release_scaling_ready"
+        and image_summary.get("runtime_neighbor_release_atom_counts_ready") is True
+        and image_summary.get("runtime_neighbor_release_nxn_allocation_observed") is not True
+        and _float_value(image_summary.get("runtime_neighbor_release_pair_count_slope")) >= 0.85
+        and _float_value(image_summary.get("runtime_neighbor_release_pair_count_slope")) <= 1.15
+        and _float_value(image_summary.get("runtime_neighbor_release_pair_count_r2")) >= 0.98
+    )
     clean_container_requirements = {
         "clean_container_smoke_receipt_ready": image_summary.get("clean_container_smoke_ready") is True,
         "product_image_receipt_status_ready": image_summary.get("receipt_status") == "product_image_smoke_ready",
         "product_image_receipt_mode_rocm_runtime": image_summary.get("receipt_mode") == "rocm-runtime",
         "container_runtime_receipt_ready": image_container_runtime_receipt_ready,
+        "runtime_neighbor_release_scaling_ready": image_runtime_neighbor_release_scaling_ready,
         "product_runner_smoke_ready": image_summary.get("product_runner_smoke_ready") is True,
         "product_runner_claim_metadata_ready": image_summary.get("product_runner_claim_metadata_ready") is True,
         "tier_alpha_result_manifest_signature_verified": (
@@ -3004,6 +3063,25 @@ def build_payload(
         ),
         "container_runtime_rust_hip_backend_enabled": bool(
             image_summary.get("container_runtime_rust_hip_backend_enabled") is True
+        ),
+        "runtime_neighbor_release_scaling_ready": image_runtime_neighbor_release_scaling_ready,
+        "runtime_neighbor_release_scaling_status": str(
+            image_summary.get("runtime_neighbor_release_scaling_status") or ""
+        ),
+        "runtime_neighbor_release_atom_counts_ready": bool(
+            image_summary.get("runtime_neighbor_release_atom_counts_ready") is True
+        ),
+        "runtime_neighbor_release_atom_counts": list(
+            image_summary.get("runtime_neighbor_release_atom_counts") or []
+        ),
+        "runtime_neighbor_release_pair_count_slope": _float_value(
+            image_summary.get("runtime_neighbor_release_pair_count_slope")
+        ),
+        "runtime_neighbor_release_pair_count_r2": _float_value(
+            image_summary.get("runtime_neighbor_release_pair_count_r2")
+        ),
+        "runtime_neighbor_release_nxn_allocation_observed": bool(
+            image_summary.get("runtime_neighbor_release_nxn_allocation_observed") is True
         ),
         "product_runner_smoke_ready": bool(image_summary.get("product_runner_smoke_ready") is True),
         "product_runner_claim_metadata_ready": bool(image_summary.get("product_runner_claim_metadata_ready") is True),

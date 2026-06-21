@@ -2,7 +2,9 @@ import numpy as np
 import pytest
 
 pytest.importorskip("torch")
-from tools.collect_feature_matrix import _unwrap_polymer_coords
+import torch
+
+from tools.collect_feature_matrix import _compactness_and_cluster, _unwrap_polymer_coords
 
 
 def test_unwrap_polymer_coords_removes_periodic_jumps():
@@ -27,3 +29,16 @@ def test_unwrap_polymer_coords_passthrough_small_input():
     out = _unwrap_polymer_coords(wrapped, np.array([100.0, 100.0, 100.0], dtype=np.float32))
     assert out.shape == wrapped.shape
     assert np.allclose(out, wrapped)
+
+
+def test_compactness_uses_provider_backed_contact_graph():
+    coords = torch.zeros(4, 3)
+    compactness, cluster_max = _compactness_and_cluster(coords, cutoff=8.0, max_neighbors=3)
+    assert compactness == pytest.approx(1.0)
+    assert cluster_max == 4
+
+
+def test_compactness_provider_overflow_blocks_claim_unsafe_graph():
+    coords = torch.zeros(4, 3)
+    with pytest.raises(ValueError, match="feature_matrix_contact_graph neighbor provider overflow"):
+        _compactness_and_cluster(coords, cutoff=8.0, max_neighbors=2)

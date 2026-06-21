@@ -470,8 +470,8 @@ def _write_product_evidence_bundle(
                 ],
                 "forcefield_neighbor_diagnostics_ready": True,
                 "forcefield_neighbor_pair_count": 6,
-                "forcefield_neighbor_pairs_provided": False,
-                "forcefield_neighbor_source": "full_neighbor_pairs",
+                "forcefield_neighbor_pairs_provided": True,
+                "forcefield_neighbor_source": "provided_cell_list",
                 "forcefield_claim_metadata_schema_version": "force_term_claim_metadata_v1",
                 "forcefield_hbond_evidence_schema_version": "hbond_evidence_v1",
                 "forcefield_hydrophobic_contact_evidence_schema_version": (
@@ -879,8 +879,8 @@ def _write_product_evidence_bundle(
                 "forces_shape": [1, 2, 3],
                 "neighbor_diagnostics_ready": True,
                 "neighbor_pair_count": 2,
-                "neighbor_pairs_provided": False,
-                "neighbor_source": "full_neighbor_pairs",
+                "neighbor_pairs_provided": True,
+                "neighbor_source": "provided_cell_list",
                 "bridge_execution_scope": "metadata_contract_only_not_runtime_gpu_claim",
             },
             "core_compatibility_layer_ready": True,
@@ -944,8 +944,8 @@ def _write_product_evidence_bundle(
                         ],
                         "neighbor_diagnostics_ready": True,
                         "neighbor_pair_count": 2,
-                        "neighbor_pairs_provided": False,
-                        "neighbor_source": "full_neighbor_pairs",
+                        "neighbor_pairs_provided": True,
+                        "neighbor_source": "provided_cell_list",
                         "error": "",
                     },
                     {
@@ -1549,10 +1549,21 @@ def _write_product_evidence_bundle(
                 "status": "runtime_neighbor_cap_scaling_ready",
                 "forcefield_contract_ready": True,
                 "neighbor_cap_scaling_ready": True,
-                "atom_counts": [8, 16, 32],
-                "neighbor_pair_counts": [26, 58, 122],
-                "neighbor_pair_count_slope": 1.11,
-                "neighbor_pair_count_r2": 0.999,
+                "nxn_allocation_observed": False,
+                "coordinate_mode": "fixed_density_grid",
+                "fixed_density_ready": True,
+                "target_number_density": 1.0 / 27.0,
+                "max_density_relative_error": 0.0,
+                "release_atom_counts": [1000, 2000, 4000, 8000],
+                "release_atom_counts_ready": False,
+                "memory_per_atom_linear_ready": True,
+                "max_memory_peak_mb_per_atom": 32.0,
+                "total_rebuild_count": 6,
+                "total_rebuild_duration_sec": 0.003,
+                "atom_counts": [64, 125, 216],
+                "neighbor_pair_counts": [384, 750, 1296],
+                "neighbor_pair_count_slope": 1.0,
+                "neighbor_pair_count_r2": 1.0,
                 "duration_slope": 0.2,
                 "duration_r2": 0.5,
                 "plot_path": "runs/ai_md_runtime_scaling_plot_current.svg",
@@ -1566,33 +1577,60 @@ def _write_product_evidence_bundle(
                 "plot_size_bytes": 1024,
                 "rows": [
                     {
-                        "atom_count": 8,
+                        "atom_count": 64,
                         "duration_per_repeat_sec": 0.001,
-                        "neighbor_pair_count": 26,
+                        "neighbor_pair_count": 384,
                         "neighbor_pairs_provided": True,
-                        "neighbor_source": "provided",
+                        "neighbor_source": "provided_cell_list",
+                        "neighbor_provider_status": "neighbor_provider_ready",
+                        "neighbor_provider_overflow": False,
+                        "nxn_allocation_observed": False,
+                        "coordinate_mode": "fixed_density_grid",
+                        "fixed_density": True,
+                        "box_size": 12.0,
+                        "target_number_density": 1.0 / 27.0,
+                        "density_relative_error": 0.0,
+                        "memory_peak_mb_per_atom": 32.0,
                         "energy_finite": True,
                         "forces_finite": True,
                         "claim_safe": True,
                         "row_ready": True,
                     },
                     {
-                        "atom_count": 16,
+                        "atom_count": 125,
                         "duration_per_repeat_sec": 0.002,
-                        "neighbor_pair_count": 58,
+                        "neighbor_pair_count": 750,
                         "neighbor_pairs_provided": True,
-                        "neighbor_source": "provided",
+                        "neighbor_source": "provided_cell_list",
+                        "neighbor_provider_status": "neighbor_provider_ready",
+                        "neighbor_provider_overflow": False,
+                        "nxn_allocation_observed": False,
+                        "coordinate_mode": "fixed_density_grid",
+                        "fixed_density": True,
+                        "box_size": 15.0,
+                        "target_number_density": 1.0 / 27.0,
+                        "density_relative_error": 0.0,
+                        "memory_peak_mb_per_atom": 16.0,
                         "energy_finite": True,
                         "forces_finite": True,
                         "claim_safe": True,
                         "row_ready": True,
                     },
                     {
-                        "atom_count": 32,
+                        "atom_count": 216,
                         "duration_per_repeat_sec": 0.004,
-                        "neighbor_pair_count": 122,
+                        "neighbor_pair_count": 1296,
                         "neighbor_pairs_provided": True,
-                        "neighbor_source": "provided",
+                        "neighbor_source": "provided_cell_list",
+                        "neighbor_provider_status": "neighbor_provider_ready",
+                        "neighbor_provider_overflow": False,
+                        "nxn_allocation_observed": False,
+                        "coordinate_mode": "fixed_density_grid",
+                        "fixed_density": True,
+                        "box_size": 18.0,
+                        "target_number_density": 1.0 / 27.0,
+                        "density_relative_error": 0.0,
+                        "memory_peak_mb_per_atom": 8.0,
                         "energy_finite": True,
                         "forces_finite": True,
                         "claim_safe": True,
@@ -1646,11 +1684,21 @@ def _write_product_evidence_bundle(
                 "runtime_neighbor_cap_scaling_ready": True,
                 "runtime_neighbor_cap_scaling_status": "runtime_neighbor_cap_scaling_ready",
                 "runtime_neighbor_cap_scaling_row_count": 3,
-                "runtime_neighbor_cap_scaling_atom_counts": [8, 16, 32],
-                "runtime_neighbor_cap_scaling_pair_count_slope": 1.11,
-                "runtime_neighbor_cap_scaling_pair_count_r2": 0.999,
+                "runtime_neighbor_cap_scaling_atom_counts": [64, 125, 216],
+                "runtime_neighbor_cap_scaling_pair_count_slope": 1.0,
+                "runtime_neighbor_cap_scaling_pair_count_r2": 1.0,
                 "runtime_neighbor_cap_scaling_duration_slope": 0.2,
                 "runtime_neighbor_cap_scaling_duration_r2": 0.5,
+                "runtime_neighbor_cap_scaling_fixed_density_ready": True,
+                "runtime_neighbor_cap_scaling_target_number_density": 1.0 / 27.0,
+                "runtime_neighbor_cap_scaling_max_density_relative_error": 0.0,
+                "runtime_neighbor_cap_scaling_release_atom_counts": [1000, 2000, 4000, 8000],
+                "runtime_neighbor_cap_scaling_release_atom_counts_ready": False,
+                "runtime_neighbor_cap_scaling_nxn_allocation_observed": False,
+                "runtime_neighbor_cap_scaling_memory_per_atom_linear_ready": True,
+                "runtime_neighbor_cap_scaling_max_memory_peak_mb_per_atom": 32.0,
+                "runtime_neighbor_cap_scaling_total_rebuild_count": 6,
+                "runtime_neighbor_cap_scaling_total_rebuild_duration_sec": 0.003,
                 "runtime_neighbor_cap_scaling_plot_ready": True,
                 "runtime_neighbor_cap_scaling_plot_path": "runs/ai_md_runtime_scaling_plot_current.svg",
                 "runtime_neighbor_cap_scaling_plot_sha256": "d" * 64,
@@ -1833,6 +1881,15 @@ def _write_product_evidence_bundle(
             "container_runtime_torch_cuda_available": clean_ready,
             "container_runtime_visible_device_count": 1 if clean_ready else 0,
             "container_runtime_rust_hip_backend_enabled": clean_ready,
+            "runtime_neighbor_release_scaling_ready": clean_ready,
+            "runtime_neighbor_release_scaling_status": (
+                "runtime_neighbor_release_scaling_ready" if clean_ready else ""
+            ),
+            "runtime_neighbor_release_atom_counts_ready": clean_ready,
+            "runtime_neighbor_release_atom_counts": [1000, 2000, 4000, 8000] if clean_ready else [],
+            "runtime_neighbor_release_pair_count_slope": 1.0 if clean_ready else 0.0,
+            "runtime_neighbor_release_pair_count_r2": 1.0 if clean_ready else 0.0,
+            "runtime_neighbor_release_nxn_allocation_observed": False,
             "product_runner_smoke_ready": clean_ready,
             "product_runner_claim_metadata_ready": clean_ready,
             "tier_alpha_result_manifest_signature_verified": clean_ready,
@@ -2191,6 +2248,10 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert guarded_plugin["pocket_wall_policy_cap_exceeded_blocked"] is True
     assert guarded_plugin["torsion_prior_policy_cap_exceeded_blocked"] is True
     assert guarded_plugin["topology_penalty_policy_cap_exceeded_blocked"] is True
+    assert guarded_plugin["forcefield_neighbor_product_required"] is True
+    assert guarded_plugin["forcefield_neighbor_pairs_provided"] is True
+    assert guarded_plugin["forcefield_neighbor_source"] == "provided_cell_list"
+    assert guarded_plugin["forcefield_neighbor_nxn_allocation_observed"] is False
     assert guarded_plugin["forcefield_bounded_row_ready"] is True
     assert guarded_plugin["forcefield_guarded_rows_ready"] is True
     assert guarded_plugin["forcefield_guarded_claim_row"]["force_term_name"] == "screened_electrostatics"
@@ -2250,8 +2311,8 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert force_term_smoke["forcefield_claim_metadata_schema_version"] == "force_term_claim_metadata_v1"
     assert force_term_smoke["forcefield_neighbor_diagnostics_ready"] is True
     assert force_term_smoke["forcefield_neighbor_pair_count"] > 0
-    assert force_term_smoke["forcefield_neighbor_pairs_provided"] is False
-    assert force_term_smoke["forcefield_neighbor_source"] == "full_neighbor_pairs"
+    assert force_term_smoke["forcefield_neighbor_pairs_provided"] is True
+    assert force_term_smoke["forcefield_neighbor_source"] == "provided_cell_list"
     assert force_term_smoke["forcefield_claim_safe_count"] == 3
     assert force_term_smoke["forcefield_blocked_count"] == 0
     assert {
@@ -2304,8 +2365,8 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert core_bridge_smoke["unsafe_base_claim_rows"][0]["blocked_reason"] == "placeholder_alanine_topology"
     assert core_bridge_smoke["neighbor_diagnostics_ready"] is True
     assert core_bridge_smoke["neighbor_pair_count"] > 0
-    assert core_bridge_smoke["neighbor_pairs_provided"] is False
-    assert core_bridge_smoke["neighbor_source"] == "full_neighbor_pairs"
+    assert core_bridge_smoke["neighbor_pairs_provided"] is True
+    assert core_bridge_smoke["neighbor_source"] == "provided_cell_list"
     assert report["product_kpi"]["core_compatibility_layer_ready"] is True
     assert report["pm_kpi_summary"]["product"]["core_compatibility_layer_ready"] is True
     core_compatibility = report["product_kpi"]["core_compatibility_layer_smoke"]
@@ -2346,8 +2407,8 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert forcefield_compat["unsafe_base_claim_rows"][0]["blocked_reason"] == "placeholder_alanine_topology"
     assert forcefield_compat["neighbor_diagnostics_ready"] is True
     assert forcefield_compat["neighbor_pair_count"] > 0
-    assert forcefield_compat["neighbor_pairs_provided"] is False
-    assert forcefield_compat["neighbor_source"] == "full_neighbor_pairs"
+    assert forcefield_compat["neighbor_pairs_provided"] is True
+    assert forcefield_compat["neighbor_source"] == "provided_cell_list"
     assert report["product_kpi"]["job_store_lazy_factory_ready"] is True
     assert report["pm_kpi_summary"]["product"]["job_store_lazy_factory_ready"] is True
     job_store_smoke = report["product_kpi"]["job_store_lazy_factory_smoke"]
@@ -2522,8 +2583,26 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert scaling_kpi["neighbor_pair_count_r2"] >= 0.98
     assert len(scaling_kpi["rows"]) >= 3
     assert all(row["neighbor_pairs_provided"] is True for row in scaling_kpi["rows"])
-    assert all(row["neighbor_source"] == "provided" for row in scaling_kpi["rows"])
+    assert all(row["neighbor_source"] == "provided_cell_list" for row in scaling_kpi["rows"])
+    assert all(row["neighbor_provider_status"] == "neighbor_provider_ready" for row in scaling_kpi["rows"])
+    assert all(row["neighbor_provider_overflow"] is False for row in scaling_kpi["rows"])
+    assert all(row["nxn_allocation_observed"] is False for row in scaling_kpi["rows"])
+    assert all(row["coordinate_mode"] == "fixed_density_grid" for row in scaling_kpi["rows"])
+    assert all(row["fixed_density"] is True for row in scaling_kpi["rows"])
+    assert all(row["box_size"] > 0.0 for row in scaling_kpi["rows"])
+    assert all(row["density_relative_error"] <= 1e-9 for row in scaling_kpi["rows"])
+    assert all(row["memory_peak_mb_per_atom"] > 0.0 for row in scaling_kpi["rows"])
     assert all(row["row_ready"] is True for row in scaling_kpi["rows"])
+    assert scaling_kpi["nxn_allocation_observed"] is False
+    assert scaling_kpi["coordinate_mode"] == "fixed_density_grid"
+    assert scaling_kpi["fixed_density_ready"] is True
+    assert scaling_kpi["target_number_density"] > 0.0
+    assert scaling_kpi["max_density_relative_error"] <= 1e-9
+    assert scaling_kpi["release_atom_counts"] == [1000, 2000, 4000, 8000]
+    assert scaling_kpi["release_atom_counts_ready"] is False
+    assert scaling_kpi["memory_per_atom_linear_ready"] is True
+    assert scaling_kpi["max_memory_peak_mb_per_atom"] > 0.0
+    assert scaling_kpi["total_rebuild_count"] > 0
     plot_path = Path(scaling_kpi["plot_path"])
     assert scaling_kpi["plot_ready"] is True
     assert scaling_kpi["plot_format"] == "svg"
@@ -2535,6 +2614,30 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert plot_path.exists()
     assert "Capped neighbor pairs" in plot_path.read_text(encoding="utf-8")
     assert report["pm_kpi_summary"]["runtime"]["runtime_neighbor_cap_scaling_ready"] is True
+    assert (
+        report["pm_kpi_summary"]["runtime"]["runtime_neighbor_cap_scaling_nxn_allocation_observed"]
+        is False
+    )
+    assert (
+        report["pm_kpi_summary"]["runtime"]["runtime_neighbor_cap_scaling_memory_per_atom_linear_ready"]
+        is True
+    )
+    assert (
+        report["pm_kpi_summary"]["runtime"]["runtime_neighbor_cap_scaling_fixed_density_ready"]
+        is True
+    )
+    assert (
+        report["pm_kpi_summary"]["runtime"]["runtime_neighbor_cap_scaling_release_atom_counts_ready"]
+        is False
+    )
+    assert (
+        report["pm_kpi_summary"]["runtime"]["runtime_neighbor_cap_scaling_max_memory_peak_mb_per_atom"]
+        == scaling_kpi["max_memory_peak_mb_per_atom"]
+    )
+    assert (
+        report["pm_kpi_summary"]["runtime"]["runtime_neighbor_cap_scaling_total_rebuild_count"]
+        == scaling_kpi["total_rebuild_count"]
+    )
     assert report["pm_kpi_summary"]["runtime"]["runtime_neighbor_cap_scaling_plot_ready"] is True
     assert (
         report["pm_kpi_summary"]["runtime"]["runtime_neighbor_cap_scaling_plot_path"]
@@ -2922,8 +3025,9 @@ def test_build_ai_md_engine_kpi_report_blocks_without_clean_install_success(tmp_
     ]
     assert report["product_kpi"]["clean_install_missing_requirement_count"] == 4
     assert report["product_kpi"]["product_image_preflight_blocker_codes"] == ["docker_cli_missing"]
-    assert report["product_kpi"]["clean_container_missing_requirement_count"] == 13
+    assert report["product_kpi"]["clean_container_missing_requirement_count"] == 14
     assert "container_runtime_receipt_ready" in report["product_kpi"]["clean_container_missing_requirements"]
+    assert "runtime_neighbor_release_scaling_ready" in report["product_kpi"]["clean_container_missing_requirements"]
     assert "backmapping_hbond_evidence_receipt_ready" in report["product_kpi"]["clean_container_missing_requirements"]
     assert report["pm_kpi_summary"]["product"]["clean_install_missing_requirements"] == [
         "clean_container_smoke_ready",
@@ -2931,7 +3035,7 @@ def test_build_ai_md_engine_kpi_report_blocks_without_clean_install_success(tmp_
         "product_image_receipt_present",
         "product_image_receipt_mode_rocm_runtime",
     ]
-    assert report["pm_kpi_summary"]["product"]["clean_container_missing_requirement_count"] == 13
+    assert report["pm_kpi_summary"]["product"]["clean_container_missing_requirement_count"] == 14
     assert (
         report["pm_kpi_summary"]["product"]["clean_container_missing_requirements"]
         == report["product_kpi"]["clean_container_missing_requirements"]

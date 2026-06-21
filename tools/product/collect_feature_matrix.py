@@ -18,9 +18,15 @@ from core.config import config
 from core.definitions import ResearchConstants
 from core.forcefield import ForceField
 from core.topology import TopologyFactory
+from betelgeuze_engine.physics.neighbor import (
+    CellListNeighborProvider,
+    NeighborProviderConfig,
+)
 from run_validation import calculate_proxy_energy, calculate_rg, calculate_sasa_proxy
 from theory.branches.hydrophobic_logic import HydrophobicLogic
 from tools.pdb_loader import load_native_structure
+
+DEFAULT_CONTACT_DIAGNOSTIC_MAX_NEIGHBORS = 256
 
 
 def _slug(text: str) -> str:
@@ -117,9 +123,90 @@ def _rmsd(coords: torch.Tensor, native: torch.Tensor) -> float:
     return float(torch.sqrt(torch.mean(torch.sum(diff * diff, dim=-1))).item())
 
 
-def _contact_adjacency(coords: torch.Tensor, cutoff: float) -> torch.Tensor:
-    dmat = torch.cdist(coords, coords)
-    adj = (dmat < float(cutoff)) & (dmat > 0.0)
+def _contact_graph_stats(
+    coords: torch.Tensor,
+    cutoff: float,
+    *,
+    max_neighbors: int = DEFAULT_CONTACT_DIAGNOSTIC_MAX_NEIGHBORS,
+) -> Tuple[int, int]:
+    n = int(coords.shape[0])
+    if n <= 1:
+        return 0, n
+    pairs = CellListNeighborProvider(
+        NeighborProviderConfig(
+            cutoff=float(cutoff),
+            max_neighbor_count=int(max_neighbors),
+            max_atoms_per_cell=max(8, int(max_neighbors)),
+        )
+    ).build(coords.reshape(1, n, 3))
+    diagnostics = dict(pairs.diagnostics)
+    if diagnostics.get("overflow") is True:
+        raise ValueError(
+            "feature_matrix_contact_graph neighbor provider overflow; "
+            f"max_observed_neighbors={diagnostics.get('max_observed_neighbors')}"
+        )
+
+    idx_cpu = pairs.idx[0].detach().cpu()
+    mask_cpu = pairs.mask[0].detach().cpu()
+    adjacency: list[set[int]] = [set() for _ in range(n)]
+    edges: set[tuple[int, int]] = set()
+    for i in range(n):
+        for j in idx_cpu[i][mask_cpu[i]].tolist():
+            j = int(j)
+            if i == j:
+                continue
+            a, b = (i, j) if i < j else (j, i)
+            edges.add((a, b))
+            adjacency[i].add(j)
+            adjacency[j].add(i)
+
+    visited = [False] * n
+    max_size = 0
+    for start in range(n):
+        if visited[start]:
+            continue
+        stack = [start]
+        visited[start] = True
+        size = 0
+        while stack:
+            atom_idx = stack.pop()
+            size += 1
+            for neighbor_idx in adjacency[atom_idx]:
+                if not visited[neighbor_idx]:
+                    visited[neighbor_idx] = True
+                    stack.append(neighbor_idx)
+        max_size = max(max_size, size)
+    return len(edges), int(max_size)
+
+
+def _contact_adjacency(
+    coords: torch.Tensor,
+    cutoff: float,
+    *,
+    max_dense_atoms: int = DEFAULT_CONTACT_DIAGNOSTIC_MAX_NEIGHBORS,
+) -> torch.Tensor:
+    n = int(coords.shape[0])
+    edges, _cluster = _contact_graph_stats(
+        coords,
+        cutoff=cutoff,
+        max_neighbors=max_dense_atoms,
+    )
+    adj = torch.zeros((n, n), dtype=torch.bool, device=coords.device)
+    if edges == 0:
+        return adj
+    pairs = CellListNeighborProvider(
+        NeighborProviderConfig(
+            cutoff=float(cutoff),
+            max_neighbor_count=int(max_dense_atoms),
+            max_atoms_per_cell=max(8, int(max_dense_atoms)),
+        )
+    ).build(coords.reshape(1, n, 3))
+    idx_cpu = pairs.idx[0].detach().cpu()
+    mask_cpu = pairs.mask[0].detach().cpu()
+    for i in range(n):
+        for j in idx_cpu[i][mask_cpu[i]].tolist():
+            if i != int(j):
+                adj[i, int(j)] = True
     return adj
 
 
@@ -148,15 +235,24 @@ def _largest_component_size(adj: torch.Tensor) -> int:
     return int(max_size)
 
 
-def _compactness_and_cluster(coords: torch.Tensor, cutoff: float) -> Tuple[float, int]:
+def _compactness_and_cluster(
+    coords: torch.Tensor,
+    cutoff: float,
+    *,
+    max_dense_atoms: int = DEFAULT_CONTACT_DIAGNOSTIC_MAX_NEIGHBORS,
+    max_neighbors: int | None = None,
+) -> Tuple[float, int]:
     n = int(coords.shape[0])
     if n <= 1:
         return 0.0, n
-    adj = _contact_adjacency(coords, cutoff=cutoff)
-    edges = float(torch.triu(adj, diagonal=1).sum().item())
+    edge_count, cluster_max = _contact_graph_stats(
+        coords,
+        cutoff=cutoff,
+        max_neighbors=int(max_neighbors if max_neighbors is not None else max_dense_atoms),
+    )
+    edges = float(edge_count)
     denom = float(n * (n - 1) / 2.0)
     compactness = float(edges / max(denom, 1.0))
-    cluster_max = _largest_component_size(adj)
     return compactness, cluster_max
 
 
@@ -414,7 +510,9 @@ def collect_feature_rows(args: argparse.Namespace) -> Tuple[List[Dict[str, Any]]
                         rg = calculate_rg(coords)
                         sasa = calculate_sasa_proxy(coords, cutoff=float(args.sasa_cutoff))
                         compactness, cluster_max = _compactness_and_cluster(
-                            coords, cutoff=float(args.contact_cutoff)
+                            coords,
+                            cutoff=float(args.contact_cutoff),
+                            max_neighbors=int(args.contact_diagnostic_max_neighbors),
                         )
                         rmsd = _rmsd(coords, native)
                         is_llps = int(
@@ -633,6 +731,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-atoms-per-cell", type=int, default=64)
     parser.add_argument("--rebuild-stride", type=int, default=4)
     parser.add_argument("--contact-cutoff", type=float, default=8.0)
+    parser.add_argument(
+        "--contact-diagnostic-max-neighbors",
+        type=int,
+        default=DEFAULT_CONTACT_DIAGNOSTIC_MAX_NEIGHBORS,
+    )
+    parser.add_argument(
+        "--max-dense-diagnostic-atoms",
+        type=int,
+        default=DEFAULT_CONTACT_DIAGNOSTIC_MAX_NEIGHBORS,
+        help=argparse.SUPPRESS,
+    )
     parser.add_argument("--sasa-cutoff", type=float, default=8.0)
     parser.add_argument("--llps-cluster-fraction-threshold", type=float, default=0.75)
     parser.add_argument("--llps-compactness-threshold", type=float, default=0.15)

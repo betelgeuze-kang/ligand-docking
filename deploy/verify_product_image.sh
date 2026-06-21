@@ -14,6 +14,10 @@ VERIFY_MODE="${PRODUCT_IMAGE_VERIFY_MODE:-build}"
 HOST_PYTHON="${PRODUCT_IMAGE_HOST_PYTHON:-python3}"
 RUNNER_TIMEOUT_SECONDS="${PRODUCT_IMAGE_RUNNER_TIMEOUT_SECONDS:-600}"
 RUNNER_PROFILE_TIMEOUT_SECONDS="${PRODUCT_IMAGE_RUNNER_PROFILE_TIMEOUT_SECONDS:-300}"
+RELEASE_SCALING_ATOM_COUNTS="${PRODUCT_IMAGE_RELEASE_SCALING_ATOM_COUNTS:-1000,2000,4000,8000}"
+RELEASE_SCALING_REPEATS="${PRODUCT_IMAGE_RELEASE_SCALING_REPEATS:-3}"
+RELEASE_SCALING_WARMUP_REPEATS="${PRODUCT_IMAGE_RELEASE_SCALING_WARMUP_REPEATS:-1}"
+RUST_HIP_PARITY_ATOM_COUNTS="${PRODUCT_IMAGE_RUST_HIP_PARITY_ATOM_COUNTS:-216,1000}"
 RECEIPT_JSON="${PRODUCT_IMAGE_SMOKE_RECEIPT_JSON:-${ROOT}/runs/product_image_smoke_receipt_current.json}"
 if [[ "${RECEIPT_JSON}" != /* ]]; then
   RECEIPT_JSON="${ROOT}/${RECEIPT_JSON}"
@@ -144,6 +148,28 @@ CSV
       --out-dir /smoke/backmapping_out \
       --out-summary-json /smoke/backmapping_summary.json \
       --out-scores-csv /smoke/backmapping_scores.csv
+
+  echo "Running fixed-density release-scale neighbor scaling gate inside ROCm container" >&2
+  "${DOCKER_BIN[@]}" run "${DOCKER_RUN_ARGS[@]}" \
+    -v "${RUNNER_SMOKE_DIR}:/smoke" \
+    "${IMAGE}" \
+    python tools/product/run_runtime_neighbor_release_scaling.py \
+      --atom-counts "${RELEASE_SCALING_ATOM_COUNTS}" \
+      --release-atom-counts "${RELEASE_SCALING_ATOM_COUNTS}" \
+      --repeats "${RELEASE_SCALING_REPEATS}" \
+      --warmup-repeats "${RELEASE_SCALING_WARMUP_REPEATS}" \
+      --out-json /smoke/runtime_neighbor_release_scaling.json \
+      --out-md /smoke/runtime_neighbor_release_scaling.md \
+      --out-svg /smoke/runtime_neighbor_release_scaling.svg
+
+  echo "Running Rust/HIP neighbor-provider parity gate inside ROCm container" >&2
+  "${DOCKER_BIN[@]}" run "${DOCKER_RUN_ARGS[@]}" \
+    -v "${RUNNER_SMOKE_DIR}:/smoke" \
+    "${IMAGE}" \
+    python tools/product/run_rust_hip_neighbor_provider_parity.py \
+      --atom-counts "${RUST_HIP_PARITY_ATOM_COUNTS}" \
+      --out-json /smoke/rust_hip_neighbor_provider_parity.json \
+      --out-md /smoke/rust_hip_neighbor_provider_parity.md
 fi
 
 echo "Running /simulate scope gate smoke (expect 422 without runner_profile_id)" >&2
@@ -201,6 +227,10 @@ runtime_proof = _read_json(smoke_dir / "rocm_container_runtime_proof.json")
 tier_alpha = _read_json(smoke_dir / "tier_alpha_adrb2_dispatch_smoke.json")
 tier_summary = tier_alpha.get("summary") if isinstance(tier_alpha.get("summary"), dict) else {}
 backmapping = _read_json(smoke_dir / "backmapping_summary.json")
+runtime_scaling = _read_json(smoke_dir / "runtime_neighbor_release_scaling.json")
+runtime_scaling_summary = runtime_scaling.get("summary") if isinstance(runtime_scaling.get("summary"), dict) else {}
+rust_hip_parity = _read_json(smoke_dir / "rust_hip_neighbor_provider_parity.json")
+rust_hip_parity_summary = rust_hip_parity.get("summary") if isinstance(rust_hip_parity.get("summary"), dict) else {}
 hbond_summary = backmapping.get("hbond_evidence_summary") if isinstance(backmapping.get("hbond_evidence_summary"), dict) else {}
 claim_metadata = backmapping.get("claim_metadata") if isinstance(backmapping.get("claim_metadata"), dict) else {}
 container_runtime_proof_ready = bool(
@@ -243,10 +273,30 @@ tier_alpha_manifest_ready = bool(
     and tier_alpha.get("result_manifest_status") == "completed"
 )
 product_runner_claim_metadata_ready = bool(tier_alpha_manifest_ready and backmapping_claim_metadata_ready)
+runtime_neighbor_release_scaling_ready = bool(
+    os.environ["VERIFY_MODE"] == "rocm-runtime"
+    and runtime_scaling.get("packet_type") == "runtime_neighbor_release_scaling"
+    and runtime_scaling_summary.get("status") == "runtime_neighbor_release_scaling_ready"
+    and runtime_scaling_summary.get("ready") is True
+    and runtime_scaling_summary.get("release_atom_counts_ready") is True
+    and runtime_scaling_summary.get("fixed_density_ready") is True
+    and runtime_scaling_summary.get("nxn_allocation_observed") is False
+)
+rust_hip_neighbor_provider_parity_ready = bool(
+    os.environ["VERIFY_MODE"] == "rocm-runtime"
+    and rust_hip_parity.get("packet_type") == "rust_hip_neighbor_provider_parity"
+    and rust_hip_parity_summary.get("status") == "rust_hip_neighbor_provider_parity_ready"
+    and rust_hip_parity_summary.get("ready") is True
+    and rust_hip_parity_summary.get("all_rows_ready") is True
+    and rust_hip_parity_summary.get("cuda_available") is True
+    and rust_hip_parity_summary.get("nxn_allocation_observed") is False
+)
 receipt_ready = bool(
     os.environ["VERIFY_MODE"] == "rocm-runtime"
     and container_runtime_proof_ready
     and product_runner_claim_metadata_ready
+    and runtime_neighbor_release_scaling_ready
+    and rust_hip_neighbor_provider_parity_ready
 )
 receipt_status = (
     "product_image_smoke_ready"
@@ -285,6 +335,38 @@ payload = {
     "container_runtime_rust_hip_backend_reason": str(runtime_proof.get("rust_hip_backend_reason") or ""),
     "product_runner_smoke_ready": os.environ["PRODUCT_RUNNER_SMOKE_READY"] == "true",
     "product_runner_claim_metadata_ready": product_runner_claim_metadata_ready,
+    "runtime_neighbor_release_scaling_present": bool(runtime_scaling),
+    "runtime_neighbor_release_scaling_ready": runtime_neighbor_release_scaling_ready,
+    "runtime_neighbor_release_scaling_status": str(runtime_scaling_summary.get("status") or ""),
+    "runtime_neighbor_release_atom_counts_ready": runtime_scaling_summary.get("release_atom_counts_ready") is True,
+    "runtime_neighbor_release_atom_counts": list(runtime_scaling_summary.get("atom_counts") or []),
+    "runtime_neighbor_release_pair_count_slope": float(
+        runtime_scaling_summary.get("neighbor_pair_count_slope") or 0.0
+    ),
+    "runtime_neighbor_release_pair_count_r2": float(
+        runtime_scaling_summary.get("neighbor_pair_count_r2") or 0.0
+    ),
+    "runtime_neighbor_release_max_memory_peak_mb_per_atom": float(
+        runtime_scaling_summary.get("max_memory_peak_mb_per_atom") or 0.0
+    ),
+    "runtime_neighbor_release_nxn_allocation_observed": runtime_scaling_summary.get("nxn_allocation_observed") is True,
+    "rust_hip_neighbor_provider_parity_present": bool(rust_hip_parity),
+    "rust_hip_neighbor_provider_parity_ready": rust_hip_neighbor_provider_parity_ready,
+    "rust_hip_neighbor_provider_parity_status": str(rust_hip_parity_summary.get("status") or ""),
+    "rust_hip_neighbor_provider_parity_atom_counts": list(rust_hip_parity_summary.get("atom_counts") or []),
+    "rust_hip_neighbor_provider_parity_max_distance_abs_delta": float(
+        rust_hip_parity_summary.get("max_distance_abs_delta") or 0.0
+    ),
+    "rust_hip_neighbor_provider_parity_max_energy_abs_error": float(
+        rust_hip_parity_summary.get("max_energy_abs_error") or 0.0
+    ),
+    "rust_hip_neighbor_provider_parity_max_energy_rel_error": float(
+        rust_hip_parity_summary.get("max_energy_rel_error") or 0.0
+    ),
+    "rust_hip_neighbor_provider_parity_max_force_abs_error": float(
+        rust_hip_parity_summary.get("max_force_abs_error") or 0.0
+    ),
+    "rust_hip_neighbor_provider_parity_nxn_allocation_observed": rust_hip_parity_summary.get("nxn_allocation_observed") is True,
     "tier_alpha_dispatch_smoke_status": str(tier_summary.get("status") or ""),
     "tier_alpha_result_manifest_exists": tier_alpha.get("result_manifest_exists") is True,
     "tier_alpha_result_manifest_signature_verified": tier_alpha.get("result_manifest_signature_verified") is True,
@@ -327,7 +409,8 @@ payload = {
         "Receipt means deploy/verify_product_image.sh completed all checks in the selected mode; "
         "product claim promotion requires mode=rocm-runtime, product_runner_smoke_ready=true, "
         "product_runner_claim_metadata_ready=true, container_runtime_proof_ready=true, "
-        "container_runtime_rust_hip_backend_enabled=true, hbond_evidence_schema_version=hbond_evidence_v1, "
+        "container_runtime_rust_hip_backend_enabled=true, runtime_neighbor_release_scaling_ready=true, "
+        "rust_hip_neighbor_provider_parity_ready=true, hbond_evidence_schema_version=hbond_evidence_v1, "
         "and backmapping_ligand_topology_claim_safe=true."
     ),
 }

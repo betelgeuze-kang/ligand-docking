@@ -91,4 +91,25 @@ def test_physics_guard_steric_overlap_violation():
     assert "Steric overlap violation" in msg
     assert guard.violation_count == 1
 
+
+def test_physics_guard_provider_backed_overlap_check_blocks_overflow():
+    guard = PhysicsGuard(
+        max_energy_drift=0.02,
+        max_momentum_drift=0.015,
+        min_interatomic_distance=0.5,
+        overlap_diagnostic_max_neighbors=1,
+        enable_local_teacher=False,
+    )
+    B, N = 1, 4
+    c = torch.zeros(B, N, 3, device='cpu')
+    v = torch.zeros(B, N, 3, device='cpu')
+    pe = torch.tensor([[100.0]], device='cpu')
+    f_core = torch.zeros(B, N, 3, device='cpu')
+    f_ai_corr = torch.zeros(B, N, 3, device='cpu')
+
+    is_ok, msg = guard.check_conservation(c, v, pe, f_core, f_ai_corr, step=0)
+    assert not is_ok
+    assert "Steric overlap neighbor provider overflow" in msg
+    assert guard.violation_count == 1
+
 # 더 많은 테스트 케이스 추가 가능 (예: 운동량 드리프트, auto_recover 등)

@@ -26,6 +26,10 @@ on:
       - third_party/rocm_device_libs_pkg/**
       - deploy/verify_product_image.sh
       - .github/workflows/product-image-smoke.yml
+      - tools/product/run_runtime_neighbor_release_scaling.py
+      - tests/unit/test_runtime_neighbor_release_scaling.py
+      - tools/product/run_rust_hip_neighbor_provider_parity.py
+      - tests/unit/test_rust_hip_neighbor_provider_parity.py
   pull_request:
     paths:
       - Dockerfile.product
@@ -48,6 +52,10 @@ on:
       - third_party/rocm_device_libs_pkg/**
       - deploy/verify_product_image.sh
       - .github/workflows/product-image-smoke.yml
+      - tools/product/run_runtime_neighbor_release_scaling.py
+      - tests/unit/test_runtime_neighbor_release_scaling.py
+      - tools/product/run_rust_hip_neighbor_provider_parity.py
+      - tests/unit/test_rust_hip_neighbor_provider_parity.py
   workflow_dispatch:
     inputs:
       verify_mode:
@@ -152,6 +160,14 @@ jobs:
               f"- clean_container_smoke_ready: `{payload.get('clean_container_smoke_ready', False)}`",
               f"- container_runtime_proof_ready: `{payload.get('container_runtime_proof_ready', False)}`",
               f"- product_runner_claim_metadata_ready: `{payload.get('product_runner_claim_metadata_ready', False)}`",
+              f"- runtime_neighbor_release_scaling_status: `{payload.get('runtime_neighbor_release_scaling_status', 'missing_scaling_receipt')}`",
+              f"- runtime_neighbor_release_scaling_ready: `{payload.get('runtime_neighbor_release_scaling_ready', False)}`",
+              f"- runtime_neighbor_release_atom_counts_ready: `{payload.get('runtime_neighbor_release_atom_counts_ready', False)}`",
+              f"- runtime_neighbor_release_pair_count_slope: `{payload.get('runtime_neighbor_release_pair_count_slope', '')}`",
+              f"- rust_hip_neighbor_provider_parity_status: `{payload.get('rust_hip_neighbor_provider_parity_status', 'missing_parity_receipt')}`",
+              f"- rust_hip_neighbor_provider_parity_ready: `{payload.get('rust_hip_neighbor_provider_parity_ready', False)}`",
+              f"- rust_hip_neighbor_provider_parity_max_distance_abs_delta: `{payload.get('rust_hip_neighbor_provider_parity_max_distance_abs_delta', '')}`",
+              f"- rust_hip_neighbor_provider_parity_max_energy_abs_error: `{payload.get('rust_hip_neighbor_provider_parity_max_energy_abs_error', '')}`",
               "",
               payload.get(
                   "claim_boundary",

@@ -118,6 +118,7 @@ def test_topk_delivery_payload_includes_claim_safe_metadata(tmp_path, monkeypatc
 def test_core_forcefield_exposes_product_engine_bridge_with_claim_metadata() -> None:
     from betelgeuze_engine.contracts import EnergyForces
     from betelgeuze_engine.physics import ProductForceField
+    from betelgeuze_engine.physics.neighbor import CellListNeighborProvider, NeighborProviderConfig
     from core.definitions import Config
     from core.forcefield import ForceField, default_product_forcefield
     from core.topology import TopologyFactory
@@ -134,8 +135,12 @@ def test_core_forcefield_exposes_product_engine_bridge_with_claim_metadata() -> 
             "hydrophobic_mask": torch.tensor([True, True], device=Config.DEVICE),
         },
     )
+    product_pairs = CellListNeighborProvider(
+        NeighborProviderConfig(cutoff=6.0, max_neighbor_count=4, max_atoms_per_cell=8)
+    ).build(coords)
     result = legacy_forcefield.product_energy_forces(
         coords,
+        pairs=product_pairs,
         term_names=["legacy_lj"],
         metadata={
             "hbond_roles": ["donor", "acceptor"],
@@ -148,6 +153,7 @@ def test_core_forcefield_exposes_product_engine_bridge_with_claim_metadata() -> 
             "claim_safe": True,
             "blocked_reason": "",
         },
+        product_neighbor_required=True,
     )
 
     assert isinstance(default_product_forcefield(term_names=["legacy_lj"]), ProductForceField)
@@ -156,6 +162,8 @@ def test_core_forcefield_exposes_product_engine_bridge_with_claim_metadata() -> 
     assert isinstance(result, EnergyForces)
     assert result.energy.shape == (1,)
     assert result.forces.shape == coords.shape
+    assert result.diagnostics["neighbor_source"] == "provided_cell_list"
+    assert result.diagnostics["neighbor_product_required"] is True
     assert result.claim_metadata["claim_safe"] is True
     assert result.claim_metadata["force_term_claim_metadata_ready"] is True
     assert result.claim_metadata["force_term_plugins"] == ["legacy_lj"]

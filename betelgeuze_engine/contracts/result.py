@@ -277,7 +277,8 @@ def validate_energy_forces_contract(
         raise ValueError("product forcefield returned missing diagnostic neighbor_pair_count")
     if not isinstance(result.diagnostics.get("neighbor_pairs_provided"), bool):
         raise ValueError("product forcefield returned missing diagnostic neighbor_pairs_provided")
-    if str(result.diagnostics.get("neighbor_source") or "") not in {
+    neighbor_source = str(result.diagnostics.get("neighbor_source") or "")
+    if neighbor_source not in {
         "provided",
         "full_neighbor_pairs",
         "provided_cell_list",
@@ -285,6 +286,17 @@ def validate_energy_forces_contract(
         "reference_full_pairs",
     }:
         raise ValueError("product forcefield returned invalid diagnostic neighbor_source")
+    neighbor_product_required = bool(result.diagnostics.get("neighbor_product_required") is True)
+    neighbor_diagnostics = result.diagnostics.get("neighbor_diagnostics")
+    if neighbor_product_required:
+        if neighbor_source in {"full_neighbor_pairs", "reference_full_pairs"}:
+            raise ValueError("product forcefield returned product-required reference neighbor source")
+        if not isinstance(neighbor_diagnostics, dict):
+            raise ValueError("product forcefield returned missing product neighbor diagnostics")
+        if neighbor_diagnostics.get("overflow") is True:
+            raise ValueError("product forcefield returned product neighbor overflow")
+        if neighbor_diagnostics.get("nxn_allocation_observed") is True:
+            raise ValueError("product forcefield returned product neighbor NxN allocation")
     term_diagnostics = result.diagnostics.get("term_diagnostics")
     if not isinstance(term_diagnostics, dict):
         raise ValueError("product forcefield returned missing term diagnostics")

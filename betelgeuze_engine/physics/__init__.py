@@ -12,7 +12,9 @@ from betelgeuze_engine.physics.neighbor import (
     NeighborBuildDiagnostics,
     NeighborPairs,
     NeighborProviderConfig,
+    RustHipNeighborProvider,
     full_neighbor_pairs,
+    neighbor_pairs_from_rust_hip_tensors,
 )
 from betelgeuze_engine.physics.mm_gbsa import REFINE_LIGAND_MODEL, mm_gbsa_binding_energy
 
@@ -25,8 +27,10 @@ __all__ = [
     "NeighborProviderConfig",
     "ProductForceField",
     "REFINE_LIGAND_MODEL",
+    "RustHipNeighborProvider",
     "default_force_term_registry",
     "full_neighbor_pairs",
     "guarded_force_term_registry",
     "mm_gbsa_binding_energy",
+    "neighbor_pairs_from_rust_hip_tensors",
 ]

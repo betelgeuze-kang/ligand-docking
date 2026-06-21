@@ -249,10 +249,15 @@ class ProductForceField:
                 raise ValueError("product neighbor provider required; reference full pairs are not product-safe")
             pairs = full_neighbor_pairs(state_for_terms.coords)
         pair_diagnostics = dict(getattr(pairs, "diagnostics", {}) or {})
-        if product_neighbor_required and pair_diagnostics.get("overflow") is True:
-            raise ValueError("product neighbor provider overflow; refusing claim-unsafe forcefield evaluation")
+        if product_neighbor_required:
+            if pair_diagnostics.get("overflow") is True:
+                raise ValueError("product neighbor provider overflow; refusing claim-unsafe forcefield evaluation")
+            if pair_diagnostics.get("nxn_allocation_observed") is True:
+                raise ValueError("product neighbor provider used NxN allocation; refusing product forcefield evaluation")
         neighbor_pair_count = int(pairs.mask.sum().detach().cpu().item())
         neighbor_source = str(getattr(pairs, "source", "") or ("provided" if neighbor_pairs_provided else "full_neighbor_pairs"))
+        if product_neighbor_required and neighbor_source in {"full_neighbor_pairs", "reference_full_pairs"}:
+            raise ValueError("product neighbor provider required; reference full pairs are not product-safe")
         total_energy = torch.zeros(
             state_for_terms.coords.shape[0],
             dtype=state_for_terms.coords.dtype,

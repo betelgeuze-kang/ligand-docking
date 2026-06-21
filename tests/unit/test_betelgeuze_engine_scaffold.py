@@ -41,7 +41,10 @@ from betelgeuze_engine.physics.neighbor import (
     CellListNeighborProvider,
     NeighborPairs,
     NeighborProviderConfig,
+    RustHipNeighborProvider,
     full_neighbor_pairs,
+    neighbor_displacements,
+    neighbor_pairs_from_rust_hip_tensors,
 )
 from betelgeuze_engine.topology import (
     ComplexTopology,
@@ -100,7 +103,7 @@ def test_engine_terms_return_energy_forces_and_diagnostics() -> None:
 
 
 def test_runtime_scaling_benchmark_tracks_capped_neighbor_path() -> None:
-    result = run_runtime_scaling_benchmark(atom_counts=(8, 16, 32), repeats=1)
+    result = run_runtime_scaling_benchmark(atom_counts=(64, 125, 216), repeats=1)
     payload = result.to_dict()
 
     assert payload["ready"] is True
@@ -109,9 +112,27 @@ def test_runtime_scaling_benchmark_tracks_capped_neighbor_path() -> None:
     assert payload["neighbor_cap_scaling_ready"] is True
     assert 0.85 <= payload["neighbor_pair_count_slope"] <= 1.15
     assert payload["neighbor_pair_count_r2"] > 0.99
+    assert payload["nxn_allocation_observed"] is False
+    assert payload["coordinate_mode"] == "fixed_density_grid"
+    assert payload["fixed_density_ready"] is True
+    assert payload["target_number_density"] > 0.0
+    assert payload["max_density_relative_error"] <= 1e-9
+    assert payload["release_atom_counts"] == [1000, 2000, 4000, 8000]
+    assert payload["release_atom_counts_ready"] is False
+    assert payload["memory_per_atom_linear_ready"] is True
+    assert payload["max_memory_peak_mb_per_atom"] > 0.0
+    assert payload["total_rebuild_count"] >= 1
     assert len(payload["rows"]) == 3
     assert all(row["neighbor_pairs_provided"] is True for row in payload["rows"])
-    assert all(row["neighbor_source"] == "provided" for row in payload["rows"])
+    assert all(row["neighbor_source"] == "provided_cell_list" for row in payload["rows"])
+    assert all(row["neighbor_provider_status"] == "neighbor_provider_ready" for row in payload["rows"])
+    assert all(row["neighbor_provider_overflow"] is False for row in payload["rows"])
+    assert all(row["nxn_allocation_observed"] is False for row in payload["rows"])
+    assert all(row["coordinate_mode"] == "fixed_density_grid" for row in payload["rows"])
+    assert all(row["fixed_density"] is True for row in payload["rows"])
+    assert all(row["box_size"] > 0.0 for row in payload["rows"])
+    assert all(row["density_relative_error"] <= 1e-9 for row in payload["rows"])
+    assert all(row["memory_peak_mb_per_atom"] > 0.0 for row in payload["rows"])
     assert all(row["row_ready"] is True for row in payload["rows"])
     assert all(row["duration_per_repeat_sec"] > 0.0 for row in payload["rows"])
 
@@ -129,15 +150,30 @@ def test_runtime_scaling_benchmark_handles_single_neighbor_cap() -> None:
     assert payload["max_neighbor_count"] == 1
     assert payload["forcefield_contract_ready"] is False
     assert payload["neighbor_cap_scaling_ready"] is False
-    assert all(row["neighbor_pairs_provided"] is True for row in payload["rows"])
-    assert all(row["neighbor_source"] == "provided" for row in payload["rows"])
-    assert all(row["neighbor_pair_count"] > row["max_neighbor_count"] * row["atom_count"] for row in payload["rows"])
-    assert all(row["claim_safe"] is True for row in payload["rows"])
+    assert payload["nxn_allocation_observed"] is False
+    assert any(row["neighbor_pairs_provided"] is True for row in payload["rows"])
+    assert all(row["neighbor_source"] == "provided_cell_list" for row in payload["rows"])
+    assert any(row["neighbor_provider_overflow"] is True for row in payload["rows"])
+    assert all(row["claim_safe"] is False for row in payload["rows"])
     assert all(row["row_ready"] is False for row in payload["rows"])
 
 
+def test_runtime_scaling_release_atom_count_gate_is_explicit() -> None:
+    result = run_runtime_scaling_benchmark(
+        atom_counts=(64, 125, 216),
+        release_atom_counts=(64, 125, 216),
+        repeats=1,
+    )
+    payload = result.to_dict()
+
+    assert payload["ready"] is True
+    assert payload["fixed_density_ready"] is True
+    assert payload["release_atom_counts"] == [64, 125, 216]
+    assert payload["release_atom_counts_ready"] is True
+
+
 def test_runtime_scaling_svg_plot_writes_claim_bounded_artifact(tmp_path: Path) -> None:
-    result = run_runtime_scaling_benchmark(atom_counts=(8, 16, 32), repeats=1)
+    result = run_runtime_scaling_benchmark(atom_counts=(64, 125, 216), repeats=1)
     out = tmp_path / "runtime_scaling.svg"
 
     metadata = write_runtime_scaling_svg(result, out)
@@ -170,9 +206,9 @@ def test_runtime_scaling_benchmark_fails_closed_for_invalid_neighbor_inputs() ->
     blocked = run_runtime_scaling_benchmark(atom_counts=(4, 5, 6), max_neighbor_count=2, repeats=1)
     assert blocked.ready is False
     assert blocked.status == "blocked_runtime_neighbor_cap_scaling"
-    assert blocked.forcefield_contract_ready is True
+    assert blocked.forcefield_contract_ready is False
     assert blocked.neighbor_cap_scaling_ready is False
-    assert blocked.neighbor_pair_count_slope > 1.15
+    assert blocked.nxn_allocation_observed is False
 
 
 def test_confidence_calibration_report_bins_pose_confidence_fail_closed() -> None:
@@ -432,6 +468,17 @@ def test_product_forcefield_rejects_overflowing_product_neighbors() -> None:
         )
 
 
+def test_product_forcefield_rejects_reference_pairs_when_product_neighbors_required() -> None:
+    coords = torch.tensor([[[0.0, 0.0, 0.0], [2.2, 0.0, 0.0]]], dtype=torch.float64)
+    state = EngineState(coords=coords, atom_types=torch.tensor([0, 0]))
+    pairs = full_neighbor_pairs(coords, cutoff=3.0)
+    forcefield = ProductForceField(terms=[LegacyLJTerm(sigma=1.0, epsilon=0.1)])
+
+    assert pairs.diagnostics["nxn_allocation_observed"] is True
+    with pytest.raises(ValueError, match="NxN allocation|reference full pairs"):
+        forcefield.energy_forces(state, pairs=pairs, product_neighbor_required=True)
+
+
 def test_legacy_lj_compact_neighbor_path_matches_dense_reference() -> None:
     coords = torch.tensor(
         [[[0.0, 0.0, 0.0], [2.2, 0.0, 0.0], [0.0, 2.5, 0.0], [6.0, 0.0, 0.0]]],
@@ -450,6 +497,74 @@ def test_legacy_lj_compact_neighbor_path_matches_dense_reference() -> None:
     assert sparse.diagnostics["nxn_allocation_observed"] is False
     assert torch.allclose(sparse_result.energy, dense_result.energy, atol=1e-10, rtol=1e-10)
     assert torch.allclose(sparse_result.forces, dense_result.forces, atol=1e-10, rtol=1e-10)
+
+
+def test_rust_hip_neighbor_tensor_adapter_matches_python_cell_list_contract() -> None:
+    coords = torch.tensor(
+        [[[0.0, 0.0, 0.0], [2.2, 0.0, 0.0], [0.0, 2.5, 0.0], [6.0, 0.0, 0.0]]],
+        dtype=torch.float32,
+    )
+    config = NeighborProviderConfig(cutoff=3.0, max_neighbor_count=4, max_atoms_per_cell=8)
+    python_pairs = CellListNeighborProvider(config).build(coords)
+    rust_pairs = neighbor_pairs_from_rust_hip_tensors(
+        coords,
+        nb_idx=python_pairs.idx,
+        nb_dist=python_pairs.dist,
+        nb_mask=python_pairs.mask.to(dtype=torch.uint8),
+        config=config,
+        backend_stats={"max_row_count": 2, "max_cell_count": 2},
+    )
+    state = EngineState(coords=coords.double(), atom_types=torch.tensor([0, 0, 0, 0]))
+    term = LegacyLJTerm(sigma=1.0, epsilon=0.2, cutoff=3.0)
+
+    python_result = term.energy_forces(state, python_pairs)
+    rust_result = term.energy_forces(state, rust_pairs)
+
+    assert rust_pairs.source == "rust_hip_cell_list"
+    assert rust_pairs.diagnostics["status"] == "neighbor_provider_ready"
+    assert rust_pairs.diagnostics["nxn_allocation_observed"] is False
+    assert rust_pairs.diagnostics["overflow"] is False
+    assert _pair_set_from_neighbors(rust_pairs) == _pair_set_from_neighbors(python_pairs)
+    assert torch.allclose(rust_pairs.dist, python_pairs.dist, atol=1e-6, rtol=1e-6)
+    assert torch.allclose(rust_result.energy, python_result.energy, atol=1e-10, rtol=1e-10)
+    assert torch.allclose(rust_result.forces, python_result.forces, atol=1e-10, rtol=1e-10)
+
+
+def test_rust_hip_neighbor_adapter_keeps_periodic_displacements_differentiable() -> None:
+    coords = torch.tensor([[[0.2, 0.0, 0.0], [9.8, 0.0, 0.0]]], dtype=torch.float64, requires_grad=True)
+    config = NeighborProviderConfig(cutoff=1.0, max_neighbor_count=1, max_atoms_per_cell=4, box_size=10.0)
+    pairs = neighbor_pairs_from_rust_hip_tensors(
+        coords,
+        nb_idx=torch.tensor([[[1], [0]]], dtype=torch.long),
+        nb_dist=torch.tensor([[[9.6], [9.6]]], dtype=torch.float64),
+        nb_mask=torch.tensor([[[1], [1]]], dtype=torch.uint8),
+        config=config,
+        box=10.0,
+    )
+
+    delta = neighbor_displacements(coords, pairs)
+
+    assert pairs.diagnostics["pbc_enabled"] is True
+    assert pairs.diagnostics["box_size"] == 10.0
+    assert pairs.dist[0, 0, 0].item() == pytest.approx(0.4)
+    assert pairs.dist[0, 1, 0].item() == pytest.approx(0.4)
+    assert delta[0, 0, 0, 0].item() == pytest.approx(0.4)
+    assert delta[0, 1, 0, 0].item() == pytest.approx(-0.4)
+
+
+def test_rust_hip_neighbor_provider_fails_closed_without_cuda_coords() -> None:
+    coords = torch.zeros(1, 4, 3, dtype=torch.float32)
+    provider = RustHipNeighborProvider(
+        NeighborProviderConfig(cutoff=3.0, max_neighbor_count=4, max_atoms_per_cell=8, box_size=16.0)
+    )
+
+    pairs = provider.build(coords)
+
+    assert pairs.source == "rust_hip_cell_list"
+    assert pairs.diagnostics["status"] == "blocked_rust_hip_neighbor_provider_unavailable"
+    assert pairs.diagnostics["blocked_reason"] == "coords_not_cuda"
+    assert pairs.diagnostics["claim_safe"] is False
+    assert pairs.diagnostics["overflow"] is True
 
 
 def test_product_forcefield_plugin_registry_aggregates_terms_and_claim_metadata() -> None:
@@ -603,6 +718,43 @@ def test_energy_forces_contract_validates_aggregate_metadata_and_diagnostics() -
     )
     with pytest.raises(ValueError, match="invalid diagnostic neighbor_source"):
         validate_energy_forces_contract(result=bad_neighbor_source, coords=coords)
+
+    product_required_reference_source = EnergyForces(
+        energy=torch.zeros(1),
+        forces=torch.zeros_like(coords),
+        terms={"legacy_lj": 0.0},
+        diagnostics={
+            **result.diagnostics,
+            "neighbor_product_required": True,
+            "neighbor_diagnostics": {
+                "status": "reference_only",
+                "nxn_allocation_observed": True,
+                "overflow": False,
+            },
+        },
+        claim_metadata=dict(result.claim_metadata),
+    )
+    with pytest.raises(ValueError, match="product-required reference neighbor source"):
+        validate_energy_forces_contract(result=product_required_reference_source, coords=coords)
+
+    product_required_nxn_source = EnergyForces(
+        energy=torch.zeros(1),
+        forces=torch.zeros_like(coords),
+        terms={"legacy_lj": 0.0},
+        diagnostics={
+            **result.diagnostics,
+            "neighbor_source": "provided_cell_list",
+            "neighbor_product_required": True,
+            "neighbor_diagnostics": {
+                "status": "neighbor_provider_ready",
+                "nxn_allocation_observed": True,
+                "overflow": False,
+            },
+        },
+        claim_metadata=dict(result.claim_metadata),
+    )
+    with pytest.raises(ValueError, match="product neighbor NxN allocation"):
+        validate_energy_forces_contract(result=product_required_nxn_source, coords=coords)
 
     unsafe_blocked = EnergyForces(
         energy=torch.zeros(1),

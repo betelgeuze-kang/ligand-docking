@@ -168,7 +168,10 @@ def neighbor_displacements(coords: torch.Tensor, pairs: NeighborPairs) -> torch.
     gather_idx = pairs.idx.clamp(min=0, max=max(int(coords.shape[1]) - 1, 0)).to(device=coords.device)
     expanded = gather_idx.unsqueeze(-1).expand(-1, -1, -1, 3)
     coords_j = torch.gather(coords.unsqueeze(1).expand(-1, coords.shape[1], -1, -1), 2, expanded)
-    return coords.unsqueeze(2) - coords_j
+    delta = coords.unsqueeze(2) - coords_j
+    if bool(pairs.diagnostics.get("pbc_enabled") is True) and pairs.diagnostics.get("box_size") is not None:
+        return _minimum_image(delta, _box_tensor(pairs.diagnostics.get("box_size"), coords=coords))
+    return delta
 
 
 def neighbor_upper_mask(pairs: NeighborPairs) -> torch.Tensor:
@@ -334,6 +337,7 @@ class CellListNeighborProvider:
             pbc_enabled=pbc_enabled,
             nxn_allocation_observed=False,
         ).to_dict()
+        diagnostics["box_size"] = _diagnostic_box_value(box_value)
         return NeighborPairs(
             idx=idx,
             dist=dist,
@@ -342,3 +346,230 @@ class CellListNeighborProvider:
             source=self.source,
             diagnostics=diagnostics,
         )
+
+
+def _diagnostic_box_value(box: torch.Tensor | None) -> float | list[float] | None:
+    if box is None:
+        return None
+    values = [float(v) for v in box.detach().cpu().reshape(3)]
+    if values[0] == values[1] == values[2]:
+        return values[0]
+    return values
+
+
+def neighbor_pairs_from_rust_hip_tensors(
+    coords: torch.Tensor,
+    *,
+    nb_idx: torch.Tensor,
+    nb_dist: torch.Tensor,
+    nb_mask: torch.Tensor,
+    config: NeighborProviderConfig,
+    box: torch.Tensor | float | None = None,
+    backend_stats: dict[str, Any] | None = None,
+) -> NeighborPairs:
+    """Adapt Rust/HIP compact neighbor tensors to the product NeighborPairs contract."""
+
+    if coords.ndim != 3 or coords.shape[-1] != 3:
+        raise ValueError("coords must have shape [B, N, 3]")
+    if nb_idx.ndim != 3 or nb_dist.shape != nb_idx.shape or nb_mask.shape != nb_idx.shape:
+        raise ValueError("Rust/HIP neighbor tensors must have matching [B, N, K] shapes")
+    if nb_idx.shape[0] != coords.shape[0] or nb_idx.shape[1] != coords.shape[1]:
+        raise ValueError("Rust/HIP neighbor tensors must match coords batch and atom dimensions")
+
+    device = coords.device
+    dtype = coords.dtype
+    idx = nb_idx.to(device=device, dtype=torch.long).contiguous()
+    mask = nb_mask.to(device=device).bool().contiguous()
+    box_value = _box_tensor(box if box is not None else config.box_size, coords=coords)
+    gather_idx = idx.clamp(min=0, max=max(int(coords.shape[1]) - 1, 0))
+    expanded = gather_idx.unsqueeze(-1).expand(-1, -1, -1, 3)
+    coords_j = torch.gather(coords.unsqueeze(1).expand(-1, coords.shape[1], -1, -1), 2, expanded)
+    delta = coords.unsqueeze(2) - coords_j
+    delta = _minimum_image(delta, box_value).to(dtype=dtype, device=device)
+    dist = torch.where(mask, delta.norm(dim=-1), torch.zeros_like(mask, dtype=dtype))
+
+    stats = dict(backend_stats or {})
+    max_neighbors = int(idx.shape[-1])
+    pair_count = int(mask.sum().detach().cpu().item())
+    cap_expanded = max_neighbors > int(config.max_neighbor_count)
+    neighbor_saturated = bool(stats.get("neighbor_saturated") is True)
+    cell_overflow = bool(stats.get("cell_overflow") is True)
+    overflow = bool(cap_expanded or neighbor_saturated or cell_overflow)
+    diagnostics = NeighborBuildDiagnostics(
+        status="blocked_rust_hip_neighbor_provider_overflow" if overflow else "neighbor_provider_ready",
+        source="rust_hip_cell_list",
+        cutoff=float(config.cutoff),
+        skin=float(config.skin),
+        max_neighbor_count=max_neighbors,
+        max_atoms_per_cell=int(stats.get("max_atoms_per_cell") or config.max_atoms_per_cell),
+        pair_count=pair_count,
+        atom_count=int(coords.shape[1]),
+        batch_size=int(coords.shape[0]),
+        overflow=overflow,
+        neighbor_overflow_count=int(neighbor_saturated),
+        cell_overflow_count=int(cell_overflow),
+        max_observed_neighbors=int(stats.get("max_row_count") or 0),
+        max_observed_atoms_per_cell=int(stats.get("max_cell_count") or 0),
+        rebuilt=True,
+        rebuild_reason="rust_hip_backend",
+        pbc_enabled=box_value is not None,
+        nxn_allocation_observed=False,
+    ).to_dict()
+    diagnostics.update(
+        {
+            "backend_stats": stats,
+            "cap_expanded": bool(cap_expanded),
+            "box_size": _diagnostic_box_value(box_value),
+        }
+    )
+    return NeighborPairs(
+        idx=idx,
+        dist=dist,
+        mask=mask,
+        delta=delta,
+        source="rust_hip_cell_list",
+        diagnostics=diagnostics,
+    )
+
+
+class RustHipNeighborProvider:
+    """Fail-closed adapter for the Rust/HIP compact cell-list neighbor builder."""
+
+    source = "rust_hip_cell_list"
+
+    def __init__(self, config: NeighborProviderConfig, *, backend: Any | None = None):
+        self.config = config
+        self._backend = backend
+        self._cached_pairs: NeighborPairs | None = None
+        self._cached_coords: torch.Tensor | None = None
+        self._cached_step: int | None = None
+
+    def needs_rebuild(self, coords: torch.Tensor, *, step: int | None = None) -> bool:
+        if self._cached_pairs is None or self._cached_coords is None:
+            return True
+        if step is not None and self._cached_step is not None:
+            if int(step) - int(self._cached_step) >= int(self.config.rebuild_stride):
+                return True
+        if float(self.config.skin) <= 0.0:
+            return False
+        if coords.shape != self._cached_coords.shape:
+            return True
+        displacement = (coords.detach() - self._cached_coords.to(device=coords.device, dtype=coords.dtype)).norm(dim=-1)
+        return bool(displacement.amax().item() > (0.5 * float(self.config.skin)))
+
+    def _blocked_pairs(self, coords: torch.Tensor, *, status: str, reason: str) -> NeighborPairs:
+        batch = int(coords.shape[0]) if coords.ndim == 3 else 1
+        atom_count = int(coords.shape[1]) if coords.ndim == 3 else 0
+        width = int(self.config.max_neighbor_count)
+        device = coords.device
+        dtype = coords.dtype if coords.is_floating_point() else torch.float32
+        diagnostics = NeighborBuildDiagnostics(
+            status=status,
+            source=self.source,
+            cutoff=float(self.config.cutoff),
+            skin=float(self.config.skin),
+            max_neighbor_count=width,
+            max_atoms_per_cell=int(self.config.max_atoms_per_cell),
+            pair_count=0,
+            atom_count=atom_count,
+            batch_size=batch,
+            overflow=True,
+            neighbor_overflow_count=0,
+            cell_overflow_count=0,
+            max_observed_neighbors=0,
+            max_observed_atoms_per_cell=0,
+            rebuilt=True,
+            rebuild_reason=reason,
+            pbc_enabled=self.config.box_size is not None,
+            nxn_allocation_observed=False,
+        ).to_dict()
+        diagnostics["blocked_reason"] = reason
+        return NeighborPairs(
+            idx=torch.zeros((batch, atom_count, width), dtype=torch.long, device=device),
+            dist=torch.zeros((batch, atom_count, width), dtype=dtype, device=device),
+            mask=torch.zeros((batch, atom_count, width), dtype=torch.bool, device=device),
+            delta=torch.zeros((batch, atom_count, width, 3), dtype=dtype, device=device),
+            source=self.source,
+            diagnostics=diagnostics,
+        )
+
+    def _backend_or_none(self) -> Any | None:
+        if self._backend is not None:
+            return self._backend
+        try:
+            from core.rust_hip_backend import RustHipBackend
+        except Exception:
+            return None
+        self._backend = RustHipBackend(device=torch.device("cuda"))
+        return self._backend
+
+    def build(
+        self,
+        coords: torch.Tensor,
+        *,
+        step: int | None = None,
+        box: torch.Tensor | float | None = None,
+    ) -> NeighborPairs:
+        if coords.ndim != 3 or coords.shape[-1] != 3:
+            raise ValueError("coords must have shape [B, N, 3]")
+        if not self.needs_rebuild(coords, step=step):
+            assert self._cached_pairs is not None
+            diagnostics = dict(self._cached_pairs.diagnostics)
+            diagnostics["rebuilt"] = False
+            diagnostics["rebuild_reason"] = "cached"
+            return NeighborPairs(
+                idx=self._cached_pairs.idx,
+                dist=self._cached_pairs.dist,
+                mask=self._cached_pairs.mask,
+                delta=self._cached_pairs.delta,
+                source=self._cached_pairs.source,
+                diagnostics=diagnostics,
+            )
+        if not coords.is_cuda:
+            pairs = self._blocked_pairs(
+                coords,
+                status="blocked_rust_hip_neighbor_provider_unavailable",
+                reason="coords_not_cuda",
+            )
+            self._cached_pairs = pairs
+            self._cached_coords = coords.detach().clone()
+            self._cached_step = int(step) if step is not None else None
+            return pairs
+        box_value = _box_tensor(box if box is not None else self.config.box_size, coords=coords)
+        if box_value is None:
+            return self._blocked_pairs(
+                coords,
+                status="blocked_rust_hip_neighbor_provider_requires_box_size",
+                reason="box_size_required",
+            )
+        backend = self._backend_or_none()
+        if backend is None or not bool(getattr(backend, "has_neighbor_builder", lambda: False)()):
+            return self._blocked_pairs(
+                coords,
+                status="blocked_rust_hip_neighbor_provider_unavailable",
+                reason="backend_neighbor_builder_unavailable",
+            )
+        scalar_box = float(box_value.max().detach().cpu().item())
+        effective_cutoff = float(self.config.cutoff) + float(self.config.skin)
+        grid_dims = tuple(max(1, int(torch.floor(v.detach().cpu().to(torch.float64) / effective_cutoff).item())) for v in box_value)
+        nb_idx, nb_dist, nb_mask = backend.build_neighbor_list(
+            coords,
+            scalar_box,
+            effective_cutoff,
+            int(self.config.max_neighbor_count),
+            grid_dims,
+            max_atoms_per_cell=int(self.config.max_atoms_per_cell),
+        )
+        pairs = neighbor_pairs_from_rust_hip_tensors(
+            coords,
+            nb_idx=nb_idx,
+            nb_dist=nb_dist,
+            nb_mask=nb_mask,
+            config=self.config,
+            box=box_value,
+            backend_stats=getattr(backend, "last_neighbor_build_stats", {}),
+        )
+        self._cached_pairs = pairs
+        self._cached_coords = coords.detach().clone()
+        self._cached_step = int(step) if step is not None else None
+        return pairs

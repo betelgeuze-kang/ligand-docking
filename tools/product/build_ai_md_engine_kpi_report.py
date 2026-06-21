@@ -35,7 +35,6 @@ from betelgeuze_engine.physics import ProductForceField, default_force_term_regi
 from betelgeuze_engine.physics.neighbor import (
     CellListNeighborProvider,
     NeighborProviderConfig,
-    full_neighbor_pairs,
 )
 from betelgeuze_engine.physics.terms import (
     DirectionalHBondTerm,
@@ -1288,8 +1287,12 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
             "blocked_reason": "",
         },
     )
+    pairs = CellListNeighborProvider(
+        NeighborProviderConfig(cutoff=6.0, max_neighbor_count=4, max_atoms_per_cell=8)
+    ).build(state.coords, step=0)
     result = forcefield.energy_forces(
         state,
+        pairs=pairs,
         claim_metadata={
             "topology_fidelity": "sequence_mapped",
             "ligand_topology_valid": True,
@@ -1297,6 +1300,7 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
             "claim_safe": True,
             "blocked_reason": "",
         },
+        product_neighbor_required=True,
     )
     unsafe_claim_metadata = {
         "topology_fidelity": "placeholder_alanine",
@@ -1315,7 +1319,9 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
     )
     unsafe_result = forcefield.energy_forces(
         unsafe_state,
+        pairs=pairs,
         claim_metadata=unsafe_claim_metadata,
+        product_neighbor_required=True,
     )
     unsafe_claim_rows = list(unsafe_result.claim_metadata.get("force_term_claim_rows") or [])
     unsafe_base_claim_blocked = bool(
@@ -1348,8 +1354,10 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
     forcefield_neighbor_pair_count = int(result.diagnostics.get("neighbor_pair_count") or 0)
     forcefield_neighbor_diagnostics_ready = bool(
         forcefield_neighbor_pair_count > 0
-        and result.diagnostics.get("neighbor_pairs_provided") is False
-        and result.diagnostics.get("neighbor_source") == "full_neighbor_pairs"
+        and result.diagnostics.get("neighbor_pairs_provided") is True
+        and result.diagnostics.get("neighbor_source") == "provided_cell_list"
+        and dict(result.diagnostics.get("neighbor_diagnostics") or {}).get("overflow") is False
+        and dict(result.diagnostics.get("neighbor_diagnostics") or {}).get("nxn_allocation_observed") is False
     )
     term_result_contract_rows: list[dict[str, Any]] = []
     forcefield_energy_forces_contract_error = ""
@@ -1840,26 +1848,31 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
         k_water=0.05, sigma=1.0, max_force_norm=1e-12
     ).energy_forces(water_displacement_state)
     forcefield = ProductForceField.from_registry(registry, names=required_guarded_terms)
+    forcefield_state = EngineState(
+        coords=torsion_coords,
+        atom_types=torsion_atom_types,
+        metadata={
+            "partial_charges": torch.tensor([0.0, 1.0, -1.0, 0.5], dtype=torch.float64),
+            "charge_source": "kpi_validated_proxy",
+            "charge_model_valid": True,
+            "pocket_atom_indices": [0],
+            "ligand_atom_indices": [1, 2, 3],
+            "pocket_radius": 1.0,
+            "topology_edge_indices": [[0, 1], [1, 2], [2, 3]],
+            "topology_edge_target_distances": [1.0, 1.0, 1.0],
+            "ligand_topology_claim_safe": True,
+            "torsion_atom_quartets": [[0, 1, 2, 3]],
+            "torsion_target_angles_rad": [0.0],
+            "water_displacement_site_indices": [0],
+            "water_displacement_model_valid": True,
+        },
+    )
+    forcefield_pairs = CellListNeighborProvider(
+        NeighborProviderConfig(cutoff=6.0, max_neighbor_count=8, max_atoms_per_cell=8)
+    ).build(forcefield_state.coords, step=0)
     forcefield_result = forcefield.energy_forces(
-        EngineState(
-            coords=torsion_coords,
-            atom_types=torsion_atom_types,
-            metadata={
-                "partial_charges": torch.tensor([0.0, 1.0, -1.0, 0.5], dtype=torch.float64),
-                "charge_source": "kpi_validated_proxy",
-                "charge_model_valid": True,
-                "pocket_atom_indices": [0],
-                "ligand_atom_indices": [1, 2, 3],
-                "pocket_radius": 1.0,
-                "topology_edge_indices": [[0, 1], [1, 2], [2, 3]],
-                "topology_edge_target_distances": [1.0, 1.0, 1.0],
-                "ligand_topology_claim_safe": True,
-                "torsion_atom_quartets": [[0, 1, 2, 3]],
-                "torsion_target_angles_rad": [0.0],
-                "water_displacement_site_indices": [0],
-                "water_displacement_model_valid": True,
-            },
-        ),
+        forcefield_state,
+        pairs=forcefield_pairs,
         claim_metadata={
             "topology_fidelity": "sequence_mapped",
             "ligand_topology_valid": True,
@@ -1867,6 +1880,7 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
             "claim_safe": True,
             "blocked_reason": "",
         },
+        product_neighbor_required=True,
     )
     forcefield_claim_rows = list(forcefield_result.claim_metadata.get("force_term_claim_rows") or [])
     forcefield_guarded_row = next(
@@ -2028,6 +2042,10 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
         and water_displacement_cap_exceeded.claim_metadata.get("force_term_observed_caps_ready") is False
         and water_displacement_cap_exceeded.claim_metadata.get("force_term_bounded_correction_ready") is False
         and forcefield_result.claim_metadata.get("claim_safe") is True
+        and forcefield_result.diagnostics.get("neighbor_product_required") is True
+        and forcefield_result.diagnostics.get("neighbor_pairs_provided") is True
+        and forcefield_result.diagnostics.get("neighbor_source") == "provided_cell_list"
+        and dict(forcefield_result.diagnostics.get("neighbor_diagnostics") or {}).get("nxn_allocation_observed") is False
         and forcefield_result.claim_metadata.get("force_term_plugins") == required_guarded_terms
         and forcefield_bounded_row_ready
         and forcefield_guarded_rows_ready
@@ -2279,6 +2297,12 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
             forcefield_guarded_rows_by_name[name] for name in required_guarded_terms
             if name in forcefield_guarded_rows_by_name
         ],
+        "forcefield_neighbor_product_required": forcefield_result.diagnostics.get("neighbor_product_required") is True,
+        "forcefield_neighbor_pairs_provided": forcefield_result.diagnostics.get("neighbor_pairs_provided") is True,
+        "forcefield_neighbor_source": str(forcefield_result.diagnostics.get("neighbor_source") or ""),
+        "forcefield_neighbor_nxn_allocation_observed": bool(
+            dict(forcefield_result.diagnostics.get("neighbor_diagnostics") or {}).get("nxn_allocation_observed") is True
+        ),
         "policy_caps": dict(result.claim_metadata.get("force_term_policy_caps") or {}),
         "observed_abs_energy": float(result.claim_metadata.get("force_term_abs_energy") or 0.0),
         "observed_force_norm": float(result.claim_metadata.get("force_term_observed_force_norm") or 0.0),
@@ -2569,8 +2593,12 @@ def _core_forcefield_bridge_kpi() -> dict[str, Any]:
             dtype=torch.float32,
             device=device,
         )
+        product_pairs = CellListNeighborProvider(
+            NeighborProviderConfig(cutoff=6.0, max_neighbor_count=4, max_atoms_per_cell=8)
+        ).build(coords, step=0)
         result = legacy_forcefield.product_energy_forces(
             coords,
+            pairs=product_pairs,
             term_names=["legacy_lj"],
             metadata={
                 "hbond_roles": ["donor", "acceptor"],
@@ -2583,6 +2611,7 @@ def _core_forcefield_bridge_kpi() -> dict[str, Any]:
                 "claim_safe": True,
                 "blocked_reason": "",
             },
+            product_neighbor_required=True,
         )
         unsafe_claim_metadata = {
             "topology_fidelity": "placeholder_alanine",
@@ -2593,6 +2622,7 @@ def _core_forcefield_bridge_kpi() -> dict[str, Any]:
         }
         unsafe_result = legacy_forcefield.product_energy_forces(
             coords,
+            pairs=product_pairs,
             term_names=["legacy_lj"],
             metadata={
                 "hbond_roles": ["donor", "acceptor"],
@@ -2600,6 +2630,7 @@ def _core_forcefield_bridge_kpi() -> dict[str, Any]:
                 **unsafe_claim_metadata,
             },
             claim_metadata=unsafe_claim_metadata,
+            product_neighbor_required=True,
         )
         unsafe_claim_rows = list(unsafe_result.claim_metadata.get("force_term_claim_rows") or [])
         unsafe_base_claim_blocked = bool(
@@ -2619,8 +2650,10 @@ def _core_forcefield_bridge_kpi() -> dict[str, Any]:
         neighbor_pair_count = int(result.diagnostics.get("neighbor_pair_count") or 0)
         neighbor_diagnostics_ready = bool(
             neighbor_pair_count > 0
-            and result.diagnostics.get("neighbor_pairs_provided") is False
-            and result.diagnostics.get("neighbor_source") == "full_neighbor_pairs"
+            and result.diagnostics.get("neighbor_pairs_provided") is True
+            and result.diagnostics.get("neighbor_source") == "provided_cell_list"
+            and dict(result.diagnostics.get("neighbor_diagnostics") or {}).get("overflow") is False
+            and dict(result.diagnostics.get("neighbor_diagnostics") or {}).get("nxn_allocation_observed") is False
         )
         ready = bool(
             result.claim_metadata.get("claim_safe") is True
@@ -3908,6 +3941,31 @@ def _pm_kpi_summary(
         if isinstance(runtime.get("neighbor_cap_scaling"), dict)
         else {}
     )
+    runtime_scaling_rows = runtime_scaling.get("rows")
+    if not isinstance(runtime_scaling_rows, list):
+        runtime_scaling_rows = []
+    runtime_scaling_rows_ready = bool(
+        runtime_scaling_rows
+        and all(
+            isinstance(row, dict)
+            and row.get("neighbor_pairs_provided") is True
+            and row.get("neighbor_source") == "provided_cell_list"
+            and row.get("neighbor_provider_status") == "neighbor_provider_ready"
+            and row.get("neighbor_provider_overflow") is False
+            and row.get("nxn_allocation_observed") is False
+            and row.get("fixed_density") is True
+            and row.get("coordinate_mode") == "fixed_density_grid"
+            and float(row.get("box_size") or 0.0) > 0.0
+            and float(row.get("target_number_density") or 0.0) > 0.0
+            and float(row.get("density_relative_error") or 1.0) <= 1e-9
+            and float(row.get("memory_peak_mb_per_atom") or 0.0) > 0.0
+            and row.get("energy_finite") is True
+            and row.get("forces_finite") is True
+            and row.get("claim_safe") is True
+            and row.get("row_ready") is True
+            for row in runtime_scaling_rows
+        )
+    )
     product_gate_values = {
         "clean_install_success": product.get("clean_install_success") is True,
         "runner_profile_validation_pass": product.get("runner_profile_validation_status") == "pass",
@@ -3972,9 +4030,16 @@ def _pm_kpi_summary(
             and runtime_scaling.get("status") == "runtime_neighbor_cap_scaling_ready"
             and runtime_scaling.get("forcefield_contract_ready") is True
             and runtime_scaling.get("neighbor_cap_scaling_ready") is True
+            and runtime_scaling.get("nxn_allocation_observed") is False
+            and runtime_scaling.get("fixed_density_ready") is True
+            and float(runtime_scaling.get("target_number_density") or 0.0) > 0.0
+            and float(runtime_scaling.get("max_density_relative_error") or 1.0) <= 1e-9
+            and runtime_scaling.get("memory_per_atom_linear_ready") is True
+            and float(runtime_scaling.get("max_memory_peak_mb_per_atom") or 0.0) > 0.0
+            and int(runtime_scaling.get("total_rebuild_count") or 0) > 0
             and 0.85 <= float(runtime_scaling.get("neighbor_pair_count_slope") or 0.0) <= 1.15
             and float(runtime_scaling.get("neighbor_pair_count_r2") or 0.0) >= 0.98
-            and bool(runtime_scaling.get("rows"))
+            and runtime_scaling_rows_ready
         ),
         "runtime_neighbor_cap_scaling_plot_ready": (
             runtime_scaling.get("plot_ready") is True
@@ -4184,6 +4249,36 @@ def _pm_kpi_summary(
             ),
             "runtime_neighbor_cap_scaling_duration_r2": float(
                 runtime_scaling.get("duration_r2") or 0.0
+            ),
+            "runtime_neighbor_cap_scaling_fixed_density_ready": (
+                runtime_scaling.get("fixed_density_ready") is True
+            ),
+            "runtime_neighbor_cap_scaling_target_number_density": float(
+                runtime_scaling.get("target_number_density") or 0.0
+            ),
+            "runtime_neighbor_cap_scaling_max_density_relative_error": float(
+                runtime_scaling.get("max_density_relative_error") or 0.0
+            ),
+            "runtime_neighbor_cap_scaling_release_atom_counts": list(
+                runtime_scaling.get("release_atom_counts") or []
+            ),
+            "runtime_neighbor_cap_scaling_release_atom_counts_ready": (
+                runtime_scaling.get("release_atom_counts_ready") is True
+            ),
+            "runtime_neighbor_cap_scaling_nxn_allocation_observed": (
+                runtime_scaling.get("nxn_allocation_observed") is True
+            ),
+            "runtime_neighbor_cap_scaling_memory_per_atom_linear_ready": (
+                runtime_scaling.get("memory_per_atom_linear_ready") is True
+            ),
+            "runtime_neighbor_cap_scaling_max_memory_peak_mb_per_atom": float(
+                runtime_scaling.get("max_memory_peak_mb_per_atom") or 0.0
+            ),
+            "runtime_neighbor_cap_scaling_total_rebuild_count": int(
+                runtime_scaling.get("total_rebuild_count") or 0
+            ),
+            "runtime_neighbor_cap_scaling_total_rebuild_duration_sec": float(
+                runtime_scaling.get("total_rebuild_duration_sec") or 0.0
             ),
             "runtime_neighbor_cap_scaling_plot_ready": runtime_gate_values[
                 "runtime_neighbor_cap_scaling_plot_ready"

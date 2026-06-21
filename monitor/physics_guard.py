@@ -2,8 +2,14 @@
 
 import torch
 import numpy as np # 탐색 확률 계산용
+from betelgeuze_engine.physics.neighbor import (
+    CellListNeighborProvider,
+    NeighborProviderConfig,
+)
 from core.definitions import Config
 from train.local_teacher import LocalTeacher # [NEW] Import Local Teacher
+
+DEFAULT_OVERLAP_DIAGNOSTIC_MAX_NEIGHBORS = 128
 
 class PhysicsGuard:
     """✅ Stage 1 개선: 에너지 드리프트 한계 5% → 1.5% 강화
@@ -16,6 +22,8 @@ class PhysicsGuard:
         max_energy_drift=0.015,
         max_momentum_drift=0.015,
         min_interatomic_distance=0.0,
+        max_dense_overlap_atoms=DEFAULT_OVERLAP_DIAGNOSTIC_MAX_NEIGHBORS,
+        overlap_diagnostic_max_neighbors=None,
         enable_local_teacher=True,
         enable_momentum_check=True,
     ):
@@ -23,6 +31,12 @@ class PhysicsGuard:
         self.max_momentum_drift = max_momentum_drift # 🔑 3% → 1.5% 강화
         # Optional hard safety check for steric overlap. 0.0 means disabled.
         self.min_interatomic_distance = float(max(min_interatomic_distance, 0.0))
+        self.max_dense_overlap_atoms = int(max_dense_overlap_atoms)
+        self.overlap_diagnostic_max_neighbors = int(
+            overlap_diagnostic_max_neighbors
+            if overlap_diagnostic_max_neighbors is not None
+            else max_dense_overlap_atoms
+        )
         self.last_energy = None
         self.last_momentum = None
         self.violation_count = 0
@@ -88,10 +102,26 @@ class PhysicsGuard:
 
         # 3. Optional steric-overlap check (hard geometric sanity gate).
         if self.min_interatomic_distance > 0.0 and N > 1:
-            dmat = torch.cdist(c, c) # [B, N, N]
-            eye = torch.eye(N, dtype=torch.bool, device=c.device).unsqueeze(0)
-            dmat = dmat.masked_fill(eye, float("inf"))
-            min_dist = float(dmat.min().item()) if dmat.numel() > 0 else float("inf")
+            overlap_pairs = CellListNeighborProvider(
+                NeighborProviderConfig(
+                    cutoff=float(self.min_interatomic_distance),
+                    max_neighbor_count=int(self.overlap_diagnostic_max_neighbors),
+                    max_atoms_per_cell=max(8, int(self.overlap_diagnostic_max_neighbors)),
+                )
+            ).build(c)
+            overlap_diagnostics = dict(overlap_pairs.diagnostics)
+            if overlap_diagnostics.get("overflow") is True:
+                self.violation_count += 1
+                self.last_min_distance = None
+                if self.local_teacher is not None:
+                    self.local_teacher.handle_violation(c, v, pe, f_core, f_ai_corr, step, violation_type='overlap_neighbor_overflow')
+                return (
+                    False,
+                    "Steric overlap neighbor provider overflow: "
+                    f"max observed neighbors {overlap_diagnostics.get('max_observed_neighbors')}",
+                )
+            active_dist = overlap_pairs.dist[overlap_pairs.mask]
+            min_dist = float(active_dist.min().item()) if active_dist.numel() > 0 else float("inf")
             self.last_min_distance = min_dist
             if min_dist < self.min_interatomic_distance:
                 self.violation_count += 1

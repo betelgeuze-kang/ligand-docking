@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from html import escape
 import math
 from pathlib import Path
+import resource
 import time
 from typing import Any, Iterable
 
@@ -12,7 +13,7 @@ import torch
 from betelgeuze_engine.contracts.result import TermResult
 from betelgeuze_engine.contracts.state import EngineState
 from betelgeuze_engine.physics.forcefield import ProductForceField
-from betelgeuze_engine.physics.neighbor import NeighborPairs
+from betelgeuze_engine.physics.neighbor import CellListNeighborProvider, NeighborPairs, NeighborProviderConfig
 from betelgeuze_engine.physics.term_claim_metadata import term_claim_metadata
 
 
@@ -32,6 +33,17 @@ class RuntimeScalingResult:
     max_neighbor_count: int
     forcefield_contract_ready: bool
     neighbor_cap_scaling_ready: bool
+    nxn_allocation_observed: bool
+    memory_per_atom_linear_ready: bool
+    max_memory_peak_mb_per_atom: float
+    total_rebuild_count: int
+    total_rebuild_duration_sec: float
+    coordinate_mode: str
+    fixed_density_ready: bool
+    target_number_density: float
+    max_density_relative_error: float
+    release_atom_counts: list[int]
+    release_atom_counts_ready: bool
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -47,6 +59,17 @@ class RuntimeScalingResult:
             "max_neighbor_count": int(self.max_neighbor_count),
             "forcefield_contract_ready": bool(self.forcefield_contract_ready),
             "neighbor_cap_scaling_ready": bool(self.neighbor_cap_scaling_ready),
+            "nxn_allocation_observed": bool(self.nxn_allocation_observed),
+            "memory_per_atom_linear_ready": bool(self.memory_per_atom_linear_ready),
+            "max_memory_peak_mb_per_atom": float(self.max_memory_peak_mb_per_atom),
+            "total_rebuild_count": int(self.total_rebuild_count),
+            "total_rebuild_duration_sec": float(self.total_rebuild_duration_sec),
+            "coordinate_mode": self.coordinate_mode,
+            "fixed_density_ready": bool(self.fixed_density_ready),
+            "target_number_density": float(self.target_number_density),
+            "max_density_relative_error": float(self.max_density_relative_error),
+            "release_atom_counts": list(self.release_atom_counts),
+            "release_atom_counts_ready": bool(self.release_atom_counts_ready),
         }
 
 
@@ -103,6 +126,12 @@ def build_capped_neighbor_pairs(coords: torch.Tensor, *, max_neighbor_count: int
         mask[:, src, dst] = True
         mask[:, dst, src] = True
     return NeighborPairs(idx=idx, dist=dist, mask=mask)
+
+
+def _memory_peak_mb() -> float:
+    peak = float(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    # Linux reports KiB; macOS reports bytes. The CI and product runners are Linux.
+    return peak / 1024.0 if peak > 10_000.0 else peak / (1024.0 * 1024.0)
 
 
 def _fit_log_slope(x_values: Iterable[float], y_values: Iterable[float]) -> tuple[float, float]:
@@ -242,37 +271,77 @@ def write_runtime_scaling_svg(
     }
 
 
-def _coords(atom_count: int, *, dtype: torch.dtype = torch.float64) -> torch.Tensor:
-    axis = torch.arange(atom_count, dtype=dtype).view(1, atom_count, 1)
-    return torch.cat(
-        [
-            axis * 1.5,
-            torch.sin(axis * 0.17),
-            torch.cos(axis * 0.11),
-        ],
-        dim=-1,
-    )
+def _fixed_density_coords(
+    atom_count: int,
+    *,
+    target_number_density: float,
+    dtype: torch.dtype = torch.float64,
+) -> tuple[torch.Tensor, float, float, float]:
+    if int(atom_count) < 1:
+        raise ValueError("atom_count must be positive")
+    if float(target_number_density) <= 0.0:
+        raise ValueError("target_number_density must be positive")
+    grid_width = int(math.ceil(float(atom_count) ** (1.0 / 3.0)))
+    box_size = float((float(atom_count) / float(target_number_density)) ** (1.0 / 3.0))
+    spacing = box_size / float(max(grid_width, 1))
+    axis = torch.arange(grid_width, dtype=dtype)
+    gx, gy, gz = torch.meshgrid(axis, axis, axis, indexing="ij")
+    coords = torch.stack([gx.reshape(-1), gy.reshape(-1), gz.reshape(-1)], dim=-1)[:atom_count]
+    coords = (coords + 0.5) * torch.tensor(float(spacing), dtype=dtype)
+    observed_density = float(atom_count) / max(float(box_size) ** 3, 1e-12)
+    return coords.view(1, atom_count, 3), box_size, spacing, observed_density
 
 
 def run_runtime_scaling_benchmark(
     *,
-    atom_counts: Iterable[int] = (8, 16, 32, 64, 128),
-    max_neighbor_count: int = 4,
+    atom_counts: Iterable[int] = (64, 125, 216),
+    max_neighbor_count: int = 16,
+    max_atoms_per_cell: int = 16,
+    cutoff: float = 3.1,
+    skin: float = 0.0,
+    rebuild_stride: int = 3,
+    warmup_repeats: int = 1,
     repeats: int = 3,
+    target_number_density: float = 1.0 / 27.0,
+    release_atom_counts: Iterable[int] = (1000, 2000, 4000, 8000),
 ) -> RuntimeScalingResult:
     counts = [int(value) for value in atom_counts]
     if not counts or any(value < 4 for value in counts):
         raise ValueError("atom_counts must contain values >= 4")
     if int(repeats) < 1:
         raise ValueError("repeats must be positive")
+    if int(warmup_repeats) < 0:
+        raise ValueError("warmup_repeats must be non-negative")
 
     forcefield = ProductForceField(terms=[_LinearProbeTerm()], name="runtime_scaling_probe_forcefield")
     rows: list[dict[str, Any]] = []
     forcefield_contract_ready = True
+    any_nxn_allocation = False
+    total_rebuild_count = 0
+    total_rebuild_duration = 0.0
+    density_relative_errors: list[float] = []
+    release_counts = [int(value) for value in release_atom_counts]
     for atom_count in counts:
-        coords = _coords(atom_count)
+        coords, box_size, spacing, observed_density = _fixed_density_coords(
+            atom_count,
+            target_number_density=float(target_number_density),
+        )
+        density_relative_error = abs(observed_density - float(target_number_density)) / max(
+            float(target_number_density),
+            1e-12,
+        )
+        density_relative_errors.append(float(density_relative_error))
         atom_types = torch.arange(atom_count, dtype=torch.long) % 4
-        pairs = build_capped_neighbor_pairs(coords, max_neighbor_count=max_neighbor_count)
+        provider = CellListNeighborProvider(
+            NeighborProviderConfig(
+                cutoff=float(cutoff),
+                skin=float(skin),
+                max_neighbor_count=int(max_neighbor_count),
+                max_atoms_per_cell=int(max_atoms_per_cell),
+                rebuild_stride=int(rebuild_stride),
+                box_size=float(box_size),
+            )
+        )
         state = EngineState(
             coords=coords,
             atom_types=atom_types,
@@ -284,38 +353,143 @@ def run_runtime_scaling_benchmark(
                 "blocked_reason": "",
             },
         )
+        warmup_rebuild_count = 0
+        warmup_rebuild_duration = 0.0
+        for warmup_idx in range(int(warmup_repeats)):
+            warmup_start = time.perf_counter()
+            warmup_pairs = provider.build(coords, step=warmup_idx)
+            warmup_elapsed = time.perf_counter() - warmup_start
+            if warmup_pairs.diagnostics.get("rebuilt") is True:
+                warmup_rebuild_count += 1
+                warmup_rebuild_duration += warmup_elapsed
+            if warmup_pairs.diagnostics.get("overflow") is True:
+                break
+            forcefield.energy_forces(state, pairs=warmup_pairs, product_neighbor_required=True)
         start = time.perf_counter()
         last_result = None
+        last_pairs = None
+        rebuild_count = 0
+        rebuild_duration = 0.0
+        blocked_reason = ""
         for _ in range(int(repeats)):
-            last_result = forcefield.energy_forces(state, pairs=pairs)
+            step = int(warmup_repeats) + _
+            rebuild_start = time.perf_counter()
+            pairs = provider.build(coords, step=step)
+            rebuild_elapsed = time.perf_counter() - rebuild_start
+            if pairs.diagnostics.get("rebuilt") is True:
+                rebuild_count += 1
+                rebuild_duration += rebuild_elapsed
+            last_pairs = pairs
+            try:
+                last_result = forcefield.energy_forces(
+                    state,
+                    pairs=pairs,
+                    product_neighbor_required=True,
+                )
+            except ValueError as exc:
+                blocked_reason = str(exc)
+                last_result = None
+                break
         duration = float(time.perf_counter() - start)
         result = last_result
-        if result is None:
+        pairs = last_pairs
+        if result is None or pairs is None:
             forcefield_contract_ready = False
+            pair_count = int(pairs.mask.sum().detach().cpu().item()) if pairs is not None else 0
+            diagnostics = dict(pairs.diagnostics) if pairs is not None else {}
+            any_nxn_allocation = any_nxn_allocation or bool(diagnostics.get("nxn_allocation_observed") is True)
+            rows.append(
+                {
+                    "atom_count": atom_count,
+                    "repeat_count": int(repeats),
+                    "duration_sec": duration,
+                    "duration_per_repeat_sec": duration / float(max(int(repeats), 1)),
+                    "neighbor_pair_count": pair_count,
+                    "max_neighbor_count": int(max_neighbor_count),
+                    "max_atoms_per_cell": int(max_atoms_per_cell),
+                    "coordinate_mode": "fixed_density_grid",
+                    "fixed_density": True,
+                    "box_size": float(box_size),
+                    "grid_spacing": float(spacing),
+                    "target_number_density": float(target_number_density),
+                    "observed_number_density": float(observed_density),
+                    "density_relative_error": float(density_relative_error),
+                    "neighbor_pairs_provided": pairs is not None,
+                    "neighbor_source": str(getattr(pairs, "source", "") or ""),
+                    "neighbor_provider_status": str(diagnostics.get("status") or ""),
+                    "neighbor_provider_overflow": bool(diagnostics.get("overflow") is True),
+                    "nxn_allocation_observed": bool(diagnostics.get("nxn_allocation_observed") is True),
+                    "warmup_rebuild_count": int(warmup_rebuild_count),
+                    "warmup_rebuild_duration_sec": float(warmup_rebuild_duration),
+                    "rebuild_count": int(rebuild_count + warmup_rebuild_count),
+                    "rebuild_duration_sec": float(rebuild_duration + warmup_rebuild_duration),
+                    "memory_peak_mb": _memory_peak_mb(),
+                    "memory_peak_mb_per_atom": float(_memory_peak_mb() / max(atom_count, 1)),
+                    "energy_finite": False,
+                    "forces_finite": False,
+                    "claim_safe": False,
+                    "blocked_reason": blocked_reason or "runtime_scaling_forcefield_result_missing",
+                    "row_ready": False,
+                }
+            )
             continue
         pair_count = int(pairs.mask.sum().detach().cpu().item())
+        diagnostics = dict(pairs.diagnostics)
+        any_nxn_allocation = any_nxn_allocation or bool(diagnostics.get("nxn_allocation_observed") is True)
+        memory_peak_mb = _memory_peak_mb()
+        memory_peak_mb_per_atom = memory_peak_mb / float(max(atom_count, 1))
         row_ready = bool(
             result.claim_metadata.get("claim_safe") is True
             and result.diagnostics.get("neighbor_pairs_provided") is True
-            and result.diagnostics.get("neighbor_source") == "provided"
+            and result.diagnostics.get("neighbor_source") == "provided_cell_list"
+            and diagnostics.get("status") == "neighbor_provider_ready"
+            and diagnostics.get("overflow") is False
+            and diagnostics.get("nxn_allocation_observed") is False
+            and memory_peak_mb_per_atom > 0.0
             and torch.isfinite(result.energy).all().item()
             and torch.isfinite(result.forces).all().item()
             and pair_count <= int(max_neighbor_count) * atom_count
         )
         forcefield_contract_ready = forcefield_contract_ready and row_ready
+        row_rebuild_count = int(rebuild_count + warmup_rebuild_count)
+        row_rebuild_duration = float(rebuild_duration + warmup_rebuild_duration)
+        total_rebuild_count += row_rebuild_count
+        total_rebuild_duration += row_rebuild_duration
         rows.append(
             {
                 "atom_count": atom_count,
                 "repeat_count": int(repeats),
+                "warmup_repeat_count": int(warmup_repeats),
                 "duration_sec": duration,
                 "duration_per_repeat_sec": duration / float(repeats),
                 "neighbor_pair_count": pair_count,
                 "max_neighbor_count": int(max_neighbor_count),
+                "max_atoms_per_cell": int(max_atoms_per_cell),
+                "coordinate_mode": "fixed_density_grid",
+                "fixed_density": True,
+                "box_size": float(box_size),
+                "grid_spacing": float(spacing),
+                "target_number_density": float(target_number_density),
+                "observed_number_density": float(observed_density),
+                "density_relative_error": float(density_relative_error),
                 "neighbor_pairs_provided": result.diagnostics.get("neighbor_pairs_provided") is True,
                 "neighbor_source": str(result.diagnostics.get("neighbor_source") or ""),
+                "neighbor_provider_status": str(diagnostics.get("status") or ""),
+                "neighbor_provider_overflow": bool(diagnostics.get("overflow") is True),
+                "nxn_allocation_observed": bool(diagnostics.get("nxn_allocation_observed") is True),
+                "warmup_rebuild_count": int(warmup_rebuild_count),
+                "warmup_rebuild_duration_sec": float(warmup_rebuild_duration),
+                "rebuild_count": row_rebuild_count,
+                "rebuild_duration_sec": row_rebuild_duration,
+                "rebuild_duration_per_rebuild_sec": float(
+                    row_rebuild_duration / max(row_rebuild_count, 1)
+                ),
+                "memory_peak_mb": float(memory_peak_mb),
+                "memory_peak_mb_per_atom": float(memory_peak_mb_per_atom),
                 "energy_finite": bool(torch.isfinite(result.energy).all().item()),
                 "forces_finite": bool(torch.isfinite(result.forces).all().item()),
                 "claim_safe": result.claim_metadata.get("claim_safe") is True,
+                "blocked_reason": "",
                 "row_ready": row_ready,
             }
         )
@@ -324,9 +498,32 @@ def run_runtime_scaling_benchmark(
     durations = [float(row["duration_per_repeat_sec"]) for row in rows]
     pair_slope, pair_r2 = _fit_log_slope(counts[: len(pair_counts)], pair_counts)
     duration_slope, duration_r2 = _fit_log_slope(counts[: len(durations)], durations)
+    memory_per_atom_values = [float(row.get("memory_peak_mb_per_atom") or 0.0) for row in rows]
+    finite_memory_per_atom = [
+        value for value in memory_per_atom_values if math.isfinite(value) and value > 0.0
+    ]
+    max_memory_per_atom = max(finite_memory_per_atom, default=0.0)
+    baseline_memory_per_atom = finite_memory_per_atom[0] if finite_memory_per_atom else 0.0
+    max_density_relative_error = max(density_relative_errors, default=1.0)
+    fixed_density_ready = bool(
+        len(density_relative_errors) == len(counts)
+        and max_density_relative_error <= 1e-9
+        and all(row.get("fixed_density") is True for row in rows)
+        and all(row.get("coordinate_mode") == "fixed_density_grid" for row in rows)
+    )
+    release_atom_counts_ready = bool(release_counts and set(release_counts).issubset(set(counts)))
+    memory_per_atom_linear_ready = bool(
+        len(finite_memory_per_atom) == len(counts)
+        and max_memory_per_atom > 0.0
+        and baseline_memory_per_atom > 0.0
+        and max_memory_per_atom <= baseline_memory_per_atom * 4.0
+    )
     neighbor_cap_scaling_ready = bool(
         len(rows) == len(counts)
         and all(row.get("row_ready") is True for row in rows)
+        and any_nxn_allocation is False
+        and fixed_density_ready
+        and memory_per_atom_linear_ready
         and 0.85 <= pair_slope <= 1.15
         and pair_r2 >= 0.98
     )
@@ -344,4 +541,15 @@ def run_runtime_scaling_benchmark(
         max_neighbor_count=int(max_neighbor_count),
         forcefield_contract_ready=forcefield_contract_ready,
         neighbor_cap_scaling_ready=neighbor_cap_scaling_ready,
+        nxn_allocation_observed=any_nxn_allocation,
+        memory_per_atom_linear_ready=memory_per_atom_linear_ready,
+        max_memory_peak_mb_per_atom=max_memory_per_atom,
+        total_rebuild_count=total_rebuild_count,
+        total_rebuild_duration_sec=total_rebuild_duration,
+        coordinate_mode="fixed_density_grid",
+        fixed_density_ready=fixed_density_ready,
+        target_number_density=float(target_number_density),
+        max_density_relative_error=max_density_relative_error,
+        release_atom_counts=release_counts,
+        release_atom_counts_ready=release_atom_counts_ready,
     )

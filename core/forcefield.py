@@ -141,11 +141,17 @@ class ForceField(nn.Module):
         metadata: dict[str, Any] | None = None,
         claim_metadata: dict[str, Any] | None = None,
         term_names: Iterable[str] | None = None,
+        product_neighbor_required: bool = True,
     ) -> EnergyForces:
         """Compatibility bridge to betelgeuze_engine ProductForceField with claim metadata."""
         state = self.engine_state(coords, atom_types=atom_types, metadata=metadata)
         product_forcefield = default_product_forcefield(term_names=term_names)
-        return product_forcefield.energy_forces(state, pairs, claim_metadata=claim_metadata)
+        return product_forcefield.energy_forces(
+            state,
+            pairs,
+            claim_metadata=claim_metadata,
+            product_neighbor_required=product_neighbor_required,
+        )
 
     def _minimum_image(self, dr, box):
         return dr - box * torch.floor(dr / box + 0.5)
