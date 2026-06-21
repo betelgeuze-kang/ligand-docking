@@ -7,6 +7,7 @@ DOCKER_CMD="${DOCKER_CMD:-docker}"
 read -r -a DOCKER_BIN <<< "${DOCKER_CMD}"
 DOCKER_DISPLAY="${DOCKER_BIN[*]}"
 DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}"
+PRODUCT_IMAGE_REQUIRE_BUILDX="${PRODUCT_IMAGE_REQUIRE_BUILDX:-0}"
 PRODUCT_IMAGE_PRUNE_BEFORE_BUILD="${PRODUCT_IMAGE_PRUNE_BEFORE_BUILD:-0}"
 DOCKERFILE="${ROOT}/Dockerfile.product"
 VERIFY_MODE="${PRODUCT_IMAGE_VERIFY_MODE:-build}"
@@ -42,6 +43,15 @@ fi
 if ! command -v "${HOST_PYTHON}" >/dev/null 2>&1; then
   echo '{"status":"blocked_product_image_smoke","reason":"host_python_missing","claim_boundary":"Verify script requires a host Python interpreter to write the receipt JSON.","operator_hint":"Install python3 or set PRODUCT_IMAGE_HOST_PYTHON to a valid interpreter."}'
   exit 2
+fi
+
+if [[ "${DOCKER_BUILDKIT}" == "1" ]] && ! "${DOCKER_BIN[@]}" buildx version >/dev/null 2>&1; then
+  if [[ "${PRODUCT_IMAGE_REQUIRE_BUILDX}" == "1" ]]; then
+    echo '{"status":"blocked_product_image_smoke","reason":"docker_buildx_missing","claim_boundary":"BuildKit was required for this product image smoke, but docker buildx is unavailable.","operator_hint":"Install the Docker buildx CLI plugin or run the workflow setup-buildx step on self-hosted runners."}'
+    exit 2
+  fi
+  echo "BuildKit requested but docker buildx is unavailable; falling back to the classic Docker builder" >&2
+  DOCKER_BUILDKIT=0
 fi
 
 export DOCKER_BUILDKIT

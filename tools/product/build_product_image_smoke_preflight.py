@@ -194,6 +194,8 @@ def build_product_image_smoke_preflight(
         _contract_row(
             "docker_buildkit_and_runner_cleanup_declared",
             "DOCKER_BUILDKIT" in verify_script
+            and "PRODUCT_IMAGE_REQUIRE_BUILDX" in verify_script
+            and "docker_buildx_missing" in verify_script
             and "PRODUCT_IMAGE_PRUNE_BEFORE_BUILD" in verify_script
             and "container prune -f" in verify_script
             and "image prune -f" in verify_script
@@ -293,7 +295,9 @@ def build_product_image_smoke_preflight(
         _contract_row(
             "workflow_build_mode_declared",
             "PRODUCT_IMAGE_VERIFY_MODE: build" in workflow
+            and "docker/setup-buildx-action@v3" in workflow
             and 'DOCKER_BUILDKIT: "1"' in workflow
+            and 'PRODUCT_IMAGE_REQUIRE_BUILDX: "1"' in workflow
             and 'PRODUCT_IMAGE_PRUNE_BEFORE_BUILD: "1"' in workflow,
             "build mode in workflow" if "PRODUCT_IMAGE_VERIFY_MODE: build" in workflow else "missing",
             "self-hosted CI uses build contract mode explicitly with BuildKit and stale Docker cleanup",

@@ -297,6 +297,8 @@ def test_product_image_smoke_script_is_fail_closed_and_has_rocm_runtime_mode() -
     assert "docker_cli_missing" in script
     assert "does not mark missing Docker as green" in script
     assert 'DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}"' in script
+    assert "PRODUCT_IMAGE_REQUIRE_BUILDX" in script
+    assert "docker_buildx_missing" in script
     assert "PRODUCT_IMAGE_PRUNE_BEFORE_BUILD" in script
     assert "container prune -f" in script
     assert "image prune -f" in script
@@ -329,7 +331,9 @@ def test_product_image_smoke_script_is_fail_closed_and_has_rocm_runtime_mode() -
     assert "workflow_dispatch:" in workflow
     assert "verify_mode:" in workflow
     assert "PRODUCT_IMAGE_VERIFY_MODE: build" in workflow
+    assert "docker/setup-buildx-action@v3" in workflow
     assert 'DOCKER_BUILDKIT: "1"' in workflow
+    assert 'PRODUCT_IMAGE_REQUIRE_BUILDX: "1"' in workflow
     assert 'PRODUCT_IMAGE_PRUNE_BEFORE_BUILD: "1"' in workflow
     assert "product-image-rocm-runtime-smoke" in workflow
     assert "runs-on: [self-hosted, linux, rocm]" in workflow
