@@ -6,13 +6,17 @@ import torch.nn as nn
 from core.definitions import Config
 
 
-class SE3EquivariantCorrection(nn.Module):
+class NeuralForceCorrection(nn.Module):
     """
-    SE(3)-equivariant neural network for predicting force corrections.
+    Frame-dependent neural network for predicting force corrections.
+
+    This module is intentionally not advertised as SE(3)-equivariant. It is a
+    legacy MLP correction surface and must stay behind product fail-closed
+    guards unless a separate equivariance audit validates a stronger claim.
     """
 
     def __init__(self, state_dim=128, hidden_dim=256, num_layers=3):
-        super(SE3EquivariantCorrection, self).__init__()
+        super().__init__()
         self.state_dim = state_dim
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
@@ -91,5 +95,22 @@ class SE3EquivariantCorrection(nn.Module):
         aux_info = {
             "mean_force_magnitude": f_corr.norm(dim=-1).mean().item(),
             "param_temp": sim_params.get("temp", 300.0),
+            "correction_model_class": self.__class__.__name__,
+            "se3_equivariant": False,
+            "claim_grade": "frame_dependent_neural_force_correction",
         }
         return f_corr, aux_info
+
+    def claim_metadata(self) -> dict[str, object]:
+        return {
+            "correction_model_class": self.__class__.__name__,
+            "se3_equivariant": False,
+            "claim_grade": "frame_dependent_neural_force_correction",
+            "claim_safe": False,
+            "blocked_reason": "neural_force_correction_not_product_claim_promoted",
+        }
+
+
+# Backward-compatible import alias for legacy tests and callers. Do not use this
+# name for product claims; the implementation is not an SE(3)-equivariant model.
+SE3EquivariantCorrection = NeuralForceCorrection

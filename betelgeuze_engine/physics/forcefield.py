@@ -7,7 +7,12 @@ from typing import Any
 import torch
 
 from betelgeuze_engine.contracts.claim import default_claim_metadata
-from betelgeuze_engine.contracts.result import EnergyForces, TermResult, validate_term_result_contract
+from betelgeuze_engine.contracts.result import (
+    EnergyForces,
+    TermResult,
+    validate_energy_forces_contract,
+    validate_term_result_contract,
+)
 from betelgeuze_engine.contracts.state import EngineState
 from betelgeuze_engine.physics.force_term import ForceTerm
 from betelgeuze_engine.physics.neighbor import NeighborPairs, full_neighbor_pairs
@@ -16,7 +21,11 @@ from betelgeuze_engine.physics.terms import (
     DirectionalHBondTerm,
     HydrophobicContactTerm,
     LegacyLJTerm,
+    PocketWallTerm,
     ScreenedElectrostaticsTerm,
+    TopologyPenaltyTerm,
+    TorsionPriorTerm,
+    WaterDisplacementProxyTerm,
 )
 
 ForceTermFactory = Callable[[], ForceTerm]
@@ -60,7 +69,11 @@ def default_force_term_registry() -> ForceTermRegistry:
 
 def guarded_force_term_registry() -> ForceTermRegistry:
     registry = default_force_term_registry()
+    registry.register("pocket_wall", lambda: PocketWallTerm())
     registry.register("screened_electrostatics", lambda: ScreenedElectrostaticsTerm())
+    registry.register("topology_penalty", lambda: TopologyPenaltyTerm())
+    registry.register("torsion_prior", lambda: TorsionPriorTerm())
+    registry.register("water_displacement_proxy", lambda: WaterDisplacementProxyTerm())
     return registry
 
 
@@ -92,29 +105,54 @@ def _merge_claim_metadata(
             or result.diagnostics.get("status")
             or ""
         )
-        term_claim_rows.append(
-            {
-                "force_term_name": term_name,
-                "force_term_status": term_status,
-                "claim_safe": term_metadata.get("claim_safe") is True,
-                "blocked_reason": str(term_metadata.get("blocked_reason") or ""),
-                "hbond_evidence_status": str(term_metadata.get("hbond_evidence_status") or ""),
-                "hbond_evidence_schema_version": str(
-                    term_metadata.get("hbond_evidence_schema_version") or ""
-                ),
-                "hbond_evidence_schema_ready": term_metadata.get("hbond_evidence_schema_ready") is True,
-                "ligand_topology_valid": term_metadata.get("ligand_topology_valid") is True,
-                "policy_caps_ready": term_metadata.get("force_term_policy_caps_ready"),
-                "observed_caps_ready": term_metadata.get("force_term_observed_caps_ready"),
-                "bounded_correction_ready": term_metadata.get("force_term_bounded_correction_ready"),
-                "policy_caps": dict(term_metadata.get("force_term_policy_caps") or {}),
-                "abs_energy_within_cap": term_metadata.get("force_term_abs_energy_within_cap"),
-                "force_norm_within_cap": term_metadata.get("force_term_force_norm_within_cap"),
-                "active_pair_count_within_cap": term_metadata.get(
-                    "force_term_active_pair_count_within_cap"
-                ),
-            }
-        )
+        claim_row = {
+            "force_term_name": term_name,
+            "force_term_status": term_status,
+            "claim_safe": term_metadata.get("claim_safe") is True,
+            "blocked_reason": str(term_metadata.get("blocked_reason") or ""),
+            "hbond_evidence_status": str(term_metadata.get("hbond_evidence_status") or ""),
+            "hbond_evidence_schema_version": str(
+                term_metadata.get("hbond_evidence_schema_version") or ""
+            ),
+            "hbond_evidence_schema_ready": term_metadata.get("hbond_evidence_schema_ready") is True,
+            "ligand_topology_valid": term_metadata.get("ligand_topology_valid") is True,
+            "policy_caps_ready": term_metadata.get("force_term_policy_caps_ready"),
+            "observed_caps_ready": term_metadata.get("force_term_observed_caps_ready"),
+            "bounded_correction_ready": term_metadata.get("force_term_bounded_correction_ready"),
+            "policy_caps": dict(term_metadata.get("force_term_policy_caps") or {}),
+            "abs_energy_within_cap": term_metadata.get("force_term_abs_energy_within_cap"),
+            "force_norm_within_cap": term_metadata.get("force_term_force_norm_within_cap"),
+            "active_pair_count_within_cap": term_metadata.get(
+                "force_term_active_pair_count_within_cap"
+            ),
+        }
+        if term_name == "hydrophobic_contact":
+            claim_row.update(
+                {
+                    "hydrophobic_contact_evidence_schema_version": str(
+                        term_metadata.get("hydrophobic_contact_evidence_schema_version") or ""
+                    ),
+                    "hydrophobic_contact_evidence_schema_ready": (
+                        term_metadata.get("hydrophobic_contact_evidence_schema_ready") is True
+                    ),
+                    "hydrophobic_contact_mask_present": (
+                        term_metadata.get("hydrophobic_contact_mask_present") is True
+                    ),
+                    "hydrophobic_contact_mask_count": int(
+                        term_metadata.get("hydrophobic_contact_mask_count") or 0
+                    ),
+                    "hydrophobic_contact_active_pair_count": int(
+                        term_metadata.get("hydrophobic_contact_active_pair_count") or 0
+                    ),
+                    "hydrophobic_contact_contact_distance_A": float(
+                        term_metadata.get("hydrophobic_contact_contact_distance_A") or 0.0
+                    ),
+                    "hydrophobic_contact_energy_model": str(
+                        term_metadata.get("hydrophobic_contact_energy_model") or ""
+                    ),
+                }
+            )
+        term_claim_rows.append(claim_row)
     diagnostic_blockers = [
         f"{name}:{diag.get('status')}"
         for name, diag in term_diagnostics.items()
@@ -143,6 +181,19 @@ def _merge_claim_metadata(
     if hbond_rows:
         metadata["hbond_evidence_schema_version"] = hbond_rows[0]["hbond_evidence_schema_version"]
         metadata["hbond_evidence_schema_ready"] = hbond_rows[0]["hbond_evidence_schema_ready"]
+    hydrophobic_rows = [
+        row for row in term_claim_rows if row["force_term_name"] == "hydrophobic_contact"
+    ]
+    if hydrophobic_rows:
+        metadata["hydrophobic_contact_evidence_schema_version"] = hydrophobic_rows[0][
+            "hydrophobic_contact_evidence_schema_version"
+        ]
+        metadata["hydrophobic_contact_evidence_schema_ready"] = hydrophobic_rows[0][
+            "hydrophobic_contact_evidence_schema_ready"
+        ]
+        metadata["hydrophobic_contact_active_pair_count"] = hydrophobic_rows[0][
+            "hydrophobic_contact_active_pair_count"
+        ]
     blockers = list(dict.fromkeys(diagnostic_blockers + explicit_term_blockers + unscoped_term_blockers))
     metadata["force_residual_applied"] = bool(metadata.get("force_residual_applied", False))
     metadata["claim_safe"] = bool(metadata.get("claim_safe") is True and not blockers)
@@ -218,7 +269,7 @@ class ProductForceField:
             term_results=term_results,
             term_diagnostics=term_diagnostics,
         )
-        return EnergyForces(
+        aggregate = EnergyForces(
             energy=total_energy.detach(),
             forces=total_forces.detach(),
             terms=term_values,
@@ -232,3 +283,5 @@ class ProductForceField:
             },
             claim_metadata=merged_claim_metadata,
         )
+        validate_energy_forces_contract(result=aggregate, coords=state_for_terms.coords)
+        return aggregate

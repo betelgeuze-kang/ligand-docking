@@ -22,7 +22,14 @@ def topology_claim_metadata(complex_topology: ComplexTopology) -> dict[str, Any]
     fidelity = str(complex_topology.protein.fidelity)
     protein_residue_count = int(complex_topology.protein.residue_indices.numel())
     protein_topology_valid = protein_residue_count > 0
-    claim_safe = ligand_claim_safe and fidelity == "sequence_mapped" and protein_topology_valid
+    pocket_indices = [int(v) for v in complex_topology.pocket_residue_indices]
+    pocket_indices_valid = all(0 <= idx < protein_residue_count for idx in pocket_indices)
+    claim_safe = (
+        ligand_claim_safe
+        and fidelity == "sequence_mapped"
+        and protein_topology_valid
+        and pocket_indices_valid
+    )
     if not ligand_valid:
         blocked = _ligand_validity_blocked_reason(validity)
     elif not ligand_claim_safe:
@@ -31,6 +38,8 @@ def topology_claim_metadata(complex_topology: ComplexTopology) -> dict[str, Any]
         blocked = "empty_protein_topology"
     elif fidelity != "sequence_mapped":
         blocked = "placeholder_alanine_topology"
+    elif not pocket_indices_valid:
+        blocked = "invalid_pocket_residue_indices"
     else:
         blocked = ""
     return default_claim_metadata(
@@ -42,6 +51,10 @@ def topology_claim_metadata(complex_topology: ComplexTopology) -> dict[str, Any]
         protein_residue_count=protein_residue_count,
         protein_topology_valid=protein_topology_valid,
         protein_topology_blocker="" if protein_topology_valid else "empty_protein_topology",
+        pocket_residue_count=len(pocket_indices),
+        pocket_residue_indices=pocket_indices,
+        pocket_residue_indices_valid=pocket_indices_valid,
+        pocket_topology_blocker="" if pocket_indices_valid else "invalid_pocket_residue_indices",
         ligand_topology_schema_version=str(validity.get("schema_version") or ""),
         ligand_topology_claim_safe=ligand_claim_safe,
         ligand_topology_source=str(validity.get("source") or ""),

@@ -88,11 +88,26 @@ def neighbor_list_parity_error(
 ) -> float:
     reference = full_neighbor_pairs(coords, cutoff=float(cutoff))
     observed = candidate_pairs or full_neighbor_pairs(coords, cutoff=float(cutoff))
-    if observed.mask.shape != reference.mask.shape:
+    if (
+        observed.mask.shape != reference.mask.shape
+        or observed.dist.shape != reference.dist.shape
+        or observed.idx.shape != reference.idx.shape
+    ):
+        return 1.0
+    if not torch.isfinite(observed.dist).all():
         return 1.0
     mismatch = (observed.mask != reference.mask).to(dtype=torch.float32)
     denom = max(int(reference.mask.numel()), 1)
-    return float(mismatch.sum().item() / denom)
+    mask_error = mismatch.sum() / float(denom)
+    idx_error = (observed.idx != reference.idx).to(dtype=torch.float32).sum() / float(denom)
+    pair_mask = reference.mask | observed.mask
+    if bool(pair_mask.any().item()):
+        dist_delta = (observed.dist - reference.dist).abs()[pair_mask]
+        dist_scale = reference.dist.abs()[pair_mask].amax().clamp_min(1.0)
+        dist_error = dist_delta.amax() / dist_scale
+    else:
+        dist_error = torch.zeros((), dtype=torch.float32, device=coords.device)
+    return float(torch.maximum(torch.maximum(mask_error, idx_error), dist_error).item())
 
 
 def energy_drift_smoke_pct(

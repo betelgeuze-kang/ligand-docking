@@ -52,11 +52,11 @@ class TopologyFactory:
         self.transition_region = None # [NEW] Define transition region atoms/residues
 
         if self.use_adress:
-            print(f"  🧬 ACTIVE (AdResS: All-Atom + Coarse-Grained)")
+            print("  BLOCKED (AdResS research path: production neighbor builder disabled)")
         elif self.use_virtual_sc:
-            print(f"  ✅ ACTIVE (2-Bead physics: CA + Virtual SC)")
+            print("  ACTIVE (2-Bead physics: CA + Virtual SC)")
         else:
-            print(f"  ❌ INACTIVE (All-Atom physics)")
+            print("  INACTIVE (All-Atom physics)")
 
         # Initialize basic properties
         self.residue_types = self._create_residue_types().to(device) # [N_res]

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import math
 from typing import Any
 
 import torch
@@ -26,6 +27,13 @@ BOUNDED_CORRECTION_CLAIM_KEYS = (
     "force_term_bounded_correction_ready",
     "force_term_abs_energy_within_cap",
     "force_term_force_norm_within_cap",
+    "force_term_active_pair_count_within_cap",
+)
+
+BOUNDED_CORRECTION_POLICY_CAP_KEYS = (
+    "max_abs_energy",
+    "max_force_norm",
+    "max_active_pair_count",
 )
 
 
@@ -158,12 +166,118 @@ def validate_term_result_contract(
     caps = result.claim_metadata.get("force_term_policy_caps")
     if not isinstance(caps, dict) or not caps:
         raise ValueError(f"force term {name} returned invalid bounded correction policy caps")
+    missing_cap_keys = _missing_keys(dict(caps), BOUNDED_CORRECTION_POLICY_CAP_KEYS)
+    if missing_cap_keys:
+        raise ValueError(
+            f"force term {name} returned missing bounded correction policy caps: "
+            f"{','.join(missing_cap_keys)}"
+        )
+    for key in BOUNDED_CORRECTION_POLICY_CAP_KEYS:
+        try:
+            cap_value = float(caps[key])
+        except (TypeError, ValueError):
+            raise ValueError(
+                f"force term {name} returned non-numeric bounded correction policy cap: {key}"
+            ) from None
+        if not math.isfinite(cap_value) or cap_value < 0.0:
+            raise ValueError(
+                f"force term {name} returned invalid bounded correction policy cap: {key}"
+            )
     for key in (
         "force_term_policy_caps_ready",
         "force_term_observed_caps_ready",
         "force_term_bounded_correction_ready",
         "force_term_abs_energy_within_cap",
         "force_term_force_norm_within_cap",
+        "force_term_active_pair_count_within_cap",
     ):
         if not isinstance(result.claim_metadata.get(key), bool):
             raise ValueError(f"force term {name} returned non-boolean bounded correction key: {key}")
+
+
+def validate_energy_forces_contract(
+    *,
+    result: EnergyForces,
+    coords: torch.Tensor,
+    require_terms: bool = True,
+) -> None:
+    """Validate the aggregate product forcefield result contract."""
+
+    expected_energy_shape = (int(coords.shape[0]),)
+    if tuple(result.energy.shape) != expected_energy_shape:
+        raise ValueError(
+            "product forcefield returned energy with wrong shape: "
+            f"{tuple(result.energy.shape)} != {expected_energy_shape}"
+        )
+    if result.forces.shape != coords.shape:
+        raise ValueError("product forcefield returned forces with wrong shape")
+    if not torch.isfinite(result.energy).all():
+        raise ValueError("product forcefield returned nonfinite energy")
+    if not torch.isfinite(result.forces).all():
+        raise ValueError("product forcefield returned nonfinite forces")
+
+    if require_terms and not result.terms:
+        raise ValueError("product forcefield returned no term values")
+    for key, value in result.terms.items():
+        if not str(key):
+            raise ValueError("product forcefield returned empty term name")
+        try:
+            term_value = float(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"product forcefield returned non-numeric term value: {key}") from None
+        if not math.isfinite(term_value):
+            raise ValueError(f"product forcefield returned nonfinite term value: {key}")
+
+    forcefield_name = str(result.diagnostics.get("forcefield") or "")
+    if not forcefield_name:
+        raise ValueError("product forcefield returned missing diagnostic forcefield")
+    if not isinstance(result.diagnostics.get("term_count"), int):
+        raise ValueError("product forcefield returned missing diagnostic term_count")
+    if int(result.diagnostics.get("term_count") or 0) != len(result.terms):
+        raise ValueError("product forcefield returned term_count mismatch")
+    if not isinstance(result.diagnostics.get("neighbor_pair_count"), int):
+        raise ValueError("product forcefield returned missing diagnostic neighbor_pair_count")
+    if not isinstance(result.diagnostics.get("neighbor_pairs_provided"), bool):
+        raise ValueError("product forcefield returned missing diagnostic neighbor_pairs_provided")
+    if str(result.diagnostics.get("neighbor_source") or "") not in {"provided", "full_neighbor_pairs"}:
+        raise ValueError("product forcefield returned invalid diagnostic neighbor_source")
+    term_diagnostics = result.diagnostics.get("term_diagnostics")
+    if not isinstance(term_diagnostics, dict):
+        raise ValueError("product forcefield returned missing term diagnostics")
+    if set(str(key) for key in term_diagnostics) != set(str(key) for key in result.terms):
+        raise ValueError("product forcefield returned term diagnostics mismatch")
+
+    missing_claim_keys = _missing_keys(dict(result.claim_metadata), REQUIRED_CLAIM_METADATA_KEYS)
+    if missing_claim_keys:
+        raise ValueError(
+            "product forcefield returned missing claim metadata keys: "
+            f"{','.join(missing_claim_keys)}"
+        )
+    if result.claim_metadata.get("claim_safe") is True and str(
+        result.claim_metadata.get("blocked_reason") or ""
+    ):
+        raise ValueError("product forcefield returned claim_safe with blocked_reason")
+    if result.claim_metadata.get("force_term_claim_metadata_ready") is not True:
+        raise ValueError("product forcefield returned force term claim metadata not ready")
+    claim_rows = result.claim_metadata.get("force_term_claim_rows")
+    if not isinstance(claim_rows, list):
+        raise ValueError("product forcefield returned missing force term claim rows")
+    if len(claim_rows) != len(result.terms):
+        raise ValueError("product forcefield returned force term claim row count mismatch")
+    claim_row_names: list[str] = []
+    for row in claim_rows:
+        if not isinstance(row, dict):
+            raise ValueError("product forcefield returned non-dict force term claim row")
+        row_name = str(row.get("force_term_name") or "")
+        row_status = str(row.get("force_term_status") or "")
+        if not row_name:
+            raise ValueError("product forcefield returned force term claim row without name")
+        if not row_status:
+            raise ValueError(f"product forcefield returned force term claim row without status: {row_name}")
+        if not isinstance(row.get("claim_safe"), bool):
+            raise ValueError(f"product forcefield returned non-boolean force term claim safety: {row_name}")
+        if row.get("claim_safe") is True and str(row.get("blocked_reason") or ""):
+            raise ValueError(f"product forcefield returned claim-safe force term row with blocker: {row_name}")
+        claim_row_names.append(row_name)
+    if set(claim_row_names) != set(str(key) for key in result.terms):
+        raise ValueError("product forcefield returned force term claim row names mismatch")

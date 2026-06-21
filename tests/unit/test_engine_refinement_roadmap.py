@@ -8,7 +8,7 @@ import pytest
 import torch
 
 from betelgeuze_product.engine_dispatch import build_dispatch_manifest, engine_roadmap_ready
-from core.ai_correction import SE3EquivariantCorrection
+from core.ai_correction import NeuralForceCorrection, SE3EquivariantCorrection
 from core.interaction_forces import analytic_hbond_forces
 from core.onsps_backmap import backmap_4bead_onsps, needs_onsps_4bead, onsps_hbond_sites_from_smiles
 from core.score_residual import apply_score_residual
@@ -26,7 +26,7 @@ from tools.run_ligand_backmapping_scoring import (
 
 
 def test_ai_correction_forward_runs():
-    model = SE3EquivariantCorrection(hidden_dim=64, num_layers=1)
+    model = NeuralForceCorrection(hidden_dim=64, num_layers=1)
     b, n, k = 1, 8, 4
     c = torch.randn(b, n, 3)
     nb_idx = torch.randint(0, n, (b, n, k))
@@ -37,9 +37,57 @@ def test_ai_correction_forward_runs():
     f_corr, aux = model.forward(c, top, nb_data, torch.zeros(b, 1), {"temp": 300.0})
     assert f_corr.shape == (b, n, 3)
     assert "mean_force_magnitude" in aux
+    assert aux["correction_model_class"] == "NeuralForceCorrection"
+    assert aux["se3_equivariant"] is False
+    assert aux["claim_grade"] == "frame_dependent_neural_force_correction"
+    assert model.claim_metadata()["claim_safe"] is False
+    assert model.claim_metadata()["blocked_reason"] == "neural_force_correction_not_product_claim_promoted"
 
 
-def test_topology_sequence_aware_and_adress_gate():
+def test_legacy_se3_name_is_compatibility_alias_not_product_claim():
+    model = SE3EquivariantCorrection(hidden_dim=64, num_layers=1)
+
+    assert isinstance(model, NeuralForceCorrection)
+    assert model.claim_metadata()["correction_model_class"] == "NeuralForceCorrection"
+    assert model.claim_metadata()["se3_equivariant"] is False
+
+
+def test_neural_force_correction_rotation_audit_blocks_se3_claim():
+    torch.manual_seed(7)
+    model = NeuralForceCorrection(hidden_dim=64, num_layers=1)
+    model.eval()
+    b, n, k = 1, 5, 3
+    coords = torch.tensor(
+        [[[0.0, 0.0, 0.0], [1.0, 0.2, 0.0], [2.0, -0.3, 0.4], [3.0, 0.1, -0.2], [4.0, 0.0, 0.3]]],
+        dtype=torch.float32,
+    )
+    nb_idx = torch.tensor([[[1, 2, 3], [0, 2, 4], [0, 1, 3], [0, 2, 4], [1, 2, 3]]], dtype=torch.long)
+    nb_dist = torch.ones(b, n, k, dtype=torch.float32)
+    nb_mask = torch.ones(b, n, k, dtype=torch.float32)
+    top = type("Top", (), {"residue_features": torch.zeros(n, 64)})()
+    sim_params = {"temp": 300.0, "salt_conc": 0.1, "pH": 7.0, "ionic_strength": 0.15}
+    rotation = torch.tensor(
+        [[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
+        dtype=torch.float32,
+    )
+
+    forces, aux = model(coords, top, (nb_idx, nb_dist, nb_mask), torch.zeros(b, 1), sim_params)
+    rotated_forces, _ = model(
+        torch.matmul(coords, rotation.transpose(-1, -2)),
+        top,
+        (nb_idx, nb_dist, nb_mask),
+        torch.zeros(b, 1),
+        sim_params,
+    )
+    expected_rotated_forces = torch.matmul(forces, rotation.transpose(-1, -2))
+    rotation_error = float((rotated_forces - expected_rotated_forces).abs().max().item())
+
+    assert aux["se3_equivariant"] is False
+    assert model.claim_metadata()["claim_safe"] is False
+    assert rotation_error > 1e-5
+
+
+def test_topology_sequence_aware_and_adress_gate(capsys):
     top = TopologyFactory(
         n_res=5,
         t_type=0,
@@ -57,6 +105,9 @@ def test_topology_sequence_aware_and_adress_gate():
         device="cpu",
         strategy_type=StrategyType.ADRESS,
     )
+    captured = capsys.readouterr().out
+    assert "BLOCKED (AdResS research path" in captured
+    assert "ACTIVE (AdResS" not in captured
     with pytest.raises(RuntimeError):
         top_adress.get_adress_neighbor_data(torch.zeros(1, 10, 3))
 
@@ -111,6 +162,11 @@ def test_score_residual_and_topo_corrector():
     assert residual["status"] == "residual_ready"
     topo = summarize_topo_correction({"site_count": 2, "roles": ["donor", "acceptor"]}, 1.0, 0.8)
     assert "topo_correction_delta" in topo
+    assert topo["topology_correction_contract"] == "topology_score_correction_bounded_v1"
+    assert topo["topology_correction_scope"] == "score_ranking_heuristic"
+    assert topo["topology_correction_physical_force_claim"] is False
+    assert topo["topology_correction_bounded"] is True
+    assert topo["topology_correction_policy_caps"]["max_abs_delta_score"] == pytest.approx(1.0)
 
 
 def test_force_residual_shortlist_hook():

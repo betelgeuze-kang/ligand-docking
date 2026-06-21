@@ -23,7 +23,8 @@ from betelgeuze_engine.backmapping.onsps import (
     backmap_4bead_onsps,
     evaluate_onsps_backmap_evidence,
 )
-from betelgeuze_engine.contracts import EngineState
+from betelgeuze_engine.benchmark import run_runtime_scaling_benchmark, write_runtime_scaling_svg
+from betelgeuze_engine.contracts import EngineState, validate_energy_forces_contract
 from betelgeuze_engine.interactions.hbond_evidence import evaluate_hbond_evidence
 from betelgeuze_engine.physics import ProductForceField, default_force_term_registry, guarded_force_term_registry
 from betelgeuze_engine.physics.neighbor import full_neighbor_pairs
@@ -31,7 +32,11 @@ from betelgeuze_engine.physics.terms import (
     DirectionalHBondTerm,
     HydrophobicContactTerm,
     LegacyLJTerm,
+    PocketWallTerm,
     ScreenedElectrostaticsTerm,
+    TopologyPenaltyTerm,
+    TorsionPriorTerm,
+    WaterDisplacementProxyTerm,
 )
 from betelgeuze_engine.residual import (
     ForceResidualPolicy,
@@ -47,6 +52,7 @@ from betelgeuze_engine.topology import (
     topology_claim_metadata,
 )
 from betelgeuze_engine.validation import (
+    build_confidence_calibration_report,
     energy_drift_smoke_pct,
     finite_difference_force_error,
     neighbor_list_parity_error,
@@ -59,8 +65,10 @@ from tools.product.validate_api_runner_profiles import validate_profiles
 
 DEFAULT_OUT_JSON = "runs/ai_md_engine_kpi_report_current.json"
 DEFAULT_OUT_MD = "runs/ai_md_engine_kpi_report_current.md"
+DEFAULT_RUNTIME_SCALING_PLOT = "runs/ai_md_runtime_scaling_plot_current.svg"
 DEFAULT_ROCM_MANIFEST_JSON = "runs/rocm_environment_manifest_current.json"
 DEFAULT_PRODUCT_EVIDENCE_BUNDLE_JSON = "runs/ai_md_product_evidence_bundle_current.json"
+DEFAULT_PRODUCT_CI_RUNTIME_GATE_JSON = "runs/product_ci_runtime_gate_current.json"
 CHEMISTRY_FIXTURES = {
     "ethanol": "CCO",
     "amide": "CC(=O)N",
@@ -75,6 +83,71 @@ CHEMISTRY_FIXTURES = {
     "keto_tautomer_smoke": "CC(=O)C",
     "invalid_smiles": "C1(",
 }
+
+
+def _sha256_path(path: Path) -> str:
+    if not path.exists() or not path.is_file():
+        return ""
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _runtime_scaling_plot_metadata(
+    scaling: dict[str, Any],
+    plot_path: str | Path,
+) -> dict[str, Any]:
+    out = Path(plot_path)
+    claim_boundary = (
+        "Pair-count scaling is the gated evidence; duration trend is advisory microbenchmark telemetry."
+    )
+    if out.exists() and out.is_file():
+        try:
+            existing = out.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            existing = ""
+        existing_ready = bool(
+            "<svg" in existing
+            and "Pair-count scaling" in existing
+            and "advisory" in existing
+            and out.stat().st_size > 0
+        )
+        if existing_ready:
+            return {
+                "plot_path": str(out),
+                "plot_format": "svg",
+                "plot_ready": True,
+                "plot_role": "runtime_neighbor_cap_scaling_plot",
+                "plot_claim_boundary": claim_boundary,
+                "plot_sha256": _sha256_path(out),
+                "plot_size_bytes": int(out.stat().st_size),
+                "plot_reused_existing": True,
+            }
+    try:
+        metadata = write_runtime_scaling_svg(scaling, out)
+    except (OSError, TypeError, ValueError) as exc:
+        return {
+            "plot_path": str(out),
+            "plot_format": "svg",
+            "plot_ready": False,
+            "plot_role": "runtime_neighbor_cap_scaling_plot",
+            "plot_claim_boundary": claim_boundary,
+            "plot_sha256": "",
+            "plot_size_bytes": 0,
+            "plot_error": str(exc),
+        }
+    plot_file = Path(str(metadata.get("plot_path") or out))
+    metadata["plot_sha256"] = _sha256_path(plot_file)
+    metadata["plot_size_bytes"] = int(plot_file.stat().st_size) if plot_file.exists() else 0
+    metadata["plot_ready"] = bool(
+        metadata.get("plot_ready") is True
+        and metadata.get("plot_format") == "svg"
+        and len(str(metadata.get("plot_sha256") or "")) == 64
+        and int(metadata.get("plot_size_bytes") or 0) > 0
+    )
+    return metadata
 POSE_RANKING_HBOND_FIXTURES = (
     {
         "pose_id": "amide_near_hbond_pose",
@@ -103,6 +176,24 @@ POSE_RANKING_HBOND_FIXTURES = (
         "expect_overanchored": False,
         "rmsd_proxy_A": 0.85,
         "ligand_xyz": [[2.9, 0.1, 0.0], [0.2, 2.9, 0.0], [1.0, 1.0, 1.0]],
+    },
+    {
+        "pose_id": "amide_delta_backmap_yellow_band_pose",
+        "benchmark_role": "delta_backmap_yellow_band_pose",
+        "smiles": "CC(=O)N",
+        "expected_top1": False,
+        "expected_claim_safe": False,
+        "expected_hbond_status": "review",
+        "expected_blocked_reason": "delta_backmap_yellow_band",
+        "expect_unsatisfied_donor_acceptor": False,
+        "expect_missing_anchor": False,
+        "expect_overanchored": False,
+        "expect_delta_backmap_yellow_band": True,
+        "delta_backmap": 3.0,
+        "delta_backmap_max": 2.5,
+        "near_hbond_geometry": True,
+        "rmsd_proxy_A": 0.55,
+        "ligand_xyz": [[2.8, 0.0, 0.0], [0.0, 2.8, 0.0], [1.0, 1.0, 1.0]],
     },
     {
         "pose_id": "amide_far_decoy_pose",
@@ -590,6 +681,15 @@ def _physics_kpis() -> dict[str, Any]:
                 "claim_safe": term_result.claim_metadata.get("claim_safe") is True,
                 "force_term_status": str(term_result.claim_metadata.get("force_term_status") or ""),
                 "blocked_reason": str(term_result.claim_metadata.get("blocked_reason") or ""),
+                "hydrophobic_contact_evidence_schema_version": str(
+                    term_result.claim_metadata.get("hydrophobic_contact_evidence_schema_version") or ""
+                ),
+                "hydrophobic_contact_evidence_schema_ready": (
+                    term_result.claim_metadata.get("hydrophobic_contact_evidence_schema_ready") is True
+                ),
+                "hydrophobic_contact_active_pair_count": int(
+                    term_result.claim_metadata.get("hydrophobic_contact_active_pair_count") or 0
+                ),
             }
         )
     force_term_validation_ready = bool(force_term_validation_rows and all(row["ready"] for row in force_term_validation_rows))
@@ -678,7 +778,24 @@ def _chemistry_kpis() -> dict[str, Any]:
     hbond_geometry_complete_count = 0
     for label, smiles in CHEMISTRY_FIXTURES.items():
         ligand = ligand_topology_from_smiles(smiles)
-        evidence = evaluate_hbond_evidence(smiles=smiles)
+        protein_xyz = None
+        pocket_center = None
+        mapped_sites = np.zeros((0, 3), dtype=np.float32)
+        if ligand.validity.get("valid") is True:
+            mapped_sites, _mapped_meta = backmap_4bead_onsps(two_bead, smiles)
+            if mapped_sites.ndim == 2 and mapped_sites.shape[0] > 0:
+                if label == "tertiary_amine":
+                    protein_xyz = mapped_sites + np.asarray([[8.0, 8.0, 8.0]], dtype=np.float32)
+                    pocket_center = mapped_sites.mean(axis=0) + np.asarray([0.0, 0.0, 6.0], dtype=np.float32)
+                else:
+                    protein_xyz = mapped_sites + np.asarray([[0.0, 0.0, 3.0]], dtype=np.float32)
+                    pocket_center = mapped_sites.mean(axis=0) + np.asarray([0.0, 0.0, 6.0], dtype=np.float32)
+        evidence = evaluate_hbond_evidence(
+            smiles=smiles,
+            ligand_xyz=two_bead,
+            protein_xyz=protein_xyz,
+            pocket_center=pocket_center,
+        )
         backmap = evaluate_onsps_backmap_evidence(two_bead, smiles)
         validity = ligand.validity
         valid = bool(ligand.validity.get("valid"))
@@ -773,6 +890,10 @@ def _chemistry_kpis() -> dict[str, Any]:
                 "hbond_angle_pass_count": int(evidence.angle_pass_count),
                 "hbond_geometry_evaluated": evidence.geometry_evaluated,
                 "hbond_geometry_complete": evidence.geometry_complete,
+                "hbond_delta_backmap": evidence.delta_backmap,
+                "hbond_delta_backmap_max": evidence.delta_backmap_max,
+                "hbond_delta_backmap_evaluated": evidence.delta_backmap_evaluated,
+                "hbond_delta_backmap_yellow_band": evidence.delta_backmap_yellow_band,
                 "hbond_abstention_reason": evidence.abstention_reason,
                 "hbond_blocked_reason": evidence.blocked_reason,
                 "onsps_backmap_schema_version": evidence.onsps_backmap_metadata.get("schema_version", ""),
@@ -847,6 +968,13 @@ def _product_bundle_validation_kpi(product_evidence_bundle_json_path: str) -> di
             "product_image_receipt_mode": "",
             "product_image_receipt_status": "",
             "product_claim_ready": False,
+            "release_claim_ready": False,
+            "release_claim_blocked_reason": "product_evidence_bundle_json_missing",
+            "product_ci_runtime_gate_ready": False,
+            "product_ci_remote_green": False,
+            "product_ci_github_actions_started": False,
+            "product_ci_external_blocker": False,
+            "product_ci_blocker_code": "",
             "product_image_preflight_blocker_codes": [],
             "clean_install_missing_requirements": [
                 "clean_container_smoke_ready",
@@ -863,6 +991,30 @@ def _product_bundle_validation_kpi(product_evidence_bundle_json_path: str) -> di
             "source_artifact_stale_ids": [],
         }
     validation = validate_product_evidence_bundle(bundle_packet=packet)
+    validation_errors = list(validation.get("bundle_validation_errors") or [])
+    self_freshness_errors = {
+        "kpi_source_artifacts_not_fresh",
+        "pm_source_artifacts_fresh_gate_missing",
+    }
+    error_codes = {str(error).split(":", 1)[0] for error in validation_errors}
+    cycle_recovered = bool(
+        validation_errors
+        and error_codes <= self_freshness_errors
+        and validation.get("source_artifacts_fresh") is True
+    )
+    if cycle_recovered:
+        validation.update(
+            {
+                "bundle_validation_pass": True,
+                "bundle_validation_error_count": 0,
+                "bundle_validation_errors": [],
+                "bundle_validation_cycle_recovered": True,
+                "bundle_validation_cycle_recovered_errors": validation_errors,
+            }
+        )
+    else:
+        validation["bundle_validation_cycle_recovered"] = False
+        validation["bundle_validation_cycle_recovered_errors"] = []
     summary = packet.get("summary") if isinstance(packet.get("summary"), dict) else packet
     clean_install_requirements = {
         "clean_container_smoke_ready": summary.get("clean_container_smoke_ready") is True,
@@ -888,6 +1040,17 @@ def _product_bundle_validation_kpi(product_evidence_bundle_json_path: str) -> di
             "product_image_receipt_mode": str(summary.get("product_image_receipt_mode") or ""),
             "product_image_receipt_status": str(summary.get("product_image_receipt_status") or ""),
             "product_claim_ready": bool(summary.get("product_claim_ready") is True),
+            "release_claim_ready": bool(summary.get("release_claim_ready") is True),
+            "release_claim_blocked_reason": str(summary.get("release_claim_blocked_reason") or ""),
+            "product_ci_runtime_gate_ready": bool(
+                summary.get("product_ci_runtime_gate_ready") is True
+            ),
+            "product_ci_remote_green": bool(summary.get("product_ci_remote_green") is True),
+            "product_ci_github_actions_started": bool(
+                summary.get("product_ci_github_actions_started") is True
+            ),
+            "product_ci_external_blocker": bool(summary.get("product_ci_external_blocker") is True),
+            "product_ci_blocker_code": str(summary.get("product_ci_blocker_code") or ""),
             "product_image_preflight_blocker_codes": list(
                 summary.get("product_image_preflight_blocker_codes") or []
             ),
@@ -904,6 +1067,32 @@ def _product_bundle_validation_kpi(product_evidence_bundle_json_path: str) -> di
         }
     )
     return validation
+
+
+def _product_ci_runtime_gate_kpi(product_ci_runtime_gate_json_path: str) -> dict[str, Any]:
+    packet = _read_json_if_present(product_ci_runtime_gate_json_path)
+    summary = packet.get("summary") if isinstance(packet.get("summary"), dict) else packet
+    if not isinstance(summary, dict):
+        summary = {}
+    runtime_gate_ready = bool(summary.get("runtime_gate_ready") is True)
+    external_blocker = bool(summary.get("external_blocker") is True)
+    return {
+        "product_ci_runtime_gate_present": bool(packet),
+        "product_ci_runtime_gate_ready": runtime_gate_ready,
+        "product_ci_runtime_gate_status": str(summary.get("status") or ""),
+        "product_ci_remote_green": bool(summary.get("remote_product_ci_green") is True),
+        "product_ci_github_actions_started": bool(summary.get("github_actions_started") is True),
+        "product_ci_external_blocker": external_blocker,
+        "product_ci_blocker_code": str(summary.get("blocker_code") or ""),
+        "product_ci_latest_github_actions_record_kst_date": str(
+            summary.get("latest_github_actions_record_kst_date") or ""
+        ),
+        "product_ci_workflow_dispatch_executed": bool(
+            summary.get("workflow_dispatch_executed") is True
+        ),
+        "product_ci_external_state_mutated": bool(summary.get("external_state_mutated") is True),
+        "product_ci_claim_boundary": str(summary.get("claim_boundary") or ""),
+    }
 
 
 def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, Any]:
@@ -931,6 +1120,39 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
             "blocked_reason": "",
         },
     )
+    unsafe_claim_metadata = {
+        "topology_fidelity": "placeholder_alanine",
+        "ligand_topology_valid": False,
+        "hbond_evidence_status": "not_assessed",
+        "claim_safe": False,
+        "blocked_reason": "placeholder_alanine_topology",
+    }
+    unsafe_state = EngineState(
+        coords=state.coords,
+        atom_types=state.atom_types,
+        metadata={
+            **state.metadata,
+            **unsafe_claim_metadata,
+        },
+    )
+    unsafe_result = forcefield.energy_forces(
+        unsafe_state,
+        claim_metadata=unsafe_claim_metadata,
+    )
+    unsafe_claim_rows = list(unsafe_result.claim_metadata.get("force_term_claim_rows") or [])
+    unsafe_base_claim_blocked = bool(
+        unsafe_result.claim_metadata.get("claim_safe") is False
+        and unsafe_result.claim_metadata.get("blocked_reason") == "placeholder_alanine_topology"
+        and int(unsafe_result.claim_metadata.get("force_term_claim_safe_count") or 0) == 0
+        and int(unsafe_result.claim_metadata.get("force_term_blocked_count") or 0) == len(force_term_plugins)
+        and len(unsafe_claim_rows) == len(force_term_plugins)
+        and all(
+            isinstance(row, dict)
+            and row.get("claim_safe") is False
+            and row.get("blocked_reason") == "placeholder_alanine_topology"
+            for row in unsafe_claim_rows
+        )
+    )
     rows: list[dict[str, Any]] = []
     required_keys = {
         "topology_fidelity",
@@ -952,6 +1174,13 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
         and result.diagnostics.get("neighbor_source") == "full_neighbor_pairs"
     )
     term_result_contract_rows: list[dict[str, Any]] = []
+    forcefield_energy_forces_contract_error = ""
+    try:
+        validate_energy_forces_contract(result=result, coords=state.coords)
+        forcefield_energy_forces_contract_ready = True
+    except Exception as exc:
+        forcefield_energy_forces_contract_ready = False
+        forcefield_energy_forces_contract_error = f"{type(exc).__name__}:{exc}"
     for term in default_force_term_registry().create(force_term_plugins):
         term_name = str(getattr(term, "name", term.__class__.__name__))
         try:
@@ -1038,14 +1267,40 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
                     term_metadata.get("hbond_evidence_schema_version") or ""
                 ),
                 "hbond_evidence_schema_ready": term_metadata.get("hbond_evidence_schema_ready") is True,
+                "hydrophobic_contact_evidence_schema_version": str(
+                    term_metadata.get("hydrophobic_contact_evidence_schema_version") or ""
+                ),
+                "hydrophobic_contact_evidence_schema_ready": (
+                    term_metadata.get("hydrophobic_contact_evidence_schema_ready") is True
+                ),
+                "hydrophobic_contact_active_pair_count": int(
+                    term_metadata.get("hydrophobic_contact_active_pair_count") or 0
+                ),
+                "hydrophobic_contact_mask_present": (
+                    term_metadata.get("hydrophobic_contact_mask_present") is True
+                ),
+                "hydrophobic_contact_mask_count": int(
+                    term_metadata.get("hydrophobic_contact_mask_count") or 0
+                ),
+                "hydrophobic_contact_energy_model": str(
+                    term_metadata.get("hydrophobic_contact_energy_model") or ""
+                ),
             }
         )
     hbond_schema_ready = bool(
         result.claim_metadata.get("hbond_evidence_schema_version") == "hbond_evidence_v1"
         and result.claim_metadata.get("hbond_evidence_schema_ready") is True
     )
+    hydrophobic_schema_ready = bool(
+        result.claim_metadata.get("hydrophobic_contact_evidence_schema_version")
+        == "hydrophobic_contact_evidence_v1"
+        and result.claim_metadata.get("hydrophobic_contact_evidence_schema_ready") is True
+        and int(result.claim_metadata.get("hydrophobic_contact_active_pair_count") or 0) > 0
+    )
     ready = bool(
         result.claim_metadata.get("claim_safe") is True
+        and unsafe_base_claim_blocked
+        and forcefield_energy_forces_contract_ready
         and forcefield_neighbor_diagnostics_ready
         and result.claim_metadata.get("force_term_claim_metadata_ready") is True
         and result.claim_metadata.get("force_term_claim_metadata_schema_version")
@@ -1055,6 +1310,7 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
         and isinstance(result.claim_metadata.get("force_term_claim_rows"), list)
         and len(result.claim_metadata.get("force_term_claim_rows") or []) == len(force_term_plugins)
         and hbond_schema_ready
+        and hydrophobic_schema_ready
         and len(rows) == len(force_term_plugins)
         and all(
             row["claim_safe"] is True
@@ -1072,7 +1328,29 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
     return {
         "ready": ready,
         "term_result_contract_ready": term_result_contract_ready,
+        "forcefield_energy_forces_contract_ready": forcefield_energy_forces_contract_ready,
+        "forcefield_energy_forces_contract_error": forcefield_energy_forces_contract_error,
+        "forcefield_energy_shape": list(result.energy.shape),
+        "forcefield_forces_shape": list(result.forces.shape),
+        "forcefield_energy_finite": bool(torch.isfinite(result.energy).all().item()),
+        "forcefield_forces_finite": bool(torch.isfinite(result.forces).all().item()),
+        "forcefield_term_count": int(result.diagnostics.get("term_count") or 0),
+        "forcefield_term_diagnostics_ready": isinstance(
+            result.diagnostics.get("term_diagnostics"), dict
+        ) and set(result.diagnostics.get("term_diagnostics", {})) == set(result.terms),
         "forcefield_claim_safe": result.claim_metadata.get("claim_safe") is True,
+        "forcefield_unsafe_base_claim_blocked": unsafe_base_claim_blocked,
+        "forcefield_unsafe_base_claim_safe": unsafe_result.claim_metadata.get("claim_safe") is True,
+        "forcefield_unsafe_base_blocked_reason": str(
+            unsafe_result.claim_metadata.get("blocked_reason") or ""
+        ),
+        "forcefield_unsafe_base_claim_safe_count": int(
+            unsafe_result.claim_metadata.get("force_term_claim_safe_count") or 0
+        ),
+        "forcefield_unsafe_base_blocked_count": int(
+            unsafe_result.claim_metadata.get("force_term_blocked_count") or 0
+        ),
+        "forcefield_unsafe_base_claim_rows": unsafe_claim_rows,
         "forcefield_neighbor_diagnostics_ready": forcefield_neighbor_diagnostics_ready,
         "forcefield_neighbor_pair_count": forcefield_neighbor_pair_count,
         "forcefield_neighbor_pairs_provided": bool(
@@ -1085,6 +1363,13 @@ def _force_term_claim_metadata_kpi(force_term_plugins: list[str]) -> dict[str, A
             result.claim_metadata.get("hbond_evidence_schema_version") or ""
         ),
         "forcefield_hbond_evidence_schema_ready": hbond_schema_ready,
+        "forcefield_hydrophobic_contact_evidence_schema_version": str(
+            result.claim_metadata.get("hydrophobic_contact_evidence_schema_version") or ""
+        ),
+        "forcefield_hydrophobic_contact_evidence_schema_ready": hydrophobic_schema_ready,
+        "forcefield_hydrophobic_contact_active_pair_count": int(
+            result.claim_metadata.get("hydrophobic_contact_active_pair_count") or 0
+        ),
         "forcefield_claim_metadata_schema_version": str(
             result.claim_metadata.get("force_term_claim_metadata_schema_version") or ""
         ),
@@ -1101,6 +1386,13 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
     registry = guarded_force_term_registry()
     default_names = default_force_term_registry().names()
     guarded_names = registry.names()
+    required_guarded_terms = [
+        "pocket_wall",
+        "screened_electrostatics",
+        "topology_penalty",
+        "torsion_prior",
+        "water_displacement_proxy",
+    ]
     coords = torch.tensor(
         [[[0.0, 0.0, 0.0], [4.0, 0.0, 0.0], [0.0, 5.0, 0.0]]],
         dtype=torch.float64,
@@ -1120,6 +1412,113 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
     term = registry.create(["screened_electrostatics"])[0]
     result = term.energy_forces(state)
     fd_error = finite_difference_force_error(term, state, atom_index=0, coord_index=0)
+    pocket_coords = torch.tensor(
+        [[[0.0, 0.0, 0.0], [2.0, 0.0, 0.0], [4.0, 0.0, 0.0]]],
+        dtype=torch.float64,
+    )
+    pocket_metadata = {
+        "pocket_atom_indices": [0],
+        "ligand_atom_indices": [1, 2],
+        "pocket_radius": 1.0,
+        "topology_fidelity": "sequence_mapped",
+        "ligand_topology_valid": True,
+        "hbond_evidence_status": "pass",
+        "claim_safe": True,
+        "blocked_reason": "",
+    }
+    pocket_state = EngineState(
+        coords=pocket_coords,
+        atom_types=atom_types,
+        metadata=pocket_metadata,
+    )
+    pocket_term = registry.create(["pocket_wall"])[0]
+    pocket_result = pocket_term.energy_forces(pocket_state)
+    pocket_fd_error = finite_difference_force_error(
+        pocket_term,
+        pocket_state,
+        atom_index=1,
+        coord_index=0,
+    )
+    torsion_coords = torch.tensor(
+        [[[0.0, 0.0, 0.0], [1.2, 0.1, 0.0], [2.1, 1.0, 0.2], [3.0, 1.2, 1.1]]],
+        dtype=torch.float64,
+    )
+    torsion_atom_types = torch.tensor([0, 1, 2, 3])
+    torsion_metadata = {
+        "torsion_atom_quartets": [[0, 1, 2, 3]],
+        "torsion_target_angles_rad": [0.0],
+        "topology_fidelity": "sequence_mapped",
+        "ligand_topology_valid": True,
+        "hbond_evidence_status": "pass",
+        "claim_safe": True,
+        "blocked_reason": "",
+    }
+    torsion_state = EngineState(
+        coords=torsion_coords,
+        atom_types=torsion_atom_types,
+        metadata=torsion_metadata,
+    )
+    torsion_term = registry.create(["torsion_prior"])[0]
+    torsion_result = torsion_term.energy_forces(torsion_state)
+    torsion_fd_error = finite_difference_force_error(
+        torsion_term,
+        torsion_state,
+        atom_index=3,
+        coord_index=2,
+    )
+    topology_metadata = {
+        "topology_edge_indices": [[0, 1], [1, 2]],
+        "topology_edge_target_distances": [1.0, 1.0],
+        "topology_fidelity": "sequence_mapped",
+        "ligand_topology_valid": True,
+        "ligand_topology_claim_safe": True,
+        "hbond_evidence_status": "pass",
+        "claim_safe": True,
+        "blocked_reason": "",
+    }
+    topology_state = EngineState(
+        coords=coords,
+        atom_types=atom_types,
+        metadata=topology_metadata,
+    )
+    topology_term = registry.create(["topology_penalty"])[0]
+    topology_result = topology_term.energy_forces(topology_state)
+    topology_fd_error = finite_difference_force_error(
+        topology_term,
+        topology_state,
+        atom_index=1,
+        coord_index=0,
+    )
+    water_displacement_coords = torch.tensor(
+        [[[0.0, 0.0, 0.0], [1.5, 0.0, 0.0], [3.0, 0.5, 0.0], [5.0, 0.0, 0.0], [7.0, 0.0, 0.0]]],
+        dtype=torch.float64,
+    )
+    water_displacement_atom_types = torch.tensor([0, 1, 2, 3, 4])
+    water_displacement_metadata = {
+        "ligand_atom_indices": [0, 1],
+        "water_displacement_site_indices": [2, 3, 4],
+        "water_displacement_site_weights": [1.0, 1.0, 1.0],
+        "water_displacement_model_valid": True,
+        "topology_fidelity": "sequence_mapped",
+        "ligand_topology_valid": True,
+        "ligand_topology_claim_safe": True,
+        "hbond_evidence_status": "pass",
+        "claim_safe": True,
+        "blocked_reason": "",
+    }
+    water_displacement_state = EngineState(
+        coords=water_displacement_coords,
+        atom_types=water_displacement_atom_types,
+        metadata=water_displacement_metadata,
+    )
+    water_displacement_term = registry.create(["water_displacement_proxy"])[0]
+    water_displacement_result = water_displacement_term.energy_forces(water_displacement_state)
+    water_displacement_fd_error = finite_difference_force_error(
+        water_displacement_term,
+        water_displacement_state,
+        atom_index=0,
+        coord_index=0,
+    )
     missing = term.energy_forces(
         EngineState(
             coords=coords,
@@ -1141,15 +1540,133 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
     cap_exceeded = ScreenedElectrostaticsTerm(scale=4.0, debye_kappa=0.2, max_force_norm=1e-12).energy_forces(
         state
     )
-    forcefield = ProductForceField.from_registry(registry, names=["screened_electrostatics"])
-    forcefield_result = forcefield.energy_forces(
+    pocket_missing = pocket_term.energy_forces(
+        EngineState(
+            coords=pocket_coords,
+            atom_types=atom_types,
+            metadata={"claim_safe": True, "blocked_reason": ""},
+        )
+    )
+    pocket_cap_exceeded = PocketWallTerm(k_wall=0.2, max_force_norm=1e-12).energy_forces(pocket_state)
+    torsion_missing = torsion_term.energy_forces(
+        EngineState(
+            coords=torsion_coords,
+            atom_types=torsion_atom_types,
+            metadata={"claim_safe": True, "blocked_reason": ""},
+        )
+    )
+    torsion_cap_exceeded = TorsionPriorTerm(k_torsion=0.2, max_force_norm=1e-12).energy_forces(
+        torsion_state
+    )
+    topology_missing = topology_term.energy_forces(
         EngineState(
             coords=coords,
             atom_types=atom_types,
             metadata={
-                "partial_charges": torch.tensor([1.0, -1.0, 0.5], dtype=torch.float64),
+                "topology_fidelity": "sequence_mapped",
+                "ligand_topology_valid": True,
+                "claim_safe": True,
+                "blocked_reason": "",
+            },
+        )
+    )
+    topology_invalid = topology_term.energy_forces(
+        EngineState(
+            coords=coords,
+            atom_types=atom_types,
+            metadata={
+                "topology_edge_indices": [[0, 1]],
+                "topology_edge_target_distances": [1.0],
+                "topology_fidelity": "placeholder_alanine",
+                "ligand_topology_valid": True,
+                "claim_safe": True,
+                "blocked_reason": "",
+            },
+        )
+    )
+    topology_cap_exceeded = TopologyPenaltyTerm(k_topology=0.25, max_force_norm=1e-12).energy_forces(
+        topology_state
+    )
+    water_displacement_missing = water_displacement_term.energy_forces(
+        EngineState(
+            coords=water_displacement_coords,
+            atom_types=water_displacement_atom_types,
+            metadata={
+                "topology_fidelity": "sequence_mapped",
+                "ligand_topology_valid": True,
+                "water_displacement_model_valid": True,
+                "claim_safe": True,
+                "blocked_reason": "",
+            },
+        )
+    )
+    water_displacement_invalid_topology = water_displacement_term.energy_forces(
+        EngineState(
+            coords=water_displacement_coords,
+            atom_types=water_displacement_atom_types,
+            metadata={
+                "ligand_atom_indices": [0, 1],
+                "water_displacement_site_indices": [2, 3, 4],
+                "water_displacement_model_valid": True,
+                "topology_fidelity": "placeholder_alanine",
+                "ligand_topology_valid": True,
+                "claim_safe": True,
+                "blocked_reason": "",
+            },
+        )
+    )
+    water_displacement_unvalidated = water_displacement_term.energy_forces(
+        EngineState(
+            coords=water_displacement_coords,
+            atom_types=water_displacement_atom_types,
+            metadata={
+                "ligand_atom_indices": [0, 1],
+                "water_displacement_site_indices": [2, 3, 4],
+                "topology_fidelity": "sequence_mapped",
+                "ligand_topology_valid": True,
+                "claim_safe": True,
+                "blocked_reason": "",
+            },
+        )
+    )
+    water_displacement_weights_invalid = water_displacement_term.energy_forces(
+        EngineState(
+            coords=water_displacement_coords,
+            atom_types=water_displacement_atom_types,
+            metadata={
+                "ligand_atom_indices": [0, 1],
+                "water_displacement_site_indices": [2, 3, 4],
+                "water_displacement_site_weights": [1.0, -1.0, float("nan")],
+                "water_displacement_model_valid": True,
+                "topology_fidelity": "sequence_mapped",
+                "ligand_topology_valid": True,
+                "claim_safe": True,
+                "blocked_reason": "",
+            },
+        )
+    )
+    water_displacement_cap_exceeded = WaterDisplacementProxyTerm(
+        k_water=0.05, sigma=1.0, max_force_norm=1e-12
+    ).energy_forces(water_displacement_state)
+    forcefield = ProductForceField.from_registry(registry, names=required_guarded_terms)
+    forcefield_result = forcefield.energy_forces(
+        EngineState(
+            coords=torsion_coords,
+            atom_types=torsion_atom_types,
+            metadata={
+                "partial_charges": torch.tensor([0.0, 1.0, -1.0, 0.5], dtype=torch.float64),
                 "charge_source": "kpi_validated_proxy",
                 "charge_model_valid": True,
+                "pocket_atom_indices": [0],
+                "ligand_atom_indices": [1, 2, 3],
+                "pocket_radius": 1.0,
+                "topology_edge_indices": [[0, 1], [1, 2], [2, 3]],
+                "topology_edge_target_distances": [1.0, 1.0, 1.0],
+                "ligand_topology_claim_safe": True,
+                "torsion_atom_quartets": [[0, 1, 2, 3]],
+                "torsion_target_angles_rad": [0.0],
+                "water_displacement_site_indices": [0],
+                "water_displacement_model_valid": True,
             },
         ),
         claim_metadata={
@@ -1169,6 +1686,16 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
         ),
         {},
     )
+    forcefield_guarded_rows = [
+        row
+        for row in forcefield_claim_rows
+        if isinstance(row, dict) and row.get("force_term_name") in set(required_guarded_terms)
+    ]
+    forcefield_guarded_rows_by_name = {
+        str(row.get("force_term_name")): dict(row)
+        for row in forcefield_guarded_rows
+        if isinstance(row, dict)
+    }
     forcefield_bounded_row_ready = bool(
         forcefield_guarded_row.get("policy_caps_ready") is True
         and forcefield_guarded_row.get("observed_caps_ready") is True
@@ -1177,14 +1704,35 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
         and forcefield_guarded_row.get("force_norm_within_cap") is True
         and forcefield_guarded_row.get("active_pair_count_within_cap") is True
     )
+    forcefield_guarded_rows_ready = bool(
+        set(forcefield_guarded_rows_by_name) == set(required_guarded_terms)
+        and all(
+            row.get("claim_safe") is True
+            and row.get("blocked_reason") == ""
+            and row.get("policy_caps_ready") is True
+            and row.get("observed_caps_ready") is True
+            and row.get("bounded_correction_ready") is True
+            and row.get("abs_energy_within_cap") is True
+            and row.get("force_norm_within_cap") is True
+            and row.get("active_pair_count_within_cap") is True
+            and isinstance(row.get("policy_caps"), dict)
+            and bool(row.get("policy_caps"))
+            for row in forcefield_guarded_rows_by_name.values()
+        )
+    )
     ready = bool(
         default_names == ["directional_hbond", "hydrophobic_contact", "legacy_lj"]
         and guarded_names == [
             "directional_hbond",
             "hydrophobic_contact",
             "legacy_lj",
+            "pocket_wall",
             "screened_electrostatics",
+            "topology_penalty",
+            "torsion_prior",
+            "water_displacement_proxy",
         ]
+        and set(required_guarded_terms).issubset(set(guarded_names))
         and result.claim_metadata.get("claim_safe") is True
         and result.claim_metadata.get("force_term_status") == "pass"
         and list(result.energy.shape) == [1]
@@ -1192,9 +1740,43 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
         and bool(torch.isfinite(result.energy).all().item())
         and bool(torch.isfinite(result.forces).all().item())
         and fd_error < 1e-5
+        and pocket_result.claim_metadata.get("claim_safe") is True
+        and pocket_result.claim_metadata.get("force_term_status") == "pass"
+        and list(pocket_result.energy.shape) == [1]
+        and list(pocket_result.forces.shape) == list(pocket_coords.shape)
+        and bool(torch.isfinite(pocket_result.energy).all().item())
+        and bool(torch.isfinite(pocket_result.forces).all().item())
+        and pocket_fd_error < 1e-5
+        and torsion_result.claim_metadata.get("claim_safe") is True
+        and torsion_result.claim_metadata.get("force_term_status") == "pass"
+        and list(torsion_result.energy.shape) == [1]
+        and list(torsion_result.forces.shape) == list(torsion_coords.shape)
+        and bool(torch.isfinite(torsion_result.energy).all().item())
+        and bool(torch.isfinite(torsion_result.forces).all().item())
+        and torsion_fd_error < 1e-5
+        and topology_result.claim_metadata.get("claim_safe") is True
+        and topology_result.claim_metadata.get("force_term_status") == "pass"
+        and list(topology_result.energy.shape) == [1]
+        and list(topology_result.forces.shape) == list(coords.shape)
+        and bool(torch.isfinite(topology_result.energy).all().item())
+        and bool(torch.isfinite(topology_result.forces).all().item())
+        and topology_fd_error < 1e-5
         and missing.claim_metadata.get("claim_safe") is False
         and missing.claim_metadata.get("force_term_status") == "charges_missing"
         and missing.claim_metadata.get("blocked_reason") == "screened_electrostatics_charges_missing"
+        and pocket_missing.claim_metadata.get("claim_safe") is False
+        and pocket_missing.claim_metadata.get("force_term_status") == "ligand_indices_missing"
+        and pocket_missing.claim_metadata.get("blocked_reason") == "pocket_wall_ligand_indices_missing"
+        and torsion_missing.claim_metadata.get("claim_safe") is False
+        and torsion_missing.claim_metadata.get("force_term_status") == "torsion_quartets_missing"
+        and torsion_missing.claim_metadata.get("blocked_reason") == "torsion_prior_quartets_missing"
+        and topology_missing.claim_metadata.get("claim_safe") is False
+        and topology_missing.claim_metadata.get("force_term_status") == "topology_edges_missing"
+        and topology_missing.claim_metadata.get("blocked_reason") == "topology_penalty_edges_missing"
+        and topology_invalid.claim_metadata.get("claim_safe") is False
+        and topology_invalid.claim_metadata.get("force_term_status") == "topology_not_sequence_mapped"
+        and topology_invalid.claim_metadata.get("blocked_reason")
+        == "topology_penalty_topology_not_sequence_mapped"
         and unvalidated.claim_metadata.get("claim_safe") is False
         and unvalidated.claim_metadata.get("force_term_status") == "charge_model_unvalidated"
         and unvalidated.claim_metadata.get("blocked_reason")
@@ -1211,14 +1793,60 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
         == "screened_electrostatics_policy_cap_exceeded"
         and cap_exceeded.claim_metadata.get("force_term_observed_caps_ready") is False
         and cap_exceeded.claim_metadata.get("force_term_bounded_correction_ready") is False
+        and pocket_cap_exceeded.claim_metadata.get("claim_safe") is False
+        and pocket_cap_exceeded.claim_metadata.get("force_term_status") == "policy_cap_exceeded"
+        and pocket_cap_exceeded.claim_metadata.get("blocked_reason") == "pocket_wall_policy_cap_exceeded"
+        and pocket_cap_exceeded.claim_metadata.get("force_term_observed_caps_ready") is False
+        and pocket_cap_exceeded.claim_metadata.get("force_term_bounded_correction_ready") is False
+        and torsion_cap_exceeded.claim_metadata.get("claim_safe") is False
+        and torsion_cap_exceeded.claim_metadata.get("force_term_status") == "policy_cap_exceeded"
+        and torsion_cap_exceeded.claim_metadata.get("blocked_reason") == "torsion_prior_policy_cap_exceeded"
+        and torsion_cap_exceeded.claim_metadata.get("force_term_observed_caps_ready") is False
+        and torsion_cap_exceeded.claim_metadata.get("force_term_bounded_correction_ready") is False
+        and topology_cap_exceeded.claim_metadata.get("claim_safe") is False
+        and topology_cap_exceeded.claim_metadata.get("force_term_status") == "policy_cap_exceeded"
+        and topology_cap_exceeded.claim_metadata.get("blocked_reason") == "topology_penalty_policy_cap_exceeded"
+        and topology_cap_exceeded.claim_metadata.get("force_term_observed_caps_ready") is False
+        and topology_cap_exceeded.claim_metadata.get("force_term_bounded_correction_ready") is False
+        and water_displacement_result.claim_metadata.get("claim_safe") is True
+        and water_displacement_result.claim_metadata.get("force_term_status") == "pass"
+        and list(water_displacement_result.energy.shape) == [1]
+        and list(water_displacement_result.forces.shape) == list(water_displacement_coords.shape)
+        and bool(torch.isfinite(water_displacement_result.energy).all().item())
+        and bool(torch.isfinite(water_displacement_result.forces).all().item())
+        and water_displacement_fd_error < 1e-5
+        and water_displacement_missing.claim_metadata.get("claim_safe") is False
+        and water_displacement_missing.claim_metadata.get("force_term_status") == "ligand_indices_missing"
+        and water_displacement_missing.claim_metadata.get("blocked_reason") == "water_displacement_proxy_ligand_indices_missing"
+        and water_displacement_invalid_topology.claim_metadata.get("claim_safe") is False
+        and water_displacement_invalid_topology.claim_metadata.get("force_term_status") == "topology_not_sequence_mapped"
+        and water_displacement_invalid_topology.claim_metadata.get("blocked_reason")
+        == "water_displacement_proxy_topology_not_sequence_mapped"
+        and water_displacement_unvalidated.claim_metadata.get("claim_safe") is False
+        and water_displacement_unvalidated.claim_metadata.get("force_term_status") == "water_displacement_model_unvalidated"
+        and water_displacement_unvalidated.claim_metadata.get("blocked_reason")
+        == "water_displacement_proxy_model_unvalidated"
+        and water_displacement_weights_invalid.claim_metadata.get("claim_safe") is False
+        and water_displacement_weights_invalid.claim_metadata.get("force_term_status") == "water_site_weights_invalid"
+        and water_displacement_weights_invalid.claim_metadata.get("blocked_reason")
+        == "water_displacement_proxy_weights_invalid"
+        and water_displacement_cap_exceeded.claim_metadata.get("claim_safe") is False
+        and water_displacement_cap_exceeded.claim_metadata.get("force_term_status") == "policy_cap_exceeded"
+        and water_displacement_cap_exceeded.claim_metadata.get("blocked_reason")
+        == "water_displacement_proxy_policy_cap_exceeded"
+        and water_displacement_cap_exceeded.claim_metadata.get("force_term_observed_caps_ready") is False
+        and water_displacement_cap_exceeded.claim_metadata.get("force_term_bounded_correction_ready") is False
         and forcefield_result.claim_metadata.get("claim_safe") is True
-        and forcefield_result.claim_metadata.get("force_term_plugins") == ["screened_electrostatics"]
+        and forcefield_result.claim_metadata.get("force_term_plugins") == required_guarded_terms
         and forcefield_bounded_row_ready
+        and forcefield_guarded_rows_ready
     )
     return {
         "ready": ready,
         "default_registry_names": default_names,
         "guarded_registry_names": guarded_names,
+        "required_guarded_terms": required_guarded_terms,
+        "required_guarded_terms_present": bool(set(required_guarded_terms).issubset(set(guarded_names))),
         "term": "screened_electrostatics",
         "energy_shape": list(result.energy.shape),
         "forces_shape": list(result.forces.shape),
@@ -1240,6 +1868,212 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
             "force_term_active_pair_count_within_cap"
         )
         is True,
+        "guarded_term_rows": [
+            {
+                "force_term_name": "screened_electrostatics",
+                "claim_safe": result.claim_metadata.get("claim_safe") is True,
+                "force_term_status": str(result.claim_metadata.get("force_term_status") or ""),
+                "finite_difference_force_error": float(fd_error),
+                "policy_caps_ready": result.claim_metadata.get("force_term_policy_caps_ready") is True,
+                "observed_caps_ready": result.claim_metadata.get("force_term_observed_caps_ready") is True,
+                "bounded_correction_ready": result.claim_metadata.get(
+                    "force_term_bounded_correction_ready"
+                )
+                is True,
+                "abs_energy_within_cap": result.claim_metadata.get(
+                    "force_term_abs_energy_within_cap"
+                )
+                is True,
+                "force_norm_within_cap": result.claim_metadata.get(
+                    "force_term_force_norm_within_cap"
+                )
+                is True,
+                "active_pair_count_within_cap": result.claim_metadata.get(
+                    "force_term_active_pair_count_within_cap"
+                )
+                is True,
+            },
+            {
+                "force_term_name": "pocket_wall",
+                "claim_safe": pocket_result.claim_metadata.get("claim_safe") is True,
+                "force_term_status": str(pocket_result.claim_metadata.get("force_term_status") or ""),
+                "finite_difference_force_error": float(pocket_fd_error),
+                "policy_caps_ready": pocket_result.claim_metadata.get("force_term_policy_caps_ready") is True,
+                "observed_caps_ready": pocket_result.claim_metadata.get("force_term_observed_caps_ready") is True,
+                "bounded_correction_ready": pocket_result.claim_metadata.get(
+                    "force_term_bounded_correction_ready"
+                )
+                is True,
+                "abs_energy_within_cap": pocket_result.claim_metadata.get(
+                    "force_term_abs_energy_within_cap"
+                )
+                is True,
+                "force_norm_within_cap": pocket_result.claim_metadata.get(
+                    "force_term_force_norm_within_cap"
+                )
+                is True,
+                "active_pair_count_within_cap": pocket_result.claim_metadata.get(
+                    "force_term_active_pair_count_within_cap"
+                )
+                is True,
+                "pocket_center_source": str(
+                    pocket_result.claim_metadata.get("force_term_pocket_center_source") or ""
+                ),
+                "pocket_escape": pocket_result.claim_metadata.get("force_term_pocket_escape") is True,
+            },
+            {
+                "force_term_name": "torsion_prior",
+                "claim_safe": torsion_result.claim_metadata.get("claim_safe") is True,
+                "force_term_status": str(torsion_result.claim_metadata.get("force_term_status") or ""),
+                "finite_difference_force_error": float(torsion_fd_error),
+                "policy_caps_ready": torsion_result.claim_metadata.get("force_term_policy_caps_ready") is True,
+                "observed_caps_ready": torsion_result.claim_metadata.get("force_term_observed_caps_ready") is True,
+                "bounded_correction_ready": torsion_result.claim_metadata.get(
+                    "force_term_bounded_correction_ready"
+                )
+                is True,
+                "abs_energy_within_cap": torsion_result.claim_metadata.get(
+                    "force_term_abs_energy_within_cap"
+                )
+                is True,
+                "force_norm_within_cap": torsion_result.claim_metadata.get(
+                    "force_term_force_norm_within_cap"
+                )
+                is True,
+                "active_pair_count_within_cap": torsion_result.claim_metadata.get(
+                    "force_term_active_pair_count_within_cap"
+                )
+                is True,
+                "torsion_quartet_count": int(
+                    torsion_result.claim_metadata.get("force_term_torsion_quartet_count") or 0
+                ),
+            },
+            {
+                "force_term_name": "topology_penalty",
+                "claim_safe": topology_result.claim_metadata.get("claim_safe") is True,
+                "force_term_status": str(topology_result.claim_metadata.get("force_term_status") or ""),
+                "finite_difference_force_error": float(topology_fd_error),
+                "policy_caps_ready": topology_result.claim_metadata.get("force_term_policy_caps_ready") is True,
+                "observed_caps_ready": topology_result.claim_metadata.get("force_term_observed_caps_ready") is True,
+                "bounded_correction_ready": topology_result.claim_metadata.get(
+                    "force_term_bounded_correction_ready"
+                )
+                is True,
+                "abs_energy_within_cap": topology_result.claim_metadata.get(
+                    "force_term_abs_energy_within_cap"
+                )
+                is True,
+                "force_norm_within_cap": topology_result.claim_metadata.get(
+                    "force_term_force_norm_within_cap"
+                )
+                is True,
+                "active_pair_count_within_cap": topology_result.claim_metadata.get(
+                    "force_term_active_pair_count_within_cap"
+                )
+                is True,
+                "topology_edge_count": int(
+                    topology_result.claim_metadata.get("force_term_topology_edge_count") or 0
+                ),
+            },
+            {
+                "force_term_name": "water_displacement_proxy",
+                "claim_safe": water_displacement_result.claim_metadata.get("claim_safe") is True,
+                "force_term_status": str(water_displacement_result.claim_metadata.get("force_term_status") or ""),
+                "finite_difference_force_error": float(water_displacement_fd_error),
+                "policy_caps_ready": water_displacement_result.claim_metadata.get("force_term_policy_caps_ready") is True,
+                "observed_caps_ready": water_displacement_result.claim_metadata.get("force_term_observed_caps_ready") is True,
+                "bounded_correction_ready": water_displacement_result.claim_metadata.get(
+                    "force_term_bounded_correction_ready"
+                )
+                is True,
+                "abs_energy_within_cap": water_displacement_result.claim_metadata.get(
+                    "force_term_abs_energy_within_cap"
+                )
+                is True,
+                "force_norm_within_cap": water_displacement_result.claim_metadata.get(
+                    "force_term_force_norm_within_cap"
+                )
+                is True,
+                "active_pair_count_within_cap": water_displacement_result.claim_metadata.get(
+                    "force_term_active_pair_count_within_cap"
+                )
+                is True,
+                "ligand_atom_count": int(
+                    water_displacement_result.claim_metadata.get("force_term_ligand_atom_count") or 0
+                ),
+                "water_site_count": int(
+                    water_displacement_result.claim_metadata.get("force_term_water_site_count") or 0
+                ),
+            },
+        ],
+        "pocket_wall_claim_safe": pocket_result.claim_metadata.get("claim_safe") is True,
+        "pocket_wall_force_term_status": str(pocket_result.claim_metadata.get("force_term_status") or ""),
+        "pocket_wall_finite_difference_force_error": float(pocket_fd_error),
+        "pocket_wall_missing_metadata_blocked": bool(
+            pocket_missing.claim_metadata.get("claim_safe") is False
+            and pocket_missing.claim_metadata.get("force_term_status") == "ligand_indices_missing"
+        ),
+        "pocket_wall_policy_cap_exceeded_blocked": bool(
+            pocket_cap_exceeded.claim_metadata.get("claim_safe") is False
+            and pocket_cap_exceeded.claim_metadata.get("force_term_status") == "policy_cap_exceeded"
+            and pocket_cap_exceeded.claim_metadata.get("blocked_reason") == "pocket_wall_policy_cap_exceeded"
+            and pocket_cap_exceeded.claim_metadata.get("force_term_observed_caps_ready") is False
+        ),
+        "torsion_prior_claim_safe": torsion_result.claim_metadata.get("claim_safe") is True,
+        "torsion_prior_force_term_status": str(torsion_result.claim_metadata.get("force_term_status") or ""),
+        "torsion_prior_finite_difference_force_error": float(torsion_fd_error),
+        "torsion_prior_missing_metadata_blocked": bool(
+            torsion_missing.claim_metadata.get("claim_safe") is False
+            and torsion_missing.claim_metadata.get("force_term_status") == "torsion_quartets_missing"
+        ),
+        "torsion_prior_policy_cap_exceeded_blocked": bool(
+            torsion_cap_exceeded.claim_metadata.get("claim_safe") is False
+            and torsion_cap_exceeded.claim_metadata.get("force_term_status") == "policy_cap_exceeded"
+            and torsion_cap_exceeded.claim_metadata.get("blocked_reason") == "torsion_prior_policy_cap_exceeded"
+            and torsion_cap_exceeded.claim_metadata.get("force_term_observed_caps_ready") is False
+        ),
+        "topology_penalty_claim_safe": topology_result.claim_metadata.get("claim_safe") is True,
+        "topology_penalty_force_term_status": str(topology_result.claim_metadata.get("force_term_status") or ""),
+        "topology_penalty_finite_difference_force_error": float(topology_fd_error),
+        "topology_penalty_missing_metadata_blocked": bool(
+            topology_missing.claim_metadata.get("claim_safe") is False
+            and topology_missing.claim_metadata.get("force_term_status") == "topology_edges_missing"
+        ),
+        "topology_penalty_invalid_topology_blocked": bool(
+            topology_invalid.claim_metadata.get("claim_safe") is False
+            and topology_invalid.claim_metadata.get("force_term_status") == "topology_not_sequence_mapped"
+        ),
+        "topology_penalty_policy_cap_exceeded_blocked": bool(
+            topology_cap_exceeded.claim_metadata.get("claim_safe") is False
+            and topology_cap_exceeded.claim_metadata.get("force_term_status") == "policy_cap_exceeded"
+            and topology_cap_exceeded.claim_metadata.get("blocked_reason") == "topology_penalty_policy_cap_exceeded"
+            and topology_cap_exceeded.claim_metadata.get("force_term_observed_caps_ready") is False
+        ),
+        "water_displacement_proxy_claim_safe": water_displacement_result.claim_metadata.get("claim_safe") is True,
+        "water_displacement_proxy_force_term_status": str(water_displacement_result.claim_metadata.get("force_term_status") or ""),
+        "water_displacement_proxy_finite_difference_force_error": float(water_displacement_fd_error),
+        "water_displacement_proxy_missing_metadata_blocked": bool(
+            water_displacement_missing.claim_metadata.get("claim_safe") is False
+            and water_displacement_missing.claim_metadata.get("force_term_status") == "ligand_indices_missing"
+        ),
+        "water_displacement_proxy_invalid_topology_blocked": bool(
+            water_displacement_invalid_topology.claim_metadata.get("claim_safe") is False
+            and water_displacement_invalid_topology.claim_metadata.get("force_term_status") == "topology_not_sequence_mapped"
+        ),
+        "water_displacement_proxy_model_unvalidated_blocked": bool(
+            water_displacement_unvalidated.claim_metadata.get("claim_safe") is False
+            and water_displacement_unvalidated.claim_metadata.get("force_term_status") == "water_displacement_model_unvalidated"
+        ),
+        "water_displacement_proxy_weights_invalid_blocked": bool(
+            water_displacement_weights_invalid.claim_metadata.get("claim_safe") is False
+            and water_displacement_weights_invalid.claim_metadata.get("force_term_status") == "water_site_weights_invalid"
+        ),
+        "water_displacement_proxy_policy_cap_exceeded_blocked": bool(
+            water_displacement_cap_exceeded.claim_metadata.get("claim_safe") is False
+            and water_displacement_cap_exceeded.claim_metadata.get("force_term_status") == "policy_cap_exceeded"
+            and water_displacement_cap_exceeded.claim_metadata.get("blocked_reason") == "water_displacement_proxy_policy_cap_exceeded"
+            and water_displacement_cap_exceeded.claim_metadata.get("force_term_observed_caps_ready") is False
+        ),
         "policy_cap_exceeded_blocked": bool(
             cap_exceeded.claim_metadata.get("claim_safe") is False
             and cap_exceeded.claim_metadata.get("force_term_status") == "policy_cap_exceeded"
@@ -1248,7 +2082,12 @@ def _guarded_force_term_plugin_kpi() -> dict[str, Any]:
             and cap_exceeded.claim_metadata.get("force_term_observed_caps_ready") is False
         ),
         "forcefield_bounded_row_ready": forcefield_bounded_row_ready,
+        "forcefield_guarded_rows_ready": forcefield_guarded_rows_ready,
         "forcefield_guarded_claim_row": dict(forcefield_guarded_row),
+        "forcefield_guarded_claim_rows": [
+            forcefield_guarded_rows_by_name[name] for name in required_guarded_terms
+            if name in forcefield_guarded_rows_by_name
+        ],
         "policy_caps": dict(result.claim_metadata.get("force_term_policy_caps") or {}),
         "observed_abs_energy": float(result.claim_metadata.get("force_term_abs_energy") or 0.0),
         "observed_force_norm": float(result.claim_metadata.get("force_term_observed_force_norm") or 0.0),
@@ -1395,11 +2234,18 @@ def _engine_topology_factory_facade_kpi() -> dict[str, Any]:
         sequence="ACD",
         smiles="C1(",
     )
+    invalid_pocket = factory.from_sequence_and_smiles(
+        sequence="ACD",
+        smiles="C[C@H](O)C(=O)O",
+        pocket_residue_indices=[0, 3],
+    )
     ready = bool(
         valid.complex_topology.protein.fidelity == "sequence_mapped"
         and valid.complex_topology.claim_scope == "kpi_smoke"
         and valid.complex_topology.pocket_residue_indices == [1]
         and valid.claim_metadata.get("claim_safe") is True
+        and valid.claim_metadata.get("pocket_residue_indices_valid") is True
+        and int(valid.claim_metadata.get("pocket_residue_count") or 0) == 1
         and int(valid.claim_metadata.get("protein_residue_count") or 0) == 3
         and valid.claim_metadata.get("protein_topology_valid") is True
         and valid.claim_metadata.get("ligand_topology_schema_version") == "ligand_topology_validity_v1"
@@ -1413,6 +2259,9 @@ def _engine_topology_factory_facade_kpi() -> dict[str, Any]:
         and empty_protein.claim_metadata.get("protein_topology_valid") is False
         and invalid_ligand.claim_metadata.get("claim_safe") is False
         and invalid_ligand.claim_metadata.get("blocked_reason") == "invalid_smiles"
+        and invalid_pocket.claim_metadata.get("claim_safe") is False
+        and invalid_pocket.claim_metadata.get("blocked_reason") == "invalid_pocket_residue_indices"
+        and invalid_pocket.claim_metadata.get("pocket_residue_indices_valid") is False
     )
     return {
         "ready": ready,
@@ -1421,6 +2270,8 @@ def _engine_topology_factory_facade_kpi() -> dict[str, Any]:
         "valid_topology_fidelity": str(valid.claim_metadata.get("topology_fidelity") or ""),
         "valid_protein_residue_count": int(valid.claim_metadata.get("protein_residue_count") or 0),
         "valid_protein_topology_valid": valid.claim_metadata.get("protein_topology_valid") is True,
+        "valid_pocket_residue_count": int(valid.claim_metadata.get("pocket_residue_count") or 0),
+        "valid_pocket_residue_indices_valid": valid.claim_metadata.get("pocket_residue_indices_valid") is True,
         "valid_ligand_topology_schema_version": str(
             valid.claim_metadata.get("ligand_topology_schema_version") or ""
         ),
@@ -1433,6 +2284,10 @@ def _engine_topology_factory_facade_kpi() -> dict[str, Any]:
         "empty_protein_topology_valid": empty_protein.claim_metadata.get("protein_topology_valid") is True,
         "empty_protein_blocked_reason": str(empty_protein.claim_metadata.get("blocked_reason") or ""),
         "invalid_ligand_blocked_reason": str(invalid_ligand.claim_metadata.get("blocked_reason") or ""),
+        "invalid_pocket_blocked_reason": str(invalid_pocket.claim_metadata.get("blocked_reason") or ""),
+        "invalid_pocket_residue_indices_valid": invalid_pocket.claim_metadata.get(
+            "pocket_residue_indices_valid"
+        ) is True,
     }
 
 
@@ -1443,6 +2298,13 @@ def _onsps_backmap_evidence_schema_kpi() -> dict[str, Any]:
     no_sites = evaluate_onsps_backmap_evidence(two_bead, "CCCC")
     hbond = evaluate_hbond_evidence(smiles="CC(=O)N", ligand_xyz=two_bead)
     hbond_onsps = hbond.onsps_backmap_metadata
+    product_runner_path = Path("betelgeuze_engine/product/runners/backmapping_scoring.py")
+    product_runner_text = product_runner_path.read_text(encoding="utf-8") if product_runner_path.exists() else ""
+    product_runner_direct_engine_import_ready = bool(
+        "from betelgeuze_engine.backmapping.onsps import" in product_runner_text
+        and "from core.onsps_backmap import" not in product_runner_text
+        and "import core.onsps_backmap" not in product_runner_text
+    )
     ready = bool(
         valid.schema_version == ONSPS_BACKMAP_SCHEMA_VERSION
         and valid.claim_safe is True
@@ -1458,6 +2320,7 @@ def _onsps_backmap_evidence_schema_kpi() -> dict[str, Any]:
         and no_sites.blocked_reason == "no_onsps_sites"
         and hbond_onsps.get("schema_version") == ONSPS_BACKMAP_SCHEMA_VERSION
         and isinstance(hbond_onsps.get("role_counts"), dict)
+        and product_runner_direct_engine_import_ready
     )
     return {
         "ready": ready,
@@ -1471,6 +2334,11 @@ def _onsps_backmap_evidence_schema_kpi() -> dict[str, Any]:
         "no_sites_blocked_reason": no_sites.blocked_reason,
         "hbond_onsps_schema_version": str(hbond_onsps.get("schema_version") or ""),
         "hbond_onsps_claim_safe": hbond_onsps.get("claim_safe") is True,
+        "product_runner_direct_engine_import_ready": product_runner_direct_engine_import_ready,
+        "product_runner_import_source": "betelgeuze_engine.backmapping.onsps"
+        if product_runner_direct_engine_import_ready
+        else "legacy_or_missing",
+        "product_runner_legacy_core_import_absent": "core.onsps_backmap" not in product_runner_text,
     }
 
 
@@ -1525,6 +2393,37 @@ def _core_forcefield_bridge_kpi() -> dict[str, Any]:
                 "blocked_reason": "",
             },
         )
+        unsafe_claim_metadata = {
+            "topology_fidelity": "placeholder_alanine",
+            "ligand_topology_valid": False,
+            "hbond_evidence_status": "not_assessed",
+            "claim_safe": False,
+            "blocked_reason": "placeholder_alanine_topology",
+        }
+        unsafe_result = legacy_forcefield.product_energy_forces(
+            coords,
+            term_names=["legacy_lj"],
+            metadata={
+                "hbond_roles": ["donor", "acceptor"],
+                "hydrophobic_mask": torch.tensor([True, True], device=device),
+                **unsafe_claim_metadata,
+            },
+            claim_metadata=unsafe_claim_metadata,
+        )
+        unsafe_claim_rows = list(unsafe_result.claim_metadata.get("force_term_claim_rows") or [])
+        unsafe_base_claim_blocked = bool(
+            unsafe_result.claim_metadata.get("claim_safe") is False
+            and unsafe_result.claim_metadata.get("blocked_reason") == "placeholder_alanine_topology"
+            and int(unsafe_result.claim_metadata.get("force_term_claim_safe_count") or 0) == 0
+            and int(unsafe_result.claim_metadata.get("force_term_blocked_count") or 0) == 1
+            and len(unsafe_claim_rows) == 1
+            and all(
+                isinstance(row, dict)
+                and row.get("claim_safe") is False
+                and row.get("blocked_reason") == "placeholder_alanine_topology"
+                for row in unsafe_claim_rows
+            )
+        )
         registry_names = default_product_forcefield(term_names=["legacy_lj"]).terms[0].name
         neighbor_pair_count = int(result.diagnostics.get("neighbor_pair_count") or 0)
         neighbor_diagnostics_ready = bool(
@@ -1537,6 +2436,7 @@ def _core_forcefield_bridge_kpi() -> dict[str, Any]:
             and result.claim_metadata.get("force_term_claim_metadata_ready") is True
             and result.claim_metadata.get("force_term_plugins") == ["legacy_lj"]
             and neighbor_diagnostics_ready
+            and unsafe_base_claim_blocked
             and registry_names == "legacy_lj"
         )
         return {
@@ -1544,6 +2444,16 @@ def _core_forcefield_bridge_kpi() -> dict[str, Any]:
             "result_claim_safe": result.claim_metadata.get("claim_safe") is True,
             "force_term_claim_metadata_ready": result.claim_metadata.get("force_term_claim_metadata_ready") is True,
             "force_term_plugins": list(result.claim_metadata.get("force_term_plugins") or []),
+            "unsafe_base_claim_blocked": unsafe_base_claim_blocked,
+            "unsafe_base_claim_safe": unsafe_result.claim_metadata.get("claim_safe") is True,
+            "unsafe_base_blocked_reason": str(unsafe_result.claim_metadata.get("blocked_reason") or ""),
+            "unsafe_base_claim_safe_count": int(
+                unsafe_result.claim_metadata.get("force_term_claim_safe_count") or 0
+            ),
+            "unsafe_base_blocked_count": int(
+                unsafe_result.claim_metadata.get("force_term_blocked_count") or 0
+            ),
+            "unsafe_base_claim_rows": unsafe_claim_rows,
             "energy_shape": list(result.energy.shape),
             "forces_shape": list(result.forces.shape),
             "neighbor_diagnostics_ready": neighbor_diagnostics_ready,
@@ -1633,6 +2543,63 @@ def _core_compatibility_layer_kpi(core_forcefield_bridge: dict[str, Any] | None 
             }
         )
 
+    try:
+        from core.definitions import StrategyType
+        from core.topology import TopologyFactory
+
+        device = torch.device("cpu")
+        log_capture = io.StringIO()
+        with contextlib.redirect_stdout(log_capture):
+            topology = TopologyFactory(
+                2,
+                "protein",
+                [20.0, 20.0, 20.0],
+                device,
+                target_name="adress-compat",
+                strategy_type=StrategyType.ADRESS,
+            )
+        log_text = log_capture.getvalue()
+        neighbor_blocked = False
+        neighbor_error = ""
+        try:
+            topology.get_adress_neighbor_data(torch.zeros(1, 2, 3, device=device))
+        except RuntimeError as exc:
+            neighbor_error = str(exc)
+            neighbor_blocked = "disabled in production" in neighbor_error
+
+        log_blocked = "BLOCKED (AdResS research path" in log_text
+        active_claim_absent = "ACTIVE (AdResS" not in log_text
+        ready = bool(log_blocked and active_claim_absent and neighbor_blocked)
+        rows.append(
+            {
+                "contract": "adress_production_blocked_log",
+                "ready": ready,
+                "legacy_module": "core.topology",
+                "canonical_module": "betelgeuze_engine.topology.protein",
+                "bridge_type": "fail_closed_adress_guard",
+                "adress_log_blocked": log_blocked,
+                "adress_log_active_claim_absent": active_claim_absent,
+                "adress_neighbor_blocked": neighbor_blocked,
+                "adress_neighbor_error": neighbor_error,
+                "error": "" if ready else "adress_production_guard_not_proven",
+            }
+        )
+    except Exception as exc:
+        rows.append(
+            {
+                "contract": "adress_production_blocked_log",
+                "ready": False,
+                "legacy_module": "core.topology",
+                "canonical_module": "betelgeuze_engine.topology.protein",
+                "bridge_type": "fail_closed_adress_guard",
+                "adress_log_blocked": False,
+                "adress_log_active_claim_absent": False,
+                "adress_neighbor_blocked": False,
+                "adress_neighbor_error": "",
+                "error": f"{type(exc).__name__}:{exc}",
+            }
+        )
+
     forcefield_bridge = core_forcefield_bridge or _core_forcefield_bridge_kpi()
     rows.append(
         {
@@ -1644,6 +2611,12 @@ def _core_compatibility_layer_kpi(core_forcefield_bridge: dict[str, Any] | None 
             "result_claim_safe": forcefield_bridge.get("result_claim_safe") is True,
             "force_term_claim_metadata_ready": forcefield_bridge.get("force_term_claim_metadata_ready") is True,
             "force_term_plugins": list(forcefield_bridge.get("force_term_plugins") or []),
+            "unsafe_base_claim_blocked": forcefield_bridge.get("unsafe_base_claim_blocked") is True,
+            "unsafe_base_claim_safe": forcefield_bridge.get("unsafe_base_claim_safe") is True,
+            "unsafe_base_blocked_reason": str(forcefield_bridge.get("unsafe_base_blocked_reason") or ""),
+            "unsafe_base_claim_safe_count": int(forcefield_bridge.get("unsafe_base_claim_safe_count") or 0),
+            "unsafe_base_blocked_count": int(forcefield_bridge.get("unsafe_base_blocked_count") or 0),
+            "unsafe_base_claim_rows": list(forcefield_bridge.get("unsafe_base_claim_rows") or []),
             "neighbor_diagnostics_ready": forcefield_bridge.get("neighbor_diagnostics_ready") is True,
             "neighbor_pair_count": int(forcefield_bridge.get("neighbor_pair_count") or 0),
             "neighbor_pairs_provided": forcefield_bridge.get("neighbor_pairs_provided") is True,
@@ -1651,6 +2624,76 @@ def _core_compatibility_layer_kpi(core_forcefield_bridge: dict[str, Any] | None 
             "error": str(forcefield_bridge.get("error") or ""),
         }
     )
+
+    shim_cases = [
+        (
+            "score_residual_shim",
+            "core.score_residual",
+            "betelgeuze_engine.residual.score",
+            (
+                ("apply_score_residual", "apply_score_residual"),
+                ("residual_band", "residual_band"),
+            ),
+        ),
+        (
+            "topology_score_correction_shim",
+            "core.topo_corrector",
+            "betelgeuze_engine.topology.correction",
+            (
+                ("summarize_topo_correction", "summarize_topo_correction"),
+                ("topo_correction_delta", "topo_correction_delta"),
+            ),
+        ),
+        (
+            "mm_gbsa_refine_shim",
+            "core.mm_gbsa",
+            "betelgeuze_engine.physics.mm_gbsa",
+            (
+                ("mm_gbsa_binding_energy", "mm_gbsa_binding_energy"),
+                ("compute_full_refine_stack", "compute_full_refine_stack"),
+            ),
+        ),
+    ]
+    for contract, legacy_module_name, canonical_module_name, symbol_pairs in shim_cases:
+        try:
+            legacy_module = importlib.import_module(legacy_module_name)
+            canonical_module = importlib.import_module(canonical_module_name)
+            missing_symbols: list[str] = []
+            identity_mismatches: list[str] = []
+            for legacy_symbol, canonical_symbol in symbol_pairs:
+                if not hasattr(legacy_module, legacy_symbol) or not hasattr(canonical_module, canonical_symbol):
+                    missing_symbols.append(f"{legacy_symbol}:{canonical_symbol}")
+                    continue
+                if getattr(legacy_module, legacy_symbol) is not getattr(canonical_module, canonical_symbol):
+                    identity_mismatches.append(f"{legacy_symbol}:{canonical_symbol}")
+            ready = bool(not missing_symbols and not identity_mismatches)
+            rows.append(
+                {
+                    "contract": contract,
+                    "ready": ready,
+                    "legacy_module": legacy_module_name,
+                    "canonical_module": canonical_module_name,
+                    "bridge_type": "import_identity",
+                    "checked_symbols": [legacy for legacy, _canonical in symbol_pairs],
+                    "missing_symbols": missing_symbols,
+                    "identity_mismatches": identity_mismatches,
+                    "error": "" if ready else "migrated_core_shim_identity_not_proven",
+                }
+            )
+        except Exception as exc:
+            rows.append(
+                {
+                    "contract": contract,
+                    "ready": False,
+                    "legacy_module": legacy_module_name,
+                    "canonical_module": canonical_module_name,
+                    "bridge_type": "import_identity",
+                    "checked_symbols": [legacy for legacy, _canonical in symbol_pairs],
+                    "missing_symbols": [],
+                    "identity_mismatches": [],
+                    "error": f"{type(exc).__name__}:{exc}",
+                }
+            )
 
     return {
         "ready": bool(rows and all(row["ready"] is True for row in rows)),
@@ -1793,6 +2836,463 @@ def _allowlisted_runner_shim_contract_kpi(profiles_dir: str | Path) -> dict[str,
     }
 
 
+def _product_runner_engine_imports_kpi() -> dict[str, Any]:
+    runner_path = Path("betelgeuze_engine/product/runners/backmapping_scoring.py")
+    script_text = runner_path.read_text(encoding="utf-8") if runner_path.exists() else ""
+    cases = [
+        {
+            "contract": "hbond_evidence_direct_engine_import",
+            "engine_module": "betelgeuze_engine.interactions",
+            "required_snippets": [
+                "from betelgeuze_engine.interactions import",
+                "evaluate_hbond_evidence",
+                "HBOND_EVIDENCE_SCHEMA_VERSION",
+            ],
+            "forbidden_snippets": [
+                "from core.interaction_forces import",
+                "import core.interaction_forces",
+                "from theory.branches.hbond_logic import",
+            ],
+        },
+        {
+            "contract": "onsps_backmap_direct_engine_import",
+            "engine_module": "betelgeuze_engine.backmapping.onsps",
+            "required_snippets": [
+                "from betelgeuze_engine.backmapping.onsps import",
+                "backmap_4bead_onsps",
+                "needs_onsps_4bead",
+                "onsps_site_count",
+            ],
+            "forbidden_snippets": [
+                "from core.onsps_backmap import",
+                "import core.onsps_backmap",
+            ],
+        },
+        {
+            "contract": "ligand_topology_direct_engine_import",
+            "engine_module": "betelgeuze_engine.topology",
+            "required_snippets": [
+                "ligand_topology_from_smiles",
+            ],
+            "forbidden_snippets": [
+                "from core.topology import ligand_topology_from_smiles",
+                "import core.ligand_topology",
+            ],
+        },
+        {
+            "contract": "topology_score_correction_direct_engine_import",
+            "engine_module": "betelgeuze_engine.topology",
+            "required_snippets": [
+                "from betelgeuze_engine.topology import",
+                "summarize_topo_correction",
+            ],
+            "forbidden_snippets": [
+                "from core.topo_corrector import",
+                "import core.topo_corrector",
+            ],
+            "residual_scope": "score_ranking_heuristic",
+            "physical_force_residual_claim": False,
+            "bounded_correction_required": True,
+        },
+        {
+            "contract": "score_residual_direct_engine_import",
+            "engine_module": "betelgeuze_engine.residual.score",
+            "required_snippets": [
+                "from betelgeuze_engine.residual.score import apply_score_residual",
+            ],
+            "forbidden_snippets": [
+                "from core.score_residual import apply_score_residual",
+                "import core.score_residual",
+            ],
+            "residual_scope": "score_ranking_heuristic",
+            "physical_force_residual_claim": False,
+        },
+        {
+            "contract": "mm_gbsa_refine_direct_engine_import",
+            "engine_module": "betelgeuze_engine.physics.mm_gbsa",
+            "required_snippets": [
+                "from betelgeuze_engine.physics.mm_gbsa import",
+                "REFINE_LIGAND_MODEL",
+                "mm_gbsa_binding_energy",
+            ],
+            "forbidden_snippets": [
+                "from core.mm_gbsa import",
+                "import core.mm_gbsa",
+            ],
+            "refine_claim_safe_required": False,
+            "claim_metadata_schema": "mm_gbsa_refine_claim_metadata_v1",
+        },
+    ]
+    rows: list[dict[str, Any]] = []
+    for case in cases:
+        required_missing = [
+            snippet for snippet in case["required_snippets"] if str(snippet) not in script_text
+        ]
+        forbidden_present = [
+            snippet for snippet in case["forbidden_snippets"] if str(snippet) in script_text
+        ]
+        direct_import_present = not required_missing
+        legacy_import_absent = not forbidden_present
+        rows.append(
+            {
+                "contract": str(case["contract"]),
+                "runner": str(runner_path),
+                "engine_module": str(case["engine_module"]),
+                "direct_import_present": direct_import_present,
+                "legacy_import_absent": legacy_import_absent,
+                "required_missing": required_missing,
+                "forbidden_present": forbidden_present,
+                "residual_scope": str(case.get("residual_scope", "")),
+                "physical_force_residual_claim": case.get("physical_force_residual_claim"),
+                "bounded_correction_required": case.get("bounded_correction_required"),
+                "refine_claim_safe_required": case.get("refine_claim_safe_required"),
+                "claim_metadata_schema": str(case.get("claim_metadata_schema", "")),
+                "ready": bool(runner_path.exists() and direct_import_present and legacy_import_absent),
+            }
+        )
+    return {
+        "ready": bool(rows and all(row["ready"] is True for row in rows)),
+        "runner": str(runner_path),
+        "row_count": len(rows),
+        "rows": rows,
+    }
+
+
+def _product_runner_no_core_imports_kpi() -> dict[str, Any]:
+    runner_paths = [
+        Path("tools/run_ligand_htvs_pipeline.py"),
+        Path("tools/run_ligand_backmapping_scoring.py"),
+        Path("tools/run_ligand_topk_delivery.py"),
+        Path("betelgeuze_engine/product/runners/htvs_pipeline.py"),
+        Path("betelgeuze_engine/product/runners/backmapping_scoring.py"),
+        Path("betelgeuze_engine/product/runners/topk_delivery.py"),
+        Path("tools/product/run_ligand_htvs_pipeline.py"),
+        Path("tools/product/run_ligand_backmapping_scoring.py"),
+        Path("tools/product/run_ligand_topk_delivery.py"),
+    ]
+    rows: list[dict[str, Any]] = []
+    for runner_path in runner_paths:
+        violations: list[dict[str, Any]] = []
+        if runner_path.exists():
+            for lineno, line in enumerate(runner_path.read_text(encoding="utf-8").splitlines(), start=1):
+                stripped = line.strip()
+                if (
+                    stripped.startswith("from core.")
+                    or stripped.startswith("from core import ")
+                    or stripped.startswith("import core.")
+                    or stripped == "import core"
+                ):
+                    violations.append({"line": lineno, "snippet": stripped})
+        rows.append(
+            {
+                "runner": str(runner_path),
+                "exists": runner_path.exists(),
+                "legacy_core_import_violation_count": len(violations),
+                "legacy_core_import_violations": violations,
+                "ready": bool(runner_path.exists() and not violations),
+            }
+        )
+    return {
+        "ready": bool(rows and all(row["ready"] is True for row in rows)),
+        "row_count": len(rows),
+        "legacy_core_import_violation_count": int(
+            sum(int(row["legacy_core_import_violation_count"]) for row in rows)
+        ),
+        "rows": rows,
+    }
+
+
+def _topk_delivery_engine_owned_kpi() -> dict[str, Any]:
+    engine_path = Path("betelgeuze_engine/product/runners/topk_delivery.py")
+    compatibility_path = Path("tools/product/run_ligand_topk_delivery.py")
+    engine_text = engine_path.read_text(encoding="utf-8") if engine_path.exists() else ""
+    compatibility_text = compatibility_path.read_text(encoding="utf-8") if compatibility_path.exists() else ""
+    engine_required_symbols = ["def build_delivery(", "def build_parser(", "def main("]
+    engine_forbidden_snippets = [
+        'import_module("tools.product.run_ligand_topk_delivery")',
+        "import_module('tools.product.run_ligand_topk_delivery')",
+    ]
+    compatibility_required_snippets = [
+        "from betelgeuze_engine.product.runners.topk_delivery import",
+        "_sys.modules[__name__]",
+    ]
+    engine_required_missing = [
+        snippet for snippet in engine_required_symbols if snippet not in engine_text
+    ]
+    engine_forbidden_present = [
+        snippet for snippet in engine_forbidden_snippets if snippet in engine_text
+    ]
+    compatibility_required_missing = [
+        snippet for snippet in compatibility_required_snippets if snippet not in compatibility_text
+    ]
+    compatibility_self_implementation_present = bool(
+        "def build_delivery(" in compatibility_text
+        or "def build_parser(" in compatibility_text
+        or "argparse.ArgumentParser" in compatibility_text
+    )
+    runtime_identity_ready = False
+    runtime_error = ""
+    claim_metadata_ready = False
+    claim_metadata_error = ""
+    claim_metadata: dict[str, Any] = {}
+    try:
+        engine_module = importlib.import_module("betelgeuze_engine.product.runners.topk_delivery")
+        compatibility_module = importlib.import_module("tools.product.run_ligand_topk_delivery")
+        runtime_identity_ready = bool(
+            compatibility_module is engine_module
+            and getattr(compatibility_module, "build_delivery", None)
+            is getattr(engine_module, "build_delivery", None)
+            and getattr(compatibility_module, "main", None) is getattr(engine_module, "main", None)
+        )
+        claim_metadata = engine_module.build_topk_delivery_claim_metadata(
+            ok=True,
+            selected_rows=1,
+            selection_mode="union",
+        )
+        claim_metadata_ready = bool(
+            claim_metadata.get("claim_metadata_schema_version") == "topk_delivery_claim_metadata_v1"
+            and claim_metadata.get("runner_kind") == "ligand_topk_delivery"
+            and claim_metadata.get("claim_scope") == "topk_delivery_selection_and_handoff"
+            and claim_metadata.get("claim_safe") is True
+            and claim_metadata.get("blocked_reason") == ""
+            and claim_metadata.get("physical_accuracy_claim") is False
+            and claim_metadata.get("external_state_mutated") is False
+        )
+    except Exception as exc:  # pragma: no cover - evidence surface only.
+        runtime_error = f"{type(exc).__name__}: {exc}"
+        claim_metadata_error = runtime_error
+    ready = bool(
+        engine_path.exists()
+        and compatibility_path.exists()
+        and not engine_required_missing
+        and not engine_forbidden_present
+        and not compatibility_required_missing
+        and not compatibility_self_implementation_present
+        and runtime_identity_ready
+        and claim_metadata_ready
+        and not runtime_error
+    )
+    return {
+        "ready": ready,
+        "engine_module": "betelgeuze_engine.product.runners.topk_delivery",
+        "engine_path": str(engine_path),
+        "compatibility_path": str(compatibility_path),
+        "engine_required_missing": engine_required_missing,
+        "engine_forbidden_present": engine_forbidden_present,
+        "compatibility_required_missing": compatibility_required_missing,
+        "compatibility_self_implementation_present": compatibility_self_implementation_present,
+        "runtime_identity_ready": runtime_identity_ready,
+        "runtime_error": runtime_error,
+        "claim_metadata_ready": claim_metadata_ready,
+        "claim_metadata_schema_version": str(claim_metadata.get("claim_metadata_schema_version") or ""),
+        "claim_metadata_claim_safe": claim_metadata.get("claim_safe"),
+        "claim_metadata_blocked_reason": str(claim_metadata.get("blocked_reason") or ""),
+        "claim_metadata_physical_accuracy_claim": claim_metadata.get("physical_accuracy_claim"),
+        "claim_metadata_error": claim_metadata_error,
+    }
+
+
+def _backmapping_scoring_engine_owned_kpi() -> dict[str, Any]:
+    engine_path = Path("betelgeuze_engine/product/runners/backmapping_scoring.py")
+    compatibility_path = Path("tools/product/run_ligand_backmapping_scoring.py")
+    engine_text = engine_path.read_text(encoding="utf-8") if engine_path.exists() else ""
+    compatibility_text = compatibility_path.read_text(encoding="utf-8") if compatibility_path.exists() else ""
+    engine_required_symbols = ["def main(", "def _frame_mmpbsa_proxy("]
+    engine_forbidden_snippets = [
+        'import_module("tools.product.run_ligand_backmapping_scoring")',
+        "import_module('tools.product.run_ligand_backmapping_scoring')",
+    ]
+    compatibility_required_snippets = [
+        "from betelgeuze_engine.product.runners.backmapping_scoring import",
+        "_sys.modules[__name__]",
+    ]
+    engine_required_missing = [
+        snippet for snippet in engine_required_symbols if snippet not in engine_text
+    ]
+    engine_forbidden_present = [
+        snippet for snippet in engine_forbidden_snippets if snippet in engine_text
+    ]
+    compatibility_required_missing = [
+        snippet for snippet in compatibility_required_snippets if snippet not in compatibility_text
+    ]
+    compatibility_self_implementation_present = bool(
+        "def _frame_mmpbsa_proxy(" in compatibility_text
+        or "argparse.ArgumentParser" in compatibility_text
+        or "ProcessPoolExecutor" in compatibility_text
+    )
+    runtime_identity_ready = False
+    runtime_error = ""
+    try:
+        engine_module = importlib.import_module("betelgeuze_engine.product.runners.backmapping_scoring")
+        compatibility_module = importlib.import_module("tools.product.run_ligand_backmapping_scoring")
+        runtime_identity_ready = bool(
+            compatibility_module is engine_module
+            and getattr(compatibility_module, "main", None) is getattr(engine_module, "main", None)
+            and getattr(compatibility_module, "_frame_mmpbsa_proxy", None)
+            is getattr(engine_module, "_frame_mmpbsa_proxy", None)
+        )
+    except Exception as exc:  # pragma: no cover - evidence surface only.
+        runtime_error = f"{type(exc).__name__}: {exc}"
+    ready = bool(
+        engine_path.exists()
+        and compatibility_path.exists()
+        and not engine_required_missing
+        and not engine_forbidden_present
+        and not compatibility_required_missing
+        and not compatibility_self_implementation_present
+        and runtime_identity_ready
+        and not runtime_error
+    )
+    return {
+        "ready": ready,
+        "engine_module": "betelgeuze_engine.product.runners.backmapping_scoring",
+        "engine_path": str(engine_path),
+        "compatibility_path": str(compatibility_path),
+        "engine_required_missing": engine_required_missing,
+        "engine_forbidden_present": engine_forbidden_present,
+        "compatibility_required_missing": compatibility_required_missing,
+        "compatibility_self_implementation_present": compatibility_self_implementation_present,
+        "runtime_identity_ready": runtime_identity_ready,
+        "runtime_error": runtime_error,
+    }
+
+
+def _htvs_pipeline_engine_owned_kpi() -> dict[str, Any]:
+    engine_path = Path("betelgeuze_engine/product/runners/htvs_pipeline.py")
+    compatibility_path = Path("tools/product/run_ligand_htvs_pipeline.py")
+    engine_text = engine_path.read_text(encoding="utf-8") if engine_path.exists() else ""
+    compatibility_text = compatibility_path.read_text(encoding="utf-8") if compatibility_path.exists() else ""
+    engine_required_symbols = ["def run_pipeline(", "def build_parser(", "def main("]
+    engine_forbidden_snippets = [
+        'import_module("tools.product.run_ligand_htvs_pipeline")',
+        "import_module('tools.product.run_ligand_htvs_pipeline')",
+    ]
+    compatibility_required_snippets = [
+        "from betelgeuze_engine.product.runners.htvs_pipeline import",
+        "_sys.modules[__name__]",
+    ]
+    engine_required_missing = [
+        snippet for snippet in engine_required_symbols if snippet not in engine_text
+    ]
+    engine_forbidden_present = [
+        snippet for snippet in engine_forbidden_snippets if snippet in engine_text
+    ]
+    compatibility_required_missing = [
+        snippet for snippet in compatibility_required_snippets if snippet not in compatibility_text
+    ]
+    compatibility_self_implementation_present = bool(
+        "def run_pipeline(" in compatibility_text
+        or "def build_parser(" in compatibility_text
+        or "argparse.ArgumentParser" in compatibility_text
+    )
+    runtime_identity_ready = False
+    runtime_error = ""
+    try:
+        engine_module = importlib.import_module("betelgeuze_engine.product.runners.htvs_pipeline")
+        compatibility_module = importlib.import_module("tools.product.run_ligand_htvs_pipeline")
+        runtime_identity_ready = bool(
+            compatibility_module is engine_module
+            and getattr(compatibility_module, "run_pipeline", None)
+            is getattr(engine_module, "run_pipeline", None)
+            and getattr(compatibility_module, "build_parser", None)
+            is getattr(engine_module, "build_parser", None)
+            and getattr(compatibility_module, "main", None) is getattr(engine_module, "main", None)
+        )
+    except Exception as exc:  # pragma: no cover - evidence surface only.
+        runtime_error = f"{type(exc).__name__}: {exc}"
+    ready = bool(
+        engine_path.exists()
+        and compatibility_path.exists()
+        and not engine_required_missing
+        and not engine_forbidden_present
+        and not compatibility_required_missing
+        and not compatibility_self_implementation_present
+        and runtime_identity_ready
+        and not runtime_error
+    )
+    return {
+        "ready": ready,
+        "engine_module": "betelgeuze_engine.product.runners.htvs_pipeline",
+        "engine_path": str(engine_path),
+        "compatibility_path": str(compatibility_path),
+        "engine_required_missing": engine_required_missing,
+        "engine_forbidden_present": engine_forbidden_present,
+        "compatibility_required_missing": compatibility_required_missing,
+        "compatibility_self_implementation_present": compatibility_self_implementation_present,
+        "runtime_identity_ready": runtime_identity_ready,
+        "runtime_error": runtime_error,
+    }
+
+
+def _product_runner_engine_owned_kpi(
+    *,
+    htvs_pipeline_engine_owned: dict[str, Any],
+    backmapping_scoring_engine_owned: dict[str, Any],
+    topk_delivery_engine_owned: dict[str, Any],
+) -> dict[str, Any]:
+    rows = [
+        {
+            "runner_id": "ligand_htvs_pipeline_default",
+            "runner_kind": "ligand_htvs_pipeline",
+            "engine_module": "betelgeuze_engine.product.runners.htvs_pipeline",
+            "ready": htvs_pipeline_engine_owned.get("ready") is True,
+            "runtime_identity_ready": htvs_pipeline_engine_owned.get("runtime_identity_ready") is True,
+            "compatibility_self_implementation_present": (
+                htvs_pipeline_engine_owned.get("compatibility_self_implementation_present") is True
+            ),
+            "engine_required_missing": list(htvs_pipeline_engine_owned.get("engine_required_missing") or []),
+            "engine_forbidden_present": list(htvs_pipeline_engine_owned.get("engine_forbidden_present") or []),
+            "runtime_error": str(htvs_pipeline_engine_owned.get("runtime_error") or ""),
+        },
+        {
+            "runner_id": "backmapping_scoring.production",
+            "runner_kind": "ligand_backmapping_scoring",
+            "engine_module": "betelgeuze_engine.product.runners.backmapping_scoring",
+            "ready": backmapping_scoring_engine_owned.get("ready") is True,
+            "runtime_identity_ready": backmapping_scoring_engine_owned.get("runtime_identity_ready") is True,
+            "compatibility_self_implementation_present": (
+                backmapping_scoring_engine_owned.get("compatibility_self_implementation_present") is True
+            ),
+            "engine_required_missing": list(
+                backmapping_scoring_engine_owned.get("engine_required_missing") or []
+            ),
+            "engine_forbidden_present": list(
+                backmapping_scoring_engine_owned.get("engine_forbidden_present") or []
+            ),
+            "runtime_error": str(backmapping_scoring_engine_owned.get("runtime_error") or ""),
+        },
+        {
+            "runner_id": "ligand_topk_delivery.production",
+            "runner_kind": "ligand_topk_delivery",
+            "engine_module": "betelgeuze_engine.product.runners.topk_delivery",
+            "ready": topk_delivery_engine_owned.get("ready") is True,
+            "runtime_identity_ready": topk_delivery_engine_owned.get("runtime_identity_ready") is True,
+            "compatibility_self_implementation_present": (
+                topk_delivery_engine_owned.get("compatibility_self_implementation_present") is True
+            ),
+            "engine_required_missing": list(topk_delivery_engine_owned.get("engine_required_missing") or []),
+            "engine_forbidden_present": list(topk_delivery_engine_owned.get("engine_forbidden_present") or []),
+            "runtime_error": str(topk_delivery_engine_owned.get("runtime_error") or ""),
+        },
+    ]
+    ready = bool(
+        len(rows) == 3
+        and all(row["ready"] is True for row in rows)
+        and all(row["runtime_identity_ready"] is True for row in rows)
+        and all(row["compatibility_self_implementation_present"] is False for row in rows)
+        and all(not row["engine_required_missing"] for row in rows)
+        and all(not row["engine_forbidden_present"] for row in rows)
+        and all(not row["runtime_error"] for row in rows)
+    )
+    return {
+        "ready": ready,
+        "runner_count": len(rows),
+        "engine_owned_runner_count": sum(1 for row in rows if row["ready"] is True),
+        "contract": "all_product_runners_are_engine_owned_with_compatibility_shims",
+        "rows": rows,
+    }
+
+
 def _job_store_lazy_factory_kpi() -> dict[str, Any]:
     from api.job_store import get_configured_job_store, reset_configured_job_store_for_tests
 
@@ -1823,7 +3323,11 @@ def _job_store_lazy_factory_kpi() -> dict[str, Any]:
     }
 
 
-def _product_kpis(profiles_dir: str, product_evidence_bundle_json_path: str) -> dict[str, Any]:
+def _product_kpis(
+    profiles_dir: str,
+    product_evidence_bundle_json_path: str,
+    product_ci_runtime_gate_json_path: str = DEFAULT_PRODUCT_CI_RUNTIME_GATE_JSON,
+) -> dict[str, Any]:
     profile_payload = validate_profiles(Path(profiles_dir))
     force_term_plugins = default_force_term_registry().names()
     force_term_claim_metadata = _force_term_claim_metadata_kpi(force_term_plugins)
@@ -1834,8 +3338,33 @@ def _product_kpis(profiles_dir: str, product_evidence_bundle_json_path: str) -> 
     core_forcefield_bridge = _core_forcefield_bridge_kpi()
     core_compatibility_layer = _core_compatibility_layer_kpi(core_forcefield_bridge)
     allowlisted_runner_shims = _allowlisted_runner_shim_contract_kpi(profiles_dir)
+    product_runner_engine_imports = _product_runner_engine_imports_kpi()
+    product_runner_no_core_imports = _product_runner_no_core_imports_kpi()
+    topk_delivery_engine_owned = _topk_delivery_engine_owned_kpi()
+    backmapping_scoring_engine_owned = _backmapping_scoring_engine_owned_kpi()
+    htvs_pipeline_engine_owned = _htvs_pipeline_engine_owned_kpi()
+    product_runner_engine_owned = _product_runner_engine_owned_kpi(
+        htvs_pipeline_engine_owned=htvs_pipeline_engine_owned,
+        backmapping_scoring_engine_owned=backmapping_scoring_engine_owned,
+        topk_delivery_engine_owned=topk_delivery_engine_owned,
+    )
     job_store_lazy_factory = _job_store_lazy_factory_kpi()
     bundle_validation = _product_bundle_validation_kpi(product_evidence_bundle_json_path)
+    product_ci_runtime_gate = _product_ci_runtime_gate_kpi(product_ci_runtime_gate_json_path)
+    product_claim_ready = bool(bundle_validation.get("product_claim_ready") is True)
+    product_ci_runtime_gate_ready = bool(
+        product_ci_runtime_gate.get("product_ci_runtime_gate_ready") is True
+    )
+    product_ci_blocker_code = str(product_ci_runtime_gate.get("product_ci_blocker_code") or "")
+    release_claim_ready = bool(product_claim_ready and product_ci_runtime_gate_ready)
+    if release_claim_ready:
+        release_claim_blocked_reason = ""
+    elif product_ci_blocker_code:
+        release_claim_blocked_reason = product_ci_blocker_code
+    elif not product_ci_runtime_gate_ready:
+        release_claim_blocked_reason = "product_ci_runtime_gate_not_ready"
+    else:
+        release_claim_blocked_reason = "local_product_claim_not_ready"
     manifest = build_result_manifest(
         job_id="kpi_smoke",
         request={"target_name": "kpi", "runner_profile_id": "backmapping_scoring.production"},
@@ -1862,7 +3391,10 @@ def _product_kpis(profiles_dir: str, product_evidence_bundle_json_path: str) -> 
         "product_image_receipt_present": bool(bundle_validation.get("product_image_receipt_present") is True),
         "product_image_receipt_mode": str(bundle_validation.get("product_image_receipt_mode") or ""),
         "product_image_receipt_status": str(bundle_validation.get("product_image_receipt_status") or ""),
-        "product_claim_ready": bool(bundle_validation.get("product_claim_ready") is True),
+        "product_claim_ready": product_claim_ready,
+        "release_claim_ready": release_claim_ready,
+        "release_claim_blocked_reason": release_claim_blocked_reason,
+        **product_ci_runtime_gate,
         "clean_install_requirements": dict(bundle_validation.get("clean_install_requirements") or {}),
         "clean_install_missing_requirements": list(
             bundle_validation.get("clean_install_missing_requirements") or []
@@ -1903,6 +3435,9 @@ def _product_kpis(profiles_dir: str, product_evidence_bundle_json_path: str) -> 
         "force_term_result_contract_ready": bool(
             force_term_claim_metadata.get("term_result_contract_ready") is True
         ),
+        "forcefield_energy_forces_contract_ready": bool(
+            force_term_claim_metadata.get("forcefield_energy_forces_contract_ready") is True
+        ),
         "guarded_force_term_plugin_ready": bool(guarded_force_term_plugin.get("ready") is True),
         "guarded_force_term_plugin_smoke": guarded_force_term_plugin,
         "engine_topology_factory_facade_ready": bool(
@@ -1921,6 +3456,20 @@ def _product_kpis(profiles_dir: str, product_evidence_bundle_json_path: str) -> 
         "job_store_lazy_factory_smoke": job_store_lazy_factory,
         "allowlisted_runner_shim_contract_ready": bool(allowlisted_runner_shims.get("ready") is True),
         "allowlisted_runner_shim_contract": allowlisted_runner_shims,
+        "product_runner_engine_imports_ready": bool(product_runner_engine_imports.get("ready") is True),
+        "product_runner_engine_imports_smoke": product_runner_engine_imports,
+        "product_runner_no_core_imports_ready": bool(product_runner_no_core_imports.get("ready") is True),
+        "product_runner_no_core_imports_smoke": product_runner_no_core_imports,
+        "topk_delivery_engine_owned_ready": bool(topk_delivery_engine_owned.get("ready") is True),
+        "topk_delivery_engine_owned_smoke": topk_delivery_engine_owned,
+        "backmapping_scoring_engine_owned_ready": bool(
+            backmapping_scoring_engine_owned.get("ready") is True
+        ),
+        "backmapping_scoring_engine_owned_smoke": backmapping_scoring_engine_owned,
+        "htvs_pipeline_engine_owned_ready": bool(htvs_pipeline_engine_owned.get("ready") is True),
+        "htvs_pipeline_engine_owned_smoke": htvs_pipeline_engine_owned,
+        "product_runner_engine_owned_ready": bool(product_runner_engine_owned.get("ready") is True),
+        "product_runner_engine_owned_smoke": product_runner_engine_owned,
         "blocked_claim_correctly_blocked": metadata["claim_safe"] is False
         and metadata["blocked_reason"] in {"empty_smiles", "placeholder_alanine_topology", "ligand_topology_invalid"},
     }
@@ -1935,7 +3484,7 @@ def _pose_ranking_hbond_benchmark() -> dict[str, Any]:
         onsps_ligand_xyz = ligand_xyz[:2] if ligand_xyz.ndim == 2 and ligand_xyz.shape[0] >= 2 else ligand_xyz
         protein_xyz = default_protein_xyz
         pocket_center = None
-        if fixture["expected_top1"] is True:
+        if fixture["expected_top1"] is True or fixture.get("near_hbond_geometry") is True:
             mapped, _meta = backmap_4bead_onsps(onsps_ligand_xyz, str(fixture["smiles"]))
             if mapped.ndim == 2 and mapped.shape[0] > 0:
                 protein_xyz = mapped + np.asarray([[0.0, 0.0, 3.0]], dtype=np.float32)
@@ -1945,6 +3494,8 @@ def _pose_ranking_hbond_benchmark() -> dict[str, Any]:
             protein_xyz=protein_xyz,
             ligand_xyz=onsps_ligand_xyz,
             pocket_center=pocket_center,
+            delta_backmap=fixture.get("delta_backmap"),
+            delta_backmap_max=float(fixture.get("delta_backmap_max", 2.5)),
         )
         validity_bonus = 0.0 if ligand.validity.get("valid") is True else -10.0
         score = float((evidence.hbond_confidence * 10.0) - float(fixture["rmsd_proxy_A"]) + validity_bonus)
@@ -1955,6 +3506,7 @@ def _pose_ranking_hbond_benchmark() -> dict[str, Any]:
         expect_unsatisfied = bool(fixture.get("expect_unsatisfied_donor_acceptor") is True)
         expect_missing_anchor = bool(fixture.get("expect_missing_anchor") is True)
         expect_overanchored = bool(fixture.get("expect_overanchored") is True)
+        expect_delta_yellow_band = bool(fixture.get("expect_delta_backmap_yellow_band") is True)
         role_contract_checks = {
             "claim_safe_matches": evidence.claim_safe is expected_claim_safe,
             "status_matches": evidence.status == expected_status,
@@ -1962,6 +3514,9 @@ def _pose_ranking_hbond_benchmark() -> dict[str, Any]:
             "unsatisfied_expectation_matches": (unsatisfied_site_count > 0) is expect_unsatisfied,
             "missing_anchor_expectation_matches": evidence.missing_expected_anchor_flag is expect_missing_anchor,
             "overanchored_expectation_matches": evidence.overanchoring_flag is expect_overanchored,
+            "delta_backmap_expectation_matches": (
+                evidence.delta_backmap_yellow_band is expect_delta_yellow_band
+            ),
         }
         rows.append(
             {
@@ -1975,6 +3530,7 @@ def _pose_ranking_hbond_benchmark() -> dict[str, Any]:
                 "expected_unsatisfied_donor_acceptor": expect_unsatisfied,
                 "expected_missing_anchor": expect_missing_anchor,
                 "expected_overanchored": expect_overanchored,
+                "expected_delta_backmap_yellow_band": expect_delta_yellow_band,
                 "ligand_valid": ligand.validity.get("valid") is True,
                 "hbond_status": evidence.status,
                 "hbond_schema_version": evidence.schema_version,
@@ -1983,6 +3539,10 @@ def _pose_ranking_hbond_benchmark() -> dict[str, Any]:
                 "hbond_pair_schema_ready": evidence.pair_schema_ready(),
                 "hbond_geometry_flags_ready": evidence.geometry_flags_ready(),
                 "hbond_confidence": evidence.hbond_confidence,
+                "hbond_delta_backmap": evidence.delta_backmap,
+                "hbond_delta_backmap_max": evidence.delta_backmap_max,
+                "hbond_delta_backmap_evaluated": evidence.delta_backmap_evaluated,
+                "hbond_delta_backmap_yellow_band": evidence.delta_backmap_yellow_band,
                 "hbond_site_count": evidence.site_count,
                 "hbond_donor_site_count": int(evidence.donor_site_count),
                 "hbond_acceptor_site_count": int(evidence.acceptor_site_count),
@@ -2042,6 +3602,7 @@ def _pose_ranking_hbond_benchmark() -> dict[str, Any]:
         and "overanchored" not in str(row["pose_id"])
     )
     required_roles = {
+        "delta_backmap_yellow_band_pose",
         "hbond_recovery_pose",
         "unsatisfied_donor_pose",
         "far_decoy_pose",
@@ -2053,6 +3614,12 @@ def _pose_ranking_hbond_benchmark() -> dict[str, Any]:
         required_roles.issubset(observed_roles)
         and all(row["benchmark_contract_pass"] is True for row in rows)
     )
+    delta_backmap_yellow_band_abstention_ready = any(
+        row["hbond_delta_backmap_yellow_band"] is True
+        and row["hbond_claim_safe"] is False
+        and row["hbond_blocked_reason"] == "delta_backmap_yellow_band"
+        for row in rows
+    )
     return {
         "benchmark_ready": bool(
             top1_pass
@@ -2060,6 +3627,7 @@ def _pose_ranking_hbond_benchmark() -> dict[str, Any]:
             and invalid_blocked
             and far_decoys_blocked
             and overanchored_decoys_blocked
+            and delta_backmap_yellow_band_abstention_ready
             and bool(unsatisfied_rows)
             and row_contracts_ready
         ),
@@ -2080,6 +3648,7 @@ def _pose_ranking_hbond_benchmark() -> dict[str, Any]:
         "invalid_ligand_blocked": invalid_blocked,
         "far_decoys_blocked": far_decoys_blocked,
         "overanchored_decoys_blocked": overanchored_decoys_blocked,
+        "delta_backmap_yellow_band_abstention_ready": delta_backmap_yellow_band_abstention_ready,
         "unsatisfied_donor_acceptor_detected": bool(unsatisfied_rows),
         "unsatisfied_donor_acceptor_pose_count": len(unsatisfied_rows),
         "unsatisfied_donor_count": int(sum(int(row["unsatisfied_donor_count"]) for row in unsatisfied_rows)),
@@ -2095,6 +3664,7 @@ def _pm_kpi_summary(
     physics: dict[str, Any],
     chemistry: dict[str, Any],
     pose_ranking_hbond: dict[str, Any],
+    confidence_calibration: dict[str, Any],
     product: dict[str, Any],
     rocm_runtime_ready: bool,
 ) -> dict[str, Any]:
@@ -2114,6 +3684,11 @@ def _pm_kpi_summary(
         if isinstance(runtime.get("neighbor_list_rebuild"), dict)
         else {}
     )
+    runtime_scaling = (
+        runtime.get("neighbor_cap_scaling")
+        if isinstance(runtime.get("neighbor_cap_scaling"), dict)
+        else {}
+    )
     product_gate_values = {
         "clean_install_success": product.get("clean_install_success") is True,
         "runner_profile_validation_pass": product.get("runner_profile_validation_status") == "pass",
@@ -2124,6 +3699,9 @@ def _pm_kpi_summary(
         "force_term_plugin_registry_ready": product.get("force_term_plugin_registry_ready") is True,
         "force_term_claim_metadata_ready": product.get("force_term_claim_metadata_ready") is True,
         "force_term_result_contract_ready": product.get("force_term_result_contract_ready") is True,
+        "forcefield_energy_forces_contract_ready": (
+            product.get("forcefield_energy_forces_contract_ready") is True
+        ),
         "guarded_force_term_plugin_ready": product.get("guarded_force_term_plugin_ready") is True,
         "engine_topology_factory_facade_ready": product.get("engine_topology_factory_facade_ready") is True,
         "onsps_backmap_evidence_schema_ready": product.get("onsps_backmap_evidence_schema_ready") is True,
@@ -2131,6 +3709,14 @@ def _pm_kpi_summary(
         "core_compatibility_layer_ready": product.get("core_compatibility_layer_ready") is True,
         "job_store_lazy_factory_ready": product.get("job_store_lazy_factory_ready") is True,
         "allowlisted_runner_shim_contract_ready": product.get("allowlisted_runner_shim_contract_ready") is True,
+        "product_runner_engine_imports_ready": product.get("product_runner_engine_imports_ready") is True,
+        "product_runner_no_core_imports_ready": product.get("product_runner_no_core_imports_ready") is True,
+        "topk_delivery_engine_owned_ready": product.get("topk_delivery_engine_owned_ready") is True,
+        "backmapping_scoring_engine_owned_ready": (
+            product.get("backmapping_scoring_engine_owned_ready") is True
+        ),
+        "htvs_pipeline_engine_owned_ready": product.get("htvs_pipeline_engine_owned_ready") is True,
+        "product_runner_engine_owned_ready": product.get("product_runner_engine_owned_ready") is True,
         "blocked_claim_correctly_blocked": product.get("blocked_claim_correctly_blocked") is True,
         "rocm_hip_rust_runtime_ready": rocm_runtime_ready,
     }
@@ -2158,6 +3744,24 @@ def _pm_kpi_summary(
             and int(neighbor.get("neighbor_list_rebuild_count") or 0) > 0
             and float(neighbor.get("neighbor_list_rebuild_frequency") or 0.0) > 0.0
             and neighbor.get("engine_neighbor_diagnostics_ready") is True
+        ),
+        "runtime_neighbor_cap_scaling_ready": (
+            runtime_scaling.get("ready") is True
+            and runtime_scaling.get("status") == "runtime_neighbor_cap_scaling_ready"
+            and runtime_scaling.get("forcefield_contract_ready") is True
+            and runtime_scaling.get("neighbor_cap_scaling_ready") is True
+            and 0.85 <= float(runtime_scaling.get("neighbor_pair_count_slope") or 0.0) <= 1.15
+            and float(runtime_scaling.get("neighbor_pair_count_r2") or 0.0) >= 0.98
+            and bool(runtime_scaling.get("rows"))
+        ),
+        "runtime_neighbor_cap_scaling_plot_ready": (
+            runtime_scaling.get("plot_ready") is True
+            and runtime_scaling.get("plot_format") == "svg"
+            and runtime_scaling.get("plot_role") == "runtime_neighbor_cap_scaling_plot"
+            and len(str(runtime_scaling.get("plot_sha256") or "")) == 64
+            and int(runtime_scaling.get("plot_size_bytes") or 0) > 0
+            and "Pair-count scaling" in str(runtime_scaling.get("plot_claim_boundary") or "")
+            and "advisory" in str(runtime_scaling.get("plot_claim_boundary") or "")
         ),
         "force_residual_bounded_policy_ready": runtime_residual.get("bounded_correction_policy_ready") is True,
         "force_residual_observed_caps_ready": runtime_residual.get("observed_caps_ready") is True,
@@ -2202,6 +3806,17 @@ def _pm_kpi_summary(
         "ring_validity_ready": chemistry.get("ring_validity_ready") is True,
         "tautomer_validity_ready": chemistry.get("tautomer_validity_ready") is True,
         "protonation_validity_ready": chemistry.get("protonation_validity_ready") is True,
+        "confidence_calibration_report_ready": (
+            confidence_calibration.get("ready") is True
+            and confidence_calibration.get("status") == "confidence_calibration_report_ready"
+            and int(confidence_calibration.get("row_count") or 0) >= 4
+            and int(confidence_calibration.get("positive_count") or 0) >= 1
+            and int(confidence_calibration.get("negative_count") or 0) >= 1
+            and float(confidence_calibration.get("expected_calibration_error") or 1.0)
+            <= float(confidence_calibration.get("max_expected_calibration_error") or 0.0)
+            and float(confidence_calibration.get("brier_score") or 1.0)
+            <= float(confidence_calibration.get("max_brier_score") or 0.0)
+        ),
     }
     gate_values = {
         **product_gate_values,
@@ -2213,6 +3828,19 @@ def _pm_kpi_summary(
     failed = [key for key, value in gate_values.items() if value is not True]
     product_summary_values = {
         **product_gate_values,
+        "product_claim_ready": product.get("product_claim_ready") is True,
+        "release_claim_ready": product.get("release_claim_ready") is True,
+        "release_claim_blocked_reason": str(product.get("release_claim_blocked_reason") or ""),
+        "product_ci_runtime_gate_present": product.get("product_ci_runtime_gate_present") is True,
+        "product_ci_runtime_gate_ready": product.get("product_ci_runtime_gate_ready") is True,
+        "product_ci_runtime_gate_status": str(product.get("product_ci_runtime_gate_status") or ""),
+        "product_ci_remote_green": product.get("product_ci_remote_green") is True,
+        "product_ci_github_actions_started": product.get("product_ci_github_actions_started") is True,
+        "product_ci_external_blocker": product.get("product_ci_external_blocker") is True,
+        "product_ci_blocker_code": str(product.get("product_ci_blocker_code") or ""),
+        "product_ci_latest_github_actions_record_kst_date": str(
+            product.get("product_ci_latest_github_actions_record_kst_date") or ""
+        ),
         "clean_install_missing_requirement_count": int(
             product.get("clean_install_missing_requirement_count") or 0
         ),
@@ -2248,6 +3876,29 @@ def _pm_kpi_summary(
             "neighbor_list_rebuild_frequency": float(
                 neighbor.get("neighbor_list_rebuild_frequency") or 0.0
             ),
+            "runtime_neighbor_cap_scaling_ready": runtime_gate_values[
+                "runtime_neighbor_cap_scaling_ready"
+            ],
+            "runtime_neighbor_cap_scaling_status": str(runtime_scaling.get("status") or ""),
+            "runtime_neighbor_cap_scaling_row_count": len(runtime_scaling.get("rows") or []),
+            "runtime_neighbor_cap_scaling_atom_counts": list(runtime_scaling.get("atom_counts") or []),
+            "runtime_neighbor_cap_scaling_pair_count_slope": float(
+                runtime_scaling.get("neighbor_pair_count_slope") or 0.0
+            ),
+            "runtime_neighbor_cap_scaling_pair_count_r2": float(
+                runtime_scaling.get("neighbor_pair_count_r2") or 0.0
+            ),
+            "runtime_neighbor_cap_scaling_duration_slope": float(
+                runtime_scaling.get("duration_slope") or 0.0
+            ),
+            "runtime_neighbor_cap_scaling_duration_r2": float(
+                runtime_scaling.get("duration_r2") or 0.0
+            ),
+            "runtime_neighbor_cap_scaling_plot_ready": runtime_gate_values[
+                "runtime_neighbor_cap_scaling_plot_ready"
+            ],
+            "runtime_neighbor_cap_scaling_plot_path": str(runtime_scaling.get("plot_path") or ""),
+            "runtime_neighbor_cap_scaling_plot_sha256": str(runtime_scaling.get("plot_sha256") or ""),
             "score_only_1k_runtime_tracked": runtime_gate_values["score_only_1k_runtime_tracked"],
             "top100_4bead_rescoring_runtime_tracked": (
                 runtime_gate_values["top100_4bead_rescoring_runtime_tracked"]
@@ -2363,6 +4014,24 @@ def _pm_kpi_summary(
                 chemistry.get("protonation_validity_fixture_count") or 0
             ),
             "protonation_validity_ready": chemistry.get("protonation_validity_ready") is True,
+            "confidence_calibration_report_ready": chemistry_gate_values[
+                "confidence_calibration_report_ready"
+            ],
+            "confidence_calibration_status": str(confidence_calibration.get("status") or ""),
+            "confidence_calibration_row_count": int(confidence_calibration.get("row_count") or 0),
+            "confidence_calibration_positive_count": int(
+                confidence_calibration.get("positive_count") or 0
+            ),
+            "confidence_calibration_negative_count": int(
+                confidence_calibration.get("negative_count") or 0
+            ),
+            "confidence_calibration_expected_calibration_error": float(
+                confidence_calibration.get("expected_calibration_error") or 0.0
+            ),
+            "confidence_calibration_brier_score": float(
+                confidence_calibration.get("brier_score") or 0.0
+            ),
+            "confidence_calibration_bin_count": int(confidence_calibration.get("bin_count") or 0),
         },
         "product": product_summary_values,
     }
@@ -2374,16 +4043,21 @@ def build_report(
     score_only_rows: int,
     onsps_rows: int,
     residual_rows: int,
+    runtime_scaling_plot_path: str = DEFAULT_RUNTIME_SCALING_PLOT,
     rocm_manifest_path: str = DEFAULT_ROCM_MANIFEST_JSON,
     product_evidence_bundle_json_path: str = DEFAULT_PRODUCT_EVIDENCE_BUNDLE_JSON,
+    product_ci_runtime_gate_json_path: str = DEFAULT_PRODUCT_CI_RUNTIME_GATE_JSON,
 ) -> dict[str, Any]:
     _quiet_rdkit_parser_logs()
+    runtime_scaling = run_runtime_scaling_benchmark().to_dict()
+    runtime_scaling.update(_runtime_scaling_plot_metadata(runtime_scaling, runtime_scaling_plot_path))
     runtime = {
         "score_only_1k": _score_only_runtime(score_only_rows),
         "top100_4bead_rescoring": _onsps_runtime(onsps_rows),
         "top10_force_residual": _force_residual_runtime(residual_rows),
         "memory_peak_mb": _memory_peak_mb(),
         "neighbor_list_rebuild": _neighbor_rebuild_kpi(),
+        "neighbor_cap_scaling": runtime_scaling,
     }
     runtime["score_only_1k_runtime_sec"] = float(runtime["score_only_1k"].get("duration_sec") or 0.0)
     runtime["top100_4bead_rescoring_runtime_sec"] = float(
@@ -2399,8 +4073,15 @@ def build_report(
     chemistry = _chemistry_kpis()
     physics["topology_invalid_rate"] = float(chemistry.get("topology_invalid_rate") or 0.0)
     physics["backmapping_failure_rate"] = float(chemistry.get("backmapping_failure_rate") or 0.0)
-    product = _product_kpis(profiles_dir, product_evidence_bundle_json_path)
+    product = _product_kpis(
+        profiles_dir,
+        product_evidence_bundle_json_path,
+        product_ci_runtime_gate_json_path,
+    )
     pose_ranking_hbond = _pose_ranking_hbond_benchmark()
+    confidence_calibration = build_confidence_calibration_report(
+        pose_ranking_hbond.get("rows") or []
+    )
     hbond_recovery_pose_count = int(pose_ranking_hbond.get("hbond_recovery_pose_count") or 0)
     chemistry["hbond_recovery_present"] = hbond_recovery_pose_count > 0
     chemistry["hbond_recovery_pose_count"] = hbond_recovery_pose_count
@@ -2431,6 +4112,7 @@ def build_report(
         physics=physics,
         chemistry=chemistry,
         pose_ranking_hbond=pose_ranking_hbond,
+        confidence_calibration=confidence_calibration,
         product=product,
         rocm_runtime_ready=rocm_runtime_ready,
     )
@@ -2448,6 +4130,7 @@ def build_report(
         "chemistry_kpi": chemistry,
         "pm_kpi_summary": pm_summary,
         "pose_ranking_hbond_benchmark": pose_ranking_hbond,
+        "confidence_calibration_report": confidence_calibration,
         "product_kpi": product,
         "product_bundle_evidence_export_ready": ready,
         "rocm_environment_summary": {
@@ -2540,6 +4223,18 @@ def _write_md(path: Path, report: dict[str, Any]) -> None:
             f"- top1_pose_id: `{report['pose_ranking_hbond_benchmark']['top1_pose_id']}`",
             f"- ranking_order: `{';'.join(report['pose_ranking_hbond_benchmark']['ranking_order'])}`",
             "",
+            "## Confidence Calibration Report",
+            f"- status: `{report['confidence_calibration_report']['status']}`",
+            f"- ready: `{report['confidence_calibration_report']['ready']}`",
+            f"- row_count: `{report['confidence_calibration_report']['row_count']}`",
+            f"- positive_count: `{report['confidence_calibration_report']['positive_count']}`",
+            f"- negative_count: `{report['confidence_calibration_report']['negative_count']}`",
+            (
+                "- expected_calibration_error: "
+                f"`{report['confidence_calibration_report']['expected_calibration_error']}`"
+            ),
+            f"- brier_score: `{report['confidence_calibration_report']['brier_score']}`",
+            "",
             "## Product KPI",
         ]
     )
@@ -2578,6 +4273,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--residual-rows", type=int, default=10)
     parser.add_argument("--rocm-manifest-json", default=DEFAULT_ROCM_MANIFEST_JSON)
     parser.add_argument("--product-evidence-bundle-json", default=DEFAULT_PRODUCT_EVIDENCE_BUNDLE_JSON)
+    parser.add_argument("--product-ci-runtime-gate-json", default=DEFAULT_PRODUCT_CI_RUNTIME_GATE_JSON)
+    parser.add_argument("--runtime-scaling-plot", default=DEFAULT_RUNTIME_SCALING_PLOT)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
     args = parser.parse_args(argv)
@@ -2587,8 +4284,10 @@ def main(argv: list[str] | None = None) -> int:
         score_only_rows=max(1, int(args.score_only_rows)),
         onsps_rows=max(1, int(args.onsps_rows)),
         residual_rows=max(1, int(args.residual_rows)),
+        runtime_scaling_plot_path=args.runtime_scaling_plot,
         rocm_manifest_path=args.rocm_manifest_json,
         product_evidence_bundle_json_path=args.product_evidence_bundle_json,
+        product_ci_runtime_gate_json_path=args.product_ci_runtime_gate_json,
     )
     out_json = Path(args.out_json)
     out_json.parent.mkdir(parents=True, exist_ok=True)

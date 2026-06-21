@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import importlib
+import argparse
 
 import numpy as np
+import pandas as pd
 import torch
 
 
@@ -50,6 +52,67 @@ def test_allowlisted_runner_path_routes_through_product_engine_adapter() -> None
     assert topk_runner.main is topk_delivery.main
     assert topk_runner.build_delivery is topk_delivery.build_delivery
     assert importlib.import_module("tools.run_ligand_topk_delivery").main is topk_delivery.main
+
+
+def test_topk_delivery_payload_includes_claim_safe_metadata(tmp_path, monkeypatch) -> None:
+    from betelgeuze_engine.product.runners import topk_delivery
+
+    scores_csv = tmp_path / "scores.csv"
+    queue_csv = tmp_path / "queue.csv"
+    pd.DataFrame(
+        [
+            {"queue_id": "q1", "target": "A", "ligand_id": "L1", "binding_energy_proxy": -9.0},
+            {"queue_id": "q2", "target": "A", "ligand_id": "L2", "binding_energy_proxy": -7.0},
+        ]
+    ).to_csv(scores_csv, index=False)
+    pd.DataFrame(
+        [
+            {"queue_id": "q1", "target": "A", "ligand_id": "L1"},
+            {"queue_id": "q2", "target": "A", "ligand_id": "L2"},
+        ]
+    ).to_csv(queue_csv, index=False)
+
+    monkeypatch.setattr(
+        topk_delivery,
+        "_run",
+        lambda cmd: {
+            "ok": True,
+            "returncode": 0,
+            "cmd": cmd,
+            "stdout_tail": "",
+            "stderr_tail": "",
+        },
+    )
+    args = argparse.Namespace(
+        scores_csv=str(scores_csv),
+        queue_csv=str(queue_csv),
+        docking_request_json="",
+        trajectory_root=str(tmp_path),
+        out_summary_json=str(tmp_path / "summary.json"),
+        trajectory_glob="*.npz",
+        out_prefix=str(tmp_path / "topk"),
+        score_col="",
+        topk_global=1,
+        topk_per_target=0,
+        selection_mode="global_only",
+        contact_cutoff_A=6.0,
+        min_frames=1,
+        workers=0,
+        parallel_threshold=2,
+        make_bundle_zip=False,
+        evidence_bundle="",
+    )
+
+    payload = topk_delivery.build_delivery(args)
+
+    assert payload["ok"] is True
+    assert payload["selected_rows"] == 1
+    assert payload["claim_metadata_schema_version"] == "topk_delivery_claim_metadata_v1"
+    assert payload["claim_safe"] is True
+    assert payload["blocked_reason"] == ""
+    assert payload["claim_metadata"]["runner_kind"] == "ligand_topk_delivery"
+    assert payload["claim_metadata"]["physical_accuracy_claim"] is False
+    assert (tmp_path / "summary.json").exists()
 
 
 def test_core_forcefield_exposes_product_engine_bridge_with_claim_metadata() -> None:

@@ -55,6 +55,10 @@ def test_mm_gbsa_binding_energy_refine_tier():
     assert "e_gb" in out
     assert "e_sa" in out
     assert "ligand_contact_atom_count" in out
+    assert out["claim_metadata_schema_version"] == "mm_gbsa_refine_claim_metadata_v1"
+    assert out["claim_safe"] is False
+    assert out["blocked_reason"] == "internal_gb_sa_proxy_uncalibrated"
+    assert out["claim_metadata"]["claim_safe"] is False
     assert np.isfinite(out["deltaG_mm_gbsa_kcal_mol"])
 
 

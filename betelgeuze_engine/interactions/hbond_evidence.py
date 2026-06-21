@@ -39,6 +39,7 @@ HBOND_THRESHOLD_REQUIRED_KEYS = {
     "overanchor_distance",
     "angle_threshold",
     "claim_safe_confidence_min",
+    "delta_backmap_max",
 }
 
 
@@ -71,12 +72,21 @@ def _threshold_schema_ready(thresholds: dict[str, Any]) -> bool:
     overanchor_distance = _finite_float(thresholds.get("overanchor_distance"))
     angle_threshold = _finite_float(thresholds.get("angle_threshold"))
     confidence_min = _finite_float(thresholds.get("claim_safe_confidence_min"))
-    if None in {min_distance, max_distance, overanchor_distance, angle_threshold, confidence_min}:
+    delta_backmap_max = _finite_float(thresholds.get("delta_backmap_max"))
+    if None in {
+        min_distance,
+        max_distance,
+        overanchor_distance,
+        angle_threshold,
+        confidence_min,
+        delta_backmap_max,
+    }:
         return False
     return bool(
         0.0 < overanchor_distance <= min_distance <= max_distance
         and 0.0 <= angle_threshold <= 1.0
         and 0.0 <= confidence_min <= 1.0
+        and delta_backmap_max > 0.0
     )
 
 
@@ -122,6 +132,10 @@ class HbondEvidence:
     geometry_evaluated: bool
     geometry_complete: bool
     hbond_confidence: float
+    delta_backmap: float
+    delta_backmap_max: float
+    delta_backmap_evaluated: bool
+    delta_backmap_yellow_band: bool
     claim_safe: bool
     status: str = "not_assessed"
     schema_version: str = HBOND_EVIDENCE_SCHEMA_VERSION
@@ -156,6 +170,8 @@ class HbondEvidence:
     def schema_ready(self) -> bool:
         """Return whether the evidence carries the product H-bond/ONSPS schema surface."""
         confidence = _finite_float(self.hbond_confidence)
+        delta_backmap = _finite_float(self.delta_backmap)
+        delta_backmap_max = _finite_float(self.delta_backmap_max)
         distance_fraction = _finite_float(self.distance_pass_fraction)
         angle_fraction = _finite_float(self.angle_pass_fraction)
         return bool(
@@ -173,6 +189,11 @@ class HbondEvidence:
             and self.unsatisfied_acceptor_count >= 0
             and confidence is not None
             and 0.0 <= confidence <= 1.0
+            and delta_backmap is not None
+            and delta_backmap_max is not None
+            and delta_backmap_max > 0.0
+            and isinstance(self.delta_backmap_evaluated, bool)
+            and isinstance(self.delta_backmap_yellow_band, bool)
             and distance_fraction is not None
             and 0.0 <= distance_fraction <= 1.0
             and angle_fraction is not None
@@ -245,6 +266,10 @@ class HbondEvidence:
             hbond_geometry_evaluated=bool(self.geometry_evaluated),
             hbond_geometry_complete=bool(self.geometry_complete),
             hbond_confidence=float(self.hbond_confidence),
+            hbond_delta_backmap=float(self.delta_backmap),
+            hbond_delta_backmap_max=float(self.delta_backmap_max),
+            hbond_delta_backmap_evaluated=bool(self.delta_backmap_evaluated),
+            hbond_delta_backmap_yellow_band=bool(self.delta_backmap_yellow_band),
             onsps_backmap_schema_version=str(
                 onsps_meta.get("schema_version") or ONSPS_BACKMAP_SCHEMA_VERSION
             ),
@@ -273,6 +298,7 @@ def _thresholds(
     max_distance: float,
     overanchor_distance: float,
     angle_threshold: float,
+    delta_backmap_max: float,
 ) -> dict[str, float]:
     return {
         "min_distance": float(min_distance),
@@ -280,6 +306,7 @@ def _thresholds(
         "overanchor_distance": float(overanchor_distance),
         "angle_threshold": float(angle_threshold),
         "claim_safe_confidence_min": 0.5,
+        "delta_backmap_max": float(delta_backmap_max),
     }
 
 
@@ -317,6 +344,7 @@ def _blocked_reason(
     confidence: float,
     overanchoring: bool,
     missing_anchor: bool,
+    delta_backmap_yellow_band: bool,
     onsps_blocked_reason: str = "",
 ) -> str:
     if site_count <= 0:
@@ -325,6 +353,8 @@ def _blocked_reason(
         return "pose_geometry_missing"
     if onsps_blocked_reason:
         return onsps_blocked_reason
+    if delta_backmap_yellow_band:
+        return "delta_backmap_yellow_band"
     if overanchoring:
         return "overanchored_decoy"
     if missing_anchor or distance_pass <= 0:
@@ -344,7 +374,16 @@ def evaluate_hbond_evidence(
     max_distance: float = 3.5,
     overanchor_distance: float = 2.1,
     angle_threshold: float = 0.55,
+    delta_backmap: float | None = None,
+    delta_backmap_max: float = 2.5,
 ) -> HbondEvidence:
+    delta_value = _finite_float(delta_backmap)
+    delta_evaluated = delta_value is not None
+    delta_abs = abs(float(delta_value)) if delta_value is not None else 0.0
+    delta_max = _finite_float(delta_backmap_max)
+    if delta_max is None or delta_max <= 0.0:
+        delta_max = 2.5
+    delta_yellow_band = bool(delta_evaluated and delta_abs > float(delta_max))
     if _invalid_smiles(smiles):
         return HbondEvidence(
             site_count=0,
@@ -362,6 +401,10 @@ def evaluate_hbond_evidence(
             geometry_evaluated=False,
             geometry_complete=False,
             hbond_confidence=0.0,
+            delta_backmap=float(delta_abs),
+            delta_backmap_max=float(delta_max),
+            delta_backmap_evaluated=delta_evaluated,
+            delta_backmap_yellow_band=delta_yellow_band,
             claim_safe=False,
             status="invalid_smiles",
             abstention_reason="invalid_smiles",
@@ -371,6 +414,7 @@ def evaluate_hbond_evidence(
                 max_distance=max_distance,
                 overanchor_distance=overanchor_distance,
                 angle_threshold=angle_threshold,
+                delta_backmap_max=float(delta_max),
             ),
             onsps_backmap_metadata=_onsps_backmap_not_claim_safe_metadata(
                 "invalid_smiles",
@@ -451,6 +495,9 @@ def evaluate_hbond_evidence(
     angle_fraction = float(angle_pass / denom)
     missing_anchor = bool(site_count > 0 and distance_pass == 0 and protein.size)
     confidence = float(max(0.0, min(1.0, 0.65 * distance_fraction + 0.35 * angle_fraction)))
+    if delta_evaluated:
+        delta_penalty = min(0.75, 0.5 * (delta_abs / max(float(delta_max), 1e-6)))
+        confidence = float(max(0.0, min(1.0, confidence * (1.0 - delta_penalty))))
     onsps_required = bool(
         onsps_backmap_metadata
         and str(onsps_backmap_metadata.get("backmap_status") or "") not in {"not_evaluated", "no_onsps_sites"}
@@ -462,6 +509,7 @@ def evaluate_hbond_evidence(
     claim_safe = bool(
         site_count > 0
         and confidence >= 0.5
+        and not delta_yellow_band
         and not overanchoring
         and not missing_anchor
         and onsps_claim_safe
@@ -473,6 +521,7 @@ def evaluate_hbond_evidence(
         confidence=confidence,
         overanchoring=overanchoring,
         missing_anchor=missing_anchor,
+        delta_backmap_yellow_band=delta_yellow_band,
         onsps_blocked_reason=onsps_blocked_reason,
     )
     return HbondEvidence(
@@ -491,6 +540,10 @@ def evaluate_hbond_evidence(
         geometry_evaluated=geometry_evaluated,
         geometry_complete=geometry_complete,
         hbond_confidence=confidence,
+        delta_backmap=float(delta_abs),
+        delta_backmap_max=float(delta_max),
+        delta_backmap_evaluated=delta_evaluated,
+        delta_backmap_yellow_band=delta_yellow_band,
         claim_safe=claim_safe,
         status="pass" if claim_safe else "review",
         abstention_reason="" if claim_safe else blocked,
@@ -500,6 +553,7 @@ def evaluate_hbond_evidence(
             max_distance=max_distance,
             overanchor_distance=overanchor_distance,
             angle_threshold=angle_threshold,
+            delta_backmap_max=float(delta_max),
         ),
         onsps_backmap_metadata=onsps_backmap_metadata,
     )

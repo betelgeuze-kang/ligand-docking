@@ -212,6 +212,9 @@ def test_topo_corrector_uses_measured_geometry_not_synthetic_only():
     out = summarize_topo_correction(meta, score_2bead=-5.0, score_4bead=-5.8)
     assert out["delta_backmap"] == pytest.approx(-0.8)
     assert out["topo_feature_dim"] == 18
+    assert out["topology_correction_contract"] == "topology_score_correction_bounded_v1"
+    assert out["topology_correction_physical_force_claim"] is False
+    assert out["topology_correction_bounded"] is True
 
 
 def test_stage2_skip_inline_manifest_and_merge(tmp_path: Path):

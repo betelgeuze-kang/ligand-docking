@@ -169,6 +169,7 @@ Definition of Done:
 - 두 workflow 모두 annotation이 "recent account payments have failed or your spending limit needs to be increased" 계열로 기록되며, 따라서 원격 CI green claim은 아직 금지한다.
 - `runs/product_ci_runtime_gate_current.json` / `.md`는 최신 2026-06-21 KST Actions record를 `latest_github_actions_record_kst_date=2026-06-21`로 기록하고, `status=blocked_product_ci_runtime_gate`, `github_actions_started=false`, `external_blocker=true`, `blocker_code=github_actions_billing_or_spending_limit`, `workflow_dispatch_executed=false`, `external_state_mutated=false`로 fail-closed 상태를 기록한다.
 - 같은 gate는 local ROCm clean-container 증거(`runs/product_image_smoke_preflight_current.json`)를 함께 읽어 `local_rocm_clean_container_ready=true`를 기록하므로, 남은 차단은 owner가 GitHub Billing & plans/spending-limit를 복구한 뒤 `product-api-worker.yml`, `product-image-smoke.yml` build mode, self-hosted ROCm `rocm-runtime` mode를 재실행하는 것이다.
+- `ai_md_product_evidence_bundle`과 `ai_md_engine_kpi_report`는 local product evidence claim과 remote release claim을 분리한다. Current local evidence는 `product_claim_ready=true`와 `bundle_validation_pass=true`를 유지하지만, GitHub Actions billing blocker 때문에 `release_claim_ready=false`, `release_claim_blocked_reason=github_actions_billing_or_spending_limit`, `product_ci_runtime_gate_ready=false`, `product_ci_external_blocker=true`를 함께 노출한다.
 
 ## 권장 PR 순서
 
@@ -260,6 +261,7 @@ core/onsps_backmap.py    -> 새 backmapping module로 연결하는 shim
 - `core/forcefield.py`는 기존 `ForceField.compute()` 경로를 유지하면서 `product_energy_forces()` bridge를 통해 `betelgeuze_engine.physics.ProductForceField`의 `EnergyForces`/claim metadata 계약을 반환한다.
 - KPI report는 `core_forcefield_bridge_ready`를 PM product gate로 노출하고, product evidence bundle validator는 tar 안의 KPI JSON에서 이 gate를 검증한다.
 - KPI report는 추가로 `core_compatibility_layer_ready`를 PM product gate로 노출해 `core/onsps_backmap.py`, `core/topology.py`, `core/forcefield.py`가 새 `betelgeuze_engine` 구현을 호출하는 compatibility layer인지 검증한다.
+- 같은 gate는 migrated helper shim인 `core/score_residual.py`, `core/topo_corrector.py`, `core/mm_gbsa.py`도 canonical engine symbol identity로 검증한다. `core_compatibility_layer_smoke.row_count=7`이며 `score_residual_shim`, `topology_score_correction_shim`, `mm_gbsa_refine_shim` 중 하나라도 missing symbol 또는 identity mismatch가 있으면 product evidence bundle validation은 fail-closed된다.
 - `core_forcefield_bridge_smoke`와 `core_compatibility_layer_smoke.rows[forcefield_product_bridge]`는 `ProductForceField` result의 neighbor diagnostics도 보존해야 한다. `neighbor_diagnostics_ready=true`, `neighbor_pair_count>0`, `neighbor_source=full_neighbor_pairs`가 없으면 product evidence bundle validation은 fail-closed된다.
 - force-term physics validation rows는 finite-difference/translation/rotation/energy-drift pass뿐 아니라 `topology_fidelity=sequence_mapped`, `ligand_topology_valid=true`, `hbond_evidence_status=pass` claim metadata를 함께 통과해야 하며, `force_term_physics_validation_claim_safe_ready` PM physics gate가 product evidence bundle에서 fail-closed로 검증된다.
 - 이 bridge gate는 runtime GPU readiness 주장이 아니라 compatibility/metadata 계약 증거이며, 실제 제품 실행 readiness는 ROCm manifest, Rust HIP build, clean-container `rocm-runtime` receipt로만 열린다.
@@ -417,10 +419,12 @@ v2:
 현재 반영 상태:
 
 - default product registry는 `directional_hbond`, `hydrophobic_contact`, `legacy_lj` 3개를 유지한다.
-- `guarded_force_term_registry()`는 opt-in `screened_electrostatics` term을 추가로 제공한다.
+- `guarded_force_term_registry()`는 opt-in `screened_electrostatics`, `pocket_wall`, `torsion_prior`, `topology_penalty`, `water_displacement_proxy` term을 추가로 제공한다.
 - `ScreenedElectrostaticsTerm`은 caller-supplied charge vector와 `charge_model_valid=true`가 있을 때만 energy/forces/diagnostics/claim metadata를 claim-safe로 반환한다.
 - charge metadata가 없거나 charge model이 검증되지 않으면 zero energy/force와 fail-closed `blocked_reason`을 반환한다.
-- KPI report는 `guarded_force_term_plugin_ready`로 default registry 보존, opt-in registry 확장, screened electrostatics finite-difference, missing/unvalidated charge blocker를 함께 검증한다.
+- `PocketWallTerm`, `TorsionPriorTerm`, `TopologyPenaltyTerm`, `WaterDisplacementProxyTerm`은 모두 opt-in guarded term으로 energy/forces/diagnostics/claim metadata와 bounded cap metadata를 반환한다.
+- `WaterDisplacementProxyTerm`은 validated sequence-mapped topology, ligand topology claim safety, `water_displacement_model_valid=true`, ligand atom indices, hydration/water site indices가 모두 있을 때만 Gaussian water-displacement proxy energy/forces를 claim-safe로 반환한다. ligand/site index overlap, invalid weights, missing metadata, unvalidated model, invalid topology, cap exceedance는 fail-closed된다.
+- KPI report는 `guarded_force_term_plugin_ready`로 default registry 보존, opt-in registry 확장, finite-difference, missing/unvalidated metadata blockers, invalid topology, invalid weights, cap exceedance, forcefield aggregate claim rows를 함께 검증한다.
 
 ### PR-5. ONSPS Interaction Evidence
 
@@ -634,7 +638,7 @@ interaction evidence
 physics validation tests
 ```
 
-3. `SE3EquivariantCorrection` 이름만 믿지 않는다. rotation equivariance test를 추가하거나, 통과하지 못하면 `NeuralForceCorrection` 같은 낮은 claim 이름으로 바꾼다.
+3. `SE3EquivariantCorrection` 이름만 믿지 않는다. legacy alias는 호환용으로만 남기고 canonical class는 `NeuralForceCorrection`으로 낮춘다. rotation audit test는 이 MLP가 SE(3)-equivariant product claim이 아님을 fail-closed metadata와 함께 검증한다.
 
 ## 수석엔지니어 기준 코드 원칙
 
@@ -650,7 +654,7 @@ physics validation tests
 -> core legacy 축소
 ```
 
-현재 product KPI는 `core_compatibility_layer_ready`로 이 원칙을 추적한다. 이 gate는 `core/onsps_backmap.py`의 import identity shim, `core/topology.py`의 `ProteinTopology` bridge, `core/forcefield.py`의 `ProductForceField`/`EnergyForces` claim metadata bridge를 함께 확인한다.
+현재 product KPI는 `core_compatibility_layer_ready`로 이 원칙을 추적한다. 이 gate는 `core/onsps_backmap.py`의 import identity shim, `core/topology.py`의 `ProteinTopology` bridge, `core/forcefield.py`의 `ProductForceField`/`EnergyForces` claim metadata bridge와 함께 `core/score_residual.py`, `core/topo_corrector.py`, `core/mm_gbsa.py`의 migrated helper shim symbol identity를 확인한다.
 
 3. 모든 물리항은 energy, forces, diagnostics를 반환한다.
 
@@ -746,14 +750,17 @@ Product KPI:
 - `ai_md_engine_kpi_report`의 Product KPI는 runner result의 `claim_metadata`, `hbond_evidence_summary`, `force_residual_shortlist`/`force_residual_summary`가 signed API `result_manifest`에 포함되는지 `runner_claim_metadata_signed`로 확인한다.
 - `ai_md_product_evidence_bundle`은 signed manifest 안의 `force_residual_summary`를 `force_residual_summary_signed`로 따로 노출하고, `force_residual_claim_metadata_v1`, policy caps, observed caps가 모두 준비되지 않으면 `product_claim_ready=false`로 fail-closed 처리한다.
 - signed runner manifest smoke는 `manifest_claim_safe=false`와 non-empty `manifest_blocked_reason`을 함께 요구한다. Product evidence bundle validator는 `blocked_claim_correctly_blocked`가 Product KPI와 PM Product KPI 양쪽에 없거나 manifest blocked reason이 비어 있으면 `product_claim_ready=false`로 fail-closed 처리한다.
-- `tools/run_ligand_htvs_pipeline.py`, `tools/run_ligand_backmapping_scoring.py`, `tools/run_ligand_topk_delivery.py`는 allowlisted path를 유지하면서 `betelgeuze_engine.product.runners.*` adapter로 라우팅한다. `allowlisted_runner_shim_contract_ready` Product KPI는 세 shim의 adapter import, runtime symbol identity, runner profile SHA256 일치를 함께 검증한다.
+- `tools/run_ligand_htvs_pipeline.py`, `tools/run_ligand_backmapping_scoring.py`, `tools/run_ligand_topk_delivery.py`는 allowlisted path를 유지하면서 `betelgeuze_engine.product.runners.*` canonical implementation으로 라우팅한다. `allowlisted_runner_shim_contract_ready` Product KPI는 세 shim의 engine import, runtime symbol identity, runner profile SHA256 일치를 함께 검증한다.
 - 세 allowlisted runner shim은 local runner implementation을 다시 품으면 안 된다. KPI와 product evidence bundle validator는 `sys.modules[__name__]` 또는 `_sys.modules[__name__]` canonical module alias, `shim_contract_type=canonical_module_alias`, `self_implementation_blocked=true`가 아니면 fail-closed한다.
+- `product_runner_engine_owned_ready` Product KPI는 `ligand_htvs_pipeline_default`, `backmapping_scoring.production`, `ligand_topk_delivery.production` 세 runner가 모두 engine-owned이고 compatibility shim identity가 유지되는지 aggregate로 검증한다. `product_runner_engine_owned_smoke.runner_count=3`, `engine_owned_runner_count=3`, contract `all_product_runners_are_engine_owned_with_compatibility_shims`가 current evidence에 남아야 한다.
 - `force_term_result_contract_ready` Product KPI는 registered force term 각각이 `TermResult.energy`, `TermResult.forces`, `diagnostics`, `claim_metadata`를 반환하고 shape/finiteness/required claim keys를 만족하는지 검증한다.
 - `force_term_claim_metadata_smoke`는 aggregate `ProductForceField` result도 `forcefield_neighbor_diagnostics_ready`, `forcefield_neighbor_pair_count`, `forcefield_neighbor_source=full_neighbor_pairs`로 검증한다. Product evidence bundle validator는 이 aggregate neighbor diagnostics가 빠지면 force-term result contract를 claim-ready로 보지 않는다.
+- `HydrophobicContactTerm`은 `hydrophobic_contact_evidence_v1` schema를 claim metadata와 diagnostics에 노출한다. Product KPI와 evidence bundle validator는 단독 physics row와 aggregate `force_term_claim_rows` 양쪽에서 `hydrophobic_contact_evidence_schema_ready`, mask presence/count, active pair count, `bounded_quadratic_contact` energy model을 검증한다.
 - guarded analytic correction인 `screened_electrostatics`는 opt-in registry에만 존재하며 `max_abs_energy`, `max_force_norm`, `max_active_pair_count` caps를 claim metadata와 diagnostics에 노출한다. cap 초과 fixture는 zero correction + `screened_electrostatics_policy_cap_exceeded`로 fail-closed되어야 하며, product evidence bundle validator는 `policy_caps_ready`, `observed_caps_ready`, `bounded_correction_ready`, `policy_cap_exceeded_blocked`가 없으면 claim-ready로 보지 않는다.
 - `ProductForceField` aggregate `force_term_claim_rows`도 guarded analytic term의 bounded cap metadata를 보존해야 한다. 단독 term smoke가 통과해도 aggregate row에서 `policy_caps_ready`, `observed_caps_ready`, `bounded_correction_ready`가 사라지면 product evidence bundle validation은 fail-closed한다.
 - bundle validation이 통과해도 clean ROCm container smoke receipt가 없으면 `product_claim_ready=false`를 유지한다.
 - clean install/product claim의 다음 required step은 CPU fallback이 아니라 `PRODUCT_IMAGE_VERIFY_MODE=rocm-runtime bash deploy/verify_product_image.sh`로 clean container ROCm/HIP/Rust runner smoke receipt를 붙이는 것이다.
+- remote release claim은 local `product_claim_ready`와 별개로 `release_claim_ready=product_claim_ready && product_ci_runtime_gate_ready`일 때만 허용한다. `product_ci_runtime_gate_ready=false`인 동안 GUI/PM summary는 delivery 가능 상태가 아니라 release-blocked 상태와 blocker code를 표시해야 한다.
 - release refresh chain은 `product_image_smoke_preflight -> ai_md_engine_kpi_report -> ai_md_product_evidence_bundle -> ai_md_engine_kpi_report -> ai_md_product_evidence_bundle` 순서로 current artifacts를 수렴시킨다. KPI report가 bundle validation을 읽고 bundle이 KPI readiness를 읽는 순환 증거 구조라, 한 번만 실행하면 stale blocker가 남을 수 있다.
 
 Chemistry KPI 현재 반영 상태:
@@ -792,7 +799,7 @@ GUI의 첫 화면은 marketing/landing page가 아니라 실제 operator가 바�
 - clean-container 증거가 없을 때는 `RUNNING`/`READY`처럼 보이게 하지 않고 `blocked_clean_container_receipt_missing` 또는 `runtime evidence required`로 fail-closed 상태를 드러낸다.
 - Runner profile selector는 `api/validated_runner.py` allowlist와 signed profile SHA256이 검증된 profile만 선택 가능하게 한다.
 - 우측 evidence cards는 예쁜 summary가 아니라 실제 artifact field에 연결한다: `topology_fidelity`, `ligand_topology_valid`, `hbond_evidence_status`, `force_residual_applied`, `claim_safe`, `blocked_reason`.
-- Delivery Verdict는 `product_claim_ready=false`이면 반드시 `internal review` 또는 `blocked`로 표시하고, clean ROCm/HIP/Rust receipt 전에는 external delivery 문구를 쓰지 않는다.
+- Delivery Verdict는 `product_claim_ready=false`이면 반드시 `internal review` 또는 `blocked`로 표시하고, `release_claim_ready=false`이면 `release blocked`와 `release_claim_blocked_reason`을 표시한다. clean ROCm/HIP/Rust receipt와 remote product CI runtime gate 전에는 external delivery 문구를 쓰지 않는다.
 - 3D viewer callout은 H-bond distance/angle, ONSPS backmapped atoms, unsatisfied donor/acceptor, over-anchored decoy rejection evidence를 같은 schema에서 표시한다.
 
 프론트엔드 구현 순서:

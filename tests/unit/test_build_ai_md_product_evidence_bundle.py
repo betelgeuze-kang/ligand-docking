@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import tarfile
 from pathlib import Path
 
+from betelgeuze_engine.validation import build_confidence_calibration_report
 from tools.product import build_ai_md_product_evidence_bundle as mod
 
 
@@ -11,6 +13,132 @@ def _write(path: Path, payload: str = "artifact\n") -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(payload, encoding="utf-8")
     return path
+
+
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _runner_no_core_imports_smoke(*, ready: bool = True) -> dict:
+    runners = [
+        "tools/run_ligand_htvs_pipeline.py",
+        "tools/run_ligand_backmapping_scoring.py",
+        "tools/run_ligand_topk_delivery.py",
+        "betelgeuze_engine/product/runners/htvs_pipeline.py",
+        "betelgeuze_engine/product/runners/backmapping_scoring.py",
+        "betelgeuze_engine/product/runners/topk_delivery.py",
+        "tools/product/run_ligand_htvs_pipeline.py",
+        "tools/product/run_ligand_backmapping_scoring.py",
+        "tools/product/run_ligand_topk_delivery.py",
+    ]
+    return {
+        "ready": ready,
+        "row_count": len(runners) if ready else 0,
+        "legacy_core_import_violation_count": 0 if ready else 1,
+        "rows": [
+            {
+                "runner": runner,
+                "exists": True,
+                "legacy_core_import_violation_count": 0,
+                "legacy_core_import_violations": [],
+                "ready": True,
+            }
+            for runner in runners
+        ] if ready else [],
+    }
+
+
+def _topk_delivery_engine_owned_smoke(*, ready: bool = True) -> dict:
+    return {
+        "ready": ready,
+        "engine_module": "betelgeuze_engine.product.runners.topk_delivery",
+        "engine_path": "betelgeuze_engine/product/runners/topk_delivery.py",
+        "compatibility_path": "tools/product/run_ligand_topk_delivery.py",
+        "engine_required_missing": [] if ready else ["def build_delivery("],
+        "engine_forbidden_present": [] if ready else ['import_module("tools.product.run_ligand_topk_delivery")'],
+        "compatibility_required_missing": [],
+        "compatibility_self_implementation_present": False,
+        "runtime_identity_ready": ready,
+        "runtime_error": "",
+        "claim_metadata_ready": ready,
+        "claim_metadata_schema_version": "topk_delivery_claim_metadata_v1" if ready else "",
+        "claim_metadata_claim_safe": True if ready else False,
+        "claim_metadata_blocked_reason": "",
+        "claim_metadata_physical_accuracy_claim": False,
+        "claim_metadata_error": "",
+    }
+
+
+def _backmapping_scoring_engine_owned_smoke(*, ready: bool = True) -> dict:
+    return {
+        "ready": ready,
+        "engine_module": "betelgeuze_engine.product.runners.backmapping_scoring",
+        "engine_path": "betelgeuze_engine/product/runners/backmapping_scoring.py",
+        "compatibility_path": "tools/product/run_ligand_backmapping_scoring.py",
+        "engine_required_missing": [] if ready else ["def _frame_mmpbsa_proxy("],
+        "engine_forbidden_present": [] if ready else ['import_module("tools.product.run_ligand_backmapping_scoring")'],
+        "compatibility_required_missing": [],
+        "compatibility_self_implementation_present": False,
+        "runtime_identity_ready": ready,
+        "runtime_error": "",
+    }
+
+
+def _htvs_pipeline_engine_owned_smoke(*, ready: bool = True) -> dict:
+    return {
+        "ready": ready,
+        "engine_module": "betelgeuze_engine.product.runners.htvs_pipeline",
+        "engine_path": "betelgeuze_engine/product/runners/htvs_pipeline.py",
+        "compatibility_path": "tools/product/run_ligand_htvs_pipeline.py",
+        "engine_required_missing": [] if ready else ["def run_pipeline("],
+        "engine_forbidden_present": [] if ready else ['import_module("tools.product.run_ligand_htvs_pipeline")'],
+        "compatibility_required_missing": [],
+        "compatibility_self_implementation_present": False,
+        "runtime_identity_ready": ready,
+        "runtime_error": "",
+    }
+
+
+def _product_runner_engine_owned_smoke(*, ready: bool = True) -> dict:
+    rows = [
+        {
+            "runner_id": "ligand_htvs_pipeline_default",
+            "runner_kind": "ligand_htvs_pipeline",
+            "engine_module": "betelgeuze_engine.product.runners.htvs_pipeline",
+        },
+        {
+            "runner_id": "backmapping_scoring.production",
+            "runner_kind": "ligand_backmapping_scoring",
+            "engine_module": "betelgeuze_engine.product.runners.backmapping_scoring",
+        },
+        {
+            "runner_id": "ligand_topk_delivery.production",
+            "runner_kind": "ligand_topk_delivery",
+            "engine_module": "betelgeuze_engine.product.runners.topk_delivery",
+        },
+    ]
+    for row in rows:
+        row.update(
+            {
+                "ready": ready,
+                "runtime_identity_ready": ready,
+                "compatibility_self_implementation_present": False,
+                "engine_required_missing": [],
+                "engine_forbidden_present": [],
+                "runtime_error": "",
+            }
+        )
+    return {
+        "ready": ready,
+        "runner_count": 3 if ready else 0,
+        "engine_owned_runner_count": 3 if ready else 0,
+        "contract": "all_product_runners_are_engine_owned_with_compatibility_shims",
+        "rows": rows if ready else [],
+    }
 
 
 def _chemistry_kpi_packet(*, ready: bool = True) -> dict:
@@ -28,17 +156,58 @@ def _chemistry_kpi_packet(*, ready: bool = True) -> dict:
         "keto_tautomer_smoke",
         "invalid_smiles",
     ]
-    rows = [
-        {
+    rows = []
+    for fixture in fixtures:
+        row = {
             "fixture": fixture,
             "hbond_schema_ready": ready,
             "hbond_threshold_schema_ready": ready,
             "hbond_pair_schema_ready": ready,
             "hbond_geometry_flags_ready": ready,
+            "hbond_geometry_evaluated": ready,
+            "hbond_geometry_complete": ready,
+            "hbond_distance_pass_count": 1 if ready else 0,
+            "hbond_angle_pass_count": 1 if ready else 0,
             "ligand_validity_schema_ready": ready,
         }
-        for fixture in fixtures
-    ] if ready else []
+        if ready:
+            row.update(
+                {
+                    "ligand_topology_claim_safe": True,
+                    "ligand_validity_blockers": [],
+                    "chiral_center_count": 0,
+                    "specified_chiral_center_count": 0,
+                    "unassigned_chiral_center_count": 0,
+                    "chirality_status": "not_applicable",
+                    "ring_atom_count": 0,
+                    "ring_status": "not_applicable",
+                    "formal_charge_sum": 0,
+                    "protonation_status": "neutral_state_parsed",
+                    "tautomer_fixture_valid": False,
+                    "tautomer_status": "connectivity_parsed_tautomer_not_canonicalized",
+                }
+            )
+            if fixture == "chiral_lactic_acid":
+                row.update({"chiral_center_count": 1, "specified_chiral_center_count": 1, "chirality_status": "specified"})
+            elif fixture == "unassigned_chiral_lactic_acid":
+                row.update(
+                    {
+                        "ligand_topology_claim_safe": False,
+                        "ligand_validity_blockers": ["unassigned_ligand_chirality"],
+                        "chiral_center_count": 1,
+                        "unassigned_chiral_center_count": 1,
+                        "chirality_status": "unassigned_chiral_centers",
+                    }
+                )
+            elif fixture == "aromatic_ring":
+                row.update({"ring_atom_count": 6, "ring_status": "present"})
+            elif fixture == "protonated_amine":
+                row.update({"formal_charge_sum": 1, "protonation_status": "charged_state_parsed"})
+            elif fixture == "keto_tautomer_smoke":
+                row.update({"tautomer_fixture_valid": True})
+        rows.append(row)
+    if not ready:
+        rows = []
     fixture_count = len(rows)
     return {
         "fixture_count": fixture_count,
@@ -48,6 +217,8 @@ def _chemistry_kpi_packet(*, ready: bool = True) -> dict:
         "ligand_topology_validity_schema_ready_count": fixture_count if ready else 0,
         "hbond_donor_site_count": 4 if ready else 0,
         "hbond_acceptor_site_count": 5 if ready else 0,
+        "hbond_geometry_evaluated_fixture_count": fixture_count if ready else 0,
+        "hbond_geometry_complete_fixture_count": fixture_count if ready else 0,
         "hbond_recovery_fixture_count": 5 if ready else 0,
         "unsatisfied_donor_acceptor_fixture_count": 1 if ready else 0,
         "unsatisfied_donor_count": 1 if ready else 0,
@@ -88,6 +259,13 @@ def _force_term_physics_validation_packet(*, ready: bool = True) -> dict:
             "claim_safe": ready,
             "force_term_status": "pass" if ready else "blocked",
             "blocked_reason": "" if ready else "physics_validation_failed",
+            "hydrophobic_contact_evidence_schema_version": (
+                "hydrophobic_contact_evidence_v1" if term == "hydrophobic_contact" and ready else ""
+            ),
+            "hydrophobic_contact_evidence_schema_ready": (
+                term == "hydrophobic_contact" and ready
+            ),
+            "hydrophobic_contact_active_pair_count": 1 if term == "hydrophobic_contact" and ready else 0,
         }
         for term in ("directional_hbond", "hydrophobic_contact", "legacy_lj")
     ] if ready else []
@@ -153,6 +331,13 @@ def _kpi_packet(
             "force_term_status": "pass",
             "claim_safe": True,
             "blocked_reason": "",
+            "hydrophobic_contact_evidence_schema_version": "hydrophobic_contact_evidence_v1",
+            "hydrophobic_contact_evidence_schema_ready": True,
+            "hydrophobic_contact_mask_present": True,
+            "hydrophobic_contact_mask_count": 2,
+            "hydrophobic_contact_active_pair_count": 1,
+            "hydrophobic_contact_contact_distance_A": 4.5,
+            "hydrophobic_contact_energy_model": "bounded_quadratic_contact",
         },
         {
             "force_term_name": "legacy_lj",
@@ -213,9 +398,16 @@ def _kpi_packet(
             "pose_id": "amide_near_hbond_pose",
             "benchmark_role": "hbond_recovery_pose",
             "expected_claim_safe": True,
+            "expected_hbond_status": "pass",
             "expected_blocked_reason": "",
             "hbond_claim_safe": True,
+            "hbond_status": "pass",
             "hbond_blocked_reason": "",
+            "hbond_geometry_evaluated": True,
+            "hbond_geometry_complete": True,
+            "hbond_distance_pass_count": 2,
+            "hbond_angle_pass_count": 2,
+            "overanchoring_flag": False,
             "unsatisfied_donor_count": 0,
             "unsatisfied_acceptor_count": 0,
             "benchmark_contract_checks": {"claim_safe_matches": True},
@@ -225,9 +417,16 @@ def _kpi_packet(
             "pose_id": "ethanol_near_hbond_pose",
             "benchmark_role": "unsatisfied_donor_pose",
             "expected_claim_safe": False,
+            "expected_hbond_status": "review",
             "expected_blocked_reason": "missing_expected_anchor",
             "hbond_claim_safe": False,
+            "hbond_status": "review",
             "hbond_blocked_reason": "missing_expected_anchor",
+            "hbond_geometry_evaluated": True,
+            "hbond_geometry_complete": True,
+            "hbond_distance_pass_count": 0,
+            "hbond_angle_pass_count": 0,
+            "overanchoring_flag": False,
             "unsatisfied_donor_count": 1,
             "unsatisfied_acceptor_count": 0,
             "benchmark_contract_checks": {"claim_safe_matches": True},
@@ -237,11 +436,18 @@ def _kpi_packet(
             "pose_id": "amide_far_decoy_pose",
             "benchmark_role": "far_decoy_pose",
             "expected_claim_safe": False,
+            "expected_hbond_status": "review",
             "expected_blocked_reason": "missing_expected_anchor",
             "hbond_claim_safe": False,
+            "hbond_status": "review",
             "hbond_blocked_reason": "missing_expected_anchor",
-            "unsatisfied_donor_count": 0,
-            "unsatisfied_acceptor_count": 0,
+            "hbond_geometry_evaluated": True,
+            "hbond_geometry_complete": True,
+            "hbond_distance_pass_count": 0,
+            "hbond_angle_pass_count": 0,
+            "overanchoring_flag": False,
+            "unsatisfied_donor_count": 1,
+            "unsatisfied_acceptor_count": 1,
             "benchmark_contract_checks": {"claim_safe_matches": True},
             "benchmark_contract_pass": True,
         },
@@ -249,11 +455,41 @@ def _kpi_packet(
             "pose_id": "amide_overanchored_decoy_pose",
             "benchmark_role": "overanchored_decoy_pose",
             "expected_claim_safe": False,
+            "expected_hbond_status": "review",
             "expected_blocked_reason": "overanchored_decoy",
             "hbond_claim_safe": False,
+            "hbond_status": "review",
             "hbond_blocked_reason": "overanchored_decoy",
+            "hbond_geometry_evaluated": True,
+            "hbond_geometry_complete": True,
+            "hbond_distance_pass_count": 0,
+            "hbond_angle_pass_count": 0,
+            "overanchoring_flag": True,
+            "unsatisfied_donor_count": 1,
+            "unsatisfied_acceptor_count": 1,
+            "benchmark_contract_checks": {"claim_safe_matches": True},
+            "benchmark_contract_pass": True,
+        },
+        {
+            "pose_id": "amide_delta_backmap_yellow_band_pose",
+            "benchmark_role": "delta_backmap_yellow_band_pose",
+            "expected_claim_safe": False,
+            "expected_hbond_status": "review",
+            "expected_blocked_reason": "delta_backmap_yellow_band",
+            "hbond_claim_safe": False,
+            "hbond_status": "review",
+            "hbond_blocked_reason": "delta_backmap_yellow_band",
+            "hbond_geometry_evaluated": True,
+            "hbond_geometry_complete": True,
+            "hbond_distance_pass_count": 2,
+            "hbond_angle_pass_count": 2,
+            "overanchoring_flag": False,
             "unsatisfied_donor_count": 0,
             "unsatisfied_acceptor_count": 0,
+            "hbond_delta_backmap": 3.0,
+            "hbond_delta_backmap_max": 2.5,
+            "hbond_delta_backmap_evaluated": True,
+            "hbond_delta_backmap_yellow_band": True,
             "benchmark_contract_checks": {"claim_safe_matches": True},
             "benchmark_contract_pass": True,
         },
@@ -261,9 +497,16 @@ def _kpi_packet(
             "pose_id": "invalid_ligand_pose",
             "benchmark_role": "invalid_ligand_pose",
             "expected_claim_safe": False,
+            "expected_hbond_status": "invalid_smiles",
             "expected_blocked_reason": "invalid_smiles",
             "hbond_claim_safe": False,
+            "hbond_status": "invalid_smiles",
             "hbond_blocked_reason": "invalid_smiles",
+            "hbond_geometry_evaluated": False,
+            "hbond_geometry_complete": False,
+            "hbond_distance_pass_count": 0,
+            "hbond_angle_pass_count": 0,
+            "overanchoring_flag": False,
             "unsatisfied_donor_count": 0,
             "unsatisfied_acceptor_count": 0,
             "benchmark_contract_checks": {"claim_safe_matches": True},
@@ -277,8 +520,17 @@ def _kpi_packet(
                 "hbond_threshold_schema_ready": True,
                 "hbond_pair_schema_ready": True,
                 "hbond_geometry_flags_ready": True,
+                "hbond_delta_backmap": row.get("hbond_delta_backmap", 0.0),
+                "hbond_delta_backmap_max": row.get("hbond_delta_backmap_max", 2.5),
+                "hbond_delta_backmap_evaluated": row.get("hbond_delta_backmap_evaluated", False),
+                "hbond_delta_backmap_yellow_band": row.get("hbond_delta_backmap_yellow_band", False),
+                "hbond_confidence": {
+                    "amide_near_hbond_pose": 1.0,
+                    "amide_delta_backmap_yellow_band_pose": 0.4,
+                }.get(str(row.get("pose_id") or ""), 0.0),
             }
         )
+    confidence_calibration = build_confidence_calibration_report(pose_rows)
     pose_roles = sorted({str(row["benchmark_role"]) for row in pose_rows})
     ranking_order = (
         ["amide_near_hbond_pose"] + [row["pose_id"] for row in pose_rows if row["pose_id"] != "amide_near_hbond_pose"]
@@ -298,6 +550,19 @@ def _kpi_packet(
             "runner_claim_metadata_signed": runner_claim_metadata_signed,
             "signed_manifest_verification_pass": runner_claim_metadata_signed,
             "bundle_validation_pass": ready,
+            "product_claim_ready": ready,
+            "release_claim_ready": False,
+            "release_claim_blocked_reason": "product_ci_runtime_gate_not_ready",
+            "product_ci_runtime_gate_present": False,
+            "product_ci_runtime_gate_ready": False,
+            "product_ci_runtime_gate_status": "",
+            "product_ci_remote_green": False,
+            "product_ci_github_actions_started": False,
+            "product_ci_external_blocker": False,
+            "product_ci_blocker_code": "",
+            "product_ci_latest_github_actions_record_kst_date": "",
+            "product_ci_workflow_dispatch_executed": False,
+            "product_ci_external_state_mutated": False,
             "clean_install_missing_requirement_count": 0,
             "clean_install_missing_requirements": [],
             "product_image_preflight_blocker_codes": [],
@@ -357,27 +622,173 @@ def _kpi_packet(
                 "forcefield_hbond_evidence_schema_version": "hbond_evidence_v1"
                 if force_term_claim_metadata_schema_ready
                 else "",
+                "forcefield_hydrophobic_contact_evidence_schema_version": (
+                    "hydrophobic_contact_evidence_v1" if force_term_claim_metadata_schema_ready else ""
+                ),
+                "forcefield_hydrophobic_contact_evidence_schema_ready": (
+                    force_term_claim_metadata_schema_ready
+                ),
+                "forcefield_hydrophobic_contact_active_pair_count": (
+                    1 if force_term_claim_metadata_schema_ready else 0
+                ),
                 "forcefield_claim_safe_count": len(force_term_rows),
                 "forcefield_blocked_count": 0,
                 "forcefield_claim_rows": force_term_rows,
+                "forcefield_unsafe_base_claim_blocked": force_term_claim_metadata_ready,
+                "forcefield_unsafe_base_claim_safe": False,
+                "forcefield_unsafe_base_blocked_reason": "placeholder_alanine_topology"
+                if force_term_claim_metadata_ready
+                else "",
+                "forcefield_unsafe_base_claim_safe_count": 0,
+                "forcefield_unsafe_base_blocked_count": len(force_term_rows)
+                if force_term_claim_metadata_ready
+                else 0,
+                "forcefield_unsafe_base_claim_rows": [
+                    {
+                        **row,
+                        "claim_safe": False,
+                        "blocked_reason": "placeholder_alanine_topology",
+                    }
+                    for row in force_term_rows
+                ] if force_term_claim_metadata_ready else [],
+                "forcefield_energy_forces_contract_ready": force_term_result_contract_ready,
+                "forcefield_energy_forces_contract_error": "",
+                "forcefield_energy_shape": [1] if force_term_result_contract_ready else [],
+                "forcefield_forces_shape": [1, 3, 3] if force_term_result_contract_ready else [],
+                "forcefield_energy_finite": force_term_result_contract_ready,
+                "forcefield_forces_finite": force_term_result_contract_ready,
+                "forcefield_term_count": len(force_term_rows) if force_term_result_contract_ready else 0,
+                "forcefield_term_diagnostics_ready": force_term_result_contract_ready,
                 "term_result_contract_rows": force_term_contract_rows,
             },
             "force_term_result_contract_ready": force_term_result_contract_ready,
+            "forcefield_energy_forces_contract_ready": force_term_result_contract_ready,
             "guarded_force_term_plugin_ready": guarded_force_term_plugin_ready,
             "guarded_force_term_plugin_smoke": {
                 "ready": guarded_force_term_plugin_ready,
+                "required_guarded_terms": [
+                    "pocket_wall",
+                    "screened_electrostatics",
+                    "topology_penalty",
+                    "torsion_prior",
+                    "water_displacement_proxy",
+                ]
+                if guarded_force_term_plugin_ready
+                else [],
+                "required_guarded_terms_present": guarded_force_term_plugin_ready,
                 "term": "screened_electrostatics",
                 "claim_safe": guarded_force_term_plugin_ready,
                 "force_term_status": "pass" if guarded_force_term_plugin_ready else "blocked",
                 "missing_charge_blocked": guarded_force_term_plugin_ready,
                 "unvalidated_charge_blocked": guarded_force_term_plugin_ready,
+                "pocket_wall_missing_metadata_blocked": guarded_force_term_plugin_ready,
+                "torsion_prior_missing_metadata_blocked": guarded_force_term_plugin_ready,
+                "topology_penalty_missing_metadata_blocked": guarded_force_term_plugin_ready,
+                "topology_penalty_invalid_topology_blocked": guarded_force_term_plugin_ready,
+                "water_displacement_proxy_missing_metadata_blocked": guarded_force_term_plugin_ready,
+                "water_displacement_proxy_invalid_topology_blocked": guarded_force_term_plugin_ready,
+                "water_displacement_proxy_model_unvalidated_blocked": guarded_force_term_plugin_ready,
+                "water_displacement_proxy_weights_invalid_blocked": guarded_force_term_plugin_ready,
+                "water_displacement_proxy_policy_cap_exceeded_blocked": guarded_force_term_plugin_ready,
+                "water_displacement_proxy_claim_safe": guarded_force_term_plugin_ready,
+                "water_displacement_proxy_force_term_status": "pass" if guarded_force_term_plugin_ready else "blocked",
+                "water_displacement_proxy_finite_difference_force_error": (
+                    1e-7 if guarded_force_term_plugin_ready else 1.0
+                ),
                 "forcefield_claim_safe": guarded_force_term_plugin_ready,
                 "finite_difference_force_error": 1e-7 if guarded_force_term_plugin_ready else 1.0,
+                "pocket_wall_claim_safe": guarded_force_term_plugin_ready,
+                "pocket_wall_force_term_status": "pass" if guarded_force_term_plugin_ready else "blocked",
+                "pocket_wall_finite_difference_force_error": (
+                    1e-7 if guarded_force_term_plugin_ready else 1.0
+                ),
+                "torsion_prior_claim_safe": guarded_force_term_plugin_ready,
+                "torsion_prior_force_term_status": "pass" if guarded_force_term_plugin_ready else "blocked",
+                "torsion_prior_finite_difference_force_error": (
+                    1e-7 if guarded_force_term_plugin_ready else 1.0
+                ),
+                "topology_penalty_claim_safe": guarded_force_term_plugin_ready,
+                "topology_penalty_force_term_status": "pass" if guarded_force_term_plugin_ready else "blocked",
+                "topology_penalty_finite_difference_force_error": (
+                    1e-7 if guarded_force_term_plugin_ready else 1.0
+                ),
                 "policy_caps_ready": guarded_force_term_plugin_ready,
                 "observed_caps_ready": guarded_force_term_plugin_ready,
                 "bounded_correction_ready": guarded_force_term_plugin_ready,
                 "policy_cap_exceeded_blocked": guarded_force_term_plugin_ready,
+                "pocket_wall_policy_cap_exceeded_blocked": guarded_force_term_plugin_ready,
+                "torsion_prior_policy_cap_exceeded_blocked": guarded_force_term_plugin_ready,
+                "topology_penalty_policy_cap_exceeded_blocked": guarded_force_term_plugin_ready,
                 "forcefield_bounded_row_ready": guarded_force_term_plugin_ready,
+                "forcefield_guarded_rows_ready": guarded_force_term_plugin_ready,
+                "guarded_term_rows": [
+                    {
+                        "force_term_name": "screened_electrostatics",
+                        "force_term_status": "pass",
+                        "claim_safe": True,
+                        "finite_difference_force_error": 1e-7,
+                        "policy_caps_ready": True,
+                        "observed_caps_ready": True,
+                        "bounded_correction_ready": True,
+                        "abs_energy_within_cap": True,
+                        "force_norm_within_cap": True,
+                        "active_pair_count_within_cap": True,
+                    },
+                    {
+                        "force_term_name": "pocket_wall",
+                        "force_term_status": "pass",
+                        "claim_safe": True,
+                        "finite_difference_force_error": 1e-7,
+                        "policy_caps_ready": True,
+                        "observed_caps_ready": True,
+                        "bounded_correction_ready": True,
+                        "abs_energy_within_cap": True,
+                        "force_norm_within_cap": True,
+                        "active_pair_count_within_cap": True,
+                        "pocket_center_source": "pocket_atom_indices",
+                        "pocket_escape": True,
+                    },
+                    {
+                        "force_term_name": "torsion_prior",
+                        "force_term_status": "pass",
+                        "claim_safe": True,
+                        "finite_difference_force_error": 1e-7,
+                        "policy_caps_ready": True,
+                        "observed_caps_ready": True,
+                        "bounded_correction_ready": True,
+                        "abs_energy_within_cap": True,
+                        "force_norm_within_cap": True,
+                        "active_pair_count_within_cap": True,
+                        "torsion_quartet_count": 1,
+                    },
+                    {
+                        "force_term_name": "topology_penalty",
+                        "force_term_status": "pass",
+                        "claim_safe": True,
+                        "finite_difference_force_error": 1e-7,
+                        "policy_caps_ready": True,
+                        "observed_caps_ready": True,
+                        "bounded_correction_ready": True,
+                        "abs_energy_within_cap": True,
+                        "force_norm_within_cap": True,
+                        "active_pair_count_within_cap": True,
+                        "topology_edge_count": 2,
+                    },
+                    {
+                        "force_term_name": "water_displacement_proxy",
+                        "force_term_status": "pass",
+                        "claim_safe": True,
+                        "finite_difference_force_error": 1e-7,
+                        "policy_caps_ready": True,
+                        "observed_caps_ready": True,
+                        "bounded_correction_ready": True,
+                        "abs_energy_within_cap": True,
+                        "force_norm_within_cap": True,
+                        "active_pair_count_within_cap": True,
+                        "ligand_atom_count": 2,
+                        "water_site_count": 3,
+                    },
+                ] if guarded_force_term_plugin_ready else [],
                 "forcefield_guarded_claim_row": {
                     "force_term_name": "screened_electrostatics",
                     "force_term_status": "pass",
@@ -395,6 +806,93 @@ def _kpi_packet(
                         "max_active_pair_count": 4096.0,
                     },
                 } if guarded_force_term_plugin_ready else {},
+                "forcefield_guarded_claim_rows": [
+                    {
+                        "force_term_name": "pocket_wall",
+                        "force_term_status": "pass",
+                        "claim_safe": True,
+                        "blocked_reason": "",
+                        "policy_caps_ready": True,
+                        "observed_caps_ready": True,
+                        "bounded_correction_ready": True,
+                        "abs_energy_within_cap": True,
+                        "force_norm_within_cap": True,
+                        "active_pair_count_within_cap": True,
+                        "policy_caps": {
+                            "max_abs_energy": 50.0,
+                            "max_force_norm": 25.0,
+                            "max_active_pair_count": 4096.0,
+                        },
+                    },
+                    {
+                        "force_term_name": "screened_electrostatics",
+                        "force_term_status": "pass",
+                        "claim_safe": True,
+                        "blocked_reason": "",
+                        "policy_caps_ready": True,
+                        "observed_caps_ready": True,
+                        "bounded_correction_ready": True,
+                        "abs_energy_within_cap": True,
+                        "force_norm_within_cap": True,
+                        "active_pair_count_within_cap": True,
+                        "policy_caps": {
+                            "max_abs_energy": 50.0,
+                            "max_force_norm": 25.0,
+                            "max_active_pair_count": 4096.0,
+                        },
+                    },
+                    {
+                        "force_term_name": "torsion_prior",
+                        "force_term_status": "pass",
+                        "claim_safe": True,
+                        "blocked_reason": "",
+                        "policy_caps_ready": True,
+                        "observed_caps_ready": True,
+                        "bounded_correction_ready": True,
+                        "abs_energy_within_cap": True,
+                        "force_norm_within_cap": True,
+                        "active_pair_count_within_cap": True,
+                        "policy_caps": {
+                            "max_abs_energy": 50.0,
+                            "max_force_norm": 25.0,
+                            "max_active_pair_count": 4096.0,
+                        },
+                    },
+                    {
+                        "force_term_name": "topology_penalty",
+                        "force_term_status": "pass",
+                        "claim_safe": True,
+                        "blocked_reason": "",
+                        "policy_caps_ready": True,
+                        "observed_caps_ready": True,
+                        "bounded_correction_ready": True,
+                        "abs_energy_within_cap": True,
+                        "force_norm_within_cap": True,
+                        "active_pair_count_within_cap": True,
+                        "policy_caps": {
+                            "max_abs_energy": 50.0,
+                            "max_force_norm": 25.0,
+                            "max_active_pair_count": 4096.0,
+                        },
+                    },
+                    {
+                        "force_term_name": "water_displacement_proxy",
+                        "force_term_status": "pass",
+                        "claim_safe": True,
+                        "blocked_reason": "",
+                        "policy_caps_ready": True,
+                        "observed_caps_ready": True,
+                        "bounded_correction_ready": True,
+                        "abs_energy_within_cap": True,
+                        "force_norm_within_cap": True,
+                        "active_pair_count_within_cap": True,
+                        "policy_caps": {
+                            "max_abs_energy": 20.0,
+                            "max_force_norm": 10.0,
+                            "max_active_pair_count": 4096.0,
+                        },
+                    },
+                ] if guarded_force_term_plugin_ready else [],
                 "abs_energy_within_cap": guarded_force_term_plugin_ready,
                 "force_norm_within_cap": guarded_force_term_plugin_ready,
                 "active_pair_count_within_cap": guarded_force_term_plugin_ready,
@@ -420,6 +918,11 @@ def _kpi_packet(
                 "hbond_onsps_schema_version": "onsps_backmap_evidence_v1"
                 if onsps_backmap_evidence_schema_ready
                 else "",
+                "product_runner_direct_engine_import_ready": onsps_backmap_evidence_schema_ready,
+                "product_runner_import_source": "betelgeuze_engine.backmapping.onsps"
+                if onsps_backmap_evidence_schema_ready
+                else "",
+                "product_runner_legacy_core_import_absent": onsps_backmap_evidence_schema_ready,
             },
             "engine_topology_factory_facade_ready": True,
             "engine_topology_factory_facade_smoke": {
@@ -429,6 +932,8 @@ def _kpi_packet(
                 "valid_topology_fidelity": "sequence_mapped",
                 "valid_protein_residue_count": 3,
                 "valid_protein_topology_valid": True,
+                "valid_pocket_residue_count": 1,
+                "valid_pocket_residue_indices_valid": True,
                 "valid_ligand_topology_schema_version": "ligand_topology_validity_v1",
                 "placeholder_protein_residue_count": 3,
                 "placeholder_protein_topology_valid": True,
@@ -437,6 +942,8 @@ def _kpi_packet(
                 "empty_protein_topology_valid": False,
                 "empty_protein_blocked_reason": "empty_protein_topology",
                 "invalid_ligand_blocked_reason": "invalid_smiles",
+                "invalid_pocket_blocked_reason": "invalid_pocket_residue_indices",
+                "invalid_pocket_residue_indices_valid": False,
             },
             "core_forcefield_bridge_ready": core_forcefield_bridge_ready,
             "core_forcefield_bridge_smoke": {
@@ -444,6 +951,21 @@ def _kpi_packet(
                 "result_claim_safe": core_forcefield_bridge_ready,
                 "force_term_claim_metadata_ready": core_forcefield_bridge_ready,
                 "force_term_plugins": ["legacy_lj"] if core_forcefield_bridge_ready else [],
+                "unsafe_base_claim_blocked": core_forcefield_bridge_ready,
+                "unsafe_base_claim_safe": False,
+                "unsafe_base_blocked_reason": "placeholder_alanine_topology"
+                if core_forcefield_bridge_ready
+                else "",
+                "unsafe_base_claim_safe_count": 0,
+                "unsafe_base_blocked_count": 1 if core_forcefield_bridge_ready else 0,
+                "unsafe_base_claim_rows": [
+                    {
+                        "force_term_name": "legacy_lj",
+                        "force_term_status": "pass",
+                        "claim_safe": False,
+                        "blocked_reason": "placeholder_alanine_topology",
+                    },
+                ] if core_forcefield_bridge_ready else [],
                 "energy_shape": [1] if core_forcefield_bridge_ready else [],
                 "forces_shape": [1, 2, 3] if core_forcefield_bridge_ready else [],
                 "neighbor_diagnostics_ready": core_forcefield_bridge_ready,
@@ -458,7 +980,7 @@ def _kpi_packet(
             "core_compatibility_layer_smoke": {
                 "ready": core_compatibility_layer_ready,
                 "contract_scope": "legacy_core_import_paths_are_compatibility_layer_not_runtime_gpu_claim",
-                "row_count": 3 if core_compatibility_layer_ready else 0,
+                "row_count": 7 if core_compatibility_layer_ready else 0,
                 "rows": [
                     {
                         "contract": "onsps_backmap_shim",
@@ -480,6 +1002,20 @@ def _kpi_packet(
                         "error": "",
                     },
                     {
+                        "contract": "adress_production_blocked_log",
+                        "ready": core_compatibility_layer_ready,
+                        "legacy_module": "core.topology",
+                        "canonical_module": "betelgeuze_engine.topology.protein",
+                        "bridge_type": "fail_closed_adress_guard",
+                        "adress_log_blocked": core_compatibility_layer_ready,
+                        "adress_log_active_claim_absent": core_compatibility_layer_ready,
+                        "adress_neighbor_blocked": core_compatibility_layer_ready,
+                        "adress_neighbor_error": "AdResS neighbor path is disabled in production."
+                        if core_compatibility_layer_ready
+                        else "",
+                        "error": "",
+                    },
+                    {
                         "contract": "forcefield_product_bridge",
                         "ready": core_compatibility_layer_ready,
                         "legacy_module": "core.forcefield",
@@ -488,10 +1024,58 @@ def _kpi_packet(
                         "result_claim_safe": core_compatibility_layer_ready,
                         "force_term_claim_metadata_ready": core_compatibility_layer_ready,
                         "force_term_plugins": ["legacy_lj"] if core_compatibility_layer_ready else [],
+                        "unsafe_base_claim_blocked": core_compatibility_layer_ready,
+                        "unsafe_base_claim_safe": False,
+                        "unsafe_base_blocked_reason": "placeholder_alanine_topology"
+                        if core_compatibility_layer_ready
+                        else "",
+                        "unsafe_base_claim_safe_count": 0,
+                        "unsafe_base_blocked_count": 1 if core_compatibility_layer_ready else 0,
+                        "unsafe_base_claim_rows": [
+                            {
+                                "force_term_name": "legacy_lj",
+                                "force_term_status": "pass",
+                                "claim_safe": False,
+                                "blocked_reason": "placeholder_alanine_topology",
+                            },
+                        ] if core_compatibility_layer_ready else [],
                         "neighbor_diagnostics_ready": core_compatibility_layer_ready,
                         "neighbor_pair_count": 2 if core_compatibility_layer_ready else 0,
                         "neighbor_pairs_provided": False,
                         "neighbor_source": "full_neighbor_pairs" if core_compatibility_layer_ready else "",
+                        "error": "",
+                    },
+                    {
+                        "contract": "score_residual_shim",
+                        "ready": core_compatibility_layer_ready,
+                        "legacy_module": "core.score_residual",
+                        "canonical_module": "betelgeuze_engine.residual.score",
+                        "bridge_type": "import_identity",
+                        "checked_symbols": ["apply_score_residual", "residual_band"],
+                        "missing_symbols": [],
+                        "identity_mismatches": [],
+                        "error": "",
+                    },
+                    {
+                        "contract": "topology_score_correction_shim",
+                        "ready": core_compatibility_layer_ready,
+                        "legacy_module": "core.topo_corrector",
+                        "canonical_module": "betelgeuze_engine.topology.correction",
+                        "bridge_type": "import_identity",
+                        "checked_symbols": ["summarize_topo_correction", "topo_correction_delta"],
+                        "missing_symbols": [],
+                        "identity_mismatches": [],
+                        "error": "",
+                    },
+                    {
+                        "contract": "mm_gbsa_refine_shim",
+                        "ready": core_compatibility_layer_ready,
+                        "legacy_module": "core.mm_gbsa",
+                        "canonical_module": "betelgeuze_engine.physics.mm_gbsa",
+                        "bridge_type": "import_identity",
+                        "checked_symbols": ["mm_gbsa_binding_energy", "compute_full_refine_stack"],
+                        "missing_symbols": [],
+                        "identity_mismatches": [],
                         "error": "",
                     },
                 ] if core_compatibility_layer_ready else [],
@@ -499,6 +1083,91 @@ def _kpi_packet(
             "job_store_lazy_factory_ready": job_store_lazy_factory_ready,
             "job_store_lazy_factory_smoke": {"ready": job_store_lazy_factory_ready},
             "allowlisted_runner_shim_contract_ready": allowlisted_runner_shim_contract_ready,
+            "product_runner_engine_imports_ready": ready,
+            "product_runner_engine_imports_smoke": {
+                "ready": ready,
+                "runner": "tools/product/run_ligand_backmapping_scoring.py",
+                "row_count": 6 if ready else 0,
+                "rows": [
+                    {
+                        "contract": "hbond_evidence_direct_engine_import",
+                        "runner": "tools/product/run_ligand_backmapping_scoring.py",
+                        "engine_module": "betelgeuze_engine.interactions",
+                        "direct_import_present": True,
+                        "legacy_import_absent": True,
+                        "required_missing": [],
+                        "forbidden_present": [],
+                        "ready": True,
+                    },
+                    {
+                        "contract": "onsps_backmap_direct_engine_import",
+                        "runner": "tools/product/run_ligand_backmapping_scoring.py",
+                        "engine_module": "betelgeuze_engine.backmapping.onsps",
+                        "direct_import_present": True,
+                        "legacy_import_absent": True,
+                        "required_missing": [],
+                        "forbidden_present": [],
+                        "ready": True,
+                    },
+                    {
+                        "contract": "ligand_topology_direct_engine_import",
+                        "runner": "tools/product/run_ligand_backmapping_scoring.py",
+                        "engine_module": "betelgeuze_engine.topology",
+                        "direct_import_present": True,
+                        "legacy_import_absent": True,
+                        "required_missing": [],
+                        "forbidden_present": [],
+                        "ready": True,
+                    },
+                    {
+                        "contract": "topology_score_correction_direct_engine_import",
+                        "runner": "tools/product/run_ligand_backmapping_scoring.py",
+                        "engine_module": "betelgeuze_engine.topology",
+                        "direct_import_present": True,
+                        "legacy_import_absent": True,
+                        "required_missing": [],
+                        "forbidden_present": [],
+                        "residual_scope": "score_ranking_heuristic",
+                        "physical_force_residual_claim": False,
+                        "bounded_correction_required": True,
+                        "ready": True,
+                    },
+                    {
+                        "contract": "score_residual_direct_engine_import",
+                        "runner": "tools/product/run_ligand_backmapping_scoring.py",
+                        "engine_module": "betelgeuze_engine.residual.score",
+                        "direct_import_present": True,
+                        "legacy_import_absent": True,
+                        "required_missing": [],
+                        "forbidden_present": [],
+                        "residual_scope": "score_ranking_heuristic",
+                        "physical_force_residual_claim": False,
+                        "ready": True,
+                    },
+                    {
+                        "contract": "mm_gbsa_refine_direct_engine_import",
+                        "runner": "tools/product/run_ligand_backmapping_scoring.py",
+                        "engine_module": "betelgeuze_engine.physics.mm_gbsa",
+                        "direct_import_present": True,
+                        "legacy_import_absent": True,
+                        "required_missing": [],
+                        "forbidden_present": [],
+                        "refine_claim_safe_required": False,
+                        "claim_metadata_schema": "mm_gbsa_refine_claim_metadata_v1",
+                        "ready": True,
+                    },
+                ] if ready else [],
+            },
+            "product_runner_no_core_imports_ready": ready,
+            "product_runner_no_core_imports_smoke": _runner_no_core_imports_smoke(ready=ready),
+            "topk_delivery_engine_owned_ready": ready,
+            "topk_delivery_engine_owned_smoke": _topk_delivery_engine_owned_smoke(ready=ready),
+            "backmapping_scoring_engine_owned_ready": ready,
+            "backmapping_scoring_engine_owned_smoke": _backmapping_scoring_engine_owned_smoke(ready=ready),
+            "htvs_pipeline_engine_owned_ready": ready,
+            "htvs_pipeline_engine_owned_smoke": _htvs_pipeline_engine_owned_smoke(ready=ready),
+            "product_runner_engine_owned_ready": ready,
+            "product_runner_engine_owned_smoke": _product_runner_engine_owned_smoke(ready=ready),
             "allowlisted_runner_shim_contract": {
                 "ready": allowlisted_runner_shim_contract_ready,
                 "runner_count": 3 if allowlisted_runner_shim_contract_ready else 0,
@@ -575,10 +1244,12 @@ def _kpi_packet(
             "hbond_recovery_pose_ids": ["amide_near_hbond_pose"] if pose_ranking_hbond_benchmark_ready else [],
             "hbond_recovery_confidence_min": 0.9 if pose_ranking_hbond_benchmark_ready else 0.0,
             "overanchored_decoys_blocked": pose_ranking_hbond_benchmark_ready,
+            "delta_backmap_yellow_band_abstention_ready": pose_ranking_hbond_benchmark_ready,
             "unsatisfied_donor_acceptor_detected": pose_ranking_hbond_benchmark_ready,
-            "unsatisfied_donor_acceptor_pose_count": 1 if pose_ranking_hbond_benchmark_ready else 0,
+            "unsatisfied_donor_acceptor_pose_count": 3 if pose_ranking_hbond_benchmark_ready else 0,
             "fixture_count": len(pose_rows),
             "required_pose_roles": [
+                "delta_backmap_yellow_band_pose",
                 "far_decoy_pose",
                 "hbond_recovery_pose",
                 "invalid_ligand_pose",
@@ -591,6 +1262,7 @@ def _kpi_packet(
             "row_contract_pass_count": len(pose_rows),
             "rows": pose_rows,
         },
+        "confidence_calibration_report": confidence_calibration,
         "runtime_kpi": {
             "score_only_1k": {
                 "row_count": 8,
@@ -614,6 +1286,33 @@ def _kpi_packet(
                 "confidence_abstention_ready": force_residual_confidence_abstention_ready,
                 "nonfinite_uncertainty_abstention_count": 1,
                 "nonfinite_delta_score_abstention_count": 1,
+                "last_report": {
+                    "applied": True,
+                    "skipped_reason": "",
+                    "claim_safe": True,
+                    "rank_pct": 0.01,
+                    "top_k_eligible": True,
+                    "delta_score": 0.25,
+                    "uncertainty": 0.1,
+                    "confidence": 0.9,
+                    "max_force_norm": 0.87,
+                    "displacement_rmsd": 0.009,
+                    "energy_drift_pct": 0.0,
+                    "policy_caps_ready": True,
+                    "observed_caps_ready": True,
+                    "all_observed_caps_within_policy": True,
+                    "delta_score_within_cap": True,
+                    "force_norm_within_cap": True,
+                    "displacement_within_cap": True,
+                    "energy_drift_within_cap": True,
+                    "policy_caps": {
+                        "top_k_rank_pct": 0.05,
+                        "max_abs_delta_score": 2.0,
+                        "max_force_norm": 25.0,
+                        "max_displacement": 0.25,
+                        "max_energy_drift_pct": 5.0,
+                    },
+                },
                 "nonfinite_uncertainty_report": {
                     "applied": False,
                     "skipped_reason": "uncertainty_nonfinite",
@@ -649,6 +1348,62 @@ def _kpi_packet(
                 "forcefield_neighbor_source": "provided",
                 "forcefield_neighbor_pairs_provided": True,
                 "engine_neighbor_diagnostics_ready": True,
+            },
+            "neighbor_cap_scaling": {
+                "ready": True,
+                "status": "runtime_neighbor_cap_scaling_ready",
+                "forcefield_contract_ready": True,
+                "neighbor_cap_scaling_ready": True,
+                "atom_counts": [8, 16, 32],
+                "neighbor_pair_counts": [26, 58, 122],
+                "neighbor_pair_count_slope": 1.11,
+                "neighbor_pair_count_r2": 0.999,
+                "duration_slope": 0.2,
+                "duration_r2": 0.5,
+                "plot_path": "runs/ai_md_runtime_scaling_plot_current.svg",
+                "plot_format": "svg",
+                "plot_ready": True,
+                "plot_role": "runtime_neighbor_cap_scaling_plot",
+                "plot_claim_boundary": (
+                    "Pair-count scaling is the gated evidence; duration trend is advisory microbenchmark telemetry."
+                ),
+                "plot_sha256": "d" * 64,
+                "plot_size_bytes": 1024,
+                "rows": [
+                    {
+                        "atom_count": 8,
+                        "duration_per_repeat_sec": 0.001,
+                        "neighbor_pair_count": 26,
+                        "neighbor_pairs_provided": True,
+                        "neighbor_source": "provided",
+                        "energy_finite": True,
+                        "forces_finite": True,
+                        "claim_safe": True,
+                        "row_ready": True,
+                    },
+                    {
+                        "atom_count": 16,
+                        "duration_per_repeat_sec": 0.002,
+                        "neighbor_pair_count": 58,
+                        "neighbor_pairs_provided": True,
+                        "neighbor_source": "provided",
+                        "energy_finite": True,
+                        "forces_finite": True,
+                        "claim_safe": True,
+                        "row_ready": True,
+                    },
+                    {
+                        "atom_count": 32,
+                        "duration_per_repeat_sec": 0.004,
+                        "neighbor_pair_count": 122,
+                        "neighbor_pairs_provided": True,
+                        "neighbor_source": "provided",
+                        "energy_finite": True,
+                        "forces_finite": True,
+                        "claim_safe": True,
+                        "row_ready": True,
+                    },
+                ],
             },
         },
         "physics_kpi": {
@@ -697,6 +1452,17 @@ def _kpi_packet(
                 "top10_force_residual_runtime_tracked": True,
                 "memory_peak_tracked": True,
                 "neighbor_list_rebuild_frequency_tracked": True,
+                "runtime_neighbor_cap_scaling_ready": True,
+                "runtime_neighbor_cap_scaling_status": "runtime_neighbor_cap_scaling_ready",
+                "runtime_neighbor_cap_scaling_row_count": 3,
+                "runtime_neighbor_cap_scaling_atom_counts": [8, 16, 32],
+                "runtime_neighbor_cap_scaling_pair_count_slope": 1.11,
+                "runtime_neighbor_cap_scaling_pair_count_r2": 0.999,
+                "runtime_neighbor_cap_scaling_duration_slope": 0.2,
+                "runtime_neighbor_cap_scaling_duration_r2": 0.5,
+                "runtime_neighbor_cap_scaling_plot_ready": True,
+                "runtime_neighbor_cap_scaling_plot_path": "runs/ai_md_runtime_scaling_plot_current.svg",
+                "runtime_neighbor_cap_scaling_plot_sha256": "d" * 64,
                 "force_residual_bounded_policy_ready": force_residual_bounded_policy_ready,
                 "force_residual_observed_caps_ready": force_residual_observed_caps_ready,
                 "force_residual_contract_ready": force_residual_contract_ready,
@@ -719,6 +1485,17 @@ def _kpi_packet(
                 "runner_claim_metadata_signed": runner_claim_metadata_signed,
                 "signed_manifest_verification_pass": runner_claim_metadata_signed,
                 "bundle_validation_pass": ready,
+                "product_claim_ready": ready,
+                "release_claim_ready": False,
+                "release_claim_blocked_reason": "product_ci_runtime_gate_not_ready",
+                "product_ci_runtime_gate_present": False,
+                "product_ci_runtime_gate_ready": False,
+                "product_ci_runtime_gate_status": "",
+                "product_ci_remote_green": False,
+                "product_ci_github_actions_started": False,
+                "product_ci_external_blocker": False,
+                "product_ci_blocker_code": "",
+                "product_ci_latest_github_actions_record_kst_date": "",
                 "clean_install_missing_requirement_count": 0,
                 "clean_install_missing_requirements": [],
                 "product_image_preflight_blocker_codes": [],
@@ -733,6 +1510,7 @@ def _kpi_packet(
                 "runner_profile_validation_pass": ready,
                 "force_term_claim_metadata_ready": force_term_claim_metadata_ready,
                 "force_term_result_contract_ready": force_term_result_contract_ready,
+                "forcefield_energy_forces_contract_ready": force_term_result_contract_ready,
                 "guarded_force_term_plugin_ready": guarded_force_term_plugin_ready,
                 "onsps_backmap_evidence_schema_ready": onsps_backmap_evidence_schema_ready,
                 "engine_topology_factory_facade_ready": True,
@@ -740,6 +1518,12 @@ def _kpi_packet(
                 "core_compatibility_layer_ready": core_compatibility_layer_ready,
                 "job_store_lazy_factory_ready": job_store_lazy_factory_ready,
                 "allowlisted_runner_shim_contract_ready": allowlisted_runner_shim_contract_ready,
+                "product_runner_engine_imports_ready": ready,
+                "product_runner_no_core_imports_ready": ready,
+                "topk_delivery_engine_owned_ready": ready,
+                "backmapping_scoring_engine_owned_ready": ready,
+                "htvs_pipeline_engine_owned_ready": ready,
+                "product_runner_engine_owned_ready": ready,
                 "blocked_claim_correctly_blocked": True,
             },
             "chemistry": {
@@ -751,6 +1535,12 @@ def _kpi_packet(
                 ),
                 "hbond_donor_site_count": chemistry_kpi["hbond_donor_site_count"],
                 "hbond_acceptor_site_count": chemistry_kpi["hbond_acceptor_site_count"],
+                "hbond_geometry_evaluated_fixture_count": (
+                    chemistry_kpi["hbond_geometry_evaluated_fixture_count"]
+                ),
+                "hbond_geometry_complete_fixture_count": (
+                    chemistry_kpi["hbond_geometry_complete_fixture_count"]
+                ),
                 "hbond_recovery_fixture_count": chemistry_kpi["hbond_recovery_fixture_count"],
                 "hbond_recovery_pose_count": 1 if chemistry_pm_gates_ready else 0,
                 "hbond_recovery_pose_ids": ["amide_near_hbond_pose"] if chemistry_pm_gates_ready else [],
@@ -761,7 +1551,7 @@ def _kpi_packet(
                 ),
                 "unsatisfied_donor_count": chemistry_kpi["unsatisfied_donor_count"],
                 "unsatisfied_acceptor_count": chemistry_kpi["unsatisfied_acceptor_count"],
-                "unsatisfied_donor_acceptor_pose_count": 1 if chemistry_pm_gates_ready else 0,
+                "unsatisfied_donor_acceptor_pose_count": 3 if chemistry_pm_gates_ready else 0,
                 "overanchored_decoy_rejection": chemistry_pm_gates_ready,
                 "chirality_preservation_fixture_count": (
                     chemistry_kpi["chirality_preservation_fixture_count"]
@@ -776,6 +1566,22 @@ def _kpi_packet(
                 "tautomer_validity_ready": chemistry_pm_gates_ready,
                 "protonation_validity_fixture_count": chemistry_kpi["protonation_validity_fixture_count"],
                 "protonation_validity_ready": chemistry_pm_gates_ready,
+                "confidence_calibration_report_ready": confidence_calibration.get("ready") is True,
+                "confidence_calibration_status": str(confidence_calibration.get("status") or ""),
+                "confidence_calibration_row_count": int(confidence_calibration.get("row_count") or 0),
+                "confidence_calibration_positive_count": int(
+                    confidence_calibration.get("positive_count") or 0
+                ),
+                "confidence_calibration_negative_count": int(
+                    confidence_calibration.get("negative_count") or 0
+                ),
+                "confidence_calibration_expected_calibration_error": float(
+                    confidence_calibration.get("expected_calibration_error") or 0.0
+                ),
+                "confidence_calibration_brier_score": float(
+                    confidence_calibration.get("brier_score") or 0.0
+                ),
+                "confidence_calibration_bin_count": int(confidence_calibration.get("bin_count") or 0),
             },
         },
     }
@@ -860,6 +1666,21 @@ def _image_preflight_packet(
 
 def _artifact_specs(tmp_path: Path, *, kpi_packet: dict | None = None) -> list[dict[str, object]]:
     kpi_packet = kpi_packet or _kpi_packet(ready=True)
+    runtime_plot = _write(
+        tmp_path / "runtime_scaling.svg",
+        (
+            "<svg xmlns=\"http://www.w3.org/2000/svg\">"
+            "<text>Capped neighbor pairs</text><text>Pair-count scaling advisory</text>"
+            "</svg>\n"
+        ),
+    )
+    runtime_scaling = kpi_packet["runtime_kpi"]["neighbor_cap_scaling"]
+    runtime_scaling["plot_path"] = str(runtime_plot)
+    runtime_scaling["plot_sha256"] = _sha256(runtime_plot)
+    runtime_scaling["plot_size_bytes"] = runtime_plot.stat().st_size
+    pm_runtime = kpi_packet["pm_kpi_summary"]["runtime"]
+    pm_runtime["runtime_neighbor_cap_scaling_plot_path"] = str(runtime_plot)
+    pm_runtime["runtime_neighbor_cap_scaling_plot_sha256"] = _sha256(runtime_plot)
     return [
         {
             "artifact_id": "kpi_json",
@@ -871,6 +1692,12 @@ def _artifact_specs(tmp_path: Path, *, kpi_packet: dict | None = None) -> list[d
             "artifact_id": "kpi_md",
             "artifact_path": str(_write(tmp_path / "kpi.md")),
             "role": "human_readable_runtime_report",
+            "required": True,
+        },
+        {
+            "artifact_id": "runtime_scaling_plot",
+            "artifact_path": str(runtime_plot),
+            "role": "runtime_neighbor_cap_scaling_plot",
             "required": True,
         },
         {
@@ -896,12 +1723,13 @@ def _artifact_specs(tmp_path: Path, *, kpi_packet: dict | None = None) -> list[d
 
 def test_ai_md_product_evidence_bundle_exports_claim_ready_tar(tmp_path: Path) -> None:
     out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
 
     payload = mod.build_payload(
-        kpi_packet=_kpi_packet(ready=True),
+        kpi_packet=kpi_packet,
         rocm_manifest_packet=_rocm_packet(ready=True),
         product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
-        artifact_specs=_artifact_specs(tmp_path),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
         out_tar=str(out_tar),
     )
 
@@ -915,16 +1743,31 @@ def test_ai_md_product_evidence_bundle_exports_claim_ready_tar(tmp_path: Path) -
     assert summary["force_residual_summary_signed"] is True
     assert summary["force_term_claim_metadata_ready"] is True
     assert summary["force_term_result_contract_ready"] is True
+    assert summary["forcefield_energy_forces_contract_ready"] is True
     assert summary["guarded_force_term_plugin_ready"] is True
+    assert summary["runtime_neighbor_cap_scaling_plot_ready"] is True
+    assert summary["runtime_neighbor_cap_scaling_plot_path"].endswith("runtime_scaling.svg")
+    assert len(summary["runtime_neighbor_cap_scaling_plot_sha256"]) == 64
     assert summary["onsps_backmap_evidence_schema_ready"] is True
     assert summary["core_forcefield_bridge_ready"] is True
     assert summary["core_compatibility_layer_ready"] is True
     assert summary["job_store_lazy_factory_ready"] is True
     assert summary["allowlisted_runner_shim_contract_ready"] is True
+    assert summary["product_runner_engine_imports_ready"] is True
+    assert summary["product_runner_no_core_imports_ready"] is True
+    assert summary["topk_delivery_engine_owned_ready"] is True
+    assert summary["backmapping_scoring_engine_owned_ready"] is True
+    assert summary["htvs_pipeline_engine_owned_ready"] is True
+    assert summary["product_runner_engine_owned_ready"] is True
     assert summary["chemistry_pm_gates_ready"] is True
     assert summary["pose_ranking_hbond_benchmark_ready"] is True
+    assert summary["confidence_calibration_report_ready"] is True
+    assert summary["confidence_calibration_status"] == "confidence_calibration_report_ready"
+    assert summary["confidence_calibration_row_count"] == 6
+    assert summary["confidence_calibration_expected_calibration_error"] <= 0.2
+    assert summary["confidence_calibration_brier_score"] <= 0.2
     assert summary["pose_ranking_hbond_row_contracts_ready"] is True
-    assert summary["pose_ranking_hbond_row_contract_pass_count"] == 5
+    assert summary["pose_ranking_hbond_row_contract_pass_count"] == 6
     assert summary["hbond_recovery_pose_count"] == 1
     assert summary["overanchored_decoy_rejection"] is True
     assert summary["unsatisfied_donor_acceptor_detection"] is True
@@ -1091,9 +1934,10 @@ def test_ai_md_product_evidence_bundle_blocks_topology_factory_smoke_without_emp
 ) -> None:
     out_tar = tmp_path / "bundle.tar.gz"
     kpi_packet = _kpi_packet(ready=True)
-    kpi_packet["product_kpi"]["engine_topology_factory_facade_smoke"][
-        "empty_protein_blocked_reason"
-    ] = ""
+    topology_smoke = kpi_packet["product_kpi"]["engine_topology_factory_facade_smoke"]
+    topology_smoke["empty_protein_blocked_reason"] = ""
+    topology_smoke["invalid_pocket_blocked_reason"] = ""
+    topology_smoke["invalid_pocket_residue_indices_valid"] = True
 
     payload = mod.build_payload(
         kpi_packet=kpi_packet,
@@ -1110,6 +1954,14 @@ def test_ai_md_product_evidence_bundle_blocks_topology_factory_smoke_without_emp
     assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
     assert any(
         error.startswith("kpi_topology_factory_empty_protein_blocker_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_topology_factory_invalid_pocket_blocker_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_topology_factory_invalid_pocket_not_blocked:")
         for error in summary["bundle_validation_errors"]
     )
 
@@ -1531,6 +2383,85 @@ def test_ai_md_product_evidence_bundle_blocks_without_runtime_kpi_tracking(tmp_p
     )
 
 
+def test_ai_md_product_evidence_bundle_blocks_without_runtime_neighbor_cap_scaling(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    scaling = kpi_packet["runtime_kpi"]["neighbor_cap_scaling"]
+    scaling["ready"] = False
+    scaling["status"] = "blocked_runtime_neighbor_cap_scaling"
+    scaling["neighbor_pair_count_slope"] = 1.8
+    scaling["rows"][0]["row_ready"] = False
+    kpi_packet["pm_kpi_summary"]["runtime"]["runtime_neighbor_cap_scaling_ready"] = False
+    kpi_packet["pm_kpi_summary"]["runtime"]["runtime_neighbor_cap_scaling_pair_count_slope"] = 0.0
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_runtime_neighbor_cap_scaling_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_runtime_neighbor_cap_scaling_rows_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_runtime_neighbor_cap_scaling_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_runtime_neighbor_cap_scaling_slope_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_without_runtime_scaling_plot_metadata(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    scaling = kpi_packet["runtime_kpi"]["neighbor_cap_scaling"]
+    scaling["plot_ready"] = False
+    scaling["plot_role"] = "runtime_plot_without_claim_role"
+    scaling["plot_claim_boundary"] = "duration chart only"
+    kpi_packet["pm_kpi_summary"]["runtime"]["runtime_neighbor_cap_scaling_plot_ready"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert summary["runtime_neighbor_cap_scaling_plot_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_runtime_neighbor_cap_scaling_plot_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_runtime_neighbor_cap_scaling_plot_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
 def test_ai_md_product_evidence_bundle_blocks_runtime_pm_numeric_mismatch(tmp_path: Path) -> None:
     out_tar = tmp_path / "bundle.tar.gz"
     kpi_packet = _kpi_packet(ready=True)
@@ -1699,6 +2630,66 @@ def test_ai_md_product_evidence_bundle_blocks_without_forcefield_neighbor_diagno
     )
 
 
+def test_ai_md_product_evidence_bundle_blocks_force_term_claim_safe_row_with_blocker(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    smoke = kpi_packet["product_kpi"]["force_term_claim_metadata_smoke"]
+    smoke["forcefield_claim_rows"][0]["blocked_reason"] = "physics_validation_failed"
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_force_term_claim_rows_not_safe:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_forcefield_unsafe_base_claim_promotion(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    smoke = kpi_packet["product_kpi"]["force_term_claim_metadata_smoke"]
+    smoke["forcefield_unsafe_base_claim_blocked"] = False
+    smoke["forcefield_unsafe_base_claim_safe"] = True
+    smoke["forcefield_unsafe_base_blocked_reason"] = ""
+    smoke["forcefield_unsafe_base_claim_safe_count"] = 3
+    smoke["forcefield_unsafe_base_blocked_count"] = 0
+    smoke["forcefield_unsafe_base_claim_rows"][0]["claim_safe"] = True
+    smoke["forcefield_unsafe_base_claim_rows"][0]["blocked_reason"] = ""
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_forcefield_unsafe_base_claim_not_blocked:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
 def test_ai_md_product_evidence_bundle_blocks_without_force_term_result_contract_gate(
     tmp_path: Path,
 ) -> None:
@@ -1726,6 +2717,51 @@ def test_ai_md_product_evidence_bundle_blocks_without_force_term_result_contract
     )
     assert any(
         error.startswith("pm_force_term_result_contract_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_without_forcefield_energy_forces_contract_gate(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    kpi_packet["product_kpi"]["forcefield_energy_forces_contract_ready"] = False
+    smoke = kpi_packet["product_kpi"]["force_term_claim_metadata_smoke"]
+    smoke["forcefield_energy_forces_contract_ready"] = False
+    smoke["forcefield_forces_finite"] = False
+    smoke["forcefield_energy_forces_contract_error"] = "ValueError:product forcefield returned nonfinite forces"
+    kpi_packet["pm_kpi_summary"]["product"]["forcefield_energy_forces_contract_ready"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert summary["forcefield_energy_forces_contract_ready"] is False
+    assert {"code": "forcefield_energy_forces_contract_not_ready"} in payload["blockers"]
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_forcefield_energy_forces_contract_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_forcefield_energy_forces_contract_smoke_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_forcefield_energy_forces_contract_fields_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_forcefield_energy_forces_contract_gate_missing:")
         for error in summary["bundle_validation_errors"]
     )
 
@@ -1927,6 +2963,58 @@ def test_ai_md_product_evidence_bundle_blocks_guarded_plugin_detail_mismatch(
     )
 
 
+def test_ai_md_product_evidence_bundle_blocks_guarded_plugin_missing_pocket_wall_rows(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    guarded = kpi_packet["product_kpi"]["guarded_force_term_plugin_smoke"]
+    guarded["required_guarded_terms"] = ["screened_electrostatics"]
+    guarded["required_guarded_terms_present"] = False
+    guarded["pocket_wall_claim_safe"] = False
+    guarded["pocket_wall_missing_metadata_blocked"] = False
+    guarded["pocket_wall_policy_cap_exceeded_blocked"] = False
+    guarded["forcefield_guarded_rows_ready"] = False
+    guarded["guarded_term_rows"] = [
+        row for row in guarded["guarded_term_rows"]
+        if row["force_term_name"] != "pocket_wall"
+    ]
+    guarded["forcefield_guarded_claim_rows"] = [
+        row for row in guarded["forcefield_guarded_claim_rows"]
+        if row["force_term_name"] != "pocket_wall"
+    ]
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_guarded_force_term_required_terms_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_guarded_force_term_plugin_pocket_wall_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_guarded_force_term_plugin_rows_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_guarded_force_term_plugin_forcefield_guarded_rows_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
 def test_ai_md_product_evidence_bundle_blocks_guarded_plugin_without_bounded_caps(
     tmp_path: Path,
 ) -> None:
@@ -2068,6 +3156,35 @@ def test_ai_md_product_evidence_bundle_blocks_onsps_detail_mismatch(
     )
 
 
+def test_ai_md_product_evidence_bundle_blocks_onsps_runner_legacy_import_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    smoke = kpi_packet["product_kpi"]["onsps_backmap_evidence_schema_smoke"]
+    smoke["product_runner_direct_engine_import_ready"] = False
+    smoke["product_runner_import_source"] = "core.onsps_backmap"
+    smoke["product_runner_legacy_core_import_absent"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_onsps_product_runner_direct_engine_import_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
 def test_ai_md_product_evidence_bundle_blocks_product_claim_without_core_forcefield_bridge_gate(tmp_path: Path) -> None:
     out_tar = tmp_path / "bundle.tar.gz"
     kpi_packet = _kpi_packet(ready=True, core_forcefield_bridge_ready=False)
@@ -2116,6 +3233,52 @@ def test_ai_md_product_evidence_bundle_blocks_core_forcefield_bridge_detail_mism
     assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
     assert any(
         error.startswith("kpi_core_forcefield_bridge_plugins_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_core_forcefield_bridge_unsafe_claim_promotion(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    bridge = kpi_packet["product_kpi"]["core_forcefield_bridge_smoke"]
+    bridge["unsafe_base_claim_blocked"] = False
+    bridge["unsafe_base_claim_safe"] = True
+    bridge["unsafe_base_blocked_reason"] = ""
+    bridge["unsafe_base_claim_safe_count"] = 1
+    bridge["unsafe_base_blocked_count"] = 0
+    bridge["unsafe_base_claim_rows"][0]["claim_safe"] = True
+    bridge["unsafe_base_claim_rows"][0]["blocked_reason"] = ""
+    rows = kpi_packet["product_kpi"]["core_compatibility_layer_smoke"]["rows"]
+    forcefield_row = next(row for row in rows if row["contract"] == "forcefield_product_bridge")
+    forcefield_row["unsafe_base_claim_blocked"] = False
+    forcefield_row["unsafe_base_claim_safe"] = True
+    forcefield_row["unsafe_base_blocked_reason"] = ""
+    forcefield_row["unsafe_base_claim_safe_count"] = 1
+    forcefield_row["unsafe_base_blocked_count"] = 0
+    forcefield_row["unsafe_base_claim_rows"][0]["claim_safe"] = True
+    forcefield_row["unsafe_base_claim_rows"][0]["blocked_reason"] = ""
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_core_forcefield_bridge_unsafe_base_claim_not_blocked:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_core_forcefield_compat_unsafe_base_claim_not_blocked:")
         for error in summary["bundle_validation_errors"]
     )
 
@@ -2374,6 +3537,44 @@ def test_ai_md_product_evidence_bundle_blocks_core_topology_bridge_protein_type_
     )
     assert any(
         error.startswith("kpi_core_topology_bridge_hbond_roles_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_core_adress_production_guard_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    rows = kpi_packet["product_kpi"]["core_compatibility_layer_smoke"]["rows"]
+    adress_row = next(row for row in rows if row["contract"] == "adress_production_blocked_log")
+    adress_row["adress_log_blocked"] = False
+    adress_row["adress_log_active_claim_absent"] = False
+    adress_row["adress_neighbor_blocked"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_core_adress_blocked_log_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_core_adress_active_claim_present:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_core_adress_neighbor_not_blocked:")
         for error in summary["bundle_validation_errors"]
     )
 
@@ -2665,6 +3866,283 @@ def test_ai_md_product_evidence_bundle_blocks_allowlisted_runner_extra_row(
     )
 
 
+def test_ai_md_product_evidence_bundle_blocks_product_runner_engine_import_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    imports = kpi_packet["product_kpi"]["product_runner_engine_imports_smoke"]
+    row = imports["rows"][0]
+    row["direct_import_present"] = False
+    row["legacy_import_absent"] = False
+    row["ready"] = False
+    row["required_missing"] = ["evaluate_hbond_evidence"]
+    row["forbidden_present"] = ["from theory.branches.hbond_logic import"]
+    imports["ready"] = False
+    kpi_packet["product_kpi"]["product_runner_engine_imports_ready"] = False
+    kpi_packet["pm_kpi_summary"]["product"]["product_runner_engine_imports_ready"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert summary["product_runner_engine_imports_ready"] is False
+    assert {"code": "product_runner_engine_imports_not_ready"} in payload["blockers"]
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_product_runner_engine_imports_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_product_runner_engine_imports_smoke_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_product_runner_engine_import_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_product_runner_legacy_import_present:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_product_runner_engine_imports_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_product_runner_core_import_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    no_core = kpi_packet["product_kpi"]["product_runner_no_core_imports_smoke"]
+    row = no_core["rows"][0]
+    row["legacy_core_import_violation_count"] = 1
+    row["legacy_core_import_violations"] = [{"line": 3, "snippet": "from core.mm_gbsa import mm_gbsa_binding_energy"}]
+    row["ready"] = False
+    no_core["legacy_core_import_violation_count"] = 1
+    no_core["ready"] = False
+    kpi_packet["product_kpi"]["product_runner_no_core_imports_ready"] = False
+    kpi_packet["pm_kpi_summary"]["product"]["product_runner_no_core_imports_ready"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert summary["product_runner_no_core_imports_ready"] is False
+    assert {"code": "product_runner_no_core_imports_not_ready"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_product_runner_no_core_imports_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_product_runner_no_core_imports_smoke_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_product_runner_no_core_import_violation_count_nonzero:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_product_runner_core_import_present:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_product_runner_no_core_imports_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_topk_delivery_adapter_regression(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    topk = kpi_packet["product_kpi"]["topk_delivery_engine_owned_smoke"]
+    topk["ready"] = False
+    topk["engine_forbidden_present"] = ['import_module("tools.product.run_ligand_topk_delivery")']
+    topk["compatibility_self_implementation_present"] = True
+    topk["runtime_identity_ready"] = False
+    topk["claim_metadata_ready"] = False
+    topk["claim_metadata_schema_version"] = ""
+    topk["claim_metadata_claim_safe"] = False
+    topk["claim_metadata_physical_accuracy_claim"] = True
+    kpi_packet["product_kpi"]["topk_delivery_engine_owned_ready"] = False
+    kpi_packet["pm_kpi_summary"]["product"]["topk_delivery_engine_owned_ready"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert summary["topk_delivery_engine_owned_ready"] is False
+    assert {"code": "topk_delivery_engine_owned_not_ready"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_topk_delivery_engine_owned_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_topk_delivery_engine_legacy_adapter_present:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_topk_delivery_compatibility_self_implementation_present:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_topk_delivery_runtime_identity_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_topk_delivery_claim_metadata_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_topk_delivery_claim_metadata_schema_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_topk_delivery_claim_metadata_physical_claim_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_topk_delivery_engine_owned_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_score_residual_force_claim_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    imports = kpi_packet["product_kpi"]["product_runner_engine_imports_smoke"]
+    row = next(
+        item
+        for item in imports["rows"]
+        if item["contract"] == "score_residual_direct_engine_import"
+    )
+    row["residual_scope"] = "force_residual"
+    row["physical_force_residual_claim"] = True
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert any(
+        error.startswith("kpi_product_runner_score_residual_scope_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_product_runner_score_residual_force_claim_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_topology_correction_claim_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    imports = kpi_packet["product_kpi"]["product_runner_engine_imports_smoke"]
+    row = next(
+        item
+        for item in imports["rows"]
+        if item["contract"] == "topology_score_correction_direct_engine_import"
+    )
+    row["residual_scope"] = "force_residual"
+    row["physical_force_residual_claim"] = True
+    row["bounded_correction_required"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert any(
+        error.startswith("kpi_product_runner_topology_correction_scope_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_product_runner_topology_correction_force_claim_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_product_runner_topology_correction_bounded_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_mm_gbsa_claim_schema_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    imports = kpi_packet["product_kpi"]["product_runner_engine_imports_smoke"]
+    row = next(
+        item
+        for item in imports["rows"]
+        if item["contract"] == "mm_gbsa_refine_direct_engine_import"
+    )
+    row["refine_claim_safe_required"] = True
+    row["claim_metadata_schema"] = ""
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert any(
+        error.startswith("kpi_product_runner_mm_gbsa_claim_safe_gate_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_product_runner_mm_gbsa_claim_schema_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
 def test_ai_md_product_evidence_bundle_blocks_without_force_residual_bounded_policy_gate(tmp_path: Path) -> None:
     out_tar = tmp_path / "bundle.tar.gz"
     kpi_packet = _kpi_packet(ready=True, force_residual_bounded_policy_ready=False)
@@ -2738,6 +4216,91 @@ def test_ai_md_product_evidence_bundle_blocks_without_force_residual_contract_ga
     )
     assert any(
         error.startswith("pm_force_residual_contract_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_invalid_force_residual_applied_report(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    applied_report = kpi_packet["runtime_kpi"]["top10_force_residual"]["last_report"]
+    applied_report["claim_safe"] = False
+    applied_report["max_force_norm"] = 26.0
+    applied_report["force_norm_within_cap"] = False
+    applied_report["rank_pct"] = 0.06
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_runtime_top10_force_residual_applied_report_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_missing_force_residual_applied_report(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    del kpi_packet["runtime_kpi"]["top10_force_residual"]["last_report"]
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_runtime_top10_force_residual_applied_report_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_blocks_nonfinite_force_residual_applied_report(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    applied_report = kpi_packet["runtime_kpi"]["top10_force_residual"]["last_report"]
+    applied_report["rank_pct"] = "nan"
+    applied_report["max_force_norm"] = "inf"
+    applied_report["energy_drift_pct"] = "-inf"
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_export_ready"] is True
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_runtime_top10_force_residual_applied_report_invalid:")
         for error in summary["bundle_validation_errors"]
     )
 
@@ -2933,6 +4496,14 @@ def test_ai_md_product_evidence_bundle_blocks_without_chemistry_pm_gates(
         for error in summary["bundle_validation_errors"]
     )
     assert any(
+        error.startswith("pm_hbond_geometry_evaluated_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_hbond_geometry_complete_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
         error.startswith("pm_overanchored_decoy_rejection_gate_missing:")
         for error in summary["bundle_validation_errors"]
     )
@@ -2945,6 +4516,8 @@ def test_ai_md_product_evidence_bundle_blocks_chemistry_pm_numeric_mismatch(
     kpi_packet = _kpi_packet(ready=True)
     pm_chemistry = kpi_packet["pm_kpi_summary"]["chemistry"]
     pm_chemistry["hbond_donor_site_count"] = 999
+    pm_chemistry["hbond_geometry_evaluated_fixture_count"] = 0
+    pm_chemistry["hbond_geometry_complete_fixture_count"] = 0
     pm_chemistry["hbond_recovery_pose_ids"] = ["wrong_pose"]
     pm_chemistry["unsatisfied_donor_count"] = 999
     pm_chemistry["ring_validity_fixture_count"] = 0
@@ -2971,6 +4544,14 @@ def test_ai_md_product_evidence_bundle_blocks_chemistry_pm_numeric_mismatch(
         for error in summary["bundle_validation_errors"]
     )
     assert any(
+        error.startswith("pm_chemistry_hbond_geometry_evaluated_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_chemistry_hbond_geometry_complete_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
         error.startswith("pm_chemistry_unsatisfied_donor_count_mismatch:")
         for error in summary["bundle_validation_errors"]
     )
@@ -2989,6 +4570,15 @@ def test_ai_md_product_evidence_bundle_blocks_without_raw_chemistry_kpi_evidence
     chemistry["hbond_evidence_schema_ready_count"] = 0
     chemistry["chirality_preservation_fixture_count"] = 0
     chemistry["rows"][0]["hbond_pair_schema_ready"] = False
+    chemistry["rows"][1]["hbond_geometry_evaluated"] = False
+    chemistry["rows"][2]["hbond_geometry_complete"] = False
+    chemistry["rows"][6]["chirality_status"] = "not_applicable"
+    chemistry["rows"][7]["ligand_validity_blockers"] = []
+    chemistry["rows"][8]["ring_status"] = "not_applicable"
+    chemistry["rows"][9]["formal_charge_sum"] = 0
+    chemistry["rows"][10]["tautomer_fixture_valid"] = False
+    for row in chemistry["rows"]:
+        row["hbond_angle_pass_count"] = 0
 
     payload = mod.build_payload(
         kpi_packet=kpi_packet,
@@ -3013,6 +4603,38 @@ def test_ai_md_product_evidence_bundle_blocks_without_raw_chemistry_kpi_evidence
     )
     assert any(
         error.startswith("kpi_chemistry_row_hbond_pair_schema_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_chemistry_hbond_geometry_evaluated_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_chemistry_hbond_geometry_complete_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_chemistry_hbond_angle_pass_rows_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_chemistry_chirality_specified_row_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_chemistry_unassigned_chirality_row_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_chemistry_ring_fixture_row_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_chemistry_protonation_fixture_row_invalid:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_chemistry_tautomer_fixture_row_invalid:")
         for error in summary["bundle_validation_errors"]
     )
 
@@ -3065,7 +4687,13 @@ def test_ai_md_product_evidence_bundle_blocks_pose_row_without_hbond_schema_cont
 ) -> None:
     out_tar = tmp_path / "bundle.tar.gz"
     kpi_packet = _kpi_packet(ready=True)
-    kpi_packet["pose_ranking_hbond_benchmark"]["rows"][0]["hbond_pair_schema_ready"] = False
+    rows = kpi_packet["pose_ranking_hbond_benchmark"]["rows"]
+    rows[0]["hbond_pair_schema_ready"] = False
+    rows[0]["hbond_angle_pass_count"] = 0
+    rows[1]["hbond_status"] = "pass"
+    rows[2]["unsatisfied_donor_count"] = 0
+    rows[2]["unsatisfied_acceptor_count"] = 0
+    rows[3]["overanchoring_flag"] = False
 
     payload = mod.build_payload(
         kpi_packet=kpi_packet,
@@ -3082,6 +4710,22 @@ def test_ai_md_product_evidence_bundle_blocks_pose_row_without_hbond_schema_cont
     assert {"code": "kpi_claim_metadata_gates_not_validated"} in payload["blockers"]
     assert any(
         error.startswith("kpi_pose_ranking_row_hbond_pair_schema_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_pose_ranking_top1_geometry_evidence_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_pose_ranking_row_status_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_pose_ranking_blocked_role_unsatisfied_evidence_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_pose_ranking_overanchored_flag_missing:")
         for error in summary["bundle_validation_errors"]
     )
 
@@ -3156,6 +4800,113 @@ def test_ai_md_product_evidence_bundle_rejects_pose_benchmark_observed_pose_role
     assert summary["product_claim_ready"] is False
     assert any(
         error.startswith("kpi_pose_ranking_observed_pose_roles_drift:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_rejects_missing_confidence_calibration_report(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    kpi_packet["confidence_calibration_report"]["ready"] = False
+    kpi_packet["confidence_calibration_report"]["status"] = "blocked_confidence_calibration_report"
+    kpi_packet["confidence_calibration_report"]["rows"] = []
+    kpi_packet["pm_kpi_summary"]["chemistry"]["confidence_calibration_report_ready"] = False
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert summary["confidence_calibration_report_ready"] is False
+    assert {"code": "confidence_calibration_report_not_ready"} in payload["blockers"]
+    assert any(
+        error.startswith("kpi_confidence_calibration_report_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_confidence_calibration_gate_missing:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_rejects_confidence_calibration_pm_mirror_drift(
+    tmp_path: Path,
+) -> None:
+    out_tar = tmp_path / "bundle.tar.gz"
+    kpi_packet = _kpi_packet(ready=True)
+    kpi_packet["confidence_calibration_report"]["blocked_reasons"] = ["manually_injected_blocker"]
+    pm_chemistry = kpi_packet["pm_kpi_summary"]["chemistry"]
+    pm_chemistry["confidence_calibration_status"] = "wrong_status"
+    pm_chemistry["confidence_calibration_positive_count"] = 999
+    pm_chemistry["confidence_calibration_negative_count"] = 999
+    pm_chemistry["confidence_calibration_bin_count"] = 999
+    pm_chemistry["confidence_calibration_brier_score"] = 0.99
+
+    payload = mod.build_payload(
+        kpi_packet=kpi_packet,
+        rocm_manifest_packet=_rocm_packet(ready=True),
+        product_image_preflight_packet=_image_preflight_packet(clean_ready=True),
+        artifact_specs=_artifact_specs(tmp_path, kpi_packet=kpi_packet),
+        out_tar=str(out_tar),
+    )
+
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert any(
+        error.startswith("kpi_confidence_calibration_ready_with_blockers:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_confidence_calibration_status_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_confidence_calibration_positive_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_confidence_calibration_negative_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_confidence_calibration_bin_count_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("pm_confidence_calibration_brier_mismatch:")
+        for error in summary["bundle_validation_errors"]
+    )
+
+
+def test_ai_md_product_evidence_bundle_rejects_pose_benchmark_delta_backmap_yellow_band_missing(
+    tmp_path: Path,
+) -> None:
+    def mutate(bench):
+        bench["delta_backmap_yellow_band_abstention_ready"] = False
+        for row in bench["rows"]:
+            if row["benchmark_role"] == "delta_backmap_yellow_band_pose":
+                row["hbond_delta_backmap_yellow_band"] = False
+                row["hbond_blocked_reason"] = ""
+
+    payload = _pose_drift_payload(tmp_path, mutate=mutate)
+    summary = payload["summary"]
+    assert summary["bundle_validation_pass"] is False
+    assert summary["product_claim_ready"] is False
+    assert any(
+        error.startswith("kpi_pose_ranking_delta_backmap_yellow_band_not_ready:")
+        for error in summary["bundle_validation_errors"]
+    )
+    assert any(
+        error.startswith("kpi_pose_ranking_delta_backmap_yellow_band_row_missing:")
         for error in summary["bundle_validation_errors"]
     )
 
@@ -3318,7 +5069,19 @@ def test_ai_md_product_evidence_bundle_blocks_missing_required_artifact(tmp_path
 
 
 def test_ai_md_product_evidence_bundle_cli_writes_outputs(tmp_path: Path) -> None:
-    kpi_json = _write(tmp_path / "kpi.json", json.dumps(_kpi_packet(ready=True)))
+    kpi_packet = _kpi_packet(ready=True)
+    runtime_plot = _write(
+        tmp_path / "runtime_scaling.svg",
+        "<svg xmlns=\"http://www.w3.org/2000/svg\"><text>Pair-count scaling advisory</text></svg>\n",
+    )
+    scaling = kpi_packet["runtime_kpi"]["neighbor_cap_scaling"]
+    scaling["plot_path"] = str(runtime_plot)
+    scaling["plot_sha256"] = _sha256(runtime_plot)
+    scaling["plot_size_bytes"] = runtime_plot.stat().st_size
+    pm_runtime = kpi_packet["pm_kpi_summary"]["runtime"]
+    pm_runtime["runtime_neighbor_cap_scaling_plot_path"] = str(runtime_plot)
+    pm_runtime["runtime_neighbor_cap_scaling_plot_sha256"] = _sha256(runtime_plot)
+    kpi_json = _write(tmp_path / "kpi.json", json.dumps(kpi_packet))
     kpi_md = _write(tmp_path / "kpi.md")
     rocm_json = _write(tmp_path / "rocm.json", json.dumps(_rocm_packet(ready=True)))
     image_preflight_json = _write(tmp_path / "image_preflight.json", json.dumps(_image_preflight_packet(clean_ready=True)))
@@ -3334,6 +5097,8 @@ def test_ai_md_product_evidence_bundle_cli_writes_outputs(tmp_path: Path) -> Non
             str(kpi_json),
             "--kpi-md",
             str(kpi_md),
+            "--runtime-scaling-plot",
+            str(runtime_plot),
             "--rocm-manifest-json",
             str(rocm_json),
             "--product-image-preflight-json",
