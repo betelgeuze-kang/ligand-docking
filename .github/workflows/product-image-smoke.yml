@@ -20,6 +20,9 @@ on:
       - betelgeuze_engine/**
       - betelgeuze_product/**
       - rust_engine/**
+      - tools/product/build_ai_md_*.py
+      - tests/unit/test_build_ai_md_*.py
+      - tests/unit/test_betelgeuze_ai_md_*.py
       - third_party/rocm_device_libs_pkg/**
       - deploy/verify_product_image.sh
   pull_request:
@@ -38,6 +41,9 @@ on:
       - betelgeuze_engine/**
       - betelgeuze_product/**
       - rust_engine/**
+      - tools/product/build_ai_md_*.py
+      - tests/unit/test_build_ai_md_*.py
+      - tests/unit/test_betelgeuze_ai_md_*.py
       - third_party/rocm_device_libs_pkg/**
       - deploy/verify_product_image.sh
   workflow_dispatch:
