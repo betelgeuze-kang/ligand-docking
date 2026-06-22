@@ -7,6 +7,8 @@ from typing import Any
 
 import numpy as np
 
+from betelgeuze_engine.chemistry.ligand_states import ligand_chemistry_state_from_smiles
+
 try:
     from rdkit import Chem
     from rdkit.Chem import AllChem
@@ -17,7 +19,6 @@ except Exception:  # pragma: no cover - optional
 MAX_ONSPS_SITES = 4
 ONSPS_BACKMAP_SCHEMA_VERSION = "onsps_backmap_evidence_v1"
 _ELEMENT_PRIORITY = {"O": 0, "N": 1, "S": 2, "P": 3}
-_ACCEPTOR_ATOMIC_NUM = {8, 7, 16, 15}
 
 
 @dataclass(frozen=True)
@@ -100,16 +101,6 @@ def _backmap_evidence(
     )
 
 
-def _role_for_atom(atom: Any) -> str:
-    z = int(atom.GetAtomicNum())
-    if z not in _ACCEPTOR_ATOMIC_NUM:
-        return "none"
-    has_h = any(int(n.GetAtomicNum()) == 1 for n in atom.GetNeighbors())
-    if has_h:
-        return "donor"
-    return "acceptor"
-
-
 def _fallback_sites_from_smiles(smiles: str) -> list[OnspsSite]:
     smi = str(smiles or "").strip().upper()
     if not smi:
@@ -147,6 +138,10 @@ def _onsps_hbond_sites_from_smiles_with_source(smiles: str) -> tuple[list[OnspsS
         mol = Chem.MolFromSmiles(smi)
         if mol is None:
             return _fallback_sites_from_smiles(smi), "fallback_smiles"
+        chemistry = ligand_chemistry_state_from_smiles(smi)
+        feature_roles_by_atom: dict[int, list[str]] = {}
+        for site in chemistry.feature_sites:
+            feature_roles_by_atom.setdefault(int(site.atom_idx), []).append(str(site.role))
         mol = Chem.AddHs(mol)
         params = AllChem.ETKDGv3()
         params.randomSeed = 0x4F4E
@@ -166,18 +161,19 @@ def _onsps_hbond_sites_from_smiles_with_source(smiles: str) -> tuple[list[OnspsS
                 element = "P"
             else:
                 continue
-            role = _role_for_atom(atom)
-            if role == "none":
+            roles = feature_roles_by_atom.get(int(atom.GetIdx()), [])
+            if not roles:
                 continue
             pos = conf.GetAtomPosition(int(atom.GetIdx()))
-            candidates.append(
-                OnspsSite(
-                    atom_idx=int(atom.GetIdx()),
-                    element=element,
-                    role=role,
-                    local_xyz=np.asarray([float(pos.x), float(pos.y), float(pos.z)], dtype=np.float32),
+            for role in sorted(set(roles), key=lambda value: 0 if value == "donor" else 1):
+                candidates.append(
+                    OnspsSite(
+                        atom_idx=int(atom.GetIdx()),
+                        element=element,
+                        role=role,
+                        local_xyz=np.asarray([float(pos.x), float(pos.y), float(pos.z)], dtype=np.float32),
+                    )
                 )
-            )
         candidates.sort(
             key=lambda s: (
                 _ELEMENT_PRIORITY.get(s.element, 9),

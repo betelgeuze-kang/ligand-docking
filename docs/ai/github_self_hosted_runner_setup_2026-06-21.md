@@ -42,10 +42,29 @@ gh workflow run product-api-worker.yml -f runner_labels_json='["self-hosted","li
 gh workflow run product-image-smoke.yml -f verify_mode=rocm-runtime
 ```
 
-Boundary: runner registration, token use, service installation, workflow dispatch, and GitHub settings changes are external-state mutations. The registration token must not be stored in this repository, docs, prompts, configs, logs, or artifacts.
+## Release CI ROCm gate (local workflow wiring)
+
+`product-image-smoke` now runs ROCm runtime smoke automatically on:
+
+- weekly schedule (`0 6 * * 1` UTC, Mondays)
+- `v*` and `product-*` release tag pushes
+- `workflow_dispatch` with `verify_mode=rocm-runtime`
+
+Build smoke still runs only on branch `push`/`pull_request` path filters and `workflow_dispatch` with `verify_mode=build`. Scheduled and tag-triggered runs do not start the build job.
+
+GitHub Actions path filters are not evaluated for tag pushes, so the `v*` / `product-*` release tag triggers are expected to start the workflow even though branch pushes remain path-filtered.
+
+Blocked-by-human / external-state prerequisites that this repo cannot satisfy locally:
+
+- self-hosted ROCm runner must stay online with labels `self-hosted`, `linux`, `rocm`
+- branch protection / required-check configuration in GitHub settings is operator-owned
+- remote CI green claims remain blocked until an observed green ROCm runtime run exists on GitHub
+
+Boundary: runner registration, token use, service installation, workflow dispatch, branch protection, and GitHub settings changes are external-state mutations. The registration token must not be stored in this repository, docs, prompts, configs, logs, or artifacts.
 
 Sources:
 
 - GitHub Docs: Adding self-hosted runners, `https://docs.github.com/actions/hosting-your-own-runners/adding-self-hosted-runners`
 - GitHub Docs: Using labels with self-hosted runners, `https://docs.github.com/actions/hosting-your-own-runners/using-labels-with-self-hosted-runners`
 - GitHub Docs: Using self-hosted runners in a workflow, `https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/use-in-a-workflow`
+- GitHub Docs: Workflow syntax, path filters and tag pushes, `https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onpushpull_requestpull_request_targetpathspaths-ignore`

@@ -47,6 +47,11 @@ EXPECTED_ALLOWLISTED_RUNNER_SHIMS = (
         "runner_script": "tools/run_ligand_topk_delivery.py",
         "adapter_import": "betelgeuze_engine.product.runners.topk_delivery",
     },
+    {
+        "profile_id": "tier_beta_biodiscovery_direct",
+        "runner_script": "tools/run_tier_beta_vertical_slice.py",
+        "adapter_import": "betelgeuze_engine.product.runners.tier_beta_vertical_slice",
+    },
 )
 EXPECTED_PRODUCT_FORCE_TERMS = ("directional_hbond", "hydrophobic_contact", "legacy_lj")
 EXPECTED_HBOND_RECOVERY_BENCHMARK_SCHEMA_VERSION = "hbond_recovery_benchmark_v1"
@@ -1558,6 +1563,7 @@ def _validate_kpi_claim_metadata_gates(
         "ligand_htvs_pipeline_default": "betelgeuze_engine.product.runners.htvs_pipeline",
         "backmapping_scoring.production": "betelgeuze_engine.product.runners.backmapping_scoring",
         "ligand_topk_delivery.production": "betelgeuze_engine.product.runners.topk_delivery",
+        "tier_beta_biodiscovery_direct": "betelgeuze_engine.product.runners.tier_beta_vertical_slice",
     }
     owned_by_runner_id = {
         str(row.get("runner_id") or ""): row

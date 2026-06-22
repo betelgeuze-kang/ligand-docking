@@ -328,13 +328,25 @@ def test_product_image_smoke_script_is_fail_closed_and_has_rocm_runtime_mode() -
     assert "product claim promotion requires mode=rocm-runtime" in script
     assert "product_runner_claim_metadata_ready=true" in script
     assert "pull_request:" in workflow
+    assert "schedule:" in workflow
+    assert 'cron: "0 6 * * 1"' in workflow
     assert "workflow_dispatch:" in workflow
     assert "verify_mode:" in workflow
+    assert "- v*" in workflow
+    assert "- product-*" in workflow
+    assert "startsWith(github.ref, 'refs/tags/v')" in workflow
+    assert "startsWith(github.ref, 'refs/tags/product-')" in workflow
+    assert "github.event_name == 'schedule'" in workflow
+    assert "github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')" in workflow
     assert "PRODUCT_IMAGE_VERIFY_MODE: build" in workflow
     assert "docker/setup-buildx-action@v3" in workflow
     assert 'DOCKER_BUILDKIT: "1"' in workflow
     assert 'PRODUCT_IMAGE_REQUIRE_BUILDX: "1"' in workflow
     assert 'PRODUCT_IMAGE_PRUNE_BEFORE_BUILD: "1"' in workflow
+    assert "actions/upload-artifact@v4" in workflow
+    assert "if: always()" in workflow
+    assert "product_image_build_smoke.log" in workflow
+    assert "product_image_rocm_runtime_smoke.log" in workflow
     assert "product-image-rocm-runtime-smoke" in workflow
     assert "runs-on: [self-hosted, linux, rocm]" in workflow
     assert "PRODUCT_IMAGE_VERIFY_MODE: rocm-runtime" in workflow

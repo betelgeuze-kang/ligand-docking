@@ -2274,9 +2274,21 @@ def test_topology_claim_metadata_carries_ligand_product_validity_status() -> Non
     assert metadata["ligand_ring_status"] == "not_applicable"
     assert metadata["ligand_ring_valid"] is True
     assert metadata["ligand_protonation_status"] == "neutral_state_parsed"
+    assert metadata["ligand_protonation_source"] == "rdkit_formal_charge_state_from_input_ph_7_4_no_pka_enumeration"
     assert metadata["ligand_protonation_valid"] is True
-    assert metadata["ligand_tautomer_status"] == "connectivity_parsed_tautomer_not_canonicalized"
+    assert metadata["ligand_formal_charge_sum"] == 0
+    assert metadata["ligand_charged_atom_count"] == 0
+    assert metadata["ligand_tautomer_status"] == "canonical_tautomer_enumerated"
+    assert metadata["ligand_tautomer_source"] == "rdkit_molstandardize_tautomer_enumerator"
+    assert metadata["ligand_canonical_tautomer_smiles"] == "CC(O)C(=O)O"
+    assert metadata["ligand_tautomer_count"] >= 1
     assert metadata["ligand_tautomer_valid"] is True
+    assert metadata["ligand_feature_source"] == "rdkit_chemical_features_base_fdef"
+    assert metadata["ligand_donor_site_count"] >= 1
+    assert metadata["ligand_acceptor_site_count"] >= 1
+    assert metadata["ligand_salt_stripped"] is False
+    assert metadata["ligand_fragment_count"] == 1
+    assert metadata["ligand_salt_parent_smiles"] == "C[C@H](O)C(=O)O"
     assert metadata["ligand_validity_blockers"] == []
 
 

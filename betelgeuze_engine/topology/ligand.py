@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 import re
 from typing import Any
 
+from betelgeuze_engine.chemistry.ligand_states import ligand_chemistry_state_from_smiles
+
 try:
     from rdkit import Chem  # type: ignore
 except Exception:  # pragma: no cover
@@ -23,9 +25,20 @@ def _base_validity(
     hbond_site_count: int = 0,
     ring_atom_count: int = 0,
     formal_charge_sum: int = 0,
+    charged_atom_count: int = 0,
     chiral_center_count: int = 0,
     specified_chiral_center_count: int = 0,
     unassigned_chiral_center_count: int = 0,
+    protonation_source: str = "not_assessed",
+    tautomer_source: str = "not_assessed",
+    canonical_tautomer_smiles: str = "",
+    tautomer_count: int = 0,
+    feature_source: str = "not_assessed",
+    donor_site_count: int = 0,
+    acceptor_site_count: int = 0,
+    salt_parent_smiles: str = "",
+    fragment_count: int = 0,
+    salt_stripped: bool = False,
     blockers: list[str] | None = None,
 ) -> dict[str, Any]:
     blocker_values = [str(v) for v in blockers or [] if str(v)]
@@ -37,8 +50,8 @@ def _base_validity(
     else:
         chirality_status = "not_applicable"
     ring_status = "present" if ring_atom_count > 0 else "not_applicable"
-    protonation_status = "charged_state_parsed" if formal_charge_sum != 0 else "neutral_state_parsed"
-    tautomer_status = "connectivity_parsed_tautomer_not_canonicalized" if valid else "not_assessed"
+    protonation_status = "charged_state_parsed" if charged_atom_count > 0 else "neutral_state_parsed"
+    tautomer_status = "canonical_tautomer_enumerated" if valid and canonical_tautomer_smiles else "not_assessed"
     claim_safe = bool(valid and chirality_valid and source == "rdkit")
     if valid and source != "rdkit":
         blocker_values.append("rdkit_unavailable_ligand_topology")
@@ -57,6 +70,7 @@ def _base_validity(
         "hbond_site_count": int(hbond_site_count),
         "ring_atom_count": int(ring_atom_count),
         "formal_charge_sum": int(formal_charge_sum),
+        "charged_atom_count": int(charged_atom_count),
         "chiral_center_count": int(chiral_center_count),
         "specified_chiral_center_count": int(specified_chiral_center_count),
         "unassigned_chiral_center_count": int(unassigned_chiral_center_count),
@@ -66,8 +80,18 @@ def _base_validity(
         "ring_status": ring_status,
         "protonation_valid": bool(valid),
         "protonation_status": protonation_status,
+        "protonation_source": protonation_source,
         "tautomer_valid": bool(valid),
         "tautomer_status": tautomer_status,
+        "tautomer_source": tautomer_source,
+        "canonical_tautomer_smiles": canonical_tautomer_smiles,
+        "tautomer_count": int(tautomer_count),
+        "feature_source": feature_source,
+        "donor_site_count": int(donor_site_count),
+        "acceptor_site_count": int(acceptor_site_count),
+        "salt_parent_smiles": salt_parent_smiles,
+        "fragment_count": int(fragment_count),
+        "salt_stripped": bool(salt_stripped),
     }
 
 
@@ -110,6 +134,10 @@ def ligand_topology_from_smiles(smiles: str) -> LigandTopology:
                 [],
                 _base_validity(valid=False, reason="invalid_smiles", source="rdkit", blockers=["invalid_smiles"]),
             )
+        chemistry = ligand_chemistry_state_from_smiles(smi)
+        roles_by_atom: dict[int, set[str]] = {}
+        for site in chemistry.feature_sites:
+            roles_by_atom.setdefault(int(site.atom_idx), set()).add(str(site.role))
         atom_elements: list[str] = []
         formal_charges: list[int] = []
         donor_acceptor_roles: list[str] = []
@@ -121,17 +149,13 @@ def ligand_topology_from_smiles(smiles: str) -> LigandTopology:
             formal_charges.append(int(atom.GetFormalCharge()))
             ring_flags.append(bool(atom.IsInRing()))
             chirality_tags.append(str(atom.GetChiralTag()))
-            if symbol in _HBOND_ELEMENTS:
-                has_h = int(atom.GetTotalNumHs()) > 0
-                if has_h and symbol in {"N", "O", "S"}:
-                    donor_acceptor_roles.append("donor")
-                else:
-                    donor_acceptor_roles.append("acceptor")
+            roles = roles_by_atom.get(int(atom.GetIdx()), set())
+            if "donor" in roles:
+                donor_acceptor_roles.append("donor")
+            elif "acceptor" in roles:
+                donor_acceptor_roles.append("acceptor")
             else:
                 donor_acceptor_roles.append("none")
-        chiral_centers = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
-        unassigned_chiral_center_count = sum(1 for _idx, tag in chiral_centers if str(tag) == "?")
-        specified_chiral_center_count = len(chiral_centers) - unassigned_chiral_center_count
         return LigandTopology(
             smiles=smi,
             atom_elements=atom_elements,
@@ -144,12 +168,24 @@ def ligand_topology_from_smiles(smiles: str) -> LigandTopology:
                 reason="rdkit_parse_ok",
                 source="rdkit",
                 atom_count=len(atom_elements),
-                hbond_site_count=sum(1 for role in donor_acceptor_roles if role in {"donor", "acceptor"}),
+                hbond_site_count=chemistry.donor_site_count + chemistry.acceptor_site_count,
                 ring_atom_count=sum(1 for flag in ring_flags if flag),
                 formal_charge_sum=sum(formal_charges),
-                chiral_center_count=len(chiral_centers),
-                specified_chiral_center_count=specified_chiral_center_count,
-                unassigned_chiral_center_count=unassigned_chiral_center_count,
+                charged_atom_count=chemistry.charged_atom_count,
+                chiral_center_count=chemistry.chiral_center_count,
+                specified_chiral_center_count=chemistry.specified_chiral_center_count,
+                unassigned_chiral_center_count=chemistry.unassigned_chiral_center_count,
+                protonation_source=chemistry.protonation_source,
+                tautomer_source=chemistry.tautomer_source,
+                canonical_tautomer_smiles=chemistry.canonical_tautomer_smiles,
+                tautomer_count=chemistry.tautomer_count,
+                feature_source=chemistry.feature_source,
+                donor_site_count=chemistry.donor_site_count,
+                acceptor_site_count=chemistry.acceptor_site_count,
+                salt_parent_smiles=chemistry.salt_parent_smiles,
+                fragment_count=chemistry.fragment_count,
+                salt_stripped=chemistry.salt_stripped,
+                blockers=list(chemistry.claim_safe_blockers),
             ),
         )
 

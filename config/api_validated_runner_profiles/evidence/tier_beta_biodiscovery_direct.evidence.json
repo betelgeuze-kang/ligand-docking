@@ -1,0 +1,13 @@
+{
+  "profile_id": "tier_beta_biodiscovery_direct",
+  "claim_boundary": "Operator-approved restricted local Tier-beta BioDiscovery vertical slice. Results remain structure-based screening evidence only and do not claim calibrated affinity, FEP parity, wetlab hits, broad platform readiness, or AlphaFold parity.",
+  "claim_boundary_reviewed": true,
+  "fake_result_emission_forbidden": true,
+  "gate_policy_artifact": "runs/product_execution_approval_gate_current.json",
+  "gate_policy_reviewed": true,
+  "input_contract_reviewed": true,
+  "output_contract_reviewed": true,
+  "required_operator_action": "Enabled after restricted local Tier-beta vertical-slice service review.",
+  "reviewed_at_utc": "2026-06-23T01:45:00+00:00",
+  "reviewer": "operator-gap-closure"
+}

@@ -597,6 +597,62 @@ def test_cli_compatibility_wrapper(tmp_path) -> None:
     assert "delivery_bundle_validation_not_attached" in bundle.failure_flags
 
 
+def test_cli_compatibility_wrapper_accepts_profile_request_json(tmp_path) -> None:
+    request_path = tmp_path / "request.json"
+    result_path = tmp_path / "result.json"
+    manifest_path = tmp_path / "manifest.json"
+    evidence_bundle_path = tmp_path / "evidence_bundle.json"
+    request_path.write_text(
+        json.dumps(
+            {
+                "runner_profile_id": TIER_BETA_DIRECT_RUNNER_PROFILE_ID,
+                "runner_profile_params": {
+                    "protein_input": MINI_PDB,
+                    "ligand_input": VALID_SMILES,
+                    "pose_count": 4,
+                    "top_k": 2,
+                    "stability_steps": 0,
+                    "seed": 42,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "tools/run_tier_beta_vertical_slice.py",
+            "--protein-input",
+            str(request_path),
+            "--ligand-input",
+            str(request_path),
+            "--result-json",
+            str(result_path),
+            "--manifest-json",
+            str(manifest_path),
+            "--evidence-bundle-json",
+            str(evidence_bundle_path),
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    assert payload["request_mode"] == "request_json"
+    assert payload["result"]["ok"] is True
+    assert payload["claim_metadata"]["claim_safe"] is False
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert verify_result_manifest(
+        manifest,
+        signing_key="local-dev-result-manifest-signing-key-change-me",
+    )
+
+
 def test_existing_runner_compatibility_hooks_call_canonical_service() -> None:
     payload = {
         "runner_profile_params": {
