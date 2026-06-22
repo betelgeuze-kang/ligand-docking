@@ -7,12 +7,12 @@ import torch.nn as nn
 
 
 class LangevinIntegrator(nn.Module):
-    """Euler-Maruyama Langevin integrator for unit-mass coarse-grained states.
+    """Euler-Maruyama Langevin integrator for coarse-grained states.
 
     The integrator keeps the historical ``noise`` argument semantics: when
     supplied, ``noise`` is treated as an already-scaled velocity increment.
     When omitted, the increment is sampled with variance
-    ``2 * gamma * kT * dt``.
+    ``2 * gamma * kT * dt / mass``.
     """
 
     def __init__(
@@ -25,6 +25,9 @@ class LangevinIntegrator(nn.Module):
         dt_max: float = 0.005,
         force_threshold: float = 100.0,
         use_mixed_precision: bool = False,
+        mass: float | torch.Tensor = 1.0,
+        coarse_mass_policy: str = "explicit_unit_mass",
+        seed: int | None = None,
     ) -> None:
         super().__init__()
         if float(dt) <= 0.0:
@@ -46,12 +49,32 @@ class LangevinIntegrator(nn.Module):
         # Retain the legacy state-dict key for backward compatibility. The
         # stochastic increment now correctly uses the full kT value.
         self.register_buffer("kT_half", torch.tensor(float(kT) * 0.5, dtype=torch.float32))
+        self.register_buffer("mass", torch.as_tensor(mass, dtype=torch.float32).clone().detach())
 
         self.adaptive_dt = bool(adaptive_dt)
         self.dt_min = float(dt_min)
         self.dt_max = float(dt_max)
         self.force_threshold = float(force_threshold)
         self.use_mixed_precision = bool(use_mixed_precision)
+        self.coarse_mass_policy = str(coarse_mass_policy)
+        self.last_dt: torch.Tensor | None = None
+        self.seed = int(seed) if seed is not None else None
+        self._generators: dict[str, torch.Generator] = {}
+
+    def set_seed(self, seed: int) -> LangevinIntegrator:
+        self.seed = int(seed)
+        self._generators = {}
+        return self
+
+    def _generator_for(self, device: torch.device) -> torch.Generator | None:
+        if self.seed is None:
+            return None
+        key = str(device)
+        if key not in self._generators:
+            gen = torch.Generator(device=device)
+            gen.manual_seed(int(self.seed))
+            self._generators[key] = gen
+        return self._generators[key]
 
     @staticmethod
     def _validate_state(c: torch.Tensor, v: torch.Tensor, f: torch.Tensor) -> None:
@@ -71,11 +94,32 @@ class LangevinIntegrator(nn.Module):
         if v.device != c.device or f.device != c.device:
             raise ValueError("c, v, and f must be on the same device")
 
+    @staticmethod
+    def _broadcast_mass(mass: float | torch.Tensor, like: torch.Tensor) -> torch.Tensor:
+        mass_t = torch.as_tensor(mass, device=like.device, dtype=like.dtype)
+        if mass_t.ndim == 0:
+            mass_t = mass_t.view(1, 1, 1)
+        elif mass_t.ndim == 1:
+            mass_t = mass_t.view(1, -1, 1)
+        elif mass_t.ndim == 2:
+            mass_t = mass_t.unsqueeze(-1)
+        elif mass_t.ndim != 3:
+            raise ValueError("mass must be scalar, [N], [B,N], or [B,N,1]")
+        if mass_t.shape[0] not in (1, like.shape[0]):
+            raise ValueError("mass batch dimension must be 1 or match coordinates")
+        if mass_t.shape[1] not in (1, like.shape[1]):
+            raise ValueError("mass atom dimension must be 1 or match coordinates")
+        if mass_t.shape[2] not in (1, like.shape[2]):
+            raise ValueError("mass coordinate dimension must be 1 or match coordinates")
+        if torch.any(mass_t <= 0):
+            raise ValueError("mass values must be positive")
+        return mass_t
+
     def _current_timestep(self, f: torch.Tensor, *, dtype: torch.dtype) -> torch.Tensor:
         device = f.device
         dt = self.dt.to(device=device, dtype=dtype)
         if not self.adaptive_dt:
-            return dt
+            return dt.view(1, 1, 1)
 
         # Keep adaptive timesteps independent across batch members. The prior
         # implementation reduced over the batch dimension and let one sample's
@@ -100,14 +144,16 @@ class LangevinIntegrator(nn.Module):
         v: torch.Tensor,
         f: torch.Tensor,
         noise: torch.Tensor | None = None,
+        mass: float | torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Advance coordinates and velocities by one Langevin step.
 
         Args:
             c: Coordinates with shape ``[B, N, 3]``.
             v: Velocities with shape ``[B, N, 3]``.
-            f: Forces with shape ``[B, N, 3]``. Unit mass is assumed.
+            f: Forces with shape ``[B, N, 3]``.
             noise: Optional pre-scaled velocity increment matching ``v``.
+            mass: Optional scalar, ``[N]``, ``[B,N]``, or ``[B,N,1]`` positive mass tensor.
 
         Returns:
             ``(v_new, c_new)`` with the same shape as the inputs. Historical
@@ -121,16 +167,25 @@ class LangevinIntegrator(nn.Module):
         c_work = c.to(dtype=compute_dtype)
         v_work = v.to(dtype=compute_dtype)
         f_work = f.to(dtype=compute_dtype)
+        mass_work = self._broadcast_mass(self.mass if mass is None else mass, v_work)
         current_dt = self._current_timestep(f_work, dtype=compute_dtype)
+        self.last_dt = current_dt.detach().to(dtype=torch.float32)
+
         gamma = self.gamma.to(device=device, dtype=compute_dtype)
         kT = self.kT.to(device=device, dtype=compute_dtype)
 
         friction_term = -gamma * v_work * current_dt
 
         if noise is None:
-            variance = torch.clamp(2.0 * gamma * kT * current_dt, min=0.0)
+            variance = torch.clamp(2.0 * gamma * kT * current_dt / mass_work, min=0.0)
             noise_std = torch.sqrt(variance)
-            random_force = torch.randn_like(v_work) * noise_std
+            generator = self._generator_for(device)
+            random_force = torch.randn(
+                v_work.shape,
+                device=device,
+                dtype=compute_dtype,
+                generator=generator,
+            ) * noise_std
         else:
             if not isinstance(noise, torch.Tensor):
                 raise TypeError("noise must be a torch.Tensor or None")
@@ -138,6 +193,7 @@ class LangevinIntegrator(nn.Module):
                 raise ValueError("noise shape must match velocity tensor shape")
             random_force = noise.to(device=device, dtype=compute_dtype)
 
-        v_new = v_work + (f_work * current_dt) + friction_term + random_force
+        v_new = v_work + (f_work * current_dt / mass_work) + friction_term + random_force
         c_new = c_work + v_new * current_dt
         return v_new.to(dtype=output_dtype), c_new.to(dtype=output_dtype)
+

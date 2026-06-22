@@ -1732,8 +1732,8 @@ def _simulate_with_engine_batch(
     if (not bool(getattr(integrator, "adaptive_dt", False))) and float(kT) > 0.0:
         gamma_t = integrator.gamma.to(device=device, dtype=v.dtype)
         dt_t = integrator.dt.to(device=device, dtype=v.dtype)
-        kT_half_t = integrator.kT_half.to(device=device, dtype=v.dtype)
-        noise_std = torch.sqrt(2.0 * gamma_t * kT_half_t * dt_t)
+        kT_t = integrator.kT.to(device=device, dtype=v.dtype)
+        noise_std = torch.sqrt(2.0 * gamma_t * kT_t * dt_t)
         rollout_noise_bank = torch.randn(
             (int(max(frames, 1)),) + tuple(v.shape),
             dtype=v.dtype,

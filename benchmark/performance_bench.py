@@ -610,7 +610,7 @@ def benchmark_simulation(
     }
     final_coords_last = None
 
-    noise_std_default = torch.sqrt(2.0 * integrator.gamma * integrator.kT_half * integrator.dt)
+    noise_std_default = torch.sqrt(2.0 * integrator.gamma * integrator.kT * integrator.dt)
     noise_std_default_f = float(noise_std_default.item()) if torch.is_tensor(noise_std_default) else float(noise_std_default)
     for run in range(num_runs):
         logger.info(f"  Run {run+1}/{num_runs}")
