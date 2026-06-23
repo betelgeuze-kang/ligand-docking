@@ -116,18 +116,17 @@ def test_build_pdbbind_casf_pose_affinity_results_scores_pose_success(tmp_path: 
     )
     out_csv = tmp_path / "results.csv"
 
-    payload = build_results(
-        argparse.Namespace(
-            dataset_artifact=str(tmp_path / "casf"),
-            max_poses=0,
-            threshold=0.35,
-            pose_success_rmsd_a=2.0,
-            out_csv=str(out_csv),
-            out_json=str(tmp_path / "results.json"),
-            out_md=str(tmp_path / "results.md"),
-            gold_metadata_csv=str(metadata),
-        )
+    args = argparse.Namespace(
+        dataset_artifact=str(tmp_path / "casf"),
+        max_poses=0,
+        threshold=0.35,
+        pose_success_rmsd_a=2.0,
+        out_csv=str(out_csv),
+        out_json=str(tmp_path / "results.json"),
+        out_md=str(tmp_path / "results.md"),
+        gold_metadata_csv=str(metadata),
     )
+    payload = build_results(args)
 
     assert payload["summary"]["status"] == "pdbbind_casf_pose_affinity_results_ready"
     assert payload["summary"]["pose_success_rate"] == 1.0
@@ -145,6 +144,17 @@ def test_build_pdbbind_casf_pose_affinity_results_scores_pose_success(tmp_path: 
     assert payload["summary"]["chemistry_evidence_coverage"] == 1.0
     assert payload["summary"]["mean_runtime_ms"] > 0.0
     assert payload["summary"]["peak_memory_mb"] > 0.0
+    assert payload["summary"]["subset_identity_schema_version"] == "pdbbind_casf_subset_identity_v1"
+    assert payload["summary"]["subset_pose_file_names"] == ["1abc_1", "1abc_2"]
+    assert payload["summary"]["subset_reference_file_names"] == ["1abc"]
+    assert payload["summary"]["subset_gold_metadata_sha256"]
+    assert payload["summary"]["subset_identity_sha256"]
+    repeat_payload = build_results(args)
+    assert repeat_payload["summary"]["subset_identity_sha256"] == payload["summary"]["subset_identity_sha256"]
+    limited_args = argparse.Namespace(**{**vars(args), "max_poses": 1})
+    limited_payload = build_results(limited_args)
+    assert limited_payload["summary"]["subset_pose_file_names"] == ["1abc_1"]
+    assert limited_payload["summary"]["subset_identity_sha256"] != payload["summary"]["subset_identity_sha256"]
     first_row = _rows(out_csv)[0]
     assert first_row["complex_id"] == "1abc"
     assert first_row["pose_rmsd_method"] == "rdkit_self_substructure_automorphism_no_ligand_alignment"

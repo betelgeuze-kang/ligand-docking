@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -9,11 +10,12 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/release_ci_remote_green_receipt_current.json"
 DEFAULT_OUT_MD = "runs/release_ci_remote_green_receipt_current.md"
+DEFAULT_WORKFLOW_YML = ".github/workflows/product-image-smoke.yml"
 
 CLAIM_BOUNDARY = (
-    "Release CI remote-green receipt only evaluates read-only GitHub/API evidence supplied as JSON files. "
-    "It does not register runners, dispatch workflows, change branch protection, edit required checks, create "
-    "tags, upload artifacts, deploy, publish, or mutate external state."
+    "Release CI remote-green receipt only evaluates read-only GitHub/API evidence supplied as JSON files plus "
+    "the local product-image workflow source contract. It does not register runners, dispatch workflows, change "
+    "branch protection, edit required checks, create tags, upload artifacts, deploy, publish, or mutate external state."
 )
 
 REQUIRED_MAIN_CHECKS = (
@@ -39,6 +41,18 @@ def _read_json(root: Path, path_like: str | Path | None) -> Any:
         return {}
 
 
+def _read_text(root: Path, path_like: str | Path | None) -> str:
+    if not path_like:
+        return ""
+    path = _resolve(root, path_like)
+    if not path.is_file():
+        return ""
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
 def _write_json(path_like: str | Path, payload: dict[str, Any]) -> None:
     path = _resolve(ROOT, path_like)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -56,6 +70,7 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- linux_self_hosted_runner_ready: `{summary['linux_self_hosted_runner_ready']}`",
         f"- rocm_self_hosted_runner_ready: `{summary['rocm_self_hosted_runner_ready']}`",
         f"- main_required_checks_ready: `{summary['main_required_checks_ready']}`",
+        f"- workflow_source_contract_ready: `{summary['workflow_source_contract_ready']}`",
         f"- weekly_rocm_schedule_green: `{summary['weekly_rocm_schedule_green']}`",
         f"- failure_artifacts_preserved: `{summary['failure_artifacts_preserved']}`",
         f"- release_tag_rocm_gate_green: `{summary['release_tag_rocm_gate_green']}`",
@@ -131,10 +146,13 @@ def _run_matches_rocm_success(run: dict[str, Any], *, event: str | None = None, 
         str(run.get(key) or "")
         for key in ("name", "display_title", "workflow_name", "path")
     ).lower()
+    product_image_workflow = "product-image" in name_text or "product image" in name_text
+    rocm_runtime_scope = "rocm" in name_text and "runtime" in name_text
     return (
         str(run.get("status") or "").lower() == "completed"
         and str(run.get("conclusion") or "").lower() == "success"
-        and ("rocm" in name_text or "runtime" in name_text or str(run.get("event") or "") == "schedule")
+        and product_image_workflow
+        and rocm_runtime_scope
     )
 
 
@@ -146,14 +164,41 @@ def _successful_rocm_run(runs_payload: Any, *, event: str | None = None, tag_pre
 
 
 def _failure_artifacts_ready(failed_run_artifacts_payload: Any) -> tuple[bool, list[str]]:
-    names = [
+    active_names = [
         str(artifact.get("name") or "")
         for artifact in _as_list(failed_run_artifacts_payload, "artifacts")
-        if isinstance(artifact, dict)
+        if isinstance(artifact, dict) and artifact.get("expired") is not True
     ]
-    lowered = " ".join(names).lower()
-    ready = bool(names) and "smoke" in lowered and ("receipt" in lowered or "log" in lowered or "runtime" in lowered)
-    return ready, names
+    lowered = " ".join(active_names).lower()
+    has_smoke_bundle = "product-image" in lowered and "smoke" in lowered
+    has_receipt_or_runtime = "receipt" in lowered or "runtime" in lowered
+    has_log_or_runtime = "log" in lowered or "runtime" in lowered
+    ready = bool(active_names) and has_smoke_bundle and has_receipt_or_runtime and has_log_or_runtime
+    return ready, active_names
+
+
+def _workflow_source_contract(workflow_text: str, *, workflow_path: str) -> tuple[bool, dict[str, Any]]:
+    text = str(workflow_text or "")
+    checks = {
+        "workflow_path": str(workflow_path or ""),
+        "workflow_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest() if text else "",
+        "workflow_present": bool(text.strip()),
+        "build_job_present": "product-image-build-smoke:" in text,
+        "build_self_hosted_linux_default": '"self-hosted","linux"' in text or "self-hosted, linux" in text,
+        "rocm_runtime_job_present": "product-image-rocm-runtime-smoke:" in text,
+        "rocm_runner_labels": "runs-on: [self-hosted, linux, rocm]" in text,
+        "weekly_schedule": "schedule:" in text and "cron:" in text,
+        "release_tag_triggers": "refs/tags/v" in text and "refs/tags/product-" in text,
+        "workflow_tag_filters": "tags:" in text and "v*" in text and "product-*" in text,
+        "artifact_upload_action": "actions/upload-artifact@v4" in text,
+        "artifact_upload_always": "if: always()" in text,
+        "receipt_artifact_path": "runs/product_image_smoke_receipt_current.json" in text,
+        "build_log_artifact_path": "runs/product_image_build_smoke.log" in text,
+        "rocm_log_artifact_path": "runs/product_image_rocm_runtime_smoke.log" in text,
+        "rocm_runner_artifacts_path": "runs/product_image_smoke_runner_artifacts/**" in text,
+    }
+    pass_values = [value for key, value in checks.items() if key not in {"workflow_path", "workflow_sha256"}]
+    return all(bool(value) for value in pass_values), checks
 
 
 def _row(check_id: str, passed: bool, observed: Any, required: str, source: str) -> dict[str, Any]:
@@ -177,6 +222,7 @@ def build_release_ci_remote_green_receipt(
     schedule_runs_json: str | Path | None = "",
     failed_run_artifacts_json: str | Path | None = "",
     release_tag_runs_json: str | Path | None = "",
+    workflow_yml: str | Path | None = DEFAULT_WORKFLOW_YML,
 ) -> dict[str, Any]:
     root_path = Path(root)
     runners_payload = _read_json(root_path, runner_inventory_json)
@@ -185,6 +231,7 @@ def build_release_ci_remote_green_receipt(
     schedule_runs_payload = _read_json(root_path, schedule_runs_json)
     failed_artifacts_payload = _read_json(root_path, failed_run_artifacts_json)
     release_tag_runs_payload = _read_json(root_path, release_tag_runs_json)
+    workflow_text = _read_text(root_path, workflow_yml)
 
     linux_ready, linux_runners = _runner_ready(runners_payload, {"self-hosted", "linux"})
     rocm_ready, rocm_runners = _runner_ready(runners_payload, {"self-hosted", "linux", "rocm"})
@@ -199,11 +246,16 @@ def build_release_ci_remote_green_receipt(
         event="push",
         tag_prefixes=("v", "product-"),
     )
+    workflow_contract_ready, workflow_contract_observed = _workflow_source_contract(
+        workflow_text,
+        workflow_path=str(workflow_yml or ""),
+    )
 
     rows = [
         _row("linux_self_hosted_runner_registered", linux_ready, linux_runners, "online runner with self-hosted+linux labels", str(runner_inventory_json or "")),
         _row("rocm_self_hosted_runner_registered", rocm_ready, rocm_runners, "online runner with self-hosted+linux+rocm labels", str(runner_inventory_json or "")),
         _row("main_branch_required_checks_configured", main_required_checks_ready, {"protected": branch_protected, "checks": sorted(checks), "missing_checks": missing_checks}, f"main protected and required checks include {', '.join(REQUIRED_MAIN_CHECKS)}", f"{branch_json};{required_checks_json}"),
+        _row("product_image_workflow_source_contract_configured", workflow_contract_ready, workflow_contract_observed, "workflow source contains build/runtime jobs, weekly schedule, tag runtime gate, and always-uploaded receipt/log artifacts", str(workflow_yml or "")),
         _row("weekly_rocm_runtime_schedule_green", weekly_rocm_schedule_green, weekly_url, "at least one completed successful schedule run for ROCm runtime smoke", str(schedule_runs_json or "")),
         _row("failed_run_artifacts_preserved", failure_artifacts_preserved, artifact_names, "failed workflow run exposes smoke log/receipt/runtime artifacts", str(failed_run_artifacts_json or "")),
         _row("release_tag_rocm_runtime_gate_green", release_tag_rocm_gate_green, tag_url, "at least one successful v* or product-* tag push ROCm runtime run", str(release_tag_runs_json or "")),
@@ -218,6 +270,7 @@ def build_release_ci_remote_green_receipt(
         "linux_self_hosted_runner_ready": linux_ready,
         "rocm_self_hosted_runner_ready": rocm_ready,
         "main_required_checks_ready": main_required_checks_ready,
+        "workflow_source_contract_ready": workflow_contract_ready,
         "weekly_rocm_schedule_green": weekly_rocm_schedule_green,
         "failure_artifacts_preserved": failure_artifacts_preserved,
         "release_tag_rocm_gate_green": release_tag_rocm_gate_green,
@@ -241,6 +294,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--schedule-runs-json", default="")
     parser.add_argument("--failed-run-artifacts-json", default="")
     parser.add_argument("--release-tag-runs-json", default="")
+    parser.add_argument("--workflow-yml", default=DEFAULT_WORKFLOW_YML)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
     args = parser.parse_args(argv)
@@ -251,6 +305,7 @@ def main(argv: list[str] | None = None) -> int:
         schedule_runs_json=args.schedule_runs_json,
         failed_run_artifacts_json=args.failed_run_artifacts_json,
         release_tag_runs_json=args.release_tag_runs_json,
+        workflow_yml=args.workflow_yml,
     )
     _write_json(args.out_json, payload)
     _write_markdown(args.out_md, payload)

@@ -188,7 +188,11 @@ def evaluate_docking_gold_slice(
         labeled_rows = [row for row in ordered if row.active_label is not None and _finite_float(row.score) is not None]
         if labeled_rows:
             labeled_complexes += 1
-            if any(bool(row.active_label) for row in labeled_rows[:k]):
+            score_ranked_labeled_rows = sorted(
+                labeled_rows,
+                key=lambda row: (_finite_float(row.score) or float("inf"), int(row.pose_rank or 10**9)),
+            )
+            if any(bool(row.active_label) for row in score_ranked_labeled_rows[:k]):
                 topk_hits += 1
             active_scores = [float(row.score) for row in labeled_rows if row.active_label is True]
             if active_scores:
@@ -231,9 +235,18 @@ def evaluate_docking_gold_slice(
         for row in rows
         if str(row.split_id or "heldout") == "heldout"
         and _finite_float(row.affinity_label) is not None
-        and _finite_float(row.score) is not None
     ]
     heldout_complex_count = len({str(row.complex_id) for row in heldout_rows})
+    heldout_scored_rows = [
+        row
+        for row in heldout_rows
+        if _finite_float(row.score) is not None
+    ]
+    heldout_baseline_rows = [
+        row
+        for row in heldout_rows
+        if _finite_float(row.baseline_score) is not None
+    ]
     heldout_paired_rows = [
         row
         for row in heldout_rows
@@ -266,8 +279,11 @@ def evaluate_docking_gold_slice(
     )
     if not heldout_rows:
         blockers.append("heldout_labels_missing")
-    elif len(heldout_paired_rows) != len(heldout_rows):
-        blockers.append("heldout_baseline_score_incomplete")
+    else:
+        if len(heldout_scored_rows) != len(heldout_rows):
+            blockers.append("heldout_refined_score_incomplete")
+        if len(heldout_baseline_rows) != len(heldout_rows):
+            blockers.append("heldout_baseline_score_incomplete")
     if baseline_ranking_spearman is None:
         blockers.append("baseline_ranking_spearman_not_computable")
     if heldout_refine_ranking_spearman is None:

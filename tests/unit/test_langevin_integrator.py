@@ -94,9 +94,16 @@ def test_mass_tensor_scales_force_and_noise_variance() -> None:
 
     v_new, _ = integrator.step(c, v, f)
 
-    assert integrator.coarse_mass_policy == "explicit_unit_mass"
+    assert integrator.coarse_mass_policy == "explicit_mass_tensor"
     assert torch.allclose(v_new[0, 0], torch.full((3,), 0.01))
     assert torch.allclose(v_new[0, 1], torch.full((3,), 0.005))
+
+
+def test_default_unit_mass_policy_is_explicit_when_mass_is_not_overridden() -> None:
+    integrator = LangevinIntegrator()
+
+    assert integrator.coarse_mass_policy == "explicit_unit_mass"
+    assert torch.equal(integrator.mass, torch.tensor(1.0))
 
 
 def test_step_matches_closed_form_reference_with_mass_and_external_noise() -> None:
@@ -314,3 +321,24 @@ def test_mixed_precision_tracks_fp32_with_supplied_stochastic_noise_and_mass() -
 
     assert torch.max(torch.abs(v32 - v16)).item() < 3e-3
     assert torch.max(torch.abs(c32 - c16)).item() < 3e-3
+
+
+def test_mixed_precision_internal_stochastic_noise_matches_fp32_distribution() -> None:
+    dt = 0.002
+    gamma = 1.25
+    kT = 0.8
+    c = torch.zeros((1, 16384, 3))
+    v = torch.zeros_like(c)
+    f = torch.zeros_like(c)
+    fp32 = LangevinIntegrator(dt=dt, friction=gamma, kT=kT, seed=1234)
+    fp16 = LangevinIntegrator(dt=dt, friction=gamma, kT=kT, seed=5678, use_mixed_precision=True)
+
+    v32, _ = fp32.step(c, v, f)
+    v16, _ = fp16.step(c, v, f)
+
+    expected_variance = 2.0 * gamma * kT * dt
+    var32 = float(v32.var(unbiased=False).item())
+    var16 = float(v16.float().var(unbiased=False).item())
+    assert abs(var32 - expected_variance) / expected_variance < 0.08
+    assert abs(var16 - expected_variance) / expected_variance < 0.10
+    assert abs(var32 - var16) / expected_variance < 0.12

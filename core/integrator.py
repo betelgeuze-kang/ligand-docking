@@ -54,7 +54,12 @@ class LangevinIntegrator(nn.Module):
         policy = str(coarse_mass_policy)
         if policy not in self.SUPPORTED_COARSE_MASS_POLICIES:
             raise ValueError(f"unsupported coarse_mass_policy: {policy}")
-        self.register_buffer("mass", torch.as_tensor(mass, dtype=torch.float32).clone().detach())
+        mass_tensor = torch.as_tensor(mass, dtype=torch.float32).clone().detach()
+        if policy == "explicit_unit_mass":
+            is_unit_scalar = bool(mass_tensor.numel() == 1 and torch.allclose(mass_tensor.reshape(-1)[0], torch.tensor(1.0)))
+            if not is_unit_scalar:
+                policy = "explicit_mass_tensor"
+        self.register_buffer("mass", mass_tensor)
 
         self.adaptive_dt = bool(adaptive_dt)
         self.dt_min = float(dt_min)

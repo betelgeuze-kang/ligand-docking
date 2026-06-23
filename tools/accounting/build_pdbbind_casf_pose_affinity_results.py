@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import math
 import pickle
@@ -62,6 +63,60 @@ def _load_gold_metadata(path_like: str | Path) -> dict[str, dict[str, Any]]:
             if complex_id:
                 metadata.setdefault(complex_id, payload)
     return metadata
+
+
+def _sha256_file(path: Path | None) -> str:
+    if path is None or not path.is_file():
+        return ""
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _subset_identity(
+    *,
+    dataset: Path,
+    data_dir: Path,
+    pose_files: list[Path],
+    reference_paths: list[Path],
+    gold_metadata_csv: str,
+    max_poses: int,
+) -> dict[str, Any]:
+    artifact_rows = [
+        {
+            "role": "pose",
+            "name": path.name,
+            "relative_path": str(path.relative_to(dataset)) if path.is_relative_to(dataset) else str(path),
+            "sha256": _sha256_file(path),
+        }
+        for path in pose_files
+    ]
+    artifact_rows.extend(
+        {
+            "role": "reference",
+            "name": path.name,
+            "relative_path": str(path.relative_to(dataset)) if path.is_relative_to(dataset) else str(path),
+            "sha256": _sha256_file(path),
+        }
+        for path in reference_paths
+    )
+    metadata_path = _resolve(gold_metadata_csv) if _text(gold_metadata_csv) else None
+    payload = {
+        "schema_version": "pdbbind_casf_subset_identity_v1",
+        "dataset_artifact": str(dataset),
+        "data_5_sdf_dir": str(data_dir),
+        "max_poses": int(max_poses),
+        "pose_file_names": [path.name for path in pose_files],
+        "reference_file_names": [path.name for path in reference_paths],
+        "artifact_rows": sorted(artifact_rows, key=lambda row: (row["role"], row["name"], row["relative_path"])),
+        "gold_metadata_csv": str(metadata_path or ""),
+        "gold_metadata_sha256": _sha256_file(metadata_path),
+    }
+    identity_payload = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    payload["subset_identity_sha256"] = hashlib.sha256(identity_payload.encode("utf-8")).hexdigest()
+    return payload
 
 
 def _coords(mol: Any) -> list[tuple[float, float, float]]:
@@ -188,6 +243,23 @@ def build_results(args: argparse.Namespace) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     threshold = float(args.pose_success_rmsd_a)
     gold_metadata = _load_gold_metadata(args.gold_metadata_csv) if _text(getattr(args, "gold_metadata_csv", "")) else {}
+    reference_paths = sorted(
+        {
+            reference
+            for complex_id in {path.name.split("_", 1)[0] for path in pose_files}
+            for reference in [_reference_path(data_dir, complex_id)]
+            if reference is not None
+        },
+        key=lambda path: path.name,
+    )
+    subset_identity = _subset_identity(
+        dataset=dataset,
+        data_dir=data_dir,
+        pose_files=pose_files,
+        reference_paths=reference_paths,
+        gold_metadata_csv=str(getattr(args, "gold_metadata_csv", "")),
+        max_poses=int(args.max_poses),
+    )
 
     for pose_path in pose_files:
         complex_id = pose_path.name.split("_", 1)[0]
@@ -394,6 +466,12 @@ def build_results(args: argparse.Namespace) -> dict[str, Any]:
         "gold_metric_status": gold_metrics.status,
         "gold_metric_blockers": list(gold_metrics.blockers),
         "gold_metadata_csv": str(_resolve(args.gold_metadata_csv)) if _text(getattr(args, "gold_metadata_csv", "")) else "",
+        "subset_identity": subset_identity,
+        "subset_identity_schema_version": subset_identity["schema_version"],
+        "subset_identity_sha256": subset_identity["subset_identity_sha256"],
+        "subset_pose_file_names": list(subset_identity["pose_file_names"]),
+        "subset_reference_file_names": list(subset_identity["reference_file_names"]),
+        "subset_gold_metadata_sha256": subset_identity["gold_metadata_sha256"],
         "pose_rmsd_method": "rdkit_self_substructure_automorphism_no_ligand_alignment",
         "runtime_metric_source": "builder_wall_clock_perf_counter",
         "peak_memory_metric_source": "builder_tracemalloc_peak",

@@ -109,6 +109,69 @@ def test_docking_gold_metrics_compute_pose_ranking_enrichment_and_resource_field
     assert "calibrate affinity" in payload["claim_boundary"]
 
 
+def test_docking_gold_topk_hit_rate_uses_score_ranking_not_pose_rank() -> None:
+    rows = [
+        DockingGoldRow(
+            "1abc",
+            "1abc_decoy_pose_rank_1",
+            1,
+            pose_rmsd_a=1.0,
+            score=-1.0,
+            baseline_score=-9.0,
+            affinity_label=1.0,
+            active_label=False,
+            chemistry_evidence_present=True,
+            runtime_ms=10,
+            peak_memory_mb=100,
+        ),
+        DockingGoldRow(
+            "1abc",
+            "1abc_active_score_rank_1",
+            2,
+            pose_rmsd_a=1.2,
+            score=-9.0,
+            baseline_score=-1.0,
+            affinity_label=9.0,
+            active_label=True,
+            abstained=True,
+            chemistry_evidence_present=True,
+            runtime_ms=11,
+            peak_memory_mb=101,
+        ),
+        DockingGoldRow(
+            "2def",
+            "2def_active_score_rank_1",
+            1,
+            pose_rmsd_a=1.0,
+            score=-8.0,
+            baseline_score=-2.0,
+            affinity_label=8.0,
+            active_label=True,
+            chemistry_evidence_present=True,
+            runtime_ms=12,
+            peak_memory_mb=102,
+        ),
+        DockingGoldRow(
+            "2def",
+            "2def_decoy_score_rank_2",
+            2,
+            pose_rmsd_a=5.0,
+            score=-2.0,
+            baseline_score=-8.0,
+            affinity_label=2.0,
+            active_label=False,
+            chemistry_evidence_present=True,
+            runtime_ms=13,
+            peak_memory_mb=103,
+        ),
+    ]
+
+    payload = evaluate_docking_gold_slice(rows, top_k=1).to_dict()
+
+    assert payload["topk_hit_rate"] == 1.0
+    assert payload["pr_auc"] == pytest.approx(1.0)
+
+
 def test_docking_gold_metrics_fail_closed_without_ranking_labels() -> None:
     rows = [
         DockingGoldRow("1abc", "1abc_pose1", 1, pose_rmsd_a=1.0, score=-9.0),
@@ -335,6 +398,60 @@ def test_docking_gold_refine_delta_requires_same_heldout_baseline_pairs() -> Non
     assert payload["refine_ranking_spearman_delta"] == pytest.approx(0.0)
     assert "heldout_baseline_score_incomplete" in payload["blockers"]
     assert "heldout_refine_ranking_spearman_not_improved" in payload["blockers"]
+
+
+def test_docking_gold_refine_delta_blocks_missing_heldout_refined_score() -> None:
+    rows = [
+        DockingGoldRow(
+            "heldout_a",
+            "heldout_a_pose1",
+            1,
+            pose_rmsd_a=1.0,
+            score=-9.0,
+            baseline_score=-1.0,
+            affinity_label=9.0,
+            active_label=True,
+            split_id="heldout",
+            chemistry_evidence_present=True,
+            runtime_ms=10,
+            peak_memory_mb=100,
+        ),
+        DockingGoldRow(
+            "heldout_b",
+            "heldout_b_pose1",
+            1,
+            pose_rmsd_a=1.0,
+            score=-8.0,
+            baseline_score=-2.0,
+            affinity_label=8.0,
+            active_label=True,
+            split_id="heldout",
+            chemistry_evidence_present=True,
+            runtime_ms=11,
+            peak_memory_mb=101,
+        ),
+        DockingGoldRow(
+            "heldout_c",
+            "heldout_c_pose1",
+            1,
+            pose_rmsd_a=1.0,
+            score=None,
+            baseline_score=-9.0,
+            affinity_label=1.0,
+            active_label=False,
+            split_id="heldout",
+            abstained=True,
+            chemistry_evidence_present=True,
+            runtime_ms=12,
+            peak_memory_mb=102,
+        ),
+    ]
+
+    payload = evaluate_docking_gold_slice(rows).to_dict()
+
+    assert payload["status"] == "blocked"
+    assert payload["heldout_complex_count"] == 3
+    assert "heldout_refined_score_incomplete" in payload["blockers"]
 
 
 def test_docking_gold_metrics_block_without_reference_pose_rmsd() -> None:
