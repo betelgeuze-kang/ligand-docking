@@ -30,22 +30,30 @@ def _base_validity(
     specified_chiral_center_count: int = 0,
     unassigned_chiral_center_count: int = 0,
     protonation_source: str = "not_assessed",
+    protonation_policy: str = "not_assessed",
+    protonation_ph_values: tuple[float, ...] | None = None,
+    protonation_claim_boundary: str = "",
     tautomer_source: str = "not_assessed",
     canonical_tautomer_smiles: str = "",
     tautomer_count: int = 0,
+    potential_stereo_count: int = 0,
+    specified_stereo_count: int = 0,
+    unassigned_stereo_count: int = 0,
+    unassigned_stereo_bond_count: int = 0,
     feature_source: str = "not_assessed",
     donor_site_count: int = 0,
     acceptor_site_count: int = 0,
+    feature_sites: list[dict[str, Any]] | None = None,
     salt_parent_smiles: str = "",
     fragment_count: int = 0,
     salt_stripped: bool = False,
     blockers: list[str] | None = None,
 ) -> dict[str, Any]:
     blocker_values = [str(v) for v in blockers or [] if str(v)]
-    chirality_valid = int(unassigned_chiral_center_count) == 0
-    if unassigned_chiral_center_count > 0:
-        chirality_status = "unassigned_chiral_centers"
-    elif specified_chiral_center_count > 0:
+    chirality_valid = int(unassigned_chiral_center_count) == 0 and int(unassigned_stereo_count) == 0
+    if unassigned_stereo_count > 0:
+        chirality_status = "unassigned_stereochemistry"
+    elif specified_chiral_center_count > 0 or specified_stereo_count > 0:
         chirality_status = "specified"
     else:
         chirality_status = "not_applicable"
@@ -56,7 +64,12 @@ def _base_validity(
     if valid and source != "rdkit":
         blocker_values.append("rdkit_unavailable_ligand_topology")
     if valid and not chirality_valid:
-        blocker_values.append("unassigned_ligand_chirality")
+        if int(unassigned_chiral_center_count) > 0:
+            blocker_values.append("unassigned_ligand_chirality")
+        if int(unassigned_stereo_count) > 0:
+            blocker_values.append("unassigned_ligand_stereochemistry")
+        if int(unassigned_stereo_bond_count) > 0:
+            blocker_values.append("unassigned_ligand_double_bond_stereochemistry")
     blocked_reason = ";".join(dict.fromkeys(blocker_values))
     return {
         "schema_version": "ligand_topology_validity_v1",
@@ -74,6 +87,10 @@ def _base_validity(
         "chiral_center_count": int(chiral_center_count),
         "specified_chiral_center_count": int(specified_chiral_center_count),
         "unassigned_chiral_center_count": int(unassigned_chiral_center_count),
+        "potential_stereo_count": int(potential_stereo_count),
+        "specified_stereo_count": int(specified_stereo_count),
+        "unassigned_stereo_count": int(unassigned_stereo_count),
+        "unassigned_stereo_bond_count": int(unassigned_stereo_bond_count),
         "chirality_valid": bool(chirality_valid),
         "chirality_status": chirality_status,
         "ring_valid": bool(valid),
@@ -81,12 +98,16 @@ def _base_validity(
         "protonation_valid": bool(valid),
         "protonation_status": protonation_status,
         "protonation_source": protonation_source,
+        "protonation_policy": protonation_policy,
+        "protonation_ph_values": [float(value) for value in protonation_ph_values or ()],
+        "protonation_claim_boundary": protonation_claim_boundary,
         "tautomer_valid": bool(valid),
         "tautomer_status": tautomer_status,
         "tautomer_source": tautomer_source,
         "canonical_tautomer_smiles": canonical_tautomer_smiles,
         "tautomer_count": int(tautomer_count),
         "feature_source": feature_source,
+        "feature_sites": [dict(site) for site in feature_sites or []],
         "donor_site_count": int(donor_site_count),
         "acceptor_site_count": int(acceptor_site_count),
         "salt_parent_smiles": salt_parent_smiles,
@@ -150,7 +171,9 @@ def ligand_topology_from_smiles(smiles: str) -> LigandTopology:
             ring_flags.append(bool(atom.IsInRing()))
             chirality_tags.append(str(atom.GetChiralTag()))
             roles = roles_by_atom.get(int(atom.GetIdx()), set())
-            if "donor" in roles:
+            if roles == {"donor", "acceptor"}:
+                donor_acceptor_roles.append("donor_acceptor")
+            elif "donor" in roles:
                 donor_acceptor_roles.append("donor")
             elif "acceptor" in roles:
                 donor_acceptor_roles.append("acceptor")
@@ -176,12 +199,20 @@ def ligand_topology_from_smiles(smiles: str) -> LigandTopology:
                 specified_chiral_center_count=chemistry.specified_chiral_center_count,
                 unassigned_chiral_center_count=chemistry.unassigned_chiral_center_count,
                 protonation_source=chemistry.protonation_source,
+                protonation_policy=chemistry.protonation_policy,
+                protonation_ph_values=chemistry.protonation_ph_values,
+                protonation_claim_boundary=chemistry.protonation_claim_boundary,
                 tautomer_source=chemistry.tautomer_source,
                 canonical_tautomer_smiles=chemistry.canonical_tautomer_smiles,
                 tautomer_count=chemistry.tautomer_count,
+                potential_stereo_count=chemistry.potential_stereo_count,
+                specified_stereo_count=chemistry.specified_stereo_count,
+                unassigned_stereo_count=chemistry.unassigned_stereo_count,
+                unassigned_stereo_bond_count=chemistry.unassigned_stereo_bond_count,
                 feature_source=chemistry.feature_source,
                 donor_site_count=chemistry.donor_site_count,
                 acceptor_site_count=chemistry.acceptor_site_count,
+                feature_sites=[site.to_dict() for site in chemistry.feature_sites],
                 salt_parent_smiles=chemistry.salt_parent_smiles,
                 fragment_count=chemistry.fragment_count,
                 salt_stripped=chemistry.salt_stripped,

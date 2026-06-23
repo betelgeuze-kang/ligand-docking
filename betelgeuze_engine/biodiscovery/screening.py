@@ -9,6 +9,10 @@ from typing import Any
 import numpy as np
 import torch
 
+from betelgeuze_engine.benchmark.docking_gold import (
+    DockingGoldRow,
+    evaluate_docking_gold_slice,
+)
 from betelgeuze_engine.biodiscovery.contracts import (
     CLAIM_SCOPE,
     SCHEMA_VERSION,
@@ -17,6 +21,9 @@ from betelgeuze_engine.biodiscovery.contracts import (
     TierBetaScreeningInput,
     TierBetaScreeningOutput,
     failure_code_for_reason,
+)
+from betelgeuze_engine.chemistry.ligand_states import (
+    enumerate_ligand_states_from_smiles as _enumerate_ligand_states_from_smiles,
 )
 from betelgeuze_engine.physics.dense_guard import ensure_small_dense_diagnostic
 from betelgeuze_engine.biodiscovery.ligand_prep import (
@@ -44,12 +51,16 @@ from betelgeuze_engine.biodiscovery.protein_prep import (
     validate_protein as _validate_protein,
 )
 from betelgeuze_engine.biodiscovery.pose import (
+    chemical_anchor_mapping as _chemical_anchor_mapping,
     chemistry_validity_summary as _chemistry_validity_summary,
     clash_count as _clash_count,
+    cluster_poses_by_symmetry as _cluster_poses_by_symmetry,
     generate_conformers as _generate_conformers,
-    place_pose_in_pocket as _place_pose_in_pocket,
+    ligand_symmetry_mappings as _ligand_symmetry_mappings,
+    pose_search_candidates as _pose_search_candidates,
     pose_rmsd as _pose_rmsd,
     resolve_pocket_indices as _resolve_pocket_indices,
+    symmetry_aware_pose_rmsd as _symmetry_aware_pose_rmsd,
     virtual_protein_coords as _virtual_protein_coords,
 )
 from betelgeuze_engine.biodiscovery.scoring import (
@@ -94,6 +105,7 @@ _DEFAULT_SEED = 42
 _DEFAULT_POCKET_CUTOFF_A = 8.0
 _DEFAULT_POSE_COUNT = 32
 _DEFAULT_TOP_K = 5
+_SUPPORTED_LIGAND_ELEMENTS = {"B", "C", "N", "O", "F", "P", "S", "Cl", "Br", "I", "H", "Si"}
 
 @dataclass
 class TierBetaScreeningResult:
@@ -134,6 +146,56 @@ def _atom_count_from_smiles(smiles: str) -> int:
     if mol is None:
         return 0
     return mol.GetNumAtoms()
+
+
+def _unsupported_ligand_elements(ligand_valid: dict[str, Any]) -> list[str]:
+    elements = [str(element) for element in ligand_valid.get("atom_elements", [])]
+    return sorted({element for element in elements if element and element not in _SUPPORTED_LIGAND_ELEMENTS})
+
+
+def _benchmark_metric_summary_from_pose_scores(pose_scores: list[dict[str, Any]]) -> dict[str, Any]:
+    rows: list[DockingGoldRow] = []
+    for row in pose_scores:
+        chemistry = row.get("chemistry_validity") if isinstance(row.get("chemistry_validity"), dict) else {}
+        chemistry_failures = [
+            str(reason)
+            for reason in (chemistry.get("blockers") or [] if isinstance(chemistry.get("blockers"), list) else [])
+            if reason
+        ]
+        rows.append(
+            DockingGoldRow(
+                complex_id="tier_beta_local_input",
+                pose_id=f"pose_{int(row.get('pose_index', len(rows)))}",
+                pose_rank=int(row.get("pose_rank") or len(rows) + 1),
+                pose_rmsd_a=None,
+                score=float(row.get("composite_score", float("inf"))),
+                active_label=None,
+                abstained=bool(row.get("abstention", False)),
+                chemistry_failures=tuple(chemistry_failures),
+                abstention_reasons=tuple(
+                    str(reason)
+                    for reason in (row.get("abstention_reasons") or [])
+                    if isinstance(row.get("abstention_reasons"), list) and str(reason)
+                ),
+            )
+        )
+    payload = evaluate_docking_gold_slice(rows, pose_success_rmsd_a=2.0, top_k=5).to_dict()
+    payload["status"] = "blocked_reference_pose_missing"
+    payload["score_metric"] = "restricted_local_composite_score_v1"
+    payload["scored_pose_count"] = int(len(pose_scores))
+    payload["blockers"] = sorted(
+        {
+            *payload.get("blockers", []),
+            "native_or_reference_pose_missing",
+            "pose_rmsd_not_computable",
+            "ranking_labels_missing",
+        }
+    )
+    payload["claim_boundary"] = (
+        "Diagnostics only; no CASF/PDBbind/native-pose success, calibrated affinity, or wetlab-hit claim. "
+        "Reference/native pose and held-out labels are required before promotion."
+    )
+    return payload
 
 
 class TierBetaScreening:
@@ -238,18 +300,100 @@ class TierBetaScreening:
                               stage_records=stage_records)
 
         ligand_atom = int(ligand_valid["atom_count"])
+        ligand_states = _enumerate_ligand_states_from_smiles(
+            ligand_smiles,
+            max_states=min(4, max(1, self.pose_count)),
+        )
+        state_pose_bundles: list[dict[str, Any]] = []
+        state_records: list[dict[str, Any]] = []
+        poses_generated = 0
+        ligand_center: np.ndarray | None = None
+        for state in ligand_states:
+            state_payload = state.to_dict()
+            state_smiles = str(state.smiles or ligand_smiles)
+            if not state.valid:
+                state_payload["scoring_status"] = "not_scored_invalid_ligand_state"
+                state_records.append(state_payload)
+                continue
+            state_ligand_valid = ligand_valid if int(state.rank) == 0 else _validate_ligand(state_smiles)
+            state_payload["topology_validation"] = {
+                "valid": bool(state_ligand_valid.get("valid", False)),
+                "claim_safe": bool(state_ligand_valid.get("claim_safe", False)),
+                "blocked": bool(state_ligand_valid.get("blocked", False)),
+                "blockers": list(state_ligand_valid.get("blockers", [])),
+                "atom_count": int(state_ligand_valid.get("atom_count", 0)),
+            }
+            if state_ligand_valid["blocked"]:
+                state_payload["scoring_status"] = "not_scored_topology_blocked"
+                state_records.append(state_payload)
+                continue
+            unsupported_elements = _unsupported_ligand_elements(state_ligand_valid)
+            if unsupported_elements:
+                state_payload["scoring_status"] = "not_scored_unsupported_ligand_element"
+                state_payload["unsupported_elements"] = unsupported_elements
+                state_payload["claim_safe_blockers"] = sorted(
+                    {
+                        *list(state_payload.get("claim_safe_blockers", [])),
+                        "unsupported_ligand_metal_or_counterion",
+                    }
+                )
+                state_records.append(state_payload)
+                continue
+            state_atom = int(state_ligand_valid["atom_count"])
+            if state_atom <= 0:
+                state_payload["scoring_status"] = "not_scored_empty_ligand_topology"
+                state_records.append(state_payload)
+                continue
+            state_seed = int(self.seed + int(state.rank) * 1009)
+            state_poses = _generate_conformers(state_smiles, self.pose_count, state_seed)
+            if state_poses is None or int(state_poses.shape[0]) <= 0:
+                state_payload["scoring_status"] = "not_scored_conformer_generation_failed"
+                state_payload["seed"] = state_seed
+                state_records.append(state_payload)
+                continue
+            poses_generated += int(state_poses.shape[0])
+            if ligand_center is None:
+                ligand_center = state_poses[0].mean(axis=0)
+            state_payload["scoring_status"] = "pose_conformers_generated"
+            state_payload["poses_generated"] = int(state_poses.shape[0])
+            state_payload["seed"] = state_seed
+            state_records.append(state_payload)
+            state_pose_bundles.append(
+                {
+                    "state": state_payload,
+                    "smiles": state_smiles,
+                    "ligand_valid": state_ligand_valid,
+                    "atom_count": state_atom,
+                    "poses": state_poses,
+                    "seed": state_seed,
+                }
+            )
 
-        poses = _generate_conformers(ligand_smiles, self.pose_count, self.seed)
-        if poses is None:
-            return self._fail("ligand_conformer_generation_failed",
-                              protein_seq, protein_coords.shape[0], ligand_smiles,
-                              ligand_atom=ligand_atom,
-                              typed_input=typed_input,
-                              stage_records=stage_records)
+        ensemble_claim_blockers = sorted(
+            {
+                str(blocker)
+                for state in state_records
+                for blocker in state.get("claim_safe_blockers", [])
+                if str(blocker)
+            }
+        )
+        if ensemble_claim_blockers:
+            ligand_valid = dict(ligand_valid)
+            ligand_valid["blockers"] = sorted(
+                {
+                    *[str(blocker) for blocker in ligand_valid.get("blockers", [])],
+                    *ensemble_claim_blockers,
+                    "fragment_parent_projection_not_product_safe",
+                }
+            )
+            ligand_valid["blocked"] = True
+            ligand_valid["claim_safe"] = False
+            ligand_valid["state_ensemble_claim_safe"] = False
+            ligand_valid["state_ensemble_blockers"] = ensemble_claim_blockers
+            ligand_valid["projection_status"] = "fragment_parent_scored_after_unsupported_ligand_state_skip"
 
-        poses_generated = poses.shape[0]
-        if poses_generated == 0:
-            return self._fail("zero_conformers_generated",
+        if not state_pose_bundles:
+            return self._fail("ligand_state_ensemble_no_scored_states",
                               protein_seq, protein_coords.shape[0], ligand_smiles,
                               ligand_atom=ligand_atom,
                               typed_input=typed_input,
@@ -259,11 +403,22 @@ class TierBetaScreening:
                 stage_id="pose_ensemble",
                 schema_version=_SCHEMA_VERSION,
                 status="pass",
-                diagnostics={"poses_generated": int(poses_generated), "seed": int(self.seed)},
+                diagnostics={
+                    "poses_generated": int(poses_generated),
+                    "seed": int(self.seed),
+                    "ligand_state_ensemble": {
+                        "schema_version": "tier_beta_ligand_state_ensemble_v1",
+                        "status": "restricted_rdkit_standardized_state_ensemble_no_pka",
+                        "state_count": int(len(ligand_states)),
+                        "scored_state_count": int(len(state_pose_bundles)),
+                        "claim_safe": bool(not ensemble_claim_blockers),
+                        "claim_safe_blockers": ensemble_claim_blockers,
+                        "states": state_records,
+                    },
+                },
             )
         )
 
-        ligand_center = poses[0].mean(axis=0) if poses_generated > 0 else None
         resolved_pocket = (
             list(pocket_residue_indices)
             if pocket_residue_indices
@@ -292,105 +447,180 @@ class TierBetaScreening:
 
         protein_beads = _virtual_protein_coords(protein_coords)
         pocket_center = protein_coords[resolved_pocket].mean(axis=0)
-
         pose_scores: list[dict[str, Any]] = []
         placed_pose_coords: dict[int, np.ndarray] = {}
-        for i in range(min(poses_generated, self.pose_count)):
-            pose_coords = _place_pose_in_pocket(poses[i], pocket_center)
-            if pose_coords.shape[0] != ligand_atom:
-                continue
-            placed_pose_coords[i] = pose_coords
-            try:
-                ensure_small_dense_diagnostic(
-                    torch.tensor(
-                        np.concatenate([protein_beads, pose_coords], axis=0),
-                        dtype=torch.float32,
-                    ).unsqueeze(0),
-                    context="tier_beta_screening_pose_diagnostic",
-                )
-            except ValueError as exc:
-                return self._fail(f"dense_diagnostic_blocked: {exc}",
-                                  protein_seq, protein_coords.shape[0], ligand_smiles,
-                                  ligand_atom=ligand_atom,
-                                  pocket=resolved_pocket,
-                                  poses_gen=poses_generated,
-                                  typed_input=typed_input,
-                                  stage_records=stage_records)
-            ffield_score, diag = _single_pose_score(protein_beads, pose_coords, device=self.device)
-            scoring_status = str(diag.get("status") or "")
-            if scoring_status == "blocked_neighbor_overflow":
-                return self._fail("neighbor_overflow",
-                                  protein_seq, protein_coords.shape[0], ligand_smiles,
-                                  ligand_atom=ligand_atom,
-                                  pocket=resolved_pocket,
-                                  poses_gen=poses_generated,
-                                  typed_input=typed_input,
-                                  stage_records=stage_records)
-            if scoring_status == "blocked_dense_or_reference_neighbor":
-                return self._fail("reference_nxn_blocked",
-                                  protein_seq, protein_coords.shape[0], ligand_smiles,
-                                  ligand_atom=ligand_atom,
-                                  pocket=resolved_pocket,
-                                  poses_gen=poses_generated,
-                                  typed_input=typed_input,
-                                  stage_records=stage_records)
-            mm_score = _mm_gbsa_binding_score(protein_beads, pose_coords,
-                                              contact_cutoff_a=self.pocket_cutoff_a)
-
-            composite = float(diag.get("total_energy", ffield_score))
-            mm_energy = float(
-                mm_score.get(
-                    "deltaG_mm_gbsa_kcal_mol",
-                    mm_score.get("binding_energy_kcal_mol", float("inf")),
-                )
+        global_pose_index = 0
+        search_diagnostics: dict[str, Any] = {
+            "schema_version": "tier_beta_state_pose_search_aggregation_v1",
+            "ligand_state_ensemble_status": "restricted_rdkit_standardized_state_ensemble_no_pka",
+            "state_count": int(len(ligand_states)),
+            "scored_state_count": int(len(state_pose_bundles)),
+            "raw_candidate_count": 0,
+            "coarse_beam_candidate_count": 0,
+            "retained_candidate_count": 0,
+            "states": [],
+        }
+        for bundle in state_pose_bundles:
+            state_payload = dict(bundle["state"])
+            state_smiles = str(bundle["smiles"])
+            state_ligand_valid = dict(bundle["ligand_valid"])
+            state_atom = int(bundle["atom_count"])
+            anchor_mapping = _chemical_anchor_mapping(state_smiles, state_ligand_valid)
+            search_candidates, state_search_diagnostics = _pose_search_candidates(
+                bundle["poses"],
+                pocket_center,
+                protein_beads,
+                seed=int(bundle["seed"]),
+                max_candidates=self.pose_count,
+                ligand_smiles=state_smiles,
             )
-            if math.isfinite(mm_energy):
-                composite = 0.5 * composite + 0.5 * mm_energy
-            clashes = _clash_count(protein_beads, pose_coords)
-            chemistry_validity = _chemistry_validity_summary(ligand_valid, pose_coords)
-            ranking_metric = {
-                "name": "restricted_local_composite_score_v1",
-                "value": float(composite),
-                "lower_is_better": True,
-                "components": ["guarded_forcefield_energy", "mm_gbsa_proxy_energy"],
-            }
-            abstention_reasons = [
-                reason
-                for reason in [
-                    str(diag.get("status") or ""),
-                    str(mm_score.get("blocked_reason") or ""),
-                    "pose_clash_detected" if clashes > 0 else "",
-                    "chemistry_validity_blocked" if not chemistry_validity["valid"] else "",
-                    "restricted_tier_beta_unvalidated",
-                ]
-                if reason
-            ]
+            state_search_diagnostics["chemical_anchor_mapping_status"] = str(anchor_mapping["status"])
+            state_search_diagnostics["chemical_anchor_mapping"] = anchor_mapping
+            state_payload["pose_search"] = dict(state_search_diagnostics)
+            state_payload["poses_scored"] = 0
+            search_diagnostics["raw_candidate_count"] += int(state_search_diagnostics["raw_candidate_count"])
+            search_diagnostics["coarse_beam_candidate_count"] += int(
+                state_search_diagnostics["coarse_beam_candidate_count"]
+            )
+            search_diagnostics["retained_candidate_count"] += int(state_search_diagnostics["retained_candidate_count"])
+            if "chemical_anchor_mapping" not in search_diagnostics:
+                search_diagnostics["chemical_anchor_mapping_status"] = str(anchor_mapping["status"])
+                search_diagnostics["chemical_anchor_mapping"] = anchor_mapping
+            for candidate in search_candidates:
+                pose_index = int(global_pose_index)
+                global_pose_index += 1
+                pose_coords = np.asarray(candidate["coords"], dtype=np.float32)
+                if pose_coords.shape[0] != state_atom:
+                    continue
+                placed_pose_coords[pose_index] = pose_coords
+                try:
+                    ensure_small_dense_diagnostic(
+                        torch.tensor(
+                            np.concatenate([protein_beads, pose_coords], axis=0),
+                            dtype=torch.float32,
+                        ).unsqueeze(0),
+                        context="tier_beta_screening_pose_diagnostic",
+                    )
+                except ValueError as exc:
+                    return self._fail(f"dense_diagnostic_blocked: {exc}",
+                                      protein_seq, protein_coords.shape[0], ligand_smiles,
+                                      ligand_atom=ligand_atom,
+                                      pocket=resolved_pocket,
+                                      poses_gen=poses_generated,
+                                      typed_input=typed_input,
+                                      stage_records=stage_records)
+                ffield_score, diag = _single_pose_score(protein_beads, pose_coords, device=self.device)
+                scoring_status = str(diag.get("status") or "")
+                if scoring_status == "blocked_neighbor_overflow":
+                    return self._fail("neighbor_overflow",
+                                      protein_seq, protein_coords.shape[0], ligand_smiles,
+                                      ligand_atom=ligand_atom,
+                                      pocket=resolved_pocket,
+                                      poses_gen=poses_generated,
+                                      typed_input=typed_input,
+                                      stage_records=stage_records)
+                if scoring_status == "blocked_dense_or_reference_neighbor":
+                    return self._fail("reference_nxn_blocked",
+                                      protein_seq, protein_coords.shape[0], ligand_smiles,
+                                      ligand_atom=ligand_atom,
+                                      pocket=resolved_pocket,
+                                      poses_gen=poses_generated,
+                                      typed_input=typed_input,
+                                      stage_records=stage_records)
+                mm_score = _mm_gbsa_binding_score(protein_beads, pose_coords,
+                                                  contact_cutoff_a=self.pocket_cutoff_a)
 
-            pose_scores.append({
-                "pose_index": i,
-                "pose_rank": 0,
-                "field_energy": float(diag.get("total_energy", float("inf"))),
-                "mm_gbsa_energy": mm_energy,
-                "composite_score": float(composite),
-                "score_components": {
-                    "guarded_forcefield_energy": float(diag.get("total_energy", float("inf"))),
-                    "mm_gbsa_proxy_energy": mm_energy,
-                },
-                "uncertainty": 1.0,
-                "abstention": True,
-                "abstention_reasons": abstention_reasons,
-                "pose_rmsd_to_top1_a": 0.0,
-                "pose_rmsd_to_top5_centroid_a": 0.0,
-                "clash_count": clashes,
-                "chemistry_validity": chemistry_validity,
-                "ranking_metric": ranking_metric,
-                "topology_fidelity": protein_valid.get("fidelity", ""),
-                "ligand_topology": _ligand_topology_payload(ligand_valid),
-                "neighbor_diagnostics": diag.get("neighbor_diagnostics", {}),
-                "claim_boundary": _CLAIM_BOUNDARY,
-                "field_diagnostics": diag,
-                "mm_gbsa_diagnostics": mm_score,
-            })
+                composite = float(diag.get("total_energy", ffield_score))
+                mm_energy = float(
+                    mm_score.get(
+                        "deltaG_mm_gbsa_kcal_mol",
+                        mm_score.get("binding_energy_kcal_mol", float("inf")),
+                    )
+                )
+                if math.isfinite(mm_energy):
+                    composite = 0.5 * composite + 0.5 * mm_energy
+                clashes = _clash_count(protein_beads, pose_coords)
+                chemistry_validity = _chemistry_validity_summary(state_ligand_valid, pose_coords)
+                ranking_metric = {
+                    "name": "restricted_local_composite_score_v1",
+                    "value": float(composite),
+                    "lower_is_better": True,
+                    "components": ["guarded_forcefield_energy", "mm_gbsa_proxy_energy"],
+                }
+                abstention_reasons = [
+                    reason
+                    for reason in [
+                        str(diag.get("status") or ""),
+                        str(mm_score.get("blocked_reason") or ""),
+                        "pose_clash_detected" if clashes > 0 else "",
+                        "chemistry_validity_blocked" if not chemistry_validity["valid"] else "",
+                        "restricted_tier_beta_unvalidated",
+                    ]
+                    if reason
+                ]
+
+                pose_scores.append({
+                    "pose_index": pose_index,
+                    "pose_rank": 0,
+                    "ligand_state": state_payload,
+                    "field_energy": float(diag.get("total_energy", float("inf"))),
+                    "mm_gbsa_energy": mm_energy,
+                    "composite_score": float(composite),
+                    "score_components": {
+                        "guarded_forcefield_energy": float(diag.get("total_energy", float("inf"))),
+                        "mm_gbsa_proxy_energy": mm_energy,
+                    },
+                    "pose_search": {
+                        "schema_version": "tier_beta_pose_search_v1",
+                        "search_strategy": state_search_diagnostics["search_strategy"],
+                        "conformer_diversity": dict(state_search_diagnostics["conformer_diversity"]),
+                        "conformer_count": int(state_search_diagnostics["conformer_count"]),
+                        "rotatable_bond_count": int(state_search_diagnostics["rotatable_bond_count"]),
+                        "retained_conformer_count": int(state_search_diagnostics["retained_conformer_count"]),
+                        "retained_conformer_indices": list(state_search_diagnostics["retained_conformer_indices"]),
+                        "retained_conformer_fraction": float(state_search_diagnostics["retained_conformer_fraction"]),
+                        "conformer_index": int(candidate["conformer_index"]),
+                        "rotation_index": int(candidate["rotation_index"]),
+                        "translation_index": int(candidate["translation_index"]),
+                        "translation_vector_a": list(candidate["translation_vector_a"]),
+                        "coarse_score": float(candidate["coarse_score"]),
+                        "coarse_score_before_local": float(candidate["coarse_score_before_local"]),
+                        "coarse_score_components": dict(candidate["coarse_score_components"]),
+                        "coarse_score_beam_status": state_search_diagnostics["coarse_score_beam_status"],
+                        "clash_prefilter_status": state_search_diagnostics["clash_prefilter_status"],
+                        "raw_candidate_count": int(state_search_diagnostics["raw_candidate_count"]),
+                        "coarse_beam_candidate_count": int(state_search_diagnostics["coarse_beam_candidate_count"]),
+                        "retained_candidate_count": int(state_search_diagnostics["retained_candidate_count"]),
+                        "rotations_per_conformer": int(state_search_diagnostics["rotations_per_conformer"]),
+                        "translation_grid_point_count": int(state_search_diagnostics["translation_grid_point_count"]),
+                        "local_minimization_status": state_search_diagnostics["local_minimization_status"],
+                        "local_minimization": dict(candidate["local_minimization"]),
+                        "symmetry_rmsd_clustering_status": state_search_diagnostics["symmetry_rmsd_clustering_status"],
+                        "chemical_anchor_mapping_status": state_search_diagnostics["chemical_anchor_mapping_status"],
+                        "chemical_anchor_mapping": anchor_mapping,
+                    },
+                    "uncertainty": 1.0,
+                    "abstention": True,
+                    "abstention_reasons": abstention_reasons,
+                    "pose_rmsd_to_top1_a": 0.0,
+                    "pose_rmsd_to_top5_centroid_a": 0.0,
+                    "clash_count": clashes,
+                    "chemistry_validity": chemistry_validity,
+                    "ranking_metric": ranking_metric,
+                    "topology_fidelity": protein_valid.get("fidelity", ""),
+                    "ligand_topology": _ligand_topology_payload(state_ligand_valid),
+                    "neighbor_diagnostics": diag.get("neighbor_diagnostics", {}),
+                    "claim_boundary": _CLAIM_BOUNDARY,
+                    "field_diagnostics": diag,
+                    "mm_gbsa_diagnostics": mm_score,
+                })
+                state_payload["poses_scored"] = int(state_payload["poses_scored"]) + 1
+            search_diagnostics["states"].append(state_payload)
+            for record in state_records:
+                if record.get("state_id") == state_payload.get("state_id"):
+                    record["poses_scored"] = int(state_payload["poses_scored"])
+                    record["pose_search"] = state_payload["pose_search"]
+                    break
 
         if not pose_scores:
             return self._fail("no_poses_scored",
@@ -405,7 +635,7 @@ class TierBetaScreening:
                 stage_id="scoring_ranking",
                 schema_version=_SCHEMA_VERSION,
                 status="pass",
-                diagnostics={"poses_scored": int(len(pose_scores))},
+                diagnostics={"poses_scored": int(len(pose_scores)), "pose_search": search_diagnostics},
             )
         )
 
@@ -413,25 +643,77 @@ class TierBetaScreening:
         for rank, row in enumerate(pose_scores, start=1):
             row["pose_rank"] = rank
 
+        state_groups: dict[str, list[dict[str, Any]]] = {}
+        for row in pose_scores:
+            state_smiles = str(row.get("ligand_state", {}).get("smiles") or ligand_smiles)
+            state_groups.setdefault(state_smiles, []).append(row)
+        state_cluster_diagnostics: list[dict[str, Any]] = []
+        for state_smiles, state_rows in state_groups.items():
+            state_mappings = _ligand_symmetry_mappings(state_smiles)
+            state_diag = _cluster_poses_by_symmetry(
+                state_rows,
+                placed_pose_coords,
+                state_mappings,
+                threshold_a=2.0,
+            )
+            state_diag["ligand_state_smiles"] = state_smiles
+            state_cluster_diagnostics.append(state_diag)
+            for row in state_rows:
+                row["pose_search"]["symmetry_ligand_smiles"] = state_smiles
+        clustering_diagnostics = {
+            "status": "symmetry_aware_rmsd_clustered",
+            "method": "rdkit_automorphism_min_rmsd",
+            "threshold_a": 2.0,
+            "symmetry_mapping_count": int(
+                max((int(diag["symmetry_mapping_count"]) for diag in state_cluster_diagnostics), default=1)
+            ),
+            "cluster_count": int(sum(int(diag["cluster_count"]) for diag in state_cluster_diagnostics)),
+            "state_cluster_count": int(len(state_cluster_diagnostics)),
+            "state_clusters": state_cluster_diagnostics,
+        }
+        search_diagnostics["symmetry_rmsd_clustering_status"] = clustering_diagnostics["status"]
+        search_diagnostics["symmetry_mapping_count"] = int(clustering_diagnostics["symmetry_mapping_count"])
+        search_diagnostics["symmetry_cluster_count"] = int(clustering_diagnostics["cluster_count"])
+        for row in pose_scores:
+            row["pose_search"]["symmetry_rmsd_clustering_status"] = clustering_diagnostics["status"]
+            row["pose_search"]["symmetry_mapping_count"] = int(clustering_diagnostics["symmetry_mapping_count"])
+            row["pose_search"]["symmetry_cluster_count"] = int(clustering_diagnostics["cluster_count"])
+
         top_k_poses = pose_scores[:self.top_k]
         top1_coords = placed_pose_coords[int(top_k_poses[0]["pose_index"])]
-        top5_indices = [int(row["pose_index"]) for row in pose_scores[: min(5, len(pose_scores))]]
+        top5_indices = [
+            int(row["pose_index"])
+            for row in pose_scores
+            if placed_pose_coords[int(row["pose_index"])].shape == top1_coords.shape
+        ][: min(5, len(pose_scores))]
         top5_centroid = np.mean([placed_pose_coords[idx] for idx in top5_indices], axis=0)
         for row in pose_scores:
             coords_for_row = placed_pose_coords[int(row["pose_index"])]
+            row_symmetry_mappings = _ligand_symmetry_mappings(str(row.get("ligand_state", {}).get("smiles") or ligand_smiles))
             row["pose_rmsd_to_top1_a"] = _pose_rmsd(coords_for_row, top1_coords)
+            row["symmetry_aware_pose_rmsd_to_top1_a"] = _symmetry_aware_pose_rmsd(
+                coords_for_row,
+                top1_coords,
+                row_symmetry_mappings,
+            )
+            row["pose_rmsd_method"] = "rdkit_automorphism_min_rmsd" if row_symmetry_mappings else "identity_atom_order_rmsd"
             row["pose_rmsd_to_top5_centroid_a"] = _pose_rmsd(coords_for_row, top5_centroid)
         stage_records.append(
             StageRecord(
                 stage_id="top_k_refine",
                 schema_version=_SCHEMA_VERSION,
                 status="pass",
-                diagnostics={"top_k": int(self.top_k), "retained_pose_count": int(len(top_k_poses))},
+                diagnostics={
+                    "top_k": int(self.top_k),
+                    "retained_pose_count": int(len(top_k_poses)),
+                    "rmsd_clustering": clustering_diagnostics,
+                },
             )
         )
         best_score = float(top_k_poses[0]["composite_score"])
         best_pose_idx = int(top_k_poses[0]["pose_index"])
         best_pose_coords = placed_pose_coords[best_pose_idx]
+        benchmark_metric_summary = _benchmark_metric_summary_from_pose_scores(pose_scores)
 
         stability_drift = 0.0
         stability_ok = True
@@ -498,6 +780,7 @@ class TierBetaScreening:
             stability_ok=stability_ok,
             stability_diagnostics=stab_diag,
             pose_scores=pose_scores,
+            benchmark_metric_summary=benchmark_metric_summary,
             protein_valid=protein_valid,
             ligand_valid=ligand_valid,
             stage_records=stage_records,
@@ -580,6 +863,15 @@ class TierBetaScreening:
                 },
                 "protein_valid": protein_valid,
                 "ligand_valid": ligand_valid,
+                "ligand_state_ensemble": {
+                    "schema_version": "tier_beta_ligand_state_ensemble_v1",
+                    "status": "restricted_rdkit_standardized_state_ensemble_no_pka",
+                    "state_count": int(len(ligand_states)),
+                    "scored_state_count": int(len(state_pose_bundles)),
+                    "states": state_records,
+                },
+                "pose_search_aggregation": search_diagnostics,
+                "benchmark_metric_summary": benchmark_metric_summary,
                 "result_signed": bool(manifest.get("signature")),
                 "blocked_claims": _BLOCKED_CLAIMS,
             },
@@ -675,6 +967,7 @@ class TierBetaScreening:
         ligand_valid: dict[str, Any],
         stage_records: list[StageRecord],
         typed_input: TierBetaScreeningInput,
+        benchmark_metric_summary: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return build_screening_manifest(
             protein_seq=protein_seq,
@@ -693,6 +986,7 @@ class TierBetaScreening:
             stability_ok=stability_ok,
             stability_diagnostics=stability_diagnostics,
             pose_scores=pose_scores,
+            benchmark_metric_summary=benchmark_metric_summary,
             protein_valid=protein_valid,
             ligand_valid=ligand_valid,
             stage_records=stage_records,

@@ -85,6 +85,17 @@ def test_service_pdb_smiles_success_signed_manifest_and_claim_limits() -> None:
     assert result.result_manifest["signature"]
     assert _verify_local_manifest_signature(result.result_manifest)
     assert result.manifest_hash == result.result_manifest["content_hash"]
+    benchmark_summary = result.result_manifest["benchmark_metric_summary"]
+    assert benchmark_summary["schema_version"] == "tier_beta_docking_gold_metrics_v1"
+    assert benchmark_summary["status"] == "blocked_reference_pose_missing"
+    assert benchmark_summary["reference_pose_present"] is False
+    assert benchmark_summary["native_pose_present"] is False
+    assert benchmark_summary["scored_pose_count"] >= result.poses_scored
+    assert benchmark_summary["top1_mean_rmsd_a"] is None
+    assert benchmark_summary["top5_best_mean_rmsd_a"] is None
+    assert "native_or_reference_pose_missing" in benchmark_summary["blockers"]
+    assert result.diagnostics["benchmark_metric_summary"] == benchmark_summary
+    assert result.claim_metadata["benchmark_metric_summary"] == benchmark_summary
     assert result.claim_metadata["claim_safe"] is False
     assert "restricted_tier_beta_unvalidated" in result.claim_metadata["blocked_reason"]
     assert "calibrated_affinity" in result.claim_metadata["blocked_claims"]
@@ -99,6 +110,54 @@ def test_service_pdb_smiles_success_signed_manifest_and_claim_limits() -> None:
     assert result.pose_scores[0]["clash_count"] >= 0
     assert result.pose_scores[0]["chemistry_validity"]["status"] == "chemical_validity_pass"
     assert result.pose_scores[0]["ranking_metric"]["name"] == "restricted_local_composite_score_v1"
+    ligand_state = result.pose_scores[0]["ligand_state"]
+    assert ligand_state["state_id"].startswith("ligand_state_")
+    assert ligand_state["scoring_status"] == "pose_conformers_generated"
+    assert ligand_state["protonation_source"].endswith("no_pka_enumeration")
+    pose_search = result.pose_scores[0]["pose_search"]
+    assert pose_search["schema_version"] == "tier_beta_pose_search_v1"
+    assert pose_search["search_strategy"] == "etkdg_conformer_so3_translation_grid_coarse_score_local_min_beam_v1"
+    assert pose_search["conformer_diversity"]["schema_version"] == "tier_beta_conformer_diversity_v1"
+    assert pose_search["conformer_diversity"]["conformer_count"] >= 1
+    assert pose_search["conformer_count"] == pose_search["conformer_diversity"]["conformer_count"]
+    assert pose_search["rotatable_bond_count"] == pose_search["conformer_diversity"]["rotatable_bond_count"]
+    assert pose_search["retained_conformer_count"] >= 1
+    assert len(pose_search["retained_conformer_indices"]) == pose_search["retained_conformer_count"]
+    assert 0.0 < pose_search["retained_conformer_fraction"] <= 1.0
+    assert pose_search["rotations_per_conformer"] >= 4
+    assert pose_search["translation_grid_point_count"] >= 7
+    assert pose_search["raw_candidate_count"] > result.poses_scored
+    assert pose_search["coarse_beam_candidate_count"] >= result.poses_scored
+    assert pose_search["retained_candidate_count"] == result.poses_scored
+    assert pose_search["coarse_score_beam_status"] == "pass"
+    assert pose_search["coarse_score"] <= pose_search["coarse_score_before_local"] + 1e-8
+    assert len(pose_search["translation_vector_a"]) == 3
+    assert pose_search["local_minimization_status"] == "finite_difference_rigid_translation_score_minimized"
+    assert pose_search["local_minimization"]["final_coarse_score"] == pose_search["coarse_score"]
+    assert pose_search["symmetry_rmsd_clustering_status"] == "symmetry_aware_rmsd_clustered"
+    assert pose_search["symmetry_mapping_count"] >= 1
+    assert pose_search["symmetry_cluster_count"] >= 1
+    assert result.pose_scores[0]["pose_rmsd_method"] in {
+        "rdkit_automorphism_min_rmsd",
+        "identity_atom_order_rmsd",
+    }
+    assert result.pose_scores[0]["symmetry_aware_pose_rmsd_to_top1_a"] == 0.0
+    assert result.pose_scores[0]["pose_rmsd_clustering"]["schema_version"] == "tier_beta_pose_rmsd_clustering_v1"
+    anchor_mapping = pose_search["chemical_anchor_mapping"]
+    assert anchor_mapping["schema_version"] == "tier_beta_ligand_anchor_mapping_v1"
+    assert anchor_mapping["status"] == "rdkit_feature_charge_ring_graph_anchor_mapping"
+    assert len(anchor_mapping["two_bead_anchor_atom_indices"]) == 2
+    assert len(anchor_mapping["four_bead_anchor_atom_indices"]) == 4
+    assert anchor_mapping["graph_distance_source"] == "rdkit_topological_distance_matrix"
+    scoring_stage = next(stage for stage in result.stage_records if stage["stage_id"] == "scoring_ranking")
+    assert scoring_stage["diagnostics"]["pose_search"]["raw_candidate_count"] == pose_search["raw_candidate_count"]
+    assert scoring_stage["diagnostics"]["pose_search"]["chemical_anchor_mapping"]["two_bead_anchor_atom_indices"]
+    pose_stage = next(stage for stage in result.stage_records if stage["stage_id"] == "pose_ensemble")
+    state_ensemble = pose_stage["diagnostics"]["ligand_state_ensemble"]
+    assert state_ensemble["status"] == "restricted_rdkit_standardized_state_ensemble_no_pka"
+    assert state_ensemble["scored_state_count"] >= 1
+    refine_stage = next(stage for stage in result.stage_records if stage["stage_id"] == "top_k_refine")
+    assert refine_stage["diagnostics"]["rmsd_clustering"]["status"] == "symmetry_aware_rmsd_clustered"
     assert result.result_manifest["stability"]["diagnostics"]["pbc_enabled"] is True
     assert result.result_manifest["stability"]["diagnostics"]["restart_reproducible"] is True
     assert result.failure_code == "none"
@@ -175,6 +234,14 @@ def test_service_pdb_sdf_success_preserves_molblock_topology_provenance() -> Non
     assert row_topology["atom_elements"] == ["C", "C", "O"]
     assert row_topology["formal_charges"] == [0, 0, 0]
     assert row_topology["bond_count"] == 2
+    assert row_topology["feature_source"] == "rdkit_chemical_features_base_fdef"
+    assert row_topology["donor_site_count"] == 1
+    assert row_topology["acceptor_site_count"] == 1
+    assert row_topology["hbond_site_count"] == 2
+    assert {site["role"] for site in row_topology["feature_sites"] if site["atom_idx"] == 2} == {
+        "donor",
+        "acceptor",
+    }
     assert row_topology["bonds"] == [
         {"begin_atom_idx": 0, "end_atom_idx": 1, "bond_type": "SINGLE", "is_aromatic": False},
         {"begin_atom_idx": 1, "end_atom_idx": 2, "bond_type": "SINGLE", "is_aromatic": False},

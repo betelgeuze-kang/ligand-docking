@@ -49,6 +49,7 @@ def build_screening_manifest(
     typed_input: TierBetaScreeningInput,
     device: str,
     seed: int,
+    benchmark_metric_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
@@ -87,6 +88,7 @@ def build_screening_manifest(
             "seed": int(seed),
         },
         "pose_scores": pose_scores,
+        "benchmark_metric_summary": benchmark_metric_summary or {},
         "blocked_claims": list(BLOCKED_CLAIMS),
         "claim_boundary": CLAIM_BOUNDARY,
         "typed_input": typed_input.to_dict(),
@@ -96,6 +98,8 @@ def build_screening_manifest(
     parts = ["restricted_tier_beta_unvalidated"]
     if not ligand_valid_flag:
         parts.append("ligand_invalid")
+    if not bool(ligand_valid.get("claim_safe", False)):
+        parts.append("ligand_not_claim_safe")
     if not stability_ok:
         parts.append("stability_failed")
     if poses_scored <= 0:
@@ -113,6 +117,7 @@ def build_screening_manifest(
         "hbond_evidence_status": "not_assessed",
         "force_residual_applied": False,
         "blocked_claims": list(BLOCKED_CLAIMS),
+        "benchmark_metric_summary": benchmark_metric_summary or {},
         "claim_boundary": CLAIM_BOUNDARY,
     }
     payload["claim_metadata"] = claim_metadata

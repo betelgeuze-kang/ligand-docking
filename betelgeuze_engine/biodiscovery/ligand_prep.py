@@ -61,13 +61,29 @@ def mol_topology_provenance(mol: Any, *, source_kind: str, source_label: str) ->
 
 def ligand_topology_payload(ligand_valid: dict[str, Any]) -> dict[str, Any]:
     return {
+        "valid": bool(ligand_valid.get("valid", False)),
+        "claim_safe": bool(ligand_valid.get("claim_safe", False)),
+        "blocked": bool(ligand_valid.get("blocked", False)),
+        "blockers": list(ligand_valid.get("blockers", [])),
         "atom_elements": ligand_valid.get("atom_elements", []),
         "formal_charges": ligand_valid.get("formal_charges", []),
         "bond_count": ligand_valid.get("bond_count", 0),
         "bonds": ligand_valid.get("bonds", []),
+        "feature_source": ligand_valid.get("feature_source", "not_assessed"),
+        "feature_sites": ligand_valid.get("feature_sites", []),
+        "donor_site_count": int(ligand_valid.get("donor_site_count", 0) or 0),
+        "acceptor_site_count": int(ligand_valid.get("acceptor_site_count", 0) or 0),
+        "hbond_site_count": int(ligand_valid.get("hbond_site_count", 0) or 0),
         "chirality_status": ligand_valid.get("chirality_status", "not_assessed"),
+        "potential_stereo_count": int(ligand_valid.get("potential_stereo_count", 0) or 0),
+        "specified_stereo_count": int(ligand_valid.get("specified_stereo_count", 0) or 0),
+        "unassigned_stereo_count": int(ligand_valid.get("unassigned_stereo_count", 0) or 0),
+        "unassigned_stereo_bond_count": int(ligand_valid.get("unassigned_stereo_bond_count", 0) or 0),
         "protonation_status": ligand_valid.get("protonation_status", "not_assessed"),
         "protonation_source": ligand_valid.get("protonation_source", "not_assessed"),
+        "protonation_policy": ligand_valid.get("protonation_policy", "not_assessed"),
+        "protonation_ph_values": ligand_valid.get("protonation_ph_values", []),
+        "protonation_claim_boundary": ligand_valid.get("protonation_claim_boundary", ""),
         "tautomer_status": ligand_valid.get("tautomer_status", "not_assessed"),
         "tautomer_source": ligand_valid.get("tautomer_source", "not_assessed"),
         "input_source_kind": ligand_valid.get("input_source_kind", "smiles_text"),
@@ -120,18 +136,39 @@ def validate_ligand(smiles: str, resolved_input: ResolvedLigandInput | None = No
         "formal_charges": list(provenance.get("formal_charges", list(ligand.formal_charges))),
         "bond_count": bond_count,
         "bonds": exact_bonds,
+        "feature_source": str(ligand.validity.get("feature_source") or "not_assessed"),
+        "feature_sites": list(ligand.validity.get("feature_sites", [])),
+        "donor_site_count": int(ligand.validity.get("donor_site_count", 0) or 0),
+        "acceptor_site_count": int(ligand.validity.get("acceptor_site_count", 0) or 0),
+        "hbond_site_count": int(ligand.validity.get("hbond_site_count", 0) or 0),
         "chiral_center_count": int(provenance.get("chiral_center_count", ligand.validity.get("chiral_center_count", 0))),
         "unassigned_chiral_center_count": unassigned_chiral,
+        "potential_stereo_count": int(ligand.validity.get("potential_stereo_count", 0) or 0),
+        "specified_stereo_count": int(ligand.validity.get("specified_stereo_count", 0) or 0),
+        "unassigned_stereo_count": int(ligand.validity.get("unassigned_stereo_count", 0) or 0),
+        "unassigned_stereo_bond_count": int(ligand.validity.get("unassigned_stereo_bond_count", 0) or 0),
         "chirality_status": str(
             provenance.get("chirality_status", ligand.validity.get("chirality_status") or "not_assessed")
         ),
         "protonation_status": str(ligand.validity.get("protonation_status") or "not_assessed"),
         "tautomer_status": str(ligand.validity.get("tautomer_status") or "not_assessed"),
         "protonation_source": str(
-            provenance.get("protonation_source", "input_smiles_rdkit_parse" if valid else "not_assessed")
+            provenance.get("protonation_source", ligand.validity.get("protonation_source") or "not_assessed")
+        ),
+        "protonation_policy": str(
+            provenance.get("protonation_policy", ligand.validity.get("protonation_policy") or "not_assessed")
+        ),
+        "protonation_ph_values": list(
+            provenance.get("protonation_ph_values", ligand.validity.get("protonation_ph_values") or [])
+        ),
+        "protonation_claim_boundary": str(
+            provenance.get(
+                "protonation_claim_boundary",
+                ligand.validity.get("protonation_claim_boundary") or "",
+            )
         ),
         "tautomer_source": str(
-            provenance.get("tautomer_source", "input_connectivity_no_enumeration" if valid else "not_assessed")
+            provenance.get("tautomer_source", ligand.validity.get("tautomer_source") or "not_assessed")
         ),
         "input_source_kind": str(resolved_input.source_kind if resolved_input is not None else "smiles_text"),
         "input_source_label": str(provenance.get("input_source_label", "inline_text")),

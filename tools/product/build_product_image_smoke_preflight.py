@@ -192,6 +192,22 @@ def build_product_image_smoke_preflight(
             "deploy/verify_product_image.sh",
         ),
         _contract_row(
+            "fail_closed_receipt_written_on_early_exit",
+            "write_blocked_receipt" in verify_script
+            and "on_exit_write_blocked_receipt" in verify_script
+            and "cleanup_and_on_exit_write_blocked_receipt" in verify_script
+            and "trap cleanup_and_on_exit_write_blocked_receipt EXIT" in verify_script
+            and "receipt_failure_stage" in verify_script
+            and "docker_cli_missing" in verify_script
+            and "docker_daemon_unreachable" in verify_script
+            and "host_python_missing" in verify_script
+            and "docker_buildx_missing" in verify_script
+            and "rocm_device_nodes_missing" in verify_script,
+            "blocked receipt helper present" if "write_blocked_receipt" in verify_script else "missing",
+            "verify script writes a fail-closed receipt file for early validation failures and unexpected ERR exits",
+            "deploy/verify_product_image.sh",
+        ),
+        _contract_row(
             "docker_buildkit_and_runner_cleanup_declared",
             "DOCKER_BUILDKIT" in verify_script
             and "PRODUCT_IMAGE_REQUIRE_BUILDX" in verify_script
@@ -352,6 +368,17 @@ def build_product_image_smoke_preflight(
             if "product runtime claim: `false`" in workflow
             else "missing",
             "build smoke summary must state build scope is not product runtime readiness",
+            ".github/workflows/product-image-smoke.yml",
+        ),
+        _contract_row(
+            "workflow_artifact_retention_declared",
+            workflow.count("retention-days: 14") >= 2
+            and "product_image_build_smoke.log" in workflow
+            and "product_image_rocm_runtime_smoke.log" in workflow
+            and "runs/product_image_smoke_receipt_current.json" in workflow
+            and "runs/product_image_smoke_runner_artifacts/**" in workflow,
+            f"retention-days occurrences={workflow.count('retention-days: 14')}",
+            "build and ROCm runtime artifact uploads retain logs and receipt artifacts for at least 14 days",
             ".github/workflows/product-image-smoke.yml",
         ),
         _contract_row(

@@ -220,6 +220,134 @@ class TestHelperFunctions:
         assert biodiscovery_pose.clash_count(protein_beads, ligand) >= 1
         assert biodiscovery_pose.pose_rmsd(ligand, ligand) == 0.0
 
+    def test_conformer_diversity_diagnostics_measure_rotatable_heavy_atom_rmsd(self):
+        conformers = np.asarray(
+            [
+                [[0.0, 0.0, 0.0], [1.5, 0.0, 0.0], [3.0, 0.0, 0.0], [4.5, 0.0, 0.0]],
+                [[0.0, 0.0, 0.0], [1.5, 0.0, 0.0], [3.0, 0.8, 0.0], [4.5, 1.2, 0.0]],
+                [[0.0, 0.0, 0.0], [1.5, 0.0, 0.0], [3.0, -0.8, 0.0], [4.5, -1.2, 0.0]],
+            ],
+            dtype=np.float32,
+        )
+
+        diagnostics = biodiscovery_pose.conformer_diversity_diagnostics(conformers, smiles="CCCC")
+
+        assert diagnostics["schema_version"] == "tier_beta_conformer_diversity_v1"
+        assert diagnostics["status"] == "rotatable_conformer_diversity_measured"
+        assert diagnostics["method"] == "atom_order_pairwise_heavy_atom_rmsd"
+        assert diagnostics["rotatable_bond_count"] >= 1
+        assert diagnostics["conformer_count"] == 3
+        assert diagnostics["pairwise_rmsd_count"] == 3
+        assert diagnostics["pairwise_rmsd_max_a"] >= 0.5
+        assert diagnostics["diverse_pair_count"] >= 1
+
+    def test_pose_search_candidates_use_so3_translation_grid_and_clash_beam(self):
+        conformers = np.asarray(
+            [
+                [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
+                [[0.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            ],
+            dtype=np.float32,
+        )
+        protein_beads = np.asarray([[0.0, 0.0, 0.0]], dtype=np.float32)
+        candidates, diagnostics = biodiscovery_pose.pose_search_candidates(
+            conformers,
+            np.asarray([4.0, 0.0, 0.0], dtype=np.float32),
+            protein_beads,
+            seed=11,
+            max_candidates=5,
+            ligand_smiles="CCCC",
+            rotations_per_conformer=4,
+            translation_spacing_a=1.5,
+        )
+
+        assert diagnostics["search_strategy"] == "etkdg_conformer_so3_translation_grid_coarse_score_local_min_beam_v1"
+        assert diagnostics["conformer_count"] == 2
+        assert diagnostics["conformer_diversity"]["schema_version"] == "tier_beta_conformer_diversity_v1"
+        assert diagnostics["conformer_diversity"]["pairwise_rmsd_count"] == 1
+        assert diagnostics["conformer_diversity"]["pairwise_rmsd_max_a"] == pytest.approx(1.0)
+        assert diagnostics["rotatable_bond_count"] == biodiscovery_pose.rotatable_bond_count("CCCC")
+        assert diagnostics["retained_conformer_count"] == len({candidate["conformer_index"] for candidate in candidates})
+        assert diagnostics["retained_conformer_fraction"] == pytest.approx(
+            diagnostics["retained_conformer_count"] / diagnostics["conformer_count"]
+        )
+        assert diagnostics["rotations_per_conformer"] == 4
+        assert diagnostics["translation_grid_point_count"] == 7
+        assert diagnostics["raw_candidate_count"] == 56
+        assert diagnostics["coarse_beam_candidate_count"] == 10
+        assert diagnostics["retained_candidate_count"] == 5
+        assert diagnostics["coarse_score_beam_status"] == "pass"
+        assert diagnostics["local_minimization_status"] == "finite_difference_rigid_translation_score_minimized"
+        assert diagnostics["local_minimization_candidate_count"] == 10
+        assert len(candidates) == 5
+        assert all(candidate["coords"].shape == (2, 3) for candidate in candidates)
+        assert [candidate["clash_count"] for candidate in candidates] == sorted(
+            candidate["clash_count"] for candidate in candidates
+        )
+        assert all(
+            candidate["coarse_score"] <= candidate["coarse_score_before_local"] + 1e-8
+            for candidate in candidates
+        )
+        assert all("local_minimization" in candidate for candidate in candidates)
+        again, again_diag = biodiscovery_pose.pose_search_candidates(
+            conformers,
+            np.asarray([4.0, 0.0, 0.0], dtype=np.float32),
+            protein_beads,
+            seed=11,
+            max_candidates=5,
+            ligand_smiles="CCCC",
+            rotations_per_conformer=4,
+            translation_spacing_a=1.5,
+        )
+        assert diagnostics == again_diag
+        assert [candidate["translation_vector_a"] for candidate in candidates] == [
+            candidate["translation_vector_a"] for candidate in again
+        ]
+        assert [candidate["coarse_score"] for candidate in candidates] == [
+            candidate["coarse_score"] for candidate in again
+        ]
+        assert np.allclose(candidates[0]["coords"], again[0]["coords"])
+
+    def test_symmetry_aware_rmsd_clusters_atom_automorphisms(self):
+        mappings = biodiscovery_pose.ligand_symmetry_mappings("CC")
+        assert (1, 0) in mappings
+        pose_a = np.asarray([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype=np.float32)
+        pose_b = np.asarray([[1.0, 0.0, 0.0], [0.0, 0.0, 0.0]], dtype=np.float32)
+
+        assert biodiscovery_pose.pose_rmsd(pose_a, pose_b) > 0.0
+        assert biodiscovery_pose.symmetry_aware_pose_rmsd(pose_a, pose_b, mappings) == 0.0
+
+        rows = [
+            {"pose_index": 0, "composite_score": 0.0},
+            {"pose_index": 1, "composite_score": 1.0},
+        ]
+        summary = biodiscovery_pose.cluster_poses_by_symmetry(
+            rows,
+            {0: pose_a, 1: pose_b},
+            mappings,
+            threshold_a=0.1,
+        )
+        assert summary["status"] == "symmetry_aware_rmsd_clustered"
+        assert summary["method"] == "rdkit_automorphism_min_rmsd"
+        assert summary["cluster_count"] == 1
+        assert rows[0]["pose_cluster_id"] == rows[1]["pose_cluster_id"]
+        assert rows[1]["symmetry_aware_pose_rmsd_to_cluster_representative_a"] == 0.0
+
+    def test_chemical_anchor_mapping_uses_feature_charge_ring_graph_atoms(self):
+        mapping = biodiscovery_pose.chemical_anchor_mapping("CC(=O)N", {"atom_count": 4})
+
+        assert mapping["schema_version"] == "tier_beta_ligand_anchor_mapping_v1"
+        assert mapping["status"] == "rdkit_feature_charge_ring_graph_anchor_mapping"
+        assert mapping["method"] == "rdkit_feature_charge_ring_graph"
+        assert len(mapping["two_bead_anchor_atom_indices"]) == 2
+        assert len(mapping["four_bead_anchor_atom_indices"]) == 4
+        rows_by_element = {}
+        for row in mapping["anchor_rows"]:
+            rows_by_element.setdefault(row["element"], []).append(row)
+        assert any("acceptor" in row["roles"] for row in rows_by_element["O"])
+        assert any("donor" in row["roles"] for row in rows_by_element["N"])
+        assert mapping["graph_distance_source"] == "rdkit_topological_distance_matrix"
+
     def test_screening_uses_canonical_scoring_helpers(self):
         assert _single_pose_score is biodiscovery_scoring.single_pose_score
         assert _run_stability_simulation is biodiscovery_scoring.run_stability_simulation
@@ -349,3 +477,49 @@ class TestTierBetaScreeningSuccess:
         assert r1.pose_scores == r2.pose_scores
         assert r1.best_score == r2.best_score
         assert r1.poses_generated == r2.poses_generated
+
+    def test_salt_ligand_scores_fragment_parent_state_without_counterion_pose(self):
+        svc = TierBetaScreening(device="cpu", seed=7, pose_count=2, top_k=4, stability_steps=0)
+        result = svc.screen(protein_input=MINI_PDB, ligand_input="CC(=O)[O-].[Na+]")
+        replay = svc.screen(protein_input=MINI_PDB, ligand_input="CC(=O)[O-].[Na+]")
+
+        assert result.ok is False
+        assert "unsupported_ligand_metal_or_counterion" in result.blocked_reason
+        assert "fragment_parent_projection_not_product_safe" in result.blocked_reason
+        pose_stage = next(stage for stage in result.stage_records if stage["stage_id"] == "pose_ensemble")
+        ensemble = pose_stage["diagnostics"]["ligand_state_ensemble"]
+        assert ensemble["status"] == "restricted_rdkit_standardized_state_ensemble_no_pka"
+        assert ensemble["state_count"] == 2
+        assert ensemble["claim_safe"] is False
+        assert "unsupported_ligand_metal_or_counterion" in ensemble["claim_safe_blockers"]
+        skipped = next(state for state in ensemble["states"] if state["state_kind"] == "input_canonical")
+        scored = next(state for state in ensemble["states"] if state["state_kind"] == "salt_parent")
+        assert skipped["scoring_status"] == "not_scored_unsupported_ligand_element"
+        assert skipped["unsupported_elements"] == ["Na"]
+        assert scored["scoring_status"] == "pose_conformers_generated"
+        assert {row["ligand_state"]["state_kind"] for row in result.pose_scores} == {"salt_parent"}
+        assert all("Na" not in row["ligand_topology"]["atom_elements"] for row in result.pose_scores)
+        scoring_stage = next(stage for stage in result.stage_records if stage["stage_id"] == "scoring_ranking")
+        assert scoring_stage["diagnostics"]["pose_search"]["scored_state_count"] == 1
+        assert result.result_manifest["claim_metadata"]["ligand_topology"]["claim_safe"] is False
+        assert "fragment_parent_projection_not_product_safe" in result.result_manifest["claim_metadata"]["ligand_topology"]["blockers"]
+        assert result.typed_output["ok"] is False
+        assert result.typed_output["failure_code"] == "screening_claim_not_safe"
+        assert result.pose_scores == replay.pose_scores
+        assert result.result_manifest["replay_hash"] == replay.result_manifest["replay_hash"]
+
+    def test_projected_tautomer_states_remain_claim_blocked_after_scoring(self):
+        svc = TierBetaScreening(device="cpu", seed=9, pose_count=4, top_k=4, stability_steps=0)
+        result = svc.screen(protein_input=MINI_PDB, ligand_input="CC(=O)CC(=O)C")
+
+        assert result.ok is False
+        assert "tautomer_projection_not_product_safe" in result.blocked_reason
+        pose_stage = next(stage for stage in result.stage_records if stage["stage_id"] == "pose_ensemble")
+        ensemble = pose_stage["diagnostics"]["ligand_state_ensemble"]
+        assert ensemble["claim_safe"] is False
+        assert "tautomer_projection_not_product_safe" in ensemble["claim_safe_blockers"]
+        assert any(state["state_kind"].startswith("tautomer_") for state in ensemble["states"])
+        assert any(row["ligand_state"]["state_kind"].startswith("tautomer_") for row in result.pose_scores)
+        for row in result.pose_scores:
+            assert row["pose_search"]["symmetry_ligand_smiles"] == row["ligand_state"]["smiles"]
+        assert result.typed_output["ok"] is False

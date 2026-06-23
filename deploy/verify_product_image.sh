@@ -27,30 +27,67 @@ if [[ "${RUNNER_SMOKE_DIR}" != /* ]]; then
   RUNNER_SMOKE_DIR="${ROOT}/${RUNNER_SMOKE_DIR}"
 fi
 
+write_blocked_receipt() {
+  local status="$1"
+  local reason="$2"
+  local mode="${VERIFY_MODE//\"/}"
+  mkdir -p "$(dirname "${RECEIPT_JSON}")"
+  printf '{"status":"%s","mode":"%s","reason":"%s","receipt_ready":false,"clean_container_smoke_ready":false,"product_runner_smoke_ready":false,"product_runner_claim_metadata_ready":false,"container_runtime_proof_ready":false,"runtime_neighbor_release_scaling_ready":false,"rust_hip_neighbor_provider_parity_ready":false,"receipt_failure_stage":"early_or_error_exit","external_state_mutated":false,"claim_boundary":"Fail-closed product image smoke receipt; product claim promotion requires a successful rocm-runtime receipt on a self-hosted ROCm runner."}\n' \
+    "${status}" "${mode}" "${reason}" > "${RECEIPT_JSON}"
+}
+
+on_exit_write_blocked_receipt() {
+  local exit_code="$?"
+  if [[ "${exit_code}" -ne 0 && ! -s "${RECEIPT_JSON}" ]]; then
+    write_blocked_receipt "blocked_product_image_smoke" "script_error_exit_${exit_code}"
+  fi
+}
+
+cleanup_container() {
+  if [[ -n "${cid:-}" ]]; then
+    "${DOCKER_BIN[@]}" rm -f "${cid}" >/dev/null 2>&1 || true
+  fi
+}
+
+cleanup_and_on_exit_write_blocked_receipt() {
+  local exit_code="$?"
+  cleanup_container
+  if [[ "${exit_code}" -ne 0 && ! -s "${RECEIPT_JSON}" ]]; then
+    write_blocked_receipt "blocked_product_image_smoke" "script_error_exit_${exit_code}"
+  fi
+  exit "${exit_code}"
+}
+trap cleanup_and_on_exit_write_blocked_receipt EXIT
+
 case "${VERIFY_MODE}" in
   build|rocm-runtime)
     ;;
   *)
+    write_blocked_receipt "blocked_product_image_smoke" "unsupported_verify_mode"
     echo '{"status":"blocked_product_image_smoke","reason":"unsupported_verify_mode","supported_modes":["build","rocm-runtime"]}'
     exit 2
     ;;
 esac
 
 if [[ "${#DOCKER_BIN[@]}" -eq 0 ]] || ! command -v "${DOCKER_BIN[0]}" >/dev/null 2>&1; then
+  write_blocked_receipt "blocked_product_image_smoke" "docker_cli_missing"
   echo '{"status":"blocked_product_image_smoke","reason":"docker_cli_missing","claim_boundary":"Verify script requires docker CLI and does not mark missing Docker as green.","operator_hint":"Install Docker with scripts/prepare_product_docker_host.sh or set DOCKER_CMD to a Docker-compatible command."}'
   exit 2
 fi
 if ! "${DOCKER_BIN[@]}" info >/dev/null 2>&1; then
+  write_blocked_receipt "blocked_product_image_smoke" "docker_daemon_unreachable"
   echo '{"status":"blocked_product_image_smoke","reason":"docker_daemon_unreachable","claim_boundary":"Verify script requires an accessible Docker daemon and does not mark daemon access failures as green.","operator_hint":"Start Docker or run with DOCKER_CMD=\"sudo docker\" after authenticating in the operator shell."}'
   exit 2
 fi
 if ! command -v "${HOST_PYTHON}" >/dev/null 2>&1; then
+  write_blocked_receipt "blocked_product_image_smoke" "host_python_missing"
   echo '{"status":"blocked_product_image_smoke","reason":"host_python_missing","claim_boundary":"Verify script requires a host Python interpreter to write the receipt JSON.","operator_hint":"Install python3 or set PRODUCT_IMAGE_HOST_PYTHON to a valid interpreter."}'
   exit 2
 fi
 
 if [[ "${DOCKER_BUILDKIT}" == "1" ]] && ! "${DOCKER_BIN[@]}" buildx version >/dev/null 2>&1; then
   if [[ "${PRODUCT_IMAGE_REQUIRE_BUILDX}" == "1" ]]; then
+    write_blocked_receipt "blocked_product_image_smoke" "docker_buildx_missing"
     echo '{"status":"blocked_product_image_smoke","reason":"docker_buildx_missing","claim_boundary":"BuildKit was required for this product image smoke, but docker buildx is unavailable.","operator_hint":"Install the Docker buildx CLI plugin or run the workflow setup-buildx step on self-hosted runners."}'
     exit 2
   fi
@@ -64,6 +101,7 @@ DOCKER_RUN_ARGS=(--rm)
 DOCKER_DAEMON_ARGS=()
 if [[ "${VERIFY_MODE}" == "rocm-runtime" ]]; then
   if [[ ! -e /dev/kfd || ! -e /dev/dri ]]; then
+    write_blocked_receipt "blocked_product_image_rocm_runtime_smoke" "rocm_device_nodes_missing"
     echo '{"status":"blocked_product_image_rocm_runtime_smoke","reason":"rocm_device_nodes_missing","required":["/dev/kfd","/dev/dri"]}'
     exit 3
   fi
@@ -174,10 +212,6 @@ fi
 
 echo "Running /simulate scope gate smoke (expect 422 without runner_profile_id)" >&2
 cid="$("${DOCKER_BIN[@]}" run -d -p 127.0.0.1::8000 -e PRODUCT_API_AUTH_REQUIRED=0 "${DOCKER_DAEMON_ARGS[@]}" "${IMAGE}")"
-cleanup_container() {
-  "${DOCKER_BIN[@]}" rm -f "${cid}" >/dev/null 2>&1 || true
-}
-trap cleanup_container EXIT
 port="$("${DOCKER_BIN[@]}" port "${cid}" 8000/tcp | head -1 | awk -F: '{print $NF}')"
 for _ in $(seq 1 30); do
   if curl -sf "http://127.0.0.1:${port}/docs" >/dev/null; then

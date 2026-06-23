@@ -106,6 +106,7 @@ jobs:
         with:
           name: product-image-build-smoke-${{ github.run_id }}
           if-no-files-found: warn
+          retention-days: 14
           path: |
             runs/product_image_smoke_receipt_current.json
             runs/product_image_build_smoke.log
@@ -172,6 +173,7 @@ jobs:
         with:
           name: product-image-rocm-runtime-smoke-${{ github.run_id }}
           if-no-files-found: warn
+          retention-days: 14
           path: |
             runs/product_image_smoke_receipt_current.json
             runs/product_image_rocm_runtime_smoke.log

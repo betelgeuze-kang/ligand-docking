@@ -15,6 +15,8 @@ class LangevinIntegrator(nn.Module):
     ``2 * gamma * kT * dt / mass``.
     """
 
+    SUPPORTED_COARSE_MASS_POLICIES = frozenset({"explicit_unit_mass", "explicit_mass_tensor"})
+
     def __init__(
         self,
         dt: float = 0.002,
@@ -49,6 +51,9 @@ class LangevinIntegrator(nn.Module):
         # Retain the legacy state-dict key for backward compatibility. The
         # stochastic increment now correctly uses the full kT value.
         self.register_buffer("kT_half", torch.tensor(float(kT) * 0.5, dtype=torch.float32))
+        policy = str(coarse_mass_policy)
+        if policy not in self.SUPPORTED_COARSE_MASS_POLICIES:
+            raise ValueError(f"unsupported coarse_mass_policy: {policy}")
         self.register_buffer("mass", torch.as_tensor(mass, dtype=torch.float32).clone().detach())
 
         self.adaptive_dt = bool(adaptive_dt)
@@ -56,7 +61,7 @@ class LangevinIntegrator(nn.Module):
         self.dt_max = float(dt_max)
         self.force_threshold = float(force_threshold)
         self.use_mixed_precision = bool(use_mixed_precision)
-        self.coarse_mass_policy = str(coarse_mass_policy)
+        self.coarse_mass_policy = policy
         self.last_dt: torch.Tensor | None = None
         self.seed = int(seed) if seed is not None else None
         self._generators: dict[str, torch.Generator] = {}
@@ -196,4 +201,3 @@ class LangevinIntegrator(nn.Module):
         v_new = v_work + (f_work * current_dt / mass_work) + friction_term + random_force
         c_new = c_work + v_new * current_dt
         return v_new.to(dtype=output_dtype), c_new.to(dtype=output_dtype)
-

@@ -305,6 +305,10 @@ def test_product_image_smoke_script_is_fail_closed_and_has_rocm_runtime_mode() -
     assert "build --progress=plain" in script
     assert 'HOST_PYTHON="${PRODUCT_IMAGE_HOST_PYTHON:-python3}"' in script
     assert "host_python_missing" in script
+    assert "write_blocked_receipt" in script
+    assert "cleanup_and_on_exit_write_blocked_receipt" in script
+    assert "trap cleanup_and_on_exit_write_blocked_receipt EXIT" in script
+    assert "receipt_failure_stage" in script
     assert '"${HOST_PYTHON}" - <<' in script
     assert "exit 2" in script
     assert "--device=/dev/kfd" in script
@@ -345,6 +349,7 @@ def test_product_image_smoke_script_is_fail_closed_and_has_rocm_runtime_mode() -
     assert 'PRODUCT_IMAGE_PRUNE_BEFORE_BUILD: "1"' in workflow
     assert "actions/upload-artifact@v4" in workflow
     assert "if: always()" in workflow
+    assert "retention-days: 14" in workflow
     assert "product_image_build_smoke.log" in workflow
     assert "product_image_rocm_runtime_smoke.log" in workflow
     assert "product-image-rocm-runtime-smoke" in workflow

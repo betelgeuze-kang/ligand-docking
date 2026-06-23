@@ -5,11 +5,15 @@ from typing import Any
 
 import numpy as np
 
+from betelgeuze_engine.chemistry.ligand_states import ligand_chemistry_state_from_smiles
+
 try:
     from rdkit import Chem
+    from rdkit.Chem import rdMolDescriptors
     from rdkit.Chem import rdDistGeom
 except Exception:
     Chem = None
+    rdMolDescriptors = None
     rdDistGeom = None
 
 _CG_BEAD_PER_RESIDUE = 4
@@ -63,6 +67,289 @@ def pose_rmsd(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.sqrt(np.mean(np.sum((left[:n] - right[:n]) ** 2, axis=1))))
 
 
+def rotatable_bond_count(smiles: str) -> int:
+    if Chem is None or rdMolDescriptors is None:
+        return 0
+    mol = Chem.MolFromSmiles(str(smiles or ""))
+    if mol is None:
+        return 0
+    return int(rdMolDescriptors.CalcNumRotatableBonds(mol))
+
+
+def conformer_diversity_diagnostics(
+    poses: np.ndarray,
+    *,
+    smiles: str = "",
+    diversity_threshold_a: float = 0.5,
+) -> dict[str, Any]:
+    conformers = np.asarray(poses, dtype=np.float32)
+    count = int(conformers.shape[0]) if conformers.ndim >= 3 else 0
+    rmsd_values: list[float] = []
+    for i in range(count):
+        for j in range(i + 1, count):
+            rmsd_values.append(pose_rmsd(conformers[i], conformers[j]))
+    finite = [float(value) for value in rmsd_values if math.isfinite(float(value))]
+    if count <= 1:
+        status = "single_conformer_no_pairwise_diversity"
+    elif finite and max(finite) >= float(diversity_threshold_a):
+        status = "rotatable_conformer_diversity_measured"
+    else:
+        status = "low_conformer_diversity_measured"
+    return {
+        "schema_version": "tier_beta_conformer_diversity_v1",
+        "status": status,
+        "method": "atom_order_pairwise_heavy_atom_rmsd",
+        "rotatable_bond_count": rotatable_bond_count(smiles) if smiles else 0,
+        "conformer_count": count,
+        "pairwise_rmsd_count": int(len(finite)),
+        "pairwise_rmsd_min_a": min(finite) if finite else 0.0,
+        "pairwise_rmsd_mean_a": float(sum(finite) / len(finite)) if finite else 0.0,
+        "pairwise_rmsd_max_a": max(finite) if finite else 0.0,
+        "diversity_threshold_a": float(diversity_threshold_a),
+        "diverse_pair_count": int(sum(1 for value in finite if value >= float(diversity_threshold_a))),
+        "claim_boundary": (
+            "Diagnostic generated-conformer spread only; not an exhaustive rotamer search or benchmarked "
+            "pose-diversity guarantee."
+        ),
+    }
+
+
+def ligand_symmetry_mappings(smiles: str, *, max_mappings: int = 256) -> list[tuple[int, ...]]:
+    if Chem is None:
+        return []
+    mol = Chem.MolFromSmiles(str(smiles or ""))
+    if mol is None:
+        return []
+    atom_count = int(mol.GetNumAtoms())
+    identity = tuple(range(atom_count))
+    try:
+        matches = mol.GetSubstructMatches(mol, uniquify=False, maxMatches=int(max_mappings))
+    except Exception:
+        matches = ()
+    mappings: list[tuple[int, ...]] = [identity]
+    seen = {identity}
+    for match in matches:
+        mapping = tuple(int(idx) for idx in match)
+        if len(mapping) != atom_count or mapping in seen:
+            continue
+        seen.add(mapping)
+        mappings.append(mapping)
+    return mappings
+
+
+def symmetry_aware_pose_rmsd(
+    a: np.ndarray,
+    b: np.ndarray,
+    symmetry_mappings: list[tuple[int, ...]] | None = None,
+) -> float:
+    left = np.asarray(a, dtype=np.float64)
+    right = np.asarray(b, dtype=np.float64)
+    n = min(int(left.shape[0]), int(right.shape[0]))
+    if n <= 0:
+        return float("inf")
+    candidates = symmetry_mappings or [tuple(range(n))]
+    best = pose_rmsd(left[:n], right[:n])
+    for mapping in candidates:
+        if len(mapping) < n:
+            continue
+        indices = [int(idx) for idx in mapping[:n]]
+        if any(idx < 0 or idx >= int(right.shape[0]) for idx in indices):
+            continue
+        candidate = pose_rmsd(left[:n], right[indices])
+        if candidate < best:
+            best = candidate
+    return float(best)
+
+
+def cluster_poses_by_symmetry(
+    pose_scores: list[dict[str, Any]],
+    placed_pose_coords: dict[int, np.ndarray],
+    symmetry_mappings: list[tuple[int, ...]],
+    *,
+    threshold_a: float = 2.0,
+) -> dict[str, Any]:
+    clusters: list[dict[str, Any]] = []
+    for row in pose_scores:
+        pose_index = int(row["pose_index"])
+        coords = placed_pose_coords[pose_index]
+        assigned_cluster = -1
+        assigned_rmsd = float("inf")
+        for cluster_idx, cluster in enumerate(clusters):
+            representative = placed_pose_coords[int(cluster["representative_pose_index"])]
+            rmsd = symmetry_aware_pose_rmsd(coords, representative, symmetry_mappings)
+            if rmsd <= float(threshold_a):
+                assigned_cluster = cluster_idx
+                assigned_rmsd = rmsd
+                break
+        if assigned_cluster < 0:
+            assigned_cluster = len(clusters)
+            assigned_rmsd = 0.0
+            clusters.append(
+                {
+                    "cluster_id": int(assigned_cluster),
+                    "representative_pose_index": pose_index,
+                    "member_pose_indices": [],
+                    "best_composite_score": float(row.get("composite_score", float("inf"))),
+                }
+            )
+        clusters[assigned_cluster]["member_pose_indices"].append(pose_index)
+        row["pose_cluster_id"] = int(assigned_cluster)
+        row["symmetry_aware_pose_rmsd_to_cluster_representative_a"] = float(assigned_rmsd)
+        row["pose_rmsd_clustering"] = {
+            "schema_version": "tier_beta_pose_rmsd_clustering_v1",
+            "method": "rdkit_automorphism_min_rmsd" if symmetry_mappings else "identity_atom_order_rmsd",
+            "threshold_a": float(threshold_a),
+            "symmetry_mapping_count": int(len(symmetry_mappings) if symmetry_mappings else 1),
+            "cluster_id": int(assigned_cluster),
+            "cluster_representative_pose_index": int(clusters[assigned_cluster]["representative_pose_index"]),
+        }
+    for cluster in clusters:
+        cluster["member_count"] = int(len(cluster["member_pose_indices"]))
+    return {
+        "status": "symmetry_aware_rmsd_clustered",
+        "method": "rdkit_automorphism_min_rmsd" if symmetry_mappings else "identity_atom_order_rmsd",
+        "threshold_a": float(threshold_a),
+        "symmetry_mapping_count": int(len(symmetry_mappings) if symmetry_mappings else 1),
+        "cluster_count": int(len(clusters)),
+        "clusters": clusters,
+    }
+
+
+def chemical_anchor_mapping(smiles: str, ligand_valid: dict[str, Any]) -> dict[str, Any]:
+    if Chem is None:
+        atom_elements = list(ligand_valid.get("atom_elements") or [])
+        atom_count = int(ligand_valid.get("atom_count") or len(atom_elements))
+        fallback_indices = list(range(min(4, atom_count)))
+        return {
+            "schema_version": "tier_beta_ligand_anchor_mapping_v1",
+            "status": "fallback_atom_order_anchor_mapping",
+            "method": "fallback_atom_order",
+            "claim_safe": False,
+            "blocked_reason": "rdkit_unavailable",
+            "atom_count": atom_count,
+            "two_bead_anchor_atom_indices": fallback_indices[:2],
+            "four_bead_anchor_atom_indices": fallback_indices,
+            "anchor_rows": [
+                {
+                    "atom_idx": int(idx),
+                    "element": str(atom_elements[idx]) if idx < len(atom_elements) else "",
+                    "roles": [],
+                    "formal_charge": 0,
+                    "ring": False,
+                    "aromatic": False,
+                    "selection_reason": "fallback_atom_order",
+                }
+                for idx in fallback_indices
+            ],
+        }
+    mol = Chem.MolFromSmiles(str(smiles or ""))
+    if mol is None or mol.GetNumAtoms() <= 0:
+        return {
+            "schema_version": "tier_beta_ligand_anchor_mapping_v1",
+            "status": "blocked_invalid_ligand_anchor_mapping",
+            "method": "rdkit_feature_charge_ring_graph",
+            "claim_safe": False,
+            "blocked_reason": "invalid_smiles",
+            "atom_count": 0,
+            "two_bead_anchor_atom_indices": [],
+            "four_bead_anchor_atom_indices": [],
+            "anchor_rows": [],
+        }
+    chemistry = ligand_chemistry_state_from_smiles(str(smiles or ""))
+    roles_by_atom: dict[int, list[str]] = {}
+    for site in chemistry.feature_sites:
+        roles_by_atom.setdefault(int(site.atom_idx), []).append(str(site.role))
+    atom_count = int(mol.GetNumAtoms())
+    distance_matrix = Chem.GetDistanceMatrix(mol)
+
+    def atom_priority(idx: int) -> tuple[int, int, int, int]:
+        atom = mol.GetAtomWithIdx(int(idx))
+        roles = roles_by_atom.get(int(idx), [])
+        has_feature = bool(roles)
+        charged = int(atom.GetFormalCharge()) != 0
+        hetero = int(atom.GetAtomicNum()) not in {1, 6}
+        ring = bool(atom.IsInRing())
+        return (
+            0 if charged else 1,
+            0 if has_feature else 1,
+            0 if hetero else 1,
+            0 if ring else 1,
+        )
+
+    ordered = sorted(range(atom_count), key=lambda idx: (*atom_priority(idx), int(idx)))
+    selected: list[int] = []
+    for idx in ordered:
+        if not selected:
+            selected.append(int(idx))
+            continue
+        candidate_dist = min(float(distance_matrix[int(idx), chosen]) for chosen in selected)
+        best_existing = max(
+            (
+                min(float(distance_matrix[other, chosen]) for chosen in selected)
+                for other in range(atom_count)
+                if other not in selected
+            ),
+            default=0.0,
+        )
+        if candidate_dist + 1e-8 >= best_existing or len(selected) >= atom_count - 1:
+            selected.append(int(idx))
+        if len(selected) >= min(4, atom_count):
+            break
+    for idx in ordered:
+        if len(selected) >= min(4, atom_count):
+            break
+        if idx not in selected:
+            selected.append(int(idx))
+    primary = selected[0] if selected else 0
+    if atom_count <= 1:
+        two_bead = [primary]
+    else:
+        secondary = max(
+            (idx for idx in range(atom_count) if idx != primary),
+            key=lambda idx: (float(distance_matrix[primary, idx]), -atom_priority(idx)[0], -atom_priority(idx)[1]),
+        )
+        two_bead = [int(primary), int(secondary)]
+
+    four_set = [int(idx) for idx in selected[: min(4, atom_count)]]
+
+    def row_for(idx: int, reason: str) -> dict[str, Any]:
+        atom = mol.GetAtomWithIdx(int(idx))
+        roles = sorted(set(roles_by_atom.get(int(idx), [])))
+        if int(atom.GetFormalCharge()) != 0:
+            reason = "formal_charge_anchor"
+        elif roles:
+            reason = "chemical_feature_anchor"
+        elif atom.IsInRing():
+            reason = "ring_graph_diversity_anchor"
+        return {
+            "atom_idx": int(idx),
+            "element": str(atom.GetSymbol()),
+            "roles": roles,
+            "formal_charge": int(atom.GetFormalCharge()),
+            "ring": bool(atom.IsInRing()),
+            "aromatic": bool(atom.GetIsAromatic()),
+            "selection_reason": reason,
+        }
+
+    anchor_rows = [
+        row_for(idx, "graph_diversity_anchor")
+        for idx in dict.fromkeys([*two_bead, *four_set])
+    ]
+    return {
+        "schema_version": "tier_beta_ligand_anchor_mapping_v1",
+        "status": "rdkit_feature_charge_ring_graph_anchor_mapping",
+        "method": "rdkit_feature_charge_ring_graph",
+        "claim_safe": True,
+        "blocked_reason": "",
+        "atom_count": atom_count,
+        "two_bead_anchor_atom_indices": two_bead,
+        "four_bead_anchor_atom_indices": four_set,
+        "anchor_rows": anchor_rows,
+        "feature_source": chemistry.feature_source,
+        "graph_distance_source": "rdkit_topological_distance_matrix",
+    }
+
+
 def clash_count(protein_beads: np.ndarray, ligand_coords: np.ndarray, *, clash_cutoff_a: float = 1.2) -> int:
     prot = np.asarray(protein_beads, dtype=np.float64)
     lig = np.asarray(ligand_coords, dtype=np.float64)
@@ -70,6 +357,108 @@ def clash_count(protein_beads: np.ndarray, ligand_coords: np.ndarray, *, clash_c
         return 0
     distances = np.linalg.norm(prot[:, None, :] - lig[None, :, :], axis=2)
     return int(np.sum(distances < float(clash_cutoff_a)))
+
+
+def coarse_pose_score(
+    protein_beads: np.ndarray,
+    ligand_coords: np.ndarray,
+    *,
+    clash_cutoff_a: float = 1.2,
+    contact_cutoff_a: float = 8.0,
+) -> dict[str, Any]:
+    prot = np.asarray(protein_beads, dtype=np.float64)
+    lig = np.asarray(ligand_coords, dtype=np.float64)
+    if prot.size == 0 or lig.size == 0:
+        return {
+            "score": float("inf"),
+            "min_distance_a": float("inf"),
+            "contact_count": 0,
+            "clash_count": 0,
+            "clash_penalty": float("inf"),
+            "contact_reward": 0.0,
+        }
+    distances = np.linalg.norm(prot[:, None, :] - lig[None, :, :], axis=2)
+    min_distance = float(np.min(distances))
+    clash_depth = np.maximum(0.0, float(clash_cutoff_a) - distances)
+    clash_penalty = float(np.sum(clash_depth * clash_depth) * 100.0)
+    contacts = distances <= float(contact_cutoff_a)
+    contact_count = int(np.sum(contacts))
+    contact_reward = float(np.sum(np.exp(-distances[contacts] / max(float(contact_cutoff_a), 1e-6)))) if contact_count else 0.0
+    ligand_min_distances = np.min(distances, axis=0)
+    pocket_fit_penalty = float(np.mean(np.maximum(0.0, ligand_min_distances - float(contact_cutoff_a))))
+    score = float(clash_penalty + pocket_fit_penalty - 0.05 * contact_reward)
+    return {
+        "score": score,
+        "min_distance_a": min_distance,
+        "contact_count": contact_count,
+        "clash_count": int(np.sum(distances < float(clash_cutoff_a))),
+        "clash_penalty": clash_penalty,
+        "contact_reward": contact_reward,
+        "pocket_fit_penalty": pocket_fit_penalty,
+    }
+
+
+def local_translation_minimize_pose(
+    protein_beads: np.ndarray,
+    ligand_coords: np.ndarray,
+    *,
+    max_steps: int = 6,
+    initial_step_a: float = 0.25,
+    clash_cutoff_a: float = 1.2,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    coords = np.asarray(ligand_coords, dtype=np.float32).copy()
+    directions = [
+        np.asarray([1.0, 0.0, 0.0], dtype=np.float32),
+        np.asarray([-1.0, 0.0, 0.0], dtype=np.float32),
+        np.asarray([0.0, 1.0, 0.0], dtype=np.float32),
+        np.asarray([0.0, -1.0, 0.0], dtype=np.float32),
+        np.asarray([0.0, 0.0, 1.0], dtype=np.float32),
+        np.asarray([0.0, 0.0, -1.0], dtype=np.float32),
+    ]
+    current = coarse_pose_score(protein_beads, coords, clash_cutoff_a=clash_cutoff_a)
+    initial_score = float(current["score"])
+    total_delta = np.zeros(3, dtype=np.float32)
+    step = float(initial_step_a)
+    steps_taken = 0
+    for _idx in range(int(max(0, max_steps))):
+        best_coords = coords
+        best_delta = np.zeros(3, dtype=np.float32)
+        best_score = current
+        for direction in directions:
+            candidate_delta = direction * step
+            candidate_coords = coords + candidate_delta.reshape(1, 3)
+            candidate_score = coarse_pose_score(
+                protein_beads,
+                candidate_coords,
+                clash_cutoff_a=clash_cutoff_a,
+            )
+            if float(candidate_score["score"]) + 1e-8 < float(best_score["score"]):
+                best_coords = candidate_coords.astype(np.float32)
+                best_delta = candidate_delta.astype(np.float32)
+                best_score = candidate_score
+        if best_coords is coords:
+            step *= 0.5
+            if step < 0.025:
+                break
+            continue
+        coords = best_coords
+        current = best_score
+        total_delta += best_delta
+        steps_taken += 1
+    final_score = float(current["score"])
+    improved = bool(final_score + 1e-8 < initial_score)
+    return coords.astype(np.float32), {
+        "status": (
+            "finite_difference_rigid_translation_score_minimized"
+            if improved
+            else "finite_difference_rigid_translation_no_improvement"
+        ),
+        "steps_taken": int(steps_taken),
+        "initial_coarse_score": initial_score,
+        "final_coarse_score": final_score,
+        "improved": improved,
+        "translation_delta_a": [float(v) for v in total_delta.tolist()],
+    }
 
 
 def chemistry_validity_summary(ligand_valid: dict[str, Any], pose_coords: np.ndarray) -> dict[str, Any]:
@@ -109,6 +498,169 @@ def random_rotation_matrix(seed: int) -> np.ndarray:
         ],
         dtype=np.float64,
     )
+
+
+def so3_rotation_matrices(count: int, seed: int) -> list[np.ndarray]:
+    """Deterministic uniform-quaternion SO(3) samples with identity first."""
+    total = int(max(1, count))
+    rotations = [np.eye(3, dtype=np.float64)]
+    if total == 1:
+        return rotations
+    rng = np.random.RandomState(int(seed))
+    for _idx in range(total - 1):
+        u1, u2, u3 = rng.uniform(0.0, 1.0, size=3)
+        q1 = math.sqrt(1.0 - u1) * math.sin(2.0 * math.pi * u2)
+        q2 = math.sqrt(1.0 - u1) * math.cos(2.0 * math.pi * u2)
+        q3 = math.sqrt(u1) * math.sin(2.0 * math.pi * u3)
+        q4 = math.sqrt(u1) * math.cos(2.0 * math.pi * u3)
+        x, y, z, w = q1, q2, q3, q4
+        rotations.append(
+            np.array(
+                [
+                    [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+                    [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+                    [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
+                ],
+                dtype=np.float64,
+            )
+        )
+    return rotations
+
+
+def pocket_translation_grid(spacing_a: float = 1.5) -> list[np.ndarray]:
+    spacing = float(spacing_a)
+    offsets = [
+        (0.0, 0.0, 0.0),
+        (spacing, 0.0, 0.0),
+        (-spacing, 0.0, 0.0),
+        (0.0, spacing, 0.0),
+        (0.0, -spacing, 0.0),
+        (0.0, 0.0, spacing),
+        (0.0, 0.0, -spacing),
+    ]
+    return [np.asarray(offset, dtype=np.float32) for offset in offsets]
+
+
+def transform_pose_to_pocket(
+    pose: np.ndarray,
+    pocket_center: np.ndarray,
+    rotation: np.ndarray,
+    translation: np.ndarray,
+) -> np.ndarray:
+    centered = center_coordinates_around_origin(np.asarray(pose, dtype=np.float32)).astype(np.float64)
+    rotated = centered @ np.asarray(rotation, dtype=np.float64).T
+    placed = rotated + np.asarray(pocket_center, dtype=np.float64).reshape(1, 3)
+    placed += np.asarray(translation, dtype=np.float64).reshape(1, 3)
+    return placed.astype(np.float32)
+
+
+def pose_search_candidates(
+    poses: np.ndarray,
+    pocket_center: np.ndarray,
+    protein_beads: np.ndarray,
+    *,
+    seed: int,
+    max_candidates: int,
+    ligand_smiles: str = "",
+    rotations_per_conformer: int = 4,
+    translation_spacing_a: float = 1.5,
+    clash_cutoff_a: float = 1.2,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    conformers = np.asarray(poses, dtype=np.float32)
+    diversity = conformer_diversity_diagnostics(conformers, smiles=ligand_smiles)
+    rotations = so3_rotation_matrices(rotations_per_conformer, seed)
+    translations = pocket_translation_grid(translation_spacing_a)
+    raw: list[dict[str, Any]] = []
+    for conformer_index, pose in enumerate(conformers):
+        for rotation_index, rotation in enumerate(rotations):
+            for translation_index, translation in enumerate(translations):
+                coords = transform_pose_to_pocket(pose, pocket_center, rotation, translation)
+                coarse = coarse_pose_score(protein_beads, coords, clash_cutoff_a=clash_cutoff_a)
+                raw.append(
+                    {
+                        "coords": coords,
+                        "conformer_index": int(conformer_index),
+                        "rotation_index": int(rotation_index),
+                        "translation_index": int(translation_index),
+                        "translation_vector_a": [float(v) for v in translation.tolist()],
+                        "clash_count": int(coarse["clash_count"]),
+                        "coarse_score": float(coarse["score"]),
+                        "coarse_score_components": coarse,
+                    }
+                )
+    raw.sort(
+        key=lambda row: (
+            int(row["clash_count"]),
+            float(row["coarse_score"]),
+            int(row["conformer_index"]),
+            int(row["rotation_index"]),
+            int(row["translation_index"]),
+        )
+    )
+    coarse_beam_size = int(max(1, max_candidates) * 2)
+    coarse_beam = raw[:coarse_beam_size]
+    minimized: list[dict[str, Any]] = []
+    for row in coarse_beam:
+        coords, minimization = local_translation_minimize_pose(
+            protein_beads,
+            np.asarray(row["coords"], dtype=np.float32),
+            clash_cutoff_a=clash_cutoff_a,
+        )
+        final_coarse = coarse_pose_score(protein_beads, coords, clash_cutoff_a=clash_cutoff_a)
+        updated = dict(row)
+        updated["coords"] = coords
+        updated["coarse_score_before_local"] = float(row["coarse_score"])
+        updated["coarse_score"] = float(final_coarse["score"])
+        updated["coarse_score_components"] = final_coarse
+        updated["clash_count"] = int(final_coarse["clash_count"])
+        updated["local_minimization"] = minimization
+        minimized.append(updated)
+    minimized.sort(
+        key=lambda row: (
+            int(row["clash_count"]),
+            float(row["coarse_score"]),
+            int(row["conformer_index"]),
+            int(row["rotation_index"]),
+            int(row["translation_index"]),
+        )
+    )
+    retained = minimized[: int(max(1, max_candidates))]
+    if retained and all(int(row["clash_count"]) > 0 for row in retained):
+        prefilter_status = "retained_lowest_clash_candidates"
+    else:
+        prefilter_status = "pass"
+    minimized_count = int(sum(1 for row in minimized if row.get("local_minimization", {}).get("improved") is True))
+    retained_conformer_indices = sorted({int(row["conformer_index"]) for row in retained})
+    diagnostics = {
+        "search_strategy": "etkdg_conformer_so3_translation_grid_coarse_score_local_min_beam_v1",
+        "conformer_count": int(conformers.shape[0]),
+        "conformer_diversity": diversity,
+        "rotatable_bond_count": int(diversity["rotatable_bond_count"]),
+        "retained_conformer_count": int(len(retained_conformer_indices)),
+        "retained_conformer_indices": retained_conformer_indices,
+        "retained_conformer_fraction": (
+            float(len(retained_conformer_indices) / int(conformers.shape[0]))
+            if int(conformers.shape[0]) > 0
+            else 0.0
+        ),
+        "rotations_per_conformer": int(len(rotations)),
+        "translation_grid_point_count": int(len(translations)),
+        "translation_spacing_a": float(translation_spacing_a),
+        "raw_candidate_count": int(len(raw)),
+        "coarse_beam_candidate_count": int(len(coarse_beam)),
+        "retained_candidate_count": int(len(retained)),
+        "beam_size": int(max(1, max_candidates)),
+        "clash_cutoff_a": float(clash_cutoff_a),
+        "clash_prefilter_status": prefilter_status,
+        "clash_prefiltered_candidate_count": int(sum(1 for row in raw if int(row["clash_count"]) == 0)),
+        "coarse_score_beam_status": "pass",
+        "local_minimization_status": "finite_difference_rigid_translation_score_minimized",
+        "local_minimization_candidate_count": int(len(minimized)),
+        "local_minimization_improved_count": minimized_count,
+        "symmetry_rmsd_clustering_status": "not_run_restricted_vertical_slice",
+        "chemical_anchor_mapping_status": "not_run_restricted_vertical_slice",
+    }
+    return retained, diagnostics
 
 
 def virtual_protein_coords(protein_ca: np.ndarray) -> np.ndarray:
