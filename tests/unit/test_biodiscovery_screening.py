@@ -241,6 +241,51 @@ class TestHelperFunctions:
         assert diagnostics["pairwise_rmsd_max_a"] >= 0.5
         assert diagnostics["diverse_pair_count"] >= 1
 
+    def test_local_rigid_body_minimizer_uses_rotation_and_preserves_internal_distances(self):
+        ligand = np.asarray([[-2.0, 0.2, 0.0], [2.0, -0.2, 0.0]], dtype=np.float32)
+        protein_beads = np.asarray([[0.0, 2.0, 0.0], [0.0, -2.0, 0.0]], dtype=np.float32)
+        initial_distance = float(np.linalg.norm(ligand[0] - ligand[1]))
+        initial_score = biodiscovery_pose.coarse_pose_score(protein_beads, ligand)["score"]
+
+        minimized, diagnostics = biodiscovery_pose.local_rigid_body_minimize_pose(
+            protein_beads,
+            ligand,
+            max_steps=8,
+            initial_step_a=0.05,
+            initial_rotation_step_rad=0.2,
+        )
+
+        assert diagnostics["status"] == "finite_difference_rigid_body_gradient_minimized"
+        assert diagnostics["method"] == "finite_difference_gradient_descent_translation_rotation"
+        assert diagnostics["degrees_of_freedom"] == ["translation", "rotation"]
+        assert diagnostics["gradient_parameter_count"] == 6
+        assert diagnostics["final_coarse_score"] < initial_score
+        assert diagnostics["final_coarse_score"] == pytest.approx(
+            biodiscovery_pose.coarse_pose_score(protein_beads, minimized)["score"]
+        )
+        assert np.linalg.norm(np.asarray(diagnostics["rotation_delta_rad"], dtype=np.float64)) > 0.1
+        assert np.linalg.norm(np.asarray(diagnostics["translation_delta_a"], dtype=np.float64)) < 1e-3
+        assert float(np.linalg.norm(minimized[0] - minimized[1])) == pytest.approx(initial_distance)
+
+    def test_local_rigid_body_minimizer_reports_no_improvement_when_no_steps_are_allowed(self):
+        ligand = np.asarray([[-2.0, 0.2, 0.0], [2.0, -0.2, 0.0]], dtype=np.float32)
+        protein_beads = np.asarray([[0.0, 2.0, 0.0], [0.0, -2.0, 0.0]], dtype=np.float32)
+        initial_score = biodiscovery_pose.coarse_pose_score(protein_beads, ligand)["score"]
+
+        minimized, diagnostics = biodiscovery_pose.local_rigid_body_minimize_pose(
+            protein_beads,
+            ligand,
+            max_steps=0,
+        )
+
+        assert diagnostics["status"] == "finite_difference_rigid_body_gradient_no_improvement"
+        assert diagnostics["steps_taken"] == 0
+        assert diagnostics["final_coarse_score"] == pytest.approx(initial_score)
+        assert diagnostics["improved"] is False
+        assert diagnostics["translation_delta_a"] == [0.0, 0.0, 0.0]
+        assert diagnostics["rotation_delta_rad"] == [0.0, 0.0, 0.0]
+        assert np.allclose(minimized, ligand)
+
     def test_pose_search_candidates_use_so3_translation_grid_and_clash_beam(self):
         conformers = np.asarray(
             [
@@ -267,7 +312,9 @@ class TestHelperFunctions:
         assert diagnostics["conformer_diversity"]["pairwise_rmsd_count"] == 1
         assert diagnostics["conformer_diversity"]["pairwise_rmsd_max_a"] == pytest.approx(1.0)
         assert diagnostics["rotatable_bond_count"] == biodiscovery_pose.rotatable_bond_count("CCCC")
-        assert diagnostics["retained_conformer_count"] == len({candidate["conformer_index"] for candidate in candidates})
+        assert diagnostics["retained_conformer_count"] == len(
+            {candidate["conformer_index"] for candidate in candidates}
+        )
         assert diagnostics["retained_conformer_fraction"] == pytest.approx(
             diagnostics["retained_conformer_count"] / diagnostics["conformer_count"]
         )
@@ -277,7 +324,9 @@ class TestHelperFunctions:
         assert diagnostics["coarse_beam_candidate_count"] == 10
         assert diagnostics["retained_candidate_count"] == 5
         assert diagnostics["coarse_score_beam_status"] == "pass"
-        assert diagnostics["local_minimization_status"] == "finite_difference_rigid_translation_score_minimized"
+        assert diagnostics["local_minimization_status"].startswith("finite_difference_rigid_body_gradient_")
+        assert diagnostics["local_minimization_method"] == "finite_difference_gradient_descent_translation_rotation"
+        assert diagnostics["local_minimization_degrees_of_freedom"] == ["translation", "rotation"]
         assert diagnostics["local_minimization_candidate_count"] == 10
         assert len(candidates) == 5
         assert all(candidate["coords"].shape == (2, 3) for candidate in candidates)
@@ -289,6 +338,12 @@ class TestHelperFunctions:
             for candidate in candidates
         )
         assert all("local_minimization" in candidate for candidate in candidates)
+        assert all(candidate["local_minimization"]["gradient_parameter_count"] == 6 for candidate in candidates)
+        assert all(
+            candidate["local_minimization"]["degrees_of_freedom"] == ["translation", "rotation"]
+            for candidate in candidates
+        )
+        assert all(len(candidate["local_minimization"]["rotation_delta_rad"]) == 3 for candidate in candidates)
         again, again_diag = biodiscovery_pose.pose_search_candidates(
             conformers,
             np.asarray([4.0, 0.0, 0.0], dtype=np.float32),
@@ -433,6 +488,12 @@ class TestTierBetaScreeningSuccess:
         assert "protein_valid" in result.diagnostics
         assert result.stability_steps_run == 0
         assert len(result.claim_metadata) > 0
+        aggregation = result.diagnostics["pose_search_aggregation"]
+        assert aggregation["local_minimization_status"].startswith("finite_difference_rigid_body_gradient_")
+        assert aggregation["local_minimization_method"] == "finite_difference_gradient_descent_translation_rotation"
+        assert aggregation["local_minimization_degrees_of_freedom"] == ["translation", "rotation"]
+        assert aggregation["local_minimization_candidate_count"] >= result.poses_scored
+        assert aggregation["local_minimization_improved_count"] >= 0
 
     def test_benzene_with_stability_simulation(self):
         svc = TierBetaScreening(
@@ -488,7 +549,7 @@ class TestTierBetaScreeningSuccess:
         assert "fragment_parent_projection_not_product_safe" in result.blocked_reason
         pose_stage = next(stage for stage in result.stage_records if stage["stage_id"] == "pose_ensemble")
         ensemble = pose_stage["diagnostics"]["ligand_state_ensemble"]
-        assert ensemble["status"] == "restricted_rdkit_standardized_state_ensemble_no_pka"
+        assert ensemble["status"] == "restricted_rdkit_standardized_state_ensemble_ph_range_no_pka_calibration"
         assert ensemble["state_count"] == 2
         assert ensemble["claim_safe"] is False
         assert "unsupported_ligand_metal_or_counterion" in ensemble["claim_safe_blockers"]

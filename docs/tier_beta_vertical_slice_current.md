@@ -47,7 +47,7 @@ Protein input resolution, PDB/mmCIF parsing, unsupported metal/cofactor blocking
 
 Each pose row records pose rank, score components, uncertainty, abstention, topology fidelity, ligand atom/bond/charge/chirality/protonation/tautomer provenance, neighbor diagnostics, and claim boundary. SMILES input is parsed through RDKit-backed topology validation; SDF/MolBlock input is parsed directly with RDKit and preserves exact atom elements, bonds, formal charges, RDKit ChemicalFeatures donor/acceptor sites including dual-role atoms, chirality/stereochemistry status, and input source provenance in both pose rows and the signed manifest.
 
-Pose rows also record local ensemble RMSD metrics, clash count, chemistry validity, conformer-diversity diagnostics, retained conformer indices, and the ranking metric used for the restricted local ordering. Protonation remains a restricted input/formal-charge policy at pH 7.4 without pKa enumeration, and projected tautomer/charge/salt-parent states are diagnostic-only unless separately validated. Stability diagnostics record constraints/PBC/thermostat posture, energy drift, and restart reproducibility fields for the short local smoke.
+Pose rows also record local ensemble RMSD metrics, clash count, chemistry validity, conformer-diversity diagnostics, retained conformer indices, and the ranking metric used for the restricted local ordering. Pose-search diagnostics include SO(3) rotation sampling, a pocket translation grid, coarse-score beam search, and a deterministic six-parameter rigid-body finite-difference local minimizer over translation plus rotation with backtracking; this is still a coarse local search diagnostic, not a validated docking engine. Protonation now records a bounded RDKit SMARTS heuristic pH-range state ensemble for pH 5.0/7.4/9.0 diagnostics, while projected protomer/tautomer/charge/salt-parent states remain non-product-safe unless separately validated; no calibrated pKa or product-safe protonation claim is made. Stability diagnostics record constraints/PBC/thermostat posture, energy drift, and restart reproducibility fields for the short local smoke.
 
 The implementation performs real local calculations but still blocks:
 
@@ -79,10 +79,12 @@ Focused tests cover:
 - unsigned engine manifest fail-closed regression
 - deterministic replay hash and pose-ranking replay
 - row-level RMSD/clash/chemistry/ranking metrics
+- pose-search SO(3) sampling, translation grid, coarse-score beam search, rigid-body finite-difference local minimization, and rigid-body distance preservation
 - ligand salt/counterion fragment-parent projection remains non-product-safe even when the parent fragment is scored
 - unspecified tetrahedral or double-bond ligand stereochemistry fails closed
 - bounded projected tautomer states remain non-product-safe unless validated separately
-- docking gold metrics fail closed when reference/native pose RMSD coverage, affinity labels, decoys, runtime/memory, or held-out refine-improvement evidence are incomplete
+- bounded projected pH-range protomer states remain non-product-safe without calibrated pKa validation
+- docking gold metrics fail closed when reference/native pose RMSD coverage, affinity labels, decoys, chemistry-failure evidence, abstention evidence, measured runtime/memory, or same-paired held-out refine-improvement evidence are incomplete
 - canonical protein preparation/topology helper extraction is wired through the screening service
 - canonical ligand preparation/topology helper extraction is wired through the screening service
 - canonical pose/pocket domain helper extraction is wired through the screening service

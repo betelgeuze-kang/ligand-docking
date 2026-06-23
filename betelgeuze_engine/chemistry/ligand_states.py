@@ -18,11 +18,12 @@ except Exception:  # pragma: no cover - optional dependency path
 
 FEATURE_SOURCE = "rdkit_chemical_features_base_fdef"
 TAUTOMER_SOURCE = "rdkit_molstandardize_tautomer_enumerator"
-PROTONATION_SOURCE = "rdkit_formal_charge_state_from_input_ph_7_4_no_pka_enumeration"
-PROTONATION_POLICY = "restricted_formal_charge_input_state_ph_7_4_no_pka"
+PROTONATION_SOURCE = "rdkit_formal_charge_input_plus_restricted_ph_range_heuristic"
+PROTONATION_POLICY = "restricted_rdkit_heuristic_protomer_ensemble_ph_5_0_7_4_9_0_no_pka_calibration"
+PROTONATION_PH_VALUES = (5.0, 7.4, 9.0)
 PROTONATION_CLAIM_BOUNDARY = (
-    "Formal-charge/protomer state is derived from the input structure and RDKit standardization only; "
-    "no pKa model or pH-range protonation ensemble is claimed."
+    "Formal-charge/protomer states are generated from input structure plus bounded RDKit SMARTS heuristics "
+    "for pH 5.0/7.4/9.0 diagnostics only; no calibrated pKa model or product-safe protonation claim is made."
 )
 SALT_SOURCE = "rdkit_molstandardize_fragment_parent"
 HBOND_ELEMENTS = {"N", "O", "S", "P"}
@@ -54,6 +55,7 @@ class LigandChemistryState:
     protonation_source: str = "not_assessed"
     protonation_policy: str = "not_assessed"
     protonation_ph_values: tuple[float, ...] = ()
+    protonation_target_ph: float | None = None
     protonation_claim_boundary: str = ""
     tautomer_status: str = "not_assessed"
     tautomer_source: str = "not_assessed"
@@ -94,6 +96,7 @@ class LigandEnumeratedState:
     protonation_source: str = "not_assessed"
     protonation_policy: str = "not_assessed"
     protonation_ph_values: tuple[float, ...] = ()
+    protonation_target_ph: float | None = None
     protonation_claim_boundary: str = ""
     tautomer_status: str = "not_assessed"
     tautomer_source: str = "not_assessed"
@@ -233,6 +236,90 @@ def _mol_to_isomeric_smiles(mol: Any) -> str:
     return Chem.MolToSmiles(mol, isomericSmiles=True)
 
 
+def _single_atom_charge_projection_smiles(
+    mol: Any,
+    atom_idx: int,
+    *,
+    formal_charge: int,
+    hydrogen_delta: int,
+) -> str:
+    if Chem is None or mol is None:
+        return ""
+    try:
+        candidate = Chem.RWMol(mol)
+        atom = candidate.GetAtomWithIdx(int(atom_idx))
+        atom.SetFormalCharge(int(formal_charge))
+        if hydrogen_delta:
+            atom.SetNumExplicitHs(max(0, int(atom.GetTotalNumHs()) + int(hydrogen_delta)))
+            atom.SetNoImplicit(True)
+        projected = candidate.GetMol()
+        Chem.SanitizeMol(projected)
+    except Exception:
+        return ""
+    return _mol_to_isomeric_smiles(projected)
+
+
+def _protonation_projection_smiles(mol: Any, *, max_states: int) -> list[tuple[str, str, str, float]]:
+    if Chem is None or mol is None:
+        return []
+    rules: tuple[tuple[str, str, int, int, float, str], ...] = (
+        (
+            "basic_amine_protonated",
+            "[NX3;H2,H1,H0;!$([N+]);!$(NC=O);!$(N=*)]",
+            1,
+            1,
+            5.0,
+            "amine_site_protonated",
+        ),
+        (
+            "aromatic_n_protonated",
+            "[nX2;r5,r6;!$([nH])]",
+            1,
+            1,
+            5.0,
+            "aromatic_heteroatom_protonated",
+        ),
+        (
+            "carboxylate_deprotonated",
+            "C(=O)[OX2H1]",
+            -1,
+            -1,
+            7.4,
+            "acidic_site_deprotonated",
+        ),
+        (
+            "phenol_deprotonated",
+            "[OX2H1][c]",
+            -1,
+            -1,
+            9.0,
+            "weak_acid_site_deprotonated",
+        ),
+    )
+    candidates: list[tuple[str, str, str, float]] = []
+    seen: set[str] = set()
+    for kind, smarts, charge, h_delta, target_ph, source_suffix in rules:
+        query = Chem.MolFromSmarts(smarts)
+        if query is None:
+            continue
+        for match in mol.GetSubstructMatches(query):
+            atom_idx = int(match[-1] if kind == "carboxylate_deprotonated" else match[0])
+            smiles = _single_atom_charge_projection_smiles(
+                mol,
+                atom_idx,
+                formal_charge=charge,
+                hydrogen_delta=h_delta,
+            )
+            if not smiles or smiles in seen:
+                continue
+            seen.add(smiles)
+            source = f"{PROTONATION_SOURCE}:{source_suffix}:ph_{str(target_ph).replace('.', '_')}"
+            candidates.append((f"protomer_ph_{str(target_ph).replace('.', '_')}_{kind}", source, smiles, target_ph))
+            if len(candidates) >= int(max(1, max_states)):
+                return candidates
+    return candidates
+
+
 def _charge_normalized_smiles(mol: Any) -> tuple[str, str]:
     if Chem is None or rdMolStandardize is None or mol is None:
         return "", "not_assessed"
@@ -312,7 +399,7 @@ def ligand_chemistry_state_from_smiles(smiles: str) -> LigandChemistryState:
         protonation_status="charged_state_parsed" if charged_atom_count else "neutral_state_parsed",
         protonation_source=PROTONATION_SOURCE,
         protonation_policy=PROTONATION_POLICY,
-        protonation_ph_values=(7.4,),
+        protonation_ph_values=PROTONATION_PH_VALUES,
         protonation_claim_boundary=PROTONATION_CLAIM_BOUNDARY,
         tautomer_status=tautomer_status,
         tautomer_source=TAUTOMER_SOURCE,
@@ -353,6 +440,7 @@ def enumerate_ligand_states_from_smiles(smiles: str, *, max_states: int = 4) -> 
                 protonation_source=chemistry.protonation_source,
                 protonation_policy=chemistry.protonation_policy,
                 protonation_ph_values=chemistry.protonation_ph_values,
+                protonation_target_ph=None,
                 protonation_claim_boundary=chemistry.protonation_claim_boundary,
                 tautomer_status=chemistry.tautomer_status,
                 tautomer_source=chemistry.tautomer_source,
@@ -374,6 +462,12 @@ def enumerate_ligand_states_from_smiles(smiles: str, *, max_states: int = 4) -> 
     ]
     if chemistry.salt_parent_smiles and chemistry.salt_parent_smiles != chemistry.canonical_smiles:
         raw_candidates.append(("salt_parent", SALT_SOURCE, chemistry.salt_parent_smiles))
+    raw_protonation_candidates = _protonation_projection_smiles(mol, max_states=limit)
+    protonation_target_by_smiles: dict[str, float] = {}
+    for state_kind, source, protomer_smiles, target_ph in raw_protonation_candidates:
+        if protomer_smiles != chemistry.canonical_smiles:
+            raw_candidates.append((state_kind, source, protomer_smiles))
+            protonation_target_by_smiles[protomer_smiles] = float(target_ph)
     if chemistry.canonical_tautomer_smiles and chemistry.canonical_tautomer_smiles != chemistry.canonical_smiles:
         raw_candidates.append(("canonical_tautomer", TAUTOMER_SOURCE, chemistry.canonical_tautomer_smiles))
     for idx, tautomer_smiles in enumerate(_tautomer_smiles(mol, max_states=limit), start=1):
@@ -400,7 +494,13 @@ def enumerate_ligand_states_from_smiles(smiles: str, *, max_states: int = 4) -> 
             projection_blockers.append("tautomer_enumeration_limited")
         elif state_kind == "charge_normalized":
             projection_blockers.append("charge_projection_not_product_safe")
-            projection_blockers.append("protonation_enumeration_limited_no_pka")
+            projection_blockers.append("protonation_projection_not_product_safe")
+            projection_blockers.append("protonation_enumeration_limited_no_pka_calibration")
+        elif state_kind.startswith("protomer_ph_"):
+            projection_blockers.append("protonation_projection_not_product_safe")
+            projection_blockers.append("protonation_enumeration_limited_no_pka_calibration")
+            projection_blockers.append("ph_range_protomer_heuristic_not_product_safe")
+        protonation_target_ph = protonation_target_by_smiles.get(candidate_smiles)
         states.append(
             LigandEnumeratedState(
                 state_id=f"ligand_state_{len(states):02d}_{state_kind}",
@@ -417,6 +517,7 @@ def enumerate_ligand_states_from_smiles(smiles: str, *, max_states: int = 4) -> 
                 ),
                 protonation_policy=candidate_chemistry.protonation_policy,
                 protonation_ph_values=candidate_chemistry.protonation_ph_values,
+                protonation_target_ph=protonation_target_ph,
                 protonation_claim_boundary=candidate_chemistry.protonation_claim_boundary,
                 tautomer_status=candidate_chemistry.tautomer_status,
                 tautomer_source=candidate_chemistry.tautomer_source,

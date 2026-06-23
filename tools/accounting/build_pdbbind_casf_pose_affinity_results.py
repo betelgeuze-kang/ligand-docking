@@ -6,8 +6,12 @@ import csv
 import json
 import math
 import pickle
+import time
+import tracemalloc
 from pathlib import Path
 from typing import Any
+
+from rdkit import Chem
 
 from betelgeuze_engine.benchmark.docking_gold import DockingGoldRow, evaluate_docking_gold_slice
 
@@ -20,7 +24,7 @@ def _resolve(path_like: str | Path) -> Path:
 
 
 def _text(value: Any) -> str:
-    return str(value or "").strip()
+    return "" if value is None else str(value).strip()
 
 
 def _float_or_none(value: Any) -> float | None:
@@ -71,6 +75,10 @@ def _coords(mol: Any) -> list[tuple[float, float, float]]:
     return coords
 
 
+def _heavy_atom_elements(mol: Any) -> list[str]:
+    return [str(atom.GetSymbol()) for atom in mol.GetAtoms() if atom.GetAtomicNum() != 1]
+
+
 def _direct_rmsd(a: list[tuple[float, float, float]], b: list[tuple[float, float, float]]) -> float | None:
     if not a or len(a) != len(b):
         return None
@@ -78,6 +86,51 @@ def _direct_rmsd(a: list[tuple[float, float, float]], b: list[tuple[float, float
     for (ax, ay, az), (bx, by, bz) in zip(a, b):
         total += (ax - bx) ** 2 + (ay - by) ** 2 + (az - bz) ** 2
     return math.sqrt(total / len(a))
+
+
+def _symmetry_aware_heavy_atom_rmsd(ref_mol: Any, pose_mol: Any) -> tuple[float | None, dict[str, Any]]:
+    ref_coords = _coords(ref_mol)
+    pose_coords = _coords(pose_mol)
+    ref_elements = _heavy_atom_elements(ref_mol)
+    pose_elements = _heavy_atom_elements(pose_mol)
+    diagnostics: dict[str, Any] = {
+        "method": "rdkit_self_substructure_automorphism_no_ligand_alignment",
+        "reference_heavy_atom_count": len(ref_coords),
+        "pose_heavy_atom_count": len(pose_coords),
+        "symmetry_mapping_count": 0,
+        "atom_identity_checked": True,
+        "ligand_alignment_applied": False,
+    }
+    if not ref_coords or len(ref_coords) != len(pose_coords):
+        diagnostics["status"] = "heavy_atom_count_mismatch"
+        return None, diagnostics
+    if ref_elements != pose_elements:
+        diagnostics["status"] = "heavy_atom_element_order_mismatch"
+        return None, diagnostics
+    try:
+        ref_heavy = Chem.RemoveHs(ref_mol)
+        mappings = ref_heavy.GetSubstructMatches(ref_heavy, uniquify=False, maxMatches=512)
+    except Exception:
+        mappings = ()
+    candidates = [tuple(range(len(ref_coords)))]
+    for mapping in mappings:
+        if len(mapping) == len(ref_coords):
+            candidates.append(tuple(int(idx) for idx in mapping))
+    seen: set[tuple[int, ...]] = set()
+    best: float | None = None
+    for mapping in candidates:
+        if mapping in seen:
+            continue
+        seen.add(mapping)
+        if any(ref_elements[int(ref_idx)] != pose_elements[pose_idx] for pose_idx, ref_idx in enumerate(mapping)):
+            continue
+        mapped_ref = [ref_coords[int(ref_idx)] for ref_idx in mapping]
+        value = _direct_rmsd(mapped_ref, pose_coords)
+        if value is not None and (best is None or value < best):
+            best = value
+    diagnostics["symmetry_mapping_count"] = len(seen)
+    diagnostics["status"] = "symmetry_aware_rmsd_computed" if best is not None else "symmetry_mapping_failed"
+    return best, diagnostics
 
 
 def _load_ligand(path: Path) -> Any:
@@ -111,6 +164,21 @@ def _pose_rank(path: Path) -> int:
         return 10**9
 
 
+def _chemistry_failures_from_metadata(metadata: dict[str, Any]) -> tuple[tuple[str, ...], bool]:
+    fields = {
+        "chirality_failure": "chirality_failure",
+        "tautomer_failure": "tautomer_failure",
+        "protonation_failure": "protonation_failure",
+    }
+    evidence_present = all(_text(metadata.get(field)) for field in fields)
+    failures = [
+        token
+        for field, token in fields.items()
+        if _bool_or_none(metadata.get(field)) is True
+    ]
+    return tuple(failures), evidence_present
+
+
 def build_results(args: argparse.Namespace) -> dict[str, Any]:
     dataset = _resolve(args.dataset_artifact)
     data_dir = dataset / "data_5_sdf"
@@ -129,19 +197,29 @@ def build_results(args: argparse.Namespace) -> dict[str, Any]:
         rmsd: float | None = None
         ref_atom_count = 0
         pose_atom_count = 0
+        rmsd_diagnostics: dict[str, Any] = {}
+        row_start = time.perf_counter()
+        tracemalloc.start()
         if reference is None:
             blockers.append("reference_ligand_missing")
         else:
             try:
-                ref_coords = _coords(_load_ligand(reference))
-                pose_coords = _coords(_load_ligand(pose_path))
-                ref_atom_count = len(ref_coords)
-                pose_atom_count = len(pose_coords)
-                rmsd = _direct_rmsd(ref_coords, pose_coords)
+                ref_mol = _load_ligand(reference)
+                pose_mol = _load_ligand(pose_path)
+                rmsd, rmsd_diagnostics = _symmetry_aware_heavy_atom_rmsd(ref_mol, pose_mol)
+                ref_atom_count = int(rmsd_diagnostics.get("reference_heavy_atom_count") or 0)
+                pose_atom_count = int(rmsd_diagnostics.get("pose_heavy_atom_count") or 0)
                 if rmsd is None:
-                    blockers.append("heavy_atom_count_mismatch")
+                    blockers.append(str(rmsd_diagnostics.get("status") or "pose_rmsd_not_computable"))
             except Exception as exc:  # noqa: BLE001 - artifact parser should report concrete row-level failure.
                 blockers.append(f"rdkit_pickle_parse_failed:{type(exc).__name__}")
+        _current_bytes, peak_bytes = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        runtime_ms = max((time.perf_counter() - row_start) * 1000.0, 0.001)
+        peak_memory_mb = max(float(peak_bytes) / (1024.0 * 1024.0), 0.001)
+        chemistry_failures, chemistry_evidence_present = _chemistry_failures_from_metadata(metadata)
+        if not chemistry_evidence_present:
+            blockers.append("chemistry_failure_evidence_missing")
         success = rmsd is not None and rmsd <= threshold and not blockers
         rows.append(
             {
@@ -155,6 +233,8 @@ def build_results(args: argparse.Namespace) -> dict[str, Any]:
                 "pose_artifact": str(pose_path),
                 "reference_heavy_atom_count": ref_atom_count,
                 "pose_heavy_atom_count": pose_atom_count,
+                "pose_rmsd_method": str(rmsd_diagnostics.get("method", "")),
+                "pose_rmsd_diagnostics": json.dumps(rmsd_diagnostics, sort_keys=True),
                 "blocker_count": len(blockers),
                 "blockers": ";".join(blockers),
                 "active_label": _text(metadata.get("active_label")),
@@ -162,8 +242,16 @@ def build_results(args: argparse.Namespace) -> dict[str, Any]:
                 "score": _text(metadata.get("score")),
                 "baseline_score": _text(metadata.get("baseline_score")),
                 "split_id": _text(metadata.get("split_id") or "heldout"),
-                "runtime_ms": _text(metadata.get("runtime_ms")),
-                "peak_memory_mb": _text(metadata.get("peak_memory_mb")),
+                "abstained": _text(metadata.get("abstained")),
+                "abstention_reasons": _text(metadata.get("abstention_reasons")),
+                "chirality_failure": _text(metadata.get("chirality_failure")),
+                "tautomer_failure": _text(metadata.get("tautomer_failure")),
+                "protonation_failure": _text(metadata.get("protonation_failure")),
+                "chemistry_evidence_present": int(chemistry_evidence_present),
+                "runtime_ms": f"{runtime_ms:.6f}",
+                "peak_memory_mb": f"{peak_memory_mb:.6f}",
+                "runtime_metric_source": "builder_wall_clock_perf_counter",
+                "peak_memory_metric_source": "builder_tracemalloc_peak",
             }
         )
 
@@ -191,8 +279,19 @@ def build_results(args: argparse.Namespace) -> dict[str, Any]:
                 affinity_label=_float_or_none(row.get("affinity_label")),
                 active_label=_bool_or_none(row.get("active_label")),
                 split_id=_text(row.get("split_id") or "heldout"),
+                abstained=bool(_bool_or_none(row.get("abstained")) is True),
                 chemistry_failures=tuple(
-                    blocker for blocker in _text(row.get("blockers")).split(";") if blocker
+                    failure
+                    for failure in [
+                        "chirality_failure" if _bool_or_none(row.get("chirality_failure")) is True else "",
+                        "tautomer_failure" if _bool_or_none(row.get("tautomer_failure")) is True else "",
+                        "protonation_failure" if _bool_or_none(row.get("protonation_failure")) is True else "",
+                    ]
+                    if failure
+                ),
+                chemistry_evidence_present=bool(int(row.get("chemistry_evidence_present") or 0)),
+                abstention_reasons=tuple(
+                    reason for reason in _text(row.get("abstention_reasons")).split(";") if reason
                 ),
                 runtime_ms=_float_or_none(row.get("runtime_ms")),
                 peak_memory_mb=_float_or_none(row.get("peak_memory_mb")),
@@ -231,6 +330,8 @@ def build_results(args: argparse.Namespace) -> dict[str, Any]:
         "pose_artifact",
         "reference_heavy_atom_count",
         "pose_heavy_atom_count",
+        "pose_rmsd_method",
+        "pose_rmsd_diagnostics",
         "blocker_count",
         "blockers",
         "active_label",
@@ -238,8 +339,16 @@ def build_results(args: argparse.Namespace) -> dict[str, Any]:
         "score",
         "baseline_score",
         "split_id",
+        "abstained",
+        "abstention_reasons",
+        "chirality_failure",
+        "tautomer_failure",
+        "protonation_failure",
+        "chemistry_evidence_present",
         "runtime_ms",
         "peak_memory_mb",
+        "runtime_metric_source",
+        "peak_memory_metric_source",
     ]
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     with out_csv.open("w", encoding="utf-8", newline="") as handle:
@@ -277,6 +386,7 @@ def build_results(args: argparse.Namespace) -> dict[str, Any]:
         "chirality_failure_rate": gold_metrics.chirality_failure_rate,
         "tautomer_failure_rate": gold_metrics.tautomer_failure_rate,
         "protonation_failure_rate": gold_metrics.protonation_failure_rate,
+        "chemistry_evidence_coverage": gold_metrics.chemistry_evidence_coverage,
         "abstention_precision": gold_metrics.abstention_precision,
         "mean_runtime_ms": gold_metrics.mean_runtime_ms,
         "peak_memory_mb": gold_metrics.peak_memory_mb,
@@ -284,6 +394,9 @@ def build_results(args: argparse.Namespace) -> dict[str, Any]:
         "gold_metric_status": gold_metrics.status,
         "gold_metric_blockers": list(gold_metrics.blockers),
         "gold_metadata_csv": str(_resolve(args.gold_metadata_csv)) if _text(getattr(args, "gold_metadata_csv", "")) else "",
+        "pose_rmsd_method": "rdkit_self_substructure_automorphism_no_ligand_alignment",
+        "runtime_metric_source": "builder_wall_clock_perf_counter",
+        "peak_memory_metric_source": "builder_tracemalloc_peak",
         "complex_count": len(by_complex),
         "complex_pose_success_count": complex_success_count,
         "complex_pose_success_rate": complex_success_rate,
@@ -297,7 +410,8 @@ def build_results(args: argparse.Namespace) -> dict[str, Any]:
         "prediction_generation_enabled": False,
         "claim_boundary": (
             "PDBbind/CASF pose-affinity adapter only; it reads local RDKit-pickled CASF ligand/reference pose pairs "
-            "and computes direct heavy-atom RMSD by preserved atom order. The primary pose_success_rate is aggregated "
+            "and computes symmetry-aware heavy-atom RMSD in the receptor frame without ligand superposition. The "
+            "primary pose_success_rate is aggregated "
             "per complex by best available pose, while pose_row_success_rate remains reported as a diagnostic. It does "
             "not run docking, train affinity models, use external SaaS, download data, or claim official CASF "
             "scoring/ranking performance."

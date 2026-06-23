@@ -18,6 +18,7 @@ class DockingGoldRow:
     split_id: str = "heldout"
     abstained: bool = False
     chemistry_failures: tuple[str, ...] = ()
+    chemistry_evidence_present: bool = False
     abstention_reasons: tuple[str, ...] = ()
     runtime_ms: float | None = None
     peak_memory_mb: float | None = None
@@ -53,6 +54,7 @@ class DockingGoldMetrics:
     chirality_failure_rate: float
     tautomer_failure_rate: float
     protonation_failure_rate: float
+    chemistry_evidence_coverage: float
     abstention_precision: float | None
     mean_runtime_ms: float | None
     peak_memory_mb: float | None
@@ -232,17 +234,31 @@ def evaluate_docking_gold_slice(
         and _finite_float(row.score) is not None
     ]
     heldout_complex_count = len({str(row.complex_id) for row in heldout_rows})
+    heldout_paired_rows = [
+        row
+        for row in heldout_rows
+        if _finite_float(row.score) is not None and _finite_float(row.baseline_score) is not None
+    ]
+    heldout_refine_pairs = [
+        (float(row.affinity_label), float(row.score))
+        for row in heldout_paired_rows
+    ]
+    heldout_refine_score_for_spearman = [-score for _label, score in heldout_refine_pairs]
+    heldout_refine_labels_for_spearman = [affinity for affinity, _score in heldout_refine_pairs]
+    heldout_refine_ranking_spearman = _spearman(
+        heldout_refine_labels_for_spearman,
+        heldout_refine_score_for_spearman,
+    )
     baseline_pairs = [
         (float(row.affinity_label), float(row.baseline_score))
-        for row in heldout_rows
-        if _finite_float(row.baseline_score) is not None
+        for row in heldout_paired_rows
     ]
     baseline_score_for_spearman = [-score for _label, score in baseline_pairs]
     baseline_labels_for_spearman = [affinity for affinity, _score in baseline_pairs]
     baseline_ranking_spearman = _spearman(baseline_labels_for_spearman, baseline_score_for_spearman)
     refine_ranking_spearman_delta = (
-        float(ranking_spearman - baseline_ranking_spearman)
-        if ranking_spearman is not None and baseline_ranking_spearman is not None
+        float(heldout_refine_ranking_spearman - baseline_ranking_spearman)
+        if heldout_refine_ranking_spearman is not None and baseline_ranking_spearman is not None
         else None
     )
     refine_improvement_observed = bool(
@@ -250,8 +266,12 @@ def evaluate_docking_gold_slice(
     )
     if not heldout_rows:
         blockers.append("heldout_labels_missing")
+    elif len(heldout_paired_rows) != len(heldout_rows):
+        blockers.append("heldout_baseline_score_incomplete")
     if baseline_ranking_spearman is None:
         blockers.append("baseline_ranking_spearman_not_computable")
+    if heldout_refine_ranking_spearman is None:
+        blockers.append("heldout_refine_ranking_spearman_not_computable")
     if refine_ranking_spearman_delta is None:
         blockers.append("refine_ranking_spearman_delta_not_computable")
     elif not refine_improvement_observed:
@@ -277,6 +297,12 @@ def evaluate_docking_gold_slice(
     ]
     if abstained and len(abstention_evidence_rows) != len(abstained):
         blockers.append("abstention_precision_evidence_incomplete")
+    if not abstained:
+        blockers.append("abstention_precision_not_computable")
+    chemistry_evidence_rows = [row for row in rows if row.chemistry_evidence_present]
+    chemistry_evidence_coverage = len(chemistry_evidence_rows) / len(rows) if rows else 0.0
+    if len(chemistry_evidence_rows) != len(rows):
+        blockers.append("chemistry_failure_evidence_incomplete")
     runtime_values = [float(row.runtime_ms) for row in rows if _finite_float(row.runtime_ms) is not None]
     memory_values = [float(row.peak_memory_mb) for row in rows if _finite_float(row.peak_memory_mb) is not None]
     if len(runtime_values) != len(rows):
@@ -309,6 +335,7 @@ def evaluate_docking_gold_slice(
         chirality_failure_rate=_failure_rate(rows, "chirality"),
         tautomer_failure_rate=_failure_rate(rows, "tautomer"),
         protonation_failure_rate=_failure_rate(rows, "protonation"),
+        chemistry_evidence_coverage=chemistry_evidence_coverage,
         abstention_precision=(len(failed_abstentions) / len(abstention_evidence_rows) if abstention_evidence_rows else None),
         mean_runtime_ms=(sum(runtime_values) / len(runtime_values) if runtime_values else None),
         peak_memory_mb=(max(memory_values) if memory_values else None),

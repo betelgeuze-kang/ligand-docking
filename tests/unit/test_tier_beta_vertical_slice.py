@@ -113,7 +113,8 @@ def test_service_pdb_smiles_success_signed_manifest_and_claim_limits() -> None:
     ligand_state = result.pose_scores[0]["ligand_state"]
     assert ligand_state["state_id"].startswith("ligand_state_")
     assert ligand_state["scoring_status"] == "pose_conformers_generated"
-    assert ligand_state["protonation_source"].endswith("no_pka_enumeration")
+    assert ligand_state["protonation_source"] == "rdkit_formal_charge_input_plus_restricted_ph_range_heuristic"
+    assert ligand_state["protonation_ph_values"] == (5.0, 7.4, 9.0)
     pose_search = result.pose_scores[0]["pose_search"]
     assert pose_search["schema_version"] == "tier_beta_pose_search_v1"
     assert pose_search["search_strategy"] == "etkdg_conformer_so3_translation_grid_coarse_score_local_min_beam_v1"
@@ -132,7 +133,11 @@ def test_service_pdb_smiles_success_signed_manifest_and_claim_limits() -> None:
     assert pose_search["coarse_score_beam_status"] == "pass"
     assert pose_search["coarse_score"] <= pose_search["coarse_score_before_local"] + 1e-8
     assert len(pose_search["translation_vector_a"]) == 3
-    assert pose_search["local_minimization_status"] == "finite_difference_rigid_translation_score_minimized"
+    assert pose_search["local_minimization_status"].startswith("finite_difference_rigid_body_gradient_")
+    assert pose_search["local_minimization_method"] == "finite_difference_gradient_descent_translation_rotation"
+    assert pose_search["local_minimization_degrees_of_freedom"] == ["translation", "rotation"]
+    assert pose_search["local_minimization"]["gradient_parameter_count"] == 6
+    assert len(pose_search["local_minimization"]["rotation_delta_rad"]) == 3
     assert pose_search["local_minimization"]["final_coarse_score"] == pose_search["coarse_score"]
     assert pose_search["symmetry_rmsd_clustering_status"] == "symmetry_aware_rmsd_clustered"
     assert pose_search["symmetry_mapping_count"] >= 1
@@ -154,7 +159,7 @@ def test_service_pdb_smiles_success_signed_manifest_and_claim_limits() -> None:
     assert scoring_stage["diagnostics"]["pose_search"]["chemical_anchor_mapping"]["two_bead_anchor_atom_indices"]
     pose_stage = next(stage for stage in result.stage_records if stage["stage_id"] == "pose_ensemble")
     state_ensemble = pose_stage["diagnostics"]["ligand_state_ensemble"]
-    assert state_ensemble["status"] == "restricted_rdkit_standardized_state_ensemble_no_pka"
+    assert state_ensemble["status"] == "restricted_rdkit_standardized_state_ensemble_ph_range_no_pka_calibration"
     assert state_ensemble["scored_state_count"] >= 1
     refine_stage = next(stage for stage in result.stage_records if stage["stage_id"] == "top_k_refine")
     assert refine_stage["diagnostics"]["rmsd_clustering"]["status"] == "symmetry_aware_rmsd_clustered"

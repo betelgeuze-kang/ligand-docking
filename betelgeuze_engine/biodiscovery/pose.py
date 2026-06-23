@@ -398,6 +398,145 @@ def coarse_pose_score(
     }
 
 
+def _rotation_matrix_from_vector(rotation_rad: np.ndarray) -> np.ndarray:
+    vector = np.asarray(rotation_rad, dtype=np.float64).reshape(3)
+    theta = float(np.linalg.norm(vector))
+    if theta < 1e-12:
+        return np.eye(3, dtype=np.float64)
+    axis = vector / theta
+    x, y, z = axis
+    c = math.cos(theta)
+    s = math.sin(theta)
+    t = 1.0 - c
+    return np.array(
+        [
+            [c + x * x * t, x * y * t - z * s, x * z * t + y * s],
+            [y * x * t + z * s, c + y * y * t, y * z * t - x * s],
+            [z * x * t - y * s, z * y * t + x * s, c + z * z * t],
+        ],
+        dtype=np.float64,
+    )
+
+
+def _apply_rigid_body_delta(
+    ligand_coords: np.ndarray,
+    translation_a: np.ndarray,
+    rotation_rad: np.ndarray,
+) -> np.ndarray:
+    coords = np.asarray(ligand_coords, dtype=np.float64)
+    center = coords.mean(axis=0)
+    rotation = _rotation_matrix_from_vector(rotation_rad)
+    shifted = coords - center.reshape(1, 3)
+    rotated = shifted @ rotation.T
+    return (rotated + center.reshape(1, 3) + np.asarray(translation_a, dtype=np.float64).reshape(1, 3)).astype(
+        np.float32
+    )
+
+
+def local_rigid_body_minimize_pose(
+    protein_beads: np.ndarray,
+    ligand_coords: np.ndarray,
+    *,
+    max_steps: int = 6,
+    initial_step_a: float = 0.25,
+    initial_rotation_step_rad: float = 0.08,
+    clash_cutoff_a: float = 1.2,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    coords = np.asarray(ligand_coords, dtype=np.float32).copy()
+    current = coarse_pose_score(protein_beads, coords, clash_cutoff_a=clash_cutoff_a)
+    initial_score = float(current["score"])
+    total_delta = np.zeros(3, dtype=np.float32)
+    total_rotation = np.zeros(3, dtype=np.float32)
+    translation_probe_a = max(float(initial_step_a) * 0.25, 1e-3)
+    rotation_probe_rad = max(float(initial_rotation_step_rad) * 0.25, 1e-4)
+    parameter_probe = np.asarray(
+        [
+            translation_probe_a,
+            translation_probe_a,
+            translation_probe_a,
+            rotation_probe_rad,
+            rotation_probe_rad,
+            rotation_probe_rad,
+        ],
+        dtype=np.float64,
+    )
+    parameter_step = np.asarray(
+        [
+            max(float(initial_step_a), 1e-6),
+            max(float(initial_step_a), 1e-6),
+            max(float(initial_step_a), 1e-6),
+            max(float(initial_rotation_step_rad), 1e-6),
+            max(float(initial_rotation_step_rad), 1e-6),
+            max(float(initial_rotation_step_rad), 1e-6),
+        ],
+        dtype=np.float64,
+    )
+    steps_taken = 0
+    line_search_backtracks = 0
+    initial_gradient_norm = 0.0
+    final_gradient_norm = 0.0
+    for _idx in range(int(max(0, max_steps))):
+        gradient = np.zeros(6, dtype=np.float64)
+        for axis in range(6):
+            plus = np.zeros(6, dtype=np.float64)
+            minus = np.zeros(6, dtype=np.float64)
+            plus[axis] = parameter_probe[axis]
+            minus[axis] = -parameter_probe[axis]
+            plus_coords = _apply_rigid_body_delta(coords, plus[:3], plus[3:])
+            minus_coords = _apply_rigid_body_delta(coords, minus[:3], minus[3:])
+            plus_score = coarse_pose_score(protein_beads, plus_coords, clash_cutoff_a=clash_cutoff_a)
+            minus_score = coarse_pose_score(protein_beads, minus_coords, clash_cutoff_a=clash_cutoff_a)
+            derivative = (float(plus_score["score"]) - float(minus_score["score"])) / (2.0 * parameter_probe[axis])
+            gradient[axis] = derivative * parameter_step[axis]
+        gradient_norm = float(np.linalg.norm(gradient))
+        if steps_taken == 0:
+            initial_gradient_norm = gradient_norm
+        final_gradient_norm = gradient_norm
+        if not math.isfinite(gradient_norm) or gradient_norm < 1e-10:
+            break
+
+        direction = -gradient / gradient_norm
+        accepted = False
+        line_scale = 1.0
+        for _backtrack_idx in range(8):
+            parameter_delta = direction * parameter_step * line_scale
+            candidate_coords = _apply_rigid_body_delta(coords, parameter_delta[:3], parameter_delta[3:])
+            candidate_score = coarse_pose_score(protein_beads, candidate_coords, clash_cutoff_a=clash_cutoff_a)
+            if float(candidate_score["score"]) + 1e-8 < float(current["score"]):
+                coords = candidate_coords.astype(np.float32)
+                current = candidate_score
+                total_delta += parameter_delta[:3].astype(np.float32)
+                total_rotation += parameter_delta[3:].astype(np.float32)
+                steps_taken += 1
+                accepted = True
+                break
+            line_scale *= 0.5
+            line_search_backtracks += 1
+        if not accepted:
+            break
+    final_score = float(current["score"])
+    improved = bool(final_score + 1e-8 < initial_score)
+    return coords.astype(np.float32), {
+        "status": (
+            "finite_difference_rigid_body_gradient_minimized"
+            if improved
+            else "finite_difference_rigid_body_gradient_no_improvement"
+        ),
+        "method": "finite_difference_gradient_descent_translation_rotation",
+        "degrees_of_freedom": ["translation", "rotation"],
+        "gradient_parameter_count": 6,
+        "steps_taken": int(steps_taken),
+        "line_search_backtracks": int(line_search_backtracks),
+        "initial_coarse_score": initial_score,
+        "final_coarse_score": final_score,
+        "improved": improved,
+        "translation_delta_a": [float(v) for v in total_delta.tolist()],
+        "rotation_delta_rad": [float(v) for v in total_rotation.tolist()],
+        "initial_gradient_norm": float(initial_gradient_norm),
+        "final_gradient_norm": float(final_gradient_norm),
+    }
+
+
 def local_translation_minimize_pose(
     protein_beads: np.ndarray,
     ligand_coords: np.ndarray,
@@ -601,7 +740,7 @@ def pose_search_candidates(
     coarse_beam = raw[:coarse_beam_size]
     minimized: list[dict[str, Any]] = []
     for row in coarse_beam:
-        coords, minimization = local_translation_minimize_pose(
+        coords, minimization = local_rigid_body_minimize_pose(
             protein_beads,
             np.asarray(row["coords"], dtype=np.float32),
             clash_cutoff_a=clash_cutoff_a,
@@ -630,6 +769,12 @@ def pose_search_candidates(
     else:
         prefilter_status = "pass"
     minimized_count = int(sum(1 for row in minimized if row.get("local_minimization", {}).get("improved") is True))
+    if minimized_count > 0:
+        local_minimization_status = "finite_difference_rigid_body_gradient_minimized"
+    elif minimized:
+        local_minimization_status = "finite_difference_rigid_body_gradient_no_improvement"
+    else:
+        local_minimization_status = "finite_difference_rigid_body_gradient_not_attempted"
     retained_conformer_indices = sorted({int(row["conformer_index"]) for row in retained})
     diagnostics = {
         "search_strategy": "etkdg_conformer_so3_translation_grid_coarse_score_local_min_beam_v1",
@@ -654,7 +799,9 @@ def pose_search_candidates(
         "clash_prefilter_status": prefilter_status,
         "clash_prefiltered_candidate_count": int(sum(1 for row in raw if int(row["clash_count"]) == 0)),
         "coarse_score_beam_status": "pass",
-        "local_minimization_status": "finite_difference_rigid_translation_score_minimized",
+        "local_minimization_status": local_minimization_status,
+        "local_minimization_method": "finite_difference_gradient_descent_translation_rotation",
+        "local_minimization_degrees_of_freedom": ["translation", "rotation"],
         "local_minimization_candidate_count": int(len(minimized)),
         "local_minimization_improved_count": minimized_count,
         "symmetry_rmsd_clustering_status": "not_run_restricted_vertical_slice",

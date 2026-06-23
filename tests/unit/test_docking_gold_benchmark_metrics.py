@@ -16,6 +16,7 @@ def test_docking_gold_metrics_compute_pose_ranking_enrichment_and_resource_field
             baseline_score=-3.0,
             affinity_label=9.0,
             active_label=True,
+            chemistry_evidence_present=True,
             runtime_ms=10,
             peak_memory_mb=100,
         ),
@@ -28,6 +29,7 @@ def test_docking_gold_metrics_compute_pose_ranking_enrichment_and_resource_field
             baseline_score=-5.0,
             affinity_label=1.0,
             active_label=False,
+            chemistry_evidence_present=True,
             runtime_ms=12,
             peak_memory_mb=110,
         ),
@@ -40,6 +42,7 @@ def test_docking_gold_metrics_compute_pose_ranking_enrichment_and_resource_field
             baseline_score=-4.0,
             affinity_label=8.0,
             active_label=True,
+            chemistry_evidence_present=True,
             runtime_ms=20,
             peak_memory_mb=120,
         ),
@@ -52,6 +55,7 @@ def test_docking_gold_metrics_compute_pose_ranking_enrichment_and_resource_field
             baseline_score=-2.0,
             affinity_label=7.0,
             active_label=True,
+            chemistry_evidence_present=True,
             runtime_ms=22,
             peak_memory_mb=130,
         ),
@@ -66,6 +70,7 @@ def test_docking_gold_metrics_compute_pose_ranking_enrichment_and_resource_field
             active_label=False,
             abstained=True,
             chemistry_failures=("unassigned_ligand_chirality", "protonation_state_not_enumerated"),
+            chemistry_evidence_present=True,
             runtime_ms=24,
             peak_memory_mb=140,
         ),
@@ -96,6 +101,7 @@ def test_docking_gold_metrics_compute_pose_ranking_enrichment_and_resource_field
     assert payload["chirality_failure_rate"] == 0.2
     assert payload["tautomer_failure_rate"] == 0.0
     assert payload["protonation_failure_rate"] == 0.2
+    assert payload["chemistry_evidence_coverage"] == 1.0
     assert payload["abstention_precision"] == 1.0
     assert payload["mean_runtime_ms"] == pytest.approx(17.6)
     assert payload["peak_memory_mb"] == 140
@@ -137,6 +143,8 @@ def test_docking_gold_metrics_block_without_decoy_or_refine_improvement() -> Non
             baseline_score=-3.0,
             affinity_label=9.0,
             active_label=True,
+            abstained=True,
+            chemistry_evidence_present=True,
             runtime_ms=10,
             peak_memory_mb=100,
         ),
@@ -149,6 +157,7 @@ def test_docking_gold_metrics_block_without_decoy_or_refine_improvement() -> Non
             baseline_score=-2.0,
             affinity_label=8.0,
             active_label=True,
+            chemistry_evidence_present=True,
             runtime_ms=11,
             peak_memory_mb=101,
         ),
@@ -161,6 +170,170 @@ def test_docking_gold_metrics_block_without_decoy_or_refine_improvement() -> Non
     assert payload["baseline_ranking_spearman"] == pytest.approx(payload["ranking_spearman"])
     assert payload["refine_ranking_spearman_delta"] == pytest.approx(0.0)
     assert "decoy_rejection_not_computable" in payload["blockers"]
+    assert "heldout_refine_ranking_spearman_not_improved" in payload["blockers"]
+
+
+def test_docking_gold_metrics_block_without_abstention_or_chemistry_evidence() -> None:
+    rows = [
+        DockingGoldRow(
+            "1abc",
+            "1abc_pose1",
+            1,
+            pose_rmsd_a=1.0,
+            score=-9.0,
+            baseline_score=-1.0,
+            affinity_label=9.0,
+            active_label=True,
+            runtime_ms=10,
+            peak_memory_mb=100,
+        ),
+        DockingGoldRow(
+            "1abc",
+            "1abc_decoy1",
+            2,
+            pose_rmsd_a=4.0,
+            score=-1.0,
+            baseline_score=-9.0,
+            affinity_label=1.0,
+            active_label=False,
+            runtime_ms=11,
+            peak_memory_mb=101,
+        ),
+    ]
+
+    payload = evaluate_docking_gold_slice(rows).to_dict()
+
+    assert payload["status"] == "blocked"
+    assert payload["abstention_precision"] is None
+    assert payload["chemistry_evidence_coverage"] == 0.0
+    assert "abstention_precision_not_computable" in payload["blockers"]
+    assert "chemistry_failure_evidence_incomplete" in payload["blockers"]
+
+
+def test_docking_gold_refine_improvement_uses_heldout_rows_only() -> None:
+    rows = [
+        DockingGoldRow(
+            "heldout_a",
+            "heldout_a_pose1",
+            1,
+            pose_rmsd_a=1.0,
+            score=-1.0,
+            baseline_score=-9.0,
+            affinity_label=9.0,
+            active_label=True,
+            split_id="heldout",
+            chemistry_evidence_present=True,
+            runtime_ms=10,
+            peak_memory_mb=100,
+        ),
+        DockingGoldRow(
+            "heldout_b",
+            "heldout_b_pose1",
+            1,
+            pose_rmsd_a=1.0,
+            score=-9.0,
+            baseline_score=-1.0,
+            affinity_label=1.0,
+            active_label=False,
+            split_id="heldout",
+            abstained=True,
+            chemistry_evidence_present=True,
+            runtime_ms=10,
+            peak_memory_mb=100,
+        ),
+        DockingGoldRow(
+            "train_a",
+            "train_a_pose1",
+            1,
+            pose_rmsd_a=1.0,
+            score=-10.0,
+            baseline_score=-1.0,
+            affinity_label=10.0,
+            active_label=True,
+            split_id="train",
+            chemistry_evidence_present=True,
+            runtime_ms=10,
+            peak_memory_mb=100,
+        ),
+        DockingGoldRow(
+            "train_b",
+            "train_b_pose1",
+            1,
+            pose_rmsd_a=1.0,
+            score=-8.0,
+            baseline_score=-1.0,
+            affinity_label=8.0,
+            active_label=False,
+            split_id="train",
+            chemistry_evidence_present=True,
+            runtime_ms=10,
+            peak_memory_mb=100,
+        ),
+    ]
+
+    payload = evaluate_docking_gold_slice(rows).to_dict()
+
+    assert payload["ranking_spearman"] > 0.0
+    assert payload["baseline_ranking_spearman"] == pytest.approx(1.0)
+    assert payload["refine_ranking_spearman_delta"] == pytest.approx(-2.0)
+    assert payload["refine_improvement_observed"] is False
+    assert "heldout_refine_ranking_spearman_not_improved" in payload["blockers"]
+
+
+def test_docking_gold_refine_delta_requires_same_heldout_baseline_pairs() -> None:
+    rows = [
+        DockingGoldRow(
+            "heldout_a",
+            "heldout_a_pose1",
+            1,
+            pose_rmsd_a=1.0,
+            score=-9.0,
+            baseline_score=-9.0,
+            affinity_label=9.0,
+            active_label=True,
+            split_id="heldout",
+            chemistry_evidence_present=True,
+            runtime_ms=10,
+            peak_memory_mb=100,
+        ),
+        DockingGoldRow(
+            "heldout_b",
+            "heldout_b_pose1",
+            1,
+            pose_rmsd_a=1.0,
+            score=-8.0,
+            baseline_score=-8.0,
+            affinity_label=8.0,
+            active_label=True,
+            split_id="heldout",
+            chemistry_evidence_present=True,
+            runtime_ms=10,
+            peak_memory_mb=100,
+        ),
+        DockingGoldRow(
+            "heldout_c",
+            "heldout_c_pose1",
+            1,
+            pose_rmsd_a=1.0,
+            score=-1.0,
+            baseline_score=None,
+            affinity_label=1.0,
+            active_label=False,
+            split_id="heldout",
+            abstained=True,
+            chemistry_evidence_present=True,
+            runtime_ms=10,
+            peak_memory_mb=100,
+        ),
+    ]
+
+    payload = evaluate_docking_gold_slice(rows).to_dict()
+
+    assert payload["status"] == "blocked"
+    assert payload["ranking_spearman"] == pytest.approx(1.0)
+    assert payload["baseline_ranking_spearman"] == pytest.approx(1.0)
+    assert payload["refine_ranking_spearman_delta"] == pytest.approx(0.0)
+    assert "heldout_baseline_score_incomplete" in payload["blockers"]
     assert "heldout_refine_ranking_spearman_not_improved" in payload["blockers"]
 
 

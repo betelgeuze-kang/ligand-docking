@@ -106,6 +106,7 @@ _DEFAULT_POCKET_CUTOFF_A = 8.0
 _DEFAULT_POSE_COUNT = 32
 _DEFAULT_TOP_K = 5
 _SUPPORTED_LIGAND_ELEMENTS = {"B", "C", "N", "O", "F", "P", "S", "Cl", "Br", "I", "H", "Si"}
+_LIGAND_STATE_ENSEMBLE_STATUS = "restricted_rdkit_standardized_state_ensemble_ph_range_no_pka_calibration"
 
 @dataclass
 class TierBetaScreeningResult:
@@ -379,18 +380,28 @@ class TierBetaScreening:
         )
         if ensemble_claim_blockers:
             ligand_valid = dict(ligand_valid)
+            ensemble_projection_blockers = ["ligand_state_projection_not_product_safe"]
+            if any(
+                blocker in {"salt_parent_projection_not_product_safe", "unsupported_ligand_metal_or_counterion"}
+                for blocker in ensemble_claim_blockers
+            ):
+                ensemble_projection_blockers.append("fragment_parent_projection_not_product_safe")
             ligand_valid["blockers"] = sorted(
                 {
                     *[str(blocker) for blocker in ligand_valid.get("blockers", [])],
                     *ensemble_claim_blockers,
-                    "fragment_parent_projection_not_product_safe",
+                    *ensemble_projection_blockers,
                 }
             )
             ligand_valid["blocked"] = True
             ligand_valid["claim_safe"] = False
             ligand_valid["state_ensemble_claim_safe"] = False
             ligand_valid["state_ensemble_blockers"] = ensemble_claim_blockers
-            ligand_valid["projection_status"] = "fragment_parent_scored_after_unsupported_ligand_state_skip"
+            ligand_valid["projection_status"] = (
+                "fragment_parent_scored_after_unsupported_ligand_state_skip"
+                if "fragment_parent_projection_not_product_safe" in ligand_valid["blockers"]
+                else "ligand_state_projection_scored_for_diagnostics_only"
+            )
 
         if not state_pose_bundles:
             return self._fail("ligand_state_ensemble_no_scored_states",
@@ -408,7 +419,7 @@ class TierBetaScreening:
                     "seed": int(self.seed),
                     "ligand_state_ensemble": {
                         "schema_version": "tier_beta_ligand_state_ensemble_v1",
-                        "status": "restricted_rdkit_standardized_state_ensemble_no_pka",
+                        "status": _LIGAND_STATE_ENSEMBLE_STATUS,
                         "state_count": int(len(ligand_states)),
                         "scored_state_count": int(len(state_pose_bundles)),
                         "claim_safe": bool(not ensemble_claim_blockers),
@@ -452,12 +463,17 @@ class TierBetaScreening:
         global_pose_index = 0
         search_diagnostics: dict[str, Any] = {
             "schema_version": "tier_beta_state_pose_search_aggregation_v1",
-            "ligand_state_ensemble_status": "restricted_rdkit_standardized_state_ensemble_no_pka",
+            "ligand_state_ensemble_status": _LIGAND_STATE_ENSEMBLE_STATUS,
             "state_count": int(len(ligand_states)),
             "scored_state_count": int(len(state_pose_bundles)),
             "raw_candidate_count": 0,
             "coarse_beam_candidate_count": 0,
             "retained_candidate_count": 0,
+            "local_minimization_status": "finite_difference_rigid_body_gradient_not_attempted",
+            "local_minimization_method": "finite_difference_gradient_descent_translation_rotation",
+            "local_minimization_degrees_of_freedom": ["translation", "rotation"],
+            "local_minimization_candidate_count": 0,
+            "local_minimization_improved_count": 0,
             "states": [],
         }
         for bundle in state_pose_bundles:
@@ -483,6 +499,18 @@ class TierBetaScreening:
                 state_search_diagnostics["coarse_beam_candidate_count"]
             )
             search_diagnostics["retained_candidate_count"] += int(state_search_diagnostics["retained_candidate_count"])
+            search_diagnostics["local_minimization_candidate_count"] += int(
+                state_search_diagnostics["local_minimization_candidate_count"]
+            )
+            search_diagnostics["local_minimization_improved_count"] += int(
+                state_search_diagnostics["local_minimization_improved_count"]
+            )
+            if int(search_diagnostics["local_minimization_improved_count"]) > 0:
+                search_diagnostics["local_minimization_status"] = "finite_difference_rigid_body_gradient_minimized"
+            elif int(search_diagnostics["local_minimization_candidate_count"]) > 0:
+                search_diagnostics["local_minimization_status"] = (
+                    "finite_difference_rigid_body_gradient_no_improvement"
+                )
             if "chemical_anchor_mapping" not in search_diagnostics:
                 search_diagnostics["chemical_anchor_mapping_status"] = str(anchor_mapping["status"])
                 search_diagnostics["chemical_anchor_mapping"] = anchor_mapping
@@ -594,6 +622,10 @@ class TierBetaScreening:
                         "rotations_per_conformer": int(state_search_diagnostics["rotations_per_conformer"]),
                         "translation_grid_point_count": int(state_search_diagnostics["translation_grid_point_count"]),
                         "local_minimization_status": state_search_diagnostics["local_minimization_status"],
+                        "local_minimization_method": state_search_diagnostics["local_minimization_method"],
+                        "local_minimization_degrees_of_freedom": list(
+                            state_search_diagnostics["local_minimization_degrees_of_freedom"]
+                        ),
                         "local_minimization": dict(candidate["local_minimization"]),
                         "symmetry_rmsd_clustering_status": state_search_diagnostics["symmetry_rmsd_clustering_status"],
                         "chemical_anchor_mapping_status": state_search_diagnostics["chemical_anchor_mapping_status"],
@@ -865,7 +897,7 @@ class TierBetaScreening:
                 "ligand_valid": ligand_valid,
                 "ligand_state_ensemble": {
                     "schema_version": "tier_beta_ligand_state_ensemble_v1",
-                    "status": "restricted_rdkit_standardized_state_ensemble_no_pka",
+                    "status": _LIGAND_STATE_ENSEMBLE_STATUS,
                     "state_count": int(len(ligand_states)),
                     "scored_state_count": int(len(state_pose_bundles)),
                     "states": state_records,

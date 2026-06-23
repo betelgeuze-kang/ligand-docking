@@ -22,6 +22,22 @@ def _mol(offset: float = 0.0) -> Chem.Mol:
     return mol
 
 
+def _ethane_with_heavy_positions(positions: list[tuple[float, float, float]]) -> Chem.Mol:
+    mol = Chem.AddHs(Chem.MolFromSmiles("CC"))
+    conformer = Chem.Conformer(mol.GetNumAtoms())
+    heavy_idx = 0
+    for atom in mol.GetAtoms():
+        idx = atom.GetIdx()
+        if atom.GetAtomicNum() == 1:
+            conformer.SetAtomPosition(idx, Point3D(float(idx), 2.0, 0.0))
+            continue
+        x, y, z = positions[heavy_idx]
+        conformer.SetAtomPosition(idx, Point3D(x, y, z))
+        heavy_idx += 1
+    mol.AddConformer(conformer)
+    return mol
+
+
 def _dump(path: Path, mol: Chem.Mol) -> None:
     path.write_bytes(pickle.dumps((mol, Chem.MolFromSmiles("CC"))))
 
@@ -40,6 +56,11 @@ def _metadata(path: Path, rows: list[dict[str, object]]) -> Path:
         "score",
         "baseline_score",
         "split_id",
+        "abstained",
+        "abstention_reasons",
+        "chirality_failure",
+        "tautomer_failure",
+        "protonation_failure",
         "runtime_ms",
         "peak_memory_mb",
     ]
@@ -68,6 +89,10 @@ def test_build_pdbbind_casf_pose_affinity_results_scores_pose_success(tmp_path: 
                 "score": "-9.0",
                 "baseline_score": "-1.0",
                 "split_id": "heldout",
+                "abstained": "0",
+                "chirality_failure": "0",
+                "tautomer_failure": "0",
+                "protonation_failure": "0",
                 "runtime_ms": "10",
                 "peak_memory_mb": "100",
             },
@@ -79,6 +104,11 @@ def test_build_pdbbind_casf_pose_affinity_results_scores_pose_success(tmp_path: 
                 "score": "-1.0",
                 "baseline_score": "-9.0",
                 "split_id": "heldout",
+                "abstained": "1",
+                "abstention_reasons": "decoy_rejected",
+                "chirality_failure": "0",
+                "tautomer_failure": "0",
+                "protonation_failure": "0",
                 "runtime_ms": "12",
                 "peak_memory_mb": "120",
             },
@@ -111,9 +141,15 @@ def test_build_pdbbind_casf_pose_affinity_results_scores_pose_success(tmp_path: 
     assert payload["summary"]["baseline_ranking_spearman"] == pytest.approx(-1.0)
     assert payload["summary"]["refine_ranking_spearman_delta"] == pytest.approx(2.0)
     assert payload["summary"]["decoy_rejection_rate"] == 1.0
-    assert payload["summary"]["mean_runtime_ms"] == 11.0
-    assert payload["summary"]["peak_memory_mb"] == 120.0
-    assert _rows(out_csv)[0]["complex_id"] == "1abc"
+    assert payload["summary"]["abstention_precision"] == 1.0
+    assert payload["summary"]["chemistry_evidence_coverage"] == 1.0
+    assert payload["summary"]["mean_runtime_ms"] > 0.0
+    assert payload["summary"]["peak_memory_mb"] > 0.0
+    first_row = _rows(out_csv)[0]
+    assert first_row["complex_id"] == "1abc"
+    assert first_row["pose_rmsd_method"] == "rdkit_self_substructure_automorphism_no_ligand_alignment"
+    assert first_row["runtime_metric_source"] == "builder_wall_clock_perf_counter"
+    assert first_row["peak_memory_metric_source"] == "builder_tracemalloc_peak"
 
 
 def test_build_pdbbind_casf_pose_affinity_results_uses_best_pose_per_complex(tmp_path: Path) -> None:
@@ -133,6 +169,10 @@ def test_build_pdbbind_casf_pose_affinity_results_uses_best_pose_per_complex(tmp
                 "affinity_label": "9.0",
                 "score": "-9.0",
                 "baseline_score": "-1.0",
+                "abstained": "0",
+                "chirality_failure": "0",
+                "tautomer_failure": "0",
+                "protonation_failure": "0",
                 "runtime_ms": "10",
                 "peak_memory_mb": "100",
             },
@@ -143,6 +183,10 @@ def test_build_pdbbind_casf_pose_affinity_results_uses_best_pose_per_complex(tmp
                 "affinity_label": "8.0",
                 "score": "-8.0",
                 "baseline_score": "-2.0",
+                "abstained": "0",
+                "chirality_failure": "0",
+                "tautomer_failure": "0",
+                "protonation_failure": "0",
                 "runtime_ms": "11",
                 "peak_memory_mb": "101",
             },
@@ -153,6 +197,11 @@ def test_build_pdbbind_casf_pose_affinity_results_uses_best_pose_per_complex(tmp
                 "affinity_label": "1.0",
                 "score": "-1.0",
                 "baseline_score": "-9.0",
+                "abstained": "1",
+                "abstention_reasons": "decoy_rejected",
+                "chirality_failure": "0",
+                "tautomer_failure": "0",
+                "protonation_failure": "0",
                 "runtime_ms": "12",
                 "peak_memory_mb": "102",
             },
@@ -179,6 +228,119 @@ def test_build_pdbbind_casf_pose_affinity_results_uses_best_pose_per_complex(tmp
     assert payload["summary"]["top5_best_mean_rmsd_A"] == 0.5
     assert payload["summary"]["top1_pose_success_rate"] == 0.0
     assert payload["summary"]["top5_pose_success_rate"] == 1.0
+
+
+def test_build_pdbbind_casf_pose_affinity_results_uses_symmetry_aware_rmsd(tmp_path: Path) -> None:
+    data = tmp_path / "casf" / "data_5_sdf"
+    data.mkdir(parents=True)
+    _dump(data / "1abc", _ethane_with_heavy_positions([(0.0, 0.0, 0.0), (1.5, 0.0, 0.0)]))
+    _dump(data / "1abc_1", _ethane_with_heavy_positions([(1.5, 0.0, 0.0), (0.0, 0.0, 0.0)]))
+    _dump(data / "1abc_2", _ethane_with_heavy_positions([(5.0, 0.0, 0.0), (6.5, 0.0, 0.0)]))
+    metadata = _metadata(
+        tmp_path / "gold.csv",
+        [
+            {
+                "pose_id": "1abc_1",
+                "complex_id": "1abc",
+                "active_label": "1",
+                "affinity_label": "9.0",
+                "score": "-9.0",
+                "baseline_score": "-1.0",
+                "abstained": "0",
+                "chirality_failure": "0",
+                "tautomer_failure": "0",
+                "protonation_failure": "0",
+            },
+            {
+                "pose_id": "1abc_2",
+                "complex_id": "1abc",
+                "active_label": "0",
+                "affinity_label": "1.0",
+                "score": "-1.0",
+                "baseline_score": "-9.0",
+                "abstained": "1",
+                "abstention_reasons": "symmetry_decoy",
+                "chirality_failure": "0",
+                "tautomer_failure": "0",
+                "protonation_failure": "0",
+            },
+        ],
+    )
+    out_csv = tmp_path / "results.csv"
+
+    payload = build_results(
+        argparse.Namespace(
+            dataset_artifact=str(tmp_path / "casf"),
+            max_poses=0,
+            threshold=0.35,
+            pose_success_rmsd_a=2.0,
+            out_csv=str(out_csv),
+            out_json=str(tmp_path / "results.json"),
+            out_md=str(tmp_path / "results.md"),
+            gold_metadata_csv=str(metadata),
+        )
+    )
+
+    first_row = _rows(out_csv)[0]
+    assert payload["summary"]["status"] == "pdbbind_casf_pose_affinity_results_ready"
+    assert payload["summary"]["top1_mean_rmsd_A"] == pytest.approx(0.0)
+    assert float(first_row["pose_rmsd_A"]) == pytest.approx(0.0)
+    assert first_row["pose_rmsd_method"] == "rdkit_self_substructure_automorphism_no_ligand_alignment"
+    assert '"symmetry_mapping_count": 2' in first_row["pose_rmsd_diagnostics"]
+
+
+def test_build_pdbbind_casf_pose_affinity_results_blocks_without_abstention_evidence(tmp_path: Path) -> None:
+    data = tmp_path / "casf" / "data_5_sdf"
+    data.mkdir(parents=True)
+    _dump(data / "1abc", _mol())
+    _dump(data / "1abc_1", _mol(offset=0.5))
+    _dump(data / "1abc_2", _mol(offset=5.0))
+    metadata = _metadata(
+        tmp_path / "gold.csv",
+        [
+            {
+                "pose_id": "1abc_1",
+                "complex_id": "1abc",
+                "active_label": "1",
+                "affinity_label": "9.0",
+                "score": "-9.0",
+                "baseline_score": "-1.0",
+                "abstained": "0",
+                "chirality_failure": "0",
+                "tautomer_failure": "0",
+                "protonation_failure": "0",
+            },
+            {
+                "pose_id": "1abc_2",
+                "complex_id": "1abc",
+                "active_label": "0",
+                "affinity_label": "1.0",
+                "score": "-1.0",
+                "baseline_score": "-9.0",
+                "abstained": "0",
+                "chirality_failure": "0",
+                "tautomer_failure": "0",
+                "protonation_failure": "0",
+            },
+        ],
+    )
+
+    payload = build_results(
+        argparse.Namespace(
+            dataset_artifact=str(tmp_path / "casf"),
+            max_poses=0,
+            threshold=0.35,
+            pose_success_rmsd_a=2.0,
+            out_csv=str(tmp_path / "results.csv"),
+            out_json=str(tmp_path / "results.json"),
+            out_md=str(tmp_path / "results.md"),
+            gold_metadata_csv=str(metadata),
+        )
+    )
+
+    assert payload["summary"]["status"] == "blocked_pdbbind_casf_pose_affinity_results"
+    assert "gold_metrics_blocked" in payload["summary"]["blockers"]
+    assert "abstention_precision_not_computable" in payload["summary"]["gold_metric_blockers"]
 
 
 def test_build_pdbbind_casf_pose_affinity_results_blocks_without_poses(tmp_path: Path) -> None:
@@ -241,6 +403,10 @@ def test_build_pdbbind_casf_pose_affinity_results_blocks_partial_references(tmp_
                 "affinity_label": "9.0",
                 "score": "-9.0",
                 "baseline_score": "-1.0",
+                "abstained": "0",
+                "chirality_failure": "0",
+                "tautomer_failure": "0",
+                "protonation_failure": "0",
                 "runtime_ms": "10",
                 "peak_memory_mb": "100",
             },
@@ -251,6 +417,11 @@ def test_build_pdbbind_casf_pose_affinity_results_blocks_partial_references(tmp_
                 "affinity_label": "1.0",
                 "score": "-1.0",
                 "baseline_score": "-9.0",
+                "abstained": "1",
+                "abstention_reasons": "missing_reference_decoy",
+                "chirality_failure": "0",
+                "tautomer_failure": "0",
+                "protonation_failure": "0",
                 "runtime_ms": "11",
                 "peak_memory_mb": "101",
             },

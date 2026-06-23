@@ -71,18 +71,40 @@ def test_unspecified_double_bond_stereo_is_fail_closed() -> None:
     assert allowed["blocked"] is False
 
 
-def test_restricted_ligand_state_ensemble_records_salt_parent_without_pka_claim() -> None:
+def test_restricted_ligand_state_ensemble_records_salt_parent_with_ph_range_boundary() -> None:
     states = enumerate_ligand_states_from_smiles("CC(=O)[O-].[Na+]", max_states=4)
 
     assert [state.state_kind for state in states][:2] == ["input_canonical", "salt_parent"]
     assert any(state.state_kind.startswith("tautomer_") for state in states)
     assert states[0].smiles == "CC(=O)[O-].[Na+]"
     assert states[0].salt_stripped is True
-    assert states[0].protonation_source.endswith("no_pka_enumeration")
+    assert states[0].protonation_source == "rdkit_formal_charge_input_plus_restricted_ph_range_heuristic"
+    assert states[0].protonation_ph_values == (5.0, 7.4, 9.0)
     assert states[1].smiles == "CC(=O)[O-]"
     assert states[1].source == "rdkit_molstandardize_fragment_parent"
     assert states[1].atom_count == 4
     assert "salt_parent_projection_not_product_safe" in states[1].claim_safe_blockers
+
+
+def test_restricted_ph_range_protomer_candidates_are_enumerated_and_claim_blocked() -> None:
+    amine_states = enumerate_ligand_states_from_smiles("CN", max_states=4)
+    acid_states = enumerate_ligand_states_from_smiles("CC(=O)O", max_states=4)
+    phenol_states = enumerate_ligand_states_from_smiles("c1ccccc1O", max_states=4)
+
+    protonated_amine = next(state for state in amine_states if state.smiles == "C[NH3+]")
+    deprotonated_acid = next(state for state in acid_states if state.smiles == "CC(=O)[O-]")
+    deprotonated_phenol = next(state for state in phenol_states if state.smiles == "[O-]c1ccccc1")
+
+    assert protonated_amine.state_kind.startswith("protomer_ph_5_0")
+    assert protonated_amine.protonation_target_ph == 5.0
+    assert deprotonated_acid.state_kind.startswith("protomer_ph_7_4")
+    assert deprotonated_acid.protonation_target_ph == 7.4
+    assert deprotonated_phenol.state_kind.startswith("protomer_ph_9_0")
+    assert deprotonated_phenol.protonation_target_ph == 9.0
+    for protomer in (protonated_amine, deprotonated_acid, deprotonated_phenol):
+        assert "protonation_projection_not_product_safe" in protomer.claim_safe_blockers
+        assert "protonation_enumeration_limited_no_pka_calibration" in protomer.claim_safe_blockers
+        assert "ph_range_protomer_heuristic_not_product_safe" in protomer.claim_safe_blockers
 
 
 def test_restricted_tautomer_states_are_bounded_and_claim_blocked() -> None:
@@ -93,9 +115,9 @@ def test_restricted_tautomer_states_are_bounded_and_claim_blocked() -> None:
     assert 1 <= len(tautomer_states) <= 3
     assert all("tautomer_projection_not_product_safe" in state.claim_safe_blockers for state in tautomer_states)
     assert all("tautomer_enumeration_limited" in state.claim_safe_blockers for state in tautomer_states)
-    assert states[0].protonation_policy == "restricted_formal_charge_input_state_ph_7_4_no_pka"
-    assert states[0].protonation_ph_values == (7.4,)
-    assert "no pKa model" in states[0].protonation_claim_boundary
+    assert states[0].protonation_policy == "restricted_rdkit_heuristic_protomer_ensemble_ph_5_0_7_4_9_0_no_pka_calibration"
+    assert states[0].protonation_ph_values == (5.0, 7.4, 9.0)
+    assert "no calibrated pKa model" in states[0].protonation_claim_boundary
 
 
 def test_ligand_topology_uses_chemistry_state_metadata() -> None:
@@ -104,8 +126,10 @@ def test_ligand_topology_uses_chemistry_state_metadata() -> None:
     assert ligand.validity["valid"] is True
     assert ligand.validity["feature_source"] == "rdkit_chemical_features_base_fdef"
     assert ligand.validity["protonation_status"] == "charged_state_parsed"
-    assert ligand.validity["protonation_policy"] == "restricted_formal_charge_input_state_ph_7_4_no_pka"
-    assert ligand.validity["protonation_ph_values"] == [7.4]
+    assert ligand.validity["protonation_policy"] == (
+        "restricted_rdkit_heuristic_protomer_ensemble_ph_5_0_7_4_9_0_no_pka_calibration"
+    )
+    assert ligand.validity["protonation_ph_values"] == [5.0, 7.4, 9.0]
     assert ligand.validity["charged_atom_count"] == 2
     assert ligand.validity["salt_stripped"] is True
     assert ligand.validity["salt_parent_smiles"] == "CC(=O)[O-]"
@@ -129,9 +153,11 @@ def test_ligand_topology_preserves_dual_donor_acceptor_feature_roles() -> None:
 def test_validate_ligand_preserves_rdkit_protonation_and_tautomer_sources() -> None:
     ligand = validate_ligand("CC(=O)CC(=O)C")
 
-    assert ligand["protonation_source"] == "rdkit_formal_charge_state_from_input_ph_7_4_no_pka_enumeration"
-    assert ligand["protonation_policy"] == "restricted_formal_charge_input_state_ph_7_4_no_pka"
-    assert ligand["protonation_ph_values"] == [7.4]
+    assert ligand["protonation_source"] == "rdkit_formal_charge_input_plus_restricted_ph_range_heuristic"
+    assert ligand["protonation_policy"] == (
+        "restricted_rdkit_heuristic_protomer_ensemble_ph_5_0_7_4_9_0_no_pka_calibration"
+    )
+    assert ligand["protonation_ph_values"] == [5.0, 7.4, 9.0]
     assert ligand["tautomer_source"] == "rdkit_molstandardize_tautomer_enumerator"
     assert ligand["tautomer_status"] == "canonical_tautomer_enumerated"
 

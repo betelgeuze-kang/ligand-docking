@@ -2274,7 +2274,7 @@ def test_topology_claim_metadata_carries_ligand_product_validity_status() -> Non
     assert metadata["ligand_ring_status"] == "not_applicable"
     assert metadata["ligand_ring_valid"] is True
     assert metadata["ligand_protonation_status"] == "neutral_state_parsed"
-    assert metadata["ligand_protonation_source"] == "rdkit_formal_charge_state_from_input_ph_7_4_no_pka_enumeration"
+    assert metadata["ligand_protonation_source"] == "rdkit_formal_charge_input_plus_restricted_ph_range_heuristic"
     assert metadata["ligand_protonation_valid"] is True
     assert metadata["ligand_formal_charge_sum"] == 0
     assert metadata["ligand_charged_atom_count"] == 0
@@ -2399,7 +2399,7 @@ def test_topology_claim_metadata_blocks_unassigned_ligand_chirality() -> None:
     assert metadata["ligand_topology_claim_safe"] is False
     assert metadata["ligand_topology_schema_version"] == "ligand_topology_validity_v1"
     assert metadata["ligand_unassigned_chiral_center_count"] == 1
-    assert metadata["ligand_chirality_status"] == "unassigned_chiral_centers"
+    assert metadata["ligand_chirality_status"] == "unassigned_stereochemistry"
     assert metadata["ligand_chirality_valid"] is False
     assert "unassigned_ligand_chirality" in metadata["blocked_reason"]
     assert "unassigned_ligand_chirality" in metadata["ligand_validity_blockers"]
