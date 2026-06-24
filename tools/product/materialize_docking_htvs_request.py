@@ -16,6 +16,7 @@ from betelgeuze_product.private_payload_store import PrivatePayloadStore
 ROOT = Path(__file__).resolve().parents[2]
 MATERIALIZATION_CONTRACT_VERSION = "docking_materialization_v3"
 SYNTHETIC_SMOKE_SMILES = "CCO"
+SYNTHETIC_SMOKE_MW = 46.069
 _RAW_SMILES_FIELDS = ("smiles", "ligand_smiles")
 _PATH_SOURCE_FIELDS = ("sdf_path", "mol2_path", "pdbqt_path")
 
@@ -47,10 +48,17 @@ def _rdkit() -> tuple[Any, Any]:
     return Chem, Descriptors
 
 
-def _estimate_ligand_mw(smiles: str) -> float:
+def _estimate_ligand_mw(smiles: str, *, synthetic_smoke: bool = False) -> float:
     text = _text(smiles)
     if not text:
         raise DockingMaterializationError("ligand_smiles_missing_after_source_resolution")
+    if synthetic_smoke:
+        if text != SYNTHETIC_SMOKE_SMILES:
+            raise DockingMaterializationError("synthetic_smoke_ligand_contract_mismatch")
+        # The lightweight contract CI intentionally does not install RDKit.
+        # This constant is scoped exclusively to the fixed, visibly-labelled
+        # internal CCO smoke ligand and is never used for customer inputs.
+        return SYNTHETIC_SMOKE_MW
     Chem, Descriptors = _rdkit()
     mol = Chem.MolFromSmiles(text)
     if mol is None:
@@ -79,6 +87,12 @@ def _canonical_smiles_from_path(path_value: str, source_kind: str) -> str:
 
 
 def _resolve_ligand_smiles(ligand: dict[str, Any]) -> tuple[str, str]:
+    if ligand.get("_synthetic_smoke_input") is True:
+        value = _text(ligand.get("smiles"))
+        if value != SYNTHETIC_SMOKE_SMILES:
+            raise DockingMaterializationError("synthetic_smoke_ligand_contract_mismatch")
+        return SYNTHETIC_SMOKE_SMILES, "synthetic_smoke"
+
     for key in _RAW_SMILES_FIELDS:
         value = _text(ligand.get(key))
         if value:
@@ -112,7 +126,8 @@ def _has_materializable_source(ligand: Any) -> bool:
     if not isinstance(ligand, dict):
         return False
     return bool(
-        any(_text(ligand.get(key)) for key in _RAW_SMILES_FIELDS)
+        ligand.get("_synthetic_smoke_input") is True
+        or any(_text(ligand.get(key)) for key in _RAW_SMILES_FIELDS)
         or _text(ligand.get("inchi"))
         or any(_text(ligand.get(key)) for key in _PATH_SOURCE_FIELDS)
     )
@@ -162,6 +177,14 @@ def _estimate_expected_ligand_count(
         if count > 0:
             return count
     return int(candidate_count)
+
+
+def _raise_specific_materialization_error(candidate_lists: list[list[dict[str, Any]]]) -> None:
+    for rows in candidate_lists:
+        for row in rows:
+            if isinstance(row, dict):
+                _resolve_ligand_smiles(row)
+    raise DockingMaterializationError("ligand_source_unavailable_for_materialization")
 
 
 def _resolve_materialization_inputs(
@@ -231,7 +254,7 @@ def _resolve_materialization_inputs(
     synthetic_used = False
     if not ligands:
         if not allow_synthetic:
-            raise DockingMaterializationError("ligand_source_unavailable_for_materialization")
+            _raise_specific_materialization_error(candidate_lists)
         if expected_count not in {0, 1}:
             raise DockingMaterializationError(
                 "synthetic_smoke_materialization_requires_exactly_one_ligand"
@@ -325,6 +348,7 @@ def _ligand_row_from_intake(
         or ligand.get("id")
         or f"ligand_{replica_idx}"
     )
+    synthetic_smoke = ligand.get("_synthetic_smoke_input") is True
     smiles, source_kind = _resolve_ligand_smiles(ligand)
     slug = "".join(ch if ch.isalnum() else "_" for ch in ligand_id.lower())[:40]
     slug = slug or f"ligand_{replica_idx:04d}"
@@ -342,9 +366,12 @@ def _ligand_row_from_intake(
         "replica_idx": int(replica_idx),
         "ligand_id": ligand_id,
         "ligand_smiles": smiles,
-        "ligand_mw": _estimate_ligand_mw(smiles),
+        "ligand_mw": _estimate_ligand_mw(
+            smiles,
+            synthetic_smoke=synthetic_smoke,
+        ),
         "materialization_source_kind": source_kind,
-        "synthetic_smoke_input": ligand.get("_synthetic_smoke_input") is True,
+        "synthetic_smoke_input": synthetic_smoke,
         "ligand_bead0_x": -0.8,
         "ligand_bead0_y": 0.0,
         "ligand_bead0_z": 0.0,
