@@ -17,19 +17,19 @@ from tools.product.materialize_docking_backmapping_request import (
     materialize_from_docking_request as materialize_backmapping,
 )
 
+PDB_CONTENT = (
+    "ATOM      1  CA  GLY A   1      12.104  13.207  14.321  1.00 10.00           C\n"
+)
 
-def _write_request(path: Path, params: dict) -> Path:
-    path.write_text(
-        json.dumps(
-            {
-                "target_name": "ADRB2",
-                "runner_profile_params": params,
-            },
-            sort_keys=True,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+
+def _write_request(path: Path, params: dict, *, include_structure: bool = True) -> Path:
+    payload = {
+        "target_name": "ADRB2",
+        "runner_profile_params": params,
+    }
+    if include_structure:
+        payload["pdb_content"] = PDB_CONTENT
+    path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
     return path
 
 
@@ -56,7 +56,7 @@ def test_htvs_materializer_rejects_redacted_hash_only_ligand(tmp_path: Path) -> 
 
     with pytest.raises(
         DockingMaterializationError,
-        match="ligand_source_unavailable_for_materialization",
+        match="redacted_ligand_source_cannot_be_materialized",
     ):
         materialize_htvs(str(request_path), out_dir=str(tmp_path / "out"))
 
@@ -80,7 +80,16 @@ def test_backmapping_materializer_rejects_empty_ligand_input(tmp_path: Path) -> 
         materialize_backmapping(str(request_path), out_dir=str(tmp_path / "out"))
 
 
-def test_explicit_internal_smoke_uses_one_labelled_synthetic_ligand(tmp_path: Path) -> None:
+def test_explicit_internal_smoke_works_without_rdkit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tools.product.materialize_docking_htvs_request as materializer
+
+    def _rdkit_must_not_be_loaded():
+        raise AssertionError("synthetic smoke must not import RDKit")
+
+    monkeypatch.setattr(materializer, "_rdkit", _rdkit_must_not_be_loaded)
     request_path = _write_request(
         tmp_path / "request.json",
         {
@@ -102,6 +111,8 @@ def test_explicit_internal_smoke_uses_one_labelled_synthetic_ligand(tmp_path: Pa
     assert len(rows) == 1
     assert rows[0]["ligand_id"] == "synthetic_smoke_ligand_1"
     assert rows[0]["ligand_smiles"] == "CCO"
+    assert float(rows[0]["ligand_mw"]) == pytest.approx(46.069)
+    assert rows[0]["materialization_source_kind"] == "synthetic_smoke"
     assert rows[0]["synthetic_smoke_input"].lower() == "true"
 
 
@@ -248,7 +259,7 @@ def test_internal_smoke_actor_is_explicitly_allowed(monkeypatch: pytest.MonkeyPa
     assert reason == "eligible"
 
 
-def test_restricted_production_requires_materializable_ligand(
+def test_restricted_production_requires_private_payload_ref(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import api.docking_dispatch as docking_dispatch
@@ -268,7 +279,9 @@ def test_restricted_production_requires_materializable_ligand(
     )
 
     assert eligible is False
-    assert reason == "runner_input_materialization_not_ready"
+    assert reason == (
+        "runner_input_materialization_not_ready:private_payload_ref_missing"
+    )
 
 
 def test_profile_execution_contract_rejects_mislabelled_smoke() -> None:
