@@ -38,9 +38,6 @@ permissions:
 
 jobs:
   lightweight-contract:
-    # GitHub-hosted jobs are currently unavailable for this private repository.
-    # Use the registered Linux runner but isolate dependencies in a fresh venv
-    # so the contract remains explicitly RDKit-free.
     runs-on: [self-hosted, linux]
     timeout-minutes: 30
     steps:
@@ -54,7 +51,8 @@ jobs:
 
       - name: Create isolated RDKit-free environment
         run: |
-          rm -rf .venv-docking-contract
+          rm -rf .venv-docking-contract test-results
+          mkdir -p test-results
           python -m venv .venv-docking-contract
           .venv-docking-contract/bin/python -m pip install --upgrade pip
           .venv-docking-contract/bin/python -m pip install \
@@ -94,32 +92,43 @@ jobs:
         run: |
           .venv-docking-contract/bin/python tools/product/validate_api_runner_profiles.py \
             --profiles-dir config/api_validated_runner_profiles \
-            --out-json /tmp/api_runner_profiles.json
+            --out-json test-results/api-runner-profiles.json
 
       - name: Test materialization and dispatch hardening
+        shell: bash
         run: |
-          mkdir -p test-results
-          .venv-docking-contract/bin/python -m pytest -q \
+          set -o pipefail
+          .venv-docking-contract/bin/python -m pytest -vv \
             tests/unit/test_docking_pipeline_hardening.py \
-            --junitxml=test-results/docking-pipeline-hardening.xml
+            --junitxml=test-results/docking-pipeline-hardening.xml \
+            2>&1 | tee test-results/docking-pipeline-hardening.log
 
       - name: Test encrypted private payload store
+        shell: bash
         run: |
-          .venv-docking-contract/bin/python -m pytest -q \
+          set -o pipefail
+          .venv-docking-contract/bin/python -m pytest -vv \
             tests/unit/test_private_payload_store.py \
-            --junitxml=test-results/private-payload-store.xml
+            --junitxml=test-results/private-payload-store.xml \
+            2>&1 | tee test-results/private-payload-store.log
 
       - name: Test transactional outbox recovery
+        shell: bash
         run: |
-          .venv-docking-contract/bin/python -m pytest -q \
+          set -o pipefail
+          .venv-docking-contract/bin/python -m pytest -vv \
             tests/unit/test_docking_dispatch_outbox.py \
-            --junitxml=test-results/docking-dispatch-outbox.xml
+            --junitxml=test-results/docking-dispatch-outbox.xml \
+            2>&1 | tee test-results/docking-dispatch-outbox.log
 
       - name: Test secure API submission end to end
+        shell: bash
         run: |
-          .venv-docking-contract/bin/python -m pytest -q \
+          set -o pipefail
+          .venv-docking-contract/bin/python -m pytest -vv \
             tests/unit/test_secure_docking_submission.py \
-            --junitxml=test-results/secure-docking-submission.xml
+            --junitxml=test-results/secure-docking-submission.xml \
+            2>&1 | tee test-results/secure-docking-submission.log
 
       - name: Upload docking contract diagnostics
         if: always()
@@ -127,6 +136,4 @@ jobs:
         with:
           name: docking-pipeline-contract-results
           if-no-files-found: warn
-          path: |
-            test-results/*.xml
-            /tmp/api_runner_profiles.json
+          path: test-results/**
