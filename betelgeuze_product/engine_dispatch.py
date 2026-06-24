@@ -6,10 +6,14 @@ import json
 from pathlib import Path
 from typing import Any
 
+from betelgeuze_product.atomic_io import atomic_write_json
+
 ROOT = Path(__file__).resolve().parents[1]
 ENGINE_ROADMAP_ARTIFACT = ROOT / "runs" / "independent_engine_roadmap_status_current.json"
 DEFAULT_RUNNER_PROFILE = "ligand_htvs_pipeline_default"
 DEFAULT_EXECUTION_MODE = "smoke"
+CUSTOMER_PRODUCTION_RUNNER_PROFILE = "ligand_htvs.restricted-production"
+CUSTOMER_PRODUCTION_EXECUTION_MODE = "restricted-production"
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -27,7 +31,11 @@ def engine_roadmap_ready() -> bool:
     summary = payload.get("summary", {})
     if not isinstance(summary, dict):
         return False
-    return str(summary.get("status", "")).strip() == "independent_engine_roadmap_closed"
+    return bool(
+        str(summary.get("status", "")).strip() == "independent_engine_roadmap_closed"
+        and summary.get("engine_dispatch_ready") is True
+        and summary.get("scoring_ranking_contract_ready") is True
+    )
 
 
 def build_dispatch_manifest(
@@ -62,7 +70,7 @@ def build_dispatch_manifest(
         "docking_results_emitted": False,
         "scoped_execution_contract": (
             "Operator-approved runner dispatch only. Smoke and restricted-production modes are explicit. "
-            "Customer pose emission remains gated until delivery bundle validation is green."
+            "Customer pose emission and broad production claims remain gated by downstream evidence."
         ),
         "pipeline_entrypoints": [
             "tools/run_ligand_htvs_pipeline.py",
@@ -72,6 +80,26 @@ def build_dispatch_manifest(
     }
 
 
+def build_customer_production_dispatch_manifest(
+    *,
+    job_id: str,
+    target_id: str,
+    family: str,
+    ligand_model_hint: str = "auto",
+) -> dict[str, Any]:
+    return build_dispatch_manifest(
+        job_id=job_id,
+        target_id=target_id,
+        family=family,
+        runner_profile_id=CUSTOMER_PRODUCTION_RUNNER_PROFILE,
+        ligand_model_hint=ligand_model_hint,
+        execution_mode=CUSTOMER_PRODUCTION_EXECUTION_MODE,
+        customer_submission_allowed=True,
+        synthetic_input_allowed=False,
+        production_claim_allowed=False,
+        customer_pose_emission_allowed=False,
+    )
+
+
 def write_dispatch_manifest(path: Path, manifest: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    atomic_write_json(path, manifest, mode=0o600)
