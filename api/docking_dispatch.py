@@ -1,4 +1,4 @@
-"""Bridge product docking ledger records to SQLite simulation worker queue."""
+"""Bridge product docking ledger records to the durable simulation queue."""
 
 from __future__ import annotations
 
@@ -7,20 +7,27 @@ from pathlib import Path
 from typing import Any
 
 from api.config import settings
+from api.docking_outbox import (
+    enqueue_job_with_outbox,
+    mark_outbox_delivered,
+    mark_outbox_failed,
+    pending_outbox_events,
+)
 from api.job_store import SQLiteJobStore, get_configured_job_store
-from api.request_privacy import sanitize_request_for_ledger
 from api.runner_profile_contract import (
     EXECUTION_MODE_RESTRICTED_PRODUCTION,
     EXECUTION_MODE_SMOKE,
     validate_runner_profile_execution_contract,
 )
 from api.validated_runner import _runner_script, validate_profile_readiness
+from betelgeuze_product.atomic_io import atomic_write_json
 from betelgeuze_product.engine_dispatch import DEFAULT_RUNNER_PROFILE, engine_roadmap_ready
-from betelgeuze_product.job_orchestration import append_job_event, read_job_record, write_job_record
+from betelgeuze_product.job_orchestration import append_job_event, read_job_record
 from betelgeuze_product.job_terminal_state import apply_terminal_job_state
+from betelgeuze_product.payload_privacy import sanitize_request_for_ledger
+from betelgeuze_product.private_payload_store import PrivatePayloadStore
 
 INTERNAL_SMOKE_ACTORS = {"tier_alpha_dispatch_smoke"}
-_RAW_MATERIALIZATION_FIELDS = ("smiles", "ligand_smiles", "inchi")
 _SQLITE_TERMINAL_STATUSES = {"completed", "failed"}
 
 
@@ -28,7 +35,20 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
-def _internal_smoke_authorized(record: dict[str, Any], *, allow_internal_smoke: bool) -> bool:
+def _atomic_write_job_record(jobs_dir: Path, record: dict[str, Any]) -> Path:
+    path = jobs_dir / f"{_text(record.get('job_id'))}.json"
+    return atomic_write_json(
+        path,
+        sanitize_request_for_ledger(record),
+        mode=0o600,
+    )
+
+
+def _internal_smoke_authorized(
+    record: dict[str, Any],
+    *,
+    allow_internal_smoke: bool,
+) -> bool:
     manifest = record.get("engine_dispatch_manifest")
     legacy_internal_record = bool(
         isinstance(manifest, dict)
@@ -45,35 +65,34 @@ def _internal_smoke_authorized(record: dict[str, Any], *, allow_internal_smoke: 
     )
 
 
-def _materialization_row_ready(row: Any) -> bool:
-    if not isinstance(row, dict):
-        return False
-    # A private payload reference is not considered ready until a resolver is
-    # implemented in the materializers. This prevents dispatch from admitting
-    # an opaque reference that the worker cannot actually dereference.
-    return any(_text(row.get(key)) for key in _RAW_MATERIALIZATION_FIELDS)
-
-
-def _record_materialization_ready(record: dict[str, Any]) -> bool:
-    expected_count = int(record.get("ligand_count", 0) or 0)
-    candidates: list[list[Any]] = []
-    materialization_ligands = record.get("materialization_ligands")
-    if isinstance(materialization_ligands, list) and materialization_ligands:
-        candidates.append(materialization_ligands)
-    intake = record.get("intake_payload")
-    if isinstance(intake, dict):
-        intake_ligands = intake.get("ligands")
-        if isinstance(intake_ligands, list) and intake_ligands:
-            candidates.append(intake_ligands)
-    return any(
-        rows
-        and (expected_count <= 0 or len(rows) == expected_count)
-        and all(_materialization_row_ready(row) for row in rows)
-        for rows in candidates
+def _private_materialization_ready(record: dict[str, Any]) -> tuple[bool, str]:
+    reference = _text(record.get("private_payload_ref"))
+    request_sha = _text(
+        record.get("private_payload_request_sha256") or record.get("request_sha256")
     )
+    job_id = _text(record.get("job_id"))
+    if not reference:
+        return False, "private_payload_ref_missing"
+    if not request_sha:
+        return False, "private_payload_request_sha256_missing"
+    try:
+        inspection = PrivatePayloadStore.from_settings(settings).inspect(
+            reference,
+            expected_job_id=job_id,
+            expected_request_sha256=request_sha,
+        )
+    except Exception as exc:
+        return False, f"private_payload_not_ready:{exc}"
+    expected_count = int(record.get("ligand_count") or 0)
+    observed_count = int(inspection.get("private_payload_ligand_count") or 0)
+    if expected_count <= 0 or observed_count != expected_count:
+        return False, "private_payload_ligand_count_mismatch"
+    return True, "private_payload_ready"
 
 
-def _load_profile_contract(record: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], str]:
+def _load_profile_contract(
+    record: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], str]:
     manifest = record.get("engine_dispatch_manifest", {})
     if not isinstance(manifest, dict):
         raise PermissionError("missing_engine_dispatch_manifest")
@@ -97,6 +116,12 @@ def _load_profile_contract(record: dict[str, Any]) -> tuple[dict[str, Any], dict
     manifest_mode = _text(manifest.get("execution_mode"))
     if manifest_mode and manifest_mode != execution["execution_mode"]:
         raise PermissionError(f"runner_profile_execution_mode_mismatch:{profile_id}")
+    if manifest.get("customer_submission_allowed") is not None and bool(
+        manifest.get("customer_submission_allowed")
+    ) != bool(execution.get("customer_submission_allowed")):
+        raise PermissionError(
+            f"runner_profile_customer_submission_contract_mismatch:{profile_id}"
+        )
     return readiness, execution, profile_id
 
 
@@ -125,21 +150,21 @@ def is_dispatch_eligible(
     except Exception as exc:
         return False, f"runner_profile_not_ready:{exc}"
 
-    internal_smoke = _internal_smoke_authorized(
-        record,
-        allow_internal_smoke=allow_internal_smoke,
-    )
     mode = _text(execution.get("execution_mode"))
     if mode == EXECUTION_MODE_SMOKE:
-        if not internal_smoke:
+        if not _internal_smoke_authorized(
+            record,
+            allow_internal_smoke=allow_internal_smoke,
+        ):
             return False, f"runner_profile_not_customer_submission_allowed:{profile_id}"
         if execution.get("synthetic_input_allowed") is not True:
             return False, f"runner_profile_synthetic_input_not_allowed:{profile_id}"
     elif mode == EXECUTION_MODE_RESTRICTED_PRODUCTION:
         if execution.get("customer_submission_allowed") is not True:
             return False, f"runner_profile_not_customer_submission_allowed:{profile_id}"
-        if not _record_materialization_ready(record):
-            return False, "runner_input_materialization_not_ready"
+        materialization_ready, materialization_reason = _private_materialization_ready(record)
+        if not materialization_ready:
+            return False, f"runner_input_materialization_not_ready:{materialization_reason}"
     else:
         return False, f"runner_profile_execution_mode_not_supported:{profile_id}"
     return True, "eligible"
@@ -168,13 +193,25 @@ def build_simulate_request(
             "ligand_model_hint": _text(manifest.get("ligand_model_hint")) or "auto",
             "engine_dispatch_manifest": manifest,
             "runner_execution_mode": _text(execution.get("execution_mode")),
-            "runner_customer_submission_allowed": execution.get("customer_submission_allowed") is True,
-            "runner_synthetic_input_allowed": execution.get("synthetic_input_allowed") is True,
-            "runner_production_claim_allowed": execution.get("production_claim_allowed") is True,
-            "runner_customer_pose_emission_allowed": execution.get("customer_pose_emission_allowed") is True,
+            "runner_customer_submission_allowed": execution.get(
+                "customer_submission_allowed"
+            )
+            is True,
+            "runner_synthetic_input_allowed": execution.get("synthetic_input_allowed")
+            is True,
+            "runner_production_claim_allowed": execution.get("production_claim_allowed")
+            is True,
+            "runner_customer_pose_emission_allowed": execution.get(
+                "customer_pose_emission_allowed"
+            )
+            is True,
             "allow_synthetic_ligand_input": bool(allow_synthetic_ligand_input),
-            "intake_payload": record.get("intake_payload", {}),
-            "ligands": list((record.get("intake_payload") or {}).get("ligands", []) or []),
+            "private_payload_ref": _text(record.get("private_payload_ref")),
+            "private_payload_request_sha256": _text(
+                record.get("private_payload_request_sha256")
+                or record.get("request_sha256")
+            ),
+            "private_payload_key_id": _text(record.get("private_payload_key_id")),
         },
     }
 
@@ -199,7 +236,9 @@ def sync_ledger_from_simulation_result(
         reason=_text(error or status),
         actor=worker_id or "api_worker",
         details={
-            "worker_state": "completed_fail_closed" if completed else "failed_retryable_fail_closed",
+            "worker_state": "completed_fail_closed"
+            if completed
+            else "failed_retryable_fail_closed",
             "progress_state": event_type if completed else "worker_failed_retryable",
             "current_step": event_type if completed else "worker_failure_recorded",
             "simulation_status": _text(status),
@@ -214,7 +253,7 @@ def sync_ledger_from_simulation_result(
         result_file=_text(result_file),
         error=_text(error),
     )
-    write_job_record(jobs_dir, updated)
+    _atomic_write_job_record(jobs_dir, updated)
     return {
         "synced": True,
         "job_id": job_id,
@@ -240,27 +279,32 @@ def enqueue_docking_job(
         execution_contract=execution_contract,
         allow_synthetic_ligand_input=allow_synthetic_ligand_input,
     )
-    stored, created = store.create_job_if_absent(
-        job_id,
-        simulate_request,
+    result = enqueue_job_with_outbox(
+        store,
+        job_id=job_id,
+        request=simulate_request,
+        event_payload={
+            "job_id": job_id,
+            "request_sha256": _text(record.get("request_sha256")),
+            "ledger_event": "worker_dispatch_enqueued",
+        },
         status="submitted",
     )
-    if not created:
-        expected_request = sanitize_request_for_ledger(simulate_request)
-        if dict(stored.get("request") or {}) != expected_request:
-            raise ValueError(f"docking dispatch idempotency conflict for job_id={job_id}")
-    sqlite_status = _text(stored.get("status")) or "submitted"
+    sqlite_status = _text(result.get("sqlite_status")) or "submitted"
     return {
-        "job_id": job_id,
+        **result,
         "simulate_request": simulate_request,
-        "sqlite_status": sqlite_status,
-        "created": created,
-        "already_present": not created,
+        "created": result.get("job_created") is True,
         "terminal": sqlite_status in _SQLITE_TERMINAL_STATUSES,
     }
 
 
-def mark_ledger_dispatched(jobs_dir: Path, job_id: str, *, worker_id: str = "") -> dict[str, Any]:
+def mark_ledger_dispatched(
+    jobs_dir: Path,
+    job_id: str,
+    *,
+    worker_id: str = "",
+) -> dict[str, Any]:
     record = read_job_record(jobs_dir, job_id)
     if not record:
         raise FileNotFoundError(f"docking ledger record not found: {job_id}")
@@ -269,7 +313,7 @@ def mark_ledger_dispatched(jobs_dir: Path, job_id: str, *, worker_id: str = "") 
     updated = append_job_event(
         record,
         event_type="worker_dispatch_enqueued",
-        reason="ledger_to_sqlite_worker_dispatch",
+        reason="transactional_outbox_to_sqlite_worker_dispatch",
         actor=worker_id or "api_docking_dispatch",
         details={
             "progress_state": "worker_dispatch_enqueued",
@@ -282,8 +326,47 @@ def mark_ledger_dispatched(jobs_dir: Path, job_id: str, *, worker_id: str = "") 
     updated["worker_dispatch_enqueued"] = True
     updated["progress_state"] = "worker_dispatch_enqueued"
     updated["current_step"] = "worker_dispatch_enqueued"
-    write_job_record(jobs_dir, updated)
+    _atomic_write_job_record(jobs_dir, updated)
     return updated
+
+
+def reconcile_pending_dispatch_outbox(
+    jobs_dir: Path,
+    *,
+    store: SQLiteJobStore | None = None,
+    limit: int = 100,
+) -> list[dict[str, Any]]:
+    job_store = store or get_configured_job_store()
+    outcomes: list[dict[str, Any]] = []
+    for event in pending_outbox_events(job_store, limit=limit):
+        event_id = _text(event.get("event_id"))
+        job_id = _text(event.get("job_id"))
+        try:
+            record = read_job_record(jobs_dir, job_id)
+            if not record:
+                raise FileNotFoundError(f"docking ledger record not found: {job_id}")
+            sqlite_record = job_store.get_job(job_id) or {}
+            if _text(sqlite_record.get("status")) not in _SQLITE_TERMINAL_STATUSES:
+                mark_ledger_dispatched(jobs_dir, job_id)
+            mark_outbox_delivered(job_store, event_id)
+            outcomes.append(
+                {
+                    "event_id": event_id,
+                    "job_id": job_id,
+                    "delivered": True,
+                }
+            )
+        except Exception as exc:
+            mark_outbox_failed(job_store, event_id, str(exc))
+            outcomes.append(
+                {
+                    "event_id": event_id,
+                    "job_id": job_id,
+                    "delivered": False,
+                    "error": str(exc),
+                }
+            )
+    return outcomes
 
 
 def dispatch_docking_job_if_eligible(
@@ -298,15 +381,18 @@ def dispatch_docking_job_if_eligible(
         allow_internal_smoke=allow_internal_smoke,
     )
     if not eligible:
-        return {"dispatched": False, "reason": reason, "job_id": _text(record.get("job_id"))}
+        return {
+            "dispatched": False,
+            "reason": reason,
+            "job_id": _text(record.get("job_id")),
+        }
 
     _, execution, _ = _load_profile_contract(record)
-    internal_smoke = _internal_smoke_authorized(
-        record,
-        allow_internal_smoke=allow_internal_smoke,
-    )
     allow_synthetic = bool(
-        internal_smoke
+        _internal_smoke_authorized(
+            record,
+            allow_internal_smoke=allow_internal_smoke,
+        )
         and execution.get("execution_mode") == EXECUTION_MODE_SMOKE
         and execution.get("synthetic_input_allowed") is True
     )
@@ -317,17 +403,37 @@ def dispatch_docking_job_if_eligible(
         execution_contract=execution,
         allow_synthetic_ligand_input=allow_synthetic,
     )
+    event_id = _text(enqueue_payload.get("event_id"))
     if enqueue_payload.get("terminal") is True:
+        if event_id:
+            mark_outbox_delivered(job_store, event_id)
         return {
             "dispatched": False,
             "reason": "already_terminal_in_job_store",
             "job_id": _text(record.get("job_id")),
             "enqueue": enqueue_payload,
         }
-    ledger = mark_ledger_dispatched(jobs_dir, _text(record.get("job_id")))
+
+    try:
+        ledger = mark_ledger_dispatched(jobs_dir, _text(record.get("job_id")))
+        if event_id:
+            mark_outbox_delivered(job_store, event_id)
+    except Exception as exc:
+        if event_id:
+            mark_outbox_failed(job_store, event_id, str(exc))
+        return {
+            "dispatched": False,
+            "reason": "dispatch_outbox_delivery_failed",
+            "job_id": _text(record.get("job_id")),
+            "error": str(exc),
+            "enqueue": enqueue_payload,
+        }
+
     return {
         "dispatched": True,
-        "reason": "already_enqueued" if enqueue_payload.get("already_present") else reason,
+        "reason": "already_enqueued"
+        if enqueue_payload.get("already_present")
+        else reason,
         "job_id": _text(record.get("job_id")),
         "enqueue": enqueue_payload,
         "idempotent_replay": enqueue_payload.get("already_present") is True,
@@ -344,6 +450,11 @@ def dispatch_ready_docking_jobs(
     limit: int = 1,
 ) -> list[dict[str, Any]]:
     job_store = store or get_configured_job_store()
+    reconcile_pending_dispatch_outbox(
+        jobs_dir,
+        store=job_store,
+        limit=max(1, int(limit) * 4),
+    )
     results: list[dict[str, Any]] = []
     if not jobs_dir.exists():
         return results
@@ -353,7 +464,11 @@ def dispatch_ready_docking_jobs(
         record = read_job_record(jobs_dir, path.stem)
         if not record:
             continue
-        outcome = dispatch_docking_job_if_eligible(record, jobs_dir=jobs_dir, store=job_store)
+        outcome = dispatch_docking_job_if_eligible(
+            record,
+            jobs_dir=jobs_dir,
+            store=job_store,
+        )
         if outcome.get("dispatched"):
             results.append(outcome)
     return results
