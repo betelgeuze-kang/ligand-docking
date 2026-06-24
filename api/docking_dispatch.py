@@ -29,9 +29,19 @@ def _text(value: Any) -> str:
 
 
 def _internal_smoke_authorized(record: dict[str, Any], *, allow_internal_smoke: bool) -> bool:
+    manifest = record.get("engine_dispatch_manifest")
+    legacy_internal_record = bool(
+        isinstance(manifest, dict)
+        and not _text(manifest.get("execution_mode"))
+        and not _text(record.get("source_host"))
+        and not _text(record.get("customer_id"))
+        and not _text(record.get("user_id"))
+        and not isinstance(record.get("intake_payload"), dict)
+    )
     return bool(
         allow_internal_smoke
         or _text(record.get("source_host")) in INTERNAL_SMOKE_ACTORS
+        or legacy_internal_record
     )
 
 
