@@ -8,3 +8,4 @@ pydantic==2.12.5
 onnx==1.20.1
 matplotlib==3.8.4
 seaborn==0.13.2
+cryptography>=42,<47
