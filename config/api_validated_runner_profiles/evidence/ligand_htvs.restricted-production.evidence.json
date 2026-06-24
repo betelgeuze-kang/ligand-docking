@@ -1,0 +1,19 @@
+{
+  "profile_id": "ligand_htvs.restricted-production",
+  "claim_boundary": "Restricted-production HTVS execution only. Encrypted customer input, native coordinates, ROCm/HIP runtime, and geometry/runtime gate evidence are required. Broad accuracy claims and customer pose emission remain blocked.",
+  "claim_boundary_reviewed": true,
+  "fake_result_emission_forbidden": true,
+  "gate_policy_artifact": "config/ligand_htvs_api_restricted_production_v1.json",
+  "gate_policy_reviewed": true,
+  "input_contract_reviewed": true,
+  "output_contract_reviewed": true,
+  "private_payload_materialization_required": true,
+  "native_structure_required": true,
+  "rust_hip_runtime_required": true,
+  "proxy_trajectory_forbidden": true,
+  "production_claim_allowed": false,
+  "customer_pose_emission_allowed": false,
+  "required_operator_action": "Configure DOCKING_PRIVATE_PAYLOAD_FERNET_KEYS and run the profile on a validated self-hosted ROCm worker.",
+  "reviewed_at_utc": "2026-06-24T00:00:00+00:00",
+  "reviewer": "operator-restricted-production-contract"
+}
