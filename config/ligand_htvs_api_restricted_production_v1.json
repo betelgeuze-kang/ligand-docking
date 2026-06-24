@@ -1,0 +1,19 @@
+{
+  "version": "ligand_htvs_api_restricted_production_v1",
+  "description": "Customer restricted-production HTVS runtime preset. Requires encrypted input materialization, native structure coordinates, ROCm/HIP execution, non-proxy trajectories, and a geometry/runtime operational gate. It does not promote broad scientific claims.",
+  "run_scope": "full",
+  "trajectory_engine_mode": "rust_hip",
+  "require_rust_hip": true,
+  "stage3_score_only": true,
+  "stage3_min_frames": 160,
+  "gate": {
+    "enforce_operational_gate": true,
+    "strict_fail_fast": true,
+    "four_bead_cascade_enabled": true
+  },
+  "claim_boundary": {
+    "production_claim_allowed": false,
+    "customer_pose_emission_allowed": false,
+    "accuracy_claim_grade": "restricted_local_delivery_proxy_refinement_only"
+  }
+}
