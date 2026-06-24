@@ -1,6 +1,11 @@
 {
   "enabled": true,
   "profile_id": "ligand_htvs_pipeline_default",
+  "execution_mode": "smoke",
+  "customer_submission_allowed": false,
+  "synthetic_input_allowed": true,
+  "production_claim_allowed": false,
+  "customer_pose_emission_allowed": false,
   "runner_script": "tools/run_ligand_htvs_pipeline.py",
   "arguments": [
     "--out-prefix",
@@ -33,7 +38,7 @@
   ],
   "result_file_template": "{job_results_dir}/htvs_summary.json",
   "evidence_bundle_template": "{job_results_dir}/evidence_bundle.json",
-  "claim_boundary": "Operator-approved HTVS pipeline dispatch. Execution remains fail-closed for customer pose emission until delivery bundle validation is green.",
+  "claim_boundary": "Internal HTVS wiring smoke only. Customer submissions, production claims, and customer pose emission are forbidden.",
   "production_readiness": {
     "approved_by": "operator-gap-closure",
     "approved_at_utc": "2026-06-06T12:00:00+00:00",
