@@ -3,5 +3,6 @@ fastapi
 uvicorn[standard]
 pydantic-settings
 prometheus-client
+cryptography>=42,<47
 pytest
 httpx2
