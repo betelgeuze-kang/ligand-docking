@@ -6,15 +6,25 @@ from typing import Any
 
 from fastapi import HTTPException, Request
 
-from api import product as legacy_product
-from api.config import settings
-from api.docking_dispatch import dispatch_docking_job_if_eligible
-from api.job_store import get_configured_job_store
-from betelgeuze_product.atomic_io import atomic_write_json
-from betelgeuze_product.docking_request import build_docking_job_record
-from betelgeuze_product.engine_dispatch import build_customer_production_dispatch_manifest
-from betelgeuze_product.payload_privacy import sanitize_request_for_ledger
-from betelgeuze_product.private_payload_store import (
+from betelgeuze_product.job_ledger_atomic import install_atomic_job_ledger_writes
+
+# Install atomic persistence before importing the legacy router. Cancel, retry,
+# lease, heartbeat, failure, and stale-lease functions resolve the writer from
+# their module globals when called, so the replacement covers the whole API
+# orchestration surface.
+install_atomic_job_ledger_writes()
+
+from api import product as legacy_product  # noqa: E402
+from api.config import settings  # noqa: E402
+from api.docking_dispatch import dispatch_docking_job_if_eligible  # noqa: E402
+from api.job_store import get_configured_job_store  # noqa: E402
+from betelgeuze_product.atomic_io import atomic_write_json  # noqa: E402
+from betelgeuze_product.docking_request import build_docking_job_record  # noqa: E402
+from betelgeuze_product.engine_dispatch import (  # noqa: E402
+    build_customer_production_dispatch_manifest,
+)
+from betelgeuze_product.payload_privacy import sanitize_request_for_ledger  # noqa: E402
+from betelgeuze_product.private_payload_store import (  # noqa: E402
     PrivatePayloadConfigurationError,
     PrivatePayloadError,
     PrivatePayloadStore,
@@ -131,6 +141,8 @@ async def submit_secure_docking_job(
             record.update(private_metadata)
             record["input_materialization_ready"] = True
             record["private_payload_ligand_count"] = int(record.get("ligand_count") or 0)
+            # The public ledger must never carry raw ligand sources. The worker
+            # resolves them from the authenticated encrypted payload reference.
             record["materialization_ligands"] = []
             _persist_public_record(record)
         except PrivatePayloadConfigurationError as exc:
