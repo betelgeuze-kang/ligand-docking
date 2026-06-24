@@ -1,6 +1,11 @@
 {
   "enabled": true,
   "profile_id": "tier_beta_biodiscovery_direct",
+  "execution_mode": "restricted-production",
+  "customer_submission_allowed": false,
+  "synthetic_input_allowed": false,
+  "production_claim_allowed": false,
+  "customer_pose_emission_allowed": false,
   "runner_script": "tools/run_tier_beta_vertical_slice.py",
   "arguments": [
     "--protein-input",
