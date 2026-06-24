@@ -14,6 +14,8 @@ if str(_ROOT) not in sys.path:
 from api.runner_profile_contract import validate_runner_profile_execution_contract
 from api.validated_runner import _runner_script, validate_profile_readiness
 
+_REPO_PROFILE_DIR = (_ROOT / "config" / "api_validated_runner_profiles").resolve()
+
 
 def _load_json(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
@@ -22,13 +24,26 @@ def _load_json(path: Path) -> dict[str, Any]:
     return payload
 
 
-def validate_profiles(profiles_dir: Path) -> dict[str, Any]:
+def validate_profiles(
+    profiles_dir: Path,
+    *,
+    require_explicit_execution_contract: bool | None = None,
+) -> dict[str, Any]:
+    resolved_profiles_dir = profiles_dir.resolve()
+    if require_explicit_execution_contract is None:
+        # Repository-owned profiles are product configuration and must declare
+        # the customer/smoke execution boundary explicitly. Temporary profiles
+        # used by adapter unit tests remain backwards compatible but are
+        # reported as fail-closed `unspecified` execution contracts.
+        require_explicit_execution_contract = resolved_profiles_dir == _REPO_PROFILE_DIR
+
     profiles = sorted(profiles_dir.glob("*.json"))
     rows: list[dict[str, Any]] = []
     enabled_count = 0
     failed_count = 0
     enabled_missing_native_bundle_count = 0
     explicit_execution_contract_count = 0
+    implicit_execution_contract_count = 0
     customer_submission_profile_count = 0
     smoke_profile_count = 0
     for path in profiles:
@@ -59,19 +74,24 @@ def validate_profiles(profiles_dir: Path) -> dict[str, Any]:
                 readiness = validate_profile_readiness(profile, runner_script_path=script)
                 execution = validate_runner_profile_execution_contract(
                     profile,
-                    require_explicit=True,
+                    require_explicit=bool(require_explicit_execution_contract),
                 )
                 row["status"] = "ready"
                 row["runner_script"] = str(profile.get("runner_script", "") or "")
                 row["claim_scope"] = readiness["claim_scope"]
                 row["evidence_artifact"] = readiness["evidence_artifact"]
                 row.update(execution)
-                explicit_execution_contract_count += 1
+                if execution.get("execution_contract_explicit") is True:
+                    explicit_execution_contract_count += 1
+                else:
+                    implicit_execution_contract_count += 1
                 if execution["customer_submission_allowed"]:
                     customer_submission_profile_count += 1
                 if execution["execution_mode"] == "smoke":
                     smoke_profile_count += 1
-                evidence_bundle_template = str(profile.get("evidence_bundle_template", "") or "").strip()
+                evidence_bundle_template = str(
+                    profile.get("evidence_bundle_template", "") or ""
+                ).strip()
                 row["evidence_bundle_template"] = evidence_bundle_template
                 row["evidence_bundle_template_declared"] = bool(evidence_bundle_template)
                 if not evidence_bundle_template:
@@ -85,7 +105,8 @@ def validate_profiles(profiles_dir: Path) -> dict[str, Any]:
         (
             str(row.get("profile_id", ""))
             for row in rows
-            if row.get("enabled") is True and row.get("evidence_bundle_template_declared") is not True
+            if row.get("enabled") is True
+            and row.get("evidence_bundle_template_declared") is not True
         ),
         "",
     )
@@ -95,7 +116,11 @@ def validate_profiles(profiles_dir: Path) -> dict[str, Any]:
         "profile_count": len(profiles),
         "enabled_profile_count": enabled_count,
         "failed_profile_count": failed_count,
+        "explicit_execution_contract_required": bool(
+            require_explicit_execution_contract
+        ),
         "explicit_execution_contract_count": explicit_execution_contract_count,
+        "implicit_execution_contract_count": implicit_execution_contract_count,
         "customer_submission_profile_count": customer_submission_profile_count,
         "smoke_profile_count": smoke_profile_count,
         "enabled_native_evidence_bundle_missing_count": enabled_missing_native_bundle_count,
