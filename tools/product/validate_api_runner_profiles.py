@@ -11,6 +11,7 @@ _ROOT = Path(__file__).resolve().parents[2]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+from api.runner_profile_contract import validate_runner_profile_execution_contract
 from api.validated_runner import _runner_script, validate_profile_readiness
 
 
@@ -27,6 +28,9 @@ def validate_profiles(profiles_dir: Path) -> dict[str, Any]:
     enabled_count = 0
     failed_count = 0
     enabled_missing_native_bundle_count = 0
+    explicit_execution_contract_count = 0
+    customer_submission_profile_count = 0
+    smoke_profile_count = 0
     for path in profiles:
         row: dict[str, Any] = {
             "profile_path": str(path),
@@ -36,6 +40,12 @@ def validate_profiles(profiles_dir: Path) -> dict[str, Any]:
             "error": "",
             "evidence_bundle_template": "",
             "evidence_bundle_template_declared": False,
+            "execution_contract_explicit": False,
+            "execution_mode": "",
+            "customer_submission_allowed": False,
+            "synthetic_input_allowed": False,
+            "production_claim_allowed": False,
+            "customer_pose_emission_allowed": False,
         }
         try:
             profile = _load_json(path)
@@ -47,10 +57,20 @@ def validate_profiles(profiles_dir: Path) -> dict[str, Any]:
                 enabled_count += 1
                 script = _runner_script(profile)
                 readiness = validate_profile_readiness(profile, runner_script_path=script)
+                execution = validate_runner_profile_execution_contract(
+                    profile,
+                    require_explicit=True,
+                )
                 row["status"] = "ready"
                 row["runner_script"] = str(profile.get("runner_script", "") or "")
                 row["claim_scope"] = readiness["claim_scope"]
                 row["evidence_artifact"] = readiness["evidence_artifact"]
+                row.update(execution)
+                explicit_execution_contract_count += 1
+                if execution["customer_submission_allowed"]:
+                    customer_submission_profile_count += 1
+                if execution["execution_mode"] == "smoke":
+                    smoke_profile_count += 1
                 evidence_bundle_template = str(profile.get("evidence_bundle_template", "") or "").strip()
                 row["evidence_bundle_template"] = evidence_bundle_template
                 row["evidence_bundle_template_declared"] = bool(evidence_bundle_template)
@@ -75,6 +95,9 @@ def validate_profiles(profiles_dir: Path) -> dict[str, Any]:
         "profile_count": len(profiles),
         "enabled_profile_count": enabled_count,
         "failed_profile_count": failed_count,
+        "explicit_execution_contract_count": explicit_execution_contract_count,
+        "customer_submission_profile_count": customer_submission_profile_count,
+        "smoke_profile_count": smoke_profile_count,
         "enabled_native_evidence_bundle_missing_count": enabled_missing_native_bundle_count,
         "first_enabled_native_evidence_bundle_missing_profile_id": first_missing_native_bundle_profile_id,
         "rows": rows,

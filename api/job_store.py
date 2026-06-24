@@ -157,6 +157,41 @@ class SQLiteJobStore:
             )
         return self.get_job(job_id) or {}
 
+    def create_job_if_absent(
+        self,
+        job_id: str,
+        request: dict[str, Any],
+        *,
+        status: str = "submitted",
+        max_attempts: int = 3,
+    ) -> tuple[dict[str, Any], bool]:
+        """Atomically insert a queue row without resetting an existing job.
+
+        Returns ``(record, created)``. The existing row is preserved exactly
+        when another dispatcher has already inserted the same ``job_id``.
+        """
+
+        now = _utc_now()
+        request_json = json.dumps(
+            sanitize_request_for_ledger(request),
+            sort_keys=True,
+            ensure_ascii=False,
+        )
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            cursor = conn.execute(
+                """
+                INSERT OR IGNORE INTO simulation_jobs(
+                    job_id, status, request_json, max_attempts, created_at_utc, updated_at_utc
+                )
+                VALUES(?, ?, ?, ?, ?, ?)
+                """,
+                (job_id, status, request_json, max_attempts, now, now),
+            )
+            created = cursor.rowcount == 1
+            conn.commit()
+        return self.get_job(job_id) or {}, created
+
     def update_job(
         self,
         job_id: str,

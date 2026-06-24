@@ -12,6 +12,14 @@ import pandas as pd
 from betelgeuze_product.job_orchestration import read_job_record
 
 ROOT = Path(__file__).resolve().parents[2]
+MATERIALIZATION_CONTRACT_VERSION = "docking_materialization_v2"
+SYNTHETIC_SMOKE_SMILES = "CCO"
+_RAW_SMILES_FIELDS = ("smiles", "ligand_smiles")
+_PATH_SOURCE_FIELDS = ("sdf_path", "mol2_path", "pdbqt_path")
+
+
+class DockingMaterializationError(ValueError):
+    """Raised when the runner cannot prove which ligand source it will materialize."""
 
 
 def _jobs_dir() -> Path:
@@ -20,24 +28,163 @@ def _jobs_dir() -> Path:
     return Path(settings.results_storage_path) / "product_docking_jobs"
 
 
+def _text(value: Any) -> str:
+    return str(value or "").strip()
+
+
 def _estimate_ligand_mw(smiles: str) -> float:
-    text = str(smiles or "").strip()
+    text = _text(smiles)
     if not text:
-        return 200.0
+        raise DockingMaterializationError("ligand_smiles_missing_after_source_resolution")
     try:
         from rdkit import Chem
         from rdkit.Chem import Descriptors
 
         mol = Chem.MolFromSmiles(text)
         if mol is None:
-            return 200.0
+            raise DockingMaterializationError("invalid_ligand_smiles")
         return float(Descriptors.MolWt(mol))
-    except Exception:
+    except DockingMaterializationError:
+        raise
+    except ImportError:
+        # RDKit is part of the product image, but queue materialization should
+        # remain usable in lightweight contract tests.
         return 200.0
 
 
+def _resolve_ligand_smiles(ligand: dict[str, Any]) -> tuple[str, str]:
+    for key in _RAW_SMILES_FIELDS:
+        value = _text(ligand.get(key))
+        if value:
+            return value, key
+
+    inchi = _text(ligand.get("inchi"))
+    if inchi:
+        try:
+            from rdkit import Chem
+        except ImportError as exc:
+            raise DockingMaterializationError("inchi_conversion_requires_rdkit") from exc
+        mol = Chem.MolFromInchi(inchi)
+        if mol is None:
+            raise DockingMaterializationError("invalid_ligand_inchi")
+        return str(Chem.MolToSmiles(mol, canonical=True)), "inchi"
+
+    unsupported_kind = next((key for key in _PATH_SOURCE_FIELDS if _text(ligand.get(key))), "")
+    if unsupported_kind:
+        raise DockingMaterializationError(
+            f"unsupported_ligand_source_for_htvs_materialization:{unsupported_kind}"
+        )
+    if ligand.get("source_redacted") is True or _text(ligand.get("source_value_sha256")):
+        raise DockingMaterializationError("redacted_ligand_source_cannot_be_materialized")
+    raise DockingMaterializationError("ligand_source_unavailable_for_materialization")
+
+
+def _has_materializable_source(ligand: Any) -> bool:
+    if not isinstance(ligand, dict):
+        return False
+    return bool(
+        any(_text(ligand.get(key)) for key in _RAW_SMILES_FIELDS)
+        or _text(ligand.get("inchi"))
+    )
+
+
+def _estimate_expected_ligand_count(
+    *,
+    params: dict[str, Any],
+    ledger: dict[str, Any],
+    candidate_count: int,
+) -> int:
+    for value in (
+        params.get("ligand_count"),
+        ledger.get("ligand_count"),
+        (ledger.get("intake_payload") or {}).get("ligand_count")
+        if isinstance(ledger.get("intake_payload"), dict)
+        else None,
+    ):
+        try:
+            count = int(value)
+        except (TypeError, ValueError):
+            continue
+        if count > 0:
+            return count
+    return int(candidate_count)
+
+
+def _resolve_materialization_inputs(
+    payload: dict[str, Any],
+    params: dict[str, Any],
+    *,
+    docking_job_id: str,
+    target: str,
+    family: str,
+) -> tuple[list[dict[str, Any]], str, str, int, bool]:
+    ledger: dict[str, Any] = {}
+    candidate_lists: list[list[dict[str, Any]]] = []
+    if docking_job_id:
+        ledger = read_job_record(_jobs_dir(), docking_job_id)
+        intake = ledger.get("intake_payload", {})
+        if isinstance(intake, dict):
+            family = _text(intake.get("family")) or family
+            target = _text(intake.get("target_id")) or target
+        materialization_ligands = ledger.get("materialization_ligands")
+        if isinstance(materialization_ligands, list) and materialization_ligands:
+            candidate_lists.append([row for row in materialization_ligands if isinstance(row, dict)])
+        if isinstance(intake, dict):
+            intake_ligands = intake.get("ligands")
+            if isinstance(intake_ligands, list) and intake_ligands:
+                candidate_lists.append([row for row in intake_ligands if isinstance(row, dict)])
+
+    param_ligands = params.get("ligands")
+    if isinstance(param_ligands, list) and param_ligands:
+        candidate_lists.append([row for row in param_ligands if isinstance(row, dict)])
+
+    ligands = next(
+        (
+            rows
+            for rows in candidate_lists
+            if rows and all(_has_materializable_source(row) for row in rows)
+        ),
+        [],
+    )
+    expected_count = _estimate_expected_ligand_count(
+        params=params,
+        ledger=ledger,
+        candidate_count=len(ligands),
+    )
+    allow_synthetic = bool(
+        params.get("allow_synthetic_ligand_input") is True
+        and _text(params.get("runner_execution_mode")) == "smoke"
+        and params.get("runner_synthetic_input_allowed") is True
+    )
+    synthetic_used = False
+    if not ligands:
+        if not allow_synthetic:
+            raise DockingMaterializationError("ligand_source_unavailable_for_materialization")
+        if expected_count not in {0, 1}:
+            raise DockingMaterializationError(
+                "synthetic_smoke_materialization_requires_exactly_one_ligand"
+            )
+        ligands = [
+            {
+                "ligand_id": "synthetic_smoke_ligand_1",
+                "smiles": SYNTHETIC_SMOKE_SMILES,
+                "_synthetic_smoke_input": True,
+            }
+        ]
+        expected_count = 1
+        synthetic_used = True
+
+    if expected_count <= 0:
+        raise DockingMaterializationError("expected_ligand_count_missing")
+    if len(ligands) != expected_count:
+        raise DockingMaterializationError(
+            f"materialized_ligand_count_mismatch:expected={expected_count}:observed={len(ligands)}"
+        )
+    return ligands, target, family, expected_count, synthetic_used
+
+
 def _resolve_native_pdb_path(target: str) -> str:
-    target_text = str(target or "").strip()
+    target_text = _text(target)
     if not target_text:
         return ""
     csv_path = ROOT / "config/real_drug_targets_blind_gpcr_adrb2_v1.csv"
@@ -50,20 +197,25 @@ def _resolve_native_pdb_path(target: str) -> str:
         aliases.add("ADRB2_GPCR_BLIND")
     with csv_path.open("r", encoding="utf-8", newline="") as handle:
         for row in csv.DictReader(handle):
-            row_target = str(row.get("target") or "").strip().upper()
+            row_target = _text(row.get("target")).upper()
             if row_target in aliases:
-                native = str(row.get("native_pdb_path") or "").strip()
+                native = _text(row.get("native_pdb_path"))
                 if native:
                     return native
     return ""
 
 
 def _ligand_row_from_intake(ligand: dict[str, Any], *, target: str, replica_idx: int) -> dict[str, Any]:
-    ligand_id = str(ligand.get("compound_id") or ligand.get("ligand_id") or ligand.get("id") or f"ligand_{replica_idx}")
-    smiles = str(ligand.get("smiles") or ligand.get("inchi") or ligand.get("ligand_smiles") or "")
+    ligand_id = _text(
+        ligand.get("compound_id")
+        or ligand.get("ligand_id")
+        or ligand.get("id")
+        or f"ligand_{replica_idx}"
+    )
+    smiles, source_kind = _resolve_ligand_smiles(ligand)
     slug = "".join(ch if ch.isalnum() else "_" for ch in ligand_id.lower())[:40] or f"ligand_{replica_idx:04d}"
     queue_id = f"{target.lower()}__rep{replica_idx:04d}__{slug}"
-    native_pdb_path = str(ligand.get("native_pdb_path") or _resolve_native_pdb_path(target) or "")
+    native_pdb_path = _text(ligand.get("native_pdb_path") or _resolve_native_pdb_path(target))
     return {
         "queue_id": queue_id,
         "target": str(target),
@@ -73,6 +225,8 @@ def _ligand_row_from_intake(ligand: dict[str, Any], *, target: str, replica_idx:
         "ligand_id": ligand_id,
         "ligand_smiles": smiles,
         "ligand_mw": _estimate_ligand_mw(smiles),
+        "materialization_source_kind": source_kind,
+        "synthetic_smoke_input": ligand.get("_synthetic_smoke_input") is True,
         "ligand_bead0_x": -0.8,
         "ligand_bead0_y": 0.0,
         "ligand_bead0_z": 0.0,
@@ -128,49 +282,50 @@ def materialize_from_docking_request(
     params = payload.get("runner_profile_params", {})
     if not isinstance(params, dict):
         params = {}
-    docking_job_id = str(params.get("docking_job_id", payload.get("job_id", "")) or "")
-    target = str(payload.get("target_name") or params.get("target_id") or "target")
-    family = str(params.get("family", "") or "")
-    ligands: list[dict[str, Any]] = []
-    if docking_job_id:
-        ledger = read_job_record(_jobs_dir(), docking_job_id)
-        materialization_ligands = ledger.get("materialization_ligands")
-        if isinstance(materialization_ligands, list) and materialization_ligands:
-            ligands = list(materialization_ligands)
-            intake = ledger.get("intake_payload", {})
-            if isinstance(intake, dict):
-                family = str(intake.get("family", family) or family)
-                target = str(intake.get("target_id", target) or target)
-        else:
-            intake = ledger.get("intake_payload", {})
-            if isinstance(intake, dict):
-                family = str(intake.get("family", family) or family)
-                target = str(intake.get("target_id", target) or target)
-                ligands = list(intake.get("ligands", []) or [])
-    if not ligands:
-        ligands = list(params.get("ligands", []) or [])
-    rows = [_ligand_row_from_intake(lig, target=target, replica_idx=i) for i, lig in enumerate(ligands)]
-    if not rows:
-        rows = [_ligand_row_from_intake({}, target=target, replica_idx=0)]
+    docking_job_id = _text(params.get("docking_job_id") or payload.get("job_id"))
+    target = _text(payload.get("target_name") or params.get("target_id")) or "target"
+    family = _text(params.get("family"))
+    ligands, target, family, expected_count, synthetic_used = _resolve_materialization_inputs(
+        payload,
+        params,
+        docking_job_id=docking_job_id,
+        target=target,
+        family=family,
+    )
+    rows = [
+        _ligand_row_from_intake(ligand, target=target, replica_idx=index)
+        for index, ligand in enumerate(ligands)
+    ]
     for row in rows:
         row["family"] = family
         row["target_family"] = family
-    pocket_meta = _pocket_metadata_from_native_pdb(str(rows[0].get("native_pdb_path") or ""))
+    pocket_meta = _pocket_metadata_from_native_pdb(_text(rows[0].get("native_pdb_path")))
     for row in rows:
         row.update(pocket_meta)
     os.makedirs(out_dir, exist_ok=True)
     queue_csv = os.path.join(out_dir, "docking_queue.csv")
     pd.DataFrame(rows).to_csv(queue_csv, index=False)
     materialized = {
+        "materialization_contract_version": MATERIALIZATION_CONTRACT_VERSION,
+        "input_materialization_ready": True,
         "queue_csv": queue_csv,
         "target": target,
         "family": family,
         "ligand_count": int(len(rows)),
+        "expected_ligand_count": int(expected_count),
+        "materialization_source_count": int(len(rows)),
+        "materialization_source_kinds": sorted(
+            {str(row.get("materialization_source_kind") or "") for row in rows}
+        ),
+        "synthetic_input_used": synthetic_used,
         "docking_job_id": docking_job_id,
         "request_json_path": str(request_json_path),
         "pocket_metadata": pocket_meta,
     }
     meta_path = os.path.join(out_dir, "docking_htvs_materialized.json")
-    Path(meta_path).write_text(json.dumps(materialized, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    Path(meta_path).write_text(
+        json.dumps(materialized, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
     materialized["materialized_json"] = meta_path
     return materialized
