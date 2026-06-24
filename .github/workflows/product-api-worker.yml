@@ -4,8 +4,11 @@ on:
   push:
     paths:
       - "api/**"
+      - "betelgeuze_product/atomic_io.py"
       - "betelgeuze_product/engine_dispatch.py"
+      - "betelgeuze_product/job_ledger_atomic.py"
       - "betelgeuze_product/job_terminal_state.py"
+      - "betelgeuze_product/private_payload_store.py"
       - "tools/run_api_simulation_worker.py"
       - "tools/smoke_alert_delivery.py"
       - "tools/product/materialize_docking_htvs_request.py"
@@ -15,6 +18,7 @@ on:
       - "tools/product/build_refine_tier_public_benchmark_readiness.py"
       - "tools/product/apply_refine_tier_public_benchmark_work_order.py"
       - "config/api_validated_runner_profiles/**"
+      - "config/ligand_htvs_api_restricted_production_v1.json"
       - "config/refine_tier_public_benchmark_intake_current.csv"
       - "tools/build_viewer_asset_base_url_decision.py"
       - "tools/build_product_commercial_independence_gate.py"
@@ -36,6 +40,9 @@ on:
       - "monitoring/**"
       - "viewer/**"
       - "tests/unit/test_docking_pipeline_hardening.py"
+      - "tests/unit/test_private_payload_store.py"
+      - "tests/unit/test_docking_dispatch_outbox.py"
+      - "tests/unit/test_secure_docking_submission.py"
       - "tests/unit/test_ci_contract_fixture_packets.py"
       - "tests/unit/test_deploy_model_registry.py"
       - "tests/unit/test_product_release_bundle.py"
@@ -57,8 +64,11 @@ on:
   pull_request:
     paths:
       - "api/**"
+      - "betelgeuze_product/atomic_io.py"
       - "betelgeuze_product/engine_dispatch.py"
+      - "betelgeuze_product/job_ledger_atomic.py"
       - "betelgeuze_product/job_terminal_state.py"
+      - "betelgeuze_product/private_payload_store.py"
       - "tools/run_api_simulation_worker.py"
       - "tools/smoke_alert_delivery.py"
       - "tools/product/materialize_docking_htvs_request.py"
@@ -68,6 +78,7 @@ on:
       - "tools/product/build_refine_tier_public_benchmark_readiness.py"
       - "tools/product/apply_refine_tier_public_benchmark_work_order.py"
       - "config/api_validated_runner_profiles/**"
+      - "config/ligand_htvs_api_restricted_production_v1.json"
       - "config/refine_tier_public_benchmark_intake_current.csv"
       - "tools/build_viewer_asset_base_url_decision.py"
       - "tools/build_product_commercial_independence_gate.py"
@@ -89,6 +100,9 @@ on:
       - "monitoring/**"
       - "viewer/**"
       - "tests/unit/test_docking_pipeline_hardening.py"
+      - "tests/unit/test_private_payload_store.py"
+      - "tests/unit/test_docking_dispatch_outbox.py"
+      - "tests/unit/test_secure_docking_submission.py"
       - "tests/unit/test_ci_contract_fixture_packets.py"
       - "tests/unit/test_deploy_model_registry.py"
       - "tests/unit/test_product_release_bundle.py"
@@ -136,7 +150,9 @@ jobs:
           python3 -m py_compile \
             api/config.py \
             api/docking_dispatch.py \
+            api/docking_outbox.py \
             api/job_store.py \
+            api/product_secure.py \
             api/runner_profile_contract.py \
             api/security.py \
             api/validated_runner.py \
@@ -144,8 +160,11 @@ jobs:
             api/main.py \
             api/result_manifest.py \
             api/tasks.py \
+            betelgeuze_product/atomic_io.py \
             betelgeuze_product/engine_dispatch.py \
+            betelgeuze_product/job_ledger_atomic.py \
             betelgeuze_product/job_terminal_state.py \
+            betelgeuze_product/private_payload_store.py \
             deploy/model_registry.py \
             deploy/upload_model.py \
             deploy/download_model.py \
@@ -189,6 +208,9 @@ jobs:
         run: |
           python3 -m pytest -q \
             tests/unit/test_docking_pipeline_hardening.py \
+            tests/unit/test_private_payload_store.py \
+            tests/unit/test_docking_dispatch_outbox.py \
+            tests/unit/test_secure_docking_submission.py \
             tests/unit/test_api_job_store.py \
             tests/unit/test_api_validated_runner_adapter.py \
             tests/unit/test_api_runner_profile_enablement_work_order.py \
