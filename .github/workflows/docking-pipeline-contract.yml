@@ -1,0 +1,101 @@
+name: docking-pipeline-contract
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "api/**"
+      - "betelgeuze_product/**"
+      - "tools/product/materialize_docking_*.py"
+      - "config/api_validated_runner_profiles/**"
+      - "config/ligand_htvs_api_restricted_production_v1.json"
+      - "requirements-api.txt"
+      - "requirements-package.txt"
+      - "tests/unit/test_docking_pipeline_hardening.py"
+      - "tests/unit/test_private_payload_store.py"
+      - "tests/unit/test_docking_dispatch_outbox.py"
+      - "tests/unit/test_secure_docking_submission.py"
+      - ".github/workflows/docking-pipeline-contract.yml"
+  pull_request:
+    paths:
+      - "api/**"
+      - "betelgeuze_product/**"
+      - "tools/product/materialize_docking_*.py"
+      - "config/api_validated_runner_profiles/**"
+      - "config/ligand_htvs_api_restricted_production_v1.json"
+      - "requirements-api.txt"
+      - "requirements-package.txt"
+      - "tests/unit/test_docking_pipeline_hardening.py"
+      - "tests/unit/test_private_payload_store.py"
+      - "tests/unit/test_docking_dispatch_outbox.py"
+      - "tests/unit/test_secure_docking_submission.py"
+      - ".github/workflows/docking-pipeline-contract.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lightweight-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install lightweight contract dependencies without RDKit
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            pytest==8.3.5 \
+            fastapi==0.115.12 \
+            pydantic==2.12.5 \
+            pydantic-settings==2.10.1 \
+            httpx==0.27.2 \
+            prometheus-client==0.22.1 \
+            cryptography==46.0.3 \
+            numpy==1.26.4 \
+            pandas==2.2.3 \
+            PyYAML==6.0.3
+          python - <<'PY'
+          import importlib.util
+          assert importlib.util.find_spec("rdkit") is None, "lightweight job must remain RDKit-free"
+          PY
+
+      - name: Compile secure docking pipeline
+        run: |
+          python -m py_compile \
+            api/config.py \
+            api/docking_dispatch.py \
+            api/docking_outbox.py \
+            api/job_store.py \
+            api/main.py \
+            api/product_secure.py \
+            api/runner_profile_contract.py \
+            betelgeuze_product/atomic_io.py \
+            betelgeuze_product/engine_dispatch.py \
+            betelgeuze_product/job_ledger_atomic.py \
+            betelgeuze_product/private_payload_store.py \
+            tools/product/materialize_docking_htvs_request.py \
+            tools/product/materialize_docking_backmapping_request.py
+
+      - name: Validate explicit runner profiles
+        run: |
+          python tools/product/validate_api_runner_profiles.py \
+            --profiles-dir config/api_validated_runner_profiles \
+            --out-json /tmp/api_runner_profiles.json
+
+      - name: Run secure docking contract tests
+        run: |
+          python -m pytest -q \
+            tests/unit/test_docking_pipeline_hardening.py \
+            tests/unit/test_private_payload_store.py \
+            tests/unit/test_docking_dispatch_outbox.py \
+            tests/unit/test_secure_docking_submission.py
