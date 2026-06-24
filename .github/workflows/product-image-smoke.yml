@@ -88,6 +88,15 @@ jobs:
           PRODUCT_IMAGE_REQUIRE_BUILDX: "1"
           PRODUCT_IMAGE_PRUNE_BEFORE_BUILD: "1"
         run: bash deploy/verify_product_image.sh
+      - name: Upload product image build receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-image-build-receipt
+          if-no-files-found: warn
+          path: |
+            runs/product_image_smoke_receipt_current.json
+            runs/product_image_smoke_runner_artifacts/**
       - name: Summarize product image build boundary
         if: always()
         run: |
@@ -125,8 +134,9 @@ jobs:
           PY
 
   product-image-rocm-runtime-smoke:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.verify_mode == 'rocm-runtime' }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.verify_mode == 'rocm-runtime') || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
     runs-on: [self-hosted, linux, rocm]
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -137,6 +147,15 @@ jobs:
           PRODUCT_IMAGE_REQUIRE_BUILDX: "1"
           PRODUCT_IMAGE_PRUNE_BEFORE_BUILD: "1"
         run: bash deploy/verify_product_image.sh
+      - name: Upload product image ROCm runtime receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-image-rocm-runtime-receipt
+          if-no-files-found: warn
+          path: |
+            runs/product_image_smoke_receipt_current.json
+            runs/product_image_smoke_runner_artifacts/**
       - name: Summarize product image ROCm runtime boundary
         if: always()
         run: |
