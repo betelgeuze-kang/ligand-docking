@@ -98,8 +98,9 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          .venv-docking-contract/bin/python -m pytest -vv \
-            tests/unit/test_docking_pipeline_hardening.py \
+          .venv-docking-contract/bin/python -m pytest \
+            --confcutdir=tests/unit \
+            -vv tests/unit/test_docking_pipeline_hardening.py \
             --junitxml=test-results/docking-pipeline-hardening.xml \
             2>&1 | tee test-results/docking-pipeline-hardening.log
 
@@ -107,8 +108,9 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          .venv-docking-contract/bin/python -m pytest -vv \
-            tests/unit/test_private_payload_store.py \
+          .venv-docking-contract/bin/python -m pytest \
+            --confcutdir=tests/unit \
+            -vv tests/unit/test_private_payload_store.py \
             --junitxml=test-results/private-payload-store.xml \
             2>&1 | tee test-results/private-payload-store.log
 
@@ -116,8 +118,9 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          .venv-docking-contract/bin/python -m pytest -vv \
-            tests/unit/test_docking_dispatch_outbox.py \
+          .venv-docking-contract/bin/python -m pytest \
+            --confcutdir=tests/unit \
+            -vv tests/unit/test_docking_dispatch_outbox.py \
             --junitxml=test-results/docking-dispatch-outbox.xml \
             2>&1 | tee test-results/docking-dispatch-outbox.log
 
@@ -125,8 +128,9 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          .venv-docking-contract/bin/python -m pytest -vv \
-            tests/unit/test_secure_docking_submission.py \
+          .venv-docking-contract/bin/python -m pytest \
+            --confcutdir=tests/unit \
+            -vv tests/unit/test_secure_docking_submission.py \
             --junitxml=test-results/secure-docking-submission.xml \
             2>&1 | tee test-results/secure-docking-submission.log
 
