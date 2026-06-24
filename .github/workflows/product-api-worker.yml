@@ -131,6 +131,7 @@ on:
 jobs:
   api-worker-contract:
     runs-on: ${{ fromJSON(inputs.runner_labels_json || '["self-hosted","linux"]') }}
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -204,18 +205,29 @@ jobs:
           python3 tools/product/build_product_launch_r4_preflight.py
           python3 deploy/product_release_bundle.py
 
-      - name: Run API worker and deploy artifact tests
+      - name: Test secure docking pipeline
         run: |
+          mkdir -p test-results
           python3 -m pytest -q \
             tests/unit/test_docking_pipeline_hardening.py \
             tests/unit/test_private_payload_store.py \
             tests/unit/test_docking_dispatch_outbox.py \
             tests/unit/test_secure_docking_submission.py \
+            --junitxml=test-results/secure-docking.xml
+
+      - name: Test API queue and validated runner contracts
+        run: |
+          python3 -m pytest -q \
             tests/unit/test_api_job_store.py \
             tests/unit/test_api_validated_runner_adapter.py \
             tests/unit/test_api_runner_profile_enablement_work_order.py \
             tests/unit/test_api_worker_deploy_artifacts.py \
             tests/unit/test_api_security_middleware.py \
+            --junitxml=test-results/api-worker-contracts.xml
+
+      - name: Test deployment and release artifacts
+        run: |
+          python3 -m pytest -q \
             tests/unit/test_deploy_model_registry.py \
             tests/unit/test_product_release_bundle.py \
             tests/unit/test_build_product_launch_r4_preflight.py \
@@ -226,10 +238,24 @@ jobs:
             tests/unit/test_viewer_self_hosted_assets.py \
             tests/unit/test_build_viewer_asset_base_url_decision.py \
             tests/unit/test_build_self_hosted_license_distribution_audit.py \
+            --junitxml=test-results/deployment-contracts.xml
+
+      - name: Test API router imports
+        run: |
+          python3 -m pytest -q \
             tests/unit/test_api_goal_import.py \
             tests/unit/test_api_casp17_import.py \
             tests/unit/test_api_cleanup_import.py \
-            tests/unit/test_api_product_import.py
+            tests/unit/test_api_product_import.py \
+            --junitxml=test-results/api-imports.xml
+
+      - name: Upload API worker test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-api-worker-test-results
+          if-no-files-found: warn
+          path: test-results/*.xml
 
       - name: Validate API runner profiles
         run: |
