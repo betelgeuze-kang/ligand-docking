@@ -14,7 +14,7 @@ from api.cameo import router as cameo_router
 from api.casp17 import router as casp17_router
 from api.cleanup import router as cleanup_router
 from api.goal import router as goal_router
-from api.product import router as product_router
+from api.product_secure import router as product_router
 from api.result_manifest import infer_result_artifact_metadata
 from api.models import SimulationRequest, SimulationResponse, StatusResponse
 from api.simulation_scope import (
@@ -103,7 +103,6 @@ async def submit_simulation(request: SimulationRequest, background_tasks: Backgr
     store = get_job_store()
     store.create_job(job_id, request_data, status="submitted")
 
-    # Create status file
     results_dir = job_results_dir(job_id)
     os.makedirs(results_dir, exist_ok=True)
     status_file_path = job_status_path(job_id)
@@ -127,6 +126,7 @@ async def submit_simulation(request: SimulationRequest, background_tasks: Backgr
         ),
     )
 
+
 async def run_simulation_async_wrapper(job_id: str, request_data: dict[str, Any]):
     """Wrapper to handle the async task and update job status."""
     return await run_job_once(
@@ -137,13 +137,13 @@ async def run_simulation_async_wrapper(job_id: str, request_data: dict[str, Any]
         lease_seconds=settings.api_worker_lease_seconds,
     )
 
+
 @app.get("/status/{job_id}", response_model=StatusResponse)
 def get_simulation_status(job_id: str):
     store = get_job_store()
     if not store.job_exists(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
 
-    # Read status from file
     status_file_path = job_status_path(job_id)
     if not os.path.exists(status_file_path):
         return StatusResponse(job_id=job_id, status="unknown", message="Status file missing")
@@ -169,6 +169,7 @@ def get_simulation_status(job_id: str):
             record.get("evidence_bundle_sha256"),
         ),
     )
+
 
 @app.get(
     "/results/{job_id}",
@@ -258,10 +259,9 @@ def get_simulation_results(job_id: str):
             raise HTTPException(status_code=500, detail="Result JSON artifact is invalid") from exc
         return JSONResponse(payload)
     return FileResponse(result_file, media_type=media_type, filename=os.path.basename(result_file))
-    # Or return a ResultsResponse object with a download link if serving via URL is preferred
-    # return ResultsResponse(job_id=job_id, status="completed", result_url=f"/download/{job_id}")
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
