@@ -6,10 +6,12 @@ on:
       - "api/**"
       - "betelgeuze_product/engine_dispatch.py"
       - "betelgeuze_product/job_terminal_state.py"
+      - "betelgeuze_product/payload_privacy.py"
       - "tools/run_api_simulation_worker.py"
       - "tools/smoke_alert_delivery.py"
       - "tools/product/materialize_docking_htvs_request.py"
       - "tools/product/materialize_docking_backmapping_request.py"
+      - "tools/accounting/build_pdbbind_casf_pose_affinity_results.py"
       - "tools/product/validate_api_runner_profiles.py"
       - "tools/product/build_api_runner_profile_enablement_work_order.py"
       - "tools/product/build_refine_tier_public_benchmark_readiness.py"
@@ -53,16 +55,20 @@ on:
       - "tests/unit/test_api_product_import.py"
       - "tests/unit/test_api_worker_deploy_artifacts.py"
       - "tests/unit/test_api_security_middleware.py"
+      - "tests/unit/test_payload_privacy.py"
+      - "tests/unit/test_build_pdbbind_casf_pose_affinity_results.py"
       - ".github/workflows/product-api-worker.yml"
   pull_request:
     paths:
       - "api/**"
       - "betelgeuze_product/engine_dispatch.py"
       - "betelgeuze_product/job_terminal_state.py"
+      - "betelgeuze_product/payload_privacy.py"
       - "tools/run_api_simulation_worker.py"
       - "tools/smoke_alert_delivery.py"
       - "tools/product/materialize_docking_htvs_request.py"
       - "tools/product/materialize_docking_backmapping_request.py"
+      - "tools/accounting/build_pdbbind_casf_pose_affinity_results.py"
       - "tools/product/validate_api_runner_profiles.py"
       - "tools/product/build_api_runner_profile_enablement_work_order.py"
       - "tools/product/build_refine_tier_public_benchmark_readiness.py"
@@ -106,6 +112,8 @@ on:
       - "tests/unit/test_api_product_import.py"
       - "tests/unit/test_api_worker_deploy_artifacts.py"
       - "tests/unit/test_api_security_middleware.py"
+      - "tests/unit/test_payload_privacy.py"
+      - "tests/unit/test_build_pdbbind_casf_pose_affinity_results.py"
       - ".github/workflows/product-api-worker.yml"
   workflow_dispatch:
     inputs:
@@ -146,6 +154,7 @@ jobs:
             api/tasks.py \
             betelgeuze_product/engine_dispatch.py \
             betelgeuze_product/job_terminal_state.py \
+            betelgeuze_product/payload_privacy.py \
             deploy/model_registry.py \
             deploy/upload_model.py \
             deploy/download_model.py \
@@ -156,6 +165,7 @@ jobs:
             tools/smoke_alert_delivery.py \
             tools/product/materialize_docking_htvs_request.py \
             tools/product/materialize_docking_backmapping_request.py \
+            tools/accounting/build_pdbbind_casf_pose_affinity_results.py \
             scripts/verify_quality_gate.py \
             tools/product/bootstrap_api_worker_contract_artifacts.py \
             tools/product/build_api_runner_profile_promotion_operator_receipt.py \
@@ -194,6 +204,8 @@ jobs:
             tests/unit/test_api_runner_profile_enablement_work_order.py \
             tests/unit/test_api_worker_deploy_artifacts.py \
             tests/unit/test_api_security_middleware.py \
+            tests/unit/test_payload_privacy.py \
+            tests/unit/test_build_pdbbind_casf_pose_affinity_results.py \
             tests/unit/test_deploy_model_registry.py \
             tests/unit/test_product_release_bundle.py \
             tests/unit/test_build_product_launch_r4_preflight.py \

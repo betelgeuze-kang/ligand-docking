@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 from datetime import datetime, timedelta, timezone
@@ -24,6 +25,28 @@ def _utc_now() -> str:
 
 def _utc_after(seconds: int) -> str:
     return _format_utc(_utc_now_dt() + timedelta(seconds=seconds))
+
+
+def _outbox_summary_from_request(job_id: str, status: str, request: dict[str, Any]) -> dict[str, Any]:
+    sanitized = sanitize_request_for_ledger(request)
+    summary: dict[str, Any] = {"job_id": job_id, "status": status}
+    target_name = sanitized.get("target_name")
+    if isinstance(target_name, str) and target_name:
+        summary["target_name"] = target_name
+    return summary
+
+
+def _outbox_summary_for_status(job_id: str, status: str, *, error: str = "") -> dict[str, Any]:
+    summary: dict[str, Any] = {"job_id": job_id, "status": status}
+    if error:
+        encoded = error.encode("utf-8")
+        summary["error"] = {
+            "redacted": True,
+            "redaction": "sha256",
+            "sha256": hashlib.sha256(encoded).hexdigest(),
+            "byte_length": len(encoded),
+        }
+    return summary
 
 
 _configured_job_store: "SQLiteJobStore | None" = None
@@ -120,6 +143,128 @@ class SQLiteJobStore:
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_simulation_jobs_lease ON simulation_jobs(status, lease_expires_at_utc)"
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS simulation_job_outbox (
+                    event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    job_id TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    delivery_state TEXT NOT NULL DEFAULT 'pending',
+                    created_at_utc TEXT NOT NULL,
+                    updated_at_utc TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_simulation_job_outbox_pending
+                ON simulation_job_outbox(delivery_state, created_at_utc)
+                """
+            )
+
+    def _insert_outbox_event(
+        self,
+        conn: sqlite3.Connection,
+        *,
+        job_id: str,
+        event_type: str,
+        payload: dict[str, Any],
+        now: str,
+    ) -> int:
+        cursor = conn.execute(
+            """
+            INSERT INTO simulation_job_outbox(
+                job_id, event_type, payload_json, delivery_state, created_at_utc, updated_at_utc
+            )
+            VALUES(?, ?, ?, 'pending', ?, ?)
+            """,
+            (
+                job_id,
+                event_type,
+                json.dumps(payload, sort_keys=True, ensure_ascii=False),
+                now,
+                now,
+            ),
+        )
+        return int(cursor.lastrowid)
+
+    def list_pending_outbox_events(self) -> list[dict[str, Any]]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT event_id, job_id, event_type, payload_json, delivery_state,
+                       created_at_utc, updated_at_utc
+                FROM simulation_job_outbox
+                WHERE delivery_state='pending'
+                ORDER BY event_id ASC
+                """
+            ).fetchall()
+        events: list[dict[str, Any]] = []
+        for row in rows:
+            event = dict(row)
+            try:
+                event["payload"] = json.loads(event.pop("payload_json"))
+            except json.JSONDecodeError:
+                event["payload"] = {}
+            events.append(event)
+        return events
+
+    def mark_outbox_event_delivered(self, event_id: int) -> bool:
+        now = _utc_now()
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT delivery_state FROM simulation_job_outbox WHERE event_id=?",
+                (event_id,),
+            ).fetchone()
+            if row is None:
+                conn.rollback()
+                return False
+            if row["delivery_state"] == "delivered":
+                conn.commit()
+                return True
+            if row["delivery_state"] != "pending":
+                conn.rollback()
+                return False
+            conn.execute(
+                """
+                UPDATE simulation_job_outbox
+                SET delivery_state='delivered', updated_at_utc=?
+                WHERE event_id=?
+                """,
+                (now, event_id),
+            )
+            conn.commit()
+        return True
+
+    def mark_outbox_event_recovered(self, event_id: int) -> bool:
+        now = _utc_now()
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT delivery_state FROM simulation_job_outbox WHERE event_id=?",
+                (event_id,),
+            ).fetchone()
+            if row is None:
+                conn.rollback()
+                return False
+            if row["delivery_state"] == "recovered":
+                conn.commit()
+                return True
+            if row["delivery_state"] != "pending":
+                conn.rollback()
+                return False
+            conn.execute(
+                """
+                UPDATE simulation_job_outbox
+                SET delivery_state='recovered', updated_at_utc=?
+                WHERE event_id=?
+                """,
+                (now, event_id),
+            )
+            conn.commit()
+        return True
 
     def create_job(
         self,
@@ -131,7 +276,9 @@ class SQLiteJobStore:
     ) -> dict[str, Any]:
         now = _utc_now()
         request_json = json.dumps(sanitize_request_for_ledger(request), sort_keys=True, ensure_ascii=False)
+        outbox_payload = _outbox_summary_from_request(job_id, status, request)
         with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
             conn.execute(
                 """
                 INSERT INTO simulation_jobs(
@@ -155,6 +302,14 @@ class SQLiteJobStore:
                 """,
                 (job_id, status, request_json, max_attempts, now, now),
             )
+            self._insert_outbox_event(
+                conn,
+                job_id=job_id,
+                event_type="job_created",
+                payload=outbox_payload,
+                now=now,
+            )
+            conn.commit()
         return self.get_job(job_id) or {}
 
     def create_job_if_absent(
@@ -206,6 +361,12 @@ class SQLiteJobStore:
         now = _utc_now()
         terminal_status = status in {"completed", "failed"}
         with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            existing_row = conn.execute(
+                "SELECT status FROM simulation_jobs WHERE job_id=?",
+                (job_id,),
+            ).fetchone()
+            previous_status = str(existing_row["status"]) if existing_row is not None else ""
             if result_manifest_path is None:
                 if terminal_status:
                     conn.execute(
@@ -291,6 +452,15 @@ class SQLiteJobStore:
                         """,
                         (status, error, result_file, result_manifest_path, now, job_id),
                     )
+            if terminal_status and existing_row is not None and previous_status != status:
+                self._insert_outbox_event(
+                    conn,
+                    job_id=job_id,
+                    event_type="job_status_changed",
+                    payload=_outbox_summary_for_status(job_id, status, error=error),
+                    now=now,
+                )
+            conn.commit()
         return self.get_job(job_id) or {}
 
     def acquire_next_job(self, worker_id: str, *, lease_seconds: int = 300) -> dict[str, Any] | None:
@@ -355,6 +525,7 @@ class SQLiteJobStore:
     def release_job_for_retry(self, job_id: str, worker_id: str, *, error: str = "") -> dict[str, Any] | None:
         now = _utc_now()
         with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
             row = conn.execute(
                 """
                 SELECT attempt_count, max_attempts
@@ -364,6 +535,7 @@ class SQLiteJobStore:
                 (job_id, worker_id),
             ).fetchone()
             if row is None:
+                conn.rollback()
                 return None
             next_status = "retry_ready" if int(row["attempt_count"]) < int(row["max_attempts"]) else "failed"
             conn.execute(
@@ -376,6 +548,14 @@ class SQLiteJobStore:
                 """,
                 (next_status, error, now, job_id),
             )
+            self._insert_outbox_event(
+                conn,
+                job_id=job_id,
+                event_type="job_status_changed",
+                payload=_outbox_summary_for_status(job_id, next_status, error=error),
+                now=now,
+            )
+            conn.commit()
         return self.get_job(job_id)
 
     def get_job(self, job_id: str) -> dict[str, Any] | None:

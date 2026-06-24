@@ -187,13 +187,41 @@ async def get_product_security_deployment_contract() -> dict[str, Any]:
                 "It does not start servers, expose APIs, inject secrets, build containers, deploy, or mutate external state."
             ),
         }
+    check_count = int(summary.get("check_count") or 0)
+    pass_count = int(summary.get("pass_count") or 0)
+    artifact_blocker_count = int(summary.get("blocker_count") or 0)
+    row_contract_present = bool(rows) and check_count == len(rows)
+    derived_blocker_count = artifact_blocker_count + (0 if row_contract_present else 1)
+    security_deployment_ready = bool(
+        summary.get("security_deployment_ready") is True
+        and row_contract_present
+        and check_count > 0
+        and pass_count == check_count
+        and derived_blocker_count == 0
+    )
+    effective_status = (
+        summary.get("status", "")
+        if security_deployment_ready or row_contract_present
+        else "blocked_product_security_deployment_contract"
+    )
+    effective_blockers = list(blockers)
+    if not row_contract_present:
+        effective_blockers.append(
+            {
+                "check": "security_deployment_contract_rows_present",
+                "status": "fail",
+                "observed": f"check_count={check_count};row_count={len(rows)}",
+                "required": "security contract artifact includes concrete check rows",
+                "reason": "security deployment artifact summary cannot be treated as ready without row-level evidence",
+            }
+        )
     return {
-        "status": summary.get("status", ""),
+        "status": effective_status,
         "artifact_path": str(PRODUCT_SECURITY_DEPLOYMENT_ARTIFACT),
-        "security_deployment_ready": bool(summary.get("security_deployment_ready") is True),
-        "check_count": int(summary.get("check_count") or 0),
-        "pass_count": int(summary.get("pass_count") or 0),
-        "blocker_count": int(summary.get("blocker_count") or 0),
+        "security_deployment_ready": security_deployment_ready,
+        "check_count": check_count,
+        "pass_count": pass_count,
+        "blocker_count": derived_blocker_count,
         "auth_ready": bool(summary.get("auth_ready") is True),
         "tenant_isolation_ready": bool(summary.get("tenant_isolation_ready") is True),
         "rate_limit_ready": bool(summary.get("rate_limit_ready") is True),
@@ -249,8 +277,9 @@ async def get_product_security_deployment_contract() -> dict[str, Any]:
         "security_policy_ready": bool(summary.get("security_policy_ready") is True),
         "sbom_rows": list(summary.get("sbom_rows") or []),
         "checks": rows,
-        "blockers": blockers,
-        "next_required_step": summary.get("next_required_step", ""),
+        "blockers": effective_blockers,
+        "next_required_step": summary.get("next_required_step", "")
+        or "Regenerate product security deployment contract with row-level evidence.",
         "execution_enabled": False,
         "docking_results_emitted": False,
         "external_state_mutated": False,

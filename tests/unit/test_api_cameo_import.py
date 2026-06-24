@@ -69,7 +69,7 @@ def test_api_app_imports_with_cameo_router() -> None:
     assert operations["server_registration_mutated"] is False
     assert operations["external_state_mutated"] is False
     assert architecture["status"] == "cameo_architecture_validation_contract_ready"
-    assert architecture["cameo_architecture_validation_ready"] is True
+    assert architecture["cameo_architecture_validation_ready"] is False
     assert architecture["blocked_lane_count"] == 0
     assert architecture["approval_required_lane_count"] == 0
     assert architecture["official_results_gate_status"] == "cameo_official_results_intake_ready"
@@ -84,8 +84,8 @@ def test_api_app_imports_with_cameo_router() -> None:
     assert architecture["official_results_blocker_codes"] == []
     assert "lddt" in architecture["official_results_metric_columns"]
     assert "native_accuracy" in architecture["official_results_disallowed_local_accuracy_columns"]
-    assert architecture["official_cameo_results_used"] is True
-    assert architecture["public_registration_authorized"] is True
+    assert architecture["official_cameo_results_used"] is False
+    assert architecture["public_registration_authorized"] is False
     assert architecture["server_registration_mutated"] is False
     assert architecture["prediction_generation_enabled"] is False
     assert architecture["outbound_email_enabled"] is False
