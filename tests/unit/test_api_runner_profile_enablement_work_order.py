@@ -82,13 +82,19 @@ def test_repo_api_runner_profile_enablement_work_order_reflects_operator_approve
         write_templates=True,
     )
 
-    assert payload["profile_count"] >= 3
+    assert payload["profile_count"] >= 4
     example_rows = [row for row in payload["rows"] if "example" in row["profile_id"]]
     assert example_rows
     assert all(row["enabled"] is False for row in example_rows)
     enabled_rows = [row for row in payload["rows"] if row["enabled"]]
-    assert len(enabled_rows) == 3
-    assert payload["native_evidence_bundle_required_profile_count"] == 3
+    enabled_profile_ids = {row["profile_id"] for row in enabled_rows}
+    assert enabled_profile_ids == {
+        "backmapping_scoring.production",
+        "ligand_htvs_pipeline_default",
+        "ligand_htvs.restricted-production",
+        "ligand_topk_delivery.production",
+    }
+    assert payload["native_evidence_bundle_required_profile_count"] == 4
     assert payload["native_evidence_bundle_missing_profile_count"] == 0
     assert payload["first_native_evidence_bundle_missing_profile_id"] == ""
     assert all(row["runner_allowlisted"] and row["runner_exists"] for row in enabled_rows)
@@ -101,7 +107,11 @@ def test_repo_api_runner_profile_enablement_work_order_reflects_operator_approve
 
     validation = validate_profiles(Path("config/api_validated_runner_profiles"))
     assert validation["status"] == "pass"
-    assert validation["enabled_profile_count"] == 3
+    assert validation["enabled_profile_count"] == 4
+    assert validation["explicit_execution_contract_count"] == 4
+    assert validation["implicit_execution_contract_count"] == 0
+    assert validation["customer_submission_profile_count"] == 2
+    assert validation["smoke_profile_count"] == 1
 
 
 def test_build_work_order_marks_native_bundle_action_for_delivery_oriented_disabled_profile(
