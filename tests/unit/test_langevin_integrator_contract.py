@@ -30,17 +30,27 @@ def test_adaptive_timestep_is_independent_per_batch_member() -> None:
 
 
 def test_generated_noise_uses_full_langevin_variance(monkeypatch: pytest.MonkeyPatch) -> None:
-    integrator = LangevinIntegrator(dt=0.25, friction=2.0, kT=3.0)
+    dt = 0.25
+    gamma = 2.0
+    kT = 3.0
+    integrator = LangevinIntegrator(dt=dt, friction=gamma, kT=kT)
     c = torch.zeros((1, 1, 3), dtype=torch.float64)
     v = torch.zeros_like(c)
     f = torch.zeros_like(c)
 
-    monkeypatch.setattr(torch, "randn_like", lambda value: torch.ones_like(value))
+    # The integrator samples the stochastic increment via ``torch.randn`` with a
+    # seeded generator; pin it to ones so the scaled noise std is observable.
+    def _ones(shape, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
+        return torch.ones(shape, dtype=kwargs.get("dtype"), device=kwargs.get("device"))
+
+    monkeypatch.setattr(torch, "randn", _ones)
     v_new, c_new = integrator.step(c, v, f)
 
-    expected_increment = math.sqrt(2.0 * 2.0 * 3.0 * 0.25)
+    # Exact-OU stochastic increment for unit mass:
+    # std = sqrt(kT / mass * (1 - exp(-2 * gamma * dt))).
+    expected_increment = math.sqrt(kT * (1.0 - math.exp(-2.0 * gamma * dt)))
     assert v_new.flatten().tolist() == pytest.approx([expected_increment] * 3)
-    assert c_new.flatten().tolist() == pytest.approx([expected_increment * 0.25] * 3)
+    assert c_new.flatten().tolist() == pytest.approx([expected_increment * dt] * 3)
 
 
 def test_supplied_noise_remains_a_pre_scaled_velocity_increment() -> None:
