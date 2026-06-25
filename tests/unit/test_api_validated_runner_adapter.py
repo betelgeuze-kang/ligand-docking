@@ -190,6 +190,11 @@ def _profile_payload(profile_id: str, fake_runner: Path, evidence: Path) -> dict
     return {
         "profile_id": profile_id,
         "enabled": True,
+        "execution_mode": "smoke",
+        "customer_submission_allowed": False,
+        "synthetic_input_allowed": True,
+        "production_claim_allowed": False,
+        "customer_pose_emission_allowed": False,
         "runner_script": str(fake_runner.resolve()),
         "arguments": [
             "--request-json",

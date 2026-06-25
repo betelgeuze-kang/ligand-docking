@@ -294,6 +294,7 @@ def test_resolve_prod_early_stop_for_target_keeps_defaults_for_other_targets() -
 def test_get_engine_resources_can_disable_cache(monkeypatch) -> None:
     build_count = {"top": 0, "ff": 0, "integrator": 0}
     ff_params_seen: list[dict[str, float]] = []
+    integrator_kwargs_seen: list[dict[str, object]] = []
 
     class _FakeForceField:
         physics_backend = "rust_hip"
@@ -306,8 +307,9 @@ def test_get_engine_resources_can_disable_cache(monkeypatch) -> None:
             return self
 
     class _FakeIntegrator:
-        def __init__(self, *_args, **_kwargs) -> None:
+        def __init__(self, *_args, **kwargs) -> None:
             build_count["integrator"] += 1
+            integrator_kwargs_seen.append(dict(kwargs))
 
         def to(self, _device):
             return self
@@ -352,6 +354,8 @@ def test_get_engine_resources_can_disable_cache(monkeypatch) -> None:
     assert ff_params_seen[0]["debye_kappa"] == 0.2
     assert ff_params_seen[0]["backbone_bond_k"] == 2.5
     assert ff_params_seen[0]["backbone_angle_k"] == 1.25
+    assert integrator_kwargs_seen[0]["mass"] == 1.0
+    assert integrator_kwargs_seen[0]["coarse_mass_policy"] == "explicit_unit_mass"
 
 
 def test_run_batch_records_batch_derate_telemetry(tmp_path, monkeypatch) -> None:

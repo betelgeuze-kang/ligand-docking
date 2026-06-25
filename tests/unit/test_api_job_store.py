@@ -34,6 +34,200 @@ def test_sqlite_job_store_persists_across_instances(tmp_path: Path) -> None:
     assert reopened.job_exists("missing") is False
 
 
+def test_sqlite_job_store_create_job_outbox_event_survives_reopen(tmp_path: Path) -> None:
+    db_path = tmp_path / "api_jobs.sqlite3"
+    store = SQLiteJobStore(db_path)
+    store.create_job("job_outbox_create", {"target_name": "Chignolin"}, status="submitted")
+
+    pending = store.list_pending_outbox_events()
+    assert len(pending) == 1
+    assert pending[0]["event_type"] == "job_created"
+    assert pending[0]["job_id"] == "job_outbox_create"
+    assert pending[0]["payload"] == {
+        "job_id": "job_outbox_create",
+        "status": "submitted",
+        "target_name": "Chignolin",
+    }
+
+    reopened = SQLiteJobStore(db_path)
+    recovered = reopened.list_pending_outbox_events()
+    assert len(recovered) == 1
+    assert recovered[0]["event_id"] == pending[0]["event_id"]
+    assert recovered[0]["payload"]["job_id"] == "job_outbox_create"
+
+
+def test_sqlite_job_store_terminal_outbox_event_delivered_idempotently_after_reopen(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "api_jobs.sqlite3"
+    store = SQLiteJobStore(db_path)
+    store.create_job("job_outbox_terminal", {"target_name": "Chignolin"}, status="submitted")
+    store.update_job("job_outbox_terminal", status="failed", error="runner unavailable")
+
+    status_events = [
+        event
+        for event in store.list_pending_outbox_events()
+        if event["event_type"] == "job_status_changed"
+    ]
+    assert len(status_events) == 1
+    event_id = int(status_events[0]["event_id"])
+    assert status_events[0]["payload"]["job_id"] == "job_outbox_terminal"
+    assert status_events[0]["payload"]["status"] == "failed"
+    assert status_events[0]["payload"]["error"]["redacted"] is True
+    assert status_events[0]["payload"]["error"]["redaction"] == "sha256"
+    assert status_events[0]["payload"]["error"]["byte_length"] == len("runner unavailable")
+
+    reopened = SQLiteJobStore(db_path)
+    recovered = [
+        event
+        for event in reopened.list_pending_outbox_events()
+        if int(event["event_id"]) == event_id
+    ]
+    assert len(recovered) == 1
+
+    assert reopened.mark_outbox_event_delivered(event_id) is True
+    assert reopened.mark_outbox_event_delivered(event_id) is True
+    remaining_status_events = [
+        event
+        for event in reopened.list_pending_outbox_events()
+        if int(event["event_id"]) == event_id
+    ]
+    assert remaining_status_events == []
+
+    with sqlite3.connect(db_path) as conn:
+        row = conn.execute(
+            "SELECT delivery_state FROM simulation_job_outbox WHERE event_id=?",
+            (event_id,),
+        ).fetchone()
+    assert row is not None
+    assert row[0] == "delivered"
+
+
+def test_sqlite_job_store_retry_outbox_event_recoverable_after_reopen(tmp_path: Path) -> None:
+    db_path = tmp_path / "api_jobs.sqlite3"
+    store = SQLiteJobStore(db_path)
+    store.create_job("job_outbox_retry", {"target_name": "Chignolin"}, status="submitted", max_attempts=3)
+    acquired = store.acquire_next_job("worker_a", lease_seconds=60)
+    assert acquired is not None
+
+    released = store.release_job_for_retry("job_outbox_retry", "worker_a", error="transient failure")
+    assert released is not None
+    assert released["status"] == "retry_ready"
+
+    retry_events = [
+        event
+        for event in store.list_pending_outbox_events()
+        if event["event_type"] == "job_status_changed" and event["payload"]["status"] == "retry_ready"
+    ]
+    assert len(retry_events) == 1
+    event_id = int(retry_events[0]["event_id"])
+
+    reopened = SQLiteJobStore(db_path)
+    assert reopened.mark_outbox_event_recovered(event_id) is True
+    assert reopened.mark_outbox_event_recovered(event_id) is True
+    remaining_retry_events = [
+        event
+        for event in reopened.list_pending_outbox_events()
+        if int(event["event_id"]) == event_id
+    ]
+    assert remaining_retry_events == []
+
+    with sqlite3.connect(db_path) as conn:
+        row = conn.execute(
+            "SELECT delivery_state FROM simulation_job_outbox WHERE event_id=?",
+            (event_id,),
+        ).fetchone()
+    assert row is not None
+    assert row[0] == "recovered"
+
+
+def test_sqlite_job_store_outbox_payload_excludes_private_material(tmp_path: Path) -> None:
+    db_path = tmp_path / "api_jobs.sqlite3"
+    store = SQLiteJobStore(db_path)
+    private_request = {
+        "target_name": "ADRB2",
+        "pdb_content": "ATOM      1  CA  GLY A   1      12.104  13.207  14.321  1.00 10.00           C\n",
+        "runner_profile_params": {
+            "ligands": ["CCO"],
+            "metadata": {"ligand_smiles": "CCN"},
+        },
+    }
+    store.create_job("job_outbox_private", private_request, status="submitted")
+
+    pending = store.list_pending_outbox_events()
+    assert len(pending) == 1
+    payload_json = json.dumps(pending[0]["payload"], sort_keys=True)
+    assert "ATOM      1" not in payload_json
+    assert "CCO" not in payload_json
+    assert "CCN" not in payload_json
+    assert "pdb_content" not in payload_json
+    assert "runner_profile_params" not in payload_json
+    assert pending[0]["payload"]["target_name"] == "ADRB2"
+
+    with sqlite3.connect(db_path) as conn:
+        raw_payload = conn.execute(
+            "SELECT payload_json FROM simulation_job_outbox WHERE event_id=?",
+            (pending[0]["event_id"],),
+        ).fetchone()[0]
+    assert "ATOM      1" not in raw_payload
+    assert "CCO" not in raw_payload
+    assert "CCN" not in raw_payload
+
+
+def test_sqlite_job_store_outbox_status_error_is_redacted(tmp_path: Path) -> None:
+    db_path = tmp_path / "api_jobs.sqlite3"
+    store = SQLiteJobStore(db_path)
+    private_error = "runner failed while handling pdb_content=ATOM_PRIVATE and ligand_smiles=CCO_PRIVATE"
+    store.create_job("job_outbox_error_private", {"target_name": "ADRB2"}, status="submitted")
+    store.update_job("job_outbox_error_private", status="failed", error=private_error)
+
+    status_events = [
+        event
+        for event in store.list_pending_outbox_events()
+        if event["event_type"] == "job_status_changed"
+    ]
+    assert len(status_events) == 1
+    payload = status_events[0]["payload"]
+    assert payload["job_id"] == "job_outbox_error_private"
+    assert payload["status"] == "failed"
+    assert payload["error"]["redacted"] is True
+    assert payload["error"]["redaction"] == "sha256"
+    assert payload["error"]["byte_length"] == len(private_error.encode("utf-8"))
+    assert len(payload["error"]["sha256"]) == 64
+
+    payload_text = json.dumps(payload, sort_keys=True)
+    assert "ATOM_PRIVATE" not in payload_text
+    assert "CCO_PRIVATE" not in payload_text
+    with sqlite3.connect(db_path) as conn:
+        raw_payload = conn.execute(
+            """
+            SELECT payload_json
+            FROM simulation_job_outbox
+            WHERE event_type='job_status_changed'
+            """
+        ).fetchone()[0]
+    assert "ATOM_PRIVATE" not in raw_payload
+    assert "CCO_PRIVATE" not in raw_payload
+
+
+def test_sqlite_job_store_repeated_terminal_update_does_not_duplicate_status_outbox(
+    tmp_path: Path,
+) -> None:
+    store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
+    store.create_job("job_outbox_terminal_once", {"target_name": "ADRB2"}, status="submitted")
+
+    store.update_job("job_outbox_terminal_once", status="failed", error="first failure")
+    store.update_job("job_outbox_terminal_once", status="failed", error="same terminal status")
+
+    status_events = [
+        event
+        for event in store.list_pending_outbox_events()
+        if event["event_type"] == "job_status_changed"
+    ]
+    assert len(status_events) == 1
+    assert status_events[0]["payload"]["status"] == "failed"
+
+
 def test_sqlite_job_store_redacts_sensitive_request_payload(tmp_path: Path) -> None:
     db_path = tmp_path / "api_jobs.sqlite3"
     store = SQLiteJobStore(db_path)

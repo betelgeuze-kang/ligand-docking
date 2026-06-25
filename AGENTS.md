@@ -31,7 +31,7 @@ This repository is operated with Codex native goal mode and optional Cursor/Open
 - Use `docs/ai/tasks/TASK-TEMPLATE.md` for R1+ task specs when the scope is not already clear from a linked issue or work queue.
 - Keep Codex-authored task specs short: goal, scope, likely files, and verification only.
 - For Cursor delegation, create a run-specific prompt under `docs/ai/dispatch/` and call `./scripts/ai-worker-cursor.sh <prompt-file>`.
-- For OpenCode delegation, create a run-specific prompt under `docs/ai/dispatch/` and call `./scripts/ai-worker-opencode.sh <prompt-file>`.
+- For OpenCode-named delegation, create a run-specific prompt under `docs/ai/dispatch/` and call `./scripts/ai-worker-opencode.sh <prompt-file>`; this compatibility wrapper currently routes the assignment to Cursor Composer 2.5 instead of invoking OpenCode.
 - Use one worker slice at a time. Codex reviews the worker summary first and opens full logs/diffs only when the summary, risk level, or tests require it.
 
 ## Delegation Bias
@@ -39,14 +39,14 @@ This repository is operated with Codex native goal mode and optional Cursor/Open
 - At the start of each non-trivial task, Codex should explicitly choose one path: direct implementation, OpenCode worker slice, or Cursor worker slice.
 - Bias toward using a worker when the work is broad, repetitive, uncertain, or likely to benefit from independent exploration before Codex final review.
 - Consider Cursor as the default implementation worker for scoped code/test changes, repeated test repair, multi-file edits, and work where IDE-attached context may help.
-- Consider OpenCode for broad repository exploration, broad grep/sweep, long-log review, large mechanical documentation/code updates, or other large-context passes.
+- OpenCode-named broad repository exploration, broad grep/sweep, long-log review, large mechanical documentation/code updates, or other large-context passes currently run through Cursor Composer 2.5 via the compatibility wrapper.
 - Codex may still handle narrow single-file fixes, obvious docs edits, tiny tests, and urgent safety corrections directly.
 - Delegation does not change ownership: Codex still defines the slice, preserves safety boundaries, reviews the worker summary, inspects targeted hunks when needed, runs verification, and decides completion.
 
 ## Worker Selection
 
 - Prefer Cursor for most scoped implementation slices, especially code/test edits, local repair loops, and IDE-attached edits where open files, selections, and current editor state matter.
-- Prefer OpenCode for broad repository sweeps, long logs/docs, large mechanical edits, and large-context exploration.
+- Treat OpenCode-named broad repository sweeps, long logs/docs, large mechanical edits, and large-context exploration as Cursor Composer 2.5 assignments unless the human owner explicitly restores direct OpenCode execution.
 - Do not delegate truly small tasks: simple docs, tiny tests, obvious single-file fixes, or changes that Codex can safely complete faster than creating and reviewing a worker slice.
 - Delegate broad exploration, repeated test repair, multi-file refactors, and mechanical work once it crosses the Delegation Bias thresholds.
 - Workers implement; they do not redesign, broaden scope, decide completion, or change safety boundaries.

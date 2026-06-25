@@ -7,6 +7,10 @@ from typing import Any
 from api.config import settings
 from api.simulation_scope import UnsupportedSimulationScopeError, validate_simulation_request_scope
 from api.validated_runner import execute_validated_runner_profile
+from betelgeuze_product.tier_beta_vertical_slice import (
+    is_tier_beta_vertical_slice_request,
+    run_tier_beta_vertical_slice_job,
+)
 
 async def run_simulation_async(job_id: str, request_data: dict[str, Any]):
     """
@@ -18,6 +22,13 @@ async def run_simulation_async(job_id: str, request_data: dict[str, Any]):
     status_file_path = os.path.join(results_dir, "status.json")
     try:
         validate_simulation_request_scope(request_data)
+        if is_tier_beta_vertical_slice_request(request_data):
+            run_tier_beta_vertical_slice_job(
+                job_id=job_id,
+                request_data=request_data,
+                results_dir=results_dir,
+            )
+            return
         if request_data.get("runner_profile_id"):
             await execute_validated_runner_profile(job_id, request_data)
             return

@@ -39,6 +39,15 @@ except Exception:  # pragma: no cover
     _write_closeout_latest = None
 
 
+def run_tier_beta_vertical_slice_compat(payload: dict[str, Any]) -> Any:
+    """Compatibility hook: delegate restricted Tier-beta jobs to canonical service."""
+    from betelgeuze_engine.product.runners.tier_beta_runner_compat import (
+        run_tier_beta_vertical_slice_compat as _run_tier_beta_vertical_slice_compat,
+    )
+
+    return _run_tier_beta_vertical_slice_compat(payload)
+
+
 def _run_cmd(cmd: List[str]) -> Dict[str, Any]:
     t0 = time.time()
     started = dt.datetime.now().isoformat(timespec="seconds")

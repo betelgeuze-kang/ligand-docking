@@ -1,0 +1,25 @@
+data_tier_beta_mini_protein
+#
+loop_
+_atom_site.group_PDB
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.label_atom_id
+_atom_site.label_comp_id
+_atom_site.label_asym_id
+_atom_site.label_seq_id
+_atom_site.Cartn_x
+_atom_site.Cartn_y
+_atom_site.Cartn_z
+_atom_site.pdbx_PDB_model_num
+ATOM 1 C CA ALA A 1 1.458 0.000 0.000 1
+ATOM 2 C CA GLY A 2 3.988 2.847 0.000 1
+ATOM 3 C CA SER A 3 7.615 3.822 0.000 1
+ATOM 4 C CA LEU A 4 10.330 6.481 0.000 1
+ATOM 5 C CA VAL A 5 14.150 6.697 0.000 1
+ATOM 6 C CA PHE A 6 16.871 9.331 0.000 1
+ATOM 7 C CA GLN A 7 20.658 9.831 0.000 1
+ATOM 8 C CA TRP A 8 23.374 12.461 0.000 1
+ATOM 9 C CA HIS A 9 27.145 12.918 0.000 1
+ATOM 10 C CA THR A 10 30.200 14.900 0.000 1
+#

@@ -3017,6 +3017,12 @@ def _allowlisted_runner_shim_contract_kpi(profiles_dir: str | Path) -> dict[str,
             "betelgeuze_engine.product.runners.topk_delivery",
             ("main", "build_delivery"),
         ),
+        (
+            "tier_beta_biodiscovery_direct",
+            Path("tools/run_tier_beta_vertical_slice.py"),
+            "betelgeuze_engine.product.runners.tier_beta_vertical_slice",
+            ("main", "build_parser"),
+        ),
     ]
     root = Path(profiles_dir)
     rows: list[dict[str, Any]] = []
@@ -3523,7 +3529,18 @@ def _product_runner_engine_owned_kpi(
     htvs_pipeline_engine_owned: dict[str, Any],
     backmapping_scoring_engine_owned: dict[str, Any],
     topk_delivery_engine_owned: dict[str, Any],
+    allowlisted_runner_shims: dict[str, Any],
 ) -> dict[str, Any]:
+    shim_rows = allowlisted_runner_shims.get("rows")
+    if not isinstance(shim_rows, list):
+        shim_rows = []
+    tier_beta_shim = next(
+        (
+            row for row in shim_rows
+            if isinstance(row, dict) and row.get("profile_id") == "tier_beta_biodiscovery_direct"
+        ),
+        {},
+    )
     rows = [
         {
             "runner_id": "ligand_htvs_pipeline_default",
@@ -3568,9 +3585,22 @@ def _product_runner_engine_owned_kpi(
             "engine_forbidden_present": list(topk_delivery_engine_owned.get("engine_forbidden_present") or []),
             "runtime_error": str(topk_delivery_engine_owned.get("runtime_error") or ""),
         },
+        {
+            "runner_id": "tier_beta_biodiscovery_direct",
+            "runner_kind": "tier_beta_biodiscovery_vertical_slice",
+            "engine_module": "betelgeuze_engine.product.runners.tier_beta_vertical_slice",
+            "ready": tier_beta_shim.get("ready") is True,
+            "runtime_identity_ready": tier_beta_shim.get("runtime_adapter_identity_ready") is True,
+            "compatibility_self_implementation_present": not bool(
+                tier_beta_shim.get("self_implementation_blocked") is True
+            ),
+            "engine_required_missing": list(tier_beta_shim.get("missing_runtime_symbols") or []),
+            "engine_forbidden_present": [],
+            "runtime_error": str(tier_beta_shim.get("runtime_adapter_error") or tier_beta_shim.get("error") or ""),
+        },
     ]
     ready = bool(
-        len(rows) == 3
+        rows
         and all(row["ready"] is True for row in rows)
         and all(row["runtime_identity_ready"] is True for row in rows)
         and all(row["compatibility_self_implementation_present"] is False for row in rows)
@@ -3641,6 +3671,7 @@ def _product_kpis(
         htvs_pipeline_engine_owned=htvs_pipeline_engine_owned,
         backmapping_scoring_engine_owned=backmapping_scoring_engine_owned,
         topk_delivery_engine_owned=topk_delivery_engine_owned,
+        allowlisted_runner_shims=allowlisted_runner_shims,
     )
     job_store_lazy_factory = _job_store_lazy_factory_kpi()
     bundle_validation = _product_bundle_validation_kpi(product_evidence_bundle_json_path)

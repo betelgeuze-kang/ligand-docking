@@ -5,7 +5,8 @@ This repository uses Codex native goal mode as the only progress owner. The repo
 ```text
 Human goal in Codex
 -> Codex goal mode tracks progress and writes a short task spec when needed
--> optional Cursor/OpenCode worker explores, implements, tests, and summarizes one slice
+-> optional Kiro design draft for broad or ambiguous code-improvement goals
+-> optional Cursor/OpenCode-named/internal-subagent worker explores, implements, tests, and summarizes one slice
 -> local verification
 -> Codex reviews summary first, then only targeted diff/logs as needed
 ```
@@ -14,9 +15,11 @@ There is no repository-local autonomous runner. Do not add local goal runners or
 
 ## Roles
 
-- Codex: native goal tracking, short task specs, risk boundaries, targeted review, and final acceptance.
-- Cursor: primary scoped implementation worker for code/test edits, local repair loops, IDE-attached exploration, focused tests, and concise summary.
-- OpenCode: broad or large-context exploration, large mechanical passes, long-log/docs review, focused tests, and concise summary.
+- Codex GPT-5.5 xhigh: native goal tracking, short task specs, risk boundaries, targeted review, verification, and final acceptance.
+- Kiro Opus 4.8 fixed: design-only planning for broad or ambiguous next-code-improvement goals; output is advisory until Codex converts it into a scoped task spec. Do not substitute another Kiro model.
+- Cursor Composer 2.5: primary scoped implementation worker for code/test edits, local repair loops, IDE-attached exploration, focused tests, and concise summary.
+- OpenCode-named wrapper: compatibility entry point for broad or large-context slices; currently routes to Cursor Composer 2.5 instead of invoking OpenCode.
+- Internal subagent fallback: Codex-managed worker used only when Cursor/OpenCode-named workers are unavailable or non-responsive; code implementation uses `model=gpt-5.4-mini` with `reasoning_effort=xhigh`.
 - `scripts/ai-verify.sh`: local smoke verification for orchestration and optional project gates.
 - Human owner: push, merge, deployment, publication, CASP submission, production mutation, billing, and final accountability.
 
@@ -24,13 +27,14 @@ There is no repository-local autonomous runner. Do not add local goal runners or
 
 1. Read `AGENTS.md`, `.betelgeuze/state.md`, and the relevant task/work-queue file.
 2. For R1+ work, write or update a short task spec under `docs/ai/tasks/`.
-3. Decide whether delegation will save Codex context.
-4. If delegating, write a run-specific prompt in `docs/ai/dispatch/` and require the worker to explore, implement, test, and summarize.
-5. Run exactly one worker wrapper.
-6. Review the worker summary before opening full logs or large diffs.
-7. Inspect only targeted files/hunks unless risk or failure requires broader review.
-8. Run `./scripts/ai-verify.sh` plus focused tests for changed behavior when Codex is doing final acceptance.
-9. Continue, split the task, or stop with an explicit blocker.
+3. Decide whether the default next-code-improvement lane is useful: Kiro Opus 4.8 fixed design -> Cursor Composer 2.5 implementation -> Codex GPT-5.5 xhigh verification.
+4. If design planning is needed, write a Kiro prompt from `docs/ai/prompts/kiro_design_slice.md`, then run `./scripts/ai-design-kiro.sh <prompt-file>`. The wrapper automatically injects the fixed Opus 4.8 confirmation requirement and fails closed unless Kiro returns the exact first-line marker. It also blocks model substitution attempts. If Kiro Opus 4.8 is not active, cannot be verified, or only opens the UI without stdout design output, stop the Kiro design step instead of using another model. Codex then reviews and trims the result into a short task spec.
+5. If delegating implementation, write a run-specific prompt in `docs/ai/dispatch/` and require the worker to explore, implement, test, and summarize.
+6. Run exactly one implementation worker wrapper at a time.
+7. Review the worker summary before opening full logs or large diffs.
+8. Inspect only targeted files/hunks unless risk or failure requires broader review.
+9. Run `./scripts/ai-verify.sh` plus focused tests for changed behavior when Codex is doing final acceptance.
+10. Continue, split the task, or stop with an explicit blocker.
 
 ## Delegation Threshold
 
@@ -51,7 +55,11 @@ Delegate:
 - long logs/docs where the worker can summarize
 - implementation slices where the worker can run focused tests and return a compact result
 
-Use Cursor first for scoped implementation slices and repeated local repair loops. Use OpenCode first when the slice is mainly broad search, long-context review, or large mechanical rewriting.
+Use Kiro Opus 4.8 first only for design planning when the code-improvement scope is broad or ambiguous. The Kiro model is fixed: do not substitute another Kiro model. Use Cursor Composer 2.5 first for scoped implementation slices and repeated local repair loops. OpenCode-named broad search, long-context review, and large mechanical rewriting slices currently run through Cursor Composer 2.5 via `scripts/ai-worker-opencode.sh`.
+
+The routed Cursor model defaults to `composer-2.5`. Override with `OPENCODE_ROUTED_CURSOR_MODEL=<cursor-model>` only when the human owner wants a different Cursor model for OpenCode-named assignments.
+
+If Cursor is unavailable or a Cursor-routed assignment is non-responsive, Codex may fall back to an internal subagent for the same scoped slice. For code implementation, spawn it as a worker with `model=gpt-5.4-mini` and `reasoning_effort=xhigh`; keep the write scope disjoint and require the same concise summary.
 
 ## Short Task Spec
 
@@ -83,6 +91,8 @@ Do not paste long state files, full logs, or broad background into worker prompt
 ## Worker Rules
 
 - Prompt files are used instead of passing large prompt bodies as shell arguments.
+- Kiro prompts should follow `docs/ai/prompts/kiro_design_slice.md` and be run through `scripts/ai-design-kiro.sh`; the wrapper must inject and enforce the fixed Opus 4.8 first-line confirmation marker. Use `scripts/ai-design-kiro.sh --dry-run <prompt-file>` only to verify wrapper injection without launching Kiro. Kiro must be Opus 4.8, must not edit files, broaden scope, or decide acceptance.
+- Internal subagent prompts should follow `docs/ai/prompts/internal_subagent_worker_slice.md`.
 - Workers are responsible for local exploration before editing.
 - Workers are responsible for running focused tests when safe and available.
 - Workers must return concise summaries, not full logs.

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+# ruff: noqa: E402
+
 import argparse
 import concurrent.futures as cf
 import datetime as dt
 import hashlib
 import json
-import math
 import multiprocessing as mp
 import os
 import time
@@ -1470,6 +1471,8 @@ def _get_engine_resources(
         friction=float(friction),
         kT=float(kT),
         adaptive_dt=False,
+        mass=1.0,
+        coarse_mass_policy="explicit_unit_mass",
     ).to(device)
     payload = {"top": top, "ff": ff, "integrator": integrator}
     if cache_enabled:
@@ -1502,9 +1505,9 @@ def _compute_ligand_extra_force(
     pocket_protein_max_atoms: int = 0,
 ) -> torch.Tensor:
     lig = c[:, n_protein:, :]  # [B, L, 3]
-    b, l, _ = lig.shape
+    b, ligand_count, _ = lig.shape
     f_lig = torch.zeros_like(lig)
-    if l <= 0:
+    if ligand_count <= 0:
         return f_lig
 
     if isinstance(pocket_attract, torch.Tensor):
@@ -1563,7 +1566,7 @@ def _compute_ligand_extra_force(
             f_lig += contact_force * active.unsqueeze(-1).to(contact_force.dtype)
 
     # 2-bead harmonic bond.
-    if l >= 2:
+    if ligand_count >= 2:
         vec = lig[:, 0, :] - lig[:, 1, :]
         d = torch.linalg.norm(vec, dim=-1).clamp_min(1e-6)
         if isinstance(bond_ref, torch.Tensor):
@@ -1732,8 +1735,9 @@ def _simulate_with_engine_batch(
     if (not bool(getattr(integrator, "adaptive_dt", False))) and float(kT) > 0.0:
         gamma_t = integrator.gamma.to(device=device, dtype=v.dtype)
         dt_t = integrator.dt.to(device=device, dtype=v.dtype)
-        kT_half_t = integrator.kT_half.to(device=device, dtype=v.dtype)
-        noise_std = torch.sqrt(2.0 * gamma_t * kT_half_t * dt_t)
+        kT_t = integrator.kT.to(device=device, dtype=v.dtype)
+        mass_t = integrator._broadcast_mass(integrator.mass, v)
+        noise_std = torch.sqrt(2.0 * gamma_t * kT_t * dt_t / mass_t)
         rollout_noise_bank = torch.randn(
             (int(max(frames, 1)),) + tuple(v.shape),
             dtype=v.dtype,

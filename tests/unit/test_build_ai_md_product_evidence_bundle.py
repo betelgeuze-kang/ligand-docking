@@ -120,6 +120,11 @@ def _product_runner_engine_owned_smoke(*, ready: bool = True) -> dict:
             "runner_kind": "ligand_topk_delivery",
             "engine_module": "betelgeuze_engine.product.runners.topk_delivery",
         },
+        {
+            "runner_id": "tier_beta_biodiscovery_direct",
+            "runner_kind": "tier_beta_biodiscovery_vertical_slice",
+            "engine_module": "betelgeuze_engine.product.runners.tier_beta_vertical_slice",
+        },
     ]
     for row in rows:
         row.update(
@@ -134,8 +139,8 @@ def _product_runner_engine_owned_smoke(*, ready: bool = True) -> dict:
         )
     return {
         "ready": ready,
-        "runner_count": 3 if ready else 0,
-        "engine_owned_runner_count": 3 if ready else 0,
+        "runner_count": 4 if ready else 0,
+        "engine_owned_runner_count": 4 if ready else 0,
         "contract": "all_product_runners_are_engine_owned_with_compatibility_shims",
         "rows": rows if ready else [],
     }
@@ -184,7 +189,7 @@ def _chemistry_kpi_packet(*, ready: bool = True) -> dict:
                     "formal_charge_sum": 0,
                     "protonation_status": "neutral_state_parsed",
                     "tautomer_fixture_valid": False,
-                    "tautomer_status": "connectivity_parsed_tautomer_not_canonicalized",
+                    "tautomer_status": "canonical_tautomer_enumerated",
                 }
             )
             if fixture == "chiral_lactic_acid":
@@ -1293,7 +1298,7 @@ def _kpi_packet(
             "product_runner_engine_owned_smoke": _product_runner_engine_owned_smoke(ready=ready),
             "allowlisted_runner_shim_contract": {
                 "ready": allowlisted_runner_shim_contract_ready,
-                "runner_count": 3 if allowlisted_runner_shim_contract_ready else 0,
+                "runner_count": 4 if allowlisted_runner_shim_contract_ready else 0,
                 "rows": [
                     {
                         "profile_id": "ligand_htvs_pipeline_default",
@@ -1351,6 +1356,26 @@ def _kpi_packet(
                         "runtime_adapter_error": "",
                         "script_hash": "c" * 64,
                         "profile_runner_script_sha256": "c" * 64,
+                        "hash_matches": True,
+                        "ready": True,
+                        "error": "",
+                    },
+                    {
+                        "profile_id": "tier_beta_biodiscovery_direct",
+                        "runner_script": "tools/run_tier_beta_vertical_slice.py",
+                        "profile_runner_script": "tools/run_tier_beta_vertical_slice.py",
+                        "adapter_import": "betelgeuze_engine.product.runners.tier_beta_vertical_slice",
+                        "adapter_import_present": True,
+                        "shim_contract_type": "canonical_module_alias",
+                        "sys_modules_alias_ready": True,
+                        "runtime_module_name": "betelgeuze_engine.product.runners.tier_beta_vertical_slice",
+                        "self_implementation_blocked": True,
+                        "required_runtime_symbols": ["main", "build_parser"],
+                        "runtime_adapter_identity_ready": True,
+                        "missing_runtime_symbols": [],
+                        "runtime_adapter_error": "",
+                        "script_hash": "d" * 64,
+                        "profile_runner_script_sha256": "d" * 64,
                         "hash_matches": True,
                         "ready": True,
                         "error": "",
@@ -4246,7 +4271,7 @@ def test_ai_md_product_evidence_bundle_blocks_allowlisted_runner_extra_row(
     out_tar = tmp_path / "bundle.tar.gz"
     kpi_packet = _kpi_packet(ready=True)
     contract = kpi_packet["product_kpi"]["allowlisted_runner_shim_contract"]
-    contract["runner_count"] = 4
+    contract["runner_count"] = 5
     contract["rows"].append(dict(contract["rows"][0]))
 
     payload = mod.build_payload(

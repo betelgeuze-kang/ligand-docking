@@ -1,0 +1,219 @@
+schema_version: 1
+generated_for: biodiscovery_commercial_platform_transition
+claim_policy:
+  current_tier: restricted_tier_alpha_pilot
+  accounting_green_is_not_scientific_validity: true
+  broad_platform_claim_allowed: false
+  alphafold_parity_claim_allowed: false
+  calibrated_delta_g_claim_allowed: false
+  wetlab_hit_claim_allowed: false
+  external_state_mutated: false
+capabilities:
+  - id: contracts_core
+    lane: P0
+    domain: contracts
+    current_state: partial
+    claim_state: restricted_local_allowed
+    accounting_green: true
+    scientific_validity_green: false
+    row_level_evidence_count: 0
+    owner: product_architecture
+    risk: R3
+    dependencies: [typed_contract_inventory, topology_provenance]
+    definition_of_done:
+      - Canonical Sequence, Polymer, Ligand, Complex, Topology, PoseEnsemble, SimulationSpec, Trajectory, PredictionConfidence, and EvidenceBundle contracts exist.
+      - Compatibility adapters isolate legacy core surfaces from product contracts.
+    execution_enabled: false
+    external_state_mutated: false
+  - id: topology_provenance
+    lane: P0
+    domain: topology
+    current_state: partial_sequence_mapped
+    claim_state: restricted_local_allowed
+    accounting_green: true
+    scientific_validity_green: false
+    row_level_evidence_count: 0
+    owner: physics_engine
+    risk: R3
+    dependencies: [contracts_core, topology_validity_rows]
+    definition_of_done:
+      - Placeholder alanine or proxy topology is fail-closed for scientific claims.
+      - Exact atom, bond, charge, parameter, source, and residue accounting is carried into every signed evidence bundle.
+    execution_enabled: false
+    external_state_mutated: false
+  - id: nxn_guard
+    lane: P0
+    domain: execution
+    current_state: partial
+    claim_state: restricted_local_allowed
+    accounting_green: true
+    scientific_validity_green: false
+    row_level_evidence_count: 0
+    owner: engine_runtime
+    risk: R3
+    dependencies: [neighbor_list_bounds, runtime_scaling_receipts]
+    definition_of_done:
+      - Dense all-pairs fallback is blocked for product-scale paths unless an explicit bounded diagnostic mode is active.
+      - Neighbor-list scaling receipts prove the selected path is bounded for release profiles.
+    execution_enabled: false
+    external_state_mutated: false
+  - id: ci_truthfulness
+    lane: P0
+    domain: verification
+    current_state: implemented_in_this_slice
+    claim_state: restricted_local_allowed
+    accounting_green: true
+    scientific_validity_green: false
+    row_level_evidence_count: 0
+    owner: product_quality
+    risk: R2
+    dependencies: [capability_matrix, ai_verify]
+    definition_of_done:
+      - Capability matrix validator fails closed on broad or high-risk science overclaims.
+      - Product verification runs the matrix check without external data or execution enablement.
+    execution_enabled: false
+    external_state_mutated: false
+  - id: structure_prediction_baseline
+    lane: P1
+    domain: structure_prediction
+    current_state: heuristic_internal_baseline
+    claim_state: baseline_only
+    accounting_green: false
+    scientific_validity_green: false
+    row_level_evidence_count: 0
+    owner: structure_ml
+    risk: R4
+    dependencies: [blind_split_protocol, confidence_calibration, multimer_interface_metrics]
+    definition_of_done:
+      - Blind split reports TM-score, lDDT, DockQ where applicable, pLDDT/PAE/PDE calibration, and OOD abstention.
+      - Optional MSA/template lanes are isolated from active CASP17 internal-only constraints.
+    execution_enabled: false
+    external_state_mutated: false
+  - id: docking_vertical_slice
+    lane: P1
+    domain: docking
+    current_state: restricted_local_tier_beta_vertical_slice
+    claim_state: restricted_local_allowed
+    accounting_green: true
+    scientific_validity_green: false
+    row_level_evidence_count: 1
+    owner: docking_product
+    risk: R3
+    dependencies: [contracts_core, topology_provenance, pose_ensemble, signed_report]
+    definition_of_done:
+      - PDB plus SMILES/SDF prepare, pocket/pose ensemble, score/refine, abstention, and signed report completes on local fixture data.
+      - Pose validity and ranking metrics are withheld from customer claims until public holdout evidence exists.
+    execution_enabled: false
+    external_state_mutated: false
+  - id: md_all_atom
+    lane: P2
+    domain: molecular_dynamics
+    current_state: proxy
+    claim_state: blocked_until_reference_validation
+    accounting_green: false
+    scientific_validity_green: false
+    row_level_evidence_count: 0
+    owner: md_engine
+    risk: R4
+    dependencies: [topology_provenance, pbc_pme, constraints, ensemble_validation]
+    definition_of_done:
+      - Atom/bond/charge/parameter topology, constraints, PBC, PME-grade electrostatics, NVE/NVT/NPT, checkpoint/restart, and deterministic seeds are implemented.
+      - Force finite-difference, invariance, energy drift, ensemble, reference trajectory, and scaling checks pass.
+    execution_enabled: false
+    external_state_mutated: false
+  - id: calibrated_delta_g_or_fep
+    lane: P2
+    domain: free_energy
+    current_state: blocked
+    claim_state: blocked
+    accounting_green: false
+    scientific_validity_green: false
+    row_level_evidence_count: 0
+    owner: free_energy
+    risk: R4
+    dependencies: [md_all_atom, lambda_windows, mbar_overlap_diagnostics, public_holdout_affinity]
+    definition_of_done:
+      - Ensemble MM/GBSA and sampling-based lambda windows report convergence, overlap, BAR/MBAR diagnostics, and held-out RMSE/MAE/Spearman with uncertainty coverage.
+      - Calibrated affinity or FEP claims remain blocked until those checks pass with row-level evidence.
+    execution_enabled: false
+    external_state_mutated: false
+  - id: foundation_structure_model
+    lane: P3
+    domain: model_training
+    current_state: not_started
+    claim_state: blocked_until_external_validation
+    accounting_green: false
+    scientific_validity_green: false
+    row_level_evidence_count: 0
+    owner: structure_ml
+    risk: R4
+    dependencies: [leakage_free_training_splits, atom_diffusion_trunk, model_card, rollback]
+    definition_of_done:
+      - Protein, ligand, nucleic-acid, ion tokenization, pair representation, SE(3)/E(3) trunk, atom-level diffusion, recycling, multimer learning, and confidence heads are independently validated.
+      - Model card, rollback, uncertainty calibration, and abstention are release-blocking.
+    execution_enabled: false
+    external_state_mutated: false
+  - id: alphafold_parity
+    lane: P3
+    domain: structure_prediction_claim
+    current_state: blocked
+    claim_state: blocked
+    accounting_green: false
+    scientific_validity_green: false
+    row_level_evidence_count: 0
+    owner: executive_claims
+    risk: R4
+    dependencies: [foundation_structure_model, independent_blind_validation]
+    definition_of_done:
+      - Independent blind validation supports any parity language.
+      - Marketing, docs, API, and report surfaces keep parity claims blocked before that evidence.
+    execution_enabled: false
+    external_state_mutated: false
+  - id: enterprise_ux_governance
+    lane: P4
+    domain: enterprise
+    current_state: partial
+    claim_state: blocked_until_operational_validation
+    accounting_green: false
+    scientific_validity_green: false
+    row_level_evidence_count: 0
+    owner: platform_product
+    risk: R3
+    dependencies: [oidc_rbac, tenant_isolation, audit_logs, metrics_tracing]
+    definition_of_done:
+      - Versioned API/SDK/CLI, PostgreSQL, durable queue, GPU scheduler, object storage, registry, workflow DAG, OIDC/RBAC, tenant isolation, provenance, metrics, tracing, retry, and idempotency pass hosted smoke tests.
+      - Enterprise UX supports job status, reports, evidence links, and recovery without operator-only runbooks.
+    execution_enabled: false
+    external_state_mutated: false
+  - id: broad_platform_claim
+    lane: P4
+    domain: product_claim
+    current_state: blocked
+    claim_state: blocked
+    accounting_green: false
+    scientific_validity_green: false
+    row_level_evidence_count: 0
+    owner: executive_claims
+    risk: R4
+    dependencies: [contracts_core, docking_vertical_slice, md_all_atom, calibrated_delta_g_or_fep, enterprise_ux_governance]
+    definition_of_done:
+      - Multiple public holdouts and clean-container GPU E2E checks pass with row-level evidence.
+      - General platform language remains blocked until structure, docking, MD, free energy, operations, and security evidence all pass.
+    execution_enabled: false
+    external_state_mutated: false
+  - id: wetlab_hit_claim
+    lane: P4
+    domain: external_validation
+    current_state: blocked
+    claim_state: blocked
+    accounting_green: false
+    scientific_validity_green: false
+    row_level_evidence_count: 0
+    owner: translational_validation
+    risk: R4
+    dependencies: [external_prospective_protocol, wetlab_result_intake, legal_review]
+    definition_of_done:
+      - Prospective wetlab evidence is independently captured with source, protocol, result, and statistical interpretation.
+      - Wetlab hit language remains blocked until human owner accepts external evidence and claim scope.
+    execution_enabled: false
+    external_state_mutated: false

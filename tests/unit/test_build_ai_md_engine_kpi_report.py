@@ -147,6 +147,11 @@ def _product_runner_engine_owned_smoke(*, ready: bool = True) -> dict:
             "runner_kind": "ligand_topk_delivery",
             "engine_module": "betelgeuze_engine.product.runners.topk_delivery",
         },
+        {
+            "runner_id": "tier_beta_biodiscovery_direct",
+            "runner_kind": "tier_beta_biodiscovery_vertical_slice",
+            "engine_module": "betelgeuze_engine.product.runners.tier_beta_vertical_slice",
+        },
     ]
     for row in rows:
         row.update(
@@ -161,8 +166,8 @@ def _product_runner_engine_owned_smoke(*, ready: bool = True) -> dict:
         )
     return {
         "ready": ready,
-        "runner_count": 3 if ready else 0,
-        "engine_owned_runner_count": 3 if ready else 0,
+        "runner_count": 4 if ready else 0,
+        "engine_owned_runner_count": 4 if ready else 0,
         "contract": "all_product_runners_are_engine_owned_with_compatibility_shims",
         "rows": rows if ready else [],
     }
@@ -211,7 +216,7 @@ def _chemistry_kpi_packet(*, ready: bool = True) -> dict:
                     "formal_charge_sum": 0,
                     "protonation_status": "neutral_state_parsed",
                     "tautomer_fixture_valid": False,
-                    "tautomer_status": "connectivity_parsed_tautomer_not_canonicalized",
+                    "tautomer_status": "canonical_tautomer_enumerated",
                 }
             )
             if fixture == "chiral_lactic_acid":
@@ -993,7 +998,7 @@ def _write_product_evidence_bundle(
             "allowlisted_runner_shim_contract_ready": True,
             "allowlisted_runner_shim_contract": {
                 "ready": True,
-                "runner_count": 3,
+                "runner_count": 4,
                 "rows": [
                     {
                         "profile_id": "ligand_htvs_pipeline_default",
@@ -1051,6 +1056,26 @@ def _write_product_evidence_bundle(
                         "runtime_adapter_error": "",
                         "script_hash": "c" * 64,
                         "profile_runner_script_sha256": "c" * 64,
+                        "hash_matches": True,
+                        "ready": True,
+                        "error": "",
+                    },
+                    {
+                        "profile_id": "tier_beta_biodiscovery_direct",
+                        "runner_script": "tools/run_tier_beta_vertical_slice.py",
+                        "profile_runner_script": "tools/run_tier_beta_vertical_slice.py",
+                        "adapter_import": "betelgeuze_engine.product.runners.tier_beta_vertical_slice",
+                        "adapter_import_present": True,
+                        "shim_contract_type": "canonical_module_alias",
+                        "sys_modules_alias_ready": True,
+                        "runtime_module_name": "betelgeuze_engine.product.runners.tier_beta_vertical_slice",
+                        "self_implementation_blocked": True,
+                        "required_runtime_symbols": ["main", "build_parser"],
+                        "runtime_adapter_identity_ready": True,
+                        "missing_runtime_symbols": [],
+                        "runtime_adapter_error": "",
+                        "script_hash": "d" * 64,
+                        "profile_runner_script_sha256": "d" * 64,
                         "hash_matches": True,
                         "ready": True,
                         "error": "",
@@ -2434,7 +2459,7 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     shim_contract = report["product_kpi"]["allowlisted_runner_shim_contract"]
     from api.validated_runner import ALLOWED_RUNNER_SCRIPTS
 
-    assert shim_contract["runner_count"] == 3
+    assert shim_contract["runner_count"] == len(ALLOWED_RUNNER_SCRIPTS)
     assert {row["runner_script"] for row in shim_contract["rows"]} == ALLOWED_RUNNER_SCRIPTS
     assert all(row["ready"] is True for row in shim_contract["rows"])
     assert all(row["adapter_import_present"] is True for row in shim_contract["rows"])
@@ -2450,6 +2475,7 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
         "betelgeuze_engine.product.runners.htvs_pipeline",
         "betelgeuze_engine.product.runners.backmapping_scoring",
         "betelgeuze_engine.product.runners.topk_delivery",
+        "betelgeuze_engine.product.runners.tier_beta_vertical_slice",
     }
     assert report["product_kpi"]["product_runner_engine_imports_ready"] is True
     assert report["pm_kpi_summary"]["product"]["product_runner_engine_imports_ready"] is True
@@ -2531,8 +2557,8 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert report["pm_kpi_summary"]["product"]["product_runner_engine_owned_ready"] is True
     runner_owned = report["product_kpi"]["product_runner_engine_owned_smoke"]
     assert runner_owned["ready"] is True
-    assert runner_owned["runner_count"] == 3
-    assert runner_owned["engine_owned_runner_count"] == 3
+    assert runner_owned["runner_count"] == 4
+    assert runner_owned["engine_owned_runner_count"] == 4
     assert runner_owned["contract"] == "all_product_runners_are_engine_owned_with_compatibility_shims"
     assert {
         row["runner_id"] for row in runner_owned["rows"]
@@ -2540,6 +2566,7 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
         "ligand_htvs_pipeline_default",
         "backmapping_scoring.production",
         "ligand_topk_delivery.production",
+        "tier_beta_biodiscovery_direct",
     }
     assert all(row["ready"] is True for row in runner_owned["rows"])
     assert all(row["runtime_identity_ready"] is True for row in runner_owned["rows"])

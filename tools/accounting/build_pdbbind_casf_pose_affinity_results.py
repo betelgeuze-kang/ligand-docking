@@ -3,13 +3,47 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import math
 import pickle
+import time
+import tracemalloc
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
+try:
+    from rdkit import Chem
+except Exception:  # noqa: BLE001 - optional dependency for lightweight CI import safety.
+    Chem = None
+
+from betelgeuze_engine.benchmark.docking_gold import DockingGoldRow, evaluate_docking_gold_slice
+from betelgeuze_engine.biodiscovery.pose import (
+    generate_conformers,
+    ligand_symmetry_mappings,
+    symmetry_aware_pose_rmsd,
+)
+
 ROOT = Path(__file__).resolve().parents[2]
+
+_REPLAY_ROW_SOURCE = "replay"
+_GENERATED_POSE_ROW_SOURCE = "generated_pose_smoke"
+_GENERATED_POSE_GENERATION_SOURCE = "rdkit_etkdgv3_local"
+_GENERATED_POSE_CLAIM_BOUNDARY = (
+    "Restricted local generated-pose smoke only; rows are produced from deterministic RDKit conformer "
+    "generation against local reference ligands. This path does not run docking, download data, claim "
+    "official CASF/PDBbind parity, or substitute replay benchmark evidence."
+)
+_REPLAY_CLAIM_BOUNDARY = (
+    "PDBbind/CASF pose-affinity adapter only; it reads local RDKit-pickled CASF ligand/reference pose pairs "
+    "and computes symmetry-aware heavy-atom RMSD in the receptor frame without ligand superposition. The "
+    "primary pose_success_rate is aggregated "
+    "per complex by best available pose, while pose_row_success_rate remains reported as a diagnostic. It does "
+    "not run docking, train affinity models, use external SaaS, download data, or claim official CASF "
+    "scoring/ranking performance."
+)
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -18,7 +52,119 @@ def _resolve(path_like: str | Path) -> Path:
 
 
 def _text(value: Any) -> str:
-    return str(value or "").strip()
+    return "" if value is None else str(value).strip()
+
+
+def _float_or_none(value: Any) -> float | None:
+    text = _text(value)
+    if not text:
+        return None
+    try:
+        number = float(text)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def _bool_or_none(value: Any) -> bool | None:
+    text = _text(value).lower()
+    if text in {"1", "true", "yes", "active"}:
+        return True
+    if text in {"0", "false", "no", "decoy"}:
+        return False
+    return None
+
+
+def _load_gold_metadata(path_like: str | Path) -> dict[str, dict[str, Any]]:
+    path = _resolve(path_like)
+    if not path.is_file():
+        return {}
+    metadata: dict[str, dict[str, Any]] = {}
+    with path.open(newline="", encoding="utf-8") as handle:
+        for row in csv.DictReader(handle):
+            payload = dict(row)
+            pose_id = _text(payload.get("pose_id"))
+            complex_id = _text(payload.get("complex_id"))
+            if pose_id:
+                metadata[pose_id] = payload
+            if complex_id:
+                metadata.setdefault(complex_id, payload)
+    return metadata
+
+
+def _load_pose_id_allowlist(path_like: str | Path) -> set[str]:
+    path = _resolve(path_like)
+    if not path.is_file():
+        return set()
+    pose_ids: set[str] = set()
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        if reader.fieldnames:
+            for row in reader:
+                pose_id = _text(row.get("pose_id"))
+                if pose_id:
+                    pose_ids.add(pose_id)
+        else:
+            handle.seek(0)
+            for line in handle:
+                pose_id = _text(line)
+                if pose_id:
+                    pose_ids.add(pose_id)
+    return pose_ids
+
+
+def _sha256_file(path: Path | None) -> str:
+    if path is None or not path.is_file():
+        return ""
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _subset_identity(
+    *,
+    dataset: Path,
+    data_dir: Path,
+    pose_files: list[Path],
+    reference_paths: list[Path],
+    gold_metadata_csv: str,
+    max_poses: int,
+) -> dict[str, Any]:
+    artifact_rows = [
+        {
+            "role": "pose",
+            "name": path.name,
+            "relative_path": str(path.relative_to(dataset)) if path.is_relative_to(dataset) else str(path),
+            "sha256": _sha256_file(path),
+        }
+        for path in pose_files
+    ]
+    artifact_rows.extend(
+        {
+            "role": "reference",
+            "name": path.name,
+            "relative_path": str(path.relative_to(dataset)) if path.is_relative_to(dataset) else str(path),
+            "sha256": _sha256_file(path),
+        }
+        for path in reference_paths
+    )
+    metadata_path = _resolve(gold_metadata_csv) if _text(gold_metadata_csv) else None
+    payload = {
+        "schema_version": "pdbbind_casf_subset_identity_v1",
+        "dataset_artifact": str(dataset),
+        "data_5_sdf_dir": str(data_dir),
+        "max_poses": int(max_poses),
+        "pose_file_names": [path.name for path in pose_files],
+        "reference_file_names": [path.name for path in reference_paths],
+        "artifact_rows": sorted(artifact_rows, key=lambda row: (row["role"], row["name"], row["relative_path"])),
+        "gold_metadata_csv": str(metadata_path or ""),
+        "gold_metadata_sha256": _sha256_file(metadata_path),
+    }
+    identity_payload = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    payload["subset_identity_sha256"] = hashlib.sha256(identity_payload.encode("utf-8")).hexdigest()
+    return payload
 
 
 def _coords(mol: Any) -> list[tuple[float, float, float]]:
@@ -32,6 +178,10 @@ def _coords(mol: Any) -> list[tuple[float, float, float]]:
     return coords
 
 
+def _heavy_atom_elements(mol: Any) -> list[str]:
+    return [str(atom.GetSymbol()) for atom in mol.GetAtoms() if atom.GetAtomicNum() != 1]
+
+
 def _direct_rmsd(a: list[tuple[float, float, float]], b: list[tuple[float, float, float]]) -> float | None:
     if not a or len(a) != len(b):
         return None
@@ -39,6 +189,53 @@ def _direct_rmsd(a: list[tuple[float, float, float]], b: list[tuple[float, float
     for (ax, ay, az), (bx, by, bz) in zip(a, b):
         total += (ax - bx) ** 2 + (ay - by) ** 2 + (az - bz) ** 2
     return math.sqrt(total / len(a))
+
+
+def _symmetry_aware_heavy_atom_rmsd(ref_mol: Any, pose_mol: Any) -> tuple[float | None, dict[str, Any]]:
+    ref_coords = _coords(ref_mol)
+    pose_coords = _coords(pose_mol)
+    ref_elements = _heavy_atom_elements(ref_mol)
+    pose_elements = _heavy_atom_elements(pose_mol)
+    diagnostics: dict[str, Any] = {
+        "method": "rdkit_self_substructure_automorphism_no_ligand_alignment",
+        "reference_heavy_atom_count": len(ref_coords),
+        "pose_heavy_atom_count": len(pose_coords),
+        "symmetry_mapping_count": 0,
+        "atom_identity_checked": True,
+        "ligand_alignment_applied": False,
+    }
+    if not ref_coords or len(ref_coords) != len(pose_coords):
+        diagnostics["status"] = "heavy_atom_count_mismatch"
+        return None, diagnostics
+    if ref_elements != pose_elements:
+        diagnostics["status"] = "heavy_atom_element_order_mismatch"
+        return None, diagnostics
+    try:
+        if Chem is None:
+            raise RuntimeError("rdkit_unavailable")
+        ref_heavy = Chem.RemoveHs(ref_mol)
+        mappings = ref_heavy.GetSubstructMatches(ref_heavy, uniquify=False, maxMatches=512)
+    except Exception:
+        mappings = ()
+    candidates = [tuple(range(len(ref_coords)))]
+    for mapping in mappings:
+        if len(mapping) == len(ref_coords):
+            candidates.append(tuple(int(idx) for idx in mapping))
+    seen: set[tuple[int, ...]] = set()
+    best: float | None = None
+    for mapping in candidates:
+        if mapping in seen:
+            continue
+        seen.add(mapping)
+        if any(ref_elements[int(ref_idx)] != pose_elements[pose_idx] for pose_idx, ref_idx in enumerate(mapping)):
+            continue
+        mapped_ref = [ref_coords[int(ref_idx)] for ref_idx in mapping]
+        value = _direct_rmsd(mapped_ref, pose_coords)
+        if value is not None and (best is None or value < best):
+            best = value
+    diagnostics["symmetry_mapping_count"] = len(seen)
+    diagnostics["status"] = "symmetry_aware_rmsd_computed" if best is not None else "symmetry_mapping_failed"
+    return best, diagnostics
 
 
 def _load_ligand(path: Path) -> Any:
@@ -65,35 +262,242 @@ def _is_pose_file(path: Path) -> bool:
     return suffix.isdigit()
 
 
-def build_results(args: argparse.Namespace) -> dict[str, Any]:
-    dataset = _resolve(args.dataset_artifact)
-    data_dir = dataset / "data_5_sdf"
-    pose_files = sorted(path for path in data_dir.iterdir() if path.is_file() and _is_pose_file(path)) if data_dir.exists() else []
-    if int(args.max_poses) > 0:
-        pose_files = pose_files[: int(args.max_poses)]
-    rows: list[dict[str, Any]] = []
-    threshold = float(args.pose_success_rmsd_a)
+def _pose_rank(path: Path) -> int:
+    try:
+        return int(path.name.rsplit("_", 1)[-1])
+    except (IndexError, ValueError):
+        return 10**9
 
-    for pose_path in pose_files:
-        complex_id = pose_path.name.split("_", 1)[0]
+
+def _mol_smiles(mol: Any) -> str:
+    if Chem is None:
+        raise RuntimeError("rdkit_unavailable")
+    heavy = Chem.RemoveHs(mol)
+    return Chem.MolToSmiles(heavy, isomericSmiles=True)
+
+
+def _reference_coords_array(mol: Any) -> list[tuple[float, float, float]]:
+    return _coords(mol)
+
+
+def _generated_pose_reference_comparison_status(
+    *,
+    rmsd: float | None,
+    rmsd_diagnostics: dict[str, Any],
+    generated_pose_count: int,
+) -> str:
+    if generated_pose_count <= 0:
+        return "generated_pose_count_zero"
+    if rmsd is None:
+        return str(rmsd_diagnostics.get("status") or "generated_pose_rmsd_not_computable")
+    return "generated_pose_reference_rmsd_computed"
+
+
+def _build_generated_pose_smoke_rows(
+    *,
+    complex_ids: list[str],
+    data_dir: Path,
+    threshold: float,
+    generation_seed: int,
+    generated_pose_count: int,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for complex_id in complex_ids:
         reference = _reference_path(data_dir, complex_id)
         blockers: list[str] = []
         rmsd: float | None = None
         ref_atom_count = 0
         pose_atom_count = 0
+        rmsd_diagnostics: dict[str, Any] = {}
+        actual_generated_pose_count = 0
+        row_start = time.perf_counter()
+        tracemalloc.start()
+        comparison_status = ""
+        if Chem is None:
+            blockers.append("rdkit_unavailable")
+            rmsd_diagnostics = {
+                "method": "",
+                "status": "rdkit_unavailable",
+                "generation_source": _GENERATED_POSE_GENERATION_SOURCE,
+                "generation_seed": int(generation_seed),
+                "generated_pose_count": 0,
+            }
+            comparison_status = "rdkit_unavailable"
+        elif reference is None:
+            blockers.append("reference_ligand_missing")
+        else:
+            try:
+                ref_mol = _load_ligand(reference)
+                smiles = _mol_smiles(ref_mol)
+                ref_coords = np.asarray(_reference_coords_array(ref_mol), dtype=np.float64)
+                ref_atom_count = len(ref_coords)
+                generated = generate_conformers(smiles, generated_pose_count, generation_seed)
+                if generated is None or int(getattr(generated, "shape", [0])[0] or 0) <= 0:
+                    blockers.append("generated_pose_conformer_embedding_failed")
+                else:
+                    actual_generated_pose_count = int(generated.shape[0])
+                    pose_coords = generated[0]
+                    pose_atom_count = int(pose_coords.shape[0])
+                    symmetry_mappings = ligand_symmetry_mappings(smiles)
+                    rmsd_value = symmetry_aware_pose_rmsd(
+                        pose_coords,
+                        ref_coords,
+                        symmetry_mappings,
+                    )
+                    rmsd = rmsd_value if math.isfinite(rmsd_value) else None
+                    rmsd_diagnostics = {
+                        "method": "rdkit_etkdgv3_symmetry_aware_heavy_atom_rmsd",
+                        "reference_heavy_atom_count": ref_atom_count,
+                        "pose_heavy_atom_count": pose_atom_count,
+                        "symmetry_mapping_count": len(symmetry_mappings),
+                        "atom_identity_checked": True,
+                        "ligand_alignment_applied": False,
+                        "generation_source": _GENERATED_POSE_GENERATION_SOURCE,
+                        "generation_seed": int(generation_seed),
+                        "generated_pose_count": actual_generated_pose_count,
+                        "status": (
+                            "generated_pose_reference_rmsd_computed"
+                            if rmsd is not None
+                            else "generated_pose_rmsd_not_computable"
+                        ),
+                    }
+                    if rmsd is None:
+                        blockers.append(str(rmsd_diagnostics.get("status") or "generated_pose_rmsd_not_computable"))
+            except Exception as exc:  # noqa: BLE001 - smoke rows should report concrete row-level failure.
+                blockers.append(f"generated_pose_smoke_failed:{type(exc).__name__}")
+        _current_bytes, peak_bytes = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        runtime_ms = max((time.perf_counter() - row_start) * 1000.0, 0.001)
+        peak_memory_mb = max(float(peak_bytes) / (1024.0 * 1024.0), 0.001)
+        if not comparison_status:
+            comparison_status = _generated_pose_reference_comparison_status(
+                rmsd=rmsd,
+                rmsd_diagnostics=rmsd_diagnostics,
+                generated_pose_count=actual_generated_pose_count,
+            )
+        success = rmsd is not None and rmsd <= threshold and not blockers
+        rows.append(
+            {
+                "suite_id": "pdbbind_casf_pose_affinity",
+                "complex_id": complex_id,
+                "pose_id": f"{complex_id}_generated_smoke_0",
+                "pose_success": int(success),
+                "pose_rmsd_A": rmsd if rmsd is not None else "",
+                "pose_success_rmsd_threshold_A": threshold,
+                "reference_ligand": str(reference or ""),
+                "pose_artifact": "",
+                "reference_heavy_atom_count": ref_atom_count,
+                "pose_heavy_atom_count": pose_atom_count,
+                "pose_rmsd_method": str(rmsd_diagnostics.get("method", "")),
+                "pose_rmsd_diagnostics": json.dumps(rmsd_diagnostics, sort_keys=True),
+                "blocker_count": len(blockers),
+                "blockers": ";".join(blockers),
+                "active_label": "",
+                "affinity_label": "",
+                "score": "",
+                "baseline_score": "",
+                "split_id": "generated_pose_smoke",
+                "abstained": "",
+                "abstention_reasons": "",
+                "chirality_failure": "",
+                "tautomer_failure": "",
+                "protonation_failure": "",
+                "chemistry_evidence_present": 0,
+                "runtime_ms": f"{runtime_ms:.6f}",
+                "peak_memory_mb": f"{peak_memory_mb:.6f}",
+                "runtime_metric_source": "builder_wall_clock_perf_counter",
+                "peak_memory_metric_source": "builder_tracemalloc_peak",
+                "row_source": _GENERATED_POSE_ROW_SOURCE,
+                "pose_generation_source": _GENERATED_POSE_GENERATION_SOURCE,
+                "pose_generation_seed": int(generation_seed),
+                "generated_pose_count": actual_generated_pose_count,
+                "generated_pose_reference_comparison_status": comparison_status,
+                "generated_pose_claim_boundary": _GENERATED_POSE_CLAIM_BOUNDARY,
+            }
+        )
+    return rows
+
+
+def _chemistry_failures_from_metadata(metadata: dict[str, Any]) -> tuple[tuple[str, ...], bool]:
+    fields = {
+        "chirality_failure": "chirality_failure",
+        "tautomer_failure": "tautomer_failure",
+        "protonation_failure": "protonation_failure",
+    }
+    evidence_present = all(_text(metadata.get(field)) for field in fields)
+    failures = [
+        token
+        for field, token in fields.items()
+        if _bool_or_none(metadata.get(field)) is True
+    ]
+    return tuple(failures), evidence_present
+
+
+def build_results(args: argparse.Namespace) -> dict[str, Any]:
+    dataset = _resolve(args.dataset_artifact)
+    data_dir = dataset / "data_5_sdf"
+    pose_files = sorted(path for path in data_dir.iterdir() if path.is_file() and _is_pose_file(path)) if data_dir.exists() else []
+    pose_id_allowlist = (
+        _load_pose_id_allowlist(args.pose_id_allowlist_csv)
+        if _text(getattr(args, "pose_id_allowlist_csv", ""))
+        else set()
+    )
+    if pose_id_allowlist:
+        pose_files = [path for path in pose_files if path.name in pose_id_allowlist]
+    if int(args.max_poses) > 0:
+        pose_files = pose_files[: int(args.max_poses)]
+    rows: list[dict[str, Any]] = []
+    threshold = float(args.pose_success_rmsd_a)
+    gold_metadata = _load_gold_metadata(args.gold_metadata_csv) if _text(getattr(args, "gold_metadata_csv", "")) else {}
+    reference_paths = sorted(
+        {
+            reference
+            for complex_id in {path.name.split("_", 1)[0] for path in pose_files}
+            for reference in [_reference_path(data_dir, complex_id)]
+            if reference is not None
+        },
+        key=lambda path: path.name,
+    )
+    subset_identity = _subset_identity(
+        dataset=dataset,
+        data_dir=data_dir,
+        pose_files=pose_files,
+        reference_paths=reference_paths,
+        gold_metadata_csv=str(getattr(args, "gold_metadata_csv", "")),
+        max_poses=int(args.max_poses),
+    )
+
+    for pose_path in pose_files:
+        complex_id = pose_path.name.split("_", 1)[0]
+        metadata = gold_metadata.get(pose_path.name, gold_metadata.get(complex_id, {}))
+        reference = _reference_path(data_dir, complex_id)
+        blockers: list[str] = []
+        rmsd: float | None = None
+        ref_atom_count = 0
+        pose_atom_count = 0
+        rmsd_diagnostics: dict[str, Any] = {}
+        row_start = time.perf_counter()
+        tracemalloc.start()
         if reference is None:
             blockers.append("reference_ligand_missing")
         else:
             try:
-                ref_coords = _coords(_load_ligand(reference))
-                pose_coords = _coords(_load_ligand(pose_path))
-                ref_atom_count = len(ref_coords)
-                pose_atom_count = len(pose_coords)
-                rmsd = _direct_rmsd(ref_coords, pose_coords)
+                ref_mol = _load_ligand(reference)
+                pose_mol = _load_ligand(pose_path)
+                rmsd, rmsd_diagnostics = _symmetry_aware_heavy_atom_rmsd(ref_mol, pose_mol)
+                ref_atom_count = int(rmsd_diagnostics.get("reference_heavy_atom_count") or 0)
+                pose_atom_count = int(rmsd_diagnostics.get("pose_heavy_atom_count") or 0)
                 if rmsd is None:
-                    blockers.append("heavy_atom_count_mismatch")
+                    blockers.append(str(rmsd_diagnostics.get("status") or "pose_rmsd_not_computable"))
             except Exception as exc:  # noqa: BLE001 - artifact parser should report concrete row-level failure.
                 blockers.append(f"rdkit_pickle_parse_failed:{type(exc).__name__}")
+        _current_bytes, peak_bytes = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        runtime_ms = max((time.perf_counter() - row_start) * 1000.0, 0.001)
+        peak_memory_mb = max(float(peak_bytes) / (1024.0 * 1024.0), 0.001)
+        chemistry_failures, chemistry_evidence_present = _chemistry_failures_from_metadata(metadata)
+        if not chemistry_evidence_present:
+            blockers.append("chemistry_failure_evidence_missing")
         success = rmsd is not None and rmsd <= threshold and not blockers
         rows.append(
             {
@@ -107,14 +511,55 @@ def build_results(args: argparse.Namespace) -> dict[str, Any]:
                 "pose_artifact": str(pose_path),
                 "reference_heavy_atom_count": ref_atom_count,
                 "pose_heavy_atom_count": pose_atom_count,
+                "pose_rmsd_method": str(rmsd_diagnostics.get("method", "")),
+                "pose_rmsd_diagnostics": json.dumps(rmsd_diagnostics, sort_keys=True),
                 "blocker_count": len(blockers),
                 "blockers": ";".join(blockers),
+                "active_label": _text(metadata.get("active_label")),
+                "affinity_label": _text(metadata.get("affinity_label")),
+                "score": _text(metadata.get("score")),
+                "baseline_score": _text(metadata.get("baseline_score")),
+                "split_id": _text(metadata.get("split_id") or "heldout"),
+                "abstained": _text(metadata.get("abstained")),
+                "abstention_reasons": _text(metadata.get("abstention_reasons")),
+                "chirality_failure": _text(metadata.get("chirality_failure")),
+                "tautomer_failure": _text(metadata.get("tautomer_failure")),
+                "protonation_failure": _text(metadata.get("protonation_failure")),
+                "chemistry_evidence_present": int(chemistry_evidence_present),
+                "runtime_ms": f"{runtime_ms:.6f}",
+                "peak_memory_mb": f"{peak_memory_mb:.6f}",
+                "runtime_metric_source": "builder_wall_clock_perf_counter",
+                "peak_memory_metric_source": "builder_tracemalloc_peak",
+                "row_source": _REPLAY_ROW_SOURCE,
+                "pose_generation_source": "",
+                "pose_generation_seed": "",
+                "generated_pose_count": "",
+                "generated_pose_reference_comparison_status": "",
+                "generated_pose_claim_boundary": "",
             }
         )
 
-    scored_rows = [row for row in rows if _text(row.get("pose_rmsd_A"))]
-    pose_success_count = sum(1 for row in rows if int(row.get("pose_success") or 0) == 1)
-    pose_success_rate = pose_success_count / len(rows) if rows else 0.0
+    generate_poses = bool(getattr(args, "generate_poses", False))
+    generation_seed = int(getattr(args, "generate_poses_seed", 42) or 42)
+    generated_pose_count = max(int(getattr(args, "generate_poses_count", 1) or 1), 1)
+    generate_poses_max_complexes = max(int(getattr(args, "generate_poses_max_complexes", 2) or 2), 1)
+    if generate_poses:
+        smoke_complex_ids = sorted({path.name.split("_", 1)[0] for path in pose_files})[:generate_poses_max_complexes]
+        rows.extend(
+            _build_generated_pose_smoke_rows(
+                complex_ids=smoke_complex_ids,
+                data_dir=data_dir,
+                threshold=threshold,
+                generation_seed=generation_seed,
+                generated_pose_count=generated_pose_count,
+            )
+        )
+
+    replay_rows = [row for row in rows if _text(row.get("row_source")) == _REPLAY_ROW_SOURCE]
+    generated_pose_rows = [row for row in rows if _text(row.get("row_source")) == _GENERATED_POSE_ROW_SOURCE]
+    scored_rows = [row for row in replay_rows if _text(row.get("pose_rmsd_A"))]
+    pose_success_count = sum(1 for row in replay_rows if int(row.get("pose_success") or 0) == 1)
+    pose_success_rate = pose_success_count / len(replay_rows) if replay_rows else 0.0
     by_complex: dict[str, list[float]] = {}
     for row in scored_rows:
         try:
@@ -124,16 +569,54 @@ def build_results(args: argparse.Namespace) -> dict[str, Any]:
         by_complex.setdefault(_text(row.get("complex_id")), []).append(rmsd)
     complex_success_count = sum(1 for values in by_complex.values() if min(values) <= threshold)
     complex_success_rate = complex_success_count / len(by_complex) if by_complex else 0.0
+    gold_metrics = evaluate_docking_gold_slice(
+        [
+            DockingGoldRow(
+                complex_id=_text(row.get("complex_id")),
+                pose_id=_text(row.get("pose_id")),
+                pose_rank=_pose_rank(Path(_text(row.get("pose_id")))),
+                pose_rmsd_a=float(row["pose_rmsd_A"]) if _text(row.get("pose_rmsd_A")) else None,
+                score=_float_or_none(row.get("score")),
+                baseline_score=_float_or_none(row.get("baseline_score")),
+                affinity_label=_float_or_none(row.get("affinity_label")),
+                active_label=_bool_or_none(row.get("active_label")),
+                split_id=_text(row.get("split_id") or "heldout"),
+                abstained=bool(_bool_or_none(row.get("abstained")) is True),
+                chemistry_failures=tuple(
+                    failure
+                    for failure in [
+                        "chirality_failure" if _bool_or_none(row.get("chirality_failure")) is True else "",
+                        "tautomer_failure" if _bool_or_none(row.get("tautomer_failure")) is True else "",
+                        "protonation_failure" if _bool_or_none(row.get("protonation_failure")) is True else "",
+                    ]
+                    if failure
+                ),
+                chemistry_evidence_present=bool(int(row.get("chemistry_evidence_present") or 0)),
+                abstention_reasons=tuple(
+                    reason for reason in _text(row.get("abstention_reasons")).split(";") if reason
+                ),
+                runtime_ms=_float_or_none(row.get("runtime_ms")),
+                peak_memory_mb=_float_or_none(row.get("peak_memory_mb")),
+            )
+            for row in replay_rows
+        ],
+        pose_success_rmsd_a=threshold,
+        top_k=5,
+    )
     primary_threshold = float(args.threshold)
     blockers: list[str] = []
     if not dataset.exists():
         blockers.append("dataset_artifact_missing")
     if not data_dir.exists():
         blockers.append("data_5_sdf_dir_missing")
-    if not rows:
+    if not replay_rows:
         blockers.append("pose_files_missing")
+    if any(int(row.get("blocker_count") or 0) > 0 for row in replay_rows):
+        blockers.append("row_level_benchmark_blockers_present")
     if complex_success_rate + 1e-12 < primary_threshold:
         blockers.append("pose_success_rate_below_threshold")
+    if gold_metrics.status != "pass":
+        blockers.append("gold_metrics_blocked")
 
     out_csv = _resolve(args.out_csv)
     out_json = _resolve(args.out_json)
@@ -149,8 +632,31 @@ def build_results(args: argparse.Namespace) -> dict[str, Any]:
         "pose_artifact",
         "reference_heavy_atom_count",
         "pose_heavy_atom_count",
+        "pose_rmsd_method",
+        "pose_rmsd_diagnostics",
         "blocker_count",
         "blockers",
+        "active_label",
+        "affinity_label",
+        "score",
+        "baseline_score",
+        "split_id",
+        "abstained",
+        "abstention_reasons",
+        "chirality_failure",
+        "tautomer_failure",
+        "protonation_failure",
+        "chemistry_evidence_present",
+        "runtime_ms",
+        "peak_memory_mb",
+        "runtime_metric_source",
+        "peak_memory_metric_source",
+        "row_source",
+        "pose_generation_source",
+        "pose_generation_seed",
+        "generated_pose_count",
+        "generated_pose_reference_comparison_status",
+        "generated_pose_claim_boundary",
     ]
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     with out_csv.open("w", encoding="utf-8", newline="") as handle:
@@ -169,10 +675,50 @@ def build_results(args: argparse.Namespace) -> dict[str, Any]:
         "dataset_artifact": str(dataset),
         "data_5_sdf_dir": str(data_dir),
         "pose_count": len(rows),
+        "replay_pose_count": len(replay_rows),
+        "generated_pose_smoke_row_count": len(generated_pose_rows),
         "scored_pose_count": len(scored_rows),
         "pose_success_count": pose_success_count,
         "pose_success_rate": complex_success_rate,
         "pose_row_success_rate": pose_success_rate,
+        "top1_mean_rmsd_A": gold_metrics.top1_mean_rmsd_a,
+        "top5_best_mean_rmsd_A": gold_metrics.top5_best_mean_rmsd_a,
+        "top1_pose_success_rate": gold_metrics.top1_pose_success_rate,
+        "top5_pose_success_rate": gold_metrics.top5_pose_success_rate,
+        "ranking_spearman": gold_metrics.ranking_spearman,
+        "pr_auc": gold_metrics.pr_auc,
+        "topk_hit_rate": gold_metrics.topk_hit_rate,
+        "decoy_rejection_rate": gold_metrics.decoy_rejection_rate,
+        "baseline_ranking_spearman": gold_metrics.baseline_ranking_spearman,
+        "refine_ranking_spearman_delta": gold_metrics.refine_ranking_spearman_delta,
+        "refine_improvement_observed": gold_metrics.refine_improvement_observed,
+        "heldout_complex_count": gold_metrics.heldout_complex_count,
+        "chirality_failure_rate": gold_metrics.chirality_failure_rate,
+        "tautomer_failure_rate": gold_metrics.tautomer_failure_rate,
+        "protonation_failure_rate": gold_metrics.protonation_failure_rate,
+        "chemistry_evidence_coverage": gold_metrics.chemistry_evidence_coverage,
+        "abstention_precision": gold_metrics.abstention_precision,
+        "mean_runtime_ms": gold_metrics.mean_runtime_ms,
+        "peak_memory_mb": gold_metrics.peak_memory_mb,
+        "gold_metric_schema_version": gold_metrics.schema_version,
+        "gold_metric_status": gold_metrics.status,
+        "gold_metric_blockers": list(gold_metrics.blockers),
+        "gold_metadata_csv": str(_resolve(args.gold_metadata_csv)) if _text(getattr(args, "gold_metadata_csv", "")) else "",
+        "pose_id_allowlist_csv": (
+            str(_resolve(args.pose_id_allowlist_csv))
+            if _text(getattr(args, "pose_id_allowlist_csv", ""))
+            else ""
+        ),
+        "pose_id_allowlist_count": len(pose_id_allowlist),
+        "subset_identity": subset_identity,
+        "subset_identity_schema_version": subset_identity["schema_version"],
+        "subset_identity_sha256": subset_identity["subset_identity_sha256"],
+        "subset_pose_file_names": list(subset_identity["pose_file_names"]),
+        "subset_reference_file_names": list(subset_identity["reference_file_names"]),
+        "subset_gold_metadata_sha256": subset_identity["gold_metadata_sha256"],
+        "pose_rmsd_method": "rdkit_self_substructure_automorphism_no_ligand_alignment",
+        "runtime_metric_source": "builder_wall_clock_perf_counter",
+        "peak_memory_metric_source": "builder_tracemalloc_peak",
         "complex_count": len(by_complex),
         "complex_pose_success_count": complex_success_count,
         "complex_pose_success_rate": complex_success_rate,
@@ -183,13 +729,16 @@ def build_results(args: argparse.Namespace) -> dict[str, Any]:
         "out_csv": str(out_csv),
         "external_state_mutated": False,
         "download_executed": False,
-        "prediction_generation_enabled": False,
+        "prediction_generation_enabled": generate_poses,
+        "generated_pose_smoke_enabled": generate_poses,
+        "generated_pose_generation_source": _GENERATED_POSE_GENERATION_SOURCE if generate_poses else "",
+        "generated_pose_generation_seed": generation_seed if generate_poses else "",
+        "generated_pose_count_per_complex": generated_pose_count if generate_poses else "",
+        "generated_pose_claim_boundary": _GENERATED_POSE_CLAIM_BOUNDARY if generate_poses else "",
         "claim_boundary": (
-            "PDBbind/CASF pose-affinity adapter only; it reads local RDKit-pickled CASF ligand/reference pose pairs "
-            "and computes direct heavy-atom RMSD by preserved atom order. The primary pose_success_rate is aggregated "
-            "per complex by best available pose, while pose_row_success_rate remains reported as a diagnostic. It does "
-            "not run docking, train affinity models, use external SaaS, download data, or claim official CASF "
-            "scoring/ranking performance."
+            _GENERATED_POSE_CLAIM_BOUNDARY
+            if generate_poses
+            else _REPLAY_CLAIM_BOUNDARY
         ),
         "next_required_step": (
             "Fingerprint this result CSV, build the suite scorecard, then refresh public benchmark gates."
@@ -229,9 +778,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-poses", type=int, default=0)
     parser.add_argument("--threshold", type=float, default=0.35)
     parser.add_argument("--pose-success-rmsd-a", type=float, default=2.0)
+    parser.add_argument("--gold-metadata-csv", default="")
+    parser.add_argument("--pose-id-allowlist-csv", default="")
     parser.add_argument("--out-csv", default="runs/pdbbind_casf_pose_affinity_benchmark_results_current.csv")
     parser.add_argument("--out-json", default="runs/pdbbind_casf_pose_affinity_results_current.json")
     parser.add_argument("--out-md", default="runs/pdbbind_casf_pose_affinity_results_current.md")
+    parser.add_argument("--generate-poses", action="store_true")
+    parser.add_argument("--generate-poses-seed", type=int, default=42)
+    parser.add_argument("--generate-poses-count", type=int, default=1)
+    parser.add_argument("--generate-poses-max-complexes", type=int, default=2)
     return parser.parse_args(argv)
 
 

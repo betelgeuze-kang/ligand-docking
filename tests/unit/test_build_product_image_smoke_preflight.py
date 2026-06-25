@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 from tools.product import build_product_image_smoke_preflight as mod
@@ -54,12 +55,14 @@ def test_product_image_smoke_preflight_contract_ready_with_docker_path(tmp_path:
     assert rows_by_id["product_rocm_requirements_no_cpu_torch_pin"]["passed"] is True
     assert rows_by_id["build_mode_receipt_not_product_claim_ready"]["passed"] is True
     assert rows_by_id["docker_cmd_override_declared"]["passed"] is True
+    assert rows_by_id["fail_closed_receipt_written_on_early_exit"]["passed"] is True
     assert rows_by_id["docker_host_setup_script_declared"]["passed"] is True
     assert rows_by_id["workflow_pull_request_trigger_declared"]["passed"] is True
     assert rows_by_id["workflow_manual_verify_mode_choice_declared"]["passed"] is True
     assert rows_by_id["workflow_build_smoke_self_hosted_by_default"]["passed"] is True
     assert rows_by_id["workflow_rocm_runtime_self_hosted_runner_declared"]["passed"] is True
     assert rows_by_id["workflow_hosted_build_summary_not_product_claim"]["passed"] is True
+    assert rows_by_id["workflow_artifact_retention_declared"]["passed"] is True
     assert all(row["execution_enabled"] is False for row in payload["rows"])
     assert all(row["external_state_mutated"] is False for row in payload["rows"])
 
@@ -80,6 +83,94 @@ def test_product_image_smoke_preflight_blocks_without_docker_cli(tmp_path: Path)
     assert summary["next_required_step"].startswith("Run bash scripts/prepare_product_docker_host.sh")
     assert summary["docker_host_setup_command"] == "bash scripts/prepare_product_docker_host.sh"
     assert "DOCKER_CMD='sudo docker'" in summary["docker_cmd_override_example"]
+
+
+def test_verify_product_image_writes_blocked_receipt_when_docker_cli_missing(tmp_path: Path) -> None:
+    receipt = tmp_path / "blocked_receipt.json"
+    result = subprocess.run(
+        ["bash", "deploy/verify_product_image.sh"],
+        check=False,
+        cwd=Path(__file__).resolve().parents[2],
+        env={
+            "PATH": "/usr/bin:/bin",
+            "DOCKER_CMD": str(tmp_path / "missing-docker"),
+            "PRODUCT_IMAGE_SMOKE_RECEIPT_JSON": str(receipt),
+        },
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    assert result.returncode == 2
+    payload = json.loads(receipt.read_text(encoding="utf-8"))
+    assert payload["status"] == "blocked_product_image_smoke"
+    assert payload["reason"] == "docker_cli_missing"
+    assert payload["receipt_ready"] is False
+    assert payload["receipt_failure_stage"] == "early_or_error_exit"
+    assert payload["external_state_mutated"] is False
+
+
+def test_verify_product_image_writes_blocked_receipt_after_container_start_failure(tmp_path: Path) -> None:
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    fake_docker = fake_bin / "docker"
+    fake_docker.write_text(
+        """#!/usr/bin/env bash
+set -euo pipefail
+cmd="${1:-}"
+shift || true
+case "${cmd}" in
+  info) exit 0 ;;
+  buildx) exit 0 ;;
+  build) exit 0 ;;
+  run)
+    if [[ "${1:-}" == "-d" ]]; then
+      echo fake-container-id
+    fi
+    exit 0
+    ;;
+  port) echo "127.0.0.1:49152"; exit 0 ;;
+  rm) exit 0 ;;
+  *) exit 0 ;;
+esac
+""",
+        encoding="utf-8",
+    )
+    fake_docker.chmod(0o755)
+    fake_curl = fake_bin / "curl"
+    fake_curl.write_text(
+        """#!/usr/bin/env bash
+if [[ "$*" == *"%{http_code}"* ]]; then
+  printf '500'
+fi
+exit 0
+""",
+        encoding="utf-8",
+    )
+    fake_curl.chmod(0o755)
+    receipt = tmp_path / "post_container_blocked_receipt.json"
+
+    result = subprocess.run(
+        ["bash", "deploy/verify_product_image.sh"],
+        check=False,
+        cwd=Path(__file__).resolve().parents[2],
+        env={
+            "PATH": f"{fake_bin}:/usr/bin:/bin",
+            "DOCKER_CMD": "docker",
+            "PRODUCT_IMAGE_SMOKE_RECEIPT_JSON": str(receipt),
+        },
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    assert result.returncode == 1
+    payload = json.loads(receipt.read_text(encoding="utf-8"))
+    assert payload["status"] == "blocked_product_image_smoke"
+    assert payload["reason"] == "script_error_exit_1"
+    assert payload["receipt_ready"] is False
+    assert payload["receipt_failure_stage"] == "early_or_error_exit"
+    assert payload["external_state_mutated"] is False
 
 
 def test_product_image_smoke_preflight_blocks_when_docker_daemon_unreachable_without_receipt(

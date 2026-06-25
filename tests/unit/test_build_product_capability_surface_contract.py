@@ -142,6 +142,34 @@ def _root(tmp_path: Path) -> Path:
     return tmp_path
 
 
+def _split_router_root(tmp_path: Path) -> Path:
+    (tmp_path / "api").mkdir(parents=True)
+    router_files = {
+        "product_docking.py": '@router.post("/structure/analyze")\n',
+        "product_capabilities.py": '@router.get("/capabilities")\n',
+        "product_architecture.py": '@router.get("/architecture")\n',
+        "product_service_contracts.py": '@router.get("/service-boundary")\n@router.get("/api-contract")\n',
+        "product_operational.py": '@router.get("/operational-quality")\n',
+        "product_release_ops.py": (
+            '@router.get("/operations")\n'
+            '@router.get("/commercial-independence")\n'
+            '@router.get("/release-readiness")\n'
+        ),
+        "product_license.py": (
+            '@router.get("/license-decision")\n'
+            '@router.get("/license-options")\n'
+            '@router.get("/license-file-work-order")\n'
+        ),
+        "product_evidence_goal.py": '@router.get("/goal-completion-audit")\n',
+    }
+    for filename, content in router_files.items():
+        (tmp_path / "api" / filename).write_text(content, encoding="utf-8")
+    (tmp_path / "betelgeuze_product").mkdir()
+    (tmp_path / "betelgeuze_product" / "docking_request.py").write_text("# request contract\n", encoding="utf-8")
+    (tmp_path / "betelgeuze_product" / "cli.py").write_text("# product CLI\n", encoding="utf-8")
+    return tmp_path
+
+
 def test_product_capability_surface_contract_tool_writes_outputs(tmp_path: Path) -> None:
     root = _root(tmp_path / "repo")
     paths = {
@@ -229,3 +257,37 @@ def test_product_capability_surface_contract_tool_writes_outputs(tmp_path: Path)
     assert "result_bundle_generation_contract_ready" in out_md.read_text(encoding="utf-8")
     assert "delivery_claim_backed_by_bundle_validation" in out_md.read_text(encoding="utf-8")
     assert "restricted_scope_claim_guard_ready" in out_md.read_text(encoding="utf-8")
+
+
+def test_product_capability_surface_contract_accepts_split_api_router_files(tmp_path: Path) -> None:
+    root = _split_router_root(tmp_path / "repo")
+
+    payload = mod.build_product_capability_surface_contract(
+        readiness_packet=_readiness(),
+        work_order_packet=_work_order(),
+        preflight_packet=_preflight(),
+        structure_report_packet=_structure_report(),
+        bundle_contract_packet=_bundle(),
+        delivery_evidence_packet=_delivery(),
+        pilot_packet=_pilot(),
+        scope_breadth_packet=_scope_breadth(),
+        execution_readiness_packet=_execution_readiness(),
+        root=root,
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "product_capability_surface_contract_ready"
+    assert summary["api_surface_ready"] is True
+    assert summary["product_structure_analysis_endpoint_present"] is True
+    assert summary["product_capability_endpoint_present"] is True
+    assert summary["product_architecture_endpoint_present"] is True
+    assert summary["product_service_boundary_endpoint_present"] is True
+    assert summary["product_api_contract_endpoint_present"] is True
+    assert summary["product_operational_quality_endpoint_present"] is True
+    assert summary["product_operations_endpoint_present"] is True
+    assert summary["product_license_decision_endpoint_present"] is True
+    assert summary["product_license_options_endpoint_present"] is True
+    assert summary["product_license_file_work_order_endpoint_present"] is True
+    assert summary["product_commercial_independence_endpoint_present"] is True
+    assert summary["product_release_readiness_endpoint_present"] is True
+    assert summary["product_goal_completion_audit_endpoint_present"] is True

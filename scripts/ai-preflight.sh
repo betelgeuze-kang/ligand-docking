@@ -19,7 +19,7 @@ test -f AGENTS.md && ok "AGENTS.md present" || bad "AGENTS.md missing"
 test -f docs/ai/ORCHESTRATION.md && ok "orchestration guide present" || bad "orchestration guide missing"
 test -f docs/ai/prompts/codex_pursue_goal_start.md && ok "Codex start prompt present" || bad "Codex start prompt missing"
 test -f docs/ai/prompts/cursor_worker_slice.md && ok "Cursor worker prompt template present" || bad "Cursor worker prompt template missing"
-test -f docs/ai/prompts/opencode_worker_slice.md && ok "OpenCode worker prompt template present" || bad "OpenCode worker prompt template missing"
+test -f docs/ai/prompts/opencode_worker_slice.md && ok "OpenCode-named worker prompt template present" || bad "OpenCode-named worker prompt template missing"
 test -f opencode.json && ok "opencode.json present" || bad "opencode.json missing"
 
 echo
@@ -30,10 +30,10 @@ else
   note "Cursor worker command not found; skip Cursor delegation until installed"
 fi
 
-if command -v opencode >/dev/null 2>&1 || [ -x "${HOME}/.local/bin/opencode" ]; then
-  ok "OpenCode command available"
+if command -v cursor-agent >/dev/null 2>&1 || command -v cursor >/dev/null 2>&1 || [ -x "${HOME}/.local/bin/cursor" ]; then
+  ok "OpenCode-named wrapper routes to Cursor Composer 2.5"
 else
-  note "OpenCode command not found; skip OpenCode delegation until installed"
+  note "OpenCode-named wrapper needs Cursor; skip routed OpenCode assignments until Cursor is installed"
 fi
 
 echo

@@ -5,6 +5,9 @@ on:
     branches:
       - codex/commercialization-accounting-closure
       - main
+    tags:
+      - v*
+      - product-*
     paths:
       - Dockerfile.product
       - pyproject.toml
@@ -56,6 +59,8 @@ on:
       - tests/unit/test_runtime_neighbor_release_scaling.py
       - tools/product/run_rust_hip_neighbor_provider_parity.py
       - tests/unit/test_rust_hip_neighbor_provider_parity.py
+  schedule:
+    - cron: "0 6 * * 1"
   workflow_dispatch:
     inputs:
       verify_mode:
@@ -76,7 +81,10 @@ permissions:
 
 jobs:
   product-image-build-smoke:
-    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.verify_mode == 'build' }}
+    if: >-
+      ${{ github.event_name == 'pull_request'
+      || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/'))
+      || (github.event_name == 'workflow_dispatch' && github.event.inputs.verify_mode == 'build') }}
     runs-on: ${{ fromJSON(inputs.build_runner_labels_json || '["self-hosted","linux"]') }}
     steps:
       - uses: actions/checkout@v4
@@ -87,7 +95,21 @@ jobs:
           DOCKER_BUILDKIT: "1"
           PRODUCT_IMAGE_REQUIRE_BUILDX: "1"
           PRODUCT_IMAGE_PRUNE_BEFORE_BUILD: "1"
-        run: bash deploy/verify_product_image.sh
+        shell: bash
+        run: |
+          mkdir -p runs
+          set -o pipefail
+          bash deploy/verify_product_image.sh 2>&1 | tee runs/product_image_build_smoke.log
+      - name: Upload product image build smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-image-build-smoke-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            runs/product_image_smoke_receipt_current.json
+            runs/product_image_build_smoke.log
       - name: Summarize product image build boundary
         if: always()
         run: |
@@ -125,7 +147,11 @@ jobs:
           PY
 
   product-image-rocm-runtime-smoke:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.verify_mode == 'rocm-runtime' }}
+    if: >-
+      ${{ github.event_name == 'schedule'
+      || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
+      || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/product-'))
+      || (github.event_name == 'workflow_dispatch' && github.event.inputs.verify_mode == 'rocm-runtime') }}
     runs-on: [self-hosted, linux, rocm]
     steps:
       - uses: actions/checkout@v4
@@ -136,7 +162,22 @@ jobs:
           DOCKER_BUILDKIT: "1"
           PRODUCT_IMAGE_REQUIRE_BUILDX: "1"
           PRODUCT_IMAGE_PRUNE_BEFORE_BUILD: "1"
-        run: bash deploy/verify_product_image.sh
+        shell: bash
+        run: |
+          mkdir -p runs
+          set -o pipefail
+          bash deploy/verify_product_image.sh 2>&1 | tee runs/product_image_rocm_runtime_smoke.log
+      - name: Upload product image ROCm runtime smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-image-rocm-runtime-smoke-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            runs/product_image_smoke_receipt_current.json
+            runs/product_image_rocm_runtime_smoke.log
+            runs/product_image_smoke_runner_artifacts/**
       - name: Summarize product image ROCm runtime boundary
         if: always()
         run: |

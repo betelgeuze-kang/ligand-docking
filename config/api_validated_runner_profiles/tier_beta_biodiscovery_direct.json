@@ -1,0 +1,38 @@
+{
+  "enabled": true,
+  "profile_id": "tier_beta_biodiscovery_direct",
+  "execution_mode": "restricted-production",
+  "customer_submission_allowed": false,
+  "synthetic_input_allowed": false,
+  "production_claim_allowed": false,
+  "customer_pose_emission_allowed": false,
+  "runner_script": "tools/run_tier_beta_vertical_slice.py",
+  "arguments": [
+    "--protein-input",
+    "{request_json_path}",
+    "--ligand-input",
+    "{request_json_path}",
+    "--result-json",
+    "{result_file}",
+    "--manifest-json",
+    "{job_results_dir}/tier_beta_manifest.json",
+    "--evidence-bundle-json",
+    "{evidence_bundle}",
+    "--pose-count",
+    "8",
+    "--top-k",
+    "3",
+    "--stability-steps",
+    "0"
+  ],
+  "result_file_template": "{job_results_dir}/tier_beta_result.json",
+  "evidence_bundle_template": "{job_results_dir}/tier_beta_evidence_bundle.json",
+  "claim_boundary": "Operator-approved restricted local Tier-beta BioDiscovery vertical slice. Results remain structure-based screening evidence only and do not claim calibrated affinity, FEP parity, wetlab hits, broad platform readiness, or AlphaFold parity.",
+  "production_readiness": {
+    "approved_by": "operator-gap-closure",
+    "approved_at_utc": "2026-06-23T01:45:00+00:00",
+    "claim_scope": "restricted_local_tier_beta_biodiscovery_vertical_slice",
+    "evidence_artifact": "config/api_validated_runner_profiles/evidence/tier_beta_biodiscovery_direct.evidence.json",
+    "runner_script_sha256": "0537775a45a69f4ab92e20ba27842f858d9e7291c3cfe3f84da3e33a44c88e57"
+  }
+}

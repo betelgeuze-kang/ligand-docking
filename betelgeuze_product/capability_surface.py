@@ -89,6 +89,10 @@ def _file_contains(root: Path, path_like: str, needle: str) -> bool:
         return False
 
 
+def _any_file_contains(root: Path, path_likes: tuple[str, ...], needle: str) -> bool:
+    return any(_file_contains(root, path_like, needle) for path_like in path_likes)
+
+
 def build_product_capability_surface_contract(
     *,
     readiness_packet: dict[str, Any],
@@ -144,20 +148,32 @@ def build_product_capability_surface_contract(
 
     product_package_present = _artifact_present(root_path, "betelgeuze_product/docking_request.py")
     product_cli_present = _artifact_present(root_path, "betelgeuze_product/cli.py")
-    product_api_present = _artifact_present(root_path, "api/product.py")
-    product_structure_analysis_endpoint_present = _file_contains(root_path, "api/product.py", '"/structure/analyze"')
-    product_capability_endpoint_present = _file_contains(root_path, "api/product.py", '"/capabilities"')
-    product_architecture_endpoint_present = _file_contains(root_path, "api/product.py", '"/architecture"')
-    product_service_boundary_endpoint_present = _file_contains(root_path, "api/product.py", '"/service-boundary"')
-    product_api_contract_endpoint_present = _file_contains(root_path, "api/product.py", '"/api-contract"')
-    product_operational_quality_endpoint_present = _file_contains(root_path, "api/product.py", '"/operational-quality"')
-    product_operations_endpoint_present = _file_contains(root_path, "api/product.py", '"/operations"')
-    product_license_decision_endpoint_present = _file_contains(root_path, "api/product.py", '"/license-decision"')
-    product_license_options_endpoint_present = _file_contains(root_path, "api/product.py", '"/license-options"')
-    product_license_file_work_order_endpoint_present = _file_contains(root_path, "api/product.py", '"/license-file-work-order"')
-    product_commercial_independence_endpoint_present = _file_contains(root_path, "api/product.py", '"/commercial-independence"')
-    product_release_readiness_endpoint_present = _file_contains(root_path, "api/product.py", '"/release-readiness"')
-    product_goal_completion_audit_endpoint_present = _file_contains(root_path, "api/product.py", '"/goal-completion-audit"')
+    product_api_files = (
+        "api/product.py",
+        "api/product_architecture.py",
+        "api/product_benchmark.py",
+        "api/product_capabilities.py",
+        "api/product_docking.py",
+        "api/product_service_contracts.py",
+        "api/product_operational.py",
+        "api/product_release_ops.py",
+        "api/product_license.py",
+        "api/product_evidence_goal.py",
+    )
+    product_api_present = any(_artifact_present(root_path, path_like) for path_like in product_api_files)
+    product_structure_analysis_endpoint_present = _any_file_contains(root_path, product_api_files, '"/structure/analyze"')
+    product_capability_endpoint_present = _any_file_contains(root_path, product_api_files, '"/capabilities"')
+    product_architecture_endpoint_present = _any_file_contains(root_path, product_api_files, '"/architecture"')
+    product_service_boundary_endpoint_present = _any_file_contains(root_path, product_api_files, '"/service-boundary"')
+    product_api_contract_endpoint_present = _any_file_contains(root_path, product_api_files, '"/api-contract"')
+    product_operational_quality_endpoint_present = _any_file_contains(root_path, product_api_files, '"/operational-quality"')
+    product_operations_endpoint_present = _any_file_contains(root_path, product_api_files, '"/operations"')
+    product_license_decision_endpoint_present = _any_file_contains(root_path, product_api_files, '"/license-decision"')
+    product_license_options_endpoint_present = _any_file_contains(root_path, product_api_files, '"/license-options"')
+    product_license_file_work_order_endpoint_present = _any_file_contains(root_path, product_api_files, '"/license-file-work-order"')
+    product_commercial_independence_endpoint_present = _any_file_contains(root_path, product_api_files, '"/commercial-independence"')
+    product_release_readiness_endpoint_present = _any_file_contains(root_path, product_api_files, '"/release-readiness"')
+    product_goal_completion_audit_endpoint_present = _any_file_contains(root_path, product_api_files, '"/goal-completion-audit"')
     request_contract_ready = (
         _text(readiness.get("status")) == "product_handoff_ready"
         and _text(readiness.get("request_contract_status")) == "pass"
@@ -328,7 +344,7 @@ def build_product_capability_surface_contract(
             domain="product_surface",
             status="ready" if api_surface_ready else "blocked",
             observed=(
-                f"api/product.py={product_api_present};"
+                f"api_product_surface={product_api_present};"
                 f"structure_analysis_endpoint={product_structure_analysis_endpoint_present};"
                 f"capability_endpoint={product_capability_endpoint_present};"
                 f"architecture_endpoint={product_architecture_endpoint_present};"
@@ -346,7 +362,7 @@ def build_product_capability_surface_contract(
                 f"betelgeuze_product/cli.py={product_cli_present}"
             ),
             required="API intake, structure-analysis endpoint, capability endpoint, architecture endpoint, service-boundary endpoint, API-contract endpoint, operational-quality endpoint, operations endpoint, license-decision/options/work-order endpoints, commercial-independence endpoint, release-readiness endpoint, goal-completion-audit endpoint, local package contract, and read-only CLI present",
-            artifact_path="api/product.py;betelgeuze_product/docking_request.py;betelgeuze_product/cli.py",
+            artifact_path="api/product*.py;betelgeuze_product/docking_request.py;betelgeuze_product/cli.py",
             reason="The product must have a local library contract, CLI, request intake API, structure-analysis API, read-only capability API, architecture API, service-boundary API, API-contract API, operational-quality API, operations API, full license handoff API, commercial-independence API, release-readiness API, and goal-completion audit API surface.",
         ),
         _row(
