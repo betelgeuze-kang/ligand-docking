@@ -88,23 +88,48 @@ def test_restricted_ligand_state_ensemble_records_salt_parent_with_ph_range_boun
 
 def test_restricted_ph_range_protomer_candidates_are_enumerated_and_claim_blocked() -> None:
     amine_states = enumerate_ligand_states_from_smiles("CN", max_states=4)
+    amide_states = enumerate_ligand_states_from_smiles("CC(=O)N", max_states=4)
+    pyridine_states = enumerate_ligand_states_from_smiles("c1ccncc1", max_states=4)
     acid_states = enumerate_ligand_states_from_smiles("CC(=O)O", max_states=4)
     phenol_states = enumerate_ligand_states_from_smiles("c1ccccc1O", max_states=4)
 
     protonated_amine = next(state for state in amine_states if state.smiles == "C[NH3+]")
+    protonated_pyridine = next(state for state in pyridine_states if state.formal_charge_sum == 1)
     deprotonated_acid = next(state for state in acid_states if state.smiles == "CC(=O)[O-]")
     deprotonated_phenol = next(state for state in phenol_states if state.smiles == "[O-]c1ccccc1")
 
     assert protonated_amine.state_kind.startswith("protomer_ph_5_0")
     assert protonated_amine.protonation_target_ph == 5.0
+    assert protonated_pyridine.state_kind.startswith("protomer_ph_5_0_aromatic_n_protonated")
+    assert protonated_pyridine.protonation_target_ph == 5.0
+    assert protonated_pyridine.charged_atom_count == 1
+    assert protonated_pyridine.feature_source == "rdkit_chemical_features_base_fdef"
+    assert not any(state.state_kind.startswith("protomer_ph_5_0_basic_amine") for state in amide_states)
     assert deprotonated_acid.state_kind.startswith("protomer_ph_7_4")
     assert deprotonated_acid.protonation_target_ph == 7.4
     assert deprotonated_phenol.state_kind.startswith("protomer_ph_9_0")
     assert deprotonated_phenol.protonation_target_ph == 9.0
-    for protomer in (protonated_amine, deprotonated_acid, deprotonated_phenol):
+    for protomer in (protonated_amine, protonated_pyridine, deprotonated_acid, deprotonated_phenol):
         assert "protonation_projection_not_product_safe" in protomer.claim_safe_blockers
         assert "protonation_enumeration_limited_no_pka_calibration" in protomer.claim_safe_blockers
         assert "ph_range_protomer_heuristic_not_product_safe" in protomer.claim_safe_blockers
+
+
+def test_enumerated_ligand_states_preserve_topology_and_feature_payloads() -> None:
+    states = enumerate_ligand_states_from_smiles("CC(=O)N", max_states=4)
+    input_state = states[0]
+
+    assert input_state.state_kind == "input_canonical"
+    assert input_state.atom_elements.count("C") == 2
+    assert input_state.atom_elements.count("O") == 1
+    assert input_state.atom_elements.count("N") == 1
+    assert input_state.formal_charges == (0, 0, 0, 0)
+    assert input_state.bond_count == 3
+    assert {site["role"] for site in input_state.feature_sites} == {"donor", "acceptor"}
+    assert input_state.feature_source == "rdkit_chemical_features_base_fdef"
+    assert input_state.donor_site_count == 1
+    assert input_state.acceptor_site_count == 1
+    assert input_state.chirality_status == "not_applicable"
 
 
 def test_restricted_tautomer_states_are_bounded_and_claim_blocked() -> None:

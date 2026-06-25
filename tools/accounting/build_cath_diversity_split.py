@@ -9,7 +9,7 @@ import os
 import random
 import urllib.request
 from collections import defaultdict
-from typing import Any, Dict, Iterable, List, Sequence, Tuple
+from typing import Any, Dict, List, Sequence, Tuple
 
 import pandas as pd
 

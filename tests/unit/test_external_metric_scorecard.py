@@ -70,9 +70,9 @@ def test_external_metric_scorecard_missing_metrics() -> None:
 
 
 def test_product_external_metrics_endpoint_missing_artifact(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    import api.product as product_mod
+    import api.product_benchmark as product_benchmark_mod
 
-    monkeypatch.setattr(product_mod, "EXTERNAL_METRIC_SCORECARD_ARTIFACT", tmp_path / "missing.json")
+    monkeypatch.setattr(product_benchmark_mod, "EXTERNAL_METRIC_SCORECARD_ARTIFACT", tmp_path / "missing.json")
     client = TestClient(app)
     response = client.get("/product/external-metrics")
     assert response.status_code == 200
@@ -94,9 +94,9 @@ def test_product_external_metrics_endpoint_with_artifact(tmp_path: Path, monkeyp
     )
     artifact = tmp_path / "external_metric_scorecard_current.json"
     artifact.write_text(json.dumps(scorecard), encoding="utf-8")
-    import api.product as product_mod
+    import api.product_benchmark as product_benchmark_mod
 
-    monkeypatch.setattr(product_mod, "EXTERNAL_METRIC_SCORECARD_ARTIFACT", artifact)
+    monkeypatch.setattr(product_benchmark_mod, "EXTERNAL_METRIC_SCORECARD_ARTIFACT", artifact)
     client = TestClient(app)
     response = client.get("/product/external-metrics")
     assert response.status_code == 200

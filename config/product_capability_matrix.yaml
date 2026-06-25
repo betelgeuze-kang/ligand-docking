@@ -99,10 +99,11 @@ capabilities:
     row_level_evidence_count: 1
     owner: docking_product
     risk: R3
-    dependencies: [contracts_core, topology_provenance, pose_ensemble, signed_report]
+    dependencies: [contracts_core, topology_provenance, pose_ensemble, ligand_state_ensemble, signed_report]
     definition_of_done:
-      - PDB plus SMILES/SDF prepare, pocket/pose ensemble, score/refine, abstention, and signed report completes on local fixture data.
-      - Pose validity and ranking metrics are withheld from customer claims until public holdout evidence exists.
+      - PDB/mmCIF plus SMILES/SDF prepare, topology validation, resolved-pocket pose search, score/refine, abstention, and signed report complete on local fixture data.
+      - Ligand ChemicalFeatures, stereochemistry, formal charge, salt/protomer/tautomer diagnostics, state-level ranking aggregation, SO(3) sampling, resolved-pocket translation grid, clash prefilter, beam search, local minimization, and symmetry-aware RMSD clustering are recorded as restricted local diagnostics.
+      - A restricted PDBbind/CASF fixed-slice scorecard may report local pose-replay metrics, but customer pose/ranking validity claims stay blocked until broader independent public holdout evidence exists.
     execution_enabled: false
     external_state_mutated: false
   - id: md_all_atom

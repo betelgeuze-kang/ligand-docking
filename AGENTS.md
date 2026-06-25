@@ -2,10 +2,10 @@
 
 ## Role Contract
 
-This repository is operated with Codex native goal mode and optional Cursor/OpenCode implementation workers.
+This repository is operated with Codex native goal mode, Kiro design planning, optional Cursor/OpenCode implementation workers, plus Codex internal subagents only when external worker routes are unavailable.
 
 - Codex owns goal tracking through its native goal feature, plus design, task slicing, review, verification, and final acceptance.
-- Cursor Agent and OpenCode may be used only as scoped implementation workers.
+- Kiro may be used only for design planning. Cursor Agent, OpenCode-named wrappers, and Codex internal subagents may be used only as scoped implementation workers.
 - The human owner owns push, merge, deployment, publication, external submission, billing changes, production mutation, and final accountability.
 
 ## Project Context
@@ -30,13 +30,16 @@ This repository is operated with Codex native goal mode and optional Cursor/Open
 - Use `docs/ai/prompts/codex_pursue_goal_start.md` as the start-prompt shape for future goal-mode work.
 - Use `docs/ai/tasks/TASK-TEMPLATE.md` for R1+ task specs when the scope is not already clear from a linked issue or work queue.
 - Keep Codex-authored task specs short: goal, scope, likely files, and verification only.
+- For next-code-improvement goals, use the default lane: Cursor Composer 2.5 implementation -> Codex GPT-5.5 xhigh verification and acceptance.
+- For Kiro design planning, use `docs/ai/prompts/kiro_design_slice.md` and call `./scripts/ai-design-kiro.sh <prompt-file>`. Kiro must be Opus 4.8; if Kiro Opus 4.8 is not active, stop instead of substituting another model. Kiro output is advisory design input only; Codex must review, trim, and convert it into the accepted task spec before implementation.
 - For Cursor delegation, create a run-specific prompt under `docs/ai/dispatch/` and call `./scripts/ai-worker-cursor.sh <prompt-file>`.
 - For OpenCode-named delegation, create a run-specific prompt under `docs/ai/dispatch/` and call `./scripts/ai-worker-opencode.sh <prompt-file>`; this compatibility wrapper currently routes the assignment to Cursor Composer 2.5 instead of invoking OpenCode.
+- If Cursor workers are unavailable or non-responsive and Codex invokes an internal subagent for code implementation, use `agent_type=worker`, `model=gpt-5.4-mini`, and `reasoning_effort=xhigh`.
 - Use one worker slice at a time. Codex reviews the worker summary first and opens full logs/diffs only when the summary, risk level, or tests require it.
 
 ## Delegation Bias
 
-- At the start of each non-trivial task, Codex should explicitly choose one path: direct implementation, OpenCode worker slice, or Cursor worker slice.
+- At the start of each non-trivial task, Codex should explicitly choose one path: direct implementation, Kiro design then Cursor implementation, Cursor worker slice, OpenCode-named worker slice, or internal subagent worker slice.
 - Bias toward using a worker when the work is broad, repetitive, uncertain, or likely to benefit from independent exploration before Codex final review.
 - Consider Cursor as the default implementation worker for scoped code/test changes, repeated test repair, multi-file edits, and work where IDE-attached context may help.
 - OpenCode-named broad repository exploration, broad grep/sweep, long-log review, large mechanical documentation/code updates, or other large-context passes currently run through Cursor Composer 2.5 via the compatibility wrapper.
@@ -46,7 +49,9 @@ This repository is operated with Codex native goal mode and optional Cursor/Open
 ## Worker Selection
 
 - Prefer Cursor for most scoped implementation slices, especially code/test edits, local repair loops, and IDE-attached edits where open files, selections, and current editor state matter.
+- Prefer Kiro Opus 4.8, fixed and not substituted, for design-only planning when the scope is broad or ambiguous enough to need architecture/options review before task slicing. Kiro must not edit files or decide completion.
 - Treat OpenCode-named broad repository sweeps, long logs/docs, large mechanical edits, and large-context exploration as Cursor Composer 2.5 assignments unless the human owner explicitly restores direct OpenCode execution.
+- Use an internal Codex subagent only when Cursor/OpenCode-named workers are unavailable, non-responsive, or unsuitable for the current environment; for code implementation, run that subagent as GPT 5.4 Mini with xhigh reasoning.
 - Do not delegate truly small tasks: simple docs, tiny tests, obvious single-file fixes, or changes that Codex can safely complete faster than creating and reviewing a worker slice.
 - Delegate broad exploration, repeated test repair, multi-file refactors, and mechanical work once it crosses the Delegation Bias thresholds.
 - Workers implement; they do not redesign, broaden scope, decide completion, or change safety boundaries.

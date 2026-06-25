@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Any
 
 from tools.lib.artifacts import (
-    ROOT,
     artifact as _artifact,
     read_csv as _read_csv,
     resolve as _resolve,

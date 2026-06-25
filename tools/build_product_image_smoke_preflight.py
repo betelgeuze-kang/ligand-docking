@@ -1,8 +1,10 @@
 """Compatibility shim; canonical module: tools.product.build_product_image_smoke_preflight."""
+# ruff: noqa: E402
 from __future__ import annotations
 
 import sys as _sys
 from importlib import import_module as _import_module
+from inspect import signature as _signature
 from pathlib import Path as _Path
 
 _repo = _Path(__file__).resolve()
@@ -20,4 +22,6 @@ if __name__ == "__main__":
     _entry = getattr(_module, "main", None)
     if _entry is None:
         raise SystemExit("builder has no main(): tools.product.build_product_image_smoke_preflight")
-    raise SystemExit(_entry(_sys.argv[1:]) or 0)
+    _params = _signature(_entry).parameters
+    _result = _entry(_sys.argv[1:]) if _params else _entry()
+    raise SystemExit(_result or 0)

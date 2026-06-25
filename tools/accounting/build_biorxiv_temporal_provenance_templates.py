@@ -4,7 +4,6 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -144,12 +143,12 @@ def _build_idp_rows(spec: dict[str, Any]) -> list[dict[str, Any]]:
     return [by_holdout[key] for key in sorted(by_holdout)]
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Build editable provenance mapping templates for the provisional temporal validation spec.")
     ap.add_argument("--set-spec-json", default="config/external_validation_biorxiv_temporal_sets_v1_provisional.json")
     ap.add_argument("--ligand-out-csv", default="config/biorxiv_temporal_ligand_provenance_v1.csv")
     ap.add_argument("--idp-out-csv", default="config/biorxiv_temporal_idp_provenance_v1.csv")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     spec = _read_json((ROOT / args.set_spec_json).resolve())
     ligand_rows = _build_ligand_rows(spec)

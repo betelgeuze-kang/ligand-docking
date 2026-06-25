@@ -35,6 +35,13 @@ gh api repos/betelgeuze-kang/ligand-docking/actions/runners --paginate > runs/gi
 python3 tools/product/build_github_self_hosted_runner_host_preflight.py
 ```
 
+The full read-only evidence collection contract for the release-CI remote-green receipt is emitted locally by:
+
+```bash
+python3 tools/product/release_ci_remote_green_evidence_contract.py --print-commands
+python3 tools/product/release_ci_remote_green_evidence_contract.py --emit-manifest
+```
+
 Next required sequence:
 
 ```bash

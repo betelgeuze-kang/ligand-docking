@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import pytest
 import torch
 
@@ -148,7 +150,9 @@ def test_step_matches_closed_form_reference_with_mass_and_external_noise() -> No
 
     v_new, c_new = integrator.step(c, v, f, noise=noise)
 
-    expected_v = v + f * dt / mass - gamma * v * dt + noise
+    decay = math.exp(-gamma * dt)
+    force_scale = -math.expm1(-gamma * dt) / gamma
+    expected_v = (v * decay) + (f * force_scale / mass) + noise
     expected_c = c + expected_v * dt
     assert torch.allclose(v_new, expected_v)
     assert torch.allclose(c_new, expected_c)
@@ -173,6 +177,8 @@ def test_mass_tensor_accepts_batched_atom_axis_and_rejects_invalid_mass() -> Non
     assert torch.allclose(v_new[:, :, 0], torch.tensor([[0.01, 0.005], [0.0025, 0.00125]]))
     with pytest.raises(ValueError, match="mass values must be positive"):
         integrator.step(c, v, f, mass=torch.tensor([[1.0, 0.0], [1.0, 1.0]]))
+    with pytest.raises(ValueError, match="mass trailing dimension must be 1"):
+        integrator.step(c, v, f, mass=torch.ones((2, 2, 3)))
     with pytest.raises(ValueError, match="unsupported coarse_mass_policy"):
         LangevinIntegrator(coarse_mass_policy="implicit_unknown_mass")
 
@@ -193,11 +199,43 @@ def test_mass_tensor_scales_stochastic_noise_variance() -> None:
 
     light_var = float(v_new[:, : atom_count // 2, :].var(unbiased=False).item())
     heavy_var = float(v_new[:, atom_count // 2 :, :].var(unbiased=False).item())
-    expected_light = 2.0 * gamma * kT * dt / 1.0
-    expected_heavy = 2.0 * gamma * kT * dt / 4.0
+    expected_light = kT * (1.0 - math.exp(-2.0 * gamma * dt)) / 1.0
+    expected_heavy = kT * (1.0 - math.exp(-2.0 * gamma * dt)) / 4.0
     assert abs(light_var - expected_light) / expected_light < 0.08
     assert abs(heavy_var - expected_heavy) / expected_heavy < 0.08
     assert abs(light_var / heavy_var - 4.0) < 0.35
+
+
+def test_adaptive_timestep_scales_stochastic_variance_per_batch() -> None:
+    dt = 0.01
+    gamma = 1.2
+    kT = 0.6
+    atom_count = 12000
+    c = torch.zeros((2, atom_count, 3))
+    v = torch.zeros_like(c)
+    f = torch.zeros_like(c)
+    f[0, :, 0] = 5.0
+    f[1, :, 0] = 1000.0
+    integrator = LangevinIntegrator(
+        dt=dt,
+        friction=gamma,
+        kT=kT,
+        adaptive_dt=True,
+        dt_min=0.001,
+        dt_max=0.02,
+        force_threshold=10.0,
+        seed=19,
+    )
+
+    v_new, _ = integrator.step(c, v, f)
+
+    observed_dt = integrator.last_dt.flatten()
+    force_scale = -torch.expm1(-torch.tensor(gamma) * observed_dt) / gamma
+    residual = v_new - (f * force_scale.view(-1, 1, 1))
+    expected_var = kT * (1.0 - torch.exp(-2.0 * gamma * observed_dt))
+    observed_var = residual.var(dim=(1, 2), unbiased=False)
+    assert torch.allclose(observed_dt, torch.tensor([0.02, 0.001]))
+    assert torch.all(torch.abs(observed_var - expected_var) / expected_var < 0.08)
 
 
 def test_heterogeneous_mass_equipartition_temperature_is_maintained() -> None:
@@ -244,6 +282,34 @@ def test_maxwell_boltzmann_temperature_is_maintained() -> None:
     assert abs(observed_kT - kT) / kT < 0.12
 
 
+def test_seed_sequence_replays_after_reset_across_multiple_steps() -> None:
+    c = torch.zeros((1, 16, 3))
+    v = torch.zeros_like(c)
+    f = torch.zeros_like(c)
+    a = LangevinIntegrator(dt=0.002, friction=1.0, kT=0.75, seed=123)
+    b = LangevinIntegrator(dt=0.002, friction=1.0, kT=0.75, seed=123)
+
+    a_trace = []
+    b_trace = []
+    for _ in range(3):
+        v, c = a.step(c, v, f)
+        a_trace.append(v.clone())
+    c_b = torch.zeros_like(c)
+    v_b = torch.zeros_like(v)
+    for _ in range(3):
+        v_b, c_b = b.step(c_b, v_b, f)
+        b_trace.append(v_b.clone())
+    for left, right in zip(a_trace, b_trace):
+        assert torch.equal(left, right)
+
+    a.set_seed(123)
+    c_reset = torch.zeros_like(c)
+    v_reset = torch.zeros_like(v)
+    for expected in a_trace:
+        v_reset, c_reset = a.step(c_reset, v_reset, f)
+        assert torch.equal(v_reset, expected)
+
+
 def test_harmonic_energy_drift_and_equilibrium_distribution_are_bounded() -> None:
     k = 1.0
     c = torch.tensor([[[1.0, 0.0, 0.0]]])
@@ -270,7 +336,9 @@ def test_harmonic_energy_drift_and_equilibrium_distribution_are_bounded() -> Non
         v, c = sampler.step(c, v, f)
 
     observed_var = float(c.var(unbiased=False).item())
+    observed_kT = float(v.pow(2).mean().item())
     assert abs(observed_var - (kT / k)) / (kT / k) < 0.25
+    assert abs(observed_kT - kT) / kT < 0.25
 
 
 def test_mixed_precision_tracks_fp32_for_deterministic_step() -> None:
@@ -336,7 +404,7 @@ def test_mixed_precision_internal_stochastic_noise_matches_fp32_distribution() -
     v32, _ = fp32.step(c, v, f)
     v16, _ = fp16.step(c, v, f)
 
-    expected_variance = 2.0 * gamma * kT * dt
+    expected_variance = kT * (1.0 - math.exp(-2.0 * gamma * dt))
     var32 = float(v32.var(unbiased=False).item())
     var16 = float(v16.float().var(unbiased=False).item())
     assert abs(var32 - expected_variance) / expected_variance < 0.08

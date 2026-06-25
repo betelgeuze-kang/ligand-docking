@@ -241,6 +241,23 @@ class TestHelperFunctions:
         assert diagnostics["pairwise_rmsd_max_a"] >= 0.5
         assert diagnostics["diverse_pair_count"] >= 1
 
+    def test_so3_rotation_sampling_is_deterministic_orthonormal_and_nontrivial(self):
+        rotations = biodiscovery_pose.so3_rotation_matrices(5, seed=23)
+        replay = biodiscovery_pose.so3_rotation_matrices(5, seed=23)
+        diagnostics = biodiscovery_pose.rotation_sampling_diagnostics(rotations)
+
+        assert len(rotations) == 5
+        assert np.allclose(rotations[0], np.eye(3))
+        assert all(np.allclose(left, right) for left, right in zip(rotations, replay))
+        assert diagnostics["schema_version"] == "tier_beta_so3_rotation_sampling_v1"
+        assert diagnostics["method"] == "deterministic_uniform_quaternion_so3_identity_first"
+        assert diagnostics["sample_count"] == 5
+        assert diagnostics["identity_first"] is True
+        assert diagnostics["non_identity_sample_count"] == 4
+        assert diagnostics["determinant_min"] == pytest.approx(1.0, abs=1e-10)
+        assert diagnostics["determinant_max"] == pytest.approx(1.0, abs=1e-10)
+        assert diagnostics["orthogonality_error_max"] < 1e-12
+
     def test_local_rigid_body_minimizer_uses_rotation_and_preserves_internal_distances(self):
         ligand = np.asarray([[-2.0, 0.2, 0.0], [2.0, -0.2, 0.0]], dtype=np.float32)
         protein_beads = np.asarray([[0.0, 2.0, 0.0], [0.0, -2.0, 0.0]], dtype=np.float32)
@@ -319,9 +336,21 @@ class TestHelperFunctions:
             diagnostics["retained_conformer_count"] / diagnostics["conformer_count"]
         )
         assert diagnostics["rotations_per_conformer"] == 4
-        assert diagnostics["translation_grid_point_count"] == 7
-        assert diagnostics["raw_candidate_count"] == 56
-        assert diagnostics["coarse_beam_candidate_count"] == 10
+        assert diagnostics["rotation_sampling"]["schema_version"] == "tier_beta_so3_rotation_sampling_v1"
+        assert diagnostics["rotation_sampling"]["sample_count"] == 4
+        assert diagnostics["rotation_sampling"]["non_identity_sample_count"] == 3
+        assert diagnostics["rotation_sampling"]["orthogonality_error_max"] < 1e-12
+        assert diagnostics["translation_grid_point_count"] >= 7
+        assert diagnostics["translation_grid"]["schema_version"] == "tier_beta_pocket_translation_grid_v1"
+        assert diagnostics["translation_grid"]["status"].startswith("protein_bead_envelope_grid")
+        assert diagnostics["translation_grid"]["envelope_source"] == "search_envelope_beads"
+        assert diagnostics["translation_grid"]["inside_envelope_count"] == diagnostics["translation_grid_point_count"]
+        assert diagnostics["raw_candidate_count"] == (
+            diagnostics["conformer_count"]
+            * diagnostics["rotations_per_conformer"]
+            * diagnostics["translation_grid_point_count"]
+        )
+        assert diagnostics["coarse_beam_candidate_count"] >= diagnostics["retained_candidate_count"]
         assert diagnostics["retained_candidate_count"] == 5
         assert diagnostics["coarse_score_beam_status"] == "pass"
         assert diagnostics["local_minimization_status"].startswith("finite_difference_rigid_body_gradient_")
@@ -363,6 +392,116 @@ class TestHelperFunctions:
         ]
         assert np.allclose(candidates[0]["coords"], again[0]["coords"])
 
+    def test_rotatable_conformer_diversity_reports_claim_blocker_when_low(self):
+        low_diversity = np.asarray(
+            [
+                [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
+                [[0.1, 0.0, 0.0], [1.1, 0.0, 0.0]],
+            ],
+            dtype=np.float32,
+        )
+
+        diagnostics = biodiscovery_pose.conformer_diversity_diagnostics(
+            low_diversity,
+            smiles="CCCC",
+            diversity_threshold_a=0.5,
+        )
+
+        assert diagnostics["status"] == "low_conformer_diversity_measured"
+        assert diagnostics["rotatable_bond_count"] > 0
+        assert diagnostics["claim_safe"] is False
+        assert "rotatable_conformer_diversity_not_demonstrated" in diagnostics["claim_safe_blockers"]
+
+    def test_pocket_translation_grid_uses_protein_bead_envelope(self):
+        protein_beads = np.asarray(
+            [
+                [0.0, 0.0, 0.0],
+                [1.5, 0.0, 0.0],
+                [0.0, 1.5, 0.0],
+                [0.0, 0.0, 1.5],
+                [-1.5, 0.0, 0.0],
+                [0.0, -1.5, 0.0],
+                [0.0, 0.0, -1.5],
+            ],
+            dtype=np.float32,
+        )
+
+        translations, diagnostics = biodiscovery_pose.pocket_translation_grid_for_beads(
+            protein_beads,
+            np.asarray([0.0, 0.0, 0.0], dtype=np.float32),
+            spacing_a=1.5,
+            envelope_radius_a=3.0,
+            max_points=27,
+        )
+
+        assert diagnostics["schema_version"] == "tier_beta_pocket_translation_grid_v1"
+        assert diagnostics["status"] == "protein_bead_envelope_grid"
+        assert diagnostics["method"] == "protein_bead_envelope_lattice"
+        assert diagnostics["envelope_source"] == "search_envelope_beads"
+        assert diagnostics["grid_point_count"] == len(translations)
+        assert diagnostics["inside_envelope_count"] == len(translations)
+        assert len(translations) > len(biodiscovery_pose.pocket_translation_grid(1.5))
+        assert all(np.linalg.norm(offset) <= diagnostics["envelope_radius_a"] + 1e-8 for offset in translations)
+
+        again, again_diagnostics = biodiscovery_pose.pocket_translation_grid_for_beads(
+            protein_beads,
+            np.asarray([0.0, 0.0, 0.0], dtype=np.float32),
+            spacing_a=1.5,
+            envelope_radius_a=3.0,
+            max_points=27,
+        )
+        assert diagnostics == again_diagnostics
+        assert [offset.tolist() for offset in translations] == [offset.tolist() for offset in again]
+
+    def test_pocket_translation_grid_falls_back_to_axial_grid_without_beads(self):
+        translations, diagnostics = biodiscovery_pose.pocket_translation_grid_for_beads(
+            np.zeros((0, 3), dtype=np.float32),
+            np.asarray([0.0, 0.0, 0.0], dtype=np.float32),
+            spacing_a=1.5,
+        )
+
+        assert diagnostics["status"] == "fallback_center_axial_grid_no_protein_beads"
+        assert diagnostics["method"] == "center_plus_axial_offsets"
+        assert diagnostics["envelope_source"] == "fallback_no_beads"
+        assert diagnostics["fallback_used"] is True
+        assert len(translations) == 7
+        assert [offset.tolist() for offset in translations] == [
+            offset.tolist() for offset in biodiscovery_pose.pocket_translation_grid(1.5)
+        ]
+
+    def test_pose_search_clash_prefilter_excludes_clashing_candidates_when_clean_beam_exists(self):
+        conformers = np.asarray(
+            [
+                [[0.0, 0.0, 0.0], [0.4, 0.0, 0.0]],
+            ],
+            dtype=np.float32,
+        )
+        protein_beads = np.asarray([[0.0, 0.0, 0.0]], dtype=np.float32)
+
+        candidates, diagnostics = biodiscovery_pose.pose_search_candidates(
+            conformers,
+            np.asarray([0.0, 0.0, 0.0], dtype=np.float32),
+            protein_beads,
+            seed=11,
+            max_candidates=2,
+            ligand_smiles="CC",
+            rotations_per_conformer=1,
+            translation_spacing_a=2.0,
+        )
+
+        assert diagnostics["raw_candidate_count"] == diagnostics["translation_grid_point_count"]
+        assert diagnostics["translation_grid_point_count"] >= 7
+        assert diagnostics["clash_free_candidate_count"] >= 2
+        assert diagnostics["clash_prefilter_status"] == "excluded_clashing_candidates"
+        assert diagnostics["clash_prefiltered_candidate_count"] == diagnostics["clash_free_candidate_count"]
+        assert diagnostics["clashing_candidate_excluded_count"] > 0
+        assert diagnostics["coarse_beam_candidate_count"] == min(
+            diagnostics["clash_free_candidate_count"],
+            diagnostics["beam_size"] * 2,
+        )
+        assert candidates
+        assert all(candidate["clash_count"] == 0 for candidate in candidates)
+
     def test_symmetry_aware_rmsd_clusters_atom_automorphisms(self):
         mappings = biodiscovery_pose.ligand_symmetry_mappings("CC")
         assert (1, 0) in mappings
@@ -402,6 +541,34 @@ class TestHelperFunctions:
         assert any("acceptor" in row["roles"] for row in rows_by_element["O"])
         assert any("donor" in row["roles"] for row in rows_by_element["N"])
         assert mapping["graph_distance_source"] == "rdkit_topological_distance_matrix"
+
+    def test_chemical_anchor_bead_mapping_projects_selected_atoms_to_pose_coordinates(self):
+        mapping = biodiscovery_pose.chemical_anchor_mapping("CC(=O)N", {"atom_count": 4})
+        coords = np.asarray(
+            [
+                [0.0, 0.0, 0.0],
+                [1.5, 0.0, 0.0],
+                [2.5, 0.8, 0.0],
+                [2.5, -0.8, 0.0],
+            ],
+            dtype=np.float32,
+        )
+
+        bead_mapping = biodiscovery_pose.chemical_anchor_bead_coordinates(coords, mapping)
+
+        assert bead_mapping["schema_version"] == "tier_beta_ligand_anchor_bead_mapping_v1"
+        assert bead_mapping["status"] == "chemical_anchor_bead_coordinates_ready"
+        assert bead_mapping["method"] == "rdkit_feature_charge_ring_graph_anchor_atom_coordinates"
+        assert bead_mapping["claim_safe"] is True
+        assert bead_mapping["two_bead_count"] == 2
+        assert bead_mapping["four_bead_count"] == 4
+        assert bead_mapping["two_bead_anchor_atom_indices"] == mapping["two_bead_anchor_atom_indices"]
+        assert bead_mapping["four_bead_anchor_atom_indices"] == mapping["four_bead_anchor_atom_indices"]
+        for atom_idx, bead_coord in zip(
+            bead_mapping["two_bead_anchor_atom_indices"],
+            bead_mapping["two_bead_coords_a"],
+        ):
+            assert bead_coord == pytest.approx(coords[int(atom_idx)].tolist())
 
     def test_screening_uses_canonical_scoring_helpers(self):
         assert _single_pose_score is biodiscovery_scoring.single_pose_score
@@ -489,11 +656,32 @@ class TestTierBetaScreeningSuccess:
         assert result.stability_steps_run == 0
         assert len(result.claim_metadata) > 0
         aggregation = result.diagnostics["pose_search_aggregation"]
+        assert aggregation["rotation_sampling"]["schema_version"] == "tier_beta_so3_rotation_sampling_v1"
+        assert aggregation["rotation_sampling"]["non_identity_sample_count"] >= 1
         assert aggregation["local_minimization_status"].startswith("finite_difference_rigid_body_gradient_")
         assert aggregation["local_minimization_method"] == "finite_difference_gradient_descent_translation_rotation"
         assert aggregation["local_minimization_degrees_of_freedom"] == ["translation", "rotation"]
         assert aggregation["local_minimization_candidate_count"] >= result.poses_scored
         assert aggregation["local_minimization_improved_count"] >= 0
+        assert aggregation["symmetry_rmsd_clustering_status"] == "symmetry_aware_rmsd_clustered"
+        assert aggregation["chemical_anchor_mapping_status"] == "rdkit_feature_charge_ring_graph_anchor_mapping"
+        assert all(
+            row["pose_search"]["rotation_sampling"]["schema_version"] == "tier_beta_so3_rotation_sampling_v1"
+            for row in result.pose_scores
+        )
+        assert all(
+            row["pose_search"]["symmetry_rmsd_clustering_status"] == "symmetry_aware_rmsd_clustered"
+            for row in result.pose_scores
+        )
+        assert all(
+            row["pose_search"]["chemical_anchor_bead_mapping_status"] == "chemical_anchor_bead_coordinates_ready"
+            for row in result.pose_scores
+        )
+        assert all(
+            row["chemical_anchor_bead_mapping"]["two_bead_count"] >= 1
+            and row["chemical_anchor_bead_mapping"]["four_bead_count"] >= 1
+            for row in result.pose_scores
+        )
 
     def test_benzene_with_stability_simulation(self):
         svc = TierBetaScreening(
@@ -583,4 +771,64 @@ class TestTierBetaScreeningSuccess:
         assert any(row["ligand_state"]["state_kind"].startswith("tautomer_") for row in result.pose_scores)
         for row in result.pose_scores:
             assert row["pose_search"]["symmetry_ligand_smiles"] == row["ligand_state"]["smiles"]
+        assert result.typed_output["ok"] is False
+
+    def test_projected_ph_protomer_states_are_independently_scored_and_aggregated(self):
+        svc = TierBetaScreening(device="cpu", seed=13, pose_count=4, top_k=4, stability_steps=0)
+        result = svc.screen(protein_input=MINI_PDB, ligand_input="CN")
+
+        assert result.ok is False
+        assert "protonation_projection_not_product_safe" in result.blocked_reason
+        assert "ph_range_protomer_heuristic_not_product_safe" in result.blocked_reason
+        pose_stage = next(stage for stage in result.stage_records if stage["stage_id"] == "pose_ensemble")
+        ensemble = pose_stage["diagnostics"]["ligand_state_ensemble"]
+        assert ensemble["claim_safe"] is False
+        assert "ph_range_protomer_heuristic_not_product_safe" in ensemble["claim_safe_blockers"]
+        assert {state["state_kind"] for state in ensemble["states"]} >= {
+            "input_canonical",
+            "protomer_ph_5_0_basic_amine_protonated",
+        }
+        scored_states = {
+            state["state_kind"]: state
+            for state in ensemble["states"]
+            if state.get("scoring_status") == "pose_conformers_generated"
+        }
+        assert scored_states["input_canonical"]["poses_generated"] >= 1
+        assert scored_states["protomer_ph_5_0_basic_amine_protonated"]["poses_generated"] >= 1
+        assert scored_states["input_canonical"]["atom_elements"] == ["C", "N"]
+        assert scored_states["protomer_ph_5_0_basic_amine_protonated"]["formal_charge_sum"] == 1
+        assert scored_states["protomer_ph_5_0_basic_amine_protonated"]["formal_charges"] == [0, 1]
+        assert scored_states["protomer_ph_5_0_basic_amine_protonated"]["feature_source"] == (
+            "rdkit_chemical_features_base_fdef"
+        )
+
+        scoring_stage = next(stage for stage in result.stage_records if stage["stage_id"] == "scoring_ranking")
+        state_ranking = scoring_stage["diagnostics"]["state_ranking_aggregation"]
+        assert state_ranking["schema_version"] == "tier_beta_ligand_state_ranking_aggregation_v1"
+        assert state_ranking["status"] == "ranked_state_aggregation_complete"
+        assert state_ranking == result.diagnostics["state_ranking_aggregation"]
+        assert state_ranking == scoring_stage["diagnostics"]["pose_search"]["state_ranking_aggregation"]
+        assert {state["state_kind"] for state in state_ranking["states"]} >= {
+            "input_canonical",
+            "protomer_ph_5_0_basic_amine_protonated",
+        }
+        assert all(state["pose_count"] >= 1 for state in state_ranking["states"])
+        protomer_row = next(
+            state
+            for state in state_ranking["states"]
+            if state["state_kind"] == "protomer_ph_5_0_basic_amine_protonated"
+        )
+        assert "ph_range_protomer_heuristic_not_product_safe" in protomer_row["claim_safe_blockers"]
+        pose_protomer_rows = [
+            row
+            for row in result.pose_scores
+            if row["ligand_state"]["state_kind"] == "protomer_ph_5_0_basic_amine_protonated"
+        ]
+        assert pose_protomer_rows
+        assert all(row["ligand_state"]["formal_charge_sum"] == 1 for row in pose_protomer_rows)
+        assert all(row["ligand_topology"]["formal_charges"] == [0, 1] for row in pose_protomer_rows)
+        manifest_scoring_stage = next(
+            stage for stage in result.result_manifest["stage_records"] if stage["stage_id"] == "scoring_ranking"
+        )
+        assert manifest_scoring_stage["diagnostics"]["state_ranking_aggregation"] == state_ranking
         assert result.typed_output["ok"] is False

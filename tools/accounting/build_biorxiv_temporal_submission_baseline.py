@@ -24,7 +24,7 @@ def _write_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Freeze the current temporal provenance state as a submission baseline summary.")
     ap.add_argument("--coverage-json", default="runs/biorxiv_temporal_provenance_mapping_coverage_current.json")
     ap.add_argument("--remaining-policy-json", default="runs/biorxiv_temporal_idp_remaining_policy_current.json")
@@ -32,7 +32,7 @@ def main() -> int:
     ap.add_argument("--submission-assets-zip", default="runs/biorxiv_submission_assets_current.zip")
     ap.add_argument("--out-json", default="runs/biorxiv_temporal_submission_baseline_current.json")
     ap.add_argument("--out-md", default="runs/biorxiv_temporal_submission_baseline_current.md")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     coverage = _read_json((ROOT / args.coverage_json).resolve())
     remaining = _read_json((ROOT / args.remaining_policy_json).resolve())

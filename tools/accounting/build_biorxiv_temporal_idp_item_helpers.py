@@ -82,7 +82,7 @@ def _extract_pdb_header_date(path_str: str) -> str:
         return raw
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Build IDP item-level temporal provenance helpers from release artifacts.")
     ap.add_argument("--provenance-csv", default="config/biorxiv_temporal_idp_provenance_v1.csv")
     ap.add_argument("--release-manifest-json", default="runs/idp_3bead_holdout_v7_sb_rust_2026-03-20_r3_speedopt3_release_manifest.json")
@@ -92,7 +92,7 @@ def main() -> int:
     ap.add_argument("--out-facts-csv", default="runs/biorxiv_temporal_idp_item_provenance_facts_current.csv")
     ap.add_argument("--out-facts-json", default="runs/biorxiv_temporal_idp_item_provenance_facts_current.json")
     ap.add_argument("--out-facts-md", default="runs/biorxiv_temporal_idp_item_provenance_facts_current.md")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     provenance_rows = _read_csv((ROOT / args.provenance_csv).resolve())
     manifest = _read_json((ROOT / args.release_manifest_json).resolve())

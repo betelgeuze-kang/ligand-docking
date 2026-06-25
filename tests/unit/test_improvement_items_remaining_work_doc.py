@@ -29,15 +29,16 @@ def test_remaining_work_doc_tracks_current_release_metrics() -> None:
     text = _doc_text()
     bundle = product_release_bundle.build_release_bundle(release_id="doc-metric-check")
     refresh = _summary("runs/product_release_current_refresh_plan_current.json")
-    source = _summary("runs/product_release_source_of_truth_gate_current.json")
+    source_packet = source_of_truth.build_product_release_source_of_truth_gate(root=ROOT)
+    source = source_packet["summary"]
     action_board = _summary("runs/goal_operator_action_board_current.json")
     command_count = len(source_of_truth.RELEASE_REFRESH_COMMANDS)
 
     assert f"`artifact_count={bundle['artifact_count']}`" in text
     assert f"`check_count={bundle['check_count']}`" in text
     assert f"`pass_count={bundle['pass_count']}`" in text
-    assert f"`{refresh['status']}`, `command_count={command_count}`" in text
-    assert f"`executed_count={command_count}`" in text
+    assert f"`{refresh['status']}`, `command_count={refresh['command_count']}`" in text
+    assert f"`executed_count={refresh['executed_count']}`" in text
     assert f"`release_refresh_command_count={command_count}`" in text
     assert f"`row_count={source['row_count']}`" in text
     assert f"`artifact_row_count={source['artifact_row_count']}`" in text
@@ -183,12 +184,12 @@ def test_remaining_work_doc_tracks_product_readiness_script_entrypoints() -> Non
     text = _doc_text()
 
     assert "`scripts/check_independent_product_readiness.py`" in text
-    assert "`independent_product_readiness_verified`" in text
-    assert "`independent_restricted_product_ready=true`" in text
+    assert "`blocked_independent_product_readiness`" in text
+    assert "`independent_restricted_product_ready=false`" in text
     assert "`full_commercial_claim_promotion_ready=false`" in text
     assert "`full_commercial_open_gap_ids=[]`" in text
     assert "`science_accuracy_frontier_status=blocked_science_accuracy_frontier`" in text
-    assert "`science_accuracy_frontier_restricted_ready=true`" in text
+    assert "`science_accuracy_frontier_restricted_ready=false`" in text
     assert "`science_accuracy_frontier_broad_commercial_blocked=true`" in text
     assert "`science_accuracy_frontier_gpcr_broad_claim_review_receipt_ready=false`" in text
     assert (

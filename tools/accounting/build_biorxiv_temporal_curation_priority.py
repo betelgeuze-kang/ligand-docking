@@ -131,14 +131,14 @@ def _build_idp_groups(rows: list[dict[str, str]]) -> list[dict[str, Any]]:
     return output
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Build a curation-priority summary for temporal provenance mapping files.")
     ap.add_argument("--ligand-csv", default="config/biorxiv_temporal_ligand_provenance_v1.csv")
     ap.add_argument("--idp-csv", default="config/biorxiv_temporal_idp_provenance_v1.csv")
     ap.add_argument("--out-json", default="runs/biorxiv_temporal_curation_priority_current.json")
     ap.add_argument("--out-csv", default="runs/biorxiv_temporal_curation_priority_current.csv")
     ap.add_argument("--out-md", default="runs/biorxiv_temporal_curation_priority_current.md")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     ligand_rows = _read_csv((ROOT / args.ligand_csv).resolve())
     idp_rows = _read_csv((ROOT / args.idp_csv).resolve())

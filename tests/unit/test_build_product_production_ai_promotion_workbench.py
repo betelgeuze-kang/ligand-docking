@@ -20,15 +20,18 @@ def test_product_production_ai_promotion_workbench_surfaces_blocked_ladder_witho
     assert summary["trained_model_checkpoint_count"] == 1
     assert summary["gpu_handoff_ready"] is True
     assert summary["gpu_return_receipt_ready"] is True
-    assert summary["gpu_receipt_expected_queue_rows"] == 0
-    assert summary["gpu_receipt_manifest_identity_row_count"] == 0
+    assert summary["gpu_receipt_expected_queue_rows"] == 768
+    assert summary["gpu_receipt_manifest_identity_row_count"] == 768
     assert summary["post_return_promotion_ladder_stage_count"] == 10
-    assert summary["post_return_promotion_ladder_blocked_stage_count"] == 2
-    assert summary["blocked_stage_ids"] == ["residual_model_registry", "product_goal_completion_audit"]
-    assert summary["ready_key_alias_used_count"] == 2
+    assert summary["post_return_promotion_ladder_blocked_stage_count"] == 3
+    assert summary["blocked_stage_ids"] == [
+        "residual_model_registry",
+        "product_ai_architecture_gap_closure",
+        "product_goal_completion_audit",
+    ]
+    assert summary["ready_key_alias_used_count"] == 1
     assert summary["ready_key_alias_used_stage_ids"] == [
         "production_score_model",
-        "production_checkpoint_preflight",
     ]
     assert summary["first_blocked_stage_id"] == "residual_model_registry"
     assert summary["first_blocked_stage_ready_key"] == "production_promotion_allowed"
@@ -40,8 +43,7 @@ def test_product_production_ai_promotion_workbench_surfaces_blocked_ladder_witho
     assert summary["registry_promotion_missing_gate_count"] == 3
     assert summary["registry_promotion_upstream_acceptance_ready"] is True
     assert summary["registry_promotion_currently_satisfied"] is False
-    assert "Complete the guarded production AI registry promotion operator receipt" in summary["next_required_step"]
-    assert "trained_model_checkpoint_count_positive" not in summary["next_required_step"]
+    assert "guarded production AI registry promotion" in summary["next_required_step"]
     assert "generate_ligand_trajectory_engine.py" in summary["force_gpu_worker_full_regeneration_command"]
     assert "build_residual_force_gpu_worker_return_receipt.py" in summary[
         "force_gpu_worker_post_return_validation_command"
@@ -51,7 +53,7 @@ def test_product_production_ai_promotion_workbench_surfaces_blocked_ladder_witho
     assert summary["model_promoted"] is False
     assert summary["external_state_mutated"] is False
     assert len(payload["rows"]) == 10
-    assert len(payload["blockers"]) == 2
+    assert len(payload["blockers"]) == 3
     assert payload["rows"][0]["artifact"] == "runs/residual_force_gpu_worker_return_receipt_current.json"
     assert payload["rows"][0]["observed_value"] is True
     rows_by_stage = {row["stage_id"]: row for row in payload["rows"]}
@@ -59,9 +61,13 @@ def test_product_production_ai_promotion_workbench_surfaces_blocked_ladder_witho
     assert rows_by_stage["production_score_model"]["observed_ready_key"] == "production_checkpoint_ready"
     assert rows_by_stage["production_score_model"]["ready_key_alias_used"] is True
     assert rows_by_stage["production_score_model"]["observed_value"] is True
-    assert rows_by_stage["production_checkpoint_preflight"]["observed_ready_key"] == "preflight_green"
-    assert rows_by_stage["production_checkpoint_preflight"]["ready_key_alias_used"] is True
+    assert rows_by_stage["production_checkpoint_preflight"]["observed_ready_key"] == "checkpoint_preflight_ready"
+    assert rows_by_stage["production_checkpoint_preflight"]["ready_key_alias_used"] is False
     assert rows_by_stage["production_checkpoint_preflight"]["observed_value"] is True
-    assert "Complete the guarded production AI registry promotion operator receipt" in rows_by_stage[
+    assert rows_by_stage["residual_model_registry"]["observed_value"] is False
+    assert "guarded production AI registry promotion" in rows_by_stage[
         "residual_model_registry"
+    ]["next_action"]
+    assert "Rebuild AI architecture gap closure" in rows_by_stage[
+        "product_ai_architecture_gap_closure"
     ]["next_action"]

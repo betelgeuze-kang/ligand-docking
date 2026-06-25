@@ -13,19 +13,19 @@ def test_product_operational_quality_contract_passes_current_fail_closed_surface
     assert summary["fail_closed_docking_intake_ready"] is True
     assert summary["production_ai_correction_fail_closed_ready"] is True
     assert summary["production_ai_intake_correction_not_applied_ready"] is True
-    assert summary["production_ai_shadow_abstention_ready"] is False
-    assert summary["production_ai_guarded_active_ready"] is True
-    assert summary["sample_production_ai_inference_subject_active"] is True
+    assert summary["production_ai_shadow_abstention_ready"] is True
+    assert summary["production_ai_guarded_active_ready"] is False
+    assert summary["sample_production_ai_inference_subject_active"] is False
     assert summary["sample_production_ai_correction_applied"] is False
-    assert summary["sample_production_ai_abstention_enforced"] is False
-    assert summary["sample_production_ai_default_residual_mode"] == "production_guarded"
-    assert summary["sample_production_ai_promotion_allowed"] is True
-    assert summary["sample_production_ai_customer_facing_auto_correction_allowed"] is True
-    assert summary["sample_production_ai_customer_facing_score_mutation_allowed"] is True
+    assert summary["sample_production_ai_abstention_enforced"] is True
+    assert summary["sample_production_ai_default_residual_mode"] == "shadow"
+    assert summary["sample_production_ai_promotion_allowed"] is False
+    assert summary["sample_production_ai_customer_facing_auto_correction_allowed"] is False
+    assert summary["sample_production_ai_customer_facing_score_mutation_allowed"] is False
     assert summary["sample_production_ai_customer_facing_ranking_mutation_allowed"] is False
-    assert summary["sample_production_ai_trained_checkpoint_count"] == 1
-    assert summary["sample_production_ai_selected_sidecar_ready"] is True
-    assert summary["sample_production_ai_selected_sidecar_missing_output_fields"] == []
+    assert summary["sample_production_ai_trained_checkpoint_count"] == 0
+    assert summary["sample_production_ai_selected_sidecar_ready"] is False
+    assert summary["sample_production_ai_selected_sidecar_missing_output_fields"] == ["delta_force"]
     assert summary["ledger_payload_privacy_ready"] is True
     assert summary["ledger_materialization_hash_only_ready"] is True
     assert summary["ledger_sensitive_key_paths"] == []

@@ -178,9 +178,10 @@ def test_build_keep_green_regression_trend_packet_cli(tmp_path: Path) -> None:
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["packet_artifact"] == "runs/keep_green_regression_trend_packet_current.md"
     assert payload["summary"]["lane_count"] == 4
-    assert payload["summary"]["all_current_green"] is True
-    assert payload["summary"]["wetlab_current_green"] is True
-    assert payload["summary"]["commercial_trend_status"] == "baseline_green_needs_repeated_history"
+    assert payload["summary"]["all_current_green"] is False
+    assert payload["summary"]["wetlab_current_green"] is False
+    assert payload["summary"]["current_green_lane_count"] == 3
+    assert payload["summary"]["commercial_trend_status"] == "current_green_regression_open"
     assert payload["rows"][0]["lane_id"] == "nightly"
     assert out_csv.exists()
     assert out_md.exists()

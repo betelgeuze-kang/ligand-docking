@@ -1536,7 +1536,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
 
 **현재 상태**
 - HTVS stage2/3 production config, two-pass 4-bead cascade, topo corrector, stage2 skip router가 상용 경로에 연결됨.
-- enabled runner profile 3종 (`ligand_htvs_pipeline_default`, `backmapping_scoring.production`, `ligand_topk_delivery.production`) + evidence reviewed.
+- enabled runner profile 4종 (`backmapping_scoring.production`, `ligand_htvs_pipeline_default`, `ligand_topk_delivery.production`, `tier_beta_biodiscovery_direct`) + evidence reviewed.
 - `api/docking_dispatch.py`가 ledger → SQLite worker queue 자동 enqueue를 수행 (`API_VALIDATED_RUNNER_ENABLED=1` 필요).
 - `api/tasks.py`는 `runner_profile_id`가 없는 일반 simulation 요청에는 계속
   fail-closed로 동작한다.
@@ -1559,7 +1559,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `promotion_ready_count=4`이며 enabled production profile은 reviewed evidence로
   accounting green을 유지한다. `profile_enabled_by_this_tool=false`,
   `runner_executed=false`, `external_state_mutated=false`는 그대로다.
-- enabled runner profile 3종의 `production_readiness.runner_script_sha256`은 현재
+- enabled runner profile 4종의 `production_readiness.runner_script_sha256`은 현재
   allowlisted runner script hash와 동기화됐고, `tools/product/validate_api_runner_profiles.py`는
   `status=pass`, `failed_profile_count=0`이다. 이 hash gate 복구 뒤
   Tier α ADRB2 dispatch smoke도 `tier_alpha_adrb2_dispatch_smoke_pass`로 재검증됐다.
@@ -1887,10 +1887,10 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `R9_engine_refinement_claim_promotion` release blocker로 기록한다. 따라서
   full-scope claim closure나 restricted delivery accounting이 green이어도,
   refine-tier claim-grade evidence가 없으면 `goal_complete=false`가 유지된다.
-  최신 audit summary는 `release_blocker_fail_count=2`,
-  `release_blocker_requirement_ids=[R8_full_scope_claim_closure, R9_engine_refinement_claim_promotion]`,
-  `primary_release_blocker_requirement_id=R8_full_scope_claim_closure`,
-  `primary_release_blocker=full_scope_claim_closure_not_ready`를 노출한다.
+  최신 audit summary는 `release_blocker_fail_count=5`,
+  `release_blocker_requirement_ids=[R1_local_self_hosted_product, R3_commercial_independence, R7_restricted_local_delivery_ready, R8_full_scope_claim_closure, R9_engine_refinement_claim_promotion]`,
+  `primary_release_blocker_requirement_id=R1_local_self_hosted_product`,
+  `primary_release_blocker=local_product_surface_not_ready`를 노출한다.
   `runs/goal_operator_action_board_current.json`도 같은 blocker를
   `primary_release_blocker_action_id=product_scope_expansion:resolve_full_scope_breadth_evidence_receipt`와
   `primary_release_blocker_action_required_input=config/product_scope_breadth_evidence_receipt_current.csv`로 연결한다.
@@ -1923,7 +1923,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   숨지 않게 한다.
   `tools/accounting/build_goal_bottleneck_briefing.py`는 release burndown이 clear인
   경우에도 `product_goal_completion_audit`의 `release_blocker=true` rows를 흡수해
-  현재 `R8_full_scope_claim_closure`와 `R9_engine_refinement_claim_promotion`을
+  현재 `R1_local_self_hosted_product`, `R3_commercial_independence`,
+  `R7_restricted_local_delivery_ready`, `R8_full_scope_claim_closure`,
+  `R9_engine_refinement_claim_promotion`을
   `completion_audit_release_blocker` 병목으로 노출한다. `/goal/status`도 active
   bottleneck briefing이 있으면 intake/action board의 오래된 primary action보다 이
   full-commercial 병목 primary를 우선 표시한다. 또한 `/goal/status`는
@@ -1931,9 +1933,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   R9_engine_refinement_claim_promotion, ACCURACY:ligand_ranking]`,
   `restricted_release_allowed=true`, `full_commercial_release_allowed=false`,
   `full_commercial_release_blocker_visibility_ready=true`,
-  `completion_audit_release_blocker_bottleneck_count=2`,
+  `completion_audit_release_blocker_bottleneck_count=5`,
   `commercial_readiness_handoff_bundle_artifact_reference_count=43`를 노출하고,
-  `product_goal_primary_release_blocker_requirement_id=R8_full_scope_claim_closure`,
+  `product_goal_primary_release_blocker_requirement_id=R1_local_self_hosted_product`,
   `primary_release_blocker_action_id=product_scope_expansion:resolve_full_scope_breadth_evidence_receipt`,
   `primary_release_blocker_action_required_input=config/product_scope_breadth_evidence_receipt_current.csv`도
   action board/intake kit에서 끌어와 노출한다. `goal_api_surface_contract_current.json`은 이
@@ -2134,7 +2136,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `config/product_scope_breadth_evidence_receipt_current.csv`를
   `local_scope_breadth_receipt` / `local_scope_breadth_receipt_template`
   artifact reference로 추적하며, 최신
-  `local_missing_artifact_reference_count=0`, `local_required_artifact_reference_count=39`,
+  `local_missing_artifact_reference_count=0`, `local_required_artifact_reference_count=47`,
   `artifact_reference_count=43`이다. 여기에 AQP1 첫 return bundle의
   `local_scope_transporter_p0_return_bundle_artifact` 5종도 포함되며,
   `config/ligand_binding_reference_blind_aqp1_v1.csv`,
@@ -3164,12 +3166,11 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   scope-breadth evidence receipt, goal operator intake kit, goal API surface contract, bottleneck briefing,
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
-  최신 실행 결과는
-  `blocked_product_release_current_refresh`, `command_count=121`, `executed_count=121`,
+  최신 계획 결과는
+  `product_release_current_refresh_planned`, `command_count=137`, `executed_count=0`,
   `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=false`,
-  `final_gate_count=4`, `final_gate_blocker_count=2`이다. 직접 final-gate 검증 기준으로
-  `product_release_source_of_truth_gate`와 `product_quality_gate_verification`은 pass이며,
-  남은 blocker는 `goal_release_decision_gate`와 그 echo인 `goal_operator_action_board`다.
+  `final_gate_count=0`, `final_gate_blocker_count=0`이다. `--execute`가 아직 수행되지
+  않았으므로 이 refresh plan은 실행 증거가 아니라 source-of-truth 순서 확인 증거다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
   rollout smoke receipt를 분리한 뒤 `deploy_ops_legal_gap_closure_complete`,
   `closed_gap_count=6`, `open_gap_ids=[]`로 닫혔다.
@@ -3209,19 +3210,20 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   active scorer promotion-decision claim-lock metric readiness, GPCR broad claim-scope target-heldout
   input readiness, science accuracy frontier restricted-ready/commercial-parity-blocked accounting, production AI registry promotion operator
   receipt/priority packet/field worksheet/staging apply preview, CAMEO official-result fetch preflight, R8 scope-breadth evidence field worksheet/staging apply preview, R9 engine-refinement claim evidence priority packet/field worksheet/staging apply preview,
-  master gap closure rollup 포함 refresh 이후
-  `product_release_source_of_truth_gate_ready`, `pass_count=149/149`,
-  `blocker_count=0`, `stale_artifact_count=0`,
-  `release_refresh_command_count=121`으로 재검증됐다.
+  master gap closure rollup 포함 refresh 순서는 최신 source-of-truth gate에서
+  `blocked_product_release_source_of_truth_gate`, `row_count=156`,
+  `pass_count=100/156`, `blocker_count=56`, `artifact_row_count=97`,
+  `semantic_status_row_count=57`, `readme_row_count=2`, `stale_artifact_count=36`,
+  `release_refresh_command_count=137`로 재검증됐다.
 - `scripts/check_independent_product_readiness.py`는 현재 release/source-of-truth,
   product readiness, operational quality, commercial-independence, capability surface,
   release bundle, master/science-claim rollup을 read-only로 확인해
-  `independent_product_readiness_verified`,
-  `independent_restricted_product_ready=true`,
+  `blocked_independent_product_readiness`,
+  `independent_restricted_product_ready=false`,
   `full_commercial_claim_promotion_ready=false`,
   `full_commercial_open_gap_ids=[]`,
   `science_accuracy_frontier_status=blocked_science_accuracy_frontier`,
-  `science_accuracy_frontier_restricted_ready=true`,
+  `science_accuracy_frontier_restricted_ready=false`,
   `science_accuracy_frontier_broad_commercial_blocked=true`,
   `science_accuracy_frontier_gpcr_broad_claim_review_receipt_ready=false`,
   `science_accuracy_frontier_gpcr_broad_claim_review_receipt_blocked_row_count=2`,

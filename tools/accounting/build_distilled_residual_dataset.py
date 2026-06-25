@@ -7,7 +7,7 @@ import glob
 import json
 import os
 import re
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence
 
 import h5py
 import numpy as np

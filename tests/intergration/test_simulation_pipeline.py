@@ -1,6 +1,5 @@
 # tests/integration/test_simulation_pipeline.py
 
-import pytest
 import torch
 from core.topology import TopologyFactory
 from core.spatial import GridSpatialHash
@@ -44,8 +43,6 @@ def test_full_simulation_step():
 
     # 7. 단일 스텝 시뮬레이션 수행
     for step in range(5): # 5 스텝 수행
-        c_prev, v_prev = c.clone(), v.clone()
-
         # Neighbor 데이터 가져오기
         nb = sh.get_neighbor_data(c)
 

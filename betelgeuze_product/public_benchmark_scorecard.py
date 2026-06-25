@@ -13,6 +13,48 @@ CLAIM_BOUNDARY = (
     "register servers, submit predictions, send email, or mutate external state outside requested output artifacts."
 )
 
+PDBBIND_CASF_SUITE_ID = "pdbbind_casf_pose_affinity"
+PDBBIND_CASF_REQUIRED_GOLD_FIELDS = (
+    "gold_metric_schema_version",
+    "gold_metric_status",
+    "top1_mean_rmsd_A",
+    "top5_best_mean_rmsd_A",
+    "top1_pose_success_rate",
+    "top5_pose_success_rate",
+    "ranking_spearman",
+    "pr_auc",
+    "topk_hit_rate",
+    "decoy_rejection_rate",
+    "baseline_ranking_spearman",
+    "refine_ranking_spearman_delta",
+    "refine_improvement_observed",
+    "heldout_complex_count",
+    "chirality_failure_rate",
+    "tautomer_failure_rate",
+    "protonation_failure_rate",
+    "chemistry_evidence_coverage",
+    "abstention_precision",
+    "mean_runtime_ms",
+    "peak_memory_mb",
+    "subset_identity_sha256",
+)
+PDBBIND_CASF_REQUIRED_RESULT_COLUMNS = (
+    "active_label",
+    "affinity_label",
+    "score",
+    "baseline_score",
+    "split_id",
+    "abstained",
+    "chirality_failure",
+    "tautomer_failure",
+    "protonation_failure",
+    "chemistry_evidence_present",
+    "runtime_ms",
+    "peak_memory_mb",
+    "pose_rmsd_method",
+    "pose_rmsd_diagnostics",
+)
+
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
@@ -70,6 +112,35 @@ def _read_provenance(path: Path | None) -> tuple[bool, dict[str, Any]]:
         return True, {}
     summary = payload.get("summary") if isinstance(payload, dict) else {}
     return True, summary if isinstance(summary, dict) else {}
+
+
+def _pdbbind_casf_gold_metric_blockers(provenance: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    if _text(provenance.get("gold_metric_schema_version")) != "tier_beta_docking_gold_metrics_v1":
+        blockers.append("pdbbind_casf_gold_metric_schema_missing")
+    if _text(provenance.get("gold_metric_status")) != "pass":
+        blockers.append("pdbbind_casf_gold_metric_status_not_pass")
+    for field in PDBBIND_CASF_REQUIRED_GOLD_FIELDS:
+        value = provenance.get(field)
+        if value is None or (isinstance(value, str) and not value.strip()):
+            blockers.append(f"pdbbind_casf_gold_metric_field_missing:{field}")
+    if provenance.get("refine_improvement_observed") is not True:
+        blockers.append("pdbbind_casf_refine_improvement_not_observed")
+    if _int(provenance.get("heldout_complex_count")) <= 0:
+        blockers.append("pdbbind_casf_heldout_complex_count_missing")
+    result_columns = provenance.get("result_columns") or []
+    result_column_set = {_text(column) for column in result_columns if _text(column)}
+    missing_columns = [
+        column
+        for column in PDBBIND_CASF_REQUIRED_RESULT_COLUMNS
+        if column not in result_column_set
+    ]
+    if missing_columns:
+        blockers.append("pdbbind_casf_result_columns_missing:" + ";".join(missing_columns))
+    gold_blockers = provenance.get("gold_metric_blockers") or []
+    if isinstance(gold_blockers, list) and gold_blockers:
+        blockers.append("pdbbind_casf_gold_metric_blockers_present")
+    return blockers
 
 
 def build_public_benchmark_suite_scorecard(
@@ -143,6 +214,8 @@ def build_public_benchmark_suite_scorecard(
             blockers.append("product_provenance_result_sha256_mismatch")
         if _int(provenance.get("result_row_count")) < int(min_evidence_rows):
             blockers.append("product_provenance_rows_below_minimum")
+        if _text(suite_id) == PDBBIND_CASF_SUITE_ID:
+            blockers.extend(_pdbbind_casf_gold_metric_blockers(provenance))
 
     status = "public_benchmark_suite_scorecard_pass" if not blockers else "blocked_public_benchmark_suite_scorecard"
     blocker_text = ",".join(sorted(set(blockers)))

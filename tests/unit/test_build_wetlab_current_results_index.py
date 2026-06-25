@@ -4,8 +4,6 @@ import json
 import os
 from pathlib import Path
 
-import pytest
-
 from tools import build_wetlab_current_results_index as mod
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -462,7 +460,9 @@ def test_build_wetlab_current_results_index_groups_surfaces(monkeypatch, tmp_pat
     assert summary["selected_rescue_branch_next_required_step"] == "Operate T. cruzi PDE through the dedicated rescue-only branch, keep the default lane closed, and use the promoted top-4 packet as the review unit before any reopen decision."
 def test_build_wetlab_current_results_index_should_prefer_dpre1_guarded_review() -> None:
     root = Path(__file__).resolve().parents[2]
-    load = lambda rel: json.loads((root / rel).read_text(encoding="utf-8"))
+
+    def load(rel: str) -> dict:
+        return json.loads((root / rel).read_text(encoding="utf-8"))
 
     payload = mod.build_payload(
         load("runs/wetlab_broad_screen_execution_queue_current.json"),

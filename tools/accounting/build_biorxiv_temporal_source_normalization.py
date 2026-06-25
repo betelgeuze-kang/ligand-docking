@@ -60,14 +60,14 @@ def _prefill_notes(targets: set[str]) -> str:
     return "Auto-prefilled source release can be reused across all matching rows; item-level dates still required."
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Build family-level source normalization tables for temporal ligand provenance curation.")
     ap.add_argument("--ligand-csv", default="config/biorxiv_temporal_ligand_provenance_v1.csv")
     ap.add_argument("--out-csv", default="config/biorxiv_temporal_source_normalization_v1.csv")
     ap.add_argument("--out-json", default="runs/biorxiv_temporal_source_normalization_current.json")
     ap.add_argument("--out-md", default="runs/biorxiv_temporal_source_normalization_current.md")
     ap.add_argument("--sanity-md", default="runs/biorxiv_temporal_source_pool_sanity_check_current.md")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     rows = _read_csv((ROOT / args.ligand_csv).resolve())
     grouped: dict[str, list[dict[str, str]]] = defaultdict(list)

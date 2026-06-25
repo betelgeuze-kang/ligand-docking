@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+from typing import Any
+
 from fastapi import APIRouter
 
 from api.product_architecture import (
+    COMPETITION_EXTERNAL_OPERATOR_TRACK_ARTIFACT as _DEFAULT_COMPETITION_EXTERNAL_OPERATOR_TRACK_ARTIFACT,
+    ARCHITECTURE_VALIDATION_REPORT_ARTIFACT as _DEFAULT_ARCHITECTURE_VALIDATION_REPORT_ARTIFACT,
+    ROOT as _DEFAULT_ROOT,
     get_product_architecture,
-    get_product_architecture_validation,
 )
 from api.product_capabilities import get_product_capabilities
 from api.product_docking import (
@@ -89,7 +95,76 @@ from api.product_evidence_goal import (
     get_product_scope_breadth_evidence_receipt,
 )
 
+ROOT = _DEFAULT_ROOT
+ARCHITECTURE_VALIDATION_REPORT_ARTIFACT = _DEFAULT_ARCHITECTURE_VALIDATION_REPORT_ARTIFACT
+COMPETITION_EXTERNAL_OPERATOR_TRACK_ARTIFACT = _DEFAULT_COMPETITION_EXTERNAL_OPERATOR_TRACK_ARTIFACT
+
 router = APIRouter(prefix="/product", tags=["product"])
+
+
+def _read_json_object(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _summary(packet: dict[str, Any]) -> dict[str, Any]:
+    summary = packet.get("summary")
+    return summary if isinstance(summary, dict) else {}
+
+
+async def get_product_architecture_validation() -> dict[str, Any]:
+    packet = _read_json_object(ARCHITECTURE_VALIDATION_REPORT_ARTIFACT)
+    summary = _summary(packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    warnings = packet.get("overclaim_warnings") if isinstance(packet.get("overclaim_warnings"), list) else []
+    external = _summary(_read_json_object(COMPETITION_EXTERNAL_OPERATOR_TRACK_ARTIFACT))
+    if not summary:
+        return {
+            "status": "missing_architecture_validation_package_report",
+            "artifact_path": str(ARCHITECTURE_VALIDATION_REPORT_ARTIFACT),
+            "architecture_validation_all_packages_complete": False,
+            "package_a_complete": False,
+            "package_b_complete": False,
+            "package_c_complete": False,
+            "evidence_depth_tier": "accounting_only",
+            "overclaim_warning_count": 0,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_boundary": (
+                "Product architecture-validation endpoint only; the local architecture validation report is missing. "
+                "It does not run benchmarks, promote claims, or mutate external state."
+            ),
+        }
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(ARCHITECTURE_VALIDATION_REPORT_ARTIFACT),
+        "architecture_validation_all_packages_complete": bool(
+            summary.get("status") == "architecture_validation_all_packages_complete"
+        ),
+        "package_a_complete": bool(summary.get("package_a_complete") is True),
+        "package_b_complete": bool(summary.get("package_b_complete") is True),
+        "package_c_complete": bool(summary.get("package_c_complete") is True),
+        "open_required_test_ids": list(summary.get("open_required_test_ids") or []),
+        "overclaim_open_test_ids": list(summary.get("overclaim_open_test_ids") or []),
+        "evidence_depth_tier": summary.get("evidence_depth_tier", "accounting_only"),
+        "overclaim_warning_count": int(summary.get("overclaim_warning_count") or 0),
+        "overclaim_hard_warning_count": int(summary.get("overclaim_hard_warning_count") or 0),
+        "competition_external_operator_track_status": external.get("status", ""),
+        "competition_external_blocked_track_count": int(external.get("blocked_track_count") or 0),
+        "rows": rows,
+        "overclaim_warnings": warnings,
+        "execution_enabled": False,
+        "claim_promotion_allowed": False,
+        "external_state_mutated": False,
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
 __all__ = [
     "DockingJobRequest",
     "JobActionRequest",

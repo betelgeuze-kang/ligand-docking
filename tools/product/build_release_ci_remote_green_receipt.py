@@ -7,6 +7,11 @@ import json
 from pathlib import Path
 from typing import Any
 
+from tools.product.release_ci_remote_green_evidence_contract import (
+    CONTRACT_SCHEMA_VERSION as EVIDENCE_CONTRACT_SCHEMA_VERSION,
+    build_release_ci_remote_green_evidence_contract,
+)
+
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/release_ci_remote_green_receipt_current.json"
 DEFAULT_OUT_MD = "runs/release_ci_remote_green_receipt_current.md"
@@ -133,7 +138,7 @@ def _required_checks(required_checks_payload: Any, branch_payload: Any) -> set[s
     return {check for check in checks if check}
 
 
-def _run_matches_rocm_success(run: dict[str, Any], *, event: str | None = None, tag_prefixes: tuple[str, ...] = ()) -> bool:
+def _run_matches_rocm_scope(run: dict[str, Any], *, event: str | None = None, tag_prefixes: tuple[str, ...] = ()) -> bool:
     if event and str(run.get("event") or "") != event:
         return False
     if tag_prefixes:
@@ -147,20 +152,36 @@ def _run_matches_rocm_success(run: dict[str, Any], *, event: str | None = None, 
         for key in ("name", "display_title", "workflow_name", "path")
     ).lower()
     product_image_workflow = "product-image" in name_text or "product image" in name_text
-    rocm_runtime_scope = "rocm" in name_text and "runtime" in name_text
-    return (
-        str(run.get("status") or "").lower() == "completed"
-        and str(run.get("conclusion") or "").lower() == "success"
-        and product_image_workflow
-        and rocm_runtime_scope
+    return product_image_workflow
+
+
+def _sort_key(run: dict[str, Any]) -> str:
+    return str(run.get("created_at") or run.get("run_started_at") or run.get("updated_at") or "")
+
+
+def _latest_rocm_run_green(runs_payload: Any, *, event: str | None = None, tag_prefixes: tuple[str, ...] = ()) -> tuple[bool, dict[str, Any]]:
+    candidates = [
+        run
+        for run in _as_list(runs_payload, "workflow_runs")
+        if isinstance(run, dict) and _run_matches_rocm_scope(run, event=event, tag_prefixes=tag_prefixes)
+    ]
+    if not candidates:
+        return False, {}
+    latest = sorted(candidates, key=_sort_key, reverse=True)[0]
+    observed = {
+        "id": latest.get("id"),
+        "event": latest.get("event"),
+        "status": latest.get("status"),
+        "conclusion": latest.get("conclusion"),
+        "created_at": latest.get("created_at"),
+        "head_branch": latest.get("head_branch") or latest.get("ref"),
+        "html_url": latest.get("html_url") or "",
+    }
+    ready = (
+        str(latest.get("status") or "").lower() == "completed"
+        and str(latest.get("conclusion") or "").lower() == "success"
     )
-
-
-def _successful_rocm_run(runs_payload: Any, *, event: str | None = None, tag_prefixes: tuple[str, ...] = ()) -> tuple[bool, str]:
-    for run in _as_list(runs_payload, "workflow_runs"):
-        if isinstance(run, dict) and _run_matches_rocm_success(run, event=event, tag_prefixes=tag_prefixes):
-            return True, str(run.get("html_url") or run.get("id") or "")
-    return False, ""
+    return ready, observed
 
 
 def _failure_artifacts_ready(failed_run_artifacts_payload: Any) -> tuple[bool, list[str]]:
@@ -169,11 +190,13 @@ def _failure_artifacts_ready(failed_run_artifacts_payload: Any) -> tuple[bool, l
         for artifact in _as_list(failed_run_artifacts_payload, "artifacts")
         if isinstance(artifact, dict) and artifact.get("expired") is not True
     ]
-    lowered = " ".join(active_names).lower()
-    has_smoke_bundle = "product-image" in lowered and "smoke" in lowered
-    has_receipt_or_runtime = "receipt" in lowered or "runtime" in lowered
-    has_log_or_runtime = "log" in lowered or "runtime" in lowered
-    ready = bool(active_names) and has_smoke_bundle and has_receipt_or_runtime and has_log_or_runtime
+    ready = any(
+        "product-image" in name.lower()
+        and "smoke" in name.lower()
+        and "receipt" in name.lower()
+        and "log" in name.lower()
+        for name in active_names
+    )
     return ready, active_names
 
 
@@ -192,10 +215,16 @@ def _workflow_source_contract(workflow_text: str, *, workflow_path: str) -> tupl
         "workflow_tag_filters": "tags:" in text and "v*" in text and "product-*" in text,
         "artifact_upload_action": "actions/upload-artifact@v4" in text,
         "artifact_upload_always": "if: always()" in text,
+        "failure_receipt_seeded": "failure_receipt_seeded" in text,
+        "build_failure_receipt_seed": "Seed product image build smoke failure receipt" in text,
+        "rocm_failure_receipt_seed": "Seed product image ROCm runtime smoke failure receipt" in text,
         "receipt_artifact_path": "runs/product_image_smoke_receipt_current.json" in text,
         "build_log_artifact_path": "runs/product_image_build_smoke.log" in text,
         "rocm_log_artifact_path": "runs/product_image_rocm_runtime_smoke.log" in text,
         "rocm_runner_artifacts_path": "runs/product_image_smoke_runner_artifacts/**" in text,
+        "artifact_names_include_receipt_log": "product-image-build-smoke-receipt-log-" in text
+        and "product-image-rocm-runtime-smoke-receipt-log-" in text,
+        "artifact_retention_configured": "retention-days:" in text,
     }
     pass_values = [value for key, value in checks.items() if key not in {"workflow_path", "workflow_sha256"}]
     return all(bool(value) for value in pass_values), checks
@@ -239,9 +268,9 @@ def build_release_ci_remote_green_receipt(
     checks = _required_checks(required_checks_payload, branch_payload)
     missing_checks = [check for check in REQUIRED_MAIN_CHECKS if not any(check in observed for observed in checks)]
     main_required_checks_ready = bool(branch_protected and not missing_checks)
-    weekly_rocm_schedule_green, weekly_url = _successful_rocm_run(schedule_runs_payload, event="schedule")
+    weekly_rocm_schedule_green, weekly_observed = _latest_rocm_run_green(schedule_runs_payload, event="schedule")
     failure_artifacts_preserved, artifact_names = _failure_artifacts_ready(failed_artifacts_payload)
-    release_tag_rocm_gate_green, tag_url = _successful_rocm_run(
+    release_tag_rocm_gate_green, tag_observed = _latest_rocm_run_green(
         release_tag_runs_payload,
         event="push",
         tag_prefixes=("v", "product-"),
@@ -256,11 +285,20 @@ def build_release_ci_remote_green_receipt(
         _row("rocm_self_hosted_runner_registered", rocm_ready, rocm_runners, "online runner with self-hosted+linux+rocm labels", str(runner_inventory_json or "")),
         _row("main_branch_required_checks_configured", main_required_checks_ready, {"protected": branch_protected, "checks": sorted(checks), "missing_checks": missing_checks}, f"main protected and required checks include {', '.join(REQUIRED_MAIN_CHECKS)}", f"{branch_json};{required_checks_json}"),
         _row("product_image_workflow_source_contract_configured", workflow_contract_ready, workflow_contract_observed, "workflow source contains build/runtime jobs, weekly schedule, tag runtime gate, and always-uploaded receipt/log artifacts", str(workflow_yml or "")),
-        _row("weekly_rocm_runtime_schedule_green", weekly_rocm_schedule_green, weekly_url, "at least one completed successful schedule run for ROCm runtime smoke", str(schedule_runs_json or "")),
+        _row("weekly_rocm_runtime_schedule_green", weekly_rocm_schedule_green, weekly_observed, "latest completed schedule run for ROCm runtime smoke is successful", str(schedule_runs_json or "")),
         _row("failed_run_artifacts_preserved", failure_artifacts_preserved, artifact_names, "failed workflow run exposes smoke log/receipt/runtime artifacts", str(failed_run_artifacts_json or "")),
-        _row("release_tag_rocm_runtime_gate_green", release_tag_rocm_gate_green, tag_url, "at least one successful v* or product-* tag push ROCm runtime run", str(release_tag_runs_json or "")),
+        _row("release_tag_rocm_runtime_gate_green", release_tag_rocm_gate_green, tag_observed, "latest v* or product-* tag push ROCm runtime run is successful", str(release_tag_runs_json or "")),
     ]
     blockers = [{"code": row["check_id"], "source": row["source"], "observed": row["observed"]} for row in rows if not row["passed"]]
+    evidence_contract = build_release_ci_remote_green_evidence_contract()
+    evidence_inputs = {
+        "runner_inventory_json": str(runner_inventory_json or ""),
+        "branch_json": str(branch_json or ""),
+        "required_checks_json": str(required_checks_json or ""),
+        "schedule_runs_json": str(schedule_runs_json or ""),
+        "failed_run_artifacts_json": str(failed_run_artifacts_json or ""),
+        "release_tag_runs_json": str(release_tag_runs_json or ""),
+    }
     summary = {
         "packet_type": "release_ci_remote_green_receipt",
         "schema_version": "release_ci_remote_green_receipt_v1",
@@ -282,6 +320,24 @@ def build_release_ci_remote_green_receipt(
             if not blockers
             else "Resolve blocked rows in GitHub runner/settings/workflow evidence, then rebuild this receipt from fresh read-only JSON."
         ),
+        "evidence_collection": {
+            "contract_schema_version": EVIDENCE_CONTRACT_SCHEMA_VERSION,
+            "contract_tool": "tools/product/release_ci_remote_green_evidence_contract.py",
+            "manifest_command": (
+                "python3 tools/product/release_ci_remote_green_evidence_contract.py --emit-manifest"
+            ),
+            "collect_commands_tool": (
+                "python3 tools/product/release_ci_remote_green_evidence_contract.py --print-commands"
+            ),
+            "receipt_builder_command": evidence_contract["receipt_builder_command"],
+            "supplied_input_paths": evidence_inputs,
+            "default_input_paths": {
+                spec["receipt_arg"]: spec["default_output_path"] for spec in evidence_contract["inputs"]
+            },
+            "gh_api_endpoints": {
+                spec["receipt_arg"]: spec["gh_api_endpoint"] for spec in evidence_contract["inputs"]
+            },
+        },
     }
     return {"summary": summary, "rows": rows, "blockers": blockers}
 

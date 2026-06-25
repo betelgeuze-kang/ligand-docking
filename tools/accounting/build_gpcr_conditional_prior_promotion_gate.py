@@ -90,6 +90,7 @@ def build_gpcr_conditional_prior_promotion_gate(
         [
             _read_text("tools/run_ligand_backmapping_scoring.py"),
             _read_text("tools/product/run_ligand_backmapping_scoring.py"),
+            _read_text("betelgeuze_engine/product/runners/backmapping_scoring.py"),
         ]
     )
     prototype_spec = _read_text("tools/accounting/build_gpcr_residual_prototype_spec.py")

@@ -97,17 +97,19 @@ def test_job_orchestration_lists_history_cancel_and_retry_without_execution(tmp_
     assert listing["jobs"][0]["rerun_manifest"]["user_id"] == "user_unit"
     assert listing["jobs"][0]["reproducible_rerun_ready"] is True
     assert listing["jobs"][0]["long_running_status_persistence_ready"] is True
-    assert listing["jobs"][0]["production_ai_inference_subject_active"] is True
+    assert listing["jobs"][0]["production_ai_inference_subject_active"] is False
     assert listing["jobs"][0]["production_ai_correction_applied"] is False
-    assert listing["jobs"][0]["production_ai_abstention_enforced"] is False
-    assert listing["jobs"][0]["production_ai_default_residual_mode"] == "production_guarded"
-    assert listing["jobs"][0]["production_ai_promotion_allowed"] is True
-    assert listing["jobs"][0]["production_ai_customer_facing_auto_correction_allowed"] is True
-    assert listing["jobs"][0]["production_ai_customer_facing_score_mutation_allowed"] is True
+    assert listing["jobs"][0]["production_ai_abstention_enforced"] is True
+    assert listing["jobs"][0]["production_ai_default_residual_mode"] == "shadow"
+    assert listing["jobs"][0]["production_ai_promotion_allowed"] is False
+    assert listing["jobs"][0]["production_ai_customer_facing_auto_correction_allowed"] is False
+    assert listing["jobs"][0]["production_ai_customer_facing_score_mutation_allowed"] is False
     assert listing["jobs"][0]["production_ai_customer_facing_ranking_mutation_allowed"] is False
-    assert listing["jobs"][0]["production_ai_trained_checkpoint_count"] == 1
-    assert listing["jobs"][0]["production_ai_abstention_reason"] == ""
-    assert listing["jobs"][0]["production_ai_what_would_change_decision"] == ""
+    assert listing["jobs"][0]["production_ai_trained_checkpoint_count"] == 0
+    assert "production checkpoint preflight is blocked" in listing["jobs"][0]["production_ai_abstention_reason"]
+    assert "promote the residual model registry out of shadow mode" in listing["jobs"][0][
+        "production_ai_what_would_change_decision"
+    ]
     assert listing["jobs"][0]["scope_claim_guard_ready"] is True
     assert listing["jobs"][0]["scope_claim_allowed_for_request"] is True
     assert listing["jobs"][0]["scope_claim_status"] == "allowed_restricted_delivery_scope"
@@ -115,7 +117,7 @@ def test_job_orchestration_lists_history_cancel_and_retry_without_execution(tmp_
     assert listing["jobs"][0]["ai_decision_graph_trace_ready"] is True
     assert listing["jobs"][0]["ai_decision_graph_node_count"] == 7
     assert listing["jobs"][0]["ai_decision_graph_edge_count"] == 6
-    assert listing["jobs"][0]["ai_decision_graph_abstention_node_id"] == ""
+    assert listing["jobs"][0]["ai_decision_graph_abstention_node_id"] == "uncertainty_abstention_guard"
     assert listing["jobs"][0]["ai_decision_graph_current_node_id"] == "customer_report_ux"
     assert listing["jobs"][0]["customer_report_explanation_ready"] is True
     assert listing["jobs"][0]["customer_report_card_ready"] is True
@@ -124,9 +126,7 @@ def test_job_orchestration_lists_history_cancel_and_retry_without_execution(tmp_
     assert listing["jobs"][0]["customer_report_selection_rationale_ready"] is True
     assert listing["jobs"][0]["customer_report_uncertainty_posture_ready"] is True
     assert listing["jobs"][0]["customer_report_prohibited_claims_ready"] is True
-    assert listing["jobs"][0]["customer_report_uncertainty_posture"] == (
-        "production_guarded_active_customer_ranking_locked"
-    )
+    assert listing["jobs"][0]["customer_report_uncertainty_posture"] == "production_ai_abstained"
     assert "fresh_docking_pose_claim" in listing["jobs"][0]["customer_report_prohibited_claims"]
     assert listing["jobs"][0]["customer_report_ready_block_count"] == 7
     assert listing["jobs"][0]["customer_report_required_block_count"] == 7
@@ -190,17 +190,19 @@ def test_job_orchestration_lists_history_cancel_and_retry_without_execution(tmp_
     assert history["root_job_id"] == "job_1"
     assert history["event_actors"] == ["qa", "unit-test"]
     assert history["event_count"] == 3
-    assert history["production_ai_inference_subject_active"] is True
+    assert history["production_ai_inference_subject_active"] is False
     assert history["production_ai_correction_applied"] is False
-    assert history["production_ai_abstention_enforced"] is False
-    assert history["production_ai_customer_facing_auto_correction_allowed"] is True
-    assert history["production_ai_customer_facing_score_mutation_allowed"] is True
+    assert history["production_ai_abstention_enforced"] is True
+    assert history["production_ai_customer_facing_auto_correction_allowed"] is False
+    assert history["production_ai_customer_facing_score_mutation_allowed"] is False
     assert history["production_ai_customer_facing_ranking_mutation_allowed"] is False
-    assert history["production_ai_default_residual_mode"] == "production_guarded"
-    assert history["production_ai_trained_checkpoint_count"] == 1
-    assert history["production_ai_selected_sidecar_missing_output_fields"] == []
-    assert history["production_ai_abstention_reason"] == ""
-    assert history["production_ai_what_would_change_decision"] == ""
+    assert history["production_ai_default_residual_mode"] == "shadow"
+    assert history["production_ai_trained_checkpoint_count"] == 0
+    assert history["production_ai_selected_sidecar_missing_output_fields"] == ["delta_force"]
+    assert "production checkpoint preflight is blocked" in history["production_ai_abstention_reason"]
+    assert "promote the residual model registry out of shadow mode" in history[
+        "production_ai_what_would_change_decision"
+    ]
     assert history["scope_claim_guard_ready"] is True
     assert history["scope_claim_allowed_for_request"] is True
     assert history["scope_claim_status"] == "allowed_restricted_delivery_scope"
@@ -208,7 +210,7 @@ def test_job_orchestration_lists_history_cancel_and_retry_without_execution(tmp_
     assert history["ai_decision_graph_trace_ready"] is True
     assert history["ai_decision_graph_node_count"] == 7
     assert history["ai_decision_graph_edge_count"] == 6
-    assert history["ai_decision_graph_abstention_node_id"] == ""
+    assert history["ai_decision_graph_abstention_node_id"] == "uncertainty_abstention_guard"
     assert history["ai_decision_graph_current_node_id"] == "customer_report_ux"
     assert history["ai_decision_graph_trace"][0]["node_id"] == "structure_quality"
     assert history["ai_decision_graph_edges"][0]["from_node"] == "structure_quality"
@@ -219,7 +221,7 @@ def test_job_orchestration_lists_history_cancel_and_retry_without_execution(tmp_
     assert history["customer_report_selection_rationale_ready"] is True
     assert history["customer_report_uncertainty_posture_ready"] is True
     assert history["customer_report_prohibited_claims_ready"] is True
-    assert history["customer_report_uncertainty_posture"] == "production_guarded_active_customer_ranking_locked"
+    assert history["customer_report_uncertainty_posture"] == "production_ai_abstained"
     assert "customer_facing_ranking_mutation_claim" in history["customer_report_prohibited_claims"]
     assert history["customer_report_ready_block_count"] == 7
     assert history["customer_report_required_block_count"] == 7

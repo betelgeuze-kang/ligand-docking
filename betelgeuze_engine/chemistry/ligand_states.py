@@ -105,11 +105,31 @@ class LigandEnumeratedState:
     formal_charge_sum: int = 0
     charged_atom_count: int = 0
     atom_count: int = 0
+    atom_elements: tuple[str, ...] = ()
+    formal_charges: tuple[int, ...] = ()
+    bond_count: int = 0
+    bonds: tuple[dict[str, Any], ...] = ()
+    feature_source: str = "not_assessed"
+    feature_sites: tuple[dict[str, Any], ...] = ()
+    donor_site_count: int = 0
+    acceptor_site_count: int = 0
+    chiral_center_count: int = 0
+    specified_chiral_center_count: int = 0
+    unassigned_chiral_center_count: int = 0
+    potential_stereo_count: int = 0
+    specified_stereo_count: int = 0
+    unassigned_stereo_count: int = 0
+    unassigned_stereo_bond_count: int = 0
+    chirality_status: str = "not_assessed"
     claim_safe_blockers: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
         payload["claim_safe_blockers"] = list(self.claim_safe_blockers)
+        payload["atom_elements"] = list(self.atom_elements)
+        payload["formal_charges"] = list(self.formal_charges)
+        payload["bonds"] = [dict(row) for row in self.bonds]
+        payload["feature_sites"] = [dict(row) for row in self.feature_sites]
         return payload
 
 
@@ -234,6 +254,31 @@ def _mol_to_isomeric_smiles(mol: Any) -> str:
     if Chem is None or mol is None:
         return ""
     return Chem.MolToSmiles(mol, isomericSmiles=True)
+
+
+def _topology_summary(mol: Any) -> dict[str, Any]:
+    if Chem is None or mol is None:
+        return {
+            "atom_elements": (),
+            "formal_charges": (),
+            "bond_count": 0,
+            "bonds": (),
+        }
+    bonds = tuple(
+        {
+            "begin_atom_idx": int(bond.GetBeginAtomIdx()),
+            "end_atom_idx": int(bond.GetEndAtomIdx()),
+            "bond_type": str(bond.GetBondType()),
+            "is_aromatic": bool(bond.GetIsAromatic()),
+        }
+        for bond in mol.GetBonds()
+    )
+    return {
+        "atom_elements": tuple(str(atom.GetSymbol()) for atom in mol.GetAtoms()),
+        "formal_charges": tuple(int(atom.GetFormalCharge()) for atom in mol.GetAtoms()),
+        "bond_count": int(mol.GetNumBonds()),
+        "bonds": bonds,
+    }
 
 
 def _single_atom_charge_projection_smiles(
@@ -426,6 +471,8 @@ def enumerate_ligand_states_from_smiles(smiles: str, *, max_states: int = 4) -> 
     limit = int(max(1, max_states))
     chemistry = ligand_chemistry_state_from_smiles(smi)
     if not chemistry.valid or Chem is None:
+        mol = Chem.MolFromSmiles(smi) if Chem is not None else None
+        topology = _topology_summary(mol)
         return (
             LigandEnumeratedState(
                 state_id="ligand_state_00_input",
@@ -448,7 +495,23 @@ def enumerate_ligand_states_from_smiles(smiles: str, *, max_states: int = 4) -> 
                 fragment_count=int(chemistry.fragment_count),
                 formal_charge_sum=int(chemistry.formal_charge_sum),
                 charged_atom_count=int(chemistry.charged_atom_count),
-                atom_count=0,
+                atom_count=int(mol.GetNumAtoms()) if mol is not None else 0,
+                atom_elements=tuple(topology["atom_elements"]),
+                formal_charges=tuple(topology["formal_charges"]),
+                bond_count=int(topology["bond_count"]),
+                bonds=tuple(topology["bonds"]),
+                feature_source=chemistry.feature_source,
+                feature_sites=tuple(site.to_dict() for site in chemistry.feature_sites),
+                donor_site_count=int(chemistry.donor_site_count),
+                acceptor_site_count=int(chemistry.acceptor_site_count),
+                chiral_center_count=int(chemistry.chiral_center_count),
+                specified_chiral_center_count=int(chemistry.specified_chiral_center_count),
+                unassigned_chiral_center_count=int(chemistry.unassigned_chiral_center_count),
+                potential_stereo_count=int(chemistry.potential_stereo_count),
+                specified_stereo_count=int(chemistry.specified_stereo_count),
+                unassigned_stereo_count=int(chemistry.unassigned_stereo_count),
+                unassigned_stereo_bond_count=int(chemistry.unassigned_stereo_bond_count),
+                chirality_status=chemistry.chirality_status,
                 claim_safe_blockers=chemistry.claim_safe_blockers,
             ),
         )
@@ -501,6 +564,7 @@ def enumerate_ligand_states_from_smiles(smiles: str, *, max_states: int = 4) -> 
             projection_blockers.append("protonation_enumeration_limited_no_pka_calibration")
             projection_blockers.append("ph_range_protomer_heuristic_not_product_safe")
         protonation_target_ph = protonation_target_by_smiles.get(candidate_smiles)
+        topology = _topology_summary(candidate_mol)
         states.append(
             LigandEnumeratedState(
                 state_id=f"ligand_state_{len(states):02d}_{state_kind}",
@@ -526,6 +590,22 @@ def enumerate_ligand_states_from_smiles(smiles: str, *, max_states: int = 4) -> 
                 formal_charge_sum=int(candidate_chemistry.formal_charge_sum),
                 charged_atom_count=int(candidate_chemistry.charged_atom_count),
                 atom_count=int(candidate_mol.GetNumAtoms()) if candidate_mol is not None else 0,
+                atom_elements=tuple(topology["atom_elements"]),
+                formal_charges=tuple(topology["formal_charges"]),
+                bond_count=int(topology["bond_count"]),
+                bonds=tuple(topology["bonds"]),
+                feature_source=candidate_chemistry.feature_source,
+                feature_sites=tuple(site.to_dict() for site in candidate_chemistry.feature_sites),
+                donor_site_count=int(candidate_chemistry.donor_site_count),
+                acceptor_site_count=int(candidate_chemistry.acceptor_site_count),
+                chiral_center_count=int(candidate_chemistry.chiral_center_count),
+                specified_chiral_center_count=int(candidate_chemistry.specified_chiral_center_count),
+                unassigned_chiral_center_count=int(candidate_chemistry.unassigned_chiral_center_count),
+                potential_stereo_count=int(candidate_chemistry.potential_stereo_count),
+                specified_stereo_count=int(candidate_chemistry.specified_stereo_count),
+                unassigned_stereo_count=int(candidate_chemistry.unassigned_stereo_count),
+                unassigned_stereo_bond_count=int(candidate_chemistry.unassigned_stereo_bond_count),
+                chirality_status=candidate_chemistry.chirality_status,
                 claim_safe_blockers=tuple(dict.fromkeys(projection_blockers)),
             )
         )

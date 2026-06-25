@@ -8,7 +8,7 @@ if [[ ! -f "$prompt_file" ]]; then
   exit 2
 fi
 
-CURSOR_AGENT_MODEL="${CURSOR_AGENT_MODEL:-auto}"
+CURSOR_AGENT_MODEL="${CURSOR_AGENT_MODEL:-composer-2.5}"
 CURSOR_AGENT_SANDBOX="${CURSOR_AGENT_SANDBOX:-enabled}"
 
 if ! command -v cursor-agent >/dev/null 2>&1 && [ -x "${HOME}/.local/bin/cursor-agent" ]; then

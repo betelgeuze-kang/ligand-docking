@@ -275,7 +275,7 @@ def _top20_gate(ci_payload: dict[str, Any], triage_payload: dict[str, Any]) -> d
 
 def _triage_gate(payload: dict[str, Any], leakage_payload: dict[str, Any] | None = None) -> dict[str, Any]:
     leakage_payload = leakage_payload or {}
-    if _source_available(leakage_payload):
+    if _source_available(payload) and _source_available(leakage_payload):
         failed_rules = leakage_payload.get("failed_rules") if isinstance(leakage_payload.get("failed_rules"), list) else []
         leakage_pass = leakage_payload.get("pass") is True and not failed_rules
         blockers: list[str] = []
