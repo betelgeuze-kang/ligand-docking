@@ -25,6 +25,12 @@ class Settings(BaseSettings):
         "local-dev-result-manifest-signing-key-change-me",
     )
     api_result_manifest_key_id: str = os.getenv("API_RESULT_MANIFEST_KEY_ID", "local-dev")
+    # Encrypted private payload store (raw customer inputs at rest). When
+    # docking_private_payload_keys is empty the store is disabled and the
+    # pipeline degrades to ledger redaction only (fail-closed).
+    docking_private_payload_keys: str = os.getenv("DOCKING_PRIVATE_PAYLOAD_KEYS", "")
+    docking_private_payload_dir: str = os.getenv("DOCKING_PRIVATE_PAYLOAD_DIR", "./results/private_payloads")
+    docking_private_payload_ttl_seconds: int = int(os.getenv("DOCKING_PRIVATE_PAYLOAD_TTL_SECONDS", str(7 * 24 * 3600)))
     redis_host: str = os.getenv("REDIS_HOST", "localhost")
     redis_port: int = int(os.getenv("REDIS_PORT", 6379))
     redis_db: int = int(os.getenv("REDIS_DB", 0))
