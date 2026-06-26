@@ -61,6 +61,40 @@ def test_htvs_materializer_rejects_redacted_hash_only_ligand(tmp_path: Path) -> 
         materialize_htvs(str(request_path), out_dir=str(tmp_path / "out"))
 
 
+def test_htvs_materializer_error_exposes_structured_reason(tmp_path: Path) -> None:
+    request_path = _write_request(
+        tmp_path / "request.json",
+        {
+            "ligand_count": 1,
+            "ligands": [{"ligand_id": "LIG-001", "sdf_path": "/tmp/x.sdf"}],
+            "runner_execution_mode": "restricted-production",
+            "runner_synthetic_input_allowed": False,
+            "allow_synthetic_ligand_input": False,
+        },
+    )
+
+    with pytest.raises(DockingMaterializationError) as excinfo:
+        materialize_htvs(str(request_path), out_dir=str(tmp_path / "out"))
+
+    # The category (reason_code) is stable; the offending source kind is detail.
+    assert excinfo.value.reason_code == "unsupported_ligand_source_for_htvs_materialization"
+    assert excinfo.value.reason_detail == "sdf_path"
+    # str() stays backward compatible for any legacy message matching.
+    assert str(excinfo.value) == "unsupported_ligand_source_for_htvs_materialization:sdf_path"
+
+
+def test_dispatch_outcome_exposes_structured_reason(tmp_path: Path) -> None:
+    from api.docking_dispatch import dispatch_docking_job_if_eligible
+
+    # A non-eligible record returns early; the outcome carries both the legacy
+    # reason string and the structured reason_code/reason_detail.
+    outcome = dispatch_docking_job_if_eligible({"status": "blocked"}, jobs_dir=tmp_path)
+    assert outcome["dispatched"] is False
+    assert outcome["reason"] == "status_not_accepted_fail_closed"
+    assert outcome["reason_code"] == "status_not_accepted_fail_closed"
+    assert outcome["reason_detail"] == ""
+
+
 def test_backmapping_materializer_rejects_empty_ligand_input(tmp_path: Path) -> None:
     request_path = _write_request(
         tmp_path / "request.json",
