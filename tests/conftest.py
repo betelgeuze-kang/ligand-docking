@@ -12,8 +12,26 @@ _CI_INTEGRATION_FILES = {
     "test_api_product_import.py",
 }
 
+_LIGHTWEIGHT_CONTRACT_FILES = {
+    "test_release_claim_evidence_ladder_gate.py",
+    "test_product_docking_response_snapshot.py",
+    "test_benchmark_contract.py",
+}
+
+
+def _requested_test_file_names(config) -> set[str]:
+    names: set[str] = set()
+    for arg in getattr(config, "args", []) or []:
+        text = str(arg)
+        if text.endswith(".py"):
+            names.add(Path(text).name)
+    return names
+
 
 def pytest_sessionstart(session) -> None:
+    requested = _requested_test_file_names(session.config)
+    if requested and requested <= _LIGHTWEIGHT_CONTRACT_FILES:
+        return
     root = Path(__file__).resolve().parents[1]
     capability = root / "runs" / "product_capability_surface_contract_current.json"
     if capability.exists():
