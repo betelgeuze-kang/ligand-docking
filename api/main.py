@@ -39,6 +39,7 @@ from api.simulation_scope import (
 )
 from api.tasks import run_simulation_async
 from api.config import settings
+from api.startup_preflight import run_startup_preflight, check_key_staleness
 from api.job_store import SQLiteJobStore, get_configured_job_store
 from api.security import ProductSecurityMiddleware, security_metrics_text
 from api.worker import (
@@ -50,6 +51,10 @@ from api.worker import (
     write_status_file,
 )
 from betelgeuze_product.tier_beta_vertical_slice import is_tier_beta_vertical_slice_request
+
+# --- Startup preflight: fail fast on fatal misconfigurations ---
+run_startup_preflight(settings)
+check_key_staleness(settings)
 
 app = FastAPI(title=settings.app_name)
 app.add_middleware(ProductSecurityMiddleware)
