@@ -17,11 +17,19 @@ class _FakeSettings:
         product_api_token: str = "",
         docking_private_payload_keys: str = "",
         product_api_secret_rotation_days: int = 30,
+        product_api_hosted_exposure_approved: bool = False,
+        product_api_tls_termination_operator_verified: bool = False,
+        api_result_manifest_signing_key: str = "local-dev-result-manifest-signing-key-change-me",
+        api_result_manifest_key_id: str = "local-dev",
     ) -> None:
         self.product_api_auth_required = product_api_auth_required
         self.product_api_token = product_api_token
         self.docking_private_payload_keys = docking_private_payload_keys
         self.product_api_secret_rotation_days = product_api_secret_rotation_days
+        self.product_api_hosted_exposure_approved = product_api_hosted_exposure_approved
+        self.product_api_tls_termination_operator_verified = product_api_tls_termination_operator_verified
+        self.api_result_manifest_signing_key = api_result_manifest_signing_key
+        self.api_result_manifest_key_id = api_result_manifest_key_id
 
 
 # --- run_startup_preflight tests ---
@@ -44,19 +52,68 @@ def test_auth_required_whitespace_token_raises_system_exit() -> None:
 
 
 def test_auth_not_required_empty_token_does_not_raise() -> None:
-    """auth_required=False + empty token should not raise."""
+    """auth_required=False + empty token should not raise for local/dev exposure."""
     settings = _FakeSettings(product_api_auth_required=False, product_api_token="")
-    # Should complete without error
     run_startup_preflight(settings)
 
 
 def test_auth_required_valid_token_does_not_raise() -> None:
-    """auth_required=True + non-empty token should not raise."""
+    """auth_required=True + non-empty token should not raise for local/dev exposure."""
     settings = _FakeSettings(
         product_api_auth_required=True, product_api_token="my-secret-token"
     )
-    # Should complete without error
     run_startup_preflight(settings)
+
+
+def _hosted_settings(**overrides: object) -> _FakeSettings:
+    payload = {
+        "product_api_hosted_exposure_approved": True,
+        "product_api_auth_required": True,
+        "product_api_token": "operator-token",
+        "product_api_tls_termination_operator_verified": True,
+        "api_result_manifest_signing_key": "operator-managed-signing-secret",
+        "api_result_manifest_key_id": "product-key-v1",
+        "docking_private_payload_keys": "k1:YWJjZGVmZ2hpamtsbW5vcA==",
+    }
+    payload.update(overrides)
+    return _FakeSettings(**payload)
+
+
+def test_hosted_exposure_requires_auth_required() -> None:
+    with pytest.raises(SystemExit, match="PRODUCT_API_AUTH_REQUIRED"):
+        run_startup_preflight(
+            _hosted_settings(product_api_auth_required=False)
+        )
+
+
+def test_hosted_exposure_requires_tls_verified() -> None:
+    with pytest.raises(SystemExit, match="TLS_TERMINATION"):
+        run_startup_preflight(
+            _hosted_settings(product_api_tls_termination_operator_verified=False)
+        )
+
+
+def test_hosted_exposure_blocks_dev_manifest_signing_key() -> None:
+    with pytest.raises(SystemExit, match="API_RESULT_MANIFEST_SIGNING_KEY"):
+        run_startup_preflight(
+            _hosted_settings(
+                api_result_manifest_signing_key="local-dev-result-manifest-signing-key-change-me"
+            )
+        )
+
+
+def test_hosted_exposure_blocks_dev_manifest_key_id() -> None:
+    with pytest.raises(SystemExit, match="API_RESULT_MANIFEST_KEY_ID"):
+        run_startup_preflight(_hosted_settings(api_result_manifest_key_id="local-dev"))
+
+
+def test_hosted_exposure_requires_private_payload_keys() -> None:
+    with pytest.raises(SystemExit, match="DOCKING_PRIVATE_PAYLOAD_KEYS"):
+        run_startup_preflight(_hosted_settings(docking_private_payload_keys=""))
+
+
+def test_hosted_exposure_with_operator_security_controls_does_not_raise() -> None:
+    run_startup_preflight(_hosted_settings())
 
 
 # --- check_key_staleness tests ---
