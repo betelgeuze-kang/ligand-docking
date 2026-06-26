@@ -7,8 +7,12 @@ on:
       - "betelgeuze_product/engine_dispatch.py"
       - "betelgeuze_product/job_terminal_state.py"
       - "betelgeuze_product/payload_privacy.py"
+      - "betelgeuze_product/docking_response.py"
+      - "betelgeuze_product/api_contract.py"
       - "betelgeuze_product/private_payload_store.py"
       - "betelgeuze_product/docking_private_payload.py"
+      - "betelgeuze_product/structured_reason.py"
+      - "betelgeuze_product/docking_materialization_errors.py"
       - "tools/run_api_simulation_worker.py"
       - "tools/smoke_alert_delivery.py"
       - "tools/product/materialize_docking_htvs_request.py"
@@ -58,8 +62,11 @@ on:
       - "tests/unit/test_api_worker_deploy_artifacts.py"
       - "tests/unit/test_api_security_middleware.py"
       - "tests/unit/test_payload_privacy.py"
+      - "tests/unit/test_product_docking_response_contract.py"
+      - "tests/unit/test_build_product_api_contract.py"
       - "tests/unit/test_private_payload_store.py"
       - "tests/unit/test_docking_private_payload.py"
+      - "tests/unit/test_structured_reason.py"
       - "tests/unit/test_build_pdbbind_casf_pose_affinity_results.py"
       - ".github/workflows/product-api-worker.yml"
   pull_request:
@@ -68,8 +75,12 @@ on:
       - "betelgeuze_product/engine_dispatch.py"
       - "betelgeuze_product/job_terminal_state.py"
       - "betelgeuze_product/payload_privacy.py"
+      - "betelgeuze_product/docking_response.py"
+      - "betelgeuze_product/api_contract.py"
       - "betelgeuze_product/private_payload_store.py"
       - "betelgeuze_product/docking_private_payload.py"
+      - "betelgeuze_product/structured_reason.py"
+      - "betelgeuze_product/docking_materialization_errors.py"
       - "tools/run_api_simulation_worker.py"
       - "tools/smoke_alert_delivery.py"
       - "tools/product/materialize_docking_htvs_request.py"
@@ -119,8 +130,11 @@ on:
       - "tests/unit/test_api_worker_deploy_artifacts.py"
       - "tests/unit/test_api_security_middleware.py"
       - "tests/unit/test_payload_privacy.py"
+      - "tests/unit/test_product_docking_response_contract.py"
+      - "tests/unit/test_build_product_api_contract.py"
       - "tests/unit/test_private_payload_store.py"
       - "tests/unit/test_docking_private_payload.py"
+      - "tests/unit/test_structured_reason.py"
       - "tests/unit/test_build_pdbbind_casf_pose_affinity_results.py"
       - ".github/workflows/product-api-worker.yml"
   workflow_dispatch:
@@ -163,8 +177,13 @@ jobs:
             betelgeuze_product/engine_dispatch.py \
             betelgeuze_product/job_terminal_state.py \
             betelgeuze_product/payload_privacy.py \
+            betelgeuze_product/docking_response.py \
+            betelgeuze_product/api_contract.py \
+            api/product_docking.py \
             betelgeuze_product/private_payload_store.py \
             betelgeuze_product/docking_private_payload.py \
+            betelgeuze_product/structured_reason.py \
+            betelgeuze_product/docking_materialization_errors.py \
             deploy/model_registry.py \
             deploy/upload_model.py \
             deploy/download_model.py \
@@ -215,8 +234,11 @@ jobs:
             tests/unit/test_api_worker_deploy_artifacts.py \
             tests/unit/test_api_security_middleware.py \
             tests/unit/test_payload_privacy.py \
+            tests/unit/test_product_docking_response_contract.py \
+            tests/unit/test_build_product_api_contract.py \
             tests/unit/test_private_payload_store.py \
             tests/unit/test_docking_private_payload.py \
+            tests/unit/test_structured_reason.py \
             tests/unit/test_build_pdbbind_casf_pose_affinity_results.py \
             tests/unit/test_deploy_model_registry.py \
             tests/unit/test_product_release_bundle.py \

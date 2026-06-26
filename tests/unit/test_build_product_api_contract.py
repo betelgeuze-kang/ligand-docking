@@ -45,36 +45,32 @@ def test_build_product_api_contract_tool_writes_outputs(tmp_path: Path) -> None:
     docking_response = mod.build_product_api_contract.__globals__[
         "REQUIRED_DOCKING_RESPONSE_KEYS"
     ]
-    assert "ai_decision_graph_trace_ready" in docking_response
-    assert "ai_decision_graph_ordered_path" in docking_response
-    assert "ai_decision_graph_node_count" in docking_response
-    assert "ai_decision_graph_edge_count" in docking_response
-    assert "ai_decision_graph_abstention_node_id" in docking_response
-    assert "ai_decision_graph_current_node_id" in docking_response
-    assert "ai_decision_graph_trace" in docking_response
-    assert "ai_decision_graph_edges" in docking_response
-    assert "workflow_controls_ready" in docking_response
-    assert "workflow_control_links" in docking_response
-    assert "workflow_allowed_actions" in docking_response
-    assert "workflow_disabled_actions" in docking_response
-    assert "workflow_next_customer_actions" in docking_response
-    assert "status_transition_contract" in docking_response
-    assert "customer_report_card_ready" in docking_response
-    assert "customer_report_delivery_contract_ready" in docking_response
-    assert "customer_report_evidence_binding_ready" in docking_response
-    assert "customer_report_selection_rationale_ready" in docking_response
-    assert "customer_report_uncertainty_posture_ready" in docking_response
-    assert "customer_report_prohibited_claims_ready" in docking_response
-    assert "customer_report_selection_rationale" in docking_response
-    assert "customer_report_uncertainty_posture" in docking_response
-    assert "customer_report_prohibited_claims" in docking_response
-    assert "customer_report_required_block_count" in docking_response
-    assert "customer_report_ready_block_count" in docking_response
-    assert "customer_report_blocked_block_count" in docking_response
-    assert "customer_report_section_count" in docking_response
-    assert "customer_report_required_blocks" in docking_response
-    assert "customer_report_card" in docking_response
-    assert "customer_report_sections" in docking_response
+    # Slim, grouped customer/GUI contract: top-level identity/status fields plus
+    # grouped summaries. Verbose internals are debug-only and the internal
+    # ledger_path is never part of the public contract.
+    for grouped_key in ("validation", "structure", "progress", "dispatch", "claim", "links"):
+        assert grouped_key in docking_response
+    for top_level_key in (
+        "job_id",
+        "status",
+        "request_type",
+        "family",
+        "target_id",
+        "customer_id",
+        "user_id",
+        "validation_status",
+        "execution_enabled",
+        "docking_results_emitted",
+        "claim_boundary",
+    ):
+        assert top_level_key in docking_response
+    # The internal filesystem ledger_path must never be exposed in the contract.
+    assert "ledger_path" not in docking_response
+    # Verbose internal diagnostics are returned only under debug=True and are not
+    # part of the required public contract.
+    assert "ai_decision_graph_trace" not in docking_response
+    assert "customer_report_sections" not in docking_response
+    assert "workflow_control_links" not in docking_response
 
     ai_report_ux_keys = REQUIRED_STATUS_DOMAIN_KEYS["get_product_ai_report_ux"]
     assert "ligand_selection_rationale_ready" in ai_report_ux_keys
