@@ -92,6 +92,24 @@ def write_restricted_scope_breadth_contract(runs_dir: Path) -> None:
 def write_restricted_self_hosted_commercial_packets(runs_dir: Path) -> None:
     write_restricted_scope_breadth_contract(runs_dir)
     _write(
+        runs_dir / "restricted_unattended_execution_readiness_current.json",
+        {
+            "summary": {
+                "packet_type": "restricted_unattended_execution_readiness",
+                "status": "restricted_unattended_execution_wiring_ready",
+                "restricted_unattended_execution_ready": True,
+                "restricted_unattended_execution_runtime_ready": False,
+                "allowed_scope_families": ["gpcr", "ion_channel", "kinase"],
+                "gate_count": 5,
+                "blocked_gate_count": 0,
+                "operator_pending_gate_count": 1,
+                "execution_enabled": False,
+                "docking_results_emitted": False,
+                "external_state_mutated": False,
+            }
+        },
+    )
+    _write(
         runs_dir / "product_commercial_independence_gate_current.json",
         {
             "summary": {
