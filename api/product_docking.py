@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from api.config import settings
 from api.docking_dispatch import dispatch_docking_job_if_eligible
 from api.job_store import get_configured_job_store
+from betelgeuze_product.docking_private_payload import configured_store, store_docking_request
 from betelgeuze_product.docking_request import build_docking_job_record, persist_docking_job_record
 from betelgeuze_product.job_orchestration import (
     cancel_job_record,
@@ -93,6 +94,16 @@ async def submit_docking_job(payload: DockingJobRequest, request: Request) -> di
         scope_claim_guard_packet=_read_json_object(PRODUCT_SCOPE_CLAIM_GUARD_ARTIFACT),
     )
     path = persist_docking_job_record(record, _jobs_dir())
+    # Persist the ORIGINAL request encrypted at rest, bound to job_id and the
+    # ledger request_sha256. The public ledger keeps only the redacted form;
+    # materialization recovers the raw inputs from this store. Fail-closed:
+    # no-op when the store is not configured.
+    store_docking_request(
+        configured_store(),
+        job_id=record["job_id"],
+        request_sha256=record["request_sha256"],
+        request=_model_to_dict(payload),
+    )
     dispatch_outcome = dispatch_docking_job_if_eligible(
         record,
         jobs_dir=_jobs_dir(),

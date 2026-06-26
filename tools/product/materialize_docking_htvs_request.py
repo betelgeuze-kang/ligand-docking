@@ -88,6 +88,32 @@ def _has_materializable_source(ligand: Any) -> bool:
     )
 
 
+def _recover_private_ligands(docking_job_id: str, request_sha256: str) -> list[dict[str, Any]]:
+    """Recover original ligand sources from the encrypted private payload store.
+
+    Bound to ``docking_job_id`` + ``request_sha256``. Returns ``[]`` (fail-closed)
+    when the store is unconfigured, the binding mismatches, or no payload exists.
+    The recovery logic lives in the dependency-free
+    ``betelgeuze_product.docking_private_payload`` helper so this module's heavy
+    imports do not leak into it.
+    """
+
+    if not docking_job_id or not request_sha256:
+        return []
+    try:
+        from betelgeuze_product.docking_private_payload import (
+            configured_store,
+            recover_request_ligands,
+        )
+
+        recovered = recover_request_ligands(
+            configured_store(), job_id=docking_job_id, request_sha256=request_sha256
+        )
+    except Exception:
+        return []
+    return recovered or []
+
+
 def _estimate_expected_ligand_count(
     *,
     params: dict[str, Any],
@@ -137,6 +163,13 @@ def _resolve_materialization_inputs(
     param_ligands = params.get("ligands")
     if isinstance(param_ligands, list) and param_ligands:
         candidate_lists.append([row for row in param_ligands if isinstance(row, dict)])
+
+    # When the ledger/queue carry only redacted ligand sources, recover the
+    # original sources from the encrypted private payload store (bound to
+    # docking_job_id + request_sha256). Preferred over redacted candidate lists.
+    recovered_ligands = _recover_private_ligands(docking_job_id, _text(params.get("request_sha256")))
+    if recovered_ligands:
+        candidate_lists.insert(0, recovered_ligands)
 
     ligands = next(
         (
