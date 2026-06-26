@@ -4,6 +4,8 @@ import ast
 from pathlib import Path
 from typing import Any
 
+from betelgeuze_product.docking_response import DOCKING_SUBMISSION_TOP_LEVEL_KEYS
+
 CLAIM_BOUNDARY = (
     "Product API contract only; it statically audits the local product API route and schema surface for commercial "
     "handoff. It does not start a server, run docking, write licenses, assemble bundles, upload, or mutate external "
@@ -125,104 +127,12 @@ EXPECTED_MODEL_FIELDS = {
     "JobActionRequest": {"reason", "actor"},
 }
 
-REQUIRED_DOCKING_RESPONSE_KEYS = {
-    "job_id",
-    "status",
-    "customer_id",
-    "user_id",
-    "validation_status",
-    "blocker_count",
-    "warning_count",
-    "structure_analysis_status",
-    "structure_source_available",
-    "structure_atom_count",
-    "structure_chain_count",
-    "structure_ligand_like_residue_count",
-    "execution_enabled",
-    "docking_results_emitted",
-    "production_ai_inference_subject_active",
-    "production_ai_correction_applied",
-    "production_ai_abstention_enforced",
-    "production_ai_abstention_reason",
-    "production_ai_what_would_change_decision",
-    "production_ai_default_residual_mode",
-    "production_ai_promotion_allowed",
-    "production_ai_customer_facing_auto_correction_allowed",
-    "production_ai_customer_facing_score_mutation_allowed",
-    "production_ai_customer_facing_ranking_mutation_allowed",
-    "production_ai_trained_checkpoint_count",
-    "production_ai_selected_sidecar_ready",
-    "production_ai_selected_sidecar_missing_output_fields",
-    "production_ai_blocked_reason",
-    "scope_claim_guard_ready",
-    "scope_claim_allowed_for_request",
-    "scope_claim_status",
-    "allowed_scope_families",
-    "blocked_claim_scopes",
-    "claim_blocked_domains",
-    "general_platform_claim_allowed",
-    "scope_claim_boundary_detail",
-    "ai_decision_graph_trace_ready",
-    "ai_decision_graph_ordered_path",
-    "ai_decision_graph_node_count",
-    "ai_decision_graph_edge_count",
-    "ai_decision_graph_blocked_node_ids",
-    "ai_decision_graph_abstention_node_id",
-    "ai_decision_graph_current_node_id",
-    "ai_decision_graph_trace",
-    "ai_decision_graph_edges",
-    "customer_report_explanation_ready",
-    "customer_report_card_ready",
-    "customer_report_delivery_contract_ready",
-    "customer_report_evidence_binding_ready",
-    "customer_report_selection_rationale_ready",
-    "customer_report_uncertainty_posture_ready",
-    "customer_report_prohibited_claims_ready",
-    "customer_report_selection_rationale",
-    "customer_report_uncertainty_posture",
-    "customer_report_prohibited_claims",
-    "customer_report_required_block_count",
-    "customer_report_ready_block_count",
-    "customer_report_blocked_block_count",
-    "customer_report_section_count",
-    "customer_report_required_blocks",
-    "customer_report_ready_blocks",
-    "customer_report_missing_blocks",
-    "customer_report_primary_abstention_reason",
-    "customer_report_what_would_change_decision",
-    "customer_report_card",
-    "customer_report_sections",
-    "progress_percent",
-    "progress_state",
-    "current_step",
-    "worker_state",
-    "worker_lease_id",
-    "worker_id",
-    "heartbeat_at_utc",
-    "worker_cancel_acknowledged",
-    "worker_cancel_acknowledged_at_utc",
-    "queue_status",
-    "queue_position",
-    "max_retry_attempts",
-    "retry_policy",
-    "retry_limit_reached",
-    "progress_percent_range_valid",
-    "status_progress_contract_ready",
-    "workflow_controls_ready",
-    "workflow_control_links",
-    "workflow_allowed_actions",
-    "workflow_disabled_actions",
-    "workflow_next_customer_actions",
-    "status_transition_contract",
-    "status_snapshot_persisted",
-    "job_retention_policy",
-    "job_retention_days",
-    "rerun_manifest_ready",
-    "reproducible_rerun_ready",
-    "long_running_status_persistence_ready",
-    "ledger_path",
-    "claim_boundary",
-}
+# The docking submission response is intentionally slim and grouped. The stable
+# top-level keys are defined once in betelgeuze_product.docking_response so the
+# static contract check and the live response cannot drift apart. Internal
+# diagnostics (debug-only) and the internal ledger_path are deliberately not
+# part of the required public contract.
+REQUIRED_DOCKING_RESPONSE_KEYS = set(DOCKING_SUBMISSION_TOP_LEVEL_KEYS)
 
 REQUIRED_STATUS_RESPONSE_KEYS = {
     "status",
@@ -3502,6 +3412,70 @@ def _status_response_helper_functions(
     return helpers
 
 
+def _api_module_paths(root: Path) -> list[Path]:
+    """Return the product API source files that hold endpoint definitions.
+
+    The product API surface is split across ``api/product.py`` (aggregator /
+    re-export) and the ``api/product_*.py`` modules where the route handlers and
+    request models actually live. The contract analyzer must parse all of them.
+    """
+
+    api_dir = root / "api"
+    candidates = [api_dir / "product.py", *sorted(api_dir.glob("product_*.py"))]
+    seen: set[Path] = set()
+    paths: list[Path] = []
+    for path in candidates:
+        if path.is_file() and path not in seen:
+            seen.add(path)
+            paths.append(path)
+    return paths
+
+
+def _aggregate_api_trees(root: Path) -> list[ast.Module]:
+    trees: list[ast.Module] = []
+    for path in _api_module_paths(root):
+        tree = _parse_module(path)
+        if tree is not None:
+            trees.append(tree)
+    return trees
+
+
+def _function_nodes_multi(
+    trees: list[ast.Module],
+) -> dict[str, ast.FunctionDef | ast.AsyncFunctionDef]:
+    functions: dict[str, ast.FunctionDef | ast.AsyncFunctionDef] = {}
+    for tree in trees:
+        for name, node in _function_nodes(tree).items():
+            functions.setdefault(name, node)
+    return functions
+
+
+def _model_fields_multi(trees: list[ast.Module]) -> dict[str, set[str]]:
+    fields: dict[str, set[str]] = {}
+    for tree in trees:
+        for model, names in _model_fields(tree).items():
+            fields.setdefault(model, names)
+    return fields
+
+
+def _status_response_helper_functions_multi(
+    root: Path,
+    *,
+    api_trees: list[ast.Module],
+    api_functions: dict[str, ast.FunctionDef | ast.AsyncFunctionDef],
+) -> dict[str, ast.FunctionDef | ast.AsyncFunctionDef]:
+    accounting_tree = _parse_module(root / "api" / "product_accounting.py")
+    accounting_functions = _function_nodes(accounting_tree)
+    helpers = dict(api_functions)
+    helpers.update(accounting_functions)
+    for tree in api_trees:
+        for local_name, original_name in _product_accounting_import_aliases(tree).items():
+            function = accounting_functions.get(original_name)
+            if function is not None:
+                helpers[local_name] = function
+    return helpers
+
+
 def _function_nodes(tree: ast.Module | None) -> dict[str, ast.FunctionDef | ast.AsyncFunctionDef]:
     if tree is None:
         return {}
@@ -3577,11 +3551,11 @@ def _literal_return_keys(
 
 def build_product_api_contract(*, root: str | Path = ".") -> dict[str, Any]:
     root_path = Path(root).resolve()
-    tree = _parse_api(root_path)
-    functions = _function_nodes(tree)
-    status_response_helpers = _status_response_helper_functions(
+    api_trees = _aggregate_api_trees(root_path)
+    functions = _function_nodes_multi(api_trees)
+    status_response_helpers = _status_response_helper_functions_multi(
         root_path,
-        api_tree=tree,
+        api_trees=api_trees,
         api_functions=functions,
     )
     routes = {name: _route_for(functions[name]) for name in functions}
@@ -3589,7 +3563,7 @@ def build_product_api_contract(*, root: str | Path = ".") -> dict[str, Any]:
         f"{method} {path}" for name, (method, path) in EXPECTED_ROUTES.items() if routes.get(name) != (method, path)
     )
 
-    model_fields = _model_fields(tree)
+    model_fields = _model_fields_multi(api_trees)
     missing_model_fields = sorted(
         f"{model}.{field}"
         for model, expected in EXPECTED_MODEL_FIELDS.items()
@@ -3624,7 +3598,7 @@ def build_product_api_contract(*, root: str | Path = ".") -> dict[str, Any]:
     rows = [
         _row(
             check="product_api_routes_declared",
-            status="pass" if tree is not None and not missing_routes else "fail",
+            status="pass" if api_trees and not missing_routes else "fail",
             observed=f"missing={','.join(missing_routes) or 'none'}",
             required="all expected product API functions use the expected HTTP method and route path",
             artifact_path="api/product.py",
