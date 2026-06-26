@@ -27,6 +27,7 @@ from api.product_docking import router as product_docking_router
 from api.product_license import router as product_license_router
 from api.product_operational import router as product_operational_router
 from api.product_production_ai import router as product_production_ai_router
+from api.product_release_evidence import router as product_release_evidence_router
 from api.product_release_ops import router as product_release_ops_router
 from api.product_service_contracts import router as product_service_contracts_router
 from api.product_tier_beta import router as product_tier_beta_router
@@ -68,6 +69,7 @@ app.include_router(product_docking_router)
 app.include_router(product_service_contracts_router)
 app.include_router(product_operational_router)
 app.include_router(product_release_ops_router)
+app.include_router(product_release_evidence_router)
 app.include_router(product_license_router)
 app.include_router(product_benchmark_router)
 app.include_router(product_cameo_runner_router)
@@ -164,6 +166,7 @@ async def submit_simulation(request: SimulationRequest, background_tasks: Backgr
         ),
     )
 
+
 async def run_simulation_async_wrapper(job_id: str, request_data: dict[str, Any]):
     """Wrapper to handle the async task and update job status."""
     return await run_job_once(
@@ -173,6 +176,7 @@ async def run_simulation_async_wrapper(job_id: str, request_data: dict[str, Any]
         runner=run_simulation_async,
         lease_seconds=settings.api_worker_lease_seconds,
     )
+
 
 @app.get("/status/{job_id}", response_model=StatusResponse)
 def get_simulation_status(job_id: str):
@@ -206,6 +210,7 @@ def get_simulation_status(job_id: str):
             record.get("evidence_bundle_sha256"),
         ),
     )
+
 
 @app.get(
     "/results/{job_id}",
