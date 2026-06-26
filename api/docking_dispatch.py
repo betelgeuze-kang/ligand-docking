@@ -17,6 +17,7 @@ from api.runner_profile_contract import (
 from api.validated_runner import _runner_script, validate_profile_readiness
 from betelgeuze_product.engine_dispatch import DEFAULT_RUNNER_PROFILE, engine_roadmap_ready
 from betelgeuze_product.job_orchestration import append_job_event, read_job_record, write_job_record
+from betelgeuze_product.structured_reason import reason_fields
 from betelgeuze_product.job_terminal_state import apply_terminal_job_state
 
 INTERNAL_SMOKE_ACTORS = {"tier_alpha_dispatch_smoke"}
@@ -298,7 +299,7 @@ def dispatch_docking_job_if_eligible(
         allow_internal_smoke=allow_internal_smoke,
     )
     if not eligible:
-        return {"dispatched": False, "reason": reason, "job_id": _text(record.get("job_id"))}
+        return {"dispatched": False, "job_id": _text(record.get("job_id")), **reason_fields(reason)}
 
     _, execution, _ = _load_profile_contract(record)
     internal_smoke = _internal_smoke_authorized(
@@ -320,20 +321,21 @@ def dispatch_docking_job_if_eligible(
     if enqueue_payload.get("terminal") is True:
         return {
             "dispatched": False,
-            "reason": "already_terminal_in_job_store",
             "job_id": _text(record.get("job_id")),
             "enqueue": enqueue_payload,
+            **reason_fields("already_terminal_in_job_store"),
         }
     ledger = mark_ledger_dispatched(jobs_dir, _text(record.get("job_id")))
+    dispatch_reason = "already_enqueued" if enqueue_payload.get("already_present") else reason
     return {
         "dispatched": True,
-        "reason": "already_enqueued" if enqueue_payload.get("already_present") else reason,
         "job_id": _text(record.get("job_id")),
         "enqueue": enqueue_payload,
         "idempotent_replay": enqueue_payload.get("already_present") is True,
         "execution_mode": _text(execution.get("execution_mode")),
         "synthetic_input_authorized": allow_synthetic,
         "ledger_status": _text(ledger.get("progress_state")),
+        **reason_fields(dispatch_reason),
     }
 
 
