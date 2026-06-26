@@ -80,6 +80,56 @@ def test_backmapping_materializer_rejects_empty_ligand_input(tmp_path: Path) -> 
         materialize_backmapping(str(request_path), out_dir=str(tmp_path / "out"))
 
 
+def test_backmapping_materializer_recovers_redacted_ligands_from_private_store(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Backmapping reuses the shared _resolve_materialization_inputs, so the
+    # encrypted-store recovery applies here too: a redacted ledger/queue ligand
+    # is recovered from the private payload store instead of failing closed.
+    import betelgeuze_product.docking_private_payload as dpp
+    from betelgeuze_product.private_payload_store import PrivatePayloadKeyring
+
+    job_id = "job-backmap-recover-1"
+    request_sha256 = "d" * 64
+    store = dpp.build_store(
+        keys_config=f"k1:{PrivatePayloadKeyring.generate_secret_b64()}",
+        root_dir=tmp_path / "pp",
+        ttl_seconds=3600,
+    )
+    dpp.store_docking_request(
+        store,
+        job_id=job_id,
+        request_sha256=request_sha256,
+        request={"family": "gpcr", "ligands": [{"ligand_id": "LIG-001", "smiles": "CCO"}]},
+    )
+    monkeypatch.setattr(dpp, "configured_store", lambda: store)
+
+    request_path = _write_request(
+        tmp_path / "request.json",
+        {
+            "docking_job_id": job_id,
+            "request_sha256": request_sha256,
+            "ligand_count": 1,
+            "ligands": [_redacted_ligand()],
+            "runner_execution_mode": "restricted-production",
+            "runner_synthetic_input_allowed": False,
+            "allow_synthetic_ligand_input": False,
+        },
+    )
+
+    materialized = materialize_backmapping(str(request_path), out_dir=str(tmp_path / "out"))
+
+    assert materialized["input_materialization_ready"] is True
+    assert materialized["synthetic_input_used"] is False
+    assert materialized["ligand_count"] == 1
+    with Path(materialized["queue_csv"]).open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == 1
+    assert rows[0]["ligand_id"] == "LIG-001"
+    assert rows[0]["ligand_smiles"] == "CCO"
+    assert rows[0]["synthetic_smoke_input"].lower() == "false"
+
+
 def test_explicit_internal_smoke_uses_one_labelled_synthetic_ligand(tmp_path: Path) -> None:
     request_path = _write_request(
         tmp_path / "request.json",
