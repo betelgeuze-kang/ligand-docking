@@ -2,7 +2,9 @@
 """Startup preflight checks -- stdlib-only, no FastAPI dependency.
 
 run_startup_preflight(settings) raises SystemExit when the configuration is
-fatally inconsistent (e.g. auth required but no token configured).
+fatally inconsistent. The checks are deliberately fail-start for hosted/product
+exposure so the API does not accept traffic with missing auth, development
+signing keys, missing encrypted private-payload keys, or unverified TLS.
 
 check_key_staleness(settings) returns a warning dict when
 docking_private_payload_keys is configured but the rotation metadata suggests
@@ -16,22 +18,73 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+DEV_RESULT_MANIFEST_SIGNING_KEY = "local-dev-result-manifest-signing-key-change-me"
+DEV_RESULT_MANIFEST_KEY_IDS = {"", "local-dev", "dev", "local"}
+
+
+def _flag(settings: Any, name: str, default: bool = False) -> bool:
+    return bool(getattr(settings, name, default))
+
+
+def _text(settings: Any, name: str, default: str = "") -> str:
+    return str(getattr(settings, name, default) or "").strip()
+
+
+def _fatal(message: str) -> None:
+    raise SystemExit(f"STARTUP PREFLIGHT FAILED: {message}")
+
 
 def run_startup_preflight(settings: Any) -> None:
-    """Refuse to start if product_api_auth_required is True but product_api_token is empty.
+    """Refuse to start when product exposure configuration is unsafe."""
 
-    Raises SystemExit with a clear diagnostic message so the uvicorn process
-    does not begin accepting requests in an unusable state.
-    """
-    auth_required: bool = getattr(settings, "product_api_auth_required", False)
-    token: str = getattr(settings, "product_api_token", "") or ""
+    auth_required = _flag(settings, "product_api_auth_required")
+    token = _text(settings, "product_api_token")
+    hosted_exposure = _flag(settings, "product_api_hosted_exposure_approved")
+    tls_verified = _flag(settings, "product_api_tls_termination_operator_verified")
+    signing_key = _text(settings, "api_result_manifest_signing_key")
+    signing_key_id = _text(settings, "api_result_manifest_key_id")
+    private_payload_keys = _text(settings, "docking_private_payload_keys")
 
-    if auth_required and not token.strip():
-        raise SystemExit(
-            "STARTUP PREFLIGHT FAILED: product_api_auth_required is True but "
-            "PRODUCT_API_TOKEN is empty. The server cannot authenticate any "
-            "request in this state. Set PRODUCT_API_TOKEN or disable "
-            "PRODUCT_API_AUTH_REQUIRED before starting."
+    if auth_required and not token:
+        _fatal(
+            "product_api_auth_required is True but PRODUCT_API_TOKEN is empty. "
+            "The server cannot authenticate any request in this state. Set "
+            "PRODUCT_API_TOKEN or disable PRODUCT_API_AUTH_REQUIRED before starting."
+        )
+
+    if not hosted_exposure:
+        return
+
+    if not auth_required:
+        _fatal(
+            "PRODUCT_API_HOSTED_EXPOSURE_APPROVED=1 requires "
+            "PRODUCT_API_AUTH_REQUIRED=1."
+        )
+    if not token:
+        _fatal(
+            "PRODUCT_API_HOSTED_EXPOSURE_APPROVED=1 requires a non-empty "
+            "PRODUCT_API_TOKEN."
+        )
+    if not tls_verified:
+        _fatal(
+            "PRODUCT_API_HOSTED_EXPOSURE_APPROVED=1 requires "
+            "PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED=1."
+        )
+    if not signing_key or signing_key == DEV_RESULT_MANIFEST_SIGNING_KEY:
+        _fatal(
+            "hosted product exposure requires API_RESULT_MANIFEST_SIGNING_KEY "
+            "to be set to an operator-managed non-development secret."
+        )
+    if signing_key_id in DEV_RESULT_MANIFEST_KEY_IDS:
+        _fatal(
+            "hosted product exposure requires API_RESULT_MANIFEST_KEY_ID to be "
+            "a non-development key identifier."
+        )
+    if not private_payload_keys:
+        _fatal(
+            "hosted product exposure requires DOCKING_PRIVATE_PAYLOAD_KEYS so "
+            "raw customer docking inputs are encrypted at rest and can be "
+            "recovered only inside the validated runner boundary."
         )
 
 
@@ -39,7 +92,7 @@ def check_key_staleness(settings: Any) -> dict[str, Any] | None:
     """Check whether docking_private_payload_keys might be stale.
 
     Returns a warning dict if keys are configured but rotation_days suggests
-    they may need rotation. Returns None when no warning is applicable.
+they may need rotation. Returns None when no warning is applicable.
 
     This function never blocks startup -- it only emits a log warning and
     returns a structured dict for metrics/observability.
