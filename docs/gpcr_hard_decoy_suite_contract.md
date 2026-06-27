@@ -66,6 +66,28 @@ decision: `family_claim_safe`, `green_target_ids`, `blocked_target_ids`,
 `missing_required_target_ids`, and `first_blocked_required_target` for operator
 focus. Status is `gpcr_hard_decoy_family_ready` or `broad_family_locked`.
 
+## Materializer (report surface)
+
+`tools/product/build_gpcr_hard_decoy_suite_report.py` is a **read-only
+materializer** that turns operator/diagnostic aggregate rows (one CSV row per
+target) into `runs/gpcr_hard_decoy_suite_current.{json,md,csv}` by running them
+through the evaluator above. Input CSV minimal columns: `target_id`,
+`positive_count`; optional metric/decoy columns as listed in *Per-target row
+inputs*, with `decoy_class_counts` supplied as a JSON-string cell
+(e.g. `{"over_anchored": 3}`). It runs no scoring, generates no decoys, and
+preserves `execution_enabled=false` / `external_state_mutated=false` /
+`docking_results_emitted=false`. It fail-closes (blocked artifact + non-zero
+exit) on a missing/empty/schema-invalid CSV or a malformed row; a correctly
+evaluated `broad_family_locked` result is a success (exit 0).
+
+```
+python3 tools/product/build_gpcr_hard_decoy_suite_report.py \
+  --input-csv config/gpcr_hard_decoy_suite_current.csv \
+  --out-json runs/gpcr_hard_decoy_suite_current.json \
+  --out-md   runs/gpcr_hard_decoy_suite_current.md \
+  --out-csv  runs/gpcr_hard_decoy_suite_current.csv
+```
+
 ## Out of scope
 
 - Scoring, decoy generation, and pose/anchor computation run under numpy/RDKit/
