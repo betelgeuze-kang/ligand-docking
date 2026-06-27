@@ -55,6 +55,7 @@ def test_product_image_smoke_preflight_contract_ready_with_docker_path(tmp_path:
     assert rows_by_id["product_rocm_requirements_no_cpu_torch_pin"]["passed"] is True
     assert rows_by_id["build_mode_receipt_not_product_claim_ready"]["passed"] is True
     assert rows_by_id["docker_cmd_override_declared"]["passed"] is True
+    assert rows_by_id["smoke_containers_disable_auth_preflight"]["passed"] is True
     assert rows_by_id["fail_closed_receipt_written_on_early_exit"]["passed"] is True
     assert rows_by_id["docker_host_setup_script_declared"]["passed"] is True
     assert rows_by_id["workflow_pull_request_trigger_declared"]["passed"] is True
