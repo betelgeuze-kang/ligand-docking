@@ -1,4 +1,5 @@
 """Compatibility shim; canonical module: tools.cleanup.dry_run_p2_data_lifecycle."""
+# ruff: noqa: E402
 import sys as _sys
 from pathlib import Path as _Path
 _repo = _Path(__file__).resolve()
@@ -10,6 +11,7 @@ for _ in range(12):
     _repo = _repo.parent
 
 from importlib import import_module as _import_module
+from inspect import signature as _signature
 import sys as _sys
 
 _module = _import_module("tools.cleanup.dry_run_p2_data_lifecycle")
@@ -19,4 +21,6 @@ if __name__ == "__main__":
     _entry = getattr(_module, "main", None)
     if _entry is None:
         raise SystemExit("builder has no main(): tools.cleanup.dry_run_p2_data_lifecycle")
-    raise SystemExit(_entry(_sys.argv[1:]) or 0)
+    _params = _signature(_entry).parameters
+    _result = _entry(_sys.argv[1:]) if _params else _entry()
+    raise SystemExit(_result or 0)

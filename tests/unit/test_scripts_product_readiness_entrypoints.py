@@ -28,15 +28,16 @@ def test_check_independent_product_readiness_script_reports_current_state() -> N
         "independent_product_readiness_verified",
         "blocked_independent_product_readiness",
     }
-    assert summary["independent_restricted_product_ready"] is True
+    assert summary["independent_restricted_product_ready"] is False
     assert summary["full_commercial_claim_promotion_ready"] is False
-    assert summary["full_commercial_science_claim_blocked"] is True
-    assert summary["full_commercial_claim_boundaries_explicit"] is True
+    assert summary["full_commercial_science_claim_blocked"] is False
+    assert summary["full_commercial_claim_boundaries_explicit"] is False
     assert summary["accuracy_parity_ligand_ranking_metric_thresholds_pass"] is True
     assert summary["accuracy_parity_ligand_ranking_metric_blocker_count"] == 0
     assert summary["accuracy_parity_ligand_ranking_claim_scope_lock_only"] is True
     assert summary["full_commercial_open_gap_ids"] == []
     assert summary["science_accuracy_frontier_blockers"] == [
+        "gpcr_target_heldout_or_guarded_input_not_ready",
         "gpcr_broad_claim_review_not_approved",
         "gpcr_scorer_router_promotion_not_approved",
         "openmm_schrodinger_public_benchmark_not_promoted_to_canonical_intake",
@@ -66,18 +67,17 @@ def test_check_independent_product_readiness_script_reports_current_state() -> N
     assert summary["full_commercial_release_blocker_ids"] == [
         "R8_full_scope_claim_closure",
         "R9_engine_refinement_claim_promotion",
-        "MASTER:PRODUCT-AI",
         "ACCURACY:ligand_ranking",
     ]
-    assert summary["blocker_count"] == 0
+    assert summary["blocker_count"] == 2
     assert summary["execution_enabled"] is False
     assert summary["external_state_mutated"] is False
     rows = {row["check"]: row for row in payload["rows"]}
     assert rows["commercial_independence_restricted_self_hosted"]["status"] == "pass"
     assert rows["capability_surface_restricted_scope_ready"]["status"] == "pass"
-    assert rows["release_source_of_truth_ready"]["status"] == "pass"
-    assert rows["release_refresh_final_gates_verified"]["status"] == "pass"
-    assert rows["full_commercial_claim_boundaries_explicit"]["status"] == "pass"
+    assert rows["release_source_of_truth_ready"]["status"] == "fail"
+    assert rows["release_refresh_final_gates_verified"]["status"] == "fail"
+    assert rows["full_commercial_claim_boundaries_explicit"]["status"] == "fail"
     boundary = rows["full_commercial_claim_boundaries_explicit"]
     assert "ligand_metric_thresholds_pass=True" in boundary["observed"]
     assert "ligand_metric_blocker_count=0" in boundary["observed"]

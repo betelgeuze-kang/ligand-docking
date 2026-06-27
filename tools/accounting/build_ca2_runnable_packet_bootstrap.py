@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tools.product import ca2_packet_bridge as bridge
+from tools.product import ca2_packet_bridge as bridge  # noqa: E402
 PRIMARY_TARGET = "CARBONIC_ANHYDRASE_2_ZN_BLIND"
 
 EXPECTED_HEADERS: dict[str, list[str]] = {
@@ -227,7 +227,6 @@ def _packet_artifact_status(packet: str, bridge_context: dict[str, Any], fallbac
 def _packet_blocking_issue(packet: str, bridge_context: dict[str, Any], default_message: str) -> str:
     counts = bridge_context["packet_counts"].get(packet, {})
     current = bridge_context["current_packets"].get(packet, {})
-    projected = bridge_context["projected_packets"].get(packet, {})
     ready = counts.get("workbook_ready_row_count", 0)
     applied = counts.get("workbook_applied_row_count", 0)
     blocked = counts.get("workbook_blocked_row_count", 0)
@@ -447,7 +446,12 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "ood_profile_json": _inspect_optional_json(_resolve(required["ood_profile_json"])),
     }
 
-    _, workbook_rows = bridge.read_csv_rows(args.workbook_csv)
+    workbook_path = Path(args.workbook_csv)
+    cwd_workbook_path = (Path.cwd() / workbook_path).resolve() if not workbook_path.is_absolute() else workbook_path
+    if workbook_path.is_absolute() or cwd_workbook_path.exists():
+        _, workbook_rows = bridge.read_csv_rows(args.workbook_csv)
+    else:
+        workbook_rows = []
     bridge_context = _packet_bridge_context(workbook_rows)
     workbook = _build_workbook_rows(template_payload, csv_inspections, json_inspections, bridge_context)
 

@@ -18,14 +18,22 @@ echo "=== Codex goal-mode orchestration preflight ==="
 test -f AGENTS.md && ok "AGENTS.md present" || bad "AGENTS.md missing"
 test -f docs/ai/ORCHESTRATION.md && ok "orchestration guide present" || bad "orchestration guide missing"
 test -f docs/ai/prompts/codex_pursue_goal_start.md && ok "Codex start prompt present" || bad "Codex start prompt missing"
+test -f docs/ai/prompts/kiro_design_slice.md && ok "Kiro design prompt template present" || bad "Kiro design prompt template missing"
 test -f docs/ai/prompts/cursor_worker_slice.md && ok "Cursor worker prompt template present" || bad "Cursor worker prompt template missing"
 test -f docs/ai/prompts/opencode_worker_slice.md && ok "OpenCode-named worker prompt template present" || bad "OpenCode-named worker prompt template missing"
+test -f docs/ai/prompts/internal_subagent_worker_slice.md && ok "internal subagent worker prompt template present" || bad "internal subagent worker prompt template missing"
 test -f opencode.json && ok "opencode.json present" || bad "opencode.json missing"
 
 echo
 echo "[worker tools]"
+if command -v kiro >/dev/null 2>&1; then
+  ok "Kiro design command available; Opus 4.8 required by wrapper"
+else
+  note "Kiro command not found; skip Kiro design planning until installed"
+fi
+
 if command -v cursor-agent >/dev/null 2>&1 || command -v cursor >/dev/null 2>&1 || [ -x "${HOME}/.local/bin/cursor" ]; then
-  ok "Cursor worker command available"
+  ok "Cursor worker command available; default model composer-2.5"
 else
   note "Cursor worker command not found; skip Cursor delegation until installed"
 fi

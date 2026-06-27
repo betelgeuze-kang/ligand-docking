@@ -201,7 +201,7 @@ def _chemistry_kpi_packet(*, ready: bool = True) -> dict:
                         "ligand_validity_blockers": ["unassigned_ligand_chirality"],
                         "chiral_center_count": 1,
                         "unassigned_chiral_center_count": 1,
-                        "chirality_status": "unassigned_chiral_centers",
+                        "chirality_status": "unassigned_stereochemistry",
                     }
                 )
             elif fixture == "aromatic_ring":

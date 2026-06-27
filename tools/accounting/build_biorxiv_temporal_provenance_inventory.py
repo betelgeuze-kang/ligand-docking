@@ -285,13 +285,13 @@ def _write_md(path: Path, summary: dict[str, Any], rows: list[dict[str, Any]]) -
     _write_text(path, "\n".join(lines) + "\n")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Build an inventory of temporal provenance coverage for the provisional bioRxiv temporal spec.")
     ap.add_argument("--set-spec-json", default="config/external_validation_biorxiv_temporal_sets_v1_provisional.json")
     ap.add_argument("--out-json", default="runs/biorxiv_temporal_provenance_inventory_current.json")
     ap.add_argument("--out-csv", default="runs/biorxiv_temporal_provenance_inventory_current.csv")
     ap.add_argument("--out-md", default="runs/biorxiv_temporal_provenance_inventory_current.md")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     spec_path = (ROOT / args.set_spec_json).resolve()
     spec = _read_json(spec_path)

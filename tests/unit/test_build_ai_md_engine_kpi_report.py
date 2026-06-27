@@ -228,7 +228,7 @@ def _chemistry_kpi_packet(*, ready: bool = True) -> dict:
                         "ligand_validity_blockers": ["unassigned_ligand_chirality"],
                         "chiral_center_count": 1,
                         "unassigned_chiral_center_count": 1,
-                        "chirality_status": "unassigned_chiral_centers",
+                        "chirality_status": "unassigned_stereochemistry",
                     }
                 )
             elif fixture == "aromatic_ring":
@@ -2926,7 +2926,7 @@ def test_build_ai_md_engine_kpi_report_contract(tmp_path: Path) -> None:
     assert unassigned_chiral_row["ligand_valid"] is True
     assert unassigned_chiral_row["ligand_topology_claim_safe"] is False
     assert unassigned_chiral_row["unassigned_chiral_center_count"] == 1
-    assert unassigned_chiral_row["chirality_status"] == "unassigned_chiral_centers"
+    assert unassigned_chiral_row["chirality_status"] == "unassigned_stereochemistry"
     assert "unassigned_ligand_chirality" in unassigned_chiral_row["ligand_validity_blockers"]
     protonated_row = next(row for row in report["chemistry_kpi"]["rows"] if row["fixture"] == "protonated_amine")
     assert protonated_row["protonation_status"] == "charged_state_parsed"

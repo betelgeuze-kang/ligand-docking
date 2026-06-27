@@ -60,13 +60,13 @@ def _policy_label(row: dict[str, str]) -> str:
     return status or "unspecified_dataset_ready"
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Summarize policy reasons for remaining dataset-ready IDP temporal rows.")
     ap.add_argument("--idp-csv", default="config/biorxiv_temporal_idp_provenance_v1.csv")
     ap.add_argument("--out-json", default="runs/biorxiv_temporal_idp_remaining_policy_current.json")
     ap.add_argument("--out-csv", default="runs/biorxiv_temporal_idp_remaining_policy_current.csv")
     ap.add_argument("--out-md", default="runs/biorxiv_temporal_idp_remaining_policy_current.md")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     rows = _read_csv((ROOT / args.idp_csv).resolve())
     remaining = []

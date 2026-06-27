@@ -31,7 +31,15 @@ def parse_pdb_atoms_with_coords(text: str) -> list[dict[str, Any]]:
             y = float(line[38:46])
             z = float(line[46:54])
         except (ValueError, IndexError):
-            continue
+            fields = line.split()
+            if len(fields) < 9:
+                continue
+            try:
+                x = float(fields[6])
+                y = float(fields[7])
+                z = float(fields[8])
+            except ValueError:
+                continue
         atom_name = line[12:16].strip() if len(line) >= 16 else ""
         resname = (line[17:20].strip() if len(line) >= 20 else "") or "UNK"
         chain_id = (line[21:22].strip() if len(line) >= 22 else "") or "_"

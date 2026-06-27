@@ -1,4 +1,5 @@
 """Compatibility shim; canonical module: tools.accounting.build_wetlab_selected_allatom_gate_burndown_packet."""
+# ruff: noqa: E402
 import inspect as _inspect
 import sys as _sys
 from pathlib import Path as _Path
@@ -11,6 +12,7 @@ for _ in range(12):
     _repo = _repo.parent
 
 from importlib import import_module as _import_module
+from inspect import signature as _signature
 import sys as _sys
 
 _module = _import_module("tools.accounting.build_wetlab_selected_allatom_gate_burndown_packet")
@@ -22,4 +24,6 @@ if __name__ == "__main__":
         raise SystemExit("builder has no main(): tools.accounting.build_wetlab_selected_allatom_gate_burndown_packet")
     if len(_inspect.signature(_entry).parameters) == 0:
         raise SystemExit(_entry() or 0)
-    raise SystemExit(_entry(_sys.argv[1:]) or 0)
+    _params = _signature(_entry).parameters
+    _result = _entry(_sys.argv[1:]) if _params else _entry()
+    raise SystemExit(_result or 0)

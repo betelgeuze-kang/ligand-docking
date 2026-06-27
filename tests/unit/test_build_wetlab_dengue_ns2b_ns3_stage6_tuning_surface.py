@@ -3,7 +3,34 @@ from __future__ import annotations
 from tools import build_wetlab_dengue_ns2b_ns3_stage6_tuning_surface as mod
 
 
-def test_build_wetlab_dengue_ns2b_ns3_stage6_tuning_surface_summarizes_gate45_band() -> None:
+def test_build_wetlab_dengue_ns2b_ns3_stage6_tuning_surface_summarizes_gate45_band(monkeypatch) -> None:
+    observed_by_shard = {
+        "01_of_20": 4.4,
+        "02_of_20": 4.45,
+        "03_of_20": 4.5,
+    }
+
+    def fake_maybe_load_json(path_like: str) -> dict[str, object]:
+        for shard_id, observed in observed_by_shard.items():
+            if shard_id in path_like:
+                return {
+                    "service_result": {
+                        "status": "error",
+                        "failed_stage": "stage6_operational_gate",
+                    },
+                    "stages": {
+                        "stage6_operational_gate": {
+                            "gate_threshold_A": 2.5,
+                            "mean_min_distance_A": observed,
+                            "mean_min_distance_A_source": "unit_fixture",
+                            "min_frames_observed": 12,
+                        }
+                    },
+                }
+        return {}
+
+    monkeypatch.setattr(mod, "maybe_load_json", fake_maybe_load_json)
+
     payload = mod.build_payload(
         {
             "rows": [

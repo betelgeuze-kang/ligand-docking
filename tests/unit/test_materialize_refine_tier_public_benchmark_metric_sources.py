@@ -165,3 +165,73 @@ def test_materializes_metric_sources_and_pass_metric_evidence(tmp_path: Path) ->
     )
     assert source_payload["external_engine_calls"] == 0
     assert validation["payload_valid"] is True
+
+
+def test_rankdata_averages_tied_ranks() -> None:
+    import numpy as np
+
+    # Values 2.0 appear twice at ordinal ranks 2 and 3 -> both should be 2.5.
+    ranks = mod._rankdata(np.asarray([1.0, 2.0, 2.0, 4.0], dtype=np.float64))
+    assert ranks.tolist() == [1.0, 2.5, 2.5, 4.0]
+
+    # No ties -> identical to plain ordinal ranking.
+    no_tie = mod._rankdata(np.asarray([3.0, 1.0, 2.0], dtype=np.float64))
+    assert no_tie.tolist() == [3.0, 1.0, 2.0]
+
+
+def test_spearman_values_is_tie_corrected_and_bounded() -> None:
+    # Perfect monotonic relationship -> +1.0.
+    assert mod._spearman_values([1.0, 2.0, 3.0, 4.0], [10.0, 20.0, 30.0, 40.0]) == pytest.approx(1.0)
+    # Perfect inverse relationship -> -1.0.
+    assert mod._spearman_values([1.0, 2.0, 3.0, 4.0], [40.0, 30.0, 20.0, 10.0]) == pytest.approx(-1.0)
+    # Tied reference values must use averaged ranks rather than argsort order.
+    tied = mod._spearman_values([1.0, 2.0, 3.0], [5.0, 5.0, 9.0])
+    assert tied is not None
+    assert -1.0 <= tied <= 1.0
+    # Degenerate inputs fail closed.
+    assert mod._spearman_values([1.0], [1.0]) is None
+    assert mod._spearman_values([2.0, 2.0, 2.0], [1.0, 2.0, 3.0]) is None
+
+
+def test_bootstrap_spearman_interval_is_seed_deterministic_and_ordered() -> None:
+    pairs = [
+        {"proxy": float(i), "reference": float(i) + (0.5 if i % 2 else -0.5)}
+        for i in range(12)
+    ]
+    first = mod._bootstrap_spearman_interval(pairs, iterations=200, seed=7)
+    second = mod._bootstrap_spearman_interval(pairs, iterations=200, seed=7)
+
+    assert first == second  # same seed -> identical interval
+    p05 = first["free_energy_spearman_bootstrap_p05"]
+    p50 = first["free_energy_spearman_bootstrap_p50"]
+    p95 = first["free_energy_spearman_bootstrap_p95"]
+    assert p05 is not None and p50 is not None and p95 is not None
+    assert p05 <= p50 <= p95
+    assert first["bootstrap_valid_sample_count"] > 0
+
+
+def test_claim_grade_statistical_support_fail_closed_thresholds() -> None:
+    # Below every minimum -> all three blockers present, not ready.
+    weak = mod._claim_grade_statistical_support(pair_count=5, holdout_pair_count=2, bootstrap_low=0.1)
+    assert weak["claim_grade_public_benchmark_statistical_support_ready"] is False
+    assert weak["claim_grade_public_benchmark_statistical_support_blocker_count"] == 3
+
+    # Meets pair/holdout counts but bootstrap p05 below the floor -> still blocked.
+    borderline = mod._claim_grade_statistical_support(
+        pair_count=mod.MIN_CLAIM_GRADE_PUBLIC_BENCHMARK_PAIRS,
+        holdout_pair_count=mod.MIN_CLAIM_GRADE_HOLDOUT_PAIRS,
+        bootstrap_low=mod.MIN_CLAIM_GRADE_BOOTSTRAP_SPEARMAN_LOW - 0.01,
+    )
+    assert borderline["claim_grade_public_benchmark_statistical_support_ready"] is False
+    assert borderline["claim_grade_public_benchmark_statistical_support_blockers"] == [
+        "claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum"
+    ]
+
+    # All thresholds satisfied -> ready with no blockers.
+    strong = mod._claim_grade_statistical_support(
+        pair_count=mod.MIN_CLAIM_GRADE_PUBLIC_BENCHMARK_PAIRS,
+        holdout_pair_count=mod.MIN_CLAIM_GRADE_HOLDOUT_PAIRS,
+        bootstrap_low=mod.MIN_CLAIM_GRADE_BOOTSTRAP_SPEARMAN_LOW,
+    )
+    assert strong["claim_grade_public_benchmark_statistical_support_ready"] is True
+    assert strong["claim_grade_public_benchmark_statistical_support_blocker_count"] == 0

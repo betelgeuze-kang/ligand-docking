@@ -61,7 +61,7 @@ def test_cameo_service_boundary_contract_reports_ready_without_mutation(tmp_path
     assert summary["blocker_count"] == 0
     assert summary["api_route_count"] == 9
     assert summary["expected_api_route_count"] == 9
-    assert summary["cli_command_count"] == 14
+    assert summary["cli_command_count"] == 16
     assert summary["expected_cli_command_count"] == 14
     assert summary["artifact_registry_mismatch_count"] == 0
     assert summary["console_script_ready"] is True

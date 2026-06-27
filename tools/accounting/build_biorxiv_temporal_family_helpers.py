@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-from collections import defaultdict
 from pathlib import Path
 
 
@@ -135,12 +134,12 @@ def _build_family_outputs(rows: list[dict[str, str]], family: str, out_dir: Path
     return [unique_csv, rowmap_csv, summary_md]
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Build family-specific helper files for temporal provenance curation.")
     ap.add_argument("--ligand-csv", default="config/biorxiv_temporal_ligand_provenance_v1.csv")
     ap.add_argument("--families", default="literature_proxy_v2,gpcr_blind_proxy_v1")
     ap.add_argument("--out-dir", default="runs/biorxiv_temporal_family_helpers_current")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     rows = _read_csv((ROOT / args.ligand_csv).resolve())
     families = [item.strip() for item in args.families.split(",") if item.strip()]

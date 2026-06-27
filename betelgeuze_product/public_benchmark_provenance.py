@@ -13,6 +13,31 @@ CLAIM_BOUNDARY = (
     "and optional execution summary. It does not download datasets, run docking, compute benchmark metrics, submit "
     "predictions, send email, or mutate external state outside requested output artifacts."
 )
+GOLD_EXECUTION_SUMMARY_FIELDS = (
+    "gold_metric_schema_version",
+    "gold_metric_status",
+    "gold_metric_blockers",
+    "top1_mean_rmsd_A",
+    "top5_best_mean_rmsd_A",
+    "top1_pose_success_rate",
+    "top5_pose_success_rate",
+    "ranking_spearman",
+    "pr_auc",
+    "topk_hit_rate",
+    "decoy_rejection_rate",
+    "baseline_ranking_spearman",
+    "refine_ranking_spearman_delta",
+    "refine_improvement_observed",
+    "heldout_complex_count",
+    "chirality_failure_rate",
+    "tautomer_failure_rate",
+    "protonation_failure_rate",
+    "chemistry_evidence_coverage",
+    "abstention_precision",
+    "mean_runtime_ms",
+    "peak_memory_mb",
+    "subset_identity_sha256",
+)
 
 
 def _text(value: Any) -> str:
@@ -133,6 +158,9 @@ def build_public_benchmark_result_provenance(
             else "Generate product-engine benchmark results, then rebuild this provenance artifact."
         ),
     }
+    for field in GOLD_EXECUTION_SUMMARY_FIELDS:
+        if field in execution_summary:
+            summary[field] = execution_summary[field]
     rows = [
         {
             "check": "result_artifact_present",

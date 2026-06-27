@@ -7,12 +7,12 @@ import torch.nn as nn
 
 
 class LangevinIntegrator(nn.Module):
-    """Euler-Maruyama Langevin integrator for coarse-grained states.
+    """Exact-OU Langevin integrator for coarse-grained states.
 
     The integrator keeps the historical ``noise`` argument semantics: when
     supplied, ``noise`` is treated as an already-scaled velocity increment.
-    When omitted, the increment is sampled with variance
-    ``2 * gamma * kT * dt / mass``.
+    When omitted, the stochastic increment uses variance
+    ``kT / mass * (1 - exp(-2 * gamma * dt))``.
     """
 
     SUPPORTED_COARSE_MASS_POLICIES = frozenset({"explicit_unit_mass", "explicit_mass_tensor"})
@@ -45,20 +45,25 @@ class LangevinIntegrator(nn.Module):
         if float(force_threshold) <= 0.0:
             raise ValueError("force_threshold must be positive")
 
+        policy = str(coarse_mass_policy)
+        if policy not in self.SUPPORTED_COARSE_MASS_POLICIES:
+            raise ValueError(f"unsupported coarse_mass_policy: {policy}")
+
+        mass_tensor = torch.as_tensor(mass, dtype=torch.float32).clone().detach()
+        if torch.any(mass_tensor <= 0):
+            raise ValueError("mass values must be positive")
+        if policy == "explicit_unit_mass" and not torch.allclose(
+            mass_tensor,
+            torch.ones_like(mass_tensor),
+        ):
+            policy = "explicit_mass_tensor"
+
         self.register_buffer("dt", torch.tensor(float(dt), dtype=torch.float32))
         self.register_buffer("gamma", torch.tensor(float(friction), dtype=torch.float32))
         self.register_buffer("kT", torch.tensor(float(kT), dtype=torch.float32))
         # Retain the legacy state-dict key for backward compatibility. The
         # stochastic increment now correctly uses the full kT value.
         self.register_buffer("kT_half", torch.tensor(float(kT) * 0.5, dtype=torch.float32))
-        policy = str(coarse_mass_policy)
-        if policy not in self.SUPPORTED_COARSE_MASS_POLICIES:
-            raise ValueError(f"unsupported coarse_mass_policy: {policy}")
-        mass_tensor = torch.as_tensor(mass, dtype=torch.float32).clone().detach()
-        if policy == "explicit_unit_mass":
-            is_unit_scalar = bool(mass_tensor.numel() == 1 and torch.allclose(mass_tensor.reshape(-1)[0], torch.tensor(1.0)))
-            if not is_unit_scalar:
-                policy = "explicit_mass_tensor"
         self.register_buffer("mass", mass_tensor)
 
         self.adaptive_dt = bool(adaptive_dt)
@@ -113,14 +118,15 @@ class LangevinIntegrator(nn.Module):
             mass_t = mass_t.view(1, -1, 1)
         elif mass_t.ndim == 2:
             mass_t = mass_t.unsqueeze(-1)
-        elif mass_t.ndim != 3:
+        elif mass_t.ndim == 3:
+            if mass_t.shape[-1] != 1:
+                raise ValueError("mass trailing dimension must be 1")
+        else:
             raise ValueError("mass must be scalar, [N], [B,N], or [B,N,1]")
         if mass_t.shape[0] not in (1, like.shape[0]):
             raise ValueError("mass batch dimension must be 1 or match coordinates")
         if mass_t.shape[1] not in (1, like.shape[1]):
             raise ValueError("mass atom dimension must be 1 or match coordinates")
-        if mass_t.shape[2] not in (1, like.shape[2]):
-            raise ValueError("mass coordinate dimension must be 1 or match coordinates")
         if torch.any(mass_t <= 0):
             raise ValueError("mass values must be positive")
         return mass_t
@@ -170,8 +176,8 @@ class LangevinIntegrator(nn.Module):
             mixed-precision behavior is retained by returning FP32 outputs.
         """
         self._validate_state(c, v, f)
+        compute_dtype = torch.float32 if self.use_mixed_precision else c.dtype
         output_dtype = torch.float32 if self.use_mixed_precision else c.dtype
-        compute_dtype = torch.float16 if self.use_mixed_precision else c.dtype
         device = c.device
 
         c_work = c.to(dtype=compute_dtype)
@@ -183,12 +189,20 @@ class LangevinIntegrator(nn.Module):
 
         gamma = self.gamma.to(device=device, dtype=compute_dtype)
         kT = self.kT.to(device=device, dtype=compute_dtype)
-
-        friction_term = -gamma * v_work * current_dt
+        gamma_dt = gamma * current_dt
+        velocity_decay = torch.exp(-gamma_dt)
+        force_scale = torch.where(
+            gamma > 0,
+            -torch.expm1(-gamma_dt) / gamma,
+            current_dt,
+        )
 
         if noise is None:
-            variance = torch.clamp(2.0 * gamma * kT * current_dt / mass_work, min=0.0)
-            noise_std = torch.sqrt(variance)
+            thermal_variance = (kT / mass_work) * torch.clamp(
+                1.0 - velocity_decay.pow(2),
+                min=0.0,
+            )
+            noise_std = torch.sqrt(thermal_variance)
             generator = self._generator_for(device)
             random_force = torch.randn(
                 v_work.shape,
@@ -203,6 +217,7 @@ class LangevinIntegrator(nn.Module):
                 raise ValueError("noise shape must match velocity tensor shape")
             random_force = noise.to(device=device, dtype=compute_dtype)
 
-        v_new = v_work + (f_work * current_dt / mass_work) + friction_term + random_force
+        v_new = (v_work * velocity_decay) + (f_work * force_scale / mass_work) + random_force
         c_new = c_work + v_new * current_dt
         return v_new.to(dtype=output_dtype), c_new.to(dtype=output_dtype)
+

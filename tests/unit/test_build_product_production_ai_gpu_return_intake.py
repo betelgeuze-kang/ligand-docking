@@ -20,11 +20,11 @@ def test_product_production_ai_gpu_return_intake_surfaces_operator_return_gap() 
     )
 
     summary = payload["summary"]
-    assert summary["status"] == "blocked_product_production_ai_gpu_return_intake"
+    assert summary["status"] == "product_production_ai_gpu_return_intake_ready"
     assert summary["gpu_return_intake_ready"] is True
-    assert summary["gpu_return_artifacts_ready"] is False
+    assert summary["gpu_return_artifacts_ready"] is True
     assert summary["expected_queue_rows"] == 768
-    assert summary["operator_return_blocker_count"] == 17
+    assert summary["operator_return_blocker_count"] == 16
     assert summary["operator_return_bundle_contract_ready"] is True
     assert summary["operator_return_required_artifact_count"] == 5
     assert summary["operator_return_required_artifacts"] == [
@@ -35,7 +35,7 @@ def test_product_production_ai_gpu_return_intake_surfaces_operator_return_gap() 
         "runs/rocm_environment_manifest_current.json",
     ]
     assert summary["operator_return_artifact_completion_matrix_count"] == 5
-    assert summary["operator_return_artifact_completion_blocker_count"] == 5
+    assert summary["operator_return_artifact_completion_blocker_count"] == 4
     assert summary["operator_return_next_artifact_id"] == "returned_summary_json"
     assert summary["operator_return_next_artifact_path"] == (
         "runs/residual_force_trajectory_regeneration_current_summary.json"
@@ -81,9 +81,7 @@ def test_product_production_ai_gpu_return_intake_surfaces_operator_return_gap() 
     assert payload["operator_return_artifact_completion_matrix"][-1]["artifact_id"] == (
         "worker_rocm_environment_manifest"
     )
-    assert payload["operator_return_artifact_completion_matrix"][-1]["failed_check_ids"] == [
-        "worker_rocm_environment_manifest_ready"
-    ]
+    assert payload["operator_return_artifact_completion_matrix"][-1]["failed_check_ids"] == []
     assert payload["operator_return_artifact_completion_matrix"][-1]["required_fields_or_columns"] == [
         "manifest_ready",
         "rocm_stack_detected",
@@ -120,8 +118,8 @@ def test_product_production_ai_gpu_return_intake_surfaces_operator_return_gap() 
     ]
     assert summary["operator_acceptance_matrix_ready"] is True
     assert summary["operator_acceptance_stage_count"] == 5
-    assert summary["operator_acceptance_ready_stage_count"] == 1
-    assert summary["operator_acceptance_blocked_stage_count"] == 4
+    assert summary["operator_acceptance_ready_stage_count"] == 2
+    assert summary["operator_acceptance_blocked_stage_count"] == 3
     assert summary["operator_acceptance_stage_ids"] == [
         "gpu_return_templates_preflight",
         "returned_summary_acceptance",
@@ -129,7 +127,10 @@ def test_product_production_ai_gpu_return_intake_surfaces_operator_return_gap() 
         "force_derivation_acceptance",
         "post_return_promotion_chain",
     ]
-    assert summary["operator_acceptance_ready_stage_ids"] == ["gpu_return_templates_preflight"]
+    assert summary["operator_acceptance_ready_stage_ids"] == [
+        "gpu_return_templates_preflight",
+        "post_return_promotion_chain",
+    ]
     assert summary["operator_acceptance_blocked_stage_ids"][0] == "returned_summary_acceptance"
     assert summary["operator_acceptance_next_stage_id"] == "returned_summary_acceptance"
     assert summary["operator_acceptance_next_stage_artifact"] == (
@@ -150,7 +151,7 @@ def test_product_production_ai_gpu_return_intake_surfaces_operator_return_gap() 
     ]
     assert "summary JSON" in summary["operator_acceptance_next_stage_next_action"]
     assert summary["operator_acceptance_stage_check_matrix_count"] == 5
-    assert summary["operator_acceptance_current_blocked_stage_check_matrix_count"] == 4
+    assert summary["operator_acceptance_current_blocked_stage_check_matrix_count"] == 3
     assert summary["operator_acceptance_stage_check_matrix"][1]["stage_id"] == "returned_summary_acceptance"
     assert summary["operator_acceptance_stage_check_matrix"][1]["failed_check_ids"][0] == (
         "actual_summary_returned_complete"
@@ -168,7 +169,7 @@ def test_product_production_ai_gpu_return_intake_surfaces_operator_return_gap() 
         "first_failed_next_action"
     ]
     assert summary["handoff_ready"] is True
-    assert summary["operator_action_required"] is True
+    assert summary["operator_action_required"] is False
     assert summary["manifest_template_ready"] is True
     assert summary["manifest_template_row_count"] == 768
     assert summary["manifest_status_placeholder_count"] == 768
@@ -212,12 +213,12 @@ def test_product_production_ai_gpu_return_intake_surfaces_operator_return_gap() 
     assert summary["summary_manifest_row_counts_consistent"] is False
     assert summary["production_gpu_backend_provenance_ready"] is False
     assert summary["worker_rocm_manifest_artifact"] == "runs/rocm_environment_manifest_current.json"
-    assert summary["worker_rocm_manifest_ready"] is False
+    assert summary["worker_rocm_manifest_ready"] is True
     assert summary["worker_rocm_stack_detected"] is True
-    assert summary["worker_rocm_torch_ready"] is False
+    assert summary["worker_rocm_torch_ready"] is True
     assert summary["worker_rocm_amd_gpu_detected"] is True
-    assert summary["worker_rocm_visible_device_count"] == 0
-    assert summary["worker_rocm_device_names"] == []
+    assert summary["worker_rocm_visible_device_count"] == 1
+    assert summary["worker_rocm_device_names"] == ["AMD Radeon RX 6900 XT"]
     assert "visible_device_count>0" in summary["worker_rocm_manifest_completion_rule"]
     assert summary["production_gpu_backend_rows"] == 0
     assert summary["production_gpu_backend_non_production_rows"] == 0
@@ -271,12 +272,12 @@ def test_product_production_ai_gpu_return_intake_surfaces_operator_return_gap() 
     assert "actual_manifest_npz_schema_valid" in summary["failed_check_ids"]
     assert "actual_manifest_npz_identity_valid" in summary["failed_check_ids"]
     assert "actual_manifest_operator_verified" in summary["failed_check_ids"]
-    assert "worker_rocm_environment_manifest_ready" in summary["failed_check_ids"]
+    assert "worker_rocm_environment_manifest_ready" not in summary["failed_check_ids"]
     assert summary["execution_enabled"] is False
     assert summary["model_promoted"] is False
     assert summary["external_state_mutated"] is False
     assert len(payload["rows"]) == 20
-    assert len(payload["blockers"]) == 17
+    assert len(payload["blockers"]) == 16
     assert len(payload["operator_acceptance_matrix"]) == 5
     assert len(payload["operator_acceptance_stage_check_matrix"]) == 5
     assert payload["operator_acceptance_matrix"][0]["status"] == "ready"

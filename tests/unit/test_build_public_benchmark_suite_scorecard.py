@@ -6,6 +6,28 @@ from pathlib import Path
 
 from tools import build_public_benchmark_suite_scorecard as mod
 
+PDBBIND_CASF_RESULT_COLUMNS = [
+    "suite_id",
+    "complex_id",
+    "pose_id",
+    "pose_success",
+    "pose_rmsd_A",
+    "active_label",
+    "affinity_label",
+    "score",
+    "baseline_score",
+    "split_id",
+    "abstained",
+    "chirality_failure",
+    "tautomer_failure",
+    "protonation_failure",
+    "chemistry_evidence_present",
+    "runtime_ms",
+    "peak_memory_mb",
+    "pose_rmsd_method",
+    "pose_rmsd_diagnostics",
+]
+
 
 def test_build_public_benchmark_suite_scorecard_writes_json_md_and_row(tmp_path: Path) -> None:
     evidence = tmp_path / "results.csv"
@@ -21,6 +43,30 @@ def test_build_public_benchmark_suite_scorecard_writes_json_md_and_row(tmp_path:
                     "result_artifact": str(evidence),
                     "result_artifact_sha256": hashlib.sha256(evidence.read_bytes()).hexdigest(),
                     "result_row_count": 1,
+                    "gold_metric_schema_version": "tier_beta_docking_gold_metrics_v1",
+                    "gold_metric_status": "pass",
+                    "top1_mean_rmsd_A": 1.2,
+                    "top5_best_mean_rmsd_A": 0.8,
+                    "top1_pose_success_rate": 0.6,
+                    "top5_pose_success_rate": 0.9,
+                    "ranking_spearman": 0.5,
+                    "pr_auc": 0.7,
+                    "topk_hit_rate": 0.8,
+                    "decoy_rejection_rate": 0.75,
+                    "baseline_ranking_spearman": 0.1,
+                    "refine_ranking_spearman_delta": 0.4,
+                    "refine_improvement_observed": True,
+                    "heldout_complex_count": 3,
+                    "chirality_failure_rate": 0.01,
+                    "tautomer_failure_rate": 0.02,
+                    "protonation_failure_rate": 0.03,
+                    "chemistry_evidence_coverage": 1.0,
+                    "abstention_precision": 0.9,
+                    "mean_runtime_ms": 12.5,
+                    "peak_memory_mb": 42.0,
+                    "subset_identity_sha256": "a" * 64,
+                    "gold_metric_blockers": [],
+                    "result_columns": PDBBIND_CASF_RESULT_COLUMNS,
                 }
             }
         ),

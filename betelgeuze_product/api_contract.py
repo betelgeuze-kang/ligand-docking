@@ -3362,13 +3362,22 @@ def _blocker(row: dict[str, Any]) -> dict[str, str]:
 
 
 def _parse_api(root: Path) -> ast.Module | None:
-    path = root / "api" / "product.py"
-    if not path.is_file():
+    api_dir = root / "api"
+    paths = sorted(api_dir.glob("product*.py"))
+    if not paths:
         return None
-    try:
-        return ast.parse(path.read_text(encoding="utf-8"))
-    except (OSError, SyntaxError):
+    body: list[ast.stmt] = []
+    type_ignores: list[ast.TypeIgnore] = []
+    for path in paths:
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (OSError, SyntaxError):
+            continue
+        body.extend(tree.body)
+        type_ignores.extend(tree.type_ignores)
+    if not body:
         return None
+    return ast.Module(body=body, type_ignores=type_ignores)
 
 
 def _parse_module(path: Path) -> ast.Module | None:

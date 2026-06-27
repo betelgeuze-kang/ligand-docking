@@ -23,7 +23,7 @@ def test_build_platform_operator_quickstart_packet_outputs_expected_lanes() -> N
     assert summary["run_now_count"] == 4
     assert summary["prepare_next_count"] == 2
     assert summary["manual_review_only_count"] == 1
-    assert summary["highest_gap_family"] == "transporter"
+    assert summary["highest_gap_family"] == "none_tracked_commercialization_gap"
 
     row_map = {row["family"]: row for row in rows}
     assert row_map["gpcr"]["lane"] == "run_now"

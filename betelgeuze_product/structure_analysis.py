@@ -87,8 +87,8 @@ def _split_mmcif_line(line: str) -> list[str]:
         return line.split()
 
 
-def _parse_mmcif(text: str) -> list[dict[str, str]]:
-    atoms: list[dict[str, str]] = []
+def _parse_mmcif(text: str) -> list[dict[str, Any]]:
+    atoms: list[dict[str, Any]] = []
     headers: list[str] = []
     in_atom_loop = False
     for raw_line in text.splitlines():
@@ -118,20 +118,27 @@ def _parse_mmcif(text: str) -> list[dict[str, str]]:
         resname = _text(values.get("_atom_site.auth_comp_id") or values.get("_atom_site.label_comp_id") or "UNK").upper()
         chain_id = _text(values.get("_atom_site.auth_asym_id") or values.get("_atom_site.label_asym_id") or "_")
         residue_id = _text(values.get("_atom_site.auth_seq_id") or values.get("_atom_site.label_seq_id") or "0")
-        atoms.append(
-            {
-                "record": record,
-                "atom_name": _text(values.get("_atom_site.auth_atom_id") or values.get("_atom_site.label_atom_id")),
-                "resname": resname,
-                "chain_id": chain_id,
-                "residue_id": residue_id,
-                "element": _text(values.get("_atom_site.type_symbol")).upper(),
-            }
-        )
+        atom: dict[str, Any] = {
+            "record": record,
+            "atom_name": _text(values.get("_atom_site.auth_atom_id") or values.get("_atom_site.label_atom_id")),
+            "resname": resname,
+            "chain_id": chain_id,
+            "residue_id": residue_id,
+            "element": _text(values.get("_atom_site.type_symbol")).upper(),
+        }
+        try:
+            atom["xyz"] = [
+                float(_text(values.get("_atom_site.Cartn_x"))),
+                float(_text(values.get("_atom_site.Cartn_y"))),
+                float(_text(values.get("_atom_site.Cartn_z"))),
+            ]
+        except ValueError:
+            pass
+        atoms.append(atom)
     return atoms
 
 
-def _summarize_atoms(atoms: list[dict[str, str]]) -> dict[str, Any]:
+def _summarize_atoms(atoms: list[dict[str, Any]]) -> dict[str, Any]:
     residue_keys = {(atom["chain_id"], atom["resname"], atom["residue_id"]) for atom in atoms}
     polymer_residues = {
         (atom["chain_id"], atom["resname"], atom["residue_id"])
@@ -171,7 +178,7 @@ def analyze_structure_source(payload: dict[str, Any], *, root: str | Path = ".")
     source_kind, source_value = _source(payload)
     source_text, source_available, blockers = _read_source_text(source_kind, source_value, root)
     parser = ""
-    atoms: list[dict[str, str]] = []
+    atoms: list[dict[str, Any]] = []
     if source_text:
         parser = "mmcif" if source_kind.startswith("mmcif") else "pdb"
         if parser == "pdb":
@@ -183,7 +190,7 @@ def analyze_structure_source(payload: dict[str, Any], *, root: str | Path = ".")
 
     summary = _summarize_atoms(atoms)
     quality_metrics: dict[str, Any] = {}
-    if atoms:
+    if atoms and all("xyz" in atom for atom in atoms):
         quality_metrics = evaluate_structure_quality_with_external(
             atoms,
             pdb_text=source_text if parser == "pdb" else "",

@@ -48,13 +48,13 @@ def _status(row: dict[str, str]) -> str:
     return "missing"
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Summarize progress on synthetic-IDP temporal provenance curation.")
     ap.add_argument("--idp-csv", default="config/biorxiv_temporal_idp_provenance_v1.csv")
     ap.add_argument("--out-json", default="runs/biorxiv_temporal_idp_synthetic_progress_current.json")
     ap.add_argument("--out-csv", default="runs/biorxiv_temporal_idp_synthetic_progress_current.csv")
     ap.add_argument("--out-md", default="runs/biorxiv_temporal_idp_synthetic_progress_current.md")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     rows = _read_csv((ROOT / args.idp_csv).resolve())
     synthetic_rows = [row for row in rows if (row.get("source_kind") or "").strip() == "synthetic"]

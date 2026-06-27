@@ -104,9 +104,23 @@ def _format_metric(value: float | None) -> str:
 
 
 def _rankdata(values: np.ndarray) -> np.ndarray:
-    order = np.argsort(values)
-    ranks = np.empty_like(order, dtype=np.float64)
+    values = np.asarray(values, dtype=np.float64).reshape(-1)
+    order = np.argsort(values, kind="mergesort")
+    ranks = np.empty(len(values), dtype=np.float64)
     ranks[order] = np.arange(1, len(values) + 1, dtype=np.float64)
+    # Average ranks within tied groups so the Spearman coefficient matches the
+    # standard tie-corrected definition; with no ties this is a no-op.
+    sorted_values = values[order]
+    start = 0
+    n = len(values)
+    while start < n:
+        stop = start + 1
+        while stop < n and sorted_values[stop] == sorted_values[start]:
+            stop += 1
+        if stop - start > 1:
+            tied_indices = order[start:stop]
+            ranks[tied_indices] = float(ranks[tied_indices].mean())
+        start = stop
     return ranks
 
 

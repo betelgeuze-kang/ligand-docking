@@ -113,7 +113,7 @@ def test_production_ai_registry_promotion_priority_packet_blocks_current_registr
     assert summary["observed_registry_customer_facing_mutation_flags_ready"] is False
     assert summary["observed_checkpoint_registry_promotion_currently_satisfied"] is False
     assert summary["approval_token_required"] == mod.APPROVAL_TOKEN
-    assert "registry_promotion_operator_priority_items_pending" in summary["blockers"]
+    assert summary["blockers"] == ["registry_promotion_operator_priority_items_pending"]
     assert summary["model_promoted"] is False
     assert summary["customer_facing_mutation_enabled"] is False
     assert summary["external_state_mutated"] is False

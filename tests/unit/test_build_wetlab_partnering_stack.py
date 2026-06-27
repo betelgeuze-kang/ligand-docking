@@ -5,8 +5,6 @@ import json
 import os
 import sys
 
-import pytest
-
 from tools.wetlab_target_render_utils import load_json
 from tools import build_runs_cleanup_batch2_manifest as cleanup_manifest_mod
 from tools import build_wetlab_partner_first_contact_export_bundle as export_mod

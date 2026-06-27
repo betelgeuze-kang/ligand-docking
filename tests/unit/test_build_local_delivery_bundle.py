@@ -49,6 +49,7 @@ def _write_canonical_inputs(tmp_path: Path, *, include_queue_csv: bool = True) -
         "wetlab_selected_allatom_json": runs / "wetlab_selected_allatom_gate_burndown_packet_current.json",
         "current_results_index_json": runs / "wetlab_current_results_index_current.json",
         "partnering_stack_json": runs / "wetlab_partnering_stack_current.json",
+        "rescue_attempt_validation_json": runs / "wetlab_tcruzi_pde_allatom_rescue_attempt_validation_current.json",
         "verdict_gate_json": runs / "local_delivery_verdict_gate_current.json",
         "verdict_gate_md": runs / "local_delivery_verdict_gate_current.md",
     }
@@ -158,6 +159,24 @@ def _write_canonical_inputs(tmp_path: Path, *, include_queue_csv: bool = True) -
             }
         },
     )
+    _write_json(
+        paths["rescue_attempt_validation_json"],
+        {
+            "summary": {
+                "rescue_attempt_validation": "pass",
+                "overall_ok": True,
+                "failed_check_count": 0,
+                "hard_fail_count": 0,
+                "warning_count": 0,
+                "attempt_id": "rescue-attempt-test",
+                "execution_mode": "local_fixture",
+                "scoring_status": "pass",
+                "input_fingerprint_recomputed_ok": True,
+                "required_artifact_missing_count": 0,
+                "path_boundary_fail_count": 0,
+            }
+        },
+    )
     _write_text(paths["verdict_gate_md"], "# verdict gate\n")
     _write_verdict_gate(paths, delivery_ready=True)
     return paths
@@ -177,6 +196,7 @@ def _verdict_gate_payload(paths: dict[str, Path]) -> dict:
         wetlab_selected_allatom_json=paths["wetlab_selected_allatom_json"],
         current_results_index_json=paths["current_results_index_json"],
         partnering_stack_json=paths["partnering_stack_json"],
+        rescue_attempt_validation_json=paths["rescue_attempt_validation_json"],
     )
 
 
@@ -253,7 +273,7 @@ def test_build_local_delivery_bundle_smoke(tmp_path, monkeypatch):
     checksums = (bundle_dir / "checksums.sha256").read_text(encoding="utf-8")
 
     assert payload["bundle_dir"] == str(bundle_dir.resolve())
-    assert payload["included_count"] == 23
+    assert payload["included_count"] == 24
     assert payload["missing_count"] == 0
     assert payload["archive_sha256"]
     assert zipfile.is_zipfile(bundle_dir / "bundle.zip")
@@ -282,16 +302,54 @@ def test_build_local_delivery_bundle_smoke(tmp_path, monkeypatch):
         "wetlab_selected_allatom",
         "current_results_index",
         "partnering_stack",
+        "rescue_attempt_validation",
         "status_report_md",
     }
 
     assert (bundle_dir / "commercialization_status_report.md").exists()
     assert (bundle_dir / "runs" / "local_delivery_preflight_current.json").exists()
-    assert (bundle_dir / "runs" / "accuracy_gate_local_delivery_preflight_current.json").exists()
-    assert (bundle_dir / "runs" / "nightly_gate_burndown_packet_current.json").exists()
-    assert (bundle_dir / "runs" / "wetlab_selected_allatom_gate_burndown_packet_current.json").exists()
-    assert (bundle_dir / "runs" / "wetlab_current_results_index_current.json").exists()
-    assert (bundle_dir / "runs" / "wetlab_partnering_stack_current.json").exists()
+    assert (
+        bundle_dir
+        / "artifacts"
+        / "verdict_gate_source_artifacts"
+        / "accuracy_gate"
+        / "accuracy_gate_local_delivery_preflight_current.json"
+    ).exists()
+    assert (
+        bundle_dir
+        / "artifacts"
+        / "verdict_gate_source_artifacts"
+        / "nightly_gate"
+        / "nightly_gate_burndown_packet_current.json"
+    ).exists()
+    assert (
+        bundle_dir
+        / "artifacts"
+        / "verdict_gate_source_artifacts"
+        / "wetlab_selected_allatom"
+        / "wetlab_selected_allatom_gate_burndown_packet_current.json"
+    ).exists()
+    assert (
+        bundle_dir
+        / "artifacts"
+        / "verdict_gate_source_artifacts"
+        / "current_results_index"
+        / "wetlab_current_results_index_current.json"
+    ).exists()
+    assert (
+        bundle_dir
+        / "artifacts"
+        / "verdict_gate_source_artifacts"
+        / "partnering_stack"
+        / "wetlab_partnering_stack_current.json"
+    ).exists()
+    assert (
+        bundle_dir
+        / "artifacts"
+        / "verdict_gate_source_artifacts"
+        / "rescue_attempt_validation"
+        / "wetlab_tcruzi_pde_allatom_rescue_attempt_validation_current.json"
+    ).exists()
     assert (bundle_dir / "environment" / "environment_manifest.json").exists()
     assert (bundle_dir / "environment" / "requirements_lock.txt").exists()
     assert (bundle_dir / "environment" / "engine_provenance.json").exists()
@@ -326,7 +384,7 @@ def test_delivery_ready_verdict_succeeds_when_verdict_gate_green(tmp_path, monke
     assert manifest["verdict_gate_fingerprint_check"]["required_for_delivery_ready_verdict"] is True
     assert manifest["verdict_gate_fingerprint_check"]["reason"] == "fingerprints_match"
     assert manifest["verdict_gate_fingerprint_check"]["matched_count"] > 0
-    assert manifest["verdict_gate_fingerprint_check"]["matched_count"] == 11
+    assert manifest["verdict_gate_fingerprint_check"]["matched_count"] == 12
     assert manifest["verdict_gate_fingerprint_check"]["mismatch_count"] == 0
     assert manifest["verdict_gate_fingerprint_check"]["mismatches"] == []
     assert (
@@ -337,7 +395,7 @@ def test_delivery_ready_verdict_succeeds_when_verdict_gate_green(tmp_path, monke
         manifest["verdict_gate_fingerprint_check"]["persisted_label_count"]
         == manifest["verdict_gate_fingerprint_check"]["fresh_label_count"]
     )
-    assert manifest["verdict_gate_fingerprint_check"]["persisted_label_count"] == 11
+    assert manifest["verdict_gate_fingerprint_check"]["persisted_label_count"] == 12
     assert {
         row["label"] for row in manifest["local_delivery_verdict_gate"]["source_artifacts"]
     } == {
@@ -351,14 +409,15 @@ def test_delivery_ready_verdict_succeeds_when_verdict_gate_green(tmp_path, monke
         "wetlab_selected_allatom",
         "current_results_index",
         "partnering_stack",
+        "rescue_attempt_validation",
         "status_report_md",
     }
     included_by_spec_key = {row["spec_key"]: row for row in manifest["included_files"]}
     assert included_by_spec_key["verdict_gate_source_artifact_current_results_index"]["bundle_path"] == (
-        "runs/wetlab_current_results_index_current.json"
+        "artifacts/verdict_gate_source_artifacts/current_results_index/wetlab_current_results_index_current.json"
     )
     assert included_by_spec_key["verdict_gate_source_artifact_partnering_stack"]["bundle_path"] == (
-        "runs/wetlab_partnering_stack_current.json"
+        "artifacts/verdict_gate_source_artifacts/partnering_stack/wetlab_partnering_stack_current.json"
     )
     assert "- fingerprint_check_status: `pass`" in manifest_md
     assert "- fingerprint_check_ok: `True`" in manifest_md
@@ -425,11 +484,19 @@ def test_delivery_ready_verdict_uses_explicit_new_source_artifact_paths_for_fres
         if row["category"] == "verdict_gate_source_artifact"
     }
     assert manifest["verdict_gate_fingerprint_check"]["status"] == "pass"
-    assert manifest["verdict_gate_fingerprint_check"]["persisted_label_count"] == 11
-    assert source_rows["current_results_index"]["bundle_path"] == "custom_sources/current_results_index.json"
-    assert source_rows["partnering_stack"]["bundle_path"] == "custom_sources/partnering_stack.json"
-    assert (bundle_dir / "custom_sources" / "current_results_index.json").exists()
-    assert (bundle_dir / "custom_sources" / "partnering_stack.json").exists()
+    assert manifest["verdict_gate_fingerprint_check"]["persisted_label_count"] == 12
+    assert source_rows["current_results_index"]["bundle_path"] == (
+        "artifacts/verdict_gate_source_artifacts/current_results_index/current_results_index.json"
+    )
+    assert source_rows["partnering_stack"]["bundle_path"] == (
+        "artifacts/verdict_gate_source_artifacts/partnering_stack/partnering_stack.json"
+    )
+    assert (
+        bundle_dir / "artifacts" / "verdict_gate_source_artifacts" / "current_results_index" / "current_results_index.json"
+    ).exists()
+    assert (
+        bundle_dir / "artifacts" / "verdict_gate_source_artifacts" / "partnering_stack" / "partnering_stack.json"
+    ).exists()
 
 
 def test_delivery_ready_verdict_fails_when_verdict_gate_blocked(tmp_path, monkeypatch):
@@ -846,7 +913,7 @@ def test_build_local_delivery_bundle_override_and_missing_file_recorded(tmp_path
     manifest = json.loads((bundle_dir / "manifest.json").read_text(encoding="utf-8"))
     copied_report = (bundle_dir / "commercialization_status_report.md").read_text(encoding="utf-8")
 
-    assert payload["included_count"] == 22
+    assert payload["included_count"] == 23
     assert payload["missing_count"] == 1
     assert copied_report == "# override report\n"
     assert manifest["queue"]["artifacts"]["csv"]["present"] is False

@@ -2023,6 +2023,15 @@ async def get_goal_status() -> dict[str, Any]:
     product_launch_r4_preflight = _summary(product_launch_r4_preflight_packet)
     deploy_ops_legal = _summary(deploy_ops_legal_packet)
     intake_rows = _rows(intake_packet)
+
+    handoff_status = dict(handoff)
+    if not handoff_status.get("production_ai_registry_promotion_priority_top_acceptance_artifact"):
+        handoff_status["production_ai_registry_promotion_priority_top_acceptance_artifact"] = (
+            intake.get("production_ai_registry_promotion_priority_top_acceptance_artifact")
+            or bottlenecks.get("production_ai_registry_promotion_priority_top_acceptance_artifact")
+            or engine_priority.get("top_acceptance_artifact")
+            or ""
+        )
     bottleneck_rows = _rows(bottleneck_packet)
     full_commercial_release_blocker_ids = [
         bottleneck_id
@@ -2818,7 +2827,7 @@ async def get_goal_status() -> dict[str, Any]:
         "production_ai_registry_promotion_priority_downstream_missing_surfaces": (
             production_ai_registry_promotion_priority_downstream_missing_surfaces
         ),
-        **_production_ai_registry_promotion_receipt_fields(handoff),
+        **_production_ai_registry_promotion_receipt_fields(handoff_status),
         **_cameo_official_result_fetch_preflight_fields(cameo_fetch, intake_rows),
         **_product_rollout_execution_smoke_receipt_fields(rollout_smoke_receipt),
         **_product_launch_r4_preflight_fields(product_launch_r4_preflight),

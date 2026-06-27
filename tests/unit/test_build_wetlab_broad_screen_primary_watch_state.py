@@ -107,7 +107,7 @@ def test_primary_watch_state_ignores_stale_summary_older_than_active_start(tmp_p
         ),
         encoding="utf-8",
     )
-    stale_mtime = dt = 1711843200  # 2024-03-31T00:00:00 local-ish anchor, intentionally old
+    stale_mtime = 1711843200  # 2024-03-31T00:00:00 local-ish anchor, intentionally old
     os.utime(summary_json, (stale_mtime, stale_mtime))
     pid_path = tmp_path / "compute.pid"
     pid_path.write_text(str(os.getpid()), encoding="utf-8")

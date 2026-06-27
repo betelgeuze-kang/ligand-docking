@@ -672,7 +672,7 @@ def _validate_kpi_claim_metadata_gates(
     if (
         not unassigned_chiral_row
         or unassigned_chiral_row.get("ligand_topology_claim_safe") is not False
-        or str(unassigned_chiral_row.get("chirality_status") or "") != "unassigned_chiral_centers"
+        or str(unassigned_chiral_row.get("chirality_status") or "") != "unassigned_stereochemistry"
         or _int_value(unassigned_chiral_row.get("unassigned_chiral_center_count")) < 1
         or "unassigned_ligand_chirality" not in [str(v) for v in unassigned_blockers]
     ):

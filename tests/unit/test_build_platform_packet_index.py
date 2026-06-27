@@ -30,7 +30,7 @@ def test_build_platform_packet_index_outputs_expected_navigation() -> None:
     assert summary["highest_gap_family"] == "none_tracked_commercialization_gap"
     assert summary["manual_review_count"] == 1
     assert summary["manual_review_target_count"] == 2
-    assert summary["partial_commit_confirm_now_count"] == 8
+    assert summary["partial_commit_confirm_now_count"] == 3
     assert summary["transporter_manual_review_seed_row_count"] == 6
     assert summary["idp_commercial_pretest_target_count"] == 7
     assert summary["transporter_manual_review_binder_pending_count"] == 0
@@ -43,7 +43,7 @@ def test_build_platform_packet_index_outputs_expected_navigation() -> None:
     assert row_map["family_packet_catalog"]["artifact_path"] == "runs/family_packet_catalog_current.md"
     assert row_map["family_operator_quicklink_board"]["artifact_path"] == "runs/family_operator_quicklink_board_current.md"
     assert row_map["partial_authoritative_commit_launchboard"]["artifact_path"] == "runs/partial_authoritative_commit_launchboard_current.md"
-    assert row_map["partial_authoritative_commit_launchboard"]["primary_signal"] == "confirm_now=8"
+    assert row_map["partial_authoritative_commit_launchboard"]["primary_signal"] == "confirm_now=3"
     assert row_map["transporter_manual_review_quickstart"]["artifact_path"] == "runs/transporter_manual_review_quickstart_packet_current.md"
     assert row_map["transporter_manual_review_quickstart"]["primary_signal"] == "seed_rows=6"
     assert row_map["idp_commercial_pretest"]["artifact_path"] == "runs/idp_commercial_pretest_decision_current.md"

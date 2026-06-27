@@ -89,13 +89,13 @@ def _summarize(
     }
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Summarize coverage of editable temporal provenance mapping CSVs.")
     ap.add_argument("--ligand-csv", default="config/biorxiv_temporal_ligand_provenance_v1.csv")
     ap.add_argument("--idp-csv", default="config/biorxiv_temporal_idp_provenance_v1.csv")
     ap.add_argument("--out-json", default="runs/biorxiv_temporal_provenance_mapping_coverage_current.json")
     ap.add_argument("--out-md", default="runs/biorxiv_temporal_provenance_mapping_coverage_current.md")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     ligand_rows = _read_csv((ROOT / args.ligand_csv).resolve())
     idp_rows = _read_csv((ROOT / args.idp_csv).resolve())

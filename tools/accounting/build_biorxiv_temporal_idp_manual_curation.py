@@ -82,12 +82,12 @@ def _build_summary(rows: list[dict[str, str]], source_kind: str, csv_name: str) 
     return "\n".join(lines)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Build manual curation templates for unresolved IDP item-level provenance.")
     ap.add_argument("--provenance-csv", default="config/biorxiv_temporal_idp_provenance_v1.csv")
     ap.add_argument("--helper-csv", default="runs/biorxiv_temporal_idp_item_helpers_current.csv")
     ap.add_argument("--out-dir", default="runs/biorxiv_temporal_idp_manual_curation_current")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     provenance_rows = _read_csv((ROOT / args.provenance_csv).resolve())
     helper_rows = _read_csv((ROOT / args.helper_csv).resolve())
