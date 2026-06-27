@@ -13,11 +13,23 @@ import json
 from pathlib import Path
 from typing import Any
 
-from betelgeuze_product.benchmark_ledger import CLAIM_SCOPES, current_ledger
+from betelgeuze_product.benchmark_ledger import CLAIM_SCOPES, EXTERNAL_SAFE_SCOPES, current_ledger
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/benchmark_ledger_current.json"
 DEFAULT_OUT_MD = "docs/BENCHMARK_LEDGER_CURRENT.md"
+
+
+_SCOPE_PRODUCT_INTERPRETATION = {
+    "restricted_local_delivery": "Current alpha product wording may cite these rows inside the restricted scope only.",
+    "tracked_ranking_parity": "Strong lane-specific ranking records; never promote to broad-family parity.",
+    "diagnostic_scaleup": "Useful scale/regression signals; do not use as hard external accuracy claims.",
+    "target_specific_success": "Target-specific success; never promote to family/router wording.",
+    "broad_family_locked": "Required failure/blocked evidence for broad GPCR claim closure.",
+    "reject_evidence": "Negative evidence retained to prevent accidental relaunch or promotion.",
+    "scaffold_only": "Scaffold/preflight only; not competitive proof.",
+    "full_commercial_blocked": "Broad all-atom/FEP/general commercial parity remains locked.",
+}
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -27,6 +39,7 @@ def _resolve(path_like: str | Path) -> Path:
 
 def _render_markdown(ledger: dict[str, Any]) -> str:
     summary = ledger["summary"]
+    scope_counts = summary.get("scope_counts", {}) if isinstance(summary.get("scope_counts"), dict) else {}
     lines = [
         "# Benchmark Claim Ledger (current)",
         "",
@@ -41,7 +54,7 @@ def _render_markdown(ledger: dict[str, Any]) -> str:
         f"- schema_version: `{summary['schema_version']}`",
         f"- entries: `{summary['entry_count']}`",
         f"- external-safe entries: `{summary['external_safe_count']}`",
-        f"- locked/reject/scaffold entries: `{summary['locked_or_reject_count']}`",
+        f"- locked/reject/scaffold/full-commercial-blocked entries: `{summary['locked_or_reject_count']}`",
         "",
         "## Claim scopes",
         "",
@@ -50,6 +63,21 @@ def _render_markdown(ledger: dict[str, Any]) -> str:
     ]
     for scope, meaning in CLAIM_SCOPES.items():
         lines.append(f"| `{scope}` | {meaning} |")
+
+    lines.extend(
+        [
+            "",
+            "## Scope rollup",
+            "",
+            "| scope | count | external-safe? | product interpretation |",
+            "| --- | ---: | :--: | --- |",
+        ]
+    )
+    for scope in CLAIM_SCOPES:
+        safe = "yes" if scope in EXTERNAL_SAFE_SCOPES else "no"
+        interpretation = _SCOPE_PRODUCT_INTERPRETATION.get(scope, "")
+        lines.append(f"| `{scope}` | {int(scope_counts.get(scope, 0))} | {safe} | {interpretation} |")
+
     lines.extend(
         [
             "",
@@ -79,7 +107,31 @@ def _render_markdown(ledger: dict[str, Any]) -> str:
     for row in ledger["entries"]:
         if row["external_safe"]:
             lines.append(f"- **{row['entry_id']}**: {row['allowed_external_wording']}")
-    lines.append("")
+
+    lines.extend(["", "## Explicitly disallowed promotions", ""])
+    for row in ledger["entries"]:
+        disallowed = [str(item) for item in row.get("disallowed_wording", []) if str(item).strip()]
+        if not disallowed:
+            continue
+        if row["external_safe"]:
+            lines.append(f"- Do not promote `{row['entry_id']}` to: {', '.join(disallowed)}.")
+        else:
+            lines.append(f"- Do not present `{row['entry_id']}` as a positive product claim: {', '.join(disallowed)}.")
+
+    lines.extend(
+        [
+            "",
+            "## Product direction encoded by the ledger",
+            "",
+            "The current product story is **restricted but strong**:",
+            "",
+            "1. Betelgeuze may be described as a **local-first restricted molecular docking / structure-analysis appliance** for guarded kinase, selected GPCR, and ion-channel workflows.",
+            "2. Strong GPCR A1, ADRB2, 1M scale-up, frozen-evaluator, OpenMM/structure, and internal smoke records exist, but each has a tight claim boundary.",
+            "3. Broad GPCR/router, general all-atom MD/FEP, CASP17 win-tier, and full commercial replacement claims remain fail-closed.",
+            "4. The next product-development sequence is: Benchmark Ledger -> H-Bond BackMap product surface -> CASF/PDBBind public harness -> GPCR hard-decoy closure -> PocketMD Lite / top-k refinement.",
+            "",
+        ]
+    )
     return "\n".join(lines)
 
 
