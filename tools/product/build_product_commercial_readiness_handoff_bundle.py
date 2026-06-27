@@ -25,6 +25,9 @@ DEFAULT_PRODUCT_IMAGE_SMOKE_PREFLIGHT_JSON = "runs/product_image_smoke_preflight
 DEFAULT_HBOND_BACKMAP_REPORT_JSON = "runs/hbond_backmap_report_current.json"
 DEFAULT_HBOND_BACKMAP_REPORT_MD = "runs/hbond_backmap_report_current.md"
 DEFAULT_HBOND_BACKMAP_REPORT_CSV = "runs/hbond_backmap_report_current.csv"
+DEFAULT_GPCR_HARD_DECOY_SUITE_JSON = "runs/gpcr_hard_decoy_suite_current.json"
+DEFAULT_GPCR_HARD_DECOY_SUITE_MD = "runs/gpcr_hard_decoy_suite_current.md"
+DEFAULT_GPCR_HARD_DECOY_SUITE_CSV = "runs/gpcr_hard_decoy_suite_current.csv"
 DEFAULT_OUT_JSON = "runs/product_commercial_readiness_handoff_bundle_current.json"
 DEFAULT_OUT_CSV = "runs/product_commercial_readiness_handoff_bundle_current.csv"
 DEFAULT_OUT_MD = "runs/product_commercial_readiness_handoff_bundle_current.md"
@@ -39,6 +42,14 @@ CLAIM_BOUNDARY = (
 # bundle, never a delivery-ready gate and never a docking-accuracy/affinity claim.
 HBOND_BACKMAP_CLAIM_BOUNDARY = (
     "H-Bond BackMap is local interpretability evidence, not a docking-accuracy or binding-affinity claim."
+)
+
+# The GPCR hard-decoy suite is an additive fail-closed gate surface in the
+# handoff bundle: it shows whether broad GPCR/router is still locked, never
+# promotes it.
+GPCR_HARD_DECOY_CLAIM_BOUNDARY = (
+    "GPCR hard-decoy suite is a fail-closed broad-GPCR gate surface; it does not run scoring, generate decoys, "
+    "relax thresholds, or promote broad-GPCR claims. A broad_family_locked result remains non-claimable."
 )
 
 
@@ -155,6 +166,79 @@ def _hbond_backmap_report_reference(
         "execution_enabled": False,
         "external_state_mutated": False,
         "claim_boundary": HBOND_BACKMAP_CLAIM_BOUNDARY,
+        "kpi": kpi,
+    }
+
+
+def _gpcr_hard_decoy_suite_reference(
+    json_path: str | Path,
+    md_path: str | Path,
+    csv_path: str | Path,
+) -> dict[str, Any]:
+    """Build an additive GPCR hard-decoy gate reference for the handoff bundle.
+
+    Reads ``runs/gpcr_hard_decoy_suite_current.json`` (built by
+    ``tools/product/build_gpcr_hard_decoy_suite_report.py``) and surfaces only
+    the family gate KPI plus artifact paths. It is a fail-closed broad-GPCR gate
+    surface: never a handoff/delivery-ready hard gate, never a broad-GPCR claim.
+    A missing/invalid report is surfaced as a warning, and family_claim_safe
+    stays false.
+    """
+
+    resolved = _resolve(json_path) if str(json_path).strip() else Path()
+    present_file = bool(str(resolved) and resolved.exists() and resolved.is_file())
+    valid = False
+    reason = "missing"
+    summary: dict[str, Any] = {}
+    if present_file:
+        try:
+            payload = json.loads(resolved.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            reason = "invalid_json"
+        else:
+            candidate = payload.get("summary") if isinstance(payload, dict) else None
+            if isinstance(candidate, dict):
+                summary = candidate
+                valid = True
+                reason = "present"
+            else:
+                reason = "invalid_payload_missing_summary"
+
+    def _i(value: Any) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
+
+    def _len(value: Any) -> int:
+        return len(value) if isinstance(value, list) else 0
+
+    kpi = {
+        "gpcr_hard_decoy_report_present": valid,
+        # Fail-closed: only an explicit True is treated as claim-safe.
+        "gpcr_hard_decoy_family_claim_safe": bool(summary.get("family_claim_safe") is True),
+        "gpcr_hard_decoy_status": str(summary.get("status") or ("missing" if not valid else "")),
+        "gpcr_hard_decoy_target_count": _i(summary.get("target_count")),
+        "gpcr_hard_decoy_green_target_count": _len(summary.get("green_target_ids")),
+        "gpcr_hard_decoy_blocked_target_count": _len(summary.get("blocked_target_ids")),
+        "gpcr_hard_decoy_missing_required_target_count": _len(summary.get("missing_required_target_ids")),
+        "gpcr_hard_decoy_first_blocked_required_target": str(
+            summary.get("first_blocked_required_target") or ""
+        ),
+    }
+    return {
+        "artifact_id": "gpcr_hard_decoy_suite_report",
+        "artifact_type": "broad_gpcr_gate_evidence",
+        "present": valid,
+        "reason": reason,
+        "warning": "" if valid else f"gpcr_hard_decoy_suite_report_{reason}",
+        "json_path": str(json_path).strip(),
+        "md_path": str(md_path).strip(),
+        "csv_path": str(csv_path).strip(),
+        "required_for_delivery_ready": False,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_boundary": GPCR_HARD_DECOY_CLAIM_BOUNDARY,
         "kpi": kpi,
     }
 
@@ -802,6 +886,9 @@ def build_product_commercial_readiness_handoff_bundle(
     hbond_backmap_report_json_path: str = DEFAULT_HBOND_BACKMAP_REPORT_JSON,
     hbond_backmap_report_md_path: str = DEFAULT_HBOND_BACKMAP_REPORT_MD,
     hbond_backmap_report_csv_path: str = DEFAULT_HBOND_BACKMAP_REPORT_CSV,
+    gpcr_hard_decoy_suite_json_path: str = DEFAULT_GPCR_HARD_DECOY_SUITE_JSON,
+    gpcr_hard_decoy_suite_md_path: str = DEFAULT_GPCR_HARD_DECOY_SUITE_MD,
+    gpcr_hard_decoy_suite_csv_path: str = DEFAULT_GPCR_HARD_DECOY_SUITE_CSV,
 ) -> dict[str, Any]:
     operator_summary = _summary(operator_packet)
     freshness_summary = _summary(freshness_packet)
@@ -813,6 +900,12 @@ def build_product_commercial_readiness_handoff_bundle(
         hbond_backmap_report_csv_path,
     )
     hbond_backmap_report_kpi = hbond_backmap_report_reference["kpi"]
+    gpcr_hard_decoy_suite_reference = _gpcr_hard_decoy_suite_reference(
+        gpcr_hard_decoy_suite_json_path,
+        gpcr_hard_decoy_suite_md_path,
+        gpcr_hard_decoy_suite_csv_path,
+    )
+    gpcr_hard_decoy_suite_kpi = gpcr_hard_decoy_suite_reference["kpi"]
     ai_md_engine_kpi_summary = _summary_or_packet(ai_md_engine_kpi_packet or {})
     ai_md_engine_kpi_present = bool(ai_md_engine_kpi_summary)
     ai_md_pose_ranking_hbond = (
@@ -1873,6 +1966,19 @@ def build_product_commercial_readiness_handoff_bundle(
         "hbond_backmap_claim_safe_rate": hbond_backmap_report_kpi["hbond_backmap_claim_safe_rate"],
         "hbond_backmap_total_donor_sites": hbond_backmap_report_kpi["hbond_backmap_total_donor_sites"],
         "hbond_backmap_total_acceptor_sites": hbond_backmap_report_kpi["hbond_backmap_total_acceptor_sites"],
+        "gpcr_hard_decoy_suite": gpcr_hard_decoy_suite_reference,
+        "gpcr_hard_decoy_report_present": gpcr_hard_decoy_suite_kpi["gpcr_hard_decoy_report_present"],
+        "gpcr_hard_decoy_family_claim_safe": gpcr_hard_decoy_suite_kpi["gpcr_hard_decoy_family_claim_safe"],
+        "gpcr_hard_decoy_status": gpcr_hard_decoy_suite_kpi["gpcr_hard_decoy_status"],
+        "gpcr_hard_decoy_target_count": gpcr_hard_decoy_suite_kpi["gpcr_hard_decoy_target_count"],
+        "gpcr_hard_decoy_green_target_count": gpcr_hard_decoy_suite_kpi["gpcr_hard_decoy_green_target_count"],
+        "gpcr_hard_decoy_blocked_target_count": gpcr_hard_decoy_suite_kpi["gpcr_hard_decoy_blocked_target_count"],
+        "gpcr_hard_decoy_missing_required_target_count": gpcr_hard_decoy_suite_kpi[
+            "gpcr_hard_decoy_missing_required_target_count"
+        ],
+        "gpcr_hard_decoy_first_blocked_required_target": gpcr_hard_decoy_suite_kpi[
+            "gpcr_hard_decoy_first_blocked_required_target"
+        ],
         "ai_md_engine_kpi_report_json": ai_md_engine_kpi_json_path if ai_md_engine_kpi_present else "",
         "ai_md_engine_kpi_report_md": ai_md_engine_kpi_md_path if ai_md_engine_kpi_present else "",
         "ai_md_engine_kpi_status": _text(ai_md_engine_kpi_summary.get("status")),
@@ -3618,6 +3724,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--hbond-backmap-report-json", default=DEFAULT_HBOND_BACKMAP_REPORT_JSON)
     parser.add_argument("--hbond-backmap-report-md", default=DEFAULT_HBOND_BACKMAP_REPORT_MD)
     parser.add_argument("--hbond-backmap-report-csv", default=DEFAULT_HBOND_BACKMAP_REPORT_CSV)
+    parser.add_argument("--gpcr-hard-decoy-suite-json", default=DEFAULT_GPCR_HARD_DECOY_SUITE_JSON)
+    parser.add_argument("--gpcr-hard-decoy-suite-md", default=DEFAULT_GPCR_HARD_DECOY_SUITE_MD)
+    parser.add_argument("--gpcr-hard-decoy-suite-csv", default=DEFAULT_GPCR_HARD_DECOY_SUITE_CSV)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -3643,6 +3752,9 @@ def main(argv: list[str] | None = None) -> None:
         hbond_backmap_report_json_path=args.hbond_backmap_report_json,
         hbond_backmap_report_md_path=args.hbond_backmap_report_md,
         hbond_backmap_report_csv_path=args.hbond_backmap_report_csv,
+        gpcr_hard_decoy_suite_json_path=args.gpcr_hard_decoy_suite_json,
+        gpcr_hard_decoy_suite_md_path=args.gpcr_hard_decoy_suite_md,
+        gpcr_hard_decoy_suite_csv_path=args.gpcr_hard_decoy_suite_csv,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])
