@@ -49,7 +49,7 @@ def _render_markdown(ledger: dict[str, Any]) -> str:
         "`betelgeuze_product/benchmark_ledger.py`. Edit the module, not this file.",
         "",
         "External messaging may cite ONLY rows with `external_safe=true` and must stay",
-        "within each row's claim boundary. Locked / reject / scaffold rows are never",
+        "within each row's claim boundary. Locked / reject / scaffold / full-commercial-blocked rows are never",
         "product claims. See `.kiro/steering/claim_safe_wording.md`.",
         "",
         f"- schema_version: `{summary['schema_version']}`",
