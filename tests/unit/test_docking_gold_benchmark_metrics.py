@@ -400,46 +400,6 @@ def test_docking_gold_refine_delta_requires_same_heldout_baseline_pairs() -> Non
     assert "heldout_refine_ranking_spearman_not_improved" in payload["blockers"]
 
 
-def test_docking_gold_accepts_holdout_split_alias_for_refine_gate() -> None:
-    rows = [
-        DockingGoldRow(
-            "holdout_a",
-            "holdout_a_pose1",
-            1,
-            pose_rmsd_a=1.0,
-            score=-9.0,
-            baseline_score=-1.0,
-            affinity_label=9.0,
-            active_label=True,
-            split_id="holdout",
-            chemistry_evidence_present=True,
-            runtime_ms=10,
-            peak_memory_mb=100,
-        ),
-        DockingGoldRow(
-            "holdout_b",
-            "holdout_b_pose1",
-            1,
-            pose_rmsd_a=1.0,
-            score=-1.0,
-            baseline_score=-9.0,
-            affinity_label=1.0,
-            active_label=False,
-            split_id="holdout",
-            abstained=True,
-            chemistry_evidence_present=True,
-            runtime_ms=11,
-            peak_memory_mb=101,
-        ),
-    ]
-
-    payload = evaluate_docking_gold_slice(rows).to_dict()
-
-    assert payload["heldout_complex_count"] == 2
-    assert "heldout_labels_missing" not in payload["blockers"]
-    assert payload["refine_improvement_observed"] is True
-
-
 def test_docking_gold_refine_delta_blocks_missing_heldout_refined_score() -> None:
     rows = [
         DockingGoldRow(

@@ -56,6 +56,74 @@ def test_sqlite_job_store_create_job_outbox_event_survives_reopen(tmp_path: Path
     assert recovered[0]["payload"]["job_id"] == "job_outbox_create"
 
 
+def test_sqlite_job_store_create_job_if_absent_emits_outbox_event(tmp_path: Path) -> None:
+    db_path = tmp_path / "api_jobs.sqlite3"
+    store = SQLiteJobStore(db_path)
+
+    _record, created = store.create_job_if_absent(
+        "job_if_absent_outbox", {"target_name": "ADRB2"}, status="submitted"
+    )
+    assert created is True
+
+    pending = store.list_pending_outbox_events()
+    assert len(pending) == 1
+    assert pending[0]["event_type"] == "job_created"
+    assert pending[0]["payload"] == {
+        "job_id": "job_if_absent_outbox",
+        "status": "submitted",
+        "target_name": "ADRB2",
+    }
+
+    # The durable creation event must survive a crash/reopen.
+    reopened = SQLiteJobStore(db_path)
+    recovered = reopened.list_pending_outbox_events()
+    assert len(recovered) == 1
+    assert recovered[0]["payload"]["job_id"] == "job_if_absent_outbox"
+
+
+def test_sqlite_job_store_create_job_if_absent_duplicate_does_not_duplicate_outbox(
+    tmp_path: Path,
+) -> None:
+    store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
+    request = {"target_name": "ADRB2"}
+
+    _first, created = store.create_job_if_absent("job_dup", request, status="submitted")
+    assert created is True
+
+    # An already-present job must be preserved and must not emit a second event.
+    _second, created_again = store.create_job_if_absent("job_dup", request, status="submitted")
+    assert created_again is False
+
+    creation_events = [
+        event
+        for event in store.list_pending_outbox_events()
+        if event["event_type"] == "job_created" and event["job_id"] == "job_dup"
+    ]
+    assert len(creation_events) == 1
+
+
+def test_sqlite_job_store_create_job_if_absent_outbox_excludes_private_material(
+    tmp_path: Path,
+) -> None:
+    store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
+    private_request = {
+        "target_name": "ADRB2",
+        "ligand_smiles": "CCO",
+        "protein_pdb": "ATOM      1  N   MET A   1",
+    }
+
+    _record, created = store.create_job_if_absent(
+        "job_if_absent_private", private_request, status="submitted"
+    )
+    assert created is True
+
+    pending = store.list_pending_outbox_events()
+    assert len(pending) == 1
+    serialized = json.dumps(pending[0]["payload"])
+    assert "CCO" not in serialized
+    assert "ATOM" not in serialized
+
+
 def test_sqlite_job_store_terminal_outbox_event_delivered_idempotently_after_reopen(
     tmp_path: Path,
 ) -> None:

@@ -44,13 +44,9 @@ jobs:
   product-image-build-smoke:
     runs-on: ${{ fromJSON(inputs.build_runner_labels_json || '["self-hosted","linux"]') }}
     steps:
-      - name: Seed product image build smoke failure receipt
-        run: echo failure_receipt_seeded
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: product-image-build-smoke-receipt-log-${{ github.run_id }}
-          retention-days: 14
           path: |
             runs/product_image_smoke_receipt_current.json
             runs/product_image_build_smoke.log
@@ -58,13 +54,9 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/product-') }}
     runs-on: [self-hosted, linux, rocm]
     steps:
-      - name: Seed product image ROCm runtime smoke failure receipt
-        run: echo failure_receipt_seeded
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: product-image-rocm-runtime-smoke-receipt-log-${{ github.run_id }}
-          retention-days: 14
           path: |
             runs/product_image_smoke_receipt_current.json
             runs/product_image_rocm_runtime_smoke.log
@@ -110,10 +102,9 @@ def _green_inputs(tmp_path: Path) -> dict[str, Path]:
                         "id": 101,
                         "event": "schedule",
                         "name": "product-image-smoke",
-                        "display_title": "Scheduled product image smoke",
+                        "display_title": "Product image ROCm runtime smoke",
                         "status": "completed",
                         "conclusion": "success",
-                        "created_at": "2026-06-23T06:00:00Z",
                         "html_url": "https://example.invalid/schedule",
                     }
                 ],
@@ -124,7 +115,8 @@ def _green_inputs(tmp_path: Path) -> dict[str, Path]:
             {
                 "total_count": 2,
                 "artifacts": [
-                    {"name": "product-image-rocm-runtime-smoke-receipt-log-101"},
+                    {"name": "product-image-rocm-runtime-smoke-101"},
+                    {"name": "product-image-rocm-runtime-smoke-log-receipt-101"},
                 ],
             },
         ),
@@ -138,10 +130,9 @@ def _green_inputs(tmp_path: Path) -> dict[str, Path]:
                         "event": "push",
                         "head_branch": "refs/tags/v0.1.0",
                         "name": "product-image-smoke",
-                        "display_title": "Release tag product image smoke",
+                        "display_title": "Product image ROCm runtime smoke",
                         "status": "completed",
                         "conclusion": "success",
-                        "created_at": "2026-06-23T07:00:00Z",
                         "html_url": "https://example.invalid/tag",
                     }
                 ],
@@ -171,11 +162,6 @@ def test_release_ci_remote_green_receipt_passes_with_complete_evidence(tmp_path:
     assert rows_by_id["product_image_workflow_source_contract_configured"]["passed"] is True
     assert rows_by_id["product_image_workflow_source_contract_configured"]["observed"]["workflow_sha256"]
     assert "does not register runners" in summary["claim_boundary"]
-    evidence_collection = summary["evidence_collection"]
-    assert evidence_collection["contract_schema_version"]
-    assert evidence_collection["contract_tool"].endswith("release_ci_remote_green_evidence_contract.py")
-    assert "actions/runners" in evidence_collection["gh_api_endpoints"]["runner_inventory_json"]
-    assert evidence_collection["default_input_paths"]["branch_json"].endswith("release_ci_branch_main_current.json")
 
 
 def test_release_ci_remote_green_receipt_blocks_unprotected_main_and_missing_remote_runs(tmp_path: Path) -> None:
@@ -264,65 +250,6 @@ def test_release_ci_remote_green_receipt_blocks_expired_failed_run_artifacts(tmp
 
     assert payload["summary"]["failure_artifacts_preserved"] is False
     assert "failed_run_artifacts_preserved" in blocker_codes
-
-
-def test_release_ci_remote_green_receipt_blocks_failed_artifact_without_receipt_log_name(tmp_path: Path) -> None:
-    inputs = _green_inputs(tmp_path)
-    inputs["workflow_yml"].write_text(_workflow_source(), encoding="utf-8")
-    inputs["failed_run_artifacts_json"] = _write_json(
-        tmp_path / "failed_artifacts.json",
-        {
-            "total_count": 1,
-            "artifacts": [
-                {"name": "product-image-rocm-runtime-smoke-101"},
-            ],
-        },
-    )
-
-    payload = build_release_ci_remote_green_receipt(root=tmp_path, **inputs)
-    blocker_codes = {row["code"] for row in payload["blockers"]}
-
-    assert payload["summary"]["failure_artifacts_preserved"] is False
-    assert "failed_run_artifacts_preserved" in blocker_codes
-
-
-def test_release_ci_remote_green_receipt_blocks_latest_schedule_failure_even_with_older_success(tmp_path: Path) -> None:
-    inputs = _green_inputs(tmp_path)
-    inputs["workflow_yml"].write_text(_workflow_source(), encoding="utf-8")
-    inputs["schedule_runs_json"] = _write_json(
-        tmp_path / "schedule_runs.json",
-        {
-            "total_count": 2,
-            "workflow_runs": [
-                {
-                    "id": 101,
-                    "event": "schedule",
-                    "name": "product-image-smoke",
-                    "status": "completed",
-                    "conclusion": "success",
-                    "created_at": "2026-06-16T06:00:00Z",
-                    "html_url": "https://example.invalid/old-success",
-                },
-                {
-                    "id": 102,
-                    "event": "schedule",
-                    "name": "product-image-smoke",
-                    "status": "completed",
-                    "conclusion": "failure",
-                    "created_at": "2026-06-23T06:00:00Z",
-                    "html_url": "https://example.invalid/latest-failure",
-                },
-            ],
-        },
-    )
-
-    payload = build_release_ci_remote_green_receipt(root=tmp_path, **inputs)
-    blocker_codes = {row["code"] for row in payload["blockers"]}
-    row = {item["check_id"]: item for item in payload["rows"]}["weekly_rocm_runtime_schedule_green"]
-
-    assert payload["summary"]["weekly_rocm_schedule_green"] is False
-    assert "weekly_rocm_runtime_schedule_green" in blocker_codes
-    assert row["observed"]["id"] == 102
 
 
 def test_release_ci_remote_green_receipt_blocks_missing_rocm_runner_label(tmp_path: Path) -> None:

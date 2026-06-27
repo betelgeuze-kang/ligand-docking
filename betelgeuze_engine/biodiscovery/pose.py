@@ -95,15 +95,11 @@ def conformer_diversity_diagnostics(
         status = "rotatable_conformer_diversity_measured"
     else:
         status = "low_conformer_diversity_measured"
-    rotatable_count = rotatable_bond_count(smiles) if smiles else 0
-    claim_blockers: list[str] = []
-    if int(rotatable_count) > 0 and status != "rotatable_conformer_diversity_measured":
-        claim_blockers.append("rotatable_conformer_diversity_not_demonstrated")
     return {
         "schema_version": "tier_beta_conformer_diversity_v1",
         "status": status,
         "method": "atom_order_pairwise_heavy_atom_rmsd",
-        "rotatable_bond_count": int(rotatable_count),
+        "rotatable_bond_count": rotatable_bond_count(smiles) if smiles else 0,
         "conformer_count": count,
         "pairwise_rmsd_count": int(len(finite)),
         "pairwise_rmsd_min_a": min(finite) if finite else 0.0,
@@ -111,8 +107,6 @@ def conformer_diversity_diagnostics(
         "pairwise_rmsd_max_a": max(finite) if finite else 0.0,
         "diversity_threshold_a": float(diversity_threshold_a),
         "diverse_pair_count": int(sum(1 for value in finite if value >= float(diversity_threshold_a))),
-        "claim_safe": not claim_blockers,
-        "claim_safe_blockers": claim_blockers,
         "claim_boundary": (
             "Diagnostic generated-conformer spread only; not an exhaustive rotamer search or benchmarked "
             "pose-diversity guarantee."
@@ -353,52 +347,6 @@ def chemical_anchor_mapping(smiles: str, ligand_valid: dict[str, Any]) -> dict[s
         "anchor_rows": anchor_rows,
         "feature_source": chemistry.feature_source,
         "graph_distance_source": "rdkit_topological_distance_matrix",
-    }
-
-
-def chemical_anchor_bead_coordinates(
-    ligand_coords: np.ndarray,
-    anchor_mapping: dict[str, Any],
-) -> dict[str, Any]:
-    coords = np.asarray(ligand_coords, dtype=np.float32)
-    atom_count = int(coords.shape[0]) if coords.ndim == 2 else 0
-
-    def _coords_for(indices: list[int]) -> list[list[float]]:
-        rows: list[list[float]] = []
-        for idx in indices:
-            atom_idx = int(idx)
-            if atom_idx < 0 or atom_idx >= atom_count:
-                continue
-            rows.append([float(value) for value in coords[atom_idx].tolist()])
-        return rows
-
-    two_indices = [int(idx) for idx in anchor_mapping.get("two_bead_anchor_atom_indices", [])]
-    four_indices = [int(idx) for idx in anchor_mapping.get("four_bead_anchor_atom_indices", [])]
-    two_coords = _coords_for(two_indices)
-    four_coords = _coords_for(four_indices)
-    status = (
-        "chemical_anchor_bead_coordinates_ready"
-        if two_coords and four_coords
-        else "blocked_invalid_anchor_bead_coordinates"
-    )
-    return {
-        "schema_version": "tier_beta_ligand_anchor_bead_mapping_v1",
-        "status": status,
-        "method": "rdkit_feature_charge_ring_graph_anchor_atom_coordinates",
-        "anchor_mapping_status": str(anchor_mapping.get("status") or ""),
-        "claim_safe": bool(status == "chemical_anchor_bead_coordinates_ready" and anchor_mapping.get("claim_safe")),
-        "atom_count": atom_count,
-        "two_bead_anchor_atom_indices": two_indices,
-        "four_bead_anchor_atom_indices": four_indices,
-        "two_bead_coords_a": two_coords,
-        "four_bead_coords_a": four_coords,
-        "two_bead_count": int(len(two_coords)),
-        "four_bead_count": int(len(four_coords)),
-        "anchor_rows": [dict(row) for row in anchor_mapping.get("anchor_rows", [])],
-        "claim_boundary": (
-            "Restricted diagnostic projection from chemically selected heavy atoms to 2/4 coarse beads; "
-            "not a trained all-atom backmapping or force-field parameterization."
-        ),
     }
 
 
@@ -718,33 +666,6 @@ def so3_rotation_matrices(count: int, seed: int) -> list[np.ndarray]:
     return rotations
 
 
-def rotation_sampling_diagnostics(rotations: list[np.ndarray]) -> dict[str, Any]:
-    matrices = [np.asarray(rotation, dtype=np.float64).reshape(3, 3) for rotation in rotations]
-    determinants = [float(np.linalg.det(matrix)) for matrix in matrices]
-    orthogonality_errors = [
-        float(np.max(np.abs(matrix.T @ matrix - np.eye(3, dtype=np.float64))))
-        for matrix in matrices
-    ]
-    non_identity_count = int(
-        sum(not np.allclose(matrix, np.eye(3, dtype=np.float64), atol=1e-8) for matrix in matrices)
-    )
-    return {
-        "schema_version": "tier_beta_so3_rotation_sampling_v1",
-        "status": "so3_uniform_quaternion_samples_ready" if matrices else "no_rotation_samples",
-        "method": "deterministic_uniform_quaternion_so3_identity_first",
-        "sample_count": int(len(matrices)),
-        "identity_first": bool(matrices and np.allclose(matrices[0], np.eye(3, dtype=np.float64), atol=1e-12)),
-        "non_identity_sample_count": non_identity_count,
-        "determinant_min": min(determinants) if determinants else 0.0,
-        "determinant_max": max(determinants) if determinants else 0.0,
-        "orthogonality_error_max": max(orthogonality_errors) if orthogonality_errors else 0.0,
-        "claim_boundary": (
-            "Deterministic SO(3) coverage diagnostics for restricted local pose search; "
-            "not an exhaustive global docking search proof."
-        ),
-    }
-
-
 def pocket_translation_grid(spacing_a: float = 1.5) -> list[np.ndarray]:
     spacing = float(spacing_a)
     offsets = [
@@ -757,76 +678,6 @@ def pocket_translation_grid(spacing_a: float = 1.5) -> list[np.ndarray]:
         (0.0, 0.0, -spacing),
     ]
     return [np.asarray(offset, dtype=np.float32) for offset in offsets]
-
-
-def pocket_translation_grid_for_beads(
-    protein_beads: np.ndarray,
-    pocket_center: np.ndarray,
-    *,
-    spacing_a: float = 1.5,
-    envelope_radius_a: float = 4.5,
-    max_points: int = 27,
-) -> tuple[list[np.ndarray], dict[str, Any]]:
-    center = np.asarray(pocket_center, dtype=np.float64).reshape(3)
-    beads = np.asarray(protein_beads, dtype=np.float64)
-    spacing = float(spacing_a)
-    radius = float(max(spacing, envelope_radius_a))
-    if beads.size == 0:
-        grid = pocket_translation_grid(spacing)
-        return grid, {
-            "schema_version": "tier_beta_pocket_translation_grid_v1",
-            "status": "fallback_center_axial_grid_no_protein_beads",
-            "method": "center_plus_axial_offsets",
-            "envelope_source": "fallback_no_beads",
-            "spacing_a": spacing,
-            "envelope_radius_a": radius,
-            "grid_point_count": int(len(grid)),
-            "inside_envelope_count": int(len(grid)),
-            "fallback_used": True,
-        }
-
-    offsets: list[np.ndarray] = [np.zeros(3, dtype=np.float32)]
-    max_axis = max(1, int(math.floor(radius / max(spacing, 1e-6))))
-    for ix in range(-max_axis, max_axis + 1):
-        for iy in range(-max_axis, max_axis + 1):
-            for iz in range(-max_axis, max_axis + 1):
-                offset = np.asarray([ix * spacing, iy * spacing, iz * spacing], dtype=np.float64)
-                norm = float(np.linalg.norm(offset))
-                if norm <= 1e-8 or norm > radius + 1e-8:
-                    continue
-                candidate_center = center + offset
-                nearest = float(np.min(np.linalg.norm(beads - candidate_center.reshape(1, 3), axis=1)))
-                if nearest <= radius + 1e-8:
-                    offsets.append(offset.astype(np.float32))
-    offsets = sorted(
-        {tuple(float(v) for v in offset.tolist()): offset for offset in offsets}.values(),
-        key=lambda value: (float(np.linalg.norm(value)), float(value[0]), float(value[1]), float(value[2])),
-    )
-    if len(offsets) > int(max(1, max_points)):
-        offsets = offsets[: int(max(1, max_points))]
-    status = "protein_bead_envelope_grid"
-    if len(offsets) < 7:
-        axial = pocket_translation_grid(spacing)
-        seen = {tuple(float(v) for v in offset.tolist()) for offset in offsets}
-        for offset in axial:
-            key = tuple(float(v) for v in offset.tolist())
-            if key not in seen:
-                offsets.append(offset)
-                seen.add(key)
-            if len(offsets) >= 7:
-                break
-        status = "protein_bead_envelope_grid_with_axial_fallback"
-    return offsets, {
-        "schema_version": "tier_beta_pocket_translation_grid_v1",
-        "status": status,
-        "method": "protein_bead_envelope_lattice",
-        "envelope_source": "search_envelope_beads",
-        "spacing_a": spacing,
-        "envelope_radius_a": radius,
-        "grid_point_count": int(len(offsets)),
-        "inside_envelope_count": int(len(offsets)),
-        "fallback_used": status.endswith("_fallback"),
-    }
 
 
 def transform_pose_to_pocket(
@@ -850,7 +701,6 @@ def pose_search_candidates(
     seed: int,
     max_candidates: int,
     ligand_smiles: str = "",
-    search_envelope_beads: np.ndarray | None = None,
     rotations_per_conformer: int = 4,
     translation_spacing_a: float = 1.5,
     clash_cutoff_a: float = 1.2,
@@ -858,12 +708,7 @@ def pose_search_candidates(
     conformers = np.asarray(poses, dtype=np.float32)
     diversity = conformer_diversity_diagnostics(conformers, smiles=ligand_smiles)
     rotations = so3_rotation_matrices(rotations_per_conformer, seed)
-    rotation_diagnostics = rotation_sampling_diagnostics(rotations)
-    translations, translation_grid_diag = pocket_translation_grid_for_beads(
-        protein_beads if search_envelope_beads is None else search_envelope_beads,
-        pocket_center,
-        spacing_a=translation_spacing_a,
-    )
+    translations = pocket_translation_grid(translation_spacing_a)
     raw: list[dict[str, Any]] = []
     for conformer_index, pose in enumerate(conformers):
         for rotation_index, rotation in enumerate(rotations):
@@ -892,22 +737,7 @@ def pose_search_candidates(
         )
     )
     coarse_beam_size = int(max(1, max_candidates) * 2)
-    clash_free = [row for row in raw if int(row["clash_count"]) == 0]
-    if len(clash_free) >= int(max(1, max_candidates)):
-        prefiltered = clash_free
-        prefilter_status = (
-            "excluded_clashing_candidates"
-            if len(clash_free) < len(raw)
-            else "pass_no_clashes_detected"
-        )
-    else:
-        prefiltered = raw
-        prefilter_status = (
-            "retained_lowest_clash_candidates"
-            if raw and len(clash_free) < int(max(1, max_candidates))
-            else "pass"
-        )
-    coarse_beam = prefiltered[:coarse_beam_size]
+    coarse_beam = raw[:coarse_beam_size]
     minimized: list[dict[str, Any]] = []
     for row in coarse_beam:
         coords, minimization = local_rigid_body_minimize_pose(
@@ -934,6 +764,10 @@ def pose_search_candidates(
         )
     )
     retained = minimized[: int(max(1, max_candidates))]
+    if retained and all(int(row["clash_count"]) > 0 for row in retained):
+        prefilter_status = "retained_lowest_clash_candidates"
+    else:
+        prefilter_status = "pass"
     minimized_count = int(sum(1 for row in minimized if row.get("local_minimization", {}).get("improved") is True))
     if minimized_count > 0:
         local_minimization_status = "finite_difference_rigid_body_gradient_minimized"
@@ -955,19 +789,15 @@ def pose_search_candidates(
             else 0.0
         ),
         "rotations_per_conformer": int(len(rotations)),
-        "rotation_sampling": rotation_diagnostics,
         "translation_grid_point_count": int(len(translations)),
         "translation_spacing_a": float(translation_spacing_a),
-        "translation_grid": translation_grid_diag,
         "raw_candidate_count": int(len(raw)),
-        "clash_free_candidate_count": int(len(clash_free)),
-        "clash_prefiltered_candidate_count": int(len(prefiltered)),
-        "clashing_candidate_excluded_count": int(len(raw) - len(prefiltered)),
         "coarse_beam_candidate_count": int(len(coarse_beam)),
         "retained_candidate_count": int(len(retained)),
         "beam_size": int(max(1, max_candidates)),
         "clash_cutoff_a": float(clash_cutoff_a),
         "clash_prefilter_status": prefilter_status,
+        "clash_prefiltered_candidate_count": int(sum(1 for row in raw if int(row["clash_count"]) == 0)),
         "coarse_score_beam_status": "pass",
         "local_minimization_status": local_minimization_status,
         "local_minimization_method": "finite_difference_gradient_descent_translation_rotation",

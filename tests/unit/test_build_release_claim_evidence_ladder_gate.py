@@ -3,163 +3,194 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
+from tools.product.build_release_claim_evidence_ladder_gate import (
+    build_release_claim_evidence_ladder_gate,
+)
 
-from tools.product import build_release_claim_evidence_ladder_gate as mod
-
-SHA = "a" * 40
-OTHER_SHA = "b" * 40
+HEAD_SHA = "abc123def456"
 
 
-def _write(path: Path, payload: object) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload), encoding="utf-8")
+def _write(path: Path, payload: dict) -> Path:
+    path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
     return path
 
 
-def _runs(*records: dict) -> dict:
-    return {"workflow_runs": list(records)}
+def _local_green(path: Path) -> Path:
+    return _write(path, {"evidence_scope": "local_observed", "status": "local_smoke_ready", "green": True})
 
 
-def _success_run(sha: str, run_id: int, completed_at: str) -> dict:
+def _remote_green(path: Path) -> Path:
+    return _write(
+        path,
+        {
+            "summary": {
+                "status": "release_ci_remote_green_ready",
+                "pass": True,
+                "rocm_self_hosted_runner_ready": True,
+                "release_tag_rocm_gate_green": True,
+                "weekly_rocm_schedule_green": True,
+            }
+        },
+    )
+
+
+def _head_runs_green(path: Path) -> Path:
+    return _write(
+        path,
+        {
+            "workflow_runs": [
+                {
+                    "id": 1,
+                    "name": "product-image-smoke",
+                    "head_sha": HEAD_SHA,
+                    "status": "completed",
+                    "conclusion": "success",
+                }
+            ]
+        },
+    )
+
+
+def _all_green(tmp_path: Path) -> dict:
     return {
-        "id": run_id,
-        "head_sha": sha,
-        "status": "completed",
-        "conclusion": "success",
-        "run_completed_at": completed_at,
+        "local_receipt_json": _local_green(tmp_path / "local.json"),
+        "remote_receipt_json": _remote_green(tmp_path / "remote.json"),
+        "head_runs_json": _head_runs_green(tmp_path / "head.json"),
+        "main_head_sha": HEAD_SHA,
     }
 
 
-def _patch_receipt(monkeypatch: pytest.MonkeyPatch, *, passes: bool) -> None:
-    def fake(*, root, **_inputs):  # noqa: ANN001
-        status = "release_ci_remote_green_ready" if passes else "blocked_release_ci_remote_green"
-        return {"summary": {"status": status, "pass": passes}, "rows": [], "blockers": []}
-
-    monkeypatch.setattr(mod, "build_release_ci_remote_green_receipt", fake)
-
-
-# --- Task 8: example-based tests --------------------------------------------------------
-
-
-def test_missing_all_evidence_is_fail_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    _patch_receipt(monkeypatch, passes=False)
-    payload = mod.build_release_claim_evidence_ladder_gate(root=tmp_path, merge_commit_sha=SHA)
-    summary = payload["summary"]
-    assert summary["highest_supported_claim"] == "none"
-    assert summary["runtime_claim_allowed"] is False
-    assert summary["execution_enabled"] is False
-    assert summary["external_state_mutated"] is False
-    assert summary["status"] == "blocked_release_claim_evidence_ladder"
+def test_full_ladder_green_supports_runtime_claim(tmp_path: Path) -> None:
+    payload = build_release_claim_evidence_ladder_gate(root=tmp_path, **_all_green(tmp_path))
+    s = payload["summary"]
+    assert s["status"] == "release_claim_ladder_ready"
+    assert s["pass"] is True
+    assert s["highest_supported_claim"] == "runtime_green"
+    assert s["claim_promotion"]["tests_pass_locally"] is True
+    assert s["claim_promotion"]["ci_wired_and_green_on_main"] is True
+    assert s["claim_promotion"]["runtime_or_production_claim"] is True
+    assert payload["blockers"] == []
 
 
-def test_local_only_supported(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    _patch_receipt(monkeypatch, passes=False)
-    local = _write(tmp_path / "local.json", {"pass": True})
-    payload = mod.build_release_claim_evidence_ladder_gate(
-        root=tmp_path, merge_commit_sha=SHA, local_evidence_json=local
+def test_local_only_does_not_imply_remote_or_runtime(tmp_path: Path) -> None:
+    payload = build_release_claim_evidence_ladder_gate(
+        root=tmp_path,
+        local_receipt_json=_local_green(tmp_path / "local.json"),
+        remote_receipt_json="",
+        head_runs_json="",
+        main_head_sha=HEAD_SHA,
     )
-    assert payload["summary"]["highest_supported_claim"] == "local_observed_green"
-    assert payload["summary"]["runtime_claim_allowed"] is False
+    s = payload["summary"]
+    assert s["highest_supported_claim"] == "local_only"
+    assert s["status"] == "blocked_release_claim_ladder"
+    assert s["local_observed_green"] is True
+    assert s["remote_green"] is False
+    assert s["runtime_green"] is False
+    assert s["claim_promotion"]["ci_wired_and_green_on_main"] is False
 
 
-def test_remote_supported_with_attributed_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    _patch_receipt(monkeypatch, passes=True)
-    local = _write(tmp_path / "local.json", {"pass": True})
-    remote = _write(tmp_path / "remote.json", _runs(_success_run(SHA, 11, "2026-06-20T00:00:00Z")))
-    payload = mod.build_release_claim_evidence_ladder_gate(
-        root=tmp_path, merge_commit_sha=SHA, local_evidence_json=local, remote_runs_json=remote
+def test_unlabeled_local_receipt_is_not_accepted(tmp_path: Path) -> None:
+    # Green, but not scoped local_observed -> must not count (honest labelling).
+    unlabeled = _write(tmp_path / "local.json", {"status": "smoke_ready", "green": True})
+    payload = build_release_claim_evidence_ladder_gate(
+        root=tmp_path, local_receipt_json=unlabeled, main_head_sha=HEAD_SHA
     )
-    summary = payload["summary"]
-    assert summary["remote_green_supported"] is True
-    assert summary["highest_supported_claim"] == "remote_green"
-    remote_tier = next(t for t in payload["tiers"] if t["tier"] == "remote_green")
-    assert remote_tier["workflow_run_id"] == 11
-    assert remote_tier["head_sha"] == SHA
+    s = payload["summary"]
+    assert s["local_observed_green"] is False
+    assert s["highest_supported_claim"] == "none"
+    codes = {b["code"] for b in payload["blockers"]}
+    assert "local_observed_green" in codes
 
 
-def test_remote_pass_but_unattributed_is_blocked(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    _patch_receipt(monkeypatch, passes=True)
-    local = _write(tmp_path / "local.json", {"pass": True})
-    # Run is green but for a different commit -> unattributed (the PR #18 gap).
-    remote = _write(tmp_path / "remote.json", _runs(_success_run(OTHER_SHA, 12, "2026-06-20T00:00:00Z")))
-    payload = mod.build_release_claim_evidence_ladder_gate(
-        root=tmp_path, merge_commit_sha=SHA, local_evidence_json=local, remote_runs_json=remote
+def test_remote_green_without_head_run_is_not_promoted(tmp_path: Path) -> None:
+    # The key gap: remote CI receipt is green, but the current main HEAD has NO
+    # product-image workflow run. Remote-green must NOT be inferred.
+    args = _all_green(tmp_path)
+    args["head_runs_json"] = _write(tmp_path / "head.json", {"workflow_runs": []})
+    payload = build_release_claim_evidence_ladder_gate(root=tmp_path, **args)
+    s = payload["summary"]
+    assert s["remote_green"] is True
+    assert s["merge_commit_workflow_run_present"] is False
+    assert s["remote_green_attributable_to_head"] is False
+    assert s["highest_supported_claim"] == "local_only"
+    assert s["claim_promotion"]["ci_wired_and_green_on_main"] is False
+    codes = {b["code"] for b in payload["blockers"]}
+    assert "merge_commit_workflow_run_present" in codes
+
+
+def test_head_run_for_different_sha_does_not_attribute(tmp_path: Path) -> None:
+    args = _all_green(tmp_path)
+    args["head_runs_json"] = _write(
+        tmp_path / "head.json",
+        {
+            "workflow_runs": [
+                {
+                    "name": "product-image-smoke",
+                    "head_sha": "some-other-sha",
+                    "status": "completed",
+                    "conclusion": "success",
+                }
+            ]
+        },
     )
-    remote_tier = next(t for t in payload["tiers"] if t["tier"] == "remote_green")
-    assert remote_tier["result"] == "not_supported"
-    assert remote_tier["block_reason"] == "unattributed"
-    assert payload["summary"]["highest_supported_claim"] == "local_observed_green"
+    payload = build_release_claim_evidence_ladder_gate(root=tmp_path, **args)
+    s = payload["summary"]
+    assert s["merge_commit_workflow_run_present"] is False
+    assert s["highest_supported_claim"] == "local_only"
 
 
-def test_runtime_supported_allows_runtime_claim(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    _patch_receipt(monkeypatch, passes=True)
-    local = _write(tmp_path / "local.json", {"pass": True})
-    remote = _write(tmp_path / "remote.json", _runs(_success_run(SHA, 11, "2026-06-20T00:00:00Z")))
-    runtime = _write(tmp_path / "runtime.json", _runs(_success_run(SHA, 21, "2026-06-21T00:00:00Z")))
-    payload = mod.build_release_claim_evidence_ladder_gate(
-        root=tmp_path, merge_commit_sha=SHA, local_evidence_json=local,
-        remote_runs_json=remote, runtime_runs_json=runtime,
+def test_head_run_present_but_failed_blocks_attribution(tmp_path: Path) -> None:
+    args = _all_green(tmp_path)
+    args["head_runs_json"] = _write(
+        tmp_path / "head.json",
+        {
+            "workflow_runs": [
+                {
+                    "name": "product-image-smoke",
+                    "head_sha": HEAD_SHA,
+                    "status": "completed",
+                    "conclusion": "failure",
+                }
+            ]
+        },
     )
-    summary = payload["summary"]
-    assert summary["highest_supported_claim"] == "runtime_green"
-    assert summary["runtime_claim_allowed"] is True
-    assert summary["status"] == "release_claim_evidence_ladder_ready"
+    payload = build_release_claim_evidence_ladder_gate(root=tmp_path, **args)
+    s = payload["summary"]
+    assert s["merge_commit_workflow_run_present"] is True
+    assert s["remote_green_attributable_to_head"] is False
+    assert s["highest_supported_claim"] == "local_only"
+    codes = {b["code"] for b in payload["blockers"]}
+    assert "remote_green_attributable_to_head" in codes
 
 
-def test_contiguity_runtime_supported_remote_not(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    _patch_receipt(monkeypatch, passes=True)
-    local = _write(tmp_path / "local.json", {"pass": True})
-    # remote unattributed, runtime attributed -> highest stays local, runtime not claimable.
-    remote = _write(tmp_path / "remote.json", _runs(_success_run(OTHER_SHA, 12, "2026-06-20T00:00:00Z")))
-    runtime = _write(tmp_path / "runtime.json", _runs(_success_run(SHA, 21, "2026-06-21T00:00:00Z")))
-    payload = mod.build_release_claim_evidence_ladder_gate(
-        root=tmp_path, merge_commit_sha=SHA, local_evidence_json=local,
-        remote_runs_json=remote, runtime_runs_json=runtime,
+def test_remote_attributable_but_no_runtime_caps_at_remote_green(tmp_path: Path) -> None:
+    # Remote CI green + attributable to HEAD, but no ROCm runtime evidence.
+    args = _all_green(tmp_path)
+    args["remote_receipt_json"] = _write(
+        tmp_path / "remote.json",
+        {
+            "summary": {
+                "status": "release_ci_remote_green_ready",
+                "pass": True,
+                "rocm_self_hosted_runner_ready": False,
+                "release_tag_rocm_gate_green": False,
+                "weekly_rocm_schedule_green": False,
+            }
+        },
     )
-    summary = payload["summary"]
-    assert summary["highest_supported_claim"] == "local_observed_green"
-    assert summary["runtime_claim_allowed"] is False
-    assert summary["contiguity_gap_count"] >= 1
+    payload = build_release_claim_evidence_ladder_gate(root=tmp_path, **args)
+    s = payload["summary"]
+    assert s["remote_green_attributable_to_head"] is True
+    assert s["highest_supported_claim"] == "remote_green"
+    assert s["runtime_green"] is False
+    assert s["claim_promotion"]["ci_wired_and_green_on_main"] is True
+    assert s["claim_promotion"]["runtime_or_production_claim"] is False
+    codes = {b["code"] for b in payload["blockers"]}
+    assert "runtime_green" in codes
 
 
-def test_mismatched_head_sha_excluded_multiple_matches_pick_latest(tmp_path: Path) -> None:
-    records = [
-        _success_run(OTHER_SHA, 1, "2026-06-25T00:00:00Z"),  # mismatch excluded
-        _success_run(SHA, 2, "2026-06-20T00:00:00Z"),
-        _success_run(SHA, 3, "2026-06-24T00:00:00Z"),  # latest match
-    ]
-    run = mod._attributed_run(records, SHA)
-    assert run is not None and run["id"] == 3
-
-
-def test_invalid_merge_commit_sha_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    _patch_receipt(monkeypatch, passes=True)
-    runtime = _write(tmp_path / "runtime.json", _runs(_success_run(SHA, 21, "2026-06-21T00:00:00Z")))
-    payload = mod.build_release_claim_evidence_ladder_gate(
-        root=tmp_path, merge_commit_sha="not-a-sha", runtime_runs_json=runtime
-    )
-    runtime_tier = next(t for t in payload["tiers"] if t["tier"] == "runtime_green")
-    assert runtime_tier["result"] == "not_supported"
-    assert runtime_tier["block_reason"] == "invalid_merge_commit_sha"
-
-
-def test_writes_artifacts_deterministically(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    _patch_receipt(monkeypatch, passes=False)
-    payload = mod.build_release_claim_evidence_ladder_gate(root=tmp_path, merge_commit_sha=SHA)
-    mod.write_outputs(payload, root=tmp_path)
-    json_path = tmp_path / mod.DEFAULT_OUT_JSON
-    first = json_path.read_bytes()
-    mod.write_outputs(payload, root=tmp_path)
-    assert json_path.read_bytes() == first  # byte-identical
-    assert (tmp_path / mod.DEFAULT_OUT_CSV).is_file()
-    assert (tmp_path / mod.DEFAULT_OUT_MD).is_file()
-
-
-def test_round_trip_and_read_only_invariance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    _patch_receipt(monkeypatch, passes=False)
-    payload = mod.build_release_claim_evidence_ladder_gate(root=tmp_path, merge_commit_sha=SHA)
-    serialized = json.dumps(payload, sort_keys=True)
-    assert json.loads(serialized) == payload  # Property 7: round-trip fidelity
-    assert payload["summary"]["execution_enabled"] is False  # Property 9
+def test_never_mutates_external_state(tmp_path: Path) -> None:
+    payload = build_release_claim_evidence_ladder_gate(root=tmp_path, **_all_green(tmp_path))
     assert payload["summary"]["external_state_mutated"] is False
+    assert all(row["external_state_mutated"] is False for row in payload["rows"])
+    assert "does not run tests" in payload["summary"]["claim_boundary"]

@@ -135,13 +135,6 @@ def _failure_rate(rows: list[DockingGoldRow], token: str) -> float:
     return count / len(rows)
 
 
-def _normalized_split_id(value: str | None) -> str:
-    text = str(value or "heldout").strip().lower().replace("-", "_")
-    if text in {"holdout", "held_out"}:
-        return "heldout"
-    return text or "heldout"
-
-
 def evaluate_docking_gold_slice(
     rows: list[DockingGoldRow],
     *,
@@ -240,7 +233,7 @@ def evaluate_docking_gold_slice(
     heldout_rows = [
         row
         for row in rows
-        if _normalized_split_id(row.split_id) == "heldout"
+        if str(row.split_id or "heldout") == "heldout"
         and _finite_float(row.affinity_label) is not None
     ]
     heldout_complex_count = len({str(row.complex_id) for row in heldout_rows})

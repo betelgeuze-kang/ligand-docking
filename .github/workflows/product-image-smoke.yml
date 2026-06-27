@@ -87,20 +87,6 @@ jobs:
       || (github.event_name == 'workflow_dispatch' && github.event.inputs.verify_mode == 'build') }}
     runs-on: ${{ fromJSON(inputs.build_runner_labels_json || '["self-hosted","linux"]') }}
     steps:
-      - name: Seed product image build smoke failure receipt
-        shell: bash
-        run: |
-          mkdir -p runs
-          cat > runs/product_image_smoke_receipt_current.json <<'JSON'
-          {
-            "status": "product_image_build_smoke_started",
-            "mode": "build",
-            "product_image_smoke_ready": false,
-            "product_runtime_claim_ready": false,
-            "failure_receipt_seeded": true,
-            "claim_boundary": "Build smoke started on self-hosted Linux. This seed receipt is overwritten by deploy/verify_product_image.sh on success; if an early failure occurs it preserves a fail-closed artifact."
-          }
-          JSON
       - uses: actions/checkout@v5
       - uses: docker/setup-buildx-action@v3
       - name: Verify product image build smoke
@@ -118,7 +104,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: product-image-build-smoke-receipt-log-${{ github.run_id }}
+          name: product-image-build-smoke-${{ github.run_id }}
           if-no-files-found: warn
           retention-days: 14
           path: |
@@ -168,22 +154,6 @@ jobs:
       || (github.event_name == 'workflow_dispatch' && github.event.inputs.verify_mode == 'rocm-runtime') }}
     runs-on: [self-hosted, linux, rocm]
     steps:
-      - name: Seed product image ROCm runtime smoke failure receipt
-        shell: bash
-        run: |
-          mkdir -p runs
-          cat > runs/product_image_smoke_receipt_current.json <<'JSON'
-          {
-            "status": "product_image_rocm_runtime_smoke_started",
-            "mode": "rocm-runtime",
-            "product_image_smoke_ready": false,
-            "clean_container_smoke_ready": false,
-            "container_runtime_proof_ready": false,
-            "product_runner_claim_metadata_ready": false,
-            "failure_receipt_seeded": true,
-            "claim_boundary": "ROCm runtime smoke started on self-hosted Linux+ROCm. This seed receipt is overwritten by deploy/verify_product_image.sh on success; if an early failure occurs it preserves a fail-closed artifact."
-          }
-          JSON
       - uses: actions/checkout@v5
       - uses: docker/setup-buildx-action@v3
       - name: Verify product image ROCm/HIP/Rust runtime smoke
@@ -201,7 +171,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: product-image-rocm-runtime-smoke-receipt-log-${{ github.run_id }}
+          name: product-image-rocm-runtime-smoke-${{ github.run_id }}
           if-no-files-found: warn
           retention-days: 14
           path: |

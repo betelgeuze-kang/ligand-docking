@@ -51,7 +51,6 @@ from betelgeuze_engine.biodiscovery.protein_prep import (
     validate_protein as _validate_protein,
 )
 from betelgeuze_engine.biodiscovery.pose import (
-    chemical_anchor_bead_coordinates as _chemical_anchor_bead_coordinates,
     chemical_anchor_mapping as _chemical_anchor_mapping,
     chemistry_validity_summary as _chemistry_validity_summary,
     clash_count as _clash_count,
@@ -108,57 +107,6 @@ _DEFAULT_POSE_COUNT = 32
 _DEFAULT_TOP_K = 5
 _SUPPORTED_LIGAND_ELEMENTS = {"B", "C", "N", "O", "F", "P", "S", "Cl", "Br", "I", "H", "Si"}
 _LIGAND_STATE_ENSEMBLE_STATUS = "restricted_rdkit_standardized_state_ensemble_ph_range_no_pka_calibration"
-
-
-def _ligand_state_ranking_summary(pose_scores: list[dict[str, Any]]) -> dict[str, Any]:
-    states: dict[str, dict[str, Any]] = {}
-    for row in pose_scores:
-        ligand_state = dict(row.get("ligand_state") or {})
-        state_id = str(ligand_state.get("state_id") or ligand_state.get("smiles") or "unknown_state")
-        entry = states.setdefault(
-            state_id,
-            {
-                "state_id": state_id,
-                "state_kind": str(ligand_state.get("state_kind") or "unknown"),
-                "smiles": str(ligand_state.get("smiles") or ""),
-                "source": str(ligand_state.get("source") or ""),
-                "pose_count": 0,
-                "best_pose_rank": None,
-                "best_pose_index": None,
-                "best_composite_score": None,
-                "claim_safe_blockers": list(ligand_state.get("claim_safe_blockers") or []),
-            },
-        )
-        entry["pose_count"] = int(entry["pose_count"]) + 1
-        pose_rank = int(row.get("pose_rank") or 10**9)
-        score = float(row.get("composite_score", float("inf")))
-        best_rank = entry["best_pose_rank"]
-        best_score = entry["best_composite_score"]
-        if best_rank is None or pose_rank < int(best_rank) or (pose_rank == best_rank and score < float(best_score)):
-            entry["best_pose_rank"] = pose_rank
-            entry["best_pose_index"] = int(row.get("pose_index") or 0)
-            entry["best_composite_score"] = score
-    ranked_states = sorted(
-        states.values(),
-        key=lambda entry: (
-            int(entry["best_pose_rank"]) if entry["best_pose_rank"] is not None else 10**9,
-            float(entry["best_composite_score"])
-            if entry["best_composite_score"] is not None
-            else float("inf"),
-            str(entry["state_id"]),
-        ),
-    )
-    best_state = ranked_states[0] if ranked_states else {}
-    return {
-        "schema_version": "tier_beta_ligand_state_ranking_aggregation_v1",
-        "status": "ranked_state_aggregation_complete" if ranked_states else "no_ranked_states",
-        "state_count": int(len(ranked_states)),
-        "pose_count": int(len(pose_scores)),
-        "best_state_id": str(best_state.get("state_id") or ""),
-        "best_state_kind": str(best_state.get("state_kind") or ""),
-        "states": ranked_states,
-    }
-
 
 @dataclass
 class TierBetaScreeningResult:
@@ -510,17 +458,6 @@ class TierBetaScreening:
 
         protein_beads = _virtual_protein_coords(protein_coords)
         pocket_center = protein_coords[resolved_pocket].mean(axis=0)
-        pocket_bead_indices = [
-            int(residue_idx) * 4 + bead_offset
-            for residue_idx in resolved_pocket
-            for bead_offset in range(4)
-            if int(residue_idx) * 4 + bead_offset < int(protein_beads.shape[0])
-        ]
-        pocket_beads = (
-            protein_beads[pocket_bead_indices]
-            if pocket_bead_indices
-            else protein_beads
-        )
         pose_scores: list[dict[str, Any]] = []
         placed_pose_coords: dict[int, np.ndarray] = {}
         global_pose_index = 0
@@ -552,7 +489,6 @@ class TierBetaScreening:
                 seed=int(bundle["seed"]),
                 max_candidates=self.pose_count,
                 ligand_smiles=state_smiles,
-                search_envelope_beads=pocket_beads,
             )
             state_search_diagnostics["chemical_anchor_mapping_status"] = str(anchor_mapping["status"])
             state_search_diagnostics["chemical_anchor_mapping"] = anchor_mapping
@@ -578,8 +514,6 @@ class TierBetaScreening:
             if "chemical_anchor_mapping" not in search_diagnostics:
                 search_diagnostics["chemical_anchor_mapping_status"] = str(anchor_mapping["status"])
                 search_diagnostics["chemical_anchor_mapping"] = anchor_mapping
-            if "rotation_sampling" not in search_diagnostics:
-                search_diagnostics["rotation_sampling"] = dict(state_search_diagnostics["rotation_sampling"])
             for candidate in search_candidates:
                 pose_index = int(global_pose_index)
                 global_pose_index += 1
@@ -635,7 +569,6 @@ class TierBetaScreening:
                     composite = 0.5 * composite + 0.5 * mm_energy
                 clashes = _clash_count(protein_beads, pose_coords)
                 chemistry_validity = _chemistry_validity_summary(state_ligand_valid, pose_coords)
-                anchor_bead_mapping = _chemical_anchor_bead_coordinates(pose_coords, anchor_mapping)
                 ranking_metric = {
                     "name": "restricted_local_composite_score_v1",
                     "value": float(composite),
@@ -687,7 +620,6 @@ class TierBetaScreening:
                         "coarse_beam_candidate_count": int(state_search_diagnostics["coarse_beam_candidate_count"]),
                         "retained_candidate_count": int(state_search_diagnostics["retained_candidate_count"]),
                         "rotations_per_conformer": int(state_search_diagnostics["rotations_per_conformer"]),
-                        "rotation_sampling": dict(state_search_diagnostics["rotation_sampling"]),
                         "translation_grid_point_count": int(state_search_diagnostics["translation_grid_point_count"]),
                         "local_minimization_status": state_search_diagnostics["local_minimization_status"],
                         "local_minimization_method": state_search_diagnostics["local_minimization_method"],
@@ -698,8 +630,6 @@ class TierBetaScreening:
                         "symmetry_rmsd_clustering_status": state_search_diagnostics["symmetry_rmsd_clustering_status"],
                         "chemical_anchor_mapping_status": state_search_diagnostics["chemical_anchor_mapping_status"],
                         "chemical_anchor_mapping": anchor_mapping,
-                        "chemical_anchor_bead_mapping_status": anchor_bead_mapping["status"],
-                        "chemical_anchor_bead_mapping": anchor_bead_mapping,
                     },
                     "uncertainty": 1.0,
                     "abstention": True,
@@ -711,7 +641,6 @@ class TierBetaScreening:
                     "ranking_metric": ranking_metric,
                     "topology_fidelity": protein_valid.get("fidelity", ""),
                     "ligand_topology": _ligand_topology_payload(state_ligand_valid),
-                    "chemical_anchor_bead_mapping": anchor_bead_mapping,
                     "neighbor_diagnostics": diag.get("neighbor_diagnostics", {}),
                     "claim_boundary": _CLAIM_BOUNDARY,
                     "field_diagnostics": diag,
@@ -733,24 +662,18 @@ class TierBetaScreening:
                               poses_gen=poses_generated,
                               typed_input=typed_input,
                               stage_records=stage_records)
-
-        pose_scores.sort(key=lambda x: float(x["composite_score"]))
-        for rank, row in enumerate(pose_scores, start=1):
-            row["pose_rank"] = rank
-        state_ranking_summary = _ligand_state_ranking_summary(pose_scores)
-        search_diagnostics["state_ranking_aggregation"] = state_ranking_summary
         stage_records.append(
             StageRecord(
                 stage_id="scoring_ranking",
                 schema_version=_SCHEMA_VERSION,
                 status="pass",
-                diagnostics={
-                    "poses_scored": int(len(pose_scores)),
-                    "pose_search": search_diagnostics,
-                    "state_ranking_aggregation": state_ranking_summary,
-                },
+                diagnostics={"poses_scored": int(len(pose_scores)), "pose_search": search_diagnostics},
             )
         )
+
+        pose_scores.sort(key=lambda x: float(x["composite_score"]))
+        for rank, row in enumerate(pose_scores, start=1):
+            row["pose_rank"] = rank
 
         state_groups: dict[str, list[dict[str, Any]]] = {}
         for row in pose_scores:
@@ -980,7 +903,6 @@ class TierBetaScreening:
                     "states": state_records,
                 },
                 "pose_search_aggregation": search_diagnostics,
-                "state_ranking_aggregation": state_ranking_summary,
                 "benchmark_metric_summary": benchmark_metric_summary,
                 "result_signed": bool(manifest.get("signature")),
                 "blocked_claims": _BLOCKED_CLAIMS,

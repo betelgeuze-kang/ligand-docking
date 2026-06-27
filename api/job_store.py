@@ -344,6 +344,18 @@ class SQLiteJobStore:
                 (job_id, status, request_json, max_attempts, now, now),
             )
             created = cursor.rowcount == 1
+            if created:
+                # Emit the durable creation event in the same transaction so a
+                # crash/reopen can recover dispatcher-created jobs, matching the
+                # behavior of create_job(). When the row already exists we leave
+                # the existing job (and its prior outbox events) untouched.
+                self._insert_outbox_event(
+                    conn,
+                    job_id=job_id,
+                    event_type="job_created",
+                    payload=_outbox_summary_from_request(job_id, status, request),
+                    now=now,
+                )
             conn.commit()
         return self.get_job(job_id) or {}, created
 

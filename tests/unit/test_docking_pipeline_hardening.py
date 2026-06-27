@@ -61,6 +61,40 @@ def test_htvs_materializer_rejects_redacted_hash_only_ligand(tmp_path: Path) -> 
         materialize_htvs(str(request_path), out_dir=str(tmp_path / "out"))
 
 
+def test_htvs_materializer_error_exposes_structured_reason(tmp_path: Path) -> None:
+    request_path = _write_request(
+        tmp_path / "request.json",
+        {
+            "ligand_count": 1,
+            "ligands": [{"ligand_id": "LIG-001", "sdf_path": "/tmp/x.sdf"}],
+            "runner_execution_mode": "restricted-production",
+            "runner_synthetic_input_allowed": False,
+            "allow_synthetic_ligand_input": False,
+        },
+    )
+
+    with pytest.raises(DockingMaterializationError) as excinfo:
+        materialize_htvs(str(request_path), out_dir=str(tmp_path / "out"))
+
+    # The category (reason_code) is stable; the offending source kind is detail.
+    assert excinfo.value.reason_code == "unsupported_ligand_source_for_htvs_materialization"
+    assert excinfo.value.reason_detail == "sdf_path"
+    # str() stays backward compatible for any legacy message matching.
+    assert str(excinfo.value) == "unsupported_ligand_source_for_htvs_materialization:sdf_path"
+
+
+def test_dispatch_outcome_exposes_structured_reason(tmp_path: Path) -> None:
+    from api.docking_dispatch import dispatch_docking_job_if_eligible
+
+    # A non-eligible record returns early; the outcome carries both the legacy
+    # reason string and the structured reason_code/reason_detail.
+    outcome = dispatch_docking_job_if_eligible({"status": "blocked"}, jobs_dir=tmp_path)
+    assert outcome["dispatched"] is False
+    assert outcome["reason"] == "status_not_accepted_fail_closed"
+    assert outcome["reason_code"] == "status_not_accepted_fail_closed"
+    assert outcome["reason_detail"] == ""
+
+
 def test_backmapping_materializer_rejects_empty_ligand_input(tmp_path: Path) -> None:
     request_path = _write_request(
         tmp_path / "request.json",
@@ -78,6 +112,56 @@ def test_backmapping_materializer_rejects_empty_ligand_input(tmp_path: Path) -> 
         match="ligand_source_unavailable_for_materialization",
     ):
         materialize_backmapping(str(request_path), out_dir=str(tmp_path / "out"))
+
+
+def test_backmapping_materializer_recovers_redacted_ligands_from_private_store(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Backmapping reuses the shared _resolve_materialization_inputs, so the
+    # encrypted-store recovery applies here too: a redacted ledger/queue ligand
+    # is recovered from the private payload store instead of failing closed.
+    import betelgeuze_product.docking_private_payload as dpp
+    from betelgeuze_product.private_payload_store import PrivatePayloadKeyring
+
+    job_id = "job-backmap-recover-1"
+    request_sha256 = "d" * 64
+    store = dpp.build_store(
+        keys_config=f"k1:{PrivatePayloadKeyring.generate_secret_b64()}",
+        root_dir=tmp_path / "pp",
+        ttl_seconds=3600,
+    )
+    dpp.store_docking_request(
+        store,
+        job_id=job_id,
+        request_sha256=request_sha256,
+        request={"family": "gpcr", "ligands": [{"ligand_id": "LIG-001", "smiles": "CCO"}]},
+    )
+    monkeypatch.setattr(dpp, "configured_store", lambda: store)
+
+    request_path = _write_request(
+        tmp_path / "request.json",
+        {
+            "docking_job_id": job_id,
+            "request_sha256": request_sha256,
+            "ligand_count": 1,
+            "ligands": [_redacted_ligand()],
+            "runner_execution_mode": "restricted-production",
+            "runner_synthetic_input_allowed": False,
+            "allow_synthetic_ligand_input": False,
+        },
+    )
+
+    materialized = materialize_backmapping(str(request_path), out_dir=str(tmp_path / "out"))
+
+    assert materialized["input_materialization_ready"] is True
+    assert materialized["synthetic_input_used"] is False
+    assert materialized["ligand_count"] == 1
+    with Path(materialized["queue_csv"]).open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == 1
+    assert rows[0]["ligand_id"] == "LIG-001"
+    assert rows[0]["ligand_smiles"] == "CCO"
+    assert rows[0]["synthetic_smoke_input"].lower() == "false"
 
 
 def test_explicit_internal_smoke_uses_one_labelled_synthetic_ligand(tmp_path: Path) -> None:
@@ -103,6 +187,99 @@ def test_explicit_internal_smoke_uses_one_labelled_synthetic_ligand(tmp_path: Pa
     assert rows[0]["ligand_id"] == "synthetic_smoke_ligand_1"
     assert rows[0]["ligand_smiles"] == "CCO"
     assert rows[0]["synthetic_smoke_input"].lower() == "true"
+
+
+def test_htvs_materializer_recovers_redacted_ligands_from_private_store(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The ledger/queue carry only a redacted ligand, but the original request
+    # is available in the encrypted private payload store. The materializer must
+    # recover the real source (bound to job_id + request_sha256) instead of
+    # failing closed.
+    import betelgeuze_product.docking_private_payload as dpp
+    from betelgeuze_product.private_payload_store import PrivatePayloadKeyring
+
+    job_id = "job-recover-1"
+    request_sha256 = "c" * 64
+    store = dpp.build_store(
+        keys_config=f"k1:{PrivatePayloadKeyring.generate_secret_b64()}",
+        root_dir=tmp_path / "pp",
+        ttl_seconds=3600,
+    )
+    dpp.store_docking_request(
+        store,
+        job_id=job_id,
+        request_sha256=request_sha256,
+        request={"family": "gpcr", "ligands": [{"ligand_id": "LIG-001", "smiles": "CCO"}]},
+    )
+    monkeypatch.setattr(dpp, "configured_store", lambda: store)
+
+    request_path = _write_request(
+        tmp_path / "request.json",
+        {
+            "docking_job_id": job_id,
+            "request_sha256": request_sha256,
+            "ligand_count": 1,
+            "ligands": [_redacted_ligand()],
+            "runner_execution_mode": "restricted-production",
+            "runner_synthetic_input_allowed": False,
+            "allow_synthetic_ligand_input": False,
+        },
+    )
+
+    materialized = materialize_htvs(str(request_path), out_dir=str(tmp_path / "out"))
+
+    assert materialized["input_materialization_ready"] is True
+    assert materialized["synthetic_input_used"] is False
+    assert materialized["ligand_count"] == 1
+    with Path(materialized["queue_csv"]).open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == 1
+    assert rows[0]["ligand_id"] == "LIG-001"
+    assert rows[0]["ligand_smiles"] == "CCO"
+    assert rows[0]["synthetic_smoke_input"].lower() == "false"
+
+
+def test_htvs_materializer_fails_closed_when_private_store_binding_mismatches(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A stored payload under a DIFFERENT request_sha256 must not be recovered;
+    # the materializer stays fail-closed.
+    import betelgeuze_product.docking_private_payload as dpp
+    from betelgeuze_product.private_payload_store import PrivatePayloadKeyring
+
+    job_id = "job-recover-2"
+    store = dpp.build_store(
+        keys_config=f"k1:{PrivatePayloadKeyring.generate_secret_b64()}",
+        root_dir=tmp_path / "pp",
+        ttl_seconds=3600,
+    )
+    dpp.store_docking_request(
+        store,
+        job_id=job_id,
+        request_sha256="a" * 64,
+        request={"ligands": [{"ligand_id": "LIG-001", "smiles": "CCO"}]},
+    )
+    monkeypatch.setattr(dpp, "configured_store", lambda: store)
+
+    request_path = _write_request(
+        tmp_path / "request.json",
+        {
+            "docking_job_id": job_id,
+            "request_sha256": "b" * 64,  # does not match the stored binding
+            "ligand_count": 1,
+            "ligands": [_redacted_ligand()],
+            "runner_execution_mode": "restricted-production",
+            "runner_synthetic_input_allowed": False,
+            "allow_synthetic_ligand_input": False,
+        },
+    )
+
+    with pytest.raises(
+        DockingMaterializationError,
+        match="ligand_source_unavailable_for_materialization",
+    ):
+        materialize_htvs(str(request_path), out_dir=str(tmp_path / "out"))
 
 
 def test_create_job_if_absent_preserves_completed_row(tmp_path: Path) -> None:

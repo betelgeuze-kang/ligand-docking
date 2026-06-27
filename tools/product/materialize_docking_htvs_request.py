@@ -9,6 +9,7 @@ from typing import Any
 
 import pandas as pd
 
+from betelgeuze_product.docking_materialization_errors import DockingMaterializationError
 from betelgeuze_product.job_orchestration import read_job_record
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -16,10 +17,6 @@ MATERIALIZATION_CONTRACT_VERSION = "docking_materialization_v2"
 SYNTHETIC_SMOKE_SMILES = "CCO"
 _RAW_SMILES_FIELDS = ("smiles", "ligand_smiles")
 _PATH_SOURCE_FIELDS = ("sdf_path", "mol2_path", "pdbqt_path")
-
-
-class DockingMaterializationError(ValueError):
-    """Raised when the runner cannot prove which ligand source it will materialize."""
 
 
 def _jobs_dir() -> Path:
@@ -72,7 +69,7 @@ def _resolve_ligand_smiles(ligand: dict[str, Any]) -> tuple[str, str]:
     unsupported_kind = next((key for key in _PATH_SOURCE_FIELDS if _text(ligand.get(key))), "")
     if unsupported_kind:
         raise DockingMaterializationError(
-            f"unsupported_ligand_source_for_htvs_materialization:{unsupported_kind}"
+            "unsupported_ligand_source_for_htvs_materialization", unsupported_kind
         )
     if ligand.get("source_redacted") is True or _text(ligand.get("source_value_sha256")):
         raise DockingMaterializationError("redacted_ligand_source_cannot_be_materialized")
@@ -86,6 +83,32 @@ def _has_materializable_source(ligand: Any) -> bool:
         any(_text(ligand.get(key)) for key in _RAW_SMILES_FIELDS)
         or _text(ligand.get("inchi"))
     )
+
+
+def _recover_private_ligands(docking_job_id: str, request_sha256: str) -> list[dict[str, Any]]:
+    """Recover original ligand sources from the encrypted private payload store.
+
+    Bound to ``docking_job_id`` + ``request_sha256``. Returns ``[]`` (fail-closed)
+    when the store is unconfigured, the binding mismatches, or no payload exists.
+    The recovery logic lives in the dependency-free
+    ``betelgeuze_product.docking_private_payload`` helper so this module's heavy
+    imports do not leak into it.
+    """
+
+    if not docking_job_id or not request_sha256:
+        return []
+    try:
+        from betelgeuze_product.docking_private_payload import (
+            configured_store,
+            recover_request_ligands,
+        )
+
+        recovered = recover_request_ligands(
+            configured_store(), job_id=docking_job_id, request_sha256=request_sha256
+        )
+    except Exception:
+        return []
+    return recovered or []
 
 
 def _estimate_expected_ligand_count(
@@ -138,6 +161,13 @@ def _resolve_materialization_inputs(
     if isinstance(param_ligands, list) and param_ligands:
         candidate_lists.append([row for row in param_ligands if isinstance(row, dict)])
 
+    # When the ledger/queue carry only redacted ligand sources, recover the
+    # original sources from the encrypted private payload store (bound to
+    # docking_job_id + request_sha256). Preferred over redacted candidate lists.
+    recovered_ligands = _recover_private_ligands(docking_job_id, _text(params.get("request_sha256")))
+    if recovered_ligands:
+        candidate_lists.insert(0, recovered_ligands)
+
     ligands = next(
         (
             rows
@@ -178,7 +208,8 @@ def _resolve_materialization_inputs(
         raise DockingMaterializationError("expected_ligand_count_missing")
     if len(ligands) != expected_count:
         raise DockingMaterializationError(
-            f"materialized_ligand_count_mismatch:expected={expected_count}:observed={len(ligands)}"
+            "materialized_ligand_count_mismatch",
+            f"expected={expected_count}:observed={len(ligands)}",
         )
     return ligands, target, family, expected_count, synthetic_used
 
