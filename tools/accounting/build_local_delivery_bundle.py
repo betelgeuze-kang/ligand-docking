@@ -147,6 +147,25 @@ def _default_partnering_stack_json() -> Path:
     return RUNS / "wetlab_partnering_stack_current.json"
 
 
+def _default_hbond_backmap_report_json() -> Path:
+    return RUNS / "hbond_backmap_report_current.json"
+
+
+def _default_hbond_backmap_report_md() -> Path:
+    return RUNS / "hbond_backmap_report_current.md"
+
+
+def _default_hbond_backmap_report_csv() -> Path:
+    return RUNS / "hbond_backmap_report_current.csv"
+
+
+# H-Bond BackMap is additive local interpretability evidence in the bundle, never
+# a delivery-ready gate and never a docking-accuracy/affinity claim.
+HBOND_BACKMAP_CLAIM_BOUNDARY = (
+    "H-Bond BackMap is local interpretability evidence, not a docking-accuracy or binding-affinity claim."
+)
+
+
 def _now_local() -> str:
     return dt.datetime.now().astimezone().isoformat(timespec="seconds")
 
@@ -239,6 +258,77 @@ def _summary_from_payload(path_like: str | Path) -> dict[str, Any]:
 
 def _family_scorecard_summary(path_like: str | Path) -> dict[str, Any]:
     return _summary_from_payload(path_like)
+
+
+def _hbond_backmap_report_reference(
+    json_path: str | Path,
+    md_path: str | Path,
+    csv_path: str | Path,
+) -> dict[str, Any]:
+    """Build an additive H-Bond BackMap evidence reference for the bundle manifest.
+
+    Reads ``runs/hbond_backmap_report_current.json`` (built by
+    ``tools/product/build_hbond_backmap_report.py``) and surfaces only the
+    batch-level KPI plus artifact paths. H-Bond BackMap is additive local
+    interpretability evidence: it is never a delivery-ready hard gate, and a
+    missing/invalid report is surfaced as a warning, never a positive claim.
+    """
+
+    resolved_json = _resolve_input_path(json_path) if str(json_path).strip() else Path()
+    present_file = bool(str(resolved_json) and resolved_json.exists() and resolved_json.is_file())
+    valid = False
+    reason = "missing"
+    summary: dict[str, Any] = {}
+    if present_file:
+        try:
+            payload = json.loads(resolved_json.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            reason = "invalid_json"
+        else:
+            candidate = payload.get("summary") if isinstance(payload, dict) else None
+            if isinstance(candidate, dict):
+                summary = candidate
+                valid = True
+                reason = "present"
+            else:
+                reason = "invalid_payload_missing_summary"
+
+    def _int(value: Any) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
+
+    def _float(value: Any) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
+    kpi = {
+        "hbond_backmap_report_present": valid,
+        "hbond_backmap_candidate_count": _int(summary.get("candidate_count")),
+        "hbond_backmap_claim_safe_count": _int(summary.get("claim_safe_count")),
+        "hbond_backmap_evidence_only_count": _int(summary.get("evidence_only_count")),
+        "hbond_backmap_claim_safe_rate": _float(summary.get("claim_safe_rate")),
+        "hbond_backmap_total_donor_sites": _int(summary.get("total_donor_sites")),
+        "hbond_backmap_total_acceptor_sites": _int(summary.get("total_acceptor_sites")),
+    }
+    return {
+        "artifact_id": "hbond_backmap_report",
+        "artifact_type": "interpretability_evidence",
+        "present": valid,
+        "reason": reason,
+        "warning": "" if valid else f"hbond_backmap_report_{reason}",
+        "json_path": str(json_path).strip(),
+        "md_path": str(md_path).strip(),
+        "csv_path": str(csv_path).strip(),
+        "required_for_delivery_ready": False,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_boundary": HBOND_BACKMAP_CLAIM_BOUNDARY,
+        "kpi": kpi,
+    }
 
 
 def _family_scorecard_summary_passes(summary: dict[str, Any]) -> bool:
@@ -1078,6 +1168,11 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "engine_provenance_summary": engine_provenance_summary,
         "verdict_gate_summary": verdict_gate_summary,
         "verdict_gate_fingerprint_check": verdict_gate_fingerprint_check,
+        "hbond_backmap_report_reference": _hbond_backmap_report_reference(
+            getattr(args, "hbond_backmap_report_json", str(_default_hbond_backmap_report_json())),
+            getattr(args, "hbond_backmap_report_md", str(_default_hbond_backmap_report_md())),
+            getattr(args, "hbond_backmap_report_csv", str(_default_hbond_backmap_report_csv())),
+        ),
     }
 
 
@@ -1496,6 +1591,7 @@ def build_bundle(args: argparse.Namespace) -> dict[str, Any]:
             },
         },
         "verdict_gate_fingerprint_check": payload["verdict_gate_fingerprint_check"],
+        "hbond_backmap_report": payload["hbond_backmap_report_reference"],
         "family_scorecards": _family_scorecard_manifest_rows(
             payload["family_scorecard_specs"],
             included_by_key,
@@ -1644,6 +1740,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--wetlab-selected-allatom-json", default=str(_default_wetlab_selected_allatom_json()))
     parser.add_argument("--current-results-index-json", default=str(_default_current_results_index_json()))
     parser.add_argument("--partnering-stack-json", default=str(_default_partnering_stack_json()))
+    parser.add_argument("--hbond-backmap-report-json", default=str(_default_hbond_backmap_report_json()))
+    parser.add_argument("--hbond-backmap-report-md", default=str(_default_hbond_backmap_report_md()))
+    parser.add_argument("--hbond-backmap-report-csv", default=str(_default_hbond_backmap_report_csv()))
     parser.add_argument("--build-archive", action=argparse.BooleanOptionalAction, default=True)
     return parser
 
