@@ -14,6 +14,7 @@ from betelgeuze_product.benchmark_ledger import (
     external_safe_entries,
     normalize_entry,
 )
+from tools.product.build_benchmark_ledger import _render_markdown
 
 
 def _entry(**overrides):
@@ -122,3 +123,13 @@ def test_external_safe_entries_helper() -> None:
     ids = {row["entry_id"] for row in safe}
     assert "gpcr_a1_independent_repeat_2026-05-13" in ids
     assert "broad_gpcr_frozen_non_adrb2_100k" not in ids
+
+
+def test_markdown_renderer_exposes_claim_review_sections() -> None:
+    markdown = _render_markdown(current_ledger())
+    assert "## Scope rollup" in markdown
+    assert "## Explicitly disallowed promotions" in markdown
+    assert "## Product direction encoded by the ledger" in markdown
+    assert "full-commercial-blocked rows are never" in markdown
+    assert "| `full_commercial_blocked` | 1 | no |" in markdown
+    assert "Do not present `broad_commercial_allatom_fep_parity` as a positive product claim" in markdown
