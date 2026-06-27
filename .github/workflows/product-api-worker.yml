@@ -11,6 +11,7 @@ on:
       - "betelgeuze_product/api_contract.py"
       - "betelgeuze_product/private_payload_store.py"
       - "betelgeuze_product/benchmark_ledger.py"
+      - "betelgeuze_product/hbond_backmap_report.py"
       - "betelgeuze_product/docking_private_payload.py"
       - "betelgeuze_product/structured_reason.py"
       - "betelgeuze_product/docking_materialization_errors.py"
@@ -67,6 +68,7 @@ on:
       - "tests/unit/test_build_product_api_contract.py"
       - "tests/unit/test_private_payload_store.py"
       - "tests/unit/test_benchmark_ledger.py"
+      - "tests/unit/test_hbond_backmap_report.py"
       - "tests/unit/test_docking_private_payload.py"
       - "tests/unit/test_structured_reason.py"
       - "tests/unit/test_build_pdbbind_casf_pose_affinity_results.py"
@@ -81,6 +83,7 @@ on:
       - "betelgeuze_product/api_contract.py"
       - "betelgeuze_product/private_payload_store.py"
       - "betelgeuze_product/benchmark_ledger.py"
+      - "betelgeuze_product/hbond_backmap_report.py"
       - "betelgeuze_product/docking_private_payload.py"
       - "betelgeuze_product/structured_reason.py"
       - "betelgeuze_product/docking_materialization_errors.py"
@@ -137,6 +140,7 @@ on:
       - "tests/unit/test_build_product_api_contract.py"
       - "tests/unit/test_private_payload_store.py"
       - "tests/unit/test_benchmark_ledger.py"
+      - "tests/unit/test_hbond_backmap_report.py"
       - "tests/unit/test_docking_private_payload.py"
       - "tests/unit/test_structured_reason.py"
       - "tests/unit/test_build_pdbbind_casf_pose_affinity_results.py"
@@ -187,6 +191,7 @@ jobs:
             betelgeuze_product/private_payload_store.py \
             betelgeuze_product/benchmark_ledger.py \
             tools/product/build_benchmark_ledger.py \
+            betelgeuze_product/hbond_backmap_report.py \
             betelgeuze_product/docking_private_payload.py \
             betelgeuze_product/structured_reason.py \
             betelgeuze_product/docking_materialization_errors.py \
@@ -244,6 +249,7 @@ jobs:
             tests/unit/test_build_product_api_contract.py \
             tests/unit/test_private_payload_store.py \
             tests/unit/test_benchmark_ledger.py \
+            tests/unit/test_hbond_backmap_report.py \
             tests/unit/test_docking_private_payload.py \
             tests/unit/test_structured_reason.py \
             tests/unit/test_build_pdbbind_casf_pose_affinity_results.py \
