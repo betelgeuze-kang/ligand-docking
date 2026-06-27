@@ -58,6 +58,27 @@ COL_ANGLE_FRACTION = "hbond_angle_pass_fraction"
 # Any one of these columns proves the CSV came from the backmapping scoring path.
 REQUIRED_ANY_COLUMNS = (COL_CLAIM_SAFE, COL_STATUS, COL_MAPPED_SITE_COUNT)
 
+# Full set of per-candidate scores-CSV columns this builder reads from the
+# backmapping scoring runner output. This is the drift contract: every column
+# here must be emitted by
+# ``betelgeuze_engine/product/runners/backmapping_scoring.py``. A contract test
+# guards against silent column renames on the runner side. ``target`` /
+# ``ligand_id`` are used to derive the candidate ``entry_id``.
+BUILDER_SCORE_COLUMNS = (
+    "target",
+    "ligand_id",
+    COL_CLAIM_SAFE,
+    COL_STATUS,
+    COL_SOURCE,
+    COL_BLOCKED_REASON,
+    COL_SITE_COUNT,
+    COL_MAPPED_SITE_COUNT,
+    COL_DONOR,
+    COL_ACCEPTOR,
+    COL_HBOND_BLOCKED_REASON,
+    COL_ANGLE_FRACTION,
+)
+
 STATUS_OK = "hbond_backmap_report_ready"
 STATUS_BLOCKED_MISSING = "blocked_missing_scores_csv"
 STATUS_BLOCKED_EMPTY = "blocked_empty_scores_csv"
