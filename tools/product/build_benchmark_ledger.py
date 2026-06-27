@@ -39,7 +39,8 @@ def _resolve(path_like: str | Path) -> Path:
 
 def _render_markdown(ledger: dict[str, Any]) -> str:
     summary = ledger["summary"]
-    scope_counts = summary.get("scope_counts", {}) if isinstance(summary.get("scope_counts"), dict) else {}
+    raw_scope_counts = summary.get("scope_counts", {})
+    scope_counts = raw_scope_counts if isinstance(raw_scope_counts, dict) else {}
     lines = [
         "# Benchmark Claim Ledger (current)",
         "",
