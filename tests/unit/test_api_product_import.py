@@ -38,6 +38,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     product_commercial_readiness = importlib.import_module("api.product_commercial_readiness")
     product_evidence_goal = importlib.import_module("api.product_evidence_goal")
     product_hbond_backmap = importlib.import_module("api.product_hbond_backmap")
+    product_gpcr_hard_decoy = importlib.import_module("api.product_gpcr_hard_decoy")
 
     paths = {route.path for route in main.app.routes}
     architecture_router_paths = {route.path for route in product_architecture.router.routes}
@@ -58,6 +59,10 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "/product/capabilities" in paths
     assert "/product/hbond-backmap-report" in paths
     assert "/product/hbond-backmap-report" in hbond_backmap_router_paths
+    assert "/product/gpcr-hard-decoy-suite-report" in paths
+    assert "/product/gpcr-hard-decoy-suite-report" in {
+        route.path for route in product_gpcr_hard_decoy.router.routes
+    }
     assert "/product/architecture" in paths
     assert "/product/architecture-validation" in paths
     assert "/product/service-boundary" in paths
@@ -173,6 +178,7 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert sum(1 for route in main.app.routes if route.path == "/product/architecture-validation") == 1
     assert sum(1 for route in main.app.routes if route.path == "/product/capabilities") == 1
     assert sum(1 for route in main.app.routes if route.path == "/product/hbond-backmap-report") == 1
+    assert sum(1 for route in main.app.routes if route.path == "/product/gpcr-hard-decoy-suite-report") == 1
     assert sum(1 for route in main.app.routes if route.path == "/product/service-boundary") == 1
     assert sum(1 for route in main.app.routes if route.path == "/product/api-contract") == 1
     assert sum(1 for route in main.app.routes if route.path == "/product/operational-quality") == 1
