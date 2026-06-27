@@ -223,6 +223,17 @@ def build_product_image_smoke_preflight(
             "deploy/verify_product_image.sh",
         ),
         _contract_row(
+            "smoke_containers_disable_auth_preflight",
+            "DOCKER_RUN_ARGS=(--rm -e PRODUCT_API_AUTH_REQUIRED=0)" in verify_script
+            and "PRODUCT_API_AUTH_REQUIRED=0" in verify_script,
+            "smoke run args disable auth"
+            if "DOCKER_RUN_ARGS=(--rm -e PRODUCT_API_AUTH_REQUIRED=0)" in verify_script
+            else "missing",
+            "ephemeral smoke containers pass PRODUCT_API_AUTH_REQUIRED=0 so importing api.main "
+            "is not blocked by the hardened startup auth preflight (Dockerfile default stays 1)",
+            "deploy/verify_product_image.sh",
+        ),
+        _contract_row(
             "docker_host_setup_script_declared",
             "docker.io" in host_setup_script
             and "systemctl enable --now docker" in host_setup_script

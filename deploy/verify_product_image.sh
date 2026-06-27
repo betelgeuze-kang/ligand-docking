@@ -97,7 +97,12 @@ fi
 
 export DOCKER_BUILDKIT
 
-DOCKER_RUN_ARGS=(--rm)
+# Ephemeral smoke containers verify imports/runtime/runner only; they never serve
+# external API traffic. Dockerfile.product keeps the secure default
+# PRODUCT_API_AUTH_REQUIRED=1, but importing api.main runs the hardened startup
+# preflight, which fail-closes without a token. Disable auth for these local
+# verification containers (the API-server smoke step below does the same).
+DOCKER_RUN_ARGS=(--rm -e PRODUCT_API_AUTH_REQUIRED=0)
 DOCKER_DAEMON_ARGS=()
 if [[ "${VERIFY_MODE}" == "rocm-runtime" ]]; then
   if [[ ! -e /dev/kfd || ! -e /dev/dri ]]; then
