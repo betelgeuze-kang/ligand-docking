@@ -1084,3 +1084,159 @@ def test_hbond_backmap_report_claim_boundary_preserved(tmp_path, monkeypatch):
 
     assert "local interpretability evidence" in boundary
     assert "not a docking-accuracy or binding-affinity claim" in boundary
+
+
+def _write_gpcr_hard_decoy_report(path: Path, *, family_claim_safe: bool = False) -> None:
+    _write_json(
+        path,
+        {
+            "packet_type": "gpcr_hard_decoy_suite_report",
+            "schema_version": "gpcr_hard_decoy_suite_report_v1",
+            "materializer_status": "materialized",
+            "summary": {
+                "schema_version": "gpcr_hard_decoy_suite_v1",
+                "status": "gpcr_hard_decoy_family_ready" if family_claim_safe else "broad_family_locked",
+                "family_claim_safe": family_claim_safe,
+                "required_target_ids": ["DRD2", "HTR2A", "OPRM1"],
+                "target_count": 3,
+                "green_target_ids": ["HTR2A"],
+                "blocked_target_ids": ["DRD2", "OPRM1"],
+                "missing_required_target_ids": [],
+                "first_blocked_required_target": "DRD2",
+                "gate": {"ci_low_min": 0.45, "top20_min": 0.2},
+            },
+            "targets": [
+                {"target_id": "DRD2", "gate_status": "blocked"},
+                {"target_id": "HTR2A", "gate_status": "green"},
+                {"target_id": "OPRM1", "gate_status": "blocked"},
+            ],
+        },
+    )
+
+
+def test_gpcr_hard_decoy_suite_present_is_additive_gate_evidence(tmp_path, monkeypatch):
+    _patch_workspace(monkeypatch, tmp_path)
+    _write_canonical_inputs(tmp_path)
+    report_json = tmp_path / "runs" / "gpcr_hard_decoy_suite_current.json"
+    _write_gpcr_hard_decoy_report(report_json)
+
+    args = _parse_args(
+        [
+            "--bundle-tag",
+            "gpcr_present_bundle",
+            "--no-build-archive",
+            "--gpcr-hard-decoy-suite-json",
+            str(report_json),
+            "--gpcr-hard-decoy-suite-md",
+            str(tmp_path / "runs" / "gpcr_hard_decoy_suite_current.md"),
+            "--gpcr-hard-decoy-suite-csv",
+            str(tmp_path / "runs" / "gpcr_hard_decoy_suite_current.csv"),
+        ]
+    )
+    b.build_bundle(args)
+
+    bundle_dir = tmp_path / "runs" / "local_delivery" / "bundle_gpcr_present_bundle"
+    manifest = json.loads((bundle_dir / "manifest.json").read_text(encoding="utf-8"))
+    section = manifest["gpcr_hard_decoy_suite"]
+
+    # Additive gate evidence must not change the delivery-ready verdict.
+    assert manifest["local_delivery_verdict_gate"]["summary"]["delivery_ready"] is True
+    assert section["artifact_id"] == "gpcr_hard_decoy_suite_report"
+    assert section["artifact_type"] == "broad_gpcr_gate_evidence"
+    assert section["present"] is True
+    assert section["required_for_delivery_ready"] is False
+    assert section["execution_enabled"] is False
+    assert section["external_state_mutated"] is False
+    assert section["kpi"]["gpcr_hard_decoy_report_present"] is True
+    assert section["kpi"]["gpcr_hard_decoy_family_claim_safe"] is False
+    assert section["kpi"]["gpcr_hard_decoy_status"] == "broad_family_locked"
+    assert section["kpi"]["gpcr_hard_decoy_target_count"] == 3
+    assert section["kpi"]["gpcr_hard_decoy_green_target_count"] == 1
+    assert section["kpi"]["gpcr_hard_decoy_blocked_target_count"] == 2
+    assert section["kpi"]["gpcr_hard_decoy_missing_required_target_count"] == 0
+    assert section["kpi"]["gpcr_hard_decoy_first_blocked_required_target"] == "DRD2"
+
+
+def test_gpcr_hard_decoy_suite_missing_does_not_break_delivery(tmp_path, monkeypatch):
+    _patch_workspace(monkeypatch, tmp_path)
+    _write_canonical_inputs(tmp_path)
+    missing_report = tmp_path / "runs" / "gpcr_hard_decoy_suite_current.json"
+
+    args = _parse_args(
+        [
+            "--bundle-tag",
+            "gpcr_missing_bundle",
+            "--no-build-archive",
+            "--gpcr-hard-decoy-suite-json",
+            str(missing_report),
+        ]
+    )
+    b.build_bundle(args)
+
+    bundle_dir = tmp_path / "runs" / "local_delivery" / "bundle_gpcr_missing_bundle"
+    manifest = json.loads((bundle_dir / "manifest.json").read_text(encoding="utf-8"))
+    section = manifest["gpcr_hard_decoy_suite"]
+
+    assert manifest["local_delivery_verdict_gate"]["summary"]["delivery_ready"] is True
+    assert section["present"] is False
+    assert section["reason"] == "missing"
+    assert section["warning"] == "gpcr_hard_decoy_suite_report_missing"
+    assert section["required_for_delivery_ready"] is False
+    assert section["kpi"]["gpcr_hard_decoy_report_present"] is False
+    assert section["kpi"]["gpcr_hard_decoy_family_claim_safe"] is False
+    assert section["kpi"]["gpcr_hard_decoy_target_count"] == 0
+
+
+def test_gpcr_hard_decoy_suite_invalid_json_is_fail_closed(tmp_path, monkeypatch):
+    _patch_workspace(monkeypatch, tmp_path)
+    _write_canonical_inputs(tmp_path)
+    bad_report = tmp_path / "runs" / "gpcr_hard_decoy_suite_current.json"
+    _write_text(bad_report, "{ broken json")
+
+    args = _parse_args(
+        [
+            "--bundle-tag",
+            "gpcr_invalid_bundle",
+            "--no-build-archive",
+            "--gpcr-hard-decoy-suite-json",
+            str(bad_report),
+        ]
+    )
+    b.build_bundle(args)
+
+    bundle_dir = tmp_path / "runs" / "local_delivery" / "bundle_gpcr_invalid_bundle"
+    manifest = json.loads((bundle_dir / "manifest.json").read_text(encoding="utf-8"))
+    section = manifest["gpcr_hard_decoy_suite"]
+
+    assert manifest["local_delivery_verdict_gate"]["summary"]["delivery_ready"] is True
+    assert section["present"] is False
+    assert section["reason"] == "invalid_json"
+    assert section["warning"] == "gpcr_hard_decoy_suite_report_invalid_json"
+    # No broad-GPCR claim may be fabricated from an invalid artifact.
+    assert section["kpi"]["gpcr_hard_decoy_family_claim_safe"] is False
+    assert section["kpi"]["gpcr_hard_decoy_report_present"] is False
+
+
+def test_gpcr_hard_decoy_suite_claim_boundary_preserved(tmp_path, monkeypatch):
+    _patch_workspace(monkeypatch, tmp_path)
+    _write_canonical_inputs(tmp_path)
+    report_json = tmp_path / "runs" / "gpcr_hard_decoy_suite_current.json"
+    _write_gpcr_hard_decoy_report(report_json)
+
+    args = _parse_args(
+        [
+            "--bundle-tag",
+            "gpcr_boundary_bundle",
+            "--no-build-archive",
+            "--gpcr-hard-decoy-suite-json",
+            str(report_json),
+        ]
+    )
+    b.build_bundle(args)
+
+    bundle_dir = tmp_path / "runs" / "local_delivery" / "bundle_gpcr_boundary_bundle"
+    manifest = json.loads((bundle_dir / "manifest.json").read_text(encoding="utf-8"))
+    boundary = manifest["gpcr_hard_decoy_suite"]["claim_boundary"]
+
+    assert "does not run scoring" in boundary
+    assert "promote broad-GPCR claims" in boundary

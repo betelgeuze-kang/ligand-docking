@@ -166,6 +166,26 @@ HBOND_BACKMAP_CLAIM_BOUNDARY = (
 )
 
 
+def _default_gpcr_hard_decoy_suite_json() -> Path:
+    return RUNS / "gpcr_hard_decoy_suite_current.json"
+
+
+def _default_gpcr_hard_decoy_suite_md() -> Path:
+    return RUNS / "gpcr_hard_decoy_suite_current.md"
+
+
+def _default_gpcr_hard_decoy_suite_csv() -> Path:
+    return RUNS / "gpcr_hard_decoy_suite_current.csv"
+
+
+# The GPCR hard-decoy suite is an additive fail-closed gate surface in the
+# bundle: it shows whether broad GPCR/router is still locked, never promotes it.
+GPCR_HARD_DECOY_CLAIM_BOUNDARY = (
+    "GPCR hard-decoy suite is a fail-closed broad-GPCR gate surface; it does not run scoring, generate decoys, "
+    "relax thresholds, or promote broad-GPCR claims. A broad_family_locked result remains non-claimable."
+)
+
+
 def _now_local() -> str:
     return dt.datetime.now().astimezone().isoformat(timespec="seconds")
 
@@ -327,6 +347,81 @@ def _hbond_backmap_report_reference(
         "execution_enabled": False,
         "external_state_mutated": False,
         "claim_boundary": HBOND_BACKMAP_CLAIM_BOUNDARY,
+        "kpi": kpi,
+    }
+
+
+def _gpcr_hard_decoy_suite_reference(
+    json_path: str | Path,
+    md_path: str | Path,
+    csv_path: str | Path,
+) -> dict[str, Any]:
+    """Build an additive GPCR hard-decoy gate reference for the bundle manifest.
+
+    Reads ``runs/gpcr_hard_decoy_suite_current.json`` (built by
+    ``tools/product/build_gpcr_hard_decoy_suite_report.py``) and surfaces only
+    the family gate KPI plus artifact paths. It is a fail-closed broad-GPCR gate
+    surface: never a delivery-ready hard gate, never a broad-GPCR claim. A
+    missing/invalid report is surfaced as a warning, and family_claim_safe stays
+    false.
+    """
+
+    resolved_json = _resolve_input_path(json_path) if str(json_path).strip() else Path()
+    present_file = bool(str(resolved_json) and resolved_json.exists() and resolved_json.is_file())
+    valid = False
+    reason = "missing"
+    summary: dict[str, Any] = {}
+    if present_file:
+        try:
+            payload = json.loads(resolved_json.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            reason = "invalid_json"
+        else:
+            candidate = payload.get("summary") if isinstance(payload, dict) else None
+            if isinstance(candidate, dict):
+                summary = candidate
+                valid = True
+                reason = "present"
+            else:
+                reason = "invalid_payload_missing_summary"
+
+    def _int(value: Any) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
+
+    def _list_len(value: Any) -> int:
+        return len(value) if isinstance(value, list) else 0
+
+    kpi = {
+        "gpcr_hard_decoy_report_present": valid,
+        # Fail-closed: only an explicit True is treated as claim-safe.
+        "gpcr_hard_decoy_family_claim_safe": bool(summary.get("family_claim_safe") is True),
+        "gpcr_hard_decoy_status": str(summary.get("status") or ("missing" if not valid else "")),
+        "gpcr_hard_decoy_target_count": _int(summary.get("target_count")),
+        "gpcr_hard_decoy_green_target_count": _list_len(summary.get("green_target_ids")),
+        "gpcr_hard_decoy_blocked_target_count": _list_len(summary.get("blocked_target_ids")),
+        "gpcr_hard_decoy_missing_required_target_count": _list_len(
+            summary.get("missing_required_target_ids")
+        ),
+        "gpcr_hard_decoy_first_blocked_required_target": str(
+            summary.get("first_blocked_required_target") or ""
+        ),
+    }
+    return {
+        "artifact_id": "gpcr_hard_decoy_suite_report",
+        "artifact_type": "broad_gpcr_gate_evidence",
+        "present": valid,
+        "reason": reason,
+        "warning": "" if valid else f"gpcr_hard_decoy_suite_report_{reason}",
+        "json_path": str(json_path).strip(),
+        "md_path": str(md_path).strip(),
+        "csv_path": str(csv_path).strip(),
+        "required_for_delivery_ready": False,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_boundary": GPCR_HARD_DECOY_CLAIM_BOUNDARY,
         "kpi": kpi,
     }
 
@@ -1173,6 +1268,11 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             getattr(args, "hbond_backmap_report_md", str(_default_hbond_backmap_report_md())),
             getattr(args, "hbond_backmap_report_csv", str(_default_hbond_backmap_report_csv())),
         ),
+        "gpcr_hard_decoy_suite_reference": _gpcr_hard_decoy_suite_reference(
+            getattr(args, "gpcr_hard_decoy_suite_json", str(_default_gpcr_hard_decoy_suite_json())),
+            getattr(args, "gpcr_hard_decoy_suite_md", str(_default_gpcr_hard_decoy_suite_md())),
+            getattr(args, "gpcr_hard_decoy_suite_csv", str(_default_gpcr_hard_decoy_suite_csv())),
+        ),
     }
 
 
@@ -1592,6 +1692,7 @@ def build_bundle(args: argparse.Namespace) -> dict[str, Any]:
         },
         "verdict_gate_fingerprint_check": payload["verdict_gate_fingerprint_check"],
         "hbond_backmap_report": payload["hbond_backmap_report_reference"],
+        "gpcr_hard_decoy_suite": payload["gpcr_hard_decoy_suite_reference"],
         "family_scorecards": _family_scorecard_manifest_rows(
             payload["family_scorecard_specs"],
             included_by_key,
@@ -1743,6 +1844,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--hbond-backmap-report-json", default=str(_default_hbond_backmap_report_json()))
     parser.add_argument("--hbond-backmap-report-md", default=str(_default_hbond_backmap_report_md()))
     parser.add_argument("--hbond-backmap-report-csv", default=str(_default_hbond_backmap_report_csv()))
+    parser.add_argument("--gpcr-hard-decoy-suite-json", default=str(_default_gpcr_hard_decoy_suite_json()))
+    parser.add_argument("--gpcr-hard-decoy-suite-md", default=str(_default_gpcr_hard_decoy_suite_md()))
+    parser.add_argument("--gpcr-hard-decoy-suite-csv", default=str(_default_gpcr_hard_decoy_suite_csv()))
     parser.add_argument("--build-archive", action=argparse.BooleanOptionalAction, default=True)
     return parser
 
