@@ -932,3 +932,155 @@ def test_build_local_delivery_bundle_override_and_missing_file_recorded(tmp_path
             "reason": "source_missing",
         }
     ]
+
+
+def _write_hbond_report(path: Path) -> None:
+    _write_json(
+        path,
+        {
+            "report_version": "hbond_backmap_report_v1",
+            "status": "hbond_backmap_report_ready",
+            "summary": {
+                "report_version": "hbond_backmap_report_v1",
+                "candidate_count": 64,
+                "claim_safe_count": 62,
+                "evidence_only_count": 2,
+                "claim_safe_rate": 0.96875,
+                "total_donor_sites": 76,
+                "total_acceptor_sites": 131,
+                "evidence_only_reason_counts": {"no_hbond_sites": 2},
+            },
+            "rows": [],
+        },
+    )
+
+
+def test_hbond_backmap_report_present_is_additive_evidence(tmp_path, monkeypatch):
+    _patch_workspace(monkeypatch, tmp_path)
+    _write_canonical_inputs(tmp_path)
+    report_json = tmp_path / "runs" / "hbond_backmap_report_current.json"
+    _write_hbond_report(report_json)
+
+    args = _parse_args(
+        [
+            "--bundle-tag",
+            "hbond_present_bundle",
+            "--no-build-archive",
+            "--hbond-backmap-report-json",
+            str(report_json),
+            "--hbond-backmap-report-md",
+            str(tmp_path / "runs" / "hbond_backmap_report_current.md"),
+            "--hbond-backmap-report-csv",
+            str(tmp_path / "runs" / "hbond_backmap_report_current.csv"),
+        ]
+    )
+    payload = b.build_bundle(args)
+
+    bundle_dir = tmp_path / "runs" / "local_delivery" / "bundle_hbond_present_bundle"
+    manifest = json.loads((bundle_dir / "manifest.json").read_text(encoding="utf-8"))
+    section = manifest["hbond_backmap_report"]
+
+    # Additive evidence must not perturb the delivery gate.
+    assert manifest["local_delivery_verdict_gate"]["summary"]["delivery_ready"] is True
+
+    assert section["artifact_id"] == "hbond_backmap_report"
+    assert section["artifact_type"] == "interpretability_evidence"
+    assert section["present"] is True
+    assert section["required_for_delivery_ready"] is False
+    assert section["execution_enabled"] is False
+    assert section["external_state_mutated"] is False
+    assert section["kpi"]["hbond_backmap_report_present"] is True
+    assert section["kpi"]["hbond_backmap_candidate_count"] == 64
+    assert section["kpi"]["hbond_backmap_claim_safe_count"] == 62
+    assert section["kpi"]["hbond_backmap_evidence_only_count"] == 2
+    assert section["kpi"]["hbond_backmap_claim_safe_rate"] == 0.96875
+    assert section["kpi"]["hbond_backmap_total_donor_sites"] == 76
+    assert section["kpi"]["hbond_backmap_total_acceptor_sites"] == 131
+
+
+def test_hbond_backmap_report_missing_does_not_break_delivery(tmp_path, monkeypatch):
+    _patch_workspace(monkeypatch, tmp_path)
+    _write_canonical_inputs(tmp_path)
+    missing_report = tmp_path / "runs" / "hbond_backmap_report_current.json"
+
+    args = _parse_args(
+        [
+            "--bundle-tag",
+            "hbond_missing_bundle",
+            "--no-build-archive",
+            "--hbond-backmap-report-json",
+            str(missing_report),
+        ]
+    )
+    payload = b.build_bundle(args)
+
+    bundle_dir = tmp_path / "runs" / "local_delivery" / "bundle_hbond_missing_bundle"
+    manifest = json.loads((bundle_dir / "manifest.json").read_text(encoding="utf-8"))
+    section = manifest["hbond_backmap_report"]
+
+    # Delivery readiness is unaffected by a missing additive H-Bond report.
+    assert manifest["local_delivery_verdict_gate"]["summary"]["delivery_ready"] is True
+
+    assert section["present"] is False
+    assert section["reason"] == "missing"
+    assert section["warning"] == "hbond_backmap_report_missing"
+    assert section["required_for_delivery_ready"] is False
+    assert section["kpi"]["hbond_backmap_report_present"] is False
+    assert section["kpi"]["hbond_backmap_claim_safe_rate"] == 0.0
+    assert section["kpi"]["hbond_backmap_candidate_count"] == 0
+
+
+def test_hbond_backmap_report_invalid_json_is_fail_closed(tmp_path, monkeypatch):
+    _patch_workspace(monkeypatch, tmp_path)
+    _write_canonical_inputs(tmp_path)
+    bad_report = tmp_path / "runs" / "hbond_backmap_report_current.json"
+    _write_text(bad_report, "{ this is not valid json")
+
+    args = _parse_args(
+        [
+            "--bundle-tag",
+            "hbond_invalid_bundle",
+            "--no-build-archive",
+            "--hbond-backmap-report-json",
+            str(bad_report),
+        ]
+    )
+    payload = b.build_bundle(args)
+
+    bundle_dir = tmp_path / "runs" / "local_delivery" / "bundle_hbond_invalid_bundle"
+    manifest = json.loads((bundle_dir / "manifest.json").read_text(encoding="utf-8"))
+    section = manifest["hbond_backmap_report"]
+
+    assert manifest["local_delivery_verdict_gate"]["summary"]["delivery_ready"] is True
+    assert section["present"] is False
+    assert section["reason"] == "invalid_json"
+    assert section["warning"] == "hbond_backmap_report_invalid_json"
+    # No positive claim may be fabricated from an invalid artifact.
+    assert section["kpi"]["hbond_backmap_report_present"] is False
+    assert section["kpi"]["hbond_backmap_claim_safe_rate"] == 0.0
+    assert section["kpi"]["hbond_backmap_claim_safe_count"] == 0
+
+
+def test_hbond_backmap_report_claim_boundary_preserved(tmp_path, monkeypatch):
+    _patch_workspace(monkeypatch, tmp_path)
+    _write_canonical_inputs(tmp_path)
+    report_json = tmp_path / "runs" / "hbond_backmap_report_current.json"
+    _write_hbond_report(report_json)
+
+    args = _parse_args(
+        [
+            "--bundle-tag",
+            "hbond_boundary_bundle",
+            "--no-build-archive",
+            "--hbond-backmap-report-json",
+            str(report_json),
+        ]
+    )
+    b.build_bundle(args)
+
+    bundle_dir = tmp_path / "runs" / "local_delivery" / "bundle_hbond_boundary_bundle"
+    manifest = json.loads((bundle_dir / "manifest.json").read_text(encoding="utf-8"))
+    boundary = manifest["hbond_backmap_report"]["claim_boundary"]
+
+    assert "local interpretability evidence" in boundary
+    assert "not a docking-accuracy or binding-affinity claim" in boundary
