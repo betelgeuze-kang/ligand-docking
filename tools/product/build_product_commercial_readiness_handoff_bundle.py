@@ -22,6 +22,9 @@ DEFAULT_FULL_COMMERCIAL_BLOCKER_EVIDENCE_MATRIX_JSON = (
 DEFAULT_AI_MD_ENGINE_KPI_JSON = "runs/ai_md_engine_kpi_report_current.json"
 DEFAULT_AI_MD_ENGINE_KPI_MD = "runs/ai_md_engine_kpi_report_current.md"
 DEFAULT_PRODUCT_IMAGE_SMOKE_PREFLIGHT_JSON = "runs/product_image_smoke_preflight_current.json"
+DEFAULT_HBOND_BACKMAP_REPORT_JSON = "runs/hbond_backmap_report_current.json"
+DEFAULT_HBOND_BACKMAP_REPORT_MD = "runs/hbond_backmap_report_current.md"
+DEFAULT_HBOND_BACKMAP_REPORT_CSV = "runs/hbond_backmap_report_current.csv"
 DEFAULT_OUT_JSON = "runs/product_commercial_readiness_handoff_bundle_current.json"
 DEFAULT_OUT_CSV = "runs/product_commercial_readiness_handoff_bundle_current.csv"
 DEFAULT_OUT_MD = "runs/product_commercial_readiness_handoff_bundle_current.md"
@@ -30,6 +33,12 @@ CLAIM_BOUNDARY = (
     "Product commercial-readiness handoff bundle only; summarizes local handoff packet, freshness, and execution "
     "ladder readiness for operator handoff. It does not run commands, run docking, run GPU jobs, fill evidence, "
     "promote checkpoints, widen product claims, upload, submit, email, delete, or mutate external state."
+)
+
+# H-Bond BackMap is additive local interpretability evidence in the handoff
+# bundle, never a delivery-ready gate and never a docking-accuracy/affinity claim.
+HBOND_BACKMAP_CLAIM_BOUNDARY = (
+    "H-Bond BackMap is local interpretability evidence, not a docking-accuracy or binding-affinity claim."
 )
 
 
@@ -76,6 +85,78 @@ def _summary_or_packet(packet: dict[str, Any]) -> dict[str, Any]:
     if isinstance(summary, dict):
         return summary
     return packet if isinstance(packet, dict) else {}
+
+
+def _hbond_backmap_report_reference(
+    json_path: str | Path,
+    md_path: str | Path,
+    csv_path: str | Path,
+) -> dict[str, Any]:
+    """Build an additive H-Bond BackMap evidence reference for the handoff bundle.
+
+    Reads ``runs/hbond_backmap_report_current.json`` (built by
+    ``tools/product/build_hbond_backmap_report.py``) and surfaces only the
+    batch-level KPI plus artifact paths. H-Bond BackMap is additive local
+    interpretability evidence: it is never a handoff/delivery-ready hard gate,
+    and a missing/invalid report is surfaced as a warning, never a positive
+    claim.
+    """
+
+    resolved = _resolve(json_path) if str(json_path).strip() else Path()
+    present_file = bool(str(resolved) and resolved.exists() and resolved.is_file())
+    valid = False
+    reason = "missing"
+    summary: dict[str, Any] = {}
+    if present_file:
+        try:
+            payload = json.loads(resolved.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            reason = "invalid_json"
+        else:
+            candidate = payload.get("summary") if isinstance(payload, dict) else None
+            if isinstance(candidate, dict):
+                summary = candidate
+                valid = True
+                reason = "present"
+            else:
+                reason = "invalid_payload_missing_summary"
+
+    def _i(value: Any) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
+
+    def _f(value: Any) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
+    kpi = {
+        "hbond_backmap_report_present": valid,
+        "hbond_backmap_candidate_count": _i(summary.get("candidate_count")),
+        "hbond_backmap_claim_safe_count": _i(summary.get("claim_safe_count")),
+        "hbond_backmap_evidence_only_count": _i(summary.get("evidence_only_count")),
+        "hbond_backmap_claim_safe_rate": _f(summary.get("claim_safe_rate")),
+        "hbond_backmap_total_donor_sites": _i(summary.get("total_donor_sites")),
+        "hbond_backmap_total_acceptor_sites": _i(summary.get("total_acceptor_sites")),
+    }
+    return {
+        "artifact_id": "hbond_backmap_report",
+        "artifact_type": "interpretability_evidence",
+        "present": valid,
+        "reason": reason,
+        "warning": "" if valid else f"hbond_backmap_report_{reason}",
+        "json_path": str(json_path).strip(),
+        "md_path": str(md_path).strip(),
+        "csv_path": str(csv_path).strip(),
+        "required_for_delivery_ready": False,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_boundary": HBOND_BACKMAP_CLAIM_BOUNDARY,
+        "kpi": kpi,
+    }
 
 
 def _rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
@@ -718,11 +799,20 @@ def build_product_commercial_readiness_handoff_bundle(
     ai_md_engine_kpi_json_path: str = DEFAULT_AI_MD_ENGINE_KPI_JSON,
     ai_md_engine_kpi_md_path: str = DEFAULT_AI_MD_ENGINE_KPI_MD,
     product_image_smoke_preflight_path: str = DEFAULT_PRODUCT_IMAGE_SMOKE_PREFLIGHT_JSON,
+    hbond_backmap_report_json_path: str = DEFAULT_HBOND_BACKMAP_REPORT_JSON,
+    hbond_backmap_report_md_path: str = DEFAULT_HBOND_BACKMAP_REPORT_MD,
+    hbond_backmap_report_csv_path: str = DEFAULT_HBOND_BACKMAP_REPORT_CSV,
 ) -> dict[str, Any]:
     operator_summary = _summary(operator_packet)
     freshness_summary = _summary(freshness_packet)
     ladder_summary = _summary(execution_ladder_packet)
     ladder_rows = _rows(execution_ladder_packet)
+    hbond_backmap_report_reference = _hbond_backmap_report_reference(
+        hbond_backmap_report_json_path,
+        hbond_backmap_report_md_path,
+        hbond_backmap_report_csv_path,
+    )
+    hbond_backmap_report_kpi = hbond_backmap_report_reference["kpi"]
     ai_md_engine_kpi_summary = _summary_or_packet(ai_md_engine_kpi_packet or {})
     ai_md_engine_kpi_present = bool(ai_md_engine_kpi_summary)
     ai_md_pose_ranking_hbond = (
@@ -1775,6 +1865,14 @@ def build_product_commercial_readiness_handoff_bundle(
         ),
         "ai_md_engine_kpi_report_present": ai_md_engine_kpi_present,
         "ai_md_engine_kpi_report_ready": ai_md_engine_kpi_ready,
+        "hbond_backmap_report": hbond_backmap_report_reference,
+        "hbond_backmap_report_present": hbond_backmap_report_kpi["hbond_backmap_report_present"],
+        "hbond_backmap_candidate_count": hbond_backmap_report_kpi["hbond_backmap_candidate_count"],
+        "hbond_backmap_claim_safe_count": hbond_backmap_report_kpi["hbond_backmap_claim_safe_count"],
+        "hbond_backmap_evidence_only_count": hbond_backmap_report_kpi["hbond_backmap_evidence_only_count"],
+        "hbond_backmap_claim_safe_rate": hbond_backmap_report_kpi["hbond_backmap_claim_safe_rate"],
+        "hbond_backmap_total_donor_sites": hbond_backmap_report_kpi["hbond_backmap_total_donor_sites"],
+        "hbond_backmap_total_acceptor_sites": hbond_backmap_report_kpi["hbond_backmap_total_acceptor_sites"],
         "ai_md_engine_kpi_report_json": ai_md_engine_kpi_json_path if ai_md_engine_kpi_present else "",
         "ai_md_engine_kpi_report_md": ai_md_engine_kpi_md_path if ai_md_engine_kpi_present else "",
         "ai_md_engine_kpi_status": _text(ai_md_engine_kpi_summary.get("status")),
@@ -3517,6 +3615,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--product-image-smoke-preflight-json",
         default=DEFAULT_PRODUCT_IMAGE_SMOKE_PREFLIGHT_JSON,
     )
+    parser.add_argument("--hbond-backmap-report-json", default=DEFAULT_HBOND_BACKMAP_REPORT_JSON)
+    parser.add_argument("--hbond-backmap-report-md", default=DEFAULT_HBOND_BACKMAP_REPORT_MD)
+    parser.add_argument("--hbond-backmap-report-csv", default=DEFAULT_HBOND_BACKMAP_REPORT_CSV)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -3539,6 +3640,9 @@ def main(argv: list[str] | None = None) -> None:
         ai_md_engine_kpi_json_path=args.ai_md_engine_kpi_json,
         ai_md_engine_kpi_md_path=args.ai_md_engine_kpi_md,
         product_image_smoke_preflight_path=args.product_image_smoke_preflight_json,
+        hbond_backmap_report_json_path=args.hbond_backmap_report_json,
+        hbond_backmap_report_md_path=args.hbond_backmap_report_md,
+        hbond_backmap_report_csv_path=args.hbond_backmap_report_csv,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

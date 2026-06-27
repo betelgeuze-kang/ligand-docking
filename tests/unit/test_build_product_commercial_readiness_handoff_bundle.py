@@ -2084,3 +2084,119 @@ def test_product_commercial_readiness_handoff_bundle_tool_writes_outputs(tmp_pat
     assert "operator_packet_freshness" in md_text
     assert "product_scope_breadth_evidence_receipt_current.json" in md_text
     assert "Artifact References" in md_text
+
+
+def _write_hbond_backmap_report(path: Path) -> None:
+    _write_json(
+        path,
+        {
+            "report_version": "hbond_backmap_report_v1",
+            "status": "hbond_backmap_report_ready",
+            "summary": {
+                "report_version": "hbond_backmap_report_v1",
+                "candidate_count": 64,
+                "claim_safe_count": 62,
+                "evidence_only_count": 2,
+                "claim_safe_rate": 0.96875,
+                "total_donor_sites": 76,
+                "total_acceptor_sites": 131,
+                "evidence_only_reason_counts": {"no_hbond_sites": 2},
+            },
+            "rows": [],
+        },
+    )
+
+
+def test_handoff_bundle_hbond_backmap_report_present_is_additive(tmp_path: Path) -> None:
+    report_json = tmp_path / "hbond_backmap_report_current.json"
+    _write_hbond_backmap_report(report_json)
+
+    payload = mod.build_product_commercial_readiness_handoff_bundle(
+        operator_packet=_operator_packet(),
+        freshness_packet=_freshness(),
+        execution_ladder_packet=_ladder(),
+        hbond_backmap_report_json_path=str(report_json),
+        hbond_backmap_report_md_path=str(tmp_path / "hbond_backmap_report_current.md"),
+        hbond_backmap_report_csv_path=str(tmp_path / "hbond_backmap_report_current.csv"),
+    )
+    summary = payload["summary"]
+    section = summary["hbond_backmap_report"]
+
+    # Additive evidence must not change the handoff readiness decision.
+    assert summary["handoff_bundle_ready"] is True
+    assert section["artifact_id"] == "hbond_backmap_report"
+    assert section["artifact_type"] == "interpretability_evidence"
+    assert section["present"] is True
+    assert section["required_for_delivery_ready"] is False
+    assert section["execution_enabled"] is False
+    assert section["external_state_mutated"] is False
+    assert summary["hbond_backmap_report_present"] is True
+    assert summary["hbond_backmap_candidate_count"] == 64
+    assert summary["hbond_backmap_claim_safe_count"] == 62
+    assert summary["hbond_backmap_evidence_only_count"] == 2
+    assert summary["hbond_backmap_claim_safe_rate"] == 0.96875
+    assert summary["hbond_backmap_total_donor_sites"] == 76
+    assert summary["hbond_backmap_total_acceptor_sites"] == 131
+    # Additive evidence must not leak into the blocking artifact rows.
+    assert all(row["artifact_id"] != "hbond_backmap_report" for row in payload["rows"])
+
+
+def test_handoff_bundle_hbond_backmap_report_missing_does_not_block(tmp_path: Path) -> None:
+    missing_json = tmp_path / "hbond_backmap_report_current.json"
+
+    payload = mod.build_product_commercial_readiness_handoff_bundle(
+        operator_packet=_operator_packet(),
+        freshness_packet=_freshness(),
+        execution_ladder_packet=_ladder(),
+        hbond_backmap_report_json_path=str(missing_json),
+    )
+    summary = payload["summary"]
+    section = summary["hbond_backmap_report"]
+
+    assert summary["handoff_bundle_ready"] is True
+    assert section["present"] is False
+    assert section["reason"] == "missing"
+    assert section["warning"] == "hbond_backmap_report_missing"
+    assert section["required_for_delivery_ready"] is False
+    assert summary["hbond_backmap_report_present"] is False
+    assert summary["hbond_backmap_claim_safe_rate"] == 0.0
+    assert summary["hbond_backmap_candidate_count"] == 0
+
+
+def test_handoff_bundle_hbond_backmap_report_invalid_is_fail_closed(tmp_path: Path) -> None:
+    bad_json = tmp_path / "hbond_backmap_report_current.json"
+    bad_json.write_text("{ not valid json", encoding="utf-8")
+
+    payload = mod.build_product_commercial_readiness_handoff_bundle(
+        operator_packet=_operator_packet(),
+        freshness_packet=_freshness(),
+        execution_ladder_packet=_ladder(),
+        hbond_backmap_report_json_path=str(bad_json),
+    )
+    summary = payload["summary"]
+    section = summary["hbond_backmap_report"]
+
+    assert summary["handoff_bundle_ready"] is True
+    assert section["present"] is False
+    assert section["reason"] == "invalid_json"
+    assert section["warning"] == "hbond_backmap_report_invalid_json"
+    # No positive claim may be fabricated from an invalid artifact.
+    assert summary["hbond_backmap_report_present"] is False
+    assert summary["hbond_backmap_claim_safe_rate"] == 0.0
+    assert summary["hbond_backmap_claim_safe_count"] == 0
+
+
+def test_handoff_bundle_hbond_backmap_report_claim_boundary_preserved(tmp_path: Path) -> None:
+    report_json = tmp_path / "hbond_backmap_report_current.json"
+    _write_hbond_backmap_report(report_json)
+
+    payload = mod.build_product_commercial_readiness_handoff_bundle(
+        operator_packet=_operator_packet(),
+        freshness_packet=_freshness(),
+        execution_ladder_packet=_ladder(),
+        hbond_backmap_report_json_path=str(report_json),
+    )
+    boundary = payload["summary"]["hbond_backmap_report"]["claim_boundary"]
+
+    assert "local interpretability evidence" in boundary
+    assert "not a docking-accuracy or binding-affinity claim" in boundary
