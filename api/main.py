@@ -23,6 +23,7 @@ from api.product_cameo_runner import router as product_cameo_runner_router
 from api.product_capabilities import router as product_capabilities_router
 from api.product_commercial_readiness import router as product_commercial_readiness_router
 from api.product_evidence_goal import router as product_evidence_goal_router
+from api.product_hbond_backmap import router as product_hbond_backmap_router
 from api.product_docking import router as product_docking_router
 from api.product_license import router as product_license_router
 from api.product_operational import router as product_operational_router
@@ -78,6 +79,7 @@ app.include_router(product_production_ai_router)
 app.include_router(product_scope_router)
 app.include_router(product_commercial_readiness_router)
 app.include_router(product_evidence_goal_router)
+app.include_router(product_hbond_backmap_router)
 app.include_router(product_router)
 app.include_router(product_tier_beta_router)
 
