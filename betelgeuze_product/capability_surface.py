@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -91,6 +92,74 @@ def _file_contains(root: Path, path_like: str, needle: str) -> bool:
 
 def _any_file_contains(root: Path, path_likes: tuple[str, ...], needle: str) -> bool:
     return any(_file_contains(root, path_like, needle) for path_like in path_likes)
+
+
+def _read_artifact_summary(root: Path, path_like: str) -> dict[str, Any]:
+    path = root / path_like
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    summary = payload.get("summary")
+    return summary if isinstance(summary, dict) else {}
+
+
+# Read-only product evidence surfaces (report/materializer -> API route -> local
+# delivery bundle -> commercial handoff bundle). Surfaced here for GUI/operator
+# discovery only. This never promotes a scientific claim: H-Bond BackMap stays
+# local interpretability evidence, and the GPCR hard-decoy suite stays a
+# fail-closed broad-GPCR gate (broad_family_locked is a valid, non-claimable
+# state).
+def _evidence_surfaces(root: Path) -> list[dict[str, Any]]:
+    hbond_artifact = "runs/hbond_backmap_report_current.json"
+    gpcr_artifact = "runs/gpcr_hard_decoy_suite_current.json"
+    hbond_present = _artifact_present(root, hbond_artifact)
+    gpcr_present = _artifact_present(root, gpcr_artifact)
+    gpcr_summary = _read_artifact_summary(root, gpcr_artifact)
+    return [
+        {
+            "capability_id": "hbond_backmap_report",
+            "surface": "product_evidence_surface",
+            "route": "/product/hbond-backmap-report",
+            "artifact": hbond_artifact,
+            "bundle_surfaces": ["local_delivery_bundle", "commercial_readiness_handoff_bundle"],
+            "claim_type": "local_interpretability_evidence",
+            "surface_available": True,
+            "artifact_present": hbond_present,
+            # H-Bond BackMap is never an accuracy/affinity claim.
+            "claim_safe": False,
+            "claim_status": "interpretability_evidence" if hbond_present else "missing",
+            "claim_boundary": (
+                "H-Bond BackMap is local interpretability evidence, not a docking-accuracy or "
+                "binding-affinity claim."
+            ),
+            "execution_enabled": False,
+            "external_state_mutated": False,
+        },
+        {
+            "capability_id": "gpcr_hard_decoy_suite_report",
+            "surface": "product_evidence_surface",
+            "route": "/product/gpcr-hard-decoy-suite-report",
+            "artifact": gpcr_artifact,
+            "bundle_surfaces": ["local_delivery_bundle", "commercial_readiness_handoff_bundle"],
+            "claim_type": "broad_gpcr_fail_closed_gate",
+            "surface_available": True,
+            "artifact_present": gpcr_present,
+            # Fail-closed: only an explicit family_claim_safe True is claim-safe.
+            "claim_safe": bool(gpcr_summary.get("family_claim_safe") is True),
+            "claim_status": _text(gpcr_summary.get("status")) or ("present" if gpcr_present else "missing"),
+            "claim_boundary": (
+                "GPCR hard-decoy suite does not run scoring, generate decoys, relax thresholds, or "
+                "promote broad-GPCR claims."
+            ),
+            "execution_enabled": False,
+            "external_state_mutated": False,
+        },
+    ]
 
 
 def build_product_capability_surface_contract(
@@ -408,6 +477,7 @@ def build_product_capability_surface_contract(
 
     blockers = [_blocker(row) for row in rows if row["status"] != "ready"]
     status = "product_capability_surface_contract_ready" if not blockers else "blocked_product_capability_surface_contract"
+    evidence_surfaces = _evidence_surfaces(root_path)
     summary = {
         "packet_type": "product_capability_surface_contract",
         "status": status,
@@ -454,6 +524,11 @@ def build_product_capability_surface_contract(
         "general_platform_claim_allowed": general_platform_claim_allowed,
         "scope_claim_boundary_detail": scope_claim_boundary_detail,
         "max_p0_ligand_count": MAX_P0_LIGAND_COUNT,
+        "evidence_surface_count": len(evidence_surfaces),
+        "evidence_surface_available_count": sum(
+            1 for surface in evidence_surfaces if surface["surface_available"]
+        ),
+        "evidence_surface_ids": [surface["capability_id"] for surface in evidence_surfaces],
         "execution_enabled": False,
         "docking_results_emitted": False,
         "bundle_assembled": False,
@@ -468,4 +543,4 @@ def build_product_capability_surface_contract(
             else "Repair blocked product capability rows before claiming a complete structure-analysis and docking product surface."
         ),
     }
-    return {"summary": summary, "blockers": blockers, "rows": rows}
+    return {"summary": summary, "blockers": blockers, "rows": rows, "evidence_surfaces": evidence_surfaces}

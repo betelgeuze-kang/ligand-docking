@@ -291,3 +291,91 @@ def test_product_capability_surface_contract_accepts_split_api_router_files(tmp_
     assert summary["product_commercial_independence_endpoint_present"] is True
     assert summary["product_release_readiness_endpoint_present"] is True
     assert summary["product_goal_completion_audit_endpoint_present"] is True
+
+
+def test_product_capability_surface_exposes_evidence_surfaces(tmp_path: Path) -> None:
+    root = _split_router_root(tmp_path / "repo")
+
+    payload = mod.build_product_capability_surface_contract(
+        readiness_packet=_readiness(),
+        work_order_packet=_work_order(),
+        preflight_packet=_preflight(),
+        structure_report_packet=_structure_report(),
+        bundle_contract_packet=_bundle(),
+        delivery_evidence_packet=_delivery(),
+        pilot_packet=_pilot(),
+        scope_breadth_packet=_scope_breadth(),
+        execution_readiness_packet=_execution_readiness(),
+        root=root,
+    )
+
+    surfaces = payload["evidence_surfaces"]
+    by_id = {s["capability_id"]: s for s in surfaces}
+    summary = payload["summary"]
+
+    # Discovery surface is additive: capability gate counts are unchanged.
+    assert summary["capability_count"] == 9
+    assert summary["evidence_surface_count"] == 2
+    assert summary["evidence_surface_available_count"] == 2
+    assert set(summary["evidence_surface_ids"]) == {
+        "hbond_backmap_report",
+        "gpcr_hard_decoy_suite_report",
+    }
+
+    hbond = by_id["hbond_backmap_report"]
+    assert hbond["route"] == "/product/hbond-backmap-report"
+    assert hbond["artifact"] == "runs/hbond_backmap_report_current.json"
+    assert hbond["bundle_surfaces"] == ["local_delivery_bundle", "commercial_readiness_handoff_bundle"]
+    assert hbond["claim_type"] == "local_interpretability_evidence"
+    assert hbond["surface_available"] is True
+    assert hbond["artifact_present"] is False  # no artifact written under root
+    assert hbond["claim_safe"] is False
+    assert "not a docking-accuracy or binding-affinity claim" in hbond["claim_boundary"]
+    assert hbond["execution_enabled"] is False
+    assert hbond["external_state_mutated"] is False
+
+    gpcr = by_id["gpcr_hard_decoy_suite_report"]
+    assert gpcr["route"] == "/product/gpcr-hard-decoy-suite-report"
+    assert gpcr["artifact"] == "runs/gpcr_hard_decoy_suite_current.json"
+    assert gpcr["claim_type"] == "broad_gpcr_fail_closed_gate"
+    assert gpcr["surface_available"] is True
+    assert gpcr["claim_safe"] is False
+    assert "promote broad-GPCR claims" in gpcr["claim_boundary"]
+    assert gpcr["execution_enabled"] is False
+    assert gpcr["external_state_mutated"] is False
+
+
+def test_product_capability_surface_reads_gpcr_locked_artifact(tmp_path: Path) -> None:
+    root = _split_router_root(tmp_path / "repo")
+    (root / "runs").mkdir(parents=True, exist_ok=True)
+    (root / "runs" / "gpcr_hard_decoy_suite_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "broad_family_locked",
+                    "family_claim_safe": False,
+                    "target_count": 3,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = mod.build_product_capability_surface_contract(
+        readiness_packet=_readiness(),
+        work_order_packet=_work_order(),
+        preflight_packet=_preflight(),
+        structure_report_packet=_structure_report(),
+        bundle_contract_packet=_bundle(),
+        delivery_evidence_packet=_delivery(),
+        pilot_packet=_pilot(),
+        scope_breadth_packet=_scope_breadth(),
+        execution_readiness_packet=_execution_readiness(),
+        root=root,
+    )
+
+    gpcr = {s["capability_id"]: s for s in payload["evidence_surfaces"]}["gpcr_hard_decoy_suite_report"]
+    assert gpcr["artifact_present"] is True
+    # A locked artifact is read as-is and stays non-claimable.
+    assert gpcr["claim_safe"] is False
+    assert gpcr["claim_status"] == "broad_family_locked"

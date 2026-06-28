@@ -27,6 +27,7 @@ async def get_product_capabilities() -> dict[str, Any]:
     packet = _read_json_object(PRODUCT_CAPABILITY_ARTIFACT)
     summary = packet.get("summary") if isinstance(packet.get("summary"), dict) else {}
     rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    evidence_surfaces = packet.get("evidence_surfaces") if isinstance(packet.get("evidence_surfaces"), list) else []
     if not summary:
         return {
             "status": "missing_product_capability_surface_contract",
@@ -39,6 +40,8 @@ async def get_product_capabilities() -> dict[str, Any]:
             "blocked_claim_scopes": ["capability_surface_contract_missing"],
             "general_platform_claim_allowed": False,
             "scope_claim_boundary_detail": "missing_product_capability_surface_contract",
+            "evidence_surfaces": [],
+            "evidence_surface_count": 0,
             "execution_enabled": False,
             "docking_results_emitted": False,
             "external_state_mutated": False,
@@ -74,6 +77,8 @@ async def get_product_capabilities() -> dict[str, Any]:
             summary.get("restricted_unattended_execution_runtime_ready") is True
         ),
         "scope_claim_boundary_detail": summary.get("scope_claim_boundary_detail", ""),
+        "evidence_surfaces": evidence_surfaces,
+        "evidence_surface_count": int(summary.get("evidence_surface_count") or len(evidence_surfaces)),
         "execution_enabled": False,
         "docking_results_emitted": False,
         "external_state_mutated": False,
