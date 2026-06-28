@@ -5832,3 +5832,28 @@ def test_release_source_of_truth_accepts_top_level_release_bundle_status(tmp_pat
     row = payload["rows"][0]
     assert row["status"] == "pass"
     assert row["observed_status"] == "release_bundle_ready_for_operator_review"
+
+
+def test_release_source_of_truth_tracks_capability_surface_builder_sources() -> None:
+    """The capability surface artifact must go stale when its builder/module
+    sources change, so refresh-pipeline regeneration is enforced (e.g., adding
+    the evidence_surfaces section must flag the prior artifact stale)."""
+
+    spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "product_capability_surface_contract"
+    )
+    depends_on = spec["depends_on"]
+
+    assert spec["builder_command"] == "python3 tools/build_product_capability_surface_contract.py"
+    # Builder + module sources must be tracked (mirrors the sibling product specs).
+    assert "tools/accounting/build_product_capability_surface_contract.py" in depends_on
+    assert "tools/build_product_capability_surface_contract.py" in depends_on
+    assert "betelgeuze_product/capability_surface.py" in depends_on
+    assert "betelgeuze_product/docking_request.py" in depends_on
+    # Existing runtime dependencies are preserved.
+    assert "runs/restricted_unattended_execution_readiness_current.json" in depends_on
+    assert "runs/product_security_deployment_contract_current.json" in depends_on
+    # The capability builder is part of the regular release refresh pipeline.
+    assert "python3 tools/build_product_capability_surface_contract.py" in mod.RELEASE_REFRESH_COMMANDS

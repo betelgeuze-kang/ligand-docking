@@ -693,6 +693,10 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "artifact_path": "runs/product_capability_surface_contract_current.json",
         "builder_command": "python3 tools/build_product_capability_surface_contract.py",
         "depends_on": [
+            "tools/accounting/build_product_capability_surface_contract.py",
+            "tools/build_product_capability_surface_contract.py",
+            "betelgeuze_product/capability_surface.py",
+            "betelgeuze_product/docking_request.py",
             "runs/restricted_unattended_execution_readiness_current.json",
             "runs/product_security_deployment_contract_current.json",
         ],
