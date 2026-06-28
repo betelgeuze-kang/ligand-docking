@@ -328,7 +328,10 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "artifact_id": "product_scope_breadth_contract",
         "artifact_path": "runs/product_scope_breadth_contract_current.json",
         "builder_command": "python3 tools/build_product_scope_breadth_contract.py",
-        "depends_on": [],
+        "depends_on": [
+            "tools/accounting/build_product_scope_breadth_contract.py",
+            "tools/build_product_scope_breadth_contract.py",
+        ],
     },
     {
         "artifact_id": "product_scope_breadth_closure_checklist",
@@ -1526,6 +1529,8 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "artifact_path": "runs/product_commercial_readiness_operator_packet_current.json",
         "builder_command": "python3 tools/build_product_commercial_readiness_operator_packet.py",
         "depends_on": [
+            "tools/accounting/build_product_commercial_readiness_operator_packet.py",
+            "tools/build_product_commercial_readiness_operator_packet.py",
             "runs/product_goal_completion_audit_current.json",
             "runs/aqp1_direct_binding_procurement_packet_current.json",
             "runs/aqp1_direct_binding_external_evidence_operator_fill_guide_current.json",
@@ -1547,6 +1552,9 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "artifact_path": "runs/product_commercial_readiness_handoff_bundle_current.json",
         "builder_command": "python3 tools/build_product_commercial_readiness_handoff_bundle.py",
         "depends_on": [
+            "tools/product/build_product_commercial_readiness_handoff_bundle.py",
+            "tools/accounting/build_product_commercial_readiness_handoff_bundle.py",
+            "tools/build_product_commercial_readiness_handoff_bundle.py",
             "runs/product_goal_completion_audit_current.json",
             "runs/product_commercial_readiness_operator_packet_current.json",
             "runs/product_commercial_readiness_operator_packet_freshness_current.json",
@@ -1559,6 +1567,9 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "artifact_path": "runs/product_commercial_readiness_operator_packet_freshness_current.json",
         "builder_command": "python3 tools/build_product_commercial_readiness_operator_packet_freshness.py",
         "depends_on": [
+            "tools/product/build_product_commercial_readiness_operator_packet_freshness.py",
+            "tools/accounting/build_product_commercial_readiness_operator_packet_freshness.py",
+            "tools/build_product_commercial_readiness_operator_packet_freshness.py",
             "runs/product_goal_completion_audit_current.json",
             "runs/product_commercial_readiness_operator_packet_current.json",
         ],
@@ -1568,6 +1579,9 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "artifact_path": "runs/product_commercial_readiness_execution_ladder_current.json",
         "builder_command": "python3 tools/build_product_commercial_readiness_execution_ladder.py",
         "depends_on": [
+            "tools/product/build_product_commercial_readiness_execution_ladder.py",
+            "tools/accounting/build_product_commercial_readiness_execution_ladder.py",
+            "tools/build_product_commercial_readiness_execution_ladder.py",
             "runs/product_commercial_readiness_operator_packet_current.json",
             "runs/product_commercial_readiness_operator_packet_freshness_current.json",
         ],

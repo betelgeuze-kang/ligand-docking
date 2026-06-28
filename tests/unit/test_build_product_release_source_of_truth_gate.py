@@ -5857,3 +5857,84 @@ def test_release_source_of_truth_tracks_capability_surface_builder_sources() -> 
     assert "runs/product_security_deployment_contract_current.json" in depends_on
     # The capability builder is part of the regular release refresh pipeline.
     assert "python3 tools/build_product_capability_surface_contract.py" in mod.RELEASE_REFRESH_COMMANDS
+
+
+def test_release_source_of_truth_tracks_commercial_readiness_spec_builder_sources() -> None:
+    """Follow-up to the capability-surface fix: clear commercial-readiness and
+    scope-breadth specs must track their builder sources in depends_on, so a
+    builder code change marks the artifact stale instead of letting a stale
+    artifact read as green. Aggregator specs (goal_readiness_rollup,
+    product_goal_completion_audit, goal_operator_action_board) are intentionally
+    excluded here because their freshness policy may be downstream-artifact based.
+    Assertions use membership (not counts) to stay robust to dep-list growth."""
+
+    by_id = {spec["artifact_id"]: spec for spec in mod.DEFAULT_ARTIFACT_SPECS}
+
+    # Expected builder-source dependencies per spec (real impl + shim copies).
+    expected_sources = {
+        "product_scope_breadth_contract": [
+            "tools/accounting/build_product_scope_breadth_contract.py",
+            "tools/build_product_scope_breadth_contract.py",
+        ],
+        "product_commercial_readiness_operator_packet": [
+            "tools/accounting/build_product_commercial_readiness_operator_packet.py",
+            "tools/build_product_commercial_readiness_operator_packet.py",
+        ],
+        "product_commercial_readiness_handoff_bundle": [
+            "tools/product/build_product_commercial_readiness_handoff_bundle.py",
+            "tools/accounting/build_product_commercial_readiness_handoff_bundle.py",
+            "tools/build_product_commercial_readiness_handoff_bundle.py",
+        ],
+        "product_commercial_readiness_operator_packet_freshness": [
+            "tools/product/build_product_commercial_readiness_operator_packet_freshness.py",
+            "tools/accounting/build_product_commercial_readiness_operator_packet_freshness.py",
+            "tools/build_product_commercial_readiness_operator_packet_freshness.py",
+        ],
+        "product_commercial_readiness_execution_ladder": [
+            "tools/product/build_product_commercial_readiness_execution_ladder.py",
+            "tools/accounting/build_product_commercial_readiness_execution_ladder.py",
+            "tools/build_product_commercial_readiness_execution_ladder.py",
+        ],
+    }
+
+    for artifact_id, sources in expected_sources.items():
+        spec = by_id[artifact_id]
+        depends_on = spec["depends_on"]
+        for source in sources:
+            assert source in depends_on, f"{artifact_id} missing builder source {source}"
+
+    # Existing runtime artifact dependencies must be preserved (membership checks).
+    assert (
+        "runs/product_goal_completion_audit_current.json"
+        in by_id["product_commercial_readiness_operator_packet"]["depends_on"]
+    )
+    assert (
+        "runs/product_commercial_readiness_operator_packet_current.json"
+        in by_id["product_commercial_readiness_handoff_bundle"]["depends_on"]
+    )
+    assert (
+        "runs/product_commercial_readiness_operator_packet_freshness_current.json"
+        in by_id["product_commercial_readiness_handoff_bundle"]["depends_on"]
+    )
+    assert (
+        "runs/product_commercial_readiness_operator_packet_current.json"
+        in by_id["product_commercial_readiness_operator_packet_freshness"]["depends_on"]
+    )
+    assert (
+        "runs/product_commercial_readiness_operator_packet_current.json"
+        in by_id["product_commercial_readiness_execution_ladder"]["depends_on"]
+    )
+    assert (
+        "runs/product_commercial_readiness_operator_packet_freshness_current.json"
+        in by_id["product_commercial_readiness_execution_ladder"]["depends_on"]
+    )
+
+    # Aggregator specs are intentionally out of scope for this builder-source pass.
+    for aggregator_id in (
+        "goal_readiness_rollup",
+        "product_goal_completion_audit",
+        "goal_operator_action_board",
+    ):
+        if aggregator_id in by_id:
+            # Not asserting their dep contents here; only documenting exclusion.
+            assert "depends_on" in by_id[aggregator_id]
