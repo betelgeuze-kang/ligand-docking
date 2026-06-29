@@ -3210,14 +3210,63 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   active scorer promotion-decision claim-lock metric readiness, GPCR broad claim-scope target-heldout
   input readiness, science accuracy frontier restricted-ready/commercial-parity-blocked accounting, production AI registry promotion operator
   receipt/priority packet/field worksheet/staging apply preview, CAMEO official-result fetch preflight, R8 scope-breadth evidence field worksheet/staging apply preview, R9 engine-refinement claim evidence priority packet/field worksheet/staging apply preview,
-  master gap closure rollup 포함 refresh 순서는 최신 source-of-truth gate에서
+  master gap closure rollup 포함 refresh 순서는 저장된
+  `runs/product_release_source_of_truth_gate_current.json` 기준
   `blocked_product_release_source_of_truth_gate`, `row_count=156`,
-  `pass_count=100/156`, `blocker_count=56`, `artifact_row_count=97`,
-  `semantic_status_row_count=57`, `readme_row_count=2`, `stale_artifact_count=36`,
-  `release_refresh_command_count=137`로 재검증됐다.
-- `scripts/check_independent_product_readiness.py`는 현재 release/source-of-truth,
+  `pass_count=85/156`, `blocker_count=71`, `artifact_row_count=97`,
+  `semantic_status_row_count=57`, `readme_row_count=2`, `stale_artifact_count=37`,
+  `semantic_status_blocker_count=34`, `readme_drift_count=0`,
+  `release_refresh_command_count=137`로 남아 있다.
+  2026-06-29 문서 동기화 점검에서 PM 메모의
+  `python3 scripts/build_product_readiness_snapshot.py --json --no-write`
+  명령은 현재 `main`에 없음을 확인했고, 보호된 `runs/` evidence를
+  덮어쓰지 않기 위해 `python3 tools/build_product_release_source_of_truth_gate.py
+  --out-json .betelgeuze/tmp_product_release_source_of_truth_gate_now.json
+  --out-csv .betelgeuze/tmp_product_release_source_of_truth_gate_now.csv
+  --out-md .betelgeuze/tmp_product_release_source_of_truth_gate_now.md`로
+  재계산만 수행했다. 그 no-write 대체 계산은
+  `blocked_product_release_source_of_truth_gate`, `row_count=156`,
+  `pass_count=64/156`, `blocker_count=92`, `artifact_row_count=97`,
+  `semantic_status_row_count=57`, `readme_row_count=2`, `stale_artifact_count=59`,
+  `semantic_status_blocker_count=33`, `readme_drift_count=0`,
+  `release_refresh_command_count=137`을 보고한다. 따라서 56/71/92의
+  차이는 서로 다른 시점의 저장 snapshot과 현재 source freshness
+  재계산 차이로 문서화하며, 어떤 숫자도 release-ready 또는
+  paid-pilot-ready 승격 근거가 아니다.
+- 최근 F2/G1 진단성 merge는 non-promoting 진단으로만 취급한다. 현재
+  `main` 검색에서는 PM 메모가 보존 요구한 정확한 수치 blocker id
+  `full_load_gate_not_closed`, `full_mesh_nonlinear_equilibrium_not_closed`,
+  `material_newton_breadth_not_closed`, `production_rocm_hip_residency_not_closed`
+  가 readiness/source-of-truth 표면에 materialized되어 있지 않다. 이 부재는
+  closure가 아니며, F2g support/elastic-link audit과 F2h continuation 이전에
+  G1/full-load/full-mesh/material-Newton/ROCm-HIP closure claim을 하지 않는다.
+- GPU/HIP parity는 CPU reference closure 이후 성능/상주성 lane으로만 진행한다.
+  2026-06-29 현재 `runs/rocm_environment_manifest_current.json`,
+  `runs/product_end_to_end_rocm_benchmark_current.json`,
+  `runs/rust_hip_neighbor_provider_parity_current.json`,
+  `runs/residual_force_gpu_worker_dispatch_manifest_current.json`, 및
+  `runs/residual_force_gpu_worker_return_receipt_current.json`은 하위 evidence를
+  제공하지만, governing product intake인
+  `runs/product_production_ai_gpu_return_intake_current.json`은
+  `blocked_product_production_ai_gpu_return_intake`로 남아 있다. 따라서 하위
+  ready receipt는 CPU/GPU solver parity, production residual promotion, 또는
+  customer-facing mutation 근거가 아니다. 후속 순서와 guardrail은
+  `docs/gpu_hip_parity_after_cpu_plan.md`에 고정한다.
+- `scripts/check_independent_product_readiness.py`는 release/source-of-truth,
   product readiness, operational quality, commercial-independence, capability surface,
-  release bundle, master/science-claim rollup을 read-only로 확인해
+  release bundle, master/science-claim rollup을 read-only로 확인한다. 2026-06-29
+  직접 실행(no `--out-json`)은 `blocked_independent_product_readiness`,
+  `pass_count=5`, `blocker_count=2`, `check_count=8`,
+  `blocked_checks=[release_source_of_truth_ready, release_refresh_final_gates_verified]`,
+  `independent_restricted_product_ready=false`,
+  `full_commercial_claim_promotion_ready=false`,
+  `science_accuracy_frontier_restricted_ready=true`,
+  `science_accuracy_frontier_broad_commercial_blocked=true`를 보고했다. 저장된
+  `runs/independent_product_readiness_check_current.json`은 더 오래된 snapshot으로
+  `blocker_count=3` 및
+  `blocked_checks=[commercial_independence_restricted_self_hosted,capability_surface_restricted_scope_ready,release_refresh_final_gates_verified]`
+  를 담고 있으므로, 아래 상세 필드들은 historical triage context이며 최신
+  readiness promotion 근거가 아니다. 이전 detailed rollup은
   `blocked_independent_product_readiness`,
   `independent_restricted_product_ready=false`,
   `full_commercial_claim_promotion_ready=false`,

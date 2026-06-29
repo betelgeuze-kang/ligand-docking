@@ -1,0 +1,51 @@
+# Developer Preview Final Gate Action Register
+
+Date: 2026-06-29
+
+This register is a planning and operator-action surface only. It does not add
+features, regenerate protected evidence, approve solver claims, or promote
+AI/GNN/surrogate truth claims. The current repo does not contain materialized
+Developer Preview final-gate artifact ids for the six PM-listed blockers, so
+each row stays blocked until an operator produces and reviews the named receipt.
+
+## Baseline
+
+| Field | Current value |
+| --- | --- |
+| Status | blocked_developer_preview_baseline |
+| Deliverables | 10/10 reported by PM context, not re-promoted here |
+| Final gates | 3/9 reported by PM context, six blockers tracked below |
+| Claim posture | frozen; no commercial solver, G1, autonomous AI, GNN, or surrogate-truth promotion |
+| Current repo evidence gap | exact gate ids are not materialized in current source/docs/evidence surfaces |
+
+## Action Register
+
+| Priority | Gate | Owner command | Expected output | Current blocker | Next action |
+| --- | --- | --- | --- | --- | --- |
+| A | `benchmark_results_clean_checkout_regenerated` | `tmpdir=$(mktemp -d .betelgeuze/dp-clean-checkout.XXXXXX) && git clone --no-hardlinks . "$tmpdir/repo" && cd "$tmpdir/repo" && python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt -r requirements-dev.txt && ./scripts/ai-verify.sh && python3 tools/run_external_validation_baselines.py --spec-json config/external_validation_baselines_v1.json --run-root runs --out-root .betelgeuze/developer_preview_external_baselines --label developer_preview_clean_checkout --no-rerun-current` | `ai-verify` passes and the baseline runner emits a reviewed clean-checkout benchmark receipt or explicit missing-input blockers under `.betelgeuze/` | No clean-checkout benchmark regeneration receipt is recorded for Developer Preview. | Run in a fresh local checkout, archive the stdout and generated `.betelgeuze/developer_preview_external_baselines` receipt for review, then decide whether a protected evidence refresh is warranted. |
+| B | `silent_import_loss_zero` | `python3 -m pytest -q tests/unit/test_api_product_import.py tests/unit/test_api_cameo_import.py tests/unit/test_api_casp17_import.py tests/unit/test_api_cleanup_import.py tests/unit/test_betelgeuze_product_cli.py tests/unit/test_betelgeuze_cameo_cli.py tests/unit/test_betelgeuze_cleanup_cli.py && python3 scripts/verify_product_capability_matrix.py --out-json .betelgeuze/developer_preview_capability_matrix.json --quiet` | Import/CLI tests pass and capability matrix reports zero missing or unimportable required Developer Preview surfaces. | Existing repo has import tests, but no Developer Preview-specific silent-import-loss receipt. | Run the command in the same clean checkout as gate A and record any missing optional/API dependency separately from required import loss. |
+| C | `selected_medium_models_pass_or_approved_review` | `python3 tools/build_product_pose_sampling_readiness.py --n-starts 8 --out-json .betelgeuze/developer_preview_medium_pose_sampling_readiness.json --out-csv .betelgeuze/developer_preview_medium_pose_sampling_readiness.csv --out-md .betelgeuze/developer_preview_medium_pose_sampling_readiness.md && python3 tools/build_backmapping_scoring_batch_smoke_benchmark.py --frame-count 12 --repeats 2 --out-json .betelgeuze/developer_preview_medium_backmapping_smoke.json --out-md .betelgeuze/developer_preview_medium_backmapping_smoke.md` | Medium-sized deterministic pose/backmapping smoke receipts pass, or an operator-approved review explains each failed medium model. | No selected-medium-model pass/review receipt is materialized. | Freeze the selected medium model list before running; do not substitute cherry-picked passing models after seeing results. |
+| D | `large_models_crash_oom_free` | `python3 tools/build_ligand_scaleup_benchmark_summary.py --out-json .betelgeuze/developer_preview_large_model_oom_guard.json --out-csv .betelgeuze/developer_preview_large_model_oom_guard.csv --out-md .betelgeuze/developer_preview_large_model_oom_guard.md && python3 tools/build_product_end_to_end_rocm_benchmark.py --out-json .betelgeuze/developer_preview_rocm_large_model_guard.json --out-csv .betelgeuze/developer_preview_rocm_large_model_guard.csv --out-md .betelgeuze/developer_preview_rocm_large_model_guard.md` | Large-model guard receipts either show crash/OOM-free status from reviewed local artifacts or fail closed with explicit missing-artifact blockers. | No large-model crash/OOM-free receipt is recorded for the Developer Preview baseline. | Run only on the approved local hardware/profile; keep GPU/HIP as performance/residency evidence, not solver-truth evidence. |
+| E | `linux_windows_reproducibility_confirmed` | `./scripts/ai-verify.sh && python3 -m pytest -q tests/unit/test_betelgeuze_product_readiness.py tests/unit/test_betelgeuze_product_cli.py tests/unit/test_betelgeuze_cameo_cli.py tests/unit/test_betelgeuze_cleanup_cli.py` | Linux receipt passes locally and a matching Windows receipt records the same command set, Python version, dependency inputs, and any expected skips. | Linux-only local smoke is available; Windows parity receipt is absent. | Have the owner run the same command set on Windows, attach stdout plus environment details, and keep unresolved platform differences as blockers. |
+| F | `new_user_core_workflow_observation_passed` | `python3 tools/build_product_execution_work_order.py --out-json .betelgeuze/developer_preview_new_user_execution_work_order.json --out-csv .betelgeuze/developer_preview_new_user_execution_work_order.csv --out-md .betelgeuze/developer_preview_new_user_execution_work_order.md && python3 tools/build_product_execution_preflight.py --work-order-json .betelgeuze/developer_preview_new_user_execution_work_order.json --out-json .betelgeuze/developer_preview_new_user_execution_preflight.json --out-csv .betelgeuze/developer_preview_new_user_execution_preflight.csv --out-md .betelgeuze/developer_preview_new_user_execution_preflight.md` | A new-user observer can follow the documented core workflow and produce fail-closed work-order/preflight receipts without hidden local state. | No observed new-user workflow receipt is present. | Prepare a scripted observation session, record only derived metadata and observer notes, and keep raw/private customer data out of the repo. |
+
+## Readiness Delta
+
+| Gate | Delta from blocked baseline |
+| --- | --- |
+| `benchmark_results_clean_checkout_regenerated` | Action command defined; still blocked pending clean-checkout run. |
+| `silent_import_loss_zero` | Required import/CLI check set defined; still blocked pending DP-specific receipt. |
+| `selected_medium_models_pass_or_approved_review` | Medium smoke/review path defined; still blocked pending frozen model list and receipt. |
+| `large_models_crash_oom_free` | Crash/OOM-free guard path defined; still blocked pending reviewed local hardware/profile output. |
+| `linux_windows_reproducibility_confirmed` | Linux/Windows parity command set defined; still blocked pending Windows receipt. |
+| `new_user_core_workflow_observation_passed` | Observation receipt path defined; still blocked pending observed workflow run. |
+
+## Guardrails
+
+- Do not add product features while these six gates are blocked.
+- Do not use GPU/HIP receipts to replace CPU solver closure or G1 evidence.
+- Do not interpret missing Developer Preview gate artifacts as pass.
+- Do not store private customer raw data, secrets, `.env` content, or approval
+  tokens in the receipts.
+- Do not promote release-ready, paid-pilot-ready, solver-product-ready,
+  autonomous AI, GNN, or surrogate-truth claims from this register.

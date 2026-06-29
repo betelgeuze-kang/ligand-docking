@@ -1,0 +1,139 @@
+from __future__ import annotations
+
+import csv
+import json
+from pathlib import Path
+
+from tools.product import build_customer_shadow_evidence_status as mod
+
+
+FIELDNAMES = [
+    "case_id",
+    "row_kind",
+    "raw_data_custody",
+    "customer_retained_raw_data",
+    "redistribution_allowed",
+    "raw_data_stored_in_repo",
+    "derived_metadata_fields",
+    "anonymized_result_summary",
+    "reviewer_signoff_status",
+    "reviewer_id",
+    "reviewed_at_utc",
+    "source_artifact_fingerprint",
+]
+
+
+def _write_intake(path: Path, rows: list[dict[str, str]], fieldnames: list[str] | None = None) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames or FIELDNAMES, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def _valid_row(case_id: str, row_kind: str = "customer_shadow") -> dict[str, str]:
+    return {
+        "case_id": case_id,
+        "row_kind": row_kind,
+        "raw_data_custody": "customer_retained",
+        "customer_retained_raw_data": "true",
+        "redistribution_allowed": "false",
+        "raw_data_stored_in_repo": "false",
+        "derived_metadata_fields": (
+            "case_domain;input_size_class;runner_profile;result_metric_summary;artifact_fingerprint"
+        ),
+        "anonymized_result_summary": "Reviewed anonymized aggregate metrics for retained customer input.",
+        "reviewer_signoff_status": "approved",
+        "reviewer_id": "reviewer_alpha",
+        "reviewed_at_utc": "2026-06-29T00:00:00Z",
+        "source_artifact_fingerprint": "a" * 64,
+    }
+
+
+def test_header_only_template_blocks_until_three_real_cases(tmp_path: Path) -> None:
+    intake = tmp_path / "intake.csv"
+    _write_intake(intake, [])
+
+    payload = mod.build_customer_shadow_evidence_status(intake_csv=str(intake))
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_customer_shadow_evidence_status"
+    assert summary["customer_shadow_intake_schema_ready"] is True
+    assert summary["completed_customer_shadow_case_count"] == 0
+    assert summary["missing_completed_customer_shadow_case_count"] == 3
+    assert summary["commercial_readiness_promotion_allowed"] is False
+    assert payload["blockers"][0]["case_id"] == "minimum_completed_cases"
+
+
+def test_mock_fixture_is_valid_but_does_not_count_toward_minimum(tmp_path: Path) -> None:
+    intake = tmp_path / "intake.csv"
+    _write_intake(intake, [_valid_row("mock_customer_shadow_fixture", "mock_fixture")])
+
+    payload = mod.build_customer_shadow_evidence_status(intake_csv=str(intake))
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_customer_shadow_evidence_status"
+    assert summary["mock_fixture_row_count"] == 1
+    assert summary["invalid_row_count"] == 0
+    assert summary["completed_customer_shadow_case_count"] == 0
+    assert payload["rows"][0]["completed_schema_valid"] is True
+    assert payload["rows"][0]["counts_toward_minimum"] is False
+
+
+def test_three_completed_customer_shadow_rows_ready_but_do_not_promote_claims(tmp_path: Path) -> None:
+    intake = tmp_path / "intake.csv"
+    _write_intake(intake, [_valid_row("case_1"), _valid_row("case_2"), _valid_row("case_3")])
+
+    payload = mod.build_customer_shadow_evidence_status(intake_csv=str(intake))
+
+    summary = payload["summary"]
+    assert summary["status"] == "customer_shadow_evidence_status_ready"
+    assert summary["completed_customer_shadow_case_count"] == 3
+    assert summary["customer_shadow_minimum_met"] is True
+    assert summary["commercial_readiness_promotion_allowed"] is False
+    assert summary["readiness_promotion_allowed"] is False
+    assert payload["blockers"] == []
+
+
+def test_private_or_redistributable_raw_data_declarations_block(tmp_path: Path) -> None:
+    row = _valid_row("case_1")
+    row["redistribution_allowed"] = "true"
+    row["raw_data_stored_in_repo"] = "true"
+    row["customer_email"] = "private@example.test"
+    intake = tmp_path / "intake.csv"
+    _write_intake(intake, [row], fieldnames=FIELDNAMES + ["customer_email"])
+
+    payload = mod.build_customer_shadow_evidence_status(intake_csv=str(intake))
+
+    summary = payload["summary"]
+    blockers = payload["rows"][0]["blockers"]
+    assert summary["status"] == "blocked_customer_shadow_evidence_status"
+    assert summary["customer_raw_data_stored_in_repo"] is True
+    assert "redistribution_allowed_not_false" in blockers
+    assert "raw_data_stored_in_repo_not_false" in blockers
+    assert "private_column_present:customer_email" in blockers
+
+
+def test_cli_writes_json_csv_and_markdown(tmp_path: Path) -> None:
+    intake = tmp_path / "intake.csv"
+    out_json = tmp_path / "status.json"
+    out_csv = tmp_path / "status.csv"
+    out_md = tmp_path / "status.md"
+    _write_intake(intake, [_valid_row("case_1"), _valid_row("case_2"), _valid_row("case_3")])
+
+    mod.main(
+        [
+            "--intake-csv",
+            str(intake),
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ]
+    )
+
+    assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["status"] == "customer_shadow_evidence_status_ready"
+    assert out_csv.read_text(encoding="utf-8").startswith("case_id,row_kind,status,")
+    assert "Customer Shadow Evidence Status" in out_md.read_text(encoding="utf-8")
