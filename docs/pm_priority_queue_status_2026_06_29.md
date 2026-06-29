@@ -4,6 +4,18 @@ Status basis: `main` checkout at `05f4f4f0` before this note was added, local re
 
 Claim boundary: this is a PM status note only. It does not promote release readiness, paid-pilot readiness, G1 closure, solver-product readiness, external benchmark closure, customer evidence completion, or GPU/HIP solver truth.
 
+Machine-readable refresh:
+
+```bash
+gh pr list --state open --json number,title,url > .betelgeuze/github_open_prs_current.json
+python3 tools/build_pm_priority_queue_status.py \
+  --out-json .betelgeuze/pm_priority_queue_status_current.json \
+  --out-csv .betelgeuze/pm_priority_queue_status_current.csv \
+  --out-md .betelgeuze/pm_priority_queue_status_current.md
+```
+
+Current rollup result: `blocked_pm_priority_queue`, `ready_item_count=6`, `blocked_item_count=2`, `first_blocked_item_id=2`, `technical_blockers=[f2g_authoritative_surfaces_missing,f2h_blocked_until_f2g_audit]`.
+
 ## Queue Snapshot
 
 | PM item | Current status | Evidence | Next action |
