@@ -3240,6 +3240,15 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   가 readiness/source-of-truth 표면에 materialized되어 있지 않다. 이 부재는
   closure가 아니며, F2g support/elastic-link audit과 F2h continuation 이전에
   G1/full-load/full-mesh/material-Newton/ROCm-HIP closure claim을 하지 않는다.
+  `tools/build_f2g_f2h_surface_preflight.py`는 이 경계를 로컬 fail-closed
+  preflight로 고정한다. 2026-06-29 현재
+  `.betelgeuze/f2g_f2h_surface_preflight.local.json`은
+  `blocked_f2g_f2h_surface_preflight`, `blocker_count=8`,
+  `blockers=[implementation_phase1_dir_missing,productization_release_evidence_dir_missing,
+  real_mgt_input_surface_missing,real_per_element_tangent_surface_missing,
+  near_null_modes_packet_missing,support_elastic_link_context_missing,
+  f2g_audit_not_available,f2h_blocked_until_f2g_audit]`로 F2g/F2h를
+  non-promoting 상태에서 멈춘다.
 - GPU/HIP parity는 CPU reference closure 이후 성능/상주성 lane으로만 진행한다.
   2026-06-29 현재 `runs/rocm_environment_manifest_current.json`,
   `runs/product_end_to_end_rocm_benchmark_current.json`,
