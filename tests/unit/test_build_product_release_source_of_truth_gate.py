@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -696,6 +697,59 @@ def test_release_source_of_truth_gate_passes_current_artifact_and_readme_metrics
     assert payload["summary"]["status"] == "product_release_source_of_truth_gate_ready"
     assert payload["summary"]["release_source_of_truth_ready"] is True
     assert payload["blockers"] == []
+
+
+def test_release_source_of_truth_records_source_fingerprint_change_and_stale_blocker(tmp_path: Path) -> None:
+    artifact = tmp_path / "runs" / "green_claim.json"
+    source = tmp_path / "tools" / "build_green_claim.py"
+    _write_json(artifact, {"summary": {"status": "green"}})
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("print('v1')\n", encoding="utf-8")
+    os.utime(source, (1_700_000_000, 1_700_000_000))
+    os.utime(artifact, (1_700_000_100, 1_700_000_100))
+
+    artifact_specs = [
+        {
+            "artifact_id": "green_claim",
+            "artifact_path": "runs/green_claim.json",
+            "builder_command": "python3 tools/build_green_claim.py",
+            "depends_on": ["tools/build_green_claim.py"],
+        }
+    ]
+
+    before = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=artifact_specs,
+        readme_paths=[],
+    )
+    before_row = before["rows"][0]
+    assert before["summary"]["status"] == "product_release_source_of_truth_gate_ready"
+    assert before_row["status"] == "pass"
+    assert before_row["source_artifact_fingerprint_count"] == 1
+    assert before_row["source_artifact_file_sha256_count"] == 1
+    assert before_row["source_artifact_fingerprint_sha256"]
+
+    source.write_text("print('v2')\n", encoding="utf-8")
+    os.utime(source, (1_700_000_200, 1_700_000_200))
+
+    after = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=artifact_specs,
+        readme_paths=[],
+    )
+    after_row = after["rows"][0]
+
+    assert after["summary"]["status"] == "blocked_product_release_source_of_truth_gate"
+    assert after["summary"]["stale_artifact_count"] == 1
+    assert after_row["status"] == "fail"
+    assert after_row["release_blocker"] is True
+    assert after_row["stale_dependency_paths"] == ["tools/build_green_claim.py"]
+    assert after_row["source_artifact_fingerprint_sha256"] != before_row[
+        "source_artifact_fingerprint_sha256"
+    ]
+    assert after_row["source_artifact_fingerprints"][0]["sha256"] == hashlib.sha256(
+        b"print('v2')\n"
+    ).hexdigest()
 
 
 def test_product_release_current_refresh_defaults_to_dry_run_plan(tmp_path: Path) -> None:
@@ -5863,10 +5917,8 @@ def test_release_source_of_truth_tracks_commercial_readiness_spec_builder_source
     """Follow-up to the capability-surface fix: clear commercial-readiness and
     scope-breadth specs must track their builder sources in depends_on, so a
     builder code change marks the artifact stale instead of letting a stale
-    artifact read as green. Aggregator specs (goal_readiness_rollup,
-    product_goal_completion_audit, goal_operator_action_board) are intentionally
-    excluded here because their freshness policy may be downstream-artifact based.
-    Assertions use membership (not counts) to stay robust to dep-list growth."""
+    artifact read as green. Assertions use membership (not counts) to stay
+    robust to dep-list growth."""
 
     by_id = {spec["artifact_id"]: spec for spec in mod.DEFAULT_ARTIFACT_SPECS}
 
@@ -5929,12 +5981,99 @@ def test_release_source_of_truth_tracks_commercial_readiness_spec_builder_source
         in by_id["product_commercial_readiness_execution_ladder"]["depends_on"]
     )
 
-    # Aggregator specs are intentionally out of scope for this builder-source pass.
-    for aggregator_id in (
-        "goal_readiness_rollup",
-        "product_goal_completion_audit",
-        "goal_operator_action_board",
+def test_release_source_of_truth_tracks_accuracy_and_checkpoint_builder_sources() -> None:
+    """Accuracy parity and production-AI readiness are green-claim inputs, so
+    their freshness policy must track both builder code and direct evidence
+    artifacts."""
+
+    by_id = {spec["artifact_id"]: spec for spec in mod.DEFAULT_ARTIFACT_SPECS}
+
+    accuracy_depends_on = by_id["accuracy_parity_scorecard"]["depends_on"]
+    for source in (
+        "tools/accounting/build_accuracy_parity_scorecard.py",
+        "tools/build_accuracy_parity_scorecard.py",
+        "tools/lib/artifacts.py",
     ):
-        if aggregator_id in by_id:
-            # Not asserting their dep contents here; only documenting exclusion.
-            assert "depends_on" in by_id[aggregator_id]
+        assert source in accuracy_depends_on
+    for source_artifact in (
+        "runs/accuracy_gate_local_delivery_preflight_current.json",
+        "runs/openmm_2bead_strict_multitarget_current_accuracy_external.json",
+        "runs/openmm_2bead_strict_multitarget_current_long_stability_validation.json",
+        "runs/gpcr_rank_rescue_crossfit_repeat_r1_evidence_packet_current.json",
+        "runs/gpcr_core_rank_diagnostics_current.json",
+        "runs/gpcr_conditional_prior_promotion_gate_current.json",
+        "runs/structure_refinement_scorecard_current.json",
+        "runs/wetlab_tcruzi_pde_allatom_review_packet_current.json",
+        "runs/commercialization_readiness_current.json",
+    ):
+        assert source_artifact in accuracy_depends_on
+
+    checkpoint_depends_on = by_id["product_production_ai_checkpoint_readiness"]["depends_on"]
+    for source in (
+        "tools/accounting/build_product_production_ai_checkpoint_readiness.py",
+        "tools/build_product_production_ai_checkpoint_readiness.py",
+        "betelgeuze_product/production_ai_checkpoint_readiness.py",
+    ):
+        assert source in checkpoint_depends_on
+    for source_artifact in (
+        "runs/residual_model_registry_current.json",
+        "runs/residual_production_checkpoint_work_order_current.json",
+        "runs/residual_production_training_data_contract_current.json",
+        "runs/residual_force_gpu_worker_return_receipt_current.json",
+        "runs/residual_force_derivation_validation_current.json",
+        "runs/residual_force_gpu_worker_handoff_package_current.json",
+        "runs/product_production_ai_gpu_return_intake_current.json",
+        "runs/rocm_environment_manifest_current.json",
+        "runs/residual_production_output_head_gap_contract_current.json",
+    ):
+        assert source_artifact in checkpoint_depends_on
+
+
+def test_release_source_of_truth_classifies_aggregator_freshness_policy() -> None:
+    """Aggregator artifacts are downstream-artifact based, but their own builder
+    sources still participate in freshness so code edits cannot leave a green
+    aggregate claim standing on stale output."""
+
+    by_id = {spec["artifact_id"]: spec for spec in mod.DEFAULT_ARTIFACT_SPECS}
+
+    rollup_depends_on = by_id["goal_readiness_rollup"]["depends_on"]
+    for source in (
+        "tools/accounting/build_goal_readiness_rollup.py",
+        "tools/build_goal_readiness_rollup.py",
+        "betelgeuze_product/cli.py",
+        "betelgeuze_cameo/cli.py",
+        "betelgeuze_cleanup/cli.py",
+    ):
+        assert source in rollup_depends_on
+    for source_artifact in (
+        "runs/product_operational_quality_contract_current.json",
+        "runs/product_capability_surface_contract_current.json",
+        "runs/product_commercial_independence_gate_current.json",
+        "runs/product_scope_breadth_contract_current.json",
+        "runs/product_production_ai_checkpoint_readiness_current.json",
+        "runs/api_customer_flow_release_evidence_current.json",
+        "runs/product_security_deployment_contract_current.json",
+    ):
+        assert source_artifact in rollup_depends_on
+
+    audit_depends_on = by_id["product_goal_completion_audit"]["depends_on"]
+    for source in (
+        "tools/accounting/build_product_goal_completion_audit.py",
+        "tools/build_product_goal_completion_audit.py",
+    ):
+        assert source in audit_depends_on
+    assert "runs/goal_readiness_rollup_current.json" in audit_depends_on
+    assert "runs/goal_operator_action_board_current.json" not in audit_depends_on
+
+    action_board_depends_on = by_id["goal_operator_action_board"]["depends_on"]
+    for source in (
+        "tools/accounting/build_goal_operator_action_board.py",
+        "tools/build_goal_operator_action_board.py",
+    ):
+        assert source in action_board_depends_on
+    for source_artifact in (
+        "runs/goal_readiness_rollup_current.json",
+        "runs/product_goal_completion_audit_current.json",
+        "runs/engine_refinement_claim_promotion_action_board_current.csv",
+    ):
+        assert source_artifact in action_board_depends_on

@@ -231,7 +231,28 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "artifact_id": "accuracy_parity_scorecard",
         "artifact_path": "runs/accuracy_parity_scorecard_current.json",
         "builder_command": "python3 tools/build_accuracy_parity_scorecard.py",
-        "depends_on": [],
+        "depends_on": [
+            "tools/accounting/build_accuracy_parity_scorecard.py",
+            "tools/build_accuracy_parity_scorecard.py",
+            "tools/lib/artifacts.py",
+            "runs/accuracy_gate_local_delivery_preflight_current.json",
+            "runs/openmm_2bead_strict_multitarget_current_accuracy_external.json",
+            "runs/openmm_2bead_strict_multitarget_current_long_stability_validation.json",
+            "runs/gpcr_rank_rescue_crossfit_repeat_r1_evidence_packet_current.json",
+            "runs/gpcr_core_rank_diagnostics_current.json",
+            "runs/gpcr_drd2_pose_generation_repair_packet_current.json",
+            "runs/gpcr_drd2_atom_typed_backmapping_support_current.json",
+            "runs/gpcr_drd2_hard_decoy_penalty_envelope_current.json",
+            "runs/gpcr_drd2_full_forcefield_minimization_readiness_current.json",
+            "runs/gpcr_drd2_openmm_forcefield_parameterization_probe_current.json",
+            "runs/gpcr_drd2_protein_amber14_parameterization_repair_current.json",
+            "runs/gpcr_false_support_discriminator_v16_adaptive_frozen_gap_packet_current.json",
+            "runs/gpcr_conditional_prior_promotion_gate_current.json",
+            "runs/structure_refinement_scorecard_current.json",
+            "runs/wetlab_tcruzi_pde_translation_quality_packet_current.json",
+            "runs/wetlab_tcruzi_pde_allatom_review_packet_current.json",
+            "runs/commercialization_readiness_current.json",
+        ],
     },
     {
         "artifact_id": "residual_model_registry",
@@ -255,8 +276,18 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "artifact_path": "runs/product_production_ai_checkpoint_readiness_current.json",
         "builder_command": "python3 tools/build_product_production_ai_checkpoint_readiness.py",
         "depends_on": [
+            "tools/accounting/build_product_production_ai_checkpoint_readiness.py",
+            "tools/build_product_production_ai_checkpoint_readiness.py",
+            "betelgeuze_product/production_ai_checkpoint_readiness.py",
             "runs/residual_model_registry_current.json",
+            "runs/residual_production_checkpoint_work_order_current.json",
+            "runs/residual_production_training_data_contract_current.json",
+            "runs/residual_force_gpu_worker_return_receipt_current.json",
             "runs/residual_force_derivation_validation_current.json",
+            "runs/residual_force_gpu_worker_handoff_package_current.json",
+            "runs/product_production_ai_gpu_return_intake_current.json",
+            "runs/rocm_environment_manifest_current.json",
+            "runs/residual_production_output_head_gap_contract_current.json",
         ],
     },
     {
@@ -1026,6 +1057,11 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "artifact_path": "runs/goal_readiness_rollup_current.json",
         "builder_command": "python3 tools/build_goal_readiness_rollup.py",
         "depends_on": [
+            "tools/accounting/build_goal_readiness_rollup.py",
+            "tools/build_goal_readiness_rollup.py",
+            "betelgeuze_product/cli.py",
+            "betelgeuze_cameo/cli.py",
+            "betelgeuze_cleanup/cli.py",
             "runs/product_operational_quality_contract_current.json",
             "runs/product_capability_surface_contract_current.json",
             "runs/product_commercial_independence_gate_current.json",
@@ -1374,6 +1410,8 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "artifact_path": "runs/product_goal_completion_audit_current.json",
         "builder_command": "python3 tools/build_product_goal_completion_audit.py",
         "depends_on": [
+            "tools/accounting/build_product_goal_completion_audit.py",
+            "tools/build_product_goal_completion_audit.py",
             "runs/goal_readiness_rollup_current.json",
             "runs/engine_refinement_tier_readiness_current.json",
             "runs/engine_refinement_claim_evidence_priority_packet_current.json",
@@ -1385,6 +1423,8 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "artifact_path": "runs/goal_operator_action_board_current.json",
         "builder_command": "python3 tools/build_goal_operator_action_board.py",
         "depends_on": [
+            "tools/accounting/build_goal_operator_action_board.py",
+            "tools/build_goal_operator_action_board.py",
             "runs/goal_readiness_rollup_current.json",
             "runs/product_goal_completion_audit_current.json",
             "runs/engine_refinement_claim_promotion_action_board_current.csv",
@@ -4832,6 +4872,46 @@ def _sha256_file_if_present(path_like: str | Path, *, root: Path = ROOT) -> str:
     return h.hexdigest()
 
 
+def _path_fingerprint(path_like: str | Path, *, root: Path = ROOT) -> dict[str, Any]:
+    path_text = _text(path_like)
+    path = _resolve(path_like, root=root)
+    present = path.exists()
+    kind = "missing"
+    size_bytes = 0
+    mtime_ns = 0
+    mtime_epoch = 0.0
+    if present:
+        if path.is_file():
+            kind = "file"
+        elif path.is_dir():
+            kind = "directory"
+        else:
+            kind = "other"
+        try:
+            stat = path.stat()
+            size_bytes = int(stat.st_size)
+            mtime_ns = int(stat.st_mtime_ns)
+            mtime_epoch = float(stat.st_mtime)
+        except OSError:
+            kind = "unreadable"
+    return {
+        "path": path_text,
+        "present": present,
+        "kind": kind,
+        "sha256": _sha256_file_if_present(path_like, root=root) if kind == "file" else "",
+        "size_bytes": size_bytes,
+        "mtime_ns": mtime_ns,
+        "mtime_utc": _iso_from_mtime(mtime_epoch),
+    }
+
+
+def _source_artifact_fingerprint(records: list[dict[str, Any]]) -> str:
+    if not records:
+        return ""
+    serialized = json.dumps(records, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
 def _mtime(path_like: str | Path, *, root: Path = ROOT) -> float:
     path = _resolve(path_like, root=root)
     if not path.exists():
@@ -4877,6 +4957,8 @@ def _artifact_row(spec: dict[str, Any], *, root: Path = ROOT) -> dict[str, Any]:
         for path in depends_on
         if _resolve(path, root=root).exists() and artifact_mtime > 0 and _mtime(path, root=root) > artifact_mtime
     ]
+    source_artifact_fingerprints = [_path_fingerprint(path, root=root) for path in depends_on]
+    source_artifact_fingerprint_sha256 = _source_artifact_fingerprint(source_artifact_fingerprints)
     if depends_on:
         newest_dependency_mtime = max((_mtime(path, root=root) for path in depends_on if _resolve(path, root=root).exists()), default=0.0)
     else:
@@ -4891,6 +4973,12 @@ def _artifact_row(spec: dict[str, Any], *, root: Path = ROOT) -> dict[str, Any]:
         "artifact_present": artifact_present,
         "artifact_mtime_utc": _iso_from_mtime(artifact_mtime),
         "artifact_sha256": _sha256_file_if_present(artifact_path, root=root),
+        "source_artifact_fingerprint_sha256": source_artifact_fingerprint_sha256,
+        "source_artifact_fingerprint_count": len(source_artifact_fingerprints),
+        "source_artifact_file_sha256_count": sum(
+            1 for item in source_artifact_fingerprints if item.get("kind") == "file" and item.get("sha256")
+        ),
+        "source_artifact_fingerprints": source_artifact_fingerprints,
         "dependency_count": len(depends_on),
         "newest_dependency_mtime_utc": _iso_from_mtime(newest_dependency_mtime),
         "missing_dependency_count": len(missing_dependencies),

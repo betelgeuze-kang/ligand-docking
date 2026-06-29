@@ -68,6 +68,8 @@ python3 tools/build_local_delivery_verdict_gate.py
 
 The verdict gate is designed to fail closed until required P0 evidence, wetlab state, and delivery readiness conditions are satisfied.
 
+For lane-specific starting points, read `docs/entrypoints.md`. For dependency placement across the package, runtime, API, and dev install surfaces, read `docs/dependency_matrix.md`.
+
 ## Product API (`/simulate`)
 
 The HTTP API product surface is **ligand HTVS and backmapping scoring only**, executed through operator-approved validated runner profiles. Generic molecular-dynamics simulation is intentionally unsupported.
@@ -104,6 +106,8 @@ Installable CLIs (`betelgeuze-product`, `betelgeuze-cameo`, `betelgeuze-cleanup`
 
 Start with these documents when reviewing delivery readiness:
 
+- `docs/entrypoints.md`
+- `docs/dependency_matrix.md`
 - `docs/local_delivery_runbook.md`
 - `docs/local_delivery_p0_gate.md`
 - `docs/local_delivery_manifest_template.md`
@@ -112,6 +116,7 @@ Start with these documents when reviewing delivery readiness:
 - `docs/local_delivery_engine_provenance.md`
 - `docs/local_delivery_claim_policy.md`
 - `docs/post_green_improvement_plan.md`
+- `docs/broad_claim_unlock_roadmap.md`
 
 ## CASP17 Internal Physics Lane
 
@@ -266,6 +271,46 @@ for path in [
 PY
 ```
 
+## Clean-Clone Evidence Reproduction
+
+A clean clone is expected to contain source code, tests, docs, schemas, templates, and lightweight committed figures. It is not expected to contain local `runs/` evidence, generated trajectories, delivery bundles, local model/checkpoint files, or OpenMM/RDKit-derived heavy artifacts. Evidence validators therefore fail closed on a clean clone until the required local artifacts are regenerated or supplied in a reviewed bundle.
+
+For a reviewer checking reproducibility from scratch:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+
+python3 tools/build_local_delivery_requirements_lock.py
+python3 tools/build_local_delivery_environment_manifest.py
+python3 tools/build_local_delivery_engine_provenance.py
+python3 tools/run_local_delivery_preflight.py
+```
+
+After the local evidence artifacts exist, assemble and validate a restricted-scope bundle:
+
+```bash
+python3 tools/build_local_delivery_bundle.py \
+  --request-summary "Restricted local delivery reviewer reproduction" \
+  --delivery-scope "kinase,gpcr,ion_channel" \
+  --claim-scope "restricted local delivery only" \
+  --verdict "internal-review until validator and verdict gate pass" \
+  --rerun-command "python3 tools/run_local_delivery_preflight.py && python3 tools/build_local_delivery_bundle.py ... && python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>"
+
+python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>
+```
+
+Expected clean-clone gaps:
+
+- Missing `runs/local_delivery_verdict_gate_current.*`, queue, preflight, requirements-lock, environment, and engine-provenance artifacts until the local builders run.
+- Missing trajectory/model/checkpoint payloads by design; these are ignored local artifacts, not GitHub source files.
+- Missing RDKit/OpenMM capability evidence unless the reviewer uses a lane-specific chemistry or OpenMM-capable environment and has the required local manifests/artifacts.
+- Missing delivery-ready bundle until `tools/build_local_delivery_bundle.py` has copied current source artifacts and `tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>` reports the required green summary fields.
+
+If any required artifact is absent, stale, or fingerprint-mismatched, keep the bundle internal-review only. Do not infer broad commercial, wetlab-proof, GPCR-family, scorer/router, or platform claims from a clean-clone pass of source-level tests.
+
 ## Claim Boundary
 
 Acceptable current wording:
@@ -283,6 +328,8 @@ Not acceptable yet:
 - Automatic scorer/router/platform promotion claims.
 - Wetlab-proven T. cruzi PDE hit claim.
 - Direct binding kcal claims from AQP1 functional surrogate rows.
+
+Use `docs/broad_claim_unlock_roadmap.md` for the separate unlock checklists for broad GPCR, wetlab proof, and platform/router/scorer promotion.
 
 ## Current Repository State
 
