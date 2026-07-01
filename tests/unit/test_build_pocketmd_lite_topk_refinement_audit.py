@@ -98,6 +98,31 @@ def _source_audit() -> dict[str, object]:
     }
 
 
+def _fill_preview_ready() -> dict[str, object]:
+    return {
+        "summary": {
+            "status": "pocketmd_lite_candidate_metric_fill_preview_ready",
+            "fill_ready_row_count": 1,
+            "blocked_fill_row_count": 0,
+            "candidate_csv_update_allowed": False,
+            "canonical_candidate_csv_mutated": False,
+            "preview_candidate_csv": "runs/preview.candidates.csv",
+        },
+        "preview_candidate_rows": [
+            {
+                "entry_id": "T:L",
+                "selected_for_refine": True,
+                "pocketmd_lite_metric_fill_status": "filled_from_claim_grade_probe",
+                "local_min_ligand_rmsd_a": "1.1",
+                "hbond_persistence": "0.8",
+                "contact_persistence": "0.9",
+                "initial_clash_count": "2",
+                "clash_count": "0",
+            }
+        ],
+    }
+
+
 def test_audit_reports_proxy_telemetry_but_keeps_claim_grade_blocked(tmp_path: Path) -> None:
     report = tmp_path / "report.json"
     probe = tmp_path / "probe.json"
@@ -144,6 +169,77 @@ def test_audit_reports_proxy_telemetry_but_keeps_claim_grade_blocked(tmp_path: P
     assert row["proxy_local_min_ligand_rmsd_a"] == 1.4
     assert row["proxy_hbond_persistence"] == 0.25
     assert any("claim_grade_metrics_missing" in blocker for blocker in row["blockers"])
+
+
+def test_audit_overlays_exact_fill_preview_metrics_without_mutating_report(tmp_path: Path) -> None:
+    report = tmp_path / "report.json"
+    probe = tmp_path / "probe.json"
+    queue = tmp_path / "queue.json"
+    fill_preview = tmp_path / "fill-preview.json"
+    _write_json(report, _proxy_only_report())
+    _write_json(
+        probe,
+        {
+            "summary": {"status": "pocketmd_lite_metric_collection_probe_ready"},
+            "rows": [
+                {
+                    "entry_id": "T:L",
+                    "claim_grade_metric_ready": True,
+                    "coarse_local_min_ligand_rmsd_a": 1.1,
+                    "coarse_local_min_survival_proxy": True,
+                    "coarse_hbond_persistence_proxy": 0.8,
+                    "coarse_contact_persistence_proxy": 0.9,
+                    "coarse_clash_frame_fraction_proxy": 0.0,
+                    "trajectory_probe_status": "pocketmd_lite_metric_collection_probe_ready",
+                }
+            ],
+        },
+    )
+    _write_json(queue, _queue())
+    _write_json(fill_preview, _fill_preview_ready())
+
+    payload = mod.build_pocketmd_lite_topk_refinement_audit(
+        report_json=report,
+        probe_json=probe,
+        remaining_queue_json=queue,
+        candidate_fill_preview_json=fill_preview,
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_pocketmd_lite_topk_refinement_claim_grade_missing_proxy_reported"
+    assert summary["candidate_metric_fill_preview_ready"] is True
+    assert summary["claim_grade_refinement_evidence_ready"] is True
+    assert summary["claim_grade_report_evidence_ready"] is False
+    assert summary["claim_grade_metric_ready_count"] == 1
+    assert summary["claim_grade_missing_candidate_count"] == 0
+    assert summary["missing_refinement_metric_names"] == []
+    assert summary["claim_grade_local_min_reported_count"] == 1
+    assert summary["claim_grade_local_min_survival_count"] == 1
+    assert summary["claim_grade_hbond_reported_count"] == 1
+    assert summary["claim_grade_initial_clash_reported_count"] == 1
+    assert summary["claim_grade_clash_relief_reported_count"] == 1
+    assert "Run the PocketMD Lite report against the metric fill preview candidate CSV" in summary["next_required_step"]
+
+    row = payload["rows"][0]
+    assert row["candidate_metric_fill_status"] == "filled_from_claim_grade_probe"
+    assert row["claim_grade_metric_ready"] is True
+    assert row["claim_grade_missing_metrics"] == []
+    assert row["band"] == "green"
+    assert row["claim_safe"] is True
+    assert row["local_min_ligand_rmsd_a"] == 1.1
+    assert row["local_min_survived"] is True
+    assert row["hbond_persistence"] == 0.8
+    assert row["initial_clash_count"] == 2
+    assert row["clash_count"] == 0
+    assert row["clash_relief_count"] == 2
+    assert row["blockers"] == []
+
+    original_report = json.loads(report.read_text(encoding="utf-8"))
+    assert original_report["rows"][0]["missing_evidence_fields"] == [
+        "local_min_ligand_rmsd_a",
+        "hbond_persistence",
+        "initial_clash_count",
+    ]
 
 
 def test_audit_ready_when_claim_grade_evidence_is_present(tmp_path: Path) -> None:

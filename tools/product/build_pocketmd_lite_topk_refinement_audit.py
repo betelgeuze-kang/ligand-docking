@@ -4,7 +4,8 @@
 Read-only: this packet joins the top-k PocketMD Lite report with the metric
 collection probe. It reports both claim-grade refinement fields and available
 coarse proxy telemetry, while keeping claim-grade gates fail-closed whenever
-local-min, H-bond, or clash-relief baseline evidence is missing.
+local-min, H-bond, or clash-relief baseline evidence is missing from the report
+or exact metric fill preview.
 """
 
 from __future__ import annotations
@@ -16,6 +17,8 @@ import json
 import math
 from pathlib import Path
 from typing import Any
+
+from betelgeuze_product.pocketmd_lite_contract import build_pocketmd_lite_assessment
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -33,9 +36,10 @@ SCHEMA_VERSION = "pocketmd_lite_topk_refinement_audit_v1"
 
 CLAIM_BOUNDARY = (
     "PocketMD Lite top-k refinement audit only. It reports top-k selection, claim-grade refinement evidence, "
-    "and available coarse proxy telemetry side by side. Proxy telemetry is diagnostic and cannot fill claim-grade "
-    "local-min, H-bond, or clash-relief fields. This tool does not run local-min, micro-MD, docking, write the "
-    "candidate CSV, promote claims, or mutate external state."
+    "exact metric fill-preview overlays, and available coarse proxy telemetry side by side. Only exact metric "
+    "fill-preview rows derived from claim-grade probes may fill local-min, H-bond, or baseline clash fields; "
+    "proxy telemetry is diagnostic only. This tool does not run local-min, micro-MD, docking, write the candidate "
+    "CSV, promote claims, or mutate external state."
 )
 
 READ_ONLY_FLAGS = {
@@ -53,7 +57,9 @@ CSV_COLUMNS = [
     "claim_safe",
     "claim_grade_metric_ready",
     "claim_grade_missing_metrics",
+    "candidate_metric_fill_status",
     "local_min_ligand_rmsd_a",
+    "local_min_survived",
     "hbond_persistence",
     "contact_persistence",
     "initial_clash_count",
@@ -108,6 +114,11 @@ def _rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
 
 
+def _preview_candidate_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = payload.get("preview_candidate_rows")
+    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+
+
 def _text(value: Any) -> str:
     return "" if value is None else str(value).strip()
 
@@ -148,8 +159,35 @@ def _claim_missing_metrics(report_row: dict[str, Any], queue_row: dict[str, Any]
     return _split_semicolon(queue_row.get("missing_metrics"))
 
 
-def _row(report_row: dict[str, Any], probe_row: dict[str, Any], queue_row: dict[str, Any]) -> dict[str, Any]:
-    missing_metrics = _claim_missing_metrics(report_row, queue_row)
+def _overlaid_candidate(report_row: dict[str, Any], fill_row: dict[str, Any]) -> dict[str, Any]:
+    candidate = dict(report_row)
+    if _text(fill_row.get("pocketmd_lite_metric_fill_status")) != "filled_from_claim_grade_probe":
+        return candidate
+    for column in (
+        "local_min_ligand_rmsd_a",
+        "hbond_persistence",
+        "contact_persistence",
+        "initial_clash_count",
+        "clash_count",
+    ):
+        value = fill_row.get(column)
+        if _text(value):
+            candidate[column] = value
+    return candidate
+
+
+def _row(
+    report_row: dict[str, Any],
+    probe_row: dict[str, Any],
+    queue_row: dict[str, Any],
+    fill_row: dict[str, Any],
+) -> dict[str, Any]:
+    assessed = build_pocketmd_lite_assessment(_overlaid_candidate(report_row, fill_row))
+    assessed_missing_metrics = assessed.get("missing_evidence_fields")
+    if isinstance(assessed_missing_metrics, list):
+        missing_metrics = [str(item) for item in assessed_missing_metrics if str(item)]
+    else:
+        missing_metrics = _claim_missing_metrics(report_row, queue_row)
     proxy_local = _num(probe_row.get("coarse_local_min_ligand_rmsd_a"))
     proxy_hbond = _num(probe_row.get("coarse_hbond_persistence_proxy"))
     proxy_contact = _num(probe_row.get("coarse_contact_persistence_proxy"))
@@ -162,18 +200,20 @@ def _row(report_row: dict[str, Any], probe_row: dict[str, Any], queue_row: dict[
     return {
         "entry_id": _text(report_row.get("entry_id") or probe_row.get("entry_id") or queue_row.get("entry_id")),
         "selected_for_refine": _bool(report_row.get("selected_for_refine")),
-        "band": _text(report_row.get("band")),
-        "claim_safe": _bool(report_row.get("claim_safe")),
+        "band": _text(assessed.get("band")),
+        "claim_safe": _bool(assessed.get("claim_safe")),
         "claim_grade_metric_ready": not missing_metrics and _bool(probe_row.get("claim_grade_metric_ready")),
         "claim_grade_missing_metrics": missing_metrics,
-        "local_min_ligand_rmsd_a": _num(report_row.get("local_min_ligand_rmsd_a")),
-        "hbond_persistence": _num(report_row.get("hbond_persistence")),
-        "contact_persistence": _num(report_row.get("contact_persistence")),
-        "initial_clash_count": _num(report_row.get("initial_clash_count")),
-        "clash_count": _num(report_row.get("clash_count")),
-        "clash_relief_count": _num(report_row.get("clash_relief_count")),
-        "uncertainty_score": _num(report_row.get("uncertainty_score")),
-        "uncertainty_posture": _text(report_row.get("uncertainty_posture")),
+        "local_min_ligand_rmsd_a": _num(assessed.get("local_min_ligand_rmsd_a")),
+        "local_min_survived": assessed.get("local_min_survived"),
+        "hbond_persistence": _num(assessed.get("hbond_persistence")),
+        "contact_persistence": _num(assessed.get("contact_persistence")),
+        "initial_clash_count": _num(assessed.get("initial_clash_count")),
+        "clash_count": _num(assessed.get("clash_count")),
+        "clash_relief_count": _num(assessed.get("clash_relief_count")),
+        "uncertainty_score": _num(assessed.get("uncertainty_score")),
+        "uncertainty_posture": _text(assessed.get("uncertainty_posture")),
+        "candidate_metric_fill_status": _text(fill_row.get("pocketmd_lite_metric_fill_status")),
         "proxy_local_min_ligand_rmsd_a": proxy_local,
         "proxy_local_min_survival": _bool(probe_row.get("coarse_local_min_survival_proxy")),
         "proxy_hbond_persistence": proxy_hbond,
@@ -216,9 +256,15 @@ def build_pocketmd_lite_topk_refinement_audit(
     source_audit_summary = _summary(source_audit)
     probe_by_entry = _entry_map(_rows(probe))
     queue_by_entry = _entry_map(_rows(queue))
+    fill_by_entry = _entry_map(_preview_candidate_rows(fill_preview))
 
     rows = [
-        _row(report_row, probe_by_entry.get(_text(report_row.get("entry_id")), {}), queue_by_entry.get(_text(report_row.get("entry_id")), {}))
+        _row(
+            report_row,
+            probe_by_entry.get(_text(report_row.get("entry_id")), {}),
+            queue_by_entry.get(_text(report_row.get("entry_id")), {}),
+            fill_by_entry.get(_text(report_row.get("entry_id")), {}),
+        )
         for report_row in _rows(report)
     ]
     selected_rows = [row for row in rows if row["selected_for_refine"]]
@@ -321,12 +367,23 @@ def build_pocketmd_lite_topk_refinement_audit(
         ),
         "proxy_contact_reported_count": proxy_contact_count,
         "proxy_final_clash_reported_count": proxy_clash_count,
-        "claim_grade_local_min_reported_count": int(report_summary.get("local_min_survival_reported_count", 0) or 0),
-        "claim_grade_hbond_reported_count": int(report_summary.get("hbond_persistence_reported_count", 0) or 0),
-        "claim_grade_contact_reported_count": int(report_summary.get("contact_persistence_reported_count", 0) or 0),
-        "claim_grade_initial_clash_reported_count": int(report_summary.get("initial_clash_reported_count", 0) or 0),
-        "claim_grade_final_clash_reported_count": int(report_summary.get("final_clash_reported_count", 0) or 0),
-        "claim_grade_clash_relief_reported_count": int(report_summary.get("clash_relief_reported_count", 0) or 0),
+        "claim_grade_local_min_reported_count": sum(
+            1 for row in selected_rows if row["local_min_ligand_rmsd_a"] is not None
+        ),
+        "claim_grade_local_min_survival_count": sum(
+            1 for row in selected_rows if row["local_min_survived"] is True
+        ),
+        "claim_grade_hbond_reported_count": sum(1 for row in selected_rows if row["hbond_persistence"] is not None),
+        "claim_grade_contact_reported_count": sum(
+            1 for row in selected_rows if row["contact_persistence"] is not None
+        ),
+        "claim_grade_initial_clash_reported_count": sum(
+            1 for row in selected_rows if row["initial_clash_count"] is not None
+        ),
+        "claim_grade_final_clash_reported_count": sum(1 for row in selected_rows if row["clash_count"] is not None),
+        "claim_grade_clash_relief_reported_count": sum(
+            1 for row in selected_rows if row["clash_relief_count"] is not None
+        ),
         "uncertainty_reported_count": sum(1 for row in selected_rows if row["uncertainty_score"] is not None),
         "high_uncertainty_count": int(report_summary.get("high_uncertainty_count", 0) or 0),
         "claim_promotion_allowed": False,
@@ -390,6 +447,12 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- candidate_metric_fill_preview_ready: `{str(summary['candidate_metric_fill_preview_ready']).lower()}`",
         f"- proxy_topk_telemetry_ready: `{str(summary['proxy_topk_telemetry_ready']).lower()}`",
         f"- missing_refinement_metric_names: `{', '.join(summary['missing_refinement_metric_names']) or '(none)'}`",
+        f"- claim_grade_metric_ready_count: `{summary['claim_grade_metric_ready_count']}`",
+        f"- claim_grade_local_min_reported_count: `{summary['claim_grade_local_min_reported_count']}`",
+        f"- claim_grade_local_min_survival_count: `{summary['claim_grade_local_min_survival_count']}`",
+        f"- claim_grade_hbond_reported_count: `{summary['claim_grade_hbond_reported_count']}`",
+        f"- claim_grade_initial_clash_reported_count: `{summary['claim_grade_initial_clash_reported_count']}`",
+        f"- claim_grade_clash_relief_reported_count: `{summary['claim_grade_clash_relief_reported_count']}`",
         f"- proxy_local_min_reported_count: `{summary['proxy_local_min_reported_count']}`",
         f"- proxy_hbond_reported_count: `{summary['proxy_hbond_reported_count']}`",
         f"- proxy_contact_reported_count: `{summary['proxy_contact_reported_count']}`",
@@ -398,18 +461,20 @@ def render_markdown(payload: dict[str, Any]) -> str:
         "",
         "## Rows",
         "",
-        "| entry | band | missing claim-grade metrics | proxy local-min RMSD | proxy H-bond | proxy contact | uncertainty |",
-        "| --- | --- | --- | ---: | ---: | ---: | ---: |",
+        "| entry | band | fill status | missing claim-grade metrics | local-min RMSD | H-bond | initial clash | clash relief | uncertainty |",
+        "| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |",
     ]
     for row in payload["rows"]:
         lines.append(
-            "| `{entry}` | `{band}` | `{missing}` | {local} | {hbond} | {contact} | {uncertainty} |".format(
+            "| `{entry}` | `{band}` | `{fill}` | `{missing}` | {local} | {hbond} | {initial_clash} | {relief} | {uncertainty} |".format(
                 entry=row["entry_id"],
                 band=row["band"] or "(none)",
+                fill=row["candidate_metric_fill_status"] or "(none)",
                 missing=", ".join(row["claim_grade_missing_metrics"]) or "(none)",
-                local=_fmt(row["proxy_local_min_ligand_rmsd_a"]),
-                hbond=_fmt(row["proxy_hbond_persistence"]),
-                contact=_fmt(row["proxy_contact_persistence"]),
+                local=_fmt(row["local_min_ligand_rmsd_a"]),
+                hbond=_fmt(row["hbond_persistence"]),
+                initial_clash=_fmt(row["initial_clash_count"]),
+                relief=_fmt(row["clash_relief_count"]),
                 uncertainty=_fmt(row["uncertainty_score"]),
             )
         )
