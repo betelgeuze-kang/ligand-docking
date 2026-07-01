@@ -82,6 +82,14 @@ REFINE_TIER_PUBLIC_BENCHMARK_RESIDUAL_METRIC_PAYLOAD_PRIORITY_PACKET_COMMAND = (
 REFINE_TIER_PUBLIC_BENCHMARK_SEEDED_METRIC_PAYLOAD_RECEIPT_BACKFILL_PACKET_COMMAND = (
     "python3 tools/product/build_refine_tier_public_benchmark_seeded_metric_payload_receipt_backfill_packet.py"
 )
+PRODUCT_PUBLIC_BENCHMARK_SCORECARD_INTAKE_SYNC_COMMAND = (
+    "python3 tools/sync_product_public_benchmark_scorecard_intake.py"
+)
+PRODUCT_PUBLIC_BENCHMARK_CONTRACT_COMMAND = "python3 tools/build_product_public_benchmark_contract.py"
+PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_COMMAND = "python3 tools/build_product_public_benchmark_work_order.py"
+PUBLIC_BENCHMARK_PHASE2_HARNESS_AUDIT_COMMAND = (
+    "python3 tools/product/build_public_benchmark_phase2_harness_audit.py"
+)
 POCKETMD_LITE_STAGE3_CONTACT_CLASH_INTAKE_COMMAND = (
     "python3 tools/product/build_pocketmd_lite_stage3_contact_clash_intake.py"
 )
@@ -165,6 +173,10 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_api_contract.py",
     "python3 tools/product/build_ai_md_contract_source_of_truth_gate.py",
     "python3 tools/build_product_service_boundary_contract.py",
+    PRODUCT_PUBLIC_BENCHMARK_SCORECARD_INTAKE_SYNC_COMMAND,
+    PRODUCT_PUBLIC_BENCHMARK_CONTRACT_COMMAND,
+    PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_COMMAND,
+    PUBLIC_BENCHMARK_PHASE2_HARNESS_AUDIT_COMMAND,
     POCKETMD_LITE_STAGE3_CONTACT_CLASH_INTAKE_COMMAND,
     POCKETMD_LITE_REPORT_COMMAND,
     POCKETMD_LITE_REFINEMENT_WORK_ORDER_COMMAND,
@@ -764,6 +776,63 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "betelgeuze_product/cli.py",
             "api/product.py",
             "pyproject.toml",
+        ],
+    },
+    {
+        "artifact_id": "product_public_benchmark_scorecard_intake_sync",
+        "artifact_path": "runs/product_public_benchmark_scorecard_intake_sync_current.json",
+        "builder_command": PRODUCT_PUBLIC_BENCHMARK_SCORECARD_INTAKE_SYNC_COMMAND,
+        "depends_on": [
+            "tools/sync_product_public_benchmark_scorecard_intake.py",
+            "runs/lit_pcba_scorecard_row_current.csv",
+            "runs/dude_z_decoy_smoke_scorecard_row_current.csv",
+            "runs/pdbbind_casf_pose_affinity_scorecard_row_current.csv",
+            "runs/protein_protein_docking_benchmark_v5_scorecard_row_current.csv",
+            "runs/casp_archive_structure_regression_scorecard_row_current.csv",
+        ],
+    },
+    {
+        "artifact_id": "product_public_benchmark_contract",
+        "artifact_path": "runs/product_public_benchmark_contract_current.json",
+        "builder_command": PRODUCT_PUBLIC_BENCHMARK_CONTRACT_COMMAND,
+        "depends_on": [
+            "tools/accounting/build_product_public_benchmark_contract.py",
+            "tools/build_product_public_benchmark_contract.py",
+            "betelgeuze_product/public_benchmark.py",
+            "runs/product_public_benchmark_scorecard_intake.csv",
+            "runs/product_public_benchmark_scorecard_intake_sync_current.json",
+            "runs/lit_pcba_scorecard_current.json",
+            "runs/dude_z_decoy_smoke_scorecard_current.json",
+            "runs/pdbbind_casf_pose_affinity_scorecard_current.json",
+            "runs/protein_protein_docking_benchmark_v5_scorecard_current.json",
+            "runs/casp_archive_structure_regression_scorecard_current.json",
+            "runs/lit_pcba_materialization_manifest_current.json",
+            "runs/dude_z_decoy_smoke_materialization_manifest_current.json",
+            "runs/pdbbind_casf_pose_affinity_materialization_manifest_current.json",
+            "runs/protein_protein_docking_benchmark_v5_materialization_manifest_current.json",
+            "runs/casp_archive_structure_regression_materialization_manifest_current.json",
+            "runs/pdbbind_casf_pose_affinity_results_current.json",
+        ],
+    },
+    {
+        "artifact_id": "product_public_benchmark_work_order",
+        "artifact_path": "runs/product_public_benchmark_work_order_current.json",
+        "builder_command": PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_COMMAND,
+        "depends_on": [
+            "tools/accounting/build_product_public_benchmark_work_order.py",
+            "tools/build_product_public_benchmark_work_order.py",
+            "betelgeuze_product/public_benchmark_work_order.py",
+            "runs/product_public_benchmark_contract_current.json",
+        ],
+    },
+    {
+        "artifact_id": "public_benchmark_phase2_harness_audit",
+        "artifact_path": "runs/public_benchmark_phase2_harness_audit_current.json",
+        "builder_command": PUBLIC_BENCHMARK_PHASE2_HARNESS_AUDIT_COMMAND,
+        "depends_on": [
+            "tools/product/build_public_benchmark_phase2_harness_audit.py",
+            "betelgeuze_product/public_benchmark.py",
+            "runs/product_public_benchmark_contract_current.json",
         ],
     },
     {

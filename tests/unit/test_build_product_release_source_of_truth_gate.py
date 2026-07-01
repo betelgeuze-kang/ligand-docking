@@ -6094,6 +6094,78 @@ def test_release_source_of_truth_tracks_pocketmd_lite_topk_refinement_chain() ->
     ]
 
 
+def test_release_source_of_truth_tracks_public_benchmark_phase2_harness_chain() -> None:
+    by_id = {spec["artifact_id"]: spec for spec in mod.DEFAULT_ARTIFACT_SPECS}
+
+    expected = {
+        "product_public_benchmark_scorecard_intake_sync": (
+            "runs/product_public_benchmark_scorecard_intake_sync_current.json",
+            mod.PRODUCT_PUBLIC_BENCHMARK_SCORECARD_INTAKE_SYNC_COMMAND,
+            [
+                "tools/sync_product_public_benchmark_scorecard_intake.py",
+                "runs/lit_pcba_scorecard_row_current.csv",
+                "runs/dude_z_decoy_smoke_scorecard_row_current.csv",
+                "runs/pdbbind_casf_pose_affinity_scorecard_row_current.csv",
+                "runs/protein_protein_docking_benchmark_v5_scorecard_row_current.csv",
+                "runs/casp_archive_structure_regression_scorecard_row_current.csv",
+            ],
+        ),
+        "product_public_benchmark_contract": (
+            "runs/product_public_benchmark_contract_current.json",
+            mod.PRODUCT_PUBLIC_BENCHMARK_CONTRACT_COMMAND,
+            [
+                "tools/accounting/build_product_public_benchmark_contract.py",
+                "tools/build_product_public_benchmark_contract.py",
+                "betelgeuze_product/public_benchmark.py",
+                "runs/product_public_benchmark_scorecard_intake.csv",
+                "runs/product_public_benchmark_scorecard_intake_sync_current.json",
+                "runs/pdbbind_casf_pose_affinity_results_current.json",
+            ],
+        ),
+        "product_public_benchmark_work_order": (
+            "runs/product_public_benchmark_work_order_current.json",
+            mod.PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_COMMAND,
+            [
+                "tools/accounting/build_product_public_benchmark_work_order.py",
+                "tools/build_product_public_benchmark_work_order.py",
+                "betelgeuze_product/public_benchmark_work_order.py",
+                "runs/product_public_benchmark_contract_current.json",
+            ],
+        ),
+        "public_benchmark_phase2_harness_audit": (
+            "runs/public_benchmark_phase2_harness_audit_current.json",
+            mod.PUBLIC_BENCHMARK_PHASE2_HARNESS_AUDIT_COMMAND,
+            [
+                "tools/product/build_public_benchmark_phase2_harness_audit.py",
+                "betelgeuze_product/public_benchmark.py",
+                "runs/product_public_benchmark_contract_current.json",
+            ],
+        ),
+    }
+
+    for artifact_id, (artifact_path, command, dependencies) in expected.items():
+        spec = by_id[artifact_id]
+        assert spec["artifact_path"] == artifact_path
+        assert spec["builder_command"] == command
+        assert command in mod.RELEASE_REFRESH_COMMANDS
+        for dependency in dependencies:
+            assert dependency in spec["depends_on"]
+
+    order = {command: index for index, command in enumerate(mod.RELEASE_REFRESH_COMMANDS)}
+    assert order[mod.PRODUCT_PUBLIC_BENCHMARK_SCORECARD_INTAKE_SYNC_COMMAND] < order[
+        mod.PRODUCT_PUBLIC_BENCHMARK_CONTRACT_COMMAND
+    ]
+    assert order[mod.PRODUCT_PUBLIC_BENCHMARK_CONTRACT_COMMAND] < order[
+        mod.PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_COMMAND
+    ]
+    assert order[mod.PRODUCT_PUBLIC_BENCHMARK_CONTRACT_COMMAND] < order[
+        mod.PUBLIC_BENCHMARK_PHASE2_HARNESS_AUDIT_COMMAND
+    ]
+    assert order[mod.PUBLIC_BENCHMARK_PHASE2_HARNESS_AUDIT_COMMAND] < order[
+        mod.POCKETMD_LITE_STAGE3_CONTACT_CLASH_INTAKE_COMMAND
+    ]
+
+
 def test_release_source_of_truth_tracks_commercial_readiness_spec_builder_sources() -> None:
     """Follow-up to the capability-surface fix: clear commercial-readiness and
     scope-breadth specs must track their builder sources in depends_on, so a
