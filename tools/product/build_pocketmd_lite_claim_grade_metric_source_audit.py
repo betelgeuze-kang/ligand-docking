@@ -27,6 +27,7 @@ DEFAULT_OUT_JSON = "runs/pocketmd_lite_claim_grade_metric_source_audit_current.j
 DEFAULT_OUT_MD = "runs/pocketmd_lite_claim_grade_metric_source_audit_current.md"
 DEFAULT_OUT_CSV = "runs/pocketmd_lite_claim_grade_metric_source_audit_current.csv"
 DEFAULT_SEARCH_ROOTS = (
+    "runs/pocketmd_lite_ligand_atom_frame_recovery_current",
     "runs/residual_force_trajectory_regeneration_current",
     "~/.local/share/Trash/files/trajectory_spill",
     "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs",
@@ -496,8 +497,12 @@ def build_pocketmd_lite_claim_grade_metric_source_audit(
     )
     if rows and exact_ready_count == len(rows):
         status = "pocketmd_lite_claim_grade_metric_source_audit_ready"
+    elif collection_ready_count:
+        status = "blocked_pocketmd_lite_claim_grade_metric_source_collection_input_ready_metric_collection_needed"
     elif partial_atomized_count:
         status = "blocked_pocketmd_lite_claim_grade_metric_source_partial_atomized"
+    elif ligand_atom_ready_count:
+        status = "blocked_pocketmd_lite_claim_grade_metric_source_ligand_atom_only"
     elif rows:
         status = "blocked_pocketmd_lite_claim_grade_metric_source_proxy_only"
     else:
@@ -525,8 +530,12 @@ def build_pocketmd_lite_claim_grade_metric_source_audit(
         "next_required_step": (
             "Extract exact NPZ metric fields into the candidate fill preview, then rerun the PocketMD Lite report."
             if rows and exact_ready_count == len(rows)
+            else "Run the claim-grade metric collector for recovered atomized top-k inputs; recover missing protein or ligand atom frames for rows not collection-ready."
+            if collection_ready_count
             else "Recover ligand atom frames for partial atomized inputs and generate exact local-min/H-bond/initial-clash metrics for every selected top-k row."
             if partial_atomized_count
+            else "Recover or generate protein atom frames for ligand-atom-only rows, then run the claim-grade metric collector for the selected top-k rows."
+            if ligand_atom_ready_count
             else "Generate atomized protein and ligand frame inputs, then run the claim-grade metric collector for the selected top-k rows."
         ),
         **READ_ONLY_FLAGS,

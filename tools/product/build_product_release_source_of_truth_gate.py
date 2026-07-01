@@ -99,6 +99,9 @@ POCKETMD_LITE_METRIC_COLLECTION_INPUT_PACK_COMMAND = (
 POCKETMD_LITE_METRIC_COLLECTION_PROBE_COMMAND = (
     "python3 tools/product/build_pocketmd_lite_metric_collection_probe.py"
 )
+POCKETMD_LITE_LIGAND_ATOM_FRAME_RECOVERY_COMMAND = (
+    "python3 tools/product/build_pocketmd_lite_ligand_atom_frame_recovery.py"
+)
 POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_COMMAND = (
     "python3 tools/product/build_pocketmd_lite_claim_grade_metric_source_audit.py"
 )
@@ -166,6 +169,7 @@ RELEASE_REFRESH_COMMANDS = [
     POCKETMD_LITE_EVIDENCE_RECOVERY_MANIFEST_COMMAND,
     POCKETMD_LITE_METRIC_COLLECTION_INPUT_PACK_COMMAND,
     POCKETMD_LITE_METRIC_COLLECTION_PROBE_COMMAND,
+    POCKETMD_LITE_LIGAND_ATOM_FRAME_RECOVERY_COMMAND,
     POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_COMMAND,
     POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_COMMAND,
     POCKETMD_LITE_TOPK_REFINEMENT_AUDIT_COMMAND,
@@ -831,6 +835,16 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "artifact_id": "pocketmd_lite_ligand_atom_frame_recovery",
+        "artifact_path": "runs/pocketmd_lite_ligand_atom_frame_recovery_current.json",
+        "builder_command": POCKETMD_LITE_LIGAND_ATOM_FRAME_RECOVERY_COMMAND,
+        "depends_on": [
+            "tools/product/build_pocketmd_lite_ligand_atom_frame_recovery.py",
+            "runs/pocketmd_lite_metric_collection_input_pack_current.csv",
+            "runs/pocketmd_lite_metric_collection_probe_current.json",
+        ],
+    },
+    {
         "artifact_id": "pocketmd_lite_claim_grade_metric_source_audit",
         "artifact_path": "runs/pocketmd_lite_claim_grade_metric_source_audit_current.json",
         "builder_command": POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_COMMAND,
@@ -838,6 +852,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "tools/product/build_pocketmd_lite_claim_grade_metric_source_audit.py",
             "runs/pocketmd_lite_metric_collection_input_pack_current.csv",
             "runs/pocketmd_lite_metric_collection_probe_current.json",
+            "runs/pocketmd_lite_ligand_atom_frame_recovery_current.json",
         ],
     },
     {

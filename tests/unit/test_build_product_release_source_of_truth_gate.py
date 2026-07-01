@@ -6011,6 +6011,15 @@ def test_release_source_of_truth_tracks_pocketmd_lite_topk_refinement_chain() ->
             mod.POCKETMD_LITE_METRIC_COLLECTION_PROBE_COMMAND,
             ["runs/pocketmd_lite_metric_collection_input_pack_current.csv"],
         ),
+        "pocketmd_lite_ligand_atom_frame_recovery": (
+            "runs/pocketmd_lite_ligand_atom_frame_recovery_current.json",
+            mod.POCKETMD_LITE_LIGAND_ATOM_FRAME_RECOVERY_COMMAND,
+            [
+                "tools/product/build_pocketmd_lite_ligand_atom_frame_recovery.py",
+                "runs/pocketmd_lite_metric_collection_input_pack_current.csv",
+                "runs/pocketmd_lite_metric_collection_probe_current.json",
+            ],
+        ),
         "pocketmd_lite_claim_grade_metric_source_audit": (
             "runs/pocketmd_lite_claim_grade_metric_source_audit_current.json",
             mod.POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_COMMAND,
@@ -6018,6 +6027,7 @@ def test_release_source_of_truth_tracks_pocketmd_lite_topk_refinement_chain() ->
                 "tools/product/build_pocketmd_lite_claim_grade_metric_source_audit.py",
                 "runs/pocketmd_lite_metric_collection_input_pack_current.csv",
                 "runs/pocketmd_lite_metric_collection_probe_current.json",
+                "runs/pocketmd_lite_ligand_atom_frame_recovery_current.json",
             ],
         ),
         "pocketmd_lite_candidate_metric_fill_preview": (
@@ -6053,6 +6063,9 @@ def test_release_source_of_truth_tracks_pocketmd_lite_topk_refinement_chain() ->
         mod.POCKETMD_LITE_REMAINING_EVIDENCE_QUEUE_COMMAND
     ]
     assert order[mod.POCKETMD_LITE_METRIC_COLLECTION_PROBE_COMMAND] < order[
+        mod.POCKETMD_LITE_LIGAND_ATOM_FRAME_RECOVERY_COMMAND
+    ]
+    assert order[mod.POCKETMD_LITE_LIGAND_ATOM_FRAME_RECOVERY_COMMAND] < order[
         mod.POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_COMMAND
     ]
     assert order[mod.POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_COMMAND] < order[

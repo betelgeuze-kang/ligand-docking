@@ -168,6 +168,39 @@ def test_audit_ready_when_selected_npz_contains_exact_metric_fields(tmp_path: Pa
     )
 
 
+def test_audit_reports_collection_input_ready_when_ligand_and_protein_atoms_exist(
+    tmp_path: Path,
+) -> None:
+    selected = tmp_path / "selected" / "ADRB2_GPCR_BLIND__rep0001__carvedilol.npz"
+    search_root = tmp_path / "recovered"
+    recovered = search_root / "ADRB2_GPCR_BLIND__rep0001__carvedilol__ligand_atom_recovery.npz"
+    input_csv = tmp_path / "input.csv"
+    probe_json = tmp_path / "probe.json"
+    _write_npz(selected)
+    _write_npz(recovered, protein_atom_frames=True, ligand_atom_frames=True)
+    _write_input_csv(input_csv, selected)
+    _write_probe_json(probe_json)
+
+    payload = mod.build_pocketmd_lite_claim_grade_metric_source_audit(
+        input_csv=input_csv,
+        probe_json=probe_json,
+        search_roots=[search_root],
+    )
+
+    summary = payload["summary"]
+    row = payload["rows"][0]
+    assert summary["status"] == (
+        "blocked_pocketmd_lite_claim_grade_metric_source_collection_input_ready_metric_collection_needed"
+    )
+    assert summary["claim_grade_collection_input_ready_count"] == 1
+    assert summary["ligand_atom_source_candidate_count"] == 1
+    assert row["best_candidate_status"] == "claim_grade_collection_input_ready"
+    assert row["recommended_next_local_action"] == (
+        "run_claim_grade_metric_collector_for_atomized_topk_input"
+    )
+    assert "Run the claim-grade metric collector" in summary["next_required_step"]
+
+
 def test_main_writes_audit_artifacts(tmp_path: Path) -> None:
     selected = tmp_path / "ADRB2_GPCR_BLIND__rep0001__carvedilol.npz"
     input_csv = tmp_path / "input.csv"
