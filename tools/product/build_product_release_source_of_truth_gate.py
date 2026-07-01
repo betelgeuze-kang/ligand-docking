@@ -90,6 +90,36 @@ PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_COMMAND = "python3 tools/build_product_publi
 PUBLIC_BENCHMARK_PHASE2_HARNESS_AUDIT_COMMAND = (
     "python3 tools/product/build_public_benchmark_phase2_harness_audit.py"
 )
+GPCR_HARD_DECOY_CLAIM_LOCK_REASON = (
+    "ADORA2A neutral-antagonist rescue rule was discovered from the current failure slice; "
+    "independent claim-unlock replay required before broad GPCR/router promotion."
+)
+GPCR_HARD_DECOY_CURRENT_FIT_CLOSURE_PROBE_COMMAND = (
+    "python3 tools/product/build_gpcr_hard_decoy_current_fit_closure_probe.py"
+)
+GPCR_HARD_DECOY_ADORA2A_NEUTRAL_RESCUE_PROBE_COMMAND = (
+    "python3 tools/product/build_gpcr_hard_decoy_adora2a_neutral_rescue_probe.py"
+)
+GPCR_HARD_DECOY_ADORA2A_PREREGISTERED_REPLAY_COMMAND = (
+    "python3 tools/product/build_gpcr_hard_decoy_adora2a_preregistered_replay.py"
+)
+GPCR_HARD_DECOY_SUITE_CURRENT_INPUT_COMMAND = (
+    "python3 tools/product/build_gpcr_hard_decoy_suite_current_input.py "
+    "--preregistered-replay-json runs/gpcr_hard_decoy_adora2a_preregistered_replay_current.json"
+)
+GPCR_HARD_DECOY_SUITE_REPORT_COMMAND = (
+    "python3 tools/product/build_gpcr_hard_decoy_suite_report.py "
+    "--required-target-ids DRD2,HTR2A,OPRM1 "
+    f"--claim-lock-reason '{GPCR_HARD_DECOY_CLAIM_LOCK_REASON}'"
+)
+GPCR_A1_INDEPENDENT_REPEAT_PACKET_COMMAND = (
+    "python3 tools/build_gpcr_a1_independent_repeat_packet.py "
+    "--ranking-json runs/gpcr_coverage_v2_crossfit_rank_rescue_repeat_r1_shadow_replay_ranking_summary_current.json "
+    "--repeat-tag gpcr_coverage_v2_crossfit_rank_rescue_repeat_r1"
+)
+GPCR_HARD_DECOY_CLAIM_UNLOCK_AUDIT_COMMAND = (
+    "python3 tools/product/build_gpcr_hard_decoy_claim_unlock_audit.py"
+)
 POCKETMD_LITE_STAGE3_CONTACT_CLASH_INTAKE_COMMAND = (
     "python3 tools/product/build_pocketmd_lite_stage3_contact_clash_intake.py"
 )
@@ -177,6 +207,13 @@ RELEASE_REFRESH_COMMANDS = [
     PRODUCT_PUBLIC_BENCHMARK_CONTRACT_COMMAND,
     PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_COMMAND,
     PUBLIC_BENCHMARK_PHASE2_HARNESS_AUDIT_COMMAND,
+    GPCR_HARD_DECOY_CURRENT_FIT_CLOSURE_PROBE_COMMAND,
+    GPCR_HARD_DECOY_ADORA2A_NEUTRAL_RESCUE_PROBE_COMMAND,
+    GPCR_HARD_DECOY_ADORA2A_PREREGISTERED_REPLAY_COMMAND,
+    GPCR_HARD_DECOY_SUITE_CURRENT_INPUT_COMMAND,
+    GPCR_HARD_DECOY_SUITE_REPORT_COMMAND,
+    GPCR_A1_INDEPENDENT_REPEAT_PACKET_COMMAND,
+    GPCR_HARD_DECOY_CLAIM_UNLOCK_AUDIT_COMMAND,
     POCKETMD_LITE_STAGE3_CONTACT_CLASH_INTAKE_COMMAND,
     POCKETMD_LITE_REPORT_COMMAND,
     POCKETMD_LITE_REFINEMENT_WORK_ORDER_COMMAND,
@@ -836,6 +873,101 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "artifact_id": "gpcr_hard_decoy_current_fit_closure_probe",
+        "artifact_path": "runs/gpcr_hard_decoy_current_fit_closure_probe_current.json",
+        "builder_command": GPCR_HARD_DECOY_CURRENT_FIT_CLOSURE_PROBE_COMMAND,
+        "depends_on": [
+            "tools/product/build_gpcr_hard_decoy_current_fit_closure_probe.py",
+            "runs/gpcr_coverage_v2_supervised_logreg_l2_c10_shadow_replay_scores_current.csv",
+            (
+                "runs/external_validation_2026-05-17_gpcr_a1_coverage_v2_beta_rescue_fast_r1_"
+                "set1_core_blind_gpcr_core_full_hard_decoy_labels_balanced.csv"
+            ),
+            (
+                "runs/external_validation_2026-05-17_gpcr_a1_coverage_v2_beta_rescue_fast_r1_"
+                "set1_core_blind_gpcr_core_full_hard_decoy_split.csv"
+            ),
+        ],
+    },
+    {
+        "artifact_id": "gpcr_hard_decoy_adora2a_neutral_rescue_probe",
+        "artifact_path": "runs/gpcr_hard_decoy_adora2a_neutral_rescue_probe_current.json",
+        "builder_command": GPCR_HARD_DECOY_ADORA2A_NEUTRAL_RESCUE_PROBE_COMMAND,
+        "depends_on": [
+            "tools/product/build_gpcr_hard_decoy_adora2a_neutral_rescue_probe.py",
+            "tools/product/build_gpcr_hard_decoy_current_fit_closure_probe.py",
+            "runs/gpcr_hard_decoy_current_fit_closure_probe_current.json",
+            "runs/gpcr_hard_decoy_current_fit_closure_probe_scores_current.csv",
+        ],
+    },
+    {
+        "artifact_id": "gpcr_hard_decoy_adora2a_preregistered_replay",
+        "artifact_path": "runs/gpcr_hard_decoy_adora2a_preregistered_replay_current.json",
+        "builder_command": GPCR_HARD_DECOY_ADORA2A_PREREGISTERED_REPLAY_COMMAND,
+        "depends_on": [
+            "tools/product/build_gpcr_hard_decoy_adora2a_preregistered_replay.py",
+            "tools/product/build_gpcr_hard_decoy_current_fit_closure_probe.py",
+            "tools/product/build_gpcr_hard_decoy_adora2a_neutral_rescue_probe.py",
+            "tools/accounting/build_gpcr_residual_prototype_spec.py",
+            "tools/run_ligand_backmapping_scoring.py",
+            "runs/gpcr_hard_decoy_current_fit_closure_probe_scores_current.csv",
+            "runs/gpcr_hard_decoy_adora2a_neutral_rescue_probe_scores_current.csv",
+            "runs/gpcr_residual_prototype_spec_adora2a_neutral_antagonist_rescue_v1_current.json",
+        ],
+    },
+    {
+        "artifact_id": "gpcr_hard_decoy_suite_current_input",
+        "artifact_path": "runs/gpcr_hard_decoy_suite_current_input_provenance.json",
+        "builder_command": GPCR_HARD_DECOY_SUITE_CURRENT_INPUT_COMMAND,
+        "depends_on": [
+            "tools/product/build_gpcr_hard_decoy_suite_current_input.py",
+            "tools/product/build_gpcr_hard_decoy_suite_report.py",
+            "runs/gpcr_hard_decoy_adora2a_preregistered_replay_current.json",
+        ],
+    },
+    {
+        "artifact_id": "gpcr_hard_decoy_suite_report",
+        "artifact_path": "runs/gpcr_hard_decoy_suite_current.json",
+        "builder_command": GPCR_HARD_DECOY_SUITE_REPORT_COMMAND,
+        "depends_on": [
+            "tools/product/build_gpcr_hard_decoy_suite_report.py",
+            "betelgeuze_product/gpcr_hard_decoy_suite.py",
+            "config/gpcr_hard_decoy_suite_current.csv",
+            "runs/gpcr_hard_decoy_suite_current_input_provenance.json",
+        ],
+    },
+    {
+        "artifact_id": "gpcr_a1_independent_repeat_packet",
+        "artifact_path": "runs/gpcr_a1_independent_repeat_packet_current.json",
+        "builder_command": GPCR_A1_INDEPENDENT_REPEAT_PACKET_COMMAND,
+        "depends_on": [
+            "tools/accounting/build_gpcr_a1_independent_repeat_packet.py",
+            "tools/build_gpcr_a1_independent_repeat_packet.py",
+            "runs/gpcr_a1_accuracy_repair_queue_current.json",
+            "runs/accuracy_parity_scorecard_current.json",
+            "runs/gpcr_coverage_v2_crossfit_rank_rescue_repeat_r1_shadow_replay_ranking_summary_current.json",
+            (
+                "runs/gpcr_scaleup_100k_family_balanced_coverage_v1_candidate_current/specs/"
+                "gpcr_core_family_balanced_rescore_100k_coverage-v1-family-balanced100k.json"
+            ),
+        ],
+    },
+    {
+        "artifact_id": "gpcr_hard_decoy_claim_unlock_audit",
+        "artifact_path": "runs/gpcr_hard_decoy_claim_unlock_audit_current.json",
+        "builder_command": GPCR_HARD_DECOY_CLAIM_UNLOCK_AUDIT_COMMAND,
+        "depends_on": [
+            "tools/product/build_gpcr_hard_decoy_claim_unlock_audit.py",
+            "tools/gpcr_replay/build_gpcr_active_scorer_promotion_decision_packet.py",
+            "runs/gpcr_hard_decoy_suite_current.json",
+            "runs/gpcr_hard_decoy_adora2a_preregistered_replay_current.json",
+            "runs/gpcr_a1_independent_repeat_packet_current.json",
+            "runs/accuracy_parity_scorecard_current.json",
+            "runs/gpcr_broad_claim_scope_readiness_current.json",
+            "runs/gpcr_active_scorer_promotion_decision_packet_current.json",
+        ],
+    },
+    {
         "artifact_id": "pocketmd_lite_stage3_contact_clash_intake",
         "artifact_path": "runs/pocketmd_lite_stage3_contact_clash_intake_current.json",
         "builder_command": POCKETMD_LITE_STAGE3_CONTACT_CLASH_INTAKE_COMMAND,
@@ -977,6 +1109,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/restricted_unattended_execution_readiness_current.json",
             "runs/product_security_deployment_contract_current.json",
             "runs/gpcr_hard_decoy_suite_current.json",
+            "runs/gpcr_hard_decoy_claim_unlock_audit_current.json",
             "runs/pocketmd_lite_report_current.json",
             "runs/pocketmd_lite_remaining_evidence_queue_current.json",
             "runs/pocketmd_lite_topk_refinement_audit_current.json",

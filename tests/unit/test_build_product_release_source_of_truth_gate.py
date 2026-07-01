@@ -5964,6 +5964,7 @@ def test_release_source_of_truth_tracks_capability_surface_builder_sources() -> 
     # Existing runtime dependencies are preserved.
     assert "runs/restricted_unattended_execution_readiness_current.json" in depends_on
     assert "runs/product_security_deployment_contract_current.json" in depends_on
+    assert "runs/gpcr_hard_decoy_claim_unlock_audit_current.json" in depends_on
     assert "runs/pocketmd_lite_topk_refinement_audit_current.json" in depends_on
     # The capability builder is part of the regular release refresh pipeline.
     assert "python3 tools/build_product_capability_surface_contract.py" in mod.RELEASE_REFRESH_COMMANDS
@@ -6162,6 +6163,116 @@ def test_release_source_of_truth_tracks_public_benchmark_phase2_harness_chain() 
         mod.PUBLIC_BENCHMARK_PHASE2_HARNESS_AUDIT_COMMAND
     ]
     assert order[mod.PUBLIC_BENCHMARK_PHASE2_HARNESS_AUDIT_COMMAND] < order[
+        mod.POCKETMD_LITE_STAGE3_CONTACT_CLASH_INTAKE_COMMAND
+    ]
+
+
+def test_release_source_of_truth_tracks_gpcr_hard_decoy_phase3_closure_chain() -> None:
+    by_id = {spec["artifact_id"]: spec for spec in mod.DEFAULT_ARTIFACT_SPECS}
+
+    expected = {
+        "gpcr_hard_decoy_current_fit_closure_probe": (
+            "runs/gpcr_hard_decoy_current_fit_closure_probe_current.json",
+            mod.GPCR_HARD_DECOY_CURRENT_FIT_CLOSURE_PROBE_COMMAND,
+            [
+                "tools/product/build_gpcr_hard_decoy_current_fit_closure_probe.py",
+                "runs/gpcr_coverage_v2_supervised_logreg_l2_c10_shadow_replay_scores_current.csv",
+            ],
+        ),
+        "gpcr_hard_decoy_adora2a_neutral_rescue_probe": (
+            "runs/gpcr_hard_decoy_adora2a_neutral_rescue_probe_current.json",
+            mod.GPCR_HARD_DECOY_ADORA2A_NEUTRAL_RESCUE_PROBE_COMMAND,
+            [
+                "tools/product/build_gpcr_hard_decoy_adora2a_neutral_rescue_probe.py",
+                "runs/gpcr_hard_decoy_current_fit_closure_probe_current.json",
+                "runs/gpcr_hard_decoy_current_fit_closure_probe_scores_current.csv",
+            ],
+        ),
+        "gpcr_hard_decoy_adora2a_preregistered_replay": (
+            "runs/gpcr_hard_decoy_adora2a_preregistered_replay_current.json",
+            mod.GPCR_HARD_DECOY_ADORA2A_PREREGISTERED_REPLAY_COMMAND,
+            [
+                "tools/product/build_gpcr_hard_decoy_adora2a_preregistered_replay.py",
+                "tools/run_ligand_backmapping_scoring.py",
+                "runs/gpcr_hard_decoy_adora2a_neutral_rescue_probe_scores_current.csv",
+            ],
+        ),
+        "gpcr_hard_decoy_suite_current_input": (
+            "runs/gpcr_hard_decoy_suite_current_input_provenance.json",
+            mod.GPCR_HARD_DECOY_SUITE_CURRENT_INPUT_COMMAND,
+            [
+                "tools/product/build_gpcr_hard_decoy_suite_current_input.py",
+                "runs/gpcr_hard_decoy_adora2a_preregistered_replay_current.json",
+            ],
+        ),
+        "gpcr_hard_decoy_suite_report": (
+            "runs/gpcr_hard_decoy_suite_current.json",
+            mod.GPCR_HARD_DECOY_SUITE_REPORT_COMMAND,
+            [
+                "tools/product/build_gpcr_hard_decoy_suite_report.py",
+                "betelgeuze_product/gpcr_hard_decoy_suite.py",
+                "config/gpcr_hard_decoy_suite_current.csv",
+                "runs/gpcr_hard_decoy_suite_current_input_provenance.json",
+            ],
+        ),
+        "gpcr_a1_independent_repeat_packet": (
+            "runs/gpcr_a1_independent_repeat_packet_current.json",
+            mod.GPCR_A1_INDEPENDENT_REPEAT_PACKET_COMMAND,
+            [
+                "tools/accounting/build_gpcr_a1_independent_repeat_packet.py",
+                "runs/gpcr_a1_accuracy_repair_queue_current.json",
+                "runs/accuracy_parity_scorecard_current.json",
+                (
+                    "runs/gpcr_coverage_v2_crossfit_rank_rescue_repeat_r1_shadow_replay_"
+                    "ranking_summary_current.json"
+                ),
+            ],
+        ),
+        "gpcr_hard_decoy_claim_unlock_audit": (
+            "runs/gpcr_hard_decoy_claim_unlock_audit_current.json",
+            mod.GPCR_HARD_DECOY_CLAIM_UNLOCK_AUDIT_COMMAND,
+            [
+                "tools/product/build_gpcr_hard_decoy_claim_unlock_audit.py",
+                "runs/gpcr_hard_decoy_suite_current.json",
+                "runs/gpcr_hard_decoy_adora2a_preregistered_replay_current.json",
+                "runs/gpcr_a1_independent_repeat_packet_current.json",
+                "runs/accuracy_parity_scorecard_current.json",
+            ],
+        ),
+    }
+
+    assert mod.GPCR_HARD_DECOY_CLAIM_LOCK_REASON in mod.GPCR_HARD_DECOY_SUITE_REPORT_COMMAND
+    for artifact_id, (artifact_path, command, dependencies) in expected.items():
+        spec = by_id[artifact_id]
+        assert spec["artifact_path"] == artifact_path
+        assert spec["builder_command"] == command
+        assert command in mod.RELEASE_REFRESH_COMMANDS
+        for dependency in dependencies:
+            assert dependency in spec["depends_on"]
+
+    order = {command: index for index, command in enumerate(mod.RELEASE_REFRESH_COMMANDS)}
+    assert order[mod.PUBLIC_BENCHMARK_PHASE2_HARNESS_AUDIT_COMMAND] < order[
+        mod.GPCR_HARD_DECOY_CURRENT_FIT_CLOSURE_PROBE_COMMAND
+    ]
+    assert order[mod.GPCR_HARD_DECOY_CURRENT_FIT_CLOSURE_PROBE_COMMAND] < order[
+        mod.GPCR_HARD_DECOY_ADORA2A_NEUTRAL_RESCUE_PROBE_COMMAND
+    ]
+    assert order[mod.GPCR_HARD_DECOY_ADORA2A_NEUTRAL_RESCUE_PROBE_COMMAND] < order[
+        mod.GPCR_HARD_DECOY_ADORA2A_PREREGISTERED_REPLAY_COMMAND
+    ]
+    assert order[mod.GPCR_HARD_DECOY_ADORA2A_PREREGISTERED_REPLAY_COMMAND] < order[
+        mod.GPCR_HARD_DECOY_SUITE_CURRENT_INPUT_COMMAND
+    ]
+    assert order[mod.GPCR_HARD_DECOY_SUITE_CURRENT_INPUT_COMMAND] < order[
+        mod.GPCR_HARD_DECOY_SUITE_REPORT_COMMAND
+    ]
+    assert order[mod.GPCR_HARD_DECOY_SUITE_REPORT_COMMAND] < order[
+        mod.GPCR_HARD_DECOY_CLAIM_UNLOCK_AUDIT_COMMAND
+    ]
+    assert order[mod.GPCR_A1_INDEPENDENT_REPEAT_PACKET_COMMAND] < order[
+        mod.GPCR_HARD_DECOY_CLAIM_UNLOCK_AUDIT_COMMAND
+    ]
+    assert order[mod.GPCR_HARD_DECOY_CLAIM_UNLOCK_AUDIT_COMMAND] < order[
         mod.POCKETMD_LITE_STAGE3_CONTACT_CLASH_INTAKE_COMMAND
     ]
 
