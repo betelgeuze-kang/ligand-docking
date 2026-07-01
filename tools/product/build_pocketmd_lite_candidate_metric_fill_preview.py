@@ -268,7 +268,9 @@ def build_pocketmd_lite_candidate_metric_fill_preview(
                 "proposed_contact_persistence": proposed.get("contact_persistence"),
                 "proposed_clash_count": proposed.get("clash_count"),
                 "source_probe_status": _text(probe_row.get("trajectory_probe_status")),
-                "source_trajectory_npz": _text(probe_row.get("selected_trajectory_npz")),
+                "source_trajectory_npz": _text(
+                    probe_row.get("exact_metric_source_npz") or probe_row.get("selected_trajectory_npz")
+                ),
                 "recommended_next_local_action": (
                     "run_pocketmd_lite_report_against_preview_candidate_csv"
                     if fill_ready
@@ -311,6 +313,8 @@ def build_pocketmd_lite_candidate_metric_fill_preview(
         "next_required_step": (
             "Run the PocketMD Lite report against the preview candidate CSV and review the top-k bands."
             if status == "pocketmd_lite_candidate_metric_fill_preview_ready"
+            else "Run the PocketMD Lite report against the preview candidate CSV for filled rows, and generate exact metric fields for remaining top-k rows."
+            if ready_count
             else "Generate claim-grade exact metric fields in the probe before filling the candidate CSV preview."
         ),
         "claim_boundary": CLAIM_BOUNDARY,

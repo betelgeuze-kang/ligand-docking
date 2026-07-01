@@ -168,6 +168,32 @@ def test_audit_ready_when_selected_npz_contains_exact_metric_fields(tmp_path: Pa
     )
 
 
+def test_audit_ready_when_bounded_metric_collector_npz_contains_exact_fields(tmp_path: Path) -> None:
+    selected = tmp_path / "selected" / "ADRB2_GPCR_BLIND__rep0001__carvedilol.npz"
+    search_root = tmp_path / "collector"
+    metric_npz = search_root / "ADRB2_GPCR_BLIND__carvedilol__bounded_metrics.npz"
+    input_csv = tmp_path / "input.csv"
+    probe_json = tmp_path / "probe.json"
+    _write_npz(selected)
+    _write_npz(metric_npz, metric_fields=True, protein_atom_frames=True, ligand_atom_frames=True)
+    _write_input_csv(input_csv, selected)
+    _write_probe_json(probe_json)
+
+    payload = mod.build_pocketmd_lite_claim_grade_metric_source_audit(
+        input_csv=input_csv,
+        probe_json=probe_json,
+        search_roots=[search_root],
+    )
+
+    summary = payload["summary"]
+    row = payload["rows"][0]
+    assert summary["status"] == "pocketmd_lite_claim_grade_metric_source_audit_ready"
+    assert summary["exact_metric_source_ready_count"] == 1
+    assert row["selected_exact_metric_ready"] is False
+    assert row["best_candidate_npz"] == str(metric_npz)
+    assert row["best_candidate_status"] == "exact_metric_source_ready"
+
+
 def test_audit_reports_collection_input_ready_when_ligand_and_protein_atoms_exist(
     tmp_path: Path,
 ) -> None:

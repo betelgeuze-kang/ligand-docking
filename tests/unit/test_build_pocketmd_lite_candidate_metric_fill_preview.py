@@ -63,6 +63,7 @@ def _write_probe(path: Path, *, claim_ready: bool) -> None:
     if claim_ready:
         row.update(
             {
+                "exact_metric_source_npz": "runs/bounded_metrics.npz",
                 "exact_local_min_ligand_rmsd_a": 1.1,
                 "exact_hbond_persistence": 0.7,
                 "exact_initial_clash_count": 2,
@@ -154,6 +155,7 @@ def test_candidate_metric_fill_preview_writes_report_ready_candidate_csv(tmp_pat
     assert preview_rows[0]["hbond_persistence"] == "0.7"
     assert preview_rows[0]["initial_clash_count"] == "2"
     assert preview_rows[0]["pocketmd_lite_metric_fill_status"] == "filled_from_claim_grade_probe"
+    assert preview_rows[0]["pocketmd_lite_metric_fill_source_npz"] == "runs/bounded_metrics.npz"
 
     report = build_pocketmd_lite_report.build_pocketmd_lite_report_artifact(out_candidate_csv)
     assert report["summary"]["status"] == "pocketmd_lite_report_ready"

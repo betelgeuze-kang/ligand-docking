@@ -25,6 +25,7 @@ from betelgeuze_product.pocketmd_lite_contract import LOCAL_MIN_SURVIVAL_RMSD_A
 ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_INPUT_CSV = "runs/pocketmd_lite_metric_collection_input_pack_current.csv"
+DEFAULT_BOUNDED_METRIC_COLLECTOR_JSON = "runs/pocketmd_lite_bounded_metric_collector_current.json"
 DEFAULT_OUT_JSON = "runs/pocketmd_lite_metric_collection_probe_current.json"
 DEFAULT_OUT_MD = "runs/pocketmd_lite_metric_collection_probe_current.md"
 DEFAULT_OUT_CSV = "runs/pocketmd_lite_metric_collection_probe_current.csv"
@@ -33,11 +34,11 @@ PACKET_TYPE = "pocketmd_lite_metric_collection_probe"
 SCHEMA_VERSION = "pocketmd_lite_metric_collection_probe_v1"
 
 CLAIM_BOUNDARY = (
-    "PocketMD Lite metric collection probe only; it extracts existing NPZ metric fields when present and computes "
-    "coarse two-bead trajectory telemetry for local triage. Coarse local-min RMSD, ONSPS H-bond-like persistence, "
-    "and clash/contact telemetry are proxy diagnostics, not claim-grade PocketMD Lite evidence. This tool does not "
-    "run local-min/OpenMM, atomize ligands, write candidate metrics, promote claims, copy restore files, or mutate "
-    "external state."
+    "PocketMD Lite metric collection probe only; it extracts explicit NPZ metric fields from selected trajectories "
+    "or bounded metric collector outputs when present and computes coarse two-bead trajectory telemetry for local "
+    "triage. Coarse local-min RMSD, ONSPS H-bond-like persistence, and clash/contact telemetry are proxy "
+    "diagnostics, not claim-grade PocketMD Lite evidence. This tool does not run local-min/OpenMM, atomize ligands, "
+    "write candidate metrics, promote claims, copy restore files, or mutate external state."
 )
 
 _READ_ONLY_FLAGS = {
@@ -53,6 +54,8 @@ _CSV_COLUMNS = [
     "target",
     "ligand_id",
     "selected_trajectory_npz",
+    "exact_metric_source_npz",
+    "exact_metric_source_status",
     "selected_trajectory_source",
     "trajectory_probe_status",
     "trajectory_schema",
@@ -161,6 +164,23 @@ def _read_csv(path: Path) -> list[dict[str, Any]]:
         return [dict(row) for row in csv.DictReader(handle)]
 
 
+def _read_json(path_like: str | Path) -> dict[str, Any]:
+    path = _resolve(path_like)
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _bounded_metric_rows_by_entry(path_like: str | Path) -> dict[str, dict[str, Any]]:
+    payload = _read_json(path_like)
+    rows = payload.get("rows")
+    if not isinstance(rows, list):
+        return {}
+    return {_text(row.get("entry_id")): row for row in rows if isinstance(row, dict) and _text(row.get("entry_id"))}
+
+
 def _valid_xyz2(arr: np.ndarray) -> bool:
     return arr.ndim == 2 and arr.shape[0] > 0 and arr.shape[1] == 3
 
@@ -189,6 +209,54 @@ def _npz_array(payload: Any, key: str, default: Any) -> np.ndarray:
     except Exception:
         pass
     return np.asarray(default)
+
+
+def _exact_metric_source(
+    source: dict[str, Any],
+    bounded_metric_rows: dict[str, dict[str, Any]],
+) -> tuple[Path, str, str, list[str]]:
+    selected = _resolve(source.get("selected_trajectory_npz", ""))
+    bounded = bounded_metric_rows.get(_text(source.get("entry_id")))
+    if not bounded:
+        return selected, _display(source.get("selected_trajectory_npz")), "selected_trajectory_npz", []
+    metric_npz = _text(bounded.get("metric_npz"))
+    if _bool(bounded.get("claim_grade_metric_ready")) and metric_npz:
+        return _resolve(metric_npz), _display(metric_npz), _text(bounded.get("status")), []
+    blockers = [f"bounded_metric_collector_not_ready:{_text(bounded.get('status')) or 'unknown'}"]
+    return selected, _display(source.get("selected_trajectory_npz")), _text(bounded.get("status")), blockers
+
+
+def _load_exact_metric_values(path: Path) -> tuple[dict[str, float | None], list[str]]:
+    values = {
+        "contact_persistence": None,
+        "local_min_ligand_rmsd_a": None,
+        "hbond_persistence": None,
+        "initial_clash_count": None,
+        "pre_refine_clash_count": None,
+        "clash_count": None,
+    }
+    if not path.exists():
+        return values, ["exact_metric_source_npz_unavailable"]
+    try:
+        with np.load(str(path), allow_pickle=False) as payload:
+            initial_clash = _npz_optional_float(
+                payload,
+                "initial_clash_count",
+                "pre_refine_clash_count",
+            )
+            values.update(
+                {
+                    "contact_persistence": _npz_optional_float(payload, "contact_persistence"),
+                    "local_min_ligand_rmsd_a": _npz_optional_float(payload, "local_min_ligand_rmsd_a"),
+                    "hbond_persistence": _npz_optional_float(payload, "hbond_persistence"),
+                    "initial_clash_count": initial_clash,
+                    "pre_refine_clash_count": initial_clash,
+                    "clash_count": _npz_optional_float(payload, "clash_count"),
+                }
+            )
+            return values, []
+    except Exception as exc:
+        return values, [f"exact_metric_source_npz_unreadable:{type(exc).__name__}"]
 
 
 def _hbond_proxy_series(
@@ -225,6 +293,8 @@ def _empty_row(source: dict[str, Any], *, status: str, blockers: list[str]) -> d
         "target": _text(source.get("target")),
         "ligand_id": _text(source.get("ligand_id")),
         "selected_trajectory_npz": _display(source.get("selected_trajectory_npz")),
+        "exact_metric_source_npz": "",
+        "exact_metric_source_status": "",
         "selected_trajectory_source": _text(source.get("selected_trajectory_source")),
         "trajectory_probe_status": status,
         "trajectory_schema": "",
@@ -258,7 +328,7 @@ def _empty_row(source: dict[str, Any], *, status: str, blockers: list[str]) -> d
     }
 
 
-def _probe_row(source: dict[str, Any]) -> dict[str, Any]:
+def _probe_row(source: dict[str, Any], bounded_metric_rows: dict[str, dict[str, Any]]) -> dict[str, Any]:
     npz_path = _resolve(source.get("selected_trajectory_npz", ""))
     if not _text(source.get("selected_trajectory_npz")):
         return _empty_row(source, status="blocked_missing_selected_trajectory_npz", blockers=["selected_trajectory_npz_missing"])
@@ -273,15 +343,6 @@ def _probe_row(source: dict[str, Any]) -> dict[str, Any]:
                 _npz_array(payload, "protein_atom_frames", np.zeros((0, 0, 3))),
                 dtype=np.float32,
             )
-            exact_contact = _npz_optional_float(payload, "contact_persistence")
-            exact_local = _npz_optional_float(payload, "local_min_ligand_rmsd_a")
-            exact_hbond = _npz_optional_float(payload, "hbond_persistence")
-            exact_initial_clash = _npz_optional_float(
-                payload,
-                "initial_clash_count",
-                "pre_refine_clash_count",
-            )
-            exact_clash = _npz_optional_float(payload, "clash_count")
     except Exception as exc:
         return _empty_row(
             source,
@@ -312,6 +373,19 @@ def _probe_row(source: dict[str, Any]) -> dict[str, Any]:
     else:
         blockers.append("ligand_smiles_missing_for_onsps_proxy")
 
+    exact_metric_source_path, exact_metric_source_npz, exact_metric_source_status, source_blockers = _exact_metric_source(
+        source,
+        bounded_metric_rows,
+    )
+    blockers.extend(source_blockers)
+    exact_metric_values, exact_load_blockers = _load_exact_metric_values(exact_metric_source_path)
+    blockers.extend(exact_load_blockers)
+    exact_contact = exact_metric_values["contact_persistence"]
+    exact_local = exact_metric_values["local_min_ligand_rmsd_a"]
+    exact_hbond = exact_metric_values["hbond_persistence"]
+    exact_initial_clash = exact_metric_values["initial_clash_count"]
+    exact_clash = exact_metric_values["clash_count"]
+
     exact_metric_values = {
         "contact_persistence": exact_contact,
         "local_min_ligand_rmsd_a": exact_local,
@@ -338,6 +412,8 @@ def _probe_row(source: dict[str, Any]) -> dict[str, Any]:
         "target": _text(source.get("target")),
         "ligand_id": _text(source.get("ligand_id")),
         "selected_trajectory_npz": _display(source.get("selected_trajectory_npz")),
+        "exact_metric_source_npz": exact_metric_source_npz,
+        "exact_metric_source_status": exact_metric_source_status,
         "selected_trajectory_source": _text(source.get("selected_trajectory_source")),
         "trajectory_probe_status": status,
         "trajectory_schema": "coarse_two_bead_ca",
@@ -383,13 +459,23 @@ def _probe_row(source: dict[str, Any]) -> dict[str, Any]:
 def build_pocketmd_lite_metric_collection_probe(
     *,
     input_csv: str | Path = DEFAULT_INPUT_CSV,
+    bounded_metric_collector_json: str | Path = DEFAULT_BOUNDED_METRIC_COLLECTOR_JSON,
 ) -> dict[str, Any]:
     input_path = _resolve(input_csv)
+    bounded_metric_path = _resolve(bounded_metric_collector_json)
     source_rows = _read_csv(input_path)
-    rows = [_probe_row(row) for row in source_rows if _bool(row.get("collection_input_ready"))]
+    bounded_metric_rows = _bounded_metric_rows_by_entry(bounded_metric_path)
+    rows = [_probe_row(row, bounded_metric_rows) for row in source_rows if _bool(row.get("collection_input_ready"))]
     telemetry_ready_count = sum(1 for row in rows if row["trajectory_probe_status"] != "blocked_selected_trajectory_npz_unavailable")
     claim_grade_ready_count = sum(1 for row in rows if row["claim_grade_metric_ready"])
     proxy_only_count = sum(1 for row in rows if row["trajectory_probe_status"] == "blocked_pocketmd_lite_metric_collection_probe_proxy_only")
+    bounded_metric_source_ready_count = sum(
+        1
+        for row in rows
+        if row["claim_grade_metric_ready"]
+        and _text(row.get("exact_metric_source_npz"))
+        and row["exact_metric_source_npz"] != row["selected_trajectory_npz"]
+    )
     status = (
         "pocketmd_lite_metric_collection_probe_ready"
         if rows and claim_grade_ready_count == len(rows)
@@ -402,10 +488,12 @@ def build_pocketmd_lite_metric_collection_probe(
         "schema_version": SCHEMA_VERSION,
         "status": status,
         "input_csv": _display(input_path),
+        "bounded_metric_collector_json": _display(bounded_metric_path),
         "candidate_count": len(rows),
         "telemetry_ready_count": telemetry_ready_count,
         "proxy_only_count": proxy_only_count,
         "claim_grade_metric_ready_count": claim_grade_ready_count,
+        "bounded_metric_source_ready_count": bounded_metric_source_ready_count,
         "coarse_local_min_survival_proxy_count": sum(1 for row in rows if row["coarse_local_min_survival_proxy"] is True),
         "coarse_hbond_proxy_observed_count": sum(
             1 for row in rows if (row["coarse_hbond_persistence_proxy"] is not None and row["coarse_hbond_persistence_proxy"] > 0)
@@ -414,6 +502,11 @@ def build_pocketmd_lite_metric_collection_probe(
         "next_required_step": (
             "Extract claim-grade NPZ metric fields into the PocketMD Lite candidate CSV, then rerun the report."
             if rows and claim_grade_ready_count == len(rows)
+            else (
+                "Extract available exact NPZ metric fields into the candidate fill preview, then recover atomized "
+                "protein/ligand inputs and rerun the bounded metric collector for remaining top-k rows."
+            )
+            if claim_grade_ready_count
             else (
                 "Generate atomized/backmapped or otherwise claim-grade local_min_ligand_rmsd_a, "
                 "hbond_persistence, and clash-relief baseline fields required by the input pack; "
@@ -466,16 +559,18 @@ def _render_markdown(payload: dict[str, Any]) -> str:
         f"- status: `{summary['status']}`",
         f"- telemetry_ready_count: `{summary['telemetry_ready_count']}` / `{summary['candidate_count']}`",
         f"- claim_grade_metric_ready_count: `{summary['claim_grade_metric_ready_count']}`",
+        f"- bounded_metric_source_ready_count: `{summary['bounded_metric_source_ready_count']}`",
         f"- proxy_only_count: `{summary['proxy_only_count']}`",
         "",
-        "| entry | status | coarse local-min RMSD | hbond proxy | claim-grade ready | action |",
-        "| --- | --- | ---: | ---: | --- | --- |",
+        "| entry | status | exact source | coarse local-min RMSD | hbond proxy | claim-grade ready | action |",
+        "| --- | --- | --- | ---: | ---: | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
-            "| `{entry}` | `{status}` | `{rmsd}` | `{hbond}` | `{ready}` | `{action}` |".format(
+            "| `{entry}` | `{status}` | `{source}` | `{rmsd}` | `{hbond}` | `{ready}` | `{action}` |".format(
                 entry=row["entry_id"],
                 status=row["trajectory_probe_status"],
+                source=row["exact_metric_source_npz"] or "(none)",
                 rmsd=_fmt(row["coarse_local_min_ligand_rmsd_a"]),
                 hbond=_fmt(row["coarse_hbond_persistence_proxy"]),
                 ready=str(row["claim_grade_metric_ready"]).lower(),
@@ -489,12 +584,16 @@ def _render_markdown(payload: dict[str, Any]) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Probe PocketMD Lite metric collection inputs.")
     parser.add_argument("--input-csv", default=DEFAULT_INPUT_CSV)
+    parser.add_argument("--bounded-metric-collector-json", default=DEFAULT_BOUNDED_METRIC_COLLECTOR_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     args = parser.parse_args(argv)
 
-    payload = build_pocketmd_lite_metric_collection_probe(input_csv=args.input_csv)
+    payload = build_pocketmd_lite_metric_collection_probe(
+        input_csv=args.input_csv,
+        bounded_metric_collector_json=args.bounded_metric_collector_json,
+    )
     out_json = _resolve(args.out_json)
     out_md = _resolve(args.out_md)
     out_csv = _resolve(args.out_csv)

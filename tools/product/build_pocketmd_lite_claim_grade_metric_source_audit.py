@@ -27,6 +27,7 @@ DEFAULT_OUT_JSON = "runs/pocketmd_lite_claim_grade_metric_source_audit_current.j
 DEFAULT_OUT_MD = "runs/pocketmd_lite_claim_grade_metric_source_audit_current.md"
 DEFAULT_OUT_CSV = "runs/pocketmd_lite_claim_grade_metric_source_audit_current.csv"
 DEFAULT_SEARCH_ROOTS = (
+    "runs/pocketmd_lite_bounded_metric_collector_current",
     "runs/pocketmd_lite_ligand_atom_frame_recovery_current",
     "runs/residual_force_trajectory_regeneration_current",
     "~/.local/share/Trash/files/trajectory_spill",
@@ -497,6 +498,8 @@ def build_pocketmd_lite_claim_grade_metric_source_audit(
     )
     if rows and exact_ready_count == len(rows):
         status = "pocketmd_lite_claim_grade_metric_source_audit_ready"
+    elif exact_ready_count:
+        status = "blocked_pocketmd_lite_claim_grade_metric_source_partial_exact_metrics"
     elif collection_ready_count:
         status = "blocked_pocketmd_lite_claim_grade_metric_source_collection_input_ready_metric_collection_needed"
     elif partial_atomized_count:
@@ -530,6 +533,8 @@ def build_pocketmd_lite_claim_grade_metric_source_audit(
         "next_required_step": (
             "Extract exact NPZ metric fields into the candidate fill preview, then rerun the PocketMD Lite report."
             if rows and exact_ready_count == len(rows)
+            else "Extract available exact NPZ metric fields into the candidate fill preview, then recover missing atomized protein/ligand inputs and rerun the metric collector for remaining top-k rows."
+            if exact_ready_count
             else "Run the claim-grade metric collector for recovered atomized top-k inputs; recover missing protein or ligand atom frames for rows not collection-ready."
             if collection_ready_count
             else "Recover ligand atom frames for partial atomized inputs and generate exact local-min/H-bond/initial-clash metrics for every selected top-k row."

@@ -72,6 +72,25 @@ def _write_npz(path: Path, *, include_metric_fields: bool = False) -> None:
     np.savez(path, **payload)
 
 
+def _write_bounded_metric_collector_json(path: Path, metric_npz: Path) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "rows": [
+                    {
+                        "entry_id": "T:L",
+                        "status": "pocketmd_lite_bounded_metric_collector_metric_ready",
+                        "metric_npz": str(metric_npz),
+                        "claim_grade_metric_ready": True,
+                    }
+                ]
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def test_probe_keeps_two_bead_collection_proxy_only(tmp_path: Path) -> None:
     npz_path = tmp_path / "traj.npz"
     input_csv = tmp_path / "input.csv"
@@ -113,6 +132,32 @@ def test_probe_accepts_explicit_npz_metric_fields(tmp_path: Path) -> None:
     assert row["recommended_next_local_action"] == (
         "extract_claim_grade_metrics_into_candidate_csv_then_rerun_pocketmd_lite_report"
     )
+
+
+def test_probe_accepts_bounded_metric_collector_npz_as_exact_source(tmp_path: Path) -> None:
+    selected_npz = tmp_path / "selected.npz"
+    metric_npz = tmp_path / "bounded_metrics.npz"
+    input_csv = tmp_path / "input.csv"
+    collector_json = tmp_path / "collector.json"
+    _write_npz(selected_npz)
+    _write_npz(metric_npz, include_metric_fields=True)
+    _write_input_csv(input_csv, selected_npz)
+    _write_bounded_metric_collector_json(collector_json, metric_npz)
+
+    payload = mod.build_pocketmd_lite_metric_collection_probe(
+        input_csv=input_csv,
+        bounded_metric_collector_json=collector_json,
+    )
+
+    summary = payload["summary"]
+    row = payload["rows"][0]
+    assert summary["status"] == "pocketmd_lite_metric_collection_probe_ready"
+    assert summary["bounded_metric_source_ready_count"] == 1
+    assert row["claim_grade_metric_ready"] is True
+    assert row["exact_metric_source_npz"] == str(metric_npz)
+    assert row["exact_metric_source_status"] == "pocketmd_lite_bounded_metric_collector_metric_ready"
+    assert row["selected_trajectory_npz"] == str(selected_npz)
+    assert abs(row["exact_local_min_ligand_rmsd_a"] - 1.1) < 1e-6
 
 
 def test_main_writes_probe_artifacts(tmp_path: Path) -> None:
