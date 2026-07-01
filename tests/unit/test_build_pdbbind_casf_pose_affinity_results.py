@@ -45,6 +45,23 @@ def _ethane_with_heavy_positions(positions: list[tuple[float, float, float]]) ->
     return mol
 
 
+def _butane_with_heavy_positions(positions: list[tuple[float, float, float]]) -> Any:
+    Chem, Point3D = _rdkit()
+    mol = Chem.AddHs(Chem.MolFromSmiles("CCCC"))
+    conformer = Chem.Conformer(mol.GetNumAtoms())
+    heavy_idx = 0
+    for atom in mol.GetAtoms():
+        idx = atom.GetIdx()
+        if atom.GetAtomicNum() == 1:
+            conformer.SetAtomPosition(idx, Point3D(float(idx), 2.0, 0.0))
+            continue
+        x, y, z = positions[heavy_idx]
+        conformer.SetAtomPosition(idx, Point3D(x, y, z))
+        heavy_idx += 1
+    mol.AddConformer(conformer)
+    return mol
+
+
 def _dump(path: Path, mol: Any) -> None:
     Chem, _Point3D = _rdkit()
     path.write_bytes(pickle.dumps((mol, Chem.MolFromSmiles("CC"))))
@@ -133,6 +150,16 @@ def _metadata(path: Path, rows: list[dict[str, object]]) -> Path:
     return path
 
 
+def _comparison_scores(path: Path, rows: list[dict[str, object]]) -> Path:
+    fields = ["pose_id", "complex_id", "vina_score", "gnina_score", "score_source"]
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({field: row.get(field, "") for field in fields})
+    return path
+
+
 def test_build_pdbbind_casf_pose_affinity_results_scores_pose_success(tmp_path: Path) -> None:
     data = tmp_path / "casf" / "data_5_sdf"
     data.mkdir(parents=True)
@@ -203,6 +230,22 @@ def test_build_pdbbind_casf_pose_affinity_results_scores_pose_success(tmp_path: 
     assert payload["summary"]["decoy_rejection_rate"] == 1.0
     assert payload["summary"]["abstention_precision"] == 1.0
     assert payload["summary"]["chemistry_evidence_coverage"] == 1.0
+    assert payload["summary"]["posebusters_check_schema_version"] == "posebusters_style_ligand_validity_v1"
+    assert payload["summary"]["posebusters_assessed_pose_count"] == 2
+    assert payload["summary"]["posebusters_valid_count"] == 2
+    assert payload["summary"]["posebusters_valid_rate"] == 1.0
+    assert payload["summary"]["posebusters_style_validity_checks_ready"] is True
+    assert "not an official PoseBusters run" in payload["summary"]["posebusters_claim_boundary"]
+    assert payload["summary"]["symmetry_aware_ligand_rmsd_ready"] is True
+    assert payload["summary"]["symmetry_aware_ligand_rmsd_coverage"] == 1.0
+    assert payload["summary"]["symmetry_aware_ligand_rmsd_method"] == (
+        "rdkit_self_substructure_automorphism_no_ligand_alignment"
+    )
+    assert payload["summary"]["comparison_adapter_schema_version"] == "vina_gnina_comparison_adapter_v1"
+    assert payload["summary"]["vina_gnina_comparison_adapter_contract_ready"] is True
+    assert payload["summary"]["vina_gnina_comparison_adapter_score_evidence_ready"] is False
+    assert payload["summary"]["vina_gnina_comparison_adapter_enabled"] is False
+    assert payload["summary"]["vina_gnina_comparison_adapter_status"] == "vina_gnina_comparison_adapter_not_requested"
     assert payload["summary"]["mean_runtime_ms"] > 0.0
     assert payload["summary"]["peak_memory_mb"] > 0.0
     assert payload["summary"]["subset_identity_schema_version"] == "pdbbind_casf_subset_identity_v1"
@@ -226,8 +269,190 @@ def test_build_pdbbind_casf_pose_affinity_results_scores_pose_success(tmp_path: 
     first_row = _rows(out_csv)[0]
     assert first_row["complex_id"] == "1abc"
     assert first_row["pose_rmsd_method"] == "rdkit_self_substructure_automorphism_no_ligand_alignment"
+    assert first_row["posebusters_valid"] == "1"
+    assert first_row["posebusters_blocker_count"] == "0"
+    assert '"status": "posebusters_style_valid"' in first_row["posebusters_checks"]
     assert first_row["runtime_metric_source"] == "builder_wall_clock_perf_counter"
     assert first_row["peak_memory_metric_source"] == "builder_tracemalloc_peak"
+
+
+def test_build_pdbbind_casf_pose_affinity_results_adapts_vina_gnina_comparison_scores(
+    tmp_path: Path,
+) -> None:
+    data = tmp_path / "casf" / "data_5_sdf"
+    data.mkdir(parents=True)
+    _dump_fake(data / "1abc", _FakeMol())
+    _dump_fake(data / "1abc_1", _FakeMol(offset=0.5))
+    _dump(data / "1abc_2", _mol(offset=5.0))
+    metadata = _metadata(
+        tmp_path / "gold.csv",
+        [
+            {
+                "pose_id": "1abc_1",
+                "complex_id": "1abc",
+                "active_label": "1",
+                "affinity_label": "9.0",
+                "score": "-9.0",
+                "baseline_score": "-1.0",
+                "split_id": "heldout",
+                "abstained": "0",
+                "chirality_failure": "0",
+                "tautomer_failure": "0",
+                "protonation_failure": "0",
+                "runtime_ms": "10",
+                "peak_memory_mb": "100",
+            },
+            {
+                "pose_id": "1abc_2",
+                "complex_id": "1abc",
+                "active_label": "0",
+                "affinity_label": "1.0",
+                "score": "-1.0",
+                "baseline_score": "-9.0",
+                "split_id": "heldout",
+                "abstained": "1",
+                "abstention_reasons": "decoy_rejected",
+                "chirality_failure": "0",
+                "tautomer_failure": "0",
+                "protonation_failure": "0",
+                "runtime_ms": "12",
+                "peak_memory_mb": "120",
+            },
+        ],
+    )
+    comparison = _comparison_scores(
+        tmp_path / "comparison.csv",
+        [
+            {
+                "pose_id": "1abc_1",
+                "complex_id": "1abc",
+                "vina_score": "-8.8",
+                "gnina_score": "-9.1",
+                "score_source": "operator_local_vina_gnina_replay",
+            },
+            {
+                "pose_id": "1abc_2",
+                "complex_id": "1abc",
+                "vina_score": "-1.2",
+                "gnina_score": "-1.1",
+                "score_source": "operator_local_vina_gnina_replay",
+            },
+        ],
+    )
+    out_csv = tmp_path / "results.csv"
+
+    payload = build_results(
+        argparse.Namespace(
+            dataset_artifact=str(tmp_path / "casf"),
+            max_poses=0,
+            threshold=0.35,
+            pose_success_rmsd_a=2.0,
+            out_csv=str(out_csv),
+            out_json=str(tmp_path / "results.json"),
+            out_md=str(tmp_path / "results.md"),
+            gold_metadata_csv=str(metadata),
+            comparison_scores_csv=str(comparison),
+        )
+    )
+
+    first_row = _rows(out_csv)[0]
+    summary = payload["summary"]
+    assert summary["status"] == "pdbbind_casf_pose_affinity_results_ready"
+    assert summary["vina_gnina_comparison_adapter_enabled"] is True
+    assert summary["vina_gnina_comparison_adapter_status"] == "vina_gnina_comparison_adapter_ready"
+    assert summary["vina_gnina_comparison_adapter_ready"] is True
+    assert summary["vina_gnina_comparison_adapter_contract_ready"] is True
+    assert summary["vina_gnina_comparison_adapter_score_evidence_ready"] is True
+    assert summary["comparison_adapter_same_input_row_count_match"] is True
+    assert summary["vina_comparison_status"] == "vina_comparison_adapter_ready"
+    assert summary["gnina_comparison_status"] == "gnina_comparison_adapter_ready"
+    assert summary["vina_comparison_score_count"] == 2
+    assert summary["gnina_comparison_score_count"] == 2
+    assert summary["vina_comparison_missing_score_count"] == 0
+    assert summary["gnina_comparison_missing_score_count"] == 0
+    assert summary["vina_comparison_ranking_spearman"] == pytest.approx(1.0)
+    assert summary["gnina_comparison_pr_auc"] == pytest.approx(1.0)
+    assert summary["comparison_scores_sha256"]
+    assert "does not run Vina, GNINA" in summary["comparison_adapter_claim_boundary"]
+    assert first_row["vina_score"] == "-8.8"
+    assert first_row["gnina_score"] == "-9.1"
+    assert first_row["comparison_score_source"] == "operator_local_vina_gnina_replay"
+
+
+def test_build_pdbbind_casf_pose_affinity_results_blocks_incomplete_comparison_adapter(
+    tmp_path: Path,
+) -> None:
+    data = tmp_path / "casf" / "data_5_sdf"
+    data.mkdir(parents=True)
+    _dump(data / "1abc", _mol())
+    _dump(data / "1abc_1", _mol(offset=0.5))
+    _dump(data / "1abc_2", _mol(offset=5.0))
+    metadata = _metadata(
+        tmp_path / "gold.csv",
+        [
+            {
+                "pose_id": "1abc_1",
+                "complex_id": "1abc",
+                "active_label": "1",
+                "affinity_label": "9.0",
+                "score": "-9.0",
+                "baseline_score": "-1.0",
+                "abstained": "0",
+                "chirality_failure": "0",
+                "tautomer_failure": "0",
+                "protonation_failure": "0",
+                "runtime_ms": "10",
+                "peak_memory_mb": "100",
+            },
+            {
+                "pose_id": "1abc_2",
+                "complex_id": "1abc",
+                "active_label": "0",
+                "affinity_label": "1.0",
+                "score": "-1.0",
+                "baseline_score": "-9.0",
+                "abstained": "1",
+                "abstention_reasons": "decoy_rejected",
+                "chirality_failure": "0",
+                "tautomer_failure": "0",
+                "protonation_failure": "0",
+                "runtime_ms": "12",
+                "peak_memory_mb": "120",
+            },
+        ],
+    )
+    comparison = _comparison_scores(
+        tmp_path / "comparison.csv",
+        [
+            {
+                "pose_id": "1abc_1",
+                "complex_id": "1abc",
+                "vina_score": "-8.8",
+                "gnina_score": "-9.1",
+            },
+        ],
+    )
+
+    payload = build_results(
+        argparse.Namespace(
+            dataset_artifact=str(tmp_path / "casf"),
+            max_poses=0,
+            threshold=0.35,
+            pose_success_rmsd_a=2.0,
+            out_csv=str(tmp_path / "results.csv"),
+            out_json=str(tmp_path / "results.json"),
+            out_md=str(tmp_path / "results.md"),
+            gold_metadata_csv=str(metadata),
+            comparison_scores_csv=str(comparison),
+        )
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_pdbbind_casf_pose_affinity_results"
+    assert summary["vina_gnina_comparison_adapter_status"] == "blocked_vina_gnina_comparison_adapter"
+    assert "vina_gnina_comparison_adapter_blocked" in summary["blockers"]
+    assert "vina:vina_comparison_score_incomplete" in summary["vina_gnina_comparison_adapter_blockers"]
+    assert "gnina:gnina_comparison_score_incomplete" in summary["vina_gnina_comparison_adapter_blockers"]
 
 
 def test_build_pdbbind_casf_pose_affinity_results_uses_best_pose_per_complex(tmp_path: Path) -> None:
@@ -365,6 +590,58 @@ def test_build_pdbbind_casf_pose_affinity_results_uses_symmetry_aware_rmsd(tmp_p
     assert float(first_row["pose_rmsd_A"]) == pytest.approx(0.0)
     assert first_row["pose_rmsd_method"] == "rdkit_self_substructure_automorphism_no_ligand_alignment"
     assert '"symmetry_mapping_count": 2' in first_row["pose_rmsd_diagnostics"]
+
+
+def test_build_pdbbind_casf_pose_affinity_results_blocks_posebusters_style_internal_clash(
+    tmp_path: Path,
+) -> None:
+    data = tmp_path / "casf" / "data_5_sdf"
+    data.mkdir(parents=True)
+    _dump(data / "1abc", _butane_with_heavy_positions([(0.0, 0.0, 0.0), (1.5, 0.0, 0.0), (3.0, 0.0, 0.0), (4.5, 0.0, 0.0)]))
+    _dump(data / "1abc_1", _butane_with_heavy_positions([(0.0, 0.0, 0.0), (1.5, 0.0, 0.0), (3.0, 0.0, 0.0), (0.2, 0.0, 0.0)]))
+    metadata = _metadata(
+        tmp_path / "gold.csv",
+        [
+            {
+                "pose_id": "1abc_1",
+                "complex_id": "1abc",
+                "active_label": "1",
+                "affinity_label": "9.0",
+                "score": "-9.0",
+                "baseline_score": "-1.0",
+                "abstained": "0",
+                "chirality_failure": "0",
+                "tautomer_failure": "0",
+                "protonation_failure": "0",
+                "runtime_ms": "10",
+                "peak_memory_mb": "100",
+            },
+        ],
+    )
+    out_csv = tmp_path / "results.csv"
+
+    payload = build_results(
+        argparse.Namespace(
+            dataset_artifact=str(tmp_path / "casf"),
+            max_poses=0,
+            threshold=0.35,
+            pose_success_rmsd_a=2.0,
+            out_csv=str(out_csv),
+            out_json=str(tmp_path / "results.json"),
+            out_md=str(tmp_path / "results.md"),
+            gold_metadata_csv=str(metadata),
+        )
+    )
+
+    row = _rows(out_csv)[0]
+    assert payload["summary"]["status"] == "blocked_pdbbind_casf_pose_affinity_results"
+    assert payload["summary"]["posebusters_assessed_pose_count"] == 1
+    assert payload["summary"]["posebusters_valid_count"] == 0
+    assert payload["summary"]["posebusters_valid_rate"] == 0.0
+    assert row["posebusters_valid"] == "0"
+    assert "posebusters_ligand_internal_clash" in row["posebusters_blockers"]
+    assert "posebusters_ligand_internal_clash" in row["blockers"]
+    assert '"status": "blocked_posebusters_style_validity"' in row["posebusters_checks"]
 
 
 def test_build_pdbbind_casf_pose_affinity_results_blocks_without_abstention_evidence(tmp_path: Path) -> None:

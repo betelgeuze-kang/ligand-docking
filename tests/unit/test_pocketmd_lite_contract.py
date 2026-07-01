@@ -23,13 +23,15 @@ def _green_candidate(entry_id="LIG-1"):
         "local_min_ligand_rmsd_a": 1.5,
         "hbond_persistence": 0.8,
         "contact_persistence": 0.75,
+        "initial_clash_count": 3,
         "clash_count": 0,
     }
 
 
 def test_selection_family_lane() -> None:
-    assert is_refine_selected(family="gpcr") is True
-    assert is_refine_selected(family="kinase") is True
+    assert is_refine_selected(family="gpcr") is False
+    assert is_refine_selected(family="kinase") is False
+    assert is_refine_selected(family="gpcr", rank_pct=0.01) is True
     assert is_refine_selected(family="transporter") is False
 
 
@@ -44,6 +46,11 @@ def test_green_band_is_claim_safe() -> None:
     assert a["band"] == BAND_GREEN
     assert a["claim_safe"] is True
     assert a["local_min_survived"] is True
+    assert a["clash_relief_count"] == 3
+    assert a["clash_relief_observed"] is True
+    assert a["uncertainty_score"] is not None
+    assert a["uncertainty_score"] < 0.35
+    assert a["uncertainty_posture"] == "green_low_uncertainty"
     assert a["review_flags"] == []
     assert a["reason_code"] == ""
 
@@ -82,6 +89,9 @@ def test_missing_evidence_abstains() -> None:
     assert a["band"] == BAND_ABSTAIN
     assert a["abstained"] is True
     assert a["reason_code"] == "missing_refinement_evidence"
+    assert a["uncertainty_score"] == 1.0
+    assert a["uncertainty_posture"] == "missing_refinement_evidence_high_uncertainty"
+    assert "hbond_persistence" in a["missing_evidence_fields"]
 
 
 def test_not_selected_is_coarse_only() -> None:
@@ -139,6 +149,23 @@ def test_batch_report_kpis() -> None:
     assert s["band_counts"][BAND_ABSTAIN] == 1
     assert s["refine_claim_safe_rate"] == 0.25
     assert s["abstention_rate"] == 0.25
+    assert s["mean_uncertainty_score"] is not None
+    assert s["high_uncertainty_count"] == 2
+    assert s["local_min_survival_reported_count"] == 4
+    assert s["local_min_survived_count"] == 2
+    assert s["hbond_persistence_reported_count"] == 4
+    assert s["contact_persistence_reported_count"] == 4
+    assert s["initial_clash_reported_count"] == 4
+    assert s["final_clash_reported_count"] == 3
+    assert s["clash_relief_reported_count"] == 3
+    assert s["clash_relief_observed_count"] == 3
+    assert s["missing_refinement_evidence_count"] == 1
+    assert s["missing_refinement_metric_names"] == ["clash_count"]
+    assert s["missing_refinement_metric_counts"] == {"clash_count": 1}
+    assert s["top_k_refinement_evidence_ready"] is False
+    assert s["reported_refinement_surface_counts"]["hbond_persistence"] == 4
+    assert "uncertainty" in s["metric_surfaces_reported"]
+    assert "clash_relief" in s["metric_surfaces_reported"]
 
 
 def test_empty_report() -> None:

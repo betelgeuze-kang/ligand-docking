@@ -8,6 +8,8 @@ CLAIM_BOUNDARY = (
     "input requirements and refresh commands. It does not download datasets, run docking, compute metrics, submit "
     "predictions, register servers, send email, delete data, or mutate external state."
 )
+PDBBIND_CASF_SUITE_ID = "pdbbind_casf_pose_affinity"
+PDBBIND_CASF_EXECUTION_SUMMARY_JSON = "runs/pdbbind_casf_pose_affinity_results_current.json"
 
 
 def _summary(packet: dict[str, Any]) -> dict[str, Any]:
@@ -78,10 +80,16 @@ def _min_result_rows_for_provenance(suite_id: str) -> int:
 
 
 def _provenance_command(*, suite_id: str, result_artifact: str, provenance_json: str) -> str:
+    execution_summary_arg = (
+        f" --execution-summary-json {PDBBIND_CASF_EXECUTION_SUMMARY_JSON}"
+        if suite_id == PDBBIND_CASF_SUITE_ID
+        else ""
+    )
     return (
         "python3 tools/build_public_benchmark_result_provenance.py "
         f"--suite-id {suite_id} --result-artifact {result_artifact} "
         f"--min-result-rows {_min_result_rows_for_provenance(suite_id)} --out-json {provenance_json}"
+        f"{execution_summary_arg}"
     )
 
 

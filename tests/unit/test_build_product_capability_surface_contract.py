@@ -315,11 +315,14 @@ def test_product_capability_surface_exposes_evidence_surfaces(tmp_path: Path) ->
 
     # Discovery surface is additive: capability gate counts are unchanged.
     assert summary["capability_count"] == 9
-    assert summary["evidence_surface_count"] == 2
-    assert summary["evidence_surface_available_count"] == 2
+    assert summary["evidence_surface_count"] == 5
+    assert summary["evidence_surface_available_count"] == 5
     assert set(summary["evidence_surface_ids"]) == {
         "hbond_backmap_report",
         "gpcr_hard_decoy_suite_report",
+        "pocketmd_lite_report",
+        "pocketmd_lite_remaining_evidence_queue",
+        "pocketmd_lite_topk_refinement_audit",
     }
 
     hbond = by_id["hbond_backmap_report"]
@@ -343,6 +346,43 @@ def test_product_capability_surface_exposes_evidence_surfaces(tmp_path: Path) ->
     assert "promote broad-GPCR claims" in gpcr["claim_boundary"]
     assert gpcr["execution_enabled"] is False
     assert gpcr["external_state_mutated"] is False
+
+    pocketmd = by_id["pocketmd_lite_report"]
+    assert pocketmd["route"] == "/product/pocketmd-lite-report"
+    assert pocketmd["artifact"] == "runs/pocketmd_lite_report_current.json"
+    assert pocketmd["bundle_surfaces"] == ["product_capability_surface_contract"]
+    assert pocketmd["claim_type"] == "top_k_pocket_refinement_gate"
+    assert pocketmd["surface_available"] is True
+    assert pocketmd["claim_safe"] is False
+    assert "top-k-only pocket-local refinement evidence" in pocketmd["claim_boundary"]
+    assert pocketmd["execution_enabled"] is False
+    assert pocketmd["external_state_mutated"] is False
+
+    pocketmd_queue = by_id["pocketmd_lite_remaining_evidence_queue"]
+    assert pocketmd_queue["route"] == "/product/pocketmd-lite-remaining-evidence-queue"
+    assert pocketmd_queue["artifact"] == "runs/pocketmd_lite_remaining_evidence_queue_current.json"
+    assert pocketmd_queue["bundle_surfaces"] == ["product_capability_surface_contract"]
+    assert pocketmd_queue["claim_type"] == "top_k_refinement_evidence_queue"
+    assert pocketmd_queue["surface_available"] is True
+    assert pocketmd_queue["claim_safe"] is False
+    assert "missing top-k local-min and H-bond persistence inputs" in pocketmd_queue["claim_boundary"]
+    assert pocketmd_queue["execution_enabled"] is False
+    assert pocketmd_queue["external_state_mutated"] is False
+
+    pocketmd_audit = by_id["pocketmd_lite_topk_refinement_audit"]
+    assert pocketmd_audit["route"] == "/product/pocketmd-lite-topk-refinement-audit"
+    assert pocketmd_audit["artifact"] == "runs/pocketmd_lite_topk_refinement_audit_current.json"
+    assert pocketmd_audit["bundle_surfaces"] == ["product_capability_surface_contract"]
+    assert pocketmd_audit["claim_type"] == "top_k_refinement_claim_grade_audit"
+    assert pocketmd_audit["surface_available"] is True
+    assert pocketmd_audit["claim_safe"] is False
+    assert pocketmd_audit["claim_grade_refinement_evidence_ready"] is False
+    assert pocketmd_audit["claim_grade_report_evidence_ready"] is False
+    assert pocketmd_audit["proxy_topk_telemetry_ready"] is False
+    assert pocketmd_audit["missing_refinement_metric_names"] == []
+    assert "proxy telemetry cannot satisfy claim-grade refinement fields" in pocketmd_audit["claim_boundary"]
+    assert pocketmd_audit["execution_enabled"] is False
+    assert pocketmd_audit["external_state_mutated"] is False
 
 
 def test_product_capability_surface_reads_gpcr_locked_artifact(tmp_path: Path) -> None:
@@ -379,3 +419,95 @@ def test_product_capability_surface_reads_gpcr_locked_artifact(tmp_path: Path) -
     # A locked artifact is read as-is and stays non-claimable.
     assert gpcr["claim_safe"] is False
     assert gpcr["claim_status"] == "broad_family_locked"
+
+
+def test_product_capability_surface_reads_pocketmd_blocked_artifact(tmp_path: Path) -> None:
+    root = _split_router_root(tmp_path / "repo")
+    (root / "runs").mkdir(parents=True, exist_ok=True)
+    (root / "runs" / "pocketmd_lite_report_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "blocked_pocketmd_lite_report",
+                    "pocketmd_lite_claim_safe": False,
+                    "candidate_count": 5,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = mod.build_product_capability_surface_contract(
+        readiness_packet=_readiness(),
+        work_order_packet=_work_order(),
+        preflight_packet=_preflight(),
+        structure_report_packet=_structure_report(),
+        bundle_contract_packet=_bundle(),
+        delivery_evidence_packet=_delivery(),
+        pilot_packet=_pilot(),
+        scope_breadth_packet=_scope_breadth(),
+        execution_readiness_packet=_execution_readiness(),
+        root=root,
+    )
+
+    pocketmd = {s["capability_id"]: s for s in payload["evidence_surfaces"]}["pocketmd_lite_report"]
+    assert pocketmd["artifact_present"] is True
+    assert pocketmd["claim_safe"] is False
+    assert pocketmd["claim_status"] == "blocked_pocketmd_lite_report"
+
+
+def test_product_capability_surface_reads_pocketmd_topk_audit_proxy_only_artifact(tmp_path: Path) -> None:
+    root = _split_router_root(tmp_path / "repo")
+    (root / "runs").mkdir(parents=True, exist_ok=True)
+    (root / "runs" / "pocketmd_lite_topk_refinement_audit_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "blocked_pocketmd_lite_topk_refinement_claim_grade_missing_proxy_reported",
+                    "selected_top_k_count": 5,
+                    "claim_grade_refinement_evidence_ready": False,
+                    "claim_grade_report_evidence_ready": False,
+                    "proxy_topk_telemetry_ready": True,
+                    "claim_grade_missing_candidate_count": 5,
+                    "missing_refinement_metric_names": [
+                        "hbond_persistence",
+                        "initial_clash_count",
+                        "local_min_ligand_rmsd_a",
+                    ],
+                    "missing_refinement_metric_counts": {
+                        "hbond_persistence": 5,
+                        "initial_clash_count": 5,
+                        "local_min_ligand_rmsd_a": 5,
+                    },
+                    "claim_promotion_allowed": False,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = mod.build_product_capability_surface_contract(
+        readiness_packet=_readiness(),
+        work_order_packet=_work_order(),
+        preflight_packet=_preflight(),
+        structure_report_packet=_structure_report(),
+        bundle_contract_packet=_bundle(),
+        delivery_evidence_packet=_delivery(),
+        pilot_packet=_pilot(),
+        scope_breadth_packet=_scope_breadth(),
+        execution_readiness_packet=_execution_readiness(),
+        root=root,
+    )
+
+    audit = {s["capability_id"]: s for s in payload["evidence_surfaces"]}[
+        "pocketmd_lite_topk_refinement_audit"
+    ]
+    assert audit["artifact_present"] is True
+    assert audit["claim_safe"] is False
+    assert audit["claim_status"] == "blocked_pocketmd_lite_topk_refinement_claim_grade_missing_proxy_reported"
+    assert audit["selected_top_k_count"] == 5
+    assert audit["claim_grade_refinement_evidence_ready"] is False
+    assert audit["claim_grade_report_evidence_ready"] is False
+    assert audit["proxy_topk_telemetry_ready"] is True
+    assert audit["claim_grade_missing_candidate_count"] == 5
+    assert audit["missing_refinement_metric_counts"]["hbond_persistence"] == 5

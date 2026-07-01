@@ -101,6 +101,42 @@ def test_missing_metrics_block() -> None:
     assert a["claim_safe"] is False
     assert "ranking_pr_auc_ci_low_below_gate" in a["blockers"]
     assert "top20_hit_rate_below_gate" in a["blockers"]
+    assert "decoys_above_positive_count_missing" in a["blockers"]
+    assert "anchor_distance_evidence_missing" in a["blockers"]
+
+
+def test_green_metrics_without_decoy_separation_evidence_still_block() -> None:
+    row = {
+        "target_id": "DRD2",
+        "positive_count": 1,
+        "ranking_pr_auc": 0.72,
+        "ranking_pr_auc_ci_low": 0.55,
+        "top20_hit_rate": 0.30,
+    }
+    a = build_target_hard_decoy_assessment(row)
+    assert a["claim_safe"] is False
+    assert "decoys_above_positive_count_missing" in a["blockers"]
+    assert "anchor_distance_evidence_missing" in a["blockers"]
+
+
+def test_no_retained_top_decoy_blocks_with_specific_evidence_gap() -> None:
+    row = _green_target("OPRM1")
+    row["top_decoy_anchor_distance_a"] = ""
+    row["top_decoy_retained_count"] = 0
+    a = build_target_hard_decoy_assessment(row)
+    assert a["claim_safe"] is False
+    assert "top_decoy_anchor_not_observed_in_retained_rows" in a["blockers"]
+    assert "anchor_distance_evidence_missing" not in a["blockers"]
+    assert a["top_decoy_retained_count"] == 0
+    assert a["anchor_margin_a"] is None
+
+
+def test_zero_positive_count_blocks_even_with_green_metrics() -> None:
+    row = _green_target()
+    row["positive_count"] = 0
+    a = build_target_hard_decoy_assessment(row)
+    assert a["claim_safe"] is False
+    assert "positive_count_missing_or_zero" in a["blockers"]
 
 
 def test_missing_required_field_raises() -> None:

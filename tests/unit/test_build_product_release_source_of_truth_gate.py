@@ -2123,7 +2123,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         if spec["artifact_id"] == "goal_operator_intake_kit_primary_release_blocker_semantic_ready"
     )
     assert intake_kit_status_spec["required_int_exact_fields"] == {
-        "product_goal_release_blocker_fail_count": 2,
+        "product_goal_release_blocker_fail_count": 5,
         "full_commercial_evidence_receipt_entry_count": 2,
         "full_commercial_evidence_receipt_operator_input_required_count": 2,
         "full_commercial_evidence_receipt_current_action_required_count": 2,
@@ -2150,6 +2150,21 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "product_scope_breadth_evidence_priority_receipt_license_ok_pending_count": 6,
         "product_scope_breadth_evidence_priority_receipt_approval_token_pending_count": 6,
     }
+    assert intake_kit_status_spec["required_text_exact_fields"][
+        "product_goal_primary_release_blocker_requirement_id"
+    ] == "R1_local_self_hosted_product"
+    assert intake_kit_status_spec["required_text_exact_fields"]["product_goal_primary_release_blocker_tier"] == (
+        "release"
+    )
+    assert intake_kit_status_spec["required_text_exact_fields"]["product_goal_primary_release_blocker"] == (
+        "local_product_surface_not_ready"
+    )
+    assert intake_kit_status_spec["required_text_exact_fields"]["primary_action_id"] == (
+        "product_ai_production:complete_residual_registry_guarded_promotion"
+    )
+    assert intake_kit_status_spec["required_text_exact_fields"]["primary_action_required_input"] == (
+        "protein_ca;ligand_frames;queue_id"
+    )
     assert intake_kit_status_spec["required_true_fields"] == [
         "product_scope_breadth_evidence_priority_packet_ready",
         "production_ai_registry_promotion_priority_packet_ready"
@@ -3969,7 +3984,10 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     )
     assert checkpoint_status_spec["required_int_exact_fields"][
         "production_inference_acceptance_blocked_stage_count"
-    ] == 1
+    ] == 2
+    assert checkpoint_status_spec["required_int_exact_fields"][
+        "registry_promotion_upstream_acceptance_ready"
+    ] == 0
     assert checkpoint_status_spec["required_int_exact_fields"][
         "force_gpu_worker_return_receipt_ready"
     ] == 1
@@ -3978,10 +3996,13 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     ] == 1
     assert checkpoint_status_spec["required_text_exact_fields"][
         "production_inference_actionable_blocker_stage_id"
-    ] == "registry_guarded_promotion_acceptance"
+    ] == "checkpoint_sidecar_acceptance"
     assert checkpoint_status_spec["required_text_exact_fields"][
         "production_inference_actionable_blocker_check_id"
-    ] == "registry_customer_facing_promotion_allowed"
+    ] == "selected_sidecar_training_contract_ready"
+    assert checkpoint_status_spec["required_text_exact_fields"][
+        "production_inference_actionable_blocker_artifact"
+    ] == "runs/residual_production_checkpoint_sidecar_current.json"
     promotion_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
@@ -3993,6 +4014,40 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert promotion_status_spec["required_text_exact_fields"]["first_blocked_stage_id"] == "residual_model_registry"
     assert promotion_status_spec["required_text_exact_fields"]["first_blocked_stage_ready_key"] == (
         "production_promotion_allowed"
+    )
+    goal_audit_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "product_goal_completion_audit_full_commercial_release_blockers_semantic_ready"
+    )
+    assert goal_audit_status_spec["required_int_exact_fields"]["release_blocker_fail_count"] == 4
+    assert goal_audit_status_spec["required_text_exact_fields"]["primary_release_blocker_requirement_id"] == (
+        "R1_local_self_hosted_product"
+    )
+    assert goal_audit_status_spec["required_text_exact_fields"]["primary_release_blocker_tier"] == "release"
+    assert goal_audit_status_spec["required_text_exact_fields"]["primary_release_blocker"] == (
+        "local_product_surface_not_ready"
+    )
+    action_board_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "goal_operator_action_board_primary_release_blocker_semantic_ready"
+    )
+    assert action_board_status_spec["required_int_exact_fields"]["product_goal_release_blocker_fail_count"] == 4
+    assert action_board_status_spec["required_text_exact_fields"][
+        "product_goal_primary_release_blocker_requirement_id"
+    ] == "R1_local_self_hosted_product"
+    assert action_board_status_spec["required_text_exact_fields"]["product_goal_primary_release_blocker_tier"] == (
+        "release"
+    )
+    assert action_board_status_spec["required_text_exact_fields"]["product_goal_primary_release_blocker"] == (
+        "local_product_surface_not_ready"
+    )
+    assert action_board_status_spec["required_text_exact_fields"]["primary_action_id"] == (
+        "product_ai_production:complete_production_ai_actionable_operator_packet"
+    )
+    assert action_board_status_spec["required_text_exact_fields"]["primary_action_required_input"] == (
+        "protein_ca;ligand_frames;queue_id"
     )
     registry_receipt_spec = next(
         spec
@@ -5909,8 +5964,106 @@ def test_release_source_of_truth_tracks_capability_surface_builder_sources() -> 
     # Existing runtime dependencies are preserved.
     assert "runs/restricted_unattended_execution_readiness_current.json" in depends_on
     assert "runs/product_security_deployment_contract_current.json" in depends_on
+    assert "runs/pocketmd_lite_topk_refinement_audit_current.json" in depends_on
     # The capability builder is part of the regular release refresh pipeline.
     assert "python3 tools/build_product_capability_surface_contract.py" in mod.RELEASE_REFRESH_COMMANDS
+
+
+def test_release_source_of_truth_tracks_pocketmd_lite_topk_refinement_chain() -> None:
+    by_id = {spec["artifact_id"]: spec for spec in mod.DEFAULT_ARTIFACT_SPECS}
+
+    expected = {
+        "pocketmd_lite_stage3_contact_clash_intake": (
+            "runs/pocketmd_lite_stage3_contact_clash_intake_current.json",
+            mod.POCKETMD_LITE_STAGE3_CONTACT_CLASH_INTAKE_COMMAND,
+            ["tools/product/build_pocketmd_lite_stage3_contact_clash_intake.py"],
+        ),
+        "pocketmd_lite_report": (
+            "runs/pocketmd_lite_report_current.json",
+            mod.POCKETMD_LITE_REPORT_COMMAND,
+            ["betelgeuze_product/pocketmd_lite_contract.py", "config/pocketmd_lite_candidates_current.csv"],
+        ),
+        "pocketmd_lite_refinement_work_order": (
+            "runs/pocketmd_lite_refinement_work_order_current.json",
+            mod.POCKETMD_LITE_REFINEMENT_WORK_ORDER_COMMAND,
+            ["runs/pocketmd_lite_report_current.json"],
+        ),
+        "pocketmd_lite_remaining_evidence_queue": (
+            "runs/pocketmd_lite_remaining_evidence_queue_current.json",
+            mod.POCKETMD_LITE_REMAINING_EVIDENCE_QUEUE_COMMAND,
+            ["runs/pocketmd_lite_report_current.json"],
+        ),
+        "pocketmd_lite_evidence_recovery_manifest": (
+            "runs/pocketmd_lite_evidence_recovery_manifest_current.json",
+            mod.POCKETMD_LITE_EVIDENCE_RECOVERY_MANIFEST_COMMAND,
+            ["runs/pocketmd_lite_remaining_evidence_queue_current.json"],
+        ),
+        "pocketmd_lite_metric_collection_input_pack": (
+            "runs/pocketmd_lite_metric_collection_input_pack_current.json",
+            mod.POCKETMD_LITE_METRIC_COLLECTION_INPUT_PACK_COMMAND,
+            [
+                "runs/pocketmd_lite_remaining_evidence_queue_current.json",
+                "runs/pocketmd_lite_evidence_recovery_manifest_current.json",
+            ],
+        ),
+        "pocketmd_lite_metric_collection_probe": (
+            "runs/pocketmd_lite_metric_collection_probe_current.json",
+            mod.POCKETMD_LITE_METRIC_COLLECTION_PROBE_COMMAND,
+            ["runs/pocketmd_lite_metric_collection_input_pack_current.csv"],
+        ),
+        "pocketmd_lite_claim_grade_metric_source_audit": (
+            "runs/pocketmd_lite_claim_grade_metric_source_audit_current.json",
+            mod.POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_COMMAND,
+            [
+                "tools/product/build_pocketmd_lite_claim_grade_metric_source_audit.py",
+                "runs/pocketmd_lite_metric_collection_input_pack_current.csv",
+                "runs/pocketmd_lite_metric_collection_probe_current.json",
+            ],
+        ),
+        "pocketmd_lite_candidate_metric_fill_preview": (
+            "runs/pocketmd_lite_candidate_metric_fill_preview_current.json",
+            mod.POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_COMMAND,
+            [
+                "tools/product/build_pocketmd_lite_candidate_metric_fill_preview.py",
+                "runs/pocketmd_lite_metric_collection_probe_current.json",
+            ],
+        ),
+        "pocketmd_lite_topk_refinement_audit": (
+            "runs/pocketmd_lite_topk_refinement_audit_current.json",
+            mod.POCKETMD_LITE_TOPK_REFINEMENT_AUDIT_COMMAND,
+            [
+                "tools/product/build_pocketmd_lite_topk_refinement_audit.py",
+                "runs/pocketmd_lite_candidate_metric_fill_preview_current.json",
+                "runs/pocketmd_lite_claim_grade_metric_source_audit_current.json",
+            ],
+        ),
+    }
+
+    for artifact_id, (artifact_path, command, dependencies) in expected.items():
+        spec = by_id[artifact_id]
+        assert spec["artifact_path"] == artifact_path
+        assert spec["builder_command"] == command
+        assert command in mod.RELEASE_REFRESH_COMMANDS
+        for dependency in dependencies:
+            assert dependency in spec["depends_on"]
+
+    order = {command: index for index, command in enumerate(mod.RELEASE_REFRESH_COMMANDS)}
+    assert order[mod.POCKETMD_LITE_REPORT_COMMAND] < order[mod.POCKETMD_LITE_REFINEMENT_WORK_ORDER_COMMAND]
+    assert order[mod.POCKETMD_LITE_REFINEMENT_WORK_ORDER_COMMAND] < order[
+        mod.POCKETMD_LITE_REMAINING_EVIDENCE_QUEUE_COMMAND
+    ]
+    assert order[mod.POCKETMD_LITE_METRIC_COLLECTION_PROBE_COMMAND] < order[
+        mod.POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_COMMAND
+    ]
+    assert order[mod.POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_COMMAND] < order[
+        mod.POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_COMMAND
+    ]
+    assert order[mod.POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_COMMAND] < order[
+        mod.POCKETMD_LITE_TOPK_REFINEMENT_AUDIT_COMMAND
+    ]
+    assert order[mod.POCKETMD_LITE_TOPK_REFINEMENT_AUDIT_COMMAND] < order[
+        "python3 tools/build_product_capability_surface_contract.py"
+    ]
 
 
 def test_release_source_of_truth_tracks_commercial_readiness_spec_builder_sources() -> None:

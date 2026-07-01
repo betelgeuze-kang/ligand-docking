@@ -78,6 +78,17 @@ BENCHMARK_SUITES = (
     },
 )
 
+PDBBIND_CASF_SUITE_ID = "pdbbind_casf_pose_affinity"
+LIT_PCBA_SUITE_ID = "lit_pcba_virtual_screening"
+DUDE_Z_SUITE_ID = "dude_z_decoy_smoke"
+PHASE2_REQUIREMENT_IDS = (
+    "casf_pdbbind_pose_success_harness",
+    "symmetry_aware_ligand_rmsd",
+    "posebusters_style_validity_checks",
+    "vina_gnina_comparison_adapter",
+    "dude_or_lit_pcba_enrichment",
+)
+
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
@@ -88,6 +99,13 @@ def _float(value: Any) -> float:
         return float(value or 0.0)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _int(value: Any) -> int:
+    try:
+        return int(float(value or 0))
+    except (TypeError, ValueError):
+        return 0
 
 
 def _read_scorecard_rows(path: str | Path) -> tuple[bool, list[dict[str, str]]]:
@@ -103,6 +121,24 @@ def _resolve_scorecard_json(path_like: str, *, root: Path) -> Path:
     return path if path.is_absolute() else root / path
 
 
+def _read_json_summary(path_like: str | Path, *, root: Path) -> tuple[bool, dict[str, Any]]:
+    if not _text(path_like):
+        return False, {}
+    path = Path(path_like)
+    if not path.is_absolute():
+        path = root / path
+    if not path.exists():
+        return False, {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return True, {}
+    summary = payload.get("summary") if isinstance(payload, dict) else payload
+    if summary is None and isinstance(payload, dict):
+        summary = payload
+    return True, summary if isinstance(summary, dict) else {}
+
+
 def _materialization_manifest_path(suite_id: str, *, root: Path) -> Path:
     stem = "lit_pcba" if suite_id == "lit_pcba_virtual_screening" else suite_id
     return root / "runs" / f"{stem}_materialization_manifest_current.json"
@@ -115,17 +151,7 @@ def _scorecard_row_csv(suite_id: str) -> str:
 
 
 def _read_scorecard_summary(path_like: str, *, root: Path) -> tuple[bool, dict[str, Any]]:
-    if not _text(path_like):
-        return False, {}
-    path = _resolve_scorecard_json(path_like, root=root)
-    if not path.exists():
-        return False, {}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return True, {}
-    summary = payload.get("summary") if isinstance(payload, dict) else {}
-    return True, summary if isinstance(summary, dict) else {}
+    return _read_json_summary(path_like, root=root)
 
 
 def _read_materialization_summary(suite_id: str, *, root: Path) -> tuple[Path, bool, dict[str, Any]]:
@@ -290,6 +316,202 @@ def _row(
     }
 
 
+def _phase2_row(requirement_id: str, ready: bool, *, evidence: str, blockers: list[str]) -> dict[str, Any]:
+    clean_blockers = sorted({_text(blocker) for blocker in blockers if _text(blocker)})
+    return {
+        "requirement_id": requirement_id,
+        "status": "ready" if ready else "blocked",
+        "ready": bool(ready),
+        "evidence": _text(evidence),
+        "blocker": ";".join(clean_blockers),
+        "blockers": clean_blockers,
+    }
+
+
+def _row_by_suite(rows: list[dict[str, Any]], suite_id: str) -> dict[str, Any]:
+    return next((row for row in rows if _text(row.get("suite_id")) == suite_id), {})
+
+
+def _execution_summary_from_provenance(row: dict[str, Any], *, root: Path) -> tuple[bool, dict[str, Any], bool, dict[str, Any]]:
+    provenance_present, provenance_summary = _read_json_summary(_text(row.get("product_provenance_json")), root=root)
+    execution_summary_path = _text(provenance_summary.get("execution_summary_json"))
+    if not execution_summary_path:
+        return provenance_present, provenance_summary, False, {}
+    execution_present, execution_summary = _read_json_summary(execution_summary_path, root=root)
+    return provenance_present, provenance_summary, execution_present, execution_summary
+
+
+def _pdbbind_phase2_requirements(row: dict[str, Any], *, root: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    row_ready = bool(row) and _text(row.get("status")) == "ready"
+    provenance_present, provenance_summary, result_present, result_summary = _execution_summary_from_provenance(row, root=root)
+    result_status = _text(result_summary.get("status"))
+    result_pass = bool(result_summary.get("pass") is True)
+    replay_pose_count = _int(result_summary.get("replay_pose_count"))
+    scored_pose_count = _int(result_summary.get("scored_pose_count"))
+    pose_success_rate = _float(result_summary.get("pose_success_rate"))
+    pose_success_threshold = _float(result_summary.get("primary_metric_threshold") or row.get("primary_metric_threshold"))
+    pose_success_ready = (
+        row_ready
+        and provenance_present
+        and bool(provenance_summary.get("product_engine_result") is True)
+        and result_present
+        and result_status == "pdbbind_casf_pose_affinity_results_ready"
+        and result_pass
+        and replay_pose_count > 0
+        and pose_success_rate + 1e-12 >= pose_success_threshold
+    )
+    pose_success_blockers: list[str] = []
+    if not row_ready:
+        pose_success_blockers.append("pdbbind_scorecard_row_not_ready")
+    if not provenance_present:
+        pose_success_blockers.append("pdbbind_result_provenance_missing")
+    if provenance_present and provenance_summary.get("product_engine_result") is not True:
+        pose_success_blockers.append("pdbbind_result_provenance_not_product_engine")
+    if not result_present:
+        pose_success_blockers.append("pdbbind_execution_summary_missing")
+    if result_present and result_status != "pdbbind_casf_pose_affinity_results_ready":
+        pose_success_blockers.append("pdbbind_execution_summary_not_ready")
+    if result_present and result_summary.get("pass") is not True:
+        pose_success_blockers.append("pdbbind_execution_summary_not_pass")
+    if replay_pose_count <= 0:
+        pose_success_blockers.append("pdbbind_replay_pose_rows_missing")
+    if pose_success_rate + 1e-12 < pose_success_threshold:
+        pose_success_blockers.append("pdbbind_pose_success_rate_below_threshold")
+
+    symmetry_ready = (
+        pose_success_ready
+        and bool(result_summary.get("symmetry_aware_ligand_rmsd_ready") is True)
+        and _float(result_summary.get("symmetry_aware_ligand_rmsd_coverage")) >= 1.0
+    )
+    symmetry_blockers = [] if symmetry_ready else ["symmetry_aware_ligand_rmsd_evidence_missing_or_incomplete"]
+    if scored_pose_count != replay_pose_count or replay_pose_count <= 0:
+        symmetry_blockers.append("symmetry_aware_ligand_rmsd_row_coverage_incomplete")
+
+    posebusters_ready = (
+        pose_success_ready
+        and bool(result_summary.get("posebusters_style_validity_checks_ready") is True)
+        and _text(result_summary.get("posebusters_check_schema_version")) == "posebusters_style_ligand_validity_v1"
+        and _int(result_summary.get("posebusters_assessed_pose_count")) == replay_pose_count
+        and replay_pose_count > 0
+    )
+    posebusters_blockers = [] if posebusters_ready else ["posebusters_style_validity_checks_missing_or_incomplete"]
+
+    adapter_status = _text(result_summary.get("vina_gnina_comparison_adapter_status"))
+    adapter_contract_ready = (
+        pose_success_ready
+        and bool(result_summary.get("vina_gnina_comparison_adapter_contract_ready") is True)
+        and _text(result_summary.get("comparison_adapter_schema_version")) == "vina_gnina_comparison_adapter_v1"
+        and {"vina", "gnina"}.issubset(set(result_summary.get("comparison_adapter_engine_ids") or []))
+        and adapter_status != "blocked_vina_gnina_comparison_adapter"
+    )
+    adapter_blockers = [] if adapter_contract_ready else ["vina_gnina_comparison_adapter_contract_missing_or_blocked"]
+
+    rows = [
+        _phase2_row(
+            "casf_pdbbind_pose_success_harness",
+            pose_success_ready,
+            evidence=_text(row.get("product_provenance_json")),
+            blockers=pose_success_blockers,
+        ),
+        _phase2_row(
+            "symmetry_aware_ligand_rmsd",
+            symmetry_ready,
+            evidence=_text(provenance_summary.get("execution_summary_json")),
+            blockers=symmetry_blockers,
+        ),
+        _phase2_row(
+            "posebusters_style_validity_checks",
+            posebusters_ready,
+            evidence=_text(provenance_summary.get("execution_summary_json")),
+            blockers=posebusters_blockers,
+        ),
+        _phase2_row(
+            "vina_gnina_comparison_adapter",
+            adapter_contract_ready,
+            evidence=_text(provenance_summary.get("execution_summary_json")),
+            blockers=adapter_blockers,
+        ),
+    ]
+    detail = {
+        "pdbbind_execution_summary_json": _text(provenance_summary.get("execution_summary_json")),
+        "pdbbind_execution_summary_status": result_status,
+        "pdbbind_pose_success_rate": pose_success_rate,
+        "pdbbind_pose_success_threshold": pose_success_threshold,
+        "pdbbind_replay_pose_count": replay_pose_count,
+        "pdbbind_symmetry_aware_ligand_rmsd_coverage": _float(
+            result_summary.get("symmetry_aware_ligand_rmsd_coverage")
+        ),
+        "pdbbind_posebusters_valid_rate": _float(result_summary.get("posebusters_valid_rate")),
+        "vina_gnina_comparison_adapter_status": adapter_status,
+        "vina_gnina_comparison_adapter_score_evidence_ready": bool(
+            result_summary.get("vina_gnina_comparison_adapter_score_evidence_ready") is True
+        ),
+    }
+    return rows, detail
+
+
+def _enrichment_phase2_requirement(rows: list[dict[str, Any]], *, root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    ready_sources: list[str] = []
+    blockers: list[str] = []
+    metric_values: dict[str, float] = {}
+    for suite_id in (LIT_PCBA_SUITE_ID, DUDE_Z_SUITE_ID):
+        row = _row_by_suite(rows, suite_id)
+        scorecard_present, scorecard_summary = _read_json_summary(_text(row.get("scorecard_json")), root=root)
+        metric_value = _float(row.get("primary_metric_value"))
+        metric_threshold = _float(row.get("primary_metric_threshold"))
+        metric_values[f"{suite_id}_primary_metric_value"] = metric_value
+        if (
+            _text(row.get("status")) == "ready"
+            and scorecard_present
+            and bool(scorecard_summary.get("pass") is True)
+            and metric_value + 1e-12 >= metric_threshold
+        ):
+            ready_sources.append(suite_id)
+        else:
+            blockers.append(f"{suite_id}_enrichment_not_ready")
+    ready = bool(ready_sources)
+    detail = {
+        "phase2_enrichment_ready_sources": ";".join(ready_sources),
+        **metric_values,
+    }
+    return (
+        _phase2_row(
+            "dude_or_lit_pcba_enrichment",
+            ready,
+            evidence=";".join(_text(_row_by_suite(rows, suite_id).get("scorecard_json")) for suite_id in ready_sources),
+            blockers=[] if ready else blockers,
+        ),
+        detail,
+    )
+
+
+def _phase2_public_benchmark_harness(rows: list[dict[str, Any]], *, root: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    pdbbind_rows, pdbbind_detail = _pdbbind_phase2_requirements(_row_by_suite(rows, PDBBIND_CASF_SUITE_ID), root=root)
+    enrichment_row, enrichment_detail = _enrichment_phase2_requirement(rows, root=root)
+    requirement_rows = [*pdbbind_rows, enrichment_row]
+    ready_requirement_count = sum(1 for row in requirement_rows if row["ready"])
+    blockers = [
+        f"{row['requirement_id']}:{row['blocker'] or 'not_ready'}"
+        for row in requirement_rows
+        if not row["ready"]
+    ]
+    summary = {
+        "phase2_public_benchmark_harness_ready": ready_requirement_count == len(requirement_rows),
+        "phase2_requirement_count": len(requirement_rows),
+        "phase2_ready_requirement_count": ready_requirement_count,
+        "phase2_blocker_count": len(blockers),
+        "phase2_blockers": blockers,
+        "phase2_pdbbind_casf_pose_success_harness_ready": requirement_rows[0]["ready"],
+        "phase2_symmetry_aware_ligand_rmsd_ready": requirement_rows[1]["ready"],
+        "phase2_posebusters_style_validity_checks_ready": requirement_rows[2]["ready"],
+        "phase2_vina_gnina_comparison_adapter_ready": requirement_rows[3]["ready"],
+        "phase2_dude_or_lit_pcba_enrichment_ready": requirement_rows[4]["ready"],
+        **pdbbind_detail,
+        **enrichment_detail,
+    }
+    return requirement_rows, summary
+
+
 def build_product_public_benchmark_contract(*, scorecard_csv: str | Path, root: str | Path | None = None) -> dict[str, Any]:
     root_path = Path(root).resolve() if root is not None else Path(scorecard_csv).resolve().parent
     scorecard_csv_present, scorecard_rows = _read_scorecard_rows(scorecard_csv)
@@ -321,12 +543,14 @@ def build_product_public_benchmark_contract(*, scorecard_csv: str | Path, root: 
     )
     duplicate_count = max(0, len(scorecard_rows) - len(evidence_by_suite))
     unknown_suite_count = sum(1 for row in scorecard_rows if _text(row.get("suite_id")) not in {_text(s["suite_id"]) for s in BENCHMARK_SUITES})
+    phase2_requirement_rows, phase2_summary = _phase2_public_benchmark_harness(rows, root=root_path)
     contract_ready = (
         scorecard_csv_present
         and not blocked_rows
         and duplicate_count == 0
         and unknown_suite_count == 0
         and len(ready_required_rows) == len(required_rows)
+        and bool(phase2_summary["phase2_public_benchmark_harness_ready"] is True)
     )
     blockers = [
         {
@@ -353,6 +577,16 @@ def build_product_public_benchmark_contract(*, scorecard_csv: str | Path, root: 
                 "severity": "hard",
                 "suite_id": "",
                 "reason": f"Scorecard intake has {unknown_suite_count} rows for suites outside the product benchmark contract.",
+            }
+        )
+    if not phase2_summary["phase2_public_benchmark_harness_ready"]:
+        blockers.append(
+            {
+                "code": "phase2_public_benchmark_harness_not_ready",
+                "severity": "hard",
+                "suite_id": PDBBIND_CASF_SUITE_ID,
+                "reason": "Phase 2 public benchmark harness blockers: "
+                + ";".join(phase2_summary["phase2_blockers"]),
             }
         )
     summary = {
@@ -382,6 +616,7 @@ def build_product_public_benchmark_contract(*, scorecard_csv: str | Path, root: 
         "external_state_mutated": False,
         "execution_enabled": False,
         "docking_results_emitted": False,
+        **phase2_summary,
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
             "Use the benchmark scorecard rows as release performance evidence."
@@ -389,4 +624,4 @@ def build_product_public_benchmark_contract(*, scorecard_csv: str | Path, root: 
             else "Materialize public benchmark datasets, run suite-specific scorecards, and fill the scorecard intake CSV."
         ),
     }
-    return {"summary": summary, "blockers": blockers, "rows": rows}
+    return {"summary": summary, "blockers": blockers, "rows": rows, "phase2_requirements": phase2_requirement_rows}

@@ -32,6 +32,9 @@ def test_build_product_public_benchmark_contract_tool_writes_outputs(tmp_path: P
     md_text = out_md.read_text(encoding="utf-8")
     assert payload["summary"]["status"] == "blocked_product_public_benchmark_contract"
     assert payload["summary"]["requires_24h_server"] is False
+    assert payload["summary"]["phase2_public_benchmark_harness_ready"] is False
+    assert payload["summary"]["phase2_requirement_count"] == 5
+    assert payload["summary"]["phase2_ready_requirement_count"] == 0
     assert payload["summary"]["suite_materialization_manifest_count"] == 5
     assert payload["summary"]["suite_scorecard_row_csv_count"] == 5
     assert payload["summary"]["suite_threshold_count"] == 5
@@ -48,4 +51,6 @@ def test_build_product_public_benchmark_contract_tool_writes_outputs(tmp_path: P
     assert "suite_scorecard_row_csv_count" in md_text
     assert "scorecard row" in md_text
     assert "run command" in md_text
+    assert "Phase 2 Harness" in md_text
+    assert "phase2_public_benchmark_harness_ready" in md_text
     assert "runs/lit_pcba_scorecard_row_current.csv" in md_text

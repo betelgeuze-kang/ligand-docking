@@ -68,6 +68,57 @@ def test_public_benchmark_result_provenance_carries_gold_metric_summary(tmp_path
     assert summary["subset_identity_sha256"] == "a" * 64
 
 
+def test_public_benchmark_result_provenance_auto_loads_pdbbind_casf_summary(tmp_path: Path) -> None:
+    result = tmp_path / "pdbbind_casf_pose_affinity_benchmark_results_current.csv"
+    result.write_text("suite_id,target_id,candidate_id,primary_metric_value\ns,T1,L1,0.7\n", encoding="utf-8")
+    execution = tmp_path / "pdbbind_casf_pose_affinity_results_current.json"
+    execution.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "pass": True,
+                    "gold_metric_schema_version": "tier_beta_docking_gold_metrics_v1",
+                    "gold_metric_status": "pass",
+                    "refine_improvement_observed": True,
+                    "subset_identity_sha256": "b" * 64,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = build_public_benchmark_result_provenance(
+        suite_id="pdbbind_casf_pose_affinity",
+        result_artifact=result,
+        source_engine="betelgeuze_product",
+        min_result_rows=1,
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "public_benchmark_result_provenance_ready"
+    assert summary["execution_summary_json"] == str(execution)
+    assert summary["execution_summary_present"] is True
+    assert summary["gold_metric_schema_version"] == "tier_beta_docking_gold_metrics_v1"
+    assert summary["refine_improvement_observed"] is True
+    assert summary["subset_identity_sha256"] == "b" * 64
+
+
+def test_public_benchmark_result_provenance_blocks_pdbbind_casf_without_summary(tmp_path: Path) -> None:
+    result = tmp_path / "pdbbind_casf_pose_affinity_benchmark_results_current.csv"
+    result.write_text("suite_id,target_id,candidate_id,primary_metric_value\ns,T1,L1,0.7\n", encoding="utf-8")
+
+    payload = build_public_benchmark_result_provenance(
+        suite_id="pdbbind_casf_pose_affinity",
+        result_artifact=result,
+        source_engine="betelgeuze_product",
+        min_result_rows=1,
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_public_benchmark_result_provenance"
+    assert "execution_summary_unreadable" in summary["blockers"]
+
+
 def test_public_benchmark_result_provenance_blocks_missing_result(tmp_path: Path) -> None:
     payload = build_public_benchmark_result_provenance(
         suite_id="dude_z_decoy_smoke",

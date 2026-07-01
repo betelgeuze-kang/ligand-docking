@@ -662,6 +662,54 @@ def test_build_gpcr_residual_prototype_spec_family_balanced_beta_blocker_rescue_
     assert "non_adrb2_tail_rank_blocker" in feature_rows
 
 
+def test_build_gpcr_residual_prototype_spec_adora2a_neutral_rescue_v1(tmp_path: Path) -> None:
+    out_json = tmp_path / "prototype_adora2a_neutral_rescue.json"
+    out_csv = tmp_path / "prototype_adora2a_neutral_rescue.csv"
+    out_md = tmp_path / "prototype_adora2a_neutral_rescue.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools/build_gpcr_residual_prototype_spec.py"),
+            "--variant",
+            "gpcr_adora2a_neutral_antagonist_rescue_v1",
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--out-md",
+            str(out_md),
+        ],
+        check=True,
+        cwd=ROOT,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    constraints = payload["prototype"]["constraints"]
+    tuning = payload["prototype"]["tuning"]
+    feature_rows = {row["feature_name"] for row in payload["feature_rows"]}
+    term_features = {term["feature"] for term in payload["prototype"]["linear_rescore"]["terms"]}
+
+    assert payload["summary"]["prototype_variant"] == "gpcr_adora2a_neutral_antagonist_rescue_v1"
+    assert constraints["claim_locked_candidate"] is True
+    assert constraints["target_specific_rescue_candidate"] is True
+    assert constraints["independent_replay_required"] is True
+    assert constraints["active_score_locked_to_base"] is True
+    assert constraints["target_scope_gate_allowed"] is True
+    assert constraints["target_identity_feature_allowed"] is False
+    assert constraints["router_promotion_allowed"] is False
+    assert constraints["threshold_relaxation_allowed"] is False
+    assert tuning["target_scope"] == "CHEMBL251_ADORA2A_HUMAN"
+    assert tuning["source_target_heldout_score_col"] == "binding_score_composite_v7_target_heldout_l2_l1_blend_probe"
+    assert tuning["adora2a_neutral_support_reward_score"] == 0.8
+    assert tuning["adora2a_basic_intrusion_penalty_score"] == 1.2
+    assert tuning["claim_promotion_allowed"] is False
+    assert payload["prototype"]["linear_rescore"]["enabled"] is True
+    assert "binding_score_composite_v7_target_heldout_l2_l1_blend_probe" in term_features
+    assert "adora2a_neutral_high_acceptor_support_rule" in feature_rows
+    assert "adora2a_basic_amine_intrusion_pressure_rule" in feature_rows
+    assert "binding_score_composite_v7_target_heldout_l2_l1_blend_probe" in feature_rows
+    assert "active_score_locked_to_base_even_in_apply_mode" in payload["prototype"]["interactions"]
+
+
 def test_build_gpcr_residual_prototype_spec_direct_atom_anchor_window_v8_is_claim_locked(tmp_path: Path) -> None:
     out_json = tmp_path / "prototype_direct_atom_window_v8.json"
     out_csv = tmp_path / "prototype_direct_atom_window_v8.csv"

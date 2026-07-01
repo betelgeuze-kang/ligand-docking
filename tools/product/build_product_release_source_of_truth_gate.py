@@ -82,6 +82,32 @@ REFINE_TIER_PUBLIC_BENCHMARK_RESIDUAL_METRIC_PAYLOAD_PRIORITY_PACKET_COMMAND = (
 REFINE_TIER_PUBLIC_BENCHMARK_SEEDED_METRIC_PAYLOAD_RECEIPT_BACKFILL_PACKET_COMMAND = (
     "python3 tools/product/build_refine_tier_public_benchmark_seeded_metric_payload_receipt_backfill_packet.py"
 )
+POCKETMD_LITE_STAGE3_CONTACT_CLASH_INTAKE_COMMAND = (
+    "python3 tools/product/build_pocketmd_lite_stage3_contact_clash_intake.py"
+)
+POCKETMD_LITE_REPORT_COMMAND = "python3 tools/product/build_pocketmd_lite_report.py"
+POCKETMD_LITE_REFINEMENT_WORK_ORDER_COMMAND = "python3 tools/product/build_pocketmd_lite_refinement_work_order.py"
+POCKETMD_LITE_REMAINING_EVIDENCE_QUEUE_COMMAND = (
+    "python3 tools/product/build_pocketmd_lite_remaining_evidence_queue.py"
+)
+POCKETMD_LITE_EVIDENCE_RECOVERY_MANIFEST_COMMAND = (
+    "python3 tools/product/build_pocketmd_lite_evidence_recovery_manifest.py"
+)
+POCKETMD_LITE_METRIC_COLLECTION_INPUT_PACK_COMMAND = (
+    "python3 tools/product/build_pocketmd_lite_metric_collection_input_pack.py"
+)
+POCKETMD_LITE_METRIC_COLLECTION_PROBE_COMMAND = (
+    "python3 tools/product/build_pocketmd_lite_metric_collection_probe.py"
+)
+POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_COMMAND = (
+    "python3 tools/product/build_pocketmd_lite_claim_grade_metric_source_audit.py"
+)
+POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_COMMAND = (
+    "python3 tools/product/build_pocketmd_lite_candidate_metric_fill_preview.py"
+)
+POCKETMD_LITE_TOPK_REFINEMENT_AUDIT_COMMAND = (
+    "python3 tools/product/build_pocketmd_lite_topk_refinement_audit.py"
+)
 
 RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_accuracy_parity_scorecard.py",
@@ -133,6 +159,16 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_api_contract.py",
     "python3 tools/product/build_ai_md_contract_source_of_truth_gate.py",
     "python3 tools/build_product_service_boundary_contract.py",
+    POCKETMD_LITE_STAGE3_CONTACT_CLASH_INTAKE_COMMAND,
+    POCKETMD_LITE_REPORT_COMMAND,
+    POCKETMD_LITE_REFINEMENT_WORK_ORDER_COMMAND,
+    POCKETMD_LITE_REMAINING_EVIDENCE_QUEUE_COMMAND,
+    POCKETMD_LITE_EVIDENCE_RECOVERY_MANIFEST_COMMAND,
+    POCKETMD_LITE_METRIC_COLLECTION_INPUT_PACK_COMMAND,
+    POCKETMD_LITE_METRIC_COLLECTION_PROBE_COMMAND,
+    POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_COMMAND,
+    POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_COMMAND,
+    POCKETMD_LITE_TOPK_REFINEMENT_AUDIT_COMMAND,
     "python3 tools/build_product_capability_surface_contract.py",
     "python3 tools/build_product_commercial_independence_gate.py",
     "python3 tools/build_product_image_smoke_preflight.py",
@@ -723,6 +759,112 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "artifact_id": "pocketmd_lite_stage3_contact_clash_intake",
+        "artifact_path": "runs/pocketmd_lite_stage3_contact_clash_intake_current.json",
+        "builder_command": POCKETMD_LITE_STAGE3_CONTACT_CLASH_INTAKE_COMMAND,
+        "depends_on": [
+            "tools/product/build_pocketmd_lite_stage3_contact_clash_intake.py",
+            "config/pocketmd_lite_candidates_current.csv",
+            "runs/external_validation_2026-05-10_beta_blocker_rescue_v2_family_balanced100k_r1_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage3_summary.json",
+        ],
+    },
+    {
+        "artifact_id": "pocketmd_lite_report",
+        "artifact_path": "runs/pocketmd_lite_report_current.json",
+        "builder_command": POCKETMD_LITE_REPORT_COMMAND,
+        "depends_on": [
+            "tools/product/build_pocketmd_lite_report.py",
+            "betelgeuze_product/pocketmd_lite_contract.py",
+            "config/pocketmd_lite_candidates_current.csv",
+            "runs/pocketmd_lite_stage3_contact_clash_intake_current.json",
+        ],
+    },
+    {
+        "artifact_id": "pocketmd_lite_refinement_work_order",
+        "artifact_path": "runs/pocketmd_lite_refinement_work_order_current.json",
+        "builder_command": POCKETMD_LITE_REFINEMENT_WORK_ORDER_COMMAND,
+        "depends_on": [
+            "tools/product/build_pocketmd_lite_refinement_work_order.py",
+            "runs/pocketmd_lite_report_current.json",
+            "config/pocketmd_lite_candidates_current.csv",
+        ],
+    },
+    {
+        "artifact_id": "pocketmd_lite_remaining_evidence_queue",
+        "artifact_path": "runs/pocketmd_lite_remaining_evidence_queue_current.json",
+        "builder_command": POCKETMD_LITE_REMAINING_EVIDENCE_QUEUE_COMMAND,
+        "depends_on": [
+            "tools/product/build_pocketmd_lite_remaining_evidence_queue.py",
+            "betelgeuze_product/pocketmd_lite_contract.py",
+            "runs/pocketmd_lite_report_current.json",
+            "config/pocketmd_lite_candidates_current.csv",
+            "runs/external_validation_2026-05-10_beta_blocker_rescue_v2_family_balanced100k_r1_set1_core_blind_gpcr_core_full_p0_n100000_r1_stage3_summary.json",
+        ],
+    },
+    {
+        "artifact_id": "pocketmd_lite_evidence_recovery_manifest",
+        "artifact_path": "runs/pocketmd_lite_evidence_recovery_manifest_current.json",
+        "builder_command": POCKETMD_LITE_EVIDENCE_RECOVERY_MANIFEST_COMMAND,
+        "depends_on": [
+            "tools/product/build_pocketmd_lite_evidence_recovery_manifest.py",
+            "runs/pocketmd_lite_remaining_evidence_queue_current.json",
+        ],
+    },
+    {
+        "artifact_id": "pocketmd_lite_metric_collection_input_pack",
+        "artifact_path": "runs/pocketmd_lite_metric_collection_input_pack_current.json",
+        "builder_command": POCKETMD_LITE_METRIC_COLLECTION_INPUT_PACK_COMMAND,
+        "depends_on": [
+            "tools/product/build_pocketmd_lite_metric_collection_input_pack.py",
+            "runs/pocketmd_lite_remaining_evidence_queue_current.json",
+            "runs/pocketmd_lite_evidence_recovery_manifest_current.json",
+        ],
+    },
+    {
+        "artifact_id": "pocketmd_lite_metric_collection_probe",
+        "artifact_path": "runs/pocketmd_lite_metric_collection_probe_current.json",
+        "builder_command": POCKETMD_LITE_METRIC_COLLECTION_PROBE_COMMAND,
+        "depends_on": [
+            "tools/product/build_pocketmd_lite_metric_collection_probe.py",
+            "betelgeuze_product/pocketmd_lite_contract.py",
+            "runs/pocketmd_lite_metric_collection_input_pack_current.csv",
+        ],
+    },
+    {
+        "artifact_id": "pocketmd_lite_claim_grade_metric_source_audit",
+        "artifact_path": "runs/pocketmd_lite_claim_grade_metric_source_audit_current.json",
+        "builder_command": POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_COMMAND,
+        "depends_on": [
+            "tools/product/build_pocketmd_lite_claim_grade_metric_source_audit.py",
+            "runs/pocketmd_lite_metric_collection_input_pack_current.csv",
+            "runs/pocketmd_lite_metric_collection_probe_current.json",
+        ],
+    },
+    {
+        "artifact_id": "pocketmd_lite_candidate_metric_fill_preview",
+        "artifact_path": "runs/pocketmd_lite_candidate_metric_fill_preview_current.json",
+        "builder_command": POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_COMMAND,
+        "depends_on": [
+            "tools/product/build_pocketmd_lite_candidate_metric_fill_preview.py",
+            "betelgeuze_product/pocketmd_lite_contract.py",
+            "config/pocketmd_lite_candidates_current.csv",
+            "runs/pocketmd_lite_metric_collection_probe_current.json",
+        ],
+    },
+    {
+        "artifact_id": "pocketmd_lite_topk_refinement_audit",
+        "artifact_path": "runs/pocketmd_lite_topk_refinement_audit_current.json",
+        "builder_command": POCKETMD_LITE_TOPK_REFINEMENT_AUDIT_COMMAND,
+        "depends_on": [
+            "tools/product/build_pocketmd_lite_topk_refinement_audit.py",
+            "runs/pocketmd_lite_report_current.json",
+            "runs/pocketmd_lite_metric_collection_probe_current.json",
+            "runs/pocketmd_lite_remaining_evidence_queue_current.json",
+            "runs/pocketmd_lite_candidate_metric_fill_preview_current.json",
+            "runs/pocketmd_lite_claim_grade_metric_source_audit_current.json",
+        ],
+    },
+    {
         "artifact_id": "product_capability_surface_contract",
         "artifact_path": "runs/product_capability_surface_contract_current.json",
         "builder_command": "python3 tools/build_product_capability_surface_contract.py",
@@ -733,6 +875,10 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "betelgeuze_product/docking_request.py",
             "runs/restricted_unattended_execution_readiness_current.json",
             "runs/product_security_deployment_contract_current.json",
+            "runs/gpcr_hard_decoy_suite_current.json",
+            "runs/pocketmd_lite_report_current.json",
+            "runs/pocketmd_lite_remaining_evidence_queue_current.json",
+            "runs/pocketmd_lite_topk_refinement_audit_current.json",
         ],
     },
     {
@@ -2212,12 +2358,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_status": "blocked_product_goal_completion_audit",
         "required_true_fields": [],
         "required_int_exact_fields": {
-            "release_blocker_fail_count": 2,
+            "release_blocker_fail_count": 4,
         },
         "required_text_exact_fields": {
-            "primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
-            "primary_release_blocker_tier": "full_commercial_scope",
-            "primary_release_blocker": "full_scope_claim_closure_not_ready",
+            "primary_release_blocker_requirement_id": "R1_local_self_hosted_product",
+            "primary_release_blocker_tier": "release",
+            "primary_release_blocker": "local_product_surface_not_ready",
         },
     },
     {
@@ -2397,14 +2543,14 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "force_gpu_worker_return_receipt_ready": 1,
             "selected_sidecar_ready": 1,
             "production_training_data_ready": 1,
-            "registry_promotion_upstream_acceptance_ready": 1,
-            "production_inference_acceptance_blocked_stage_count": 1,
+            "registry_promotion_upstream_acceptance_ready": 0,
+            "production_inference_acceptance_blocked_stage_count": 2,
         },
         "required_text_exact_fields": {
             "default_residual_mode": "shadow",
-            "production_inference_actionable_blocker_stage_id": "registry_guarded_promotion_acceptance",
-            "production_inference_actionable_blocker_check_id": "registry_customer_facing_promotion_allowed",
-            "production_inference_actionable_blocker_artifact": "runs/residual_model_registry_current.json",
+            "production_inference_actionable_blocker_stage_id": "checkpoint_sidecar_acceptance",
+            "production_inference_actionable_blocker_check_id": "selected_sidecar_training_contract_ready",
+            "production_inference_actionable_blocker_artifact": "runs/residual_production_checkpoint_sidecar_current.json",
         },
     },
     {
@@ -4437,15 +4583,15 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_status": "operator_actions_required",
         "required_true_fields": [],
         "required_int_exact_fields": {
-            "product_goal_release_blocker_fail_count": 2,
+            "product_goal_release_blocker_fail_count": 4,
         },
         "required_text_exact_fields": {
-            "product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
-            "product_goal_primary_release_blocker_tier": "full_commercial_scope",
-            "product_goal_primary_release_blocker": "full_scope_claim_closure_not_ready",
-            "primary_release_blocker_action_id": "product_scope_expansion:resolve_full_scope_breadth_evidence_receipt",
-            "primary_release_blocker_action_required_input": "config/product_scope_breadth_evidence_receipt_current.csv",
-            "primary_release_blocker_action_status": "required",
+            "product_goal_primary_release_blocker_requirement_id": "R1_local_self_hosted_product",
+            "product_goal_primary_release_blocker_tier": "release",
+            "product_goal_primary_release_blocker": "local_product_surface_not_ready",
+            "primary_action_id": "product_ai_production:complete_production_ai_actionable_operator_packet",
+            "primary_action_required_input": "protein_ca;ligand_frames;queue_id",
+            "primary_action_status": "required",
         },
     },
     {
@@ -4458,7 +4604,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "production_ai_registry_promotion_priority_packet_ready",
         ],
         "required_int_exact_fields": {
-            "product_goal_release_blocker_fail_count": 2,
+            "product_goal_release_blocker_fail_count": 5,
             "full_commercial_evidence_receipt_entry_count": 2,
             "full_commercial_evidence_receipt_operator_input_required_count": 2,
             "full_commercial_evidence_receipt_current_action_required_count": 2,
@@ -4524,12 +4670,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "product_scope_breadth_evidence_priority_receipt_approval_token_required": (
                 "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
             ),
-            "product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
-            "product_goal_primary_release_blocker_tier": "full_commercial_scope",
-            "product_goal_primary_release_blocker": "full_scope_claim_closure_not_ready",
-            "primary_release_blocker_action_id": "product_scope_expansion:resolve_full_scope_breadth_evidence_receipt",
-            "primary_release_blocker_action_required_input": "config/product_scope_breadth_evidence_receipt_current.csv",
-            "primary_release_blocker_action_status": "required",
+            "product_goal_primary_release_blocker_requirement_id": "R1_local_self_hosted_product",
+            "product_goal_primary_release_blocker_tier": "release",
+            "product_goal_primary_release_blocker": "local_product_surface_not_ready",
+            "primary_action_id": "product_ai_production:complete_residual_registry_guarded_promotion",
+            "primary_action_required_input": "protein_ca;ligand_frames;queue_id",
+            "primary_action_status": "required",
             "full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
                 "engine_refinement_claim_evidence_receipt=blocked_engine_refinement_claim_evidence_receipt"

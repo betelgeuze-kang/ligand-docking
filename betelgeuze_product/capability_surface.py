@@ -111,15 +111,28 @@ def _read_artifact_summary(root: Path, path_like: str) -> dict[str, Any]:
 # Read-only product evidence surfaces (report/materializer -> API route -> local
 # delivery bundle -> commercial handoff bundle). Surfaced here for GUI/operator
 # discovery only. This never promotes a scientific claim: H-Bond BackMap stays
-# local interpretability evidence, and the GPCR hard-decoy suite stays a
-# fail-closed broad-GPCR gate (broad_family_locked is a valid, non-claimable
-# state).
+# local interpretability evidence, the GPCR hard-decoy suite stays a fail-closed
+# broad-GPCR gate, and PocketMD Lite stays top-k-only refinement evidence.
 def _evidence_surfaces(root: Path) -> list[dict[str, Any]]:
     hbond_artifact = "runs/hbond_backmap_report_current.json"
     gpcr_artifact = "runs/gpcr_hard_decoy_suite_current.json"
+    pocketmd_artifact = "runs/pocketmd_lite_report_current.json"
+    pocketmd_queue_artifact = "runs/pocketmd_lite_remaining_evidence_queue_current.json"
+    pocketmd_audit_artifact = "runs/pocketmd_lite_topk_refinement_audit_current.json"
     hbond_present = _artifact_present(root, hbond_artifact)
     gpcr_present = _artifact_present(root, gpcr_artifact)
+    pocketmd_present = _artifact_present(root, pocketmd_artifact)
+    pocketmd_queue_present = _artifact_present(root, pocketmd_queue_artifact)
+    pocketmd_audit_present = _artifact_present(root, pocketmd_audit_artifact)
     gpcr_summary = _read_artifact_summary(root, gpcr_artifact)
+    pocketmd_summary = _read_artifact_summary(root, pocketmd_artifact)
+    pocketmd_queue_summary = _read_artifact_summary(root, pocketmd_queue_artifact)
+    pocketmd_audit_summary = _read_artifact_summary(root, pocketmd_audit_artifact)
+    pocketmd_audit_claim_safe = (
+        pocketmd_audit_summary.get("claim_grade_refinement_evidence_ready") is True
+        and pocketmd_audit_summary.get("claim_grade_report_evidence_ready") is True
+        and pocketmd_audit_summary.get("claim_promotion_allowed") is True
+    )
     return [
         {
             "capability_id": "hbond_backmap_report",
@@ -155,6 +168,87 @@ def _evidence_surfaces(root: Path) -> list[dict[str, Any]]:
             "claim_boundary": (
                 "GPCR hard-decoy suite does not run scoring, generate decoys, relax thresholds, or "
                 "promote broad-GPCR claims."
+            ),
+            "execution_enabled": False,
+            "external_state_mutated": False,
+        },
+        {
+            "capability_id": "pocketmd_lite_report",
+            "surface": "product_evidence_surface",
+            "route": "/product/pocketmd-lite-report",
+            "artifact": pocketmd_artifact,
+            "bundle_surfaces": ["product_capability_surface_contract"],
+            "claim_type": "top_k_pocket_refinement_gate",
+            "surface_available": True,
+            "artifact_present": pocketmd_present,
+            # Fail-closed: only explicit report-level claim safety is claim-safe.
+            "claim_safe": bool(pocketmd_summary.get("pocketmd_lite_claim_safe") is True),
+            "claim_status": _text(pocketmd_summary.get("status")) or ("present" if pocketmd_present else "missing"),
+            "claim_boundary": (
+                "PocketMD Lite grades top-k-only pocket-local refinement evidence; it does not run local-min "
+                "or micro-MD here and is not a binding-affinity claim."
+            ),
+            "execution_enabled": False,
+            "external_state_mutated": False,
+        },
+        {
+            "capability_id": "pocketmd_lite_remaining_evidence_queue",
+            "surface": "product_evidence_surface",
+            "route": "/product/pocketmd-lite-remaining-evidence-queue",
+            "artifact": pocketmd_queue_artifact,
+            "bundle_surfaces": ["product_capability_surface_contract"],
+            "claim_type": "top_k_refinement_evidence_queue",
+            "surface_available": True,
+            "artifact_present": pocketmd_queue_present,
+            "claim_safe": False,
+            "claim_status": _text(pocketmd_queue_summary.get("status")) or (
+                "present" if pocketmd_queue_present else "missing"
+            ),
+            "claim_boundary": (
+                "PocketMD Lite remaining evidence queue records missing top-k local-min and H-bond persistence "
+                "inputs; it does not execute refinement or promote a binding-affinity claim."
+            ),
+            "execution_enabled": False,
+            "external_state_mutated": False,
+        },
+        {
+            "capability_id": "pocketmd_lite_topk_refinement_audit",
+            "surface": "product_evidence_surface",
+            "route": "/product/pocketmd-lite-topk-refinement-audit",
+            "artifact": pocketmd_audit_artifact,
+            "bundle_surfaces": ["product_capability_surface_contract"],
+            "claim_type": "top_k_refinement_claim_grade_audit",
+            "surface_available": True,
+            "artifact_present": pocketmd_audit_present,
+            "claim_safe": pocketmd_audit_claim_safe,
+            "claim_status": _text(pocketmd_audit_summary.get("status")) or (
+                "present" if pocketmd_audit_present else "missing"
+            ),
+            "selected_top_k_count": _int(pocketmd_audit_summary.get("selected_top_k_count")),
+            "claim_grade_refinement_evidence_ready": bool(
+                pocketmd_audit_summary.get("claim_grade_refinement_evidence_ready") is True
+            ),
+            "claim_grade_report_evidence_ready": bool(
+                pocketmd_audit_summary.get("claim_grade_report_evidence_ready") is True
+            ),
+            "proxy_topk_telemetry_ready": bool(pocketmd_audit_summary.get("proxy_topk_telemetry_ready") is True),
+            "claim_grade_missing_candidate_count": _int(
+                pocketmd_audit_summary.get("claim_grade_missing_candidate_count")
+            ),
+            "missing_refinement_metric_names": (
+                pocketmd_audit_summary.get("missing_refinement_metric_names")
+                if isinstance(pocketmd_audit_summary.get("missing_refinement_metric_names"), list)
+                else []
+            ),
+            "missing_refinement_metric_counts": (
+                pocketmd_audit_summary.get("missing_refinement_metric_counts")
+                if isinstance(pocketmd_audit_summary.get("missing_refinement_metric_counts"), dict)
+                else {}
+            ),
+            "claim_boundary": (
+                "PocketMD Lite top-k refinement audit separates claim-grade local-min, H-bond, contact, "
+                "clash-relief, and uncertainty evidence from diagnostic proxy telemetry; proxy telemetry "
+                "cannot satisfy claim-grade refinement fields or promote a binding-affinity claim."
             ),
             "execution_enabled": False,
             "external_state_mutated": False,

@@ -28,6 +28,7 @@ from api.product_hbond_backmap import router as product_hbond_backmap_router
 from api.product_docking import router as product_docking_router
 from api.product_license import router as product_license_router
 from api.product_operational import router as product_operational_router
+from api.product_pocketmd_lite import router as product_pocketmd_lite_router
 from api.product_production_ai import router as product_production_ai_router
 from api.product_release_evidence import router as product_release_evidence_router
 from api.product_release_ops import router as product_release_ops_router
@@ -82,6 +83,7 @@ app.include_router(product_commercial_readiness_router)
 app.include_router(product_evidence_goal_router)
 app.include_router(product_hbond_backmap_router)
 app.include_router(product_gpcr_hard_decoy_router)
+app.include_router(product_pocketmd_lite_router)
 app.include_router(product_router)
 app.include_router(product_tier_beta_router)
 

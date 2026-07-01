@@ -5,6 +5,8 @@ Status: reference. Operator fill guide for the GPCR hard-decoy claim gate
 
 Source of truth:
 - Input template: `config/gpcr_hard_decoy_suite_input_template.csv`
+- Current actual input extractor:
+  `tools/product/build_gpcr_hard_decoy_suite_current_input.py`
 - Materializer: `tools/product/build_gpcr_hard_decoy_suite_report.py`
 - Gate/evaluator: `betelgeuze_product/gpcr_hard_decoy_suite.py`
 - Contract: `docs/gpcr_hard_decoy_suite_contract.md`
@@ -27,14 +29,14 @@ copied in. This runbook never relaxes the gate; it only documents data entry.
 | column | required | meaning | source |
 | --- | :--: | --- | --- |
 | `target_id` | yes | `DRD2`, `HTR2A`, or `OPRM1` (fixed required set) | fixed |
-| `positive_count` | yes | number of known positives evaluated | diagnostics packet |
+| `positive_count` | yes | number of known positives evaluated; must be > 0 to pass | diagnostics packet |
 | `ranking_pr_auc` | no | ranking PR-AUC point estimate | `runs/gpcr_ci_low_recovery_packet_*` |
 | `ranking_pr_auc_ci_low` | no | bootstrap CI-low of PR-AUC (gate: `>= 0.45`) | `runs/gpcr_ci_low_recovery_packet_*` |
 | `top20_hit_rate` | no | top-20 hit rate (gate: `>= 0.20`) | ranking diagnostics |
-| `decoys_above_positive_count` | no | decoys ranked above the positive (gate: `== 0`) | `runs/gpcr_guarded_100k_rank_failure_diagnostics_*` |
+| `decoys_above_positive_count` | no | decoys ranked above the positive (gate: present and `== 0`) | `runs/gpcr_guarded_100k_rank_failure_diagnostics_*` |
 | `positive_target_rank` | no | rank of the positive in the pool | rank-failure diagnostics |
-| `positive_anchor_distance_a` | no | positive distance to the native anchor (Å) | `runs/gpcr_drd2_*` / anchor diagnostics |
-| `top_decoy_anchor_distance_a` | no | best decoy distance to the native anchor (Å) | anchor diagnostics |
+| `positive_anchor_distance_a` | no | positive distance to the native anchor (A); must be present to pass | `runs/gpcr_drd2_*` / anchor diagnostics |
+| `top_decoy_anchor_distance_a` | no | best decoy distance to the native anchor (A); must be present to pass | anchor diagnostics |
 | `decoy_class_counts` | no | JSON object of decoy-class counts | decoy taxonomy diagnostics |
 
 `decoy_class_counts` is a JSON-string cell. Allowed classes only:
@@ -47,8 +49,10 @@ unknown class fail-closes the materializer.
 A target is `green` only when **all** hold:
 - `ranking_pr_auc_ci_low >= 0.45`
 - `top20_hit_rate >= 0.20`
-- `decoys_above_positive_count == 0`
-- the positive is not out-anchored: if both anchor distances are present,
+- `positive_count > 0`
+- `decoys_above_positive_count` is present and `== 0`
+- both anchor distances are present
+- the positive is not out-anchored:
   `top_decoy_anchor_distance_a >= positive_anchor_distance_a`.
 
 The broad GPCR/router family claim stays `broad_family_locked` until every
@@ -69,9 +73,22 @@ root cause `anchor_separation_insufficient`).
 
 ## Run
 
+Build the current actual aggregate input from the pinned GPCR independent-repeat
+artifacts:
+
+```
+python3 tools/product/build_gpcr_hard_decoy_suite_current_input.py
+```
+
+This writes `config/gpcr_hard_decoy_suite_current.csv` plus
+`runs/gpcr_hard_decoy_suite_current_input_provenance.json`. If detailed ranking
+rows are missing, the extractor may use retained top-rank rows as partial
+evidence. Missing positives or incomplete anchor evidence still fail-close; do
+not hand-fill zeros.
+
 ```
 python3 tools/product/build_gpcr_hard_decoy_suite_report.py \
-  --input-csv config/gpcr_hard_decoy_suite_input_template.csv \
+  --input-csv config/gpcr_hard_decoy_suite_current.csv \
   --out-json runs/gpcr_hard_decoy_suite_current.json \
   --out-md   runs/gpcr_hard_decoy_suite_current.md \
   --out-csv  runs/gpcr_hard_decoy_suite_current.csv

@@ -957,3 +957,94 @@ def test_family_balanced_beta_blocker_rescue_v3_uses_configured_pharmacophore_re
     assert out.loc[0, "binding_score_composite_v7_residual_shadow"] == -12.0
     assert out.loc[1, "binding_score_composite_v7_residual_shadow"] == -2.1
     assert out.loc[0, "binding_score_composite_v7_residual_active"] == -12.0
+
+
+def test_adora2a_neutral_antagonist_rescue_is_target_scoped_and_claim_locked(tmp_path):
+    spec = tmp_path / "residual_adora2a_neutral_rescue.json"
+    spec.write_text(
+        json.dumps(
+            {
+                "prototype": {
+                    "constraints": {
+                        "max_abs_delta_score": 0.0,
+                        "yellow_band_abs_delta_score": 0.4,
+                    },
+                    "tuning": {
+                        "variant": "gpcr_adora2a_neutral_antagonist_rescue_v1",
+                        "adora2a_neutral_support_reward_score": 0.8,
+                        "adora2a_basic_intrusion_penalty_score": 1.2,
+                    },
+                    "linear_rescore": {
+                        "enabled": True,
+                        "combine_mode": "replace",
+                        "terms": [
+                            {
+                                "feature": "binding_score_composite_v7_target_heldout_l2_l1_blend_probe",
+                                "weight": 1.0,
+                            }
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    df = pd.DataFrame(
+        {
+            "ligand_id": ["adora2a_neutral", "adora2a_basic_intrusion", "adrb2_neutral"],
+            "target": [
+                "CHEMBL251_ADORA2A_HUMAN",
+                "CHEMBL251_ADORA2A_HUMAN",
+                "CHEMBL210_ADRB2_HUMAN",
+            ],
+            "ligand_h_donors": [0, 2, 0],
+            "ligand_h_acceptors": [5, 4, 5],
+            "ligand_logp": [4.0, 3.5, 4.0],
+            "ligand_rot_bonds": [4, 5, 4],
+            "basic_amine_count": [0, 1, 0],
+            "binding_score_composite_v7": [-1.0, -1.0, -1.0],
+            "binding_score_composite_v7_target_heldout_l2_l1_blend_probe": [-0.5, -0.5, -0.5],
+        }
+    )
+    args = argparse.Namespace(
+        residual_prototype_enabled=True,
+        residual_prototype_mode="apply",
+        residual_prototype_family="gpcr",
+        residual_prototype_spec_json=str(spec),
+        residual_prototype_runtime_hook_ready=True,
+        residual_prototype_max_abs_delta_score=None,
+        residual_prototype_yellow_band_abs_delta_score=None,
+        score_reference_scaling_mode="run_local",
+    )
+    zero = pd.Series([0.0, 0.0, 0.0], dtype=float)
+
+    out, summary = mod._apply_residual_prototype_shadow(
+        df,
+        args,
+        z_e=zero,
+        z_d=zero,
+        z_s=zero,
+        z_c=zero,
+        z_aff=zero,
+        z_logp=zero,
+        z_rot=zero,
+        z_hd=zero,
+        z_ha=zero,
+    )
+
+    assert summary["tuning_variant"] == "gpcr_adora2a_neutral_antagonist_rescue_v1"
+    assert summary["status"] == "shadow_ready_claim_locked"
+    assert summary["shadow_only_active_locked"] is True
+    assert summary["linear_rescore_status"] == "applied"
+    assert summary["adora2a_neutral_support_count"] == 1
+    assert summary["adora2a_basic_intrusion_pressure_count"] == 1
+    assert out.loc[0, "gpcr_adora2a_neutral_antagonist_support"] == 1
+    assert out.loc[0, "gpcr_adora2a_neutral_antagonist_reward"] == 0.8
+    assert abs(out.loc[0, "binding_score_composite_v7_residual_shadow"] - (-1.3)) < 1e-9
+    assert out.loc[1, "gpcr_adora2a_basic_amine_intrusion_pressure"] == 1
+    assert out.loc[1, "gpcr_adora2a_basic_amine_intrusion_penalty"] == 1.2
+    assert abs(out.loc[1, "binding_score_composite_v7_residual_shadow"] - 0.7) < 1e-9
+    assert out.loc[2, "gpcr_adora2a_neutral_antagonist_support"] == 0
+    assert out.loc[2, "gpcr_adora2a_basic_amine_intrusion_pressure"] == 0
+    assert out.loc[2, "binding_score_composite_v7_residual_shadow"] == -0.5
+    assert out["binding_score_composite_v7_residual_active"].tolist() == [-1.0, -1.0, -1.0]

@@ -210,6 +210,41 @@ def test_product_public_benchmark_work_order_uses_lit_pcba_scorecard_row_csv() -
     assert row["result_generation_approval_token_required"] == "APPROVE_PRODUCT_DOCKING_EXECUTION"
 
 
+def test_product_public_benchmark_work_order_includes_pdbbind_casf_execution_summary() -> None:
+    packet = _blocked_public_benchmark_packet()
+    packet["rows"] = [
+        {
+            "suite_id": "pdbbind_casf_pose_affinity",
+            "benchmark_family": "protein_ligand_pose_affinity",
+            "status": "blocked",
+            "required_for_commercial_release": True,
+            "dataset_source_url": "https://www.pdbbind-plus.org.cn/",
+            "materialization_manifest_json": "runs/pdbbind_casf_pose_affinity_materialization_manifest_current.json",
+            "scorecard_json": "runs/pdbbind_casf_pose_affinity_scorecard_current.json",
+            "product_provenance_json": "runs/pdbbind_casf_pose_affinity_result_provenance_current.json",
+            "primary_metric": "pose_success_rate",
+            "primary_metric_value": 0.0,
+            "primary_metric_threshold": 0.35,
+            "materialization_manifest_status": "public_benchmark_materialization_ready",
+            "operator_input_artifacts": "data/public_benchmarks/pdbbind_casf_pose_affinity",
+            "operator_output_artifacts": "runs/pdbbind_casf_pose_affinity_benchmark_results_current.csv",
+            "scorecard_json_summary_status": "blocked_public_benchmark_suite_scorecard",
+            "blockers": "scorecard_json_status_not_pass,scorecard_status_not_pass",
+            "materialization_run_command": (
+                "python3 tools/build_public_benchmark_materialization_manifest.py "
+                "--suite-id pdbbind_casf_pose_affinity"
+            ),
+            "run_command": "python3 tools/build_public_benchmark_suite_scorecard.py --suite-id pdbbind_casf_pose_affinity",
+        }
+    ]
+
+    payload = build_product_public_benchmark_work_order(public_benchmark_packet=packet)
+
+    row = payload["rows"][0]
+    assert "--execution-summary-json runs/pdbbind_casf_pose_affinity_results_current.json" in row["result_provenance_command"]
+    assert "--execution-summary-json runs/pdbbind_casf_pose_affinity_results_current.json" in row["continuous_validation_command"]
+
+
 def test_build_product_public_benchmark_work_order_tool_writes_outputs(tmp_path: Path) -> None:
     public_benchmark = tmp_path / "public_benchmark.json"
     public_benchmark.write_text(json.dumps(_blocked_public_benchmark_packet()) + "\n", encoding="utf-8")

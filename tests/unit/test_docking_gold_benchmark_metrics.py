@@ -195,6 +195,73 @@ def test_docking_gold_metrics_fail_closed_without_ranking_labels() -> None:
     assert "peak_memory_metric_incomplete" in payload["blockers"]
 
 
+def test_docking_gold_metrics_can_evaluate_external_comparator_without_baseline_delta() -> None:
+    rows = [
+        DockingGoldRow(
+            "1abc",
+            "1abc_pose1",
+            1,
+            pose_rmsd_a=1.0,
+            score=-9.0,
+            affinity_label=9.0,
+            active_label=True,
+            chemistry_evidence_present=True,
+            runtime_ms=10,
+            peak_memory_mb=100,
+        ),
+        DockingGoldRow(
+            "1abc",
+            "1abc_decoy1",
+            2,
+            pose_rmsd_a=5.0,
+            score=-1.0,
+            affinity_label=1.0,
+            active_label=False,
+            abstained=True,
+            abstention_reasons=("external_comparator_decoy_rejected",),
+            chemistry_evidence_present=True,
+            runtime_ms=11,
+            peak_memory_mb=101,
+        ),
+        DockingGoldRow(
+            "2def",
+            "2def_pose1",
+            1,
+            pose_rmsd_a=1.2,
+            score=-8.0,
+            affinity_label=8.0,
+            active_label=True,
+            chemistry_evidence_present=True,
+            runtime_ms=12,
+            peak_memory_mb=102,
+        ),
+        DockingGoldRow(
+            "2def",
+            "2def_decoy1",
+            2,
+            pose_rmsd_a=6.0,
+            score=-2.0,
+            affinity_label=2.0,
+            active_label=False,
+            abstained=True,
+            abstention_reasons=("external_comparator_decoy_rejected",),
+            chemistry_evidence_present=True,
+            runtime_ms=13,
+            peak_memory_mb=103,
+        ),
+    ]
+
+    payload = evaluate_docking_gold_slice(rows, require_baseline=False).to_dict()
+
+    assert payload["status"] == "pass"
+    assert payload["ranking_spearman"] == pytest.approx(1.0)
+    assert payload["pr_auc"] == pytest.approx(1.0)
+    assert payload["baseline_ranking_spearman"] is None
+    assert payload["refine_ranking_spearman_delta"] is None
+    assert "baseline_ranking_spearman_not_computable" not in payload["blockers"]
+    assert "refine_ranking_spearman_delta_not_computable" not in payload["blockers"]
+
+
 def test_docking_gold_metrics_block_without_decoy_or_refine_improvement() -> None:
     rows = [
         DockingGoldRow(

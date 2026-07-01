@@ -58,6 +58,9 @@ OPTIONAL_NUMERIC_COLUMNS = (
     "positive_target_rank",
     "positive_anchor_distance_a",
     "top_decoy_anchor_distance_a",
+    "retained_target_row_count",
+    "retained_positive_count",
+    "top_decoy_retained_count",
 )
 DECOY_CLASS_COUNTS_COLUMN = "decoy_class_counts"
 
@@ -134,6 +137,7 @@ def build_gpcr_hard_decoy_suite_report_artifact(
     input_csv: str | Path,
     *,
     required_target_ids: list[str] | None = None,
+    claim_lock_reason: str = "",
 ) -> dict[str, Any]:
     """Build the report artifact dict from an aggregate per-target input CSV.
 
@@ -166,6 +170,20 @@ def build_gpcr_hard_decoy_suite_report_artifact(
         return _blocked_artifact(STATUS_BLOCKED_INVALID_ROW, path, str(exc))
 
     summary = {**suite["summary"], **_READ_ONLY_FLAGS}
+    claim_lock_text = str(claim_lock_reason or "").strip()
+    if claim_lock_text:
+        summary.update(
+            {
+                "claim_locked": True,
+                "claim_lock_reason": claim_lock_text,
+                "diagnostic_status_before_claim_lock": summary.get("status"),
+                "diagnostic_family_claim_safe_before_claim_lock": bool(summary.get("family_claim_safe")),
+                "status": "claim_locked_gpcr_hard_decoy_diagnostic_probe",
+                "family_claim_safe": False,
+            }
+        )
+    else:
+        summary["claim_locked"] = False
     return {
         "packet_type": PACKET_TYPE,
         "schema_version": REPORT_SCHEMA_VERSION,
@@ -201,16 +219,31 @@ def _render_markdown(artifact: dict[str, Any]) -> str:
         [
             f"- status: `{summary.get('status')}`",
             f"- family_claim_safe: `{str(summary.get('family_claim_safe')).lower()}`",
+            f"- claim_locked: `{str(summary.get('claim_locked')).lower()}`",
             f"- required_target_ids: `{', '.join(summary.get('required_target_ids', []))}`",
             f"- green_target_ids: `{', '.join(summary.get('green_target_ids', [])) or '(none)'}`",
             f"- blocked_target_ids: `{', '.join(summary.get('blocked_target_ids', [])) or '(none)'}`",
             f"- missing_required_target_ids: `{', '.join(summary.get('missing_required_target_ids', [])) or '(none)'}`",
             f"- first_blocked_required_target: `{summary.get('first_blocked_required_target') or '(none)'}`",
+        ]
+    )
+    if summary.get("claim_locked"):
+        lines.extend(
+            [
+                f"- diagnostic_status_before_claim_lock: `{summary.get('diagnostic_status_before_claim_lock')}`",
+                "- diagnostic_family_claim_safe_before_claim_lock: "
+                f"`{str(summary.get('diagnostic_family_claim_safe_before_claim_lock')).lower()}`",
+                f"- claim_lock_reason: `{summary.get('claim_lock_reason')}`",
+                "",
+            ]
+        )
+    lines.extend(
+        [
             "",
             "## Targets",
             "",
-            "| target | gate | CI-low | top20 | decoys_above | blockers | root_cause_tags |",
-            "| --- | --- | --: | --: | --: | --- | --- |",
+            "| target | gate | CI-low | top20 | decoys_above | anchor_margin | retained_decoys | blockers | root_cause_tags |",
+            "| --- | --- | --: | --: | --: | --: | --: | --- | --- |",
         ]
     )
     for target in artifact["targets"]:
@@ -218,12 +251,14 @@ def _render_markdown(artifact: dict[str, Any]) -> str:
             return "" if value is None else (f"{value:.4f}" if isinstance(value, float) else str(value))
 
         lines.append(
-            "| `{tid}` | `{gate}` | {ci} | {top20} | {decoys} | {blockers} | {roots} |".format(
+            "| `{tid}` | `{gate}` | {ci} | {top20} | {decoys} | {margin} | {retained_decoys} | {blockers} | {roots} |".format(
                 tid=target["target_id"],
                 gate=target["gate_status"],
                 ci=_fmt(target["ranking_pr_auc_ci_low"]),
                 top20=_fmt(target["top20_hit_rate"]),
-                decoys=target["decoys_above_positive_count"],
+                decoys=_fmt(target["decoys_above_positive_count"]),
+                margin=_fmt(target.get("anchor_margin_a")),
+                retained_decoys=_fmt(target.get("top_decoy_retained_count")),
                 blockers=", ".join(target["blockers"]) or "(none)",
                 roots=", ".join(target["root_cause_tags"]) or "(none)",
             )
@@ -242,6 +277,10 @@ _CSV_COLUMNS = [
     "decoys_above_positive_count",
     "positive_anchor_distance_a",
     "top_decoy_anchor_distance_a",
+    "anchor_margin_a",
+    "retained_target_row_count",
+    "retained_positive_count",
+    "top_decoy_retained_count",
     "blockers",
     "root_cause_tags",
     "decoy_class_counts",
@@ -263,12 +302,22 @@ def _write_csv(out_csv: Path, targets: list[dict[str, Any]]) -> None:
                         "" if target["ranking_pr_auc_ci_low"] is None else target["ranking_pr_auc_ci_low"]
                     ),
                     "top20_hit_rate": "" if target["top20_hit_rate"] is None else target["top20_hit_rate"],
-                    "decoys_above_positive_count": target["decoys_above_positive_count"],
+                    "decoys_above_positive_count": (
+                        ""
+                        if target["decoys_above_positive_count"] is None
+                        else target["decoys_above_positive_count"]
+                    ),
                     "positive_anchor_distance_a": (
                         "" if target["positive_anchor_distance_a"] is None else target["positive_anchor_distance_a"]
                     ),
                     "top_decoy_anchor_distance_a": (
                         "" if target["top_decoy_anchor_distance_a"] is None else target["top_decoy_anchor_distance_a"]
+                    ),
+                    "anchor_margin_a": "" if target.get("anchor_margin_a") is None else target["anchor_margin_a"],
+                    "retained_target_row_count": target.get("retained_target_row_count", ""),
+                    "retained_positive_count": target.get("retained_positive_count", ""),
+                    "top_decoy_retained_count": (
+                        "" if target.get("top_decoy_retained_count") is None else target["top_decoy_retained_count"]
                     ),
                     "blockers": ";".join(target["blockers"]),
                     "root_cause_tags": ";".join(target["root_cause_tags"]),
@@ -288,10 +337,19 @@ def main(argv: list[str] | None = None) -> int:
         default="",
         help="Comma-separated required target ids (default: DRD2,HTR2A,OPRM1).",
     )
+    parser.add_argument(
+        "--claim-lock-reason",
+        default="",
+        help="Optional reason to keep a diagnostic-green report out of product claim promotion.",
+    )
     args = parser.parse_args(argv)
 
     required = [tid.strip() for tid in args.required_target_ids.split(",") if tid.strip()] or None
-    artifact = build_gpcr_hard_decoy_suite_report_artifact(args.input_csv, required_target_ids=required)
+    artifact = build_gpcr_hard_decoy_suite_report_artifact(
+        args.input_csv,
+        required_target_ids=required,
+        claim_lock_reason=args.claim_lock_reason,
+    )
 
     out_json = _resolve(args.out_json)
     out_md = _resolve(args.out_md)

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 
 from __future__ import annotations
 
@@ -38,7 +39,6 @@ from betelgeuze_engine.backmapping.onsps import (
     backmap_4bead_onsps,
     hbond_angle_score,
     needs_onsps_4bead,
-    onsps_site_count,
 )
 from betelgeuze_engine.physics.mm_gbsa import REFINE_LIGAND_MODEL, mm_gbsa_binding_energy
 from betelgeuze_engine.residual.score import apply_score_residual
@@ -55,6 +55,8 @@ ADRB2_BETA_BLOCKER_PHARMACOPHORE_SMARTS = "[a]-[OX2]-[CX4]-[CX4]([OX2H1])-[CX4]-
 _ADRB2_BETA_BLOCKER_PHARMACOPHORE = (
     Chem.MolFromSmarts(ADRB2_BETA_BLOCKER_PHARMACOPHORE_SMARTS) if Chem is not None else None
 )
+ADORA2A_TARGET_ID = "CHEMBL251_ADORA2A_HUMAN"
+ADORA2A_NEUTRAL_ANTAGONIST_RESCUE_VARIANT = "gpcr_adora2a_neutral_antagonist_rescue_v1"
 GPCR_BASIC_AMINE_SMARTS = (
     "[NX3;H0,H1,H2;!$(NC=O);!$(NS=O);!$(N[S](=O)=O)]",
     "[NX4+]",
@@ -390,6 +392,12 @@ def _residual_tuning(spec_payload: Dict[str, Any]) -> Dict[str, float | str]:
             tuning.get("max_md_support_for_affinity_hint_delta"), 1.0e9
         ),
         "pharmacophore_reward_score": _safe_float(tuning.get("pharmacophore_reward_score"), 0.0),
+        "adora2a_neutral_support_reward_score": _safe_float(
+            tuning.get("adora2a_neutral_support_reward_score"), 0.0
+        ),
+        "adora2a_basic_intrusion_penalty_score": _safe_float(
+            tuning.get("adora2a_basic_intrusion_penalty_score"), 0.0
+        ),
     }
 
 
@@ -675,6 +683,10 @@ def _apply_residual_prototype_shadow(
     shadow_score = base_score + delta
     pharmacophore_matches = np.zeros(len(result_df), dtype=np.int64)
     pharmacophore_reward = np.zeros(len(result_df), dtype=float)
+    adora2a_neutral_support = np.zeros(len(result_df), dtype=np.int64)
+    adora2a_neutral_support_reward = np.zeros(len(result_df), dtype=float)
+    adora2a_basic_intrusion_pressure = np.zeros(len(result_df), dtype=np.int64)
+    adora2a_basic_intrusion_penalty = np.zeros(len(result_df), dtype=float)
     linear_rescore = (
         spec_payload.get("prototype", {}).get("linear_rescore", {})
         if isinstance(spec_payload.get("prototype", {}), dict)
@@ -1391,6 +1403,66 @@ def _apply_residual_prototype_shadow(
             "yellow",
             np.where(np.abs(delta) > 0.0, "green", "none"),
         )
+    if str(tuning["variant"]) == ADORA2A_NEUTRAL_ANTAGONIST_RESCUE_VARIANT:
+        zero_series = pd.Series(np.zeros(len(result_df)), index=result_df.index)
+        target_series = (
+            result_df["target"].astype(str)
+            if "target" in result_df.columns
+            else pd.Series([""] * len(result_df), index=result_df.index)
+        )
+        h_donors = pd.to_numeric(result_df.get("ligand_h_donors", zero_series), errors="coerce").fillna(0.0)
+        h_acceptors = pd.to_numeric(result_df.get("ligand_h_acceptors", zero_series), errors="coerce").fillna(0.0)
+        ligand_logp = pd.to_numeric(result_df.get("ligand_logp", zero_series), errors="coerce").fillna(0.0)
+        rot_bonds = pd.to_numeric(result_df.get("ligand_rot_bonds", zero_series), errors="coerce").fillna(0.0)
+        if "basic_amine_count" in result_df.columns:
+            basic_amine_count = pd.to_numeric(result_df["basic_amine_count"], errors="coerce").fillna(0.0)
+        else:
+            smiles_series = (
+                result_df["ligand_smiles"]
+                if "ligand_smiles" in result_df.columns
+                else result_df["smiles"]
+                if "smiles" in result_df.columns
+                else pd.Series([""] * len(result_df), index=result_df.index)
+            )
+            basic_amine_count = smiles_series.apply(_gpcr_basic_amine_proxy).astype(float)
+
+        adora2a_target_mask = target_series.eq(ADORA2A_TARGET_ID)
+        adora2a_neutral_support = (
+            adora2a_target_mask
+            & (h_donors <= 0.0)
+            & (h_acceptors >= 5.0)
+            & (ligand_logp >= 3.0)
+            & (ligand_logp <= 5.5)
+            & (rot_bonds <= 6.0)
+        ).astype(int).to_numpy()
+        adora2a_basic_intrusion_pressure = (
+            adora2a_target_mask
+            & (basic_amine_count >= 1.0)
+            & (h_donors >= 1.0)
+        ).astype(int).to_numpy()
+        adora2a_neutral_support_reward = (
+            adora2a_neutral_support.astype(float)
+            * float(tuning["adora2a_neutral_support_reward_score"])
+        )
+        adora2a_basic_intrusion_penalty = (
+            adora2a_basic_intrusion_pressure.astype(float)
+            * float(tuning["adora2a_basic_intrusion_penalty_score"])
+        )
+        shadow_score = (
+            pd.to_numeric(shadow_score, errors="coerce")
+            - adora2a_neutral_support_reward
+            + adora2a_basic_intrusion_penalty
+        )
+        delta = pd.to_numeric(shadow_score - base_score, errors="coerce").to_numpy(dtype=float)
+        raw_delta = delta
+        activation_mask = (adora2a_neutral_support.astype(bool)) | (
+            adora2a_basic_intrusion_pressure.astype(bool)
+        )
+        band = np.where(
+            np.abs(delta) >= float(yellow_band),
+            "yellow",
+            np.where(np.abs(delta) > 0.0, "green", "none"),
+        )
     result_df["residual_shadow_prior_pressure"] = prior_pressure
     result_df["residual_shadow_structure_weakness"] = structural_weakness
     result_df["residual_shadow_structure_support"] = structural_support
@@ -1713,8 +1785,13 @@ def _apply_residual_prototype_shadow(
     result_df["residual_shadow_band"] = band
     result_df["gpcr_adrb2_beta_blocker_pharmacophore_match"] = pharmacophore_matches
     result_df["gpcr_adrb2_beta_blocker_pharmacophore_reward"] = pharmacophore_reward
+    result_df["gpcr_adora2a_neutral_antagonist_support"] = adora2a_neutral_support
+    result_df["gpcr_adora2a_neutral_antagonist_reward"] = adora2a_neutral_support_reward
+    result_df["gpcr_adora2a_basic_amine_intrusion_pressure"] = adora2a_basic_intrusion_pressure
+    result_df["gpcr_adora2a_basic_amine_intrusion_penalty"] = adora2a_basic_intrusion_penalty
     result_df["binding_score_composite_v7_residual_shadow"] = shadow_score
     shadow_only_active_locked = str(tuning["variant"]) in {
+        ADORA2A_NEUTRAL_ANTAGONIST_RESCUE_VARIANT,
         "gpcr_core_acidic_anchor_overcontact_prior_gate_v4",
         "gpcr_core_fixed_reference_live_shadow_v5",
         "gpcr_core_class_a_motif_shadow_v6",
@@ -1807,6 +1884,16 @@ def _apply_residual_prototype_shadow(
             "linear_rescore_missing_terms": list(missing_terms) if linear_rescore_enabled else [],
             "pharmacophore_positive_match_count": int(pharmacophore_matches.sum()),
             "pharmacophore_reward_score": float(tuning["pharmacophore_reward_score"]),
+            "adora2a_neutral_support_count": int(adora2a_neutral_support.sum()),
+            "adora2a_neutral_support_reward_score": float(
+                tuning["adora2a_neutral_support_reward_score"]
+            ),
+            "adora2a_basic_intrusion_pressure_count": int(
+                adora2a_basic_intrusion_pressure.sum()
+            ),
+            "adora2a_basic_intrusion_penalty_score": float(
+                tuning["adora2a_basic_intrusion_penalty_score"]
+            ),
             "shadow_only_active_locked": bool(shadow_only_active_locked),
             "fixed_reference_scaling_enabled": bool(score_reference_scaling_mode == "fixed_family_reference"),
             "fixed_reference_live_positive_pressure_count": int(
@@ -2848,7 +2935,6 @@ def _frame_mmpbsa_proxy_batch(
         hb_contacts = np.zeros(frame_count, dtype=np.float64)
         for frame_idx in range(frame_count):
             lig = frames[frame_idx]
-            pocket_center = lig.mean(axis=0)
             for bead_idx in range(int(lig.shape[0])):
                 bead = lig[bead_idx]
                 if float(np.linalg.norm(bead)) <= 1e-8:

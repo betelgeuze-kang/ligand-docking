@@ -23,9 +23,10 @@ Per target, both must hold:
 - `ranking_pr_auc_ci_low >= 0.45`
 - `top20_hit_rate >= 0.20`
 
-Plus target-internal decoy separation:
+Plus target-internal decoy separation evidence:
 - `decoys_above_positive_count == 0`
-- the positive must not be out-anchored: if both anchor distances are present,
+- both anchor distances are present
+- the positive must not be out-anchored:
   `top_decoy_anchor_distance_a >= positive_anchor_distance_a`.
 
 A target is `green` only when it has zero blockers. The **broad GPCR/router
@@ -54,10 +55,13 @@ anchor separation so the next scorer work has a named target.
 ## Per-target row inputs
 
 `build_target_hard_decoy_assessment(row)` requires `target_id`,
-`positive_count`; optional `ranking_pr_auc`, `ranking_pr_auc_ci_low`,
-`top20_hit_rate`, `decoys_above_positive_count`, `positive_target_rank`,
-`positive_anchor_distance_a`, `top_decoy_anchor_distance_a`,
-`decoy_class_counts`.
+`positive_count`; optional input columns are `ranking_pr_auc`,
+`ranking_pr_auc_ci_low`, `top20_hit_rate`, `decoys_above_positive_count`,
+`positive_target_rank`, `positive_anchor_distance_a`,
+`top_decoy_anchor_distance_a`, `decoy_class_counts`. Optional means the
+materializer can accept incomplete operator rows; it does not mean incomplete
+rows can pass. Missing positive count, decoy-count evidence, or anchor-distance
+evidence adds blockers and keeps the target fail-closed.
 
 ## Family rollup
 

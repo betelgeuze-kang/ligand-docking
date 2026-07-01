@@ -1,0 +1,4 @@
+target_id,positive_count,ranking_pr_auc,ranking_pr_auc_ci_low,top20_hit_rate,decoys_above_positive_count,positive_target_rank,positive_anchor_distance_a,top_decoy_anchor_distance_a,retained_target_row_count,retained_positive_count,top_decoy_retained_count,decoy_class_counts
+DRD2,4,1.0,1.0,1.0,0,1,4.564473827679952,4.984543879826863,10000,4,9996,{}
+HTR2A,4,1.0,1.0,1.0,0,1,5.7298547228177386,5.775827968120575,10000,4,9996,{}
+OPRM1,4,1.0,1.0,1.0,0,1,4.832566106319428,5.191823454697927,10000,4,9996,{}

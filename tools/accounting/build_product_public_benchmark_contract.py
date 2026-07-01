@@ -56,6 +56,11 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         f"- status: `{s['status']}`",
         f"- public_benchmark_validation_ready: `{s['public_benchmark_validation_ready']}`",
+        f"- phase2_public_benchmark_harness_ready: `{s['phase2_public_benchmark_harness_ready']}`",
+        f"- phase2_ready_requirement_count: `{s['phase2_ready_requirement_count']}` / `{s['phase2_requirement_count']}`",
+        f"- phase2_vina_gnina_comparison_adapter_ready: `{s['phase2_vina_gnina_comparison_adapter_ready']}`",
+        f"- phase2_vina_gnina_comparison_adapter_status: `{s['vina_gnina_comparison_adapter_status']}`",
+        f"- phase2_vina_gnina_comparison_score_evidence_ready: `{s['vina_gnina_comparison_adapter_score_evidence_ready']}`",
         f"- benchmark_mode: `{s['benchmark_mode']}`",
         f"- requires_institution_registration: `{s['requires_institution_registration']}`",
         f"- requires_24h_server: `{s['requires_24h_server']}`",
@@ -87,6 +92,20 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
             f"`{row['scorecard_row_csv']}` | "
             f"`{row['primary_metric']}` | `{row['threshold']}` | "
             f"`{row['blocker']}` | `{row['run_command'] or 'missing'}` |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Phase 2 Harness",
+            "",
+            "| requirement | status | evidence | blocker |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
+    for row in payload.get("phase2_requirements", []):
+        lines.append(
+            f"| `{row['requirement_id']}` | `{row['status']}` | `{row['evidence'] or 'missing'}` | "
+            f"`{row['blocker']}` |"
         )
     lines.extend(["", "## Required Scorecard Fields", "", ", ".join(f"`{field}`" for field in REQUIRED_SCORECARD_FIELDS)])
     lines.extend(["", "## Blockers", ""])

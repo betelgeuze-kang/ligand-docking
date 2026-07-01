@@ -140,6 +140,7 @@ def evaluate_docking_gold_slice(
     *,
     pose_success_rmsd_a: float = 2.0,
     top_k: int = 5,
+    require_baseline: bool = True,
 ) -> DockingGoldMetrics:
     blockers: list[str] = []
     threshold = float(pose_success_rmsd_a)
@@ -252,9 +253,10 @@ def evaluate_docking_gold_slice(
         for row in heldout_rows
         if _finite_float(row.score) is not None and _finite_float(row.baseline_score) is not None
     ]
+    heldout_refine_rows = heldout_paired_rows if require_baseline else heldout_scored_rows
     heldout_refine_pairs = [
         (float(row.affinity_label), float(row.score))
-        for row in heldout_paired_rows
+        for row in heldout_refine_rows
     ]
     heldout_refine_score_for_spearman = [-score for _label, score in heldout_refine_pairs]
     heldout_refine_labels_for_spearman = [affinity for affinity, _score in heldout_refine_pairs]
@@ -282,15 +284,15 @@ def evaluate_docking_gold_slice(
     else:
         if len(heldout_scored_rows) != len(heldout_rows):
             blockers.append("heldout_refined_score_incomplete")
-        if len(heldout_baseline_rows) != len(heldout_rows):
+        if require_baseline and len(heldout_baseline_rows) != len(heldout_rows):
             blockers.append("heldout_baseline_score_incomplete")
-    if baseline_ranking_spearman is None:
+    if require_baseline and baseline_ranking_spearman is None:
         blockers.append("baseline_ranking_spearman_not_computable")
     if heldout_refine_ranking_spearman is None:
         blockers.append("heldout_refine_ranking_spearman_not_computable")
-    if refine_ranking_spearman_delta is None:
+    if require_baseline and refine_ranking_spearman_delta is None:
         blockers.append("refine_ranking_spearman_delta_not_computable")
-    elif not refine_improvement_observed:
+    elif require_baseline and not refine_improvement_observed:
         blockers.append("heldout_refine_ranking_spearman_not_improved")
     rmsd_coverage_complete = bool(
         by_complex and top1_rmsd_missing_complexes == 0 and topk_rmsd_missing_complexes == 0

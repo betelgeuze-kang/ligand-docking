@@ -38,6 +38,8 @@ GOLD_EXECUTION_SUMMARY_FIELDS = (
     "peak_memory_mb",
     "subset_identity_sha256",
 )
+PDBBIND_CASF_SUITE_ID = "pdbbind_casf_pose_affinity"
+PDBBIND_CASF_DEFAULT_EXECUTION_SUMMARY = "pdbbind_casf_pose_affinity_results_current.json"
 
 
 def _text(value: Any) -> str:
@@ -92,6 +94,14 @@ def _read_summary(path: Path | None) -> dict[str, Any]:
     return summary if isinstance(summary, dict) else {}
 
 
+def _execution_summary_path(suite_id: str, result_artifact: Path, execution_summary_json: str | Path) -> Path | None:
+    if _text(execution_summary_json):
+        return Path(execution_summary_json)
+    if _text(suite_id) == PDBBIND_CASF_SUITE_ID:
+        return result_artifact.parent / PDBBIND_CASF_DEFAULT_EXECUTION_SUMMARY
+    return None
+
+
 def build_public_benchmark_result_provenance(
     *,
     suite_id: str,
@@ -102,7 +112,7 @@ def build_public_benchmark_result_provenance(
 ) -> dict[str, Any]:
     suite = _suite_by_id(suite_id)
     result = Path(result_artifact)
-    execution_summary_path = Path(execution_summary_json) if _text(execution_summary_json) else None
+    execution_summary_path = _execution_summary_path(suite_id, result, execution_summary_json)
     execution_summary = _read_summary(execution_summary_path)
     result_present = result.exists() and result.is_file()
     result_rows = _csv_row_count(result)

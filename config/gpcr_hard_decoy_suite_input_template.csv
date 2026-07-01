@@ -1,4 +1,4 @@
-target_id,positive_count,ranking_pr_auc,ranking_pr_auc_ci_low,top20_hit_rate,decoys_above_positive_count,positive_target_rank,positive_anchor_distance_a,top_decoy_anchor_distance_a,decoy_class_counts
-DRD2,,,,,,,,,{}
-HTR2A,,,,,,,,,{}
-OPRM1,,,,,,,,,{}
+target_id,positive_count,ranking_pr_auc,ranking_pr_auc_ci_low,top20_hit_rate,decoys_above_positive_count,positive_target_rank,positive_anchor_distance_a,top_decoy_anchor_distance_a,retained_target_row_count,retained_positive_count,top_decoy_retained_count,decoy_class_counts
+DRD2,,,,,,,,,,,,{}
+HTR2A,,,,,,,,,,,,{}
+OPRM1,,,,,,,,,,,,{}

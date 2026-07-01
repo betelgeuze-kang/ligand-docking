@@ -87,6 +87,26 @@ def test_all_green_family_ready(tmp_path: Path) -> None:
     assert summary["docking_results_emitted"] is False
 
 
+def test_claim_lock_overlays_diagnostic_green_report(tmp_path: Path) -> None:
+    csv_path = tmp_path / "in.csv"
+    _write_input_csv(csv_path, [_green_row("DRD2"), _green_row("HTR2A"), _green_row("OPRM1")])
+
+    artifact = mod.build_gpcr_hard_decoy_suite_report_artifact(
+        csv_path,
+        claim_lock_reason="current-fit label-trained diagnostic probe",
+    )
+
+    summary = artifact["summary"]
+    assert summary["status"] == "claim_locked_gpcr_hard_decoy_diagnostic_probe"
+    assert summary["family_claim_safe"] is False
+    assert summary["claim_locked"] is True
+    assert summary["diagnostic_status_before_claim_lock"] == "gpcr_hard_decoy_family_ready"
+    assert summary["diagnostic_family_claim_safe_before_claim_lock"] is True
+    assert set(summary["green_target_ids"]) == {"DRD2", "HTR2A", "OPRM1"}
+    assert "current-fit" in summary["claim_lock_reason"]
+    assert all(target["claim_safe"] is True for target in artifact["targets"])
+
+
 def test_drd2_over_anchored_blocked(tmp_path: Path) -> None:
     csv_path = tmp_path / "in.csv"
     _write_input_csv(

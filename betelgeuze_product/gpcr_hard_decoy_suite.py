@@ -98,17 +98,32 @@ def build_target_hard_decoy_assessment(row: dict[str, Any]) -> dict[str, Any]:
             raise GpcrHardDecoyError(f"target row missing required field: {field}")
 
     target_id = str(row["target_id"])
+    positive_count = _int(row["positive_count"])
     ci_low = _num(row.get("ranking_pr_auc_ci_low"))
     top20 = _num(row.get("top20_hit_rate"))
     pr_auc = _num(row.get("ranking_pr_auc"))
-    decoys_above = _int(row.get("decoys_above_positive_count"))
+    decoys_above_raw = row.get("decoys_above_positive_count")
+    decoys_above_missing = decoys_above_raw in (None, "")
+    decoys_above = _int(decoys_above_raw)
     target_rank = row.get("positive_target_rank")
     positive_anchor_a = _num(row.get("positive_anchor_distance_a"))
     top_decoy_anchor_a = _num(row.get("top_decoy_anchor_distance_a"))
+    retained_target_row_count = _int(row.get("retained_target_row_count"))
+    retained_positive_count = _int(row.get("retained_positive_count"))
+    top_decoy_retained_count_raw = row.get("top_decoy_retained_count")
+    top_decoy_retained_count = None if top_decoy_retained_count_raw in (None, "") else _int(top_decoy_retained_count_raw)
+    anchor_margin_a = (
+        None
+        if positive_anchor_a is None or top_decoy_anchor_a is None
+        else top_decoy_anchor_a - positive_anchor_a
+    )
     decoy_class_counts = _decoy_class_counts(row.get("decoy_class_counts"))
 
     blockers: list[str] = []
     root_cause_tags: list[str] = []
+
+    if positive_count <= 0:
+        blockers.append("positive_count_missing_or_zero")
 
     # Operational gate.
     if ci_low is None or ci_low < GATE_CI_LOW:
@@ -117,14 +132,21 @@ def build_target_hard_decoy_assessment(row: dict[str, Any]) -> dict[str, Any]:
         blockers.append("top20_hit_rate_below_gate")
 
     # Target-internal decoy separation.
+    if decoys_above_missing:
+        blockers.append("decoys_above_positive_count_missing")
     if decoys_above > 0:
         blockers.append("decoys_above_positive_present")
+    if positive_anchor_a is None:
+        blockers.append("anchor_distance_evidence_missing")
+    if top_decoy_anchor_a is None:
+        if top_decoy_retained_count == 0:
+            blockers.append("top_decoy_anchor_not_observed_in_retained_rows")
+        elif positive_anchor_a is not None:
+            blockers.append("top_decoy_anchor_distance_evidence_missing")
+        elif "anchor_distance_evidence_missing" not in blockers:
+            blockers.append("anchor_distance_evidence_missing")
     # Over-anchoring: a decoy sits closer to the native anchor than the positive.
-    if (
-        positive_anchor_a is not None
-        and top_decoy_anchor_a is not None
-        and top_decoy_anchor_a < positive_anchor_a
-    ):
+    if anchor_margin_a is not None and anchor_margin_a < 0.0:
         blockers.append("decoy_over_anchored_vs_positive")
         root_cause_tags.append(ROOT_CAUSE_ANCHOR_SEPARATION_INSUFFICIENT)
 
@@ -142,14 +164,18 @@ def build_target_hard_decoy_assessment(row: dict[str, Any]) -> dict[str, Any]:
         "target_id": target_id,
         "gate_status": gate_status,
         "claim_safe": gate_status == "green",
-        "positive_count": _int(row["positive_count"]),
+        "positive_count": positive_count,
         "ranking_pr_auc": pr_auc,
         "ranking_pr_auc_ci_low": ci_low,
         "top20_hit_rate": top20,
         "positive_target_rank": _int(target_rank) if target_rank not in (None, "") else None,
-        "decoys_above_positive_count": decoys_above,
+        "decoys_above_positive_count": None if decoys_above_missing else decoys_above,
         "positive_anchor_distance_a": positive_anchor_a,
         "top_decoy_anchor_distance_a": top_decoy_anchor_a,
+        "anchor_margin_a": anchor_margin_a,
+        "retained_target_row_count": retained_target_row_count,
+        "retained_positive_count": retained_positive_count,
+        "top_decoy_retained_count": top_decoy_retained_count,
         "decoy_class_counts": decoy_class_counts,
         "blockers": blockers,
         "root_cause_tags": sorted(set(root_cause_tags)),

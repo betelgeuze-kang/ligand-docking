@@ -25,3 +25,14 @@ python3 tools/build_f2g_f2h_surface_preflight.py \
 ```
 
 On the current checkout, the expected result is blocked until the real-MGT implementation tree, support/elastic-link context, and near-null mode packet are restored. F2h remains blocked until the F2g local audit exists.
+
+When the preflight is blocked, build the local recovery packet to document the authoritative surfaces that must be restored without creating placeholders or promoting G1:
+
+```bash
+python3 tools/build_f2g_f2h_authoritative_surface_recovery_packet.py \
+  --out-json .betelgeuze/f2g_f2h_authoritative_surface_recovery_packet.local.json \
+  --out-csv .betelgeuze/f2g_f2h_authoritative_surface_recovery_packet.local.csv \
+  --out-md .betelgeuze/f2g_f2h_authoritative_surface_recovery_packet.local.md
+```
+
+This packet is a work order only. It does not restore surfaces, run the F2g audit, start F2h continuation, promote G1, or write protected `runs/` evidence.

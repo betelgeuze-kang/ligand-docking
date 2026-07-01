@@ -1059,6 +1059,67 @@ def _feature_rows(variant: str) -> list[dict[str, Any]]:
                 },
             ]
         )
+    if variant == "gpcr_adora2a_neutral_antagonist_rescue_v1":
+        rows.extend(
+            [
+                {
+                    "feature_name": "adora2a_neutral_high_acceptor_support_rule",
+                    "role": "target_specific_support_reward",
+                    "direction": "reward_adora2a_neutral_high_acceptor_rows",
+                    "rationale": (
+                        "The current hard-decoy failure slice shows ADORA2A neutral, high-acceptor positives "
+                        "out-ranked by basic-amine decoys. This support rule is pre-registered for independent "
+                        "replay and must not become a general GPCR claim."
+                    ),
+                },
+                {
+                    "feature_name": "adora2a_basic_amine_intrusion_pressure_rule",
+                    "role": "target_specific_intrusion_pressure",
+                    "direction": "penalize_adora2a_basic_amine_donor_rows",
+                    "rationale": (
+                        "The paired pressure demotes ADORA2A basic-amine donor-rich intrusions observed in the "
+                        "current slice while leaving other GPCR targets untouched."
+                    ),
+                },
+                {
+                    "feature_name": "target",
+                    "role": "scope_gate",
+                    "direction": "adora2a_only",
+                    "rationale": (
+                        "The target identifier is used only as a scope gate for the pre-registered ADORA2A "
+                        "diagnostic rule, not as a broad rank feature or router promotion feature."
+                    ),
+                },
+                {
+                    "feature_name": "binding_score_composite_v7_target_heldout_l2_l1_blend_probe",
+                    "role": "claim_locked_replay_baseline_score",
+                    "direction": "lower_is_better_baseline_only",
+                    "rationale": (
+                        "The audited rescue probe applied the ADORA2A support/pressure rule on top of the "
+                        "target-held-out L2/L1 blend score. Independent replay should provide this column "
+                        "explicitly rather than silently promoting the rule as a standalone production score."
+                    ),
+                },
+                {
+                    "feature_name": "ligand_h_donors_ligand_h_acceptors_ligand_logp_ligand_rot_bonds",
+                    "role": "neutral_antagonist_support_inputs",
+                    "direction": "declared_thresholds_only",
+                    "rationale": (
+                        "Support is limited to donor-free, high-acceptor, moderate-logP, compact ADORA2A rows "
+                        "matching the audited rescue probe thresholds."
+                    ),
+                },
+                {
+                    "feature_name": "basic_amine_count",
+                    "role": "intrusion_pressure_input",
+                    "direction": "penalize_basic_amine_donor_intrusion",
+                    "rationale": (
+                        "The pressure side uses declared basic-amine count plus donor count to catch the "
+                        "beta-blocker-like intrusion pattern from the current ADORA2A failure slice."
+                    ),
+                },
+            ]
+        )
     return rows
 
 
@@ -2987,6 +3048,78 @@ def build_payload(*, variant: str = "current") -> dict[str, Any]:
             "Run as shadow-only on the GPCR core 100k lane, evaluate the residual shadow score separately, "
             "and keep any improvement scoped to ADRB2 beta-blocker-like evidence until non-leaky family validation exists."
         )
+    elif variant == "gpcr_adora2a_neutral_antagonist_rescue_v1":
+        constraints = {
+            **constraints,
+            "max_abs_delta_score": 0.0,
+            "yellow_band_abs_delta_score": 0.4,
+            "claim_locked_candidate": True,
+            "target_specific_rescue_candidate": True,
+            "target_specific_rule_discovered_from_current_failure_slice": True,
+            "independent_replay_required": True,
+            "router_promotion_allowed": False,
+            "platform_promotion_allowed": False,
+            "apply_mode_claim_allowed": False,
+            "claim_safe_assertion_allowed": False,
+            "broad_gpcr_claim_allowed": False,
+            "active_score_locked_to_base": True,
+            "target_scope_gate_allowed": True,
+            "target_identity_feature_allowed": False,
+            "threshold_relaxation_allowed": False,
+            "fake_pass_allowed": False,
+            "diagnostic_source_artifact": "runs/gpcr_hard_decoy_adora2a_neutral_rescue_probe_current.json",
+            "required_before_claim": [
+                "complete_hard_decoy_replay_with_residual_shadow_score",
+                "official_suite_family_ready",
+                "target_heldout_ci_low_gate_green",
+                "non_adora2a_family_preservation_review",
+            ],
+        }
+        tuning = {
+            "variant": "gpcr_adora2a_neutral_antagonist_rescue_v1",
+            "candidate_source": "adora2a_target_heldout_failure_probe",
+            "failure_tags": [
+                "adora2a_neutral_positive_tail_rank",
+                "basic_amine_decoy_intrusion",
+                "target_heldout_ci_low_below_phase3_gate",
+            ],
+            "target_scope": "CHEMBL251_ADORA2A_HUMAN",
+            "neutral_support_rule": {
+                "ligand_h_donors_max": 0,
+                "ligand_h_acceptors_min": 5,
+                "ligand_logp_min": 3.0,
+                "ligand_logp_max": 5.5,
+                "ligand_rot_bonds_max": 6,
+            },
+            "basic_intrusion_pressure_rule": {
+                "basic_amine_count_min": 1,
+                "ligand_h_donors_min": 1,
+            },
+            "source_target_heldout_score_col": "binding_score_composite_v7_target_heldout_l2_l1_blend_probe",
+            "adora2a_neutral_support_reward_score": 0.8,
+            "adora2a_basic_intrusion_penalty_score": 1.2,
+            "claim_promotion_allowed": False,
+            "independent_replay_required": True,
+            "scope": "CHEMBL251_ADORA2A_HUMAN_neutral_high_acceptor_only",
+            "replay_score_formula": (
+                "binding_score_composite_v7_target_heldout_l2_l1_blend_probe "
+                "- 0.8*adora2a_neutral_high_acceptor_support_rule "
+                "+ 1.2*adora2a_basic_amine_intrusion_pressure_rule"
+            ),
+        }
+        interactions = [
+            "target_specific_adora2a_neutral_high_acceptor_support_shadow_only",
+            "target_specific_adora2a_basic_amine_intrusion_pressure",
+            "active_score_locked_to_base_even_in_apply_mode",
+            "independent_replay_required_before_claim",
+            "no_router_platform_or_claim_promotion",
+            "no_threshold_relaxation_or_fake_pass_features",
+        ]
+        next_step = (
+            "Replay gpcr_adora2a_neutral_antagonist_rescue_v1 on the complete hard-decoy evidence using the "
+            "residual shadow score. Keep Phase 3 blocked until the official suite is family-ready, the target-held-out "
+            "CI-low gate clears, and non-ADORA2A preservation review is green."
+        )
 
     return {
         "summary": {
@@ -3256,6 +3389,18 @@ def build_payload(*, variant: str = "current") -> dict[str, Any]:
                     ],
                 }
                 if variant == "gpcr_core_false_support_discriminator_shadow_v16"
+                else {
+                    "enabled": True,
+                    "combine_mode": "replace",
+                    "intercept": 0.0,
+                    "terms": [
+                        {
+                            "feature": "binding_score_composite_v7_target_heldout_l2_l1_blend_probe",
+                            "weight": 1.0,
+                        }
+                    ],
+                }
+                if variant == "gpcr_adora2a_neutral_antagonist_rescue_v1"
                 else {"enabled": False}
             ),
             "feature_rows": feature_rows,
@@ -3356,6 +3501,7 @@ def parse_args() -> argparse.Namespace:
             "gpcr_core_truebase_gap_penalty_shadow_v15",
             "gpcr_core_false_support_discriminator_shadow_v16",
             "gpcr_adrb2_beta_blocker_pharmacophore_v1",
+            "gpcr_adora2a_neutral_antagonist_rescue_v1",
         ],
         default="current",
     )
