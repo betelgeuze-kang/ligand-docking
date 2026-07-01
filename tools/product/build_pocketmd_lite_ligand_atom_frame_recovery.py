@@ -4,8 +4,9 @@
 This is a local artifact builder, not a claim promoter. It uses RDKit ETKDG
 heavy-atom conformers and a two-point Kabsch fit to map ligand heavy atoms onto
 the existing PocketMD Lite two-bead trajectory frames. When a matching
-trajectory already contains protein atom frames, the output NPZ becomes a
-candidate input for the follow-on local-min/H-bond/clash metric collector.
+trajectory already contains protein atom frames, or a local protein PDB can
+provide static heavy-atom frames in the same source lane, the output NPZ becomes
+a candidate input for the follow-on local-min/H-bond/clash metric collector.
 The recovered frames are provenance-tagged and are not final claim-grade
 metrics by themselves.
 """
@@ -47,12 +48,14 @@ MAX_CANDIDATE_PATHS_PER_ROW = 24
 PACKET_TYPE = "pocketmd_lite_ligand_atom_frame_recovery"
 SCHEMA_VERSION = "pocketmd_lite_ligand_atom_frame_recovery_v1"
 FRAME_SOURCE = "rdkit_etkdg_heavy_atom_two_bead_kabsch_candidate"
+PROTEIN_FRAME_SOURCE = "protein_structure_source_pdb_static_heavy_atom_frames"
 
 CLAIM_BOUNDARY = (
     "PocketMD Lite ligand atom frame recovery builds local candidate NPZs from selected top-k two-bead "
-    "trajectories and ligand SMILES. The recovered ligand heavy-atom frames are provenance-tagged candidate "
-    "inputs for the subsequent local-min/H-bond/clash collector; they are not final claim-grade refinement "
-    "metrics, do not mutate the canonical candidate CSV, and do not promote PocketMD Lite claims."
+    "trajectories, ligand SMILES, and available local protein PDB sources. The recovered ligand heavy-atom "
+    "frames and static protein heavy-atom frames are provenance-tagged candidate inputs for the subsequent "
+    "local-min/H-bond/clash collector; they are not final claim-grade refinement metrics, do not mutate the "
+    "canonical candidate CSV, and do not promote PocketMD Lite claims."
 )
 
 LOCAL_FLAGS = {
@@ -75,6 +78,7 @@ CSV_COLUMNS = [
     "protein_atom_frame_count",
     "collection_input_candidate_ready",
     "ligand_atom_frame_source",
+    "protein_atom_frame_source",
     "anchor_atom_indices",
     "blockers",
     "recommended_next_local_action",
@@ -83,6 +87,19 @@ CSV_COLUMNS = [
     "claim_promotion_allowed",
     "refinement_execution_enabled",
 ]
+
+ELEMENT_TO_ATOMIC_NUMBER = {
+    "H": 1,
+    "C": 6,
+    "N": 7,
+    "O": 8,
+    "F": 9,
+    "P": 15,
+    "S": 16,
+    "CL": 17,
+    "BR": 35,
+    "I": 53,
+}
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -192,6 +209,77 @@ def _protein_atom_frame_count(arrays: dict[str, np.ndarray]) -> int:
     if frames.ndim == 3 and frames.shape[0] > 0 and frames.shape[1] > 0 and frames.shape[2] == 3:
         return int(frames.shape[1])
     return 0
+
+
+def _pdb_element(line: str) -> str:
+    element = line[76:78].strip().upper()
+    if element:
+        return element
+    atom_name = "".join(part for part in line[12:16].strip().upper() if part.isalpha())
+    if atom_name[:2] in {"CL", "BR"}:
+        return atom_name[:2]
+    if atom_name[:1] in {"C", "N", "O", "P", "S", "F", "I", "H"}:
+        return atom_name[:1]
+    return "C"
+
+
+def _protein_atom_frames_from_pdb(
+    path_like: str | Path,
+    *,
+    frame_count: int,
+) -> tuple[dict[str, np.ndarray], list[str]]:
+    path_text = _text(path_like)
+    if not path_text:
+        return {}, ["protein_structure_source_path_missing"]
+    path = _resolve(path_text)
+    if not path.exists():
+        return {}, ["protein_structure_source_path_unavailable"]
+
+    coords: list[list[float]] = []
+    elements: list[str] = []
+    atomic_numbers: list[int] = []
+    model_seen = False
+    try:
+        lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    except OSError as exc:
+        return {}, [f"protein_structure_source_path_unreadable:{type(exc).__name__}"]
+
+    for line in lines:
+        if line.startswith("MODEL"):
+            if model_seen:
+                break
+            model_seen = True
+            continue
+        if line.startswith("ENDMDL"):
+            break
+        if not line.startswith("ATOM"):
+            continue
+        element = _pdb_element(line)
+        if element == "H":
+            continue
+        try:
+            coord = [float(line[30:38]), float(line[38:46]), float(line[46:54])]
+        except ValueError:
+            continue
+        coords.append(coord)
+        elements.append(element)
+        atomic_numbers.append(ELEMENT_TO_ATOMIC_NUMBER.get(element, 6))
+
+    if not coords:
+        return {}, ["protein_structure_source_pdb_no_heavy_atoms"]
+    base = np.asarray(coords, dtype=np.float32)
+    frames = np.repeat(base.reshape(1, base.shape[0], 3), int(frame_count), axis=0)
+    return (
+        {
+            "protein_atom_frames": frames.astype(np.float32, copy=False),
+            "protein_atom_atomic_numbers": np.asarray(atomic_numbers, dtype=np.int16),
+            "protein_atom_elements": np.asarray(elements, dtype="<U2"),
+            "protein_atom_frame_source": np.asarray(PROTEIN_FRAME_SOURCE),
+            "protein_atom_frame_static_pdb_source_path": np.asarray(_display(path)),
+            "protein_atom_frame_claim_grade_metric_evidence": np.asarray(False),
+        },
+        [],
+    )
 
 
 def _rank_npz(path: str) -> tuple[int, int, int]:
@@ -309,6 +397,7 @@ def _recover_row(row: dict[str, Any], *, out_root: Path, search_roots: list[Path
         "protein_atom_frame_count": 0,
         "collection_input_candidate_ready": False,
         "ligand_atom_frame_source": "",
+        "protein_atom_frame_source": "",
         "anchor_atom_indices": [],
         "blockers": [],
         "recommended_next_local_action": "restore_or_regenerate_readable_two_bead_trajectory",
@@ -336,6 +425,19 @@ def _recover_row(row: dict[str, Any], *, out_root: Path, search_roots: list[Path
 
     out_npz.parent.mkdir(parents=True, exist_ok=True)
     output_arrays: dict[str, Any] = dict(arrays)
+    protein_frame_source = ""
+    protein_frame_blockers: list[str] = []
+    if _protein_atom_frame_count(output_arrays) <= 0:
+        protein_frames, protein_frame_blockers = _protein_atom_frames_from_pdb(
+            row.get("protein_structure_source_path"),
+            frame_count=int(ligand_atom_frames.shape[0]),
+        )
+        if protein_frames:
+            output_arrays.update(protein_frames)
+            protein_frame_source = PROTEIN_FRAME_SOURCE
+    else:
+        protein_frame_source = _text(output_arrays.get("protein_atom_frame_source")) or "source_npz_protein_atom_frames"
+
     output_arrays.update(
         {
             "ligand_atom_frames": ligand_atom_frames,
@@ -351,8 +453,9 @@ def _recover_row(row: dict[str, Any], *, out_root: Path, search_roots: list[Path
     np.savez(out_npz, **output_arrays)
 
     blockers: list[str] = []
-    if int(base["protein_atom_frame_count"]) <= 0:
-        blockers.append("protein_atom_frames_missing")
+    protein_atom_frame_count = _protein_atom_frame_count(output_arrays)
+    if protein_atom_frame_count <= 0:
+        blockers.extend(["protein_atom_frames_missing", *protein_frame_blockers])
     collection_ready = not blockers
     return {
         **base,
@@ -362,8 +465,10 @@ def _recover_row(row: dict[str, Any], *, out_root: Path, search_roots: list[Path
             else "pocketmd_lite_ligand_atom_frame_recovery_ligand_only_protein_atom_missing"
         ),
         "ligand_atom_count": int(ligand_atom_frames.shape[1]),
+        "protein_atom_frame_count": int(protein_atom_frame_count),
         "collection_input_candidate_ready": collection_ready,
         "ligand_atom_frame_source": FRAME_SOURCE,
+        "protein_atom_frame_source": protein_frame_source,
         "anchor_atom_indices": [int(anchors[0]), int(anchors[1])],
         "blockers": blockers,
         "recommended_next_local_action": (

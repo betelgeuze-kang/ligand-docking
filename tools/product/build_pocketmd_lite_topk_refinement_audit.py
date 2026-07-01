@@ -297,6 +297,8 @@ def build_pocketmd_lite_topk_refinement_audit(
         status = "blocked_pocketmd_lite_topk_refinement_audit_no_topk"
     elif claim_grade_ready and report_evidence_ready:
         status = "pocketmd_lite_topk_refinement_audit_ready"
+    elif claim_grade_ready and candidate_fill_preview_ready:
+        status = "pocketmd_lite_topk_refinement_audit_ready"
     elif proxy_ready:
         status = "blocked_pocketmd_lite_topk_refinement_claim_grade_missing_proxy_reported"
     else:
@@ -354,6 +356,7 @@ def build_pocketmd_lite_topk_refinement_audit(
         "top_k_only_policy_enforced": bool(report_summary.get("top_k_only_policy_enforced") is True),
         "claim_grade_refinement_evidence_ready": claim_grade_ready,
         "claim_grade_report_evidence_ready": report_evidence_ready,
+        "claim_grade_fill_preview_evidence_ready": bool(claim_grade_ready and candidate_fill_preview_ready),
         "claim_grade_metric_ready_count": len(claim_grade_ready_rows),
         "claim_grade_missing_candidate_count": len(selected_rows) - len(claim_grade_ready_rows),
         "missing_refinement_metric_names": sorted(missing_metric_counts),
@@ -385,11 +388,15 @@ def build_pocketmd_lite_topk_refinement_audit(
             1 for row in selected_rows if row["clash_relief_count"] is not None
         ),
         "uncertainty_reported_count": sum(1 for row in selected_rows if row["uncertainty_score"] is not None),
-        "high_uncertainty_count": int(report_summary.get("high_uncertainty_count", 0) or 0),
+        "high_uncertainty_count": sum(
+            1
+            for row in selected_rows
+            if row["uncertainty_score"] is not None and row["uncertainty_score"] >= 0.75
+        ),
         "claim_promotion_allowed": False,
         "next_required_step": (
             "PocketMD Lite claim-grade top-k refinement evidence is complete; review the uncertainty bands."
-            if claim_grade_ready and report_evidence_ready
+            if claim_grade_ready and (report_evidence_ready or candidate_fill_preview_ready)
             else "Run the PocketMD Lite report against the metric fill preview candidate CSV, then review top-k bands."
             if candidate_fill_preview_ready
             else _text(source_audit_summary.get("next_required_step"))

@@ -206,10 +206,11 @@ def test_audit_overlays_exact_fill_preview_metrics_without_mutating_report(tmp_p
     )
 
     summary = payload["summary"]
-    assert summary["status"] == "blocked_pocketmd_lite_topk_refinement_claim_grade_missing_proxy_reported"
+    assert summary["status"] == "pocketmd_lite_topk_refinement_audit_ready"
     assert summary["candidate_metric_fill_preview_ready"] is True
     assert summary["claim_grade_refinement_evidence_ready"] is True
     assert summary["claim_grade_report_evidence_ready"] is False
+    assert summary["claim_grade_fill_preview_evidence_ready"] is True
     assert summary["claim_grade_metric_ready_count"] == 1
     assert summary["claim_grade_missing_candidate_count"] == 0
     assert summary["missing_refinement_metric_names"] == []
@@ -218,7 +219,7 @@ def test_audit_overlays_exact_fill_preview_metrics_without_mutating_report(tmp_p
     assert summary["claim_grade_hbond_reported_count"] == 1
     assert summary["claim_grade_initial_clash_reported_count"] == 1
     assert summary["claim_grade_clash_relief_reported_count"] == 1
-    assert "Run the PocketMD Lite report against the metric fill preview candidate CSV" in summary["next_required_step"]
+    assert "claim-grade top-k refinement evidence is complete" in summary["next_required_step"]
 
     row = payload["rows"][0]
     assert row["candidate_metric_fill_status"] == "filled_from_claim_grade_probe"
