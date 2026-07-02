@@ -194,6 +194,101 @@ def _delimited_string_list(value: Any) -> list[str]:
     return []
 
 
+def _customer_shadow_case_summaries(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    summaries: list[dict[str, Any]] = []
+    for row in rows:
+        summaries.append(
+            {
+                "case_id": str(row.get("case_id") or ""),
+                "row_kind": str(row.get("row_kind") or ""),
+                "status": str(row.get("status") or ""),
+                "counts_toward_minimum": bool(row.get("counts_toward_minimum") is True),
+                "completed_schema_valid": bool(row.get("completed_schema_valid") is True),
+                "is_mock_fixture": bool(row.get("is_mock_fixture") is True),
+                "blocker_count": _int(row.get("blocker_count")),
+                "blockers": _row_blockers(row),
+                "raw_data_custody": str(row.get("raw_data_custody") or ""),
+                "customer_retained_raw_data": str(row.get("customer_retained_raw_data") or ""),
+                "redistribution_allowed": str(row.get("redistribution_allowed") or ""),
+                "raw_data_stored_in_repo": str(row.get("raw_data_stored_in_repo") or ""),
+                "reviewer_signoff_status": str(row.get("reviewer_signoff_status") or ""),
+                "next_action": str(row.get("next_action") or ""),
+            }
+        )
+    return summaries
+
+
+def _customer_shadow_work_order_summary(row: dict[str, Any]) -> dict[str, Any]:
+    if not row:
+        return {}
+    return {
+        "work_order_id": str(row.get("work_order_id") or ""),
+        "case_slot_id": str(row.get("case_slot_id") or ""),
+        "status": str(row.get("status") or ""),
+        "required_row_kind": str(row.get("required_row_kind") or ""),
+        "operator_csv": str(row.get("operator_csv") or ""),
+        "required_action": str(row.get("required_action") or ""),
+        "required_raw_data_custody": str(row.get("required_raw_data_custody") or ""),
+        "required_customer_retained_raw_data": bool(
+            row.get("required_customer_retained_raw_data") is True
+        ),
+        "required_redistribution_allowed": bool(row.get("required_redistribution_allowed") is True),
+        "required_raw_data_stored_in_repo": bool(row.get("required_raw_data_stored_in_repo") is True),
+        "required_derived_metadata_fields": _string_list(row.get("required_derived_metadata_fields")),
+        "required_anonymized_result_summary": str(row.get("required_anonymized_result_summary") or ""),
+        "required_reviewer_signoff_status": str(row.get("required_reviewer_signoff_status") or ""),
+        "required_reviewer_id": str(row.get("required_reviewer_id") or ""),
+        "required_reviewed_at_utc": str(row.get("required_reviewed_at_utc") or ""),
+        "required_source_artifact_fingerprint": str(
+            row.get("required_source_artifact_fingerprint") or ""
+        ),
+        "paid_pilot_claim_allowed": bool(row.get("paid_pilot_claim_allowed") is True),
+        "commercial_readiness_promotion_allowed": bool(
+            row.get("commercial_readiness_promotion_allowed") is True
+        ),
+        "execution_enabled": bool(row.get("execution_enabled") is True),
+        "external_state_mutated": bool(row.get("external_state_mutated") is True),
+    }
+
+
+def _customer_shadow_paid_pilot_wording_blockers(summary: dict[str, Any]) -> list[str]:
+    required = _int(summary.get("required_completed_customer_shadow_case_count")) or 3
+    blockers: list[str] = []
+    if summary.get("customer_shadow_intake_schema_ready") is not True:
+        blockers.append("customer_shadow_intake_schema_not_ready")
+    if summary.get("customer_shadow_minimum_met") is not True:
+        blockers.append("customer_shadow_minimum_not_met")
+    for key, label in [
+        ("completed_customer_shadow_case_count", "completed_customer_shadow_cases_below_required"),
+        ("real_customer_shadow_row_count", "real_customer_shadow_rows_below_required"),
+        ("customer_retained_raw_data_count", "customer_retained_raw_data_rows_below_required"),
+        ("redistribution_allowed_false_count", "redistribution_false_rows_below_required"),
+        ("anonymized_result_summary_count", "anonymized_summary_rows_below_required"),
+        ("reviewer_signoff_count", "reviewer_signoff_rows_below_required"),
+    ]:
+        observed = _int(summary.get(key))
+        if observed < required:
+            blockers.append(f"{label}:{observed}/{required}")
+    if _int(summary.get("invalid_row_count")):
+        blockers.append(f"invalid_customer_shadow_rows:{_int(summary.get('invalid_row_count'))}")
+    if summary.get("customer_raw_data_stored_in_repo") is True:
+        blockers.append("customer_raw_data_stored_in_repo")
+    if summary.get("redistribution_allowed_required_value") is not False:
+        blockers.append("redistribution_allowed_required_value_not_false")
+    if _int(summary.get("customer_shadow_work_order_row_count")):
+        blockers.append(
+            "customer_shadow_work_order_rows_open:"
+            f"{_int(summary.get('customer_shadow_work_order_row_count'))}"
+        )
+    if summary.get("paid_pilot_evidence_ready") is not True:
+        blockers.append("paid_pilot_evidence_not_ready")
+    if summary.get("paid_pilot_claim_allowed") is not True:
+        blockers.append("paid_pilot_claim_not_approved")
+    if summary.get("commercial_readiness_promotion_allowed") is not True:
+        blockers.append("commercial_readiness_promotion_not_approved")
+    return blockers
+
+
 def _developer_preview_clean_checkout_receipt_surface(receipt_path: Path) -> dict[str, Any]:
     packet = _read_json_object(receipt_path)
     summary = _summary(packet)
@@ -283,6 +378,75 @@ def _developer_preview_clean_checkout_receipt_surface(receipt_path: Path) -> dic
         "clean_checkout_source_blockers": source_blockers,
         "developer_demo_wording_allowed": receipt_ready,
         "paid_pilot_wording_allowed": False,
+    }
+
+
+def _developer_preview_gate_summaries(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    summaries: list[dict[str, Any]] = []
+    for row in rows:
+        gate_id = str(row.get("gate_id") or "").strip()
+        if not gate_id:
+            continue
+        status = str(row.get("status") or "")
+        ready = row.get("ready") is True and status == "developer_preview_gate_ready"
+        summaries.append(
+            {
+                "gate_id": gate_id,
+                "priority": str(row.get("priority") or ""),
+                "status": status,
+                "ready": ready,
+                "blocker": str(row.get("blocker") or ""),
+                "blockers": _delimited_string_list(row.get("blockers")),
+                "receipt_artifacts": _delimited_string_list(row.get("receipt_artifacts")),
+                "present_receipt_count": _int(row.get("present_receipt_count")),
+                "required_receipt_count": _int(row.get("required_receipt_count")),
+                "present_blocked_receipt_count": _int(row.get("present_blocked_receipt_count")),
+                "receipt_blocker_count": _int(row.get("receipt_blocker_count")),
+                "receipt_blockers": _delimited_string_list(row.get("receipt_blockers")),
+                "primary_metric": str(row.get("primary_metric") or ""),
+                "secondary_metric": str(row.get("secondary_metric") or ""),
+                "next_required_step": str(row.get("next_required_step") or ""),
+            }
+        )
+    return summaries
+
+
+def _developer_preview_work_order_surface(work_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    blocked_rows = [
+        row
+        for row in work_rows
+        if str(row.get("blocker") or row.get("blocker_detail") or "").strip()
+    ]
+    source_rows = [
+        row for row in blocked_rows if str(row.get("blocker_scope") or "") == "receipt_source"
+    ]
+    contract_rows = [
+        row for row in blocked_rows if str(row.get("blocker_scope") or "") == "receipt_contract"
+    ]
+
+    def _summary_row(row: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "gate_id": str(row.get("gate_id") or ""),
+            "priority": str(row.get("priority") or ""),
+            "receipt_artifact": str(row.get("receipt_artifact") or ""),
+            "receipt_kind": str(row.get("receipt_kind") or ""),
+            "blocker_scope": str(row.get("blocker_scope") or ""),
+            "blocker_detail": str(row.get("blocker_detail") or row.get("blocker") or ""),
+            "required_action": str(row.get("required_action") or ""),
+            "required_receipt_status": str(row.get("required_receipt_status") or ""),
+            "required_true_fields": _delimited_string_list(row.get("required_true_fields")),
+            "required_zero_fields": _delimited_string_list(row.get("required_zero_fields")),
+            "next_required_step": str(row.get("next_required_step") or ""),
+        }
+
+    primary = _summary_row(blocked_rows[0]) if blocked_rows else {}
+    return {
+        "receipt_work_order_blocked_row_count": len(blocked_rows),
+        "receipt_work_order_contract_blocker_row_count": len(contract_rows),
+        "receipt_work_order_source_blocker_row_count": len(source_rows),
+        "receipt_work_order_primary_blocked_row": primary,
+        "blocked_receipt_work_order_rows": [_summary_row(row) for row in blocked_rows],
+        "source_receipt_work_order_rows": [_summary_row(row) for row in source_rows],
     }
 
 
@@ -3545,6 +3709,7 @@ async def get_goal_priority_queue() -> dict[str, Any]:
 async def get_goal_developer_preview() -> dict[str, Any]:
     packet = _read_json_object(DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT)
     summary = _summary(packet)
+    gate_rows = _rows(packet)
     receipt_work_order_rows = packet.get("receipt_work_order_rows")
     work_rows = (
         [row for row in receipt_work_order_rows if isinstance(row, dict)]
@@ -3566,7 +3731,15 @@ async def get_goal_developer_preview() -> dict[str, Any]:
             "receipt_work_order_primary_source_blocker": "",
             "receipt_work_order_primary_source_blocker_required_action": "",
             "rows": [],
+            "gate_summaries": [],
+            "blocked_gate_summaries": [],
             "receipt_work_order_rows": [],
+            "receipt_work_order_blocked_row_count": 0,
+            "receipt_work_order_contract_blocker_row_count": 0,
+            "receipt_work_order_source_blocker_row_count": 0,
+            "receipt_work_order_primary_blocked_row": {},
+            "blocked_receipt_work_order_rows": [],
+            "source_receipt_work_order_rows": [],
             **_developer_preview_clean_checkout_receipt_surface(
                 DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT
             ),
@@ -3578,6 +3751,7 @@ async def get_goal_developer_preview() -> dict[str, Any]:
     clean_checkout_surface = _developer_preview_clean_checkout_receipt_surface(
         DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT
     )
+    gate_summaries = _developer_preview_gate_summaries(gate_rows)
     return {
         **summary,
         "artifact_path": str(DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT),
@@ -3588,8 +3762,11 @@ async def get_goal_developer_preview() -> dict[str, Any]:
         "ready_gate_count": _int(summary.get("ready_gate_count")),
         "blocked_gate_count": _int(summary.get("blocked_gate_count")),
         "receipt_work_order_row_count": _int(summary.get("receipt_work_order_row_count")),
-        "rows": _rows(packet),
+        "rows": gate_rows,
+        "gate_summaries": gate_summaries,
+        "blocked_gate_summaries": [row for row in gate_summaries if not row["ready"]],
         "receipt_work_order_rows": work_rows,
+        **_developer_preview_work_order_surface(work_rows),
         **clean_checkout_surface,
         "developer_demo_wording_allowed": bool(
             summary.get("developer_preview_clean_baseline_ready") is True
@@ -3710,11 +3887,25 @@ async def get_goal_customer_shadow() -> dict[str, Any]:
             "artifact_path": str(CUSTOMER_SHADOW_EVIDENCE_STATUS_ARTIFACT),
             "customer_shadow_intake_schema_ready": False,
             "customer_shadow_minimum_met": False,
+            "row_count": 0,
+            "real_customer_shadow_row_count": 0,
             "completed_customer_shadow_case_count": 0,
             "required_completed_customer_shadow_case_count": 3,
             "missing_completed_customer_shadow_case_count": 3,
+            "mock_fixture_row_count": 0,
+            "invalid_row_count": 0,
+            "customer_retained_raw_data_count": 0,
+            "redistribution_allowed_false_count": 0,
+            "anonymized_result_summary_count": 0,
+            "reviewer_signoff_count": 0,
+            "customer_raw_data_stored_in_repo": False,
+            "redistribution_allowed_required_value": False,
+            "required_column_count": 0,
+            "missing_required_columns": [],
+            "blocker_count": 0,
             "customer_shadow_work_order_ready": False,
             "customer_shadow_work_order_row_count": 0,
+            "customer_shadow_work_order_missing_case_count": 3,
             "customer_shadow_work_order_primary_case_slot_id": "",
             "customer_shadow_work_order_primary_required_action": "",
             "customer_shadow_work_order_primary_operator_csv": "",
@@ -3726,13 +3917,51 @@ async def get_goal_customer_shadow() -> dict[str, Any]:
             "customer_shadow_work_order_primary_required_derived_metadata_fields": [],
             "customer_shadow_work_order_primary_required_reviewer_signoff_status": "",
             "customer_shadow_work_order_primary_required_source_artifact_fingerprint": "",
+            "paid_pilot_evidence_ready": False,
             "paid_pilot_claim_allowed": False,
+            "paid_pilot_wording_allowed": False,
+            "paid_pilot_wording_blockers": _customer_shadow_paid_pilot_wording_blockers({}),
             "commercial_readiness_promotion_allowed": False,
+            "readiness_promotion_allowed": False,
+            "customer_shadow_case_summaries": [],
+            "blocked_customer_shadow_case_count": 0,
+            "blocked_customer_shadow_case_summaries": [],
+            "customer_shadow_blocker_count": 0,
+            "customer_shadow_blocker_summaries": [],
+            "customer_shadow_work_order_blocked_row_count": 0,
+            "customer_shadow_work_order_primary_row": {},
+            "customer_shadow_work_order_blocked_rows": [],
             "rows": [],
             "customer_shadow_work_order_rows": [],
             **_mutation_flags(),
             "claim_boundary": CLAIM_BOUNDARY,
         }
+    rows = _rows(packet)
+    blockers = _blockers(packet)
+    case_summaries = _customer_shadow_case_summaries(rows)
+    blocker_summaries = _customer_shadow_case_summaries(blockers)
+    blocked_case_summaries = [
+        row
+        for row in case_summaries
+        if row["status"] != "pass" or row["blockers"] or not row["counts_toward_minimum"]
+    ]
+    work_order_blocked_rows = [
+        _customer_shadow_work_order_summary(row)
+        for row in work_order_rows
+        if str(row.get("status") or "") != "customer_shadow_evidence_status_ready"
+    ]
+    paid_pilot_evidence_ready = bool(summary.get("paid_pilot_evidence_ready") is True)
+    paid_pilot_claim_allowed = bool(summary.get("paid_pilot_claim_allowed") is True)
+    commercial_readiness_promotion_allowed = bool(
+        summary.get("commercial_readiness_promotion_allowed") is True
+    )
+    customer_raw_data_stored_in_repo = bool(summary.get("customer_raw_data_stored_in_repo") is True)
+    paid_pilot_wording_allowed = bool(
+        paid_pilot_evidence_ready
+        and paid_pilot_claim_allowed
+        and commercial_readiness_promotion_allowed
+        and not customer_raw_data_stored_in_repo
+    )
     return {
         **summary,
         "artifact_path": str(CUSTOMER_SHADOW_EVIDENCE_STATUS_ARTIFACT),
@@ -3740,6 +3969,8 @@ async def get_goal_customer_shadow() -> dict[str, Any]:
             summary.get("customer_shadow_intake_schema_ready") is True
         ),
         "customer_shadow_minimum_met": bool(summary.get("customer_shadow_minimum_met") is True),
+        "row_count": _int(summary.get("row_count")),
+        "real_customer_shadow_row_count": _int(summary.get("real_customer_shadow_row_count")),
         "completed_customer_shadow_case_count": _int(summary.get("completed_customer_shadow_case_count")),
         "required_completed_customer_shadow_case_count": _int(
             summary.get("required_completed_customer_shadow_case_count")
@@ -3747,8 +3978,24 @@ async def get_goal_customer_shadow() -> dict[str, Any]:
         "missing_completed_customer_shadow_case_count": _int(
             summary.get("missing_completed_customer_shadow_case_count")
         ),
+        "mock_fixture_row_count": _int(summary.get("mock_fixture_row_count")),
+        "invalid_row_count": _int(summary.get("invalid_row_count")),
+        "customer_retained_raw_data_count": _int(summary.get("customer_retained_raw_data_count")),
+        "redistribution_allowed_false_count": _int(summary.get("redistribution_allowed_false_count")),
+        "anonymized_result_summary_count": _int(summary.get("anonymized_result_summary_count")),
+        "reviewer_signoff_count": _int(summary.get("reviewer_signoff_count")),
+        "customer_raw_data_stored_in_repo": customer_raw_data_stored_in_repo,
+        "redistribution_allowed_required_value": bool(
+            summary.get("redistribution_allowed_required_value") is True
+        ),
+        "required_column_count": _int(summary.get("required_column_count")),
+        "missing_required_columns": _string_list(summary.get("missing_required_columns")),
+        "blocker_count": _int(summary.get("blocker_count")),
         "customer_shadow_work_order_ready": bool(summary.get("customer_shadow_work_order_ready") is True),
         "customer_shadow_work_order_row_count": _int(summary.get("customer_shadow_work_order_row_count")),
+        "customer_shadow_work_order_missing_case_count": _int(
+            summary.get("customer_shadow_work_order_missing_case_count")
+        ),
         "customer_shadow_work_order_primary_case_slot_id": str(
             summary.get("customer_shadow_work_order_primary_case_slot_id") or ""
         ),
@@ -3782,11 +4029,23 @@ async def get_goal_customer_shadow() -> dict[str, Any]:
         "customer_shadow_work_order_primary_required_source_artifact_fingerprint": str(
             summary.get("customer_shadow_work_order_primary_required_source_artifact_fingerprint") or ""
         ),
-        "paid_pilot_claim_allowed": bool(summary.get("paid_pilot_claim_allowed") is True),
-        "commercial_readiness_promotion_allowed": bool(
-            summary.get("commercial_readiness_promotion_allowed") is True
+        "paid_pilot_evidence_ready": paid_pilot_evidence_ready,
+        "paid_pilot_claim_allowed": paid_pilot_claim_allowed,
+        "paid_pilot_wording_allowed": paid_pilot_wording_allowed,
+        "paid_pilot_wording_blockers": _customer_shadow_paid_pilot_wording_blockers(summary),
+        "commercial_readiness_promotion_allowed": commercial_readiness_promotion_allowed,
+        "readiness_promotion_allowed": bool(summary.get("readiness_promotion_allowed") is True),
+        "customer_shadow_case_summaries": case_summaries,
+        "blocked_customer_shadow_case_count": len(blocked_case_summaries),
+        "blocked_customer_shadow_case_summaries": blocked_case_summaries,
+        "customer_shadow_blocker_count": len(blocker_summaries),
+        "customer_shadow_blocker_summaries": blocker_summaries,
+        "customer_shadow_work_order_blocked_row_count": len(work_order_blocked_rows),
+        "customer_shadow_work_order_primary_row": _customer_shadow_work_order_summary(
+            work_order_rows[0] if work_order_rows else {}
         ),
-        "rows": _rows(packet),
+        "customer_shadow_work_order_blocked_rows": work_order_blocked_rows,
+        "rows": rows,
         "customer_shadow_work_order_rows": work_order_rows,
         **_mutation_flags(),
         "claim_boundary": summary.get("claim_boundary") or CLAIM_BOUNDARY,

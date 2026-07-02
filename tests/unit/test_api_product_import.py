@@ -363,6 +363,28 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert pose_sampling["external_state_mutated"] is False
 
     pocketmd_report = asyncio.run(product_pocketmd_lite.get_product_pocketmd_lite_report())
+    pocketmd_report_source = _artifact_summary("pocketmd_lite_report_current.json")
+    assert pocketmd_report["status"] == pocketmd_report_source.get("status")
+    assert pocketmd_report["pocketmd_lite_claim_safe"] is (
+        pocketmd_report_source.get("pocketmd_lite_claim_safe") is True
+    )
+    assert pocketmd_report["top_k_refinement_evidence_ready"] is (
+        pocketmd_report_source.get("top_k_refinement_evidence_ready") is True
+    )
+    for key in (
+        "claim_grade_metric_ready_row_count",
+        "green_row_count",
+        "yellow_row_count",
+        "red_row_count",
+        "abstain_row_count",
+    ):
+        assert pocketmd_report[key] == int(pocketmd_report_source.get(key) or 0)
+    assert pocketmd_report["missing_refinement_metric_names"] == (
+        pocketmd_report_source.get("missing_refinement_metric_names") or []
+    )
+    assert pocketmd_report["missing_refinement_metric_counts"] == (
+        pocketmd_report_source.get("missing_refinement_metric_counts") or {}
+    )
     assert pocketmd_report["execution_enabled"] is False
     assert pocketmd_report["docking_results_emitted"] is False
     assert pocketmd_report["external_state_mutated"] is False
@@ -374,6 +396,40 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
 
     pocketmd_preview_report = asyncio.run(
         product_pocketmd_lite.get_product_pocketmd_lite_candidate_metric_fill_preview_report()
+    )
+    pocketmd_preview_source = _artifact_summary("pocketmd_lite_candidate_metric_fill_preview_report_current.json")
+    pocketmd_audit_source = _artifact_summary("pocketmd_lite_topk_refinement_audit_current.json")
+    preview_ready = (
+        pocketmd_preview_source.get("status") == "pocketmd_lite_report_ready"
+        and pocketmd_preview_source.get("top_k_refinement_evidence_ready") is True
+    )
+    canonical_ready = (
+        pocketmd_report_source.get("status") == "pocketmd_lite_report_ready"
+        and pocketmd_report_source.get("top_k_refinement_evidence_ready") is True
+        and pocketmd_report_source.get("pocketmd_lite_claim_safe") is True
+    )
+    assert pocketmd_preview_report["canonical_report_status"] == pocketmd_report_source.get("status")
+    assert pocketmd_preview_report["canonical_report_ready"] is canonical_ready
+    assert pocketmd_preview_report["canonical_pocketmd_lite_claim_safe"] is (
+        pocketmd_report_source.get("pocketmd_lite_claim_safe") is True
+    )
+    assert pocketmd_preview_report["canonical_abstain_row_count"] == int(
+        pocketmd_report_source.get("abstain_row_count") or 0
+    )
+    assert pocketmd_preview_report["canonical_missing_refinement_metric_names"] == (
+        pocketmd_report_source.get("missing_refinement_metric_names") or []
+    )
+    assert pocketmd_preview_report["canonical_missing_refinement_metric_counts"] == (
+        pocketmd_report_source.get("missing_refinement_metric_counts") or {}
+    )
+    assert pocketmd_preview_report["canonical_review_required"] is (preview_ready and not canonical_ready)
+    assert pocketmd_preview_report["canonical_candidate_csv_mutated"] is (
+        pocketmd_audit_source.get("candidate_metric_fill_preview_canonical_candidate_csv_mutated") is True
+    )
+    assert pocketmd_preview_report["preview_report_ready"] is preview_ready
+    assert pocketmd_preview_report["preview_requires_canonical_review"] is True
+    assert pocketmd_preview_report["preview_pocketmd_lite_claim_safe"] is (
+        pocketmd_preview_source.get("pocketmd_lite_claim_safe") is True
     )
     assert pocketmd_preview_report["pocketmd_lite_claim_safe"] is False
     assert pocketmd_preview_report["execution_enabled"] is False
@@ -525,6 +581,51 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert public_benchmark_receipts["vina_gnina_comparison_adapter_score_evidence_ready"] is (
         public_benchmark_receipts_source.get("vina_gnina_comparison_adapter_score_evidence_ready") is True
     )
+    for key in (
+        "phase2_harness_ready",
+        "materialization_manifest_ready",
+        "subset_dry_run_ready",
+        "pose_rmsd_2a_5a_ready",
+        "posebusters_validity_ready",
+        "vina_gnina_same_input_comparison_ready",
+        "benchmark_receipt_attach_ready",
+        "benchmark_ledger_review_ready",
+        "vina_gnina_score_template_receipt_ready",
+        "vina_gnina_score_template_validation_ready",
+    ):
+        assert public_benchmark_receipts[key] is (public_benchmark_receipts_source.get(key) is True)
+    for key in (
+        "vina_gnina_score_template_filled_score_row_count",
+        "vina_gnina_score_value_pending_count",
+        "vina_gnina_license_ok_pending_count",
+        "vina_gnina_operator_metadata_pending_count",
+        "vina_gnina_approval_token_pending_count",
+        "vina_gnina_pending_field_count",
+        "benchmark_ledger_entry_count",
+        "benchmark_ledger_external_safe_count",
+    ):
+        assert public_benchmark_receipts[key] == int(public_benchmark_receipts_source.get(key) or 0)
+    assert public_benchmark_receipts["next_required_step"] == public_benchmark_receipts_source.get(
+        "next_required_step", ""
+    )
+    assert public_benchmark_receipts["scorecard_status"] == public_benchmark_receipts_source.get(
+        "scorecard_status", ""
+    )
+    assert public_benchmark_receipts["vina_gnina_score_template_receipt_status"] == (
+        public_benchmark_receipts_source.get("vina_gnina_score_template_receipt_status", "")
+    )
+    assert public_benchmark_receipts["vina_gnina_pending_field_counts"] == (
+        public_benchmark_receipts_source.get("vina_gnina_pending_field_counts") or {}
+    )
+    public_benchmark_receipts_payload = _artifact_payload("public_benchmark_external_receipts_audit_current.json")
+    source_blocked_steps = [
+        row
+        for row in public_benchmark_receipts_payload.get("rows", [])
+        if not (row.get("ready") is True and row.get("status") == "ready")
+    ]
+    assert len(public_benchmark_receipts["blocked_steps"]) == len(source_blocked_steps)
+    assert public_benchmark_receipts["blocked_steps"][0]["step_id"] == source_blocked_steps[0].get("step_id")
+    assert public_benchmark_receipts["blocked_steps"][0]["blocker"] == source_blocked_steps[0].get("blocker")
     assert len(public_benchmark_receipts["steps"]) == public_benchmark_receipts["step_count"]
 
     trajectory_sla = asyncio.run(product.get_product_trajectory_sla_contract())

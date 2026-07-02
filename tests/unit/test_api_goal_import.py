@@ -1070,15 +1070,59 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
                 "rows": [
                     {
                         "gate_id": "benchmark_results_clean_checkout_regenerated",
+                        "priority": "A",
                         "status": "blocked_developer_preview_gate",
                         "ready": False,
+                        "blocker": ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:status=blocked_developer_preview_clean_checkout_benchmark_receipt",
+                        "blockers": [
+                            ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:status=blocked_developer_preview_clean_checkout_benchmark_receipt",
+                        ],
+                        "receipt_artifacts": ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+                        "present_receipt_count": 1,
+                        "required_receipt_count": 1,
+                        "present_blocked_receipt_count": 1,
+                        "receipt_blocker_count": 2,
+                        "receipt_blockers": [
+                            ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:status=blocked_developer_preview_clean_checkout_benchmark_receipt",
+                            ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:source_blocker=baseline_task_count_zero",
+                        ],
+                        "primary_metric": "required_ready=false; review_ready=false",
+                        "secondary_metric": "present_receipts=1; required_receipts=1",
+                        "next_required_step": "Run Gate A.",
                     }
                 ],
                 "receipt_work_order_rows": [
                     {
                         "gate_id": "benchmark_results_clean_checkout_regenerated",
+                        "priority": "A",
                         "receipt_artifact": ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+                        "receipt_kind": "required",
+                        "blocker_scope": "receipt_contract",
                         "blocker_detail": "status=blocked_developer_preview_clean_checkout_benchmark_receipt",
+                        "required_action": "Rebuild the receipt after clearing its source blockers.",
+                        "required_receipt_status": "developer_preview_clean_checkout_benchmark_receipt_ready",
+                        "required_true_fields": [
+                            "clean_checkout_benchmark_regenerated",
+                            "ai_verify_passed",
+                        ],
+                        "required_zero_fields": ["blocker_count", "failed_count"],
+                        "next_required_step": "Run Gate A.",
+                    },
+                    {
+                        "gate_id": "benchmark_results_clean_checkout_regenerated",
+                        "priority": "A",
+                        "receipt_artifact": ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+                        "receipt_kind": "required",
+                        "blocker_scope": "receipt_source",
+                        "blocker_detail": "baseline_task_count_zero",
+                        "required_action": "Resolve this receipt blocker and rebuild the Developer Preview audit.",
+                        "required_receipt_status": "developer_preview_clean_checkout_benchmark_receipt_ready",
+                        "required_true_fields": [
+                            "clean_checkout_benchmark_regenerated",
+                            "ai_verify_passed",
+                        ],
+                        "required_zero_fields": ["blocker_count", "failed_count"],
+                        "next_required_step": "Run Gate A.",
                     }
                 ],
             }
@@ -1167,8 +1211,33 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
         "Attach the missing source evidence required by the receipt."
     )
     assert response["rows"][0]["gate_id"] == "benchmark_results_clean_checkout_regenerated"
+    assert response["gate_summaries"][0]["gate_id"] == "benchmark_results_clean_checkout_regenerated"
+    assert response["gate_summaries"][0]["priority"] == "A"
+    assert response["gate_summaries"][0]["ready"] is False
+    assert response["gate_summaries"][0]["receipt_artifacts"] == [
+        ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+    ]
+    assert response["gate_summaries"][0]["receipt_blocker_count"] == 2
+    assert response["gate_summaries"][0]["receipt_blockers"][1].endswith(
+        "source_blocker=baseline_task_count_zero"
+    )
+    assert response["blocked_gate_summaries"][0]["gate_id"] == (
+        "benchmark_results_clean_checkout_regenerated"
+    )
     assert response["receipt_work_order_rows"][0]["blocker_detail"] == (
         "status=blocked_developer_preview_clean_checkout_benchmark_receipt"
+    )
+    assert response["receipt_work_order_blocked_row_count"] == 2
+    assert response["receipt_work_order_contract_blocker_row_count"] == 1
+    assert response["receipt_work_order_source_blocker_row_count"] == 1
+    assert response["receipt_work_order_primary_blocked_row"]["blocker_scope"] == (
+        "receipt_contract"
+    )
+    assert response["blocked_receipt_work_order_rows"][1]["blocker_detail"] == (
+        "baseline_task_count_zero"
+    )
+    assert response["source_receipt_work_order_rows"][0]["required_action"] == (
+        "Resolve this receipt blocker and rebuild the Developer Preview audit."
     )
     assert response["clean_checkout_receipt_status"] == (
         "blocked_developer_preview_clean_checkout_benchmark_receipt"
@@ -1198,7 +1267,15 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     assert missing["developer_preview_clean_baseline_ready"] is False
     assert missing["gate_count"] == 0
     assert missing["receipt_work_order_rows"] == []
+    assert missing["gate_summaries"] == []
+    assert missing["blocked_gate_summaries"] == []
     assert missing["receipt_work_order_source_blocker_count"] == 0
+    assert missing["receipt_work_order_blocked_row_count"] == 0
+    assert missing["receipt_work_order_contract_blocker_row_count"] == 0
+    assert missing["receipt_work_order_source_blocker_row_count"] == 0
+    assert missing["receipt_work_order_primary_blocked_row"] == {}
+    assert missing["blocked_receipt_work_order_rows"] == []
+    assert missing["source_receipt_work_order_rows"] == []
     assert missing["receipt_work_order_primary_source_blocker"] == ""
     assert missing["clean_checkout_receipt_ready"] is False
     assert missing["developer_demo_wording_allowed"] is False
@@ -1363,11 +1440,25 @@ def test_goal_customer_shadow_endpoint_reads_fail_closed_evidence(monkeypatch, t
                     "status": "blocked_customer_shadow_evidence_status",
                     "customer_shadow_intake_schema_ready": True,
                     "customer_shadow_minimum_met": False,
+                    "row_count": 1,
+                    "real_customer_shadow_row_count": 1,
                     "completed_customer_shadow_case_count": 0,
                     "required_completed_customer_shadow_case_count": 3,
                     "missing_completed_customer_shadow_case_count": 3,
+                    "mock_fixture_row_count": 0,
+                    "invalid_row_count": 1,
+                    "customer_retained_raw_data_count": 1,
+                    "redistribution_allowed_false_count": 1,
+                    "anonymized_result_summary_count": 1,
+                    "reviewer_signoff_count": 0,
+                    "customer_raw_data_stored_in_repo": False,
+                    "redistribution_allowed_required_value": False,
+                    "required_column_count": 12,
+                    "missing_required_columns": [],
+                    "blocker_count": 2,
                     "customer_shadow_work_order_ready": False,
                     "customer_shadow_work_order_row_count": 3,
+                    "customer_shadow_work_order_missing_case_count": 3,
                     "customer_shadow_work_order_primary_case_slot_id": "customer_shadow_case_1",
                     "customer_shadow_work_order_primary_required_action": (
                         "Add one reviewed real customer-shadow metadata row."
@@ -1389,21 +1480,87 @@ def test_goal_customer_shadow_endpoint_reads_fail_closed_evidence(monkeypatch, t
                     ],
                     "customer_shadow_work_order_primary_required_reviewer_signoff_status": "approved",
                     "customer_shadow_work_order_primary_required_source_artifact_fingerprint": "sha256",
+                    "paid_pilot_evidence_ready": False,
                     "paid_pilot_claim_allowed": False,
                     "commercial_readiness_promotion_allowed": False,
+                    "readiness_promotion_allowed": False,
                     "next_required_step": "Collect three reviewed customer-shadow rows.",
                     "claim_boundary": "customer shadow boundary",
                 },
-                "rows": [],
+                "rows": [
+                    {
+                        "case_id": "customer_case_1",
+                        "row_kind": "customer_shadow",
+                        "status": "fail",
+                        "completed_schema_valid": False,
+                        "counts_toward_minimum": False,
+                        "is_mock_fixture": False,
+                        "blockers": (
+                            "reviewer_signoff_not_approved;"
+                            "reviewed_at_utc_missing_or_invalid"
+                        ),
+                        "blocker_count": 2,
+                        "raw_data_custody": "customer_retained",
+                        "customer_retained_raw_data": "true",
+                        "redistribution_allowed": "false",
+                        "raw_data_stored_in_repo": "false",
+                        "reviewer_signoff_status": "pending",
+                        "next_action": "Fill reviewer signoff fields.",
+                    }
+                ],
+                "blockers": [
+                    {
+                        "case_id": "customer_case_1",
+                        "row_kind": "customer_shadow",
+                        "status": "fail",
+                        "blockers": (
+                            "reviewer_signoff_not_approved;"
+                            "reviewed_at_utc_missing_or_invalid"
+                        ),
+                        "blocker_count": 2,
+                        "counts_toward_minimum": False,
+                        "is_mock_fixture": False,
+                        "next_action": "Fill reviewer signoff fields.",
+                    },
+                    {
+                        "case_id": "minimum_completed_cases",
+                        "row_kind": "minimum",
+                        "status": "fail",
+                        "blockers": "missing_completed_customer_shadow_case_count:3",
+                        "blocker_count": 1,
+                        "counts_toward_minimum": False,
+                        "is_mock_fixture": False,
+                        "next_action": "Add reviewed real customer-shadow rows.",
+                    },
+                ],
                 "customer_shadow_work_order_rows": [
                     {
+                        "work_order_id": "customer_shadow_case_slot_1",
                         "case_slot_id": "customer_shadow_case_1",
+                        "status": "missing_customer_shadow_evidence",
+                        "required_row_kind": "customer_shadow",
+                        "operator_csv": "config/customer_shadow_evidence_intake_template.csv",
+                        "required_action": "Add one reviewed real customer-shadow metadata row.",
+                        "required_raw_data_custody": "customer_retained",
                         "required_customer_retained_raw_data": True,
                         "required_raw_data_stored_in_repo": False,
                         "required_redistribution_allowed": False,
+                        "required_derived_metadata_fields": [
+                            "artifact_fingerprint",
+                            "case_domain",
+                            "input_size_class",
+                            "result_metric_summary",
+                            "runner_profile",
+                        ],
+                        "required_anonymized_result_summary": "At least 24 characters.",
                         "required_reviewer_signoff_status": "approved",
+                        "required_reviewer_id": "non-empty reviewer id",
+                        "required_reviewed_at_utc": "timezone-aware ISO timestamp",
+                        "required_source_artifact_fingerprint": "sha256",
                         "paid_pilot_claim_allowed": False,
                         "commercial_readiness_promotion_allowed": False,
+                        "execution_enabled": False,
+                        "external_state_mutated": False,
                     }
                 ],
             }
@@ -1417,11 +1574,25 @@ def test_goal_customer_shadow_endpoint_reads_fail_closed_evidence(monkeypatch, t
     assert response["status"] == "blocked_customer_shadow_evidence_status"
     assert response["customer_shadow_intake_schema_ready"] is True
     assert response["customer_shadow_minimum_met"] is False
+    assert response["row_count"] == 1
+    assert response["real_customer_shadow_row_count"] == 1
     assert response["completed_customer_shadow_case_count"] == 0
     assert response["required_completed_customer_shadow_case_count"] == 3
     assert response["missing_completed_customer_shadow_case_count"] == 3
+    assert response["mock_fixture_row_count"] == 0
+    assert response["invalid_row_count"] == 1
+    assert response["customer_retained_raw_data_count"] == 1
+    assert response["redistribution_allowed_false_count"] == 1
+    assert response["anonymized_result_summary_count"] == 1
+    assert response["reviewer_signoff_count"] == 0
+    assert response["customer_raw_data_stored_in_repo"] is False
+    assert response["redistribution_allowed_required_value"] is False
+    assert response["required_column_count"] == 12
+    assert response["missing_required_columns"] == []
+    assert response["blocker_count"] == 2
     assert response["customer_shadow_work_order_ready"] is False
     assert response["customer_shadow_work_order_row_count"] == 3
+    assert response["customer_shadow_work_order_missing_case_count"] == 3
     assert response["customer_shadow_work_order_primary_case_slot_id"] == "customer_shadow_case_1"
     assert response["customer_shadow_work_order_primary_required_action"] == (
         "Add one reviewed real customer-shadow metadata row."
@@ -1443,9 +1614,40 @@ def test_goal_customer_shadow_endpoint_reads_fail_closed_evidence(monkeypatch, t
     ]
     assert response["customer_shadow_work_order_primary_required_reviewer_signoff_status"] == "approved"
     assert response["customer_shadow_work_order_primary_required_source_artifact_fingerprint"] == "sha256"
+    assert response["paid_pilot_evidence_ready"] is False
     assert response["paid_pilot_claim_allowed"] is False
+    assert response["paid_pilot_wording_allowed"] is False
+    assert response["paid_pilot_wording_blockers"] == [
+        "customer_shadow_minimum_not_met",
+        "completed_customer_shadow_cases_below_required:0/3",
+        "real_customer_shadow_rows_below_required:1/3",
+        "customer_retained_raw_data_rows_below_required:1/3",
+        "redistribution_false_rows_below_required:1/3",
+        "anonymized_summary_rows_below_required:1/3",
+        "reviewer_signoff_rows_below_required:0/3",
+        "invalid_customer_shadow_rows:1",
+        "customer_shadow_work_order_rows_open:3",
+        "paid_pilot_evidence_not_ready",
+        "paid_pilot_claim_not_approved",
+        "commercial_readiness_promotion_not_approved",
+    ]
     assert response["commercial_readiness_promotion_allowed"] is False
-    assert response["rows"] == []
+    assert response["readiness_promotion_allowed"] is False
+    assert response["customer_shadow_case_summaries"][0]["case_id"] == "customer_case_1"
+    assert response["customer_shadow_case_summaries"][0]["blockers"] == [
+        "reviewer_signoff_not_approved",
+        "reviewed_at_utc_missing_or_invalid",
+    ]
+    assert response["blocked_customer_shadow_case_count"] == 1
+    assert response["customer_shadow_blocker_count"] == 2
+    assert response["customer_shadow_blocker_summaries"][1]["case_id"] == "minimum_completed_cases"
+    assert response["customer_shadow_work_order_blocked_row_count"] == 1
+    assert response["customer_shadow_work_order_primary_row"]["case_slot_id"] == "customer_shadow_case_1"
+    assert response["customer_shadow_work_order_primary_row"]["required_raw_data_stored_in_repo"] is False
+    assert response["customer_shadow_work_order_blocked_rows"][0]["operator_csv"] == (
+        "config/customer_shadow_evidence_intake_template.csv"
+    )
+    assert response["rows"][0]["case_id"] == "customer_case_1"
     assert response["customer_shadow_work_order_rows"][0]["case_slot_id"] == "customer_shadow_case_1"
     assert response["customer_shadow_work_order_rows"][0]["required_raw_data_stored_in_repo"] is False
     assert response["execution_enabled"] is False
@@ -1457,14 +1659,39 @@ def test_goal_customer_shadow_endpoint_reads_fail_closed_evidence(monkeypatch, t
     assert missing["status"] == "missing_customer_shadow_evidence_status"
     assert missing["customer_shadow_intake_schema_ready"] is False
     assert missing["customer_shadow_minimum_met"] is False
+    assert missing["row_count"] == 0
+    assert missing["real_customer_shadow_row_count"] == 0
     assert missing["completed_customer_shadow_case_count"] == 0
     assert missing["required_completed_customer_shadow_case_count"] == 3
     assert missing["missing_completed_customer_shadow_case_count"] == 3
+    assert missing["mock_fixture_row_count"] == 0
+    assert missing["invalid_row_count"] == 0
+    assert missing["customer_retained_raw_data_count"] == 0
+    assert missing["redistribution_allowed_false_count"] == 0
+    assert missing["anonymized_result_summary_count"] == 0
+    assert missing["reviewer_signoff_count"] == 0
+    assert missing["customer_raw_data_stored_in_repo"] is False
+    assert missing["redistribution_allowed_required_value"] is False
+    assert missing["required_column_count"] == 0
+    assert missing["missing_required_columns"] == []
+    assert missing["blocker_count"] == 0
     assert missing["customer_shadow_work_order_ready"] is False
     assert missing["customer_shadow_work_order_row_count"] == 0
+    assert missing["customer_shadow_work_order_missing_case_count"] == 3
     assert missing["customer_shadow_work_order_primary_required_derived_metadata_fields"] == []
+    assert missing["paid_pilot_evidence_ready"] is False
     assert missing["paid_pilot_claim_allowed"] is False
+    assert missing["paid_pilot_wording_allowed"] is False
+    assert "paid_pilot_claim_not_approved" in missing["paid_pilot_wording_blockers"]
     assert missing["commercial_readiness_promotion_allowed"] is False
+    assert missing["readiness_promotion_allowed"] is False
+    assert missing["customer_shadow_case_summaries"] == []
+    assert missing["blocked_customer_shadow_case_count"] == 0
+    assert missing["customer_shadow_blocker_count"] == 0
+    assert missing["customer_shadow_blocker_summaries"] == []
+    assert missing["customer_shadow_work_order_blocked_row_count"] == 0
+    assert missing["customer_shadow_work_order_primary_row"] == {}
+    assert missing["customer_shadow_work_order_blocked_rows"] == []
     assert missing["customer_shadow_work_order_rows"] == []
     assert missing["execution_enabled"] is False
     assert missing["external_state_mutated"] is False
