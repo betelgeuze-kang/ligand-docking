@@ -387,6 +387,7 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "blocked_gate_count": 3,
                 "receipt_work_order_row_count": 29,
                 "receipt_blocker_count": 12,
+                "receipt_work_order_source_blocker_count": 7,
                 "receipt_work_order_primary_gate_id": "benchmark_results_clean_checkout_regenerated",
                 "receipt_work_order_primary_receipt_artifact": (
                     ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
@@ -403,6 +404,18 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                     "blocker_count",
                     "failed_count",
                 ],
+                "receipt_work_order_primary_source_blocker_gate_id": (
+                    "benchmark_results_clean_checkout_regenerated"
+                ),
+                "receipt_work_order_primary_source_blocker_receipt_artifact": (
+                    ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+                ),
+                "receipt_work_order_primary_source_blocker": (
+                    ".betelgeuze/developer_preview_clean_checkout_ai_verify.log:missing"
+                ),
+                "receipt_work_order_primary_source_blocker_required_action": (
+                    "Attach the missing source evidence required by the receipt."
+                ),
                 "primary_blocker_id": "benchmark_results_clean_checkout_regenerated",
                 "next_required_step": "Attach the clean-checkout benchmark receipt.",
                 "blockers": [
@@ -700,6 +713,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["developer_preview_blocked_gate_count"] == 3
     assert summary["developer_preview_receipt_work_order_row_count"] == 29
     assert summary["developer_preview_receipt_blocker_count"] == 12
+    assert summary["developer_preview_receipt_work_order_source_blocker_count"] == 7
     assert summary["developer_preview_primary_blocker_id"] == (
         "benchmark_results_clean_checkout_regenerated"
     )
@@ -721,6 +735,18 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         "blocker_count",
         "failed_count",
     ]
+    assert summary["developer_preview_receipt_work_order_primary_source_blocker_gate_id"] == (
+        "benchmark_results_clean_checkout_regenerated"
+    )
+    assert summary[
+        "developer_preview_receipt_work_order_primary_source_blocker_receipt_artifact"
+    ] == ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+    assert summary["developer_preview_receipt_work_order_primary_source_blocker"] == (
+        ".betelgeuze/developer_preview_clean_checkout_ai_verify.log:missing"
+    )
+    assert summary[
+        "developer_preview_receipt_work_order_primary_source_blocker_required_action"
+    ] == "Attach the missing source evidence required by the receipt."
     assert summary["f2g_f2h_preflight_present"] is True
     assert summary["f2g_f2h_recovery_packet_present"] is True
     assert summary["f2g_f2h_preflight_status"] == "blocked_f2g_f2h_surface_preflight"
@@ -949,6 +975,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "clean_baseline=false" in panels["developer_preview_final_gates"]["primary_metric"]
     assert "receipt_work_order_rows=29" in panels["developer_preview_final_gates"]["secondary_metric"]
     assert "receipt_blockers=12" in panels["developer_preview_final_gates"]["secondary_metric"]
+    assert "source_blockers=7" in panels["developer_preview_final_gates"]["secondary_metric"]
     assert "primary_gate=benchmark_results_clean_checkout_regenerated" in (
         panels["developer_preview_final_gates"]["secondary_metric"]
     )
@@ -968,6 +995,21 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     )
     assert "primary_required_zero_fields=2" in (
         panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "primary_source_gate=benchmark_results_clean_checkout_regenerated" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert (
+        "primary_source_receipt=.betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+        in panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert (
+        "primary_source_blocker=.betelgeuze/developer_preview_clean_checkout_ai_verify.log:missing"
+        in panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert (
+        "primary_source_action=Attach the missing source evidence required by the receipt."
+        in panels["developer_preview_final_gates"]["secondary_metric"]
     )
     assert panels["developer_preview_final_gates"]["next_action"] == (
         "Attach the clean-checkout benchmark receipt."

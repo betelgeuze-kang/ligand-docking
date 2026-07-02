@@ -314,12 +314,14 @@ def _receipt_work_order_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]
             requirement = receipt_requirements.get(artifact, {})
             required_true_fields = list(requirement.get("required_true_fields", []))
             required_zero_fields = list(requirement.get("required_zero_fields", []))
+            blocker_scope = "receipt_source" if ":source_blocker=" in blocker else "receipt_contract"
             work_rows.append(
                 {
                     "priority": row["priority"],
                     "gate_id": row["gate_id"],
                     "receipt_artifact": artifact,
                     "receipt_kind": requirement.get("receipt_kind", ""),
+                    "blocker_scope": blocker_scope,
                     "required_receipt_status": requirement.get("required_receipt_status", ""),
                     "required_true_fields": required_true_fields,
                     "required_zero_fields": required_zero_fields,
@@ -472,6 +474,9 @@ def build_developer_preview_final_gate_audit(
         for blocker in row["receipt_blockers"]
     ]
     receipt_work_order_rows = _receipt_work_order_rows(rows)
+    receipt_source_blocker_rows = [
+        row for row in receipt_work_order_rows if row.get("blocker_scope") == "receipt_source"
+    ]
     present_blocked_receipt_count = sum(
         int(row["present_blocked_receipt_count"])
         for row in blocked_rows
@@ -514,6 +519,19 @@ def build_developer_preview_final_gate_audit(
         ),
         "receipt_work_order_primary_required_zero_fields": (
             receipt_work_order_rows[0]["required_zero_fields"] if receipt_work_order_rows else []
+        ),
+        "receipt_work_order_source_blocker_count": len(receipt_source_blocker_rows),
+        "receipt_work_order_primary_source_blocker_gate_id": (
+            receipt_source_blocker_rows[0]["gate_id"] if receipt_source_blocker_rows else ""
+        ),
+        "receipt_work_order_primary_source_blocker_receipt_artifact": (
+            receipt_source_blocker_rows[0]["receipt_artifact"] if receipt_source_blocker_rows else ""
+        ),
+        "receipt_work_order_primary_source_blocker": (
+            receipt_source_blocker_rows[0]["blocker_detail"] if receipt_source_blocker_rows else ""
+        ),
+        "receipt_work_order_primary_source_blocker_required_action": (
+            receipt_source_blocker_rows[0]["required_action"] if receipt_source_blocker_rows else ""
         ),
         "register_gate_id_count": len(materialized_gate_ids),
         "register_gate_ids_complete": materialized_gate_ids == {spec["gate_id"] for spec in GATE_SPECS},
@@ -566,7 +584,9 @@ def _render_md(payload: dict[str, Any]) -> str:
         f"- present_blocked_receipt_count: `{summary['present_blocked_receipt_count']}`",
         f"- receipt_blocker_count: `{summary['receipt_blocker_count']}`",
         f"- receipt_work_order_row_count: `{summary['receipt_work_order_row_count']}`",
+        f"- receipt_work_order_source_blocker_count: `{summary['receipt_work_order_source_blocker_count']}`",
         f"- primary_blocker_id: `{summary['primary_blocker_id']}`",
+        f"- primary_source_blocker: `{summary['receipt_work_order_primary_source_blocker']}`",
         "",
         "| priority | gate | status | receipts | blocker |",
         "| --- | --- | --- | --- | --- |",

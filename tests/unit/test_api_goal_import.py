@@ -1047,6 +1047,19 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
                     "ready_gate_count": 3,
                     "blocked_gate_count": 3,
                     "receipt_work_order_row_count": 29,
+                    "receipt_work_order_source_blocker_count": 5,
+                    "receipt_work_order_primary_source_blocker_gate_id": (
+                        "benchmark_results_clean_checkout_regenerated"
+                    ),
+                    "receipt_work_order_primary_source_blocker_receipt_artifact": (
+                        ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+                    ),
+                    "receipt_work_order_primary_source_blocker": (
+                        ".betelgeuze/developer_preview_clean_checkout_ai_verify.log:missing"
+                    ),
+                    "receipt_work_order_primary_source_blocker_required_action": (
+                        "Attach the missing source evidence required by the receipt."
+                    ),
                     "primary_blocker_id": "benchmark_results_clean_checkout_regenerated",
                     "next_required_step": "Attach clean-checkout receipt.",
                     "claim_boundary": "developer preview boundary",
@@ -1079,6 +1092,19 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     assert response["ready_gate_count"] == 3
     assert response["blocked_gate_count"] == 3
     assert response["receipt_work_order_row_count"] == 29
+    assert response["receipt_work_order_source_blocker_count"] == 5
+    assert response["receipt_work_order_primary_source_blocker_gate_id"] == (
+        "benchmark_results_clean_checkout_regenerated"
+    )
+    assert response["receipt_work_order_primary_source_blocker_receipt_artifact"] == (
+        ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+    )
+    assert response["receipt_work_order_primary_source_blocker"] == (
+        ".betelgeuze/developer_preview_clean_checkout_ai_verify.log:missing"
+    )
+    assert response["receipt_work_order_primary_source_blocker_required_action"] == (
+        "Attach the missing source evidence required by the receipt."
+    )
     assert response["rows"][0]["gate_id"] == "benchmark_results_clean_checkout_regenerated"
     assert response["receipt_work_order_rows"][0]["blocker_detail"] == (
         "status=blocked_developer_preview_clean_checkout_benchmark_receipt"
@@ -1093,6 +1119,8 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     assert missing["developer_preview_clean_baseline_ready"] is False
     assert missing["gate_count"] == 0
     assert missing["receipt_work_order_rows"] == []
+    assert missing["receipt_work_order_source_blocker_count"] == 0
+    assert missing["receipt_work_order_primary_source_blocker"] == ""
     assert missing["execution_enabled"] is False
     assert missing["external_state_mutated"] is False
 

@@ -194,6 +194,11 @@ def _missing_response() -> dict[str, Any]:
         "developer_preview_receipt_work_order_primary_required_receipt_status": "",
         "developer_preview_receipt_work_order_primary_required_true_fields": [],
         "developer_preview_receipt_work_order_primary_required_zero_fields": [],
+        "developer_preview_receipt_work_order_source_blocker_count": 0,
+        "developer_preview_receipt_work_order_primary_source_blocker_gate_id": "",
+        "developer_preview_receipt_work_order_primary_source_blocker_receipt_artifact": "",
+        "developer_preview_receipt_work_order_primary_source_blocker": "",
+        "developer_preview_receipt_work_order_primary_source_blocker_required_action": "",
         "enterprise_on_prem_readiness_present": False,
         "enterprise_on_prem_ready": False,
         "enterprise_on_prem_claim_allowed": False,
@@ -567,6 +572,27 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "developer_preview_receipt_work_order_primary_required_zero_fields": _string_list(
             summary.get("developer_preview_receipt_work_order_primary_required_zero_fields")
+        ),
+        "developer_preview_receipt_work_order_source_blocker_count": _int(
+            summary.get("developer_preview_receipt_work_order_source_blocker_count")
+        ),
+        "developer_preview_receipt_work_order_primary_source_blocker_gate_id": str(
+            summary.get("developer_preview_receipt_work_order_primary_source_blocker_gate_id") or ""
+        ),
+        "developer_preview_receipt_work_order_primary_source_blocker_receipt_artifact": str(
+            summary.get(
+                "developer_preview_receipt_work_order_primary_source_blocker_receipt_artifact"
+            )
+            or ""
+        ),
+        "developer_preview_receipt_work_order_primary_source_blocker": str(
+            summary.get("developer_preview_receipt_work_order_primary_source_blocker") or ""
+        ),
+        "developer_preview_receipt_work_order_primary_source_blocker_required_action": str(
+            summary.get(
+                "developer_preview_receipt_work_order_primary_source_blocker_required_action"
+            )
+            or ""
         ),
         "enterprise_on_prem_readiness_present": bool(
             summary.get("enterprise_on_prem_readiness_present") is True

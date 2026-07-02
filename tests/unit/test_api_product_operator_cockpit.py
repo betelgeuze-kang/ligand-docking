@@ -194,6 +194,7 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "developer_preview_blocked_gate_count": 3,
                 "developer_preview_receipt_work_order_row_count": 29,
                 "developer_preview_receipt_blocker_count": 12,
+                "developer_preview_receipt_work_order_source_blocker_count": 7,
                 "developer_preview_primary_blocker_id": "benchmark_results_clean_checkout_regenerated",
                 "developer_preview_receipt_work_order_primary_gate_id": (
                     "benchmark_results_clean_checkout_regenerated"
@@ -213,6 +214,18 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                     "blocker_count",
                     "failed_count",
                 ],
+                "developer_preview_receipt_work_order_primary_source_blocker_gate_id": (
+                    "benchmark_results_clean_checkout_regenerated"
+                ),
+                "developer_preview_receipt_work_order_primary_source_blocker_receipt_artifact": (
+                    ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+                ),
+                "developer_preview_receipt_work_order_primary_source_blocker": (
+                    ".betelgeuze/developer_preview_clean_checkout_ai_verify.log:missing"
+                ),
+                "developer_preview_receipt_work_order_primary_source_blocker_required_action": (
+                    "Attach the missing source evidence required by the receipt."
+                ),
                 "enterprise_on_prem_readiness_present": True,
                 "enterprise_on_prem_ready": False,
                 "enterprise_on_prem_claim_allowed": False,
@@ -436,6 +449,7 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["developer_preview_blocked_gate_count"] == 3
     assert response["developer_preview_receipt_work_order_row_count"] == 29
     assert response["developer_preview_receipt_blocker_count"] == 12
+    assert response["developer_preview_receipt_work_order_source_blocker_count"] == 7
     assert response["developer_preview_primary_blocker_id"] == (
         "benchmark_results_clean_checkout_regenerated"
     )
@@ -457,6 +471,18 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
         "blocker_count",
         "failed_count",
     ]
+    assert response["developer_preview_receipt_work_order_primary_source_blocker_gate_id"] == (
+        "benchmark_results_clean_checkout_regenerated"
+    )
+    assert response[
+        "developer_preview_receipt_work_order_primary_source_blocker_receipt_artifact"
+    ] == ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+    assert response["developer_preview_receipt_work_order_primary_source_blocker"] == (
+        ".betelgeuze/developer_preview_clean_checkout_ai_verify.log:missing"
+    )
+    assert response[
+        "developer_preview_receipt_work_order_primary_source_blocker_required_action"
+    ] == "Attach the missing source evidence required by the receipt."
     assert response["enterprise_on_prem_readiness_present"] is True
     assert response["enterprise_on_prem_ready"] is False
     assert response["enterprise_on_prem_claim_allowed"] is False
@@ -631,6 +657,15 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["developer_preview_receipt_work_order_primary_required_receipt_status"] == ""
     assert response["developer_preview_receipt_work_order_primary_required_true_fields"] == []
     assert response["developer_preview_receipt_work_order_primary_required_zero_fields"] == []
+    assert response["developer_preview_receipt_work_order_source_blocker_count"] == 0
+    assert response["developer_preview_receipt_work_order_primary_source_blocker_gate_id"] == ""
+    assert response[
+        "developer_preview_receipt_work_order_primary_source_blocker_receipt_artifact"
+    ] == ""
+    assert response["developer_preview_receipt_work_order_primary_source_blocker"] == ""
+    assert response[
+        "developer_preview_receipt_work_order_primary_source_blocker_required_action"
+    ] == ""
     assert response["enterprise_on_prem_readiness_present"] is False
     assert response["enterprise_on_prem_ready"] is False
     assert response["enterprise_on_prem_claim_allowed"] is False

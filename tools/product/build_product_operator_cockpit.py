@@ -995,6 +995,21 @@ def build_product_operator_cockpit(
         developer_preview.get("receipt_work_order_primary_required_zero_fields")
     )
     developer_preview_receipt_blocker_count = _int(developer_preview.get("receipt_blocker_count"))
+    developer_preview_source_blocker_count = _int(
+        developer_preview.get("receipt_work_order_source_blocker_count")
+    )
+    developer_preview_primary_source_blocker_gate = _first_text(
+        developer_preview.get("receipt_work_order_primary_source_blocker_gate_id")
+    )
+    developer_preview_primary_source_blocker_receipt = _first_text(
+        developer_preview.get("receipt_work_order_primary_source_blocker_receipt_artifact")
+    )
+    developer_preview_primary_source_blocker = _first_text(
+        developer_preview.get("receipt_work_order_primary_source_blocker")
+    )
+    developer_preview_primary_source_blocker_action = _first_text(
+        developer_preview.get("receipt_work_order_primary_source_blocker_required_action")
+    )
     f2g_preflight_present = bool(f2g_preflight)
     f2g_recovery_present = bool(f2g_recovery)
     f2g_first_recovery_row = _first_non_pass_row(f2g_recovery_rows)
@@ -1322,6 +1337,11 @@ def build_product_operator_cockpit(
                 _metric("primary_blocker", developer_preview_primary_blocker_id),
                 _metric("primary_receipt", developer_preview_primary_receipt_artifact),
                 _metric("primary_expected_status", developer_preview_primary_required_receipt_status),
+                _count_metric("source_blockers", developer_preview_source_blocker_count),
+                _metric("primary_source_gate", developer_preview_primary_source_blocker_gate),
+                _metric("primary_source_receipt", developer_preview_primary_source_blocker_receipt),
+                _metric("primary_source_blocker", developer_preview_primary_source_blocker),
+                _metric("primary_source_action", developer_preview_primary_source_blocker_action),
                 _count_metric(
                     "primary_required_true_fields",
                     len(developer_preview_primary_required_true_fields),
@@ -1820,6 +1840,21 @@ def build_product_operator_cockpit(
         ),
         "developer_preview_receipt_work_order_primary_required_zero_fields": (
             developer_preview_primary_required_zero_fields
+        ),
+        "developer_preview_receipt_work_order_source_blocker_count": (
+            developer_preview_source_blocker_count
+        ),
+        "developer_preview_receipt_work_order_primary_source_blocker_gate_id": (
+            developer_preview_primary_source_blocker_gate
+        ),
+        "developer_preview_receipt_work_order_primary_source_blocker_receipt_artifact": (
+            developer_preview_primary_source_blocker_receipt
+        ),
+        "developer_preview_receipt_work_order_primary_source_blocker": (
+            developer_preview_primary_source_blocker
+        ),
+        "developer_preview_receipt_work_order_primary_source_blocker_required_action": (
+            developer_preview_primary_source_blocker_action
         ),
         "enterprise_on_prem_readiness_present": enterprise_present,
         "enterprise_on_prem_ready": enterprise_ready,
