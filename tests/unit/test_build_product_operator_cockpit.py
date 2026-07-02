@@ -198,6 +198,9 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "anonymized_result_summary_count": 1,
                 "reviewer_signoff_count": 0,
                 "blocker_count": 2,
+                "customer_shadow_work_order_ready": False,
+                "customer_shadow_work_order_row_count": 3,
+                "customer_shadow_work_order_primary_case_slot_id": "customer_shadow_case_1",
                 "paid_pilot_evidence_ready": False,
                 "paid_pilot_claim_allowed": False,
             }
@@ -268,6 +271,9 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["customer_shadow_anonymized_result_summary_count"] == 1
     assert summary["customer_shadow_reviewer_signoff_count"] == 0
     assert summary["customer_shadow_evidence_blocker_count"] == 2
+    assert summary["customer_shadow_work_order_ready"] is False
+    assert summary["customer_shadow_work_order_row_count"] == 3
+    assert summary["customer_shadow_work_order_primary_case_slot_id"] == "customer_shadow_case_1"
 
     assert panels["product_capabilities_dashboard"]["route"] == "/product/capabilities"
     assert panels["goal_readiness_dashboard"]["route"] == "/goal/readiness"
@@ -318,6 +324,11 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "real_rows=1" in panels["claim_boundary_matrix"]["secondary_metric"]
     assert "missing_customer_rows=3" in panels["claim_boundary_matrix"]["secondary_metric"]
     assert "customer_shadow_blockers=2" in panels["claim_boundary_matrix"]["secondary_metric"]
+    assert "customer_shadow_work_order_ready=false" in panels["claim_boundary_matrix"]["secondary_metric"]
+    assert "customer_shadow_work_order_rows=3" in panels["claim_boundary_matrix"]["secondary_metric"]
+    assert "customer_shadow_work_order_primary=customer_shadow_case_1" in (
+        panels["claim_boundary_matrix"]["secondary_metric"]
+    )
 
     assert claims["operator_cockpit_surface"]["allowed"] is True
     assert claims["paid_pilot_wording"]["allowed"] is False

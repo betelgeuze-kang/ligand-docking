@@ -66,11 +66,25 @@ def test_header_only_template_blocks_until_three_real_cases(tmp_path: Path) -> N
     assert summary["redistribution_allowed_false_count"] == 0
     assert summary["anonymized_result_summary_count"] == 0
     assert summary["reviewer_signoff_count"] == 0
+    assert summary["customer_shadow_work_order_ready"] is False
+    assert summary["customer_shadow_work_order_row_count"] == 3
+    assert summary["customer_shadow_work_order_primary_case_slot_id"] == "customer_shadow_case_1"
     assert summary["blocker_count"] == 1
     assert summary["paid_pilot_evidence_ready"] is False
     assert summary["paid_pilot_claim_allowed"] is False
     assert summary["commercial_readiness_promotion_allowed"] is False
     assert payload["blockers"][0]["case_id"] == "minimum_completed_cases"
+    work_orders = payload["customer_shadow_work_order_rows"]
+    assert [row["case_slot_id"] for row in work_orders] == [
+        "customer_shadow_case_1",
+        "customer_shadow_case_2",
+        "customer_shadow_case_3",
+    ]
+    assert work_orders[0]["required_redistribution_allowed"] is False
+    assert work_orders[0]["required_customer_retained_raw_data"] is True
+    assert work_orders[0]["required_raw_data_stored_in_repo"] is False
+    assert work_orders[0]["execution_enabled"] is False
+    assert work_orders[0]["paid_pilot_claim_allowed"] is False
 
 
 def test_mock_fixture_is_valid_but_does_not_count_toward_minimum(tmp_path: Path) -> None:
@@ -89,9 +103,12 @@ def test_mock_fixture_is_valid_but_does_not_count_toward_minimum(tmp_path: Path)
     assert summary["redistribution_allowed_false_count"] == 0
     assert summary["anonymized_result_summary_count"] == 0
     assert summary["reviewer_signoff_count"] == 0
+    assert summary["customer_shadow_work_order_ready"] is False
+    assert summary["customer_shadow_work_order_row_count"] == 3
     assert summary["blocker_count"] == 1
     assert payload["rows"][0]["completed_schema_valid"] is True
     assert payload["rows"][0]["counts_toward_minimum"] is False
+    assert payload["customer_shadow_work_order_rows"][0]["case_slot_id"] == "customer_shadow_case_1"
 
 
 def test_three_completed_customer_shadow_rows_ready_but_do_not_promote_claims(tmp_path: Path) -> None:
@@ -114,7 +131,11 @@ def test_three_completed_customer_shadow_rows_ready_but_do_not_promote_claims(tm
     assert summary["paid_pilot_claim_allowed"] is False
     assert summary["commercial_readiness_promotion_allowed"] is False
     assert summary["readiness_promotion_allowed"] is False
+    assert summary["customer_shadow_work_order_ready"] is True
+    assert summary["customer_shadow_work_order_row_count"] == 0
+    assert summary["customer_shadow_work_order_primary_case_slot_id"] == ""
     assert payload["blockers"] == []
+    assert payload["customer_shadow_work_order_rows"] == []
 
 
 def test_reviewed_at_must_be_timezone_aware_iso_timestamp(tmp_path: Path) -> None:
@@ -170,4 +191,6 @@ def test_cli_writes_json_csv_and_markdown(tmp_path: Path) -> None:
 
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["status"] == "customer_shadow_evidence_status_ready"
     assert out_csv.read_text(encoding="utf-8").startswith("case_id,row_kind,status,")
-    assert "Customer Shadow Evidence Status" in out_md.read_text(encoding="utf-8")
+    md = out_md.read_text(encoding="utf-8")
+    assert "Customer Shadow Evidence Status" in md
+    assert "Customer Shadow Work Order" in md

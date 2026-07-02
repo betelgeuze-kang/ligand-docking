@@ -693,6 +693,11 @@ def build_product_operator_cockpit(
     customer_shadow_anonymized_summary_count = _int(customer_shadow.get("anonymized_result_summary_count"))
     customer_shadow_reviewer_signoff_count = _int(customer_shadow.get("reviewer_signoff_count"))
     customer_shadow_blocker_count = _int(customer_shadow.get("blocker_count"))
+    customer_shadow_work_order_ready = _bool_true(customer_shadow.get("customer_shadow_work_order_ready"))
+    customer_shadow_work_order_rows = _int(customer_shadow.get("customer_shadow_work_order_row_count"))
+    customer_shadow_work_order_primary_slot = _first_text(
+        customer_shadow.get("customer_shadow_work_order_primary_case_slot_id")
+    )
     paid_pilot_wording_allowed = release_allowed and customer_shadow_paid_pilot_ready
 
     claim_rows = _build_claim_rows(
@@ -1009,6 +1014,9 @@ def build_product_operator_cockpit(
                 _count_metric("anonymized_summaries", customer_shadow_anonymized_summary_count),
                 _count_metric("reviewer_signoffs", customer_shadow_reviewer_signoff_count),
                 _count_metric("customer_shadow_blockers", customer_shadow_blocker_count),
+                _metric("customer_shadow_work_order_ready", customer_shadow_work_order_ready),
+                _count_metric("customer_shadow_work_order_rows", customer_shadow_work_order_rows),
+                _metric("customer_shadow_work_order_primary", customer_shadow_work_order_primary_slot),
                 _metric("paid_pilot_wording_allowed", paid_pilot_wording_allowed),
             ),
             next_action=(
@@ -1093,6 +1101,9 @@ def build_product_operator_cockpit(
         "customer_shadow_anonymized_result_summary_count": customer_shadow_anonymized_summary_count,
         "customer_shadow_reviewer_signoff_count": customer_shadow_reviewer_signoff_count,
         "customer_shadow_evidence_blocker_count": customer_shadow_blocker_count,
+        "customer_shadow_work_order_ready": customer_shadow_work_order_ready,
+        "customer_shadow_work_order_row_count": customer_shadow_work_order_rows,
+        "customer_shadow_work_order_primary_case_slot_id": customer_shadow_work_order_primary_slot,
         "release_allowed": release_allowed,
         "next_required_step": action_panels[0]["next_action"] if action_panels else "",
         "execution_enabled": False,

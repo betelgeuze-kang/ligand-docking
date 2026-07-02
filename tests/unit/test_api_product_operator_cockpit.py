@@ -70,6 +70,9 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "customer_shadow_anonymized_result_summary_count": 1,
                 "customer_shadow_reviewer_signoff_count": 0,
                 "customer_shadow_evidence_blocker_count": 2,
+                "customer_shadow_work_order_ready": False,
+                "customer_shadow_work_order_row_count": 3,
+                "customer_shadow_work_order_primary_case_slot_id": "customer_shadow_case_1",
                 "release_allowed": False,
                 "next_required_step": "Keep claims locked.",
                 "claim_boundary": "cockpit boundary",
@@ -118,6 +121,9 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["customer_shadow_anonymized_result_summary_count"] == 1
     assert response["customer_shadow_reviewer_signoff_count"] == 0
     assert response["customer_shadow_evidence_blocker_count"] == 2
+    assert response["customer_shadow_work_order_ready"] is False
+    assert response["customer_shadow_work_order_row_count"] == 3
+    assert response["customer_shadow_work_order_primary_case_slot_id"] == "customer_shadow_case_1"
     assert response["panels"][0]["panel_id"] == "product_capabilities_dashboard"
     assert response["claim_matrix"][0]["claim_id"] == "paid_pilot_wording"
     assert response["execution_enabled"] is False
@@ -167,6 +173,9 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["customer_shadow_anonymized_result_summary_count"] == 0
     assert response["customer_shadow_reviewer_signoff_count"] == 0
     assert response["customer_shadow_evidence_blocker_count"] == 0
+    assert response["customer_shadow_work_order_ready"] is False
+    assert response["customer_shadow_work_order_row_count"] == 0
+    assert response["customer_shadow_work_order_primary_case_slot_id"] == ""
     assert response["panels"] == []
     assert response["claim_matrix"] == []
     assert response["execution_enabled"] is False

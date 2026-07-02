@@ -36,6 +36,12 @@ def _write_common_inputs(root: Path) -> None:
                 "customer_shadow_intake_schema_ready": True,
                 "completed_customer_shadow_case_count": 0,
                 "required_completed_customer_shadow_case_count": 3,
+                "customer_shadow_work_order_row_count": 3,
+                "customer_shadow_work_order_primary_case_slot_id": "customer_shadow_case_1",
+                "customer_shadow_work_order_primary_required_action": (
+                    "Add one reviewed real customer-shadow metadata row; keep raw data "
+                    "customer-retained and out of repo."
+                ),
             }
         },
     )
@@ -103,6 +109,10 @@ def test_pm_priority_queue_status_keeps_f2g_and_f2h_blocked(tmp_path: Path) -> N
     assert rows["6"]["ready"] is False
     assert rows["6"]["status"] == "schema_ready_cases_missing"
     assert "completed=0;required=3;minimum_met=False" in rows["6"]["evidence"]
+    assert "work_order_rows=3;work_order_primary=customer_shadow_case_1" in rows["6"]["evidence"]
+    assert rows["6"]["next_action"] == (
+        "Add one reviewed real customer-shadow metadata row; keep raw data customer-retained and out of repo."
+    )
     assert summary["g1_promotion_allowed"] is False
     assert summary["release_ready_promotion_allowed"] is False
 
@@ -184,6 +194,8 @@ def test_pm_priority_queue_status_marks_customer_shadow_ready_only_after_three_c
                 "customer_shadow_minimum_met": True,
                 "completed_customer_shadow_case_count": 3,
                 "required_completed_customer_shadow_case_count": 3,
+                "customer_shadow_work_order_row_count": 0,
+                "customer_shadow_work_order_primary_case_slot_id": "",
             }
         },
     )
@@ -194,6 +206,7 @@ def test_pm_priority_queue_status_marks_customer_shadow_ready_only_after_three_c
     assert row["ready"] is True
     assert row["status"] == "customer_shadow_minimum_ready"
     assert "completed=3;required=3;minimum_met=True" in row["evidence"]
+    assert "work_order_rows=0;work_order_primary=none" in row["evidence"]
 
 
 def test_pm_priority_queue_status_uses_developer_preview_audit_when_present(tmp_path: Path) -> None:

@@ -288,6 +288,9 @@ def _customer_shadow_row(payload: Any) -> dict[str, Any]:
     completed = _int(summary.get("completed_customer_shadow_case_count"))
     required = _int(summary.get("required_completed_customer_shadow_case_count")) or 3
     minimum_met = bool(summary.get("customer_shadow_minimum_met") is True) or completed >= required
+    work_order_rows = _int(summary.get("customer_shadow_work_order_row_count"))
+    work_order_primary = _text(summary.get("customer_shadow_work_order_primary_case_slot_id"))
+    work_order_action = _text(summary.get("customer_shadow_work_order_primary_required_action"))
     ready = bool(status == "customer_shadow_evidence_status_ready" and schema_ready and minimum_met)
     return _row(
         "6",
@@ -298,13 +301,17 @@ def _customer_shadow_row(payload: Any) -> dict[str, Any]:
         ready,
         (
             f"status={status or 'missing'};schema_ready={schema_ready};"
-            f"completed={completed};required={required};minimum_met={minimum_met}"
+            f"completed={completed};required={required};minimum_met={minimum_met};"
+            f"work_order_rows={work_order_rows};work_order_primary={work_order_primary or 'none'}"
         ),
         "customer_shadow_completed_cases_missing" if schema_ready else "customer_shadow_schema_missing",
         (
             "Customer shadow minimum is ready; keep paid-pilot wording blocked until release gates agree."
             if ready
-            else "Collect three real reviewed customer-shadow metadata rows without storing private raw data."
+            else (
+                work_order_action
+                or "Collect three real reviewed customer-shadow metadata rows without storing private raw data."
+            )
         ),
     )
 

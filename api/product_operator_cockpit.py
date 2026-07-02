@@ -108,6 +108,9 @@ def _missing_response() -> dict[str, Any]:
         "customer_shadow_anonymized_result_summary_count": 0,
         "customer_shadow_reviewer_signoff_count": 0,
         "customer_shadow_evidence_blocker_count": 0,
+        "customer_shadow_work_order_ready": False,
+        "customer_shadow_work_order_row_count": 0,
+        "customer_shadow_work_order_primary_case_slot_id": "",
         "release_allowed": False,
         "panels": [],
         "claim_matrix": [],
@@ -227,6 +230,15 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "customer_shadow_evidence_blocker_count": _int(
             summary.get("customer_shadow_evidence_blocker_count")
+        ),
+        "customer_shadow_work_order_ready": bool(
+            summary.get("customer_shadow_work_order_ready") is True
+        ),
+        "customer_shadow_work_order_row_count": _int(
+            summary.get("customer_shadow_work_order_row_count")
+        ),
+        "customer_shadow_work_order_primary_case_slot_id": str(
+            summary.get("customer_shadow_work_order_primary_case_slot_id") or ""
         ),
         "release_allowed": bool(summary.get("release_allowed") is True),
         "panels": _list(packet, "rows"),

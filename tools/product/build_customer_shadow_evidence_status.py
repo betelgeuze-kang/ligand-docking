@@ -198,6 +198,50 @@ def _row_status(row: dict[str, str], *, row_index: int, schema_ready: bool) -> d
     }
 
 
+def _build_work_order_rows(
+    *,
+    missing_case_count: int,
+    completed_case_count: int,
+    intake_csv: str,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    required_fields = sorted(REQUIRED_DERIVED_METADATA_FIELDS)
+    for offset in range(missing_case_count):
+        slot_number = completed_case_count + offset + 1
+        rows.append(
+            {
+                "work_order_id": f"customer_shadow_case_slot_{slot_number}",
+                "case_slot_id": f"customer_shadow_case_{slot_number}",
+                "status": "missing_customer_shadow_evidence",
+                "required_row_kind": "customer_shadow",
+                "operator_csv": intake_csv,
+                "required_action": (
+                    "Add one reviewed real customer-shadow metadata row; keep raw data "
+                    "customer-retained and out of repo."
+                ),
+                "required_raw_data_custody": "customer_retained",
+                "required_customer_retained_raw_data": True,
+                "required_redistribution_allowed": False,
+                "required_raw_data_stored_in_repo": False,
+                "required_derived_metadata_fields": required_fields,
+                "required_anonymized_result_summary": (
+                    "At least 24 characters, aggregate only, with no email or private identifiers."
+                ),
+                "required_reviewer_signoff_status": "approved",
+                "required_reviewer_id": "non-empty reviewer id",
+                "required_reviewed_at_utc": "timezone-aware ISO timestamp",
+                "required_source_artifact_fingerprint": "sha256",
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "paid_pilot_claim_allowed": False,
+                "commercial_readiness_promotion_allowed": False,
+                "claim_promotion_allowed": False,
+                "claim_boundary": CLAIM_BOUNDARY,
+            }
+        )
+    return rows
+
+
 def build_customer_shadow_evidence_status(
     *,
     intake_csv: str = DEFAULT_INTAKE_CSV,
@@ -241,6 +285,11 @@ def build_customer_shadow_evidence_status(
         and _reviewed_at_valid(raw_row.get("reviewed_at_utc"))
     )
     missing_case_count = max(0, min_completed_cases - completed_case_count)
+    work_order_rows = _build_work_order_rows(
+        missing_case_count=missing_case_count,
+        completed_case_count=completed_case_count,
+        intake_csv=intake_csv,
+    )
     ready = schema_ready and invalid_row_count == 0 and completed_case_count >= min_completed_cases
     summary = {
         "packet_type": "customer_shadow_evidence_status",
@@ -260,6 +309,15 @@ def build_customer_shadow_evidence_status(
         "anonymized_result_summary_count": anonymized_result_summary_count,
         "reviewer_signoff_count": reviewer_signoff_count,
         "customer_shadow_minimum_met": completed_case_count >= min_completed_cases,
+        "customer_shadow_work_order_ready": not work_order_rows,
+        "customer_shadow_work_order_row_count": len(work_order_rows),
+        "customer_shadow_work_order_missing_case_count": missing_case_count,
+        "customer_shadow_work_order_primary_case_slot_id": work_order_rows[0]["case_slot_id"]
+        if work_order_rows
+        else "",
+        "customer_shadow_work_order_primary_required_action": work_order_rows[0]["required_action"]
+        if work_order_rows
+        else "",
         "customer_raw_data_stored_in_repo": raw_data_stored_in_repo_observed,
         "redistribution_allowed_required_value": False,
         "paid_pilot_evidence_ready": ready,
@@ -307,7 +365,12 @@ def build_customer_shadow_evidence_status(
             }
         )
     summary["blocker_count"] = len(blockers)
-    return {"summary": summary, "rows": rows, "blockers": blockers}
+    return {
+        "summary": summary,
+        "rows": rows,
+        "blockers": blockers,
+        "customer_shadow_work_order_rows": work_order_rows,
+    }
 
 
 def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Path = ROOT) -> None:
@@ -328,6 +391,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"- redistribution_allowed_false_count: `{s['redistribution_allowed_false_count']}`",
         f"- anonymized_result_summary_count: `{s['anonymized_result_summary_count']}`",
         f"- reviewer_signoff_count: `{s['reviewer_signoff_count']}`",
+        f"- customer_shadow_work_order_ready: `{s['customer_shadow_work_order_ready']}`",
+        f"- customer_shadow_work_order_row_count: `{s['customer_shadow_work_order_row_count']}`",
+        f"- customer_shadow_work_order_primary_case_slot_id: `{s['customer_shadow_work_order_primary_case_slot_id']}`",
         f"- blocker_count: `{s['blocker_count']}`",
         f"- commercial_readiness_promotion_allowed: `{s['commercial_readiness_promotion_allowed']}`",
         "",
@@ -339,6 +405,19 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
     for row in payload["rows"]:
         lines.append(
             f"| `{row['case_id']}` | `{row['row_kind']}` | `{row['status']}` | `{row['counts_toward_minimum']}` | `{row['blockers'] or '-'}` | {row['next_action']} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Customer Shadow Work Order",
+            "",
+            "| slot | status | required action | operator csv |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
+    for row in payload["customer_shadow_work_order_rows"]:
+        lines.append(
+            f"| `{row['case_slot_id']}` | `{row['status']}` | {row['required_action']} | `{row['operator_csv']}` |"
         )
     lines.extend(["", "## Claim Boundary", "", s["claim_boundary"], "", "## Next Step", "", f"- {s['next_required_step']}", ""])
     path.parent.mkdir(parents=True, exist_ok=True)
