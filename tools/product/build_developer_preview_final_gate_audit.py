@@ -287,18 +287,44 @@ def _blocker_required_action(detail: str) -> str:
     return "Resolve this receipt blocker and rebuild the Developer Preview audit."
 
 
+def _receipt_requirement_index() -> dict[str, dict[str, Any]]:
+    requirements: dict[str, dict[str, Any]] = {}
+    for gate_spec in GATE_SPECS:
+        artifacts = [("required", item) for item in gate_spec["receipt_artifacts"]]
+        if isinstance(gate_spec.get("review_artifact"), dict):
+            artifacts.append(("review", gate_spec["review_artifact"]))
+        for receipt_kind, artifact in artifacts:
+            requirements[_text(artifact.get("path"))] = {
+                "receipt_kind": receipt_kind,
+                "required_receipt_status": _text(artifact.get("required_status")),
+                "required_true_fields": list(artifact.get("required_true_fields", [])),
+                "required_zero_fields": list(artifact.get("required_zero_fields", [])),
+            }
+    return requirements
+
+
 def _receipt_work_order_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    receipt_requirements = _receipt_requirement_index()
     work_rows: list[dict[str, Any]] = []
     for row in rows:
         if row["ready"]:
             continue
         for blocker in row["receipt_blockers"]:
             artifact, detail = _split_receipt_blocker(blocker)
+            requirement = receipt_requirements.get(artifact, {})
+            required_true_fields = list(requirement.get("required_true_fields", []))
+            required_zero_fields = list(requirement.get("required_zero_fields", []))
             work_rows.append(
                 {
                     "priority": row["priority"],
                     "gate_id": row["gate_id"],
                     "receipt_artifact": artifact,
+                    "receipt_kind": requirement.get("receipt_kind", ""),
+                    "required_receipt_status": requirement.get("required_receipt_status", ""),
+                    "required_true_fields": required_true_fields,
+                    "required_zero_fields": required_zero_fields,
+                    "required_true_field_count": len(required_true_fields),
+                    "required_zero_field_count": len(required_zero_fields),
                     "blocker": blocker,
                     "blocker_detail": detail,
                     "required_action": _blocker_required_action(detail),
@@ -480,6 +506,15 @@ def build_developer_preview_final_gate_audit(
         "receipt_work_order_primary_blocker": receipt_work_order_rows[0]["blocker_detail"]
         if receipt_work_order_rows
         else "",
+        "receipt_work_order_primary_required_receipt_status": (
+            receipt_work_order_rows[0]["required_receipt_status"] if receipt_work_order_rows else ""
+        ),
+        "receipt_work_order_primary_required_true_fields": (
+            receipt_work_order_rows[0]["required_true_fields"] if receipt_work_order_rows else []
+        ),
+        "receipt_work_order_primary_required_zero_fields": (
+            receipt_work_order_rows[0]["required_zero_fields"] if receipt_work_order_rows else []
+        ),
         "register_gate_id_count": len(materialized_gate_ids),
         "register_gate_ids_complete": materialized_gate_ids == {spec["gate_id"] for spec in GATE_SPECS},
         "primary_blocker_id": blocked_rows[0]["gate_id"] if blocked_rows else "",
@@ -546,13 +581,18 @@ def _render_md(payload: dict[str, Any]) -> str:
             "",
             "## Receipt Work Order",
             "",
-            "| gate | receipt | blocker | action |",
-            "| --- | --- | --- | --- |",
+            "| gate | receipt | expected status | required fields | blocker | action |",
+            "| --- | --- | --- | --- | --- | --- |",
         ]
     )
     for row in payload.get("receipt_work_order_rows", []):
+        required_fields = _join_metrics(
+            _metric("true", row["required_true_field_count"]),
+            _metric("zero", row["required_zero_field_count"]),
+        )
         lines.append(
             f"| `{row['gate_id']}` | `{row['receipt_artifact']}` | "
+            f"`{row['required_receipt_status']}` | `{required_fields}` | "
             f"`{row['blocker_detail']}` | {row['required_action']} |"
         )
     lines.extend(["", CLAIM_BOUNDARY, ""])

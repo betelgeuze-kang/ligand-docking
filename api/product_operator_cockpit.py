@@ -170,6 +170,9 @@ def _missing_response() -> dict[str, Any]:
         "developer_preview_primary_blocker_id": "",
         "developer_preview_receipt_work_order_primary_gate_id": "",
         "developer_preview_receipt_work_order_primary_receipt_artifact": "",
+        "developer_preview_receipt_work_order_primary_required_receipt_status": "",
+        "developer_preview_receipt_work_order_primary_required_true_fields": [],
+        "developer_preview_receipt_work_order_primary_required_zero_fields": [],
         "f2g_f2h_preflight_present": False,
         "f2g_f2h_recovery_packet_present": False,
         "f2g_f2h_preflight_status": "",
@@ -469,6 +472,15 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "developer_preview_receipt_work_order_primary_receipt_artifact": str(
             summary.get("developer_preview_receipt_work_order_primary_receipt_artifact") or ""
+        ),
+        "developer_preview_receipt_work_order_primary_required_receipt_status": str(
+            summary.get("developer_preview_receipt_work_order_primary_required_receipt_status") or ""
+        ),
+        "developer_preview_receipt_work_order_primary_required_true_fields": _string_list(
+            summary.get("developer_preview_receipt_work_order_primary_required_true_fields")
+        ),
+        "developer_preview_receipt_work_order_primary_required_zero_fields": _string_list(
+            summary.get("developer_preview_receipt_work_order_primary_required_zero_fields")
         ),
         "f2g_f2h_preflight_present": bool(summary.get("f2g_f2h_preflight_present") is True),
         "f2g_f2h_recovery_packet_present": bool(

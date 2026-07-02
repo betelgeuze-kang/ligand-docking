@@ -356,6 +356,18 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "receipt_work_order_primary_receipt_artifact": (
                     ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
                 ),
+                "receipt_work_order_primary_required_receipt_status": (
+                    "developer_preview_clean_checkout_benchmark_receipt_ready"
+                ),
+                "receipt_work_order_primary_required_true_fields": [
+                    "clean_checkout_benchmark_regenerated",
+                    "ai_verify_passed",
+                    "reviewed_receipt_attached",
+                ],
+                "receipt_work_order_primary_required_zero_fields": [
+                    "blocker_count",
+                    "failed_count",
+                ],
                 "primary_blocker_id": "benchmark_results_clean_checkout_regenerated",
                 "next_required_step": "Attach the clean-checkout benchmark receipt.",
                 "blockers": [
@@ -575,6 +587,18 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["developer_preview_receipt_work_order_primary_receipt_artifact"] == (
         ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
     )
+    assert summary["developer_preview_receipt_work_order_primary_required_receipt_status"] == (
+        "developer_preview_clean_checkout_benchmark_receipt_ready"
+    )
+    assert summary["developer_preview_receipt_work_order_primary_required_true_fields"] == [
+        "clean_checkout_benchmark_regenerated",
+        "ai_verify_passed",
+        "reviewed_receipt_attached",
+    ]
+    assert summary["developer_preview_receipt_work_order_primary_required_zero_fields"] == [
+        "blocker_count",
+        "failed_count",
+    ]
     assert summary["f2g_f2h_preflight_present"] is True
     assert summary["f2g_f2h_recovery_packet_present"] is True
     assert summary["f2g_f2h_preflight_status"] == "blocked_f2g_f2h_surface_preflight"
@@ -773,6 +797,16 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert (
         "primary_receipt=.betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
         in panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert (
+        "primary_expected_status=developer_preview_clean_checkout_benchmark_receipt_ready"
+        in panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "primary_required_true_fields=3" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "primary_required_zero_fields=2" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
     )
     assert panels["developer_preview_final_gates"]["next_action"] == (
         "Attach the clean-checkout benchmark receipt."

@@ -144,6 +144,18 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "developer_preview_receipt_work_order_primary_receipt_artifact": (
                     ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
                 ),
+                "developer_preview_receipt_work_order_primary_required_receipt_status": (
+                    "developer_preview_clean_checkout_benchmark_receipt_ready"
+                ),
+                "developer_preview_receipt_work_order_primary_required_true_fields": [
+                    "clean_checkout_benchmark_regenerated",
+                    "ai_verify_passed",
+                    "reviewed_receipt_attached",
+                ],
+                "developer_preview_receipt_work_order_primary_required_zero_fields": [
+                    "blocker_count",
+                    "failed_count",
+                ],
                 "f2g_f2h_preflight_present": True,
                 "f2g_f2h_recovery_packet_present": True,
                 "f2g_f2h_preflight_status": "blocked_f2g_f2h_surface_preflight",
@@ -299,6 +311,18 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["developer_preview_receipt_work_order_primary_receipt_artifact"] == (
         ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
     )
+    assert response["developer_preview_receipt_work_order_primary_required_receipt_status"] == (
+        "developer_preview_clean_checkout_benchmark_receipt_ready"
+    )
+    assert response["developer_preview_receipt_work_order_primary_required_true_fields"] == [
+        "clean_checkout_benchmark_regenerated",
+        "ai_verify_passed",
+        "reviewed_receipt_attached",
+    ]
+    assert response["developer_preview_receipt_work_order_primary_required_zero_fields"] == [
+        "blocker_count",
+        "failed_count",
+    ]
     assert response["f2g_f2h_preflight_present"] is True
     assert response["f2g_f2h_recovery_packet_present"] is True
     assert response["f2g_f2h_preflight_status"] == "blocked_f2g_f2h_surface_preflight"
@@ -432,6 +456,9 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["developer_preview_primary_blocker_id"] == ""
     assert response["developer_preview_receipt_work_order_primary_gate_id"] == ""
     assert response["developer_preview_receipt_work_order_primary_receipt_artifact"] == ""
+    assert response["developer_preview_receipt_work_order_primary_required_receipt_status"] == ""
+    assert response["developer_preview_receipt_work_order_primary_required_true_fields"] == []
+    assert response["developer_preview_receipt_work_order_primary_required_zero_fields"] == []
     assert response["f2g_f2h_preflight_present"] is False
     assert response["f2g_f2h_recovery_packet_present"] is False
     assert response["f2g_f2h_preflight_status"] == ""

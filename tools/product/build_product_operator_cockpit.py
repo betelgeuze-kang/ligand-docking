@@ -930,6 +930,15 @@ def build_product_operator_cockpit(
     developer_preview_receipt_work_order_primary_gate = _first_text(
         developer_preview.get("receipt_work_order_primary_gate_id")
     )
+    developer_preview_primary_required_receipt_status = _first_text(
+        developer_preview.get("receipt_work_order_primary_required_receipt_status")
+    )
+    developer_preview_primary_required_true_fields = _string_list(
+        developer_preview.get("receipt_work_order_primary_required_true_fields")
+    )
+    developer_preview_primary_required_zero_fields = _string_list(
+        developer_preview.get("receipt_work_order_primary_required_zero_fields")
+    )
     developer_preview_receipt_blocker_count = _int(developer_preview.get("receipt_blocker_count"))
     f2g_preflight_present = bool(f2g_preflight)
     f2g_recovery_present = bool(f2g_recovery)
@@ -1230,6 +1239,15 @@ def build_product_operator_cockpit(
                 _metric("primary_gate", developer_preview_receipt_work_order_primary_gate),
                 _metric("primary_blocker", developer_preview_primary_blocker_id),
                 _metric("primary_receipt", developer_preview_primary_receipt_artifact),
+                _metric("primary_expected_status", developer_preview_primary_required_receipt_status),
+                _count_metric(
+                    "primary_required_true_fields",
+                    len(developer_preview_primary_required_true_fields),
+                ),
+                _count_metric(
+                    "primary_required_zero_fields",
+                    len(developer_preview_primary_required_zero_fields),
+                ),
             ),
             next_action=_first_text(
                 developer_preview.get("next_required_step"),
@@ -1607,6 +1625,15 @@ def build_product_operator_cockpit(
         ),
         "developer_preview_receipt_work_order_primary_receipt_artifact": (
             developer_preview_primary_receipt_artifact
+        ),
+        "developer_preview_receipt_work_order_primary_required_receipt_status": (
+            developer_preview_primary_required_receipt_status
+        ),
+        "developer_preview_receipt_work_order_primary_required_true_fields": (
+            developer_preview_primary_required_true_fields
+        ),
+        "developer_preview_receipt_work_order_primary_required_zero_fields": (
+            developer_preview_primary_required_zero_fields
         ),
         "f2g_f2h_preflight_present": f2g_preflight_present,
         "f2g_f2h_recovery_packet_present": f2g_recovery_present,
