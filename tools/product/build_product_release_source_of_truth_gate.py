@@ -370,6 +370,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_ledger_privacy_scan.py",
     SUPPORT_BUNDLE_COMMAND,
     ENTERPRISE_ON_PREM_READINESS_GATE_COMMAND,
+    PRODUCT_OPERATOR_COCKPIT_COMMAND,
     "python3 tools/build_product_release_source_of_truth_gate.py",
 ]
 

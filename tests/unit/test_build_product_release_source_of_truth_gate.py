@@ -5547,6 +5547,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert _last_refresh_index("python3 tools/build_product_ledger_privacy_scan.py") < (
         _last_refresh_index("python3 tools/build_product_release_source_of_truth_gate.py")
     )
+    assert _last_refresh_index(mod.ENTERPRISE_ON_PREM_READINESS_GATE_COMMAND) < (
+        _last_refresh_index(mod.PRODUCT_OPERATOR_COCKPIT_COMMAND)
+    )
+    assert _last_refresh_index(mod.PRODUCT_OPERATOR_COCKPIT_COMMAND) < (
+        _last_refresh_index("python3 tools/build_product_release_source_of_truth_gate.py")
+    )
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_release_decision_gate.py") < (
         mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_goal_completion_audit.py")
     )
@@ -6225,8 +6231,12 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
     assert _last_refresh_index(mod.PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_COMMAND) < _last_refresh_index(
         mod.PRODUCT_OPERATOR_COCKPIT_COMMAND
     )
-    assert _last_refresh_index(mod.PRODUCT_OPERATOR_COCKPIT_COMMAND) < _last_refresh_index(
+    assert mod.RELEASE_REFRESH_COMMANDS.count(mod.PRODUCT_OPERATOR_COCKPIT_COMMAND) >= 2
+    assert mod.RELEASE_REFRESH_COMMANDS.index(mod.PRODUCT_OPERATOR_COCKPIT_COMMAND) < _last_refresh_index(
         "python3 tools/build_goal_release_burndown_work_order.py"
+    )
+    assert _last_refresh_index(mod.PRODUCT_OPERATOR_COCKPIT_COMMAND) < _last_refresh_index(
+        "python3 tools/build_product_release_source_of_truth_gate.py"
     )
 
 
