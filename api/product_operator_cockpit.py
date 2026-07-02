@@ -168,6 +168,27 @@ def _public_benchmark_field_work_order_rows(value: Any) -> list[dict[str, Any]]:
     return work_rows
 
 
+def _gpcr_promotion_work_order_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    work_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        work_rows.append(
+            {
+                "lane_id": str(row.get("lane_id") or ""),
+                "blocker": str(row.get("blocker") or ""),
+                "required_action": str(row.get("required_action") or ""),
+                "source_artifact": str(row.get("source_artifact") or ""),
+                "claim_boundary": str(row.get("claim_boundary") or ""),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return work_rows
+
+
 def _pr38_split_surface() -> dict[str, Any]:
     acceptance_packet = _read_json_object(PR38_SPLIT_ACCEPTANCE_PACKET_ARTIFACT)
     matrix_packet = _read_json_object(PR38_CHILD_PR_VERIFICATION_MATRIX_ARTIFACT)
@@ -302,6 +323,7 @@ def _missing_response() -> dict[str, Any]:
         "gpcr_promotion_work_order_row_count": 0,
         "gpcr_promotion_work_order_lane_count": 0,
         "gpcr_promotion_work_order_primary_blocker": "",
+        "gpcr_promotion_work_order_rows": [],
         "pocketmd_lite_refinement_evidence_ready": False,
         "pocketmd_lite_report_evidence_ready": False,
         "pocketmd_lite_fill_preview_evidence_ready": False,
@@ -555,6 +577,9 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "gpcr_promotion_work_order_primary_blocker": str(
             summary.get("gpcr_promotion_work_order_primary_blocker") or ""
+        ),
+        "gpcr_promotion_work_order_rows": _gpcr_promotion_work_order_rows(
+            summary.get("gpcr_promotion_work_order_rows")
         ),
         "pocketmd_lite_refinement_evidence_ready": bool(
             summary.get("pocketmd_lite_refinement_evidence_ready") is True

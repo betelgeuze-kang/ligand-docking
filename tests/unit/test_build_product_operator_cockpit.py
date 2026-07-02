@@ -101,7 +101,24 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                     "broad_scope:formal_broad_claim_review_not_approved",
                     "scorer_router_promotion_gate_not_ready",
                 ],
-            }
+            },
+            "promotion_work_order_rows": [
+                {
+                    "lane_id": "active_scorer",
+                    "blocker": "active_scorer:operational_gate_refresh_not_complete",
+                    "required_action": (
+                        "Refresh the active scorer operational gate and keep broad GPCR "
+                        "promotion locked."
+                    ),
+                    "source_artifact": (
+                        "runs/gpcr_active_scorer_promotion_decision_packet_current.json"
+                    ),
+                    "claim_boundary": "GPCR promotion work order only; no broad claim promotion.",
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                }
+            ],
         },
     )
     _write_json(
@@ -735,6 +752,20 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["gpcr_promotion_work_order_primary_blocker"] == (
         "broad_scope:formal_broad_claim_review_not_approved"
     )
+    assert summary["gpcr_promotion_work_order_rows"] == [
+        {
+            "lane_id": "active_scorer",
+            "blocker": "active_scorer:operational_gate_refresh_not_complete",
+            "required_action": (
+                "Refresh the active scorer operational gate and keep broad GPCR promotion locked."
+            ),
+            "source_artifact": "runs/gpcr_active_scorer_promotion_decision_packet_current.json",
+            "claim_boundary": "GPCR promotion work order only; no broad claim promotion.",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
     assert summary["pocketmd_lite_claim_allowed"] is False
     assert summary["pocketmd_lite_report_evidence_ready"] is False
     assert summary["pocketmd_lite_fill_preview_evidence_ready"] is True

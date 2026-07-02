@@ -178,6 +178,25 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "gpcr_promotion_work_order_primary_blocker": (
                     "broad_scope:formal_broad_claim_review_not_approved"
                 ),
+                "gpcr_promotion_work_order_rows": [
+                    {
+                        "lane_id": "active_scorer",
+                        "blocker": "active_scorer:operational_gate_refresh_not_complete",
+                        "required_action": (
+                            "Refresh the active scorer operational gate and keep broad GPCR "
+                            "promotion locked."
+                        ),
+                        "source_artifact": (
+                            "runs/gpcr_active_scorer_promotion_decision_packet_current.json"
+                        ),
+                        "claim_boundary": (
+                            "GPCR promotion work order only; no broad claim promotion."
+                        ),
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    }
+                ],
                 "pocketmd_lite_refinement_evidence_ready": True,
                 "pocketmd_lite_report_evidence_ready": False,
                 "pocketmd_lite_fill_preview_evidence_ready": True,
@@ -485,6 +504,20 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["gpcr_promotion_work_order_primary_blocker"] == (
         "broad_scope:formal_broad_claim_review_not_approved"
     )
+    assert response["gpcr_promotion_work_order_rows"] == [
+        {
+            "lane_id": "active_scorer",
+            "blocker": "active_scorer:operational_gate_refresh_not_complete",
+            "required_action": (
+                "Refresh the active scorer operational gate and keep broad GPCR promotion locked."
+            ),
+            "source_artifact": "runs/gpcr_active_scorer_promotion_decision_packet_current.json",
+            "claim_boundary": "GPCR promotion work order only; no broad claim promotion.",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
     assert response["pocketmd_lite_report_evidence_ready"] is False
     assert response["pocketmd_lite_fill_preview_evidence_ready"] is True
     assert response["pocketmd_lite_preview_requires_canonical_review"] is True
@@ -836,6 +869,7 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["gpcr_promotion_work_order_row_count"] == 0
     assert response["gpcr_promotion_work_order_lane_count"] == 0
     assert response["gpcr_promotion_work_order_primary_blocker"] == ""
+    assert response["gpcr_promotion_work_order_rows"] == []
     assert response["pocketmd_lite_report_evidence_ready"] is False
     assert response["pocketmd_lite_fill_preview_evidence_ready"] is False
     assert response["pocketmd_lite_preview_requires_canonical_review"] is False

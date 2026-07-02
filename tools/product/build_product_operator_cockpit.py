@@ -231,6 +231,24 @@ def _public_benchmark_field_work_order_rows(payload: dict[str, Any]) -> list[dic
     return rows
 
 
+def _gpcr_promotion_work_order_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _dict_list(payload, "promotion_work_order_rows"):
+        rows.append(
+            {
+                "lane_id": _text(row.get("lane_id")),
+                "blocker": _text(row.get("blocker")),
+                "required_action": _text(row.get("required_action")),
+                "source_artifact": _text(row.get("source_artifact")),
+                "claim_boundary": _text(row.get("claim_boundary")),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _metric(label: str, value: Any) -> str:
     if isinstance(value, bool):
         rendered = "true" if value else "false"
@@ -719,7 +737,9 @@ def build_product_operator_cockpit(
     goal = _summary(_read_json(goal_readiness_json, root=root))
     hbond_payload = _read_json(hbond_json, root=root)
     hbond = _summary(hbond_payload)
-    gpcr = _summary(_read_json(gpcr_json, root=root))
+    gpcr_payload = _read_json(gpcr_json, root=root)
+    gpcr = _summary(gpcr_payload)
+    gpcr_promotion_work_order_row_preview = _gpcr_promotion_work_order_rows(gpcr_payload)
     gpcr_phase3_closure = _summary(_read_json(gpcr_phase3_closure_json, root=root))
     pocketmd_payload = _read_json(pocketmd_json, root=root)
     pocketmd = _summary(pocketmd_payload)
@@ -1910,6 +1930,7 @@ def build_product_operator_cockpit(
         "gpcr_promotion_work_order_row_count": gpcr_promotion_work_order_rows,
         "gpcr_promotion_work_order_lane_count": gpcr_promotion_work_order_lanes,
         "gpcr_promotion_work_order_primary_blocker": gpcr_promotion_work_order_primary,
+        "gpcr_promotion_work_order_rows": gpcr_promotion_work_order_row_preview,
         "pocketmd_lite_refinement_evidence_ready": pocketmd_refinement_ready,
         "pocketmd_lite_report_evidence_ready": pocketmd_report_ready,
         "pocketmd_lite_fill_preview_evidence_ready": pocketmd_fill_preview_ready,
