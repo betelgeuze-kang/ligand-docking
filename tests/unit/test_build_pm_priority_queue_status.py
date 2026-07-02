@@ -39,6 +39,26 @@ def _write_common_inputs(root: Path) -> None:
             }
         },
     )
+    _write_json(
+        root / ".betelgeuze/f2g_f2h_authoritative_surface_recovery_packet.local.json",
+        {
+            "summary": {
+                "status": "f2g_f2h_authoritative_surface_recovery_packet_ready",
+                "recovery_required": True,
+                "blocked_recovery_item_count": 8,
+            },
+            "rows": [
+                {
+                    "recovery_item_id": "restore_implementation_phase1_tree",
+                    "status": "fail",
+                },
+                {
+                    "recovery_item_id": "restore_productization_release_evidence_dir",
+                    "status": "fail",
+                },
+            ],
+        },
+    )
     gpu = root / "docs/gpu_hip_parity_after_cpu_plan.md"
     gpu.write_text("GPU/HIP is a performance lane and not solver-truth evidence.\n", encoding="utf-8")
     _write_json(
@@ -75,7 +95,11 @@ def test_pm_priority_queue_status_keeps_f2g_and_f2h_blocked(tmp_path: Path) -> N
     assert summary["f2h_blocked"] is True
     assert rows["0"]["ready"] is True
     assert rows["2"]["ready"] is False
+    assert "recovery_status=f2g_f2h_authoritative_surface_recovery_packet_ready" in rows["2"]["evidence"]
+    assert "blocked_recovery_items=8" in rows["2"]["evidence"]
+    assert "primary_recovery_item=restore_implementation_phase1_tree" in rows["2"]["evidence"]
     assert rows["3"]["ready"] is False
+    assert "blocked_recovery_items=8" in rows["3"]["evidence"]
     assert rows["6"]["ready"] is False
     assert rows["6"]["status"] == "schema_ready_cases_missing"
     assert "completed=0;required=3;minimum_met=False" in rows["6"]["evidence"]

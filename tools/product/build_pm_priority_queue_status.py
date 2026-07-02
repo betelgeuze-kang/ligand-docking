@@ -17,6 +17,7 @@ DEFAULT_GITHUB_OPEN_PRS_JSON = ".betelgeuze/github_open_prs_current.json"
 DEFAULT_RELEASE_SOURCE_JSON = "runs/product_release_source_of_truth_gate_current.json"
 DEFAULT_RELEASE_SOURCE_RECALC_JSON = ".betelgeuze/tmp_product_release_source_of_truth_gate_now.json"
 DEFAULT_F2G_F2H_PREFLIGHT_JSON = ".betelgeuze/f2g_f2h_surface_preflight.local.json"
+DEFAULT_F2G_F2H_RECOVERY_JSON = ".betelgeuze/f2g_f2h_authoritative_surface_recovery_packet.local.json"
 DEFAULT_DEVELOPER_PREVIEW_REGISTER_MD = "docs/developer_preview_final_gate_action_register.md"
 DEFAULT_DEVELOPER_PREVIEW_AUDIT_JSON = "runs/developer_preview_final_gate_audit_current.json"
 DEFAULT_EXTERNAL_BENCHMARK_JSON = ".betelgeuze/external_benchmark_receipt_queue_batch_update.json"
@@ -168,32 +169,49 @@ def _readiness_row(release_payload: Any, recalc_payload: Any) -> dict[str, Any]:
     )
 
 
-def _f2g_row(f2_payload: Any) -> dict[str, Any]:
+def _recovery_evidence(recovery_payload: Any) -> str:
+    recovery = _summary(recovery_payload)
+    rows = recovery_payload.get("rows") if isinstance(recovery_payload, dict) else []
+    failing_rows = [
+        row for row in rows if isinstance(row, dict) and _text(row.get("status")) != "pass"
+    ] if isinstance(rows, list) else []
+    primary = failing_rows[0] if failing_rows else {}
+    return (
+        f"recovery_status={_text(recovery.get('status')) or 'missing'};"
+        f"recovery_required={bool(recovery.get('recovery_required') is True)};"
+        f"blocked_recovery_items={_int(recovery.get('blocked_recovery_item_count'))};"
+        f"primary_recovery_item={_text(primary.get('recovery_item_id')) or 'none'}"
+    )
+
+
+def _f2g_row(f2_payload: Any, recovery_payload: Any = None) -> dict[str, Any]:
     summary = _summary(f2_payload)
     status = _text(summary.get("status"))
     blockers = summary.get("blockers") if isinstance(summary.get("blockers"), list) else []
     ready = status == "f2g_f2h_surface_preflight_ready" and bool(summary.get("f2g_audit_ready") is True)
+    recovery_evidence = _recovery_evidence(recovery_payload)
     return _row(
         "2",
         "F2g support/elastic-link audit",
         "ready_for_f2g_audit" if ready else status or "blocked_f2g_preflight_missing",
         ready,
-        f"status={status or 'missing'};blockers={','.join(map(str, blockers))}",
+        f"status={status or 'missing'};blockers={','.join(map(str, blockers))};{recovery_evidence}",
         "f2g_authoritative_surfaces_missing",
         "Restore real-MGT, near-null, support/elastic-link, and assembled tangent inputs before running F2g.",
     )
 
 
-def _f2h_row(f2_payload: Any) -> dict[str, Any]:
+def _f2h_row(f2_payload: Any, recovery_payload: Any = None) -> dict[str, Any]:
     summary = _summary(f2_payload)
     allowed = bool(summary.get("f2h_continuation_allowed") is True)
     f2g_ready = bool(summary.get("f2g_audit_ready") is True)
+    recovery_evidence = _recovery_evidence(recovery_payload)
     return _row(
         "3",
         "F2h lightweight continuation",
         "ready_for_f2h_continuation" if allowed else "blocked_until_f2g_audit",
         allowed,
-        f"f2g_audit_ready={f2g_ready};f2h_continuation_allowed={allowed}",
+        f"f2g_audit_ready={f2g_ready};f2h_continuation_allowed={allowed};{recovery_evidence}",
         "f2h_blocked_until_f2g_audit",
         "Do not run continuation until the F2g local audit exists and prerequisite surfaces are present.",
     )
@@ -318,6 +336,7 @@ def build_pm_priority_queue_status(
     release_source_json: str = DEFAULT_RELEASE_SOURCE_JSON,
     release_source_recalc_json: str = DEFAULT_RELEASE_SOURCE_RECALC_JSON,
     f2g_f2h_preflight_json: str = DEFAULT_F2G_F2H_PREFLIGHT_JSON,
+    f2g_f2h_recovery_json: str = DEFAULT_F2G_F2H_RECOVERY_JSON,
     developer_preview_register_md: str = DEFAULT_DEVELOPER_PREVIEW_REGISTER_MD,
     developer_preview_audit_json: str = DEFAULT_DEVELOPER_PREVIEW_AUDIT_JSON,
     external_benchmark_json: str = DEFAULT_EXTERNAL_BENCHMARK_JSON,
@@ -329,14 +348,15 @@ def build_pm_priority_queue_status(
 ) -> dict[str, Any]:
     root = Path(root)
     f2_payload = _read_json(f2g_f2h_preflight_json, root=root)
+    f2_recovery_payload = _read_json(f2g_f2h_recovery_json, root=root)
     rows = [
         _github_pr_row(_read_json(github_open_prs_json, root=root)),
         _readiness_row(
             _read_json(release_source_json, root=root),
             _read_json(release_source_recalc_json, root=root),
         ),
-        _f2g_row(f2_payload),
-        _f2h_row(f2_payload),
+        _f2g_row(f2_payload, f2_recovery_payload),
+        _f2h_row(f2_payload, f2_recovery_payload),
         _developer_preview_row(
             _read_text(developer_preview_register_md, root=root),
             _read_json(developer_preview_audit_json, root=root),
@@ -405,6 +425,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--release-source-json", default=DEFAULT_RELEASE_SOURCE_JSON)
     parser.add_argument("--release-source-recalc-json", default=DEFAULT_RELEASE_SOURCE_RECALC_JSON)
     parser.add_argument("--f2g-f2h-preflight-json", default=DEFAULT_F2G_F2H_PREFLIGHT_JSON)
+    parser.add_argument("--f2g-f2h-recovery-json", default=DEFAULT_F2G_F2H_RECOVERY_JSON)
     parser.add_argument("--developer-preview-register-md", default=DEFAULT_DEVELOPER_PREVIEW_REGISTER_MD)
     parser.add_argument("--developer-preview-audit-json", default=DEFAULT_DEVELOPER_PREVIEW_AUDIT_JSON)
     parser.add_argument("--external-benchmark-json", default=DEFAULT_EXTERNAL_BENCHMARK_JSON)
@@ -428,6 +449,7 @@ def main(argv: list[str] | None = None) -> None:
         release_source_json=args.release_source_json,
         release_source_recalc_json=args.release_source_recalc_json,
         f2g_f2h_preflight_json=args.f2g_f2h_preflight_json,
+        f2g_f2h_recovery_json=args.f2g_f2h_recovery_json,
         developer_preview_register_md=args.developer_preview_register_md,
         developer_preview_audit_json=args.developer_preview_audit_json,
         external_benchmark_json=args.external_benchmark_json,
