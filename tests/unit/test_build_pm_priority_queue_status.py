@@ -29,7 +29,7 @@ def _write_common_inputs(root: Path) -> None:
         {"rows": [{"work_item_id": track, "current_receipt_status": "missing_not_attached"} for track in sorted(mod.EXTERNAL_TRACK_IDS)]},
     )
     _write_json(
-        root / ".betelgeuze/customer_shadow_evidence_status_current.json",
+        root / "runs/customer_shadow_evidence_status_current.json",
         {
             "summary": {
                 "status": "blocked_customer_shadow_evidence_status",
@@ -128,6 +128,58 @@ def test_pm_priority_queue_status_blocks_without_local_pr_capture(tmp_path: Path
     assert first["blocker"] == "github_open_pr_state_not_captured"
 
 
+def test_pm_priority_queue_status_marks_source_of_truth_ready_when_stored_and_recalc_sync(
+    tmp_path: Path,
+) -> None:
+    _write_common_inputs(tmp_path)
+    ready_summary = {
+        "status": "product_release_source_of_truth_gate_ready",
+        "release_source_of_truth_ready": True,
+        "blocker_count": 0,
+        "stale_artifact_count": 0,
+    }
+    _write_json(tmp_path / "runs/product_release_source_of_truth_gate_current.json", {"summary": ready_summary})
+    _write_json(
+        tmp_path / ".betelgeuze/tmp_product_release_source_of_truth_gate_now.json",
+        {"summary": ready_summary},
+    )
+
+    payload = mod.build_pm_priority_queue_status(root=tmp_path)
+
+    row = {item["item_id"]: item for item in payload["rows"]}["1"]
+    assert row["ready"] is True
+    assert row["status"] == "source_of_truth_refresh_synced"
+    assert row["blocker"] == ""
+    assert "stored_blockers=0;stored_stale=0" in row["evidence"]
+    assert "recalc_blockers=0;recalc_stale=0" in row["evidence"]
+
+
+def test_pm_priority_queue_status_blocks_when_source_of_truth_recalc_mismatches(
+    tmp_path: Path,
+) -> None:
+    _write_common_inputs(tmp_path)
+    _write_json(
+        tmp_path / "runs/product_release_source_of_truth_gate_current.json",
+        {
+            "summary": {
+                "status": "product_release_source_of_truth_gate_ready",
+                "release_source_of_truth_ready": True,
+                "blocker_count": 0,
+                "stale_artifact_count": 0,
+            }
+        },
+    )
+
+    payload = mod.build_pm_priority_queue_status(root=tmp_path)
+
+    row = {item["item_id"]: item for item in payload["rows"]}["1"]
+    assert row["ready"] is False
+    assert row["status"] == "blocked_readiness_refresh_mismatch"
+    assert row["blocker"] == "readiness_snapshot_recalc_mismatch"
+    assert "stored_status=product_release_source_of_truth_gate_ready" in row["evidence"]
+    assert "recalc_status=blocked_product_release_source_of_truth_gate" in row["evidence"]
+
+
 def test_pm_priority_queue_status_surfaces_developer_preview_work_order_count(
     tmp_path: Path,
 ) -> None:
@@ -186,7 +238,7 @@ def test_pm_priority_queue_status_marks_customer_shadow_ready_only_after_three_c
 ) -> None:
     _write_common_inputs(tmp_path)
     _write_json(
-        tmp_path / ".betelgeuze/customer_shadow_evidence_status_current.json",
+        tmp_path / "runs/customer_shadow_evidence_status_current.json",
         {
             "summary": {
                 "status": "customer_shadow_evidence_status_ready",

@@ -21,7 +21,7 @@ DEFAULT_F2G_F2H_RECOVERY_JSON = ".betelgeuze/f2g_f2h_authoritative_surface_recov
 DEFAULT_DEVELOPER_PREVIEW_REGISTER_MD = "docs/developer_preview_final_gate_action_register.md"
 DEFAULT_DEVELOPER_PREVIEW_AUDIT_JSON = "runs/developer_preview_final_gate_audit_current.json"
 DEFAULT_EXTERNAL_BENCHMARK_JSON = ".betelgeuze/external_benchmark_receipt_queue_batch_update.json"
-DEFAULT_CUSTOMER_SHADOW_JSON = ".betelgeuze/customer_shadow_evidence_status_current.json"
+DEFAULT_CUSTOMER_SHADOW_JSON = "runs/customer_shadow_evidence_status_current.json"
 DEFAULT_GPU_HIP_PLAN_MD = "docs/gpu_hip_parity_after_cpu_plan.md"
 DEFAULT_GPU_RETURN_INTAKE_JSON = "runs/product_production_ai_gpu_return_intake_current.json"
 DEFAULT_ROCM_ENV_JSON = "runs/rocm_environment_manifest_current.json"
@@ -152,20 +152,43 @@ def _readiness_row(release_payload: Any, recalc_payload: Any) -> dict[str, Any]:
     recalc_status = _text(recalc.get("status"))
     release_blockers = _int(release.get("blocker_count"))
     recalc_blockers = _int(recalc.get("blocker_count"))
+    release_stale = _int(release.get("stale_artifact_count"))
+    recalc_stale = _int(recalc.get("stale_artifact_count"))
+    release_ready = release_status == "product_release_source_of_truth_gate_ready"
+    recalc_ready = recalc_status == "product_release_source_of_truth_gate_ready"
     evidence = (
         f"stored_status={release_status or 'missing'};stored_blockers={release_blockers};"
-        f"recalc_status={recalc_status or 'missing'};recalc_blockers={recalc_blockers}"
+        f"stored_stale={release_stale};recalc_status={recalc_status or 'missing'};"
+        f"recalc_blockers={recalc_blockers};recalc_stale={recalc_stale}"
     )
     captured = bool(release_status and recalc_status)
     documented_blocked = captured and release_status.startswith("blocked_") and recalc_status.startswith("blocked_")
+    synced_ready = captured and release_ready and recalc_ready and release_blockers == 0 and recalc_blockers == 0
+    refresh_mismatch = captured and not synced_ready and not documented_blocked
     return _row(
         "1",
         "readiness snapshot/doc sync",
-        "documented_blocked_no_promotion" if documented_blocked else "blocked_readiness_sync_evidence_missing",
-        documented_blocked,
+        (
+            "source_of_truth_refresh_synced"
+            if synced_ready
+            else (
+                "documented_blocked_no_promotion"
+                if documented_blocked
+                else (
+                    "blocked_readiness_refresh_mismatch"
+                    if refresh_mismatch
+                    else "blocked_readiness_sync_evidence_missing"
+                )
+            )
+        ),
+        synced_ready or documented_blocked,
         evidence,
-        "readiness_snapshot_or_recalc_evidence_missing",
-        "Keep readiness non-promoting; refresh protected evidence only after explicit approval.",
+        "readiness_snapshot_recalc_mismatch" if refresh_mismatch else "readiness_snapshot_or_recalc_evidence_missing",
+        (
+            "Source-of-truth stored and recalc snapshots agree; downstream claim gates still control promotion."
+            if synced_ready
+            else "Keep readiness non-promoting; refresh protected evidence only after explicit approval."
+        ),
     )
 
 
