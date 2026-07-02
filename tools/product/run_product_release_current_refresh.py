@@ -45,11 +45,11 @@ FINAL_GATE_SPECS = [
         "required_true_fields": ["release_source_of_truth_ready"],
         "required_zero_fields": ["blocker_count", "stale_artifact_count", "readme_drift_count"],
         "required_int_exact_fields": {
-            "row_count": 179,
-            "artifact_row_count": 120,
+            "row_count": 184,
+            "artifact_row_count": 125,
             "semantic_status_row_count": 57,
             "readme_row_count": 2,
-            "pass_count": 179,
+            "pass_count": 184,
             "release_refresh_command_count": len(RELEASE_REFRESH_COMMANDS),
         },
     },
@@ -222,7 +222,7 @@ FINAL_GATE_SPECS = [
             "third_party_license_review_gate_approved_review_asset_count": 1,
             "third_party_license_review_gate_source_hard_blocker_count": 0,
             "third_party_license_review_gate_source_operator_review_item_count": 1,
-            "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 2,
+            "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 3,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_operator_input_required_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_current_action_required_count": 2,
@@ -261,10 +261,10 @@ FINAL_GATE_SPECS = [
             "accuracy_parity_scorecard_top_blocker_count": 1,
             "accuracy_parity_ligand_ranking_blocker_count": 1,
             "accuracy_parity_ligand_ranking_positive_count": 34,
-            "api_runner_profile_promotion_operator_receipt_profile_count": 4,
-            "api_runner_profile_promotion_operator_receipt_receipt_row_count": 4,
+            "api_runner_profile_promotion_operator_receipt_profile_count": 5,
+            "api_runner_profile_promotion_operator_receipt_receipt_row_count": 5,
             "api_runner_profile_promotion_operator_receipt_pass_row_count": 0,
-            "api_runner_profile_promotion_operator_receipt_blocked_row_count": 4,
+            "api_runner_profile_promotion_operator_receipt_blocked_row_count": 5,
             "api_runner_profile_promotion_operator_receipt_blocker_count": 1,
             "product_scope_breadth_evidence_receipt_receipt_row_count": 6,
             "product_scope_breadth_evidence_receipt_pass_row_count": 0,
@@ -1006,9 +1006,14 @@ def run_product_release_current_refresh(
     root: str | Path = ROOT,
     commands: list[str] | None = None,
     command_timeout_seconds: int = DEFAULT_COMMAND_TIMEOUT_SECONDS,
+    command_start_at: int = 1,
+    full_command_count: int | None = None,
 ) -> dict[str, Any]:
     root_path = Path(root)
     commands = list(RELEASE_REFRESH_COMMANDS if commands is None else commands)
+    command_start_at = max(1, int(command_start_at))
+    command_end_at = command_start_at + len(commands) - 1 if commands else command_start_at - 1
+    full_command_count = len(commands) if full_command_count is None else int(full_command_count)
     rows: list[dict[str, Any]] = []
     failed = False
     for index, command in enumerate(commands, start=1):
@@ -1051,6 +1056,10 @@ def run_product_release_current_refresh(
         "generated_at_local": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         "execute": execute,
         "command_count": len(commands),
+        "command_start_at": command_start_at,
+        "command_end_at": command_end_at,
+        "full_refresh_command_count": full_command_count,
+        "command_slice_complete": command_start_at == 1 and command_end_at == full_command_count,
         "executed_count": sum(1 for row in rows if row["executed"]),
         "failed_count": sum(1 for row in rows if row["status"] in {"fail", "timeout"}),
         "timed_out_count": sum(1 for row in rows if row["timed_out"]),
@@ -1074,6 +1083,21 @@ def run_product_release_current_refresh(
     return {"summary": summary, "rows": rows, "verification_rows": verification_rows}
 
 
+def select_refresh_commands(
+    commands: list[str],
+    *,
+    start_at: int = 1,
+    max_commands: int | None = None,
+) -> list[str]:
+    start_index = max(0, int(start_at) - 1)
+    if start_index >= len(commands):
+        return []
+    if max_commands is None:
+        return list(commands[start_index:])
+    end_index = start_index + max(0, int(max_commands))
+    return list(commands[start_index:end_index])
+
+
 def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Path = ROOT) -> None:
     path = _resolve(path_like, root=root)
     s = payload["summary"]
@@ -1083,6 +1107,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"- status: `{s['status']}`",
         f"- execute: `{s['execute']}`",
         f"- command_count: `{s['command_count']}`",
+        f"- command_start_at: `{s['command_start_at']}`",
+        f"- command_end_at: `{s['command_end_at']}`",
+        f"- full_refresh_command_count: `{s['full_refresh_command_count']}`",
         f"- executed_count: `{s['executed_count']}`",
         f"- failed_count: `{s['failed_count']}`",
         "",
@@ -1107,16 +1134,36 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
     parser.add_argument("--command-timeout-seconds", type=int, default=DEFAULT_COMMAND_TIMEOUT_SECONDS)
+    parser.add_argument(
+        "--start-at",
+        type=int,
+        default=1,
+        help="1-based refresh command index to start from; useful for resuming after a timed-out builder.",
+    )
+    parser.add_argument(
+        "--max-commands",
+        type=int,
+        default=None,
+        help="Maximum number of refresh commands to run from --start-at. Omit to run through the end.",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     root = Path(args.root)
+    commands = select_refresh_commands(
+        RELEASE_REFRESH_COMMANDS,
+        start_at=max(1, int(args.start_at)),
+        max_commands=args.max_commands,
+    )
     payload = run_product_release_current_refresh(
         execute=args.execute,
         root=root,
+        commands=commands,
         command_timeout_seconds=max(1, int(args.command_timeout_seconds)),
+        command_start_at=max(1, int(args.start_at)),
+        full_command_count=len(RELEASE_REFRESH_COMMANDS),
     )
     _write_json(args.out_json, payload, root=root)
     _write_markdown(args.out_md, payload, root=root)

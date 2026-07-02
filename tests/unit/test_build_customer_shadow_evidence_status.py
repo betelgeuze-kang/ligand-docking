@@ -61,6 +61,8 @@ def test_header_only_template_blocks_until_three_real_cases(tmp_path: Path) -> N
     assert summary["customer_shadow_intake_schema_ready"] is True
     assert summary["completed_customer_shadow_case_count"] == 0
     assert summary["missing_completed_customer_shadow_case_count"] == 3
+    assert summary["paid_pilot_evidence_ready"] is False
+    assert summary["paid_pilot_claim_allowed"] is False
     assert summary["commercial_readiness_promotion_allowed"] is False
     assert payload["blockers"][0]["case_id"] == "minimum_completed_cases"
 
@@ -90,9 +92,23 @@ def test_three_completed_customer_shadow_rows_ready_but_do_not_promote_claims(tm
     assert summary["status"] == "customer_shadow_evidence_status_ready"
     assert summary["completed_customer_shadow_case_count"] == 3
     assert summary["customer_shadow_minimum_met"] is True
+    assert summary["paid_pilot_evidence_ready"] is True
+    assert summary["paid_pilot_claim_allowed"] is False
     assert summary["commercial_readiness_promotion_allowed"] is False
     assert summary["readiness_promotion_allowed"] is False
     assert payload["blockers"] == []
+
+
+def test_reviewed_at_must_be_timezone_aware_iso_timestamp(tmp_path: Path) -> None:
+    row = _valid_row("case_1")
+    row["reviewed_at_utc"] = "2026-06-29"
+    intake = tmp_path / "intake.csv"
+    _write_intake(intake, [row])
+
+    payload = mod.build_customer_shadow_evidence_status(intake_csv=str(intake))
+
+    assert payload["summary"]["status"] == "blocked_customer_shadow_evidence_status"
+    assert "reviewed_at_utc_missing_or_invalid" in payload["rows"][0]["blockers"]
 
 
 def test_private_or_redistributable_raw_data_declarations_block(tmp_path: Path) -> None:

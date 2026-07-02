@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from api.validated_runner import ALLOWED_RUNNER_SCRIPTS
 from tools.builder_table_utils import write_csv_rows
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,11 +20,6 @@ DEFAULT_OUT_MD = "runs/api_runner_profile_promotion_readiness_current.md"
 DEFAULT_OPERATOR_TEMPLATE_CSV = "runs/api_runner_profile_promotion_operator_template_current.csv"
 
 APPROVAL_TOKEN = "APPROVE_API_RUNNER_PROFILE_PROMOTION"
-ALLOWED_RUNNER_SCRIPTS = {
-    "tools/run_ligand_htvs_pipeline.py",
-    "tools/run_ligand_backmapping_scoring.py",
-    "tools/run_ligand_topk_delivery.py",
-}
 REQUIRED_TRUE_EVIDENCE = (
     "input_contract_reviewed",
     "output_contract_reviewed",

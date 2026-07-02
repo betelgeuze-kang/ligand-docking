@@ -70,6 +70,10 @@ def _file_contains(root: Path, path_like: str, needle: str) -> bool:
         return False
 
 
+def _any_file_contains(root: Path, path_likes: tuple[str, ...], needle: str) -> bool:
+    return any(_file_contains(root, path_like, needle) for path_like in path_likes)
+
+
 def _artifact_present(root: Path, path_like: str) -> bool:
     return (root / path_like).exists()
 
@@ -173,13 +177,25 @@ def build_product_architecture_contract(
     casp17 = _summary(casp17_transition_packet)
 
     product_api_present = _artifact_present(root_path, "api/product.py")
-    product_architecture_endpoint_present = _file_contains(root_path, "api/product.py", '"/architecture"')
+    product_architecture_endpoint_present = _any_file_contains(
+        root_path,
+        ("api/product.py", "api/product_architecture.py"),
+        '"/architecture"',
+    )
     request_contract_present = _artifact_present(root_path, "betelgeuze_product/docking_request.py")
     execution_preflight_present = _artifact_present(root_path, "betelgeuze_product/execution_preflight.py")
     htvs_command_present = _artifact_present(root_path, "betelgeuze_product/htvs_command.py")
     ligand_pipeline_present = _artifact_present(root_path, "tools/run_ligand_htvs_pipeline.py")
-    service_boundary_endpoint_present = _file_contains(root_path, "api/product.py", '"/service-boundary"')
-    api_contract_endpoint_present = _file_contains(root_path, "api/product.py", '"/api-contract"')
+    service_boundary_endpoint_present = _any_file_contains(
+        root_path,
+        ("api/product.py", "api/product_service_contracts.py"),
+        '"/service-boundary"',
+    )
+    api_contract_endpoint_present = _any_file_contains(
+        root_path,
+        ("api/product.py", "api/product_service_contracts.py"),
+        '"/api-contract"',
+    )
     cameo_api_present = _artifact_present(root_path, "api/cameo.py")
     cleanup_api_present = _artifact_present(root_path, "api/cleanup.py")
     casp17_api_present = _artifact_present(root_path, "api/casp17.py")
@@ -321,7 +337,7 @@ def build_product_architecture_contract(
                 f"architecture_endpoint={product_architecture_endpoint_present};request_contract={request_contract_present}"
             ),
             required="ready product capability contract, structure-analysis capability, request contract, and /product/architecture endpoint",
-            artifact_path=f"{product_capability_path};api/product.py;betelgeuze_product/docking_request.py",
+            artifact_path=f"{product_capability_path};api/product.py;api/product_architecture.py;betelgeuze_product/docking_request.py",
             reason="The commercial product architecture needs a visible structure-analysis intake and status surface.",
         ),
         _row(
@@ -405,7 +421,7 @@ def build_product_architecture_contract(
                 f"cli_command_count={_int(service_boundary.get('cli_command_count'))}"
             ),
             required="product service-boundary contract ready, API endpoint present, and CLI/API/artifact registry coherent",
-            artifact_path=f"{product_service_boundary_path};api/product.py;betelgeuze_product/cli.py",
+            artifact_path=f"{product_service_boundary_path};api/product.py;api/product_service_contracts.py;betelgeuze_product/cli.py",
             reason="The product architecture should expose a dedicated service-boundary status surface for commercial handoff.",
         ),
         _row(
@@ -421,7 +437,7 @@ def build_product_architecture_contract(
                 f"status_response_missing_key_count={_int(api_contract.get('status_response_missing_key_count'))}"
             ),
             required="product API contract ready, /product/api-contract endpoint present, and route/schema/safety flags coherent",
-            artifact_path=f"{product_api_contract_path};api/product.py",
+            artifact_path=f"{product_api_contract_path};api/product.py;api/product_service_contracts.py",
             reason="Commercial handoff needs a static API contract for customer integration, not only source-level route presence.",
         ),
         _row(

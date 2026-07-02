@@ -126,7 +126,7 @@ def _sha256(path_like: str | Path, *, root: Path = ROOT) -> str:
 
 
 def _utc_now() -> str:
-    return dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _format_metric(value: float | None) -> str:

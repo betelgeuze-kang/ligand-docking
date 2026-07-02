@@ -23,6 +23,7 @@ from api.product_docking import (
 from api.product_benchmark import (
     get_product_external_metrics,
     get_product_public_benchmark,
+    get_product_public_benchmark_external_receipts_audit,
     get_product_rollout_execution_smoke_receipt,
     get_product_trajectory_sla_contract,
 )
@@ -36,6 +37,7 @@ from api.product_operational import (
     get_product_operational_quality,
     get_product_security_deployment_contract,
 )
+from api.product_operator_cockpit import get_product_operator_cockpit
 from api.product_release_ops import (
     get_product_commercial_independence,
     get_product_job_orchestration_contract,
@@ -120,6 +122,7 @@ __all__ = [
     "get_product_license_file_work_order",
     "get_product_license_options",
     "get_product_operational_quality",
+    "get_product_operator_cockpit",
     "get_product_operations",
     "get_product_pose_sampling_readiness",
     "get_product_production_ai_checkpoint_readiness",
@@ -131,6 +134,7 @@ __all__ = [
     "get_product_production_ai_registry_promotion_operator_receipt",
     "get_product_production_ai_registry_promotion_priority",
     "get_product_public_benchmark",
+    "get_product_public_benchmark_external_receipts_audit",
     "get_product_aqp1_direct_binding_procurement_packet",
     "get_product_aqp1_operator_validation_candidate",
     "get_product_pxr_exact_review_intake",

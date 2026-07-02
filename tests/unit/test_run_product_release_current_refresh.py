@@ -101,6 +101,38 @@ def _action_board_stale_release_echo() -> dict:
     return payload
 
 
+def test_goal_release_decision_final_gate_tracks_current_api_runner_receipt_count() -> None:
+    exact_fields = _goal_release_decision_spec()["required_int_exact_fields"]
+
+    assert exact_fields["api_runner_profile_promotion_operator_receipt_profile_count"] == 5
+    assert exact_fields["api_runner_profile_promotion_operator_receipt_receipt_row_count"] == 5
+    assert exact_fields["api_runner_profile_promotion_operator_receipt_blocked_row_count"] == 5
+
+
+def test_select_refresh_commands_supports_resume_slice() -> None:
+    commands = ["cmd1", "cmd2", "cmd3", "cmd4"]
+
+    assert mod.select_refresh_commands(commands, start_at=2, max_commands=2) == ["cmd2", "cmd3"]
+    assert mod.select_refresh_commands(commands, start_at=3) == ["cmd3", "cmd4"]
+    assert mod.select_refresh_commands(commands, start_at=99) == []
+
+
+def test_refresh_summary_records_resume_slice_metadata() -> None:
+    payload = mod.run_product_release_current_refresh(
+        execute=False,
+        commands=["cmd52", "cmd53"],
+        command_start_at=52,
+        full_command_count=160,
+    )
+
+    summary = payload["summary"]
+    assert summary["command_count"] == 2
+    assert summary["command_start_at"] == 52
+    assert summary["command_end_at"] == 53
+    assert summary["full_refresh_command_count"] == 160
+    assert summary["command_slice_complete"] is False
+
+
 def test_refresh_final_gate_requires_release_decision_bottleneck_receipt_linkage(tmp_path: Path) -> None:
     _write_json(
         tmp_path / "runs" / "product_release_source_of_truth_gate_current.json",

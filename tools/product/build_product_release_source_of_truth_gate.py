@@ -90,6 +90,10 @@ PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_COMMAND = "python3 tools/build_product_publi
 PUBLIC_BENCHMARK_PHASE2_HARNESS_AUDIT_COMMAND = (
     "python3 tools/product/build_public_benchmark_phase2_harness_audit.py"
 )
+BENCHMARK_LEDGER_COMMAND = "python3 tools/product/build_benchmark_ledger.py"
+PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND = (
+    "python3 tools/product/build_public_benchmark_external_receipts_audit.py"
+)
 GPCR_HARD_DECOY_CLAIM_LOCK_REASON = (
     "ADORA2A neutral-antagonist rescue rule was discovered from the current failure slice; "
     "independent claim-unlock replay required before broad GPCR/router promotion."
@@ -117,6 +121,7 @@ GPCR_A1_INDEPENDENT_REPEAT_PACKET_COMMAND = (
     "--ranking-json runs/gpcr_coverage_v2_crossfit_rank_rescue_repeat_r1_shadow_replay_ranking_summary_current.json "
     "--repeat-tag gpcr_coverage_v2_crossfit_rank_rescue_repeat_r1"
 )
+GPCR_A1_ACCURACY_REPAIR_QUEUE_COMMAND = "python3 tools/build_gpcr_a1_accuracy_repair_queue.py"
 GPCR_HARD_DECOY_CLAIM_UNLOCK_AUDIT_COMMAND = (
     "python3 tools/product/build_gpcr_hard_decoy_claim_unlock_audit.py"
 )
@@ -149,9 +154,21 @@ POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_COMMAND = (
 POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_COMMAND = (
     "python3 tools/product/build_pocketmd_lite_candidate_metric_fill_preview.py"
 )
+POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_COMMAND = (
+    "python3 tools/product/build_pocketmd_lite_report.py "
+    "--input-csv runs/pocketmd_lite_candidate_metric_fill_preview_current.candidates.csv "
+    "--out-json runs/pocketmd_lite_candidate_metric_fill_preview_report_current.json "
+    "--out-md runs/pocketmd_lite_candidate_metric_fill_preview_report_current.md "
+    "--out-csv runs/pocketmd_lite_candidate_metric_fill_preview_report_current.csv"
+)
 POCKETMD_LITE_TOPK_REFINEMENT_AUDIT_COMMAND = (
     "python3 tools/product/build_pocketmd_lite_topk_refinement_audit.py"
 )
+HBOND_BACKMAP_REPORT_COMMAND = (
+    "python3 tools/product/build_hbond_backmap_report.py "
+    "--scores-csv runs/product_image_smoke_runner_artifacts/backmapping_scores.csv"
+)
+PRODUCT_OPERATOR_COCKPIT_COMMAND = "python3 tools/product/build_product_operator_cockpit.py"
 
 RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_accuracy_parity_scorecard.py",
@@ -190,6 +207,8 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/product/run_tier_alpha_adrb2_dispatch_smoke.py --timeout-seconds 420",
     "python3 tools/build_api_docking_dispatch_e2e_evidence.py",
     "python3 tools/build_product_job_orchestration_contract.py",
+    PRODUCT_PUBLIC_BENCHMARK_SCORECARD_INTAKE_SYNC_COMMAND,
+    PRODUCT_PUBLIC_BENCHMARK_CONTRACT_COMMAND,
     "python3 tools/build_architecture_validation_package_report.py",
     "python3 tools/product/build_restricted_unattended_execution_readiness.py",
     "python3 tools/build_product_security_deployment_contract.py",
@@ -203,17 +222,14 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_api_contract.py",
     "python3 tools/product/build_ai_md_contract_source_of_truth_gate.py",
     "python3 tools/build_product_service_boundary_contract.py",
-    PRODUCT_PUBLIC_BENCHMARK_SCORECARD_INTAKE_SYNC_COMMAND,
-    PRODUCT_PUBLIC_BENCHMARK_CONTRACT_COMMAND,
     PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_COMMAND,
     PUBLIC_BENCHMARK_PHASE2_HARNESS_AUDIT_COMMAND,
+    BENCHMARK_LEDGER_COMMAND,
     GPCR_HARD_DECOY_CURRENT_FIT_CLOSURE_PROBE_COMMAND,
     GPCR_HARD_DECOY_ADORA2A_NEUTRAL_RESCUE_PROBE_COMMAND,
     GPCR_HARD_DECOY_ADORA2A_PREREGISTERED_REPLAY_COMMAND,
     GPCR_HARD_DECOY_SUITE_CURRENT_INPUT_COMMAND,
     GPCR_HARD_DECOY_SUITE_REPORT_COMMAND,
-    GPCR_A1_INDEPENDENT_REPEAT_PACKET_COMMAND,
-    GPCR_HARD_DECOY_CLAIM_UNLOCK_AUDIT_COMMAND,
     POCKETMD_LITE_STAGE3_CONTACT_CLASH_INTAKE_COMMAND,
     POCKETMD_LITE_REPORT_COMMAND,
     POCKETMD_LITE_REFINEMENT_WORK_ORDER_COMMAND,
@@ -225,10 +241,12 @@ RELEASE_REFRESH_COMMANDS = [
     POCKETMD_LITE_METRIC_COLLECTION_PROBE_COMMAND,
     POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_COMMAND,
     POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_COMMAND,
+    POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_COMMAND,
     POCKETMD_LITE_TOPK_REFINEMENT_AUDIT_COMMAND,
     "python3 tools/build_product_capability_surface_contract.py",
     "python3 tools/build_product_commercial_independence_gate.py",
     "python3 tools/build_product_image_smoke_preflight.py",
+    HBOND_BACKMAP_REPORT_COMMAND,
     "python3 tools/build_product_end_to_end_rocm_benchmark.py",
     "python3 tools/build_ai_md_engine_kpi_report.py",
     "python3 tools/build_ai_md_product_evidence_bundle.py",
@@ -237,9 +255,11 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_ai_md_engine_kpi_report.py",
     "python3 tools/build_ai_md_product_evidence_bundle.py",
     "python3 tools/build_gpcr_commercial_phase_ab_closure_chain.py",
+    GPCR_A1_INDEPENDENT_REPEAT_PACKET_COMMAND,
     "python3 tools/build_gpcr_active_scorer_promotion_decision_packet.py",
     "python3 tools/build_gpcr_broad_claim_review_receipt.py",
     "python3 tools/build_gpcr_broad_claim_scope_readiness.py",
+    GPCR_HARD_DECOY_CLAIM_UNLOCK_AUDIT_COMMAND,
     "python3 tools/product/build_self_hosted_license_distribution_audit.py",
     "python3 tools/build_third_party_license_review_gate.py",
     "python3 deploy/product_rollout.py --out-json runs/product_rollout_plan_current.json",
@@ -274,6 +294,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/product/build_engine_refinement_tier_readiness.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py",
+    PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND,
     "python3 tools/build_engine_refinement_claim_evidence_operator_field_worksheet.py",
     "python3 tools/build_engine_refinement_claim_evidence_operator_staging_apply.py",
     "python3 tools/product/build_science_accuracy_frontier.py",
@@ -291,6 +312,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_goal_release_decision_gate.py",
     "python3 tools/build_product_goal_completion_audit.py",
     "python3 tools/build_goal_operator_action_board.py",
+    PRODUCT_OPERATOR_COCKPIT_COMMAND,
     "python3 tools/build_goal_operator_intake_kit.py",
     "python3 tools/build_goal_api_surface_contract.py",
     "python3 tools/build_goal_bottleneck_briefing.py",
@@ -309,11 +331,17 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_release_source_of_truth_gate.py",
     "python3 tools/build_goal_release_decision_gate.py",
     "python3 tools/build_goal_operator_action_board.py",
+    PRODUCT_OPERATOR_COCKPIT_COMMAND,
     "python3 tools/build_goal_release_burndown_work_order.py",
     "python3 tools/build_goal_operator_intake_kit.py",
     "python3 tools/build_goal_bottleneck_briefing.py",
     "python3 tools/build_product_full_commercial_blocker_evidence_matrix.py",
     "python3 deploy/product_release_bundle.py",
+    "python3 tools/build_product_rollout_execution_readiness.py",
+    "python3 tools/product/build_product_launch_r4_preflight.py",
+    "python3 tools/build_product_rollout_execution_smoke_receipt.py",
+    "python3 tools/build_deploy_ops_legal_gap_closure.py",
+    "python3 tools/build_master_gap_closure_rollup.py",
     "python3 tools/build_product_commercial_readiness_handoff_bundle.py",
     "python3 tools/build_product_ledger_privacy_scan.py",
     "python3 tools/build_product_release_source_of_truth_gate.py",
@@ -811,7 +839,27 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "tools/build_product_service_boundary_contract.py",
             "betelgeuze_product/service_boundary.py",
             "betelgeuze_product/cli.py",
+            "api/main.py",
             "api/product.py",
+            "api/product_ai_surface.py",
+            "api/product_architecture.py",
+            "api/product_benchmark.py",
+            "api/product_capabilities.py",
+            "api/product_cameo_runner.py",
+            "api/product_commercial_readiness.py",
+            "api/product_docking.py",
+            "api/product_evidence_goal.py",
+            "api/product_gpcr_hard_decoy.py",
+            "api/product_hbond_backmap.py",
+            "api/product_license.py",
+            "api/product_operational.py",
+            "api/product_pocketmd_lite.py",
+            "api/product_production_ai.py",
+            "api/product_release_evidence.py",
+            "api/product_release_ops.py",
+            "api/product_scope.py",
+            "api/product_service_contracts.py",
+            "api/product_tier_beta.py",
             "pyproject.toml",
         ],
     },
@@ -870,6 +918,15 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "tools/product/build_public_benchmark_phase2_harness_audit.py",
             "betelgeuze_product/public_benchmark.py",
             "runs/product_public_benchmark_contract_current.json",
+        ],
+    },
+    {
+        "artifact_id": "benchmark_ledger",
+        "artifact_path": "runs/benchmark_ledger_current.json",
+        "builder_command": BENCHMARK_LEDGER_COMMAND,
+        "depends_on": [
+            "tools/product/build_benchmark_ledger.py",
+            "betelgeuze_product/benchmark_ledger.py",
         ],
     },
     {
@@ -963,8 +1020,9 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/gpcr_hard_decoy_adora2a_preregistered_replay_current.json",
             "runs/gpcr_a1_independent_repeat_packet_current.json",
             "runs/accuracy_parity_scorecard_current.json",
-            "runs/gpcr_broad_claim_scope_readiness_current.json",
-            "runs/gpcr_active_scorer_promotion_decision_packet_current.json",
+            # Promotion context artifacts are independently freshness-gated below. Making this
+            # metric-closure packet depend on them creates a release-refresh cycle through the
+            # capability surface and active-scorer promotion packets.
         ],
     },
     {
@@ -1085,16 +1143,39 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "artifact_id": "pocketmd_lite_candidate_metric_fill_preview_report",
+        "artifact_path": "runs/pocketmd_lite_candidate_metric_fill_preview_report_current.json",
+        "builder_command": POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_COMMAND,
+        "depends_on": [
+            "tools/product/build_pocketmd_lite_report.py",
+            "betelgeuze_product/pocketmd_lite_contract.py",
+            "runs/pocketmd_lite_candidate_metric_fill_preview_current.json",
+            "runs/pocketmd_lite_candidate_metric_fill_preview_current.candidates.csv",
+        ],
+    },
+    {
         "artifact_id": "pocketmd_lite_topk_refinement_audit",
         "artifact_path": "runs/pocketmd_lite_topk_refinement_audit_current.json",
         "builder_command": POCKETMD_LITE_TOPK_REFINEMENT_AUDIT_COMMAND,
         "depends_on": [
             "tools/product/build_pocketmd_lite_topk_refinement_audit.py",
-            "runs/pocketmd_lite_report_current.json",
+            "runs/pocketmd_lite_candidate_metric_fill_preview_report_current.json",
             "runs/pocketmd_lite_metric_collection_probe_current.json",
             "runs/pocketmd_lite_remaining_evidence_queue_current.json",
             "runs/pocketmd_lite_candidate_metric_fill_preview_current.json",
             "runs/pocketmd_lite_claim_grade_metric_source_audit_current.json",
+        ],
+    },
+    {
+        "artifact_id": "hbond_backmap_report",
+        "artifact_path": "runs/hbond_backmap_report_current.json",
+        "builder_command": HBOND_BACKMAP_REPORT_COMMAND,
+        "depends_on": [
+            "tools/product/build_hbond_backmap_report.py",
+            "betelgeuze_product/hbond_backmap_report.py",
+            "betelgeuze_product/structured_reason.py",
+            "docs/hbond_backmap_contract.md",
+            "runs/product_image_smoke_runner_artifacts/backmapping_scores.csv",
         ],
     },
     {
@@ -1109,7 +1190,6 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/restricted_unattended_execution_readiness_current.json",
             "runs/product_security_deployment_contract_current.json",
             "runs/gpcr_hard_decoy_suite_current.json",
-            "runs/gpcr_hard_decoy_claim_unlock_audit_current.json",
             "runs/pocketmd_lite_report_current.json",
             "runs/pocketmd_lite_remaining_evidence_queue_current.json",
             "runs/pocketmd_lite_topk_refinement_audit_current.json",
@@ -1153,7 +1233,6 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "tools/build_gpcr_commercial_phase_ab_closure_chain.py",
             "runs/accuracy_parity_scorecard_current.json",
             "runs/gpcr_guarded_operational_gate_refresh_chain_current.json",
-            "runs/gpcr_a1_independent_repeat_packet_current.json",
             "runs/gpcr_frozen_ranking_quality_repair_chain_current.json",
             "runs/product_operational_quality_contract_current.json",
             "runs/product_bundle_contract_current.json",
@@ -1231,7 +1310,6 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "tools/product/build_third_party_license_review_gate.py",
             "tools/accounting/build_third_party_license_review_gate.py",
             "tools/build_third_party_license_review_gate.py",
-            "runs/self_hosted_license_distribution_audit_current.json",
             "runs/third_party_license_review_operator_intake.csv",
         ],
     },
@@ -1258,7 +1336,6 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/alert_delivery_smoke_current.json",
             "runs/self_hosted_license_distribution_audit_current.json",
             "runs/third_party_license_review_gate_current.json",
-            "runs/product_launch_r4_preflight_current.json",
             "scripts/check_independent_product_readiness.py",
             "scripts/verify_quality_gate.py",
             "runs/product_quality_gate_verification_current.json",
@@ -1386,6 +1463,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "depends_on": [
             "tools/product/build_product_rollout_execution_readiness.py",
             "deploy/product_release_bundle.py",
+            "runs/product_release_bundle_current.json",
             "runs/product_rollout_plan_current.json",
             "runs/product_security_deployment_contract_current.json",
             "runs/alert_delivery_smoke_current.json",
@@ -1705,6 +1783,22 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "artifact_id": "public_benchmark_external_receipts_audit",
+        "artifact_path": "runs/public_benchmark_external_receipts_audit_current.json",
+        "builder_command": PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND,
+        "depends_on": [
+            "tools/product/build_public_benchmark_external_receipts_audit.py",
+            "runs/pdbbind_casf_pose_affinity_materialization_manifest_current.json",
+            "runs/pdbbind_casf_pose_affinity_results_current.json",
+            "runs/public_benchmark_phase2_harness_audit_current.json",
+            "runs/pdbbind_casf_pose_affinity_result_provenance_current.json",
+            "runs/pdbbind_casf_pose_affinity_scorecard_current.json",
+            R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON,
+            R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV,
+            "runs/benchmark_ledger_current.json",
+        ],
+    },
+    {
         "artifact_id": "engine_refinement_claim_evidence_operator_field_worksheet",
         "artifact_path": "runs/engine_refinement_claim_evidence_operator_field_worksheet_current.json",
         "builder_command": (
@@ -1808,6 +1902,26 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/goal_readiness_rollup_current.json",
             "runs/product_goal_completion_audit_current.json",
             "runs/engine_refinement_claim_promotion_action_board_current.csv",
+        ],
+    },
+    {
+        "artifact_id": "product_operator_cockpit",
+        "artifact_path": "runs/product_operator_cockpit_current.json",
+        "builder_command": PRODUCT_OPERATOR_COCKPIT_COMMAND,
+        "depends_on": [
+            "tools/product/build_product_operator_cockpit.py",
+            "api/main.py",
+            "api/product.py",
+            "api/product_operator_cockpit.py",
+            "runs/product_capability_surface_contract_current.json",
+            "runs/goal_readiness_rollup_current.json",
+            "runs/hbond_backmap_report_current.json",
+            "runs/gpcr_hard_decoy_claim_unlock_audit_current.json",
+            "runs/pocketmd_lite_topk_refinement_audit_current.json",
+            "runs/public_benchmark_external_receipts_audit_current.json",
+            "runs/goal_operator_action_board_current.json",
+            "runs/ai_md_product_evidence_bundle_current.json",
+            "runs/customer_shadow_evidence_status_current.json",
         ],
     },
     {
@@ -2235,16 +2349,22 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_status": "ai_md_product_evidence_bundle_ready",
         "required_true_fields": [
             "bundle_export_ready",
-            "kpi_report_ready",
             "rocm_hip_rust_runtime_ready",
-            "clean_container_smoke_ready",
-            "product_claim_ready",
+            "product_image_preflight_ready",
+            "source_artifacts_fresh",
         ],
         "required_int_exact_fields": {
             "required_artifact_missing_count": 0,
+            "bundle_validation_error_count": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "benchmark_executed": 0,
+            "product_claim_ready": 1,
+            "release_claim_ready": 0,
         },
         "required_text_exact_fields": {
             "product_image_receipt_mode": "rocm-runtime",
+            "release_claim_blocked_reason": "product_ci_runtime_gate_not_ready",
         },
     },
     {
@@ -2286,12 +2406,30 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_status": "product_ai_report_explanation_packet_ready",
         "required_true_fields": [
             "customer_report_evidence_binding_ready",
+            "customer_report_delivery_contract_ready",
             "evidence_traceability_ready",
             "production_ai_abstention_enforced",
             "scope_claim_guard_ready",
             "scope_claim_limit_ready",
             "shadow_abstention_ready",
+            "structured_customer_report_ready",
         ],
+        "required_int_exact_fields": {
+            "general_platform_claim_allowed": 0,
+            "production_ai_correction_applied": 0,
+            "model_inference_executed": 0,
+            "docking_results_emitted": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "required_section_count": 7,
+            "section_count": 7,
+            "ready_section_count": 7,
+            "blocked_section_count": 0,
+        },
+        "required_text_exact_fields": {
+            "primary_abstention_reason": "production_residual_checkpoint_not_promoted",
+            "uncertainty_policy_mode": "shadow_abstention",
+        },
     },
     {
         "artifact_id": "product_ai_report_ux_contract_semantic_ready",
@@ -2299,16 +2437,36 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "builder_command": "python3 tools/build_product_ai_report_ux_contract.py",
         "required_status": "product_ai_report_ux_contract_ready",
         "required_true_fields": [
+            "ai_report_ux_ready",
             "customer_report_card_ready",
+            "customer_report_delivery_contract_ready",
             "customer_report_evidence_binding_ready",
+            "customer_report_viewer_binding_ready",
             "evidence_traceability_ready",
             "scope_claim_guard_ready",
             "scope_claim_limit_ready",
             "shadow_abstention_ready",
+            "structured_customer_report_ready",
             "viewer_customer_report_binding_ready",
             "viewer_interaction_surface_ready",
             "viewer_ready",
         ],
+        "required_int_exact_fields": {
+            "general_platform_claim_allowed": 0,
+            "model_inference_executed": 0,
+            "docking_results_emitted": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "customer_report_required_block_count": 7,
+            "customer_report_ready_block_count": 7,
+            "customer_report_blocked_block_count": 0,
+            "ready_section_count": 10,
+            "blocked_section_count": 0,
+        },
+        "required_text_exact_fields": {
+            "primary_abstention_reason": "production_residual_checkpoint_not_promoted",
+            "uncertainty_policy_mode": "shadow_abstention",
+        },
     },
     {
         "artifact_id": "product_ledger_privacy_scan_semantic_ready",
@@ -2350,9 +2508,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "release_bundle_ready",
         ],
         "required_int_exact_fields": {
-            "artifact_count": 34,
-            "check_count": 26,
-            "pass_count": 26,
+            "artifact_count": 32,
+            "check_count": 24,
+            "pass_count": 24,
             "blocker_count": 0,
         },
     },
@@ -2592,12 +2750,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_status": "blocked_product_goal_completion_audit",
         "required_true_fields": [],
         "required_int_exact_fields": {
-            "release_blocker_fail_count": 4,
+            "release_blocker_fail_count": 3,
         },
         "required_text_exact_fields": {
-            "primary_release_blocker_requirement_id": "R1_local_self_hosted_product",
+            "primary_release_blocker_requirement_id": "R4_cameo_optional_live_validation",
             "primary_release_blocker_tier": "release",
-            "primary_release_blocker": "local_product_surface_not_ready",
+            "primary_release_blocker": "cameo_optional_live_lane_not_clean",
         },
     },
     {
@@ -2608,10 +2766,10 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_true_fields": [],
         "required_int_exact_fields": {
             "operator_receipt_ready": 0,
-            "profile_count": 4,
-            "receipt_row_count": 4,
+            "profile_count": 5,
+            "receipt_row_count": 5,
             "pass_row_count": 0,
-            "blocked_row_count": 4,
+            "blocked_row_count": 5,
             "blocker_count": 1,
         },
         "required_text_exact_fields": {
@@ -2633,15 +2791,15 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "science_claim_present",
         ],
         "required_int_exact_fields": {
-            "staging_row_count": 4,
+            "staging_row_count": 5,
             "staging_missing_required_column_count": 0,
             "staging_placeholder_row_count": 0,
-            "live_operator_template_row_count": 4,
+            "live_operator_template_row_count": 5,
             "candidate_operator_template_written": 0,
             "candidate_operator_receipt_ready": 0,
-            "candidate_profile_count": 4,
+            "candidate_profile_count": 5,
             "candidate_pass_row_count": 0,
-            "candidate_blocked_row_count": 4,
+            "candidate_blocked_row_count": 5,
             "candidate_blocker_count": 1,
             "candidate_approved_profile_count": 0,
             "candidate_promote_decision_count": 0,
@@ -2777,14 +2935,14 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "force_gpu_worker_return_receipt_ready": 1,
             "selected_sidecar_ready": 1,
             "production_training_data_ready": 1,
-            "registry_promotion_upstream_acceptance_ready": 0,
-            "production_inference_acceptance_blocked_stage_count": 2,
+            "registry_promotion_upstream_acceptance_ready": 1,
+            "production_inference_acceptance_blocked_stage_count": 1,
         },
         "required_text_exact_fields": {
             "default_residual_mode": "shadow",
-            "production_inference_actionable_blocker_stage_id": "checkpoint_sidecar_acceptance",
-            "production_inference_actionable_blocker_check_id": "selected_sidecar_training_contract_ready",
-            "production_inference_actionable_blocker_artifact": "runs/residual_production_checkpoint_sidecar_current.json",
+            "production_inference_actionable_blocker_stage_id": "registry_guarded_promotion_acceptance",
+            "production_inference_actionable_blocker_check_id": "registry_customer_facing_promotion_allowed",
+            "production_inference_actionable_blocker_artifact": "runs/residual_model_registry_current.json",
         },
     },
     {
@@ -3136,10 +3294,16 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_int_exact_fields": {
             "current_work_order_row_count": 8,
             "existing_target_exclusion_count": 8,
+            "seed_csv_source_row_count": 16,
             "seed_source_row_count": 22492,
-            "candidate_source_eligible_row_count": 5824,
-            "candidate_source_excluded_existing_target_row_count": 169,
-            "candidate_source_distinct_target_count": 276,
+            "local_pose_inventory_pose_row_count": 22492,
+            "local_pose_inventory_ligand_reference_row_count": 285,
+            "candidate_source_eligible_row_count": 17,
+            "candidate_source_excluded_existing_target_row_count": 8,
+            "candidate_source_distinct_target_count": 17,
+            "candidate_fill_recovery_candidate_count": 17,
+            "candidate_fill_recovery_payload_write_allowed": 0,
+            "candidate_fill_recovery_claim_promotion_allowed": 0,
             "expansion_slot_count": 17,
             "selected_candidate_count": 17,
             "holdout_selected_candidate_count": 5,
@@ -3156,6 +3320,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "blocker_count": 0,
         },
         "required_text_exact_fields": {
+            "candidate_source_mode": "candidate_fill_recovery",
             "statistical_support_work_order": (
                 "runs/refine_tier_public_benchmark_statistical_support_work_order_current.json"
             ),
@@ -3764,8 +3929,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "external_state_mutated": 0,
         },
         "required_text_exact_fields": {
-            "observed_bootstrap_spearman_p05": "0.23053846153846155",
-            "bootstrap_spearman_p05_deficit": "0.2694615384615384",
+            "observed_bootstrap_spearman_p05": "0.23349188084975714",
+            "bootstrap_spearman_p05_deficit": "0.26650811915024286",
             "coordinate_fetch_r4_approval_token_required": (
                 "APPROVE_PUBLIC_BENCHMARK_NATIVE_STRUCTURE_DOWNLOAD"
             ),
@@ -4669,8 +4834,8 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "public_benchmark_work_order_missing_internal_deltaG_source_row_count": 8,
             "public_benchmark_work_order_seed_interaction_metric_column_count": 0,
             "public_benchmark_work_order_seed_internal_deltaG_column_count": 0,
-            "public_benchmark_work_order_seed_candidate_row_count": 5824,
-            "public_benchmark_work_order_seed_distinct_target_count": 284,
+            "public_benchmark_work_order_seed_candidate_row_count": 8,
+            "public_benchmark_work_order_seed_distinct_target_count": 8,
             "engine_refinement_receipt_blocked_row_count": 6,
             "external_state_mutated": 0,
             "blocker_count": 7,
@@ -4817,14 +4982,18 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_status": "operator_actions_required",
         "required_true_fields": [],
         "required_int_exact_fields": {
-            "product_goal_release_blocker_fail_count": 4,
+            "product_goal_release_blocker_fail_count": 3,
         },
         "required_text_exact_fields": {
-            "product_goal_primary_release_blocker_requirement_id": "R1_local_self_hosted_product",
+            "product_goal_primary_release_blocker_requirement_id": "R4_cameo_optional_live_validation",
             "product_goal_primary_release_blocker_tier": "release",
-            "product_goal_primary_release_blocker": "local_product_surface_not_ready",
-            "primary_action_id": "product_ai_production:complete_production_ai_actionable_operator_packet",
-            "primary_action_required_input": "protein_ca;ligand_frames;queue_id",
+            "product_goal_primary_release_blocker": "cameo_optional_live_lane_not_clean",
+            "primary_action_id": "product_ai_production:complete_residual_registry_guarded_promotion",
+            "primary_action_required_input": (
+                "production_promotion_allowed;customer_facing_auto_correction_allowed;"
+                "customer_facing_score_mutation_allowed;customer_facing_ranking_mutation_allowed;"
+                "default_residual_mode;trained_model_checkpoint_count"
+            ),
             "primary_action_status": "required",
         },
     },
@@ -4838,7 +5007,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "production_ai_registry_promotion_priority_packet_ready",
         ],
         "required_int_exact_fields": {
-            "product_goal_release_blocker_fail_count": 5,
+            "product_goal_release_blocker_fail_count": 3,
             "full_commercial_evidence_receipt_entry_count": 2,
             "full_commercial_evidence_receipt_operator_input_required_count": 2,
             "full_commercial_evidence_receipt_current_action_required_count": 2,
@@ -4904,11 +5073,15 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "product_scope_breadth_evidence_priority_receipt_approval_token_required": (
                 "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
             ),
-            "product_goal_primary_release_blocker_requirement_id": "R1_local_self_hosted_product",
+            "product_goal_primary_release_blocker_requirement_id": "R4_cameo_optional_live_validation",
             "product_goal_primary_release_blocker_tier": "release",
-            "product_goal_primary_release_blocker": "local_product_surface_not_ready",
+            "product_goal_primary_release_blocker": "cameo_optional_live_lane_not_clean",
             "primary_action_id": "product_ai_production:complete_residual_registry_guarded_promotion",
-            "primary_action_required_input": "protein_ca;ligand_frames;queue_id",
+            "primary_action_required_input": (
+                "production_promotion_allowed;customer_facing_auto_correction_allowed;"
+                "customer_facing_score_mutation_allowed;customer_facing_ranking_mutation_allowed;"
+                "default_residual_mode;trained_model_checkpoint_count"
+            ),
             "primary_action_status": "required",
             "full_commercial_evidence_receipt_source_gate_statuses": (
                 "product_scope_breadth_evidence_receipt=blocked_product_scope_breadth_evidence_receipt;"
@@ -4971,7 +5144,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "production_ai_registry_promotion_priority_packet_ready",
         ],
         "required_int_exact_fields": {
-            "completion_audit_release_blocker_bottleneck_count": 2,
+            "completion_audit_release_blocker_bottleneck_count": 3,
             "full_commercial_evidence_receipt_entry_count": 2,
             "full_commercial_evidence_receipt_operator_input_required_count": 2,
             "full_commercial_evidence_receipt_current_action_required_count": 2,

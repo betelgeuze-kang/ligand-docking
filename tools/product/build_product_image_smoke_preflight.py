@@ -99,6 +99,8 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- container_runtime_receipt_ready: `{s['container_runtime_receipt_ready']}`",
         f"- container_runtime_visible_device_count: `{s['container_runtime_visible_device_count']}`",
         f"- container_runtime_rust_hip_backend_enabled: `{s['container_runtime_rust_hip_backend_enabled']}`",
+        f"- runtime_neighbor_release_scaling_ready: `{s['runtime_neighbor_release_scaling_ready']}`",
+        f"- runtime_neighbor_release_atom_counts_ready: `{s['runtime_neighbor_release_atom_counts_ready']}`",
         f"- docker_host_setup_command: `{s['docker_host_setup_command']}`",
         f"- docker_cmd_override_example: `{s['docker_cmd_override_example']}`",
         f"- product_runner_smoke_ready: `{s['product_runner_smoke_ready']}`",
@@ -581,6 +583,33 @@ def build_product_image_smoke_preflight(
         "container_runtime_rust_hip_backend_enabled": container_runtime_rust_hip_backend_enabled,
         "container_runtime_rust_hip_kernel_name": str(
             receipt.get("container_runtime_rust_hip_kernel_name") or ""
+        ),
+        "runtime_neighbor_release_scaling_present": bool(
+            receipt.get("runtime_neighbor_release_scaling_present") is True
+        ),
+        "runtime_neighbor_release_scaling_ready": bool(
+            receipt.get("runtime_neighbor_release_scaling_ready") is True
+        ),
+        "runtime_neighbor_release_scaling_status": str(
+            receipt.get("runtime_neighbor_release_scaling_status") or ""
+        ),
+        "runtime_neighbor_release_atom_counts_ready": bool(
+            receipt.get("runtime_neighbor_release_atom_counts_ready") is True
+        ),
+        "runtime_neighbor_release_atom_counts": (
+            list(receipt.get("runtime_neighbor_release_atom_counts"))
+            if isinstance(receipt.get("runtime_neighbor_release_atom_counts"), list)
+            else []
+        ),
+        "runtime_neighbor_release_pair_count_slope": receipt.get(
+            "runtime_neighbor_release_pair_count_slope"
+        ),
+        "runtime_neighbor_release_pair_count_r2": receipt.get("runtime_neighbor_release_pair_count_r2"),
+        "runtime_neighbor_release_nxn_allocation_observed": bool(
+            receipt.get("runtime_neighbor_release_nxn_allocation_observed") is True
+        ),
+        "runtime_neighbor_release_max_memory_peak_mb_per_atom": receipt.get(
+            "runtime_neighbor_release_max_memory_peak_mb_per_atom"
         ),
         "product_runner_smoke_ready": product_runner_smoke_ready,
         "product_runner_claim_metadata_ready": product_runner_claim_metadata_ready,

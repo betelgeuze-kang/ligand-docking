@@ -112,7 +112,17 @@ def test_api_customer_flow_release_evidence_accepts_signed_recovered_live_job(tm
     smoke["result_manifest_status"] = "completed"
     smoke["runner_execution_ok"] = True
     smoke["worker_dispatch_enqueued"] = True
-    smoke["ledger_progress_state"] = "worker_dispatch_completed"
+    smoke["ledger_progress_state"] = "worker_dispatch_enqueued"
+    smoke["ledger_worker_state"] = "not_started_fail_closed"
+    smoke["ledger_payload"] = {
+        "current_step": "worker_dispatch_completed",
+        "progress_state": "worker_dispatch_completed",
+        "queue_status": "completed_fail_closed",
+        "status": "completed_fail_closed",
+        "worker_dispatch_enqueued": True,
+        "worker_state": "completed_fail_closed",
+    }
+    smoke["status_payload"] = {"status": "completed"}
     smoke["dispatch_outcome"] = {
         "dispatched": True,
         "reason": "completed_artifact_recovered_after_parent_wait",

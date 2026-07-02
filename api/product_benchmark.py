@@ -13,6 +13,9 @@ PRODUCT_ROLLOUT_EXECUTION_SMOKE_RECEIPT_ARTIFACT = (
     ROOT / "runs" / "product_rollout_execution_smoke_receipt_current.json"
 )
 PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_ARTIFACT = ROOT / "runs" / "product_public_benchmark_work_order_current.json"
+PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT = (
+    ROOT / "runs" / "public_benchmark_external_receipts_audit_current.json"
+)
 EXTERNAL_METRIC_SCORECARD_ARTIFACT = ROOT / "runs" / "external_metric_scorecard_current.json"
 PRODUCT_TRAJECTORY_SLA_CONTRACT_ARTIFACT = ROOT / "runs" / "product_trajectory_sla_contract_current.json"
 
@@ -65,6 +68,73 @@ async def get_product_external_metrics() -> dict[str, Any]:
         "evaluated_row_count": int(summary.get("evaluated_row_count") or 0),
         "topology_fidelity_required": summary.get("topology_fidelity_required", ""),
         "rows": rows,
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": False,
+        "claim_boundary": summary.get("claim_boundary", ""),
+    }
+
+
+@router.get("/public-benchmark-external-receipts-audit")
+async def get_product_public_benchmark_external_receipts_audit() -> dict[str, Any]:
+    packet = _read_json_object(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT)
+    summary = _summary(packet)
+    rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    if not summary:
+        return {
+            "status": "missing_public_benchmark_external_receipts_audit",
+            "artifact_path": str(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT),
+            "external_benchmark_receipts_ready": False,
+            "claim_promotion_allowed": False,
+            "step_count": 7,
+            "ready_step_count": 0,
+            "blocked_step_count": 7,
+            "blocker_count": 1,
+            "blockers": ["public_benchmark_external_receipts_audit_missing"],
+            "primary_blocker_id": "public_benchmark_external_receipts_audit_missing",
+            "primary_blocker": "public_benchmark_external_receipts_audit_missing",
+            "receipt_blocked_row_count": 0,
+            "vina_gnina_comparison_adapter_score_evidence_ready": False,
+            "steps": [],
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+            "claim_boundary": (
+                "Product public benchmark external receipts audit endpoint only; the local audit artifact "
+                "is missing. It does not download data, run docking, run Vina/GNINA, approve receipts, "
+                "or mutate external state."
+            ),
+        }
+    return {
+        "status": summary.get("status", ""),
+        "artifact_path": str(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT),
+        "external_benchmark_receipts_ready": bool(summary.get("external_benchmark_receipts_ready") is True),
+        "claim_promotion_allowed": bool(summary.get("claim_promotion_allowed") is True),
+        "step_count": int(summary.get("step_count") or 0),
+        "ready_step_count": int(summary.get("ready_step_count") or 0),
+        "blocked_step_count": int(summary.get("blocked_step_count") or 0),
+        "blocker_count": int(summary.get("blocker_count") or 0),
+        "blockers": list(summary.get("blockers") or []),
+        "primary_blocker_id": summary.get("primary_blocker_id", ""),
+        "primary_blocker": summary.get("primary_blocker", ""),
+        "primary_blocker_next_required_step": summary.get("primary_blocker_next_required_step", ""),
+        "pose_count": int(summary.get("pose_count") or 0),
+        "pose_success_rate": summary.get("pose_success_rate"),
+        "posebusters_valid_rate": summary.get("posebusters_valid_rate"),
+        "receipt_row_count": int(summary.get("receipt_row_count") or 0),
+        "receipt_blocked_row_count": int(summary.get("receipt_blocked_row_count") or 0),
+        "receipt_manual_field_pending_count": int(summary.get("receipt_manual_field_pending_count") or 0),
+        "receipt_approval_token_pending_count": int(summary.get("receipt_approval_token_pending_count") or 0),
+        "vina_gnina_comparison_adapter_contract_ready": bool(
+            summary.get("vina_gnina_comparison_adapter_contract_ready") is True
+        ),
+        "vina_gnina_comparison_adapter_score_evidence_ready": bool(
+            summary.get("vina_gnina_comparison_adapter_score_evidence_ready") is True
+        ),
+        "comparison_adapter_same_input_row_count_match": bool(
+            summary.get("comparison_adapter_same_input_row_count_match") is True
+        ),
+        "steps": rows,
         "execution_enabled": False,
         "docking_results_emitted": False,
         "external_state_mutated": False,

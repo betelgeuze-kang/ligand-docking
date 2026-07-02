@@ -53,6 +53,75 @@ def _bool(value: Any) -> bool:
     return value is True
 
 
+def _int(value: Any) -> int:
+    try:
+        return int(float(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _status_from_smoke(smoke: dict[str, Any]) -> dict[str, Any]:
+    direct = smoke.get("status_payload")
+    if isinstance(direct, dict):
+        return direct
+    status_json = _text(smoke.get("status_json"))
+    return _read_json(status_json) if status_json else {}
+
+
+def _ledger_from_smoke(smoke: dict[str, Any]) -> dict[str, Any]:
+    direct = smoke.get("ledger_payload")
+    if isinstance(direct, dict):
+        return direct
+    jobs_dir = _text(smoke.get("jobs_dir"))
+    job_id = _text(smoke.get("job_id"))
+    if not jobs_dir or not job_id:
+        return {}
+    return _read_json(_resolve(jobs_dir) / f"{job_id}.json")
+
+
+def _runner_execution_from_smoke(smoke: dict[str, Any]) -> dict[str, Any]:
+    direct = smoke.get("runner_execution_payload")
+    if isinstance(direct, dict):
+        return direct
+    runner_execution = _text(smoke.get("runner_execution"))
+    if not runner_execution:
+        runner_execution = _text(_status_from_smoke(smoke).get("runner_execution"))
+    return _read_json(runner_execution) if runner_execution else {}
+
+
+def _recovered_completed_runtime_smoke(smoke: dict[str, Any], smoke_summary: dict[str, Any]) -> bool:
+    status = _status_from_smoke(smoke)
+    ledger = _ledger_from_smoke(smoke)
+    runner_execution = _runner_execution_from_smoke(smoke)
+    runner_execution_ok = (
+        smoke.get("runner_execution_ok") is True
+        or (
+            runner_execution.get("ok") is True
+            and _int(runner_execution.get("returncode")) == 0
+            and runner_execution.get("timed_out") is not True
+        )
+    )
+    ledger_worker_state = _text(
+        ledger.get("worker_state") or ledger.get("queue_status") or ledger.get("status")
+    )
+    ledger_progress_state = _text(ledger.get("progress_state") or ledger.get("current_step"))
+    return (
+        smoke_summary.get("status") == "tier_alpha_adrb2_dispatch_smoke_pass"
+        and _text(smoke_summary.get("evidence_mode")) == "live_job_recovered_from_completed_artifacts"
+        and smoke.get("recovered_from_completed_artifacts") is True
+        and bool(smoke_summary.get("api_validated_runner_enabled"))
+        and smoke.get("result_manifest_signature_verified") is True
+        and _text(smoke.get("result_manifest_status")) == "completed"
+        and runner_execution_ok
+        and smoke.get("worker_dispatch_enqueued") is True
+        and smoke.get("worker_ran") is True
+        and _text(smoke.get("sqlite_job_status")) == "completed"
+        and _text(status.get("status")) == "completed"
+        and ledger_worker_state == "completed_fail_closed"
+        and ledger_progress_state == "worker_dispatch_completed"
+    )
+
+
 def build_restricted_unattended_execution_readiness(
     *,
     e2e_json: str = DEFAULT_E2E_JSON,
@@ -74,7 +143,7 @@ def build_restricted_unattended_execution_readiness(
         smoke_summary.get("status") == "tier_alpha_adrb2_dispatch_smoke_pass"
         and smoke.get("ledger_worker_state") == "completed_fail_closed"
         and bool(smoke_summary.get("api_validated_runner_enabled"))
-    )
+    ) or _recovered_completed_runtime_smoke(smoke, smoke_summary)
 
     rows: list[dict[str, Any]] = []
     rows.append(

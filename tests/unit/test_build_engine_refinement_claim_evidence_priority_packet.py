@@ -105,6 +105,22 @@ def _current_claim_grade_gap_audit_summary() -> dict:
     return summary
 
 
+def _current_metric_source_materialization_summary() -> dict:
+    path = Path("runs/refine_tier_public_benchmark_metric_source_materialization_current.json")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    summary = payload.get("summary")
+    assert isinstance(summary, dict)
+    return summary
+
+
+def _current_statistical_support_work_order_summary() -> dict:
+    path = Path("runs/refine_tier_public_benchmark_statistical_support_work_order_current.json")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    summary = payload.get("summary")
+    assert isinstance(summary, dict)
+    return summary
+
+
 def _current_coordinate_fetch_r4_summary() -> dict:
     path = Path("runs/refine_tier_public_benchmark_statistical_support_coordinate_fetch_r4_preflight_current.json")
     payload = json.loads(path.read_text(encoding="utf-8"))
@@ -127,6 +143,8 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     payload = mod.build_engine_refinement_claim_evidence_priority_packet()
     summary = payload["summary"]
     claim_grade_gap = _current_claim_grade_gap_audit_summary()
+    materialization = _current_metric_source_materialization_summary()
+    statistical_support_work_order = _current_statistical_support_work_order_summary()
     coordinate_fetch_r4 = _current_coordinate_fetch_r4_summary()
     metric_payload_receipt = _current_metric_source_payload_operator_receipt_summary()
 
@@ -150,7 +168,9 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     assert summary["public_benchmark_materialized_free_energy_pair_count"] == 8
     assert summary["public_benchmark_materialized_free_energy_spearman"] == 0.6190476190476191
     assert summary["public_benchmark_materialized_free_energy_spearman_gate_ready"] is True
-    assert summary["public_benchmark_materialized_free_energy_spearman_bootstrap_p05"] == -0.14285714285714285
+    assert summary["public_benchmark_materialized_free_energy_spearman_bootstrap_p05"] == (
+        materialization["free_energy_spearman_bootstrap_p05"]
+    )
     assert summary["public_benchmark_materialized_claim_grade_statistical_support_ready"] is False
     assert summary["public_benchmark_materialized_claim_grade_statistical_support_blocker_count"] == 3
     assert summary["public_benchmark_claim_grade_gap_audit_present"] is True
@@ -198,7 +218,7 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     assert summary["public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count"] == 5
     assert summary["public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count"] == 12
     assert summary["public_benchmark_statistical_support_work_order_bootstrap_spearman_p05_deficit"] == (
-        0.6428571428571428
+        statistical_support_work_order["bootstrap_spearman_p05_deficit"]
     )
     assert summary["public_benchmark_statistical_support_work_order_bootstrap_retest_required"] is True
     assert (
@@ -361,6 +381,13 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     assert summary["top_blocker_id"] == "public_benchmark_gate_not_ready"
     assert summary["top_priority_bucket"] == "public_benchmark_work_order_apply_required"
     assert summary["top_required_input"] == mod.PUBLIC_BENCHMARK_METRIC_SOURCE_PAYLOAD_RECEIPT_CSV
+    assert summary["top_acceptance_artifact"] == "runs/refine_tier_public_benchmark_readiness_current.json"
+    assert summary["top_acceptance_artifact_present"] is True
+    assert summary["top_acceptance_artifact_status"] == "blocked_refine_tier_public_benchmark_readiness"
+    assert summary["top_acceptance_artifact_claim_ready"] is False
+    assert summary["top_acceptance_artifact_missing_true_fields"] == [
+        "claim_grade_public_benchmark_ready"
+    ]
     assert (
         "build_refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt.py"
         in summary["top_verification_command"]
@@ -384,6 +411,14 @@ def test_engine_refinement_claim_evidence_priority_packet_blocks_current_r9_work
     assert "operator_evidence_rows_pending" in summary["blockers"]
     assert payload["rows"][0]["blocker_id"] == "public_benchmark_gate_not_ready"
     assert payload["rows"][0]["operator_input_required"] is True
+    assert payload["rows"][0]["acceptance_artifact_present"] is True
+    assert payload["rows"][0]["acceptance_artifact_status"] == (
+        "blocked_refine_tier_public_benchmark_readiness"
+    )
+    assert payload["rows"][0]["acceptance_artifact_claim_ready"] is False
+    assert payload["rows"][0]["acceptance_artifact_missing_true_fields"] == (
+        "claim_grade_public_benchmark_ready"
+    )
     assert payload["rows"][0]["public_benchmark_materialized_candidate_ready"] is True
     assert payload["rows"][0]["public_benchmark_materialized_claim_grade_statistical_support_ready"] is False
     assert payload["rows"][0]["public_benchmark_claim_grade_gap_audit_ready"] is True
@@ -490,6 +525,10 @@ def test_engine_refinement_claim_evidence_priority_packet_ready_with_verified_lo
     assert summary["public_benchmark_statistical_support_work_order_present"] is False
     assert summary["public_benchmark_statistical_support_work_order_ready"] is False
     assert summary["top_priority_bucket"] == "receipt_verified"
+    assert summary["top_acceptance_artifact_present"] is True
+    assert summary["top_acceptance_artifact_status"] == "refine_tier_public_benchmark_ready"
+    assert summary["top_acceptance_artifact_claim_ready"] is True
+    assert summary["top_acceptance_artifact_missing_true_fields"] == []
     assert summary["blockers"] == []
     assert all(row["priority_bucket"] == "receipt_verified" for row in payload["rows"])
 

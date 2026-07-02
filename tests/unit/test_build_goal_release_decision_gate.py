@@ -2622,6 +2622,55 @@ def test_goal_release_decision_gate_surfaces_full_commercial_matrix_without_bloc
     assert "intake_written=false" in benchmark_apply_row["observed"]
 
 
+def test_goal_release_decision_accepts_full_commercial_receipts_with_extra_release_bottlenecks() -> None:
+    briefing = _full_commercial_bottleneck_briefing()
+    briefing["summary"]["completion_audit_release_blocker_bottleneck_count"] = 5
+
+    payload = mod.build_goal_release_decision_gate(
+        product_pilot_packet=_ready_product(),
+        product_architecture_packet=_ready_product_architecture(),
+        product_commercial_independence_packet=_ready_product_independence(),
+        cameo_validation_packet=_ready_cameo_validation(),
+        cameo_capability_packet=_ready_cameo_capability(),
+        goal_rollup_packet=_ready_rollup(),
+        operator_action_board_packet=_clear_action_board(),
+        transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_complete"),
+        ligand_cleanup_preflight_packet=_ligand_cleanup("ligand_heavy_cleanup_execution_complete"),
+        protected_cleanup_review_packet=_protected_cleanup(0),
+        cleanup_postcheck_contract_packet=_ready_cleanup_postcheck(),
+        goal_api_surface_contract_packet=_ready_goal_api_surface_contract(),
+        goal_bottleneck_briefing_packet=briefing,
+        production_ai_registry_promotion_priority_packet=(
+            _production_ai_registry_promotion_priority_packet()
+        ),
+        product_production_ai_checkpoint_readiness_packet=_production_ai_checkpoint_readiness(),
+        product_production_ai_promotion_workbench_packet=_production_ai_promotion_workbench(),
+        product_release_source_of_truth_packet=_ready_source_of_truth(),
+        product_scope_breadth_evidence_receipt_packet=_blocked_product_scope_receipt(),
+        engine_refinement_claim_evidence_receipt_packet=_blocked_engine_refinement_receipt(),
+        engine_refinement_claim_evidence_priority_packet=_blocked_engine_refinement_priority_packet(),
+        refine_tier_public_benchmark_readiness_packet=(
+            _refine_tier_public_benchmark_fail_closed()
+        ),
+        refine_tier_public_benchmark_work_order_apply_packet=(
+            _refine_tier_public_benchmark_work_order_apply_fail_closed()
+        ),
+        product_full_commercial_blocker_evidence_matrix_packet=_blocked_full_commercial_matrix(),
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "goal_release_ready"
+    assert summary["goal_bottleneck_briefing_full_commercial_receipts_recorded"] is True
+    assert summary["goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count"] == 5
+    bottleneck_row = next(
+        row
+        for row in payload["rows"]
+        if row["check"] == "goal_bottleneck_briefing_full_commercial_receipts_recorded"
+    )
+    assert bottleneck_row["status"] == "pass"
+    assert "completion_audit_release_blocker_bottleneck_count=5" in bottleneck_row["observed"]
+
+
 def test_goal_release_decision_gate_surfaces_r4_smoke_and_master_rollup_without_blocking_restricted_release() -> None:
     payload = mod.build_goal_release_decision_gate(
         product_pilot_packet=_ready_product(),

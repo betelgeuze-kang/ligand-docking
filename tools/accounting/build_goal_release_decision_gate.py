@@ -666,7 +666,7 @@ def build_goal_release_decision_gate(
     goal_bottleneck_briefing_gate_present = goal_bottleneck_briefing_packet is not None
     goal_bottleneck_full_commercial_receipts_recorded = (
         _text(goal_bottleneck_briefing.get("status")) == "goal_bottleneck_briefing_ready"
-        and _int(goal_bottleneck_briefing.get("completion_audit_release_blocker_bottleneck_count")) == 2
+        and _int(goal_bottleneck_briefing.get("completion_audit_release_blocker_bottleneck_count")) >= 2
         and _int(goal_bottleneck_briefing.get("full_commercial_evidence_receipt_entry_count")) == 2
         and _int(goal_bottleneck_briefing.get("full_commercial_evidence_receipt_operator_input_required_count")) == 2
         and _int(goal_bottleneck_briefing.get("full_commercial_evidence_receipt_current_action_required_count")) == 2

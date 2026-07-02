@@ -20,9 +20,11 @@ Use `config/customer_shadow_evidence_intake_template.csv` as the header template
 - `derived_metadata_fields`: includes `case_domain`, `input_size_class`, `runner_profile`, `result_metric_summary`, and `artifact_fingerprint`
 - `anonymized_result_summary`: derived summary only, with no emails or private identifiers
 - `reviewer_signoff_status`: `approved`
-- `reviewer_id`, `reviewed_at_utc`, and a 64-character hex `source_artifact_fingerprint`
+- `reviewer_id`, timezone-aware ISO `reviewed_at_utc` such as `2026-06-29T00:00:00Z`, and a 64-character hex `source_artifact_fingerprint`
 
 Do not add customer names, emails, patient IDs, subject IDs, raw data paths, raw data URIs, private payloads, private raw data, PII, author codes, or similar private columns.
+
+The PM priority queue treats schema-only status as blocked. The customer shadow item is ready only when the status gate reports three real reviewed `customer_shadow` rows; even then, paid-pilot wording remains locked until the release gates agree.
 
 ## Local Check
 

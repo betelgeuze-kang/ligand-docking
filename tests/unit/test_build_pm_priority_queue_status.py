@@ -76,6 +76,9 @@ def test_pm_priority_queue_status_keeps_f2g_and_f2h_blocked(tmp_path: Path) -> N
     assert rows["0"]["ready"] is True
     assert rows["2"]["ready"] is False
     assert rows["3"]["ready"] is False
+    assert rows["6"]["ready"] is False
+    assert rows["6"]["status"] == "schema_ready_cases_missing"
+    assert "completed=0;required=3;minimum_met=False" in rows["6"]["evidence"]
     assert summary["g1_promotion_allowed"] is False
     assert summary["release_ready_promotion_allowed"] is False
 
@@ -111,6 +114,31 @@ def test_pm_priority_queue_status_rejects_external_receipt_promotion_without_url
     row = {item["item_id"]: item for item in payload["rows"]}["5"]
     assert row["ready"] is False
     assert row["status"] == "blocked_external_benchmark_queue_incomplete"
+
+
+def test_pm_priority_queue_status_marks_customer_shadow_ready_only_after_three_cases(
+    tmp_path: Path,
+) -> None:
+    _write_common_inputs(tmp_path)
+    _write_json(
+        tmp_path / ".betelgeuze/customer_shadow_evidence_status_current.json",
+        {
+            "summary": {
+                "status": "customer_shadow_evidence_status_ready",
+                "customer_shadow_intake_schema_ready": True,
+                "customer_shadow_minimum_met": True,
+                "completed_customer_shadow_case_count": 3,
+                "required_completed_customer_shadow_case_count": 3,
+            }
+        },
+    )
+
+    payload = mod.build_pm_priority_queue_status(root=tmp_path)
+
+    row = {item["item_id"]: item for item in payload["rows"]}["6"]
+    assert row["ready"] is True
+    assert row["status"] == "customer_shadow_minimum_ready"
+    assert "completed=3;required=3;minimum_met=True" in row["evidence"]
 
 
 def test_pm_priority_queue_status_cli_writes_outputs(tmp_path: Path) -> None:

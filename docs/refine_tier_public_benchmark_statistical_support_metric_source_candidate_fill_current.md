@@ -7,7 +7,7 @@
 - combined public benchmark pairs: `25`
 - combined fit/holdout pairs: `17/8`
 - combined Spearman: `0.5315384615384615`
-- bootstrap Spearman p05/p50/p95: `0.23053846153846155/0.5492307692307692/0.7739230769230769`
+- bootstrap Spearman p05/p50/p95: `0.23349188084975714/0.5508308100108106/0.7754054054054054`
 - claim-grade statistical support ready: `False`
 - claim-grade blockers: `['claim_grade_public_benchmark_bootstrap_spearman_low_below_minimum']`
 - expected metric source artifacts touched: `0`

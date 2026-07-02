@@ -1,0 +1,1062 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import csv
+import datetime as dt
+import html
+import json
+from pathlib import Path
+from typing import Any
+
+
+ROOT = Path(__file__).resolve().parents[2]
+
+DEFAULT_CAPABILITIES_JSON = "runs/product_capability_surface_contract_current.json"
+DEFAULT_GOAL_READINESS_JSON = "runs/goal_readiness_rollup_current.json"
+DEFAULT_HBOND_JSON = "runs/hbond_backmap_report_current.json"
+DEFAULT_GPCR_JSON = "runs/gpcr_hard_decoy_claim_unlock_audit_current.json"
+DEFAULT_POCKETMD_JSON = "runs/pocketmd_lite_topk_refinement_audit_current.json"
+DEFAULT_PUBLIC_BENCHMARK_JSON = "runs/public_benchmark_external_receipts_audit_current.json"
+DEFAULT_RELEASE_ACTIONS_JSON = "runs/goal_operator_action_board_current.json"
+DEFAULT_EVIDENCE_BUNDLE_JSON = "runs/ai_md_product_evidence_bundle_current.json"
+DEFAULT_CUSTOMER_SHADOW_JSON = "runs/customer_shadow_evidence_status_current.json"
+DEFAULT_OUT_JSON = "runs/product_operator_cockpit_current.json"
+DEFAULT_OUT_CSV = "runs/product_operator_cockpit_current.csv"
+DEFAULT_OUT_MD = "runs/product_operator_cockpit_current.md"
+DEFAULT_OUT_HTML = "runs/product_operator_cockpit_current.html"
+
+CLAIM_BOUNDARY = (
+    "Product operator cockpit only; reads local current artifacts and renders operator-facing status. "
+    "It does not run docking, run MD, mutate artifacts other than its own outputs, approve claims, "
+    "upload, email, delete, commit, push, deploy, or mutate external state."
+)
+
+REQUIRED_PHASE8_PANEL_IDS = [
+    "product_capabilities_dashboard",
+    "goal_readiness_dashboard",
+    "hbond_backmap_candidate_table",
+    "gpcr_hard_decoy_blocker_panel",
+    "pocketmd_lite_report_panel",
+    "public_benchmark_scorecard",
+    "release_blockers_operator_actions",
+    "evidence_bundle_export",
+    "claim_boundary_matrix",
+]
+
+CSV_FIELDS = [
+    "panel_id",
+    "title",
+    "route",
+    "artifact",
+    "artifact_present",
+    "status",
+    "surface_ready",
+    "source_artifact_ready",
+    "operator_action_required",
+    "claim_allowed",
+    "primary_metric",
+    "secondary_metric",
+    "next_action",
+    "allowed_claim_text",
+    "disallowed_claim_text",
+    "blockers",
+]
+
+
+def _resolve(path_like: str | Path, *, root: Path = ROOT) -> Path:
+    path = Path(path_like)
+    return path if path.is_absolute() else root / path
+
+
+def _artifact(path_like: str | Path, *, root: Path = ROOT) -> str:
+    path = _resolve(path_like, root=root).resolve()
+    try:
+        return str(path.relative_to(root.resolve()))
+    except ValueError:
+        return str(path)
+
+
+def _read_json(path_like: str | Path, *, root: Path = ROOT) -> dict[str, Any]:
+    path = _resolve(path_like, root=root)
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _summary(payload: dict[str, Any]) -> dict[str, Any]:
+    summary = payload.get("summary")
+    return summary if isinstance(summary, dict) else {}
+
+
+def _rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = payload.get("rows")
+    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+
+
+def _text(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _int(value: Any) -> int:
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _bool_true(value: Any) -> bool:
+    return value is True
+
+
+def _string_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [_text(item) for item in value if _text(item)]
+    if isinstance(value, tuple):
+        return [_text(item) for item in value if _text(item)]
+    text = _text(value)
+    return [text] if text else []
+
+
+def _first_text(*values: Any) -> str:
+    for value in values:
+        text = _text(value)
+        if text:
+            return text
+    return ""
+
+
+def _metric(label: str, value: Any) -> str:
+    if isinstance(value, bool):
+        rendered = "true" if value else "false"
+    elif isinstance(value, float):
+        rendered = f"{value:.4g}"
+    else:
+        rendered = _text(value)
+    return f"{label}={rendered}" if rendered else ""
+
+
+def _join_metrics(*metrics: str) -> str:
+    return "; ".join(metric for metric in metrics if metric)
+
+
+def _status_is_blocked(status: str) -> bool:
+    lowered = status.lower()
+    return "blocked" in lowered or "missing" in lowered or "fail" in lowered
+
+
+def _panel(
+    *,
+    panel_id: str,
+    title: str,
+    route: str,
+    artifact_path: str | Path,
+    artifact_present: bool,
+    status: str,
+    surface_ready: bool,
+    source_artifact_ready: bool,
+    operator_action_required: bool,
+    claim_allowed: bool,
+    primary_metric: str,
+    secondary_metric: str,
+    next_action: str,
+    allowed_claim_text: str,
+    disallowed_claim_text: str,
+    blockers: list[str] | None = None,
+    claim_boundary: str = "",
+    root: Path = ROOT,
+) -> dict[str, Any]:
+    return {
+        "panel_id": panel_id,
+        "title": title,
+        "route": route,
+        "artifact": _artifact(artifact_path, root=root),
+        "artifact_present": artifact_present,
+        "status": status or "missing",
+        "surface_ready": surface_ready,
+        "source_artifact_ready": source_artifact_ready,
+        "operator_action_required": operator_action_required,
+        "claim_allowed": claim_allowed,
+        "primary_metric": primary_metric,
+        "secondary_metric": secondary_metric,
+        "next_action": next_action,
+        "allowed_claim_text": allowed_claim_text,
+        "disallowed_claim_text": disallowed_claim_text,
+        "blockers": blockers or [],
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": False,
+        "claim_boundary": claim_boundary or CLAIM_BOUNDARY,
+    }
+
+
+def _build_claim_rows(
+    *,
+    restricted_scope_claim_guard_ready: bool,
+    general_platform_claim_allowed: bool,
+    gpcr_metric_ready: bool,
+    gpcr_broad_claim_allowed: bool,
+    pocketmd_refinement_ready: bool,
+    pocketmd_claim_allowed: bool,
+    public_benchmark_claim_allowed: bool,
+    evidence_bundle_export_ready: bool,
+    release_allowed: bool,
+    customer_shadow_paid_pilot_ready: bool,
+) -> list[dict[str, Any]]:
+    rows = [
+        {
+            "claim_id": "operator_cockpit_surface",
+            "allowed": True,
+            "claim_text": "Local operator cockpit renders current artifact status and claim boundaries.",
+            "boundary": "Read-only status surface; not release approval.",
+        },
+        {
+            "claim_id": "restricted_scope_claim_guard",
+            "allowed": restricted_scope_claim_guard_ready,
+            "claim_text": "Restricted local capability scope is guarded by the current capability artifact.",
+            "boundary": "No general protein-ligand platform wording.",
+        },
+        {
+            "claim_id": "gpcr_hard_decoy_metric_review",
+            "allowed": gpcr_metric_ready,
+            "claim_text": "GPCR hard-decoy metric evidence is ready for operator review.",
+            "boundary": "Broad GPCR/router/scorer promotion remains separate.",
+        },
+        {
+            "claim_id": "pocketmd_lite_refinement_evidence",
+            "allowed": pocketmd_refinement_ready,
+            "claim_text": "PocketMD Lite top-k refinement metric evidence is present for review.",
+            "boundary": "PocketMD Lite customer-facing claim needs report-grade evidence and approval.",
+        },
+        {
+            "claim_id": "evidence_bundle_export",
+            "allowed": evidence_bundle_export_ready,
+            "claim_text": "Local evidence bundle export is available as a handoff artifact.",
+            "boundary": "Export-ready is not release-ready.",
+        },
+        {
+            "claim_id": "paid_pilot_wording",
+            "allowed": release_allowed and customer_shadow_paid_pilot_ready,
+            "claim_text": "Paid pilot wording is allowed.",
+            "boundary": "Requires release allowance and reviewed customer-shadow evidence.",
+        },
+        {
+            "claim_id": "general_platform_claim",
+            "allowed": general_platform_claim_allowed,
+            "claim_text": "General protein-ligand platform claim is allowed.",
+            "boundary": "Blocked unless explicitly approved by capability and release gates.",
+        },
+        {
+            "claim_id": "broad_gpcr_claim",
+            "allowed": gpcr_broad_claim_allowed,
+            "claim_text": "Broad GPCR/router/scorer claim is allowed.",
+            "boundary": "Blocked until broad claim review and router promotion gates pass.",
+        },
+        {
+            "claim_id": "pocketmd_lite_customer_claim",
+            "allowed": pocketmd_claim_allowed,
+            "claim_text": "PocketMD Lite customer-facing claim-grade reporting is allowed.",
+            "boundary": "Blocked until claim-grade report evidence and promotion gates pass.",
+        },
+        {
+            "claim_id": "public_benchmark_claim",
+            "allowed": public_benchmark_claim_allowed,
+            "claim_text": "Public benchmark claim-grade support is allowed.",
+            "boundary": "Blocked until benchmark readiness and receipt ledger pass.",
+        },
+    ]
+    return rows
+
+
+def _build_markdown(payload: dict[str, Any]) -> str:
+    summary = payload["summary"]
+    lines = [
+        "# Product Operator Cockpit",
+        "",
+        f"- status: {summary['status']}",
+        f"- phase8_surface_ready: {str(summary['phase8_surface_ready']).lower()}",
+        f"- required_phase8_panel_count: {summary['required_phase8_panel_count']}",
+        f"- operator_action_required_panel_count: {summary['operator_action_required_panel_count']}",
+        f"- paid_pilot_wording_allowed: {str(summary['paid_pilot_wording_allowed']).lower()}",
+        f"- general_platform_claim_allowed: {str(summary['general_platform_claim_allowed']).lower()}",
+        f"- gpcr_broad_claim_allowed: {str(summary['gpcr_broad_claim_allowed']).lower()}",
+        f"- pocketmd_lite_claim_allowed: {str(summary['pocketmd_lite_claim_allowed']).lower()}",
+        "",
+        "## Panels",
+        "",
+        "| panel | status | source ready | action | claim | artifact |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for row in payload["rows"]:
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    _text(row["panel_id"]),
+                    _text(row["status"]),
+                    str(row["source_artifact_ready"]).lower(),
+                    str(row["operator_action_required"]).lower(),
+                    str(row["claim_allowed"]).lower(),
+                    _text(row["artifact"]),
+                ]
+            )
+            + " |"
+        )
+    lines.extend(["", "## Claim Boundary", ""])
+    for claim in payload["claim_matrix"]:
+        prefix = "allowed" if claim["allowed"] else "disallowed"
+        lines.append(f"- {prefix}: {claim['claim_id']} - {claim['boundary']}")
+    lines.append("")
+    lines.append(CLAIM_BOUNDARY)
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _build_html(payload: dict[str, Any]) -> str:
+    summary = payload["summary"]
+    rows = payload["rows"]
+    claim_rows = payload["claim_matrix"]
+    panel_cards = []
+    for row in rows:
+        state = "ready" if row["source_artifact_ready"] else "blocked"
+        action = "Action required" if row["operator_action_required"] else "No action"
+        panel_cards.append(
+            f"""
+      <section class="panel {html.escape(state)}">
+        <header>
+          <p>{html.escape(row["route"])}</p>
+          <h2>{html.escape(row["title"])}</h2>
+          <span>{html.escape(row["status"])}</span>
+        </header>
+        <dl>
+          <div><dt>Primary</dt><dd>{html.escape(row["primary_metric"])}</dd></div>
+          <div><dt>Secondary</dt><dd>{html.escape(row["secondary_metric"])}</dd></div>
+          <div><dt>Artifact</dt><dd>{html.escape(row["artifact"])}</dd></div>
+          <div><dt>Action</dt><dd>{html.escape(action)}</dd></div>
+        </dl>
+        <p class="next">{html.escape(row["next_action"])}</p>
+      </section>"""
+        )
+
+    claim_table_rows = []
+    for claim in claim_rows:
+        state = "Allowed" if claim["allowed"] else "Disallowed"
+        claim_table_rows.append(
+            "<tr>"
+            f"<td>{html.escape(claim['claim_id'])}</td>"
+            f"<td>{html.escape(state)}</td>"
+            f"<td>{html.escape(claim['claim_text'])}</td>"
+            f"<td>{html.escape(claim['boundary'])}</td>"
+            "</tr>"
+        )
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Product Operator Cockpit</title>
+  <style>
+    :root {{
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --ink: #18202a;
+      --muted: #5f6b7a;
+      --line: #cfd6df;
+      --panel: #ffffff;
+      --ready: #176b4d;
+      --blocked: #9a3412;
+      --accent: #254a7b;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 14px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }}
+    main {{
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }}
+    h1 {{
+      margin: 0 0 8px;
+      font-size: 28px;
+      font-weight: 720;
+    }}
+    .summary {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin: 18px 0 20px;
+    }}
+    .metric {{
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 12px;
+    }}
+    .metric span {{
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }}
+    .metric strong {{
+      display: block;
+      margin-top: 4px;
+      font-size: 18px;
+    }}
+    .grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+      gap: 12px;
+    }}
+    .panel {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--accent);
+      border-radius: 6px;
+      padding: 14px;
+      min-height: 236px;
+    }}
+    .panel.ready {{ border-left-color: var(--ready); }}
+    .panel.blocked {{ border-left-color: var(--blocked); }}
+    .panel header {{
+      display: grid;
+      gap: 5px;
+      margin-bottom: 10px;
+    }}
+    .panel p {{
+      margin: 0;
+      color: var(--muted);
+    }}
+    .panel h2 {{
+      margin: 0;
+      font-size: 17px;
+    }}
+    .panel span {{
+      justify-self: start;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 3px 8px;
+      color: var(--muted);
+      font-size: 12px;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }}
+    dl {{
+      display: grid;
+      gap: 8px;
+      margin: 0;
+    }}
+    dt {{
+      color: var(--muted);
+      font-size: 12px;
+    }}
+    dd {{
+      margin: 0;
+      overflow-wrap: anywhere;
+    }}
+    .next {{
+      margin-top: 12px;
+      color: var(--ink);
+    }}
+    table {{
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 18px;
+      background: #fff;
+      border: 1px solid var(--line);
+    }}
+    th, td {{
+      border-bottom: 1px solid var(--line);
+      padding: 9px;
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }}
+    th {{
+      color: var(--muted);
+      font-weight: 640;
+    }}
+    .boundary {{
+      margin-top: 16px;
+      color: var(--muted);
+    }}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Product Operator Cockpit</h1>
+    <p>{html.escape(CLAIM_BOUNDARY)}</p>
+    <section class="summary" aria-label="summary">
+      <div class="metric"><span>Status</span><strong>{html.escape(summary["status"])}</strong></div>
+      <div class="metric"><span>Phase 8 Panels</span><strong>{summary["required_phase8_panel_count"]}</strong></div>
+      <div class="metric"><span>Actions</span><strong>{summary["operator_action_required_panel_count"]}</strong></div>
+      <div class="metric"><span>Paid Pilot</span><strong>{str(summary["paid_pilot_wording_allowed"]).lower()}</strong></div>
+    </section>
+    <section class="grid" aria-label="panels">
+      {"".join(panel_cards)}
+    </section>
+    <table>
+      <thead>
+        <tr><th>Claim</th><th>Decision</th><th>Text</th><th>Boundary</th></tr>
+      </thead>
+      <tbody>
+        {"".join(claim_table_rows)}
+      </tbody>
+    </table>
+    <p class="boundary">Generated at {html.escape(summary["generated_at_utc"])}. execution_enabled=false; external_state_mutated=false.</p>
+  </main>
+</body>
+</html>
+"""
+
+
+def _csv_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, list):
+        return ";".join(_text(item) for item in value if _text(item))
+    if isinstance(value, dict):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)
+    return _text(value)
+
+
+def _write_json(path_like: str | Path, payload: dict[str, Any], *, root: Path = ROOT) -> None:
+    path = _resolve(path_like, root=root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _write_csv(path_like: str | Path, rows: list[dict[str, Any]], *, root: Path = ROOT) -> None:
+    path = _resolve(path_like, root=root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=CSV_FIELDS)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({field: _csv_value(row.get(field)) for field in CSV_FIELDS})
+
+
+def _write_text(path_like: str | Path, text: str, *, root: Path = ROOT) -> None:
+    path = _resolve(path_like, root=root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def build_product_operator_cockpit(
+    *,
+    capabilities_json: str | Path = DEFAULT_CAPABILITIES_JSON,
+    goal_readiness_json: str | Path = DEFAULT_GOAL_READINESS_JSON,
+    hbond_json: str | Path = DEFAULT_HBOND_JSON,
+    gpcr_json: str | Path = DEFAULT_GPCR_JSON,
+    pocketmd_json: str | Path = DEFAULT_POCKETMD_JSON,
+    public_benchmark_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_JSON,
+    release_actions_json: str | Path = DEFAULT_RELEASE_ACTIONS_JSON,
+    evidence_bundle_json: str | Path = DEFAULT_EVIDENCE_BUNDLE_JSON,
+    customer_shadow_json: str | Path = DEFAULT_CUSTOMER_SHADOW_JSON,
+    root: Path = ROOT,
+) -> dict[str, Any]:
+    capabilities = _summary(_read_json(capabilities_json, root=root))
+    goal = _summary(_read_json(goal_readiness_json, root=root))
+    hbond_payload = _read_json(hbond_json, root=root)
+    hbond = _summary(hbond_payload)
+    gpcr = _summary(_read_json(gpcr_json, root=root))
+    pocketmd = _summary(_read_json(pocketmd_json, root=root))
+    public_benchmark = _summary(_read_json(public_benchmark_json, root=root))
+    release_actions = _summary(_read_json(release_actions_json, root=root))
+    evidence_bundle = _summary(_read_json(evidence_bundle_json, root=root))
+    customer_shadow = _summary(_read_json(customer_shadow_json, root=root))
+
+    capabilities_present = bool(capabilities)
+    restricted_scope_claim_guard_ready = _bool_true(capabilities.get("restricted_scope_claim_guard_ready"))
+    general_platform_claim_allowed = _bool_true(capabilities.get("general_platform_claim_allowed"))
+    capabilities_source_ready = capabilities_present and _int(capabilities.get("capability_count")) > 0
+
+    goal_present = bool(goal)
+    release_allowed = _bool_true(
+        release_actions.get("goal_release_allowed")
+        or release_actions.get("release_allowed")
+        or goal.get("release_allowed")
+    )
+    goal_operator_pending_count = _int(goal.get("operator_or_external_pending_lane_count"))
+
+    hbond_present = bool(hbond)
+    hbond_status = _text(hbond.get("status") or hbond_payload.get("status"))
+    hbond_candidate_count = _int(hbond.get("candidate_count") or len(_rows(hbond_payload)))
+    hbond_source_ready = hbond_present and hbond_status == "hbond_backmap_report_ready"
+
+    gpcr_present = bool(gpcr)
+    gpcr_metric_ready = _bool_true(gpcr.get("hard_decoy_metric_claim_unlock_ready"))
+    gpcr_broad_claim_allowed = all(
+        [
+            _bool_true(gpcr.get("claim_promotion_allowed")),
+            _bool_true(gpcr.get("router_claim_allowed")),
+            _bool_true(gpcr.get("platform_claim_allowed")),
+        ]
+    )
+
+    pocketmd_present = bool(pocketmd)
+    pocketmd_refinement_ready = _bool_true(pocketmd.get("claim_grade_refinement_evidence_ready"))
+    pocketmd_fill_preview_ready = _bool_true(pocketmd.get("claim_grade_fill_preview_evidence_ready"))
+    pocketmd_report_ready = _bool_true(pocketmd.get("claim_grade_report_evidence_ready")) or pocketmd_fill_preview_ready
+    pocketmd_promotion_allowed = _bool_true(pocketmd.get("claim_promotion_allowed"))
+    pocketmd_lite_claim_allowed = (
+        pocketmd_refinement_ready
+        and pocketmd_report_ready
+        and pocketmd_promotion_allowed
+    )
+
+    public_present = bool(public_benchmark)
+    public_external_receipts_ready = _bool_true(public_benchmark.get("external_benchmark_receipts_ready"))
+    public_acceptance_ready = public_external_receipts_ready or _bool_true(
+        public_benchmark.get("top_acceptance_artifact_claim_ready")
+    )
+    public_benchmark_claim_allowed = (
+        public_acceptance_ready and _bool_true(public_benchmark.get("claim_promotion_allowed"))
+    )
+    public_receipt_blocked_rows = _first_text(
+        public_benchmark.get("receipt_blocked_row_count"),
+        public_benchmark.get(
+            "public_benchmark_statistical_support_metric_source_payload_operator_receipt_blocked_row_count"
+        ),
+    )
+    public_blockers = _string_list(public_benchmark.get("blockers"))
+    if not public_blockers:
+        public_blockers = _string_list(public_benchmark.get("top_acceptance_artifact_missing_true_fields"))
+    if not public_blockers:
+        public_blockers = _string_list(public_benchmark.get("primary_blocker_id"))
+
+    release_actions_present = bool(release_actions)
+    release_blocker_count = _int(
+        release_actions.get("goal_release_blocker_count") or release_actions.get("blocker_count")
+    )
+
+    evidence_bundle_present = bool(evidence_bundle)
+    evidence_bundle_export_ready = (
+        _bool_true(evidence_bundle.get("bundle_export_ready"))
+        and _bool_true(evidence_bundle.get("bundle_tar_exists"))
+        and _bool_true(evidence_bundle.get("bundle_validation_pass"))
+    )
+
+    customer_shadow_paid_pilot_ready = _bool_true(customer_shadow.get("paid_pilot_evidence_ready"))
+    paid_pilot_wording_allowed = release_allowed and customer_shadow_paid_pilot_ready
+
+    claim_rows = _build_claim_rows(
+        restricted_scope_claim_guard_ready=restricted_scope_claim_guard_ready,
+        general_platform_claim_allowed=general_platform_claim_allowed,
+        gpcr_metric_ready=gpcr_metric_ready,
+        gpcr_broad_claim_allowed=gpcr_broad_claim_allowed,
+        pocketmd_refinement_ready=pocketmd_refinement_ready,
+        pocketmd_claim_allowed=pocketmd_lite_claim_allowed,
+        public_benchmark_claim_allowed=public_benchmark_claim_allowed,
+        evidence_bundle_export_ready=evidence_bundle_export_ready,
+        release_allowed=release_allowed,
+        customer_shadow_paid_pilot_ready=customer_shadow_paid_pilot_ready,
+    )
+    allowed_claim_text = "; ".join(row["claim_id"] for row in claim_rows if row["allowed"])
+    disallowed_claim_text = "; ".join(row["claim_id"] for row in claim_rows if not row["allowed"])
+
+    panels = [
+        _panel(
+            panel_id="product_capabilities_dashboard",
+            title="/product/capabilities dashboard",
+            route="/product/capabilities",
+            artifact_path=capabilities_json,
+            artifact_present=capabilities_present,
+            status=_text(capabilities.get("status") or "missing_product_capability_surface_contract"),
+            surface_ready=True,
+            source_artifact_ready=capabilities_source_ready,
+            operator_action_required=not capabilities_source_ready,
+            claim_allowed=restricted_scope_claim_guard_ready and not general_platform_claim_allowed,
+            primary_metric=_join_metrics(
+                _metric("ready_capabilities", _int(capabilities.get("ready_capability_count"))),
+                _metric("capability_count", _int(capabilities.get("capability_count"))),
+            ),
+            secondary_metric=_join_metrics(
+                _metric("evidence_surfaces", _int(capabilities.get("evidence_surface_count"))),
+                _metric("general_platform_claim_allowed", general_platform_claim_allowed),
+            ),
+            next_action=_first_text(
+                capabilities.get("next_required_step"),
+                "Keep general platform wording locked until capability and release gates approve it.",
+            ),
+            allowed_claim_text="Restricted local capability surface may be shown when scoped by family.",
+            disallowed_claim_text="General protein-ligand platform wording remains disallowed.",
+            blockers=_string_list(capabilities.get("blocked_claim_scopes")),
+            claim_boundary=_text(capabilities.get("claim_boundary")) or CLAIM_BOUNDARY,
+            root=root,
+        ),
+        _panel(
+            panel_id="goal_readiness_dashboard",
+            title="/goal/readiness dashboard",
+            route="/goal/readiness",
+            artifact_path=goal_readiness_json,
+            artifact_present=goal_present,
+            status=_text(goal.get("status") or "missing_goal_readiness_rollup"),
+            surface_ready=True,
+            source_artifact_ready=goal_present,
+            operator_action_required=not _bool_true(goal.get("goal_completion_audit_goal_complete")),
+            claim_allowed=release_allowed,
+            primary_metric=_join_metrics(
+                _metric("blocked_lanes", _int(goal.get("blocked_lane_count"))),
+                _metric("pending_lanes", goal_operator_pending_count),
+            ),
+            secondary_metric=_join_metrics(
+                _metric("goal_complete", _bool_true(goal.get("goal_completion_audit_goal_complete"))),
+                _metric("release_lane_ready", _bool_true(goal.get("release_complete_lane_ready"))),
+            ),
+            next_action=_first_text(
+                goal.get("next_required_step"),
+                "Close blocked and operator-pending lanes before release wording.",
+            ),
+            allowed_claim_text="Goal readiness can be displayed as an operator status dashboard.",
+            disallowed_claim_text="Release-complete wording is disallowed until goal completion is true.",
+            blockers=[] if goal_present else ["missing_goal_readiness_rollup"],
+            claim_boundary=_text(goal.get("claim_boundary")) or CLAIM_BOUNDARY,
+            root=root,
+        ),
+        _panel(
+            panel_id="hbond_backmap_candidate_table",
+            title="H-Bond BackMap candidate table",
+            route="/product/hbond-backmap-report",
+            artifact_path=hbond_json,
+            artifact_present=hbond_present,
+            status=hbond_status or "missing_hbond_backmap_report",
+            surface_ready=True,
+            source_artifact_ready=hbond_source_ready,
+            operator_action_required=not hbond_source_ready,
+            claim_allowed=False,
+            primary_metric=_join_metrics(
+                _metric("candidate_count", hbond_candidate_count),
+                _metric("claim_safe_count", _int(hbond.get("claim_safe_count"))),
+            ),
+            secondary_metric=_join_metrics(
+                _metric("donor_sites", _int(hbond.get("total_donor_sites"))),
+                _metric("acceptor_sites", _int(hbond.get("total_acceptor_sites"))),
+            ),
+            next_action=_first_text(
+                hbond.get("next_required_step"),
+                "Build runs/hbond_backmap_report_current.json from backmapping scores before using the table.",
+            ),
+            allowed_claim_text="Local interpretability candidates can be inspected when the report exists.",
+            disallowed_claim_text="Docking accuracy, affinity, and scientific-result claims are disallowed.",
+            blockers=[] if hbond_source_ready else ["hbond_backmap_report_missing_or_blocked"],
+            claim_boundary=_text(hbond.get("claim_boundary")) or CLAIM_BOUNDARY,
+            root=root,
+        ),
+        _panel(
+            panel_id="gpcr_hard_decoy_blocker_panel",
+            title="GPCR hard-decoy blocker panel",
+            route="/product/gpcr-hard-decoy-suite-report",
+            artifact_path=gpcr_json,
+            artifact_present=gpcr_present,
+            status=_text(gpcr.get("status") or "missing_gpcr_hard_decoy_claim_unlock_audit"),
+            surface_ready=True,
+            source_artifact_ready=gpcr_present and gpcr_metric_ready,
+            operator_action_required=not gpcr_broad_claim_allowed,
+            claim_allowed=gpcr_broad_claim_allowed,
+            primary_metric=_join_metrics(
+                _metric("pr_auc_ci_low", gpcr.get("preregistered_ranking_pr_auc_ci_low")),
+                _metric("top20_hit_rate", gpcr.get("preregistered_top20_hit_rate")),
+            ),
+            secondary_metric=_join_metrics(
+                _metric("decoys_above_positive", gpcr.get("preregistered_decoys_above_positive_count")),
+                _metric("promotion_blockers", _int(gpcr.get("promotion_blocker_count"))),
+            ),
+            next_action=_first_text(
+                gpcr.get("next_required_step"),
+                "Complete broad-claim review and scorer/router promotion gates.",
+            ),
+            allowed_claim_text="Hard-decoy metric evidence may be reviewed.",
+            disallowed_claim_text="Broad GPCR/router/scorer claim remains locked.",
+            blockers=_string_list(gpcr.get("promotion_blockers")),
+            claim_boundary=_text(gpcr.get("claim_boundary")) or CLAIM_BOUNDARY,
+            root=root,
+        ),
+        _panel(
+            panel_id="pocketmd_lite_report_panel",
+            title="PocketMD Lite report panel",
+            route="/product/pocketmd-lite-topk-refinement-audit",
+            artifact_path=pocketmd_json,
+            artifact_present=pocketmd_present,
+            status=_text(pocketmd.get("status") or "missing_pocketmd_lite_topk_refinement_audit"),
+            surface_ready=True,
+            source_artifact_ready=pocketmd_present and pocketmd_refinement_ready,
+            operator_action_required=not pocketmd_lite_claim_allowed,
+            claim_allowed=pocketmd_lite_claim_allowed,
+            primary_metric=_join_metrics(
+                _metric("metric_ready", _int(pocketmd.get("claim_grade_metric_ready_count"))),
+                _metric("candidate_count", _int(pocketmd.get("candidate_count"))),
+            ),
+            secondary_metric=_join_metrics(
+                _metric("refinement_ready", pocketmd_refinement_ready),
+                _metric("report_ready", pocketmd_report_ready),
+                _metric("promotion_allowed", pocketmd_promotion_allowed),
+            ),
+            next_action=_first_text(
+                pocketmd.get("next_required_step"),
+                "Finish claim-grade report evidence before PocketMD Lite customer-facing wording.",
+            ),
+            allowed_claim_text="Top-k refinement metric evidence may be reviewed.",
+            disallowed_claim_text="PocketMD Lite claim-grade customer wording remains disallowed.",
+            blockers=[]
+            if pocketmd_lite_claim_allowed
+            else [
+                "pocketmd_lite_claim_promotion_missing"
+                if pocketmd_refinement_ready and pocketmd_report_ready
+                else "pocketmd_lite_claim_grade_report_or_promotion_missing"
+            ],
+            claim_boundary=_text(pocketmd.get("claim_boundary")) or CLAIM_BOUNDARY,
+            root=root,
+        ),
+        _panel(
+            panel_id="public_benchmark_scorecard",
+            title="Public benchmark scorecard",
+            route="/product/public-benchmark-external-receipts-audit",
+            artifact_path=public_benchmark_json,
+            artifact_present=public_present,
+            status=_text(public_benchmark.get("status") or "missing_public_benchmark_external_receipts_audit"),
+            surface_ready=True,
+            source_artifact_ready=public_present,
+            operator_action_required=not public_benchmark_claim_allowed,
+            claim_allowed=public_benchmark_claim_allowed,
+            primary_metric=_join_metrics(
+                _metric("ready_steps", public_benchmark.get("ready_step_count")),
+                _metric("step_count", public_benchmark.get("step_count")),
+                _metric("blocked_steps", public_benchmark.get("blocked_step_count")),
+                _metric("blocked_receipt_rows", public_receipt_blocked_rows),
+                _metric("acceptance_ready", public_acceptance_ready),
+            ),
+            secondary_metric=_join_metrics(
+                _metric(
+                    "vina_gnina_score_evidence",
+                    _bool_true(public_benchmark.get("vina_gnina_comparison_adapter_score_evidence_ready")),
+                ),
+                _metric(
+                    "same_input_rows",
+                    _bool_true(public_benchmark.get("comparison_adapter_same_input_row_count_match")),
+                ),
+                _metric("top_artifact_status", public_benchmark.get("top_acceptance_artifact_status")),
+                _metric("claim_promotion_allowed", _bool_true(public_benchmark.get("claim_promotion_allowed"))),
+            ),
+            next_action=_first_text(
+                public_benchmark.get("primary_blocker_next_required_step"),
+                public_benchmark.get("top_required_input"),
+                public_benchmark.get("next_required_step"),
+                "Attach benchmark receipts and clear Vina/GNINA same-input comparison evidence.",
+            ),
+            allowed_claim_text="Benchmark receipt status may be displayed.",
+            disallowed_claim_text="Public benchmark performance claims remain disallowed.",
+            blockers=public_blockers,
+            claim_boundary=_text(public_benchmark.get("claim_boundary")) or CLAIM_BOUNDARY,
+            root=root,
+        ),
+        _panel(
+            panel_id="release_blockers_operator_actions",
+            title="Release blockers / operator actions",
+            route="/goal/actions",
+            artifact_path=release_actions_json,
+            artifact_present=release_actions_present,
+            status=_text(release_actions.get("status") or "missing_goal_operator_action_board"),
+            surface_ready=True,
+            source_artifact_ready=release_actions_present,
+            operator_action_required=not release_allowed,
+            claim_allowed=release_allowed,
+            primary_metric=_join_metrics(
+                _metric("release_allowed", release_allowed),
+                _metric("release_blockers", release_blocker_count),
+            ),
+            secondary_metric=_join_metrics(
+                _metric("primary_action", release_actions.get("primary_action_id")),
+                _metric("decision_gate", release_actions.get("goal_release_decision_gate_status")),
+            ),
+            next_action=_first_text(
+                release_actions.get("primary_action_recommended_action"),
+                release_actions.get("next_required_step"),
+                "Resolve the primary operator action before release promotion.",
+            ),
+            allowed_claim_text="Operator actions can be displayed as release blockers.",
+            disallowed_claim_text="Release or paid-pilot wording remains disallowed while release_allowed=false.",
+            blockers=[] if release_allowed else ["goal_release_allowed_false"],
+            claim_boundary=_text(release_actions.get("claim_boundary")) or CLAIM_BOUNDARY,
+            root=root,
+        ),
+        _panel(
+            panel_id="evidence_bundle_export",
+            title="Evidence bundle export",
+            route="/product/evidence-bundle-export",
+            artifact_path=evidence_bundle_json,
+            artifact_present=evidence_bundle_present,
+            status=_text(evidence_bundle.get("status") or "missing_ai_md_product_evidence_bundle"),
+            surface_ready=True,
+            source_artifact_ready=evidence_bundle_export_ready,
+            operator_action_required=not _bool_true(evidence_bundle.get("release_claim_ready")),
+            claim_allowed=evidence_bundle_export_ready,
+            primary_metric=_join_metrics(
+                _metric("bundle_export_ready", evidence_bundle_export_ready),
+                _metric("members", _int(evidence_bundle.get("bundle_tar_member_count"))),
+            ),
+            secondary_metric=_join_metrics(
+                _metric("validation_pass", _bool_true(evidence_bundle.get("bundle_validation_pass"))),
+                _metric("release_claim_ready", _bool_true(evidence_bundle.get("release_claim_ready"))),
+            ),
+            next_action=_first_text(
+                evidence_bundle.get("next_required_step"),
+                "Use the local evidence bundle for handoff, not release promotion.",
+            ),
+            allowed_claim_text="Local evidence bundle export is available when validation passes.",
+            disallowed_claim_text="Release-ready or runtime-green claims remain disallowed.",
+            blockers=[] if evidence_bundle_export_ready else ["evidence_bundle_export_not_ready"],
+            claim_boundary=_text(evidence_bundle.get("claim_boundary")) or CLAIM_BOUNDARY,
+            root=root,
+        ),
+        _panel(
+            panel_id="claim_boundary_matrix",
+            title="Allowed/disallowed claim text",
+            route="/product/operator-cockpit#claim-boundary",
+            artifact_path=customer_shadow_json,
+            artifact_present=bool(customer_shadow),
+            status="claim_boundary_matrix_ready",
+            surface_ready=True,
+            source_artifact_ready=True,
+            operator_action_required=not paid_pilot_wording_allowed,
+            claim_allowed=False,
+            primary_metric=_join_metrics(
+                _metric("allowed_claims", sum(1 for row in claim_rows if row["allowed"])),
+                _metric("disallowed_claims", sum(1 for row in claim_rows if not row["allowed"])),
+            ),
+            secondary_metric=_join_metrics(
+                _metric("customer_shadow_ready", customer_shadow_paid_pilot_ready),
+                _metric("paid_pilot_wording_allowed", paid_pilot_wording_allowed),
+            ),
+            next_action=(
+                "Keep paid-pilot, broad-platform, broad-GPCR, PocketMD claim-grade, and public-benchmark "
+                "wording locked until their evidence gates pass."
+            ),
+            allowed_claim_text=allowed_claim_text,
+            disallowed_claim_text=disallowed_claim_text,
+            blockers=[] if paid_pilot_wording_allowed else ["paid_pilot_claim_boundary_locked"],
+            claim_boundary=CLAIM_BOUNDARY,
+            root=root,
+        ),
+    ]
+
+    missing_required_panel_ids = [
+        panel_id for panel_id in REQUIRED_PHASE8_PANEL_IDS if panel_id not in {row["panel_id"] for row in panels}
+    ]
+    action_panels = [row for row in panels if row["operator_action_required"]]
+    source_blocked_panels = [
+        row for row in panels if not row["source_artifact_ready"] or _status_is_blocked(_text(row["status"]))
+    ]
+    phase8_surface_ready = not missing_required_panel_ids and all(row["surface_ready"] for row in panels)
+    status = (
+        "product_operator_cockpit_ready_claims_blocked"
+        if phase8_surface_ready
+        else "blocked_product_operator_cockpit"
+    )
+    if phase8_surface_ready and not action_panels:
+        status = "product_operator_cockpit_ready"
+
+    summary = {
+        "packet_type": "product_operator_cockpit",
+        "schema_version": "product_operator_cockpit_v1",
+        "status": status,
+        "generated_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "phase8_surface_ready": phase8_surface_ready,
+        "required_phase8_panel_count": len(REQUIRED_PHASE8_PANEL_IDS),
+        "required_phase8_panel_ids": REQUIRED_PHASE8_PANEL_IDS,
+        "observed_phase8_panel_count": len(panels),
+        "missing_required_phase8_panel_count": len(missing_required_panel_ids),
+        "missing_required_phase8_panel_ids": missing_required_panel_ids,
+        "surface_ready_panel_count": sum(1 for row in panels if row["surface_ready"]),
+        "source_artifact_ready_panel_count": sum(1 for row in panels if row["source_artifact_ready"]),
+        "source_artifact_blocked_panel_count": len(source_blocked_panels),
+        "source_artifact_blocked_panel_ids": [row["panel_id"] for row in source_blocked_panels],
+        "operator_action_required_panel_count": len(action_panels),
+        "operator_action_required_panel_ids": [row["panel_id"] for row in action_panels],
+        "allowed_claim_count": sum(1 for row in claim_rows if row["allowed"]),
+        "disallowed_claim_count": sum(1 for row in claim_rows if not row["allowed"]),
+        "paid_pilot_wording_allowed": paid_pilot_wording_allowed,
+        "general_platform_claim_allowed": general_platform_claim_allowed,
+        "gpcr_hard_decoy_metric_ready": gpcr_metric_ready,
+        "gpcr_broad_claim_allowed": gpcr_broad_claim_allowed,
+        "pocketmd_lite_refinement_evidence_ready": pocketmd_refinement_ready,
+        "pocketmd_lite_claim_allowed": pocketmd_lite_claim_allowed,
+        "public_benchmark_claim_allowed": public_benchmark_claim_allowed,
+        "evidence_bundle_export_ready": evidence_bundle_export_ready,
+        "customer_shadow_paid_pilot_evidence_ready": customer_shadow_paid_pilot_ready,
+        "release_allowed": release_allowed,
+        "next_required_step": action_panels[0]["next_action"] if action_panels else "",
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": False,
+        "claim_boundary": CLAIM_BOUNDARY,
+    }
+    return {"summary": summary, "rows": panels, "claim_matrix": claim_rows}
+
+
+def write_product_operator_cockpit_outputs(
+    payload: dict[str, Any],
+    *,
+    out_json: str | Path = DEFAULT_OUT_JSON,
+    out_csv: str | Path = DEFAULT_OUT_CSV,
+    out_md: str | Path = DEFAULT_OUT_MD,
+    out_html: str | Path = DEFAULT_OUT_HTML,
+    root: Path = ROOT,
+) -> None:
+    _write_json(out_json, payload, root=root)
+    _write_csv(out_csv, payload["rows"], root=root)
+    _write_text(out_md, _build_markdown(payload), root=root)
+    _write_text(out_html, _build_html(payload), root=root)
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Build the product operator cockpit current artifacts.")
+    parser.add_argument("--capabilities-json", default=DEFAULT_CAPABILITIES_JSON)
+    parser.add_argument("--goal-readiness-json", default=DEFAULT_GOAL_READINESS_JSON)
+    parser.add_argument("--hbond-json", default=DEFAULT_HBOND_JSON)
+    parser.add_argument("--gpcr-json", default=DEFAULT_GPCR_JSON)
+    parser.add_argument("--pocketmd-json", default=DEFAULT_POCKETMD_JSON)
+    parser.add_argument("--public-benchmark-json", default=DEFAULT_PUBLIC_BENCHMARK_JSON)
+    parser.add_argument("--release-actions-json", default=DEFAULT_RELEASE_ACTIONS_JSON)
+    parser.add_argument("--evidence-bundle-json", default=DEFAULT_EVIDENCE_BUNDLE_JSON)
+    parser.add_argument("--customer-shadow-json", default=DEFAULT_CUSTOMER_SHADOW_JSON)
+    parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
+    parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
+    parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
+    parser.add_argument("--out-html", default=DEFAULT_OUT_HTML)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    payload = build_product_operator_cockpit(
+        capabilities_json=args.capabilities_json,
+        goal_readiness_json=args.goal_readiness_json,
+        hbond_json=args.hbond_json,
+        gpcr_json=args.gpcr_json,
+        pocketmd_json=args.pocketmd_json,
+        public_benchmark_json=args.public_benchmark_json,
+        release_actions_json=args.release_actions_json,
+        evidence_bundle_json=args.evidence_bundle_json,
+        customer_shadow_json=args.customer_shadow_json,
+    )
+    write_product_operator_cockpit_outputs(
+        payload,
+        out_json=args.out_json,
+        out_csv=args.out_csv,
+        out_md=args.out_md,
+        out_html=args.out_html,
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,311 @@
+from __future__ import annotations
+
+import json
+import subprocess
+from pathlib import Path
+
+from tools.product import build_product_operator_cockpit as mod
+
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def _write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _write_inputs(tmp_path: Path) -> dict[str, Path]:
+    paths = {
+        "capabilities": tmp_path / "runs/product_capability_surface_contract_current.json",
+        "goal": tmp_path / "runs/goal_readiness_rollup_current.json",
+        "hbond": tmp_path / "runs/hbond_backmap_report_current.json",
+        "gpcr": tmp_path / "runs/gpcr_hard_decoy_claim_unlock_audit_current.json",
+        "pocketmd": tmp_path / "runs/pocketmd_lite_topk_refinement_audit_current.json",
+        "public": tmp_path / "runs/public_benchmark_external_receipts_audit_current.json",
+        "release": tmp_path / "runs/goal_operator_action_board_current.json",
+        "bundle": tmp_path / "runs/ai_md_product_evidence_bundle_current.json",
+        "customer": tmp_path / "runs/customer_shadow_evidence_status_current.json",
+    }
+    _write_json(
+        paths["capabilities"],
+        {
+            "summary": {
+                "status": "product_capability_surface_contract_ready",
+                "capability_count": 9,
+                "ready_capability_count": 9,
+                "evidence_surface_count": 5,
+                "restricted_scope_claim_guard_ready": True,
+                "general_platform_claim_allowed": False,
+                "blocked_claim_scopes": ["general_protein_ligand_platform"],
+            }
+        },
+    )
+    _write_json(
+        paths["goal"],
+        {
+            "summary": {
+                "status": "blocked_goal_readiness",
+                "blocked_lane_count": 1,
+                "operator_or_external_pending_lane_count": 3,
+                "goal_completion_audit_goal_complete": False,
+                "release_complete_lane_ready": False,
+            }
+        },
+    )
+    _write_json(
+        paths["hbond"],
+        {
+            "status": "hbond_backmap_report_ready",
+            "summary": {
+                "candidate_count": 2,
+                "claim_safe_count": 1,
+                "total_donor_sites": 2,
+                "total_acceptor_sites": 1,
+            },
+            "rows": [
+                {"entry_id": "ADRB2::LIG-1", "claim_safe": True},
+                {"entry_id": "ADRB2::LIG-2", "claim_safe": False},
+            ],
+        },
+    )
+    _write_json(
+        paths["gpcr"],
+        {
+            "summary": {
+                "status": "gpcr_hard_decoy_claim_unlock_metric_evidence_ready_promotion_locked",
+                "hard_decoy_metric_claim_unlock_ready": True,
+                "preregistered_ranking_pr_auc_ci_low": 0.5597832604695224,
+                "preregistered_top20_hit_rate": 1.0,
+                "preregistered_decoys_above_positive_count": 0,
+                "claim_promotion_allowed": False,
+                "router_claim_allowed": False,
+                "platform_claim_allowed": False,
+                "promotion_blocker_count": 2,
+                "promotion_blockers": [
+                    "broad_scope:formal_broad_claim_review_not_approved",
+                    "scorer_router_promotion_gate_not_ready",
+                ],
+            }
+        },
+    )
+    _write_json(
+        paths["pocketmd"],
+        {
+            "summary": {
+                "status": "pocketmd_lite_topk_refinement_audit_ready",
+                "candidate_count": 5,
+                "claim_grade_metric_ready_count": 5,
+                "claim_grade_refinement_evidence_ready": True,
+                "claim_grade_report_evidence_ready": False,
+                "claim_grade_fill_preview_evidence_ready": True,
+                "claim_promotion_allowed": False,
+            }
+        },
+    )
+    _write_json(
+        paths["public"],
+        {
+            "summary": {
+                "status": "blocked_public_benchmark_external_receipts_audit",
+                "external_benchmark_receipts_ready": False,
+                "ready_step_count": 5,
+                "step_count": 7,
+                "blocked_step_count": 2,
+                "receipt_blocked_row_count": 51,
+                "vina_gnina_comparison_adapter_score_evidence_ready": False,
+                "comparison_adapter_same_input_row_count_match": False,
+                "primary_blocker_id": "vina_gnina_same_input_comparison",
+                "primary_blocker_next_required_step": (
+                    "Attach operator-provided Vina/GNINA scores for the same subset rows, then rerun the adapter."
+                ),
+                "blockers": [
+                    "vina_gnina_same_input_comparison:vina_gnina_same_input_score_evidence_missing",
+                    "benchmark_receipt_attach:benchmark_metric_source_receipt_rows_unapproved",
+                ],
+                "claim_promotion_allowed": False,
+            }
+        },
+    )
+    _write_json(
+        paths["release"],
+        {
+            "summary": {
+                "status": "operator_actions_required",
+                "goal_release_allowed": False,
+                "goal_release_blocker_count": 4,
+                "primary_action_id": "product_ai_production:complete_residual_registry_guarded_promotion",
+                "primary_action_recommended_action": "Complete the guarded production AI registry promotion receipt.",
+                "goal_release_decision_gate_status": "blocked_goal_release_decision",
+            }
+        },
+    )
+    _write_json(
+        paths["bundle"],
+        {
+            "summary": {
+                "status": "ai_md_product_evidence_bundle_ready",
+                "bundle_export_ready": True,
+                "bundle_tar_exists": True,
+                "bundle_tar_member_count": 14,
+                "bundle_validation_pass": True,
+                "release_claim_ready": False,
+            }
+        },
+    )
+    _write_json(
+        paths["customer"],
+        {
+            "summary": {
+                "status": "blocked_customer_shadow_evidence_status",
+                "completed_customer_shadow_case_count": 0,
+                "required_completed_customer_shadow_case_count": 3,
+                "paid_pilot_evidence_ready": False,
+                "paid_pilot_claim_allowed": False,
+            }
+        },
+    )
+    return paths
+
+
+def _build_payload(tmp_path: Path) -> dict:
+    paths = _write_inputs(tmp_path)
+    return mod.build_product_operator_cockpit(
+        capabilities_json=paths["capabilities"],
+        goal_readiness_json=paths["goal"],
+        hbond_json=paths["hbond"],
+        gpcr_json=paths["gpcr"],
+        pocketmd_json=paths["pocketmd"],
+        public_benchmark_json=paths["public"],
+        release_actions_json=paths["release"],
+        evidence_bundle_json=paths["bundle"],
+        customer_shadow_json=paths["customer"],
+        root=tmp_path,
+    )
+
+
+def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_path: Path) -> None:
+    payload = _build_payload(tmp_path)
+    summary = payload["summary"]
+    panels = {row["panel_id"]: row for row in payload["rows"]}
+    claims = {row["claim_id"]: row for row in payload["claim_matrix"]}
+
+    assert summary["status"] == "product_operator_cockpit_ready_claims_blocked"
+    assert summary["phase8_surface_ready"] is True
+    assert summary["required_phase8_panel_count"] == 9
+    assert summary["observed_phase8_panel_count"] == 9
+    assert summary["missing_required_phase8_panel_count"] == 0
+    assert summary["paid_pilot_wording_allowed"] is False
+    assert summary["general_platform_claim_allowed"] is False
+    assert summary["gpcr_hard_decoy_metric_ready"] is True
+    assert summary["gpcr_broad_claim_allowed"] is False
+    assert summary["pocketmd_lite_claim_allowed"] is False
+    assert summary["public_benchmark_claim_allowed"] is False
+    assert summary["evidence_bundle_export_ready"] is True
+    assert summary["customer_shadow_paid_pilot_evidence_ready"] is False
+
+    assert panels["product_capabilities_dashboard"]["route"] == "/product/capabilities"
+    assert panels["goal_readiness_dashboard"]["route"] == "/goal/readiness"
+    assert panels["hbond_backmap_candidate_table"]["route"] == "/product/hbond-backmap-report"
+    assert panels["hbond_backmap_candidate_table"]["source_artifact_ready"] is True
+    assert "candidate_count=2" in panels["hbond_backmap_candidate_table"]["primary_metric"]
+    assert panels["hbond_backmap_candidate_table"]["blockers"] == []
+    assert "pr_auc_ci_low=0.5598" in panels["gpcr_hard_decoy_blocker_panel"]["primary_metric"]
+    assert panels["gpcr_hard_decoy_blocker_panel"]["claim_allowed"] is False
+    assert panels["pocketmd_lite_report_panel"]["operator_action_required"] is True
+    assert "report_ready=true" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
+    assert "promotion_allowed=false" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
+    assert panels["pocketmd_lite_report_panel"]["blockers"] == ["pocketmd_lite_claim_promotion_missing"]
+    assert panels["public_benchmark_scorecard"]["route"] == "/product/public-benchmark-external-receipts-audit"
+    assert "ready_steps=5" in panels["public_benchmark_scorecard"]["primary_metric"]
+    assert "blocked_steps=2" in panels["public_benchmark_scorecard"]["primary_metric"]
+    assert "blocked_receipt_rows=51" in panels["public_benchmark_scorecard"]["primary_metric"]
+    assert "vina_gnina_score_evidence=false" in panels["public_benchmark_scorecard"]["secondary_metric"]
+    assert panels["public_benchmark_scorecard"]["blockers"] == [
+        "vina_gnina_same_input_comparison:vina_gnina_same_input_score_evidence_missing",
+        "benchmark_receipt_attach:benchmark_metric_source_receipt_rows_unapproved",
+    ]
+    assert panels["release_blockers_operator_actions"]["claim_allowed"] is False
+    assert panels["evidence_bundle_export"]["source_artifact_ready"] is True
+
+    assert claims["operator_cockpit_surface"]["allowed"] is True
+    assert claims["paid_pilot_wording"]["allowed"] is False
+    assert claims["general_platform_claim"]["allowed"] is False
+    assert claims["broad_gpcr_claim"]["allowed"] is False
+    assert claims["pocketmd_lite_customer_claim"]["allowed"] is False
+    assert claims["public_benchmark_claim"]["allowed"] is False
+    assert summary["execution_enabled"] is False
+    assert summary["external_state_mutated"] is False
+
+
+def test_product_operator_cockpit_writes_outputs(tmp_path: Path) -> None:
+    payload = _build_payload(tmp_path)
+
+    mod.write_product_operator_cockpit_outputs(
+        payload,
+        out_json=tmp_path / "runs/product_operator_cockpit_current.json",
+        out_csv=tmp_path / "runs/product_operator_cockpit_current.csv",
+        out_md=tmp_path / "runs/product_operator_cockpit_current.md",
+        out_html=tmp_path / "runs/product_operator_cockpit_current.html",
+        root=tmp_path,
+    )
+
+    written = json.loads((tmp_path / "runs/product_operator_cockpit_current.json").read_text(encoding="utf-8"))
+    html = (tmp_path / "runs/product_operator_cockpit_current.html").read_text(encoding="utf-8")
+    csv_text = (tmp_path / "runs/product_operator_cockpit_current.csv").read_text(encoding="utf-8")
+    md = (tmp_path / "runs/product_operator_cockpit_current.md").read_text(encoding="utf-8")
+
+    assert written["summary"]["required_phase8_panel_count"] == 9
+    assert "Product Operator Cockpit" in html
+    assert "H-Bond BackMap candidate table" in html
+    assert "Allowed/disallowed claim text" in html
+    assert "paid_pilot_wording" in html
+    assert "http://" not in html
+    assert "https://" not in html
+    assert "public_benchmark_scorecard" in csv_text
+    assert "paid_pilot_wording_allowed: false" in md
+
+
+def test_product_operator_cockpit_cli_writes_current_artifacts(tmp_path: Path) -> None:
+    paths = _write_inputs(tmp_path)
+    out_json = tmp_path / "runs/product_operator_cockpit_current.json"
+    out_html = tmp_path / "runs/product_operator_cockpit_current.html"
+
+    subprocess.run(
+        [
+            "python3",
+            str(ROOT / "tools/product/build_product_operator_cockpit.py"),
+            "--capabilities-json",
+            str(paths["capabilities"]),
+            "--goal-readiness-json",
+            str(paths["goal"]),
+            "--hbond-json",
+            str(paths["hbond"]),
+            "--gpcr-json",
+            str(paths["gpcr"]),
+            "--pocketmd-json",
+            str(paths["pocketmd"]),
+            "--public-benchmark-json",
+            str(paths["public"]),
+            "--release-actions-json",
+            str(paths["release"]),
+            "--evidence-bundle-json",
+            str(paths["bundle"]),
+            "--customer-shadow-json",
+            str(paths["customer"]),
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(tmp_path / "runs/product_operator_cockpit_current.csv"),
+            "--out-md",
+            str(tmp_path / "runs/product_operator_cockpit_current.md"),
+            "--out-html",
+            str(out_html),
+        ],
+        cwd=ROOT,
+        check=True,
+    )
+
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["summary"]["phase8_surface_ready"] is True
+    assert out_html.exists()

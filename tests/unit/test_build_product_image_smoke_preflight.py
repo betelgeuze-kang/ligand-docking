@@ -348,6 +348,15 @@ def test_product_image_smoke_preflight_accepts_rocm_runtime_receipt(tmp_path: Pa
                 "backmapping_hbond_evaluated_row_count": 2,
                 "backmapping_onsps_backmap_claim_safe_row_count": 1,
                 "rocm_runtime_visible_device_required": True,
+                "runtime_neighbor_release_scaling_present": True,
+                "runtime_neighbor_release_scaling_ready": True,
+                "runtime_neighbor_release_scaling_status": "runtime_neighbor_release_scaling_ready",
+                "runtime_neighbor_release_atom_counts_ready": True,
+                "runtime_neighbor_release_atom_counts": [1000, 2000, 4000, 8000],
+                "runtime_neighbor_release_pair_count_slope": 1.0,
+                "runtime_neighbor_release_pair_count_r2": 1.0,
+                "runtime_neighbor_release_nxn_allocation_observed": False,
+                "runtime_neighbor_release_max_memory_peak_mb_per_atom": 1.25,
             }
         ),
         encoding="utf-8",
@@ -374,6 +383,14 @@ def test_product_image_smoke_preflight_accepts_rocm_runtime_receipt(tmp_path: Pa
     assert summary["container_runtime_torch_rocm_ready"] is True
     assert summary["container_runtime_visible_device_count"] == 1
     assert summary["container_runtime_rust_hip_backend_enabled"] is True
+    assert summary["runtime_neighbor_release_scaling_present"] is True
+    assert summary["runtime_neighbor_release_scaling_ready"] is True
+    assert summary["runtime_neighbor_release_scaling_status"] == "runtime_neighbor_release_scaling_ready"
+    assert summary["runtime_neighbor_release_atom_counts_ready"] is True
+    assert summary["runtime_neighbor_release_atom_counts"] == [1000, 2000, 4000, 8000]
+    assert summary["runtime_neighbor_release_pair_count_slope"] == 1.0
+    assert summary["runtime_neighbor_release_pair_count_r2"] == 1.0
+    assert summary["runtime_neighbor_release_nxn_allocation_observed"] is False
     assert summary["product_runner_smoke_ready"] is True
     assert summary["product_runner_claim_metadata_ready"] is True
     assert summary["tier_alpha_result_manifest_signature_verified"] is True

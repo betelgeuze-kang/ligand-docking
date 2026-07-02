@@ -22,7 +22,7 @@ from betelgeuze_product.pocketmd_lite_contract import build_pocketmd_lite_assess
 
 ROOT = Path(__file__).resolve().parents[2]
 
-DEFAULT_REPORT_JSON = "runs/pocketmd_lite_report_current.json"
+DEFAULT_REPORT_JSON = "runs/pocketmd_lite_candidate_metric_fill_preview_report_current.json"
 DEFAULT_PROBE_JSON = "runs/pocketmd_lite_metric_collection_probe_current.json"
 DEFAULT_REMAINING_QUEUE_JSON = "runs/pocketmd_lite_remaining_evidence_queue_current.json"
 DEFAULT_CANDIDATE_FILL_PREVIEW_JSON = "runs/pocketmd_lite_candidate_metric_fill_preview_current.json"

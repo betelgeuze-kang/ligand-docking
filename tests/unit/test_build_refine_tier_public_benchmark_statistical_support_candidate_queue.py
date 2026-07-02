@@ -211,6 +211,97 @@ def test_statistical_support_candidate_queue_uses_local_archive_receptor_member(
     assert row["candidate_blockers"] == ""
 
 
+def test_statistical_support_candidate_queue_recovers_from_candidate_fill_preview(
+    tmp_path: Path,
+) -> None:
+    stat_json = tmp_path / "runs" / "stat.json"
+    current_work_order = tmp_path / "runs" / "work_order.csv"
+    seed_csv = tmp_path / "runs" / "seed.csv"
+    affinity_tsv = tmp_path / "data" / "affinity.tsv"
+    dataset_dir = tmp_path / "data" / "pdbbind"
+    candidate_fill_json = tmp_path / "config" / "candidate_fill.json"
+    _write_stat_work_order(stat_json, slot_count=2)
+    _write_csv(current_work_order, [{"work_order_id": "seeded_001", "target_id": "old1"}], ["work_order_id", "target_id"])
+    _write_csv(
+        seed_csv,
+        [],
+        ["suite_id", "complex_id", "pose_id", "pose_rmsd_A", "pose_artifact", "blocker_count", "blockers"],
+    )
+    for target_id, pose_id in [("new1", "new1_020"), ("new2", "new2_030")]:
+        ligand = dataset_dir / "data_5_sdf" / pose_id
+        ligand.parent.mkdir(parents=True, exist_ok=True)
+        ligand.write_text("pose\n", encoding="utf-8")
+        receptor = dataset_dir / target_id / f"{target_id}_complex.pdb"
+        receptor.parent.mkdir(parents=True, exist_ok=True)
+        receptor.write_text("ATOM      1  CA  ALA A   1\n", encoding="utf-8")
+    (dataset_dir / "data_5_sdf.list").write_text(
+        "new1_020\nnew1_ligand\nnew2_030\nnew2_ligand\n",
+        encoding="utf-8",
+    )
+    affinity_tsv.parent.mkdir(parents=True, exist_ok=True)
+    affinity_tsv.write_text("new1\t7.0\nnew2\t8.0\n", encoding="utf-8")
+    candidate_fill_json.parent.mkdir(parents=True, exist_ok=True)
+    candidate_fill_json.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "refine_tier_public_benchmark_statistical_support_metric_candidates_ready",
+                    "payload_write_allowed": False,
+                    "claim_promotion_allowed": False,
+                },
+                "candidate_pairs": [
+                    {
+                        "target_id": "new1",
+                        "pose_id": "new1_020",
+                        "split": "holdout",
+                        "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_001",
+                        "candidate_status": "pass",
+                        "blockers": "",
+                    },
+                    {
+                        "target_id": "new2",
+                        "pose_id": "new2_030",
+                        "split": "fit",
+                        "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_002",
+                        "candidate_status": "pass",
+                        "blockers": "",
+                    },
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = mod.build_refine_tier_public_benchmark_statistical_support_candidate_queue(
+        statistical_support_work_order_json=stat_json,
+        current_work_order_csv=current_work_order,
+        seed_csv=seed_csv,
+        affinity_tsv=affinity_tsv,
+        dataset_dir=dataset_dir,
+        candidate_fill_json=candidate_fill_json,
+        root=tmp_path,
+    )
+
+    summary = payload["summary"]
+    rows = payload["rows"]
+    assert summary["status"] == "refine_tier_public_benchmark_statistical_support_candidate_queue_ready"
+    assert summary["candidate_source_mode"] == "candidate_fill_recovery"
+    assert summary["seed_csv_source_row_count"] == 0
+    assert summary["seed_source_row_count"] == 2
+    assert summary["local_pose_inventory_pose_row_count"] == 2
+    assert summary["candidate_fill_recovery_candidate_count"] == 2
+    assert summary["candidate_fill_recovery_payload_write_allowed"] is False
+    assert summary["candidate_fill_recovery_claim_promotion_allowed"] is False
+    assert summary["selected_candidate_count"] == 2
+    assert summary["ligand_pose_artifact_present_count"] == 2
+    assert summary["receptor_coordinate_artifact_present_count"] == 2
+    assert summary["candidate_ready_for_metric_materialization_count"] == 2
+    assert [row["target_id"] for row in rows] == ["new1", "new2"]
+    assert rows[0]["required_split"] == "holdout"
+    assert rows[1]["suggested_split"] == "holdout"
+
+
 def test_statistical_support_candidate_queue_cli_writes_outputs(tmp_path: Path) -> None:
     stat_json = tmp_path / "stat.json"
     current_work_order = tmp_path / "work_order.csv"

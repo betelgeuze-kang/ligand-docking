@@ -171,6 +171,14 @@ def _split(value: Any) -> list[str]:
     return [item for item in _text(value).split(";") if item]
 
 
+def _missing_true_fields(summary: dict[str, Any], expected: dict[str, Any]) -> list[str]:
+    return [
+        str(field)
+        for field in expected.get("true_fields", [])
+        if summary.get(str(field)) is not True
+    ]
+
+
 def _materialized_metric_ready(materialization: dict[str, Any]) -> bool:
     row_count = _int(materialization.get("materialized_row_count"))
     return bool(
@@ -393,6 +401,7 @@ def _row(
     action_row: dict[str, Any],
     receipt_row: dict[str, Any],
     public_benchmark_summary: dict[str, Any],
+    public_benchmark_present: bool,
     public_work_order_present: bool,
     public_work_order_row_count: int,
     public_apply_summary: dict[str, Any],
@@ -453,6 +462,19 @@ def _row(
         public_apply_ready=public_apply_ready,
     )
     expected = EXPECTED_EVIDENCE.get(blocker_id, {})
+    if blocker_id == PUBLIC_BENCHMARK_BLOCKER:
+        acceptance_artifact_present = public_benchmark_present
+        acceptance_artifact_status = _text(public_benchmark_summary.get("status")) or "missing"
+        acceptance_missing_true_fields = _missing_true_fields(public_benchmark_summary, expected)
+    else:
+        receipt_observed_status = _text(receipt_row.get("observed_evidence_status"))
+        acceptance_artifact_present = bool(receipt_observed_status and receipt_observed_status != "missing")
+        acceptance_artifact_status = receipt_observed_status or "missing"
+        acceptance_missing_true_fields = _split(receipt_row.get("missing_true_fields"))
+    acceptance_artifact_claim_ready = bool(
+        acceptance_artifact_status == _text(expected.get("status"))
+        and not acceptance_missing_true_fields
+    )
     return {
         "priority": priority,
         "blocker_id": blocker_id,
@@ -493,6 +515,10 @@ def _row(
         "expected_true_fields": ";".join(str(field) for field in expected.get("true_fields", [])),
         "observed_evidence_status": _text(receipt_row.get("observed_evidence_status")) or "missing",
         "missing_true_fields": _text(receipt_row.get("missing_true_fields")),
+        "acceptance_artifact_present": acceptance_artifact_present,
+        "acceptance_artifact_status": acceptance_artifact_status,
+        "acceptance_artifact_claim_ready": acceptance_artifact_claim_ready,
+        "acceptance_artifact_missing_true_fields": ";".join(acceptance_missing_true_fields),
         "operator_input_required": _text(receipt_row.get("row_status")) != "pass",
         "approval_token_required": APPROVAL_TOKEN,
         "prerequisite_blocker_id": "" if blocker_id == PUBLIC_BENCHMARK_BLOCKER else PUBLIC_BENCHMARK_BLOCKER,
@@ -1118,6 +1144,7 @@ def build_engine_refinement_claim_evidence_priority_packet(
             action_row=action_by_blocker.get(blocker_id, {}),
             receipt_row=receipt_by_blocker.get(blocker_id, {}),
             public_benchmark_summary=public_summary,
+            public_benchmark_present=public_present,
             public_work_order_present=public_work_order_present,
             public_work_order_row_count=len(public_work_order_rows),
             public_apply_summary=public_apply_summary,
@@ -1664,6 +1691,14 @@ def build_engine_refinement_claim_evidence_priority_packet(
         "top_priority_bucket": _text(public_first.get("priority_bucket")),
         "top_required_input": _text(public_first.get("required_input")),
         "top_acceptance_artifact": _text(public_first.get("acceptance_artifact")),
+        "top_acceptance_artifact_present": bool(public_first.get("acceptance_artifact_present") is True),
+        "top_acceptance_artifact_status": _text(public_first.get("acceptance_artifact_status")),
+        "top_acceptance_artifact_claim_ready": bool(
+            public_first.get("acceptance_artifact_claim_ready") is True
+        ),
+        "top_acceptance_artifact_missing_true_fields": _split(
+            public_first.get("acceptance_artifact_missing_true_fields")
+        ),
         "top_verification_command": _text(public_first.get("verification_command")),
         "top_next_operator_step": _text(public_first.get("next_operator_step")),
         "approval_token_required": APPROVAL_TOKEN,
@@ -1769,6 +1804,12 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"- top_blocker_id: `{summary['top_blocker_id']}`",
         f"- top_priority_bucket: `{summary['top_priority_bucket']}`",
         f"- top_required_input: `{summary['top_required_input']}`",
+        f"- top_acceptance_artifact: `{summary['top_acceptance_artifact']}`",
+        f"- top_acceptance_artifact_present: `{summary['top_acceptance_artifact_present']}`",
+        f"- top_acceptance_artifact_status: `{summary['top_acceptance_artifact_status']}`",
+        f"- top_acceptance_artifact_claim_ready: `{summary['top_acceptance_artifact_claim_ready']}`",
+        "- top_acceptance_artifact_missing_true_fields: "
+        f"`{';'.join(summary['top_acceptance_artifact_missing_true_fields'])}`",
         f"- approval_token_required: `{summary['approval_token_required']}`",
         "",
         "## Rows",
@@ -1825,6 +1866,10 @@ def main(argv: list[str] | None = None) -> None:
         default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_TEMPLATES_JSON,
     )
     parser.add_argument(
+        "--public-benchmark-statistical-support-metric-source-payload-operator-receipt-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON,
+    )
+    parser.add_argument(
         "--public-benchmark-statistical-support-coordinate-fetch-r4-preflight-json",
         default=DEFAULT_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_COORDINATE_FETCH_R4_PREFLIGHT_JSON,
     )
@@ -1858,6 +1903,9 @@ def main(argv: list[str] | None = None) -> None:
         ),
         public_benchmark_statistical_support_metric_source_templates_json=(
             args.public_benchmark_statistical_support_metric_source_templates_json
+        ),
+        public_benchmark_statistical_support_metric_source_payload_operator_receipt_json=(
+            args.public_benchmark_statistical_support_metric_source_payload_operator_receipt_json
         ),
         public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json=(
             args.public_benchmark_statistical_support_coordinate_fetch_r4_preflight_json

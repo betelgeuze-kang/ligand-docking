@@ -285,3 +285,54 @@ def test_api_runner_profile_promotion_readiness_ready_for_delivery_oriented_prof
     assert row["delivery_oriented"] is True
     assert row["evidence_bundle_template_declared"] is True
     assert "evidence_bundle_template_missing" not in row["blockers"]
+
+
+def test_api_runner_profile_promotion_readiness_uses_runtime_runner_allowlist_for_tier_beta(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    profile = {
+        "enabled": True,
+        "profile_id": "tier_beta_biodiscovery_direct",
+        "runner_script": "tools/run_tier_beta_vertical_slice.py",
+        "arguments": [],
+        "result_file_template": "{job_results_dir}/tier_beta_result.json",
+        "claim_boundary": "restricted tier beta scope",
+        "evidence_bundle_template": "{job_results_dir}/tier_beta_evidence_bundle.json",
+        "production_readiness": {
+            "claim_scope": "restricted_local_tier_beta_biodiscovery_vertical_slice",
+            "evidence_artifact": "evidence/tier_beta_biodiscovery_direct.evidence.json",
+        },
+    }
+    (tmp_path / "profiles" / "tier_beta_biodiscovery_direct.json").parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "profiles" / "tier_beta_biodiscovery_direct.json").write_text(
+        json.dumps(profile) + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools" / "run_tier_beta_vertical_slice.py").parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "tools" / "run_tier_beta_vertical_slice.py").write_text("# tier beta runner\n", encoding="utf-8")
+    evidence = {
+        "profile_id": "tier_beta_biodiscovery_direct",
+        "input_contract_reviewed": True,
+        "output_contract_reviewed": True,
+        "claim_boundary_reviewed": True,
+        "gate_policy_reviewed": True,
+        "fake_result_emission_forbidden": True,
+        "gate_policy_artifact": "runs/tier_beta_gate.json",
+        "reviewer": "operator",
+        "reviewed_at_utc": "2026-06-23T01:45:00Z",
+    }
+    evidence_path = tmp_path / "evidence" / "tier_beta_biodiscovery_direct.evidence.json"
+    evidence_path.parent.mkdir(parents=True)
+    evidence_path.write_text(json.dumps(evidence) + "\n", encoding="utf-8")
+
+    payload = mod.build_api_runner_profile_promotion_readiness(
+        profiles_dir=tmp_path / "profiles",
+        evidence_dir=tmp_path / "evidence",
+    )
+
+    row = payload["rows"][0]
+    assert payload["summary"]["status"] == "api_runner_profile_promotion_ready"
+    assert row["runner_allowlisted"] is True
+    assert row["promotion_ready"] is True
+    assert "runner_script_not_allowlisted" not in row["blockers"]

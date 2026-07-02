@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import datetime as dt
 import json
 import re
 from pathlib import Path
@@ -99,6 +100,17 @@ def _read_csv(path_like: str | Path, *, root: Path = ROOT) -> tuple[list[str], l
         return list(reader.fieldnames or []), rows
 
 
+def _reviewed_at_valid(value: Any) -> bool:
+    text = _text(value)
+    if not text:
+        return False
+    try:
+        parsed = dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return parsed.tzinfo is not None
+
+
 def _write_json(path_like: str | Path, payload: dict[str, Any], *, root: Path = ROOT) -> None:
     path = _resolve(path_like, root=root)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -149,8 +161,8 @@ def _row_status(row: dict[str, str], *, row_index: int, schema_ready: bool) -> d
         blockers.append("reviewer_signoff_not_approved")
     if not _text(row.get("reviewer_id")):
         blockers.append("reviewer_id_missing")
-    if not _text(row.get("reviewed_at_utc")):
-        blockers.append("reviewed_at_utc_missing")
+    if not _reviewed_at_valid(row.get("reviewed_at_utc")):
+        blockers.append("reviewed_at_utc_missing_or_invalid")
     if not SHA256_RE.match(_text(row.get("source_artifact_fingerprint")).lower()):
         blockers.append("source_artifact_fingerprint_not_sha256")
     blockers.extend(_private_column_blockers(row))
@@ -217,6 +229,8 @@ def build_customer_shadow_evidence_status(
         "customer_shadow_minimum_met": completed_case_count >= min_completed_cases,
         "customer_raw_data_stored_in_repo": raw_data_stored_in_repo_observed,
         "redistribution_allowed_required_value": False,
+        "paid_pilot_evidence_ready": ready,
+        "paid_pilot_claim_allowed": False,
         "commercial_readiness_promotion_allowed": False,
         "readiness_promotion_allowed": False,
         "execution_enabled": False,

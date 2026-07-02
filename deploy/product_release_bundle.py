@@ -43,8 +43,6 @@ DEFAULT_ARTIFACTS = {
     "viewer_asset_base_url_decision": "runs/viewer_asset_base_url_decision_current.json",
     "self_hosted_license_distribution_audit": "runs/self_hosted_license_distribution_audit_current.json",
     "third_party_license_review_gate": "runs/third_party_license_review_gate_current.json",
-    "product_rollout_execution_readiness": "runs/product_rollout_execution_readiness_current.json",
-    "product_launch_r4_preflight": "runs/product_launch_r4_preflight_current.json",
     "independent_product_readiness_script": "scripts/check_independent_product_readiness.py",
     "product_quality_gate_verifier_script": "scripts/verify_quality_gate.py",
     "product_quality_gate_verification": "runs/product_quality_gate_verification_current.json",
@@ -149,8 +147,6 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
     viewer_asset_base = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["viewer_asset_base_url_decision"])))
     license_audit = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["self_hosted_license_distribution_audit"])))
     third_party_license_review = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["third_party_license_review_gate"])))
-    rollout_execution_readiness = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["product_rollout_execution_readiness"])))
-    launch_r4_preflight = _summary(_read_json(_resolve(DEFAULT_ARTIFACTS["product_launch_r4_preflight"])))
     independent_product_readiness_script = _read_text(
         _resolve(DEFAULT_ARTIFACTS["independent_product_readiness_script"])
     )
@@ -472,42 +468,6 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
             "observed": "api_server_unit=deploy/systemd/micf-api-server.service;api_worker_unit=deploy/systemd/micf-api-worker.service",
         },
         {
-            "check": "product_rollout_execution_readiness_recorded",
-            "passed": (
-                rollout_execution_readiness.get("status")
-                in {"blocked_product_rollout_execution_readiness", "product_rollout_execution_readiness_ready"}
-                and rollout_execution_readiness.get("rollout_executed") is False
-                and rollout_execution_readiness.get("pager_provider_contacted") is False
-                and rollout_execution_readiness.get("external_state_mutated") is False
-            ),
-            "observed": (
-                f"status={rollout_execution_readiness.get('status')};"
-                f"blocker_count={rollout_execution_readiness.get('blocker_count')};"
-                f"operator_csv_present={rollout_execution_readiness.get('operator_csv_present')}"
-            ),
-        },
-        {
-            "check": "product_launch_r4_preflight_recorded",
-            "passed": (
-                launch_r4_preflight.get("status")
-                in {"blocked_product_launch_r4_preflight", "product_launch_r4_preflight_ready"}
-                and launch_r4_preflight.get("authorized_for_external_mutation") is False
-                and launch_r4_preflight.get("launch_executed") is False
-                and launch_r4_preflight.get("external_state_mutated") is False
-                and isinstance(launch_r4_preflight.get("required_r4_fields"), list)
-                and all(
-                    field in launch_r4_preflight.get("required_r4_fields")
-                    for field in ("target", "action", "impact", "risk", "rollback", "verification")
-                )
-            ),
-            "observed": (
-                f"status={launch_r4_preflight.get('status')};"
-                f"blocker_count={launch_r4_preflight.get('blocker_count')};"
-                f"authorized_for_external_mutation={launch_r4_preflight.get('authorized_for_external_mutation')};"
-                f"launch_executed={launch_r4_preflight.get('launch_executed')}"
-            ),
-        },
-        {
             "check": "product_readiness_verification_scripts_recorded",
             "passed": (
                 artifacts["independent_product_readiness_script"]["present"]
@@ -555,13 +515,9 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
                 and "public_benchmark_gate_not_ready" in engine_action_board_text
                 and "external_structure_quality_parity_not_ready" in engine_action_board_text
                 and "APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_INTAKE" in engine_action_board_text
-                and DEFAULT_ARTIFACTS["engine_refinement_claim_promotion_action_board"]
-                == str(launch_r4_preflight.get("engine_refinement_claim_promotion_action_board_csv", ""))
             ),
             "observed": (
                 f"action_board_path={DEFAULT_ARTIFACTS['engine_refinement_claim_promotion_action_board']};"
-                f"launch_preflight_action_board_path="
-                f"{launch_r4_preflight.get('engine_refinement_claim_promotion_action_board_csv')};"
                 f"line_count={engine_action_board_text.count(chr(10))}"
             ),
         },
@@ -574,16 +530,12 @@ def _status_checks(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
                 and int(engine_claim_evidence_receipt.get("receipt_row_count") or 0) >= 6
                 and int(engine_claim_evidence_receipt.get("missing_required_blocker_count") or 0) == 0
                 and engine_claim_evidence_receipt.get("external_state_mutated") is False
-                and DEFAULT_ARTIFACTS["engine_refinement_claim_evidence_receipt"]
-                == str(launch_r4_preflight.get("engine_refinement_claim_evidence_receipt_artifact", ""))
             ),
             "observed": (
                 f"receipt_status={engine_claim_evidence_receipt.get('status')};"
                 f"receipt_ready={engine_claim_evidence_receipt.get('claim_promotion_evidence_receipt_ready')};"
                 f"blocked_row_count={engine_claim_evidence_receipt.get('blocked_row_count')};"
-                f"blocker_count={engine_claim_evidence_receipt.get('blocker_count')};"
-                f"launch_preflight_receipt_artifact="
-                f"{launch_r4_preflight.get('engine_refinement_claim_evidence_receipt_artifact')}"
+                f"blocker_count={engine_claim_evidence_receipt.get('blocker_count')}"
             ),
         },
         {

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import importlib
 from pathlib import Path
 from typing import Any
 
@@ -135,6 +136,39 @@ def _route_decorators(root: Path, rel_path: str) -> set[tuple[str, str]]:
     return routes
 
 
+def _normalize_product_route_path(path: str) -> str:
+    if path == "/product":
+        return "/"
+    if path.startswith("/product/"):
+        return path[len("/product") :]
+    return path
+
+
+def _app_product_routes() -> set[tuple[str, str]]:
+    try:
+        main = importlib.import_module("api.main")
+    except Exception:
+        return set()
+    app = getattr(main, "app", None)
+    routes: set[tuple[str, str]] = set()
+    for route in getattr(app, "routes", []) or []:
+        path = _text(getattr(route, "path", ""))
+        if not path.startswith("/product"):
+            continue
+        for method in getattr(route, "methods", set()) or set():
+            method_text = _text(method).upper()
+            if method_text in {"GET", "POST"}:
+                routes.add((method_text, _normalize_product_route_path(path)))
+    return routes
+
+
+def _product_api_routes(root: Path) -> set[tuple[str, str]]:
+    app_routes = _app_product_routes() if (root / "api" / "main.py").is_file() else set()
+    if app_routes:
+        return app_routes
+    return _route_decorators(root, "api/product.py")
+
+
 def _row(
     *,
     check: str,
@@ -171,7 +205,7 @@ def _blocker(row: dict[str, Any]) -> dict[str, str]:
 
 def build_product_service_boundary_contract(*, root: str | Path = ".") -> dict[str, Any]:
     root_path = Path(root).resolve()
-    api_routes = _route_decorators(root_path, "api/product.py")
+    api_routes = _product_api_routes(root_path)
     api_missing = sorted(EXPECTED_API_ROUTES - api_routes)
     api_extra = sorted(route for route in api_routes if route[1].startswith("/") and route not in EXPECTED_API_ROUTES)
 

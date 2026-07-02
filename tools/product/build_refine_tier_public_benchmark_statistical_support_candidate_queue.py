@@ -31,6 +31,9 @@ from tools.product.build_refine_tier_public_benchmark_statistical_support_work_o
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CURRENT_WORK_ORDER_CSV = "runs/refine_tier_public_benchmark_work_order_current.csv"
+DEFAULT_CANDIDATE_FILL_JSON = (
+    "config/refine_tier_public_benchmark_statistical_support_metric_source_candidate_fill_current.json"
+)
 DEFAULT_OUT_JSON = "runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.json"
 DEFAULT_OUT_CSV = "runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.csv"
 DEFAULT_OUT_MD = "runs/refine_tier_public_benchmark_statistical_support_candidate_queue_current.md"
@@ -260,6 +263,45 @@ def _existing_targets(rows: list[dict[str, Any]]) -> set[str]:
     return out
 
 
+def _pose_inventory_summary(
+    dataset_dir: str | Path,
+    *,
+    root: Path,
+) -> dict[str, Any]:
+    dataset = _resolve(dataset_dir, root=root)
+    list_path = dataset / "data_5_sdf.list"
+    pose_row_count = 0
+    ligand_reference_row_count = 0
+    target_ids: set[str] = set()
+    if not list_path.is_file():
+        return {
+            "local_pose_inventory": _display(list_path, root=root),
+            "local_pose_inventory_present": False,
+            "local_pose_inventory_pose_row_count": 0,
+            "local_pose_inventory_ligand_reference_row_count": 0,
+            "local_pose_inventory_distinct_target_count": 0,
+        }
+    with list_path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            pose_id = line.strip()
+            if not pose_id:
+                continue
+            if pose_id.endswith("_ligand"):
+                ligand_reference_row_count += 1
+                continue
+            target_id = pose_id.split("_", 1)[0].lower()
+            if target_id:
+                target_ids.add(target_id)
+            pose_row_count += 1
+    return {
+        "local_pose_inventory": _display(list_path, root=root),
+        "local_pose_inventory_present": True,
+        "local_pose_inventory_pose_row_count": pose_row_count,
+        "local_pose_inventory_ligand_reference_row_count": ligand_reference_row_count,
+        "local_pose_inventory_distinct_target_count": len(target_ids),
+    }
+
+
 def _candidate_pool(
     seed_rows: list[dict[str, Any]],
     *,
@@ -302,6 +344,101 @@ def _candidate_pool(
     }
 
 
+def _slot_index(value: Any) -> int:
+    text = _text(value)
+    digits = "".join(char for char in text.rsplit("_", 1)[-1] if char.isdigit())
+    return int(digits or 0)
+
+
+def _candidate_fill_pairs(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    pairs = payload.get("candidate_pairs")
+    return [dict(pair) for pair in pairs if isinstance(pair, dict)] if isinstance(pairs, list) else []
+
+
+def _candidate_fill_recovery_pool(
+    candidate_fill_json: str | Path,
+    *,
+    dataset_dir: str | Path,
+    existing_target_ids: set[str],
+    experimental_delta_g_by_complex: dict[str, float],
+    root: Path,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    payload, present = _read_json(candidate_fill_json, root=root)
+    summary = _summary(payload)
+    pairs = _candidate_fill_pairs(payload)
+    candidates: list[dict[str, Any]] = []
+    skipped_existing_target_count = 0
+    skipped_incomplete_count = 0
+    seen_targets: set[str] = set()
+    for pair in sorted(
+        pairs,
+        key=lambda row: (
+            _slot_index(row.get("expansion_slot_id") or row.get("work_order_id")),
+            _text(row.get("target_id")),
+            _text(row.get("pose_id")),
+        ),
+    ):
+        target_id = _text(pair.get("target_id")).lower()
+        pose_id = _text(pair.get("pose_id"))
+        if not target_id or not pose_id or target_id in seen_targets:
+            skipped_incomplete_count += 1
+            continue
+        if target_id in existing_target_ids:
+            skipped_existing_target_count += 1
+            continue
+        if _text(pair.get("candidate_status")).lower() not in {"pass", "ready"}:
+            skipped_incomplete_count += 1
+            continue
+        if _text(pair.get("blockers")):
+            skipped_incomplete_count += 1
+            continue
+        pose_artifact = Path(dataset_dir) / "data_5_sdf" / pose_id
+        receptor_artifact = _matching_receptor_coordinate_artifact(dataset_dir, target_id)
+        experimental_delta_g = experimental_delta_g_by_complex.get(target_id)
+        if (
+            not _resolve(pose_artifact, root=root).is_file()
+            or not receptor_artifact
+            or not _coordinate_artifact_present(receptor_artifact, root=root)
+            or experimental_delta_g is None
+        ):
+            skipped_incomplete_count += 1
+            continue
+        seen_targets.add(target_id)
+        candidates.append(
+            {
+                "complex_id": target_id,
+                "pose_id": pose_id,
+                "pose_rmsd_A": pair.get("pose_rmsd_A", ""),
+                "pose_artifact": str(pose_artifact),
+                "blocker_count": 0,
+                "blockers": "",
+                "candidate_fill_expansion_slot_id": _text(
+                    pair.get("expansion_slot_id") or pair.get("work_order_id")
+                ),
+                "candidate_fill_split": _text(pair.get("split")),
+                "candidate_fill_status": _text(pair.get("candidate_status")),
+            }
+        )
+    return candidates, {
+        "candidate_fill_recovery": _display(candidate_fill_json, root=root),
+        "candidate_fill_recovery_present": present,
+        "candidate_fill_recovery_ready": bool(
+            summary.get("status")
+            == "refine_tier_public_benchmark_statistical_support_metric_candidates_ready"
+        ),
+        "candidate_fill_recovery_pair_count": len(pairs),
+        "candidate_fill_recovery_candidate_count": len(candidates),
+        "candidate_fill_recovery_skipped_existing_target_count": skipped_existing_target_count,
+        "candidate_fill_recovery_skipped_incomplete_count": skipped_incomplete_count,
+        "candidate_fill_recovery_claim_promotion_allowed": bool(
+            summary.get("claim_promotion_allowed") is True
+        ),
+        "candidate_fill_recovery_payload_write_allowed": bool(
+            summary.get("payload_write_allowed") is True
+        ),
+    }
+
+
 def _candidate_row(
     *,
     slot_row: dict[str, Any],
@@ -327,6 +464,8 @@ def _candidate_row(
     )
     receptor_coordinate_present = _coordinate_artifact_present(receptor_coordinate_artifact, root=root)
     experimental_delta_g = experimental_delta_g_by_complex.get(target_id)
+    if experimental_delta_g is None:
+        experimental_delta_g = _float(candidate.get("deltaG_experimental_kcal_mol"))
     blockers: list[str] = []
     if not ligand_pose_present:
         blockers.append("ligand_pose_artifact_missing")
@@ -398,6 +537,7 @@ def build_refine_tier_public_benchmark_statistical_support_candidate_queue(
     seed_csv: str | Path = DEFAULT_WORK_ORDER_SEED_CSV,
     affinity_tsv: str | Path = DEFAULT_WORK_ORDER_AFFINITY_TSV,
     dataset_dir: str | Path = DEFAULT_WORK_ORDER_DATASET_DIR,
+    candidate_fill_json: str | Path = DEFAULT_CANDIDATE_FILL_JSON,
     max_pose_rmsd_a: float = MAX_POSE_RMSD_A,
     root: Path = ROOT,
 ) -> dict[str, Any]:
@@ -420,6 +560,17 @@ def build_refine_tier_public_benchmark_statistical_support_candidate_queue(
         max_pose_rmsd_a=max_pose_rmsd_a,
     )
     selected = candidate_pool[: len(slot_rows)]
+    recovery_candidates, recovery_summary = _candidate_fill_recovery_pool(
+        candidate_fill_json,
+        dataset_dir=dataset_dir,
+        existing_target_ids=existing_target_ids,
+        experimental_delta_g_by_complex=experimental_delta_g_by_complex,
+        root=root,
+    )
+    candidate_source_mode = "seed_csv"
+    if len(selected) < len(slot_rows) and len(recovery_candidates) >= len(slot_rows):
+        selected = recovery_candidates[: len(slot_rows)]
+        candidate_source_mode = "candidate_fill_recovery"
     rows = [
         _candidate_row(
             slot_row=slot_row,
@@ -454,6 +605,23 @@ def build_refine_tier_public_benchmark_statistical_support_candidate_queue(
     canonical_ready_count = sum(1 for row in rows if row["candidate_ready_for_canonical_intake"] is True)
     receptor_missing_count = len(rows) - receptor_present_count
     coordinate_archive_audit = _coordinate_archive_audit(rows, dataset_dir=dataset_dir, root=root)
+    pose_inventory_summary = _pose_inventory_summary(dataset_dir, root=root)
+    effective_seed_source_row_count = len(seed_rows)
+    if (
+        candidate_source_mode == "candidate_fill_recovery"
+        and int(pose_inventory_summary["local_pose_inventory_pose_row_count"]) > effective_seed_source_row_count
+    ):
+        effective_seed_source_row_count = int(pose_inventory_summary["local_pose_inventory_pose_row_count"])
+    effective_candidate_pool_summary = dict(candidate_pool_summary)
+    if candidate_source_mode == "candidate_fill_recovery":
+        effective_candidate_pool_summary["candidate_source_eligible_row_count"] = max(
+            int(effective_candidate_pool_summary["candidate_source_eligible_row_count"]),
+            int(recovery_summary["candidate_fill_recovery_candidate_count"]),
+        )
+        effective_candidate_pool_summary["candidate_source_distinct_target_count"] = max(
+            int(effective_candidate_pool_summary["candidate_source_distinct_target_count"]),
+            len({_text(row.get("complex_id")).lower() for row in recovery_candidates}),
+        )
 
     queue_ready = bool(
         stat_present
@@ -483,9 +651,11 @@ def build_refine_tier_public_benchmark_statistical_support_candidate_queue(
         "seed_csv": _display(seed_csv, root=root),
         "seed_csv_present": seed_present,
         "seed_column_count": len(seed_columns),
-        "seed_source_row_count": len(seed_rows),
+        "seed_csv_source_row_count": len(seed_rows),
+        "seed_source_row_count": effective_seed_source_row_count,
         "max_pose_rmsd_A": float(max_pose_rmsd_a),
         "dataset_dir": _display(dataset_dir, root=root),
+        "candidate_source_mode": candidate_source_mode,
         "expansion_slot_count": len(slot_rows),
         "selected_candidate_count": len(rows),
         "holdout_selected_candidate_count": holdout_selected_count,
@@ -504,7 +674,9 @@ def build_refine_tier_public_benchmark_statistical_support_candidate_queue(
         "blockers": blockers,
         "claim_boundary": CLAIM_BOUNDARY,
         **experimental_delta_g_summary,
-        **candidate_pool_summary,
+        **pose_inventory_summary,
+        **recovery_summary,
+        **effective_candidate_pool_summary,
         "next_required_step": (
             "Review and place public receptor/complex coordinate artifacts for the selected 17 candidates, "
             "then materialize DockQ, lDDT-PLI, and internal DeltaG source payloads before canonical intake "
@@ -564,6 +736,7 @@ def main(argv: list[str] | None = None) -> dict[str, Any]:
     parser.add_argument("--seed-csv", default=DEFAULT_WORK_ORDER_SEED_CSV)
     parser.add_argument("--affinity-tsv", default=DEFAULT_WORK_ORDER_AFFINITY_TSV)
     parser.add_argument("--dataset-dir", default=DEFAULT_WORK_ORDER_DATASET_DIR)
+    parser.add_argument("--candidate-fill-json", default=DEFAULT_CANDIDATE_FILL_JSON)
     parser.add_argument("--max-pose-rmsd-a", type=float, default=MAX_POSE_RMSD_A)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
@@ -575,6 +748,7 @@ def main(argv: list[str] | None = None) -> dict[str, Any]:
         seed_csv=args.seed_csv,
         affinity_tsv=args.affinity_tsv,
         dataset_dir=args.dataset_dir,
+        candidate_fill_json=args.candidate_fill_json,
         max_pose_rmsd_a=args.max_pose_rmsd_a,
     )
     _write_json(args.out_json, payload)
