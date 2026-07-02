@@ -119,6 +119,7 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "blocked_step_count": 2,
                 "receipt_blocked_row_count": 51,
                 "vina_gnina_comparison_adapter_score_evidence_ready": False,
+                "vina_gnina_pending_field_count": 192,
                 "comparison_adapter_same_input_row_count_match": False,
                 "primary_blocker_id": "vina_gnina_same_input_comparison",
                 "primary_blocker_next_required_step": (
@@ -261,6 +262,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "vina_gnina_score_evidence=false" in panels["public_benchmark_scorecard"]["secondary_metric"]
     assert "attach_packet_ready=false" in panels["public_benchmark_scorecard"]["secondary_metric"]
     assert "pending_scores=32" in panels["public_benchmark_scorecard"]["secondary_metric"]
+    assert "pending_score_fields=192" in panels["public_benchmark_scorecard"]["secondary_metric"]
     assert "pending_receipt_fields=510" in panels["public_benchmark_scorecard"]["secondary_metric"]
     assert "pending_receipt_tokens=51" in panels["public_benchmark_scorecard"]["secondary_metric"]
     assert panels["public_benchmark_scorecard"]["blockers"] == [

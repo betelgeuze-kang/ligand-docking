@@ -653,6 +653,7 @@ def build_product_operator_cockpit(
     public_vina_pending_scores = _int(
         public_receipt_attach_packet.get("vina_gnina_score_value_pending_count")
     )
+    public_vina_pending_fields = _int(public_benchmark.get("vina_gnina_pending_field_count"))
     public_metric_pending_fields = _int(
         public_receipt_attach_packet.get("metric_source_receipt_manual_field_pending_count")
     )
@@ -875,6 +876,7 @@ def build_product_operator_cockpit(
                 ),
                 _metric("attach_packet_ready", public_attach_ready),
                 _metric("pending_scores", public_vina_pending_scores),
+                _metric("pending_score_fields", public_vina_pending_fields),
                 _metric("pending_receipt_fields", public_metric_pending_fields),
                 _metric("pending_receipt_tokens", public_metric_pending_tokens),
                 _metric(

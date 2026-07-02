@@ -93,6 +93,8 @@ def test_vina_gnina_score_template_receipt_ready_when_all_rows_reviewed(tmp_path
     assert summary["comparison_score_evidence_ready"] is True
     assert summary["score_template_row_count"] == 2
     assert summary["score_template_filled_score_row_count"] == 2
+    assert summary["pending_field_count"] == 0
+    assert summary["pending_field_counts"] == {}
     assert summary["blocker_count"] == 0
     assert summary["claim_promotion_allowed"] is False
     assert summary["execution_enabled"] is False
@@ -123,9 +125,14 @@ def test_vina_gnina_score_template_receipt_blocks_empty_operator_template(tmp_pa
     assert summary["score_template_receipt_ready"] is False
     assert summary["score_value_pending_count"] == 2
     assert summary["operator_placeholder_pending_count"] == 2
+    assert summary["pending_field_counts"]["vina_score"] == 1
+    assert summary["pending_field_counts"]["gnina_score"] == 1
+    assert summary["pending_field_counts"]["approval_token"] == 1
     assert "same_input_score_values_pending" in blockers
     assert "approval_token_pending" in blockers
     assert payload["rows"][0]["status"] == "blocked"
+    assert "vina_score" in payload["rows"][0]["missing_fields"]
+    assert "approval_token" in payload["rows"][0]["missing_fields"]
 
 
 def test_vina_gnina_score_template_receipt_blocks_row_count_mismatch(tmp_path: Path) -> None:

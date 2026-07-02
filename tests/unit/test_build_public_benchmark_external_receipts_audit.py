@@ -127,6 +127,23 @@ def _write_inputs(
             "operator_placeholder_pending_count": 0 if comparison_ready else 96,
             "license_ok_pending_count": 0 if comparison_ready else 16,
             "approval_token_pending_count": 0 if comparison_ready else 16,
+            "pending_field_count": 0 if comparison_ready else 192,
+            "pending_field_counts": {}
+            if comparison_ready
+            else {
+                "approval_token": 16,
+                "comparison_score_artifact_path": 16,
+                "comparison_score_artifact_sha256": 16,
+                "comparison_score_source": 16,
+                "gnina_score": 16,
+                "license_ok": 16,
+                "operator_engine_versions": 16,
+                "operator_id": 16,
+                "operator_method": 16,
+                "operator_prep_policy_sha256": 16,
+                "operator_reviewed_at_utc": 16,
+                "vina_score": 16,
+            },
             "score_template_blocker_count": 0 if comparison_ready else 5,
             "score_template_blockers": []
             if comparison_ready
@@ -160,6 +177,23 @@ def _write_inputs(
             "operator_placeholder_pending_count": 0 if comparison_ready else 96,
             "license_ok_pending_count": 0 if comparison_ready else 16,
             "approval_token_pending_count": 0 if comparison_ready else 16,
+            "pending_field_count": 0 if comparison_ready else 192,
+            "pending_field_counts": {}
+            if comparison_ready
+            else {
+                "approval_token": 16,
+                "comparison_score_artifact_path": 16,
+                "comparison_score_artifact_sha256": 16,
+                "comparison_score_source": 16,
+                "gnina_score": 16,
+                "license_ok": 16,
+                "operator_engine_versions": 16,
+                "operator_id": 16,
+                "operator_method": 16,
+                "operator_prep_policy_sha256": 16,
+                "operator_reviewed_at_utc": 16,
+                "vina_score": 16,
+            },
             "score_template_blocker_count": 0 if comparison_ready else 5,
             "score_template_blockers": []
             if comparison_ready
@@ -218,6 +252,9 @@ def test_public_benchmark_external_receipts_audit_blocks_unapproved_receipts(
     assert summary["vina_gnina_operator_placeholder_pending_count"] == 96
     assert summary["vina_gnina_license_ok_pending_count"] == 16
     assert summary["vina_gnina_approval_token_pending_count"] == 16
+    assert summary["vina_gnina_pending_field_count"] == 192
+    assert summary["vina_gnina_pending_field_counts"]["vina_score"] == 16
+    assert summary["vina_gnina_pending_field_counts"]["approval_token"] == 16
     assert summary["vina_gnina_score_template_blocker_count"] == 5
     assert "approval_token_pending" in summary["vina_gnina_score_template_blockers"]
     assert summary["vina_gnina_score_template_csv"] == (
@@ -245,6 +282,7 @@ def test_public_benchmark_external_receipts_audit_ready_when_all_steps_pass(
     assert summary["vina_gnina_score_template_validation_ready"] is True
     assert summary["vina_gnina_score_template_receipt_ready"] is True
     assert summary["vina_gnina_score_value_pending_count"] == 0
+    assert summary["vina_gnina_pending_field_count"] == 0
     assert summary["receipt_blocked_row_count"] == 0
     assert summary["claim_promotion_allowed"] is False
 

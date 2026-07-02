@@ -41,6 +41,7 @@ CSV_FIELDS = [
     "metadata_ready",
     "license_ok",
     "approval_token_ok",
+    "missing_fields",
     "blocker",
 ]
 
@@ -146,6 +147,14 @@ def _row_status(row: dict[str, Any]) -> dict[str, Any]:
         blockers.append("license_ok_pending")
     if not approval_token_ok:
         blockers.append("approval_token_pending")
+    missing_fields = [
+        *missing_score_fields,
+        *missing_metadata_fields,
+    ]
+    if not license_ok:
+        missing_fields.append("license_ok")
+    if not approval_token_ok:
+        missing_fields.append("approval_token")
     return {
         "pose_id": _text(row.get("pose_id")),
         "complex_id": _text(row.get("complex_id")),
@@ -154,8 +163,19 @@ def _row_status(row: dict[str, Any]) -> dict[str, Any]:
         "metadata_ready": not missing_metadata_fields,
         "license_ok": license_ok,
         "approval_token_ok": approval_token_ok,
+        "missing_fields": ";".join(missing_fields),
         "blocker": ";".join(blockers),
     }
+
+
+def _pending_field_counts(row_checks: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in row_checks:
+        for field in _text(row.get("missing_fields")).split(";"):
+            if not field:
+                continue
+            counts[field] = counts.get(field, 0) + 1
+    return dict(sorted(counts.items()))
 
 
 def build_public_benchmark_vina_gnina_score_template_receipt(
@@ -168,6 +188,7 @@ def build_public_benchmark_vina_gnina_score_template_receipt(
     template_present, fieldnames, rows = _read_csv_rows(score_template_csv, root=root)
     validation = validate_vina_gnina_score_template(rows)
     row_checks = [_row_status(row) for row in rows]
+    pending_field_counts = _pending_field_counts(row_checks)
 
     missing_columns = [field for field in SCORE_TEMPLATE_FIELDS if field not in fieldnames]
     work_order_present = bool(work_order)
@@ -235,6 +256,8 @@ def build_public_benchmark_vina_gnina_score_template_receipt(
         "operator_placeholder_pending_count": validation["operator_placeholder_pending_count"],
         "license_ok_pending_count": validation["license_ok_pending_count"],
         "approval_token_pending_count": validation["approval_token_pending_count"],
+        "pending_field_count": sum(pending_field_counts.values()),
+        "pending_field_counts": pending_field_counts,
         "score_template_blocker_count": validation["score_template_blocker_count"],
         "score_template_blockers": validation["score_template_blockers"],
         "blocker_count": len(blockers),

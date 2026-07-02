@@ -258,6 +258,10 @@ def build_public_benchmark_external_receipts_audit(
         if score_template_receipt_present
         else vina_gnina_work_order
     )
+    vina_gnina_pending_field_counts = score_template_metrics.get("pending_field_counts")
+    if not isinstance(vina_gnina_pending_field_counts, dict):
+        vina_gnina_pending_field_counts = {}
+    vina_gnina_pending_field_count = sum(_int(value) for value in vina_gnina_pending_field_counts.values())
     score_template_receipt_ready = (
         score_template_receipt_present
         and _text(vina_gnina_score_template_receipt.get("status"))
@@ -438,6 +442,8 @@ def build_public_benchmark_external_receipts_audit(
             score_template_metrics.get("score_template_filled_score_row_count")
         ),
         "vina_gnina_score_value_pending_count": _int(score_template_metrics.get("score_value_pending_count")),
+        "vina_gnina_pending_field_count": vina_gnina_pending_field_count,
+        "vina_gnina_pending_field_counts": vina_gnina_pending_field_counts,
         "vina_gnina_invalid_score_value_count": _int(score_template_metrics.get("invalid_score_value_count")),
         "vina_gnina_operator_metadata_pending_count": _int(
             score_template_metrics.get("operator_metadata_pending_count")
