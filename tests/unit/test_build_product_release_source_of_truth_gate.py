@@ -6048,6 +6048,11 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
         for spec in mod.DEFAULT_ARTIFACT_SPECS
         if spec["artifact_id"] == "public_benchmark_vina_gnina_comparison_work_order"
     )
+    score_template_receipt_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "public_benchmark_vina_gnina_score_template_receipt"
+    )
     audit_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -6112,6 +6117,19 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
     assert "runs/pdbbind_casf_pose_affinity_results_current.json" in (
         comparison_work_order_spec["depends_on"]
     )
+    assert score_template_receipt_spec["artifact_path"] == (
+        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+    )
+    assert score_template_receipt_spec["builder_command"] == (
+        mod.PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_COMMAND
+    )
+    for receipt_source in (
+        "tools/product/build_public_benchmark_vina_gnina_score_template_receipt.py",
+        "tools/product/build_public_benchmark_vina_gnina_comparison_work_order.py",
+        "runs/public_benchmark_vina_gnina_comparison_work_order_current.json",
+        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
+    ):
+        assert receipt_source in score_template_receipt_spec["depends_on"]
     assert audit_spec["artifact_path"] == "runs/public_benchmark_external_receipts_audit_current.json"
     assert audit_spec["builder_command"] == mod.PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND
     for audit_source in (
@@ -6125,6 +6143,7 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
         "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv",
         "runs/benchmark_ledger_current.json",
         "runs/public_benchmark_vina_gnina_comparison_work_order_current.json",
+        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json",
     ):
         assert audit_source in audit_spec["depends_on"]
     assert receipt_attach_packet_spec["artifact_path"] == "runs/public_benchmark_receipt_attach_packet_current.json"
@@ -6133,6 +6152,7 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
         "tools/product/build_public_benchmark_receipt_attach_packet.py",
         "runs/public_benchmark_external_receipts_audit_current.json",
         "runs/public_benchmark_vina_gnina_comparison_work_order_current.json",
+        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json",
         "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
         "runs/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.json",
         "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv",
@@ -6160,6 +6180,7 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
     assert mod.HBOND_BACKMAP_REPORT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert mod.BENCHMARK_LEDGER_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert mod.PUBLIC_BENCHMARK_VINA_GNINA_COMPARISON_WORK_ORDER_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert mod.PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert mod.PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert mod.PRODUCT_OPERATOR_COCKPIT_COMMAND in mod.RELEASE_REFRESH_COMMANDS

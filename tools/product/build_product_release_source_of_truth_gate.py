@@ -94,6 +94,9 @@ BENCHMARK_LEDGER_COMMAND = "python3 tools/product/build_benchmark_ledger.py"
 PUBLIC_BENCHMARK_VINA_GNINA_COMPARISON_WORK_ORDER_COMMAND = (
     "python3 tools/product/build_public_benchmark_vina_gnina_comparison_work_order.py"
 )
+PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_COMMAND = (
+    "python3 tools/product/build_public_benchmark_vina_gnina_score_template_receipt.py"
+)
 PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND = (
     "python3 tools/product/build_public_benchmark_external_receipts_audit.py"
 )
@@ -235,6 +238,7 @@ RELEASE_REFRESH_COMMANDS = [
     PUBLIC_BENCHMARK_PHASE2_HARNESS_AUDIT_COMMAND,
     BENCHMARK_LEDGER_COMMAND,
     PUBLIC_BENCHMARK_VINA_GNINA_COMPARISON_WORK_ORDER_COMMAND,
+    PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_COMMAND,
     GPCR_HARD_DECOY_CURRENT_FIT_CLOSURE_PROBE_COMMAND,
     GPCR_HARD_DECOY_ADORA2A_NEUTRAL_RESCUE_PROBE_COMMAND,
     GPCR_HARD_DECOY_ADORA2A_PREREGISTERED_REPLAY_COMMAND,
@@ -305,6 +309,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/product/build_engine_refinement_claim_evidence_receipt.py",
     "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py",
     PUBLIC_BENCHMARK_VINA_GNINA_COMPARISON_WORK_ORDER_COMMAND,
+    PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_COMMAND,
     PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND,
     PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_COMMAND,
     "python3 tools/build_engine_refinement_claim_evidence_operator_field_worksheet.py",
@@ -952,6 +957,17 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "docs/docking_comparison_contract.md",
             "runs/pdbbind_casf_pose_affinity_results_current.json",
             "runs/pdbbind_casf_pose_affinity_fixed_gold_metadata_current.csv",
+        ],
+    },
+    {
+        "artifact_id": "public_benchmark_vina_gnina_score_template_receipt",
+        "artifact_path": "runs/public_benchmark_vina_gnina_score_template_receipt_current.json",
+        "builder_command": PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_COMMAND,
+        "depends_on": [
+            "tools/product/build_public_benchmark_vina_gnina_score_template_receipt.py",
+            "tools/product/build_public_benchmark_vina_gnina_comparison_work_order.py",
+            "runs/public_benchmark_vina_gnina_comparison_work_order_current.json",
+            "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
         ],
     },
     {
@@ -1845,6 +1861,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV,
             "runs/benchmark_ledger_current.json",
             "runs/public_benchmark_vina_gnina_comparison_work_order_current.json",
+            "runs/public_benchmark_vina_gnina_score_template_receipt_current.json",
         ],
     },
     {
@@ -1855,6 +1872,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "tools/product/build_public_benchmark_receipt_attach_packet.py",
             "runs/public_benchmark_external_receipts_audit_current.json",
             "runs/public_benchmark_vina_gnina_comparison_work_order_current.json",
+            "runs/public_benchmark_vina_gnina_score_template_receipt_current.json",
             "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
             R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON,
             R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV,

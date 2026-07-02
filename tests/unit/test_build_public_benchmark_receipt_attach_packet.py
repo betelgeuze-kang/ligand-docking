@@ -25,6 +25,7 @@ def _write_inputs(tmp_path: Path, *, ready: bool) -> dict[str, Path]:
     paths = {
         "audit": tmp_path / "runs/public_benchmark_external_receipts_audit_current.json",
         "work_order": tmp_path / "runs/public_benchmark_vina_gnina_comparison_work_order_current.json",
+        "score_receipt": tmp_path / "runs/public_benchmark_vina_gnina_score_template_receipt_current.json",
         "score_csv": tmp_path / "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
         "receipt": (
             tmp_path
@@ -70,6 +71,26 @@ def _write_inputs(tmp_path: Path, *, ready: bool) -> dict[str, Path]:
         ],
     )
     _write_summary(
+        paths["score_receipt"],
+        {
+            "status": "public_benchmark_vina_gnina_score_template_receipt_ready"
+            if ready
+            else "blocked_public_benchmark_vina_gnina_score_template_receipt",
+            "score_template_receipt_ready": ready,
+            "score_template_validation_ready": ready,
+            "score_template_row_count": 2,
+            "score_value_pending_count": 0 if ready else 4,
+            "operator_metadata_pending_count": 0 if ready else 16,
+            "operator_placeholder_pending_count": 0 if ready else 16,
+            "license_ok_pending_count": 0 if ready else 2,
+            "approval_token_pending_count": 0 if ready else 2,
+            "score_template_blocker_count": 0 if ready else 5,
+            "score_template_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
+            "approval_token_required": mod.VINA_GNINA_APPROVAL_TOKEN,
+            "next_required_step": "Fill every Vina/GNINA same-input score row.",
+        },
+    )
+    _write_summary(
         paths["receipt"],
         {
             "status": "refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_ready"
@@ -100,6 +121,7 @@ def _build(tmp_path: Path, *, ready: bool) -> dict:
     return mod.build_public_benchmark_receipt_attach_packet(
         external_receipts_audit_json=paths["audit"],
         vina_gnina_work_order_json=paths["work_order"],
+        vina_gnina_score_template_receipt_json=paths["score_receipt"],
         vina_gnina_score_template_csv=paths["score_csv"],
         metric_source_receipt_json=paths["receipt"],
         metric_source_receipt_csv=paths["receipt_csv"],
@@ -119,6 +141,7 @@ def test_public_benchmark_receipt_attach_packet_blocks_pending_operator_fields(t
     assert summary["blocked_lane_count"] == 2
     assert summary["primary_blocker_id"] == "vina_gnina_same_input_scores"
     assert summary["claim_promotion_allowed"] is False
+    assert summary["vina_gnina_score_template_receipt_present"] is True
     assert rows["vina_gnina_same_input_scores"]["pending_value_count"] == 4
     assert rows["vina_gnina_same_input_scores"]["pending_metadata_count"] == 32
     assert rows["vina_gnina_same_input_scores"]["pending_approval_token_count"] == 2
@@ -153,6 +176,8 @@ def test_public_benchmark_receipt_attach_packet_cli_writes_outputs(tmp_path: Pat
             str(paths["audit"]),
             "--vina-gnina-work-order-json",
             str(paths["work_order"]),
+            "--vina-gnina-score-template-receipt-json",
+            str(paths["score_receipt"]),
             "--vina-gnina-score-template-csv",
             str(paths["score_csv"]),
             "--metric-source-receipt-json",

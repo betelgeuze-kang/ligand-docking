@@ -43,6 +43,9 @@ def _write_inputs(
         ),
         "ledger": tmp_path / "runs/benchmark_ledger_current.json",
         "work_order": tmp_path / "runs/public_benchmark_vina_gnina_comparison_work_order_current.json",
+        "score_template_receipt": (
+            tmp_path / "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+        ),
     }
     _write_summary(
         paths["materialization"],
@@ -141,6 +144,35 @@ def _write_inputs(
             "next_required_step": "Fill Vina/GNINA same-input scores.",
         },
     )
+    _write_summary(
+        paths["score_template_receipt"],
+        {
+            "status": "public_benchmark_vina_gnina_score_template_receipt_ready"
+            if comparison_ready
+            else "blocked_public_benchmark_vina_gnina_score_template_receipt",
+            "score_template_receipt_ready": comparison_ready,
+            "score_template_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
+            "score_template_validation_ready": comparison_ready,
+            "score_template_filled_score_row_count": 16 if comparison_ready else 0,
+            "score_value_pending_count": 0 if comparison_ready else 32,
+            "invalid_score_value_count": 0,
+            "operator_metadata_pending_count": 0 if comparison_ready else 32,
+            "operator_placeholder_pending_count": 0 if comparison_ready else 96,
+            "license_ok_pending_count": 0 if comparison_ready else 16,
+            "approval_token_pending_count": 0 if comparison_ready else 16,
+            "score_template_blocker_count": 0 if comparison_ready else 5,
+            "score_template_blockers": []
+            if comparison_ready
+            else [
+                "same_input_score_values_pending",
+                "operator_score_metadata_pending",
+                "operator_score_placeholders_unfilled",
+                "license_ok_pending",
+                "approval_token_pending",
+            ],
+            "next_required_step": "Fill Vina/GNINA same-input scores.",
+        },
+    )
     return paths
 
 
@@ -156,6 +188,7 @@ def _build(tmp_path: Path, *, comparison_ready: bool, receipt_ready: bool) -> di
         receipt_csv=paths["receipt_csv"],
         benchmark_ledger_json=paths["ledger"],
         vina_gnina_work_order_json=paths["work_order"],
+        vina_gnina_score_template_receipt_json=paths["score_template_receipt"],
         root=tmp_path,
     )
 
@@ -176,6 +209,8 @@ def test_public_benchmark_external_receipts_audit_blocks_unapproved_receipts(
     assert summary["claim_promotion_allowed"] is False
     assert rows["benchmark_ledger_review"]["ready"] is True
     assert summary["vina_gnina_comparison_work_order_ready"] is True
+    assert summary["vina_gnina_score_template_receipt_present"] is True
+    assert summary["vina_gnina_score_template_receipt_ready"] is False
     assert summary["vina_gnina_score_template_validation_ready"] is False
     assert summary["vina_gnina_score_template_filled_score_row_count"] == 0
     assert summary["vina_gnina_score_value_pending_count"] == 32
@@ -208,6 +243,7 @@ def test_public_benchmark_external_receipts_audit_ready_when_all_steps_pass(
     assert summary["blocked_step_count"] == 0
     assert summary["blockers"] == []
     assert summary["vina_gnina_score_template_validation_ready"] is True
+    assert summary["vina_gnina_score_template_receipt_ready"] is True
     assert summary["vina_gnina_score_value_pending_count"] == 0
     assert summary["receipt_blocked_row_count"] == 0
     assert summary["claim_promotion_allowed"] is False
@@ -239,6 +275,8 @@ def test_public_benchmark_external_receipts_audit_cli_writes_outputs(tmp_path: P
             str(paths["ledger"]),
             "--vina-gnina-work-order-json",
             str(paths["work_order"]),
+            "--vina-gnina-score-template-receipt-json",
+            str(paths["score_template_receipt"]),
             "--out-json",
             str(out_json),
             "--out-csv",

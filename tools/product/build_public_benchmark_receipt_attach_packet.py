@@ -12,6 +12,9 @@ ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_EXTERNAL_RECEIPTS_AUDIT_JSON = "runs/public_benchmark_external_receipts_audit_current.json"
 DEFAULT_VINA_GNINA_WORK_ORDER_JSON = "runs/public_benchmark_vina_gnina_comparison_work_order_current.json"
+DEFAULT_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_JSON = (
+    "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+)
 DEFAULT_VINA_GNINA_SCORE_TEMPLATE_CSV = "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
 DEFAULT_METRIC_SOURCE_RECEIPT_JSON = (
     "runs/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.json"
@@ -147,6 +150,7 @@ def build_public_benchmark_receipt_attach_packet(
     *,
     external_receipts_audit_json: str | Path = DEFAULT_EXTERNAL_RECEIPTS_AUDIT_JSON,
     vina_gnina_work_order_json: str | Path = DEFAULT_VINA_GNINA_WORK_ORDER_JSON,
+    vina_gnina_score_template_receipt_json: str | Path = DEFAULT_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_JSON,
     vina_gnina_score_template_csv: str | Path = DEFAULT_VINA_GNINA_SCORE_TEMPLATE_CSV,
     metric_source_receipt_json: str | Path = DEFAULT_METRIC_SOURCE_RECEIPT_JSON,
     metric_source_receipt_csv: str | Path = DEFAULT_METRIC_SOURCE_RECEIPT_CSV,
@@ -154,30 +158,36 @@ def build_public_benchmark_receipt_attach_packet(
 ) -> dict[str, Any]:
     audit = _summary(_read_json(external_receipts_audit_json, root=root))
     vina_gnina = _summary(_read_json(vina_gnina_work_order_json, root=root))
+    vina_gnina_receipt = _summary(_read_json(vina_gnina_score_template_receipt_json, root=root))
     metric_receipt = _summary(_read_json(metric_source_receipt_json, root=root))
+    vina_gnina_receipt_present = bool(vina_gnina_receipt)
+    vina_gnina_source = vina_gnina_receipt if vina_gnina_receipt_present else vina_gnina
 
-    vina_gnina_row_count = _int(vina_gnina.get("score_template_row_count")) or _csv_row_count(
+    vina_gnina_row_count = _int(vina_gnina_source.get("score_template_row_count")) or _csv_row_count(
         vina_gnina_score_template_csv, root=root
     )
     vina_gnina_ready = (
-        _bool_true(vina_gnina.get("score_template_validation_ready"))
-        and _int(vina_gnina.get("score_template_blocker_count")) == 0
+        _bool_true(vina_gnina_source.get("score_template_validation_ready"))
+        and _int(vina_gnina_source.get("score_template_blocker_count")) == 0
         and vina_gnina_row_count > 0
     )
     vina_gnina_lane = _lane(
         lane_id="vina_gnina_same_input_scores",
         ready=vina_gnina_ready,
-        source_artifact=vina_gnina_work_order_json,
+        source_artifact=(
+            vina_gnina_score_template_receipt_json if vina_gnina_receipt_present else vina_gnina_work_order_json
+        ),
         operator_csv=vina_gnina_score_template_csv,
         row_count=vina_gnina_row_count,
-        pending_value_count=_int(vina_gnina.get("score_value_pending_count")),
-        pending_metadata_count=_int(vina_gnina.get("operator_metadata_pending_count"))
-        + _int(vina_gnina.get("operator_placeholder_pending_count")),
-        pending_license_count=_int(vina_gnina.get("license_ok_pending_count")),
-        pending_approval_token_count=_int(vina_gnina.get("approval_token_pending_count")),
+        pending_value_count=_int(vina_gnina_source.get("score_value_pending_count")),
+        pending_metadata_count=_int(vina_gnina_source.get("operator_metadata_pending_count"))
+        + _int(vina_gnina_source.get("operator_placeholder_pending_count")),
+        pending_license_count=_int(vina_gnina_source.get("license_ok_pending_count")),
+        pending_approval_token_count=_int(vina_gnina_source.get("approval_token_pending_count")),
         approval_token_required=_text(vina_gnina.get("approval_token_required")) or VINA_GNINA_APPROVAL_TOKEN,
         blocker="vina_gnina_same_input_score_evidence_missing",
-        next_required_step=_text(vina_gnina.get("next_required_step"))
+        next_required_step=_text(vina_gnina_source.get("next_required_step"))
+        or _text(vina_gnina.get("next_required_step"))
         or "Fill every Vina/GNINA same-input score template row, then rerun the comparison adapter.",
         root=root,
     )
@@ -233,12 +243,20 @@ def build_public_benchmark_receipt_attach_packet(
         "primary_blocker": blocked_rows[0]["blocker"] if blocked_rows else "",
         "external_receipts_audit_status": _text(audit.get("status")),
         "external_receipts_audit_blocker_count": _int(audit.get("blocker_count")),
+        "vina_gnina_score_template_receipt_present": vina_gnina_receipt_present,
+        "vina_gnina_score_template_receipt_status": _text(vina_gnina_receipt.get("status")),
+        "vina_gnina_score_template_receipt_json": _display(
+            vina_gnina_score_template_receipt_json,
+            root=root,
+        ),
         "vina_gnina_score_template_csv": _display(vina_gnina_score_template_csv, root=root),
         "vina_gnina_score_template_row_count": vina_gnina_row_count,
         "vina_gnina_score_value_pending_count": vina_gnina_lane["pending_value_count"],
-        "vina_gnina_operator_metadata_pending_count": _int(vina_gnina.get("operator_metadata_pending_count")),
+        "vina_gnina_operator_metadata_pending_count": _int(
+            vina_gnina_source.get("operator_metadata_pending_count")
+        ),
         "vina_gnina_operator_placeholder_pending_count": _int(
-            vina_gnina.get("operator_placeholder_pending_count")
+            vina_gnina_source.get("operator_placeholder_pending_count")
         ),
         "vina_gnina_license_ok_pending_count": vina_gnina_lane["pending_license_count"],
         "vina_gnina_approval_token_pending_count": vina_gnina_lane["pending_approval_token_count"],
@@ -319,6 +337,10 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Build public benchmark receipt attach packet.")
     parser.add_argument("--external-receipts-audit-json", default=DEFAULT_EXTERNAL_RECEIPTS_AUDIT_JSON)
     parser.add_argument("--vina-gnina-work-order-json", default=DEFAULT_VINA_GNINA_WORK_ORDER_JSON)
+    parser.add_argument(
+        "--vina-gnina-score-template-receipt-json",
+        default=DEFAULT_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_JSON,
+    )
     parser.add_argument("--vina-gnina-score-template-csv", default=DEFAULT_VINA_GNINA_SCORE_TEMPLATE_CSV)
     parser.add_argument("--metric-source-receipt-json", default=DEFAULT_METRIC_SOURCE_RECEIPT_JSON)
     parser.add_argument("--metric-source-receipt-csv", default=DEFAULT_METRIC_SOURCE_RECEIPT_CSV)
@@ -333,6 +355,7 @@ def main(argv: list[str] | None = None) -> int:
     payload = build_public_benchmark_receipt_attach_packet(
         external_receipts_audit_json=args.external_receipts_audit_json,
         vina_gnina_work_order_json=args.vina_gnina_work_order_json,
+        vina_gnina_score_template_receipt_json=args.vina_gnina_score_template_receipt_json,
         vina_gnina_score_template_csv=args.vina_gnina_score_template_csv,
         metric_source_receipt_json=args.metric_source_receipt_json,
         metric_source_receipt_csv=args.metric_source_receipt_csv,
