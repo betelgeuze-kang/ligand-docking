@@ -722,6 +722,9 @@ def build_product_operator_cockpit(
     customer_shadow_work_order_primary_slot = _first_text(
         customer_shadow.get("customer_shadow_work_order_primary_case_slot_id")
     )
+    customer_shadow_work_order_primary_required_action = _first_text(
+        customer_shadow.get("customer_shadow_work_order_primary_required_action")
+    )
     paid_pilot_wording_allowed = release_allowed and customer_shadow_paid_pilot_ready
 
     claim_rows = _build_claim_rows(
@@ -1054,6 +1057,10 @@ def build_product_operator_cockpit(
                 _metric("customer_shadow_work_order_ready", customer_shadow_work_order_ready),
                 _count_metric("customer_shadow_work_order_rows", customer_shadow_work_order_rows),
                 _metric("customer_shadow_work_order_primary", customer_shadow_work_order_primary_slot),
+                _metric(
+                    "customer_shadow_work_order_action",
+                    customer_shadow_work_order_primary_required_action,
+                ),
                 _metric("paid_pilot_wording_allowed", paid_pilot_wording_allowed),
             ),
             next_action=(
@@ -1141,6 +1148,9 @@ def build_product_operator_cockpit(
         "customer_shadow_work_order_ready": customer_shadow_work_order_ready,
         "customer_shadow_work_order_row_count": customer_shadow_work_order_rows,
         "customer_shadow_work_order_primary_case_slot_id": customer_shadow_work_order_primary_slot,
+        "customer_shadow_work_order_primary_required_action": (
+            customer_shadow_work_order_primary_required_action
+        ),
         "pm_priority_queue_present": pm_queue_present,
         "pm_priority_queue_status": _text(pm_queue.get("status")),
         "pm_priority_queue_ready_item_count": pm_queue_ready_count,

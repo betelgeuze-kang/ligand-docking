@@ -111,6 +111,7 @@ def _missing_response() -> dict[str, Any]:
         "customer_shadow_work_order_ready": False,
         "customer_shadow_work_order_row_count": 0,
         "customer_shadow_work_order_primary_case_slot_id": "",
+        "customer_shadow_work_order_primary_required_action": "",
         "pm_priority_queue_present": False,
         "pm_priority_queue_status": "",
         "pm_priority_queue_ready_item_count": 0,
@@ -246,6 +247,9 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "customer_shadow_work_order_primary_case_slot_id": str(
             summary.get("customer_shadow_work_order_primary_case_slot_id") or ""
+        ),
+        "customer_shadow_work_order_primary_required_action": str(
+            summary.get("customer_shadow_work_order_primary_required_action") or ""
         ),
         "pm_priority_queue_present": bool(summary.get("pm_priority_queue_present") is True),
         "pm_priority_queue_status": str(summary.get("pm_priority_queue_status") or ""),

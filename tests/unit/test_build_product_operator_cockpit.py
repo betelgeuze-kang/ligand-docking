@@ -234,6 +234,9 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "customer_shadow_work_order_ready": False,
                 "customer_shadow_work_order_row_count": 3,
                 "customer_shadow_work_order_primary_case_slot_id": "customer_shadow_case_1",
+                "customer_shadow_work_order_primary_required_action": (
+                    "Add one reviewed real customer-shadow metadata row."
+                ),
                 "paid_pilot_evidence_ready": False,
                 "paid_pilot_claim_allowed": False,
             }
@@ -308,6 +311,9 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["customer_shadow_work_order_ready"] is False
     assert summary["customer_shadow_work_order_row_count"] == 3
     assert summary["customer_shadow_work_order_primary_case_slot_id"] == "customer_shadow_case_1"
+    assert summary["customer_shadow_work_order_primary_required_action"] == (
+        "Add one reviewed real customer-shadow metadata row."
+    )
     assert summary["pm_priority_queue_present"] is True
     assert summary["pm_priority_queue_status"] == "blocked_pm_priority_queue"
     assert summary["pm_priority_queue_blocked_item_count"] == 5
@@ -386,6 +392,10 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "customer_shadow_work_order_rows=3" in panels["claim_boundary_matrix"]["secondary_metric"]
     assert "customer_shadow_work_order_primary=customer_shadow_case_1" in (
         panels["claim_boundary_matrix"]["secondary_metric"]
+    )
+    assert (
+        "customer_shadow_work_order_action=Add one reviewed real customer-shadow metadata row."
+        in panels["claim_boundary_matrix"]["secondary_metric"]
     )
 
     assert claims["operator_cockpit_surface"]["allowed"] is True

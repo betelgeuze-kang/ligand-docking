@@ -73,6 +73,9 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "customer_shadow_work_order_ready": False,
                 "customer_shadow_work_order_row_count": 3,
                 "customer_shadow_work_order_primary_case_slot_id": "customer_shadow_case_1",
+                "customer_shadow_work_order_primary_required_action": (
+                    "Add one reviewed real customer-shadow metadata row."
+                ),
                 "pm_priority_queue_present": True,
                 "pm_priority_queue_status": "blocked_pm_priority_queue",
                 "pm_priority_queue_ready_item_count": 3,
@@ -133,6 +136,9 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["customer_shadow_work_order_ready"] is False
     assert response["customer_shadow_work_order_row_count"] == 3
     assert response["customer_shadow_work_order_primary_case_slot_id"] == "customer_shadow_case_1"
+    assert response["customer_shadow_work_order_primary_required_action"] == (
+        "Add one reviewed real customer-shadow metadata row."
+    )
     assert response["pm_priority_queue_present"] is True
     assert response["pm_priority_queue_status"] == "blocked_pm_priority_queue"
     assert response["pm_priority_queue_ready_item_count"] == 3
@@ -194,6 +200,7 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["customer_shadow_work_order_ready"] is False
     assert response["customer_shadow_work_order_row_count"] == 0
     assert response["customer_shadow_work_order_primary_case_slot_id"] == ""
+    assert response["customer_shadow_work_order_primary_required_action"] == ""
     assert response["pm_priority_queue_present"] is False
     assert response["pm_priority_queue_status"] == ""
     assert response["pm_priority_queue_ready_item_count"] == 0
