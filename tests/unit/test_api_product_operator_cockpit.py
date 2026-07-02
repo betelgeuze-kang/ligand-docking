@@ -39,6 +39,15 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "general_platform_claim_allowed": False,
                 "gpcr_hard_decoy_metric_ready": True,
                 "gpcr_broad_claim_allowed": False,
+                "gpcr_phase3_closure_present": True,
+                "gpcr_phase3_closure_evidence_ready": True,
+                "gpcr_phase3_exit_metric_conditions_ready": True,
+                "gpcr_phase3_broad_promotion_locked": True,
+                "gpcr_phase3_effective_ranking_pr_auc_ci_low": 0.5597832604,
+                "gpcr_phase3_effective_top20_hit_rate": 1.0,
+                "gpcr_phase3_effective_decoys_above_positive_total": 0,
+                "gpcr_phase3_effective_metric_source": "claim_unlock_audit",
+                "gpcr_phase3_promotion_blocker_count": 2,
                 "gpcr_promotion_work_order_row_count": 2,
                 "gpcr_promotion_work_order_lane_count": 2,
                 "gpcr_promotion_work_order_primary_blocker": (
@@ -115,6 +124,15 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["general_platform_claim_allowed"] is False
     assert response["gpcr_hard_decoy_metric_ready"] is True
     assert response["gpcr_broad_claim_allowed"] is False
+    assert response["gpcr_phase3_closure_present"] is True
+    assert response["gpcr_phase3_closure_evidence_ready"] is True
+    assert response["gpcr_phase3_exit_metric_conditions_ready"] is True
+    assert response["gpcr_phase3_broad_promotion_locked"] is True
+    assert response["gpcr_phase3_effective_ranking_pr_auc_ci_low"] == 0.5597832604
+    assert response["gpcr_phase3_effective_top20_hit_rate"] == 1.0
+    assert response["gpcr_phase3_effective_decoys_above_positive_total"] == 0
+    assert response["gpcr_phase3_effective_metric_source"] == "claim_unlock_audit"
+    assert response["gpcr_phase3_promotion_blocker_count"] == 2
     assert response["gpcr_promotion_work_order_row_count"] == 2
     assert response["gpcr_promotion_work_order_lane_count"] == 2
     assert response["gpcr_promotion_work_order_primary_blocker"] == (
@@ -189,6 +207,15 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["paid_pilot_wording_allowed"] is False
     assert response["general_platform_claim_allowed"] is False
     assert response["gpcr_broad_claim_allowed"] is False
+    assert response["gpcr_phase3_closure_present"] is False
+    assert response["gpcr_phase3_closure_evidence_ready"] is False
+    assert response["gpcr_phase3_exit_metric_conditions_ready"] is False
+    assert response["gpcr_phase3_broad_promotion_locked"] is False
+    assert response["gpcr_phase3_effective_ranking_pr_auc_ci_low"] == 0.0
+    assert response["gpcr_phase3_effective_top20_hit_rate"] == 0.0
+    assert response["gpcr_phase3_effective_decoys_above_positive_total"] == 0
+    assert response["gpcr_phase3_effective_metric_source"] == ""
+    assert response["gpcr_phase3_promotion_blocker_count"] == 0
     assert response["gpcr_promotion_work_order_row_count"] == 0
     assert response["gpcr_promotion_work_order_lane_count"] == 0
     assert response["gpcr_promotion_work_order_primary_blocker"] == ""

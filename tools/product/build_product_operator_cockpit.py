@@ -16,6 +16,7 @@ DEFAULT_CAPABILITIES_JSON = "runs/product_capability_surface_contract_current.js
 DEFAULT_GOAL_READINESS_JSON = "runs/goal_readiness_rollup_current.json"
 DEFAULT_HBOND_JSON = "runs/hbond_backmap_report_current.json"
 DEFAULT_GPCR_JSON = "runs/gpcr_hard_decoy_claim_unlock_audit_current.json"
+DEFAULT_GPCR_PHASE3_CLOSURE_JSON = "runs/gpcr_hard_decoy_phase3_closure_gap_dossier_current.json"
 DEFAULT_POCKETMD_JSON = "runs/pocketmd_lite_topk_refinement_audit_current.json"
 DEFAULT_PUBLIC_BENCHMARK_JSON = "runs/public_benchmark_external_receipts_audit_current.json"
 DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON = (
@@ -145,6 +146,8 @@ def _first_blocked_row(rows: list[dict[str, Any]]) -> dict[str, Any]:
 def _metric(label: str, value: Any) -> str:
     if isinstance(value, bool):
         rendered = "true" if value else "false"
+    elif isinstance(value, int):
+        rendered = str(value)
     elif isinstance(value, float):
         rendered = f"{value:.4g}"
     else:
@@ -572,6 +575,7 @@ def build_product_operator_cockpit(
     goal_readiness_json: str | Path = DEFAULT_GOAL_READINESS_JSON,
     hbond_json: str | Path = DEFAULT_HBOND_JSON,
     gpcr_json: str | Path = DEFAULT_GPCR_JSON,
+    gpcr_phase3_closure_json: str | Path = DEFAULT_GPCR_PHASE3_CLOSURE_JSON,
     pocketmd_json: str | Path = DEFAULT_POCKETMD_JSON,
     public_benchmark_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_JSON,
     public_benchmark_receipt_attach_packet_json: str | Path = (
@@ -589,6 +593,7 @@ def build_product_operator_cockpit(
     hbond_payload = _read_json(hbond_json, root=root)
     hbond = _summary(hbond_payload)
     gpcr = _summary(_read_json(gpcr_json, root=root))
+    gpcr_phase3_closure = _summary(_read_json(gpcr_phase3_closure_json, root=root))
     pocketmd = _summary(_read_json(pocketmd_json, root=root))
     public_benchmark = _summary(_read_json(public_benchmark_json, root=root))
     public_receipt_attach_packet = _summary(
@@ -632,6 +637,37 @@ def build_product_operator_cockpit(
     gpcr_promotion_work_order_rows = _int(gpcr.get("promotion_work_order_row_count"))
     gpcr_promotion_work_order_lanes = _int(gpcr.get("promotion_work_order_lane_count"))
     gpcr_promotion_work_order_primary = _first_text(gpcr.get("promotion_work_order_primary_blocker"))
+    gpcr_phase3_closure_present = bool(gpcr_phase3_closure)
+    gpcr_phase3_closure_ready = _bool_true(gpcr_phase3_closure.get("phase3_closure_evidence_ready"))
+    gpcr_phase3_exit_metric_ready = _bool_true(
+        gpcr_phase3_closure.get("claim_unlock_phase3_exit_metric_conditions_ready")
+    )
+    gpcr_phase3_broad_promotion_locked = _bool_true(
+        gpcr_phase3_closure.get("claim_unlock_broad_promotion_remains_locked")
+    )
+    gpcr_phase3_effective_pr_auc_ci_low = gpcr_phase3_closure.get(
+        "effective_phase3_ranking_pr_auc_ci_low"
+    )
+    gpcr_phase3_effective_top20_hit_rate = gpcr_phase3_closure.get("effective_phase3_top20_hit_rate")
+    gpcr_phase3_effective_decoys_above_positive = gpcr_phase3_closure.get(
+        "effective_phase3_decoys_above_positive_total"
+    )
+    gpcr_phase3_effective_metric_source = _first_text(
+        gpcr_phase3_closure.get("effective_phase3_metric_source")
+    )
+    gpcr_phase3_promotion_blocker_count = len(
+        _string_list(gpcr_phase3_closure.get("claim_unlock_promotion_blockers"))
+    )
+    gpcr_primary_pr_auc_ci_low = (
+        gpcr_phase3_effective_pr_auc_ci_low
+        if gpcr_phase3_effective_pr_auc_ci_low is not None
+        else gpcr.get("preregistered_ranking_pr_auc_ci_low")
+    )
+    gpcr_primary_top20_hit_rate = (
+        gpcr_phase3_effective_top20_hit_rate
+        if gpcr_phase3_effective_top20_hit_rate is not None
+        else gpcr.get("preregistered_top20_hit_rate")
+    )
 
     pocketmd_present = bool(pocketmd)
     pocketmd_refinement_ready = _bool_true(pocketmd.get("claim_grade_refinement_evidence_ready"))
@@ -855,17 +891,30 @@ def build_product_operator_cockpit(
             operator_action_required=not gpcr_broad_claim_allowed,
             claim_allowed=gpcr_broad_claim_allowed,
             primary_metric=_join_metrics(
-                _metric("pr_auc_ci_low", gpcr.get("preregistered_ranking_pr_auc_ci_low")),
-                _metric("top20_hit_rate", gpcr.get("preregistered_top20_hit_rate")),
+                _metric("pr_auc_ci_low", gpcr_primary_pr_auc_ci_low),
+                _metric("top20_hit_rate", gpcr_primary_top20_hit_rate),
             ),
             secondary_metric=_join_metrics(
-                _metric("decoys_above_positive", gpcr.get("preregistered_decoys_above_positive_count")),
-                _metric("promotion_blockers", _int(gpcr.get("promotion_blocker_count"))),
+                _metric(
+                    "decoys_above_positive",
+                    gpcr_phase3_effective_decoys_above_positive
+                    if gpcr_phase3_effective_decoys_above_positive is not None
+                    else gpcr.get("preregistered_decoys_above_positive_count"),
+                ),
+                _metric("phase3_closure_ready", gpcr_phase3_closure_ready),
+                _metric("phase3_exit_metric_ready", gpcr_phase3_exit_metric_ready),
+                _metric("phase3_metric_source", gpcr_phase3_effective_metric_source),
+                _metric("broad_promotion_locked", gpcr_phase3_broad_promotion_locked),
+                _metric(
+                    "promotion_blockers",
+                    gpcr_phase3_promotion_blocker_count or _int(gpcr.get("promotion_blocker_count")),
+                ),
                 _count_metric("promotion_work_order_rows", gpcr_promotion_work_order_rows),
                 _count_metric("promotion_work_order_lanes", gpcr_promotion_work_order_lanes),
                 _metric("promotion_work_order_primary", gpcr_promotion_work_order_primary),
             ),
             next_action=_first_text(
+                gpcr_phase3_closure.get("next_required_step"),
                 gpcr.get("next_required_step"),
                 "Complete broad-claim review and scorer/router promotion gates.",
             ),
@@ -1141,6 +1190,17 @@ def build_product_operator_cockpit(
         "general_platform_claim_allowed": general_platform_claim_allowed,
         "gpcr_hard_decoy_metric_ready": gpcr_metric_ready,
         "gpcr_broad_claim_allowed": gpcr_broad_claim_allowed,
+        "gpcr_phase3_closure_present": gpcr_phase3_closure_present,
+        "gpcr_phase3_closure_evidence_ready": gpcr_phase3_closure_ready,
+        "gpcr_phase3_exit_metric_conditions_ready": gpcr_phase3_exit_metric_ready,
+        "gpcr_phase3_broad_promotion_locked": gpcr_phase3_broad_promotion_locked,
+        "gpcr_phase3_effective_ranking_pr_auc_ci_low": gpcr_phase3_effective_pr_auc_ci_low,
+        "gpcr_phase3_effective_top20_hit_rate": gpcr_phase3_effective_top20_hit_rate,
+        "gpcr_phase3_effective_decoys_above_positive_total": (
+            gpcr_phase3_effective_decoys_above_positive
+        ),
+        "gpcr_phase3_effective_metric_source": gpcr_phase3_effective_metric_source,
+        "gpcr_phase3_promotion_blocker_count": gpcr_phase3_promotion_blocker_count,
         "gpcr_promotion_work_order_row_count": gpcr_promotion_work_order_rows,
         "gpcr_promotion_work_order_lane_count": gpcr_promotion_work_order_lanes,
         "gpcr_promotion_work_order_primary_blocker": gpcr_promotion_work_order_primary,
@@ -1238,6 +1298,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--goal-readiness-json", default=DEFAULT_GOAL_READINESS_JSON)
     parser.add_argument("--hbond-json", default=DEFAULT_HBOND_JSON)
     parser.add_argument("--gpcr-json", default=DEFAULT_GPCR_JSON)
+    parser.add_argument("--gpcr-phase3-closure-json", default=DEFAULT_GPCR_PHASE3_CLOSURE_JSON)
     parser.add_argument("--pocketmd-json", default=DEFAULT_POCKETMD_JSON)
     parser.add_argument("--public-benchmark-json", default=DEFAULT_PUBLIC_BENCHMARK_JSON)
     parser.add_argument(
@@ -1263,6 +1324,7 @@ def main(argv: list[str] | None = None) -> int:
         goal_readiness_json=args.goal_readiness_json,
         hbond_json=args.hbond_json,
         gpcr_json=args.gpcr_json,
+        gpcr_phase3_closure_json=args.gpcr_phase3_closure_json,
         pocketmd_json=args.pocketmd_json,
         public_benchmark_json=args.public_benchmark_json,
         public_benchmark_receipt_attach_packet_json=args.public_benchmark_receipt_attach_packet_json,

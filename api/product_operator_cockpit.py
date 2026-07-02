@@ -79,6 +79,15 @@ def _missing_response() -> dict[str, Any]:
         "general_platform_claim_allowed": False,
         "gpcr_hard_decoy_metric_ready": False,
         "gpcr_broad_claim_allowed": False,
+        "gpcr_phase3_closure_present": False,
+        "gpcr_phase3_closure_evidence_ready": False,
+        "gpcr_phase3_exit_metric_conditions_ready": False,
+        "gpcr_phase3_broad_promotion_locked": False,
+        "gpcr_phase3_effective_ranking_pr_auc_ci_low": 0.0,
+        "gpcr_phase3_effective_top20_hit_rate": 0.0,
+        "gpcr_phase3_effective_decoys_above_positive_total": 0,
+        "gpcr_phase3_effective_metric_source": "",
+        "gpcr_phase3_promotion_blocker_count": 0,
         "gpcr_promotion_work_order_row_count": 0,
         "gpcr_promotion_work_order_lane_count": 0,
         "gpcr_promotion_work_order_primary_blocker": "",
@@ -176,6 +185,31 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         "general_platform_claim_allowed": bool(summary.get("general_platform_claim_allowed") is True),
         "gpcr_hard_decoy_metric_ready": bool(summary.get("gpcr_hard_decoy_metric_ready") is True),
         "gpcr_broad_claim_allowed": bool(summary.get("gpcr_broad_claim_allowed") is True),
+        "gpcr_phase3_closure_present": bool(summary.get("gpcr_phase3_closure_present") is True),
+        "gpcr_phase3_closure_evidence_ready": bool(
+            summary.get("gpcr_phase3_closure_evidence_ready") is True
+        ),
+        "gpcr_phase3_exit_metric_conditions_ready": bool(
+            summary.get("gpcr_phase3_exit_metric_conditions_ready") is True
+        ),
+        "gpcr_phase3_broad_promotion_locked": bool(
+            summary.get("gpcr_phase3_broad_promotion_locked") is True
+        ),
+        "gpcr_phase3_effective_ranking_pr_auc_ci_low": float(
+            summary.get("gpcr_phase3_effective_ranking_pr_auc_ci_low") or 0.0
+        ),
+        "gpcr_phase3_effective_top20_hit_rate": float(
+            summary.get("gpcr_phase3_effective_top20_hit_rate") or 0.0
+        ),
+        "gpcr_phase3_effective_decoys_above_positive_total": _int(
+            summary.get("gpcr_phase3_effective_decoys_above_positive_total")
+        ),
+        "gpcr_phase3_effective_metric_source": str(
+            summary.get("gpcr_phase3_effective_metric_source") or ""
+        ),
+        "gpcr_phase3_promotion_blocker_count": _int(
+            summary.get("gpcr_phase3_promotion_blocker_count")
+        ),
         "gpcr_promotion_work_order_row_count": _int(
             summary.get("gpcr_promotion_work_order_row_count")
         ),

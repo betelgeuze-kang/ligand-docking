@@ -21,6 +21,7 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         "goal": tmp_path / "runs/goal_readiness_rollup_current.json",
         "hbond": tmp_path / "runs/hbond_backmap_report_current.json",
         "gpcr": tmp_path / "runs/gpcr_hard_decoy_claim_unlock_audit_current.json",
+        "gpcr_phase3": tmp_path / "runs/gpcr_hard_decoy_phase3_closure_gap_dossier_current.json",
         "pocketmd": tmp_path / "runs/pocketmd_lite_topk_refinement_audit_current.json",
         "public": tmp_path / "runs/public_benchmark_external_receipts_audit_current.json",
         "public_attach": tmp_path / "runs/public_benchmark_receipt_attach_packet_current.json",
@@ -92,6 +93,26 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                     "broad_scope:formal_broad_claim_review_not_approved",
                     "scorer_router_promotion_gate_not_ready",
                 ],
+            }
+        },
+    )
+    _write_json(
+        paths["gpcr_phase3"],
+        {
+            "summary": {
+                "status": "gpcr_hard_decoy_phase3_closure_evidence_ready",
+                "phase3_closure_evidence_ready": True,
+                "claim_unlock_phase3_exit_metric_conditions_ready": True,
+                "claim_unlock_broad_promotion_remains_locked": True,
+                "effective_phase3_ranking_pr_auc_ci_low": 0.5597832604,
+                "effective_phase3_top20_hit_rate": 1.0,
+                "effective_phase3_decoys_above_positive_total": 0,
+                "effective_phase3_metric_source": "claim_unlock_audit",
+                "claim_unlock_promotion_blockers": [
+                    "broad_scope:formal_broad_claim_review_not_approved",
+                    "scorer_router_promotion_gate_not_ready",
+                ],
+                "next_required_step": "Keep broad GPCR promotion locked.",
             }
         },
     )
@@ -270,6 +291,7 @@ def _build_payload(tmp_path: Path) -> dict:
         goal_readiness_json=paths["goal"],
         hbond_json=paths["hbond"],
         gpcr_json=paths["gpcr"],
+        gpcr_phase3_closure_json=paths["gpcr_phase3"],
         pocketmd_json=paths["pocketmd"],
         public_benchmark_json=paths["public"],
         public_benchmark_receipt_attach_packet_json=paths["public_attach"],
@@ -297,6 +319,15 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["general_platform_claim_allowed"] is False
     assert summary["gpcr_hard_decoy_metric_ready"] is True
     assert summary["gpcr_broad_claim_allowed"] is False
+    assert summary["gpcr_phase3_closure_present"] is True
+    assert summary["gpcr_phase3_closure_evidence_ready"] is True
+    assert summary["gpcr_phase3_exit_metric_conditions_ready"] is True
+    assert summary["gpcr_phase3_broad_promotion_locked"] is True
+    assert summary["gpcr_phase3_effective_ranking_pr_auc_ci_low"] == 0.5597832604
+    assert summary["gpcr_phase3_effective_top20_hit_rate"] == 1.0
+    assert summary["gpcr_phase3_effective_decoys_above_positive_total"] == 0
+    assert summary["gpcr_phase3_effective_metric_source"] == "claim_unlock_audit"
+    assert summary["gpcr_phase3_promotion_blocker_count"] == 2
     assert summary["gpcr_promotion_work_order_row_count"] == 2
     assert summary["gpcr_promotion_work_order_lane_count"] == 2
     assert summary["gpcr_promotion_work_order_primary_blocker"] == (
@@ -363,6 +394,14 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert panels["hbond_backmap_candidate_table"]["blockers"] == []
     assert "pr_auc_ci_low=0.5598" in panels["gpcr_hard_decoy_blocker_panel"]["primary_metric"]
     assert panels["gpcr_hard_decoy_blocker_panel"]["claim_allowed"] is False
+    assert "top20_hit_rate=1" in panels["gpcr_hard_decoy_blocker_panel"]["primary_metric"]
+    assert "decoys_above_positive=0" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
+    assert "phase3_closure_ready=true" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
+    assert "phase3_exit_metric_ready=true" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
+    assert "phase3_metric_source=claim_unlock_audit" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
+    assert "broad_promotion_locked=true" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
+    assert "promotion_blockers=2" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
+    assert panels["gpcr_hard_decoy_blocker_panel"]["next_action"] == "Keep broad GPCR promotion locked."
     assert "promotion_work_order_rows=2" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
     assert "promotion_work_order_lanes=2" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
     assert "promotion_work_order_primary=broad_scope:formal_broad_claim_review_not_approved" in (

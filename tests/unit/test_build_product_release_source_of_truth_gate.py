@@ -6169,6 +6169,7 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
         "runs/goal_readiness_rollup_current.json",
         "runs/hbond_backmap_report_current.json",
         "runs/gpcr_hard_decoy_claim_unlock_audit_current.json",
+        "runs/gpcr_hard_decoy_phase3_closure_gap_dossier_current.json",
         "runs/pocketmd_lite_topk_refinement_audit_current.json",
         "runs/public_benchmark_external_receipts_audit_current.json",
         "runs/public_benchmark_receipt_attach_packet_current.json",
