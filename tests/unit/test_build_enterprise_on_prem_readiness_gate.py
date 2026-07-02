@@ -105,6 +105,24 @@ def _write_common_inputs(root: Path) -> None:
     )
 
 
+def _write_support_bundle(root: Path) -> None:
+    _write_json(
+        root / "runs/support_bundle_current.json",
+        {
+            "summary": {
+                "status": "support_bundle_ready",
+                "support_bundle_ready": True,
+                "customer_safe_bundle_ready": True,
+                "recovery_drill_ready": True,
+                "incident_handoff_ready": True,
+                "blocked_artifact_count": 0,
+                "raw_customer_data_included": False,
+                "secret_material_included": False,
+            }
+        },
+    )
+
+
 def test_enterprise_on_prem_gate_blocks_unproven_enterprise_controls(tmp_path: Path) -> None:
     _write_common_inputs(tmp_path)
 
@@ -134,6 +152,23 @@ def test_enterprise_on_prem_gate_blocks_unproven_enterprise_controls(tmp_path: P
     assert rows["support_bundle_recovery_drill"]["blocker"] == "support_bundle_and_recovery_drill_missing"
     assert "oidc_ready=false" in rows["oidc_rbac_tenant_isolation"]["evidence"]
     assert "target_architecture_mentions_object_storage=true" in rows["object_storage_artifact_plane"]["evidence"]
+
+
+def test_enterprise_on_prem_gate_consumes_ready_support_bundle(tmp_path: Path) -> None:
+    _write_common_inputs(tmp_path)
+    _write_support_bundle(tmp_path)
+
+    payload = mod.build_enterprise_on_prem_readiness_gate(root=tmp_path)
+
+    summary = payload["summary"]
+    rows = {row["control_id"]: row for row in payload["rows"]}
+    assert summary["status"] == "blocked_enterprise_on_prem_readiness_gate"
+    assert summary["ready_control_count"] == 5
+    assert summary["blocked_control_count"] == 5
+    assert summary["support_bundle_recovery_drill_ready"] is True
+    assert rows["support_bundle_recovery_drill"]["ready"] is True
+    assert rows["support_bundle_recovery_drill"]["blocker"] == ""
+    assert "support_bundle_ready=true" in rows["support_bundle_recovery_drill"]["evidence"]
 
 
 def test_enterprise_on_prem_gate_cli_writes_outputs(tmp_path: Path) -> None:

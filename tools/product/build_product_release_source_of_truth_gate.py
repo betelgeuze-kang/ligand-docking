@@ -178,6 +178,10 @@ HBOND_BACKMAP_REPORT_COMMAND = (
     "--scores-csv runs/product_image_smoke_runner_artifacts/backmapping_scores.csv"
 )
 PRODUCT_OPERATOR_COCKPIT_COMMAND = "python3 tools/product/build_product_operator_cockpit.py"
+SUPPORT_BUNDLE_COMMAND = "python3 tools/product/build_support_bundle.py"
+ENTERPRISE_ON_PREM_READINESS_GATE_COMMAND = (
+    "python3 tools/product/build_enterprise_on_prem_readiness_gate.py"
+)
 DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND = (
     "python3 tools/product/build_developer_preview_final_gate_audit.py"
 )
@@ -346,6 +350,8 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_api_runner_profile_promotion_operator_staging_apply.py",
     "python3 tools/build_master_gap_closure_rollup.py",
     "python3 tools/build_product_ledger_privacy_scan.py",
+    SUPPORT_BUNDLE_COMMAND,
+    ENTERPRISE_ON_PREM_READINESS_GATE_COMMAND,
     "python3 tools/build_product_release_source_of_truth_gate.py",
     "python3 tools/build_goal_release_decision_gate.py",
     "python3 tools/build_goal_operator_action_board.py",
@@ -362,6 +368,8 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_master_gap_closure_rollup.py",
     "python3 tools/build_product_commercial_readiness_handoff_bundle.py",
     "python3 tools/build_product_ledger_privacy_scan.py",
+    SUPPORT_BUNDLE_COMMAND,
+    ENTERPRISE_ON_PREM_READINESS_GATE_COMMAND,
     "python3 tools/build_product_release_source_of_truth_gate.py",
 ]
 
@@ -2005,6 +2013,40 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/ai_md_product_evidence_bundle_current.json",
             "runs/api_customer_flow_release_evidence_current.json",
             "runs/customer_shadow_evidence_status_current.json",
+            "runs/enterprise_on_prem_readiness_gate_current.json",
+        ],
+    },
+    {
+        "artifact_id": "support_bundle",
+        "artifact_path": "runs/support_bundle_current.json",
+        "builder_command": SUPPORT_BUNDLE_COMMAND,
+        "depends_on": [
+            "tools/product/build_support_bundle.py",
+            "runs/product_security_deployment_contract_current.json",
+            "runs/product_job_orchestration_contract_current.json",
+            "runs/product_rollout_execution_smoke_receipt_current.json",
+            "runs/product_ledger_privacy_scan_current.json",
+            "runs/api_customer_flow_release_evidence_current.json",
+            "runs/self_hosted_license_distribution_audit_current.json",
+        ],
+    },
+    {
+        "artifact_id": "enterprise_on_prem_readiness_gate",
+        "artifact_path": "runs/enterprise_on_prem_readiness_gate_current.json",
+        "builder_command": ENTERPRISE_ON_PREM_READINESS_GATE_COMMAND,
+        "depends_on": [
+            "tools/product/build_enterprise_on_prem_readiness_gate.py",
+            "runs/product_service_boundary_contract_current.json",
+            "runs/product_security_deployment_contract_current.json",
+            "runs/product_job_orchestration_contract_current.json",
+            "runs/product_rollout_execution_readiness_current.json",
+            "runs/product_rollout_execution_smoke_receipt_current.json",
+            "runs/self_hosted_license_distribution_audit_current.json",
+            "runs/product_ledger_privacy_scan_current.json",
+            "runs/api_customer_flow_release_evidence_current.json",
+            "runs/support_bundle_current.json",
+            "docs/product_stage_and_roadmap_2026_06_30.md",
+            "docs/target_bioscience_architecture.md",
         ],
     },
     {
