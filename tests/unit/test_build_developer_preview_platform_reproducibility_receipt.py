@@ -104,3 +104,20 @@ def test_platform_reproducibility_receipt_cli_writes_outputs(tmp_path: Path) -> 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["packet_type"] == "developer_preview_platform_reproducibility_receipt"
     assert "Developer Preview Platform Reproducibility Receipt" in out_md.read_text(encoding="utf-8")
+
+
+def test_platform_reproducibility_receipt_uses_platform_specific_defaults() -> None:
+    assert mod._default_ai_verify_log("linux") == ".betelgeuze/developer_preview_linux_ai_verify.log"
+    assert mod._default_pytest_junit_xml("linux") == (
+        ".betelgeuze/developer_preview_linux_reproducibility_pytest.xml"
+    )
+    assert mod._default_out_json("linux") == (
+        ".betelgeuze/developer_preview_linux_reproducibility_receipt.json"
+    )
+    assert mod._default_ai_verify_log("windows") == ".betelgeuze/developer_preview_windows_ai_verify.log"
+    assert mod._default_pytest_junit_xml("windows") == (
+        ".betelgeuze/developer_preview_windows_reproducibility_pytest.xml"
+    )
+    assert mod._default_out_json("windows") == (
+        ".betelgeuze/developer_preview_windows_reproducibility_receipt.json"
+    )

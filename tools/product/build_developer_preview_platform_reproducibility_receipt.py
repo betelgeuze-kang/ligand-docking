@@ -17,6 +17,10 @@ DEFAULT_LINUX_AI_VERIFY_LOG = ".betelgeuze/developer_preview_linux_ai_verify.log
 DEFAULT_LINUX_PYTEST_JUNIT_XML = ".betelgeuze/developer_preview_linux_reproducibility_pytest.xml"
 DEFAULT_LINUX_OUT_JSON = ".betelgeuze/developer_preview_linux_reproducibility_receipt.json"
 DEFAULT_LINUX_OUT_MD = ".betelgeuze/developer_preview_linux_reproducibility_receipt.md"
+DEFAULT_WINDOWS_AI_VERIFY_LOG = ".betelgeuze/developer_preview_windows_ai_verify.log"
+DEFAULT_WINDOWS_PYTEST_JUNIT_XML = ".betelgeuze/developer_preview_windows_reproducibility_pytest.xml"
+DEFAULT_WINDOWS_OUT_JSON = ".betelgeuze/developer_preview_windows_reproducibility_receipt.json"
+DEFAULT_WINDOWS_OUT_MD = ".betelgeuze/developer_preview_windows_reproducibility_receipt.md"
 
 PACKET_TYPE = "developer_preview_platform_reproducibility_receipt"
 SCHEMA_VERSION = "developer_preview_platform_reproducibility_receipt_v1"
@@ -177,11 +181,11 @@ def build_developer_preview_platform_reproducibility_receipt(
         blockers.append(f"{_display(pytest_junit_xml, root=root)}:missing")
     elif junit["parse_error"]:
         blockers.append(f"{_display(pytest_junit_xml, root=root)}:parse_error")
-    if junit["test_count"] <= 0:
+    elif junit["test_count"] <= 0:
         blockers.append(f"{_display(pytest_junit_xml, root=root)}:test_count_zero")
-    if junit["failure_count"] != 0:
+    if junit["present"] and not junit["parse_error"] and junit["failure_count"] != 0:
         blockers.append(f"{_display(pytest_junit_xml, root=root)}:failure_count_nonzero")
-    if junit["error_count"] != 0:
+    if junit["present"] and not junit["parse_error"] and junit["error_count"] != 0:
         blockers.append(f"{_display(pytest_junit_xml, root=root)}:error_count_nonzero")
     if not platform_match:
         blockers.append(f"platform_mismatch:expected={normalized_platform};observed={observed_platform_system}")
@@ -288,19 +292,37 @@ def _write_text(path_like: str | Path, text: str, *, root: Path = ROOT) -> None:
 
 def _default_out_json(platform_id: str) -> str:
     normalized = _normalize_platform(platform_id)
-    return f".betelgeuze/developer_preview_{normalized}_reproducibility_receipt.json"
+    if normalized == "windows":
+        return DEFAULT_WINDOWS_OUT_JSON
+    return DEFAULT_LINUX_OUT_JSON
 
 
 def _default_out_md(platform_id: str) -> str:
     normalized = _normalize_platform(platform_id)
-    return f".betelgeuze/developer_preview_{normalized}_reproducibility_receipt.md"
+    if normalized == "windows":
+        return DEFAULT_WINDOWS_OUT_MD
+    return DEFAULT_LINUX_OUT_MD
+
+
+def _default_ai_verify_log(platform_id: str) -> str:
+    normalized = _normalize_platform(platform_id)
+    if normalized == "windows":
+        return DEFAULT_WINDOWS_AI_VERIFY_LOG
+    return DEFAULT_LINUX_AI_VERIFY_LOG
+
+
+def _default_pytest_junit_xml(platform_id: str) -> str:
+    normalized = _normalize_platform(platform_id)
+    if normalized == "windows":
+        return DEFAULT_WINDOWS_PYTEST_JUNIT_XML
+    return DEFAULT_LINUX_PYTEST_JUNIT_XML
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Build a Developer Preview platform reproducibility receipt.")
     parser.add_argument("--platform", default=DEFAULT_PLATFORM, choices=sorted(VALID_PLATFORMS))
-    parser.add_argument("--ai-verify-log", default=DEFAULT_LINUX_AI_VERIFY_LOG)
-    parser.add_argument("--pytest-junit-xml", default=DEFAULT_LINUX_PYTEST_JUNIT_XML)
+    parser.add_argument("--ai-verify-log", default="")
+    parser.add_argument("--pytest-junit-xml", default="")
     parser.add_argument("--out-json", default="")
     parser.add_argument("--out-md", default="")
     return parser
@@ -308,12 +330,14 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    ai_verify_log = args.ai_verify_log or _default_ai_verify_log(args.platform)
+    pytest_junit_xml = args.pytest_junit_xml or _default_pytest_junit_xml(args.platform)
     out_json = args.out_json or _default_out_json(args.platform)
     out_md = args.out_md or _default_out_md(args.platform)
     payload = build_developer_preview_platform_reproducibility_receipt(
         platform_id=args.platform,
-        ai_verify_log=args.ai_verify_log,
-        pytest_junit_xml=args.pytest_junit_xml,
+        ai_verify_log=ai_verify_log,
+        pytest_junit_xml=pytest_junit_xml,
     )
     _write_json(out_json, payload)
     _write_text(out_md, _render_md(payload))
