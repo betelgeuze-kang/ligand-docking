@@ -18,6 +18,9 @@ GOAL_BOTTLENECK_BRIEFING_ARTIFACT = ROOT / "runs" / "goal_bottleneck_briefing_cu
 GOAL_API_SURFACE_CONTRACT_ARTIFACT = ROOT / "runs" / "goal_api_surface_contract_current.json"
 PM_PRIORITY_QUEUE_ARTIFACT = ROOT / ".betelgeuze" / "pm_priority_queue_status_current.json"
 DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT = ROOT / "runs" / "developer_preview_final_gate_audit_current.json"
+DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT = (
+    ROOT / ".betelgeuze" / "developer_preview_clean_checkout_benchmark_receipt.json"
+)
 PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT = (
     ROOT / "runs" / "public_benchmark_external_receipts_audit_current.json"
 )
@@ -147,6 +150,15 @@ def _blockers(packet: dict[str, Any]) -> list[dict[str, Any]]:
     return [row for row in blockers if isinstance(row, dict)] if isinstance(blockers, list) else []
 
 
+def _row_blockers(row: dict[str, Any]) -> list[str]:
+    blockers = row.get("blockers")
+    if isinstance(blockers, list):
+        return [str(item) for item in blockers if str(item or "").strip()]
+    if isinstance(blockers, str) and blockers.strip():
+        return [part.strip() for part in blockers.replace(";", ",").split(",") if part.strip()]
+    return []
+
+
 def _int(value: Any) -> int:
     try:
         return int(float(value or 0))
@@ -180,6 +192,98 @@ def _delimited_string_list(value: Any) -> list[str]:
         normalized = value.replace(";", ",")
         return [part.strip() for part in normalized.split(",") if part.strip()]
     return []
+
+
+def _developer_preview_clean_checkout_receipt_surface(receipt_path: Path) -> dict[str, Any]:
+    packet = _read_json_object(receipt_path)
+    summary = _summary(packet)
+    rows = _rows(packet)
+    row_by_check = {str(row.get("check") or ""): row for row in rows}
+    source_evidence = [
+        {
+            "check": str(row.get("check") or ""),
+            "status": str(row.get("status") or ""),
+            "artifact_path": str(row.get("artifact_path") or ""),
+            "blockers": _row_blockers(row),
+        }
+        for row in rows
+        if str(row.get("check") or "")
+        in {"clean_checkout_ai_verify", "baseline_summary", "operator_review"}
+    ]
+    if not summary:
+        return {
+            "clean_checkout_receipt_artifact_path": str(receipt_path),
+            "clean_checkout_receipt_status": "missing_developer_preview_clean_checkout_benchmark_receipt",
+            "clean_checkout_receipt_ready": False,
+            "clean_checkout_benchmark_regenerated": False,
+            "clean_checkout_ai_verify_passed": False,
+            "clean_checkout_reviewed_receipt_attached": False,
+            "clean_checkout_reviewer_id_present": False,
+            "clean_checkout_reviewed_at_utc_present": False,
+            "clean_checkout_blocker_count": 0,
+            "clean_checkout_failed_count": 0,
+            "clean_checkout_baseline_summary_present": False,
+            "clean_checkout_baseline_task_count": 0,
+            "clean_checkout_baseline_score_row_count": 0,
+            "clean_checkout_baseline_score_leaderboard_count": 0,
+            "clean_checkout_baseline_score_leaderboard_csv_count": 0,
+            "clean_checkout_baseline_ranking_summary_missing_count": 0,
+            "clean_checkout_source_evidence_ready": False,
+            "clean_checkout_source_evidence": [],
+            "clean_checkout_source_blockers": ["developer_preview_clean_checkout_benchmark_receipt_missing"],
+            "developer_demo_wording_allowed": False,
+            "paid_pilot_wording_allowed": False,
+        }
+    receipt_ready = (
+        str(summary.get("status") or "")
+        == "developer_preview_clean_checkout_benchmark_receipt_ready"
+    )
+    source_blockers = [
+        blocker
+        for row in source_evidence
+        for blocker in _row_blockers(row)
+    ]
+    return {
+        "clean_checkout_receipt_artifact_path": str(receipt_path),
+        "clean_checkout_receipt_status": str(summary.get("status") or ""),
+        "clean_checkout_receipt_ready": receipt_ready,
+        "clean_checkout_benchmark_regenerated": bool(
+            summary.get("clean_checkout_benchmark_regenerated") is True
+        ),
+        "clean_checkout_ai_verify_passed": bool(summary.get("ai_verify_passed") is True),
+        "clean_checkout_reviewed_receipt_attached": bool(
+            summary.get("reviewed_receipt_attached") is True
+        ),
+        "clean_checkout_reviewer_id_present": bool(summary.get("reviewer_id_present") is True),
+        "clean_checkout_reviewed_at_utc_present": bool(
+            summary.get("reviewed_at_utc_present") is True
+        ),
+        "clean_checkout_blocker_count": _int(summary.get("blocker_count")),
+        "clean_checkout_failed_count": _int(summary.get("failed_count")),
+        "clean_checkout_baseline_summary_present": bool(
+            summary.get("baseline_summary_present") is True
+        ),
+        "clean_checkout_baseline_task_count": _int(summary.get("baseline_task_count")),
+        "clean_checkout_baseline_score_row_count": _int(summary.get("baseline_score_row_count")),
+        "clean_checkout_baseline_score_leaderboard_count": _int(
+            summary.get("baseline_score_leaderboard_count")
+        ),
+        "clean_checkout_baseline_score_leaderboard_csv_count": _int(
+            summary.get("baseline_score_leaderboard_csv_count")
+        ),
+        "clean_checkout_baseline_ranking_summary_missing_count": _int(
+            summary.get("baseline_ranking_summary_missing_count")
+        ),
+        "clean_checkout_source_evidence_ready": bool(
+            row_by_check.get("clean_checkout_ai_verify", {}).get("status") == "pass"
+            and row_by_check.get("baseline_summary", {}).get("status") == "pass"
+            and row_by_check.get("operator_review", {}).get("status") == "pass"
+        ),
+        "clean_checkout_source_evidence": source_evidence,
+        "clean_checkout_source_blockers": source_blockers,
+        "developer_demo_wording_allowed": receipt_ready,
+        "paid_pilot_wording_allowed": False,
+    }
 
 
 def _accuracy_parity_release_fields(release: dict[str, Any]) -> dict[str, Any]:
@@ -3463,9 +3567,17 @@ async def get_goal_developer_preview() -> dict[str, Any]:
             "receipt_work_order_primary_source_blocker_required_action": "",
             "rows": [],
             "receipt_work_order_rows": [],
+            **_developer_preview_clean_checkout_receipt_surface(
+                DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT
+            ),
+            "developer_demo_wording_allowed": False,
+            "paid_pilot_wording_allowed": False,
             **_mutation_flags(),
             "claim_boundary": CLAIM_BOUNDARY,
         }
+    clean_checkout_surface = _developer_preview_clean_checkout_receipt_surface(
+        DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT
+    )
     return {
         **summary,
         "artifact_path": str(DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT),
@@ -3478,6 +3590,10 @@ async def get_goal_developer_preview() -> dict[str, Any]:
         "receipt_work_order_row_count": _int(summary.get("receipt_work_order_row_count")),
         "rows": _rows(packet),
         "receipt_work_order_rows": work_rows,
+        **clean_checkout_surface,
+        "developer_demo_wording_allowed": bool(
+            summary.get("developer_preview_clean_baseline_ready") is True
+        ),
         **_mutation_flags(),
         "claim_boundary": summary.get("claim_boundary") or CLAIM_BOUNDARY,
     }

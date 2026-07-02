@@ -1036,6 +1036,9 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     from api import goal as goal_api
 
     artifact = tmp_path / "runs/developer_preview_final_gate_audit_current.json"
+    clean_checkout_receipt = (
+        tmp_path / ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+    )
     artifact.parent.mkdir(parents=True)
     artifact.write_text(
         json.dumps(
@@ -1082,7 +1085,65 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
         ),
         encoding="utf-8",
     )
+    clean_checkout_receipt.parent.mkdir(parents=True)
+    clean_checkout_receipt.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "blocked_developer_preview_clean_checkout_benchmark_receipt",
+                    "clean_checkout_benchmark_regenerated": False,
+                    "ai_verify_passed": True,
+                    "reviewed_receipt_attached": False,
+                    "reviewer_id_present": False,
+                    "reviewed_at_utc_present": False,
+                    "blocker_count": 3,
+                    "failed_count": 2,
+                    "baseline_summary_present": True,
+                    "baseline_task_count": 0,
+                    "baseline_score_row_count": 0,
+                    "baseline_score_leaderboard_count": 0,
+                    "baseline_score_leaderboard_csv_count": 0,
+                    "baseline_ranking_summary_missing_count": 0,
+                },
+                "rows": [
+                    {
+                        "check": "clean_checkout_ai_verify",
+                        "status": "pass",
+                        "artifact_path": ".betelgeuze/developer_preview_clean_checkout_ai_verify.log",
+                        "blockers": [],
+                    },
+                    {
+                        "check": "baseline_summary",
+                        "status": "blocked",
+                        "artifact_path": (
+                            ".betelgeuze/developer_preview_external_baselines/"
+                            "biorxiv_baseline_comparison_developer_preview_clean_checkout/summary.json"
+                        ),
+                        "blockers": [
+                            "baseline_task_count_zero",
+                            "baseline_score_leaderboard_empty",
+                        ],
+                    },
+                    {
+                        "check": "operator_review",
+                        "status": "blocked",
+                        "blockers": [
+                            "reviewed_receipt_attached_not_true",
+                            "reviewer_id_missing",
+                            "reviewed_at_utc_missing",
+                        ],
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
     monkeypatch.setattr(goal_api, "DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT", artifact)
+    monkeypatch.setattr(
+        goal_api,
+        "DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT",
+        clean_checkout_receipt,
+    )
 
     response = asyncio.run(goal_api.get_goal_developer_preview())
 
@@ -1109,6 +1170,24 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     assert response["receipt_work_order_rows"][0]["blocker_detail"] == (
         "status=blocked_developer_preview_clean_checkout_benchmark_receipt"
     )
+    assert response["clean_checkout_receipt_status"] == (
+        "blocked_developer_preview_clean_checkout_benchmark_receipt"
+    )
+    assert response["clean_checkout_receipt_ready"] is False
+    assert response["clean_checkout_ai_verify_passed"] is True
+    assert response["clean_checkout_benchmark_regenerated"] is False
+    assert response["clean_checkout_reviewed_receipt_attached"] is False
+    assert response["clean_checkout_blocker_count"] == 3
+    assert response["clean_checkout_failed_count"] == 2
+    assert response["clean_checkout_baseline_summary_present"] is True
+    assert response["clean_checkout_baseline_task_count"] == 0
+    assert response["clean_checkout_source_evidence_ready"] is False
+    assert response["clean_checkout_source_evidence"][0]["check"] == "clean_checkout_ai_verify"
+    assert response["clean_checkout_source_evidence"][1]["check"] == "baseline_summary"
+    assert "baseline_task_count_zero" in response["clean_checkout_source_blockers"]
+    assert "reviewer_id_missing" in response["clean_checkout_source_blockers"]
+    assert response["developer_demo_wording_allowed"] is False
+    assert response["paid_pilot_wording_allowed"] is False
     assert response["execution_enabled"] is False
     assert response["external_state_mutated"] is False
     assert response["claim_boundary"] == "developer preview boundary"
@@ -1121,6 +1200,9 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     assert missing["receipt_work_order_rows"] == []
     assert missing["receipt_work_order_source_blocker_count"] == 0
     assert missing["receipt_work_order_primary_source_blocker"] == ""
+    assert missing["clean_checkout_receipt_ready"] is False
+    assert missing["developer_demo_wording_allowed"] is False
+    assert missing["paid_pilot_wording_allowed"] is False
     assert missing["execution_enabled"] is False
     assert missing["external_state_mutated"] is False
 
