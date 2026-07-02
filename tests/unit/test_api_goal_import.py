@@ -1097,6 +1097,115 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     assert missing["external_state_mutated"] is False
 
 
+def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, tmp_path: Path) -> None:
+    from api import goal as goal_api
+
+    audit_artifact = tmp_path / "runs/public_benchmark_external_receipts_audit_current.json"
+    attach_artifact = tmp_path / "runs/public_benchmark_receipt_attach_packet_current.json"
+    audit_artifact.parent.mkdir(parents=True)
+    audit_artifact.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "blocked_public_benchmark_external_receipts_audit",
+                    "external_benchmark_receipts_ready": False,
+                    "blocker_count": 2,
+                    "ready_step_count": 5,
+                    "blocked_step_count": 2,
+                    "receipt_blocked_row_count": 51,
+                    "next_required_step": "Fill public benchmark receipts.",
+                    "claim_boundary": "benchmark audit boundary",
+                },
+                "rows": [
+                    {
+                        "step_id": "vina_gnina_same_input_comparison",
+                        "status": "blocked",
+                        "ready": False,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    attach_artifact.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "blocked_public_benchmark_receipt_attach_packet",
+                    "receipt_attach_packet_ready": False,
+                    "external_benchmark_receipts_ready": False,
+                    "blocker_count": 2,
+                    "field_work_order_row_count": 22,
+                    "field_work_order_primary_lane_id": "vina_gnina_same_input_scores",
+                    "field_work_order_primary_field_name": "approval_token",
+                    "vina_gnina_score_value_pending_count": 32,
+                    "vina_gnina_operator_metadata_pending_count": 128,
+                    "vina_gnina_approval_token_pending_count": 16,
+                    "metric_source_receipt_blocked_row_count": 51,
+                    "metric_source_receipt_manual_field_pending_count": 510,
+                    "next_required_step": "Fill score-template rows.",
+                    "claim_boundary": "receipt attach boundary",
+                },
+                "rows": [
+                    {
+                        "lane_id": "vina_gnina_same_input_scores",
+                        "status": "blocked",
+                        "ready": False,
+                    }
+                ],
+                "field_work_order_rows": [
+                    {
+                        "lane_id": "vina_gnina_same_input_scores",
+                        "field_name": "approval_token",
+                        "pending_row_count": 16,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(goal_api, "PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT", audit_artifact)
+    monkeypatch.setattr(goal_api, "PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT", attach_artifact)
+
+    response = asyncio.run(goal_api.get_goal_public_benchmark())
+
+    assert response["status"] == "blocked_public_benchmark_receipt_attach_packet"
+    assert response["audit_status"] == "blocked_public_benchmark_external_receipts_audit"
+    assert response["receipt_attach_packet_status"] == "blocked_public_benchmark_receipt_attach_packet"
+    assert response["external_benchmark_receipts_ready"] is False
+    assert response["receipt_attach_packet_ready"] is False
+    assert response["blocker_count"] == 2
+    assert response["ready_step_count"] == 5
+    assert response["blocked_step_count"] == 2
+    assert response["receipt_blocked_row_count"] == 51
+    assert response["field_work_order_row_count"] == 22
+    assert response["field_work_order_primary_lane_id"] == "vina_gnina_same_input_scores"
+    assert response["field_work_order_primary_field_name"] == "approval_token"
+    assert response["vina_gnina_score_value_pending_count"] == 32
+    assert response["metric_source_receipt_manual_field_pending_count"] == 510
+    assert response["rows"][0]["step_id"] == "vina_gnina_same_input_comparison"
+    assert response["receipt_attach_rows"][0]["lane_id"] == "vina_gnina_same_input_scores"
+    assert response["field_work_order_rows"][0]["field_name"] == "approval_token"
+    assert response["next_required_step"] == "Fill score-template rows."
+    assert response["execution_enabled"] is False
+    assert response["external_state_mutated"] is False
+    assert response["claim_boundary"] == "receipt attach boundary"
+
+    monkeypatch.setattr(goal_api, "PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT", tmp_path / "missing-audit.json")
+    monkeypatch.setattr(
+        goal_api,
+        "PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT",
+        tmp_path / "missing-attach.json",
+    )
+    missing = asyncio.run(goal_api.get_goal_public_benchmark())
+    assert missing["status"] == "missing_public_benchmark_receipts"
+    assert missing["external_benchmark_receipts_ready"] is False
+    assert missing["receipt_attach_packet_ready"] is False
+    assert missing["field_work_order_rows"] == []
+    assert missing["execution_enabled"] is False
+    assert missing["external_state_mutated"] is False
+
+
 def test_api_app_imports_with_goal_router() -> None:
     from api.main import app
     from api.goal import (
@@ -1107,6 +1216,7 @@ def test_api_app_imports_with_goal_router() -> None:
         get_goal_developer_preview,
         get_goal_operator_intake_kit,
         get_goal_priority_queue,
+        get_goal_public_benchmark,
         get_goal_readiness,
         get_goal_release_decision,
         get_goal_status,
@@ -1117,6 +1227,7 @@ def test_api_app_imports_with_goal_router() -> None:
     assert "/goal/readiness" in paths
     assert "/goal/priority-queue" in paths
     assert "/goal/developer-preview" in paths
+    assert "/goal/public-benchmark" in paths
     assert "/goal/actions" in paths
     assert "/goal/operator-intake-kit" in paths
     assert "/goal/release-decision" in paths

@@ -18,6 +18,12 @@ GOAL_BOTTLENECK_BRIEFING_ARTIFACT = ROOT / "runs" / "goal_bottleneck_briefing_cu
 GOAL_API_SURFACE_CONTRACT_ARTIFACT = ROOT / "runs" / "goal_api_surface_contract_current.json"
 PM_PRIORITY_QUEUE_ARTIFACT = ROOT / ".betelgeuze" / "pm_priority_queue_status_current.json"
 DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT = ROOT / "runs" / "developer_preview_final_gate_audit_current.json"
+PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT = (
+    ROOT / "runs" / "public_benchmark_external_receipts_audit_current.json"
+)
+PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT = (
+    ROOT / "runs" / "public_benchmark_receipt_attach_packet_current.json"
+)
 PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT = ROOT / "runs" / "product_goal_completion_audit_current.json"
 PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT = (
     ROOT / "runs" / "product_commercial_readiness_handoff_bundle_current.json"
@@ -3466,6 +3472,75 @@ async def get_goal_developer_preview() -> dict[str, Any]:
         "receipt_work_order_rows": work_rows,
         **_mutation_flags(),
         "claim_boundary": summary.get("claim_boundary") or CLAIM_BOUNDARY,
+    }
+
+
+@router.get("/public-benchmark")
+async def get_goal_public_benchmark() -> dict[str, Any]:
+    audit_packet = _read_json_object(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT)
+    attach_packet = _read_json_object(PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT)
+    audit = _summary(audit_packet)
+    attach = _summary(attach_packet)
+    field_rows_value = attach_packet.get("field_work_order_rows")
+    field_work_order_rows = (
+        [row for row in field_rows_value if isinstance(row, dict)]
+        if isinstance(field_rows_value, list)
+        else []
+    )
+    if not audit and not attach:
+        return {
+            "status": "missing_public_benchmark_receipts",
+            "audit_artifact_path": str(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT),
+            "receipt_attach_packet_artifact_path": str(PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT),
+            "external_benchmark_receipts_ready": False,
+            "receipt_attach_packet_ready": False,
+            "blocker_count": 0,
+            "field_work_order_row_count": 0,
+            "rows": [],
+            "receipt_attach_rows": [],
+            "field_work_order_rows": [],
+            **_mutation_flags(),
+            "claim_boundary": CLAIM_BOUNDARY,
+        }
+    status = str(
+        attach.get("status")
+        or audit.get("status")
+        or "blocked_public_benchmark_receipts"
+    )
+    next_required_step = str(attach.get("next_required_step") or audit.get("next_required_step") or "")
+    return {
+        "status": status,
+        "audit_artifact_path": str(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT),
+        "receipt_attach_packet_artifact_path": str(PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT),
+        "audit_status": str(audit.get("status") or ""),
+        "receipt_attach_packet_status": str(attach.get("status") or ""),
+        "external_benchmark_receipts_ready": bool(
+            attach.get("external_benchmark_receipts_ready") is True
+            and audit.get("external_benchmark_receipts_ready") is True
+        ),
+        "receipt_attach_packet_ready": bool(attach.get("receipt_attach_packet_ready") is True),
+        "blocker_count": max(_int(audit.get("blocker_count")), _int(attach.get("blocker_count"))),
+        "ready_step_count": _int(audit.get("ready_step_count")),
+        "blocked_step_count": _int(audit.get("blocked_step_count")),
+        "receipt_blocked_row_count": _int(audit.get("receipt_blocked_row_count")),
+        "field_work_order_row_count": _int(attach.get("field_work_order_row_count")),
+        "field_work_order_primary_lane_id": str(attach.get("field_work_order_primary_lane_id") or ""),
+        "field_work_order_primary_field_name": str(attach.get("field_work_order_primary_field_name") or ""),
+        "vina_gnina_score_value_pending_count": _int(attach.get("vina_gnina_score_value_pending_count")),
+        "vina_gnina_operator_metadata_pending_count": _int(
+            attach.get("vina_gnina_operator_metadata_pending_count")
+        ),
+        "vina_gnina_approval_token_pending_count": _int(attach.get("vina_gnina_approval_token_pending_count")),
+        "metric_source_receipt_blocked_row_count": _int(attach.get("metric_source_receipt_blocked_row_count")),
+        "metric_source_receipt_manual_field_pending_count": _int(
+            attach.get("metric_source_receipt_manual_field_pending_count")
+        ),
+        "next_required_step": next_required_step,
+        "rows": _rows(audit_packet),
+        "receipt_attach_rows": _rows(attach_packet),
+        "field_work_order_rows": field_work_order_rows,
+        **_mutation_flags(),
+        "claim_boundary": attach.get("claim_boundary") or audit.get("claim_boundary") or CLAIM_BOUNDARY,
     }
 
 
