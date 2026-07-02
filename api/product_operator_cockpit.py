@@ -168,6 +168,31 @@ def _public_benchmark_field_work_order_rows(value: Any) -> list[dict[str, Any]]:
     return work_rows
 
 
+def _public_benchmark_external_receipt_step_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    step_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        step_rows.append(
+            {
+                "step_id": str(row.get("step_id") or ""),
+                "status": str(row.get("status") or ""),
+                "ready": bool(row.get("ready") is True),
+                "evidence_artifact": str(row.get("evidence_artifact") or ""),
+                "primary_metric": str(row.get("primary_metric") or ""),
+                "secondary_metric": str(row.get("secondary_metric") or ""),
+                "blocker": str(row.get("blocker") or ""),
+                "next_required_step": str(row.get("next_required_step") or ""),
+                "claim_boundary": str(row.get("claim_boundary") or ""),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return step_rows
+
+
 def _gpcr_promotion_work_order_rows(value: Any) -> list[dict[str, Any]]:
     rows = value if isinstance(value, list) else []
     work_rows: list[dict[str, Any]] = []
@@ -386,6 +411,7 @@ def _missing_response() -> dict[str, Any]:
         "public_benchmark_field_work_order_primary_operator_csv": "",
         "public_benchmark_field_work_order_primary_source_artifact": "",
         "public_benchmark_field_work_order_rows": [],
+        "public_benchmark_external_receipt_step_rows": [],
         "public_benchmark_primary_blocker_id": "",
         "public_benchmark_primary_blocker": "",
         "public_benchmark_primary_next_required_step": "",
@@ -701,6 +727,11 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "public_benchmark_field_work_order_rows": _public_benchmark_field_work_order_rows(
             summary.get("public_benchmark_field_work_order_rows")
+        ),
+        "public_benchmark_external_receipt_step_rows": (
+            _public_benchmark_external_receipt_step_rows(
+                summary.get("public_benchmark_external_receipt_step_rows")
+            )
         ),
         "public_benchmark_primary_blocker_id": str(
             summary.get("public_benchmark_primary_blocker_id") or ""

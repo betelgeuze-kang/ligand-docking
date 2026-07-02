@@ -231,6 +231,28 @@ def _public_benchmark_field_work_order_rows(payload: dict[str, Any]) -> list[dic
     return rows
 
 
+def _public_benchmark_external_receipt_step_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _rows(payload):
+        rows.append(
+            {
+                "step_id": _text(row.get("step_id")),
+                "status": _text(row.get("status")),
+                "ready": _bool_true(row.get("ready")),
+                "evidence_artifact": _text(row.get("evidence_artifact")),
+                "primary_metric": _text(row.get("primary_metric")),
+                "secondary_metric": _text(row.get("secondary_metric")),
+                "blocker": _text(row.get("blocker")),
+                "next_required_step": _text(row.get("next_required_step")),
+                "claim_boundary": _text(row.get("claim_boundary")),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _gpcr_promotion_work_order_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in _dict_list(payload, "promotion_work_order_rows"):
@@ -772,7 +794,11 @@ def build_product_operator_cockpit(
     pocketmd_payload = _read_json(pocketmd_json, root=root)
     pocketmd = _summary(pocketmd_payload)
     pocketmd_rows = _rows(pocketmd_payload)
-    public_benchmark = _summary(_read_json(public_benchmark_json, root=root))
+    public_benchmark_payload = _read_json(public_benchmark_json, root=root)
+    public_benchmark = _summary(public_benchmark_payload)
+    public_benchmark_external_receipt_step_rows = (
+        _public_benchmark_external_receipt_step_rows(public_benchmark_payload)
+    )
     public_receipt_attach_payload = _read_json(
         public_benchmark_receipt_attach_packet_json, root=root
     )
@@ -2010,6 +2036,9 @@ def build_product_operator_cockpit(
             public_field_work_order_primary_source_artifact
         ),
         "public_benchmark_field_work_order_rows": public_benchmark_field_work_order_rows,
+        "public_benchmark_external_receipt_step_rows": (
+            public_benchmark_external_receipt_step_rows
+        ),
         "public_benchmark_primary_blocker_id": public_primary_blocker_id,
         "public_benchmark_primary_blocker": public_primary_blocker,
         "public_benchmark_primary_next_required_step": public_primary_next_required_step,

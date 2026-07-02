@@ -217,7 +217,27 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                     "benchmark_receipt_attach:benchmark_metric_source_receipt_rows_unapproved",
                 ],
                 "claim_promotion_allowed": False,
-            }
+            },
+            "rows": [
+                {
+                    "step_id": "vina_gnina_same_input_comparison",
+                    "status": "blocked",
+                    "ready": False,
+                    "evidence_artifact": (
+                        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+                    ),
+                    "primary_metric": "score_rows=0/16",
+                    "secondary_metric": "pending_fields=192",
+                    "blocker": "vina_gnina_same_input_score_evidence_missing",
+                    "next_required_step": (
+                        "Fill every score-template row with same-input Vina/GNINA scores."
+                    ),
+                    "claim_boundary": "public benchmark audit boundary",
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                }
+            ],
         },
     )
     _write_json(
@@ -861,6 +881,26 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
             "operator_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
             "source_artifact": "runs/public_benchmark_vina_gnina_score_template_receipt_current.json",
             "claim_boundary": "same-input Vina/GNINA score receipt only",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
+    assert summary["public_benchmark_external_receipt_step_rows"] == [
+        {
+            "step_id": "vina_gnina_same_input_comparison",
+            "status": "blocked",
+            "ready": False,
+            "evidence_artifact": (
+                "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+            ),
+            "primary_metric": "score_rows=0/16",
+            "secondary_metric": "pending_fields=192",
+            "blocker": "vina_gnina_same_input_score_evidence_missing",
+            "next_required_step": (
+                "Fill every score-template row with same-input Vina/GNINA scores."
+            ),
+            "claim_boundary": "public benchmark audit boundary",
             "execution_enabled": False,
             "external_state_mutated": False,
             "claim_promotion_allowed": False,

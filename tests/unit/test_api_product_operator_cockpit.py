@@ -267,6 +267,26 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                         "claim_promotion_allowed": True,
                     }
                 ],
+                "public_benchmark_external_receipt_step_rows": [
+                    {
+                        "step_id": "vina_gnina_same_input_comparison",
+                        "status": "blocked",
+                        "ready": False,
+                        "evidence_artifact": (
+                            "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+                        ),
+                        "primary_metric": "score_rows=0/16",
+                        "secondary_metric": "pending_fields=192",
+                        "blocker": "vina_gnina_same_input_score_evidence_missing",
+                        "next_required_step": (
+                            "Fill every score-template row with same-input Vina/GNINA scores."
+                        ),
+                        "claim_boundary": "public benchmark audit boundary",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    }
+                ],
                 "public_benchmark_primary_blocker_id": "vina_gnina_same_input_scores",
                 "public_benchmark_primary_blocker": "vina_gnina_same_input_score_evidence_missing",
                 "public_benchmark_primary_next_required_step": (
@@ -613,6 +633,26 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
             "operator_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
             "source_artifact": "runs/public_benchmark_vina_gnina_score_template_receipt_current.json",
             "claim_boundary": "same-input Vina/GNINA score receipt only",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
+    assert response["public_benchmark_external_receipt_step_rows"] == [
+        {
+            "step_id": "vina_gnina_same_input_comparison",
+            "status": "blocked",
+            "ready": False,
+            "evidence_artifact": (
+                "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+            ),
+            "primary_metric": "score_rows=0/16",
+            "secondary_metric": "pending_fields=192",
+            "blocker": "vina_gnina_same_input_score_evidence_missing",
+            "next_required_step": (
+                "Fill every score-template row with same-input Vina/GNINA scores."
+            ),
+            "claim_boundary": "public benchmark audit boundary",
             "execution_enabled": False,
             "external_state_mutated": False,
             "claim_promotion_allowed": False,
@@ -966,6 +1006,7 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["public_benchmark_field_work_order_primary_operator_csv"] == ""
     assert response["public_benchmark_field_work_order_primary_source_artifact"] == ""
     assert response["public_benchmark_field_work_order_rows"] == []
+    assert response["public_benchmark_external_receipt_step_rows"] == []
     assert response["public_benchmark_primary_blocker_id"] == ""
     assert response["public_benchmark_primary_blocker"] == ""
     assert response["public_benchmark_primary_next_required_step"] == ""
