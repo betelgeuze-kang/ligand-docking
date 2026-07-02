@@ -35,6 +35,7 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         "f2g_recovery": (
             tmp_path / ".betelgeuze/f2g_f2h_authoritative_surface_recovery_packet.local.json"
         ),
+        "enterprise": tmp_path / "runs/enterprise_on_prem_readiness_gate_current.json",
     }
     _write_json(
         paths["capabilities"],
@@ -470,6 +471,31 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
             ],
         },
     )
+    _write_json(
+        paths["enterprise"],
+        {
+            "summary": {
+                "status": "blocked_enterprise_on_prem_readiness_gate",
+                "enterprise_on_prem_ready": False,
+                "control_count": 10,
+                "ready_control_count": 4,
+                "blocked_control_count": 6,
+                "primary_blocker_id": "oidc_rbac_tenant_isolation",
+                "primary_blocker": "oidc_rbac_claim_grade_evidence_missing",
+                "next_required_step": (
+                    "Add reviewed OIDC provider, RBAC role matrix, and tenant-isolation test receipts."
+                ),
+                "oidc_rbac_ready": False,
+                "object_storage_ready": False,
+                "gpu_scheduler_ready": False,
+                "audit_provenance_metrics_tracing_ready": False,
+                "license_control_ready": True,
+                "support_bundle_recovery_drill_ready": False,
+                "rollback_retry_idempotency_ready": True,
+                "claim_boundary": "enterprise boundary",
+            }
+        },
+    )
     return paths
 
 
@@ -492,6 +518,7 @@ def _build_payload(tmp_path: Path) -> dict:
         developer_preview_json=paths["developer_preview"],
         f2g_f2h_preflight_json=paths["f2g_preflight"],
         f2g_f2h_recovery_json=paths["f2g_recovery"],
+        enterprise_on_prem_json=paths["enterprise"],
         root=tmp_path,
     )
 
@@ -505,7 +532,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["status"] == "product_operator_cockpit_ready_claims_blocked"
     assert summary["phase8_surface_ready"] is True
     assert summary["required_phase8_panel_count"] == 9
-    assert summary["observed_phase8_panel_count"] == 12
+    assert summary["observed_phase8_panel_count"] == 13
     assert summary["missing_required_phase8_panel_count"] == 0
     assert summary["paid_pilot_wording_allowed"] is False
     assert summary["general_platform_claim_allowed"] is False
@@ -687,6 +714,23 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["f2h_continuation_allowed"] is False
     assert summary["f2g_f2h_placeholder_surface_creation_allowed"] is False
     assert summary["f2g_f2h_surface_restore_executed"] is False
+    assert summary["enterprise_on_prem_readiness_present"] is True
+    assert summary["enterprise_on_prem_ready"] is False
+    assert summary["enterprise_on_prem_claim_allowed"] is False
+    assert summary["enterprise_on_prem_control_count"] == 10
+    assert summary["enterprise_on_prem_ready_control_count"] == 4
+    assert summary["enterprise_on_prem_blocked_control_count"] == 6
+    assert summary["enterprise_on_prem_primary_blocker_id"] == "oidc_rbac_tenant_isolation"
+    assert summary["enterprise_on_prem_primary_blocker"] == (
+        "oidc_rbac_claim_grade_evidence_missing"
+    )
+    assert summary["enterprise_on_prem_oidc_rbac_ready"] is False
+    assert summary["enterprise_on_prem_object_storage_ready"] is False
+    assert summary["enterprise_on_prem_gpu_scheduler_ready"] is False
+    assert summary["enterprise_on_prem_audit_provenance_metrics_tracing_ready"] is False
+    assert summary["enterprise_on_prem_license_control_ready"] is True
+    assert summary["enterprise_on_prem_support_bundle_recovery_drill_ready"] is False
+    assert summary["enterprise_on_prem_rollback_retry_idempotency_ready"] is True
     assert summary["pm_priority_queue_present"] is True
     assert summary["pm_priority_queue_status"] == "blocked_pm_priority_queue"
     assert summary["pm_priority_queue_blocked_item_count"] == 5
@@ -931,6 +975,21 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert panels["f2g_f2h_preflight_work_order"]["next_action"] == (
         "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
     )
+    assert panels["enterprise_on_prem_readiness_panel"]["route"] == "/goal/enterprise-on-prem"
+    assert panels["enterprise_on_prem_readiness_panel"]["source_artifact_ready"] is True
+    assert panels["enterprise_on_prem_readiness_panel"]["operator_action_required"] is True
+    assert panels["enterprise_on_prem_readiness_panel"]["claim_allowed"] is False
+    assert panels["enterprise_on_prem_readiness_panel"]["claim_boundary"] == "enterprise boundary"
+    assert "ready_controls=4/10" in panels["enterprise_on_prem_readiness_panel"]["primary_metric"]
+    assert "blocked_controls=6" in panels["enterprise_on_prem_readiness_panel"]["primary_metric"]
+    assert "primary_blocker_id=oidc_rbac_tenant_isolation" in (
+        panels["enterprise_on_prem_readiness_panel"]["secondary_metric"]
+    )
+    assert "object_storage_ready=false" in panels["enterprise_on_prem_readiness_panel"]["secondary_metric"]
+    assert "gpu_scheduler_ready=false" in panels["enterprise_on_prem_readiness_panel"]["secondary_metric"]
+    assert panels["enterprise_on_prem_readiness_panel"]["blockers"] == [
+        "oidc_rbac_claim_grade_evidence_missing"
+    ]
     assert panels["f2g_f2h_preflight_work_order"]["blockers"] == [
         "implementation_phase1_dir_missing",
         "real_mgt_input_surface_missing",
@@ -943,6 +1002,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert claims["broad_gpcr_claim"]["allowed"] is False
     assert claims["pocketmd_lite_customer_claim"]["allowed"] is False
     assert claims["public_benchmark_claim"]["allowed"] is False
+    assert claims["enterprise_on_prem_platform_claim"]["allowed"] is False
     assert summary["execution_enabled"] is False
     assert summary["external_state_mutated"] is False
 

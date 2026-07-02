@@ -190,6 +190,24 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                     "blocker_count",
                     "failed_count",
                 ],
+                "enterprise_on_prem_readiness_present": True,
+                "enterprise_on_prem_ready": False,
+                "enterprise_on_prem_claim_allowed": False,
+                "enterprise_on_prem_control_count": 10,
+                "enterprise_on_prem_ready_control_count": 4,
+                "enterprise_on_prem_blocked_control_count": 6,
+                "enterprise_on_prem_primary_blocker_id": "oidc_rbac_tenant_isolation",
+                "enterprise_on_prem_primary_blocker": "oidc_rbac_claim_grade_evidence_missing",
+                "enterprise_on_prem_next_required_step": (
+                    "Add reviewed OIDC provider, RBAC role matrix, and tenant-isolation test receipts."
+                ),
+                "enterprise_on_prem_oidc_rbac_ready": False,
+                "enterprise_on_prem_object_storage_ready": False,
+                "enterprise_on_prem_gpu_scheduler_ready": False,
+                "enterprise_on_prem_audit_provenance_metrics_tracing_ready": False,
+                "enterprise_on_prem_license_control_ready": True,
+                "enterprise_on_prem_support_bundle_recovery_drill_ready": False,
+                "enterprise_on_prem_rollback_retry_idempotency_ready": True,
                 "f2g_f2h_preflight_present": True,
                 "f2g_f2h_recovery_packet_present": True,
                 "f2g_f2h_preflight_status": "blocked_f2g_f2h_surface_preflight",
@@ -391,6 +409,23 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
         "blocker_count",
         "failed_count",
     ]
+    assert response["enterprise_on_prem_readiness_present"] is True
+    assert response["enterprise_on_prem_ready"] is False
+    assert response["enterprise_on_prem_claim_allowed"] is False
+    assert response["enterprise_on_prem_control_count"] == 10
+    assert response["enterprise_on_prem_ready_control_count"] == 4
+    assert response["enterprise_on_prem_blocked_control_count"] == 6
+    assert response["enterprise_on_prem_primary_blocker_id"] == "oidc_rbac_tenant_isolation"
+    assert response["enterprise_on_prem_primary_blocker"] == (
+        "oidc_rbac_claim_grade_evidence_missing"
+    )
+    assert response["enterprise_on_prem_oidc_rbac_ready"] is False
+    assert response["enterprise_on_prem_object_storage_ready"] is False
+    assert response["enterprise_on_prem_gpu_scheduler_ready"] is False
+    assert response["enterprise_on_prem_audit_provenance_metrics_tracing_ready"] is False
+    assert response["enterprise_on_prem_license_control_ready"] is True
+    assert response["enterprise_on_prem_support_bundle_recovery_drill_ready"] is False
+    assert response["enterprise_on_prem_rollback_retry_idempotency_ready"] is True
     assert response["f2g_f2h_preflight_present"] is True
     assert response["f2g_f2h_recovery_packet_present"] is True
     assert response["f2g_f2h_preflight_status"] == "blocked_f2g_f2h_surface_preflight"
@@ -542,6 +577,22 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["developer_preview_receipt_work_order_primary_required_receipt_status"] == ""
     assert response["developer_preview_receipt_work_order_primary_required_true_fields"] == []
     assert response["developer_preview_receipt_work_order_primary_required_zero_fields"] == []
+    assert response["enterprise_on_prem_readiness_present"] is False
+    assert response["enterprise_on_prem_ready"] is False
+    assert response["enterprise_on_prem_claim_allowed"] is False
+    assert response["enterprise_on_prem_control_count"] == 0
+    assert response["enterprise_on_prem_ready_control_count"] == 0
+    assert response["enterprise_on_prem_blocked_control_count"] == 0
+    assert response["enterprise_on_prem_primary_blocker_id"] == ""
+    assert response["enterprise_on_prem_primary_blocker"] == ""
+    assert response["enterprise_on_prem_next_required_step"] == ""
+    assert response["enterprise_on_prem_oidc_rbac_ready"] is False
+    assert response["enterprise_on_prem_object_storage_ready"] is False
+    assert response["enterprise_on_prem_gpu_scheduler_ready"] is False
+    assert response["enterprise_on_prem_audit_provenance_metrics_tracing_ready"] is False
+    assert response["enterprise_on_prem_license_control_ready"] is False
+    assert response["enterprise_on_prem_support_bundle_recovery_drill_ready"] is False
+    assert response["enterprise_on_prem_rollback_retry_idempotency_ready"] is False
     assert response["f2g_f2h_preflight_present"] is False
     assert response["f2g_f2h_recovery_packet_present"] is False
     assert response["f2g_f2h_preflight_status"] == ""

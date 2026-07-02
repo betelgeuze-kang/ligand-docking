@@ -188,6 +188,22 @@ def _missing_response() -> dict[str, Any]:
         "developer_preview_receipt_work_order_primary_required_receipt_status": "",
         "developer_preview_receipt_work_order_primary_required_true_fields": [],
         "developer_preview_receipt_work_order_primary_required_zero_fields": [],
+        "enterprise_on_prem_readiness_present": False,
+        "enterprise_on_prem_ready": False,
+        "enterprise_on_prem_claim_allowed": False,
+        "enterprise_on_prem_control_count": 0,
+        "enterprise_on_prem_ready_control_count": 0,
+        "enterprise_on_prem_blocked_control_count": 0,
+        "enterprise_on_prem_primary_blocker_id": "",
+        "enterprise_on_prem_primary_blocker": "",
+        "enterprise_on_prem_next_required_step": "",
+        "enterprise_on_prem_oidc_rbac_ready": False,
+        "enterprise_on_prem_object_storage_ready": False,
+        "enterprise_on_prem_gpu_scheduler_ready": False,
+        "enterprise_on_prem_audit_provenance_metrics_tracing_ready": False,
+        "enterprise_on_prem_license_control_ready": False,
+        "enterprise_on_prem_support_bundle_recovery_drill_ready": False,
+        "enterprise_on_prem_rollback_retry_idempotency_ready": False,
         "f2g_f2h_preflight_present": False,
         "f2g_f2h_recovery_packet_present": False,
         "f2g_f2h_preflight_status": "",
@@ -541,6 +557,50 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "developer_preview_receipt_work_order_primary_required_zero_fields": _string_list(
             summary.get("developer_preview_receipt_work_order_primary_required_zero_fields")
+        ),
+        "enterprise_on_prem_readiness_present": bool(
+            summary.get("enterprise_on_prem_readiness_present") is True
+        ),
+        "enterprise_on_prem_ready": bool(summary.get("enterprise_on_prem_ready") is True),
+        "enterprise_on_prem_claim_allowed": bool(
+            summary.get("enterprise_on_prem_claim_allowed") is True
+        ),
+        "enterprise_on_prem_control_count": _int(summary.get("enterprise_on_prem_control_count")),
+        "enterprise_on_prem_ready_control_count": _int(
+            summary.get("enterprise_on_prem_ready_control_count")
+        ),
+        "enterprise_on_prem_blocked_control_count": _int(
+            summary.get("enterprise_on_prem_blocked_control_count")
+        ),
+        "enterprise_on_prem_primary_blocker_id": str(
+            summary.get("enterprise_on_prem_primary_blocker_id") or ""
+        ),
+        "enterprise_on_prem_primary_blocker": str(
+            summary.get("enterprise_on_prem_primary_blocker") or ""
+        ),
+        "enterprise_on_prem_next_required_step": str(
+            summary.get("enterprise_on_prem_next_required_step") or ""
+        ),
+        "enterprise_on_prem_oidc_rbac_ready": bool(
+            summary.get("enterprise_on_prem_oidc_rbac_ready") is True
+        ),
+        "enterprise_on_prem_object_storage_ready": bool(
+            summary.get("enterprise_on_prem_object_storage_ready") is True
+        ),
+        "enterprise_on_prem_gpu_scheduler_ready": bool(
+            summary.get("enterprise_on_prem_gpu_scheduler_ready") is True
+        ),
+        "enterprise_on_prem_audit_provenance_metrics_tracing_ready": bool(
+            summary.get("enterprise_on_prem_audit_provenance_metrics_tracing_ready") is True
+        ),
+        "enterprise_on_prem_license_control_ready": bool(
+            summary.get("enterprise_on_prem_license_control_ready") is True
+        ),
+        "enterprise_on_prem_support_bundle_recovery_drill_ready": bool(
+            summary.get("enterprise_on_prem_support_bundle_recovery_drill_ready") is True
+        ),
+        "enterprise_on_prem_rollback_retry_idempotency_ready": bool(
+            summary.get("enterprise_on_prem_rollback_retry_idempotency_ready") is True
         ),
         "f2g_f2h_preflight_present": bool(summary.get("f2g_f2h_preflight_present") is True),
         "f2g_f2h_recovery_packet_present": bool(

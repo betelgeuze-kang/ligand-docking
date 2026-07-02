@@ -30,6 +30,7 @@ DEFAULT_CUSTOMER_SHADOW_JSON = "runs/customer_shadow_evidence_status_current.jso
 DEFAULT_DEVELOPER_PREVIEW_JSON = "runs/developer_preview_final_gate_audit_current.json"
 DEFAULT_F2G_F2H_PREFLIGHT_JSON = ".betelgeuze/f2g_f2h_surface_preflight.local.json"
 DEFAULT_F2G_F2H_RECOVERY_JSON = ".betelgeuze/f2g_f2h_authoritative_surface_recovery_packet.local.json"
+DEFAULT_ENTERPRISE_ON_PREM_JSON = "runs/enterprise_on_prem_readiness_gate_current.json"
 DEFAULT_OUT_JSON = "runs/product_operator_cockpit_current.json"
 DEFAULT_OUT_CSV = "runs/product_operator_cockpit_current.csv"
 DEFAULT_OUT_MD = "runs/product_operator_cockpit_current.md"
@@ -267,6 +268,7 @@ def _build_claim_rows(
     evidence_bundle_export_ready: bool,
     release_allowed: bool,
     customer_shadow_paid_pilot_ready: bool,
+    enterprise_on_prem_ready: bool,
 ) -> list[dict[str, Any]]:
     rows = [
         {
@@ -328,6 +330,12 @@ def _build_claim_rows(
             "allowed": public_benchmark_claim_allowed,
             "claim_text": "Public benchmark claim-grade support is allowed.",
             "boundary": "Blocked until benchmark readiness and receipt ledger pass.",
+        },
+        {
+            "claim_id": "enterprise_on_prem_platform_claim",
+            "allowed": enterprise_on_prem_ready,
+            "claim_text": "Enterprise/on-prem platform claim is allowed.",
+            "boundary": "Blocked until OIDC/RBAC, TLS/exposure, object storage, GPU scheduler, tracing, support, and drills pass.",
         },
     ]
     return rows
@@ -631,6 +639,7 @@ def build_product_operator_cockpit(
     developer_preview_json: str | Path = DEFAULT_DEVELOPER_PREVIEW_JSON,
     f2g_f2h_preflight_json: str | Path = DEFAULT_F2G_F2H_PREFLIGHT_JSON,
     f2g_f2h_recovery_json: str | Path = DEFAULT_F2G_F2H_RECOVERY_JSON,
+    enterprise_on_prem_json: str | Path = DEFAULT_ENTERPRISE_ON_PREM_JSON,
     root: Path = ROOT,
 ) -> dict[str, Any]:
     capabilities = _summary(_read_json(capabilities_json, root=root))
@@ -659,6 +668,7 @@ def build_product_operator_cockpit(
     f2g_recovery_payload = _read_json(f2g_f2h_recovery_json, root=root)
     f2g_recovery = _summary(f2g_recovery_payload)
     f2g_recovery_rows = _rows(f2g_recovery_payload)
+    enterprise_on_prem = _summary(_read_json(enterprise_on_prem_json, root=root))
 
     capabilities_present = bool(capabilities)
     restricted_scope_claim_guard_ready = _bool_true(capabilities.get("restricted_scope_claim_guard_ready"))
@@ -1008,6 +1018,27 @@ def build_product_operator_cockpit(
         f2g_recovery.get("placeholder_surface_creation_allowed")
     )
     f2g_surface_restore_executed = _bool_true(f2g_recovery.get("surface_restore_executed"))
+    enterprise_present = bool(enterprise_on_prem)
+    enterprise_ready = _bool_true(enterprise_on_prem.get("enterprise_on_prem_ready"))
+    enterprise_control_count = _int(enterprise_on_prem.get("control_count"))
+    enterprise_ready_control_count = _int(enterprise_on_prem.get("ready_control_count"))
+    enterprise_blocked_control_count = _int(enterprise_on_prem.get("blocked_control_count"))
+    enterprise_primary_blocker_id = _first_text(enterprise_on_prem.get("primary_blocker_id"))
+    enterprise_primary_blocker = _first_text(enterprise_on_prem.get("primary_blocker"))
+    enterprise_next_required_step = _first_text(enterprise_on_prem.get("next_required_step"))
+    enterprise_oidc_rbac_ready = _bool_true(enterprise_on_prem.get("oidc_rbac_ready"))
+    enterprise_object_storage_ready = _bool_true(enterprise_on_prem.get("object_storage_ready"))
+    enterprise_gpu_scheduler_ready = _bool_true(enterprise_on_prem.get("gpu_scheduler_ready"))
+    enterprise_audit_provenance_ready = _bool_true(
+        enterprise_on_prem.get("audit_provenance_metrics_tracing_ready")
+    )
+    enterprise_license_control_ready = _bool_true(enterprise_on_prem.get("license_control_ready"))
+    enterprise_support_bundle_ready = _bool_true(
+        enterprise_on_prem.get("support_bundle_recovery_drill_ready")
+    )
+    enterprise_rollback_retry_ready = _bool_true(
+        enterprise_on_prem.get("rollback_retry_idempotency_ready")
+    )
 
     claim_rows = _build_claim_rows(
         restricted_scope_claim_guard_ready=restricted_scope_claim_guard_ready,
@@ -1020,6 +1051,7 @@ def build_product_operator_cockpit(
         evidence_bundle_export_ready=evidence_bundle_export_ready,
         release_allowed=release_allowed,
         customer_shadow_paid_pilot_ready=customer_shadow_paid_pilot_ready,
+        enterprise_on_prem_ready=enterprise_ready,
     )
     allowed_claim_text = "; ".join(row["claim_id"] for row in claim_rows if row["allowed"])
     disallowed_claim_text = "; ".join(row["claim_id"] for row in claim_rows if not row["allowed"])
@@ -1345,6 +1377,47 @@ def build_product_operator_cockpit(
             claim_boundary=_text(f2g_recovery.get("claim_boundary"))
             or _text(f2g_preflight.get("claim_boundary"))
             or CLAIM_BOUNDARY,
+            root=root,
+        ),
+        _panel(
+            panel_id="enterprise_on_prem_readiness_panel",
+            title="Enterprise/on-prem readiness",
+            route="/goal/enterprise-on-prem",
+            artifact_path=enterprise_on_prem_json,
+            artifact_present=enterprise_present,
+            status=_text(
+                enterprise_on_prem.get("status")
+                or "missing_enterprise_on_prem_readiness_gate"
+            ),
+            surface_ready=True,
+            source_artifact_ready=enterprise_present,
+            operator_action_required=not enterprise_ready,
+            claim_allowed=False,
+            primary_metric=_join_metrics(
+                _metric("ready_controls", f"{enterprise_ready_control_count}/{enterprise_control_count}"),
+                _metric("blocked_controls", enterprise_blocked_control_count),
+                _metric("enterprise_ready", enterprise_ready),
+            ),
+            secondary_metric=_join_metrics(
+                _metric("primary_blocker_id", enterprise_primary_blocker_id),
+                _metric("oidc_rbac_ready", enterprise_oidc_rbac_ready),
+                _metric("object_storage_ready", enterprise_object_storage_ready),
+                _metric("gpu_scheduler_ready", enterprise_gpu_scheduler_ready),
+                _metric("audit_provenance_tracing_ready", enterprise_audit_provenance_ready),
+                _metric("license_control_ready", enterprise_license_control_ready),
+                _metric("support_bundle_ready", enterprise_support_bundle_ready),
+                _metric("rollback_retry_ready", enterprise_rollback_retry_ready),
+            ),
+            next_action=_first_text(
+                enterprise_next_required_step,
+                "Build enterprise/on-prem readiness evidence and keep platform claims blocked.",
+            ),
+            allowed_claim_text="Enterprise/on-prem readiness blockers can be displayed for operator planning.",
+            disallowed_claim_text="Enterprise/on-prem platform wording remains disallowed until all controls pass.",
+            blockers=[]
+            if enterprise_ready
+            else [enterprise_primary_blocker or "enterprise_on_prem_readiness_blocked"],
+            claim_boundary=_text(enterprise_on_prem.get("claim_boundary")) or CLAIM_BOUNDARY,
             root=root,
         ),
         _panel(
@@ -1742,6 +1815,24 @@ def build_product_operator_cockpit(
         "developer_preview_receipt_work_order_primary_required_zero_fields": (
             developer_preview_primary_required_zero_fields
         ),
+        "enterprise_on_prem_readiness_present": enterprise_present,
+        "enterprise_on_prem_ready": enterprise_ready,
+        "enterprise_on_prem_claim_allowed": False,
+        "enterprise_on_prem_control_count": enterprise_control_count,
+        "enterprise_on_prem_ready_control_count": enterprise_ready_control_count,
+        "enterprise_on_prem_blocked_control_count": enterprise_blocked_control_count,
+        "enterprise_on_prem_primary_blocker_id": enterprise_primary_blocker_id,
+        "enterprise_on_prem_primary_blocker": enterprise_primary_blocker,
+        "enterprise_on_prem_next_required_step": enterprise_next_required_step,
+        "enterprise_on_prem_oidc_rbac_ready": enterprise_oidc_rbac_ready,
+        "enterprise_on_prem_object_storage_ready": enterprise_object_storage_ready,
+        "enterprise_on_prem_gpu_scheduler_ready": enterprise_gpu_scheduler_ready,
+        "enterprise_on_prem_audit_provenance_metrics_tracing_ready": (
+            enterprise_audit_provenance_ready
+        ),
+        "enterprise_on_prem_license_control_ready": enterprise_license_control_ready,
+        "enterprise_on_prem_support_bundle_recovery_drill_ready": enterprise_support_bundle_ready,
+        "enterprise_on_prem_rollback_retry_idempotency_ready": enterprise_rollback_retry_ready,
         "f2g_f2h_preflight_present": f2g_preflight_present,
         "f2g_f2h_recovery_packet_present": f2g_recovery_present,
         "f2g_f2h_preflight_status": f2g_preflight_status,
@@ -1815,6 +1906,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--developer-preview-json", default=DEFAULT_DEVELOPER_PREVIEW_JSON)
     parser.add_argument("--f2g-f2h-preflight-json", default=DEFAULT_F2G_F2H_PREFLIGHT_JSON)
     parser.add_argument("--f2g-f2h-recovery-json", default=DEFAULT_F2G_F2H_RECOVERY_JSON)
+    parser.add_argument("--enterprise-on-prem-json", default=DEFAULT_ENTERPRISE_ON_PREM_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -1841,6 +1933,7 @@ def main(argv: list[str] | None = None) -> int:
         developer_preview_json=args.developer_preview_json,
         f2g_f2h_preflight_json=args.f2g_f2h_preflight_json,
         f2g_f2h_recovery_json=args.f2g_f2h_recovery_json,
+        enterprise_on_prem_json=args.enterprise_on_prem_json,
     )
     write_product_operator_cockpit_outputs(
         payload,

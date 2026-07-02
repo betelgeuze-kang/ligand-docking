@@ -28,6 +28,7 @@ DEFAULT_GPU_HIP_PLAN_MD = "docs/gpu_hip_parity_after_cpu_plan.md"
 DEFAULT_GPU_RETURN_INTAKE_JSON = "runs/product_production_ai_gpu_return_intake_current.json"
 DEFAULT_ROCM_ENV_JSON = "runs/rocm_environment_manifest_current.json"
 DEFAULT_ROCM_BENCHMARK_JSON = "runs/product_end_to_end_rocm_benchmark_current.json"
+DEFAULT_ENTERPRISE_ON_PREM_JSON = "runs/enterprise_on_prem_readiness_gate_current.json"
 
 DP_GATE_IDS = {
     "benchmark_results_clean_checkout_regenerated",
@@ -417,6 +418,33 @@ def _gpu_hip_row(plan_text: str, intake_payload: Any, rocm_payload: Any, benchma
     )
 
 
+def _enterprise_on_prem_row(payload: Any) -> dict[str, Any]:
+    summary = _summary(payload)
+    status = _text(summary.get("status"))
+    ready = bool(summary.get("enterprise_on_prem_ready") is True)
+    ready_controls = _int(summary.get("ready_control_count"))
+    control_count = _int(summary.get("control_count"))
+    blocked_controls = _int(summary.get("blocked_control_count"))
+    primary_blocker = _text(summary.get("primary_blocker_id") or summary.get("primary_blocker"))
+    return _row(
+        "8",
+        "enterprise/on-prem platform",
+        status or "blocked_enterprise_on_prem_readiness_gate_missing",
+        ready,
+        (
+            f"status={status or 'missing'};ready_controls={ready_controls}/{control_count};"
+            f"blocked_controls={blocked_controls};primary_blocker={primary_blocker or 'none'};"
+            f"oidc_rbac_ready={bool(summary.get('oidc_rbac_ready') is True)};"
+            f"object_storage_ready={bool(summary.get('object_storage_ready') is True)};"
+            f"gpu_scheduler_ready={bool(summary.get('gpu_scheduler_ready') is True)};"
+            f"support_bundle_recovery_drill_ready={bool(summary.get('support_bundle_recovery_drill_ready') is True)}"
+        ),
+        primary_blocker or "enterprise_on_prem_readiness_gate_missing",
+        _text(summary.get("next_required_step"))
+        or "Build runs/enterprise_on_prem_readiness_gate_current.json and clear OIDC/RBAC, object storage, GPU scheduler, tracing, and support-bundle blockers.",
+    )
+
+
 def build_pm_priority_queue_status(
     *,
     root: Path = ROOT,
@@ -435,6 +463,7 @@ def build_pm_priority_queue_status(
     gpu_return_intake_json: str = DEFAULT_GPU_RETURN_INTAKE_JSON,
     rocm_env_json: str = DEFAULT_ROCM_ENV_JSON,
     rocm_benchmark_json: str = DEFAULT_ROCM_BENCHMARK_JSON,
+    enterprise_on_prem_json: str = DEFAULT_ENTERPRISE_ON_PREM_JSON,
 ) -> dict[str, Any]:
     root = Path(root)
     f2_payload = _read_json(f2g_f2h_preflight_json, root=root)
@@ -463,6 +492,7 @@ def build_pm_priority_queue_status(
             _read_json(rocm_env_json, root=root),
             _read_json(rocm_benchmark_json, root=root),
         ),
+        _enterprise_on_prem_row(_read_json(enterprise_on_prem_json, root=root)),
     ]
     ready_count = sum(1 for row in rows if row["ready"])
     blocker_count = len(rows) - ready_count
@@ -546,6 +576,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--gpu-return-intake-json", default=DEFAULT_GPU_RETURN_INTAKE_JSON)
     parser.add_argument("--rocm-env-json", default=DEFAULT_ROCM_ENV_JSON)
     parser.add_argument("--rocm-benchmark-json", default=DEFAULT_ROCM_BENCHMARK_JSON)
+    parser.add_argument("--enterprise-on-prem-json", default=DEFAULT_ENTERPRISE_ON_PREM_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -572,6 +603,7 @@ def main(argv: list[str] | None = None) -> None:
         gpu_return_intake_json=args.gpu_return_intake_json,
         rocm_env_json=args.rocm_env_json,
         rocm_benchmark_json=args.rocm_benchmark_json,
+        enterprise_on_prem_json=args.enterprise_on_prem_json,
     )
     _write_json(args.out_json, payload, root=root)
     write_csv_rows(_resolve(args.out_csv, root=root), payload["rows"])

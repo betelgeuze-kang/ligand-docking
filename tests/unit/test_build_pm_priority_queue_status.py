@@ -113,6 +113,25 @@ def _write_common_inputs(root: Path) -> None:
         root / "runs/product_end_to_end_rocm_benchmark_current.json",
         {"summary": {"status": "product_end_to_end_rocm_benchmark_ready"}},
     )
+    _write_json(
+        root / "runs/enterprise_on_prem_readiness_gate_current.json",
+        {
+            "summary": {
+                "status": "blocked_enterprise_on_prem_readiness_gate",
+                "enterprise_on_prem_ready": False,
+                "control_count": 10,
+                "ready_control_count": 4,
+                "blocked_control_count": 6,
+                "primary_blocker_id": "oidc_rbac_tenant_isolation",
+                "primary_blocker": "oidc_rbac_claim_grade_evidence_missing",
+                "oidc_rbac_ready": False,
+                "object_storage_ready": False,
+                "gpu_scheduler_ready": False,
+                "support_bundle_recovery_drill_ready": False,
+                "next_required_step": "Add reviewed OIDC provider, RBAC role matrix, and tenant-isolation test receipts.",
+            }
+        },
+    )
 
 
 def test_pm_priority_queue_status_keeps_f2g_and_f2h_blocked(tmp_path: Path) -> None:
@@ -169,6 +188,14 @@ def test_pm_priority_queue_status_keeps_f2g_and_f2h_blocked(tmp_path: Path) -> N
     assert rows["5"]["ready"] is False
     assert rows["5"]["status"] == "blocked_public_benchmark_receipt_attach_packet"
     assert "field_work_order_rows=22" in rows["5"]["evidence"]
+    assert rows["8"]["ready"] is False
+    assert rows["8"]["status"] == "blocked_enterprise_on_prem_readiness_gate"
+    assert rows["8"]["blocker"] == "oidc_rbac_tenant_isolation"
+    assert "ready_controls=4/10" in rows["8"]["evidence"]
+    assert "object_storage_ready=False" in rows["8"]["evidence"]
+    assert rows["8"]["next_action"] == (
+        "Add reviewed OIDC provider, RBAC role matrix, and tenant-isolation test receipts."
+    )
     assert summary["g1_promotion_allowed"] is False
     assert summary["release_ready_promotion_allowed"] is False
 
