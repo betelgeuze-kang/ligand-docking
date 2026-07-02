@@ -27,6 +27,7 @@ DEFAULT_PM_PRIORITY_QUEUE_JSON = ".betelgeuze/pm_priority_queue_status_current.j
 DEFAULT_EVIDENCE_BUNDLE_JSON = "runs/ai_md_product_evidence_bundle_current.json"
 DEFAULT_API_CUSTOMER_FLOW_JSON = "runs/api_customer_flow_release_evidence_current.json"
 DEFAULT_CUSTOMER_SHADOW_JSON = "runs/customer_shadow_evidence_status_current.json"
+DEFAULT_DEVELOPER_PREVIEW_JSON = "runs/developer_preview_final_gate_audit_current.json"
 DEFAULT_OUT_JSON = "runs/product_operator_cockpit_current.json"
 DEFAULT_OUT_CSV = "runs/product_operator_cockpit_current.csv"
 DEFAULT_OUT_MD = "runs/product_operator_cockpit_current.md"
@@ -618,6 +619,7 @@ def build_product_operator_cockpit(
     evidence_bundle_json: str | Path = DEFAULT_EVIDENCE_BUNDLE_JSON,
     api_customer_flow_json: str | Path = DEFAULT_API_CUSTOMER_FLOW_JSON,
     customer_shadow_json: str | Path = DEFAULT_CUSTOMER_SHADOW_JSON,
+    developer_preview_json: str | Path = DEFAULT_DEVELOPER_PREVIEW_JSON,
     root: Path = ROOT,
 ) -> dict[str, Any]:
     capabilities = _summary(_read_json(capabilities_json, root=root))
@@ -640,6 +642,7 @@ def build_product_operator_cockpit(
     evidence_bundle = _summary(_read_json(evidence_bundle_json, root=root))
     api_customer_flow = _summary(_read_json(api_customer_flow_json, root=root))
     customer_shadow = _summary(_read_json(customer_shadow_json, root=root))
+    developer_preview = _summary(_read_json(developer_preview_json, root=root))
 
     capabilities_present = bool(capabilities)
     restricted_scope_claim_guard_ready = _bool_true(capabilities.get("restricted_scope_claim_guard_ready"))
@@ -877,6 +880,28 @@ def build_product_operator_cockpit(
         customer_shadow.get("customer_shadow_work_order_primary_required_action")
     )
     paid_pilot_wording_allowed = release_allowed and customer_shadow_paid_pilot_ready
+
+    developer_preview_present = bool(developer_preview)
+    developer_preview_clean_baseline_ready = _bool_true(
+        developer_preview.get("developer_preview_clean_baseline_ready")
+    )
+    developer_preview_gate_count = _int(developer_preview.get("gate_count"))
+    developer_preview_ready_gate_count = _int(developer_preview.get("ready_gate_count"))
+    developer_preview_blocked_gate_count = _int(developer_preview.get("blocked_gate_count"))
+    developer_preview_receipt_work_order_rows = _int(
+        developer_preview.get("receipt_work_order_row_count")
+    )
+    developer_preview_primary_blocker_id = _first_text(
+        developer_preview.get("primary_blocker_id"),
+        developer_preview.get("primary_blocker"),
+    )
+    developer_preview_primary_receipt_artifact = _first_text(
+        developer_preview.get("receipt_work_order_primary_receipt_artifact")
+    )
+    developer_preview_receipt_work_order_primary_gate = _first_text(
+        developer_preview.get("receipt_work_order_primary_gate_id")
+    )
+    developer_preview_receipt_blocker_count = _int(developer_preview.get("receipt_blocker_count"))
 
     claim_rows = _build_claim_rows(
         restricted_scope_claim_guard_ready=restricted_scope_claim_guard_ready,
@@ -1129,6 +1154,39 @@ def build_product_operator_cockpit(
             disallowed_claim_text="Public benchmark performance claims remain disallowed.",
             blockers=public_blockers,
             claim_boundary=_text(public_benchmark.get("claim_boundary")) or CLAIM_BOUNDARY,
+            root=root,
+        ),
+        _panel(
+            panel_id="developer_preview_final_gates",
+            title="Developer Preview final gates",
+            route="/goal/developer-preview",
+            artifact_path=developer_preview_json,
+            artifact_present=developer_preview_present,
+            status=_text(developer_preview.get("status") or "missing_developer_preview_final_gate_audit"),
+            surface_ready=True,
+            source_artifact_ready=developer_preview_present,
+            operator_action_required=not developer_preview_clean_baseline_ready,
+            claim_allowed=developer_preview_clean_baseline_ready,
+            primary_metric=_join_metrics(
+                _metric("ready_gates", f"{developer_preview_ready_gate_count}/{developer_preview_gate_count}"),
+                _metric("blocked_gates", developer_preview_blocked_gate_count),
+                _metric("clean_baseline", developer_preview_clean_baseline_ready),
+            ),
+            secondary_metric=_join_metrics(
+                _count_metric("receipt_work_order_rows", developer_preview_receipt_work_order_rows),
+                _count_metric("receipt_blockers", developer_preview_receipt_blocker_count),
+                _metric("primary_gate", developer_preview_receipt_work_order_primary_gate),
+                _metric("primary_blocker", developer_preview_primary_blocker_id),
+                _metric("primary_receipt", developer_preview_primary_receipt_artifact),
+            ),
+            next_action=_first_text(
+                developer_preview.get("next_required_step"),
+                "Attach reviewed clean-checkout, platform, and new-user receipts before Developer Preview wording.",
+            ),
+            allowed_claim_text="Developer Preview gate status can be displayed for operator review.",
+            disallowed_claim_text="Developer demo-ready wording is disallowed until all final gates pass.",
+            blockers=_string_list(developer_preview.get("blockers")),
+            claim_boundary=_text(developer_preview.get("claim_boundary")) or CLAIM_BOUNDARY,
             root=root,
         ),
         _panel(
@@ -1391,6 +1449,19 @@ def build_product_operator_cockpit(
         "customer_shadow_work_order_primary_required_action": (
             customer_shadow_work_order_primary_required_action
         ),
+        "developer_preview_clean_baseline_ready": developer_preview_clean_baseline_ready,
+        "developer_preview_gate_count": developer_preview_gate_count,
+        "developer_preview_ready_gate_count": developer_preview_ready_gate_count,
+        "developer_preview_blocked_gate_count": developer_preview_blocked_gate_count,
+        "developer_preview_receipt_work_order_row_count": developer_preview_receipt_work_order_rows,
+        "developer_preview_receipt_blocker_count": developer_preview_receipt_blocker_count,
+        "developer_preview_primary_blocker_id": developer_preview_primary_blocker_id,
+        "developer_preview_receipt_work_order_primary_gate_id": (
+            developer_preview_receipt_work_order_primary_gate
+        ),
+        "developer_preview_receipt_work_order_primary_receipt_artifact": (
+            developer_preview_primary_receipt_artifact
+        ),
         "pm_priority_queue_present": pm_queue_present,
         "pm_priority_queue_status": _text(pm_queue.get("status")),
         "pm_priority_queue_ready_item_count": pm_queue_ready_count,
@@ -1445,6 +1516,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--evidence-bundle-json", default=DEFAULT_EVIDENCE_BUNDLE_JSON)
     parser.add_argument("--api-customer-flow-json", default=DEFAULT_API_CUSTOMER_FLOW_JSON)
     parser.add_argument("--customer-shadow-json", default=DEFAULT_CUSTOMER_SHADOW_JSON)
+    parser.add_argument("--developer-preview-json", default=DEFAULT_DEVELOPER_PREVIEW_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -1468,6 +1540,7 @@ def main(argv: list[str] | None = None) -> int:
         evidence_bundle_json=args.evidence_bundle_json,
         api_customer_flow_json=args.api_customer_flow_json,
         customer_shadow_json=args.customer_shadow_json,
+        developer_preview_json=args.developer_preview_json,
     )
     write_product_operator_cockpit_outputs(
         payload,

@@ -124,6 +124,19 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "customer_shadow_work_order_primary_required_action": (
                     "Add one reviewed real customer-shadow metadata row."
                 ),
+                "developer_preview_clean_baseline_ready": False,
+                "developer_preview_gate_count": 6,
+                "developer_preview_ready_gate_count": 3,
+                "developer_preview_blocked_gate_count": 3,
+                "developer_preview_receipt_work_order_row_count": 29,
+                "developer_preview_receipt_blocker_count": 12,
+                "developer_preview_primary_blocker_id": "benchmark_results_clean_checkout_regenerated",
+                "developer_preview_receipt_work_order_primary_gate_id": (
+                    "benchmark_results_clean_checkout_regenerated"
+                ),
+                "developer_preview_receipt_work_order_primary_receipt_artifact": (
+                    ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+                ),
                 "pm_priority_queue_present": True,
                 "pm_priority_queue_status": "blocked_pm_priority_queue",
                 "pm_priority_queue_ready_item_count": 3,
@@ -239,6 +252,21 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["customer_shadow_work_order_primary_required_action"] == (
         "Add one reviewed real customer-shadow metadata row."
     )
+    assert response["developer_preview_clean_baseline_ready"] is False
+    assert response["developer_preview_gate_count"] == 6
+    assert response["developer_preview_ready_gate_count"] == 3
+    assert response["developer_preview_blocked_gate_count"] == 3
+    assert response["developer_preview_receipt_work_order_row_count"] == 29
+    assert response["developer_preview_receipt_blocker_count"] == 12
+    assert response["developer_preview_primary_blocker_id"] == (
+        "benchmark_results_clean_checkout_regenerated"
+    )
+    assert response["developer_preview_receipt_work_order_primary_gate_id"] == (
+        "benchmark_results_clean_checkout_regenerated"
+    )
+    assert response["developer_preview_receipt_work_order_primary_receipt_artifact"] == (
+        ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+    )
     assert response["pm_priority_queue_present"] is True
     assert response["pm_priority_queue_status"] == "blocked_pm_priority_queue"
     assert response["pm_priority_queue_ready_item_count"] == 3
@@ -336,6 +364,15 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["customer_shadow_work_order_row_count"] == 0
     assert response["customer_shadow_work_order_primary_case_slot_id"] == ""
     assert response["customer_shadow_work_order_primary_required_action"] == ""
+    assert response["developer_preview_clean_baseline_ready"] is False
+    assert response["developer_preview_gate_count"] == 0
+    assert response["developer_preview_ready_gate_count"] == 0
+    assert response["developer_preview_blocked_gate_count"] == 0
+    assert response["developer_preview_receipt_work_order_row_count"] == 0
+    assert response["developer_preview_receipt_blocker_count"] == 0
+    assert response["developer_preview_primary_blocker_id"] == ""
+    assert response["developer_preview_receipt_work_order_primary_gate_id"] == ""
+    assert response["developer_preview_receipt_work_order_primary_receipt_artifact"] == ""
     assert response["pm_priority_queue_present"] is False
     assert response["pm_priority_queue_status"] == ""
     assert response["pm_priority_queue_ready_item_count"] == 0

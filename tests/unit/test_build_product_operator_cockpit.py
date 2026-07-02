@@ -30,6 +30,7 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         "bundle": tmp_path / "runs/ai_md_product_evidence_bundle_current.json",
         "api_customer_flow": tmp_path / "runs/api_customer_flow_release_evidence_current.json",
         "customer": tmp_path / "runs/customer_shadow_evidence_status_current.json",
+        "developer_preview": tmp_path / "runs/developer_preview_final_gate_audit_current.json",
     }
     _write_json(
         paths["capabilities"],
@@ -329,6 +330,30 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
             }
         },
     )
+    _write_json(
+        paths["developer_preview"],
+        {
+            "summary": {
+                "status": "blocked_developer_preview_final_gate_audit",
+                "developer_preview_clean_baseline_ready": False,
+                "gate_count": 6,
+                "ready_gate_count": 3,
+                "blocked_gate_count": 3,
+                "receipt_work_order_row_count": 29,
+                "receipt_blocker_count": 12,
+                "receipt_work_order_primary_gate_id": "benchmark_results_clean_checkout_regenerated",
+                "receipt_work_order_primary_receipt_artifact": (
+                    ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+                ),
+                "primary_blocker_id": "benchmark_results_clean_checkout_regenerated",
+                "next_required_step": "Attach the clean-checkout benchmark receipt.",
+                "blockers": [
+                    "benchmark_results_clean_checkout_regenerated:.betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:status=blocked_developer_preview_clean_checkout_benchmark_receipt"
+                ],
+                "claim_boundary": "developer preview boundary",
+            }
+        },
+    )
     return paths
 
 
@@ -348,6 +373,7 @@ def _build_payload(tmp_path: Path) -> dict:
         evidence_bundle_json=paths["bundle"],
         api_customer_flow_json=paths["api_customer_flow"],
         customer_shadow_json=paths["customer"],
+        developer_preview_json=paths["developer_preview"],
         root=tmp_path,
     )
 
@@ -361,7 +387,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["status"] == "product_operator_cockpit_ready_claims_blocked"
     assert summary["phase8_surface_ready"] is True
     assert summary["required_phase8_panel_count"] == 9
-    assert summary["observed_phase8_panel_count"] == 9
+    assert summary["observed_phase8_panel_count"] == 10
     assert summary["missing_required_phase8_panel_count"] == 0
     assert summary["paid_pilot_wording_allowed"] is False
     assert summary["general_platform_claim_allowed"] is False
@@ -454,6 +480,21 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["customer_shadow_work_order_primary_case_slot_id"] == "customer_shadow_case_1"
     assert summary["customer_shadow_work_order_primary_required_action"] == (
         "Add one reviewed real customer-shadow metadata row."
+    )
+    assert summary["developer_preview_clean_baseline_ready"] is False
+    assert summary["developer_preview_gate_count"] == 6
+    assert summary["developer_preview_ready_gate_count"] == 3
+    assert summary["developer_preview_blocked_gate_count"] == 3
+    assert summary["developer_preview_receipt_work_order_row_count"] == 29
+    assert summary["developer_preview_receipt_blocker_count"] == 12
+    assert summary["developer_preview_primary_blocker_id"] == (
+        "benchmark_results_clean_checkout_regenerated"
+    )
+    assert summary["developer_preview_receipt_work_order_primary_gate_id"] == (
+        "benchmark_results_clean_checkout_regenerated"
+    )
+    assert summary["developer_preview_receipt_work_order_primary_receipt_artifact"] == (
+        ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
     )
     assert summary["pm_priority_queue_present"] is True
     assert summary["pm_priority_queue_status"] == "blocked_pm_priority_queue"
@@ -585,6 +626,32 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         "customer_shadow_work_order_action=Add one reviewed real customer-shadow metadata row."
         in panels["claim_boundary_matrix"]["secondary_metric"]
     )
+    assert panels["developer_preview_final_gates"]["route"] == "/goal/developer-preview"
+    assert panels["developer_preview_final_gates"]["source_artifact_ready"] is True
+    assert panels["developer_preview_final_gates"]["operator_action_required"] is True
+    assert panels["developer_preview_final_gates"]["claim_allowed"] is False
+    assert panels["developer_preview_final_gates"]["claim_boundary"] == "developer preview boundary"
+    assert "ready_gates=3/6" in panels["developer_preview_final_gates"]["primary_metric"]
+    assert "blocked_gates=3" in panels["developer_preview_final_gates"]["primary_metric"]
+    assert "clean_baseline=false" in panels["developer_preview_final_gates"]["primary_metric"]
+    assert "receipt_work_order_rows=29" in panels["developer_preview_final_gates"]["secondary_metric"]
+    assert "receipt_blockers=12" in panels["developer_preview_final_gates"]["secondary_metric"]
+    assert "primary_gate=benchmark_results_clean_checkout_regenerated" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "primary_blocker=benchmark_results_clean_checkout_regenerated" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert (
+        "primary_receipt=.betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+        in panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert panels["developer_preview_final_gates"]["next_action"] == (
+        "Attach the clean-checkout benchmark receipt."
+    )
+    assert panels["developer_preview_final_gates"]["blockers"] == [
+        "benchmark_results_clean_checkout_regenerated:.betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:status=blocked_developer_preview_clean_checkout_benchmark_receipt"
+    ]
 
     assert claims["operator_cockpit_surface"]["allowed"] is True
     assert claims["paid_pilot_wording"]["allowed"] is False
@@ -655,6 +722,8 @@ def test_product_operator_cockpit_cli_writes_current_artifacts(tmp_path: Path) -
             str(paths["bundle"]),
             "--customer-shadow-json",
             str(paths["customer"]),
+            "--developer-preview-json",
+            str(paths["developer_preview"]),
             "--out-json",
             str(out_json),
             "--out-csv",

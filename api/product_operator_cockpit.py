@@ -154,6 +154,15 @@ def _missing_response() -> dict[str, Any]:
         "customer_shadow_work_order_row_count": 0,
         "customer_shadow_work_order_primary_case_slot_id": "",
         "customer_shadow_work_order_primary_required_action": "",
+        "developer_preview_clean_baseline_ready": False,
+        "developer_preview_gate_count": 0,
+        "developer_preview_ready_gate_count": 0,
+        "developer_preview_blocked_gate_count": 0,
+        "developer_preview_receipt_work_order_row_count": 0,
+        "developer_preview_receipt_blocker_count": 0,
+        "developer_preview_primary_blocker_id": "",
+        "developer_preview_receipt_work_order_primary_gate_id": "",
+        "developer_preview_receipt_work_order_primary_receipt_artifact": "",
         "pm_priority_queue_present": False,
         "pm_priority_queue_status": "",
         "pm_priority_queue_ready_item_count": 0,
@@ -395,6 +404,31 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "customer_shadow_work_order_primary_required_action": str(
             summary.get("customer_shadow_work_order_primary_required_action") or ""
+        ),
+        "developer_preview_clean_baseline_ready": bool(
+            summary.get("developer_preview_clean_baseline_ready") is True
+        ),
+        "developer_preview_gate_count": _int(summary.get("developer_preview_gate_count")),
+        "developer_preview_ready_gate_count": _int(
+            summary.get("developer_preview_ready_gate_count")
+        ),
+        "developer_preview_blocked_gate_count": _int(
+            summary.get("developer_preview_blocked_gate_count")
+        ),
+        "developer_preview_receipt_work_order_row_count": _int(
+            summary.get("developer_preview_receipt_work_order_row_count")
+        ),
+        "developer_preview_receipt_blocker_count": _int(
+            summary.get("developer_preview_receipt_blocker_count")
+        ),
+        "developer_preview_primary_blocker_id": str(
+            summary.get("developer_preview_primary_blocker_id") or ""
+        ),
+        "developer_preview_receipt_work_order_primary_gate_id": str(
+            summary.get("developer_preview_receipt_work_order_primary_gate_id") or ""
+        ),
+        "developer_preview_receipt_work_order_primary_receipt_artifact": str(
+            summary.get("developer_preview_receipt_work_order_primary_receipt_artifact") or ""
         ),
         "pm_priority_queue_present": bool(summary.get("pm_priority_queue_present") is True),
         "pm_priority_queue_status": str(summary.get("pm_priority_queue_status") or ""),
