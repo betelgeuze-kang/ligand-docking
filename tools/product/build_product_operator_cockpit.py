@@ -618,7 +618,7 @@ def build_product_operator_cockpit(
     pocketmd_present = bool(pocketmd)
     pocketmd_refinement_ready = _bool_true(pocketmd.get("claim_grade_refinement_evidence_ready"))
     pocketmd_fill_preview_ready = _bool_true(pocketmd.get("claim_grade_fill_preview_evidence_ready"))
-    pocketmd_report_ready = _bool_true(pocketmd.get("claim_grade_report_evidence_ready")) or pocketmd_fill_preview_ready
+    pocketmd_report_ready = _bool_true(pocketmd.get("claim_grade_report_evidence_ready"))
     pocketmd_promotion_allowed = _bool_true(pocketmd.get("claim_promotion_allowed"))
     pocketmd_lite_claim_allowed = (
         pocketmd_refinement_ready
@@ -829,6 +829,7 @@ def build_product_operator_cockpit(
             secondary_metric=_join_metrics(
                 _metric("refinement_ready", pocketmd_refinement_ready),
                 _metric("report_ready", pocketmd_report_ready),
+                _metric("preview_ready", pocketmd_fill_preview_ready),
                 _metric("promotion_allowed", pocketmd_promotion_allowed),
             ),
             next_action=_first_text(
@@ -842,6 +843,8 @@ def build_product_operator_cockpit(
             else [
                 "pocketmd_lite_claim_promotion_missing"
                 if pocketmd_refinement_ready and pocketmd_report_ready
+                else "pocketmd_lite_preview_not_canonical_report"
+                if pocketmd_refinement_ready and pocketmd_fill_preview_ready and not pocketmd_report_ready
                 else "pocketmd_lite_claim_grade_report_or_promotion_missing"
             ],
             claim_boundary=_text(pocketmd.get("claim_boundary")) or CLAIM_BOUNDARY,
@@ -1024,6 +1027,11 @@ def build_product_operator_cockpit(
         "gpcr_hard_decoy_metric_ready": gpcr_metric_ready,
         "gpcr_broad_claim_allowed": gpcr_broad_claim_allowed,
         "pocketmd_lite_refinement_evidence_ready": pocketmd_refinement_ready,
+        "pocketmd_lite_report_evidence_ready": pocketmd_report_ready,
+        "pocketmd_lite_fill_preview_evidence_ready": pocketmd_fill_preview_ready,
+        "pocketmd_lite_preview_requires_canonical_review": (
+            pocketmd_fill_preview_ready and not pocketmd_report_ready
+        ),
         "pocketmd_lite_claim_allowed": pocketmd_lite_claim_allowed,
         "public_benchmark_claim_allowed": public_benchmark_claim_allowed,
         "public_benchmark_receipt_attach_packet_ready": public_attach_ready,

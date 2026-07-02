@@ -80,6 +80,9 @@ def _missing_response() -> dict[str, Any]:
         "gpcr_hard_decoy_metric_ready": False,
         "gpcr_broad_claim_allowed": False,
         "pocketmd_lite_refinement_evidence_ready": False,
+        "pocketmd_lite_report_evidence_ready": False,
+        "pocketmd_lite_fill_preview_evidence_ready": False,
+        "pocketmd_lite_preview_requires_canonical_review": False,
         "pocketmd_lite_claim_allowed": False,
         "public_benchmark_claim_allowed": False,
         "public_benchmark_receipt_attach_packet_ready": False,
@@ -138,6 +141,15 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         "gpcr_broad_claim_allowed": bool(summary.get("gpcr_broad_claim_allowed") is True),
         "pocketmd_lite_refinement_evidence_ready": bool(
             summary.get("pocketmd_lite_refinement_evidence_ready") is True
+        ),
+        "pocketmd_lite_report_evidence_ready": bool(
+            summary.get("pocketmd_lite_report_evidence_ready") is True
+        ),
+        "pocketmd_lite_fill_preview_evidence_ready": bool(
+            summary.get("pocketmd_lite_fill_preview_evidence_ready") is True
+        ),
+        "pocketmd_lite_preview_requires_canonical_review": bool(
+            summary.get("pocketmd_lite_preview_requires_canonical_review") is True
         ),
         "pocketmd_lite_claim_allowed": bool(summary.get("pocketmd_lite_claim_allowed") is True),
         "public_benchmark_claim_allowed": bool(summary.get("public_benchmark_claim_allowed") is True),

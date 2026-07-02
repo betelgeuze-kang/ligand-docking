@@ -225,6 +225,9 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["gpcr_hard_decoy_metric_ready"] is True
     assert summary["gpcr_broad_claim_allowed"] is False
     assert summary["pocketmd_lite_claim_allowed"] is False
+    assert summary["pocketmd_lite_report_evidence_ready"] is False
+    assert summary["pocketmd_lite_fill_preview_evidence_ready"] is True
+    assert summary["pocketmd_lite_preview_requires_canonical_review"] is True
     assert summary["public_benchmark_claim_allowed"] is False
     assert summary["public_benchmark_receipt_attach_packet_ready"] is False
     assert summary["public_benchmark_receipt_attach_packet_present"] is True
@@ -245,9 +248,12 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert panels["pocketmd_lite_report_panel"]["operator_action_required"] is True
     assert "green=5" in panels["pocketmd_lite_report_panel"]["primary_metric"]
     assert "abstain=0" in panels["pocketmd_lite_report_panel"]["primary_metric"]
-    assert "report_ready=true" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
+    assert "report_ready=false" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
+    assert "preview_ready=true" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
     assert "promotion_allowed=false" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
-    assert panels["pocketmd_lite_report_panel"]["blockers"] == ["pocketmd_lite_claim_promotion_missing"]
+    assert panels["pocketmd_lite_report_panel"]["blockers"] == [
+        "pocketmd_lite_preview_not_canonical_report"
+    ]
     assert panels["public_benchmark_scorecard"]["route"] == "/product/public-benchmark-external-receipts-audit"
     assert "ready_steps=5" in panels["public_benchmark_scorecard"]["primary_metric"]
     assert "blocked_steps=2" in panels["public_benchmark_scorecard"]["primary_metric"]
