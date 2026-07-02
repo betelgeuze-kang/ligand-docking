@@ -245,6 +245,31 @@ def _developer_preview_receipt_work_order_rows(value: Any) -> list[dict[str, Any
     return work_rows
 
 
+def _enterprise_on_prem_control_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    control_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        control_rows.append(
+            {
+                "control_id": str(row.get("control_id") or ""),
+                "title": str(row.get("title") or ""),
+                "status": str(row.get("status") or ""),
+                "ready": bool(row.get("ready") is True),
+                "blocker": str(row.get("blocker") or ""),
+                "next_action": str(row.get("next_action") or ""),
+                "evidence": str(row.get("evidence") or ""),
+                "evidence_artifacts": _string_list(row.get("evidence_artifacts")),
+                "claim_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return control_rows
+
+
 def _pr38_split_surface() -> dict[str, Any]:
     acceptance_packet = _read_json_object(PR38_SPLIT_ACCEPTANCE_PACKET_ARTIFACT)
     matrix_packet = _read_json_object(PR38_CHILD_PR_VERIFICATION_MATRIX_ARTIFACT)
@@ -495,6 +520,7 @@ def _missing_response() -> dict[str, Any]:
         "enterprise_on_prem_license_control_ready": False,
         "enterprise_on_prem_support_bundle_recovery_drill_ready": False,
         "enterprise_on_prem_rollback_retry_idempotency_ready": False,
+        "enterprise_on_prem_control_rows": [],
         "f2g_f2h_preflight_present": False,
         "f2g_f2h_recovery_packet_present": False,
         "f2g_f2h_preflight_status": "",
@@ -967,6 +993,9 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "enterprise_on_prem_rollback_retry_idempotency_ready": bool(
             summary.get("enterprise_on_prem_rollback_retry_idempotency_ready") is True
+        ),
+        "enterprise_on_prem_control_rows": _enterprise_on_prem_control_rows(
+            summary.get("enterprise_on_prem_control_rows")
         ),
         "f2g_f2h_preflight_present": bool(summary.get("f2g_f2h_preflight_present") is True),
         "f2g_f2h_recovery_packet_present": bool(

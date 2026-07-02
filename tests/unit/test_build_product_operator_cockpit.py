@@ -633,7 +633,29 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "support_bundle_recovery_drill_ready": False,
                 "rollback_retry_idempotency_ready": True,
                 "claim_boundary": "enterprise boundary",
-            }
+            },
+            "rows": [
+                {
+                    "control_id": "oidc_rbac_tenant_isolation",
+                    "title": "OIDC/RBAC and tenant isolation",
+                    "status": "blocked_oidc_rbac_not_verified",
+                    "ready": False,
+                    "blocker": "oidc_rbac_claim_grade_evidence_missing",
+                    "next_action": (
+                        "Add reviewed OIDC provider, RBAC role matrix, and tenant-isolation test receipts."
+                    ),
+                    "evidence": (
+                        "auth_ready=true;tenant_isolation_ready=true;oidc_ready=false;rbac_ready=false"
+                    ),
+                    "evidence_artifacts": [
+                        "runs/product_security_deployment_contract_current.json"
+                    ],
+                    "claim_allowed": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                }
+            ],
         },
     )
     pr38_locks = [
@@ -1109,6 +1131,24 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["enterprise_on_prem_license_control_ready"] is True
     assert summary["enterprise_on_prem_support_bundle_recovery_drill_ready"] is False
     assert summary["enterprise_on_prem_rollback_retry_idempotency_ready"] is True
+    assert summary["enterprise_on_prem_control_rows"] == [
+        {
+            "control_id": "oidc_rbac_tenant_isolation",
+            "title": "OIDC/RBAC and tenant isolation",
+            "status": "blocked_oidc_rbac_not_verified",
+            "ready": False,
+            "blocker": "oidc_rbac_claim_grade_evidence_missing",
+            "next_action": (
+                "Add reviewed OIDC provider, RBAC role matrix, and tenant-isolation test receipts."
+            ),
+            "evidence": "auth_ready=true;tenant_isolation_ready=true;oidc_ready=false;rbac_ready=false",
+            "evidence_artifacts": ["runs/product_security_deployment_contract_current.json"],
+            "claim_allowed": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
     assert summary["pr38_split_acceptance_present"] is True
     assert summary["pr38_split_acceptance_status"] == "pr38_split_acceptance_packet_ready"
     assert summary["pr38_split_acceptance_ready"] is True

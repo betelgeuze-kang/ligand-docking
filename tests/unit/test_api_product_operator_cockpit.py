@@ -475,6 +475,28 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "enterprise_on_prem_license_control_ready": True,
                 "enterprise_on_prem_support_bundle_recovery_drill_ready": False,
                 "enterprise_on_prem_rollback_retry_idempotency_ready": True,
+                "enterprise_on_prem_control_rows": [
+                    {
+                        "control_id": "oidc_rbac_tenant_isolation",
+                        "title": "OIDC/RBAC and tenant isolation",
+                        "status": "blocked_oidc_rbac_not_verified",
+                        "ready": False,
+                        "blocker": "oidc_rbac_claim_grade_evidence_missing",
+                        "next_action": (
+                            "Add reviewed OIDC provider, RBAC role matrix, and tenant-isolation test receipts."
+                        ),
+                        "evidence": (
+                            "auth_ready=true;tenant_isolation_ready=true;oidc_ready=false;rbac_ready=false"
+                        ),
+                        "evidence_artifacts": [
+                            "runs/product_security_deployment_contract_current.json"
+                        ],
+                        "claim_allowed": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    }
+                ],
                 "f2g_f2h_preflight_present": True,
                 "f2g_f2h_recovery_packet_present": True,
                 "f2g_f2h_preflight_status": "blocked_f2g_f2h_surface_preflight",
@@ -841,6 +863,24 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["enterprise_on_prem_license_control_ready"] is True
     assert response["enterprise_on_prem_support_bundle_recovery_drill_ready"] is False
     assert response["enterprise_on_prem_rollback_retry_idempotency_ready"] is True
+    assert response["enterprise_on_prem_control_rows"] == [
+        {
+            "control_id": "oidc_rbac_tenant_isolation",
+            "title": "OIDC/RBAC and tenant isolation",
+            "status": "blocked_oidc_rbac_not_verified",
+            "ready": False,
+            "blocker": "oidc_rbac_claim_grade_evidence_missing",
+            "next_action": (
+                "Add reviewed OIDC provider, RBAC role matrix, and tenant-isolation test receipts."
+            ),
+            "evidence": "auth_ready=true;tenant_isolation_ready=true;oidc_ready=false;rbac_ready=false",
+            "evidence_artifacts": ["runs/product_security_deployment_contract_current.json"],
+            "claim_allowed": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
     assert response["f2g_f2h_preflight_present"] is True
     assert response["f2g_f2h_recovery_packet_present"] is True
     assert response["f2g_f2h_preflight_status"] == "blocked_f2g_f2h_surface_preflight"
@@ -1094,6 +1134,7 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["enterprise_on_prem_license_control_ready"] is False
     assert response["enterprise_on_prem_support_bundle_recovery_drill_ready"] is False
     assert response["enterprise_on_prem_rollback_retry_idempotency_ready"] is False
+    assert response["enterprise_on_prem_control_rows"] == []
     assert response["f2g_f2h_preflight_present"] is False
     assert response["f2g_f2h_recovery_packet_present"] is False
     assert response["f2g_f2h_preflight_status"] == ""

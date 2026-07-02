@@ -299,6 +299,28 @@ def _developer_preview_receipt_work_order_rows(payload: dict[str, Any]) -> list[
     return rows
 
 
+def _enterprise_on_prem_control_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _rows(payload):
+        rows.append(
+            {
+                "control_id": _text(row.get("control_id")),
+                "title": _text(row.get("title")),
+                "status": _text(row.get("status")),
+                "ready": _bool_true(row.get("ready")),
+                "blocker": _text(row.get("blocker")),
+                "next_action": _text(row.get("next_action")),
+                "evidence": _text(row.get("evidence")),
+                "evidence_artifacts": _string_list(row.get("evidence_artifacts")),
+                "claim_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _metric(label: str, value: Any) -> str:
     if isinstance(value, bool):
         rendered = "true" if value else "false"
@@ -827,7 +849,11 @@ def build_product_operator_cockpit(
     f2g_recovery_payload = _read_json(f2g_f2h_recovery_json, root=root)
     f2g_recovery = _summary(f2g_recovery_payload)
     f2g_recovery_rows = _rows(f2g_recovery_payload)
-    enterprise_on_prem = _summary(_read_json(enterprise_on_prem_json, root=root))
+    enterprise_on_prem_payload = _read_json(enterprise_on_prem_json, root=root)
+    enterprise_on_prem = _summary(enterprise_on_prem_payload)
+    enterprise_on_prem_control_row_preview = _enterprise_on_prem_control_rows(
+        enterprise_on_prem_payload
+    )
     pr38_acceptance_payload = _read_json(pr38_split_acceptance_json, root=root)
     pr38_acceptance = _summary(pr38_acceptance_payload)
     pr38_matrix_payload = _read_json(pr38_child_pr_verification_matrix_json, root=root)
@@ -2180,6 +2206,7 @@ def build_product_operator_cockpit(
         "enterprise_on_prem_license_control_ready": enterprise_license_control_ready,
         "enterprise_on_prem_support_bundle_recovery_drill_ready": enterprise_support_bundle_ready,
         "enterprise_on_prem_rollback_retry_idempotency_ready": enterprise_rollback_retry_ready,
+        "enterprise_on_prem_control_rows": enterprise_on_prem_control_row_preview,
         "pr38_split_acceptance_present": pr38_split_acceptance_present,
         "pr38_split_acceptance_status": _text(pr38_acceptance.get("status")),
         "pr38_split_acceptance_ready": pr38_split_acceptance_ready,
