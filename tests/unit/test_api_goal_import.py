@@ -976,6 +976,62 @@ def _assert_engine_priority_fields(*, observed: dict, artifact: dict) -> None:
     ] == guard_missing_reasons
 
 
+def test_goal_priority_queue_endpoint_reads_fail_closed_pm_queue(monkeypatch, tmp_path: Path) -> None:
+    from api import goal as goal_api
+
+    artifact = tmp_path / ".betelgeuze/pm_priority_queue_status_current.json"
+    artifact.parent.mkdir(parents=True)
+    artifact.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "blocked_pm_priority_queue",
+                    "ready_item_count": 3,
+                    "blocked_item_count": 5,
+                    "first_blocked_item_id": "2",
+                    "next_required_step": "Restore F2/G1 implementation tree.",
+                    "claim_boundary": "pm boundary",
+                },
+                "rows": [
+                    {
+                        "item_id": "2",
+                        "status": "blocked_f2g_f2h_surface_preflight",
+                        "ready": False,
+                        "blocker": "f2g_authoritative_surfaces_missing",
+                        "next_action": "Restore F2/G1 implementation tree.",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(goal_api, "PM_PRIORITY_QUEUE_ARTIFACT", artifact)
+
+    response = asyncio.run(goal_api.get_goal_priority_queue())
+
+    assert response["status"] == "blocked_pm_priority_queue"
+    assert response["ready_item_count"] == 3
+    assert response["blocked_item_count"] == 5
+    assert response["first_blocked_item_id"] == "2"
+    assert response["first_blocked_blocker"] == "f2g_authoritative_surfaces_missing"
+    assert response["first_blocked_next_action"] == "Restore F2/G1 implementation tree."
+    assert response["first_blocked_item"]["item_id"] == "2"
+    assert response["rows"][0]["status"] == "blocked_f2g_f2h_surface_preflight"
+    assert response["execution_enabled"] is False
+    assert response["external_state_mutated"] is False
+    assert response["claim_boundary"] == "pm boundary"
+
+    monkeypatch.setattr(goal_api, "PM_PRIORITY_QUEUE_ARTIFACT", tmp_path / "missing.json")
+    missing = asyncio.run(goal_api.get_goal_priority_queue())
+    assert missing["status"] == "missing_pm_priority_queue_status"
+    assert missing["ready_item_count"] == 0
+    assert missing["blocked_item_count"] == 0
+    assert missing["first_blocked_item"] == {}
+    assert missing["rows"] == []
+    assert missing["execution_enabled"] is False
+    assert missing["external_state_mutated"] is False
+
+
 def test_api_app_imports_with_goal_router() -> None:
     from api.main import app
     from api.goal import (
@@ -984,6 +1040,7 @@ def test_api_app_imports_with_goal_router() -> None:
         get_goal_bottlenecks,
         get_goal_burndown,
         get_goal_operator_intake_kit,
+        get_goal_priority_queue,
         get_goal_readiness,
         get_goal_release_decision,
         get_goal_status,
@@ -992,6 +1049,7 @@ def test_api_app_imports_with_goal_router() -> None:
     paths = {route.path for route in app.routes}
     assert "/goal/status" in paths
     assert "/goal/readiness" in paths
+    assert "/goal/priority-queue" in paths
     assert "/goal/actions" in paths
     assert "/goal/operator-intake-kit" in paths
     assert "/goal/release-decision" in paths
@@ -1033,6 +1091,7 @@ def test_api_app_imports_with_goal_router() -> None:
 
     status = asyncio.run(get_goal_status())
     readiness = asyncio.run(get_goal_readiness())
+    priority_queue = asyncio.run(get_goal_priority_queue())
     actions = asyncio.run(get_goal_actions())
     intake_kit = asyncio.run(get_goal_operator_intake_kit())
     release = asyncio.run(get_goal_release_decision())
@@ -2354,7 +2413,17 @@ def test_api_app_imports_with_goal_router() -> None:
     assert api_contract["surface_ready"] is True
     assert api_contract["blocker_count"] == 0
 
-    for payload in (status, readiness, actions, intake_kit, release, burndown, bottlenecks, api_contract):
+    for payload in (
+        status,
+        readiness,
+        priority_queue,
+        actions,
+        intake_kit,
+        release,
+        burndown,
+        bottlenecks,
+        api_contract,
+    ):
         assert payload["execution_enabled"] is False
         assert payload["delete_executed"] is False
         assert payload["external_state_mutated"] is False

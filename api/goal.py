@@ -16,6 +16,7 @@ GOAL_RELEASE_DECISION_ARTIFACT = ROOT / "runs" / "goal_release_decision_gate_cur
 GOAL_RELEASE_BURNDOWN_ARTIFACT = ROOT / "runs" / "goal_release_burndown_work_order_current.json"
 GOAL_BOTTLENECK_BRIEFING_ARTIFACT = ROOT / "runs" / "goal_bottleneck_briefing_current.json"
 GOAL_API_SURFACE_CONTRACT_ARTIFACT = ROOT / "runs" / "goal_api_surface_contract_current.json"
+PM_PRIORITY_QUEUE_ARTIFACT = ROOT / ".betelgeuze" / "pm_priority_queue_status_current.json"
 PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT = ROOT / "runs" / "product_goal_completion_audit_current.json"
 PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT = (
     ROOT / "runs" / "product_commercial_readiness_handoff_bundle_current.json"
@@ -3384,6 +3385,43 @@ async def get_goal_readiness() -> dict[str, Any]:
         "rows": _rows(packet),
         "blockers": _blockers(packet),
         **_mutation_flags(),
+    }
+
+
+@router.get("/priority-queue")
+async def get_goal_priority_queue() -> dict[str, Any]:
+    packet = _read_json_object(PM_PRIORITY_QUEUE_ARTIFACT)
+    summary = _summary(packet)
+    rows = _rows(packet)
+    if not summary:
+        return {
+            "status": "missing_pm_priority_queue_status",
+            "artifact_path": str(PM_PRIORITY_QUEUE_ARTIFACT),
+            "ready_item_count": 0,
+            "blocked_item_count": 0,
+            "first_blocked_item_id": "",
+            "first_blocked_item": {},
+            "rows": [],
+            **_mutation_flags(),
+            "claim_boundary": CLAIM_BOUNDARY,
+        }
+    first_blocked_id = str(summary.get("first_blocked_item_id") or "")
+    first_blocked_item = next(
+        (row for row in rows if str(row.get("item_id") or "") == first_blocked_id),
+        {},
+    )
+    return {
+        **summary,
+        "artifact_path": str(PM_PRIORITY_QUEUE_ARTIFACT),
+        "ready_item_count": _int(summary.get("ready_item_count")),
+        "blocked_item_count": _int(summary.get("blocked_item_count")),
+        "first_blocked_item_id": first_blocked_id,
+        "first_blocked_item": first_blocked_item,
+        "first_blocked_blocker": str(first_blocked_item.get("blocker") or ""),
+        "first_blocked_next_action": str(first_blocked_item.get("next_action") or ""),
+        "rows": rows,
+        **_mutation_flags(),
+        "claim_boundary": summary.get("claim_boundary") or CLAIM_BOUNDARY,
     }
 
 
