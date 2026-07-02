@@ -1540,7 +1540,10 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "artifact_path": "runs/developer_preview_final_gate_audit_current.json",
         "builder_command": DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND,
         "depends_on": [
+            "tools/build_product_execution_preflight.py",
+            "tools/build_product_execution_work_order.py",
             "tools/product/build_developer_preview_final_gate_audit.py",
+            "tools/product/build_developer_preview_new_user_observation_receipt.py",
             "tools/product/build_developer_preview_platform_reproducibility_receipt.py",
             "tools/product/build_developer_preview_silent_import_loss_receipt.py",
             "docs/developer_preview_final_gate_action_register.md",
