@@ -6376,6 +6376,10 @@ def test_release_source_of_truth_tracks_pocketmd_lite_topk_refinement_chain() ->
     assert order[mod.POCKETMD_LITE_TOPK_REFINEMENT_AUDIT_COMMAND] < order[
         "python3 tools/build_product_capability_surface_contract.py"
     ]
+    capability_spec = by_id["product_capability_surface_contract"]
+    assert "runs/pocketmd_lite_candidate_metric_fill_preview_report_current.json" in (
+        capability_spec["depends_on"]
+    )
 
 
 def test_release_source_of_truth_tracks_public_benchmark_phase2_harness_chain() -> None:

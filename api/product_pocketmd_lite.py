@@ -12,6 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 POCKETMD_LITE_REPORT_ARTIFACT = ROOT / "runs" / "pocketmd_lite_report_current.json"
 POCKETMD_LITE_REMAINING_QUEUE_ARTIFACT = ROOT / "runs" / "pocketmd_lite_remaining_evidence_queue_current.json"
 POCKETMD_LITE_TOPK_REFINEMENT_AUDIT_ARTIFACT = ROOT / "runs" / "pocketmd_lite_topk_refinement_audit_current.json"
+POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_ARTIFACT = (
+    ROOT / "runs" / "pocketmd_lite_candidate_metric_fill_preview_report_current.json"
+)
 
 _REPORT_CLAIM_BOUNDARY_MISSING = (
     "PocketMD Lite report endpoint only; the local report artifact is missing or invalid. "
@@ -28,6 +31,12 @@ _TOPK_AUDIT_CLAIM_BOUNDARY_MISSING = (
     "PocketMD Lite top-k refinement audit endpoint only; the local audit artifact is missing or invalid. "
     "It does not run local-min, micro-MD, H-bond scoring, docking, emit scientific results, promote claims, "
     "or mutate external state. Proxy telemetry cannot satisfy claim-grade refinement evidence."
+)
+
+_PREVIEW_REPORT_CLAIM_BOUNDARY_MISSING = (
+    "PocketMD Lite candidate metric fill-preview report endpoint only; the local preview report artifact is "
+    "missing or invalid. It does not mutate the canonical candidate CSV, approve customer-facing PocketMD Lite "
+    "wording, run local-min, micro-MD, docking, emit scientific results, or mutate external state."
 )
 
 
@@ -157,6 +166,82 @@ async def get_product_pocketmd_lite_remaining_evidence_queue() -> dict[str, Any]
         "external_state_mutated": False,
         "rows": rows,
         "claim_boundary": artifact.get("claim_boundary", ""),
+    }
+
+
+@router.get("/pocketmd-lite-candidate-metric-fill-preview-report")
+async def get_product_pocketmd_lite_candidate_metric_fill_preview_report() -> dict[str, Any]:
+    """Return the read-only PocketMD Lite candidate metric fill-preview report surface."""
+
+    artifact = _read_json_object(POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_ARTIFACT)
+    summary = artifact.get("summary") if isinstance(artifact.get("summary"), dict) else {}
+    rows = artifact.get("rows") if isinstance(artifact.get("rows"), list) else []
+    if not artifact or not summary:
+        return {
+            "status": "missing_pocketmd_lite_candidate_metric_fill_preview_report",
+            "artifact_path": str(POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_ARTIFACT),
+            "canonical_report_artifact_path": str(POCKETMD_LITE_REPORT_ARTIFACT),
+            "preview_report_ready": False,
+            "preview_requires_canonical_review": False,
+            "candidate_count": 0,
+            "selected_top_k_count": 0,
+            "preview_pocketmd_lite_claim_safe": False,
+            "pocketmd_lite_claim_safe": False,
+            "claim_grade_metric_ready_row_count": 0,
+            "band_counts": {},
+            "green_row_count": 0,
+            "yellow_row_count": 0,
+            "red_row_count": 0,
+            "abstain_row_count": 0,
+            "local_min_ligand_rmsd_a_max": 0.0,
+            "hbond_persistence_min": 0.0,
+            "contact_persistence_min": 0.0,
+            "initial_clash_count_total": 0.0,
+            "final_clash_count_total": 0.0,
+            "clash_relief_count_total": 0.0,
+            "green_band_condition_text": "",
+            "claim_promotion_allowed": False,
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+            "candidates": [],
+            "claim_boundary": _PREVIEW_REPORT_CLAIM_BOUNDARY_MISSING,
+        }
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_ARTIFACT),
+        "canonical_report_artifact_path": str(POCKETMD_LITE_REPORT_ARTIFACT),
+        "schema_version": summary.get("schema_version", ""),
+        "preview_report_ready": bool(
+            summary.get("status") == "pocketmd_lite_report_ready"
+            and summary.get("top_k_refinement_evidence_ready") is True
+        ),
+        "preview_requires_canonical_review": True,
+        "candidate_count": int(summary.get("candidate_count") or 0),
+        "selected_top_k_count": int(summary.get("selected_top_k_count") or 0),
+        "preview_pocketmd_lite_claim_safe": bool(summary.get("pocketmd_lite_claim_safe") is True),
+        "pocketmd_lite_claim_safe": False,
+        "claim_grade_metric_ready_row_count": _int(
+            summary.get("claim_grade_metric_ready_row_count")
+        ),
+        "band_counts": summary.get("band_counts", {}),
+        "green_row_count": _int(summary.get("green_row_count")),
+        "yellow_row_count": _int(summary.get("yellow_row_count")),
+        "red_row_count": _int(summary.get("red_row_count")),
+        "abstain_row_count": _int(summary.get("abstain_row_count")),
+        "local_min_ligand_rmsd_a_max": _row_max(rows, "local_min_ligand_rmsd_a"),
+        "hbond_persistence_min": _row_min(rows, "hbond_persistence"),
+        "contact_persistence_min": _row_min(rows, "contact_persistence"),
+        "initial_clash_count_total": _row_sum(rows, "initial_clash_count"),
+        "final_clash_count_total": _row_sum(rows, "clash_count"),
+        "clash_relief_count_total": _row_sum(rows, "clash_relief_count"),
+        "green_band_condition_text": str(summary.get("green_band_condition_text") or ""),
+        "claim_promotion_allowed": False,
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": False,
+        "candidates": rows,
+        "claim_boundary": summary.get("claim_boundary") or artifact.get("claim_boundary", ""),
     }
 
 

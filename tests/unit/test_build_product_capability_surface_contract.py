@@ -315,13 +315,14 @@ def test_product_capability_surface_exposes_evidence_surfaces(tmp_path: Path) ->
 
     # Discovery surface is additive: capability gate counts are unchanged.
     assert summary["capability_count"] == 9
-    assert summary["evidence_surface_count"] == 5
-    assert summary["evidence_surface_available_count"] == 5
+    assert summary["evidence_surface_count"] == 6
+    assert summary["evidence_surface_available_count"] == 6
     assert set(summary["evidence_surface_ids"]) == {
         "hbond_backmap_report",
         "gpcr_hard_decoy_suite_report",
         "pocketmd_lite_report",
         "pocketmd_lite_remaining_evidence_queue",
+        "pocketmd_lite_candidate_metric_fill_preview_report",
         "pocketmd_lite_topk_refinement_audit",
     }
 
@@ -368,6 +369,24 @@ def test_product_capability_surface_exposes_evidence_surfaces(tmp_path: Path) ->
     assert "missing top-k local-min and H-bond persistence inputs" in pocketmd_queue["claim_boundary"]
     assert pocketmd_queue["execution_enabled"] is False
     assert pocketmd_queue["external_state_mutated"] is False
+
+    pocketmd_preview_report = by_id["pocketmd_lite_candidate_metric_fill_preview_report"]
+    assert pocketmd_preview_report["route"] == "/product/pocketmd-lite-candidate-metric-fill-preview-report"
+    assert pocketmd_preview_report["artifact"] == (
+        "runs/pocketmd_lite_candidate_metric_fill_preview_report_current.json"
+    )
+    assert pocketmd_preview_report["bundle_surfaces"] == ["product_capability_surface_contract"]
+    assert pocketmd_preview_report["claim_type"] == "top_k_refinement_fill_preview_report"
+    assert pocketmd_preview_report["surface_available"] is True
+    assert pocketmd_preview_report["claim_safe"] is False
+    assert pocketmd_preview_report["preview_claim_safe"] is False
+    assert pocketmd_preview_report["preview_report_ready"] is False
+    assert pocketmd_preview_report["preview_requires_canonical_review"] is False
+    assert "cannot by itself promote PocketMD Lite claim wording" in (
+        pocketmd_preview_report["claim_boundary"]
+    )
+    assert pocketmd_preview_report["execution_enabled"] is False
+    assert pocketmd_preview_report["external_state_mutated"] is False
 
     pocketmd_audit = by_id["pocketmd_lite_topk_refinement_audit"]
     assert pocketmd_audit["route"] == "/product/pocketmd-lite-topk-refinement-audit"
@@ -454,6 +473,54 @@ def test_product_capability_surface_reads_pocketmd_blocked_artifact(tmp_path: Pa
     assert pocketmd["artifact_present"] is True
     assert pocketmd["claim_safe"] is False
     assert pocketmd["claim_status"] == "blocked_pocketmd_lite_report"
+
+
+def test_product_capability_surface_reads_pocketmd_preview_report_artifact(tmp_path: Path) -> None:
+    root = _split_router_root(tmp_path / "repo")
+    (root / "runs").mkdir(parents=True, exist_ok=True)
+    (root / "runs" / "pocketmd_lite_candidate_metric_fill_preview_report_current.json").write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "pocketmd_lite_report_ready",
+                    "top_k_refinement_evidence_ready": True,
+                    "pocketmd_lite_claim_safe": True,
+                    "claim_grade_metric_ready_row_count": 5,
+                    "green_row_count": 5,
+                    "yellow_row_count": 0,
+                    "red_row_count": 0,
+                    "abstain_row_count": 0,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = mod.build_product_capability_surface_contract(
+        readiness_packet=_readiness(),
+        work_order_packet=_work_order(),
+        preflight_packet=_preflight(),
+        structure_report_packet=_structure_report(),
+        bundle_contract_packet=_bundle(),
+        delivery_evidence_packet=_delivery(),
+        pilot_packet=_pilot(),
+        scope_breadth_packet=_scope_breadth(),
+        execution_readiness_packet=_execution_readiness(),
+        root=root,
+    )
+
+    preview_report = {s["capability_id"]: s for s in payload["evidence_surfaces"]}[
+        "pocketmd_lite_candidate_metric_fill_preview_report"
+    ]
+    assert preview_report["artifact_present"] is True
+    assert preview_report["claim_safe"] is False
+    assert preview_report["preview_claim_safe"] is True
+    assert preview_report["preview_report_ready"] is True
+    assert preview_report["preview_requires_canonical_review"] is True
+    assert preview_report["claim_status"] == "pocketmd_lite_report_ready"
+    assert preview_report["claim_grade_metric_ready_row_count"] == 5
+    assert preview_report["green_row_count"] == 5
+    assert preview_report["abstain_row_count"] == 0
 
 
 def test_product_capability_surface_reads_pocketmd_topk_audit_proxy_only_artifact(tmp_path: Path) -> None:

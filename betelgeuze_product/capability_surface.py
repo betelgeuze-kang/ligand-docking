@@ -119,15 +119,18 @@ def _evidence_surfaces(root: Path) -> list[dict[str, Any]]:
     pocketmd_artifact = "runs/pocketmd_lite_report_current.json"
     pocketmd_queue_artifact = "runs/pocketmd_lite_remaining_evidence_queue_current.json"
     pocketmd_audit_artifact = "runs/pocketmd_lite_topk_refinement_audit_current.json"
+    pocketmd_preview_report_artifact = "runs/pocketmd_lite_candidate_metric_fill_preview_report_current.json"
     hbond_present = _artifact_present(root, hbond_artifact)
     gpcr_present = _artifact_present(root, gpcr_artifact)
     pocketmd_present = _artifact_present(root, pocketmd_artifact)
     pocketmd_queue_present = _artifact_present(root, pocketmd_queue_artifact)
     pocketmd_audit_present = _artifact_present(root, pocketmd_audit_artifact)
+    pocketmd_preview_report_present = _artifact_present(root, pocketmd_preview_report_artifact)
     gpcr_summary = _read_artifact_summary(root, gpcr_artifact)
     pocketmd_summary = _read_artifact_summary(root, pocketmd_artifact)
     pocketmd_queue_summary = _read_artifact_summary(root, pocketmd_queue_artifact)
     pocketmd_audit_summary = _read_artifact_summary(root, pocketmd_audit_artifact)
+    pocketmd_preview_report_summary = _read_artifact_summary(root, pocketmd_preview_report_artifact)
     pocketmd_audit_claim_safe = (
         pocketmd_audit_summary.get("claim_grade_refinement_evidence_ready") is True
         and pocketmd_audit_summary.get("claim_grade_report_evidence_ready") is True
@@ -207,6 +210,42 @@ def _evidence_surfaces(root: Path) -> list[dict[str, Any]]:
             "claim_boundary": (
                 "PocketMD Lite remaining evidence queue records missing top-k local-min and H-bond persistence "
                 "inputs; it does not execute refinement or promote a binding-affinity claim."
+            ),
+            "execution_enabled": False,
+            "external_state_mutated": False,
+        },
+        {
+            "capability_id": "pocketmd_lite_candidate_metric_fill_preview_report",
+            "surface": "product_evidence_surface",
+            "route": "/product/pocketmd-lite-candidate-metric-fill-preview-report",
+            "artifact": pocketmd_preview_report_artifact,
+            "bundle_surfaces": ["product_capability_surface_contract"],
+            "claim_type": "top_k_refinement_fill_preview_report",
+            "surface_available": True,
+            "artifact_present": pocketmd_preview_report_present,
+            "claim_safe": False,
+            "preview_claim_safe": bool(
+                pocketmd_preview_report_summary.get("pocketmd_lite_claim_safe") is True
+            ),
+            "preview_report_ready": bool(
+                pocketmd_preview_report_summary.get("status") == "pocketmd_lite_report_ready"
+                and pocketmd_preview_report_summary.get("top_k_refinement_evidence_ready") is True
+            ),
+            "preview_requires_canonical_review": pocketmd_preview_report_present,
+            "claim_status": _text(pocketmd_preview_report_summary.get("status")) or (
+                "present" if pocketmd_preview_report_present else "missing"
+            ),
+            "claim_grade_metric_ready_row_count": _int(
+                pocketmd_preview_report_summary.get("claim_grade_metric_ready_row_count")
+            ),
+            "green_row_count": _int(pocketmd_preview_report_summary.get("green_row_count")),
+            "yellow_row_count": _int(pocketmd_preview_report_summary.get("yellow_row_count")),
+            "red_row_count": _int(pocketmd_preview_report_summary.get("red_row_count")),
+            "abstain_row_count": _int(pocketmd_preview_report_summary.get("abstain_row_count")),
+            "claim_boundary": (
+                "PocketMD Lite candidate metric fill-preview report exposes exact recovered top-k metrics "
+                "for review, but it is not the canonical customer-facing report and cannot by itself promote "
+                "PocketMD Lite claim wording."
             ),
             "execution_enabled": False,
             "external_state_mutated": False,

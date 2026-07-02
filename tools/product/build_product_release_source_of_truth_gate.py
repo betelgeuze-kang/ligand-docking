@@ -1242,6 +1242,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/gpcr_hard_decoy_suite_current.json",
             "runs/pocketmd_lite_report_current.json",
             "runs/pocketmd_lite_remaining_evidence_queue_current.json",
+            "runs/pocketmd_lite_candidate_metric_fill_preview_report_current.json",
             "runs/pocketmd_lite_topk_refinement_audit_current.json",
         ],
     },

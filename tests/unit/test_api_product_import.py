@@ -77,6 +77,8 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert "/product/pocketmd-lite-report" in pocketmd_lite_router_paths
     assert "/product/pocketmd-lite-remaining-evidence-queue" in paths
     assert "/product/pocketmd-lite-remaining-evidence-queue" in pocketmd_lite_router_paths
+    assert "/product/pocketmd-lite-candidate-metric-fill-preview-report" in paths
+    assert "/product/pocketmd-lite-candidate-metric-fill-preview-report" in pocketmd_lite_router_paths
     assert "/product/pocketmd-lite-topk-refinement-audit" in paths
     assert "/product/pocketmd-lite-topk-refinement-audit" in pocketmd_lite_router_paths
     assert "/product/architecture" in paths
@@ -200,6 +202,14 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert sum(1 for route in main.app.routes if route.path == "/product/pocketmd-lite-report") == 1
     assert (
         sum(1 for route in main.app.routes if route.path == "/product/pocketmd-lite-remaining-evidence-queue")
+        == 1
+    )
+    assert (
+        sum(
+            1
+            for route in main.app.routes
+            if route.path == "/product/pocketmd-lite-candidate-metric-fill-preview-report"
+        )
         == 1
     )
     assert sum(1 for route in main.app.routes if route.path == "/product/service-boundary") == 1
@@ -361,6 +371,14 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert pocketmd_queue["execution_enabled"] is False
     assert pocketmd_queue["docking_results_emitted"] is False
     assert pocketmd_queue["external_state_mutated"] is False
+
+    pocketmd_preview_report = asyncio.run(
+        product_pocketmd_lite.get_product_pocketmd_lite_candidate_metric_fill_preview_report()
+    )
+    assert pocketmd_preview_report["pocketmd_lite_claim_safe"] is False
+    assert pocketmd_preview_report["execution_enabled"] is False
+    assert pocketmd_preview_report["docking_results_emitted"] is False
+    assert pocketmd_preview_report["external_state_mutated"] is False
 
     pocketmd_audit = asyncio.run(product_pocketmd_lite.get_product_pocketmd_lite_topk_refinement_audit())
     assert "claim_grade_refinement_evidence_ready" in pocketmd_audit
