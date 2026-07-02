@@ -84,10 +84,16 @@ def _write_common_inputs(root: Path) -> None:
                 {
                     "recovery_item_id": "restore_implementation_phase1_tree",
                     "status": "fail",
+                    "required_surface": "implementation/phase1",
+                    "operator_action": (
+                        "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+                    ),
                 },
                 {
                     "recovery_item_id": "restore_productization_release_evidence_dir",
                     "status": "fail",
+                    "required_surface": "implementation/phase1/release_evidence/productization",
+                    "operator_action": "Restore the productization evidence directory.",
                 },
             ],
         },
@@ -131,8 +137,16 @@ def test_pm_priority_queue_status_keeps_f2g_and_f2h_blocked(tmp_path: Path) -> N
     assert "recovery_status=f2g_f2h_authoritative_surface_recovery_packet_ready" in rows["2"]["evidence"]
     assert "blocked_recovery_items=8" in rows["2"]["evidence"]
     assert "primary_recovery_item=restore_implementation_phase1_tree" in rows["2"]["evidence"]
+    assert "primary_required_surface=implementation/phase1" in rows["2"]["evidence"]
+    assert rows["2"]["next_action"] == (
+        "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+    )
     assert rows["3"]["ready"] is False
     assert "blocked_recovery_items=8" in rows["3"]["evidence"]
+    assert "primary_required_surface=implementation/phase1" in rows["3"]["evidence"]
+    assert rows["3"]["next_action"] == (
+        "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+    )
     assert rows["6"]["ready"] is False
     assert rows["6"]["status"] == "schema_ready_cases_missing"
     assert "completed=0;required=3;minimum_met=False" in rows["6"]["evidence"]

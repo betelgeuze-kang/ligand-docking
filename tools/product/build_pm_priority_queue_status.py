@@ -205,8 +205,18 @@ def _recovery_evidence(recovery_payload: Any) -> str:
         f"recovery_status={_text(recovery.get('status')) or 'missing'};"
         f"recovery_required={bool(recovery.get('recovery_required') is True)};"
         f"blocked_recovery_items={_int(recovery.get('blocked_recovery_item_count'))};"
-        f"primary_recovery_item={_text(primary.get('recovery_item_id')) or 'none'}"
+        f"primary_recovery_item={_text(primary.get('recovery_item_id')) or 'none'};"
+        f"primary_required_surface={_text(primary.get('required_surface')) or 'none'}"
     )
+
+
+def _recovery_action(recovery_payload: Any, fallback: str) -> str:
+    rows = recovery_payload.get("rows") if isinstance(recovery_payload, dict) else []
+    failing_rows = [
+        row for row in rows if isinstance(row, dict) and _text(row.get("status")) != "pass"
+    ] if isinstance(rows, list) else []
+    primary = failing_rows[0] if failing_rows else {}
+    return _text(primary.get("operator_action")) or fallback
 
 
 def _f2g_row(f2_payload: Any, recovery_payload: Any = None) -> dict[str, Any]:
@@ -222,7 +232,10 @@ def _f2g_row(f2_payload: Any, recovery_payload: Any = None) -> dict[str, Any]:
         ready,
         f"status={status or 'missing'};blockers={','.join(map(str, blockers))};{recovery_evidence}",
         "f2g_authoritative_surfaces_missing",
-        "Restore real-MGT, near-null, support/elastic-link, and assembled tangent inputs before running F2g.",
+        _recovery_action(
+            recovery_payload or {},
+            "Restore real-MGT, near-null, support/elastic-link, and assembled tangent inputs before running F2g.",
+        ),
     )
 
 
@@ -238,7 +251,10 @@ def _f2h_row(f2_payload: Any, recovery_payload: Any = None) -> dict[str, Any]:
         allowed,
         f"f2g_audit_ready={f2g_ready};f2h_continuation_allowed={allowed};{recovery_evidence}",
         "f2h_blocked_until_f2g_audit",
-        "Do not run continuation until the F2g local audit exists and prerequisite surfaces are present.",
+        _recovery_action(
+            recovery_payload or {},
+            "Do not run continuation until the F2g local audit exists and prerequisite surfaces are present.",
+        ),
     )
 
 
