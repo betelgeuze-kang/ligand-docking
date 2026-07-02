@@ -48,6 +48,7 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "public_benchmark_receipt_attach_packet_ready": False,
                 "public_benchmark_receipt_attach_packet_present": True,
                 "public_benchmark_vina_gnina_pending_score_count": 32,
+                "public_benchmark_vina_gnina_pending_field_count": 192,
                 "public_benchmark_metric_source_pending_field_count": 510,
                 "public_benchmark_metric_source_pending_approval_token_count": 51,
                 "evidence_bundle_export_ready": True,
@@ -78,6 +79,7 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["public_benchmark_receipt_attach_packet_ready"] is False
     assert response["public_benchmark_receipt_attach_packet_present"] is True
     assert response["public_benchmark_vina_gnina_pending_score_count"] == 32
+    assert response["public_benchmark_vina_gnina_pending_field_count"] == 192
     assert response["public_benchmark_metric_source_pending_field_count"] == 510
     assert response["public_benchmark_metric_source_pending_approval_token_count"] == 51
     assert response["evidence_bundle_export_ready"] is True
@@ -110,6 +112,7 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["public_benchmark_receipt_attach_packet_ready"] is False
     assert response["public_benchmark_receipt_attach_packet_present"] is False
     assert response["public_benchmark_vina_gnina_pending_score_count"] == 0
+    assert response["public_benchmark_vina_gnina_pending_field_count"] == 0
     assert response["public_benchmark_metric_source_pending_field_count"] == 0
     assert response["public_benchmark_metric_source_pending_approval_token_count"] == 0
     assert response["evidence_bundle_export_ready"] is False

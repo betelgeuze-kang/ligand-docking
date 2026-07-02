@@ -1039,6 +1039,7 @@ def build_product_operator_cockpit(
         "public_benchmark_receipt_attach_packet_ready": public_attach_ready,
         "public_benchmark_receipt_attach_packet_present": public_attach_present,
         "public_benchmark_vina_gnina_pending_score_count": public_vina_pending_scores,
+        "public_benchmark_vina_gnina_pending_field_count": public_vina_pending_fields,
         "public_benchmark_metric_source_pending_field_count": public_metric_pending_fields,
         "public_benchmark_metric_source_pending_approval_token_count": public_metric_pending_tokens,
         "evidence_bundle_export_ready": evidence_bundle_export_ready,

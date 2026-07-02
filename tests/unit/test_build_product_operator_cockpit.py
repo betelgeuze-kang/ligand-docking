@@ -233,6 +233,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["public_benchmark_receipt_attach_packet_ready"] is False
     assert summary["public_benchmark_receipt_attach_packet_present"] is True
     assert summary["public_benchmark_vina_gnina_pending_score_count"] == 32
+    assert summary["public_benchmark_vina_gnina_pending_field_count"] == 192
     assert summary["public_benchmark_metric_source_pending_field_count"] == 510
     assert summary["public_benchmark_metric_source_pending_approval_token_count"] == 51
     assert summary["evidence_bundle_export_ready"] is True

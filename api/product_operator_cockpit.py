@@ -88,6 +88,7 @@ def _missing_response() -> dict[str, Any]:
         "public_benchmark_receipt_attach_packet_ready": False,
         "public_benchmark_receipt_attach_packet_present": False,
         "public_benchmark_vina_gnina_pending_score_count": 0,
+        "public_benchmark_vina_gnina_pending_field_count": 0,
         "public_benchmark_metric_source_pending_field_count": 0,
         "public_benchmark_metric_source_pending_approval_token_count": 0,
         "evidence_bundle_export_ready": False,
@@ -161,6 +162,9 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "public_benchmark_vina_gnina_pending_score_count": _int(
             summary.get("public_benchmark_vina_gnina_pending_score_count")
+        ),
+        "public_benchmark_vina_gnina_pending_field_count": _int(
+            summary.get("public_benchmark_vina_gnina_pending_field_count")
         ),
         "public_benchmark_metric_source_pending_field_count": _int(
             summary.get("public_benchmark_metric_source_pending_field_count")
