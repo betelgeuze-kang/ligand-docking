@@ -173,8 +173,19 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "vina_gnina_pending_field_count": 192,
                 "comparison_adapter_same_input_row_count_match": False,
                 "primary_blocker_id": "vina_gnina_same_input_comparison",
+                "primary_blocker": "vina_gnina_same_input_score_evidence_missing",
                 "primary_blocker_next_required_step": (
                     "Attach operator-provided Vina/GNINA scores for the same subset rows, then rerun the adapter."
+                ),
+                "vina_gnina_score_template_csv": (
+                    "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                ),
+                "vina_gnina_score_template_receipt_json": (
+                    "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+                ),
+                "vina_gnina_adapter_command_after_fill": (
+                    "python3 tools/build_pdbbind_casf_pose_affinity_results.py --comparison-scores-csv "
+                    "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
                 ),
                 "blockers": [
                     "vina_gnina_same_input_comparison:vina_gnina_same_input_score_evidence_missing",
@@ -192,16 +203,28 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "receipt_attach_packet_ready": False,
                 "external_benchmark_receipts_ready": False,
                 "blocker_count": 2,
+                "primary_blocker_id": "vina_gnina_same_input_scores",
+                "primary_blocker": "vina_gnina_same_input_score_evidence_missing",
                 "blockers": [
                     "vina_gnina_same_input_scores:vina_gnina_same_input_score_evidence_missing",
                     "metric_source_receipt_rows:benchmark_metric_source_receipt_rows_unapproved",
                 ],
+                "vina_gnina_score_template_csv": (
+                    "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                ),
+                "vina_gnina_score_template_receipt_json": (
+                    "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+                ),
+                "metric_source_receipt_csv": (
+                    "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+                ),
                 "vina_gnina_score_value_pending_count": 32,
                 "metric_source_receipt_manual_field_pending_count": 510,
                 "metric_source_receipt_approval_token_pending_count": 51,
                 "field_work_order_row_count": 22,
                 "field_work_order_pending_field_count": 702,
                 "field_work_order_primary_field_name": "approval_token",
+                "field_work_order_primary_lane_id": "vina_gnina_same_input_scores",
                 "next_required_step": "Fill the receipt attach packet rows before rerunning the benchmark audit.",
             }
         },
@@ -382,6 +405,29 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["public_benchmark_field_work_order_row_count"] == 22
     assert summary["public_benchmark_field_work_order_pending_field_count"] == 702
     assert summary["public_benchmark_field_work_order_primary_field_name"] == "approval_token"
+    assert summary["public_benchmark_field_work_order_primary_lane_id"] == (
+        "vina_gnina_same_input_scores"
+    )
+    assert summary["public_benchmark_primary_blocker_id"] == "vina_gnina_same_input_scores"
+    assert summary["public_benchmark_primary_blocker"] == (
+        "vina_gnina_same_input_score_evidence_missing"
+    )
+    assert summary["public_benchmark_primary_next_required_step"] == (
+        "Fill the receipt attach packet rows before rerunning the benchmark audit."
+    )
+    assert summary["public_benchmark_vina_gnina_score_template_csv"] == (
+        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+    )
+    assert summary["public_benchmark_vina_gnina_score_template_receipt_json"] == (
+        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+    )
+    assert summary["public_benchmark_metric_source_receipt_csv"] == (
+        "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+    )
+    assert summary["public_benchmark_vina_gnina_adapter_command_after_fill"] == (
+        "python3 tools/build_pdbbind_casf_pose_affinity_results.py --comparison-scores-csv "
+        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+    )
     assert summary["evidence_bundle_export_ready"] is True
     assert summary["api_customer_flow_release_evidence_present"] is True
     assert summary["api_customer_flow_release_evidence_ready"] is True
@@ -470,6 +516,32 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "field_work_order_rows=22" in panels["public_benchmark_scorecard"]["secondary_metric"]
     assert "field_work_order_pending_fields=702" in panels["public_benchmark_scorecard"]["secondary_metric"]
     assert "field_work_order_primary=approval_token" in panels["public_benchmark_scorecard"]["secondary_metric"]
+    assert "field_work_order_lane=vina_gnina_same_input_scores" in (
+        panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
+    assert "primary_blocker_id=vina_gnina_same_input_scores" in (
+        panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
+    assert "primary_blocker=vina_gnina_same_input_score_evidence_missing" in (
+        panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
+    assert (
+        "score_template=runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+        in panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
+    assert (
+        "score_receipt=runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+        in panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
+    assert (
+        "metric_receipt=config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+        in panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
+    assert (
+        "adapter_after_fill=python3 tools/build_pdbbind_casf_pose_affinity_results.py --comparison-scores-csv "
+        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+        in panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
     assert panels["public_benchmark_scorecard"]["blockers"] == [
         "vina_gnina_same_input_scores:vina_gnina_same_input_score_evidence_missing",
         "metric_source_receipt_rows:benchmark_metric_source_receipt_rows_unapproved",

@@ -78,6 +78,25 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "public_benchmark_field_work_order_row_count": 22,
                 "public_benchmark_field_work_order_pending_field_count": 702,
                 "public_benchmark_field_work_order_primary_field_name": "approval_token",
+                "public_benchmark_field_work_order_primary_lane_id": "vina_gnina_same_input_scores",
+                "public_benchmark_primary_blocker_id": "vina_gnina_same_input_scores",
+                "public_benchmark_primary_blocker": "vina_gnina_same_input_score_evidence_missing",
+                "public_benchmark_primary_next_required_step": (
+                    "Fill every score-template row, then rebuild the receipt."
+                ),
+                "public_benchmark_vina_gnina_score_template_csv": (
+                    "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                ),
+                "public_benchmark_vina_gnina_score_template_receipt_json": (
+                    "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+                ),
+                "public_benchmark_metric_source_receipt_csv": (
+                    "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+                ),
+                "public_benchmark_vina_gnina_adapter_command_after_fill": (
+                    "python3 tools/build_pdbbind_casf_pose_affinity_results.py --comparison-scores-csv "
+                    "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                ),
                 "evidence_bundle_export_ready": True,
                 "api_customer_flow_release_evidence_present": True,
                 "api_customer_flow_release_evidence_ready": True,
@@ -170,6 +189,29 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["public_benchmark_field_work_order_row_count"] == 22
     assert response["public_benchmark_field_work_order_pending_field_count"] == 702
     assert response["public_benchmark_field_work_order_primary_field_name"] == "approval_token"
+    assert response["public_benchmark_field_work_order_primary_lane_id"] == (
+        "vina_gnina_same_input_scores"
+    )
+    assert response["public_benchmark_primary_blocker_id"] == "vina_gnina_same_input_scores"
+    assert response["public_benchmark_primary_blocker"] == (
+        "vina_gnina_same_input_score_evidence_missing"
+    )
+    assert response["public_benchmark_primary_next_required_step"] == (
+        "Fill every score-template row, then rebuild the receipt."
+    )
+    assert response["public_benchmark_vina_gnina_score_template_csv"] == (
+        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+    )
+    assert response["public_benchmark_vina_gnina_score_template_receipt_json"] == (
+        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+    )
+    assert response["public_benchmark_metric_source_receipt_csv"] == (
+        "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+    )
+    assert response["public_benchmark_vina_gnina_adapter_command_after_fill"] == (
+        "python3 tools/build_pdbbind_casf_pose_affinity_results.py --comparison-scores-csv "
+        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+    )
     assert response["evidence_bundle_export_ready"] is True
     assert response["api_customer_flow_release_evidence_present"] is True
     assert response["api_customer_flow_release_evidence_ready"] is True
@@ -261,6 +303,14 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["public_benchmark_field_work_order_row_count"] == 0
     assert response["public_benchmark_field_work_order_pending_field_count"] == 0
     assert response["public_benchmark_field_work_order_primary_field_name"] == ""
+    assert response["public_benchmark_field_work_order_primary_lane_id"] == ""
+    assert response["public_benchmark_primary_blocker_id"] == ""
+    assert response["public_benchmark_primary_blocker"] == ""
+    assert response["public_benchmark_primary_next_required_step"] == ""
+    assert response["public_benchmark_vina_gnina_score_template_csv"] == ""
+    assert response["public_benchmark_vina_gnina_score_template_receipt_json"] == ""
+    assert response["public_benchmark_metric_source_receipt_csv"] == ""
+    assert response["public_benchmark_vina_gnina_adapter_command_after_fill"] == ""
     assert response["evidence_bundle_export_ready"] is False
     assert response["api_customer_flow_release_evidence_present"] is False
     assert response["api_customer_flow_release_evidence_ready"] is False

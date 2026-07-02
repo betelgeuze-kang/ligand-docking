@@ -791,6 +791,38 @@ def build_product_operator_cockpit(
     public_field_work_order_primary_field = _first_text(
         public_receipt_attach_packet.get("field_work_order_primary_field_name")
     )
+    public_field_work_order_primary_lane = _first_text(
+        public_receipt_attach_packet.get("field_work_order_primary_lane_id")
+    )
+    public_primary_blocker_id = _first_text(
+        public_receipt_attach_packet.get("primary_blocker_id"),
+        public_benchmark.get("primary_blocker_id"),
+    )
+    public_primary_blocker = _first_text(
+        public_receipt_attach_packet.get("primary_blocker"),
+        public_benchmark.get("primary_blocker"),
+    )
+    public_primary_next_required_step = _first_text(
+        public_receipt_attach_packet.get("next_required_step"),
+        public_benchmark.get("primary_blocker_next_required_step"),
+        public_benchmark.get("next_required_step"),
+    )
+    public_vina_score_template_csv = _first_text(
+        public_receipt_attach_packet.get("vina_gnina_score_template_csv"),
+        public_benchmark.get("vina_gnina_score_template_csv"),
+    )
+    public_vina_score_template_receipt_json = _first_text(
+        public_receipt_attach_packet.get("vina_gnina_score_template_receipt_json"),
+        public_benchmark.get("vina_gnina_score_template_receipt_json"),
+    )
+    public_metric_source_receipt_csv = _first_text(
+        public_receipt_attach_packet.get("metric_source_receipt_csv"),
+        public_benchmark.get("metric_source_receipt_csv"),
+    )
+    public_vina_adapter_command_after_fill = _first_text(
+        public_benchmark.get("vina_gnina_adapter_command_after_fill"),
+        public_receipt_attach_packet.get("vina_gnina_adapter_command_after_fill"),
+    )
 
     release_actions_present = bool(release_actions)
     release_blocker_count = _int(
@@ -1074,6 +1106,13 @@ def build_product_operator_cockpit(
                 _count_metric("field_work_order_rows", public_field_work_order_rows),
                 _count_metric("field_work_order_pending_fields", public_field_work_order_pending_fields),
                 _metric("field_work_order_primary", public_field_work_order_primary_field),
+                _metric("field_work_order_lane", public_field_work_order_primary_lane),
+                _metric("primary_blocker_id", public_primary_blocker_id),
+                _metric("primary_blocker", public_primary_blocker),
+                _metric("score_template", public_vina_score_template_csv),
+                _metric("score_receipt", public_vina_score_template_receipt_json),
+                _metric("metric_receipt", public_metric_source_receipt_csv),
+                _metric("adapter_after_fill", public_vina_adapter_command_after_fill),
                 _metric(
                     "same_input_rows",
                     _bool_true(public_benchmark.get("comparison_adapter_same_input_row_count_match")),
@@ -1082,10 +1121,8 @@ def build_product_operator_cockpit(
                 _metric("claim_promotion_allowed", _bool_true(public_benchmark.get("claim_promotion_allowed"))),
             ),
             next_action=_first_text(
-                public_receipt_attach_packet.get("next_required_step"),
-                public_benchmark.get("primary_blocker_next_required_step"),
+                public_primary_next_required_step,
                 public_benchmark.get("top_required_input"),
-                public_benchmark.get("next_required_step"),
                 "Attach benchmark receipts and clear Vina/GNINA same-input comparison evidence.",
             ),
             allowed_claim_text="Benchmark receipt status may be displayed.",
@@ -1307,6 +1344,18 @@ def build_product_operator_cockpit(
         "public_benchmark_field_work_order_row_count": public_field_work_order_rows,
         "public_benchmark_field_work_order_pending_field_count": public_field_work_order_pending_fields,
         "public_benchmark_field_work_order_primary_field_name": public_field_work_order_primary_field,
+        "public_benchmark_field_work_order_primary_lane_id": public_field_work_order_primary_lane,
+        "public_benchmark_primary_blocker_id": public_primary_blocker_id,
+        "public_benchmark_primary_blocker": public_primary_blocker,
+        "public_benchmark_primary_next_required_step": public_primary_next_required_step,
+        "public_benchmark_vina_gnina_score_template_csv": public_vina_score_template_csv,
+        "public_benchmark_vina_gnina_score_template_receipt_json": (
+            public_vina_score_template_receipt_json
+        ),
+        "public_benchmark_metric_source_receipt_csv": public_metric_source_receipt_csv,
+        "public_benchmark_vina_gnina_adapter_command_after_fill": (
+            public_vina_adapter_command_after_fill
+        ),
         "evidence_bundle_export_ready": evidence_bundle_export_ready,
         "api_customer_flow_release_evidence_present": api_customer_flow_present,
         "api_customer_flow_release_evidence_ready": api_customer_flow_ready,

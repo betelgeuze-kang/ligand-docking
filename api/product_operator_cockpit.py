@@ -121,6 +121,14 @@ def _missing_response() -> dict[str, Any]:
         "public_benchmark_field_work_order_row_count": 0,
         "public_benchmark_field_work_order_pending_field_count": 0,
         "public_benchmark_field_work_order_primary_field_name": "",
+        "public_benchmark_field_work_order_primary_lane_id": "",
+        "public_benchmark_primary_blocker_id": "",
+        "public_benchmark_primary_blocker": "",
+        "public_benchmark_primary_next_required_step": "",
+        "public_benchmark_vina_gnina_score_template_csv": "",
+        "public_benchmark_vina_gnina_score_template_receipt_json": "",
+        "public_benchmark_metric_source_receipt_csv": "",
+        "public_benchmark_vina_gnina_adapter_command_after_fill": "",
         "evidence_bundle_export_ready": False,
         "api_customer_flow_release_evidence_present": False,
         "api_customer_flow_release_evidence_ready": False,
@@ -298,6 +306,30 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "public_benchmark_field_work_order_primary_field_name": str(
             summary.get("public_benchmark_field_work_order_primary_field_name") or ""
+        ),
+        "public_benchmark_field_work_order_primary_lane_id": str(
+            summary.get("public_benchmark_field_work_order_primary_lane_id") or ""
+        ),
+        "public_benchmark_primary_blocker_id": str(
+            summary.get("public_benchmark_primary_blocker_id") or ""
+        ),
+        "public_benchmark_primary_blocker": str(
+            summary.get("public_benchmark_primary_blocker") or ""
+        ),
+        "public_benchmark_primary_next_required_step": str(
+            summary.get("public_benchmark_primary_next_required_step") or ""
+        ),
+        "public_benchmark_vina_gnina_score_template_csv": str(
+            summary.get("public_benchmark_vina_gnina_score_template_csv") or ""
+        ),
+        "public_benchmark_vina_gnina_score_template_receipt_json": str(
+            summary.get("public_benchmark_vina_gnina_score_template_receipt_json") or ""
+        ),
+        "public_benchmark_metric_source_receipt_csv": str(
+            summary.get("public_benchmark_metric_source_receipt_csv") or ""
+        ),
+        "public_benchmark_vina_gnina_adapter_command_after_fill": str(
+            summary.get("public_benchmark_vina_gnina_adapter_command_after_fill") or ""
         ),
         "evidence_bundle_export_ready": bool(summary.get("evidence_bundle_export_ready") is True),
         "api_customer_flow_release_evidence_present": bool(
