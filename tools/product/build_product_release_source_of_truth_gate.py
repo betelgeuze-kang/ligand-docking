@@ -97,6 +97,9 @@ PUBLIC_BENCHMARK_VINA_GNINA_COMPARISON_WORK_ORDER_COMMAND = (
 PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND = (
     "python3 tools/product/build_public_benchmark_external_receipts_audit.py"
 )
+PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_COMMAND = (
+    "python3 tools/product/build_public_benchmark_receipt_attach_packet.py"
+)
 GPCR_HARD_DECOY_CLAIM_LOCK_REASON = (
     "ADORA2A neutral-antagonist rescue rule was discovered from the current failure slice; "
     "independent claim-unlock replay required before broad GPCR/router promotion."
@@ -303,6 +306,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py",
     PUBLIC_BENCHMARK_VINA_GNINA_COMPARISON_WORK_ORDER_COMMAND,
     PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND,
+    PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_COMMAND,
     "python3 tools/build_engine_refinement_claim_evidence_operator_field_worksheet.py",
     "python3 tools/build_engine_refinement_claim_evidence_operator_staging_apply.py",
     "python3 tools/product/build_science_accuracy_frontier.py",
@@ -1827,6 +1831,19 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV,
             "runs/benchmark_ledger_current.json",
             "runs/public_benchmark_vina_gnina_comparison_work_order_current.json",
+        ],
+    },
+    {
+        "artifact_id": "public_benchmark_receipt_attach_packet",
+        "artifact_path": "runs/public_benchmark_receipt_attach_packet_current.json",
+        "builder_command": PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_COMMAND,
+        "depends_on": [
+            "tools/product/build_public_benchmark_receipt_attach_packet.py",
+            "runs/public_benchmark_external_receipts_audit_current.json",
+            "runs/public_benchmark_vina_gnina_comparison_work_order_current.json",
+            "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
+            R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_JSON,
+            R9_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_CSV,
         ],
     },
     {

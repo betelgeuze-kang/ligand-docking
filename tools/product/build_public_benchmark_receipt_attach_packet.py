@@ -1,0 +1,347 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+from pathlib import Path
+from typing import Any
+
+
+ROOT = Path(__file__).resolve().parents[2]
+
+DEFAULT_EXTERNAL_RECEIPTS_AUDIT_JSON = "runs/public_benchmark_external_receipts_audit_current.json"
+DEFAULT_VINA_GNINA_WORK_ORDER_JSON = "runs/public_benchmark_vina_gnina_comparison_work_order_current.json"
+DEFAULT_VINA_GNINA_SCORE_TEMPLATE_CSV = "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+DEFAULT_METRIC_SOURCE_RECEIPT_JSON = (
+    "runs/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.json"
+)
+DEFAULT_METRIC_SOURCE_RECEIPT_CSV = (
+    "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+)
+DEFAULT_OUT_JSON = "runs/public_benchmark_receipt_attach_packet_current.json"
+DEFAULT_OUT_CSV = "runs/public_benchmark_receipt_attach_packet_current.csv"
+DEFAULT_OUT_MD = "runs/public_benchmark_receipt_attach_packet_current.md"
+
+PACKET_TYPE = "public_benchmark_receipt_attach_packet"
+SCHEMA_VERSION = "public_benchmark_receipt_attach_packet_v1"
+VINA_GNINA_APPROVAL_TOKEN = "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES"
+
+CLAIM_BOUNDARY = (
+    "Public benchmark receipt attach packet only; it summarizes local operator-fill rows, pending fields, "
+    "approval tokens, and follow-up commands for external benchmark receipts. It does not run Vina/GNINA, "
+    "download benchmark datasets, compute metrics, approve receipt rows, promote claims, upload, email, "
+    "deploy, or mutate external state."
+)
+
+CSV_FIELDS = [
+    "lane_id",
+    "status",
+    "ready",
+    "source_artifact",
+    "operator_csv",
+    "row_count",
+    "pending_value_count",
+    "pending_metadata_count",
+    "pending_license_count",
+    "pending_approval_token_count",
+    "approval_token_required",
+    "blocker",
+    "next_required_step",
+    "execution_enabled",
+    "external_state_mutated",
+    "claim_promotion_allowed",
+]
+
+
+def _resolve(path_like: str | Path, *, root: Path = ROOT) -> Path:
+    path = Path(path_like)
+    return path if path.is_absolute() else root / path
+
+
+def _display(path_like: str | Path, *, root: Path = ROOT) -> str:
+    path = Path(str(path_like))
+    if path.is_absolute():
+        try:
+            return str(path.relative_to(root))
+        except ValueError:
+            return str(path)
+    return str(path_like)
+
+
+def _read_json(path_like: str | Path, *, root: Path = ROOT) -> dict[str, Any]:
+    path = _resolve(path_like, root=root)
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _summary(payload: dict[str, Any]) -> dict[str, Any]:
+    summary = payload.get("summary")
+    return summary if isinstance(summary, dict) else payload
+
+
+def _text(value: Any) -> str:
+    return "" if value is None else str(value).strip()
+
+
+def _int(value: Any) -> int:
+    try:
+        return int(float(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _bool_true(value: Any) -> bool:
+    return value is True
+
+
+def _csv_row_count(path_like: str | Path, *, root: Path = ROOT) -> int:
+    path = _resolve(path_like, root=root)
+    if not path.is_file():
+        return 0
+    with path.open(newline="", encoding="utf-8") as handle:
+        return sum(1 for _ in csv.DictReader(handle))
+
+
+def _lane(
+    *,
+    lane_id: str,
+    ready: bool,
+    source_artifact: str | Path,
+    operator_csv: str | Path,
+    row_count: int,
+    pending_value_count: int,
+    pending_metadata_count: int,
+    pending_license_count: int,
+    pending_approval_token_count: int,
+    approval_token_required: str,
+    blocker: str,
+    next_required_step: str,
+    root: Path,
+) -> dict[str, Any]:
+    return {
+        "lane_id": lane_id,
+        "status": "ready" if ready else "blocked",
+        "ready": ready,
+        "source_artifact": _display(source_artifact, root=root),
+        "operator_csv": _display(operator_csv, root=root),
+        "row_count": row_count,
+        "pending_value_count": pending_value_count,
+        "pending_metadata_count": pending_metadata_count,
+        "pending_license_count": pending_license_count,
+        "pending_approval_token_count": pending_approval_token_count,
+        "approval_token_required": approval_token_required,
+        "blocker": "" if ready else blocker,
+        "next_required_step": next_required_step,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_promotion_allowed": False,
+        "claim_boundary": CLAIM_BOUNDARY,
+    }
+
+
+def build_public_benchmark_receipt_attach_packet(
+    *,
+    external_receipts_audit_json: str | Path = DEFAULT_EXTERNAL_RECEIPTS_AUDIT_JSON,
+    vina_gnina_work_order_json: str | Path = DEFAULT_VINA_GNINA_WORK_ORDER_JSON,
+    vina_gnina_score_template_csv: str | Path = DEFAULT_VINA_GNINA_SCORE_TEMPLATE_CSV,
+    metric_source_receipt_json: str | Path = DEFAULT_METRIC_SOURCE_RECEIPT_JSON,
+    metric_source_receipt_csv: str | Path = DEFAULT_METRIC_SOURCE_RECEIPT_CSV,
+    root: Path = ROOT,
+) -> dict[str, Any]:
+    audit = _summary(_read_json(external_receipts_audit_json, root=root))
+    vina_gnina = _summary(_read_json(vina_gnina_work_order_json, root=root))
+    metric_receipt = _summary(_read_json(metric_source_receipt_json, root=root))
+
+    vina_gnina_row_count = _int(vina_gnina.get("score_template_row_count")) or _csv_row_count(
+        vina_gnina_score_template_csv, root=root
+    )
+    vina_gnina_ready = (
+        _bool_true(vina_gnina.get("score_template_validation_ready"))
+        and _int(vina_gnina.get("score_template_blocker_count")) == 0
+        and vina_gnina_row_count > 0
+    )
+    vina_gnina_lane = _lane(
+        lane_id="vina_gnina_same_input_scores",
+        ready=vina_gnina_ready,
+        source_artifact=vina_gnina_work_order_json,
+        operator_csv=vina_gnina_score_template_csv,
+        row_count=vina_gnina_row_count,
+        pending_value_count=_int(vina_gnina.get("score_value_pending_count")),
+        pending_metadata_count=_int(vina_gnina.get("operator_metadata_pending_count"))
+        + _int(vina_gnina.get("operator_placeholder_pending_count")),
+        pending_license_count=_int(vina_gnina.get("license_ok_pending_count")),
+        pending_approval_token_count=_int(vina_gnina.get("approval_token_pending_count")),
+        approval_token_required=_text(vina_gnina.get("approval_token_required")) or VINA_GNINA_APPROVAL_TOKEN,
+        blocker="vina_gnina_same_input_score_evidence_missing",
+        next_required_step=_text(vina_gnina.get("next_required_step"))
+        or "Fill every Vina/GNINA same-input score template row, then rerun the comparison adapter.",
+        root=root,
+    )
+
+    metric_row_count = _int(metric_receipt.get("row_count")) or _csv_row_count(
+        metric_source_receipt_csv, root=root
+    )
+    metric_ready = (
+        _bool_true(metric_receipt.get("claim_promotion_allowed"))
+        and _int(metric_receipt.get("blocked_row_count")) == 0
+        and metric_row_count > 0
+    )
+    metric_lane = _lane(
+        lane_id="metric_source_receipt_rows",
+        ready=metric_ready,
+        source_artifact=metric_source_receipt_json,
+        operator_csv=metric_source_receipt_csv,
+        row_count=metric_row_count,
+        pending_value_count=_int(metric_receipt.get("receipt_manual_field_pending_count")),
+        pending_metadata_count=_int(metric_receipt.get("receipt_manual_field_pending_count")),
+        pending_license_count=_int(metric_receipt.get("license_ok_pending_count")),
+        pending_approval_token_count=_int(metric_receipt.get("receipt_approval_token_pending_count")),
+        approval_token_required=_text(metric_receipt.get("approval_token_required"))
+        or "APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_METRIC_SOURCE_PAYLOAD",
+        blocker="benchmark_metric_source_receipt_rows_unapproved",
+        next_required_step=(
+            "Fill reviewed metric values, methods, artifact review fields, license flags, and approval token "
+            "for every metric-source receipt row."
+        ),
+        root=root,
+    )
+
+    rows = [vina_gnina_lane, metric_lane]
+    ready_rows = [row for row in rows if row["ready"]]
+    blocked_rows = [row for row in rows if not row["ready"]]
+    packet_ready = len(ready_rows) == len(rows)
+    summary = {
+        "packet_type": PACKET_TYPE,
+        "schema_version": SCHEMA_VERSION,
+        "status": "public_benchmark_receipt_attach_packet_ready"
+        if packet_ready
+        else "blocked_public_benchmark_receipt_attach_packet",
+        "receipt_attach_packet_ready": packet_ready,
+        "external_benchmark_receipts_ready": packet_ready
+        and _bool_true(audit.get("external_benchmark_receipts_ready")),
+        "claim_promotion_allowed": False,
+        "lane_count": len(rows),
+        "ready_lane_count": len(ready_rows),
+        "blocked_lane_count": len(blocked_rows),
+        "blocker_count": len(blocked_rows),
+        "blockers": [f"{row['lane_id']}:{row['blocker']}" for row in blocked_rows],
+        "primary_blocker_id": blocked_rows[0]["lane_id"] if blocked_rows else "",
+        "primary_blocker": blocked_rows[0]["blocker"] if blocked_rows else "",
+        "external_receipts_audit_status": _text(audit.get("status")),
+        "external_receipts_audit_blocker_count": _int(audit.get("blocker_count")),
+        "vina_gnina_score_template_csv": _display(vina_gnina_score_template_csv, root=root),
+        "vina_gnina_score_template_row_count": vina_gnina_row_count,
+        "vina_gnina_score_value_pending_count": vina_gnina_lane["pending_value_count"],
+        "vina_gnina_operator_metadata_pending_count": _int(vina_gnina.get("operator_metadata_pending_count")),
+        "vina_gnina_operator_placeholder_pending_count": _int(
+            vina_gnina.get("operator_placeholder_pending_count")
+        ),
+        "vina_gnina_license_ok_pending_count": vina_gnina_lane["pending_license_count"],
+        "vina_gnina_approval_token_pending_count": vina_gnina_lane["pending_approval_token_count"],
+        "metric_source_receipt_csv": _display(metric_source_receipt_csv, root=root),
+        "metric_source_receipt_row_count": metric_row_count,
+        "metric_source_receipt_blocked_row_count": _int(metric_receipt.get("blocked_row_count")),
+        "metric_source_receipt_manual_field_pending_count": _int(
+            metric_receipt.get("receipt_manual_field_pending_count")
+        ),
+        "metric_source_receipt_approval_token_pending_count": metric_lane[
+            "pending_approval_token_count"
+        ],
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_boundary": CLAIM_BOUNDARY,
+        "next_required_step": blocked_rows[0]["next_required_step"]
+        if blocked_rows
+        else "Receipt attach packet is ready; rerun the external benchmark receipts audit.",
+    }
+    return {"summary": summary, "rows": rows}
+
+
+def _write_json(path_like: str | Path, payload: dict[str, Any], *, root: Path = ROOT) -> None:
+    path = _resolve(path_like, root=root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _csv_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, list):
+        return ";".join(_text(item) for item in value if _text(item))
+    return _text(value)
+
+
+def _write_csv(path_like: str | Path, rows: list[dict[str, Any]], *, root: Path = ROOT) -> None:
+    path = _resolve(path_like, root=root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=CSV_FIELDS)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({field: _csv_value(row.get(field)) for field in CSV_FIELDS})
+
+
+def _render_md(payload: dict[str, Any]) -> str:
+    summary = payload["summary"]
+    lines = [
+        "# Public Benchmark Receipt Attach Packet",
+        "",
+        f"- status: `{summary['status']}`",
+        f"- receipt_attach_packet_ready: `{summary['receipt_attach_packet_ready']}`",
+        f"- ready_lane_count: `{summary['ready_lane_count']}` / `{summary['lane_count']}`",
+        f"- blocker_count: `{summary['blocker_count']}`",
+        f"- primary_blocker_id: `{summary['primary_blocker_id']}`",
+        "",
+        "| lane | status | rows | pending values | pending approvals | blocker |",
+        "| --- | --- | ---: | ---: | ---: | --- |",
+    ]
+    for row in payload["rows"]:
+        lines.append(
+            f"| `{row['lane_id']}` | `{row['status']}` | `{row['row_count']}` | "
+            f"`{row['pending_value_count']}` | `{row['pending_approval_token_count']}` | "
+            f"`{row['blocker']}` |"
+        )
+    lines.extend(["", CLAIM_BOUNDARY, ""])
+    return "\n".join(lines)
+
+
+def _write_text(path_like: str | Path, text: str, *, root: Path = ROOT) -> None:
+    path = _resolve(path_like, root=root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Build public benchmark receipt attach packet.")
+    parser.add_argument("--external-receipts-audit-json", default=DEFAULT_EXTERNAL_RECEIPTS_AUDIT_JSON)
+    parser.add_argument("--vina-gnina-work-order-json", default=DEFAULT_VINA_GNINA_WORK_ORDER_JSON)
+    parser.add_argument("--vina-gnina-score-template-csv", default=DEFAULT_VINA_GNINA_SCORE_TEMPLATE_CSV)
+    parser.add_argument("--metric-source-receipt-json", default=DEFAULT_METRIC_SOURCE_RECEIPT_JSON)
+    parser.add_argument("--metric-source-receipt-csv", default=DEFAULT_METRIC_SOURCE_RECEIPT_CSV)
+    parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
+    parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
+    parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    payload = build_public_benchmark_receipt_attach_packet(
+        external_receipts_audit_json=args.external_receipts_audit_json,
+        vina_gnina_work_order_json=args.vina_gnina_work_order_json,
+        vina_gnina_score_template_csv=args.vina_gnina_score_template_csv,
+        metric_source_receipt_json=args.metric_source_receipt_json,
+        metric_source_receipt_csv=args.metric_source_receipt_csv,
+    )
+    _write_json(args.out_json, payload)
+    _write_csv(args.out_csv, payload["rows"])
+    _write_text(args.out_md, _render_md(payload))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -6053,6 +6053,11 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
         for spec in mod.DEFAULT_ARTIFACT_SPECS
         if spec["artifact_id"] == "public_benchmark_external_receipts_audit"
     )
+    receipt_attach_packet_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "public_benchmark_receipt_attach_packet"
+    )
     spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -6105,6 +6110,17 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
         "runs/public_benchmark_vina_gnina_comparison_work_order_current.json",
     ):
         assert audit_source in audit_spec["depends_on"]
+    assert receipt_attach_packet_spec["artifact_path"] == "runs/public_benchmark_receipt_attach_packet_current.json"
+    assert receipt_attach_packet_spec["builder_command"] == mod.PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_COMMAND
+    for attach_source in (
+        "tools/product/build_public_benchmark_receipt_attach_packet.py",
+        "runs/public_benchmark_external_receipts_audit_current.json",
+        "runs/public_benchmark_vina_gnina_comparison_work_order_current.json",
+        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
+        "runs/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.json",
+        "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv",
+    ):
+        assert attach_source in receipt_attach_packet_spec["depends_on"]
     assert spec["artifact_path"] == "runs/product_operator_cockpit_current.json"
     assert spec["builder_command"] == mod.PRODUCT_OPERATOR_COCKPIT_COMMAND
     assert "tools/product/build_product_operator_cockpit.py" in depends_on
@@ -6127,6 +6143,7 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
     assert mod.BENCHMARK_LEDGER_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert mod.PUBLIC_BENCHMARK_VINA_GNINA_COMPARISON_WORK_ORDER_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert mod.PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert mod.PRODUCT_OPERATOR_COCKPIT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert _last_refresh_index("python3 tools/build_cameo_architecture_validation_contract.py") < (
         _last_refresh_index(mod.DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND)
@@ -6162,6 +6179,9 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
         mod.PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND
     )
     assert _last_refresh_index(mod.PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND) < _last_refresh_index(
+        mod.PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_COMMAND
+    )
+    assert _last_refresh_index(mod.PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_COMMAND) < _last_refresh_index(
         mod.PRODUCT_OPERATOR_COCKPIT_COMMAND
     )
     assert _last_refresh_index(mod.PRODUCT_OPERATOR_COCKPIT_COMMAND) < _last_refresh_index(
