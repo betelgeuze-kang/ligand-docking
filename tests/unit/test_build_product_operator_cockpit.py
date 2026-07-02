@@ -494,7 +494,42 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                     "benchmark_results_clean_checkout_regenerated:.betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:status=blocked_developer_preview_clean_checkout_benchmark_receipt"
                 ],
                 "claim_boundary": "developer preview boundary",
-            }
+            },
+            "receipt_work_order_rows": [
+                {
+                    "gate_id": "benchmark_results_clean_checkout_regenerated",
+                    "priority": "A",
+                    "receipt_artifact": (
+                        ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+                    ),
+                    "receipt_kind": "required",
+                    "blocker_scope": "receipt_contract",
+                    "blocker": (
+                        ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:"
+                        "status=blocked_developer_preview_clean_checkout_benchmark_receipt"
+                    ),
+                    "blocker_detail": (
+                        "status=blocked_developer_preview_clean_checkout_benchmark_receipt"
+                    ),
+                    "required_action": "Rebuild the receipt after clearing its source blockers.",
+                    "next_required_step": "Attach the clean-checkout benchmark receipt.",
+                    "required_receipt_status": (
+                        "developer_preview_clean_checkout_benchmark_receipt_ready"
+                    ),
+                    "required_true_field_count": 3,
+                    "required_true_fields": [
+                        "clean_checkout_benchmark_regenerated",
+                        "ai_verify_passed",
+                        "reviewed_receipt_attached",
+                    ],
+                    "required_zero_field_count": 2,
+                    "required_zero_fields": ["blocker_count", "failed_count"],
+                    "claim_boundary": "developer preview boundary",
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                }
+            ],
         },
     )
     _write_json(
@@ -968,6 +1003,35 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary[
         "developer_preview_receipt_work_order_primary_source_blocker_required_action"
     ] == "Attach the missing source evidence required by the receipt."
+    assert summary["developer_preview_receipt_work_order_rows"] == [
+        {
+            "gate_id": "benchmark_results_clean_checkout_regenerated",
+            "priority": "A",
+            "receipt_artifact": ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+            "receipt_kind": "required",
+            "blocker_scope": "receipt_contract",
+            "blocker": (
+                ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:"
+                "status=blocked_developer_preview_clean_checkout_benchmark_receipt"
+            ),
+            "blocker_detail": "status=blocked_developer_preview_clean_checkout_benchmark_receipt",
+            "required_action": "Rebuild the receipt after clearing its source blockers.",
+            "next_required_step": "Attach the clean-checkout benchmark receipt.",
+            "required_receipt_status": "developer_preview_clean_checkout_benchmark_receipt_ready",
+            "required_true_field_count": 3,
+            "required_true_fields": [
+                "clean_checkout_benchmark_regenerated",
+                "ai_verify_passed",
+                "reviewed_receipt_attached",
+            ],
+            "required_zero_field_count": 2,
+            "required_zero_fields": ["blocker_count", "failed_count"],
+            "claim_boundary": "developer preview boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
     assert summary["f2g_f2h_preflight_present"] is True
     assert summary["f2g_f2h_recovery_packet_present"] is True
     assert summary["f2g_f2h_preflight_status"] == "blocked_f2g_f2h_surface_preflight"

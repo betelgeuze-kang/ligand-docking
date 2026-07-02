@@ -400,6 +400,43 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "developer_preview_receipt_work_order_primary_source_blocker_required_action": (
                     "Attach the missing source evidence required by the receipt."
                 ),
+                "developer_preview_receipt_work_order_rows": [
+                    {
+                        "gate_id": "benchmark_results_clean_checkout_regenerated",
+                        "priority": "A",
+                        "receipt_artifact": (
+                            ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+                        ),
+                        "receipt_kind": "required",
+                        "blocker_scope": "receipt_contract",
+                        "blocker": (
+                            ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:"
+                            "status=blocked_developer_preview_clean_checkout_benchmark_receipt"
+                        ),
+                        "blocker_detail": (
+                            "status=blocked_developer_preview_clean_checkout_benchmark_receipt"
+                        ),
+                        "required_action": (
+                            "Rebuild the receipt after clearing its source blockers."
+                        ),
+                        "next_required_step": "Attach the clean-checkout benchmark receipt.",
+                        "required_receipt_status": (
+                            "developer_preview_clean_checkout_benchmark_receipt_ready"
+                        ),
+                        "required_true_field_count": 3,
+                        "required_true_fields": [
+                            "clean_checkout_benchmark_regenerated",
+                            "ai_verify_passed",
+                            "reviewed_receipt_attached",
+                        ],
+                        "required_zero_field_count": 2,
+                        "required_zero_fields": ["blocker_count", "failed_count"],
+                        "claim_boundary": "developer preview boundary",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    }
+                ],
                 "enterprise_on_prem_readiness_present": True,
                 "enterprise_on_prem_ready": False,
                 "enterprise_on_prem_claim_allowed": False,
@@ -718,6 +755,35 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response[
         "developer_preview_receipt_work_order_primary_source_blocker_required_action"
     ] == "Attach the missing source evidence required by the receipt."
+    assert response["developer_preview_receipt_work_order_rows"] == [
+        {
+            "gate_id": "benchmark_results_clean_checkout_regenerated",
+            "priority": "A",
+            "receipt_artifact": ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+            "receipt_kind": "required",
+            "blocker_scope": "receipt_contract",
+            "blocker": (
+                ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:"
+                "status=blocked_developer_preview_clean_checkout_benchmark_receipt"
+            ),
+            "blocker_detail": "status=blocked_developer_preview_clean_checkout_benchmark_receipt",
+            "required_action": "Rebuild the receipt after clearing its source blockers.",
+            "next_required_step": "Attach the clean-checkout benchmark receipt.",
+            "required_receipt_status": "developer_preview_clean_checkout_benchmark_receipt_ready",
+            "required_true_field_count": 3,
+            "required_true_fields": [
+                "clean_checkout_benchmark_regenerated",
+                "ai_verify_passed",
+                "reviewed_receipt_attached",
+            ],
+            "required_zero_field_count": 2,
+            "required_zero_fields": ["blocker_count", "failed_count"],
+            "claim_boundary": "developer preview boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
     assert response["enterprise_on_prem_readiness_present"] is True
     assert response["enterprise_on_prem_ready"] is False
     assert response["enterprise_on_prem_claim_allowed"] is False
@@ -970,6 +1036,7 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response[
         "developer_preview_receipt_work_order_primary_source_blocker_required_action"
     ] == ""
+    assert response["developer_preview_receipt_work_order_rows"] == []
     assert response["enterprise_on_prem_readiness_present"] is False
     assert response["enterprise_on_prem_ready"] is False
     assert response["enterprise_on_prem_claim_allowed"] is False

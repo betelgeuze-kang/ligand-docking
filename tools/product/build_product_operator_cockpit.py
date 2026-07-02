@@ -249,6 +249,34 @@ def _gpcr_promotion_work_order_rows(payload: dict[str, Any]) -> list[dict[str, A
     return rows
 
 
+def _developer_preview_receipt_work_order_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _dict_list(payload, "receipt_work_order_rows"):
+        rows.append(
+            {
+                "gate_id": _text(row.get("gate_id")),
+                "priority": _text(row.get("priority")),
+                "receipt_artifact": _text(row.get("receipt_artifact")),
+                "receipt_kind": _text(row.get("receipt_kind")),
+                "blocker_scope": _text(row.get("blocker_scope")),
+                "blocker": _text(row.get("blocker")),
+                "blocker_detail": _text(row.get("blocker_detail")),
+                "required_action": _text(row.get("required_action")),
+                "next_required_step": _text(row.get("next_required_step")),
+                "required_receipt_status": _text(row.get("required_receipt_status")),
+                "required_true_field_count": _int(row.get("required_true_field_count")),
+                "required_true_fields": _string_list(row.get("required_true_fields")),
+                "required_zero_field_count": _int(row.get("required_zero_field_count")),
+                "required_zero_fields": _string_list(row.get("required_zero_fields")),
+                "claim_boundary": _text(row.get("claim_boundary")),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _metric(label: str, value: Any) -> str:
     if isinstance(value, bool):
         rendered = "true" if value else "false"
@@ -763,7 +791,11 @@ def build_product_operator_cockpit(
     customer_shadow_work_order_row_preview = _customer_shadow_work_order_rows(
         customer_shadow_payload
     )
-    developer_preview = _summary(_read_json(developer_preview_json, root=root))
+    developer_preview_payload = _read_json(developer_preview_json, root=root)
+    developer_preview = _summary(developer_preview_payload)
+    developer_preview_receipt_work_order_row_preview = (
+        _developer_preview_receipt_work_order_rows(developer_preview_payload)
+    )
     f2g_preflight_payload = _read_json(f2g_f2h_preflight_json, root=root)
     f2g_preflight = _summary(f2g_preflight_payload)
     f2g_recovery_payload = _read_json(f2g_f2h_recovery_json, root=root)
@@ -2097,6 +2129,9 @@ def build_product_operator_cockpit(
         ),
         "developer_preview_receipt_work_order_primary_source_blocker_required_action": (
             developer_preview_primary_source_blocker_action
+        ),
+        "developer_preview_receipt_work_order_rows": (
+            developer_preview_receipt_work_order_row_preview
         ),
         "enterprise_on_prem_readiness_present": enterprise_present,
         "enterprise_on_prem_ready": enterprise_ready,

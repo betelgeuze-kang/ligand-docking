@@ -189,6 +189,37 @@ def _gpcr_promotion_work_order_rows(value: Any) -> list[dict[str, Any]]:
     return work_rows
 
 
+def _developer_preview_receipt_work_order_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    work_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        work_rows.append(
+            {
+                "gate_id": str(row.get("gate_id") or ""),
+                "priority": str(row.get("priority") or ""),
+                "receipt_artifact": str(row.get("receipt_artifact") or ""),
+                "receipt_kind": str(row.get("receipt_kind") or ""),
+                "blocker_scope": str(row.get("blocker_scope") or ""),
+                "blocker": str(row.get("blocker") or ""),
+                "blocker_detail": str(row.get("blocker_detail") or ""),
+                "required_action": str(row.get("required_action") or ""),
+                "next_required_step": str(row.get("next_required_step") or ""),
+                "required_receipt_status": str(row.get("required_receipt_status") or ""),
+                "required_true_field_count": _int(row.get("required_true_field_count")),
+                "required_true_fields": _string_list(row.get("required_true_fields")),
+                "required_zero_field_count": _int(row.get("required_zero_field_count")),
+                "required_zero_fields": _string_list(row.get("required_zero_fields")),
+                "claim_boundary": str(row.get("claim_boundary") or ""),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return work_rows
+
+
 def _pr38_split_surface() -> dict[str, Any]:
     acceptance_packet = _read_json_object(PR38_SPLIT_ACCEPTANCE_PACKET_ARTIFACT)
     matrix_packet = _read_json_object(PR38_CHILD_PR_VERIFICATION_MATRIX_ARTIFACT)
@@ -421,6 +452,7 @@ def _missing_response() -> dict[str, Any]:
         "developer_preview_receipt_work_order_primary_source_blocker_receipt_artifact": "",
         "developer_preview_receipt_work_order_primary_source_blocker": "",
         "developer_preview_receipt_work_order_primary_source_blocker_required_action": "",
+        "developer_preview_receipt_work_order_rows": [],
         "enterprise_on_prem_readiness_present": False,
         "enterprise_on_prem_ready": False,
         "enterprise_on_prem_claim_allowed": False,
@@ -857,6 +889,9 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
                 "developer_preview_receipt_work_order_primary_source_blocker_required_action"
             )
             or ""
+        ),
+        "developer_preview_receipt_work_order_rows": _developer_preview_receipt_work_order_rows(
+            summary.get("developer_preview_receipt_work_order_rows")
         ),
         "enterprise_on_prem_readiness_present": bool(
             summary.get("enterprise_on_prem_readiness_present") is True
