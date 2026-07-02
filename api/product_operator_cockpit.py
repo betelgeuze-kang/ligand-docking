@@ -82,6 +82,11 @@ def _missing_response() -> dict[str, Any]:
         "pocketmd_lite_refinement_evidence_ready": False,
         "pocketmd_lite_claim_allowed": False,
         "public_benchmark_claim_allowed": False,
+        "public_benchmark_receipt_attach_packet_ready": False,
+        "public_benchmark_receipt_attach_packet_present": False,
+        "public_benchmark_vina_gnina_pending_score_count": 0,
+        "public_benchmark_metric_source_pending_field_count": 0,
+        "public_benchmark_metric_source_pending_approval_token_count": 0,
         "evidence_bundle_export_ready": False,
         "customer_shadow_paid_pilot_evidence_ready": False,
         "release_allowed": False,
@@ -136,6 +141,21 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "pocketmd_lite_claim_allowed": bool(summary.get("pocketmd_lite_claim_allowed") is True),
         "public_benchmark_claim_allowed": bool(summary.get("public_benchmark_claim_allowed") is True),
+        "public_benchmark_receipt_attach_packet_ready": bool(
+            summary.get("public_benchmark_receipt_attach_packet_ready") is True
+        ),
+        "public_benchmark_receipt_attach_packet_present": bool(
+            summary.get("public_benchmark_receipt_attach_packet_present") is True
+        ),
+        "public_benchmark_vina_gnina_pending_score_count": _int(
+            summary.get("public_benchmark_vina_gnina_pending_score_count")
+        ),
+        "public_benchmark_metric_source_pending_field_count": _int(
+            summary.get("public_benchmark_metric_source_pending_field_count")
+        ),
+        "public_benchmark_metric_source_pending_approval_token_count": _int(
+            summary.get("public_benchmark_metric_source_pending_approval_token_count")
+        ),
         "evidence_bundle_export_ready": bool(summary.get("evidence_bundle_export_ready") is True),
         "customer_shadow_paid_pilot_evidence_ready": bool(
             summary.get("customer_shadow_paid_pilot_evidence_ready") is True

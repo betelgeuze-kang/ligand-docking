@@ -42,6 +42,11 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "pocketmd_lite_refinement_evidence_ready": True,
                 "pocketmd_lite_claim_allowed": False,
                 "public_benchmark_claim_allowed": False,
+                "public_benchmark_receipt_attach_packet_ready": False,
+                "public_benchmark_receipt_attach_packet_present": True,
+                "public_benchmark_vina_gnina_pending_score_count": 32,
+                "public_benchmark_metric_source_pending_field_count": 510,
+                "public_benchmark_metric_source_pending_approval_token_count": 51,
                 "evidence_bundle_export_ready": True,
                 "customer_shadow_paid_pilot_evidence_ready": False,
                 "release_allowed": False,
@@ -64,6 +69,11 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["general_platform_claim_allowed"] is False
     assert response["gpcr_hard_decoy_metric_ready"] is True
     assert response["gpcr_broad_claim_allowed"] is False
+    assert response["public_benchmark_receipt_attach_packet_ready"] is False
+    assert response["public_benchmark_receipt_attach_packet_present"] is True
+    assert response["public_benchmark_vina_gnina_pending_score_count"] == 32
+    assert response["public_benchmark_metric_source_pending_field_count"] == 510
+    assert response["public_benchmark_metric_source_pending_approval_token_count"] == 51
     assert response["evidence_bundle_export_ready"] is True
     assert response["panels"][0]["panel_id"] == "product_capabilities_dashboard"
     assert response["claim_matrix"][0]["claim_id"] == "paid_pilot_wording"
@@ -88,6 +98,11 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["gpcr_broad_claim_allowed"] is False
     assert response["pocketmd_lite_claim_allowed"] is False
     assert response["public_benchmark_claim_allowed"] is False
+    assert response["public_benchmark_receipt_attach_packet_ready"] is False
+    assert response["public_benchmark_receipt_attach_packet_present"] is False
+    assert response["public_benchmark_vina_gnina_pending_score_count"] == 0
+    assert response["public_benchmark_metric_source_pending_field_count"] == 0
+    assert response["public_benchmark_metric_source_pending_approval_token_count"] == 0
     assert response["evidence_bundle_export_ready"] is False
     assert response["panels"] == []
     assert response["claim_matrix"] == []

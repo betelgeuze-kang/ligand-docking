@@ -23,6 +23,7 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         "gpcr": tmp_path / "runs/gpcr_hard_decoy_claim_unlock_audit_current.json",
         "pocketmd": tmp_path / "runs/pocketmd_lite_topk_refinement_audit_current.json",
         "public": tmp_path / "runs/public_benchmark_external_receipts_audit_current.json",
+        "public_attach": tmp_path / "runs/public_benchmark_receipt_attach_packet_current.json",
         "release": tmp_path / "runs/goal_operator_action_board_current.json",
         "bundle": tmp_path / "runs/ai_md_product_evidence_bundle_current.json",
         "customer": tmp_path / "runs/customer_shadow_evidence_status_current.json",
@@ -132,6 +133,25 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         },
     )
     _write_json(
+        paths["public_attach"],
+        {
+            "summary": {
+                "status": "blocked_public_benchmark_receipt_attach_packet",
+                "receipt_attach_packet_ready": False,
+                "external_benchmark_receipts_ready": False,
+                "blocker_count": 2,
+                "blockers": [
+                    "vina_gnina_same_input_scores:vina_gnina_same_input_score_evidence_missing",
+                    "metric_source_receipt_rows:benchmark_metric_source_receipt_rows_unapproved",
+                ],
+                "vina_gnina_score_value_pending_count": 32,
+                "metric_source_receipt_manual_field_pending_count": 510,
+                "metric_source_receipt_approval_token_pending_count": 51,
+                "next_required_step": "Fill the receipt attach packet rows before rerunning the benchmark audit.",
+            }
+        },
+    )
+    _write_json(
         paths["release"],
         {
             "summary": {
@@ -181,6 +201,7 @@ def _build_payload(tmp_path: Path) -> dict:
         gpcr_json=paths["gpcr"],
         pocketmd_json=paths["pocketmd"],
         public_benchmark_json=paths["public"],
+        public_benchmark_receipt_attach_packet_json=paths["public_attach"],
         release_actions_json=paths["release"],
         evidence_bundle_json=paths["bundle"],
         customer_shadow_json=paths["customer"],
@@ -205,6 +226,11 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["gpcr_broad_claim_allowed"] is False
     assert summary["pocketmd_lite_claim_allowed"] is False
     assert summary["public_benchmark_claim_allowed"] is False
+    assert summary["public_benchmark_receipt_attach_packet_ready"] is False
+    assert summary["public_benchmark_receipt_attach_packet_present"] is True
+    assert summary["public_benchmark_vina_gnina_pending_score_count"] == 32
+    assert summary["public_benchmark_metric_source_pending_field_count"] == 510
+    assert summary["public_benchmark_metric_source_pending_approval_token_count"] == 51
     assert summary["evidence_bundle_export_ready"] is True
     assert summary["customer_shadow_paid_pilot_evidence_ready"] is False
 
@@ -227,10 +253,17 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "blocked_steps=2" in panels["public_benchmark_scorecard"]["primary_metric"]
     assert "blocked_receipt_rows=51" in panels["public_benchmark_scorecard"]["primary_metric"]
     assert "vina_gnina_score_evidence=false" in panels["public_benchmark_scorecard"]["secondary_metric"]
+    assert "attach_packet_ready=false" in panels["public_benchmark_scorecard"]["secondary_metric"]
+    assert "pending_scores=32" in panels["public_benchmark_scorecard"]["secondary_metric"]
+    assert "pending_receipt_fields=510" in panels["public_benchmark_scorecard"]["secondary_metric"]
+    assert "pending_receipt_tokens=51" in panels["public_benchmark_scorecard"]["secondary_metric"]
     assert panels["public_benchmark_scorecard"]["blockers"] == [
-        "vina_gnina_same_input_comparison:vina_gnina_same_input_score_evidence_missing",
-        "benchmark_receipt_attach:benchmark_metric_source_receipt_rows_unapproved",
+        "vina_gnina_same_input_scores:vina_gnina_same_input_score_evidence_missing",
+        "metric_source_receipt_rows:benchmark_metric_source_receipt_rows_unapproved",
     ]
+    assert panels["public_benchmark_scorecard"]["next_action"] == (
+        "Fill the receipt attach packet rows before rerunning the benchmark audit."
+    )
     assert panels["release_blockers_operator_actions"]["claim_allowed"] is False
     assert panels["evidence_bundle_export"]["source_artifact_ready"] is True
 
@@ -293,6 +326,8 @@ def test_product_operator_cockpit_cli_writes_current_artifacts(tmp_path: Path) -
             str(paths["pocketmd"]),
             "--public-benchmark-json",
             str(paths["public"]),
+            "--public-benchmark-receipt-attach-packet-json",
+            str(paths["public_attach"]),
             "--release-actions-json",
             str(paths["release"]),
             "--evidence-bundle-json",

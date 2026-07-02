@@ -1967,6 +1967,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/gpcr_hard_decoy_claim_unlock_audit_current.json",
             "runs/pocketmd_lite_topk_refinement_audit_current.json",
             "runs/public_benchmark_external_receipts_audit_current.json",
+            "runs/public_benchmark_receipt_attach_packet_current.json",
             "runs/goal_operator_action_board_current.json",
             "runs/ai_md_product_evidence_bundle_current.json",
             "runs/customer_shadow_evidence_status_current.json",

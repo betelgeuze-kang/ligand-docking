@@ -18,6 +18,9 @@ DEFAULT_HBOND_JSON = "runs/hbond_backmap_report_current.json"
 DEFAULT_GPCR_JSON = "runs/gpcr_hard_decoy_claim_unlock_audit_current.json"
 DEFAULT_POCKETMD_JSON = "runs/pocketmd_lite_topk_refinement_audit_current.json"
 DEFAULT_PUBLIC_BENCHMARK_JSON = "runs/public_benchmark_external_receipts_audit_current.json"
+DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON = (
+    "runs/public_benchmark_receipt_attach_packet_current.json"
+)
 DEFAULT_RELEASE_ACTIONS_JSON = "runs/goal_operator_action_board_current.json"
 DEFAULT_EVIDENCE_BUNDLE_JSON = "runs/ai_md_product_evidence_bundle_current.json"
 DEFAULT_CUSTOMER_SHADOW_JSON = "runs/customer_shadow_evidence_status_current.json"
@@ -562,6 +565,9 @@ def build_product_operator_cockpit(
     gpcr_json: str | Path = DEFAULT_GPCR_JSON,
     pocketmd_json: str | Path = DEFAULT_POCKETMD_JSON,
     public_benchmark_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_JSON,
+    public_benchmark_receipt_attach_packet_json: str | Path = (
+        DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON
+    ),
     release_actions_json: str | Path = DEFAULT_RELEASE_ACTIONS_JSON,
     evidence_bundle_json: str | Path = DEFAULT_EVIDENCE_BUNDLE_JSON,
     customer_shadow_json: str | Path = DEFAULT_CUSTOMER_SHADOW_JSON,
@@ -574,6 +580,9 @@ def build_product_operator_cockpit(
     gpcr = _summary(_read_json(gpcr_json, root=root))
     pocketmd = _summary(_read_json(pocketmd_json, root=root))
     public_benchmark = _summary(_read_json(public_benchmark_json, root=root))
+    public_receipt_attach_packet = _summary(
+        _read_json(public_benchmark_receipt_attach_packet_json, root=root)
+    )
     release_actions = _summary(_read_json(release_actions_json, root=root))
     evidence_bundle = _summary(_read_json(evidence_bundle_json, root=root))
     customer_shadow = _summary(_read_json(customer_shadow_json, root=root))
@@ -636,6 +645,20 @@ def build_product_operator_cockpit(
         public_blockers = _string_list(public_benchmark.get("top_acceptance_artifact_missing_true_fields"))
     if not public_blockers:
         public_blockers = _string_list(public_benchmark.get("primary_blocker_id"))
+    public_attach_present = bool(public_receipt_attach_packet)
+    public_attach_ready = _bool_true(public_receipt_attach_packet.get("receipt_attach_packet_ready"))
+    public_attach_blockers = _string_list(public_receipt_attach_packet.get("blockers"))
+    if public_attach_blockers:
+        public_blockers = public_attach_blockers
+    public_vina_pending_scores = _int(
+        public_receipt_attach_packet.get("vina_gnina_score_value_pending_count")
+    )
+    public_metric_pending_fields = _int(
+        public_receipt_attach_packet.get("metric_source_receipt_manual_field_pending_count")
+    )
+    public_metric_pending_tokens = _int(
+        public_receipt_attach_packet.get("metric_source_receipt_approval_token_pending_count")
+    )
 
     release_actions_present = bool(release_actions)
     release_blocker_count = _int(
@@ -847,6 +870,10 @@ def build_product_operator_cockpit(
                     "vina_gnina_score_evidence",
                     _bool_true(public_benchmark.get("vina_gnina_comparison_adapter_score_evidence_ready")),
                 ),
+                _metric("attach_packet_ready", public_attach_ready),
+                _metric("pending_scores", public_vina_pending_scores),
+                _metric("pending_receipt_fields", public_metric_pending_fields),
+                _metric("pending_receipt_tokens", public_metric_pending_tokens),
                 _metric(
                     "same_input_rows",
                     _bool_true(public_benchmark.get("comparison_adapter_same_input_row_count_match")),
@@ -855,6 +882,7 @@ def build_product_operator_cockpit(
                 _metric("claim_promotion_allowed", _bool_true(public_benchmark.get("claim_promotion_allowed"))),
             ),
             next_action=_first_text(
+                public_receipt_attach_packet.get("next_required_step"),
                 public_benchmark.get("primary_blocker_next_required_step"),
                 public_benchmark.get("top_required_input"),
                 public_benchmark.get("next_required_step"),
@@ -998,6 +1026,11 @@ def build_product_operator_cockpit(
         "pocketmd_lite_refinement_evidence_ready": pocketmd_refinement_ready,
         "pocketmd_lite_claim_allowed": pocketmd_lite_claim_allowed,
         "public_benchmark_claim_allowed": public_benchmark_claim_allowed,
+        "public_benchmark_receipt_attach_packet_ready": public_attach_ready,
+        "public_benchmark_receipt_attach_packet_present": public_attach_present,
+        "public_benchmark_vina_gnina_pending_score_count": public_vina_pending_scores,
+        "public_benchmark_metric_source_pending_field_count": public_metric_pending_fields,
+        "public_benchmark_metric_source_pending_approval_token_count": public_metric_pending_tokens,
         "evidence_bundle_export_ready": evidence_bundle_export_ready,
         "customer_shadow_paid_pilot_evidence_ready": customer_shadow_paid_pilot_ready,
         "release_allowed": release_allowed,
@@ -1033,6 +1066,10 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--gpcr-json", default=DEFAULT_GPCR_JSON)
     parser.add_argument("--pocketmd-json", default=DEFAULT_POCKETMD_JSON)
     parser.add_argument("--public-benchmark-json", default=DEFAULT_PUBLIC_BENCHMARK_JSON)
+    parser.add_argument(
+        "--public-benchmark-receipt-attach-packet-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON,
+    )
     parser.add_argument("--release-actions-json", default=DEFAULT_RELEASE_ACTIONS_JSON)
     parser.add_argument("--evidence-bundle-json", default=DEFAULT_EVIDENCE_BUNDLE_JSON)
     parser.add_argument("--customer-shadow-json", default=DEFAULT_CUSTOMER_SHADOW_JSON)
@@ -1052,6 +1089,7 @@ def main(argv: list[str] | None = None) -> int:
         gpcr_json=args.gpcr_json,
         pocketmd_json=args.pocketmd_json,
         public_benchmark_json=args.public_benchmark_json,
+        public_benchmark_receipt_attach_packet_json=args.public_benchmark_receipt_attach_packet_json,
         release_actions_json=args.release_actions_json,
         evidence_bundle_json=args.evidence_bundle_json,
         customer_shadow_json=args.customer_shadow_json,
