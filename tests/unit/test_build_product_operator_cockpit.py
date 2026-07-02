@@ -27,6 +27,7 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         "release": tmp_path / "runs/goal_operator_action_board_current.json",
         "pm_queue": tmp_path / ".betelgeuze/pm_priority_queue_status_current.json",
         "bundle": tmp_path / "runs/ai_md_product_evidence_bundle_current.json",
+        "api_customer_flow": tmp_path / "runs/api_customer_flow_release_evidence_current.json",
         "customer": tmp_path / "runs/customer_shadow_evidence_status_current.json",
     }
     _write_json(
@@ -218,6 +219,23 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         },
     )
     _write_json(
+        paths["api_customer_flow"],
+        {
+            "summary": {
+                "status": "api_customer_flow_release_evidence_ready",
+                "pass_count": 6,
+                "blocker_count": 0,
+                "formal_release_evidence_ready": True,
+                "clean_install_flow_ready": True,
+                "restricted_unattended_runtime_ready": True,
+                "result_manifest_signature_verified": True,
+                "bundle_validation_ready": True,
+                "tier_alpha_smoke_status": "tier_alpha_adrb2_dispatch_smoke_pass",
+                "tier_alpha_runner_execution_ok": True,
+            }
+        },
+    )
+    _write_json(
         paths["customer"],
         {
             "summary": {
@@ -258,6 +276,7 @@ def _build_payload(tmp_path: Path) -> dict:
         release_actions_json=paths["release"],
         pm_priority_queue_json=paths["pm_queue"],
         evidence_bundle_json=paths["bundle"],
+        api_customer_flow_json=paths["api_customer_flow"],
         customer_shadow_json=paths["customer"],
         root=tmp_path,
     )
@@ -298,6 +317,16 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["public_benchmark_field_work_order_pending_field_count"] == 702
     assert summary["public_benchmark_field_work_order_primary_field_name"] == "approval_token"
     assert summary["evidence_bundle_export_ready"] is True
+    assert summary["api_customer_flow_release_evidence_present"] is True
+    assert summary["api_customer_flow_release_evidence_ready"] is True
+    assert summary["api_customer_flow_release_evidence_status"] == "api_customer_flow_release_evidence_ready"
+    assert summary["api_customer_flow_release_evidence_pass_count"] == 6
+    assert summary["api_customer_flow_release_evidence_blocker_count"] == 0
+    assert summary["api_customer_flow_tier_alpha_smoke_status"] == "tier_alpha_adrb2_dispatch_smoke_pass"
+    assert summary["api_customer_flow_tier_alpha_runner_execution_ok"] is True
+    assert summary["api_customer_flow_result_manifest_signature_verified"] is True
+    assert summary["api_customer_flow_restricted_runtime_ready"] is True
+    assert summary["api_customer_flow_bundle_validation_ready"] is True
     assert summary["customer_shadow_paid_pilot_evidence_ready"] is False
     assert summary["customer_shadow_real_row_count"] == 1
     assert summary["customer_shadow_completed_case_count"] == 0
@@ -383,6 +412,13 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         "f2g_authoritative_surfaces_missing"
     ]
     assert panels["evidence_bundle_export"]["source_artifact_ready"] is True
+    assert "api_customer_flow_ready=true" in panels["evidence_bundle_export"]["secondary_metric"]
+    assert "tier_alpha=tier_alpha_adrb2_dispatch_smoke_pass" in (
+        panels["evidence_bundle_export"]["secondary_metric"]
+    )
+    assert "signed_manifest=true" in panels["evidence_bundle_export"]["secondary_metric"]
+    assert "restricted_runtime=true" in panels["evidence_bundle_export"]["secondary_metric"]
+    assert "api_bundle_validation=true" in panels["evidence_bundle_export"]["secondary_metric"]
     assert "customer_rows=0" in panels["claim_boundary_matrix"]["primary_metric"]
     assert "required_customer_rows=3" in panels["claim_boundary_matrix"]["primary_metric"]
     assert "real_rows=1" in panels["claim_boundary_matrix"]["secondary_metric"]

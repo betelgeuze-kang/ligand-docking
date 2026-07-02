@@ -24,6 +24,7 @@ DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON = (
 DEFAULT_RELEASE_ACTIONS_JSON = "runs/goal_operator_action_board_current.json"
 DEFAULT_PM_PRIORITY_QUEUE_JSON = ".betelgeuze/pm_priority_queue_status_current.json"
 DEFAULT_EVIDENCE_BUNDLE_JSON = "runs/ai_md_product_evidence_bundle_current.json"
+DEFAULT_API_CUSTOMER_FLOW_JSON = "runs/api_customer_flow_release_evidence_current.json"
 DEFAULT_CUSTOMER_SHADOW_JSON = "runs/customer_shadow_evidence_status_current.json"
 DEFAULT_OUT_JSON = "runs/product_operator_cockpit_current.json"
 DEFAULT_OUT_CSV = "runs/product_operator_cockpit_current.csv"
@@ -579,6 +580,7 @@ def build_product_operator_cockpit(
     release_actions_json: str | Path = DEFAULT_RELEASE_ACTIONS_JSON,
     pm_priority_queue_json: str | Path = DEFAULT_PM_PRIORITY_QUEUE_JSON,
     evidence_bundle_json: str | Path = DEFAULT_EVIDENCE_BUNDLE_JSON,
+    api_customer_flow_json: str | Path = DEFAULT_API_CUSTOMER_FLOW_JSON,
     customer_shadow_json: str | Path = DEFAULT_CUSTOMER_SHADOW_JSON,
     root: Path = ROOT,
 ) -> dict[str, Any]:
@@ -597,6 +599,7 @@ def build_product_operator_cockpit(
     pm_queue = _summary(pm_queue_payload)
     pm_queue_rows = _rows(pm_queue_payload)
     evidence_bundle = _summary(_read_json(evidence_bundle_json, root=root))
+    api_customer_flow = _summary(_read_json(api_customer_flow_json, root=root))
     customer_shadow = _summary(_read_json(customer_shadow_json, root=root))
 
     capabilities_present = bool(capabilities)
@@ -705,6 +708,16 @@ def build_product_operator_cockpit(
         _bool_true(evidence_bundle.get("bundle_export_ready"))
         and _bool_true(evidence_bundle.get("bundle_tar_exists"))
         and _bool_true(evidence_bundle.get("bundle_validation_pass"))
+    )
+    api_customer_flow_present = bool(api_customer_flow)
+    api_customer_flow_ready = (
+        _text(api_customer_flow.get("status")) == "api_customer_flow_release_evidence_ready"
+        and _bool_true(api_customer_flow.get("formal_release_evidence_ready"))
+        and _bool_true(api_customer_flow.get("clean_install_flow_ready"))
+        and _bool_true(api_customer_flow.get("restricted_unattended_runtime_ready"))
+        and _bool_true(api_customer_flow.get("result_manifest_signature_verified"))
+        and _bool_true(api_customer_flow.get("bundle_validation_ready"))
+        and _int(api_customer_flow.get("blocker_count")) == 0
     )
 
     customer_shadow_paid_pilot_ready = _bool_true(customer_shadow.get("paid_pilot_evidence_ready"))
@@ -1017,6 +1030,20 @@ def build_product_operator_cockpit(
             secondary_metric=_join_metrics(
                 _metric("validation_pass", _bool_true(evidence_bundle.get("bundle_validation_pass"))),
                 _metric("release_claim_ready", _bool_true(evidence_bundle.get("release_claim_ready"))),
+                _metric("api_customer_flow_ready", api_customer_flow_ready),
+                _metric("tier_alpha", api_customer_flow.get("tier_alpha_smoke_status")),
+                _metric(
+                    "signed_manifest",
+                    _bool_true(api_customer_flow.get("result_manifest_signature_verified")),
+                ),
+                _metric(
+                    "restricted_runtime",
+                    _bool_true(api_customer_flow.get("restricted_unattended_runtime_ready")),
+                ),
+                _metric(
+                    "api_bundle_validation",
+                    _bool_true(api_customer_flow.get("bundle_validation_ready")),
+                ),
             ),
             next_action=_first_text(
                 evidence_bundle.get("next_required_step"),
@@ -1135,6 +1162,24 @@ def build_product_operator_cockpit(
         "public_benchmark_field_work_order_pending_field_count": public_field_work_order_pending_fields,
         "public_benchmark_field_work_order_primary_field_name": public_field_work_order_primary_field,
         "evidence_bundle_export_ready": evidence_bundle_export_ready,
+        "api_customer_flow_release_evidence_present": api_customer_flow_present,
+        "api_customer_flow_release_evidence_ready": api_customer_flow_ready,
+        "api_customer_flow_release_evidence_status": _text(api_customer_flow.get("status")),
+        "api_customer_flow_release_evidence_pass_count": _int(api_customer_flow.get("pass_count")),
+        "api_customer_flow_release_evidence_blocker_count": _int(api_customer_flow.get("blocker_count")),
+        "api_customer_flow_tier_alpha_smoke_status": _text(api_customer_flow.get("tier_alpha_smoke_status")),
+        "api_customer_flow_tier_alpha_runner_execution_ok": _bool_true(
+            api_customer_flow.get("tier_alpha_runner_execution_ok")
+        ),
+        "api_customer_flow_result_manifest_signature_verified": _bool_true(
+            api_customer_flow.get("result_manifest_signature_verified")
+        ),
+        "api_customer_flow_restricted_runtime_ready": _bool_true(
+            api_customer_flow.get("restricted_unattended_runtime_ready")
+        ),
+        "api_customer_flow_bundle_validation_ready": _bool_true(
+            api_customer_flow.get("bundle_validation_ready")
+        ),
         "customer_shadow_paid_pilot_evidence_ready": customer_shadow_paid_pilot_ready,
         "customer_shadow_real_row_count": customer_shadow_real_row_count,
         "customer_shadow_completed_case_count": customer_shadow_completed_case_count,
@@ -1202,6 +1247,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--release-actions-json", default=DEFAULT_RELEASE_ACTIONS_JSON)
     parser.add_argument("--pm-priority-queue-json", default=DEFAULT_PM_PRIORITY_QUEUE_JSON)
     parser.add_argument("--evidence-bundle-json", default=DEFAULT_EVIDENCE_BUNDLE_JSON)
+    parser.add_argument("--api-customer-flow-json", default=DEFAULT_API_CUSTOMER_FLOW_JSON)
     parser.add_argument("--customer-shadow-json", default=DEFAULT_CUSTOMER_SHADOW_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
@@ -1223,6 +1269,7 @@ def main(argv: list[str] | None = None) -> int:
         release_actions_json=args.release_actions_json,
         pm_priority_queue_json=args.pm_priority_queue_json,
         evidence_bundle_json=args.evidence_bundle_json,
+        api_customer_flow_json=args.api_customer_flow_json,
         customer_shadow_json=args.customer_shadow_json,
     )
     write_product_operator_cockpit_outputs(

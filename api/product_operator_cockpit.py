@@ -98,6 +98,16 @@ def _missing_response() -> dict[str, Any]:
         "public_benchmark_field_work_order_pending_field_count": 0,
         "public_benchmark_field_work_order_primary_field_name": "",
         "evidence_bundle_export_ready": False,
+        "api_customer_flow_release_evidence_present": False,
+        "api_customer_flow_release_evidence_ready": False,
+        "api_customer_flow_release_evidence_status": "",
+        "api_customer_flow_release_evidence_pass_count": 0,
+        "api_customer_flow_release_evidence_blocker_count": 0,
+        "api_customer_flow_tier_alpha_smoke_status": "",
+        "api_customer_flow_tier_alpha_runner_execution_ok": False,
+        "api_customer_flow_result_manifest_signature_verified": False,
+        "api_customer_flow_restricted_runtime_ready": False,
+        "api_customer_flow_bundle_validation_ready": False,
         "customer_shadow_paid_pilot_evidence_ready": False,
         "customer_shadow_real_row_count": 0,
         "customer_shadow_completed_case_count": 0,
@@ -217,6 +227,36 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
             summary.get("public_benchmark_field_work_order_primary_field_name") or ""
         ),
         "evidence_bundle_export_ready": bool(summary.get("evidence_bundle_export_ready") is True),
+        "api_customer_flow_release_evidence_present": bool(
+            summary.get("api_customer_flow_release_evidence_present") is True
+        ),
+        "api_customer_flow_release_evidence_ready": bool(
+            summary.get("api_customer_flow_release_evidence_ready") is True
+        ),
+        "api_customer_flow_release_evidence_status": str(
+            summary.get("api_customer_flow_release_evidence_status") or ""
+        ),
+        "api_customer_flow_release_evidence_pass_count": _int(
+            summary.get("api_customer_flow_release_evidence_pass_count")
+        ),
+        "api_customer_flow_release_evidence_blocker_count": _int(
+            summary.get("api_customer_flow_release_evidence_blocker_count")
+        ),
+        "api_customer_flow_tier_alpha_smoke_status": str(
+            summary.get("api_customer_flow_tier_alpha_smoke_status") or ""
+        ),
+        "api_customer_flow_tier_alpha_runner_execution_ok": bool(
+            summary.get("api_customer_flow_tier_alpha_runner_execution_ok") is True
+        ),
+        "api_customer_flow_result_manifest_signature_verified": bool(
+            summary.get("api_customer_flow_result_manifest_signature_verified") is True
+        ),
+        "api_customer_flow_restricted_runtime_ready": bool(
+            summary.get("api_customer_flow_restricted_runtime_ready") is True
+        ),
+        "api_customer_flow_bundle_validation_ready": bool(
+            summary.get("api_customer_flow_bundle_validation_ready") is True
+        ),
         "customer_shadow_paid_pilot_evidence_ready": bool(
             summary.get("customer_shadow_paid_pilot_evidence_ready") is True
         ),

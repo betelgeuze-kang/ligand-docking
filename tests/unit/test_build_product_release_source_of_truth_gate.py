@@ -6174,6 +6174,7 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
         "runs/public_benchmark_receipt_attach_packet_current.json",
         "runs/goal_operator_action_board_current.json",
         "runs/ai_md_product_evidence_bundle_current.json",
+        "runs/api_customer_flow_release_evidence_current.json",
         "runs/customer_shadow_evidence_status_current.json",
     ):
         assert source_artifact in depends_on
