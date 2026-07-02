@@ -93,6 +93,15 @@ def _missing_response() -> dict[str, Any]:
         "public_benchmark_metric_source_pending_approval_token_count": 0,
         "evidence_bundle_export_ready": False,
         "customer_shadow_paid_pilot_evidence_ready": False,
+        "customer_shadow_real_row_count": 0,
+        "customer_shadow_completed_case_count": 0,
+        "customer_shadow_required_case_count": 0,
+        "customer_shadow_missing_case_count": 0,
+        "customer_shadow_customer_retained_raw_data_count": 0,
+        "customer_shadow_redistribution_allowed_false_count": 0,
+        "customer_shadow_anonymized_result_summary_count": 0,
+        "customer_shadow_reviewer_signoff_count": 0,
+        "customer_shadow_evidence_blocker_count": 0,
         "release_allowed": False,
         "panels": [],
         "claim_matrix": [],
@@ -175,6 +184,25 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         "evidence_bundle_export_ready": bool(summary.get("evidence_bundle_export_ready") is True),
         "customer_shadow_paid_pilot_evidence_ready": bool(
             summary.get("customer_shadow_paid_pilot_evidence_ready") is True
+        ),
+        "customer_shadow_real_row_count": _int(summary.get("customer_shadow_real_row_count")),
+        "customer_shadow_completed_case_count": _int(summary.get("customer_shadow_completed_case_count")),
+        "customer_shadow_required_case_count": _int(summary.get("customer_shadow_required_case_count")),
+        "customer_shadow_missing_case_count": _int(summary.get("customer_shadow_missing_case_count")),
+        "customer_shadow_customer_retained_raw_data_count": _int(
+            summary.get("customer_shadow_customer_retained_raw_data_count")
+        ),
+        "customer_shadow_redistribution_allowed_false_count": _int(
+            summary.get("customer_shadow_redistribution_allowed_false_count")
+        ),
+        "customer_shadow_anonymized_result_summary_count": _int(
+            summary.get("customer_shadow_anonymized_result_summary_count")
+        ),
+        "customer_shadow_reviewer_signoff_count": _int(
+            summary.get("customer_shadow_reviewer_signoff_count")
+        ),
+        "customer_shadow_evidence_blocker_count": _int(
+            summary.get("customer_shadow_evidence_blocker_count")
         ),
         "release_allowed": bool(summary.get("release_allowed") is True),
         "panels": _list(packet, "rows"),

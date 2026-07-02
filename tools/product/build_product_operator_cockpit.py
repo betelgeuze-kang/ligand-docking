@@ -674,6 +674,15 @@ def build_product_operator_cockpit(
     )
 
     customer_shadow_paid_pilot_ready = _bool_true(customer_shadow.get("paid_pilot_evidence_ready"))
+    customer_shadow_real_row_count = _int(customer_shadow.get("real_customer_shadow_row_count"))
+    customer_shadow_completed_case_count = _int(customer_shadow.get("completed_customer_shadow_case_count"))
+    customer_shadow_required_case_count = _int(customer_shadow.get("required_completed_customer_shadow_case_count"))
+    customer_shadow_missing_case_count = _int(customer_shadow.get("missing_completed_customer_shadow_case_count"))
+    customer_shadow_retained_raw_data_count = _int(customer_shadow.get("customer_retained_raw_data_count"))
+    customer_shadow_redistribution_false_count = _int(customer_shadow.get("redistribution_allowed_false_count"))
+    customer_shadow_anonymized_summary_count = _int(customer_shadow.get("anonymized_result_summary_count"))
+    customer_shadow_reviewer_signoff_count = _int(customer_shadow.get("reviewer_signoff_count"))
+    customer_shadow_blocker_count = _int(customer_shadow.get("blocker_count"))
     paid_pilot_wording_allowed = release_allowed and customer_shadow_paid_pilot_ready
 
     claim_rows = _build_claim_rows(
@@ -972,9 +981,18 @@ def build_product_operator_cockpit(
             primary_metric=_join_metrics(
                 _metric("allowed_claims", sum(1 for row in claim_rows if row["allowed"])),
                 _metric("disallowed_claims", sum(1 for row in claim_rows if not row["allowed"])),
+                _count_metric("customer_rows", customer_shadow_completed_case_count),
+                _count_metric("required_customer_rows", customer_shadow_required_case_count),
             ),
             secondary_metric=_join_metrics(
                 _metric("customer_shadow_ready", customer_shadow_paid_pilot_ready),
+                _count_metric("real_rows", customer_shadow_real_row_count),
+                _count_metric("missing_customer_rows", customer_shadow_missing_case_count),
+                _count_metric("retained_raw_data", customer_shadow_retained_raw_data_count),
+                _count_metric("redistribution_false", customer_shadow_redistribution_false_count),
+                _count_metric("anonymized_summaries", customer_shadow_anonymized_summary_count),
+                _count_metric("reviewer_signoffs", customer_shadow_reviewer_signoff_count),
+                _count_metric("customer_shadow_blockers", customer_shadow_blocker_count),
                 _metric("paid_pilot_wording_allowed", paid_pilot_wording_allowed),
             ),
             next_action=(
@@ -1044,6 +1062,15 @@ def build_product_operator_cockpit(
         "public_benchmark_metric_source_pending_approval_token_count": public_metric_pending_tokens,
         "evidence_bundle_export_ready": evidence_bundle_export_ready,
         "customer_shadow_paid_pilot_evidence_ready": customer_shadow_paid_pilot_ready,
+        "customer_shadow_real_row_count": customer_shadow_real_row_count,
+        "customer_shadow_completed_case_count": customer_shadow_completed_case_count,
+        "customer_shadow_required_case_count": customer_shadow_required_case_count,
+        "customer_shadow_missing_case_count": customer_shadow_missing_case_count,
+        "customer_shadow_customer_retained_raw_data_count": customer_shadow_retained_raw_data_count,
+        "customer_shadow_redistribution_allowed_false_count": customer_shadow_redistribution_false_count,
+        "customer_shadow_anonymized_result_summary_count": customer_shadow_anonymized_summary_count,
+        "customer_shadow_reviewer_signoff_count": customer_shadow_reviewer_signoff_count,
+        "customer_shadow_evidence_blocker_count": customer_shadow_blocker_count,
         "release_allowed": release_allowed,
         "next_required_step": action_panels[0]["next_action"] if action_panels else "",
         "execution_enabled": False,

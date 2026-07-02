@@ -183,8 +183,15 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         {
             "summary": {
                 "status": "blocked_customer_shadow_evidence_status",
+                "real_customer_shadow_row_count": 1,
                 "completed_customer_shadow_case_count": 0,
                 "required_completed_customer_shadow_case_count": 3,
+                "missing_completed_customer_shadow_case_count": 3,
+                "customer_retained_raw_data_count": 1,
+                "redistribution_allowed_false_count": 1,
+                "anonymized_result_summary_count": 1,
+                "reviewer_signoff_count": 0,
+                "blocker_count": 2,
                 "paid_pilot_evidence_ready": False,
                 "paid_pilot_claim_allowed": False,
             }
@@ -238,6 +245,15 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["public_benchmark_metric_source_pending_approval_token_count"] == 51
     assert summary["evidence_bundle_export_ready"] is True
     assert summary["customer_shadow_paid_pilot_evidence_ready"] is False
+    assert summary["customer_shadow_real_row_count"] == 1
+    assert summary["customer_shadow_completed_case_count"] == 0
+    assert summary["customer_shadow_required_case_count"] == 3
+    assert summary["customer_shadow_missing_case_count"] == 3
+    assert summary["customer_shadow_customer_retained_raw_data_count"] == 1
+    assert summary["customer_shadow_redistribution_allowed_false_count"] == 1
+    assert summary["customer_shadow_anonymized_result_summary_count"] == 1
+    assert summary["customer_shadow_reviewer_signoff_count"] == 0
+    assert summary["customer_shadow_evidence_blocker_count"] == 2
 
     assert panels["product_capabilities_dashboard"]["route"] == "/product/capabilities"
     assert panels["goal_readiness_dashboard"]["route"] == "/goal/readiness"
@@ -275,6 +291,11 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     )
     assert panels["release_blockers_operator_actions"]["claim_allowed"] is False
     assert panels["evidence_bundle_export"]["source_artifact_ready"] is True
+    assert "customer_rows=0" in panels["claim_boundary_matrix"]["primary_metric"]
+    assert "required_customer_rows=3" in panels["claim_boundary_matrix"]["primary_metric"]
+    assert "real_rows=1" in panels["claim_boundary_matrix"]["secondary_metric"]
+    assert "missing_customer_rows=3" in panels["claim_boundary_matrix"]["secondary_metric"]
+    assert "customer_shadow_blockers=2" in panels["claim_boundary_matrix"]["secondary_metric"]
 
     assert claims["operator_cockpit_surface"]["allowed"] is True
     assert claims["paid_pilot_wording"]["allowed"] is False

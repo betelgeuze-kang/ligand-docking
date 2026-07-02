@@ -208,10 +208,38 @@ def build_customer_shadow_evidence_status(
     missing_columns = [column for column in REQUIRED_COLUMNS if column not in fieldnames]
     schema_ready = not missing_columns
     rows = [_row_status(row, row_index=index + 1, schema_ready=schema_ready) for index, row in enumerate(raw_rows)]
+    real_customer_shadow_rows = [
+        (raw_row, row)
+        for raw_row, row in zip(raw_rows, rows)
+        if row["row_kind"] == "customer_shadow" and not row["is_mock_fixture"]
+    ]
     completed_case_count = sum(1 for row in rows if row["counts_toward_minimum"])
     mock_fixture_count = sum(1 for row in rows if row["is_mock_fixture"])
     invalid_row_count = sum(1 for row in rows if row["status"] != "pass")
     raw_data_stored_in_repo_observed = any(_bool(row.get("raw_data_stored_in_repo")) is True for row in raw_rows)
+    customer_retained_raw_data_count = sum(
+        1
+        for raw_row, _row in real_customer_shadow_rows
+        if _text(raw_row.get("raw_data_custody")).lower() == "customer_retained"
+        and _bool(raw_row.get("customer_retained_raw_data")) is True
+        and _bool(raw_row.get("raw_data_stored_in_repo")) is False
+    )
+    redistribution_allowed_false_count = sum(
+        1 for raw_row, _row in real_customer_shadow_rows if _bool(raw_row.get("redistribution_allowed")) is False
+    )
+    anonymized_result_summary_count = sum(
+        1
+        for raw_row, _row in real_customer_shadow_rows
+        if len(_text(raw_row.get("anonymized_result_summary"))) >= 24
+        and not EMAIL_RE.search(_text(raw_row.get("anonymized_result_summary")))
+    )
+    reviewer_signoff_count = sum(
+        1
+        for raw_row, _row in real_customer_shadow_rows
+        if _text(raw_row.get("reviewer_signoff_status")).lower() == "approved"
+        and bool(_text(raw_row.get("reviewer_id")))
+        and _reviewed_at_valid(raw_row.get("reviewed_at_utc"))
+    )
     missing_case_count = max(0, min_completed_cases - completed_case_count)
     ready = schema_ready and invalid_row_count == 0 and completed_case_count >= min_completed_cases
     summary = {
@@ -221,11 +249,16 @@ def build_customer_shadow_evidence_status(
         "required_column_count": len(REQUIRED_COLUMNS),
         "missing_required_columns": missing_columns,
         "row_count": len(rows),
+        "real_customer_shadow_row_count": len(real_customer_shadow_rows),
         "completed_customer_shadow_case_count": completed_case_count,
         "required_completed_customer_shadow_case_count": min_completed_cases,
         "missing_completed_customer_shadow_case_count": missing_case_count,
         "mock_fixture_row_count": mock_fixture_count,
         "invalid_row_count": invalid_row_count,
+        "customer_retained_raw_data_count": customer_retained_raw_data_count,
+        "redistribution_allowed_false_count": redistribution_allowed_false_count,
+        "anonymized_result_summary_count": anonymized_result_summary_count,
+        "reviewer_signoff_count": reviewer_signoff_count,
         "customer_shadow_minimum_met": completed_case_count >= min_completed_cases,
         "customer_raw_data_stored_in_repo": raw_data_stored_in_repo_observed,
         "redistribution_allowed_required_value": False,
@@ -273,6 +306,7 @@ def build_customer_shadow_evidence_status(
                 "external_state_mutated": False,
             }
         )
+    summary["blocker_count"] = len(blockers)
     return {"summary": summary, "rows": rows, "blockers": blockers}
 
 
@@ -284,11 +318,17 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         "",
         f"- status: `{s['status']}`",
         f"- customer_shadow_intake_schema_ready: `{s['customer_shadow_intake_schema_ready']}`",
+        f"- real_customer_shadow_row_count: `{s['real_customer_shadow_row_count']}`",
         f"- completed_customer_shadow_case_count: `{s['completed_customer_shadow_case_count']}`",
         f"- required_completed_customer_shadow_case_count: `{s['required_completed_customer_shadow_case_count']}`",
         f"- missing_completed_customer_shadow_case_count: `{s['missing_completed_customer_shadow_case_count']}`",
         f"- mock_fixture_row_count: `{s['mock_fixture_row_count']}`",
         f"- invalid_row_count: `{s['invalid_row_count']}`",
+        f"- customer_retained_raw_data_count: `{s['customer_retained_raw_data_count']}`",
+        f"- redistribution_allowed_false_count: `{s['redistribution_allowed_false_count']}`",
+        f"- anonymized_result_summary_count: `{s['anonymized_result_summary_count']}`",
+        f"- reviewer_signoff_count: `{s['reviewer_signoff_count']}`",
+        f"- blocker_count: `{s['blocker_count']}`",
         f"- commercial_readiness_promotion_allowed: `{s['commercial_readiness_promotion_allowed']}`",
         "",
         "## Rows",

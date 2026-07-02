@@ -53,6 +53,15 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "public_benchmark_metric_source_pending_approval_token_count": 51,
                 "evidence_bundle_export_ready": True,
                 "customer_shadow_paid_pilot_evidence_ready": False,
+                "customer_shadow_real_row_count": 1,
+                "customer_shadow_completed_case_count": 0,
+                "customer_shadow_required_case_count": 3,
+                "customer_shadow_missing_case_count": 3,
+                "customer_shadow_customer_retained_raw_data_count": 1,
+                "customer_shadow_redistribution_allowed_false_count": 1,
+                "customer_shadow_anonymized_result_summary_count": 1,
+                "customer_shadow_reviewer_signoff_count": 0,
+                "customer_shadow_evidence_blocker_count": 2,
                 "release_allowed": False,
                 "next_required_step": "Keep claims locked.",
                 "claim_boundary": "cockpit boundary",
@@ -83,6 +92,16 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["public_benchmark_metric_source_pending_field_count"] == 510
     assert response["public_benchmark_metric_source_pending_approval_token_count"] == 51
     assert response["evidence_bundle_export_ready"] is True
+    assert response["customer_shadow_paid_pilot_evidence_ready"] is False
+    assert response["customer_shadow_real_row_count"] == 1
+    assert response["customer_shadow_completed_case_count"] == 0
+    assert response["customer_shadow_required_case_count"] == 3
+    assert response["customer_shadow_missing_case_count"] == 3
+    assert response["customer_shadow_customer_retained_raw_data_count"] == 1
+    assert response["customer_shadow_redistribution_allowed_false_count"] == 1
+    assert response["customer_shadow_anonymized_result_summary_count"] == 1
+    assert response["customer_shadow_reviewer_signoff_count"] == 0
+    assert response["customer_shadow_evidence_blocker_count"] == 2
     assert response["panels"][0]["panel_id"] == "product_capabilities_dashboard"
     assert response["claim_matrix"][0]["claim_id"] == "paid_pilot_wording"
     assert response["execution_enabled"] is False
@@ -116,6 +135,16 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["public_benchmark_metric_source_pending_field_count"] == 0
     assert response["public_benchmark_metric_source_pending_approval_token_count"] == 0
     assert response["evidence_bundle_export_ready"] is False
+    assert response["customer_shadow_paid_pilot_evidence_ready"] is False
+    assert response["customer_shadow_real_row_count"] == 0
+    assert response["customer_shadow_completed_case_count"] == 0
+    assert response["customer_shadow_required_case_count"] == 0
+    assert response["customer_shadow_missing_case_count"] == 0
+    assert response["customer_shadow_customer_retained_raw_data_count"] == 0
+    assert response["customer_shadow_redistribution_allowed_false_count"] == 0
+    assert response["customer_shadow_anonymized_result_summary_count"] == 0
+    assert response["customer_shadow_reviewer_signoff_count"] == 0
+    assert response["customer_shadow_evidence_blocker_count"] == 0
     assert response["panels"] == []
     assert response["claim_matrix"] == []
     assert response["execution_enabled"] is False

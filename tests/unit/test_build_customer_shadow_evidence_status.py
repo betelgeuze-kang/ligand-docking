@@ -59,8 +59,14 @@ def test_header_only_template_blocks_until_three_real_cases(tmp_path: Path) -> N
     summary = payload["summary"]
     assert summary["status"] == "blocked_customer_shadow_evidence_status"
     assert summary["customer_shadow_intake_schema_ready"] is True
+    assert summary["real_customer_shadow_row_count"] == 0
     assert summary["completed_customer_shadow_case_count"] == 0
     assert summary["missing_completed_customer_shadow_case_count"] == 3
+    assert summary["customer_retained_raw_data_count"] == 0
+    assert summary["redistribution_allowed_false_count"] == 0
+    assert summary["anonymized_result_summary_count"] == 0
+    assert summary["reviewer_signoff_count"] == 0
+    assert summary["blocker_count"] == 1
     assert summary["paid_pilot_evidence_ready"] is False
     assert summary["paid_pilot_claim_allowed"] is False
     assert summary["commercial_readiness_promotion_allowed"] is False
@@ -75,9 +81,15 @@ def test_mock_fixture_is_valid_but_does_not_count_toward_minimum(tmp_path: Path)
 
     summary = payload["summary"]
     assert summary["status"] == "blocked_customer_shadow_evidence_status"
+    assert summary["real_customer_shadow_row_count"] == 0
     assert summary["mock_fixture_row_count"] == 1
     assert summary["invalid_row_count"] == 0
     assert summary["completed_customer_shadow_case_count"] == 0
+    assert summary["customer_retained_raw_data_count"] == 0
+    assert summary["redistribution_allowed_false_count"] == 0
+    assert summary["anonymized_result_summary_count"] == 0
+    assert summary["reviewer_signoff_count"] == 0
+    assert summary["blocker_count"] == 1
     assert payload["rows"][0]["completed_schema_valid"] is True
     assert payload["rows"][0]["counts_toward_minimum"] is False
 
@@ -90,8 +102,14 @@ def test_three_completed_customer_shadow_rows_ready_but_do_not_promote_claims(tm
 
     summary = payload["summary"]
     assert summary["status"] == "customer_shadow_evidence_status_ready"
+    assert summary["real_customer_shadow_row_count"] == 3
     assert summary["completed_customer_shadow_case_count"] == 3
     assert summary["customer_shadow_minimum_met"] is True
+    assert summary["customer_retained_raw_data_count"] == 3
+    assert summary["redistribution_allowed_false_count"] == 3
+    assert summary["anonymized_result_summary_count"] == 3
+    assert summary["reviewer_signoff_count"] == 3
+    assert summary["blocker_count"] == 0
     assert summary["paid_pilot_evidence_ready"] is True
     assert summary["paid_pilot_claim_allowed"] is False
     assert summary["commercial_readiness_promotion_allowed"] is False
