@@ -6036,6 +6036,11 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
         for spec in mod.DEFAULT_ARTIFACT_SPECS
         if spec["artifact_id"] == "benchmark_ledger"
     )
+    comparison_work_order_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "public_benchmark_vina_gnina_comparison_work_order"
+    )
     audit_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -6057,6 +6062,22 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
     assert ledger_spec["builder_command"] == mod.BENCHMARK_LEDGER_COMMAND
     assert "tools/product/build_benchmark_ledger.py" in ledger_spec["depends_on"]
     assert "betelgeuze_product/benchmark_ledger.py" in ledger_spec["depends_on"]
+    assert comparison_work_order_spec["artifact_path"] == (
+        "runs/public_benchmark_vina_gnina_comparison_work_order_current.json"
+    )
+    assert comparison_work_order_spec["builder_command"] == (
+        mod.PUBLIC_BENCHMARK_VINA_GNINA_COMPARISON_WORK_ORDER_COMMAND
+    )
+    assert "tools/product/build_public_benchmark_vina_gnina_comparison_work_order.py" in (
+        comparison_work_order_spec["depends_on"]
+    )
+    assert "tools/accounting/build_pdbbind_casf_pose_affinity_results.py" in (
+        comparison_work_order_spec["depends_on"]
+    )
+    assert "docs/docking_comparison_contract.md" in comparison_work_order_spec["depends_on"]
+    assert "runs/pdbbind_casf_pose_affinity_results_current.json" in (
+        comparison_work_order_spec["depends_on"]
+    )
     assert audit_spec["artifact_path"] == "runs/public_benchmark_external_receipts_audit_current.json"
     assert audit_spec["builder_command"] == mod.PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND
     for audit_source in (
@@ -6069,6 +6090,7 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
         "runs/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.json",
         "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv",
         "runs/benchmark_ledger_current.json",
+        "runs/public_benchmark_vina_gnina_comparison_work_order_current.json",
     ):
         assert audit_source in audit_spec["depends_on"]
     assert spec["artifact_path"] == "runs/product_operator_cockpit_current.json"
@@ -6091,6 +6113,7 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
         assert source_artifact in depends_on
     assert mod.HBOND_BACKMAP_REPORT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert mod.BENCHMARK_LEDGER_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.PUBLIC_BENCHMARK_VINA_GNINA_COMPARISON_WORK_ORDER_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert mod.PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert mod.PRODUCT_OPERATOR_COCKPIT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert _last_refresh_index("python3 tools/build_product_image_smoke_preflight.py") < _last_refresh_index(
@@ -6105,9 +6128,15 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
     assert _last_refresh_index(mod.PUBLIC_BENCHMARK_PHASE2_HARNESS_AUDIT_COMMAND) < _last_refresh_index(
         mod.BENCHMARK_LEDGER_COMMAND
     )
+    assert _last_refresh_index(mod.BENCHMARK_LEDGER_COMMAND) < _last_refresh_index(
+        mod.PUBLIC_BENCHMARK_VINA_GNINA_COMPARISON_WORK_ORDER_COMMAND
+    )
     assert _last_refresh_index(
         mod.REFINE_TIER_PUBLIC_BENCHMARK_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOAD_OPERATOR_RECEIPT_COMMAND
     ) < _last_refresh_index(mod.PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND)
+    assert _last_refresh_index(mod.PUBLIC_BENCHMARK_VINA_GNINA_COMPARISON_WORK_ORDER_COMMAND) < (
+        _last_refresh_index(mod.PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND)
+    )
     assert _last_refresh_index("python3 tools/product/build_engine_refinement_claim_evidence_priority_packet.py") < (
         _last_refresh_index(mod.PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND)
     )

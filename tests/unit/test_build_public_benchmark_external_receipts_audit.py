@@ -42,6 +42,7 @@ def _write_inputs(
             / "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
         ),
         "ledger": tmp_path / "runs/benchmark_ledger_current.json",
+        "work_order": tmp_path / "runs/public_benchmark_vina_gnina_comparison_work_order_current.json",
     }
     _write_summary(
         paths["materialization"],
@@ -108,6 +109,21 @@ def _write_inputs(
             "locked_or_reject_count": 2,
         },
     )
+    _write_summary(
+        paths["work_order"],
+        {
+            "status": "public_benchmark_vina_gnina_comparison_work_order_ready",
+            "work_order_ready": True,
+            "same_input_score_template_ready": True,
+            "score_template_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
+            "score_value_pending_count": 32,
+            "adapter_command_after_fill": (
+                "python3 tools/build_pdbbind_casf_pose_affinity_results.py "
+                "--comparison-scores-csv runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+            ),
+            "next_required_step": "Fill Vina/GNINA same-input scores.",
+        },
+    )
     return paths
 
 
@@ -122,6 +138,7 @@ def _build(tmp_path: Path, *, comparison_ready: bool, receipt_ready: bool) -> di
         receipt_json=paths["receipt"],
         receipt_csv=paths["receipt_csv"],
         benchmark_ledger_json=paths["ledger"],
+        vina_gnina_work_order_json=paths["work_order"],
         root=tmp_path,
     )
 
@@ -141,6 +158,11 @@ def test_public_benchmark_external_receipts_audit_blocks_unapproved_receipts(
     assert summary["receipt_blocked_row_count"] == 51
     assert summary["claim_promotion_allowed"] is False
     assert rows["benchmark_ledger_review"]["ready"] is True
+    assert summary["vina_gnina_comparison_work_order_ready"] is True
+    assert summary["vina_gnina_score_value_pending_count"] == 32
+    assert summary["vina_gnina_score_template_csv"] == (
+        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+    )
     assert rows["vina_gnina_same_input_comparison"]["blocker"] == (
         "vina_gnina_same_input_score_evidence_missing"
     )
@@ -188,6 +210,8 @@ def test_public_benchmark_external_receipts_audit_cli_writes_outputs(tmp_path: P
             str(paths["receipt_csv"]),
             "--benchmark-ledger-json",
             str(paths["ledger"]),
+            "--vina-gnina-work-order-json",
+            str(paths["work_order"]),
             "--out-json",
             str(out_json),
             "--out-csv",
