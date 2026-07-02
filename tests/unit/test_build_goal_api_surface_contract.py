@@ -11,6 +11,7 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
     status_key = '"product_cli_status_set_status": "blocked_product_cli_status_set",' if include_status_key else ""
     (root / "api" / "goal.py").write_text(
         "GOAL_READINESS_ROLLUP_ARTIFACT = 'runs/goal_readiness_rollup_current.json'\n"
+        "PM_PRIORITY_QUEUE_ARTIFACT = '.betelgeuze/pm_priority_queue_status_current.json'\n"
         "GOAL_OPERATOR_ACTION_BOARD_ARTIFACT = 'runs/goal_operator_action_board_current.json'\n"
         "GOAL_OPERATOR_INTAKE_KIT_MANIFEST = 'runs/goal_operator_intake_kit_current/manifest.json'\n"
         "GOAL_RELEASE_DECISION_ARTIFACT = 'runs/goal_release_decision_gate_current.json'\n"
@@ -627,6 +628,8 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         '"external_state_mutated": False}\n'
         '@router.get("/readiness")\n'
         "async def get_goal_readiness(): pass\n"
+        '@router.get("/priority-queue")\n'
+        "async def get_goal_priority_queue(): pass\n"
         '@router.get("/actions")\n'
         "async def get_goal_actions(): pass\n"
         '@router.get("/operator-intake-kit")\n'
@@ -661,7 +664,7 @@ def test_goal_api_surface_contract_reports_ready_for_current_source() -> None:
     assert summary["check_count"] == 9
     assert summary["pass_count"] == 9
     assert summary["blocker_count"] == 0
-    assert summary["expected_endpoint_count"] == 8
+    assert summary["expected_endpoint_count"] == 9
     assert summary["missing_endpoint_count"] == 0
     assert summary["missing_artifact_source_count"] == 0
     assert summary["missing_status_key_count"] == 0
