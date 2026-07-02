@@ -163,6 +163,22 @@ def _missing_response() -> dict[str, Any]:
         "developer_preview_primary_blocker_id": "",
         "developer_preview_receipt_work_order_primary_gate_id": "",
         "developer_preview_receipt_work_order_primary_receipt_artifact": "",
+        "f2g_f2h_preflight_present": False,
+        "f2g_f2h_recovery_packet_present": False,
+        "f2g_f2h_preflight_status": "",
+        "f2g_f2h_recovery_status": "",
+        "f2g_f2h_recovery_required": False,
+        "f2g_f2h_preflight_blocker_count": 0,
+        "f2g_f2h_blocked_recovery_item_count": 0,
+        "f2g_f2h_recovery_item_count": 0,
+        "f2g_f2h_primary_recovery_item_id": "",
+        "f2g_f2h_primary_required_surface": "",
+        "f2g_f2h_primary_blocker": "",
+        "f2g_f2h_primary_operator_action": "",
+        "f2g_f2h_audit_ready": False,
+        "f2h_continuation_allowed": False,
+        "f2g_f2h_placeholder_surface_creation_allowed": False,
+        "f2g_f2h_surface_restore_executed": False,
         "pm_priority_queue_present": False,
         "pm_priority_queue_status": "",
         "pm_priority_queue_ready_item_count": 0,
@@ -429,6 +445,38 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "developer_preview_receipt_work_order_primary_receipt_artifact": str(
             summary.get("developer_preview_receipt_work_order_primary_receipt_artifact") or ""
+        ),
+        "f2g_f2h_preflight_present": bool(summary.get("f2g_f2h_preflight_present") is True),
+        "f2g_f2h_recovery_packet_present": bool(
+            summary.get("f2g_f2h_recovery_packet_present") is True
+        ),
+        "f2g_f2h_preflight_status": str(summary.get("f2g_f2h_preflight_status") or ""),
+        "f2g_f2h_recovery_status": str(summary.get("f2g_f2h_recovery_status") or ""),
+        "f2g_f2h_recovery_required": bool(summary.get("f2g_f2h_recovery_required") is True),
+        "f2g_f2h_preflight_blocker_count": _int(
+            summary.get("f2g_f2h_preflight_blocker_count")
+        ),
+        "f2g_f2h_blocked_recovery_item_count": _int(
+            summary.get("f2g_f2h_blocked_recovery_item_count")
+        ),
+        "f2g_f2h_recovery_item_count": _int(summary.get("f2g_f2h_recovery_item_count")),
+        "f2g_f2h_primary_recovery_item_id": str(
+            summary.get("f2g_f2h_primary_recovery_item_id") or ""
+        ),
+        "f2g_f2h_primary_required_surface": str(
+            summary.get("f2g_f2h_primary_required_surface") or ""
+        ),
+        "f2g_f2h_primary_blocker": str(summary.get("f2g_f2h_primary_blocker") or ""),
+        "f2g_f2h_primary_operator_action": str(
+            summary.get("f2g_f2h_primary_operator_action") or ""
+        ),
+        "f2g_f2h_audit_ready": bool(summary.get("f2g_f2h_audit_ready") is True),
+        "f2h_continuation_allowed": bool(summary.get("f2h_continuation_allowed") is True),
+        "f2g_f2h_placeholder_surface_creation_allowed": bool(
+            summary.get("f2g_f2h_placeholder_surface_creation_allowed") is True
+        ),
+        "f2g_f2h_surface_restore_executed": bool(
+            summary.get("f2g_f2h_surface_restore_executed") is True
         ),
         "pm_priority_queue_present": bool(summary.get("pm_priority_queue_present") is True),
         "pm_priority_queue_status": str(summary.get("pm_priority_queue_status") or ""),

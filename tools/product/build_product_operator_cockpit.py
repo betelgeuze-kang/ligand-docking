@@ -28,6 +28,8 @@ DEFAULT_EVIDENCE_BUNDLE_JSON = "runs/ai_md_product_evidence_bundle_current.json"
 DEFAULT_API_CUSTOMER_FLOW_JSON = "runs/api_customer_flow_release_evidence_current.json"
 DEFAULT_CUSTOMER_SHADOW_JSON = "runs/customer_shadow_evidence_status_current.json"
 DEFAULT_DEVELOPER_PREVIEW_JSON = "runs/developer_preview_final_gate_audit_current.json"
+DEFAULT_F2G_F2H_PREFLIGHT_JSON = ".betelgeuze/f2g_f2h_surface_preflight.local.json"
+DEFAULT_F2G_F2H_RECOVERY_JSON = ".betelgeuze/f2g_f2h_authoritative_surface_recovery_packet.local.json"
 DEFAULT_OUT_JSON = "runs/product_operator_cockpit_current.json"
 DEFAULT_OUT_CSV = "runs/product_operator_cockpit_current.csv"
 DEFAULT_OUT_MD = "runs/product_operator_cockpit_current.md"
@@ -148,6 +150,13 @@ def _first_text(*values: Any) -> str:
 def _first_blocked_row(rows: list[dict[str, Any]]) -> dict[str, Any]:
     for row in rows:
         if row.get("ready") is not True:
+            return row
+    return {}
+
+
+def _first_non_pass_row(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    for row in rows:
+        if _text(row.get("status")).lower() != "pass":
             return row
     return {}
 
@@ -620,6 +629,8 @@ def build_product_operator_cockpit(
     api_customer_flow_json: str | Path = DEFAULT_API_CUSTOMER_FLOW_JSON,
     customer_shadow_json: str | Path = DEFAULT_CUSTOMER_SHADOW_JSON,
     developer_preview_json: str | Path = DEFAULT_DEVELOPER_PREVIEW_JSON,
+    f2g_f2h_preflight_json: str | Path = DEFAULT_F2G_F2H_PREFLIGHT_JSON,
+    f2g_f2h_recovery_json: str | Path = DEFAULT_F2G_F2H_RECOVERY_JSON,
     root: Path = ROOT,
 ) -> dict[str, Any]:
     capabilities = _summary(_read_json(capabilities_json, root=root))
@@ -643,6 +654,11 @@ def build_product_operator_cockpit(
     api_customer_flow = _summary(_read_json(api_customer_flow_json, root=root))
     customer_shadow = _summary(_read_json(customer_shadow_json, root=root))
     developer_preview = _summary(_read_json(developer_preview_json, root=root))
+    f2g_preflight_payload = _read_json(f2g_f2h_preflight_json, root=root)
+    f2g_preflight = _summary(f2g_preflight_payload)
+    f2g_recovery_payload = _read_json(f2g_f2h_recovery_json, root=root)
+    f2g_recovery = _summary(f2g_recovery_payload)
+    f2g_recovery_rows = _rows(f2g_recovery_payload)
 
     capabilities_present = bool(capabilities)
     restricted_scope_claim_guard_ready = _bool_true(capabilities.get("restricted_scope_claim_guard_ready"))
@@ -902,6 +918,29 @@ def build_product_operator_cockpit(
         developer_preview.get("receipt_work_order_primary_gate_id")
     )
     developer_preview_receipt_blocker_count = _int(developer_preview.get("receipt_blocker_count"))
+    f2g_preflight_present = bool(f2g_preflight)
+    f2g_recovery_present = bool(f2g_recovery)
+    f2g_first_recovery_row = _first_non_pass_row(f2g_recovery_rows)
+    f2g_preflight_status = _text(f2g_preflight.get("status"))
+    f2g_recovery_status = _text(f2g_recovery.get("status"))
+    f2g_recovery_required = _bool_true(f2g_recovery.get("recovery_required"))
+    f2g_preflight_blocker_count = _int(f2g_preflight.get("blocker_count"))
+    f2g_blocked_recovery_item_count = _int(f2g_recovery.get("blocked_recovery_item_count"))
+    f2g_recovery_item_count = _int(f2g_recovery.get("recovery_item_count"))
+    f2g_primary_recovery_item = _first_text(f2g_first_recovery_row.get("recovery_item_id"))
+    f2g_primary_required_surface = _first_text(f2g_first_recovery_row.get("required_surface"))
+    f2g_primary_blocker = _first_text(f2g_first_recovery_row.get("blocker"))
+    f2g_primary_operator_action = _first_text(
+        f2g_first_recovery_row.get("operator_action"),
+        f2g_recovery.get("next_required_step"),
+        f2g_preflight.get("next_required_step"),
+    )
+    f2g_audit_ready = _bool_true(f2g_preflight.get("f2g_audit_ready"))
+    f2h_continuation_allowed = _bool_true(f2g_preflight.get("f2h_continuation_allowed"))
+    f2g_placeholder_creation_allowed = _bool_true(
+        f2g_recovery.get("placeholder_surface_creation_allowed")
+    )
+    f2g_surface_restore_executed = _bool_true(f2g_recovery.get("surface_restore_executed"))
 
     claim_rows = _build_claim_rows(
         restricted_scope_claim_guard_ready=restricted_scope_claim_guard_ready,
@@ -1190,6 +1229,46 @@ def build_product_operator_cockpit(
             root=root,
         ),
         _panel(
+            panel_id="f2g_f2h_preflight_work_order",
+            title="F2g/F2h preflight / work order",
+            route="/goal/priority-queue#f2g-f2h",
+            artifact_path=f2g_f2h_recovery_json,
+            artifact_present=f2g_recovery_present,
+            status=f2g_preflight_status or f2g_recovery_status or "missing_f2g_f2h_surface_preflight",
+            surface_ready=True,
+            source_artifact_ready=f2g_preflight_present and f2g_recovery_present,
+            operator_action_required=f2g_recovery_required or not f2h_continuation_allowed,
+            claim_allowed=False,
+            primary_metric=_join_metrics(
+                _count_metric("preflight_blockers", f2g_preflight_blocker_count),
+                _count_metric("blocked_recovery_items", f2g_blocked_recovery_item_count),
+                _count_metric("recovery_items", f2g_recovery_item_count),
+                _metric("f2g_audit_ready", f2g_audit_ready),
+                _metric("f2h_allowed", f2h_continuation_allowed),
+            ),
+            secondary_metric=_join_metrics(
+                _metric("recovery_required", f2g_recovery_required),
+                _metric("primary_recovery_item", f2g_primary_recovery_item),
+                _metric("primary_required_surface", f2g_primary_required_surface),
+                _metric("primary_blocker", f2g_primary_blocker),
+                _metric("placeholder_allowed", f2g_placeholder_creation_allowed),
+                _metric("surface_restore_executed", f2g_surface_restore_executed),
+            ),
+            next_action=_first_text(
+                f2g_primary_operator_action,
+                "Restore the authoritative F2/G1 surfaces, then rerun the local F2g/F2h preflight.",
+            ),
+            allowed_claim_text="F2g/F2h recovery work order can be shown as non-promoting operator guidance.",
+            disallowed_claim_text="F2g audit, F2h continuation, G1 promotion, and solver claims remain disallowed.",
+            blockers=_string_list(f2g_preflight.get("blockers")) or _string_list(
+                f2g_recovery.get("preflight_blockers")
+            ),
+            claim_boundary=_text(f2g_recovery.get("claim_boundary"))
+            or _text(f2g_preflight.get("claim_boundary"))
+            or CLAIM_BOUNDARY,
+            root=root,
+        ),
+        _panel(
             panel_id="release_blockers_operator_actions",
             title="Release blockers / operator actions",
             route="/goal/actions",
@@ -1462,6 +1541,22 @@ def build_product_operator_cockpit(
         "developer_preview_receipt_work_order_primary_receipt_artifact": (
             developer_preview_primary_receipt_artifact
         ),
+        "f2g_f2h_preflight_present": f2g_preflight_present,
+        "f2g_f2h_recovery_packet_present": f2g_recovery_present,
+        "f2g_f2h_preflight_status": f2g_preflight_status,
+        "f2g_f2h_recovery_status": f2g_recovery_status,
+        "f2g_f2h_recovery_required": f2g_recovery_required,
+        "f2g_f2h_preflight_blocker_count": f2g_preflight_blocker_count,
+        "f2g_f2h_blocked_recovery_item_count": f2g_blocked_recovery_item_count,
+        "f2g_f2h_recovery_item_count": f2g_recovery_item_count,
+        "f2g_f2h_primary_recovery_item_id": f2g_primary_recovery_item,
+        "f2g_f2h_primary_required_surface": f2g_primary_required_surface,
+        "f2g_f2h_primary_blocker": f2g_primary_blocker,
+        "f2g_f2h_primary_operator_action": f2g_primary_operator_action,
+        "f2g_f2h_audit_ready": f2g_audit_ready,
+        "f2h_continuation_allowed": f2h_continuation_allowed,
+        "f2g_f2h_placeholder_surface_creation_allowed": f2g_placeholder_creation_allowed,
+        "f2g_f2h_surface_restore_executed": f2g_surface_restore_executed,
         "pm_priority_queue_present": pm_queue_present,
         "pm_priority_queue_status": _text(pm_queue.get("status")),
         "pm_priority_queue_ready_item_count": pm_queue_ready_count,
@@ -1517,6 +1612,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--api-customer-flow-json", default=DEFAULT_API_CUSTOMER_FLOW_JSON)
     parser.add_argument("--customer-shadow-json", default=DEFAULT_CUSTOMER_SHADOW_JSON)
     parser.add_argument("--developer-preview-json", default=DEFAULT_DEVELOPER_PREVIEW_JSON)
+    parser.add_argument("--f2g-f2h-preflight-json", default=DEFAULT_F2G_F2H_PREFLIGHT_JSON)
+    parser.add_argument("--f2g-f2h-recovery-json", default=DEFAULT_F2G_F2H_RECOVERY_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -1541,6 +1638,8 @@ def main(argv: list[str] | None = None) -> int:
         api_customer_flow_json=args.api_customer_flow_json,
         customer_shadow_json=args.customer_shadow_json,
         developer_preview_json=args.developer_preview_json,
+        f2g_f2h_preflight_json=args.f2g_f2h_preflight_json,
+        f2g_f2h_recovery_json=args.f2g_f2h_recovery_json,
     )
     write_product_operator_cockpit_outputs(
         payload,

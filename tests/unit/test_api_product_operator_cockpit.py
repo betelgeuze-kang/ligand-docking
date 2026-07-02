@@ -137,6 +137,24 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "developer_preview_receipt_work_order_primary_receipt_artifact": (
                     ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
                 ),
+                "f2g_f2h_preflight_present": True,
+                "f2g_f2h_recovery_packet_present": True,
+                "f2g_f2h_preflight_status": "blocked_f2g_f2h_surface_preflight",
+                "f2g_f2h_recovery_status": "f2g_f2h_authoritative_surface_recovery_packet_ready",
+                "f2g_f2h_recovery_required": True,
+                "f2g_f2h_preflight_blocker_count": 8,
+                "f2g_f2h_blocked_recovery_item_count": 8,
+                "f2g_f2h_recovery_item_count": 8,
+                "f2g_f2h_primary_recovery_item_id": "restore_implementation_phase1_tree",
+                "f2g_f2h_primary_required_surface": "implementation/phase1",
+                "f2g_f2h_primary_blocker": "implementation_phase1_dir_missing",
+                "f2g_f2h_primary_operator_action": (
+                    "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+                ),
+                "f2g_f2h_audit_ready": False,
+                "f2h_continuation_allowed": False,
+                "f2g_f2h_placeholder_surface_creation_allowed": False,
+                "f2g_f2h_surface_restore_executed": False,
                 "pm_priority_queue_present": True,
                 "pm_priority_queue_status": "blocked_pm_priority_queue",
                 "pm_priority_queue_ready_item_count": 3,
@@ -267,6 +285,26 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["developer_preview_receipt_work_order_primary_receipt_artifact"] == (
         ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
     )
+    assert response["f2g_f2h_preflight_present"] is True
+    assert response["f2g_f2h_recovery_packet_present"] is True
+    assert response["f2g_f2h_preflight_status"] == "blocked_f2g_f2h_surface_preflight"
+    assert response["f2g_f2h_recovery_status"] == (
+        "f2g_f2h_authoritative_surface_recovery_packet_ready"
+    )
+    assert response["f2g_f2h_recovery_required"] is True
+    assert response["f2g_f2h_preflight_blocker_count"] == 8
+    assert response["f2g_f2h_blocked_recovery_item_count"] == 8
+    assert response["f2g_f2h_recovery_item_count"] == 8
+    assert response["f2g_f2h_primary_recovery_item_id"] == "restore_implementation_phase1_tree"
+    assert response["f2g_f2h_primary_required_surface"] == "implementation/phase1"
+    assert response["f2g_f2h_primary_blocker"] == "implementation_phase1_dir_missing"
+    assert response["f2g_f2h_primary_operator_action"] == (
+        "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+    )
+    assert response["f2g_f2h_audit_ready"] is False
+    assert response["f2h_continuation_allowed"] is False
+    assert response["f2g_f2h_placeholder_surface_creation_allowed"] is False
+    assert response["f2g_f2h_surface_restore_executed"] is False
     assert response["pm_priority_queue_present"] is True
     assert response["pm_priority_queue_status"] == "blocked_pm_priority_queue"
     assert response["pm_priority_queue_ready_item_count"] == 3
@@ -373,6 +411,22 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["developer_preview_primary_blocker_id"] == ""
     assert response["developer_preview_receipt_work_order_primary_gate_id"] == ""
     assert response["developer_preview_receipt_work_order_primary_receipt_artifact"] == ""
+    assert response["f2g_f2h_preflight_present"] is False
+    assert response["f2g_f2h_recovery_packet_present"] is False
+    assert response["f2g_f2h_preflight_status"] == ""
+    assert response["f2g_f2h_recovery_status"] == ""
+    assert response["f2g_f2h_recovery_required"] is False
+    assert response["f2g_f2h_preflight_blocker_count"] == 0
+    assert response["f2g_f2h_blocked_recovery_item_count"] == 0
+    assert response["f2g_f2h_recovery_item_count"] == 0
+    assert response["f2g_f2h_primary_recovery_item_id"] == ""
+    assert response["f2g_f2h_primary_required_surface"] == ""
+    assert response["f2g_f2h_primary_blocker"] == ""
+    assert response["f2g_f2h_primary_operator_action"] == ""
+    assert response["f2g_f2h_audit_ready"] is False
+    assert response["f2h_continuation_allowed"] is False
+    assert response["f2g_f2h_placeholder_surface_creation_allowed"] is False
+    assert response["f2g_f2h_surface_restore_executed"] is False
     assert response["pm_priority_queue_present"] is False
     assert response["pm_priority_queue_status"] == ""
     assert response["pm_priority_queue_ready_item_count"] == 0

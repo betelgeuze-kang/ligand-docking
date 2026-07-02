@@ -31,6 +31,10 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         "api_customer_flow": tmp_path / "runs/api_customer_flow_release_evidence_current.json",
         "customer": tmp_path / "runs/customer_shadow_evidence_status_current.json",
         "developer_preview": tmp_path / "runs/developer_preview_final_gate_audit_current.json",
+        "f2g_preflight": tmp_path / ".betelgeuze/f2g_f2h_surface_preflight.local.json",
+        "f2g_recovery": (
+            tmp_path / ".betelgeuze/f2g_f2h_authoritative_surface_recovery_packet.local.json"
+        ),
     }
     _write_json(
         paths["capabilities"],
@@ -354,6 +358,65 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
             }
         },
     )
+    _write_json(
+        paths["f2g_preflight"],
+        {
+            "summary": {
+                "status": "blocked_f2g_f2h_surface_preflight",
+                "blocker_count": 8,
+                "blockers": [
+                    "implementation_phase1_dir_missing",
+                    "real_mgt_input_surface_missing",
+                    "f2h_blocked_until_f2g_audit",
+                ],
+                "f2g_audit_ready": False,
+                "f2h_continuation_allowed": False,
+                "g1_promotion_allowed": False,
+                "next_required_step": "Restore the missing F2/G1 real-MGT surfaces.",
+                "claim_boundary": "f2g preflight boundary",
+            }
+        },
+    )
+    _write_json(
+        paths["f2g_recovery"],
+        {
+            "summary": {
+                "status": "f2g_f2h_authoritative_surface_recovery_packet_ready",
+                "preflight_status": "blocked_f2g_f2h_surface_preflight",
+                "preflight_blocker_count": 8,
+                "recovery_required": True,
+                "recovery_item_count": 8,
+                "blocked_recovery_item_count": 8,
+                "placeholder_surface_creation_allowed": False,
+                "surface_restore_executed": False,
+                "g1_promotion_allowed": False,
+                "next_required_step": (
+                    "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+                ),
+                "claim_boundary": "f2g recovery boundary",
+            },
+            "rows": [
+                {
+                    "recovery_item_id": "restore_implementation_phase1_tree",
+                    "preflight_check_id": "implementation_phase1_dir",
+                    "status": "fail",
+                    "required_surface": "implementation/phase1",
+                    "blocker": "implementation_phase1_dir_missing",
+                    "operator_action": (
+                        "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+                    ),
+                },
+                {
+                    "recovery_item_id": "restore_real_mgt_input_surface",
+                    "preflight_check_id": "real_mgt_input_surface",
+                    "status": "fail",
+                    "required_surface": "real-MGT model/input packet",
+                    "blocker": "real_mgt_input_surface_missing",
+                    "operator_action": "Restore the reviewed real-MGT model/input packet.",
+                },
+            ],
+        },
+    )
     return paths
 
 
@@ -374,6 +437,8 @@ def _build_payload(tmp_path: Path) -> dict:
         api_customer_flow_json=paths["api_customer_flow"],
         customer_shadow_json=paths["customer"],
         developer_preview_json=paths["developer_preview"],
+        f2g_f2h_preflight_json=paths["f2g_preflight"],
+        f2g_f2h_recovery_json=paths["f2g_recovery"],
         root=tmp_path,
     )
 
@@ -387,7 +452,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["status"] == "product_operator_cockpit_ready_claims_blocked"
     assert summary["phase8_surface_ready"] is True
     assert summary["required_phase8_panel_count"] == 9
-    assert summary["observed_phase8_panel_count"] == 10
+    assert summary["observed_phase8_panel_count"] == 11
     assert summary["missing_required_phase8_panel_count"] == 0
     assert summary["paid_pilot_wording_allowed"] is False
     assert summary["general_platform_claim_allowed"] is False
@@ -496,6 +561,26 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["developer_preview_receipt_work_order_primary_receipt_artifact"] == (
         ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
     )
+    assert summary["f2g_f2h_preflight_present"] is True
+    assert summary["f2g_f2h_recovery_packet_present"] is True
+    assert summary["f2g_f2h_preflight_status"] == "blocked_f2g_f2h_surface_preflight"
+    assert summary["f2g_f2h_recovery_status"] == (
+        "f2g_f2h_authoritative_surface_recovery_packet_ready"
+    )
+    assert summary["f2g_f2h_recovery_required"] is True
+    assert summary["f2g_f2h_preflight_blocker_count"] == 8
+    assert summary["f2g_f2h_blocked_recovery_item_count"] == 8
+    assert summary["f2g_f2h_recovery_item_count"] == 8
+    assert summary["f2g_f2h_primary_recovery_item_id"] == "restore_implementation_phase1_tree"
+    assert summary["f2g_f2h_primary_required_surface"] == "implementation/phase1"
+    assert summary["f2g_f2h_primary_blocker"] == "implementation_phase1_dir_missing"
+    assert summary["f2g_f2h_primary_operator_action"] == (
+        "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+    )
+    assert summary["f2g_f2h_audit_ready"] is False
+    assert summary["f2h_continuation_allowed"] is False
+    assert summary["f2g_f2h_placeholder_surface_creation_allowed"] is False
+    assert summary["f2g_f2h_surface_restore_executed"] is False
     assert summary["pm_priority_queue_present"] is True
     assert summary["pm_priority_queue_status"] == "blocked_pm_priority_queue"
     assert summary["pm_priority_queue_blocked_item_count"] == 5
@@ -652,6 +737,38 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert panels["developer_preview_final_gates"]["blockers"] == [
         "benchmark_results_clean_checkout_regenerated:.betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:status=blocked_developer_preview_clean_checkout_benchmark_receipt"
     ]
+    assert panels["f2g_f2h_preflight_work_order"]["route"] == "/goal/priority-queue#f2g-f2h"
+    assert panels["f2g_f2h_preflight_work_order"]["source_artifact_ready"] is True
+    assert panels["f2g_f2h_preflight_work_order"]["operator_action_required"] is True
+    assert panels["f2g_f2h_preflight_work_order"]["claim_allowed"] is False
+    assert panels["f2g_f2h_preflight_work_order"]["claim_boundary"] == "f2g recovery boundary"
+    assert "preflight_blockers=8" in panels["f2g_f2h_preflight_work_order"]["primary_metric"]
+    assert "blocked_recovery_items=8" in panels["f2g_f2h_preflight_work_order"]["primary_metric"]
+    assert "recovery_items=8" in panels["f2g_f2h_preflight_work_order"]["primary_metric"]
+    assert "f2g_audit_ready=false" in panels["f2g_f2h_preflight_work_order"]["primary_metric"]
+    assert "f2h_allowed=false" in panels["f2g_f2h_preflight_work_order"]["primary_metric"]
+    assert "recovery_required=true" in panels["f2g_f2h_preflight_work_order"]["secondary_metric"]
+    assert "primary_recovery_item=restore_implementation_phase1_tree" in (
+        panels["f2g_f2h_preflight_work_order"]["secondary_metric"]
+    )
+    assert "primary_required_surface=implementation/phase1" in (
+        panels["f2g_f2h_preflight_work_order"]["secondary_metric"]
+    )
+    assert "primary_blocker=implementation_phase1_dir_missing" in (
+        panels["f2g_f2h_preflight_work_order"]["secondary_metric"]
+    )
+    assert "placeholder_allowed=false" in panels["f2g_f2h_preflight_work_order"]["secondary_metric"]
+    assert "surface_restore_executed=false" in (
+        panels["f2g_f2h_preflight_work_order"]["secondary_metric"]
+    )
+    assert panels["f2g_f2h_preflight_work_order"]["next_action"] == (
+        "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+    )
+    assert panels["f2g_f2h_preflight_work_order"]["blockers"] == [
+        "implementation_phase1_dir_missing",
+        "real_mgt_input_surface_missing",
+        "f2h_blocked_until_f2g_audit",
+    ]
 
     assert claims["operator_cockpit_surface"]["allowed"] is True
     assert claims["paid_pilot_wording"]["allowed"] is False
@@ -724,6 +841,10 @@ def test_product_operator_cockpit_cli_writes_current_artifacts(tmp_path: Path) -
             str(paths["customer"]),
             "--developer-preview-json",
             str(paths["developer_preview"]),
+            "--f2g-f2h-preflight-json",
+            str(paths["f2g_preflight"]),
+            "--f2g-f2h-recovery-json",
+            str(paths["f2g_recovery"]),
             "--out-json",
             str(out_json),
             "--out-csv",
