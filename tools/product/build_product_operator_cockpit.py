@@ -913,6 +913,33 @@ def build_product_operator_cockpit(
     customer_shadow_work_order_primary_required_action = _first_text(
         customer_shadow.get("customer_shadow_work_order_primary_required_action")
     )
+    customer_shadow_work_order_primary_operator_csv = _first_text(
+        customer_shadow.get("customer_shadow_work_order_primary_operator_csv")
+    )
+    customer_shadow_work_order_primary_required_row_kind = _first_text(
+        customer_shadow.get("customer_shadow_work_order_primary_required_row_kind")
+    )
+    customer_shadow_work_order_primary_required_raw_data_custody = _first_text(
+        customer_shadow.get("customer_shadow_work_order_primary_required_raw_data_custody")
+    )
+    customer_shadow_work_order_primary_required_customer_retained_raw_data = _bool_true(
+        customer_shadow.get("customer_shadow_work_order_primary_required_customer_retained_raw_data")
+    )
+    customer_shadow_work_order_primary_required_redistribution_allowed = _bool_true(
+        customer_shadow.get("customer_shadow_work_order_primary_required_redistribution_allowed")
+    )
+    customer_shadow_work_order_primary_required_raw_data_stored_in_repo = _bool_true(
+        customer_shadow.get("customer_shadow_work_order_primary_required_raw_data_stored_in_repo")
+    )
+    customer_shadow_work_order_primary_required_derived_metadata_fields = _string_list(
+        customer_shadow.get("customer_shadow_work_order_primary_required_derived_metadata_fields")
+    )
+    customer_shadow_work_order_primary_required_reviewer_signoff_status = _first_text(
+        customer_shadow.get("customer_shadow_work_order_primary_required_reviewer_signoff_status")
+    )
+    customer_shadow_work_order_primary_required_source_artifact_fingerprint = _first_text(
+        customer_shadow.get("customer_shadow_work_order_primary_required_source_artifact_fingerprint")
+    )
     customer_shadow_intake_schema_ready = _bool_true(
         customer_shadow.get("customer_shadow_intake_schema_ready")
     )
@@ -1437,6 +1464,20 @@ def build_product_operator_cockpit(
                 _count_metric("required_columns", customer_shadow_required_column_count),
                 _count_metric("work_order_rows", customer_shadow_work_order_rows),
                 _metric("work_order_primary", customer_shadow_work_order_primary_slot),
+                _metric("required_raw_custody", customer_shadow_work_order_primary_required_raw_data_custody),
+                _metric(
+                    "required_retained_raw_data",
+                    customer_shadow_work_order_primary_required_customer_retained_raw_data,
+                ),
+                _metric(
+                    "required_raw_data_in_repo",
+                    customer_shadow_work_order_primary_required_raw_data_stored_in_repo,
+                ),
+                _count_metric(
+                    "required_derived_metadata_fields",
+                    len(customer_shadow_work_order_primary_required_derived_metadata_fields),
+                ),
+                _metric("required_signoff", customer_shadow_work_order_primary_required_reviewer_signoff_status),
             ),
             next_action=_first_text(
                 customer_shadow.get("next_required_step"),
@@ -1642,6 +1683,33 @@ def build_product_operator_cockpit(
         "customer_shadow_work_order_primary_case_slot_id": customer_shadow_work_order_primary_slot,
         "customer_shadow_work_order_primary_required_action": (
             customer_shadow_work_order_primary_required_action
+        ),
+        "customer_shadow_work_order_primary_operator_csv": (
+            customer_shadow_work_order_primary_operator_csv
+        ),
+        "customer_shadow_work_order_primary_required_row_kind": (
+            customer_shadow_work_order_primary_required_row_kind
+        ),
+        "customer_shadow_work_order_primary_required_raw_data_custody": (
+            customer_shadow_work_order_primary_required_raw_data_custody
+        ),
+        "customer_shadow_work_order_primary_required_customer_retained_raw_data": (
+            customer_shadow_work_order_primary_required_customer_retained_raw_data
+        ),
+        "customer_shadow_work_order_primary_required_redistribution_allowed": (
+            customer_shadow_work_order_primary_required_redistribution_allowed
+        ),
+        "customer_shadow_work_order_primary_required_raw_data_stored_in_repo": (
+            customer_shadow_work_order_primary_required_raw_data_stored_in_repo
+        ),
+        "customer_shadow_work_order_primary_required_derived_metadata_fields": (
+            customer_shadow_work_order_primary_required_derived_metadata_fields
+        ),
+        "customer_shadow_work_order_primary_required_reviewer_signoff_status": (
+            customer_shadow_work_order_primary_required_reviewer_signoff_status
+        ),
+        "customer_shadow_work_order_primary_required_source_artifact_fingerprint": (
+            customer_shadow_work_order_primary_required_source_artifact_fingerprint
         ),
         "customer_shadow_intake_schema_ready": customer_shadow_intake_schema_ready,
         "customer_shadow_minimum_met": customer_shadow_minimum_met,

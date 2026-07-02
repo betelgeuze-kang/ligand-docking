@@ -69,6 +69,17 @@ def test_header_only_template_blocks_until_three_real_cases(tmp_path: Path) -> N
     assert summary["customer_shadow_work_order_ready"] is False
     assert summary["customer_shadow_work_order_row_count"] == 3
     assert summary["customer_shadow_work_order_primary_case_slot_id"] == "customer_shadow_case_1"
+    assert summary["customer_shadow_work_order_primary_operator_csv"] == str(intake)
+    assert summary["customer_shadow_work_order_primary_required_row_kind"] == "customer_shadow"
+    assert summary["customer_shadow_work_order_primary_required_raw_data_custody"] == "customer_retained"
+    assert summary["customer_shadow_work_order_primary_required_customer_retained_raw_data"] is True
+    assert summary["customer_shadow_work_order_primary_required_redistribution_allowed"] is False
+    assert summary["customer_shadow_work_order_primary_required_raw_data_stored_in_repo"] is False
+    assert summary["customer_shadow_work_order_primary_required_derived_metadata_fields"] == sorted(
+        mod.REQUIRED_DERIVED_METADATA_FIELDS
+    )
+    assert summary["customer_shadow_work_order_primary_required_reviewer_signoff_status"] == "approved"
+    assert summary["customer_shadow_work_order_primary_required_source_artifact_fingerprint"] == "sha256"
     assert summary["blocker_count"] == 1
     assert summary["paid_pilot_evidence_ready"] is False
     assert summary["paid_pilot_claim_allowed"] is False
@@ -134,6 +145,8 @@ def test_three_completed_customer_shadow_rows_ready_but_do_not_promote_claims(tm
     assert summary["customer_shadow_work_order_ready"] is True
     assert summary["customer_shadow_work_order_row_count"] == 0
     assert summary["customer_shadow_work_order_primary_case_slot_id"] == ""
+    assert summary["customer_shadow_work_order_primary_operator_csv"] == ""
+    assert summary["customer_shadow_work_order_primary_required_derived_metadata_fields"] == []
     assert payload["blockers"] == []
     assert payload["customer_shadow_work_order_rows"] == []
 

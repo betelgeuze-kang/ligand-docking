@@ -290,6 +290,7 @@ def build_customer_shadow_evidence_status(
         completed_case_count=completed_case_count,
         intake_csv=intake_csv,
     )
+    primary_work_order_row = work_order_rows[0] if work_order_rows else {}
     ready = schema_ready and invalid_row_count == 0 and completed_case_count >= min_completed_cases
     summary = {
         "packet_type": "customer_shadow_evidence_status",
@@ -312,12 +313,39 @@ def build_customer_shadow_evidence_status(
         "customer_shadow_work_order_ready": not work_order_rows,
         "customer_shadow_work_order_row_count": len(work_order_rows),
         "customer_shadow_work_order_missing_case_count": missing_case_count,
-        "customer_shadow_work_order_primary_case_slot_id": work_order_rows[0]["case_slot_id"]
-        if work_order_rows
-        else "",
-        "customer_shadow_work_order_primary_required_action": work_order_rows[0]["required_action"]
-        if work_order_rows
-        else "",
+        "customer_shadow_work_order_primary_case_slot_id": _text(
+            primary_work_order_row.get("case_slot_id")
+        ),
+        "customer_shadow_work_order_primary_required_action": _text(
+            primary_work_order_row.get("required_action")
+        ),
+        "customer_shadow_work_order_primary_operator_csv": _text(
+            primary_work_order_row.get("operator_csv")
+        ),
+        "customer_shadow_work_order_primary_required_row_kind": _text(
+            primary_work_order_row.get("required_row_kind")
+        ),
+        "customer_shadow_work_order_primary_required_raw_data_custody": _text(
+            primary_work_order_row.get("required_raw_data_custody")
+        ),
+        "customer_shadow_work_order_primary_required_customer_retained_raw_data": (
+            primary_work_order_row.get("required_customer_retained_raw_data") is True
+        ),
+        "customer_shadow_work_order_primary_required_redistribution_allowed": (
+            primary_work_order_row.get("required_redistribution_allowed") is True
+        ),
+        "customer_shadow_work_order_primary_required_raw_data_stored_in_repo": (
+            primary_work_order_row.get("required_raw_data_stored_in_repo") is True
+        ),
+        "customer_shadow_work_order_primary_required_derived_metadata_fields": list(
+            primary_work_order_row.get("required_derived_metadata_fields", [])
+        ),
+        "customer_shadow_work_order_primary_required_reviewer_signoff_status": _text(
+            primary_work_order_row.get("required_reviewer_signoff_status")
+        ),
+        "customer_shadow_work_order_primary_required_source_artifact_fingerprint": _text(
+            primary_work_order_row.get("required_source_artifact_fingerprint")
+        ),
         "customer_raw_data_stored_in_repo": raw_data_stored_in_repo_observed,
         "redistribution_allowed_required_value": False,
         "paid_pilot_evidence_ready": ready,
@@ -394,6 +422,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"- customer_shadow_work_order_ready: `{s['customer_shadow_work_order_ready']}`",
         f"- customer_shadow_work_order_row_count: `{s['customer_shadow_work_order_row_count']}`",
         f"- customer_shadow_work_order_primary_case_slot_id: `{s['customer_shadow_work_order_primary_case_slot_id']}`",
+        f"- customer_shadow_work_order_primary_operator_csv: `{s['customer_shadow_work_order_primary_operator_csv']}`",
+        f"- customer_shadow_work_order_primary_required_raw_data_custody: `{s['customer_shadow_work_order_primary_required_raw_data_custody']}`",
+        f"- customer_shadow_work_order_primary_required_redistribution_allowed: `{s['customer_shadow_work_order_primary_required_redistribution_allowed']}`",
         f"- blocker_count: `{s['blocker_count']}`",
         f"- commercial_readiness_promotion_allowed: `{s['commercial_readiness_promotion_allowed']}`",
         "",
@@ -411,13 +442,15 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
             "",
             "## Customer Shadow Work Order",
             "",
-            "| slot | status | required action | operator csv |",
-            "| --- | --- | --- | --- |",
+            "| slot | status | row kind | raw custody | redistribution | required action | operator csv |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
         ]
     )
     for row in payload["customer_shadow_work_order_rows"]:
         lines.append(
-            f"| `{row['case_slot_id']}` | `{row['status']}` | {row['required_action']} | `{row['operator_csv']}` |"
+            f"| `{row['case_slot_id']}` | `{row['status']}` | `{row['required_row_kind']}` | "
+            f"`{row['required_raw_data_custody']}` | `{row['required_redistribution_allowed']}` | "
+            f"{row['required_action']} | `{row['operator_csv']}` |"
         )
     lines.extend(["", "## Claim Boundary", "", s["claim_boundary"], "", "## Next Step", "", f"- {s['next_required_step']}", ""])
     path.parent.mkdir(parents=True, exist_ok=True)

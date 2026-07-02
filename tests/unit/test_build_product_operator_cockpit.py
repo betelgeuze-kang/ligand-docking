@@ -353,6 +353,23 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "customer_shadow_work_order_primary_required_action": (
                     "Add one reviewed real customer-shadow metadata row."
                 ),
+                "customer_shadow_work_order_primary_operator_csv": (
+                    "config/customer_shadow_evidence_intake_template.csv"
+                ),
+                "customer_shadow_work_order_primary_required_row_kind": "customer_shadow",
+                "customer_shadow_work_order_primary_required_raw_data_custody": "customer_retained",
+                "customer_shadow_work_order_primary_required_customer_retained_raw_data": True,
+                "customer_shadow_work_order_primary_required_redistribution_allowed": False,
+                "customer_shadow_work_order_primary_required_raw_data_stored_in_repo": False,
+                "customer_shadow_work_order_primary_required_derived_metadata_fields": [
+                    "artifact_fingerprint",
+                    "case_domain",
+                    "input_size_class",
+                    "result_metric_summary",
+                    "runner_profile",
+                ],
+                "customer_shadow_work_order_primary_required_reviewer_signoff_status": "approved",
+                "customer_shadow_work_order_primary_required_source_artifact_fingerprint": "sha256",
                 "paid_pilot_evidence_ready": False,
                 "paid_pilot_claim_allowed": False,
             }
@@ -599,6 +616,23 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["customer_shadow_work_order_primary_required_action"] == (
         "Add one reviewed real customer-shadow metadata row."
     )
+    assert summary["customer_shadow_work_order_primary_operator_csv"] == (
+        "config/customer_shadow_evidence_intake_template.csv"
+    )
+    assert summary["customer_shadow_work_order_primary_required_row_kind"] == "customer_shadow"
+    assert summary["customer_shadow_work_order_primary_required_raw_data_custody"] == "customer_retained"
+    assert summary["customer_shadow_work_order_primary_required_customer_retained_raw_data"] is True
+    assert summary["customer_shadow_work_order_primary_required_redistribution_allowed"] is False
+    assert summary["customer_shadow_work_order_primary_required_raw_data_stored_in_repo"] is False
+    assert summary["customer_shadow_work_order_primary_required_derived_metadata_fields"] == [
+        "artifact_fingerprint",
+        "case_domain",
+        "input_size_class",
+        "result_metric_summary",
+        "runner_profile",
+    ]
+    assert summary["customer_shadow_work_order_primary_required_reviewer_signoff_status"] == "approved"
+    assert summary["customer_shadow_work_order_primary_required_source_artifact_fingerprint"] == "sha256"
     assert summary["customer_shadow_intake_schema_ready"] is True
     assert summary["customer_shadow_minimum_met"] is False
     assert summary["customer_shadow_raw_data_stored_in_repo"] is False
@@ -815,6 +849,19 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "work_order_primary=customer_shadow_case_1" in (
         panels["customer_shadow_evidence_panel"]["secondary_metric"]
     )
+    assert "required_raw_custody=customer_retained" in (
+        panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    )
+    assert "required_retained_raw_data=true" in (
+        panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    )
+    assert "required_raw_data_in_repo=false" in (
+        panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    )
+    assert "required_derived_metadata_fields=5" in (
+        panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    )
+    assert "required_signoff=approved" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
     assert panels["customer_shadow_evidence_panel"]["blockers"] == [
         "Add one reviewed real customer-shadow metadata row."
     ]

@@ -1262,6 +1262,23 @@ def test_goal_customer_shadow_endpoint_reads_fail_closed_evidence(monkeypatch, t
                     "customer_shadow_work_order_primary_required_action": (
                         "Add one reviewed real customer-shadow metadata row."
                     ),
+                    "customer_shadow_work_order_primary_operator_csv": (
+                        "config/customer_shadow_evidence_intake_template.csv"
+                    ),
+                    "customer_shadow_work_order_primary_required_row_kind": "customer_shadow",
+                    "customer_shadow_work_order_primary_required_raw_data_custody": "customer_retained",
+                    "customer_shadow_work_order_primary_required_customer_retained_raw_data": True,
+                    "customer_shadow_work_order_primary_required_redistribution_allowed": False,
+                    "customer_shadow_work_order_primary_required_raw_data_stored_in_repo": False,
+                    "customer_shadow_work_order_primary_required_derived_metadata_fields": [
+                        "artifact_fingerprint",
+                        "case_domain",
+                        "input_size_class",
+                        "result_metric_summary",
+                        "runner_profile",
+                    ],
+                    "customer_shadow_work_order_primary_required_reviewer_signoff_status": "approved",
+                    "customer_shadow_work_order_primary_required_source_artifact_fingerprint": "sha256",
                     "paid_pilot_claim_allowed": False,
                     "commercial_readiness_promotion_allowed": False,
                     "next_required_step": "Collect three reviewed customer-shadow rows.",
@@ -1299,6 +1316,23 @@ def test_goal_customer_shadow_endpoint_reads_fail_closed_evidence(monkeypatch, t
     assert response["customer_shadow_work_order_primary_required_action"] == (
         "Add one reviewed real customer-shadow metadata row."
     )
+    assert response["customer_shadow_work_order_primary_operator_csv"] == (
+        "config/customer_shadow_evidence_intake_template.csv"
+    )
+    assert response["customer_shadow_work_order_primary_required_row_kind"] == "customer_shadow"
+    assert response["customer_shadow_work_order_primary_required_raw_data_custody"] == "customer_retained"
+    assert response["customer_shadow_work_order_primary_required_customer_retained_raw_data"] is True
+    assert response["customer_shadow_work_order_primary_required_redistribution_allowed"] is False
+    assert response["customer_shadow_work_order_primary_required_raw_data_stored_in_repo"] is False
+    assert response["customer_shadow_work_order_primary_required_derived_metadata_fields"] == [
+        "artifact_fingerprint",
+        "case_domain",
+        "input_size_class",
+        "result_metric_summary",
+        "runner_profile",
+    ]
+    assert response["customer_shadow_work_order_primary_required_reviewer_signoff_status"] == "approved"
+    assert response["customer_shadow_work_order_primary_required_source_artifact_fingerprint"] == "sha256"
     assert response["paid_pilot_claim_allowed"] is False
     assert response["commercial_readiness_promotion_allowed"] is False
     assert response["rows"] == []
@@ -1318,6 +1352,7 @@ def test_goal_customer_shadow_endpoint_reads_fail_closed_evidence(monkeypatch, t
     assert missing["missing_completed_customer_shadow_case_count"] == 3
     assert missing["customer_shadow_work_order_ready"] is False
     assert missing["customer_shadow_work_order_row_count"] == 0
+    assert missing["customer_shadow_work_order_primary_required_derived_metadata_fields"] == []
     assert missing["paid_pilot_claim_allowed"] is False
     assert missing["commercial_readiness_promotion_allowed"] is False
     assert missing["customer_shadow_work_order_rows"] == []
