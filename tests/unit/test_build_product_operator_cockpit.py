@@ -535,6 +535,33 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["observed_phase8_panel_count"] == 13
     assert summary["missing_required_phase8_panel_count"] == 0
     assert summary["paid_pilot_wording_allowed"] is False
+    assert summary["allowed_claim_count"] == 5
+    assert summary["disallowed_claim_count"] == 6
+    assert summary["allowed_claim_ids"] == [
+        "operator_cockpit_surface",
+        "restricted_scope_claim_guard",
+        "gpcr_hard_decoy_metric_review",
+        "pocketmd_lite_refinement_evidence",
+        "evidence_bundle_export",
+    ]
+    assert summary["disallowed_claim_ids"] == [
+        "paid_pilot_wording",
+        "general_platform_claim",
+        "broad_gpcr_claim",
+        "pocketmd_lite_customer_claim",
+        "public_benchmark_claim",
+        "enterprise_on_prem_platform_claim",
+    ]
+    assert summary["allowed_claim_text"] == (
+        "operator_cockpit_surface; restricted_scope_claim_guard; "
+        "gpcr_hard_decoy_metric_review; pocketmd_lite_refinement_evidence; "
+        "evidence_bundle_export"
+    )
+    assert summary["disallowed_claim_text"] == (
+        "paid_pilot_wording; general_platform_claim; broad_gpcr_claim; "
+        "pocketmd_lite_customer_claim; public_benchmark_claim; "
+        "enterprise_on_prem_platform_claim"
+    )
     assert summary["general_platform_claim_allowed"] is False
     assert summary["gpcr_hard_decoy_metric_ready"] is True
     assert summary["gpcr_broad_claim_allowed"] is False
@@ -997,6 +1024,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     ]
 
     assert claims["operator_cockpit_surface"]["allowed"] is True
+    assert claims["pocketmd_lite_refinement_evidence"]["allowed"] is True
     assert claims["paid_pilot_wording"]["allowed"] is False
     assert claims["general_platform_claim"]["allowed"] is False
     assert claims["broad_gpcr_claim"]["allowed"] is False

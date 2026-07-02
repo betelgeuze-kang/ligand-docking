@@ -35,6 +35,29 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "operator_action_required_panel_ids": ["release_blockers_operator_actions"],
                 "allowed_claim_count": 4,
                 "disallowed_claim_count": 6,
+                "allowed_claim_ids": [
+                    "operator_cockpit_surface",
+                    "restricted_scope_claim_guard",
+                    "gpcr_hard_decoy_metric_review",
+                    "evidence_bundle_export",
+                ],
+                "disallowed_claim_ids": [
+                    "paid_pilot_wording",
+                    "general_platform_claim",
+                    "broad_gpcr_claim",
+                    "pocketmd_lite_customer_claim",
+                    "public_benchmark_claim",
+                    "enterprise_on_prem_platform_claim",
+                ],
+                "allowed_claim_text": (
+                    "operator_cockpit_surface; restricted_scope_claim_guard; "
+                    "gpcr_hard_decoy_metric_review; evidence_bundle_export"
+                ),
+                "disallowed_claim_text": (
+                    "paid_pilot_wording; general_platform_claim; broad_gpcr_claim; "
+                    "pocketmd_lite_customer_claim; public_benchmark_claim; "
+                    "enterprise_on_prem_platform_claim"
+                ),
                 "paid_pilot_wording_allowed": False,
                 "general_platform_claim_allowed": False,
                 "gpcr_hard_decoy_metric_ready": True,
@@ -251,6 +274,31 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["phase8_surface_ready"] is True
     assert response["required_phase8_panel_count"] == 9
     assert response["source_artifact_blocked_panel_ids"] == ["hbond_backmap_candidate_table"]
+    assert response["allowed_claim_count"] == 4
+    assert response["disallowed_claim_count"] == 6
+    assert response["allowed_claim_ids"] == [
+        "operator_cockpit_surface",
+        "restricted_scope_claim_guard",
+        "gpcr_hard_decoy_metric_review",
+        "evidence_bundle_export",
+    ]
+    assert response["disallowed_claim_ids"] == [
+        "paid_pilot_wording",
+        "general_platform_claim",
+        "broad_gpcr_claim",
+        "pocketmd_lite_customer_claim",
+        "public_benchmark_claim",
+        "enterprise_on_prem_platform_claim",
+    ]
+    assert response["allowed_claim_text"] == (
+        "operator_cockpit_surface; restricted_scope_claim_guard; "
+        "gpcr_hard_decoy_metric_review; evidence_bundle_export"
+    )
+    assert response["disallowed_claim_text"] == (
+        "paid_pilot_wording; general_platform_claim; broad_gpcr_claim; "
+        "pocketmd_lite_customer_claim; public_benchmark_claim; "
+        "enterprise_on_prem_platform_claim"
+    )
     assert response["paid_pilot_wording_allowed"] is False
     assert response["general_platform_claim_allowed"] is False
     assert response["gpcr_hard_decoy_metric_ready"] is True
@@ -473,6 +521,12 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["phase8_surface_ready"] is False
     assert response["required_phase8_panel_count"] == 9
     assert response["observed_phase8_panel_count"] == 0
+    assert response["allowed_claim_count"] == 0
+    assert response["disallowed_claim_count"] == 0
+    assert response["allowed_claim_ids"] == []
+    assert response["disallowed_claim_ids"] == []
+    assert response["allowed_claim_text"] == ""
+    assert response["disallowed_claim_text"] == ""
     assert response["paid_pilot_wording_allowed"] is False
     assert response["general_platform_claim_allowed"] is False
     assert response["gpcr_broad_claim_allowed"] is False

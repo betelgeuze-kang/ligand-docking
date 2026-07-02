@@ -1053,8 +1053,10 @@ def build_product_operator_cockpit(
         customer_shadow_paid_pilot_ready=customer_shadow_paid_pilot_ready,
         enterprise_on_prem_ready=enterprise_ready,
     )
-    allowed_claim_text = "; ".join(row["claim_id"] for row in claim_rows if row["allowed"])
-    disallowed_claim_text = "; ".join(row["claim_id"] for row in claim_rows if not row["allowed"])
+    allowed_claim_ids = [row["claim_id"] for row in claim_rows if row["allowed"]]
+    disallowed_claim_ids = [row["claim_id"] for row in claim_rows if not row["allowed"]]
+    allowed_claim_text = "; ".join(allowed_claim_ids)
+    disallowed_claim_text = "; ".join(disallowed_claim_ids)
 
     panels = [
         _panel(
@@ -1645,8 +1647,12 @@ def build_product_operator_cockpit(
         "source_artifact_blocked_panel_ids": [row["panel_id"] for row in source_blocked_panels],
         "operator_action_required_panel_count": len(action_panels),
         "operator_action_required_panel_ids": [row["panel_id"] for row in action_panels],
-        "allowed_claim_count": sum(1 for row in claim_rows if row["allowed"]),
-        "disallowed_claim_count": sum(1 for row in claim_rows if not row["allowed"]),
+        "allowed_claim_count": len(allowed_claim_ids),
+        "disallowed_claim_count": len(disallowed_claim_ids),
+        "allowed_claim_ids": allowed_claim_ids,
+        "disallowed_claim_ids": disallowed_claim_ids,
+        "allowed_claim_text": allowed_claim_text,
+        "disallowed_claim_text": disallowed_claim_text,
         "paid_pilot_wording_allowed": paid_pilot_wording_allowed,
         "general_platform_claim_allowed": general_platform_claim_allowed,
         "gpcr_hard_decoy_metric_ready": gpcr_metric_ready,
