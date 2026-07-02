@@ -143,6 +143,31 @@ def _customer_shadow_work_order_rows(value: Any) -> list[dict[str, Any]]:
     return work_rows
 
 
+def _public_benchmark_field_work_order_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    work_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        work_rows.append(
+            {
+                "lane_id": str(row.get("lane_id") or ""),
+                "field_name": str(row.get("field_name") or ""),
+                "pending_row_count": _int(row.get("pending_row_count")),
+                "required_value": str(row.get("required_value") or ""),
+                "required_action": str(row.get("required_action") or ""),
+                "approval_token_required": str(row.get("approval_token_required") or ""),
+                "operator_csv": str(row.get("operator_csv") or ""),
+                "source_artifact": str(row.get("source_artifact") or ""),
+                "claim_boundary": str(row.get("claim_boundary") or ""),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return work_rows
+
+
 def _pr38_split_surface() -> dict[str, Any]:
     acceptance_packet = _read_json_object(PR38_SPLIT_ACCEPTANCE_PACKET_ARTIFACT)
     matrix_packet = _read_json_object(PR38_CHILD_PR_VERIFICATION_MATRIX_ARTIFACT)
@@ -307,6 +332,7 @@ def _missing_response() -> dict[str, Any]:
         "public_benchmark_field_work_order_primary_approval_token_required": "",
         "public_benchmark_field_work_order_primary_operator_csv": "",
         "public_benchmark_field_work_order_primary_source_artifact": "",
+        "public_benchmark_field_work_order_rows": [],
         "public_benchmark_primary_blocker_id": "",
         "public_benchmark_primary_blocker": "",
         "public_benchmark_primary_next_required_step": "",
@@ -615,6 +641,9 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "public_benchmark_field_work_order_primary_source_artifact": str(
             summary.get("public_benchmark_field_work_order_primary_source_artifact") or ""
+        ),
+        "public_benchmark_field_work_order_rows": _public_benchmark_field_work_order_rows(
+            summary.get("public_benchmark_field_work_order_rows")
         ),
         "public_benchmark_primary_blocker_id": str(
             summary.get("public_benchmark_primary_blocker_id") or ""

@@ -209,6 +209,28 @@ def _customer_shadow_work_order_rows(payload: dict[str, Any]) -> list[dict[str, 
     return rows
 
 
+def _public_benchmark_field_work_order_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _dict_list(payload, "field_work_order_rows"):
+        rows.append(
+            {
+                "lane_id": _text(row.get("lane_id")),
+                "field_name": _text(row.get("field_name")),
+                "pending_row_count": _int(row.get("pending_row_count")),
+                "required_value": _text(row.get("required_value")),
+                "required_action": _text(row.get("required_action")),
+                "approval_token_required": _text(row.get("approval_token_required")),
+                "operator_csv": _text(row.get("operator_csv")),
+                "source_artifact": _text(row.get("source_artifact")),
+                "claim_boundary": _text(row.get("claim_boundary")),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _metric(label: str, value: Any) -> str:
     if isinstance(value, bool):
         rendered = "true" if value else "false"
@@ -703,8 +725,12 @@ def build_product_operator_cockpit(
     pocketmd = _summary(pocketmd_payload)
     pocketmd_rows = _rows(pocketmd_payload)
     public_benchmark = _summary(_read_json(public_benchmark_json, root=root))
-    public_receipt_attach_packet = _summary(
-        _read_json(public_benchmark_receipt_attach_packet_json, root=root)
+    public_receipt_attach_payload = _read_json(
+        public_benchmark_receipt_attach_packet_json, root=root
+    )
+    public_receipt_attach_packet = _summary(public_receipt_attach_payload)
+    public_benchmark_field_work_order_rows = _public_benchmark_field_work_order_rows(
+        public_receipt_attach_payload
     )
     release_actions = _summary(_read_json(release_actions_json, root=root))
     pm_queue_payload = _read_json(pm_priority_queue_json, root=root)
@@ -1930,6 +1956,7 @@ def build_product_operator_cockpit(
         "public_benchmark_field_work_order_primary_source_artifact": (
             public_field_work_order_primary_source_artifact
         ),
+        "public_benchmark_field_work_order_rows": public_benchmark_field_work_order_rows,
         "public_benchmark_primary_blocker_id": public_primary_blocker_id,
         "public_benchmark_primary_blocker": public_primary_blocker,
         "public_benchmark_primary_next_required_step": public_primary_next_required_step,
