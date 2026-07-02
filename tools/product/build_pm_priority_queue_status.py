@@ -208,6 +208,8 @@ def _developer_preview_row(register_text: str, audit_payload: Any) -> dict[str, 
         gate_count = _int(audit.get("gate_count")) or len(DP_GATE_IDS)
         blocked_count = _int(audit.get("blocked_gate_count"))
         missing_receipts = _int(audit.get("missing_receipt_count"))
+        work_order_rows = _int(audit.get("receipt_work_order_row_count"))
+        work_order_primary = _text(audit.get("receipt_work_order_primary_gate_id"))
         primary_blocker = _text(audit.get("primary_blocker_id") or audit.get("primary_blocker"))
         return _row(
             "4",
@@ -217,6 +219,8 @@ def _developer_preview_row(register_text: str, audit_payload: Any) -> dict[str, 
             (
                 f"status={audit_status};ready_gates={ready_count}/{gate_count};"
                 f"blocked_gates={blocked_count};missing_receipts={missing_receipts};"
+                f"receipt_work_order_rows={work_order_rows};"
+                f"receipt_work_order_primary={work_order_primary or 'none'};"
                 f"primary_blocker={primary_blocker or 'none'}"
             ),
             primary_blocker or "developer_preview_final_gate_receipts_missing",

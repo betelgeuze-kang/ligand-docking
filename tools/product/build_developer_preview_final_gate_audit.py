@@ -258,6 +258,60 @@ def _join_metrics(*parts: str) -> str:
     return "; ".join(part for part in parts if part)
 
 
+def _split_receipt_blocker(blocker: str) -> tuple[str, str]:
+    text = _text(blocker)
+    if ":source_blocker=" in text:
+        artifact, detail = text.split(":source_blocker=", 1)
+        return artifact, detail
+    if ":" in text:
+        artifact, detail = text.split(":", 1)
+        return artifact, detail
+    return "", text
+
+
+def _blocker_required_action(detail: str) -> str:
+    if detail == "missing":
+        return "Create or attach the required receipt artifact."
+    if detail.startswith("status="):
+        return "Rebuild the receipt after clearing its source blockers."
+    if detail.endswith("_not_true"):
+        return f"Provide evidence so {detail[:-9]} is true."
+    if detail.endswith("_nonzero"):
+        return f"Clear the underlying blockers so {detail[:-8]} is zero."
+    if detail.endswith(":missing") or detail.endswith("_missing"):
+        return "Attach the missing source evidence required by the receipt."
+    if "missing_or_invalid" in detail:
+        return "Attach a valid source artifact for the receipt."
+    if "platform_mismatch" in detail:
+        return "Run this receipt on the expected platform or attach an approved platform receipt."
+    return "Resolve this receipt blocker and rebuild the Developer Preview audit."
+
+
+def _receipt_work_order_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    work_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if row["ready"]:
+            continue
+        for blocker in row["receipt_blockers"]:
+            artifact, detail = _split_receipt_blocker(blocker)
+            work_rows.append(
+                {
+                    "priority": row["priority"],
+                    "gate_id": row["gate_id"],
+                    "receipt_artifact": artifact,
+                    "blocker": blocker,
+                    "blocker_detail": detail,
+                    "required_action": _blocker_required_action(detail),
+                    "next_required_step": row["next_required_step"],
+                    "execution_enabled": False,
+                    "external_state_mutated": False,
+                    "claim_promotion_allowed": False,
+                    "claim_boundary": CLAIM_BOUNDARY,
+                }
+            )
+    return work_rows
+
+
 def _artifact_check(artifact: dict[str, Any], *, root: Path) -> dict[str, Any]:
     artifact_path = artifact["path"]
     path = _resolve(artifact_path, root=root)
@@ -391,6 +445,7 @@ def build_developer_preview_final_gate_audit(
         for row in blocked_rows
         for blocker in row["receipt_blockers"]
     ]
+    receipt_work_order_rows = _receipt_work_order_rows(rows)
     present_blocked_receipt_count = sum(
         int(row["present_blocked_receipt_count"])
         for row in blocked_rows
@@ -411,6 +466,20 @@ def build_developer_preview_final_gate_audit(
         "present_blocked_receipt_count": present_blocked_receipt_count,
         "receipt_blocker_count": len(receipt_blockers),
         "receipt_blockers": receipt_blockers,
+        "receipt_work_order_ready": not receipt_work_order_rows,
+        "receipt_work_order_row_count": len(receipt_work_order_rows),
+        "receipt_work_order_blocked_gate_count": len(
+            {row["gate_id"] for row in receipt_work_order_rows}
+        ),
+        "receipt_work_order_primary_gate_id": receipt_work_order_rows[0]["gate_id"]
+        if receipt_work_order_rows
+        else "",
+        "receipt_work_order_primary_receipt_artifact": receipt_work_order_rows[0]["receipt_artifact"]
+        if receipt_work_order_rows
+        else "",
+        "receipt_work_order_primary_blocker": receipt_work_order_rows[0]["blocker_detail"]
+        if receipt_work_order_rows
+        else "",
         "register_gate_id_count": len(materialized_gate_ids),
         "register_gate_ids_complete": materialized_gate_ids == {spec["gate_id"] for spec in GATE_SPECS},
         "primary_blocker_id": blocked_rows[0]["gate_id"] if blocked_rows else "",
@@ -423,7 +492,7 @@ def build_developer_preview_final_gate_audit(
         if blocked_rows
         else "Developer Preview final gates are ready for operator review.",
     }
-    return {"summary": summary, "rows": rows}
+    return {"summary": summary, "rows": rows, "receipt_work_order_rows": receipt_work_order_rows}
 
 
 def _write_json(path_like: str | Path, payload: dict[str, Any], *, root: Path = ROOT) -> None:
@@ -461,6 +530,7 @@ def _render_md(payload: dict[str, Any]) -> str:
         f"- missing_receipt_count: `{summary['missing_receipt_count']}`",
         f"- present_blocked_receipt_count: `{summary['present_blocked_receipt_count']}`",
         f"- receipt_blocker_count: `{summary['receipt_blocker_count']}`",
+        f"- receipt_work_order_row_count: `{summary['receipt_work_order_row_count']}`",
         f"- primary_blocker_id: `{summary['primary_blocker_id']}`",
         "",
         "| priority | gate | status | receipts | blocker |",
@@ -470,6 +540,20 @@ def _render_md(payload: dict[str, Any]) -> str:
         lines.append(
             f"| `{row['priority']}` | `{row['gate_id']}` | `{row['status']}` | "
             f"`{row['present_receipt_count']}/{row['required_receipt_count']}` | `{row['blocker']}` |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Receipt Work Order",
+            "",
+            "| gate | receipt | blocker | action |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
+    for row in payload.get("receipt_work_order_rows", []):
+        lines.append(
+            f"| `{row['gate_id']}` | `{row['receipt_artifact']}` | "
+            f"`{row['blocker_detail']}` | {row['required_action']} |"
         )
     lines.extend(["", CLAIM_BOUNDARY, ""])
     return "\n".join(lines)

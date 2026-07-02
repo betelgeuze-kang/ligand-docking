@@ -94,6 +94,37 @@ def test_pm_priority_queue_status_blocks_without_local_pr_capture(tmp_path: Path
     assert first["blocker"] == "github_open_pr_state_not_captured"
 
 
+def test_pm_priority_queue_status_surfaces_developer_preview_work_order_count(
+    tmp_path: Path,
+) -> None:
+    _write_common_inputs(tmp_path)
+    _write_json(
+        tmp_path / "runs/developer_preview_final_gate_audit_current.json",
+        {
+            "summary": {
+                "status": "blocked_developer_preview_final_gate_audit",
+                "developer_preview_clean_baseline_ready": False,
+                "ready_gate_count": 3,
+                "gate_count": 6,
+                "blocked_gate_count": 3,
+                "missing_receipt_count": 0,
+                "receipt_work_order_row_count": 29,
+                "receipt_work_order_primary_gate_id": "benchmark_results_clean_checkout_regenerated",
+                "primary_blocker_id": "benchmark_results_clean_checkout_regenerated",
+                "next_required_step": "Run the clean-checkout benchmark regeneration command.",
+            }
+        },
+    )
+
+    payload = mod.build_pm_priority_queue_status(root=tmp_path)
+
+    row = {item["item_id"]: item for item in payload["rows"]}["4"]
+    assert row["ready"] is False
+    assert row["status"] == "blocked_developer_preview_final_gates"
+    assert "receipt_work_order_rows=29" in row["evidence"]
+    assert "receipt_work_order_primary=benchmark_results_clean_checkout_regenerated" in row["evidence"]
+
+
 def test_pm_priority_queue_status_rejects_external_receipt_promotion_without_url(tmp_path: Path) -> None:
     _write_common_inputs(tmp_path)
     _write_json(

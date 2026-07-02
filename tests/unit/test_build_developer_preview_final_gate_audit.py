@@ -133,6 +133,17 @@ def test_developer_preview_final_gate_audit_blocks_missing_receipts(tmp_path: Pa
     assert summary["blocked_gate_count"] == 6
     assert summary["primary_blocker_id"] == "benchmark_results_clean_checkout_regenerated"
     assert summary["claim_promotion_allowed"] is False
+    assert summary["receipt_work_order_ready"] is False
+    assert summary["receipt_work_order_row_count"] >= summary["missing_receipt_count"]
+    assert summary["receipt_work_order_blocked_gate_count"] == 6
+    assert summary["receipt_work_order_primary_gate_id"] == "benchmark_results_clean_checkout_regenerated"
+    assert summary["receipt_work_order_primary_receipt_artifact"] == (
+        ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+    )
+    assert summary["receipt_work_order_primary_blocker"] == "missing"
+    assert payload["receipt_work_order_rows"][0]["required_action"] == (
+        "Create or attach the required receipt artifact."
+    )
     assert rows["benchmark_results_clean_checkout_regenerated"]["blocker"].endswith(":missing")
     assert rows["linux_windows_reproducibility_confirmed"]["required_receipt_count"] == 2
     assert summary["execution_enabled"] is False
@@ -203,6 +214,21 @@ def test_developer_preview_final_gate_audit_surfaces_present_blocked_receipt_det
     assert "source_blocker=observer_id_missing" in receipt_blockers
     assert "source_blocker=anonymized_summary_missing" in receipt_blockers
     assert summary["receipt_blocker_count"] == len(summary["receipt_blockers"])
+    assert summary["receipt_work_order_ready"] is False
+    assert summary["receipt_work_order_row_count"] == len(payload["receipt_work_order_rows"])
+    assert summary["receipt_work_order_blocked_gate_count"] == 1
+    work_rows = {
+        item["blocker_detail"]: item for item in payload["receipt_work_order_rows"]
+    }
+    assert work_rows["observer_signoff_missing"]["receipt_artifact"] == (
+        ".betelgeuze/developer_preview_new_user_observation_receipt.json"
+    )
+    assert work_rows["observer_signoff_missing"]["required_action"] == (
+        "Attach the missing source evidence required by the receipt."
+    )
+    assert work_rows["observer_signoff_not_true"]["required_action"] == (
+        "Provide evidence so observer_signoff is true."
+    )
 
 
 def test_developer_preview_final_gate_audit_ready_when_all_receipts_pass(tmp_path: Path) -> None:
@@ -218,6 +244,9 @@ def test_developer_preview_final_gate_audit_ready_when_all_receipts_pass(tmp_pat
     assert summary["blocked_gate_count"] == 0
     assert summary["missing_receipt_count"] == 0
     assert summary["blockers"] == []
+    assert summary["receipt_work_order_ready"] is True
+    assert summary["receipt_work_order_row_count"] == 0
+    assert payload["receipt_work_order_rows"] == []
     assert summary["claim_promotion_allowed"] is False
 
 
@@ -244,4 +273,6 @@ def test_developer_preview_final_gate_audit_cli_writes_outputs(tmp_path: Path) -
         "developer_preview_final_gate_audit"
     )
     assert out_csv.read_text(encoding="utf-8").startswith("priority,gate_id,status,")
-    assert "Developer Preview Final Gate Audit" in out_md.read_text(encoding="utf-8")
+    md = out_md.read_text(encoding="utf-8")
+    assert "Developer Preview Final Gate Audit" in md
+    assert "Receipt Work Order" in md
