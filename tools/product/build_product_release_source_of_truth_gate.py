@@ -1541,6 +1541,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "builder_command": DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND,
         "depends_on": [
             "tools/product/build_developer_preview_final_gate_audit.py",
+            "tools/product/build_developer_preview_platform_reproducibility_receipt.py",
             "tools/product/build_developer_preview_silent_import_loss_receipt.py",
             "docs/developer_preview_final_gate_action_register.md",
         ],
