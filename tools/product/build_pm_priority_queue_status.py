@@ -321,6 +321,10 @@ def _external_benchmark_row(payload: Any, audit_payload: Any = None, attach_payl
     field_work_order_primary = _text(
         attach.get("field_work_order_primary_lane_id") or attach.get("field_work_order_primary_field_name")
     )
+    field_work_order_primary_field = _text(attach.get("field_work_order_primary_field_name"))
+    field_work_order_primary_required_action = _text(
+        attach.get("field_work_order_primary_required_action")
+    )
     primary_blocker = _text(
         attach.get("primary_blocker_id")
         or audit.get("primary_blocker_id")
@@ -334,7 +338,8 @@ def _external_benchmark_row(payload: Any, audit_payload: Any = None, attach_payl
         f"audit_status={audit_status or 'missing'};attach_status={attach_status or 'missing'};"
         f"audit_ready={audit_ready};attach_ready={attach_ready};"
         f"field_work_order_rows={field_work_order_rows};"
-        f"field_work_order_primary={field_work_order_primary or 'none'}"
+        f"field_work_order_primary={field_work_order_primary or 'none'};"
+        f"field_work_order_primary_field={field_work_order_primary_field or 'none'}"
     )
     return _row(
         "5",
@@ -351,7 +356,8 @@ def _external_benchmark_row(payload: Any, audit_payload: Any = None, attach_payl
         ready,
         evidence,
         primary_blocker or "external_benchmark_receipt_queue_incomplete",
-        _text(attach.get("next_required_step") or audit.get("next_required_step"))
+        field_work_order_primary_required_action
+        or _text(attach.get("next_required_step") or audit.get("next_required_step"))
         or "Create/confirm operator queue rows and attach receipt URLs only after real closure evidence exists.",
     )
 

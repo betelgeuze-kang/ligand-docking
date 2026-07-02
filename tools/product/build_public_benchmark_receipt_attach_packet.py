@@ -153,6 +153,16 @@ def _csv_pending_field_counts(path_like: str | Path, *, root: Path = ROOT) -> di
     return {field: count for field, count in counts.items() if field}
 
 
+def _field_required_action(*, field_name: str, required_value: str, approval_token_required: str) -> str:
+    if field_name == "approval_token":
+        return f"Fill approval_token with {approval_token_required} after operator review."
+    if field_name == "license_ok":
+        return "Confirm license_ok=true only after the benchmark input and receipt license review passes."
+    if field_name in {"operator_id", "reviewed_at_utc"}:
+        return f"Fill {field_name} with reviewed operator metadata."
+    return f"Replace operator placeholder for {field_name} with {required_value}."
+
+
 def _field_work_order_row(
     *,
     lane_id: str,
@@ -172,6 +182,11 @@ def _field_work_order_row(
         "operator_csv": _display(operator_csv, root=root),
         "required_value": required_value,
         "approval_token_required": approval_token_required,
+        "required_action": _field_required_action(
+            field_name=field_name,
+            required_value=required_value,
+            approval_token_required=approval_token_required,
+        ),
         "execution_enabled": False,
         "external_state_mutated": False,
         "claim_promotion_allowed": False,
@@ -366,6 +381,7 @@ def build_public_benchmark_receipt_attach_packet(
     ready_rows = [row for row in rows if row["ready"]]
     blocked_rows = [row for row in rows if not row["ready"]]
     packet_ready = len(ready_rows) == len(rows)
+    primary_work_order_row = field_work_order_rows[0] if field_work_order_rows else {}
     summary = {
         "packet_type": PACKET_TYPE,
         "schema_version": SCHEMA_VERSION,
@@ -386,12 +402,24 @@ def build_public_benchmark_receipt_attach_packet(
         "field_work_order_pending_field_count": sum(
             _int(row.get("pending_row_count")) for row in field_work_order_rows
         ),
-        "field_work_order_primary_lane_id": field_work_order_rows[0]["lane_id"]
-        if field_work_order_rows
-        else "",
-        "field_work_order_primary_field_name": field_work_order_rows[0]["field_name"]
-        if field_work_order_rows
-        else "",
+        "field_work_order_primary_lane_id": _text(primary_work_order_row.get("lane_id")),
+        "field_work_order_primary_field_name": _text(primary_work_order_row.get("field_name")),
+        "field_work_order_primary_pending_row_count": _int(
+            primary_work_order_row.get("pending_row_count")
+        ),
+        "field_work_order_primary_required_value": _text(
+            primary_work_order_row.get("required_value")
+        ),
+        "field_work_order_primary_required_action": _text(
+            primary_work_order_row.get("required_action")
+        ),
+        "field_work_order_primary_approval_token_required": _text(
+            primary_work_order_row.get("approval_token_required")
+        ),
+        "field_work_order_primary_operator_csv": _text(primary_work_order_row.get("operator_csv")),
+        "field_work_order_primary_source_artifact": _text(
+            primary_work_order_row.get("source_artifact")
+        ),
         "primary_blocker_id": blocked_rows[0]["lane_id"] if blocked_rows else "",
         "primary_blocker": blocked_rows[0]["blocker"] if blocked_rows else "",
         "external_receipts_audit_status": _text(audit.get("status")),
@@ -484,14 +512,14 @@ def _render_md(payload: dict[str, Any]) -> str:
             "",
             "## Field Work Order",
             "",
-            "| lane | field | pending rows | required value | operator csv |",
-            "| --- | --- | ---: | --- | --- |",
+            "| lane | field | pending rows | required value | action | operator csv |",
+            "| --- | --- | ---: | --- | --- | --- |",
         ]
     )
     for row in payload.get("field_work_order_rows", []):
         lines.append(
             f"| `{row['lane_id']}` | `{row['field_name']}` | `{row['pending_row_count']}` | "
-            f"{row['required_value']} | `{row['operator_csv']}` |"
+            f"{row['required_value']} | {row['required_action']} | `{row['operator_csv']}` |"
         )
     lines.extend(["", CLAIM_BOUNDARY, ""])
     return "\n".join(lines)

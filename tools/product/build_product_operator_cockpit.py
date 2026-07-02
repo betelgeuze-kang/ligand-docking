@@ -813,6 +813,24 @@ def build_product_operator_cockpit(
     public_field_work_order_primary_lane = _first_text(
         public_receipt_attach_packet.get("field_work_order_primary_lane_id")
     )
+    public_field_work_order_primary_pending_rows = _int(
+        public_receipt_attach_packet.get("field_work_order_primary_pending_row_count")
+    )
+    public_field_work_order_primary_required_value = _first_text(
+        public_receipt_attach_packet.get("field_work_order_primary_required_value")
+    )
+    public_field_work_order_primary_required_action = _first_text(
+        public_receipt_attach_packet.get("field_work_order_primary_required_action")
+    )
+    public_field_work_order_primary_approval_token = _first_text(
+        public_receipt_attach_packet.get("field_work_order_primary_approval_token_required")
+    )
+    public_field_work_order_primary_operator_csv = _first_text(
+        public_receipt_attach_packet.get("field_work_order_primary_operator_csv")
+    )
+    public_field_work_order_primary_source_artifact = _first_text(
+        public_receipt_attach_packet.get("field_work_order_primary_source_artifact")
+    )
     public_primary_blocker_id = _first_text(
         public_receipt_attach_packet.get("primary_blocker_id"),
         public_benchmark.get("primary_blocker_id"),
@@ -1193,6 +1211,8 @@ def build_product_operator_cockpit(
                 _count_metric("field_work_order_pending_fields", public_field_work_order_pending_fields),
                 _metric("field_work_order_primary", public_field_work_order_primary_field),
                 _metric("field_work_order_lane", public_field_work_order_primary_lane),
+                _count_metric("field_work_order_primary_rows", public_field_work_order_primary_pending_rows),
+                _metric("field_work_order_required_value", public_field_work_order_primary_required_value),
                 _metric("primary_blocker_id", public_primary_blocker_id),
                 _metric("primary_blocker", public_primary_blocker),
                 _metric("score_template", public_vina_score_template_csv),
@@ -1207,6 +1227,7 @@ def build_product_operator_cockpit(
                 _metric("claim_promotion_allowed", _bool_true(public_benchmark.get("claim_promotion_allowed"))),
             ),
             next_action=_first_text(
+                public_field_work_order_primary_required_action,
                 public_primary_next_required_step,
                 public_benchmark.get("top_required_input"),
                 "Attach benchmark receipts and clear Vina/GNINA same-input comparison evidence.",
@@ -1558,6 +1579,24 @@ def build_product_operator_cockpit(
         "public_benchmark_field_work_order_pending_field_count": public_field_work_order_pending_fields,
         "public_benchmark_field_work_order_primary_field_name": public_field_work_order_primary_field,
         "public_benchmark_field_work_order_primary_lane_id": public_field_work_order_primary_lane,
+        "public_benchmark_field_work_order_primary_pending_row_count": (
+            public_field_work_order_primary_pending_rows
+        ),
+        "public_benchmark_field_work_order_primary_required_value": (
+            public_field_work_order_primary_required_value
+        ),
+        "public_benchmark_field_work_order_primary_required_action": (
+            public_field_work_order_primary_required_action
+        ),
+        "public_benchmark_field_work_order_primary_approval_token_required": (
+            public_field_work_order_primary_approval_token
+        ),
+        "public_benchmark_field_work_order_primary_operator_csv": (
+            public_field_work_order_primary_operator_csv
+        ),
+        "public_benchmark_field_work_order_primary_source_artifact": (
+            public_field_work_order_primary_source_artifact
+        ),
         "public_benchmark_primary_blocker_id": public_primary_blocker_id,
         "public_benchmark_primary_blocker": public_primary_blocker,
         "public_benchmark_primary_next_required_step": public_primary_next_required_step,

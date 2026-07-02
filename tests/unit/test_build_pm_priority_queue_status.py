@@ -50,6 +50,10 @@ def _write_common_inputs(root: Path) -> None:
                 "field_work_order_row_count": 22,
                 "field_work_order_primary_lane_id": "vina_gnina_same_input_scores",
                 "field_work_order_primary_field_name": "approval_token",
+                "field_work_order_primary_required_action": (
+                    "Fill approval_token with APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES "
+                    "after operator review."
+                ),
                 "primary_blocker_id": "vina_gnina_same_input_scores",
                 "next_required_step": "Fill public benchmark receipt fields.",
             }
@@ -301,7 +305,11 @@ def test_pm_priority_queue_status_uses_public_benchmark_attach_packet_work_order
     assert "attach_status=blocked_public_benchmark_receipt_attach_packet" in row["evidence"]
     assert "field_work_order_rows=22" in row["evidence"]
     assert "field_work_order_primary=vina_gnina_same_input_scores" in row["evidence"]
-    assert row["next_action"] == "Fill public benchmark receipt fields."
+    assert "field_work_order_primary_field=approval_token" in row["evidence"]
+    assert row["next_action"] == (
+        "Fill approval_token with APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES "
+        "after operator review."
+    )
 
 
 def test_pm_priority_queue_status_marks_public_benchmark_ready_after_canonical_receipts(

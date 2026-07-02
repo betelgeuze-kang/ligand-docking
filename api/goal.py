@@ -3499,6 +3499,14 @@ async def get_goal_public_benchmark() -> dict[str, Any]:
             "receipt_attach_packet_ready": False,
             "blocker_count": 0,
             "field_work_order_row_count": 0,
+            "field_work_order_primary_lane_id": "",
+            "field_work_order_primary_field_name": "",
+            "field_work_order_primary_pending_row_count": 0,
+            "field_work_order_primary_required_value": "",
+            "field_work_order_primary_required_action": "",
+            "field_work_order_primary_approval_token_required": "",
+            "field_work_order_primary_operator_csv": "",
+            "field_work_order_primary_source_artifact": "",
             "rows": [],
             "receipt_attach_rows": [],
             "field_work_order_rows": [],
@@ -3529,6 +3537,24 @@ async def get_goal_public_benchmark() -> dict[str, Any]:
         "field_work_order_row_count": _int(attach.get("field_work_order_row_count")),
         "field_work_order_primary_lane_id": str(attach.get("field_work_order_primary_lane_id") or ""),
         "field_work_order_primary_field_name": str(attach.get("field_work_order_primary_field_name") or ""),
+        "field_work_order_primary_pending_row_count": _int(
+            attach.get("field_work_order_primary_pending_row_count")
+        ),
+        "field_work_order_primary_required_value": str(
+            attach.get("field_work_order_primary_required_value") or ""
+        ),
+        "field_work_order_primary_required_action": str(
+            attach.get("field_work_order_primary_required_action") or ""
+        ),
+        "field_work_order_primary_approval_token_required": str(
+            attach.get("field_work_order_primary_approval_token_required") or ""
+        ),
+        "field_work_order_primary_operator_csv": str(
+            attach.get("field_work_order_primary_operator_csv") or ""
+        ),
+        "field_work_order_primary_source_artifact": str(
+            attach.get("field_work_order_primary_source_artifact") or ""
+        ),
         "vina_gnina_score_value_pending_count": _int(attach.get("vina_gnina_score_value_pending_count")),
         "vina_gnina_operator_metadata_pending_count": _int(
             attach.get("vina_gnina_operator_metadata_pending_count")

@@ -164,6 +164,22 @@ def test_public_benchmark_receipt_attach_packet_blocks_pending_operator_fields(t
     assert summary["field_work_order_pending_field_count"] == 38
     assert summary["field_work_order_primary_lane_id"] == "vina_gnina_same_input_scores"
     assert summary["field_work_order_primary_field_name"] == "approval_token"
+    assert summary["field_work_order_primary_pending_row_count"] == 2
+    assert summary["field_work_order_primary_required_value"] == (
+        f"{mod.VINA_GNINA_APPROVAL_TOKEN} for approval_token"
+    )
+    assert summary["field_work_order_primary_approval_token_required"] == (
+        mod.VINA_GNINA_APPROVAL_TOKEN
+    )
+    assert summary["field_work_order_primary_required_action"] == (
+        f"Fill approval_token with {mod.VINA_GNINA_APPROVAL_TOKEN} after operator review."
+    )
+    assert summary["field_work_order_primary_operator_csv"] == (
+        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+    )
+    assert summary["field_work_order_primary_source_artifact"] == (
+        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+    )
     assert rows["vina_gnina_same_input_scores"]["pending_value_count"] == 4
     assert rows["vina_gnina_same_input_scores"]["pending_metadata_count"] == 32
     assert rows["vina_gnina_same_input_scores"]["pending_approval_token_count"] == 2
@@ -173,6 +189,9 @@ def test_public_benchmark_receipt_attach_packet_blocks_pending_operator_fields(t
         (row["lane_id"], row["field_name"]): row for row in payload["field_work_order_rows"]
     }
     assert field_rows[("vina_gnina_same_input_scores", "vina_score")]["pending_row_count"] == 2
+    assert field_rows[("vina_gnina_same_input_scores", "approval_token")]["required_action"] == (
+        f"Fill approval_token with {mod.VINA_GNINA_APPROVAL_TOKEN} after operator review."
+    )
     assert field_rows[("metric_source_receipt_rows", "metric_value")]["pending_row_count"] == 3
     assert field_rows[("metric_source_receipt_rows", "approval_token")]["pending_row_count"] == 3
     assert summary["execution_enabled"] is False
@@ -232,3 +251,4 @@ def test_public_benchmark_receipt_attach_packet_cli_writes_outputs(tmp_path: Pat
     assert "Public Benchmark Receipt Attach Packet" in md
     assert "Field Work Order" in md
     assert "metric_value" in md
+    assert "Fill approval_token with" in md

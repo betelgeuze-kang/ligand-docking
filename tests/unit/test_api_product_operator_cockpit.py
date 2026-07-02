@@ -79,6 +79,23 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "public_benchmark_field_work_order_pending_field_count": 702,
                 "public_benchmark_field_work_order_primary_field_name": "approval_token",
                 "public_benchmark_field_work_order_primary_lane_id": "vina_gnina_same_input_scores",
+                "public_benchmark_field_work_order_primary_pending_row_count": 16,
+                "public_benchmark_field_work_order_primary_required_value": (
+                    "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES for approval_token"
+                ),
+                "public_benchmark_field_work_order_primary_required_action": (
+                    "Fill approval_token with APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES "
+                    "after operator review."
+                ),
+                "public_benchmark_field_work_order_primary_approval_token_required": (
+                    "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES"
+                ),
+                "public_benchmark_field_work_order_primary_operator_csv": (
+                    "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                ),
+                "public_benchmark_field_work_order_primary_source_artifact": (
+                    "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+                ),
                 "public_benchmark_primary_blocker_id": "vina_gnina_same_input_scores",
                 "public_benchmark_primary_blocker": "vina_gnina_same_input_score_evidence_missing",
                 "public_benchmark_primary_next_required_step": (
@@ -241,6 +258,23 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["public_benchmark_field_work_order_primary_field_name"] == "approval_token"
     assert response["public_benchmark_field_work_order_primary_lane_id"] == (
         "vina_gnina_same_input_scores"
+    )
+    assert response["public_benchmark_field_work_order_primary_pending_row_count"] == 16
+    assert response["public_benchmark_field_work_order_primary_required_value"] == (
+        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES for approval_token"
+    )
+    assert response["public_benchmark_field_work_order_primary_required_action"] == (
+        "Fill approval_token with APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES "
+        "after operator review."
+    )
+    assert response["public_benchmark_field_work_order_primary_approval_token_required"] == (
+        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES"
+    )
+    assert response["public_benchmark_field_work_order_primary_operator_csv"] == (
+        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+    )
+    assert response["public_benchmark_field_work_order_primary_source_artifact"] == (
+        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
     )
     assert response["public_benchmark_primary_blocker_id"] == "vina_gnina_same_input_scores"
     assert response["public_benchmark_primary_blocker"] == (
@@ -408,6 +442,12 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["public_benchmark_field_work_order_pending_field_count"] == 0
     assert response["public_benchmark_field_work_order_primary_field_name"] == ""
     assert response["public_benchmark_field_work_order_primary_lane_id"] == ""
+    assert response["public_benchmark_field_work_order_primary_pending_row_count"] == 0
+    assert response["public_benchmark_field_work_order_primary_required_value"] == ""
+    assert response["public_benchmark_field_work_order_primary_required_action"] == ""
+    assert response["public_benchmark_field_work_order_primary_approval_token_required"] == ""
+    assert response["public_benchmark_field_work_order_primary_operator_csv"] == ""
+    assert response["public_benchmark_field_work_order_primary_source_artifact"] == ""
     assert response["public_benchmark_primary_blocker_id"] == ""
     assert response["public_benchmark_primary_blocker"] == ""
     assert response["public_benchmark_primary_next_required_step"] == ""

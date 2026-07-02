@@ -1138,6 +1138,23 @@ def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, 
                     "field_work_order_row_count": 22,
                     "field_work_order_primary_lane_id": "vina_gnina_same_input_scores",
                     "field_work_order_primary_field_name": "approval_token",
+                    "field_work_order_primary_pending_row_count": 16,
+                    "field_work_order_primary_required_value": (
+                        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES for approval_token"
+                    ),
+                    "field_work_order_primary_required_action": (
+                        "Fill approval_token with APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES "
+                        "after operator review."
+                    ),
+                    "field_work_order_primary_approval_token_required": (
+                        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES"
+                    ),
+                    "field_work_order_primary_operator_csv": (
+                        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                    ),
+                    "field_work_order_primary_source_artifact": (
+                        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+                    ),
                     "vina_gnina_score_value_pending_count": 32,
                     "vina_gnina_operator_metadata_pending_count": 128,
                     "vina_gnina_approval_token_pending_count": 16,
@@ -1181,6 +1198,23 @@ def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, 
     assert response["field_work_order_row_count"] == 22
     assert response["field_work_order_primary_lane_id"] == "vina_gnina_same_input_scores"
     assert response["field_work_order_primary_field_name"] == "approval_token"
+    assert response["field_work_order_primary_pending_row_count"] == 16
+    assert response["field_work_order_primary_required_value"] == (
+        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES for approval_token"
+    )
+    assert response["field_work_order_primary_required_action"] == (
+        "Fill approval_token with APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES "
+        "after operator review."
+    )
+    assert response["field_work_order_primary_approval_token_required"] == (
+        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES"
+    )
+    assert response["field_work_order_primary_operator_csv"] == (
+        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+    )
+    assert response["field_work_order_primary_source_artifact"] == (
+        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+    )
     assert response["vina_gnina_score_value_pending_count"] == 32
     assert response["metric_source_receipt_manual_field_pending_count"] == 510
     assert response["rows"][0]["step_id"] == "vina_gnina_same_input_comparison"
@@ -1201,6 +1235,7 @@ def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, 
     assert missing["status"] == "missing_public_benchmark_receipts"
     assert missing["external_benchmark_receipts_ready"] is False
     assert missing["receipt_attach_packet_ready"] is False
+    assert missing["field_work_order_primary_required_action"] == ""
     assert missing["field_work_order_rows"] == []
     assert missing["execution_enabled"] is False
     assert missing["external_state_mutated"] is False

@@ -230,6 +230,23 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "field_work_order_pending_field_count": 702,
                 "field_work_order_primary_field_name": "approval_token",
                 "field_work_order_primary_lane_id": "vina_gnina_same_input_scores",
+                "field_work_order_primary_pending_row_count": 16,
+                "field_work_order_primary_required_value": (
+                    "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES for approval_token"
+                ),
+                "field_work_order_primary_required_action": (
+                    "Fill approval_token with APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES "
+                    "after operator review."
+                ),
+                "field_work_order_primary_approval_token_required": (
+                    "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES"
+                ),
+                "field_work_order_primary_operator_csv": (
+                    "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                ),
+                "field_work_order_primary_source_artifact": (
+                    "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+                ),
                 "next_required_step": "Fill the receipt attach packet rows before rerunning the benchmark audit.",
             }
         },
@@ -518,6 +535,23 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["public_benchmark_field_work_order_primary_lane_id"] == (
         "vina_gnina_same_input_scores"
     )
+    assert summary["public_benchmark_field_work_order_primary_pending_row_count"] == 16
+    assert summary["public_benchmark_field_work_order_primary_required_value"] == (
+        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES for approval_token"
+    )
+    assert summary["public_benchmark_field_work_order_primary_required_action"] == (
+        "Fill approval_token with APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES "
+        "after operator review."
+    )
+    assert summary["public_benchmark_field_work_order_primary_approval_token_required"] == (
+        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES"
+    )
+    assert summary["public_benchmark_field_work_order_primary_operator_csv"] == (
+        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+    )
+    assert summary["public_benchmark_field_work_order_primary_source_artifact"] == (
+        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+    )
     assert summary["public_benchmark_primary_blocker_id"] == "vina_gnina_same_input_scores"
     assert summary["public_benchmark_primary_blocker"] == (
         "vina_gnina_same_input_score_evidence_missing"
@@ -683,6 +717,14 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "field_work_order_lane=vina_gnina_same_input_scores" in (
         panels["public_benchmark_scorecard"]["secondary_metric"]
     )
+    assert "field_work_order_primary_rows=16" in (
+        panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
+    assert (
+        "field_work_order_required_value=APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES "
+        "for approval_token"
+        in panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
     assert "primary_blocker_id=vina_gnina_same_input_scores" in (
         panels["public_benchmark_scorecard"]["secondary_metric"]
     )
@@ -711,7 +753,8 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         "metric_source_receipt_rows:benchmark_metric_source_receipt_rows_unapproved",
     ]
     assert panels["public_benchmark_scorecard"]["next_action"] == (
-        "Fill the receipt attach packet rows before rerunning the benchmark audit."
+        "Fill approval_token with APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES "
+        "after operator review."
     )
     assert panels["release_blockers_operator_actions"]["claim_allowed"] is False
     assert panels["release_blockers_operator_actions"]["status"] == "pm_priority_queue_blocked"

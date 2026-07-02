@@ -122,6 +122,12 @@ def _missing_response() -> dict[str, Any]:
         "public_benchmark_field_work_order_pending_field_count": 0,
         "public_benchmark_field_work_order_primary_field_name": "",
         "public_benchmark_field_work_order_primary_lane_id": "",
+        "public_benchmark_field_work_order_primary_pending_row_count": 0,
+        "public_benchmark_field_work_order_primary_required_value": "",
+        "public_benchmark_field_work_order_primary_required_action": "",
+        "public_benchmark_field_work_order_primary_approval_token_required": "",
+        "public_benchmark_field_work_order_primary_operator_csv": "",
+        "public_benchmark_field_work_order_primary_source_artifact": "",
         "public_benchmark_primary_blocker_id": "",
         "public_benchmark_primary_blocker": "",
         "public_benchmark_primary_next_required_step": "",
@@ -344,6 +350,24 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "public_benchmark_field_work_order_primary_lane_id": str(
             summary.get("public_benchmark_field_work_order_primary_lane_id") or ""
+        ),
+        "public_benchmark_field_work_order_primary_pending_row_count": _int(
+            summary.get("public_benchmark_field_work_order_primary_pending_row_count")
+        ),
+        "public_benchmark_field_work_order_primary_required_value": str(
+            summary.get("public_benchmark_field_work_order_primary_required_value") or ""
+        ),
+        "public_benchmark_field_work_order_primary_required_action": str(
+            summary.get("public_benchmark_field_work_order_primary_required_action") or ""
+        ),
+        "public_benchmark_field_work_order_primary_approval_token_required": str(
+            summary.get("public_benchmark_field_work_order_primary_approval_token_required") or ""
+        ),
+        "public_benchmark_field_work_order_primary_operator_csv": str(
+            summary.get("public_benchmark_field_work_order_primary_operator_csv") or ""
+        ),
+        "public_benchmark_field_work_order_primary_source_artifact": str(
+            summary.get("public_benchmark_field_work_order_primary_source_artifact") or ""
         ),
         "public_benchmark_primary_blocker_id": str(
             summary.get("public_benchmark_primary_blocker_id") or ""
