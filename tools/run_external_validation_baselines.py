@@ -15,6 +15,20 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 
 
+class TaskSourceError(RuntimeError):
+    def __init__(
+        self,
+        blocker: str,
+        *,
+        pipeline_summary_json: str = "",
+        pipeline_summary_resolution_source: str = "",
+    ) -> None:
+        super().__init__(blocker)
+        self.blocker = blocker
+        self.pipeline_summary_json = pipeline_summary_json
+        self.pipeline_summary_resolution_source = pipeline_summary_resolution_source
+
+
 def _read_json(path: Path) -> Dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -110,6 +124,48 @@ def _ranking_summary_from_cmd(cmd: List[str]) -> Path:
     if not out_json:
         raise ValueError("stage5 command missing --out-json")
     return Path(out_json).resolve()
+
+
+def _rebase_repo_path(path: Path) -> Path:
+    if path.exists():
+        return path
+    parts = list(path.parts)
+    if ROOT.name not in parts:
+        return path
+    index = len(parts) - 1 - parts[::-1].index(ROOT.name)
+    rebased = ROOT.joinpath(*parts[index + 1 :])
+    return rebased if rebased.exists() else path
+
+
+def _resolve_task_artifact_path(task: Dict[str, Any], key: str) -> tuple[Path, str]:
+    raw = str(task.get(key) or "").strip()
+    path = _rebase_repo_path(Path(raw).resolve()) if raw else Path("")
+    if raw and path.is_file():
+        return path, "manifest"
+    copied_files = task.get("copied_files") if isinstance(task.get("copied_files"), list) else []
+    for copied in copied_files:
+        if not isinstance(copied, dict):
+            continue
+        src = Path(str(copied.get("src") or ""))
+        dst = Path(str(copied.get("dst") or ""))
+        if not raw:
+            continue
+        if str(src) != raw and src.name != Path(raw).name and dst.name != Path(raw).name:
+            continue
+        candidate = _rebase_repo_path(dst.resolve() if dst.is_absolute() else (ROOT / dst).resolve())
+        if candidate.is_file():
+            return candidate, "copied_files"
+    raise FileNotFoundError(f"{key}_missing:{raw}")
+
+
+def _resolve_stage5_input_path(cmd: List[str], flag: str, *, task_id: str) -> Path:
+    raw = _get_flag(cmd, flag)
+    if not raw:
+        raise FileNotFoundError(f"stage5_input_missing:{flag}:{task_id}:flag_missing")
+    path = _rebase_repo_path(Path(raw).resolve())
+    if not path.is_file():
+        raise FileNotFoundError(f"stage5_input_missing:{flag}:{path}")
+    return path
 
 
 def _extract_topk(summary: Dict[str, Any], k: int) -> Dict[str, Any]:
@@ -214,15 +270,23 @@ def _score_rows_for_task(
 ) -> Dict[str, Any]:
     task_id = str(task.get("task_id"))
     set_id = str(task.get("set_id"))
-    pipe_path = Path(str(task.get("pipeline_summary_json"))).resolve()
+    pipe_path, pipe_resolution_source = _resolve_task_artifact_path(task, "pipeline_summary_json")
     pipe = _read_json(pipe_path)
     stage5 = ((pipe.get("stages") or {}).get("stage5_ranking_eval") or {})
     stage5_cmd = list(stage5.get("cmd") or [])
     if not stage5_cmd:
         raise ValueError(f"stage5 command missing for {task_id}: {pipe_path}")
-    scores_csv = Path(str(_get_flag(stage5_cmd, "--scores-csv") or "")).resolve()
-    if not scores_csv.exists():
-        raise FileNotFoundError(f"scores csv missing for {task_id}: {scores_csv}")
+    try:
+        scores_csv = _resolve_stage5_input_path(stage5_cmd, "--scores-csv", task_id=task_id)
+        _resolve_stage5_input_path(stage5_cmd, "--labels-csv", task_id=task_id)
+        _resolve_stage5_input_path(stage5_cmd, "--split-csv", task_id=task_id)
+        _resolve_stage5_input_path(stage5_cmd, "--expected-keys-csv", task_id=task_id)
+    except FileNotFoundError as exc:
+        raise TaskSourceError(
+            str(exc),
+            pipeline_summary_json=str(pipe_path),
+            pipeline_summary_resolution_source=pipe_resolution_source,
+        ) from exc
     current_score = str(_get_flag(stage5_cmd, "--score-col") or "")
     current_prob_score = str(_get_flag(stage5_cmd, "--probability-score-col") or current_score)
     current_summary_json = _ranking_summary_from_cmd(stage5_cmd)
@@ -282,6 +346,7 @@ def _score_rows_for_task(
     return {
         "task": task,
         "pipeline_summary_json": str(pipe_path),
+        "pipeline_summary_resolution_source": pipe_resolution_source,
         "current_score_col": current_score,
         "current_probability_score_col": current_prob_score,
         "available_score_columns": available_cols,
@@ -307,6 +372,8 @@ def _build_markdown(summary: Dict[str, Any], task_df: pd.DataFrame, score_df: pd
     lines.append(f"- protocol_id: `{summary['protocol_id']}`")
     lines.append(f"- run_root: `{summary['run_root']}`")
     lines.append(f"- task_count: `{summary['task_count']}`")
+    lines.append(f"- processed_task_count: `{summary.get('processed_task_count', summary['task_count'])}`")
+    lines.append(f"- task_source_error_count: `{summary.get('task_source_error_count', 0)}`")
     lines.append(f"- score_candidates: `{', '.join(summary['score_candidates'])}`")
     lines.append("")
     lines.append(summary.get("note", ""))
@@ -314,7 +381,10 @@ def _build_markdown(summary: Dict[str, Any], task_df: pd.DataFrame, score_df: pd
     lines.append("## Score Leaderboard")
     lines.append("")
     if score_df.empty:
-        lines.append("No ligand tasks found.")
+        if int(summary.get("task_source_error_count", 0) or 0):
+            lines.append("No score rows were produced because task source errors are present.")
+        else:
+            lines.append("No ligand tasks found.")
     else:
         lines.append("| score | tasks | wins_pr_auc | mean_pr_auc | mean_top20 | mean_ef1 |")
         lines.append("| --- | ---: | ---: | ---: | ---: | ---: |")
@@ -330,6 +400,20 @@ def _build_markdown(summary: Dict[str, Any], task_df: pd.DataFrame, score_df: pd
                 )
             )
     lines.append("")
+    if summary.get("task_source_errors"):
+        lines.append("## Task Source Errors")
+        lines.append("")
+        lines.append("| set | task | blocker |")
+        lines.append("| --- | --- | --- |")
+        for row in summary.get("task_source_errors", []) or []:
+            lines.append(
+                "| {set_id} | {task_id} | `{blocker}` |".format(
+                    set_id=row.get("set_id", "-"),
+                    task_id=row.get("task_id", "-"),
+                    blocker=row.get("blocker", "-"),
+                )
+            )
+        lines.append("")
     lines.append("## Task Winners")
     lines.append("")
     lines.append("| set | task | domain | current | winner | current_pr | winner_pr | current_top20 | winner_top20 |")
@@ -392,8 +476,47 @@ def main(argv: Optional[List[str]] = None) -> int:
     per_task_payloads: List[Dict[str, Any]] = []
     flat_rows: List[Dict[str, Any]] = []
     winner_rows: List[Dict[str, Any]] = []
+    task_source_errors: List[Dict[str, Any]] = []
     for task in tasks:
-        payload = _score_rows_for_task(task, spec, bundle_root, bool(args.rerun_current))
+        try:
+            payload = _score_rows_for_task(task, spec, bundle_root, bool(args.rerun_current))
+        except Exception as exc:
+            error_type = type(exc).__name__
+            error_message = str(exc).splitlines()[0][:500]
+            blocker = (
+                error_message
+                if error_message.startswith(
+                    (
+                        "pipeline_summary_json_missing:",
+                        "stage5_input_missing:",
+                    )
+                )
+                else f"task_source_error:{task.get('set_id')}:{task.get('task_id')}:{error_type}"
+            )
+            blockers.append(blocker)
+            task_source_errors.append(
+                {
+                    "set_id": task.get("set_id"),
+                    "task_id": task.get("task_id"),
+                    "domain": task.get("domain"),
+                    "kind": task.get("kind"),
+                    "profile_json": task.get("profile_json"),
+                    "pipeline_summary_json": getattr(
+                        exc,
+                        "pipeline_summary_json",
+                        task.get("pipeline_summary_json"),
+                    ),
+                    "pipeline_summary_resolution_source": getattr(
+                        exc,
+                        "pipeline_summary_resolution_source",
+                        "missing",
+                    ),
+                    "source_error_type": error_type,
+                    "source_error": error_message,
+                    "blocker": blocker,
+                }
+            )
+            continue
         per_task_payloads.append(payload)
         flat_rows.extend(payload["score_rows"])
         current_row = next((r for r in payload["score_rows"] if r.get("is_current_score")), None)
@@ -433,6 +556,43 @@ def main(argv: Optional[List[str]] = None) -> int:
         score_df = agg.merge(wins, on="score_alias", how="left").fillna({"wins_pr_auc": 0})
         score_df["wins_pr_auc"] = score_df["wins_pr_auc"].astype(int)
 
+    summary_tasks: List[Dict[str, Any]] = []
+    for payload in per_task_payloads:
+        task = payload["task"]
+        summary_tasks.append(
+            {
+                "set_id": task.get("set_id"),
+                "task_id": task.get("task_id"),
+                "domain": task.get("domain"),
+                "kind": task.get("kind"),
+                "profile_json": task.get("profile_json"),
+                "pipeline_summary_json": payload.get("pipeline_summary_json"),
+                "pipeline_summary_resolution_source": payload.get(
+                    "pipeline_summary_resolution_source"
+                ),
+                "current_score_col": payload.get("current_score_col"),
+                "current_probability_score_col": payload.get("current_probability_score_col"),
+                "available_score_columns": payload.get("available_score_columns"),
+                "tested_score_columns": payload.get("tested_score_columns"),
+                "current_is_primary_winner": payload.get("current_is_primary_winner"),
+                "primary_winner": payload.get("primary_winner"),
+                "score_rows": payload.get("score_rows"),
+            }
+        )
+    for error_row in task_source_errors:
+        summary_tasks.append(
+            {
+                **error_row,
+                "current_score_col": "",
+                "current_probability_score_col": "",
+                "available_score_columns": [],
+                "tested_score_columns": [],
+                "current_is_primary_winner": False,
+                "primary_winner": {},
+                "score_rows": [],
+            }
+        )
+
     summary = {
         "generated_at_local": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         "protocol_id": spec.get("protocol_id"),
@@ -443,34 +603,18 @@ def main(argv: Optional[List[str]] = None) -> int:
         "bundle_root": str(bundle_root),
         "ok": not blockers,
         "blockers": blockers,
-        "task_count": int(len(per_task_payloads)),
+        "task_count": int(len(summary_tasks)),
+        "processed_task_count": int(len(per_task_payloads)),
+        "task_source_error_count": int(len(task_source_errors)),
+        "task_source_errors": task_source_errors,
         "score_candidates": list(spec.get("candidate_score_columns", [])),
         "note": str(spec.get("note", "")),
         "task_winner_count_current": int(sum(1 for row in winner_rows if row.get("current_is_primary_winner") is True)),
         "task_winner_count_noncurrent": int(sum(1 for row in winner_rows if row.get("current_is_primary_winner") is False)),
-        "tasks": [],
+        "tasks": summary_tasks,
         "score_leaderboard": score_df.to_dict(orient="records") if not score_df.empty else [],
         "winner_table": winner_df.to_dict(orient="records") if not winner_df.empty else [],
     }
-    for payload in per_task_payloads:
-        task = payload["task"]
-        summary["tasks"].append(
-            {
-                "set_id": task.get("set_id"),
-                "task_id": task.get("task_id"),
-                "domain": task.get("domain"),
-                "kind": task.get("kind"),
-                "profile_json": task.get("profile_json"),
-                "pipeline_summary_json": payload.get("pipeline_summary_json"),
-                "current_score_col": payload.get("current_score_col"),
-                "current_probability_score_col": payload.get("current_probability_score_col"),
-                "available_score_columns": payload.get("available_score_columns"),
-                "tested_score_columns": payload.get("tested_score_columns"),
-                "current_is_primary_winner": payload.get("current_is_primary_winner"),
-                "primary_winner": payload.get("primary_winner"),
-                "score_rows": payload.get("score_rows"),
-            }
-        )
 
     summary_json = bundle_root / "summary.json"
     summary_md = bundle_root / "summary.md"
@@ -518,7 +662,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         "ok": not blockers,
         "summary_json": str(summary_json.resolve()),
         "summary_md": str(summary_md.resolve()),
-        "task_count": len(per_task_payloads),
+        "task_count": summary["task_count"],
+        "processed_task_count": summary["processed_task_count"],
+        "task_source_error_count": summary["task_source_error_count"],
         "blockers": blockers,
         "winner_current": summary["task_winner_count_current"],
         "winner_noncurrent": summary["task_winner_count_noncurrent"],

@@ -115,6 +115,12 @@ def _baseline_checks(payload: dict[str, Any], *, root: Path) -> dict[str, Any]:
         if isinstance(summary.get("score_leaderboard"), list)
         else []
     )
+    summary_blockers = (
+        [_text(item) for item in summary.get("blockers", []) if _text(item)]
+        if isinstance(summary.get("blockers"), list)
+        else []
+    )
+    task_source_error_count = _int(summary.get("task_source_error_count"))
 
     task_structural_failure_count = 0
     ranking_summary_missing_count = 0
@@ -153,6 +159,8 @@ def _baseline_checks(payload: dict[str, Any], *, root: Path) -> dict[str, Any]:
         failed_count += 1
     failed_count += task_structural_failure_count
     failed_count += ranking_summary_missing_count
+    failed_count += task_source_error_count
+    failed_count += len(summary_blockers)
 
     return {
         "baseline_summary_present": bool(summary),
@@ -165,6 +173,9 @@ def _baseline_checks(payload: dict[str, Any], *, root: Path) -> dict[str, Any]:
         "score_row_count": score_row_count,
         "task_structural_failure_count": task_structural_failure_count,
         "ranking_summary_missing_count": ranking_summary_missing_count,
+        "task_source_error_count": task_source_error_count,
+        "summary_blocker_count": len(summary_blockers),
+        "summary_blockers": summary_blockers,
         "failed_count": failed_count,
     }
 
@@ -193,6 +204,13 @@ def build_developer_preview_clean_checkout_benchmark_receipt(
         blockers.append(f"{_display(ai_verify_log, root=root)}:verify_ok_missing")
     if not baseline["baseline_summary_present"]:
         blockers.append(f"{_display(baseline_summary_json, root=root)}:missing_or_invalid")
+    if baseline["summary_blocker_count"] != 0:
+        blockers.extend(
+            f"baseline_source_blocker={blocker}" for blocker in baseline["summary_blockers"]
+        )
+        blockers.append("baseline_summary_blocker_count_nonzero")
+    if baseline["task_source_error_count"] != 0:
+        blockers.append("baseline_task_source_error_count_nonzero")
     if baseline["task_count"] <= 0:
         blockers.append("baseline_task_count_zero")
     if baseline["task_row_count"] != baseline["task_count"]:
@@ -240,6 +258,8 @@ def build_developer_preview_clean_checkout_benchmark_receipt(
             "task_count": baseline["task_count"],
             "score_row_count": baseline["score_row_count"],
             "failed_count": baseline["failed_count"],
+            "task_source_error_count": baseline["task_source_error_count"],
+            "summary_blocker_count": baseline["summary_blocker_count"],
             "blockers": [
                 blocker
                 for blocker in blockers
@@ -291,6 +311,9 @@ def build_developer_preview_clean_checkout_benchmark_receipt(
         "baseline_noncurrent_winner_count": baseline["noncurrent_winner_count"],
         "baseline_task_structural_failure_count": baseline["task_structural_failure_count"],
         "baseline_ranking_summary_missing_count": baseline["ranking_summary_missing_count"],
+        "baseline_task_source_error_count": baseline["task_source_error_count"],
+        "baseline_summary_blocker_count": baseline["summary_blocker_count"],
+        "baseline_summary_blockers": baseline["summary_blockers"],
         "claim_promotion_allowed": False,
         "execution_enabled": False,
         "external_state_mutated": False,

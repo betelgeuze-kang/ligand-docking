@@ -103,6 +103,62 @@ def test_clean_checkout_benchmark_receipt_blocks_missing_sources(tmp_path: Path)
     assert "reviewed_at_utc_missing" in blockers
 
 
+def test_clean_checkout_benchmark_receipt_surfaces_baseline_source_blockers(
+    tmp_path: Path,
+) -> None:
+    ai_verify_log = tmp_path / ".betelgeuze/developer_preview_clean_checkout_ai_verify.log"
+    ai_verify_log.parent.mkdir(parents=True, exist_ok=True)
+    ai_verify_log.write_text("verify ok (smoke)\n", encoding="utf-8")
+    baseline_summary = (
+        tmp_path
+        / ".betelgeuze/developer_preview_external_baselines"
+        / "biorxiv_baseline_comparison_developer_preview_clean_checkout"
+        / "summary.json"
+    )
+    _write_json(
+        baseline_summary,
+        {
+            "bundle_root": str(baseline_summary.parent),
+            "task_count": 1,
+            "task_winner_count_current": 0,
+            "task_winner_count_noncurrent": 0,
+            "task_source_error_count": 1,
+            "blockers": [
+                "pipeline_summary_json_missing:/tmp/missing_pipeline_summary.json",
+            ],
+            "score_leaderboard": [],
+            "tasks": [
+                {
+                    "set_id": "set1_core_blind",
+                    "task_id": "gpcr_core_full",
+                    "current_score_col": "",
+                    "score_rows": [],
+                }
+            ],
+        },
+    )
+
+    payload = mod.build_developer_preview_clean_checkout_benchmark_receipt(
+        ai_verify_log=ai_verify_log,
+        baseline_summary_json=baseline_summary,
+        reviewed_receipt_attached=False,
+        root=tmp_path,
+    )
+    summary = payload["summary"]
+    blockers = ";".join(summary["blockers"])
+
+    assert summary["status"] == "blocked_developer_preview_clean_checkout_benchmark_receipt"
+    assert summary["baseline_task_count"] == 1
+    assert summary["baseline_task_source_error_count"] == 1
+    assert summary["baseline_summary_blocker_count"] == 1
+    assert "baseline_task_source_error_count_nonzero" in blockers
+    assert "baseline_summary_blocker_count_nonzero" in blockers
+    assert (
+        "baseline_source_blocker=pipeline_summary_json_missing:/tmp/missing_pipeline_summary.json"
+        in blockers
+    )
+
+
 def test_clean_checkout_benchmark_receipt_cli_writes_outputs(tmp_path: Path) -> None:
     ai_verify_log, baseline_summary = _write_ready_sources(tmp_path)
     out_json = tmp_path / ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"

@@ -212,3 +212,168 @@ def test_run_external_validation_baselines_require_tasks_blocks_empty_root(tmp_p
     assert "run_root_missing" in summary["blockers"]
     assert "set_manifest_missing" in summary["blockers"]
     assert "ligand_stress_tasks_missing" in summary["blockers"]
+
+
+def test_run_external_validation_baselines_records_missing_task_sources(tmp_path: Path) -> None:
+    run_root = tmp_path / "run_root"
+    set_dir = run_root / "set1_core_blind"
+    set_dir.mkdir(parents=True)
+    missing_pipeline = tmp_path / "runs/missing_pipeline_summary.json"
+    manifest = {
+        "set_id": "set1_core_blind",
+        "tasks": [
+            {
+                "task_id": "gpcr_core_full",
+                "domain": "gpcr",
+                "kind": "ligand_stress",
+                "pass": True,
+                "profile_json": "config/mock.json",
+                "pipeline_summary_json": str(missing_pipeline),
+                "metrics": {
+                    "operational_gate_pass": True,
+                    "strict_gate_pass": True,
+                },
+            }
+        ],
+    }
+    (set_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    out_root = tmp_path / "out"
+
+    rc = main(
+        [
+            "--run-root",
+            str(run_root),
+            "--out-root",
+            str(out_root),
+            "--label",
+            "missing_sources",
+            "--spec-json",
+            "config/external_validation_baselines_v1.json",
+            "--require-tasks",
+        ]
+    )
+
+    assert rc == 1
+    summary = json.loads(
+        (
+            out_root
+            / "biorxiv_baseline_comparison_missing_sources"
+            / "summary.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert summary["ok"] is False
+    assert summary["task_count"] == 1
+    assert summary["processed_task_count"] == 0
+    assert summary["task_source_error_count"] == 1
+    assert summary["task_source_errors"][0]["task_id"] == "gpcr_core_full"
+    assert summary["task_source_errors"][0]["source_error_type"] == "FileNotFoundError"
+    assert summary["task_source_errors"][0]["blocker"].startswith(
+        "pipeline_summary_json_missing:"
+    )
+    assert summary["tasks"][0]["score_rows"] == []
+    assert summary["tasks"][0]["current_score_col"] == ""
+    assert summary["score_leaderboard"] == []
+
+
+def test_run_external_validation_baselines_uses_copied_pipeline_summary(
+    tmp_path: Path,
+) -> None:
+    run_root = tmp_path / "run_root"
+    set_dir = run_root / "set1_core_blind"
+    files_dir = set_dir / "files/gpcr"
+    files_dir.mkdir(parents=True)
+    original_pipeline = tmp_path / "runs/original_pipeline_summary.json"
+    copied_pipeline = files_dir / "original_pipeline_summary.json"
+    missing_scores = tmp_path / "runs/missing_stage3_scores.csv"
+    copied_pipeline.write_text(
+        json.dumps(
+            {
+                "stages": {
+                    "stage5_ranking_eval": {
+                        "cmd": [
+                            sys.executable,
+                            "tools/evaluate_ligand_ranking_metrics.py",
+                            "--scores-csv",
+                            str(missing_scores),
+                            "--labels-csv",
+                            str(tmp_path / "runs/missing_labels.csv"),
+                            "--split-csv",
+                            str(tmp_path / "runs/missing_split.csv"),
+                            "--expected-keys-csv",
+                            str(tmp_path / "runs/missing_queue.csv"),
+                            "--score-col",
+                            "binding_score_composite_v7",
+                            "--out-json",
+                            str(tmp_path / "runs/missing_ranking_summary.json"),
+                        ]
+                    }
+                }
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    manifest = {
+        "set_id": "set1_core_blind",
+        "tasks": [
+            {
+                "task_id": "gpcr_core_full",
+                "domain": "gpcr",
+                "kind": "ligand_stress",
+                "pass": True,
+                "profile_json": "config/mock.json",
+                "pipeline_summary_json": str(original_pipeline),
+                "copied_files": [
+                    {
+                        "src": str(original_pipeline),
+                        "dst": str(copied_pipeline),
+                        "size_bytes": copied_pipeline.stat().st_size,
+                    }
+                ],
+            }
+        ],
+    }
+    (set_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    out_root = tmp_path / "out"
+
+    rc = main(
+        [
+            "--run-root",
+            str(run_root),
+            "--out-root",
+            str(out_root),
+            "--label",
+            "copied_pipeline",
+            "--spec-json",
+            "config/external_validation_baselines_v1.json",
+            "--require-tasks",
+        ]
+    )
+
+    assert rc == 1
+    summary = json.loads(
+        (
+            out_root
+            / "biorxiv_baseline_comparison_copied_pipeline"
+            / "summary.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert summary["task_count"] == 1
+    assert summary["processed_task_count"] == 0
+    assert summary["task_source_error_count"] == 1
+    assert summary["task_source_errors"][0]["pipeline_summary_json"] == str(copied_pipeline)
+    assert summary["task_source_errors"][0]["pipeline_summary_resolution_source"] == "copied_files"
+    assert summary["task_source_errors"][0]["blocker"].startswith(
+        "stage5_input_missing:--scores-csv:"
+    )
+    assert not summary["task_source_errors"][0]["blocker"].startswith(
+        "pipeline_summary_json_missing:"
+    )
