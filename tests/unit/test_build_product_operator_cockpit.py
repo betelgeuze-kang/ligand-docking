@@ -595,10 +595,22 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                     "preflight_check_id": "implementation_phase1_dir",
                     "status": "fail",
                     "required_surface": "implementation/phase1",
+                    "observed": "missing",
                     "blocker": "implementation_phase1_dir_missing",
                     "operator_action": (
                         "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
                     ),
+                    "acceptance_rule": (
+                        "Directory exists in the checkout and is the reviewed implementation tree."
+                    ),
+                    "authoritative_source_hint": "Original F2/G1 implementation branch.",
+                    "prohibited_actions": "do_not_create_placeholder_json;do_not_promote_g1",
+                    "audit_executed": True,
+                    "continuation_executed": True,
+                    "surface_restore_executed": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
                 },
                 {
                     "recovery_item_id": "restore_real_mgt_input_surface",
@@ -1114,6 +1126,46 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["f2h_continuation_allowed"] is False
     assert summary["f2g_f2h_placeholder_surface_creation_allowed"] is False
     assert summary["f2g_f2h_surface_restore_executed"] is False
+    assert summary["f2g_f2h_recovery_rows"] == [
+        {
+            "recovery_item_id": "restore_implementation_phase1_tree",
+            "preflight_check_id": "implementation_phase1_dir",
+            "status": "fail",
+            "required_surface": "implementation/phase1",
+            "observed": "missing",
+            "blocker": "implementation_phase1_dir_missing",
+            "operator_action": (
+                "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+            ),
+            "acceptance_rule": "Directory exists in the checkout and is the reviewed implementation tree.",
+            "authoritative_source_hint": "Original F2/G1 implementation branch.",
+            "prohibited_actions": "do_not_create_placeholder_json;do_not_promote_g1",
+            "audit_executed": False,
+            "continuation_executed": False,
+            "surface_restore_executed": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+        {
+            "recovery_item_id": "restore_real_mgt_input_surface",
+            "preflight_check_id": "real_mgt_input_surface",
+            "status": "fail",
+            "required_surface": "real-MGT model/input packet",
+            "observed": "",
+            "blocker": "real_mgt_input_surface_missing",
+            "operator_action": "Restore the reviewed real-MGT model/input packet.",
+            "acceptance_rule": "",
+            "authoritative_source_hint": "",
+            "prohibited_actions": "",
+            "audit_executed": False,
+            "continuation_executed": False,
+            "surface_restore_executed": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+    ]
     assert summary["enterprise_on_prem_readiness_present"] is True
     assert summary["enterprise_on_prem_ready"] is False
     assert summary["enterprise_on_prem_claim_allowed"] is False

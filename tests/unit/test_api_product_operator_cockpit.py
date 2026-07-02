@@ -515,6 +515,32 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "f2h_continuation_allowed": False,
                 "f2g_f2h_placeholder_surface_creation_allowed": False,
                 "f2g_f2h_surface_restore_executed": False,
+                "f2g_f2h_recovery_rows": [
+                    {
+                        "recovery_item_id": "restore_implementation_phase1_tree",
+                        "preflight_check_id": "implementation_phase1_dir",
+                        "status": "fail",
+                        "required_surface": "implementation/phase1",
+                        "observed": "missing",
+                        "blocker": "implementation_phase1_dir_missing",
+                        "operator_action": (
+                            "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+                        ),
+                        "acceptance_rule": (
+                            "Directory exists in the checkout and is the reviewed implementation tree."
+                        ),
+                        "authoritative_source_hint": "Original F2/G1 implementation branch.",
+                        "prohibited_actions": (
+                            "do_not_create_placeholder_json;do_not_promote_g1"
+                        ),
+                        "audit_executed": True,
+                        "continuation_executed": True,
+                        "surface_restore_executed": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    }
+                ],
                 "pm_priority_queue_present": True,
                 "pm_priority_queue_status": "blocked_pm_priority_queue",
                 "pm_priority_queue_ready_item_count": 3,
@@ -901,6 +927,28 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["f2h_continuation_allowed"] is False
     assert response["f2g_f2h_placeholder_surface_creation_allowed"] is False
     assert response["f2g_f2h_surface_restore_executed"] is False
+    assert response["f2g_f2h_recovery_rows"] == [
+        {
+            "recovery_item_id": "restore_implementation_phase1_tree",
+            "preflight_check_id": "implementation_phase1_dir",
+            "status": "fail",
+            "required_surface": "implementation/phase1",
+            "observed": "missing",
+            "blocker": "implementation_phase1_dir_missing",
+            "operator_action": (
+                "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+            ),
+            "acceptance_rule": "Directory exists in the checkout and is the reviewed implementation tree.",
+            "authoritative_source_hint": "Original F2/G1 implementation branch.",
+            "prohibited_actions": "do_not_create_placeholder_json;do_not_promote_g1",
+            "audit_executed": False,
+            "continuation_executed": False,
+            "surface_restore_executed": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
     assert response["pm_priority_queue_present"] is True
     assert response["pm_priority_queue_status"] == "blocked_pm_priority_queue"
     assert response["pm_priority_queue_ready_item_count"] == 3
@@ -1151,6 +1199,7 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["f2h_continuation_allowed"] is False
     assert response["f2g_f2h_placeholder_surface_creation_allowed"] is False
     assert response["f2g_f2h_surface_restore_executed"] is False
+    assert response["f2g_f2h_recovery_rows"] == []
     assert response["pm_priority_queue_present"] is False
     assert response["pm_priority_queue_status"] == ""
     assert response["pm_priority_queue_ready_item_count"] == 0

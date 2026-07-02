@@ -321,6 +321,32 @@ def _enterprise_on_prem_control_rows(payload: dict[str, Any]) -> list[dict[str, 
     return rows
 
 
+def _f2g_f2h_recovery_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _rows(payload):
+        rows.append(
+            {
+                "recovery_item_id": _text(row.get("recovery_item_id")),
+                "preflight_check_id": _text(row.get("preflight_check_id")),
+                "status": _text(row.get("status")),
+                "required_surface": _text(row.get("required_surface")),
+                "observed": _text(row.get("observed")),
+                "blocker": _text(row.get("blocker")),
+                "operator_action": _text(row.get("operator_action")),
+                "acceptance_rule": _text(row.get("acceptance_rule")),
+                "authoritative_source_hint": _text(row.get("authoritative_source_hint")),
+                "prohibited_actions": _text(row.get("prohibited_actions")),
+                "audit_executed": False,
+                "continuation_executed": False,
+                "surface_restore_executed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _metric(label: str, value: Any) -> str:
     if isinstance(value, bool):
         rendered = "true" if value else "false"
@@ -849,6 +875,7 @@ def build_product_operator_cockpit(
     f2g_recovery_payload = _read_json(f2g_f2h_recovery_json, root=root)
     f2g_recovery = _summary(f2g_recovery_payload)
     f2g_recovery_rows = _rows(f2g_recovery_payload)
+    f2g_f2h_recovery_row_preview = _f2g_f2h_recovery_rows(f2g_recovery_payload)
     enterprise_on_prem_payload = _read_json(enterprise_on_prem_json, root=root)
     enterprise_on_prem = _summary(enterprise_on_prem_payload)
     enterprise_on_prem_control_row_preview = _enterprise_on_prem_control_rows(
@@ -2257,6 +2284,7 @@ def build_product_operator_cockpit(
         "f2h_continuation_allowed": f2h_continuation_allowed,
         "f2g_f2h_placeholder_surface_creation_allowed": f2g_placeholder_creation_allowed,
         "f2g_f2h_surface_restore_executed": f2g_surface_restore_executed,
+        "f2g_f2h_recovery_rows": f2g_f2h_recovery_row_preview,
         "pm_priority_queue_present": pm_queue_present,
         "pm_priority_queue_status": _text(pm_queue.get("status")),
         "pm_priority_queue_ready_item_count": pm_queue_ready_count,

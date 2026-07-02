@@ -270,6 +270,35 @@ def _enterprise_on_prem_control_rows(value: Any) -> list[dict[str, Any]]:
     return control_rows
 
 
+def _f2g_f2h_recovery_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    recovery_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        recovery_rows.append(
+            {
+                "recovery_item_id": str(row.get("recovery_item_id") or ""),
+                "preflight_check_id": str(row.get("preflight_check_id") or ""),
+                "status": str(row.get("status") or ""),
+                "required_surface": str(row.get("required_surface") or ""),
+                "observed": str(row.get("observed") or ""),
+                "blocker": str(row.get("blocker") or ""),
+                "operator_action": str(row.get("operator_action") or ""),
+                "acceptance_rule": str(row.get("acceptance_rule") or ""),
+                "authoritative_source_hint": str(row.get("authoritative_source_hint") or ""),
+                "prohibited_actions": str(row.get("prohibited_actions") or ""),
+                "audit_executed": False,
+                "continuation_executed": False,
+                "surface_restore_executed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return recovery_rows
+
+
 def _pr38_split_surface() -> dict[str, Any]:
     acceptance_packet = _read_json_object(PR38_SPLIT_ACCEPTANCE_PACKET_ARTIFACT)
     matrix_packet = _read_json_object(PR38_CHILD_PR_VERIFICATION_MATRIX_ARTIFACT)
@@ -537,6 +566,7 @@ def _missing_response() -> dict[str, Any]:
         "f2h_continuation_allowed": False,
         "f2g_f2h_placeholder_surface_creation_allowed": False,
         "f2g_f2h_surface_restore_executed": False,
+        "f2g_f2h_recovery_rows": [],
         "pm_priority_queue_present": False,
         "pm_priority_queue_status": "",
         "pm_priority_queue_ready_item_count": 0,
@@ -1028,6 +1058,9 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "f2g_f2h_surface_restore_executed": bool(
             summary.get("f2g_f2h_surface_restore_executed") is True
+        ),
+        "f2g_f2h_recovery_rows": _f2g_f2h_recovery_rows(
+            summary.get("f2g_f2h_recovery_rows")
         ),
         "pm_priority_queue_present": bool(summary.get("pm_priority_queue_present") is True),
         "pm_priority_queue_status": str(summary.get("pm_priority_queue_status") or ""),
