@@ -6028,6 +6028,11 @@ def test_release_source_of_truth_tracks_capability_surface_builder_sources() -> 
 
 
 def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
+    developer_preview_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_final_gate_audit"
+    )
     hbond_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -6055,6 +6060,11 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
     )
     depends_on = spec["depends_on"]
 
+    assert developer_preview_spec["artifact_path"] == "runs/developer_preview_final_gate_audit_current.json"
+    assert developer_preview_spec["builder_command"] == mod.DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND
+    assert "tools/product/build_developer_preview_final_gate_audit.py" in developer_preview_spec["depends_on"]
+    assert "docs/developer_preview_final_gate_action_register.md" in developer_preview_spec["depends_on"]
+    assert mod.DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert hbond_spec["artifact_path"] == "runs/hbond_backmap_report_current.json"
     assert hbond_spec["builder_command"] == mod.HBOND_BACKMAP_REPORT_COMMAND
     assert "tools/product/build_hbond_backmap_report.py" in hbond_spec["depends_on"]
@@ -6118,6 +6128,12 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
     assert mod.PUBLIC_BENCHMARK_VINA_GNINA_COMPARISON_WORK_ORDER_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert mod.PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert mod.PRODUCT_OPERATOR_COCKPIT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert _last_refresh_index("python3 tools/build_cameo_architecture_validation_contract.py") < (
+        _last_refresh_index(mod.DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND)
+    )
+    assert _last_refresh_index(mod.DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND) < _last_refresh_index(
+        "python3 tools/build_product_release_source_of_truth_gate.py"
+    )
     assert _last_refresh_index("python3 tools/build_product_image_smoke_preflight.py") < _last_refresh_index(
         mod.HBOND_BACKMAP_REPORT_COMMAND
     )

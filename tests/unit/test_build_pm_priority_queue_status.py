@@ -141,6 +141,35 @@ def test_pm_priority_queue_status_marks_customer_shadow_ready_only_after_three_c
     assert "completed=3;required=3;minimum_met=True" in row["evidence"]
 
 
+def test_pm_priority_queue_status_uses_developer_preview_audit_when_present(tmp_path: Path) -> None:
+    _write_common_inputs(tmp_path)
+    _write_json(
+        tmp_path / "runs/developer_preview_final_gate_audit_current.json",
+        {
+            "summary": {
+                "status": "blocked_developer_preview_final_gate_audit",
+                "developer_preview_clean_baseline_ready": False,
+                "gate_count": 6,
+                "ready_gate_count": 1,
+                "blocked_gate_count": 5,
+                "missing_receipt_count": 8,
+                "primary_blocker_id": "benchmark_results_clean_checkout_regenerated",
+                "next_required_step": "Attach clean-checkout receipt.",
+            }
+        },
+    )
+
+    payload = mod.build_pm_priority_queue_status(root=tmp_path)
+
+    row = {item["item_id"]: item for item in payload["rows"]}["4"]
+    assert row["ready"] is False
+    assert row["status"] == "blocked_developer_preview_final_gates"
+    assert row["blocker"] == "benchmark_results_clean_checkout_regenerated"
+    assert "ready_gates=1/6" in row["evidence"]
+    assert "missing_receipts=8" in row["evidence"]
+    assert row["next_action"] == "Attach clean-checkout receipt."
+
+
 def test_pm_priority_queue_status_cli_writes_outputs(tmp_path: Path) -> None:
     _write_common_inputs(tmp_path)
     out_json = tmp_path / "status.json"

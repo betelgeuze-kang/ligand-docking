@@ -172,6 +172,9 @@ HBOND_BACKMAP_REPORT_COMMAND = (
     "--scores-csv runs/product_image_smoke_runner_artifacts/backmapping_scores.csv"
 )
 PRODUCT_OPERATOR_COCKPIT_COMMAND = "python3 tools/product/build_product_operator_cockpit.py"
+DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND = (
+    "python3 tools/product/build_developer_preview_final_gate_audit.py"
+)
 
 RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_accuracy_parity_scorecard.py",
@@ -312,6 +315,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_cameo_outbound_email_send_preflight.py",
     "python3 tools/build_cameo_validation_operations_dossier.py",
     "python3 tools/build_cameo_architecture_validation_contract.py",
+    DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND,
     "python3 tools/build_goal_readiness_rollup.py",
     "python3 tools/build_product_release_source_of_truth_gate.py",
     "python3 tools/build_goal_release_decision_gate.py",
@@ -1525,6 +1529,15 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "tools/accounting/build_cameo_official_result_fetch_preflight.py",
             "tools/build_cameo_official_result_fetch_preflight.py",
             "runs/cameo_official_result_fetch_operator_approval_template_current.csv",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_final_gate_audit",
+        "artifact_path": "runs/developer_preview_final_gate_audit_current.json",
+        "builder_command": DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND,
+        "depends_on": [
+            "tools/product/build_developer_preview_final_gate_audit.py",
+            "docs/developer_preview_final_gate_action_register.md",
         ],
     },
     {

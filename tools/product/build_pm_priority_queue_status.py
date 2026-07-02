@@ -18,6 +18,7 @@ DEFAULT_RELEASE_SOURCE_JSON = "runs/product_release_source_of_truth_gate_current
 DEFAULT_RELEASE_SOURCE_RECALC_JSON = ".betelgeuze/tmp_product_release_source_of_truth_gate_now.json"
 DEFAULT_F2G_F2H_PREFLIGHT_JSON = ".betelgeuze/f2g_f2h_surface_preflight.local.json"
 DEFAULT_DEVELOPER_PREVIEW_REGISTER_MD = "docs/developer_preview_final_gate_action_register.md"
+DEFAULT_DEVELOPER_PREVIEW_AUDIT_JSON = "runs/developer_preview_final_gate_audit_current.json"
 DEFAULT_EXTERNAL_BENCHMARK_JSON = ".betelgeuze/external_benchmark_receipt_queue_batch_update.json"
 DEFAULT_CUSTOMER_SHADOW_JSON = ".betelgeuze/customer_shadow_evidence_status_current.json"
 DEFAULT_GPU_HIP_PLAN_MD = "docs/gpu_hip_parity_after_cpu_plan.md"
@@ -198,7 +199,31 @@ def _f2h_row(f2_payload: Any) -> dict[str, Any]:
     )
 
 
-def _developer_preview_row(register_text: str) -> dict[str, Any]:
+def _developer_preview_row(register_text: str, audit_payload: Any) -> dict[str, Any]:
+    audit = _summary(audit_payload)
+    audit_status = _text(audit.get("status"))
+    if audit_status:
+        clean_ready = bool(audit.get("developer_preview_clean_baseline_ready") is True)
+        ready_count = _int(audit.get("ready_gate_count"))
+        gate_count = _int(audit.get("gate_count")) or len(DP_GATE_IDS)
+        blocked_count = _int(audit.get("blocked_gate_count"))
+        missing_receipts = _int(audit.get("missing_receipt_count"))
+        primary_blocker = _text(audit.get("primary_blocker_id") or audit.get("primary_blocker"))
+        return _row(
+            "4",
+            "Developer Preview baseline clean",
+            "developer_preview_final_gates_ready" if clean_ready else "blocked_developer_preview_final_gates",
+            clean_ready,
+            (
+                f"status={audit_status};ready_gates={ready_count}/{gate_count};"
+                f"blocked_gates={blocked_count};missing_receipts={missing_receipts};"
+                f"primary_blocker={primary_blocker or 'none'}"
+            ),
+            primary_blocker or "developer_preview_final_gate_receipts_missing",
+            _text(audit.get("next_required_step"))
+            or "Run the six DP gate commands in a clean checkout and attach reviewed receipts before promotion.",
+        )
+
     present_ids = {gate_id for gate_id in DP_GATE_IDS if gate_id in register_text}
     ready = present_ids == DP_GATE_IDS
     return _row(
@@ -290,6 +315,7 @@ def build_pm_priority_queue_status(
     release_source_recalc_json: str = DEFAULT_RELEASE_SOURCE_RECALC_JSON,
     f2g_f2h_preflight_json: str = DEFAULT_F2G_F2H_PREFLIGHT_JSON,
     developer_preview_register_md: str = DEFAULT_DEVELOPER_PREVIEW_REGISTER_MD,
+    developer_preview_audit_json: str = DEFAULT_DEVELOPER_PREVIEW_AUDIT_JSON,
     external_benchmark_json: str = DEFAULT_EXTERNAL_BENCHMARK_JSON,
     customer_shadow_json: str = DEFAULT_CUSTOMER_SHADOW_JSON,
     gpu_hip_plan_md: str = DEFAULT_GPU_HIP_PLAN_MD,
@@ -307,7 +333,10 @@ def build_pm_priority_queue_status(
         ),
         _f2g_row(f2_payload),
         _f2h_row(f2_payload),
-        _developer_preview_row(_read_text(developer_preview_register_md, root=root)),
+        _developer_preview_row(
+            _read_text(developer_preview_register_md, root=root),
+            _read_json(developer_preview_audit_json, root=root),
+        ),
         _external_benchmark_row(_read_json(external_benchmark_json, root=root)),
         _customer_shadow_row(_read_json(customer_shadow_json, root=root)),
         _gpu_hip_row(
@@ -373,6 +402,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--release-source-recalc-json", default=DEFAULT_RELEASE_SOURCE_RECALC_JSON)
     parser.add_argument("--f2g-f2h-preflight-json", default=DEFAULT_F2G_F2H_PREFLIGHT_JSON)
     parser.add_argument("--developer-preview-register-md", default=DEFAULT_DEVELOPER_PREVIEW_REGISTER_MD)
+    parser.add_argument("--developer-preview-audit-json", default=DEFAULT_DEVELOPER_PREVIEW_AUDIT_JSON)
     parser.add_argument("--external-benchmark-json", default=DEFAULT_EXTERNAL_BENCHMARK_JSON)
     parser.add_argument("--customer-shadow-json", default=DEFAULT_CUSTOMER_SHADOW_JSON)
     parser.add_argument("--gpu-hip-plan-md", default=DEFAULT_GPU_HIP_PLAN_MD)
@@ -395,6 +425,7 @@ def main(argv: list[str] | None = None) -> None:
         release_source_recalc_json=args.release_source_recalc_json,
         f2g_f2h_preflight_json=args.f2g_f2h_preflight_json,
         developer_preview_register_md=args.developer_preview_register_md,
+        developer_preview_audit_json=args.developer_preview_audit_json,
         external_benchmark_json=args.external_benchmark_json,
         customer_shadow_json=args.customer_shadow_json,
         gpu_hip_plan_md=args.gpu_hip_plan_md,
