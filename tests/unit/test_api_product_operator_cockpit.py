@@ -51,6 +51,9 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "public_benchmark_vina_gnina_pending_field_count": 192,
                 "public_benchmark_metric_source_pending_field_count": 510,
                 "public_benchmark_metric_source_pending_approval_token_count": 51,
+                "public_benchmark_field_work_order_row_count": 22,
+                "public_benchmark_field_work_order_pending_field_count": 702,
+                "public_benchmark_field_work_order_primary_field_name": "approval_token",
                 "evidence_bundle_export_ready": True,
                 "customer_shadow_paid_pilot_evidence_ready": False,
                 "customer_shadow_real_row_count": 1,
@@ -91,6 +94,9 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["public_benchmark_vina_gnina_pending_field_count"] == 192
     assert response["public_benchmark_metric_source_pending_field_count"] == 510
     assert response["public_benchmark_metric_source_pending_approval_token_count"] == 51
+    assert response["public_benchmark_field_work_order_row_count"] == 22
+    assert response["public_benchmark_field_work_order_pending_field_count"] == 702
+    assert response["public_benchmark_field_work_order_primary_field_name"] == "approval_token"
     assert response["evidence_bundle_export_ready"] is True
     assert response["customer_shadow_paid_pilot_evidence_ready"] is False
     assert response["customer_shadow_real_row_count"] == 1
@@ -134,6 +140,9 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["public_benchmark_vina_gnina_pending_field_count"] == 0
     assert response["public_benchmark_metric_source_pending_field_count"] == 0
     assert response["public_benchmark_metric_source_pending_approval_token_count"] == 0
+    assert response["public_benchmark_field_work_order_row_count"] == 0
+    assert response["public_benchmark_field_work_order_pending_field_count"] == 0
+    assert response["public_benchmark_field_work_order_primary_field_name"] == ""
     assert response["evidence_bundle_export_ready"] is False
     assert response["customer_shadow_paid_pilot_evidence_ready"] is False
     assert response["customer_shadow_real_row_count"] == 0

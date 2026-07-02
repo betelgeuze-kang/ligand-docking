@@ -56,6 +56,35 @@ CSV_FIELDS = [
     "claim_promotion_allowed",
 ]
 
+METRIC_SOURCE_PENDING_FIELDS = [
+    ("metric_value", "receipt_metric_value_pending_count", "fill reviewed numeric metric value"),
+    ("method", "receipt_method_pending_count", "fill method/tool used for metric derivation"),
+    (
+        "input_artifacts_reviewed",
+        "receipt_input_artifacts_reviewed_pending_count",
+        "confirm required input artifacts were reviewed",
+    ),
+    (
+        "input_artifact_sha256s_reviewed",
+        "receipt_input_artifact_sha256s_reviewed_pending_count",
+        "confirm required input artifact hashes were reviewed",
+    ),
+    (
+        "metric_source_artifact_reviewed",
+        "receipt_metric_source_artifact_reviewed_pending_count",
+        "confirm metric source artifact was reviewed",
+    ),
+    (
+        "payload_schema_reviewed",
+        "receipt_payload_schema_reviewed_pending_count",
+        "confirm payload schema was reviewed",
+    ),
+    ("license_ok", "receipt_license_ok_pending_count", "confirm license_ok=true"),
+    ("operator_id", "receipt_operator_id_pending_count", "fill reviewer/operator id"),
+    ("reviewed_at_utc", "receipt_reviewed_at_utc_pending_count", "fill timezone-aware review timestamp"),
+    ("approval_token", "receipt_approval_token_pending_count", "fill approval token"),
+]
+
 
 def _resolve(path_like: str | Path, *, root: Path = ROOT) -> Path:
     path = Path(path_like)
@@ -107,6 +136,109 @@ def _csv_row_count(path_like: str | Path, *, root: Path = ROOT) -> int:
         return 0
     with path.open(newline="", encoding="utf-8") as handle:
         return sum(1 for _ in csv.DictReader(handle))
+
+
+def _csv_pending_field_counts(path_like: str | Path, *, root: Path = ROOT) -> dict[str, int]:
+    path = _resolve(path_like, root=root)
+    if not path.is_file():
+        return {}
+    counts: dict[str, int] = {}
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            for field, value in row.items():
+                text = _text(value)
+                if not text or text.startswith("OPERATOR_FILL") or text.startswith("OPERATOR_CONFIRM"):
+                    counts[_text(field)] = counts.get(_text(field), 0) + 1
+    return {field: count for field, count in counts.items() if field}
+
+
+def _field_work_order_row(
+    *,
+    lane_id: str,
+    source_artifact: str | Path,
+    operator_csv: str | Path,
+    field_name: str,
+    pending_row_count: int,
+    required_value: str,
+    approval_token_required: str,
+    root: Path,
+) -> dict[str, Any]:
+    return {
+        "lane_id": lane_id,
+        "field_name": field_name,
+        "pending_row_count": pending_row_count,
+        "source_artifact": _display(source_artifact, root=root),
+        "operator_csv": _display(operator_csv, root=root),
+        "required_value": required_value,
+        "approval_token_required": approval_token_required,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_promotion_allowed": False,
+        "claim_boundary": CLAIM_BOUNDARY,
+    }
+
+
+def _build_field_work_order_rows(
+    *,
+    vina_gnina_source: dict[str, Any],
+    vina_gnina_source_artifact: str | Path,
+    vina_gnina_score_template_csv: str | Path,
+    metric_receipt: dict[str, Any],
+    metric_source_receipt_json: str | Path,
+    metric_source_receipt_csv: str | Path,
+    root: Path,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    vina_pending_counts = vina_gnina_source.get("pending_field_counts")
+    if not isinstance(vina_pending_counts, dict):
+        vina_pending_counts = _csv_pending_field_counts(vina_gnina_score_template_csv, root=root)
+    vina_token = _text(vina_gnina_source.get("approval_token_required")) or VINA_GNINA_APPROVAL_TOKEN
+    for field_name, pending_count in sorted(vina_pending_counts.items()):
+        count = _int(pending_count)
+        if count <= 0:
+            continue
+        rows.append(
+            _field_work_order_row(
+                lane_id="vina_gnina_same_input_scores",
+                source_artifact=vina_gnina_source_artifact,
+                operator_csv=vina_gnina_score_template_csv,
+                field_name=field_name,
+                pending_row_count=count,
+                required_value=(
+                    f"{vina_token} for approval_token"
+                    if field_name == "approval_token"
+                    else "operator-reviewed same-input Vina/GNINA score evidence"
+                ),
+                approval_token_required=vina_token,
+                root=root,
+            )
+        )
+
+    metric_token = _text(metric_receipt.get("approval_token_required")) or (
+        "APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_METRIC_SOURCE_PAYLOAD"
+    )
+    for field_name, pending_key, required_value in METRIC_SOURCE_PENDING_FIELDS:
+        count = _int(metric_receipt.get(pending_key))
+        if count <= 0:
+            continue
+        rows.append(
+            _field_work_order_row(
+                lane_id="metric_source_receipt_rows",
+                source_artifact=metric_source_receipt_json,
+                operator_csv=metric_source_receipt_csv,
+                field_name=field_name,
+                pending_row_count=count,
+                required_value=(
+                    f"{metric_token} for approval_token"
+                    if field_name == "approval_token"
+                    else required_value
+                ),
+                approval_token_required=metric_token,
+                root=root,
+            )
+        )
+    return rows
 
 
 def _lane(
@@ -162,6 +294,9 @@ def build_public_benchmark_receipt_attach_packet(
     metric_receipt = _summary(_read_json(metric_source_receipt_json, root=root))
     vina_gnina_receipt_present = bool(vina_gnina_receipt)
     vina_gnina_source = vina_gnina_receipt if vina_gnina_receipt_present else vina_gnina
+    vina_gnina_source_artifact = (
+        vina_gnina_score_template_receipt_json if vina_gnina_receipt_present else vina_gnina_work_order_json
+    )
 
     vina_gnina_row_count = _int(vina_gnina_source.get("score_template_row_count")) or _csv_row_count(
         vina_gnina_score_template_csv, root=root
@@ -174,9 +309,7 @@ def build_public_benchmark_receipt_attach_packet(
     vina_gnina_lane = _lane(
         lane_id="vina_gnina_same_input_scores",
         ready=vina_gnina_ready,
-        source_artifact=(
-            vina_gnina_score_template_receipt_json if vina_gnina_receipt_present else vina_gnina_work_order_json
-        ),
+        source_artifact=vina_gnina_source_artifact,
         operator_csv=vina_gnina_score_template_csv,
         row_count=vina_gnina_row_count,
         pending_value_count=_int(vina_gnina_source.get("score_value_pending_count")),
@@ -221,6 +354,15 @@ def build_public_benchmark_receipt_attach_packet(
     )
 
     rows = [vina_gnina_lane, metric_lane]
+    field_work_order_rows = _build_field_work_order_rows(
+        vina_gnina_source=vina_gnina_source,
+        vina_gnina_source_artifact=vina_gnina_source_artifact,
+        vina_gnina_score_template_csv=vina_gnina_score_template_csv,
+        metric_receipt=metric_receipt,
+        metric_source_receipt_json=metric_source_receipt_json,
+        metric_source_receipt_csv=metric_source_receipt_csv,
+        root=root,
+    )
     ready_rows = [row for row in rows if row["ready"]]
     blocked_rows = [row for row in rows if not row["ready"]]
     packet_ready = len(ready_rows) == len(rows)
@@ -239,6 +381,17 @@ def build_public_benchmark_receipt_attach_packet(
         "blocked_lane_count": len(blocked_rows),
         "blocker_count": len(blocked_rows),
         "blockers": [f"{row['lane_id']}:{row['blocker']}" for row in blocked_rows],
+        "field_work_order_ready": not field_work_order_rows,
+        "field_work_order_row_count": len(field_work_order_rows),
+        "field_work_order_pending_field_count": sum(
+            _int(row.get("pending_row_count")) for row in field_work_order_rows
+        ),
+        "field_work_order_primary_lane_id": field_work_order_rows[0]["lane_id"]
+        if field_work_order_rows
+        else "",
+        "field_work_order_primary_field_name": field_work_order_rows[0]["field_name"]
+        if field_work_order_rows
+        else "",
         "primary_blocker_id": blocked_rows[0]["lane_id"] if blocked_rows else "",
         "primary_blocker": blocked_rows[0]["blocker"] if blocked_rows else "",
         "external_receipts_audit_status": _text(audit.get("status")),
@@ -276,7 +429,7 @@ def build_public_benchmark_receipt_attach_packet(
         if blocked_rows
         else "Receipt attach packet is ready; rerun the external benchmark receipts audit.",
     }
-    return {"summary": summary, "rows": rows}
+    return {"summary": summary, "rows": rows, "field_work_order_rows": field_work_order_rows}
 
 
 def _write_json(path_like: str | Path, payload: dict[str, Any], *, root: Path = ROOT) -> None:
@@ -313,6 +466,9 @@ def _render_md(payload: dict[str, Any]) -> str:
         f"- ready_lane_count: `{summary['ready_lane_count']}` / `{summary['lane_count']}`",
         f"- blocker_count: `{summary['blocker_count']}`",
         f"- primary_blocker_id: `{summary['primary_blocker_id']}`",
+        f"- field_work_order_ready: `{summary['field_work_order_ready']}`",
+        f"- field_work_order_row_count: `{summary['field_work_order_row_count']}`",
+        f"- field_work_order_pending_field_count: `{summary['field_work_order_pending_field_count']}`",
         "",
         "| lane | status | rows | pending values | pending approvals | blocker |",
         "| --- | --- | ---: | ---: | ---: | --- |",
@@ -322,6 +478,20 @@ def _render_md(payload: dict[str, Any]) -> str:
             f"| `{row['lane_id']}` | `{row['status']}` | `{row['row_count']}` | "
             f"`{row['pending_value_count']}` | `{row['pending_approval_token_count']}` | "
             f"`{row['blocker']}` |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Field Work Order",
+            "",
+            "| lane | field | pending rows | required value | operator csv |",
+            "| --- | --- | ---: | --- | --- |",
+        ]
+    )
+    for row in payload.get("field_work_order_rows", []):
+        lines.append(
+            f"| `{row['lane_id']}` | `{row['field_name']}` | `{row['pending_row_count']}` | "
+            f"{row['required_value']} | `{row['operator_csv']}` |"
         )
     lines.extend(["", CLAIM_BOUNDARY, ""])
     return "\n".join(lines)

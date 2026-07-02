@@ -84,6 +84,14 @@ def _write_inputs(tmp_path: Path, *, ready: bool) -> dict[str, Path]:
             "operator_placeholder_pending_count": 0 if ready else 16,
             "license_ok_pending_count": 0 if ready else 2,
             "approval_token_pending_count": 0 if ready else 2,
+            "pending_field_counts": {}
+            if ready
+            else {
+                "approval_token": 2,
+                "gnina_score": 2,
+                "operator_id": 2,
+                "vina_score": 2,
+            },
             "score_template_blocker_count": 0 if ready else 5,
             "score_template_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
             "approval_token_required": mod.VINA_GNINA_APPROVAL_TOKEN,
@@ -99,6 +107,15 @@ def _write_inputs(tmp_path: Path, *, ready: bool) -> dict[str, Path]:
             "row_count": 3,
             "blocked_row_count": 0 if ready else 3,
             "receipt_manual_field_pending_count": 0 if ready else 30,
+            "receipt_metric_value_pending_count": 0 if ready else 3,
+            "receipt_method_pending_count": 0 if ready else 3,
+            "receipt_input_artifacts_reviewed_pending_count": 0 if ready else 3,
+            "receipt_input_artifact_sha256s_reviewed_pending_count": 0 if ready else 3,
+            "receipt_metric_source_artifact_reviewed_pending_count": 0 if ready else 3,
+            "receipt_payload_schema_reviewed_pending_count": 0 if ready else 3,
+            "receipt_license_ok_pending_count": 0 if ready else 3,
+            "receipt_operator_id_pending_count": 0 if ready else 3,
+            "receipt_reviewed_at_utc_pending_count": 0 if ready else 3,
             "receipt_approval_token_pending_count": 0 if ready else 3,
             "claim_promotion_allowed": ready,
             "approval_token_required": "APPROVE_REFINE_TIER_PUBLIC_BENCHMARK_METRIC_SOURCE_PAYLOAD",
@@ -142,11 +159,22 @@ def test_public_benchmark_receipt_attach_packet_blocks_pending_operator_fields(t
     assert summary["primary_blocker_id"] == "vina_gnina_same_input_scores"
     assert summary["claim_promotion_allowed"] is False
     assert summary["vina_gnina_score_template_receipt_present"] is True
+    assert summary["field_work_order_ready"] is False
+    assert summary["field_work_order_row_count"] == 14
+    assert summary["field_work_order_pending_field_count"] == 38
+    assert summary["field_work_order_primary_lane_id"] == "vina_gnina_same_input_scores"
+    assert summary["field_work_order_primary_field_name"] == "approval_token"
     assert rows["vina_gnina_same_input_scores"]["pending_value_count"] == 4
     assert rows["vina_gnina_same_input_scores"]["pending_metadata_count"] == 32
     assert rows["vina_gnina_same_input_scores"]["pending_approval_token_count"] == 2
     assert rows["metric_source_receipt_rows"]["pending_value_count"] == 30
     assert rows["metric_source_receipt_rows"]["pending_approval_token_count"] == 3
+    field_rows = {
+        (row["lane_id"], row["field_name"]): row for row in payload["field_work_order_rows"]
+    }
+    assert field_rows[("vina_gnina_same_input_scores", "vina_score")]["pending_row_count"] == 2
+    assert field_rows[("metric_source_receipt_rows", "metric_value")]["pending_row_count"] == 3
+    assert field_rows[("metric_source_receipt_rows", "approval_token")]["pending_row_count"] == 3
     assert summary["execution_enabled"] is False
     assert summary["external_state_mutated"] is False
 
@@ -161,6 +189,9 @@ def test_public_benchmark_receipt_attach_packet_ready_when_lanes_are_filled(tmp_
     assert summary["ready_lane_count"] == 2
     assert summary["blocked_lane_count"] == 0
     assert summary["blockers"] == []
+    assert summary["field_work_order_ready"] is True
+    assert summary["field_work_order_row_count"] == 0
+    assert payload["field_work_order_rows"] == []
     assert summary["claim_promotion_allowed"] is False
 
 
@@ -195,5 +226,9 @@ def test_public_benchmark_receipt_attach_packet_cli_writes_outputs(tmp_path: Pat
 
     written = json.loads(out_json.read_text(encoding="utf-8"))
     assert written["summary"]["packet_type"] == "public_benchmark_receipt_attach_packet"
+    assert written["summary"]["field_work_order_row_count"] == 14
     assert "vina_gnina_same_input_scores" in out_csv.read_text(encoding="utf-8")
-    assert "Public Benchmark Receipt Attach Packet" in out_md.read_text(encoding="utf-8")
+    md = out_md.read_text(encoding="utf-8")
+    assert "Public Benchmark Receipt Attach Packet" in md
+    assert "Field Work Order" in md
+    assert "metric_value" in md

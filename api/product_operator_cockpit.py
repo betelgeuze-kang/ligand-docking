@@ -91,6 +91,9 @@ def _missing_response() -> dict[str, Any]:
         "public_benchmark_vina_gnina_pending_field_count": 0,
         "public_benchmark_metric_source_pending_field_count": 0,
         "public_benchmark_metric_source_pending_approval_token_count": 0,
+        "public_benchmark_field_work_order_row_count": 0,
+        "public_benchmark_field_work_order_pending_field_count": 0,
+        "public_benchmark_field_work_order_primary_field_name": "",
         "evidence_bundle_export_ready": False,
         "customer_shadow_paid_pilot_evidence_ready": False,
         "customer_shadow_real_row_count": 0,
@@ -180,6 +183,15 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "public_benchmark_metric_source_pending_approval_token_count": _int(
             summary.get("public_benchmark_metric_source_pending_approval_token_count")
+        ),
+        "public_benchmark_field_work_order_row_count": _int(
+            summary.get("public_benchmark_field_work_order_row_count")
+        ),
+        "public_benchmark_field_work_order_pending_field_count": _int(
+            summary.get("public_benchmark_field_work_order_pending_field_count")
+        ),
+        "public_benchmark_field_work_order_primary_field_name": str(
+            summary.get("public_benchmark_field_work_order_primary_field_name") or ""
         ),
         "evidence_bundle_export_ready": bool(summary.get("evidence_bundle_export_ready") is True),
         "customer_shadow_paid_pilot_evidence_ready": bool(

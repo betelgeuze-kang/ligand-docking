@@ -660,6 +660,13 @@ def build_product_operator_cockpit(
     public_metric_pending_tokens = _int(
         public_receipt_attach_packet.get("metric_source_receipt_approval_token_pending_count")
     )
+    public_field_work_order_rows = _int(public_receipt_attach_packet.get("field_work_order_row_count"))
+    public_field_work_order_pending_fields = _int(
+        public_receipt_attach_packet.get("field_work_order_pending_field_count")
+    )
+    public_field_work_order_primary_field = _first_text(
+        public_receipt_attach_packet.get("field_work_order_primary_field_name")
+    )
 
     release_actions_present = bool(release_actions)
     release_blocker_count = _int(
@@ -888,6 +895,9 @@ def build_product_operator_cockpit(
                 _metric("pending_score_fields", public_vina_pending_fields),
                 _metric("pending_receipt_fields", public_metric_pending_fields),
                 _metric("pending_receipt_tokens", public_metric_pending_tokens),
+                _count_metric("field_work_order_rows", public_field_work_order_rows),
+                _count_metric("field_work_order_pending_fields", public_field_work_order_pending_fields),
+                _metric("field_work_order_primary", public_field_work_order_primary_field),
                 _metric(
                     "same_input_rows",
                     _bool_true(public_benchmark.get("comparison_adapter_same_input_row_count_match")),
@@ -1060,6 +1070,9 @@ def build_product_operator_cockpit(
         "public_benchmark_vina_gnina_pending_field_count": public_vina_pending_fields,
         "public_benchmark_metric_source_pending_field_count": public_metric_pending_fields,
         "public_benchmark_metric_source_pending_approval_token_count": public_metric_pending_tokens,
+        "public_benchmark_field_work_order_row_count": public_field_work_order_rows,
+        "public_benchmark_field_work_order_pending_field_count": public_field_work_order_pending_fields,
+        "public_benchmark_field_work_order_primary_field_name": public_field_work_order_primary_field,
         "evidence_bundle_export_ready": evidence_bundle_export_ready,
         "customer_shadow_paid_pilot_evidence_ready": customer_shadow_paid_pilot_ready,
         "customer_shadow_real_row_count": customer_shadow_real_row_count,

@@ -148,6 +148,9 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "vina_gnina_score_value_pending_count": 32,
                 "metric_source_receipt_manual_field_pending_count": 510,
                 "metric_source_receipt_approval_token_pending_count": 51,
+                "field_work_order_row_count": 22,
+                "field_work_order_pending_field_count": 702,
+                "field_work_order_primary_field_name": "approval_token",
                 "next_required_step": "Fill the receipt attach packet rows before rerunning the benchmark audit.",
             }
         },
@@ -243,6 +246,9 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["public_benchmark_vina_gnina_pending_field_count"] == 192
     assert summary["public_benchmark_metric_source_pending_field_count"] == 510
     assert summary["public_benchmark_metric_source_pending_approval_token_count"] == 51
+    assert summary["public_benchmark_field_work_order_row_count"] == 22
+    assert summary["public_benchmark_field_work_order_pending_field_count"] == 702
+    assert summary["public_benchmark_field_work_order_primary_field_name"] == "approval_token"
     assert summary["evidence_bundle_export_ready"] is True
     assert summary["customer_shadow_paid_pilot_evidence_ready"] is False
     assert summary["customer_shadow_real_row_count"] == 1
@@ -282,6 +288,9 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "pending_score_fields=192" in panels["public_benchmark_scorecard"]["secondary_metric"]
     assert "pending_receipt_fields=510" in panels["public_benchmark_scorecard"]["secondary_metric"]
     assert "pending_receipt_tokens=51" in panels["public_benchmark_scorecard"]["secondary_metric"]
+    assert "field_work_order_rows=22" in panels["public_benchmark_scorecard"]["secondary_metric"]
+    assert "field_work_order_pending_fields=702" in panels["public_benchmark_scorecard"]["secondary_metric"]
+    assert "field_work_order_primary=approval_token" in panels["public_benchmark_scorecard"]["secondary_metric"]
     assert panels["public_benchmark_scorecard"]["blockers"] == [
         "vina_gnina_same_input_scores:vina_gnina_same_input_score_evidence_missing",
         "metric_source_receipt_rows:benchmark_metric_source_receipt_rows_unapproved",
