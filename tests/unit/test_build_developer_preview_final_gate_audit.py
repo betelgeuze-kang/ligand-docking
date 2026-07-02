@@ -161,6 +161,50 @@ def test_developer_preview_medium_gate_accepts_approved_review(tmp_path: Path) -
     assert row["claim_promotion_allowed"] is False
 
 
+def test_developer_preview_final_gate_audit_surfaces_present_blocked_receipt_details(
+    tmp_path: Path,
+) -> None:
+    _write_register(tmp_path)
+    _write_ready_receipts(tmp_path)
+    _write_json(
+        tmp_path / ".betelgeuze/developer_preview_new_user_observation_receipt.json",
+        {
+            "status": "blocked_developer_preview_new_user_observation_receipt",
+            "observer_signoff": False,
+            "anonymized_notes_only": False,
+            "blocker_count": 5,
+            "hidden_state_blocker_count": 0,
+            "blockers": [
+                "observer_id_missing",
+                "observed_at_utc_missing",
+                "observer_signoff_missing",
+                "anonymized_notes_only_not_true",
+                "anonymized_summary_missing",
+            ],
+        },
+    )
+
+    payload = mod.build_developer_preview_final_gate_audit(root=tmp_path)
+    summary = payload["summary"]
+    row = {
+        item["gate_id"]: item
+        for item in payload["rows"]
+    }["new_user_core_workflow_observation_passed"]
+    receipt_blockers = ";".join(row["receipt_blockers"])
+
+    assert summary["status"] == "blocked_developer_preview_final_gate_audit"
+    assert summary["missing_receipt_count"] == 0
+    assert summary["present_blocked_receipt_count"] == 1
+    assert row["present_blocked_receipt_count"] == 1
+    assert row["blocker"] == (
+        ".betelgeuze/developer_preview_new_user_observation_receipt.json:"
+        "status=blocked_developer_preview_new_user_observation_receipt"
+    )
+    assert "source_blocker=observer_id_missing" in receipt_blockers
+    assert "source_blocker=anonymized_summary_missing" in receipt_blockers
+    assert summary["receipt_blocker_count"] == len(summary["receipt_blockers"])
+
+
 def test_developer_preview_final_gate_audit_ready_when_all_receipts_pass(tmp_path: Path) -> None:
     _write_register(tmp_path)
     _write_ready_receipts(tmp_path)

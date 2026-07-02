@@ -266,12 +266,16 @@ def _artifact_check(artifact: dict[str, Any], *, root: Path) -> dict[str, Any]:
     status = _text(summary.get("status"))
     expected_status = _text(artifact.get("required_status"))
     status_ok = bool(status and status == expected_status)
-    missing_true_fields = [
-        field for field in artifact.get("required_true_fields", []) if not _bool_true(summary.get(field))
-    ]
-    nonzero_fields = [
-        field for field in artifact.get("required_zero_fields", []) if _int(summary.get(field)) != 0
-    ]
+    missing_true_fields = (
+        [field for field in artifact.get("required_true_fields", []) if not _bool_true(summary.get(field))]
+        if present
+        else []
+    )
+    nonzero_fields = (
+        [field for field in artifact.get("required_zero_fields", []) if _int(summary.get(field)) != 0]
+        if present
+        else []
+    )
     ready = present and status_ok and not missing_true_fields and not nonzero_fields
     blockers: list[str] = []
     if not present:
@@ -280,12 +284,23 @@ def _artifact_check(artifact: dict[str, Any], *, root: Path) -> dict[str, Any]:
         blockers.append(f"{artifact_path}:status={status or 'missing'}")
     blockers.extend(f"{artifact_path}:{field}_not_true" for field in missing_true_fields)
     blockers.extend(f"{artifact_path}:{field}_nonzero" for field in nonzero_fields)
+    source_blockers = [
+        _text(blocker)
+        for blocker in summary.get("blockers", [])
+        if _text(blocker)
+    ]
+    detailed_blockers = [
+        *blockers,
+        *[f"{artifact_path}:source_blocker={blocker}" for blocker in source_blockers],
+    ]
     return {
         "path": artifact_path,
         "present": present,
         "ready": ready,
         "status": status,
         "blockers": blockers,
+        "detailed_blockers": detailed_blockers,
+        "source_blockers": source_blockers,
     }
 
 
@@ -302,14 +317,28 @@ def _gate_row(spec: dict[str, Any], *, root: Path) -> dict[str, Any]:
         for blocker in check["blockers"]
         if not review_ready
     ]
+    detailed_blockers = [
+        blocker
+        for check in checks
+        for blocker in check["detailed_blockers"]
+        if not review_ready
+    ]
     if review_check and not required_ready and not review_ready:
         blockers.extend(review_check["blockers"])
+        detailed_blockers.extend(review_check["detailed_blockers"])
     if not blockers and not ready:
         blockers = [spec["missing_blocker"]]
+    if not detailed_blockers and not ready:
+        detailed_blockers = list(blockers)
     present_count = sum(1 for check in checks if check["present"])
+    present_blocked_receipt_count = sum(
+        1 for check in checks if check["present"] and not check["ready"]
+    )
     required_count = len(checks)
     if review_check and review_check["present"]:
         present_count += 1
+    if review_check and review_check["present"] and not review_check["ready"]:
+        present_blocked_receipt_count += 1
     receipt_paths = [check["path"] for check in checks]
     if review_check:
         receipt_paths.append(review_check["path"])
@@ -331,6 +360,9 @@ def _gate_row(spec: dict[str, Any], *, root: Path) -> dict[str, Any]:
         ),
         "blocker": "" if ready else (blockers[0] if blockers else spec["missing_blocker"]),
         "blockers": blockers,
+        "receipt_blocker_count": len(detailed_blockers),
+        "receipt_blockers": detailed_blockers,
+        "present_blocked_receipt_count": present_blocked_receipt_count,
         "next_required_step": spec["next_required_step"],
         "execution_enabled": False,
         "external_state_mutated": False,
@@ -354,6 +386,15 @@ def build_developer_preview_final_gate_audit(
         for row in rows
         if not row["ready"]
     )
+    receipt_blockers = [
+        blocker
+        for row in blocked_rows
+        for blocker in row["receipt_blockers"]
+    ]
+    present_blocked_receipt_count = sum(
+        int(row["present_blocked_receipt_count"])
+        for row in blocked_rows
+    )
     clean_ready = len(ready_rows) == len(rows)
     summary = {
         "packet_type": PACKET_TYPE,
@@ -367,6 +408,9 @@ def build_developer_preview_final_gate_audit(
         "ready_gate_count": len(ready_rows),
         "blocked_gate_count": len(blocked_rows),
         "missing_receipt_count": missing_receipt_count,
+        "present_blocked_receipt_count": present_blocked_receipt_count,
+        "receipt_blocker_count": len(receipt_blockers),
+        "receipt_blockers": receipt_blockers,
         "register_gate_id_count": len(materialized_gate_ids),
         "register_gate_ids_complete": materialized_gate_ids == {spec["gate_id"] for spec in GATE_SPECS},
         "primary_blocker_id": blocked_rows[0]["gate_id"] if blocked_rows else "",
@@ -415,6 +459,8 @@ def _render_md(payload: dict[str, Any]) -> str:
         f"- developer_preview_clean_baseline_ready: `{summary['developer_preview_clean_baseline_ready']}`",
         f"- ready_gate_count: `{summary['ready_gate_count']}` / `{summary['gate_count']}`",
         f"- missing_receipt_count: `{summary['missing_receipt_count']}`",
+        f"- present_blocked_receipt_count: `{summary['present_blocked_receipt_count']}`",
+        f"- receipt_blocker_count: `{summary['receipt_blocker_count']}`",
         f"- primary_blocker_id: `{summary['primary_blocker_id']}`",
         "",
         "| priority | gate | status | receipts | blocker |",
