@@ -57,6 +57,16 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "pocketmd_lite_report_evidence_ready": False,
                 "pocketmd_lite_fill_preview_evidence_ready": True,
                 "pocketmd_lite_preview_requires_canonical_review": True,
+                "pocketmd_lite_claim_grade_metric_ready_row_count": 2,
+                "pocketmd_lite_local_min_ligand_rmsd_a_max": 1.29,
+                "pocketmd_lite_hbond_persistence_min": 0.8,
+                "pocketmd_lite_contact_persistence_min": 0.9,
+                "pocketmd_lite_initial_clash_count_total": 79,
+                "pocketmd_lite_final_clash_count_total": 1,
+                "pocketmd_lite_clash_relief_count_total": 78,
+                "pocketmd_lite_green_band_condition_text": (
+                    "green requires local-min RMSD, hbond/contact persistence, and clash relief."
+                ),
                 "pocketmd_lite_claim_allowed": False,
                 "public_benchmark_claim_allowed": False,
                 "public_benchmark_receipt_attach_packet_ready": False,
@@ -141,6 +151,16 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["pocketmd_lite_report_evidence_ready"] is False
     assert response["pocketmd_lite_fill_preview_evidence_ready"] is True
     assert response["pocketmd_lite_preview_requires_canonical_review"] is True
+    assert response["pocketmd_lite_claim_grade_metric_ready_row_count"] == 2
+    assert response["pocketmd_lite_local_min_ligand_rmsd_a_max"] == 1.29
+    assert response["pocketmd_lite_hbond_persistence_min"] == 0.8
+    assert response["pocketmd_lite_contact_persistence_min"] == 0.9
+    assert response["pocketmd_lite_initial_clash_count_total"] == 79
+    assert response["pocketmd_lite_final_clash_count_total"] == 1
+    assert response["pocketmd_lite_clash_relief_count_total"] == 78
+    assert response["pocketmd_lite_green_band_condition_text"] == (
+        "green requires local-min RMSD, hbond/contact persistence, and clash relief."
+    )
     assert response["public_benchmark_receipt_attach_packet_ready"] is False
     assert response["public_benchmark_receipt_attach_packet_present"] is True
     assert response["public_benchmark_vina_gnina_pending_score_count"] == 32
@@ -222,6 +242,14 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["pocketmd_lite_report_evidence_ready"] is False
     assert response["pocketmd_lite_fill_preview_evidence_ready"] is False
     assert response["pocketmd_lite_preview_requires_canonical_review"] is False
+    assert response["pocketmd_lite_claim_grade_metric_ready_row_count"] == 0
+    assert response["pocketmd_lite_local_min_ligand_rmsd_a_max"] == 0.0
+    assert response["pocketmd_lite_hbond_persistence_min"] == 0.0
+    assert response["pocketmd_lite_contact_persistence_min"] == 0.0
+    assert response["pocketmd_lite_initial_clash_count_total"] == 0.0
+    assert response["pocketmd_lite_final_clash_count_total"] == 0.0
+    assert response["pocketmd_lite_clash_relief_count_total"] == 0.0
+    assert response["pocketmd_lite_green_band_condition_text"] == ""
     assert response["pocketmd_lite_claim_allowed"] is False
     assert response["public_benchmark_claim_allowed"] is False
     assert response["public_benchmark_receipt_attach_packet_ready"] is False

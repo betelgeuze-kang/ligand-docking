@@ -130,8 +130,33 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "claim_grade_refinement_evidence_ready": True,
                 "claim_grade_report_evidence_ready": False,
                 "claim_grade_fill_preview_evidence_ready": True,
+                "green_band_condition_text": (
+                    "green requires local-min RMSD, hbond/contact persistence, and clash relief."
+                ),
                 "claim_promotion_allowed": False,
-            }
+            },
+            "rows": [
+                {
+                    "entry_id": "ADRB2_GPCR_BLIND:carvedilol",
+                    "claim_grade_metric_ready": True,
+                    "local_min_ligand_rmsd_a": 1.29,
+                    "hbond_persistence": 0.8,
+                    "contact_persistence": 1.0,
+                    "initial_clash_count": 57,
+                    "clash_count": 0,
+                    "clash_relief_count": 57,
+                },
+                {
+                    "entry_id": "ADRB2_GPCR_BLIND:timolol",
+                    "claim_grade_metric_ready": True,
+                    "local_min_ligand_rmsd_a": 0.86,
+                    "hbond_persistence": 1.0,
+                    "contact_persistence": 0.9,
+                    "initial_clash_count": 22,
+                    "clash_count": 1,
+                    "clash_relief_count": 21,
+                },
+            ],
         },
     )
     _write_json(
@@ -337,6 +362,16 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["pocketmd_lite_report_evidence_ready"] is False
     assert summary["pocketmd_lite_fill_preview_evidence_ready"] is True
     assert summary["pocketmd_lite_preview_requires_canonical_review"] is True
+    assert summary["pocketmd_lite_claim_grade_metric_ready_row_count"] == 2
+    assert summary["pocketmd_lite_local_min_ligand_rmsd_a_max"] == 1.29
+    assert summary["pocketmd_lite_hbond_persistence_min"] == 0.8
+    assert summary["pocketmd_lite_contact_persistence_min"] == 0.9
+    assert summary["pocketmd_lite_initial_clash_count_total"] == 79
+    assert summary["pocketmd_lite_final_clash_count_total"] == 1
+    assert summary["pocketmd_lite_clash_relief_count_total"] == 78
+    assert summary["pocketmd_lite_green_band_condition_text"] == (
+        "green requires local-min RMSD, hbond/contact persistence, and clash relief."
+    )
     assert summary["public_benchmark_claim_allowed"] is False
     assert summary["public_benchmark_receipt_attach_packet_ready"] is False
     assert summary["public_benchmark_receipt_attach_packet_present"] is True
@@ -412,6 +447,12 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "abstain=0" in panels["pocketmd_lite_report_panel"]["primary_metric"]
     assert "report_ready=false" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
     assert "preview_ready=true" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
+    assert "local_min_rmsd_max=1.29" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
+    assert "hbond_persistence_min=0.8" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
+    assert "contact_persistence_min=0.9" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
+    assert "initial_clashes=79" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
+    assert "final_clashes=1" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
+    assert "clash_relief=78" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
     assert "promotion_allowed=false" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
     assert panels["pocketmd_lite_report_panel"]["blockers"] == [
         "pocketmd_lite_preview_not_canonical_report"

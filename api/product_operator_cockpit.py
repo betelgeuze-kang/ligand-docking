@@ -45,6 +45,13 @@ def _int(value: Any) -> int:
         return 0
 
 
+def _float(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _string_list(value: Any) -> list[str]:
     if isinstance(value, list):
         return [str(item) for item in value if str(item or "").strip()]
@@ -95,6 +102,14 @@ def _missing_response() -> dict[str, Any]:
         "pocketmd_lite_report_evidence_ready": False,
         "pocketmd_lite_fill_preview_evidence_ready": False,
         "pocketmd_lite_preview_requires_canonical_review": False,
+        "pocketmd_lite_claim_grade_metric_ready_row_count": 0,
+        "pocketmd_lite_local_min_ligand_rmsd_a_max": 0.0,
+        "pocketmd_lite_hbond_persistence_min": 0.0,
+        "pocketmd_lite_contact_persistence_min": 0.0,
+        "pocketmd_lite_initial_clash_count_total": 0.0,
+        "pocketmd_lite_final_clash_count_total": 0.0,
+        "pocketmd_lite_clash_relief_count_total": 0.0,
+        "pocketmd_lite_green_band_condition_text": "",
         "pocketmd_lite_claim_allowed": False,
         "public_benchmark_claim_allowed": False,
         "public_benchmark_receipt_attach_packet_ready": False,
@@ -230,6 +245,30 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "pocketmd_lite_preview_requires_canonical_review": bool(
             summary.get("pocketmd_lite_preview_requires_canonical_review") is True
+        ),
+        "pocketmd_lite_claim_grade_metric_ready_row_count": _int(
+            summary.get("pocketmd_lite_claim_grade_metric_ready_row_count")
+        ),
+        "pocketmd_lite_local_min_ligand_rmsd_a_max": _float(
+            summary.get("pocketmd_lite_local_min_ligand_rmsd_a_max")
+        ),
+        "pocketmd_lite_hbond_persistence_min": _float(
+            summary.get("pocketmd_lite_hbond_persistence_min")
+        ),
+        "pocketmd_lite_contact_persistence_min": _float(
+            summary.get("pocketmd_lite_contact_persistence_min")
+        ),
+        "pocketmd_lite_initial_clash_count_total": _float(
+            summary.get("pocketmd_lite_initial_clash_count_total")
+        ),
+        "pocketmd_lite_final_clash_count_total": _float(
+            summary.get("pocketmd_lite_final_clash_count_total")
+        ),
+        "pocketmd_lite_clash_relief_count_total": _float(
+            summary.get("pocketmd_lite_clash_relief_count_total")
+        ),
+        "pocketmd_lite_green_band_condition_text": str(
+            summary.get("pocketmd_lite_green_band_condition_text") or ""
         ),
         "pocketmd_lite_claim_allowed": bool(summary.get("pocketmd_lite_claim_allowed") is True),
         "public_benchmark_claim_allowed": bool(summary.get("public_benchmark_claim_allowed") is True),

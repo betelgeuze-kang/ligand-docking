@@ -115,6 +115,14 @@ def _int(value: Any) -> int:
         return 0
 
 
+def _float(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number
+
+
 def _bool_true(value: Any) -> bool:
     return value is True
 
@@ -161,6 +169,30 @@ def _count_metric(label: str, value: Any) -> str:
 
 def _join_metrics(*metrics: str) -> str:
     return "; ".join(metric for metric in metrics if metric)
+
+
+def _row_float_values(rows: list[dict[str, Any]], key: str) -> list[float]:
+    values: list[float] = []
+    for row in rows:
+        number = _float(row.get(key))
+        if number is not None:
+            values.append(number)
+    return values
+
+
+def _max_float_or_zero(rows: list[dict[str, Any]], key: str) -> float:
+    values = _row_float_values(rows, key)
+    return max(values) if values else 0.0
+
+
+def _min_float_or_zero(rows: list[dict[str, Any]], key: str) -> float:
+    values = _row_float_values(rows, key)
+    return min(values) if values else 0.0
+
+
+def _sum_float_or_zero(rows: list[dict[str, Any]], key: str) -> float:
+    values = _row_float_values(rows, key)
+    return sum(values) if values else 0.0
 
 
 def _status_is_blocked(status: str) -> bool:
@@ -594,7 +626,9 @@ def build_product_operator_cockpit(
     hbond = _summary(hbond_payload)
     gpcr = _summary(_read_json(gpcr_json, root=root))
     gpcr_phase3_closure = _summary(_read_json(gpcr_phase3_closure_json, root=root))
-    pocketmd = _summary(_read_json(pocketmd_json, root=root))
+    pocketmd_payload = _read_json(pocketmd_json, root=root)
+    pocketmd = _summary(pocketmd_payload)
+    pocketmd_rows = _rows(pocketmd_payload)
     public_benchmark = _summary(_read_json(public_benchmark_json, root=root))
     public_receipt_attach_packet = _summary(
         _read_json(public_benchmark_receipt_attach_packet_json, root=root)
@@ -678,6 +712,42 @@ def build_product_operator_cockpit(
         pocketmd_refinement_ready
         and pocketmd_report_ready
         and pocketmd_promotion_allowed
+    )
+    pocketmd_claim_grade_rows = [
+        row for row in pocketmd_rows if row.get("claim_grade_metric_ready") is True
+    ]
+    pocketmd_claim_grade_metric_ready_row_count = (
+        len(pocketmd_claim_grade_rows)
+        if pocketmd_rows
+        else _int(pocketmd.get("claim_grade_metric_ready_count"))
+    )
+    pocketmd_local_min_ligand_rmsd_a_max = _max_float_or_zero(
+        pocketmd_claim_grade_rows,
+        "local_min_ligand_rmsd_a",
+    )
+    pocketmd_hbond_persistence_min = _min_float_or_zero(
+        pocketmd_claim_grade_rows,
+        "hbond_persistence",
+    )
+    pocketmd_contact_persistence_min = _min_float_or_zero(
+        pocketmd_claim_grade_rows,
+        "contact_persistence",
+    )
+    pocketmd_initial_clash_count_total = _sum_float_or_zero(
+        pocketmd_claim_grade_rows,
+        "initial_clash_count",
+    )
+    pocketmd_final_clash_count_total = _sum_float_or_zero(
+        pocketmd_claim_grade_rows,
+        "clash_count",
+    )
+    pocketmd_clash_relief_count_total = _sum_float_or_zero(
+        pocketmd_claim_grade_rows,
+        "clash_relief_count",
+    )
+    pocketmd_green_band_condition_text = _first_text(
+        pocketmd.get("green_band_condition_text"),
+        pocketmd.get("green_band_condition"),
     )
 
     public_present = bool(public_benchmark)
@@ -947,6 +1017,12 @@ def build_product_operator_cockpit(
                 _metric("refinement_ready", pocketmd_refinement_ready),
                 _metric("report_ready", pocketmd_report_ready),
                 _metric("preview_ready", pocketmd_fill_preview_ready),
+                _metric("local_min_rmsd_max", pocketmd_local_min_ligand_rmsd_a_max),
+                _metric("hbond_persistence_min", pocketmd_hbond_persistence_min),
+                _metric("contact_persistence_min", pocketmd_contact_persistence_min),
+                _metric("initial_clashes", pocketmd_initial_clash_count_total),
+                _metric("final_clashes", pocketmd_final_clash_count_total),
+                _metric("clash_relief", pocketmd_clash_relief_count_total),
                 _metric("promotion_allowed", pocketmd_promotion_allowed),
             ),
             next_action=_first_text(
@@ -1210,6 +1286,16 @@ def build_product_operator_cockpit(
         "pocketmd_lite_preview_requires_canonical_review": (
             pocketmd_fill_preview_ready and not pocketmd_report_ready
         ),
+        "pocketmd_lite_claim_grade_metric_ready_row_count": (
+            pocketmd_claim_grade_metric_ready_row_count
+        ),
+        "pocketmd_lite_local_min_ligand_rmsd_a_max": pocketmd_local_min_ligand_rmsd_a_max,
+        "pocketmd_lite_hbond_persistence_min": pocketmd_hbond_persistence_min,
+        "pocketmd_lite_contact_persistence_min": pocketmd_contact_persistence_min,
+        "pocketmd_lite_initial_clash_count_total": pocketmd_initial_clash_count_total,
+        "pocketmd_lite_final_clash_count_total": pocketmd_final_clash_count_total,
+        "pocketmd_lite_clash_relief_count_total": pocketmd_clash_relief_count_total,
+        "pocketmd_lite_green_band_condition_text": pocketmd_green_band_condition_text,
         "pocketmd_lite_claim_allowed": pocketmd_lite_claim_allowed,
         "public_benchmark_claim_allowed": public_benchmark_claim_allowed,
         "public_benchmark_receipt_attach_packet_ready": public_attach_ready,
