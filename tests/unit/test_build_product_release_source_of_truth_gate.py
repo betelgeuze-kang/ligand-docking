@@ -5508,7 +5508,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert _last_refresh_index("python3 tools/build_goal_release_decision_gate.py") < (
         _last_refresh_index("python3 tools/build_goal_operator_action_board.py")
     )
-    assert _last_refresh_index("python3 tools/build_goal_operator_action_board.py") < (
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_operator_action_board.py") < (
         _last_refresh_index("python3 tools/build_goal_release_burndown_work_order.py")
     )
     assert _last_refresh_index("python3 tools/build_goal_release_burndown_work_order.py") < (
@@ -5517,7 +5517,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert _last_refresh_index("python3 tools/build_goal_operator_intake_kit.py") < (
         _last_refresh_index("python3 tools/build_goal_bottleneck_briefing.py")
     )
-    assert _last_refresh_index("python3 tools/build_goal_bottleneck_briefing.py") < (
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_goal_bottleneck_briefing.py") < (
         _last_refresh_index("python3 tools/build_product_full_commercial_blocker_evidence_matrix.py")
     )
     assert _last_refresh_index("python3 tools/build_product_full_commercial_blocker_evidence_matrix.py") < (
@@ -6234,6 +6234,47 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
     assert mod.RELEASE_REFRESH_COMMANDS.count(mod.PRODUCT_OPERATOR_COCKPIT_COMMAND) >= 2
     assert mod.RELEASE_REFRESH_COMMANDS.index(mod.PRODUCT_OPERATOR_COCKPIT_COMMAND) < _last_refresh_index(
         "python3 tools/build_goal_release_burndown_work_order.py"
+    )
+    last_goal_release = _last_refresh_index("python3 tools/build_goal_release_decision_gate.py")
+    last_goal_board = _last_refresh_index("python3 tools/build_goal_operator_action_board.py")
+    last_source_gate = _last_refresh_index("python3 tools/build_product_release_source_of_truth_gate.py")
+    assert last_goal_release < last_goal_board
+    assert last_goal_board < _last_refresh_index(mod.PRODUCT_OPERATOR_COCKPIT_COMMAND)
+    assert last_goal_board < _last_refresh_index("python3 tools/build_goal_operator_intake_kit.py")
+    last_goal_bottleneck = _last_refresh_index("python3 tools/build_goal_bottleneck_briefing.py")
+    last_full_commercial_matrix = _last_refresh_index(
+        "python3 tools/build_product_full_commercial_blocker_evidence_matrix.py"
+    )
+    last_release_bundle = _last_refresh_index("python3 deploy/product_release_bundle.py")
+    last_rollout_readiness = _last_refresh_index("python3 tools/build_product_rollout_execution_readiness.py")
+    last_launch_preflight = _last_refresh_index("python3 tools/product/build_product_launch_r4_preflight.py")
+    last_rollout_smoke = _last_refresh_index("python3 tools/build_product_rollout_execution_smoke_receipt.py")
+    last_deploy_ops_gap = _last_refresh_index("python3 tools/build_deploy_ops_legal_gap_closure.py")
+    last_master_gap_rollup = _last_refresh_index("python3 tools/build_master_gap_closure_rollup.py")
+    last_commercial_handoff = _last_refresh_index(
+        "python3 tools/build_product_commercial_readiness_handoff_bundle.py"
+    )
+    last_ledger_scan = _last_refresh_index("python3 tools/build_product_ledger_privacy_scan.py")
+    last_support_bundle = _last_refresh_index(mod.SUPPORT_BUNDLE_COMMAND)
+    last_enterprise_gate = _last_refresh_index(mod.ENTERPRISE_ON_PREM_READINESS_GATE_COMMAND)
+    last_cockpit = _last_refresh_index(mod.PRODUCT_OPERATOR_COCKPIT_COMMAND)
+    assert last_goal_board < last_goal_bottleneck
+    assert last_goal_bottleneck < last_full_commercial_matrix
+    assert last_full_commercial_matrix < last_release_bundle
+    assert last_release_bundle < last_rollout_readiness
+    assert last_rollout_readiness < last_launch_preflight
+    assert last_rollout_readiness < last_rollout_smoke
+    assert last_rollout_smoke < last_deploy_ops_gap
+    assert last_deploy_ops_gap < last_master_gap_rollup
+    assert last_full_commercial_matrix < last_commercial_handoff
+    assert last_commercial_handoff < last_ledger_scan
+    assert last_ledger_scan < last_support_bundle
+    assert last_support_bundle < last_enterprise_gate
+    assert last_enterprise_gate < last_cockpit
+    assert last_cockpit < last_source_gate
+    assert any(
+        command == "python3 tools/build_product_release_source_of_truth_gate.py"
+        for command in mod.RELEASE_REFRESH_COMMANDS[:last_goal_release]
     )
     assert _last_refresh_index(mod.PRODUCT_OPERATOR_COCKPIT_COMMAND) < _last_refresh_index(
         "python3 tools/build_product_release_source_of_truth_gate.py"

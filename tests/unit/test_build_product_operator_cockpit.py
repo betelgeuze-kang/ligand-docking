@@ -375,7 +375,33 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "customer_shadow_work_order_primary_required_source_artifact_fingerprint": "sha256",
                 "paid_pilot_evidence_ready": False,
                 "paid_pilot_claim_allowed": False,
-            }
+            },
+            "customer_shadow_work_order_rows": [
+                {
+                    "work_order_id": "customer_shadow_case_slot_1",
+                    "case_slot_id": "customer_shadow_case_1",
+                    "status": "missing_customer_shadow_evidence",
+                    "required_row_kind": "customer_shadow",
+                    "operator_csv": "config/customer_shadow_evidence_intake_template.csv",
+                    "required_action": "Add one reviewed real customer-shadow metadata row.",
+                    "required_raw_data_custody": "customer_retained",
+                    "required_customer_retained_raw_data": True,
+                    "required_redistribution_allowed": False,
+                    "required_raw_data_stored_in_repo": False,
+                    "required_derived_metadata_fields": [
+                        "artifact_fingerprint",
+                        "case_domain",
+                        "input_size_class",
+                        "result_metric_summary",
+                        "runner_profile",
+                    ],
+                    "required_reviewer_signoff_status": "approved",
+                    "required_source_artifact_fingerprint": "sha256",
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                }
+            ],
         },
     )
     _write_json(
@@ -790,6 +816,32 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     ]
     assert summary["customer_shadow_work_order_primary_required_reviewer_signoff_status"] == "approved"
     assert summary["customer_shadow_work_order_primary_required_source_artifact_fingerprint"] == "sha256"
+    assert summary["customer_shadow_work_order_rows"] == [
+        {
+            "work_order_id": "customer_shadow_case_slot_1",
+            "case_slot_id": "customer_shadow_case_1",
+            "status": "missing_customer_shadow_evidence",
+            "required_row_kind": "customer_shadow",
+            "operator_csv": "config/customer_shadow_evidence_intake_template.csv",
+            "required_action": "Add one reviewed real customer-shadow metadata row.",
+            "required_raw_data_custody": "customer_retained",
+            "required_customer_retained_raw_data": True,
+            "required_redistribution_allowed": False,
+            "required_raw_data_stored_in_repo": False,
+            "required_derived_metadata_fields": [
+                "artifact_fingerprint",
+                "case_domain",
+                "input_size_class",
+                "result_metric_summary",
+                "runner_profile",
+            ],
+            "required_reviewer_signoff_status": "approved",
+            "required_source_artifact_fingerprint": "sha256",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
     assert summary["customer_shadow_intake_schema_ready"] is True
     assert summary["customer_shadow_minimum_met"] is False
     assert summary["customer_shadow_raw_data_stored_in_repo"] is False

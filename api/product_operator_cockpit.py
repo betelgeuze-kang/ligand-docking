@@ -102,6 +102,47 @@ def _pr38_verification_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
+def _customer_shadow_work_order_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    work_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        work_rows.append(
+            {
+                "work_order_id": str(row.get("work_order_id") or ""),
+                "case_slot_id": str(row.get("case_slot_id") or ""),
+                "status": str(row.get("status") or ""),
+                "required_row_kind": str(row.get("required_row_kind") or ""),
+                "operator_csv": str(row.get("operator_csv") or ""),
+                "required_action": str(row.get("required_action") or ""),
+                "required_raw_data_custody": str(row.get("required_raw_data_custody") or ""),
+                "required_customer_retained_raw_data": bool(
+                    row.get("required_customer_retained_raw_data") is True
+                ),
+                "required_redistribution_allowed": bool(
+                    row.get("required_redistribution_allowed") is True
+                ),
+                "required_raw_data_stored_in_repo": bool(
+                    row.get("required_raw_data_stored_in_repo") is True
+                ),
+                "required_derived_metadata_fields": _string_list(
+                    row.get("required_derived_metadata_fields")
+                ),
+                "required_reviewer_signoff_status": str(
+                    row.get("required_reviewer_signoff_status") or ""
+                ),
+                "required_source_artifact_fingerprint": str(
+                    row.get("required_source_artifact_fingerprint") or ""
+                ),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return work_rows
+
+
 def _pr38_split_surface() -> dict[str, Any]:
     acceptance_packet = _read_json_object(PR38_SPLIT_ACCEPTANCE_PACKET_ARTIFACT)
     matrix_packet = _read_json_object(PR38_CHILD_PR_VERIFICATION_MATRIX_ARTIFACT)
@@ -307,6 +348,7 @@ def _missing_response() -> dict[str, Any]:
         "customer_shadow_work_order_primary_required_derived_metadata_fields": [],
         "customer_shadow_work_order_primary_required_reviewer_signoff_status": "",
         "customer_shadow_work_order_primary_required_source_artifact_fingerprint": "",
+        "customer_shadow_work_order_rows": [],
         "customer_shadow_intake_schema_ready": False,
         "customer_shadow_minimum_met": False,
         "customer_shadow_raw_data_stored_in_repo": False,
@@ -686,6 +728,9 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "customer_shadow_work_order_primary_required_source_artifact_fingerprint": str(
             summary.get("customer_shadow_work_order_primary_required_source_artifact_fingerprint") or ""
+        ),
+        "customer_shadow_work_order_rows": _customer_shadow_work_order_rows(
+            summary.get("customer_shadow_work_order_rows")
         ),
         "customer_shadow_intake_schema_ready": bool(
             summary.get("customer_shadow_intake_schema_ready") is True

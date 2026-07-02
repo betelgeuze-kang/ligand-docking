@@ -112,6 +112,11 @@ def _rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
 
 
+def _dict_list(payload: dict[str, Any], key: str) -> list[dict[str, Any]]:
+    rows = payload.get(key)
+    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+
+
 def _text(value: Any) -> str:
     return str(value or "").strip()
 
@@ -164,6 +169,44 @@ def _first_non_pass_row(rows: list[dict[str, Any]]) -> dict[str, Any]:
         if _text(row.get("status")).lower() != "pass":
             return row
     return {}
+
+
+def _customer_shadow_work_order_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _dict_list(payload, "customer_shadow_work_order_rows"):
+        rows.append(
+            {
+                "work_order_id": _text(row.get("work_order_id")),
+                "case_slot_id": _text(row.get("case_slot_id")),
+                "status": _text(row.get("status")),
+                "required_row_kind": _text(row.get("required_row_kind")),
+                "operator_csv": _text(row.get("operator_csv")),
+                "required_action": _text(row.get("required_action")),
+                "required_raw_data_custody": _text(row.get("required_raw_data_custody")),
+                "required_customer_retained_raw_data": _bool_true(
+                    row.get("required_customer_retained_raw_data")
+                ),
+                "required_redistribution_allowed": _bool_true(
+                    row.get("required_redistribution_allowed")
+                ),
+                "required_raw_data_stored_in_repo": _bool_true(
+                    row.get("required_raw_data_stored_in_repo")
+                ),
+                "required_derived_metadata_fields": _string_list(
+                    row.get("required_derived_metadata_fields")
+                ),
+                "required_reviewer_signoff_status": _text(
+                    row.get("required_reviewer_signoff_status")
+                ),
+                "required_source_artifact_fingerprint": _text(
+                    row.get("required_source_artifact_fingerprint")
+                ),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
 
 
 def _metric(label: str, value: Any) -> str:
@@ -669,7 +712,11 @@ def build_product_operator_cockpit(
     pm_queue_rows = _rows(pm_queue_payload)
     evidence_bundle = _summary(_read_json(evidence_bundle_json, root=root))
     api_customer_flow = _summary(_read_json(api_customer_flow_json, root=root))
-    customer_shadow = _summary(_read_json(customer_shadow_json, root=root))
+    customer_shadow_payload = _read_json(customer_shadow_json, root=root)
+    customer_shadow = _summary(customer_shadow_payload)
+    customer_shadow_work_order_row_preview = _customer_shadow_work_order_rows(
+        customer_shadow_payload
+    )
     developer_preview = _summary(_read_json(developer_preview_json, root=root))
     f2g_preflight_payload = _read_json(f2g_f2h_preflight_json, root=root)
     f2g_preflight = _summary(f2g_preflight_payload)
@@ -1956,6 +2003,7 @@ def build_product_operator_cockpit(
         "customer_shadow_work_order_primary_required_source_artifact_fingerprint": (
             customer_shadow_work_order_primary_required_source_artifact_fingerprint
         ),
+        "customer_shadow_work_order_rows": customer_shadow_work_order_row_preview,
         "customer_shadow_intake_schema_ready": customer_shadow_intake_schema_ready,
         "customer_shadow_minimum_met": customer_shadow_minimum_met,
         "customer_shadow_raw_data_stored_in_repo": customer_shadow_raw_data_stored_in_repo,
