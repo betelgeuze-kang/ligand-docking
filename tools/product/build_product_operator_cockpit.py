@@ -22,6 +22,7 @@ DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON = (
     "runs/public_benchmark_receipt_attach_packet_current.json"
 )
 DEFAULT_RELEASE_ACTIONS_JSON = "runs/goal_operator_action_board_current.json"
+DEFAULT_PM_PRIORITY_QUEUE_JSON = ".betelgeuze/pm_priority_queue_status_current.json"
 DEFAULT_EVIDENCE_BUNDLE_JSON = "runs/ai_md_product_evidence_bundle_current.json"
 DEFAULT_CUSTOMER_SHADOW_JSON = "runs/customer_shadow_evidence_status_current.json"
 DEFAULT_OUT_JSON = "runs/product_operator_cockpit_current.json"
@@ -131,6 +132,13 @@ def _first_text(*values: Any) -> str:
         if text:
             return text
     return ""
+
+
+def _first_blocked_row(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    for row in rows:
+        if row.get("ready") is not True:
+            return row
+    return {}
 
 
 def _metric(label: str, value: Any) -> str:
@@ -569,6 +577,7 @@ def build_product_operator_cockpit(
         DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON
     ),
     release_actions_json: str | Path = DEFAULT_RELEASE_ACTIONS_JSON,
+    pm_priority_queue_json: str | Path = DEFAULT_PM_PRIORITY_QUEUE_JSON,
     evidence_bundle_json: str | Path = DEFAULT_EVIDENCE_BUNDLE_JSON,
     customer_shadow_json: str | Path = DEFAULT_CUSTOMER_SHADOW_JSON,
     root: Path = ROOT,
@@ -584,6 +593,9 @@ def build_product_operator_cockpit(
         _read_json(public_benchmark_receipt_attach_packet_json, root=root)
     )
     release_actions = _summary(_read_json(release_actions_json, root=root))
+    pm_queue_payload = _read_json(pm_priority_queue_json, root=root)
+    pm_queue = _summary(pm_queue_payload)
+    pm_queue_rows = _rows(pm_queue_payload)
     evidence_bundle = _summary(_read_json(evidence_bundle_json, root=root))
     customer_shadow = _summary(_read_json(customer_shadow_json, root=root))
 
@@ -675,6 +687,18 @@ def build_product_operator_cockpit(
     release_blocker_count = _int(
         release_actions.get("goal_release_blocker_count") or release_actions.get("blocker_count")
     )
+    pm_queue_present = bool(pm_queue)
+    pm_queue_blocked_count = _int(pm_queue.get("blocked_item_count"))
+    pm_queue_ready_count = _int(pm_queue.get("ready_item_count"))
+    pm_queue_first_blocked_item_id = _first_text(pm_queue.get("first_blocked_item_id"))
+    pm_queue_first_blocked_row = _first_blocked_row(pm_queue_rows)
+    pm_queue_first_blocker = _first_text(pm_queue_first_blocked_row.get("blocker"))
+    pm_queue_first_action = _first_text(
+        pm_queue_first_blocked_row.get("next_action"),
+        pm_queue.get("next_required_step"),
+    )
+    pm_queue_blocked = pm_queue_present and pm_queue_blocked_count > 0
+    release_panel_claim_allowed = release_allowed and not pm_queue_blocked
 
     evidence_bundle_present = bool(evidence_bundle)
     evidence_bundle_export_ready = (
@@ -933,29 +957,42 @@ def build_product_operator_cockpit(
             panel_id="release_blockers_operator_actions",
             title="Release blockers / operator actions",
             route="/goal/actions",
-            artifact_path=release_actions_json,
-            artifact_present=release_actions_present,
-            status=_text(release_actions.get("status") or "missing_goal_operator_action_board"),
+            artifact_path=pm_priority_queue_json if pm_queue_present else release_actions_json,
+            artifact_present=release_actions_present or pm_queue_present,
+            status=(
+                "pm_priority_queue_blocked"
+                if pm_queue_blocked
+                else _text(release_actions.get("status") or "missing_goal_operator_action_board")
+            ),
             surface_ready=True,
-            source_artifact_ready=release_actions_present,
-            operator_action_required=not release_allowed,
-            claim_allowed=release_allowed,
+            source_artifact_ready=release_actions_present or pm_queue_present,
+            operator_action_required=(not release_allowed) or pm_queue_blocked,
+            claim_allowed=release_panel_claim_allowed,
             primary_metric=_join_metrics(
                 _metric("release_allowed", release_allowed),
                 _metric("release_blockers", release_blocker_count),
+                _metric("pm_queue_status", pm_queue.get("status")),
+                _count_metric("pm_queue_blocked_items", pm_queue_blocked_count),
             ),
             secondary_metric=_join_metrics(
                 _metric("primary_action", release_actions.get("primary_action_id")),
                 _metric("decision_gate", release_actions.get("goal_release_decision_gate_status")),
+                _metric("pm_first_blocked_item", pm_queue_first_blocked_item_id),
+                _metric("pm_first_blocker", pm_queue_first_blocker),
             ),
             next_action=_first_text(
+                pm_queue_first_action if pm_queue_blocked else "",
                 release_actions.get("primary_action_recommended_action"),
                 release_actions.get("next_required_step"),
                 "Resolve the primary operator action before release promotion.",
             ),
             allowed_claim_text="Operator actions can be displayed as release blockers.",
             disallowed_claim_text="Release or paid-pilot wording remains disallowed while release_allowed=false.",
-            blockers=[] if release_allowed else ["goal_release_allowed_false"],
+            blockers=(
+                [pm_queue_first_blocker or "pm_priority_queue_blocked"]
+                if pm_queue_blocked
+                else ([] if release_allowed else ["goal_release_allowed_false"])
+            ),
             claim_boundary=_text(release_actions.get("claim_boundary")) or CLAIM_BOUNDARY,
             root=root,
         ),
@@ -1104,8 +1141,19 @@ def build_product_operator_cockpit(
         "customer_shadow_work_order_ready": customer_shadow_work_order_ready,
         "customer_shadow_work_order_row_count": customer_shadow_work_order_rows,
         "customer_shadow_work_order_primary_case_slot_id": customer_shadow_work_order_primary_slot,
+        "pm_priority_queue_present": pm_queue_present,
+        "pm_priority_queue_status": _text(pm_queue.get("status")),
+        "pm_priority_queue_ready_item_count": pm_queue_ready_count,
+        "pm_priority_queue_blocked_item_count": pm_queue_blocked_count,
+        "pm_priority_queue_first_blocked_item_id": pm_queue_first_blocked_item_id,
+        "pm_priority_queue_first_blocker": pm_queue_first_blocker,
+        "pm_priority_queue_next_required_step": pm_queue_first_action,
         "release_allowed": release_allowed,
-        "next_required_step": action_panels[0]["next_action"] if action_panels else "",
+        "next_required_step": (
+            pm_queue_first_action
+            if pm_queue_blocked
+            else (action_panels[0]["next_action"] if action_panels else "")
+        ),
         "execution_enabled": False,
         "docking_results_emitted": False,
         "external_state_mutated": False,
@@ -1142,6 +1190,7 @@ def _parser() -> argparse.ArgumentParser:
         default=DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON,
     )
     parser.add_argument("--release-actions-json", default=DEFAULT_RELEASE_ACTIONS_JSON)
+    parser.add_argument("--pm-priority-queue-json", default=DEFAULT_PM_PRIORITY_QUEUE_JSON)
     parser.add_argument("--evidence-bundle-json", default=DEFAULT_EVIDENCE_BUNDLE_JSON)
     parser.add_argument("--customer-shadow-json", default=DEFAULT_CUSTOMER_SHADOW_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
@@ -1162,6 +1211,7 @@ def main(argv: list[str] | None = None) -> int:
         public_benchmark_json=args.public_benchmark_json,
         public_benchmark_receipt_attach_packet_json=args.public_benchmark_receipt_attach_packet_json,
         release_actions_json=args.release_actions_json,
+        pm_priority_queue_json=args.pm_priority_queue_json,
         evidence_bundle_json=args.evidence_bundle_json,
         customer_shadow_json=args.customer_shadow_json,
     )

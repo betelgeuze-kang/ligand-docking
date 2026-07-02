@@ -111,6 +111,13 @@ def _missing_response() -> dict[str, Any]:
         "customer_shadow_work_order_ready": False,
         "customer_shadow_work_order_row_count": 0,
         "customer_shadow_work_order_primary_case_slot_id": "",
+        "pm_priority_queue_present": False,
+        "pm_priority_queue_status": "",
+        "pm_priority_queue_ready_item_count": 0,
+        "pm_priority_queue_blocked_item_count": 0,
+        "pm_priority_queue_first_blocked_item_id": "",
+        "pm_priority_queue_first_blocker": "",
+        "pm_priority_queue_next_required_step": "",
         "release_allowed": False,
         "panels": [],
         "claim_matrix": [],
@@ -239,6 +246,17 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "customer_shadow_work_order_primary_case_slot_id": str(
             summary.get("customer_shadow_work_order_primary_case_slot_id") or ""
+        ),
+        "pm_priority_queue_present": bool(summary.get("pm_priority_queue_present") is True),
+        "pm_priority_queue_status": str(summary.get("pm_priority_queue_status") or ""),
+        "pm_priority_queue_ready_item_count": _int(summary.get("pm_priority_queue_ready_item_count")),
+        "pm_priority_queue_blocked_item_count": _int(summary.get("pm_priority_queue_blocked_item_count")),
+        "pm_priority_queue_first_blocked_item_id": str(
+            summary.get("pm_priority_queue_first_blocked_item_id") or ""
+        ),
+        "pm_priority_queue_first_blocker": str(summary.get("pm_priority_queue_first_blocker") or ""),
+        "pm_priority_queue_next_required_step": str(
+            summary.get("pm_priority_queue_next_required_step") or ""
         ),
         "release_allowed": bool(summary.get("release_allowed") is True),
         "panels": _list(packet, "rows"),

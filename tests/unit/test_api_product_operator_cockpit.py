@@ -73,6 +73,15 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "customer_shadow_work_order_ready": False,
                 "customer_shadow_work_order_row_count": 3,
                 "customer_shadow_work_order_primary_case_slot_id": "customer_shadow_case_1",
+                "pm_priority_queue_present": True,
+                "pm_priority_queue_status": "blocked_pm_priority_queue",
+                "pm_priority_queue_ready_item_count": 3,
+                "pm_priority_queue_blocked_item_count": 5,
+                "pm_priority_queue_first_blocked_item_id": "2",
+                "pm_priority_queue_first_blocker": "f2g_authoritative_surfaces_missing",
+                "pm_priority_queue_next_required_step": (
+                    "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+                ),
                 "release_allowed": False,
                 "next_required_step": "Keep claims locked.",
                 "claim_boundary": "cockpit boundary",
@@ -124,6 +133,15 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["customer_shadow_work_order_ready"] is False
     assert response["customer_shadow_work_order_row_count"] == 3
     assert response["customer_shadow_work_order_primary_case_slot_id"] == "customer_shadow_case_1"
+    assert response["pm_priority_queue_present"] is True
+    assert response["pm_priority_queue_status"] == "blocked_pm_priority_queue"
+    assert response["pm_priority_queue_ready_item_count"] == 3
+    assert response["pm_priority_queue_blocked_item_count"] == 5
+    assert response["pm_priority_queue_first_blocked_item_id"] == "2"
+    assert response["pm_priority_queue_first_blocker"] == "f2g_authoritative_surfaces_missing"
+    assert response["pm_priority_queue_next_required_step"] == (
+        "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+    )
     assert response["panels"][0]["panel_id"] == "product_capabilities_dashboard"
     assert response["claim_matrix"][0]["claim_id"] == "paid_pilot_wording"
     assert response["execution_enabled"] is False
@@ -176,6 +194,13 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["customer_shadow_work_order_ready"] is False
     assert response["customer_shadow_work_order_row_count"] == 0
     assert response["customer_shadow_work_order_primary_case_slot_id"] == ""
+    assert response["pm_priority_queue_present"] is False
+    assert response["pm_priority_queue_status"] == ""
+    assert response["pm_priority_queue_ready_item_count"] == 0
+    assert response["pm_priority_queue_blocked_item_count"] == 0
+    assert response["pm_priority_queue_first_blocked_item_id"] == ""
+    assert response["pm_priority_queue_first_blocker"] == ""
+    assert response["pm_priority_queue_next_required_step"] == ""
     assert response["panels"] == []
     assert response["claim_matrix"] == []
     assert response["execution_enabled"] is False

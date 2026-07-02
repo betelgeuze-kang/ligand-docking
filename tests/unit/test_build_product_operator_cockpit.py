@@ -25,6 +25,7 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         "public": tmp_path / "runs/public_benchmark_external_receipts_audit_current.json",
         "public_attach": tmp_path / "runs/public_benchmark_receipt_attach_packet_current.json",
         "release": tmp_path / "runs/goal_operator_action_board_current.json",
+        "pm_queue": tmp_path / ".betelgeuze/pm_priority_queue_status_current.json",
         "bundle": tmp_path / "runs/ai_md_product_evidence_bundle_current.json",
         "customer": tmp_path / "runs/customer_shadow_evidence_status_current.json",
     }
@@ -172,6 +173,38 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         },
     )
     _write_json(
+        paths["pm_queue"],
+        {
+            "summary": {
+                "status": "blocked_pm_priority_queue",
+                "ready_item_count": 3,
+                "blocked_item_count": 5,
+                "first_blocked_item_id": "2",
+                "next_required_step": (
+                    "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+                ),
+            },
+            "rows": [
+                {
+                    "item_id": "1",
+                    "status": "source_of_truth_refresh_synced",
+                    "ready": True,
+                    "blocker": "",
+                    "next_action": "Source-of-truth snapshots agree.",
+                },
+                {
+                    "item_id": "2",
+                    "status": "blocked_f2g_f2h_surface_preflight",
+                    "ready": False,
+                    "blocker": "f2g_authoritative_surfaces_missing",
+                    "next_action": (
+                        "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+                    ),
+                },
+            ],
+        },
+    )
+    _write_json(
         paths["bundle"],
         {
             "summary": {
@@ -220,6 +253,7 @@ def _build_payload(tmp_path: Path) -> dict:
         public_benchmark_json=paths["public"],
         public_benchmark_receipt_attach_packet_json=paths["public_attach"],
         release_actions_json=paths["release"],
+        pm_priority_queue_json=paths["pm_queue"],
         evidence_bundle_json=paths["bundle"],
         customer_shadow_json=paths["customer"],
         root=tmp_path,
@@ -274,6 +308,17 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["customer_shadow_work_order_ready"] is False
     assert summary["customer_shadow_work_order_row_count"] == 3
     assert summary["customer_shadow_work_order_primary_case_slot_id"] == "customer_shadow_case_1"
+    assert summary["pm_priority_queue_present"] is True
+    assert summary["pm_priority_queue_status"] == "blocked_pm_priority_queue"
+    assert summary["pm_priority_queue_blocked_item_count"] == 5
+    assert summary["pm_priority_queue_first_blocked_item_id"] == "2"
+    assert summary["pm_priority_queue_first_blocker"] == "f2g_authoritative_surfaces_missing"
+    assert summary["pm_priority_queue_next_required_step"] == (
+        "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+    )
+    assert summary["next_required_step"] == (
+        "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+    )
 
     assert panels["product_capabilities_dashboard"]["route"] == "/product/capabilities"
     assert panels["goal_readiness_dashboard"]["route"] == "/goal/readiness"
@@ -318,6 +363,19 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         "Fill the receipt attach packet rows before rerunning the benchmark audit."
     )
     assert panels["release_blockers_operator_actions"]["claim_allowed"] is False
+    assert panels["release_blockers_operator_actions"]["status"] == "pm_priority_queue_blocked"
+    assert panels["release_blockers_operator_actions"]["operator_action_required"] is True
+    assert "pm_queue_blocked_items=5" in panels["release_blockers_operator_actions"]["primary_metric"]
+    assert "pm_first_blocked_item=2" in panels["release_blockers_operator_actions"]["secondary_metric"]
+    assert "pm_first_blocker=f2g_authoritative_surfaces_missing" in (
+        panels["release_blockers_operator_actions"]["secondary_metric"]
+    )
+    assert panels["release_blockers_operator_actions"]["next_action"] == (
+        "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+    )
+    assert panels["release_blockers_operator_actions"]["blockers"] == [
+        "f2g_authoritative_surfaces_missing"
+    ]
     assert panels["evidence_bundle_export"]["source_artifact_ready"] is True
     assert "customer_rows=0" in panels["claim_boundary_matrix"]["primary_metric"]
     assert "required_customer_rows=3" in panels["claim_boundary_matrix"]["primary_metric"]
@@ -393,6 +451,8 @@ def test_product_operator_cockpit_cli_writes_current_artifacts(tmp_path: Path) -
             str(paths["public_attach"]),
             "--release-actions-json",
             str(paths["release"]),
+            "--pm-priority-queue-json",
+            str(paths["pm_queue"]),
             "--evidence-bundle-json",
             str(paths["bundle"]),
             "--customer-shadow-json",
