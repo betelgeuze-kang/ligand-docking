@@ -29,6 +29,33 @@ def _write_common_inputs(root: Path) -> None:
         {"rows": [{"work_item_id": track, "current_receipt_status": "missing_not_attached"} for track in sorted(mod.EXTERNAL_TRACK_IDS)]},
     )
     _write_json(
+        root / "runs/public_benchmark_external_receipts_audit_current.json",
+        {
+            "summary": {
+                "status": "blocked_public_benchmark_external_receipts_audit",
+                "external_benchmark_receipts_ready": False,
+                "blocker_count": 2,
+                "primary_blocker_id": "vina_gnina_same_input_comparison",
+                "next_required_step": "Fill public benchmark receipt fields.",
+            }
+        },
+    )
+    _write_json(
+        root / "runs/public_benchmark_receipt_attach_packet_current.json",
+        {
+            "summary": {
+                "status": "blocked_public_benchmark_receipt_attach_packet",
+                "receipt_attach_packet_ready": False,
+                "blocker_count": 2,
+                "field_work_order_row_count": 22,
+                "field_work_order_primary_lane_id": "vina_gnina_same_input_scores",
+                "field_work_order_primary_field_name": "approval_token",
+                "primary_blocker_id": "vina_gnina_same_input_scores",
+                "next_required_step": "Fill public benchmark receipt fields.",
+            }
+        },
+    )
+    _write_json(
         root / "runs/customer_shadow_evidence_status_current.json",
         {
             "summary": {
@@ -113,6 +140,9 @@ def test_pm_priority_queue_status_keeps_f2g_and_f2h_blocked(tmp_path: Path) -> N
     assert rows["6"]["next_action"] == (
         "Add one reviewed real customer-shadow metadata row; keep raw data customer-retained and out of repo."
     )
+    assert rows["5"]["ready"] is False
+    assert rows["5"]["status"] == "blocked_public_benchmark_receipt_attach_packet"
+    assert "field_work_order_rows=22" in rows["5"]["evidence"]
     assert summary["g1_promotion_allowed"] is False
     assert summary["release_ready_promotion_allowed"] is False
 
@@ -230,7 +260,58 @@ def test_pm_priority_queue_status_rejects_external_receipt_promotion_without_url
 
     row = {item["item_id"]: item for item in payload["rows"]}["5"]
     assert row["ready"] is False
-    assert row["status"] == "blocked_external_benchmark_queue_incomplete"
+    assert row["status"] == "blocked_public_benchmark_receipt_attach_packet"
+    assert row["blocker"] == "vina_gnina_same_input_scores"
+
+
+def test_pm_priority_queue_status_uses_public_benchmark_attach_packet_work_order(
+    tmp_path: Path,
+) -> None:
+    _write_common_inputs(tmp_path)
+
+    payload = mod.build_pm_priority_queue_status(root=tmp_path)
+
+    row = {item["item_id"]: item for item in payload["rows"]}["5"]
+    assert row["ready"] is False
+    assert row["status"] == "blocked_public_benchmark_receipt_attach_packet"
+    assert row["blocker"] == "vina_gnina_same_input_scores"
+    assert "audit_status=blocked_public_benchmark_external_receipts_audit" in row["evidence"]
+    assert "attach_status=blocked_public_benchmark_receipt_attach_packet" in row["evidence"]
+    assert "field_work_order_rows=22" in row["evidence"]
+    assert "field_work_order_primary=vina_gnina_same_input_scores" in row["evidence"]
+    assert row["next_action"] == "Fill public benchmark receipt fields."
+
+
+def test_pm_priority_queue_status_marks_public_benchmark_ready_after_canonical_receipts(
+    tmp_path: Path,
+) -> None:
+    _write_common_inputs(tmp_path)
+    _write_json(
+        tmp_path / "runs/public_benchmark_external_receipts_audit_current.json",
+        {
+            "summary": {
+                "status": "public_benchmark_external_receipts_audit_ready",
+                "external_benchmark_receipts_ready": True,
+            }
+        },
+    )
+    _write_json(
+        tmp_path / "runs/public_benchmark_receipt_attach_packet_current.json",
+        {
+            "summary": {
+                "status": "public_benchmark_receipt_attach_packet_ready",
+                "receipt_attach_packet_ready": True,
+                "field_work_order_row_count": 0,
+            }
+        },
+    )
+
+    payload = mod.build_pm_priority_queue_status(root=tmp_path)
+
+    row = {item["item_id"]: item for item in payload["rows"]}["5"]
+    assert row["ready"] is True
+    assert row["status"] == "external_benchmark_receipts_ready"
+    assert row["blocker"] == ""
 
 
 def test_pm_priority_queue_status_marks_customer_shadow_ready_only_after_three_cases(

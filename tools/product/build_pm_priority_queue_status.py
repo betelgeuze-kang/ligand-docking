@@ -21,6 +21,8 @@ DEFAULT_F2G_F2H_RECOVERY_JSON = ".betelgeuze/f2g_f2h_authoritative_surface_recov
 DEFAULT_DEVELOPER_PREVIEW_REGISTER_MD = "docs/developer_preview_final_gate_action_register.md"
 DEFAULT_DEVELOPER_PREVIEW_AUDIT_JSON = "runs/developer_preview_final_gate_audit_current.json"
 DEFAULT_EXTERNAL_BENCHMARK_JSON = ".betelgeuze/external_benchmark_receipt_queue_batch_update.json"
+DEFAULT_PUBLIC_BENCHMARK_AUDIT_JSON = "runs/public_benchmark_external_receipts_audit_current.json"
+DEFAULT_PUBLIC_BENCHMARK_ATTACH_PACKET_JSON = "runs/public_benchmark_receipt_attach_packet_current.json"
 DEFAULT_CUSTOMER_SHADOW_JSON = "runs/customer_shadow_evidence_status_current.json"
 DEFAULT_GPU_HIP_PLAN_MD = "docs/gpu_hip_parity_after_cpu_plan.md"
 DEFAULT_GPU_RETURN_INTAKE_JSON = "runs/product_production_ai_gpu_return_intake_current.json"
@@ -282,7 +284,7 @@ def _developer_preview_row(register_text: str, audit_payload: Any) -> dict[str, 
     )
 
 
-def _external_benchmark_row(payload: Any) -> dict[str, Any]:
+def _external_benchmark_row(payload: Any, audit_payload: Any = None, attach_payload: Any = None) -> dict[str, Any]:
     data = payload if isinstance(payload, dict) else {}
     rows = data.get("rows") if isinstance(data.get("rows"), list) else []
     ids = {str(row.get("work_item_id")) for row in rows if isinstance(row, dict)}
@@ -292,15 +294,49 @@ def _external_benchmark_row(payload: Any) -> dict[str, Any]:
         if isinstance(row, dict)
         and (_text(row.get("current_receipt_status")) != "missing_not_attached" or bool(_text(row.get("receipt_url"))))
     )
-    ready = ids == EXTERNAL_TRACK_IDS and missing_status_count == 0
+    queue_ready = ids == EXTERNAL_TRACK_IDS and missing_status_count == 0
+    audit = _summary(audit_payload)
+    attach = _summary(attach_payload)
+    audit_status = _text(audit.get("status"))
+    attach_status = _text(attach.get("status"))
+    audit_ready = bool(audit.get("external_benchmark_receipts_ready") is True)
+    attach_ready = bool(attach.get("receipt_attach_packet_ready") is True)
+    field_work_order_rows = _int(attach.get("field_work_order_row_count"))
+    field_work_order_primary = _text(
+        attach.get("field_work_order_primary_lane_id") or attach.get("field_work_order_primary_field_name")
+    )
+    primary_blocker = _text(
+        attach.get("primary_blocker_id")
+        or audit.get("primary_blocker_id")
+        or attach.get("primary_blocker")
+        or audit.get("primary_blocker")
+    )
+    canonical_present = bool(audit_status or attach_status)
+    ready = (audit_ready and attach_ready) if canonical_present else queue_ready
+    evidence = (
+        f"queue_track_count={len(ids)};queue_unexpected_attached_or_pass_count={missing_status_count};"
+        f"audit_status={audit_status or 'missing'};attach_status={attach_status or 'missing'};"
+        f"audit_ready={audit_ready};attach_ready={attach_ready};"
+        f"field_work_order_rows={field_work_order_rows};"
+        f"field_work_order_primary={field_work_order_primary or 'none'}"
+    )
     return _row(
         "5",
         "external benchmark receipts",
-        "workflow_ready_receipts_missing" if ready else "blocked_external_benchmark_queue_incomplete",
+        (
+            "external_benchmark_receipts_ready"
+            if ready
+            else (
+                "blocked_public_benchmark_receipt_attach_packet"
+                if canonical_present
+                else "blocked_external_benchmark_queue_incomplete"
+            )
+        ),
         ready,
-        f"track_count={len(ids)};unexpected_attached_or_pass_count={missing_status_count}",
-        "external_benchmark_receipt_queue_incomplete",
-        "Create/confirm operator queue rows and attach receipt URLs only after real closure evidence exists.",
+        evidence,
+        primary_blocker or "external_benchmark_receipt_queue_incomplete",
+        _text(attach.get("next_required_step") or audit.get("next_required_step"))
+        or "Create/confirm operator queue rows and attach receipt URLs only after real closure evidence exists.",
     )
 
 
@@ -370,6 +406,8 @@ def build_pm_priority_queue_status(
     developer_preview_register_md: str = DEFAULT_DEVELOPER_PREVIEW_REGISTER_MD,
     developer_preview_audit_json: str = DEFAULT_DEVELOPER_PREVIEW_AUDIT_JSON,
     external_benchmark_json: str = DEFAULT_EXTERNAL_BENCHMARK_JSON,
+    public_benchmark_audit_json: str = DEFAULT_PUBLIC_BENCHMARK_AUDIT_JSON,
+    public_benchmark_attach_packet_json: str = DEFAULT_PUBLIC_BENCHMARK_ATTACH_PACKET_JSON,
     customer_shadow_json: str = DEFAULT_CUSTOMER_SHADOW_JSON,
     gpu_hip_plan_md: str = DEFAULT_GPU_HIP_PLAN_MD,
     gpu_return_intake_json: str = DEFAULT_GPU_RETURN_INTAKE_JSON,
@@ -391,7 +429,11 @@ def build_pm_priority_queue_status(
             _read_text(developer_preview_register_md, root=root),
             _read_json(developer_preview_audit_json, root=root),
         ),
-        _external_benchmark_row(_read_json(external_benchmark_json, root=root)),
+        _external_benchmark_row(
+            _read_json(external_benchmark_json, root=root),
+            _read_json(public_benchmark_audit_json, root=root),
+            _read_json(public_benchmark_attach_packet_json, root=root),
+        ),
         _customer_shadow_row(_read_json(customer_shadow_json, root=root)),
         _gpu_hip_row(
             _read_text(gpu_hip_plan_md, root=root),
@@ -459,6 +501,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--developer-preview-register-md", default=DEFAULT_DEVELOPER_PREVIEW_REGISTER_MD)
     parser.add_argument("--developer-preview-audit-json", default=DEFAULT_DEVELOPER_PREVIEW_AUDIT_JSON)
     parser.add_argument("--external-benchmark-json", default=DEFAULT_EXTERNAL_BENCHMARK_JSON)
+    parser.add_argument("--public-benchmark-audit-json", default=DEFAULT_PUBLIC_BENCHMARK_AUDIT_JSON)
+    parser.add_argument(
+        "--public-benchmark-attach-packet-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_ATTACH_PACKET_JSON,
+    )
     parser.add_argument("--customer-shadow-json", default=DEFAULT_CUSTOMER_SHADOW_JSON)
     parser.add_argument("--gpu-hip-plan-md", default=DEFAULT_GPU_HIP_PLAN_MD)
     parser.add_argument("--gpu-return-intake-json", default=DEFAULT_GPU_RETURN_INTAKE_JSON)
@@ -483,6 +530,8 @@ def main(argv: list[str] | None = None) -> None:
         developer_preview_register_md=args.developer_preview_register_md,
         developer_preview_audit_json=args.developer_preview_audit_json,
         external_benchmark_json=args.external_benchmark_json,
+        public_benchmark_audit_json=args.public_benchmark_audit_json,
+        public_benchmark_attach_packet_json=args.public_benchmark_attach_packet_json,
         customer_shadow_json=args.customer_shadow_json,
         gpu_hip_plan_md=args.gpu_hip_plan_md,
         gpu_return_intake_json=args.gpu_return_intake_json,
