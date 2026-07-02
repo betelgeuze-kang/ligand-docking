@@ -1206,6 +1206,90 @@ def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, 
     assert missing["external_state_mutated"] is False
 
 
+def test_goal_customer_shadow_endpoint_reads_fail_closed_evidence(monkeypatch, tmp_path: Path) -> None:
+    from api import goal as goal_api
+
+    artifact = tmp_path / "runs/customer_shadow_evidence_status_current.json"
+    artifact.parent.mkdir(parents=True)
+    artifact.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "blocked_customer_shadow_evidence_status",
+                    "customer_shadow_intake_schema_ready": True,
+                    "customer_shadow_minimum_met": False,
+                    "completed_customer_shadow_case_count": 0,
+                    "required_completed_customer_shadow_case_count": 3,
+                    "missing_completed_customer_shadow_case_count": 3,
+                    "customer_shadow_work_order_ready": False,
+                    "customer_shadow_work_order_row_count": 3,
+                    "customer_shadow_work_order_primary_case_slot_id": "customer_shadow_case_1",
+                    "customer_shadow_work_order_primary_required_action": (
+                        "Add one reviewed real customer-shadow metadata row."
+                    ),
+                    "paid_pilot_claim_allowed": False,
+                    "commercial_readiness_promotion_allowed": False,
+                    "next_required_step": "Collect three reviewed customer-shadow rows.",
+                    "claim_boundary": "customer shadow boundary",
+                },
+                "rows": [],
+                "customer_shadow_work_order_rows": [
+                    {
+                        "case_slot_id": "customer_shadow_case_1",
+                        "required_customer_retained_raw_data": True,
+                        "required_raw_data_stored_in_repo": False,
+                        "required_redistribution_allowed": False,
+                        "required_reviewer_signoff_status": "approved",
+                        "paid_pilot_claim_allowed": False,
+                        "commercial_readiness_promotion_allowed": False,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(goal_api, "CUSTOMER_SHADOW_EVIDENCE_STATUS_ARTIFACT", artifact)
+
+    response = asyncio.run(goal_api.get_goal_customer_shadow())
+
+    assert response["status"] == "blocked_customer_shadow_evidence_status"
+    assert response["customer_shadow_intake_schema_ready"] is True
+    assert response["customer_shadow_minimum_met"] is False
+    assert response["completed_customer_shadow_case_count"] == 0
+    assert response["required_completed_customer_shadow_case_count"] == 3
+    assert response["missing_completed_customer_shadow_case_count"] == 3
+    assert response["customer_shadow_work_order_ready"] is False
+    assert response["customer_shadow_work_order_row_count"] == 3
+    assert response["customer_shadow_work_order_primary_case_slot_id"] == "customer_shadow_case_1"
+    assert response["customer_shadow_work_order_primary_required_action"] == (
+        "Add one reviewed real customer-shadow metadata row."
+    )
+    assert response["paid_pilot_claim_allowed"] is False
+    assert response["commercial_readiness_promotion_allowed"] is False
+    assert response["rows"] == []
+    assert response["customer_shadow_work_order_rows"][0]["case_slot_id"] == "customer_shadow_case_1"
+    assert response["customer_shadow_work_order_rows"][0]["required_raw_data_stored_in_repo"] is False
+    assert response["execution_enabled"] is False
+    assert response["external_state_mutated"] is False
+    assert response["claim_boundary"] == "customer shadow boundary"
+
+    monkeypatch.setattr(goal_api, "CUSTOMER_SHADOW_EVIDENCE_STATUS_ARTIFACT", tmp_path / "missing.json")
+    missing = asyncio.run(goal_api.get_goal_customer_shadow())
+    assert missing["status"] == "missing_customer_shadow_evidence_status"
+    assert missing["customer_shadow_intake_schema_ready"] is False
+    assert missing["customer_shadow_minimum_met"] is False
+    assert missing["completed_customer_shadow_case_count"] == 0
+    assert missing["required_completed_customer_shadow_case_count"] == 3
+    assert missing["missing_completed_customer_shadow_case_count"] == 3
+    assert missing["customer_shadow_work_order_ready"] is False
+    assert missing["customer_shadow_work_order_row_count"] == 0
+    assert missing["paid_pilot_claim_allowed"] is False
+    assert missing["commercial_readiness_promotion_allowed"] is False
+    assert missing["customer_shadow_work_order_rows"] == []
+    assert missing["execution_enabled"] is False
+    assert missing["external_state_mutated"] is False
+
+
 def test_api_app_imports_with_goal_router() -> None:
     from api.main import app
     from api.goal import (
@@ -1213,6 +1297,7 @@ def test_api_app_imports_with_goal_router() -> None:
         get_goal_api_contract,
         get_goal_bottlenecks,
         get_goal_burndown,
+        get_goal_customer_shadow,
         get_goal_developer_preview,
         get_goal_operator_intake_kit,
         get_goal_priority_queue,
@@ -1228,6 +1313,7 @@ def test_api_app_imports_with_goal_router() -> None:
     assert "/goal/priority-queue" in paths
     assert "/goal/developer-preview" in paths
     assert "/goal/public-benchmark" in paths
+    assert "/goal/customer-shadow" in paths
     assert "/goal/actions" in paths
     assert "/goal/operator-intake-kit" in paths
     assert "/goal/release-decision" in paths

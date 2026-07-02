@@ -15,6 +15,7 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         "DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT = 'runs/developer_preview_final_gate_audit_current.json'\n"
         "PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT = 'runs/public_benchmark_external_receipts_audit_current.json'\n"
         "PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT = 'runs/public_benchmark_receipt_attach_packet_current.json'\n"
+        "CUSTOMER_SHADOW_EVIDENCE_STATUS_ARTIFACT = 'runs/customer_shadow_evidence_status_current.json'\n"
         "GOAL_OPERATOR_ACTION_BOARD_ARTIFACT = 'runs/goal_operator_action_board_current.json'\n"
         "GOAL_OPERATOR_INTAKE_KIT_MANIFEST = 'runs/goal_operator_intake_kit_current/manifest.json'\n"
         "GOAL_RELEASE_DECISION_ARTIFACT = 'runs/goal_release_decision_gate_current.json'\n"
@@ -637,6 +638,8 @@ def _write_goal_api_surface(root: Path, *, include_router: bool = True, include_
         "async def get_goal_developer_preview(): pass\n"
         '@router.get("/public-benchmark")\n'
         "async def get_goal_public_benchmark(): pass\n"
+        '@router.get("/customer-shadow")\n'
+        "async def get_goal_customer_shadow(): pass\n"
         '@router.get("/actions")\n'
         "async def get_goal_actions(): pass\n"
         '@router.get("/operator-intake-kit")\n'
@@ -671,7 +674,7 @@ def test_goal_api_surface_contract_reports_ready_for_current_source() -> None:
     assert summary["check_count"] == 9
     assert summary["pass_count"] == 9
     assert summary["blocker_count"] == 0
-    assert summary["expected_endpoint_count"] == 11
+    assert summary["expected_endpoint_count"] == 12
     assert summary["missing_endpoint_count"] == 0
     assert summary["missing_artifact_source_count"] == 0
     assert summary["missing_status_key_count"] == 0

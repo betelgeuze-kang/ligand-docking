@@ -24,6 +24,9 @@ PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT = (
 PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT = (
     ROOT / "runs" / "public_benchmark_receipt_attach_packet_current.json"
 )
+CUSTOMER_SHADOW_EVIDENCE_STATUS_ARTIFACT = (
+    ROOT / "runs" / "customer_shadow_evidence_status_current.json"
+)
 PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT = ROOT / "runs" / "product_goal_completion_audit_current.json"
 PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT = (
     ROOT / "runs" / "product_commercial_readiness_handoff_bundle_current.json"
@@ -3541,6 +3544,69 @@ async def get_goal_public_benchmark() -> dict[str, Any]:
         "field_work_order_rows": field_work_order_rows,
         **_mutation_flags(),
         "claim_boundary": attach.get("claim_boundary") or audit.get("claim_boundary") or CLAIM_BOUNDARY,
+    }
+
+
+@router.get("/customer-shadow")
+async def get_goal_customer_shadow() -> dict[str, Any]:
+    packet = _read_json_object(CUSTOMER_SHADOW_EVIDENCE_STATUS_ARTIFACT)
+    summary = _summary(packet)
+    work_order_rows_value = packet.get("customer_shadow_work_order_rows")
+    work_order_rows = (
+        [row for row in work_order_rows_value if isinstance(row, dict)]
+        if isinstance(work_order_rows_value, list)
+        else []
+    )
+    if not summary:
+        return {
+            "status": "missing_customer_shadow_evidence_status",
+            "artifact_path": str(CUSTOMER_SHADOW_EVIDENCE_STATUS_ARTIFACT),
+            "customer_shadow_intake_schema_ready": False,
+            "customer_shadow_minimum_met": False,
+            "completed_customer_shadow_case_count": 0,
+            "required_completed_customer_shadow_case_count": 3,
+            "missing_completed_customer_shadow_case_count": 3,
+            "customer_shadow_work_order_ready": False,
+            "customer_shadow_work_order_row_count": 0,
+            "customer_shadow_work_order_primary_case_slot_id": "",
+            "customer_shadow_work_order_primary_required_action": "",
+            "paid_pilot_claim_allowed": False,
+            "commercial_readiness_promotion_allowed": False,
+            "rows": [],
+            "customer_shadow_work_order_rows": [],
+            **_mutation_flags(),
+            "claim_boundary": CLAIM_BOUNDARY,
+        }
+    return {
+        **summary,
+        "artifact_path": str(CUSTOMER_SHADOW_EVIDENCE_STATUS_ARTIFACT),
+        "customer_shadow_intake_schema_ready": bool(
+            summary.get("customer_shadow_intake_schema_ready") is True
+        ),
+        "customer_shadow_minimum_met": bool(summary.get("customer_shadow_minimum_met") is True),
+        "completed_customer_shadow_case_count": _int(summary.get("completed_customer_shadow_case_count")),
+        "required_completed_customer_shadow_case_count": _int(
+            summary.get("required_completed_customer_shadow_case_count")
+        ),
+        "missing_completed_customer_shadow_case_count": _int(
+            summary.get("missing_completed_customer_shadow_case_count")
+        ),
+        "customer_shadow_work_order_ready": bool(summary.get("customer_shadow_work_order_ready") is True),
+        "customer_shadow_work_order_row_count": _int(summary.get("customer_shadow_work_order_row_count")),
+        "customer_shadow_work_order_primary_case_slot_id": str(
+            summary.get("customer_shadow_work_order_primary_case_slot_id") or ""
+        ),
+        "customer_shadow_work_order_primary_required_action": str(
+            summary.get("customer_shadow_work_order_primary_required_action") or ""
+        ),
+        "paid_pilot_claim_allowed": bool(summary.get("paid_pilot_claim_allowed") is True),
+        "commercial_readiness_promotion_allowed": bool(
+            summary.get("commercial_readiness_promotion_allowed") is True
+        ),
+        "rows": _rows(packet),
+        "customer_shadow_work_order_rows": work_order_rows,
+        **_mutation_flags(),
+        "claim_boundary": summary.get("claim_boundary") or CLAIM_BOUNDARY,
     }
 
 
