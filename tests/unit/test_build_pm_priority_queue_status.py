@@ -132,6 +132,14 @@ def test_pm_priority_queue_status_keeps_f2g_and_f2h_blocked(tmp_path: Path) -> N
     assert summary["status"] == "blocked_pm_priority_queue"
     assert summary["f2g_blocked"] is True
     assert summary["f2h_blocked"] is True
+    assert summary["first_blocked_item_id"] == "2"
+    assert summary["first_blocked_title"] == "F2g support/elastic-link audit"
+    assert summary["first_blocked_status"] == "blocked_f2g_f2h_surface_preflight"
+    assert summary["first_blocked_blocker"] == "f2g_authoritative_surfaces_missing"
+    assert summary["first_blocked_next_action"] == (
+        "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+    )
+    assert summary["next_required_step"] == summary["first_blocked_next_action"]
     assert rows["0"]["ready"] is True
     assert rows["2"]["ready"] is False
     assert "recovery_status=f2g_f2h_authoritative_surface_recovery_packet_ready" in rows["2"]["evidence"]

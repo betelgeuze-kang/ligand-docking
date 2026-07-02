@@ -461,13 +461,23 @@ def build_pm_priority_queue_status(
     ready_count = sum(1 for row in rows if row["ready"])
     blocker_count = len(rows) - ready_count
     technical_blockers = [row["blocker"] for row in rows if row["item_id"] in {"2", "3"} and row["blocker"]]
+    first_blocked_row = next((row for row in rows if not row["ready"]), {})
+    first_blocked_item_id = _text(first_blocked_row.get("item_id"))
+    first_blocked_title = _text(first_blocked_row.get("title"))
+    first_blocked_status = _text(first_blocked_row.get("status"))
+    first_blocked_blocker = _text(first_blocked_row.get("blocker"))
+    first_blocked_next_action = _text(first_blocked_row.get("next_action"))
     summary = {
         "packet_type": "pm_priority_queue_status",
         "status": "pm_priority_queue_complete" if blocker_count == 0 else "blocked_pm_priority_queue",
         "item_count": len(rows),
         "ready_item_count": ready_count,
         "blocked_item_count": blocker_count,
-        "first_blocked_item_id": next((row["item_id"] for row in rows if not row["ready"]), ""),
+        "first_blocked_item_id": first_blocked_item_id,
+        "first_blocked_title": first_blocked_title,
+        "first_blocked_status": first_blocked_status,
+        "first_blocked_blocker": first_blocked_blocker,
+        "first_blocked_next_action": first_blocked_next_action,
         "technical_blockers": technical_blockers,
         "f2g_blocked": any(row["item_id"] == "2" and not row["ready"] for row in rows),
         "f2h_blocked": any(row["item_id"] == "3" and not row["ready"] for row in rows),
@@ -478,7 +488,7 @@ def build_pm_priority_queue_status(
         "external_state_mutated": False,
         "execution_enabled": False,
         "claim_boundary": CLAIM_BOUNDARY,
-        "next_required_step": next((row["next_action"] for row in rows if not row["ready"]), "No queue blockers remain."),
+        "next_required_step": first_blocked_next_action or "No queue blockers remain.",
     }
     return {"summary": summary, "rows": rows}
 
@@ -492,6 +502,9 @@ def _write_md(path_like: str | Path, payload: dict[str, Any], *, root: Path = RO
         f"- status: `{summary['status']}`",
         f"- ready_item_count: `{summary['ready_item_count']}`",
         f"- blocked_item_count: `{summary['blocked_item_count']}`",
+        f"- first_blocked_item_id: `{summary['first_blocked_item_id']}`",
+        f"- first_blocked_blocker: `{summary['first_blocked_blocker']}`",
+        f"- first_blocked_next_action: `{summary['first_blocked_next_action']}`",
         f"- g1_promotion_allowed: `{summary['g1_promotion_allowed']}`",
         "",
         "| item | status | ready | blocker | next action |",

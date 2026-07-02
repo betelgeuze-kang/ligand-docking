@@ -3417,8 +3417,10 @@ async def get_goal_priority_queue() -> dict[str, Any]:
         "blocked_item_count": _int(summary.get("blocked_item_count")),
         "first_blocked_item_id": first_blocked_id,
         "first_blocked_item": first_blocked_item,
-        "first_blocked_blocker": str(first_blocked_item.get("blocker") or ""),
-        "first_blocked_next_action": str(first_blocked_item.get("next_action") or ""),
+        "first_blocked_blocker": str(summary.get("first_blocked_blocker") or first_blocked_item.get("blocker") or ""),
+        "first_blocked_next_action": str(
+            summary.get("first_blocked_next_action") or first_blocked_item.get("next_action") or ""
+        ),
         "rows": rows,
         **_mutation_flags(),
         "claim_boundary": summary.get("claim_boundary") or CLAIM_BOUNDARY,
