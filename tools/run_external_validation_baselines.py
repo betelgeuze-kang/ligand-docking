@@ -362,10 +362,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--spec-json", default="config/external_validation_baselines_v1.json")
     ap.add_argument("--out-root", default="runs")
     ap.add_argument("--label", default="current")
+    ap.add_argument(
+        "--require-tasks",
+        action="store_true",
+        help="Return nonzero when no matching ligand task manifests are materialized.",
+    )
     ap.add_argument("--rerun-current", action=argparse.BooleanOptionalAction, default=False)
     args = ap.parse_args(argv)
 
     run_root = _load_run_root(args)
+    manifest_count = len(_find_set_manifests(run_root))
     spec_path = Path(str(args.spec_json))
     spec_path = (ROOT / spec_path).resolve() if not spec_path.is_absolute() else spec_path.resolve()
     spec = _load_spec(spec_path)
@@ -375,6 +381,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     bundle_root.mkdir(parents=True, exist_ok=True)
 
     tasks = _collect_tasks(run_root, str(spec.get("task_kind", "ligand_stress")))
+    blockers: List[str] = []
+    if args.require_tasks:
+        if not run_root.exists():
+            blockers.append("run_root_missing")
+        if manifest_count <= 0:
+            blockers.append("set_manifest_missing")
+        if not tasks:
+            blockers.append("ligand_stress_tasks_missing")
     per_task_payloads: List[Dict[str, Any]] = []
     flat_rows: List[Dict[str, Any]] = []
     winner_rows: List[Dict[str, Any]] = []
@@ -424,7 +438,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         "protocol_id": spec.get("protocol_id"),
         "spec_json": str(spec_path),
         "run_root": str(run_root),
+        "run_root_exists": run_root.exists(),
+        "set_manifest_count": manifest_count,
         "bundle_root": str(bundle_root),
+        "ok": not blockers,
+        "blockers": blockers,
         "task_count": int(len(per_task_payloads)),
         "score_candidates": list(spec.get("candidate_score_columns", [])),
         "note": str(spec.get("note", "")),
@@ -483,6 +501,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         "protocol_id": spec.get("protocol_id"),
         "run_root": str(run_root),
         "bundle_root": str(bundle_root),
+        "ok": not blockers,
+        "blockers": blockers,
         "convenience_artifacts": convenience,
     })
     _write_text(
@@ -495,14 +515,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         f"- summary_md: `{summary_md}`\n",
     )
     print(json.dumps({
-        "ok": True,
+        "ok": not blockers,
         "summary_json": str(summary_json.resolve()),
         "summary_md": str(summary_md.resolve()),
         "task_count": len(per_task_payloads),
+        "blockers": blockers,
         "winner_current": summary["task_winner_count_current"],
         "winner_noncurrent": summary["task_winner_count_noncurrent"],
     }, indent=2, ensure_ascii=False))
-    return 0
+    return 0 if not blockers else 1
 
 
 if __name__ == "__main__":

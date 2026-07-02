@@ -180,3 +180,35 @@ def test_run_external_validation_baselines(tmp_path: Path) -> None:
 
     leaderboard = pd.read_csv(out_root / "biorxiv_baseline_comparison_test" / "score_leaderboard.csv")
     assert set(leaderboard["score_alias"]) >= {"composite_v7", "proxy_energy", "distance_only"}
+
+
+def test_run_external_validation_baselines_require_tasks_blocks_empty_root(tmp_path: Path) -> None:
+    run_root = tmp_path / "missing_run_root"
+    out_root = tmp_path / "out"
+
+    rc = main(
+        [
+            "--run-root",
+            str(run_root),
+            "--out-root",
+            str(out_root),
+            "--label",
+            "empty",
+            "--spec-json",
+            "config/external_validation_baselines_v1.json",
+            "--require-tasks",
+        ]
+    )
+
+    assert rc == 1
+    summary = json.loads(
+        (out_root / "biorxiv_baseline_comparison_empty" / "summary.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert summary["ok"] is False
+    assert summary["run_root_exists"] is False
+    assert summary["task_count"] == 0
+    assert "run_root_missing" in summary["blockers"]
+    assert "set_manifest_missing" in summary["blockers"]
+    assert "ligand_stress_tasks_missing" in summary["blockers"]
