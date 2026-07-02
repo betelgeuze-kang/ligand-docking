@@ -16,6 +16,9 @@ PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_ARTIFACT = ROOT / "runs" / "product_public_b
 PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT = (
     ROOT / "runs" / "public_benchmark_external_receipts_audit_current.json"
 )
+PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT = (
+    ROOT / "runs" / "public_benchmark_receipt_attach_packet_current.json"
+)
 EXTERNAL_METRIC_SCORECARD_ARTIFACT = ROOT / "runs" / "external_metric_scorecard_current.json"
 PRODUCT_TRAJECTORY_SLA_CONTRACT_ARTIFACT = ROOT / "runs" / "product_trajectory_sla_contract_current.json"
 
@@ -46,6 +49,14 @@ def _bool_true(value: Any) -> bool:
     return bool(value is True)
 
 
+def _string_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value if str(item or "").strip()]
+    if isinstance(value, str) and value.strip():
+        return [value.strip()]
+    return []
+
+
 def _blocked_public_benchmark_steps(rows: list[Any]) -> list[dict[str, Any]]:
     blocked_steps: list[dict[str, Any]] = []
     for row in rows:
@@ -66,6 +77,86 @@ def _blocked_public_benchmark_steps(rows: list[Any]) -> list[dict[str, Any]]:
             }
         )
     return blocked_steps
+
+
+def _field_work_order_rows(rows: list[Any]) -> list[dict[str, Any]]:
+    work_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        work_rows.append(
+            {
+                "lane_id": str(row.get("lane_id") or ""),
+                "field_name": str(row.get("field_name") or ""),
+                "pending_row_count": _int(row.get("pending_row_count")),
+                "source_artifact": str(row.get("source_artifact") or ""),
+                "operator_csv": str(row.get("operator_csv") or ""),
+                "required_value": str(row.get("required_value") or ""),
+                "approval_token_required": str(row.get("approval_token_required") or ""),
+                "required_action": str(row.get("required_action") or ""),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return work_rows
+
+
+def _receipt_attach_surface(packet: dict[str, Any]) -> dict[str, Any]:
+    summary = _summary(packet)
+    rows = packet.get("field_work_order_rows") if isinstance(packet.get("field_work_order_rows"), list) else []
+    return {
+        "receipt_attach_packet_artifact_path": str(PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT),
+        "receipt_attach_packet_present": bool(summary),
+        "receipt_attach_packet_status": str(summary.get("status") or ""),
+        "receipt_attach_packet_ready": bool(summary.get("receipt_attach_packet_ready") is True),
+        "receipt_attach_blocker_count": _int(summary.get("blocker_count")),
+        "receipt_attach_blockers": _string_list(summary.get("blockers")),
+        "receipt_attach_primary_blocker_id": str(summary.get("primary_blocker_id") or ""),
+        "receipt_attach_primary_blocker": str(summary.get("primary_blocker") or ""),
+        "receipt_attach_next_required_step": str(summary.get("next_required_step") or ""),
+        "field_work_order_ready": bool(summary.get("field_work_order_ready") is True),
+        "field_work_order_row_count": _int(summary.get("field_work_order_row_count")),
+        "field_work_order_pending_field_count": _int(
+            summary.get("field_work_order_pending_field_count")
+        ),
+        "field_work_order_primary_lane_id": str(
+            summary.get("field_work_order_primary_lane_id") or ""
+        ),
+        "field_work_order_primary_field_name": str(
+            summary.get("field_work_order_primary_field_name") or ""
+        ),
+        "field_work_order_primary_pending_row_count": _int(
+            summary.get("field_work_order_primary_pending_row_count")
+        ),
+        "field_work_order_primary_required_value": str(
+            summary.get("field_work_order_primary_required_value") or ""
+        ),
+        "field_work_order_primary_required_action": str(
+            summary.get("field_work_order_primary_required_action") or ""
+        ),
+        "field_work_order_primary_approval_token_required": str(
+            summary.get("field_work_order_primary_approval_token_required") or ""
+        ),
+        "field_work_order_primary_operator_csv": str(
+            summary.get("field_work_order_primary_operator_csv") or ""
+        ),
+        "field_work_order_primary_source_artifact": str(
+            summary.get("field_work_order_primary_source_artifact") or ""
+        ),
+        "field_work_order_rows": _field_work_order_rows(rows),
+        "metric_source_receipt_csv": str(summary.get("metric_source_receipt_csv") or ""),
+        "metric_source_receipt_row_count": _int(summary.get("metric_source_receipt_row_count")),
+        "metric_source_receipt_blocked_row_count": _int(
+            summary.get("metric_source_receipt_blocked_row_count")
+        ),
+        "metric_source_receipt_manual_field_pending_count": _int(
+            summary.get("metric_source_receipt_manual_field_pending_count")
+        ),
+        "metric_source_receipt_approval_token_pending_count": _int(
+            summary.get("metric_source_receipt_approval_token_pending_count")
+        ),
+    }
 
 
 @router.get("/external-metrics")
@@ -111,6 +202,8 @@ async def get_product_external_metrics() -> dict[str, Any]:
 @router.get("/public-benchmark-external-receipts-audit")
 async def get_product_public_benchmark_external_receipts_audit() -> dict[str, Any]:
     packet = _read_json_object(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT)
+    receipt_attach_packet = _read_json_object(PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT)
+    receipt_attach_surface = _receipt_attach_surface(receipt_attach_packet)
     summary = _summary(packet)
     rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
     if not summary:
@@ -149,6 +242,7 @@ async def get_product_public_benchmark_external_receipts_audit() -> dict[str, An
             "vina_gnina_pending_field_counts": {},
             "benchmark_ledger_entry_count": 0,
             "benchmark_ledger_external_safe_count": 0,
+            **receipt_attach_surface,
             "blocked_steps": [],
             "steps": [],
             "execution_enabled": False,
@@ -240,6 +334,7 @@ async def get_product_public_benchmark_external_receipts_audit() -> dict[str, An
         "benchmark_ledger_external_safe_count": _int(
             summary.get("benchmark_ledger_external_safe_count")
         ),
+        **receipt_attach_surface,
         "blocked_steps": _blocked_public_benchmark_steps(rows),
         "steps": rows,
         "execution_enabled": False,
