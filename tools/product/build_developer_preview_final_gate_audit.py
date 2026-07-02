@@ -270,6 +270,16 @@ def _split_receipt_blocker(blocker: str) -> tuple[str, str]:
 
 
 def _blocker_required_action(detail: str) -> str:
+    if "stage5_input_missing" in detail:
+        return (
+            "Restore or regenerate the missing clean-checkout stage5 input CSVs "
+            "(scores, labels, split, and expected-key queue), then rebuild the baseline receipt."
+        )
+    if "pipeline_summary_json_missing" in detail:
+        return (
+            "Restore the packaged pipeline summary copy or rerun the clean-checkout benchmark "
+            "regeneration before rebuilding the baseline receipt."
+        )
     if detail == "missing":
         return "Create or attach the required receipt artifact."
     if detail.startswith("status="):

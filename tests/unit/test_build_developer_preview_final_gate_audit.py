@@ -285,6 +285,53 @@ def test_developer_preview_final_gate_audit_surfaces_present_blocked_receipt_det
     )
 
 
+def test_developer_preview_final_gate_audit_guides_stage5_input_recovery(
+    tmp_path: Path,
+) -> None:
+    _write_register(tmp_path)
+    _write_ready_receipts(tmp_path)
+    _write_json(
+        tmp_path / ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+        {
+            "status": "blocked_developer_preview_clean_checkout_benchmark_receipt",
+            "clean_checkout_benchmark_regenerated": False,
+            "ai_verify_passed": True,
+            "reviewed_receipt_attached": False,
+            "blocker_count": 3,
+            "failed_count": 2,
+            "blockers": [
+                "baseline_source_blocker=stage5_input_missing:--scores-csv:/tmp/missing_scores.csv",
+                "baseline_task_source_error_count_nonzero",
+                "reviewed_receipt_attached_not_true",
+            ],
+        },
+    )
+
+    payload = mod.build_developer_preview_final_gate_audit(root=tmp_path)
+    summary = payload["summary"]
+    source_rows = [
+        row
+        for row in payload["receipt_work_order_rows"]
+        if row["blocker_scope"] == "receipt_source"
+    ]
+
+    assert summary["status"] == "blocked_developer_preview_final_gate_audit"
+    assert summary["receipt_work_order_primary_source_blocker_gate_id"] == (
+        "benchmark_results_clean_checkout_regenerated"
+    )
+    assert summary["receipt_work_order_primary_source_blocker"] == (
+        "baseline_source_blocker=stage5_input_missing:--scores-csv:/tmp/missing_scores.csv"
+    )
+    assert summary["receipt_work_order_primary_source_blocker_required_action"] == (
+        "Restore or regenerate the missing clean-checkout stage5 input CSVs "
+        "(scores, labels, split, and expected-key queue), then rebuild the baseline receipt."
+    )
+    assert source_rows[0]["required_action"] == (
+        "Restore or regenerate the missing clean-checkout stage5 input CSVs "
+        "(scores, labels, split, and expected-key queue), then rebuild the baseline receipt."
+    )
+
+
 def test_developer_preview_final_gate_audit_ready_when_all_receipts_pass(tmp_path: Path) -> None:
     _write_register(tmp_path)
     _write_ready_receipts(tmp_path)
