@@ -48,8 +48,8 @@ def test_api_app_imports_with_casp17_router() -> None:
     assert transition["cleanup_completion_transition_cleanup_complete"] is True
     assert transition["cleanup_completion_ligand_heavy_cleanup_complete"] is True
     assert transition["cleanup_completion_protected_policy_resolved"] is True
-    assert transition["goal_release_status"] == "blocked_goal_release_decision"
-    assert transition["release_allowed"] is False
+    assert transition["goal_release_status"] == "goal_release_ready"
+    assert transition["release_allowed"] is True
     assert transition["cleanup_objective_ready"] is True
     assert transition["delete_executed"] is False
     assert transition["upload_executed"] is False
