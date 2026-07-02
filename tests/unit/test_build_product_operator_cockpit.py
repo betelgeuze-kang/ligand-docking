@@ -95,6 +95,10 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
             "summary": {
                 "status": "pocketmd_lite_topk_refinement_audit_ready",
                 "candidate_count": 5,
+                "green_row_count": 5,
+                "yellow_row_count": 0,
+                "red_row_count": 0,
+                "abstain_row_count": 0,
                 "claim_grade_metric_ready_count": 5,
                 "claim_grade_refinement_evidence_ready": True,
                 "claim_grade_report_evidence_ready": False,
@@ -213,6 +217,8 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "pr_auc_ci_low=0.5598" in panels["gpcr_hard_decoy_blocker_panel"]["primary_metric"]
     assert panels["gpcr_hard_decoy_blocker_panel"]["claim_allowed"] is False
     assert panels["pocketmd_lite_report_panel"]["operator_action_required"] is True
+    assert "green=5" in panels["pocketmd_lite_report_panel"]["primary_metric"]
+    assert "abstain=0" in panels["pocketmd_lite_report_panel"]["primary_metric"]
     assert "report_ready=true" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
     assert "promotion_allowed=false" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
     assert panels["pocketmd_lite_report_panel"]["blockers"] == ["pocketmd_lite_claim_promotion_missing"]

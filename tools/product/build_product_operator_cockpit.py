@@ -140,6 +140,10 @@ def _metric(label: str, value: Any) -> str:
     return f"{label}={rendered}" if rendered else ""
 
 
+def _count_metric(label: str, value: Any) -> str:
+    return f"{label}={_int(value)}"
+
+
 def _join_metrics(*metrics: str) -> str:
     return "; ".join(metric for metric in metrics if metric)
 
@@ -792,6 +796,10 @@ def build_product_operator_cockpit(
             operator_action_required=not pocketmd_lite_claim_allowed,
             claim_allowed=pocketmd_lite_claim_allowed,
             primary_metric=_join_metrics(
+                _count_metric("green", pocketmd.get("green_row_count")),
+                _count_metric("yellow", pocketmd.get("yellow_row_count")),
+                _count_metric("red", pocketmd.get("red_row_count")),
+                _count_metric("abstain", pocketmd.get("abstain_row_count")),
                 _metric("metric_ready", _int(pocketmd.get("claim_grade_metric_ready_count"))),
                 _metric("candidate_count", _int(pocketmd.get("candidate_count"))),
             ),

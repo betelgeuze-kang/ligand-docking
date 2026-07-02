@@ -149,7 +149,7 @@ def _refresh_release_decision_ready() -> dict:
             "product_ledger_privacy_scan_execution_enabled": False,
             "product_ledger_privacy_scan_external_state_mutated": False,
             "source_goal_bottleneck_briefing_status": "goal_bottleneck_briefing_ready",
-            "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 3,
+            "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_operator_input_required_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_current_action_required_count": 2,
@@ -2135,7 +2135,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         if spec["artifact_id"] == "goal_operator_intake_kit_primary_release_blocker_semantic_ready"
     )
     assert intake_kit_status_spec["required_int_exact_fields"] == {
-        "product_goal_release_blocker_fail_count": 3,
+        "product_goal_release_blocker_fail_count": 2,
         "full_commercial_evidence_receipt_entry_count": 2,
         "full_commercial_evidence_receipt_operator_input_required_count": 2,
         "full_commercial_evidence_receipt_current_action_required_count": 2,
@@ -2164,12 +2164,12 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     }
     assert intake_kit_status_spec["required_text_exact_fields"][
         "product_goal_primary_release_blocker_requirement_id"
-    ] == "R4_cameo_optional_live_validation"
+    ] == "R8_full_scope_claim_closure"
     assert intake_kit_status_spec["required_text_exact_fields"]["product_goal_primary_release_blocker_tier"] == (
-        "release"
+        "full_commercial_scope"
     )
     assert intake_kit_status_spec["required_text_exact_fields"]["product_goal_primary_release_blocker"] == (
-        "cameo_optional_live_lane_not_clean"
+        "full_scope_claim_closure_not_ready"
     )
     assert intake_kit_status_spec["required_text_exact_fields"]["primary_action_id"] == (
         "product_ai_production:complete_residual_registry_guarded_promotion"
@@ -2236,7 +2236,7 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         "production_ai_registry_promotion_priority_packet_ready",
     ]
     assert bottleneck_status_spec["required_int_exact_fields"] == {
-        "completion_audit_release_blocker_bottleneck_count": 3,
+        "completion_audit_release_blocker_bottleneck_count": 2,
         "full_commercial_evidence_receipt_entry_count": 2,
         "full_commercial_evidence_receipt_operator_input_required_count": 2,
         "full_commercial_evidence_receipt_current_action_required_count": 2,
@@ -4061,28 +4061,30 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         for spec in mod.DEFAULT_STATUS_SPECS
         if spec["artifact_id"] == "product_goal_completion_audit_full_commercial_release_blockers_semantic_ready"
     )
-    assert goal_audit_status_spec["required_int_exact_fields"]["release_blocker_fail_count"] == 3
+    assert goal_audit_status_spec["required_int_exact_fields"]["release_blocker_fail_count"] == 2
     assert goal_audit_status_spec["required_text_exact_fields"]["primary_release_blocker_requirement_id"] == (
-        "R4_cameo_optional_live_validation"
+        "R8_full_scope_claim_closure"
     )
-    assert goal_audit_status_spec["required_text_exact_fields"]["primary_release_blocker_tier"] == "release"
+    assert goal_audit_status_spec["required_text_exact_fields"]["primary_release_blocker_tier"] == (
+        "full_commercial_scope"
+    )
     assert goal_audit_status_spec["required_text_exact_fields"]["primary_release_blocker"] == (
-        "cameo_optional_live_lane_not_clean"
+        "full_scope_claim_closure_not_ready"
     )
     action_board_status_spec = next(
         spec
         for spec in mod.DEFAULT_STATUS_SPECS
         if spec["artifact_id"] == "goal_operator_action_board_primary_release_blocker_semantic_ready"
     )
-    assert action_board_status_spec["required_int_exact_fields"]["product_goal_release_blocker_fail_count"] == 3
+    assert action_board_status_spec["required_int_exact_fields"]["product_goal_release_blocker_fail_count"] == 2
     assert action_board_status_spec["required_text_exact_fields"][
         "product_goal_primary_release_blocker_requirement_id"
-    ] == "R4_cameo_optional_live_validation"
+    ] == "R8_full_scope_claim_closure"
     assert action_board_status_spec["required_text_exact_fields"]["product_goal_primary_release_blocker_tier"] == (
-        "release"
+        "full_commercial_scope"
     )
     assert action_board_status_spec["required_text_exact_fields"]["product_goal_primary_release_blocker"] == (
-        "cameo_optional_live_lane_not_clean"
+        "full_scope_claim_closure_not_ready"
     )
     assert action_board_status_spec["required_text_exact_fields"]["primary_action_id"] == (
         "product_ai_production:complete_residual_registry_guarded_promotion"
@@ -5927,10 +5929,10 @@ def test_release_source_of_truth_accepts_full_commercial_release_blocker_semanti
                 "status": "blocked_product_goal_completion_audit",
                 "commercial_independence_ready": False,
                 "restricted_delivery_complete": False,
-                "release_blocker_fail_count": 3,
-                "primary_release_blocker_requirement_id": "R4_cameo_optional_live_validation",
-                "primary_release_blocker_tier": "release",
-                "primary_release_blocker": "cameo_optional_live_lane_not_clean",
+                "release_blocker_fail_count": 2,
+                "primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+                "primary_release_blocker_tier": "full_commercial_scope",
+                "primary_release_blocker": "full_scope_claim_closure_not_ready",
             }
         },
     )
@@ -5946,12 +5948,12 @@ def test_release_source_of_truth_accepts_full_commercial_release_blocker_semanti
                 "required_status": "blocked_product_goal_completion_audit",
                 "required_true_fields": [],
                 "required_int_exact_fields": {
-                    "release_blocker_fail_count": 3,
+                    "release_blocker_fail_count": 2,
                 },
                 "required_text_exact_fields": {
-                    "primary_release_blocker_requirement_id": "R4_cameo_optional_live_validation",
-                    "primary_release_blocker_tier": "release",
-                    "primary_release_blocker": "cameo_optional_live_lane_not_clean",
+                    "primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+                    "primary_release_blocker_tier": "full_commercial_scope",
+                    "primary_release_blocker": "full_scope_claim_closure_not_ready",
                 },
             }
         ],
@@ -5962,7 +5964,7 @@ def test_release_source_of_truth_accepts_full_commercial_release_blocker_semanti
     row = payload["rows"][0]
     assert row["failed_text_exact_fields"] == []
     assert row["required_text_exact_fields"]["primary_release_blocker_requirement_id"] == (
-        "R4_cameo_optional_live_validation"
+        "R8_full_scope_claim_closure"
     )
 
 

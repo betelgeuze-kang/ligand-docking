@@ -143,6 +143,18 @@ def test_audit_reports_proxy_telemetry_but_keeps_claim_grade_blocked(tmp_path: P
     summary = payload["summary"]
     assert summary["status"] == "blocked_pocketmd_lite_topk_refinement_claim_grade_missing_proxy_reported"
     assert summary["selected_top_k_count"] == 1
+    assert summary["green_row_count"] == 0
+    assert summary["yellow_row_count"] == 0
+    assert summary["red_row_count"] == 0
+    assert summary["abstain_row_count"] == 1
+    assert summary["claim_grade_band_counts"] == {
+        "green": 0,
+        "yellow": 0,
+        "red": 0,
+        "abstain": 1,
+    }
+    assert summary["banding_surface_ready"] is True
+    assert summary["green_band_condition"]["missing_evidence_band"] == "abstain"
     assert summary["claim_grade_refinement_evidence_ready"] is False
     assert summary["proxy_topk_telemetry_ready"] is True
     assert summary["proxy_local_min_reported_count"] == 1
@@ -212,6 +224,17 @@ def test_audit_overlays_exact_fill_preview_metrics_without_mutating_report(tmp_p
     assert summary["claim_grade_report_evidence_ready"] is False
     assert summary["claim_grade_fill_preview_evidence_ready"] is True
     assert summary["claim_grade_metric_ready_count"] == 1
+    assert summary["green_row_count"] == 1
+    assert summary["yellow_row_count"] == 0
+    assert summary["red_row_count"] == 0
+    assert summary["abstain_row_count"] == 0
+    assert summary["claim_grade_band_counts"] == {
+        "green": 1,
+        "yellow": 0,
+        "red": 0,
+        "abstain": 0,
+    }
+    assert summary["green_band_condition"]["local_min_ligand_rmsd_a_lte"] == 2.0
     assert summary["claim_grade_missing_candidate_count"] == 0
     assert summary["missing_refinement_metric_names"] == []
     assert summary["claim_grade_local_min_reported_count"] == 1
@@ -310,6 +333,8 @@ def test_audit_ready_when_claim_grade_evidence_is_present(tmp_path: Path) -> Non
     assert summary["status"] == "pocketmd_lite_topk_refinement_audit_ready"
     assert summary["claim_grade_refinement_evidence_ready"] is True
     assert summary["claim_grade_metric_ready_count"] == 1
+    assert summary["green_row_count"] == 1
+    assert summary["abstain_row_count"] == 0
     assert summary["missing_refinement_metric_names"] == []
     assert summary["claim_grade_clash_relief_reported_count"] == 1
 

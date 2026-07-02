@@ -15,7 +15,16 @@ from pathlib import Path
 from typing import Any
 
 from betelgeuze_product.pocketmd_lite_contract import (
+    BAND_ABSTAIN,
+    BAND_COARSE_ONLY,
+    BAND_GREEN,
+    BAND_RED,
+    BAND_YELLOW,
     CLAIM_BOUNDARY,
+    CONTACT_PERSISTENCE_MIN,
+    HBOND_PERSISTENCE_MIN,
+    LOCAL_MIN_SURVIVAL_RMSD_A,
+    MAX_CLASH_COUNT,
     PocketMdLiteError,
     build_pocketmd_lite_report,
 )
@@ -55,6 +64,27 @@ _READ_ONLY_FLAGS = {
     "refinement_execution_enabled": False,
 }
 
+BAND_KEYS = (BAND_GREEN, BAND_YELLOW, BAND_RED, BAND_ABSTAIN, BAND_COARSE_ONLY)
+CLAIM_GRADE_BANDS = (BAND_GREEN, BAND_YELLOW, BAND_RED)
+GREEN_BAND_CONDITION = {
+    "local_min_ligand_rmsd_a_lte": LOCAL_MIN_SURVIVAL_RMSD_A,
+    "hbond_persistence_gte": HBOND_PERSISTENCE_MIN,
+    "contact_persistence_gte": CONTACT_PERSISTENCE_MIN,
+    "initial_clash_count_required": True,
+    "clash_count_lte": MAX_CLASH_COUNT,
+    "clash_relief_report_required": True,
+    "missing_evidence_band": BAND_ABSTAIN,
+    "local_min_failure_band": BAND_RED,
+}
+GREEN_BAND_CONDITION_TEXT = (
+    f"green requires local_min_ligand_rmsd_a <= {LOCAL_MIN_SURVIVAL_RMSD_A}, "
+    f"hbond_persistence >= {HBOND_PERSISTENCE_MIN}, "
+    f"contact_persistence >= {CONTACT_PERSISTENCE_MIN}, "
+    "initial_clash_count present, "
+    f"clash_count <= {MAX_CLASH_COUNT}, and clash-relief fields reportable; "
+    f"missing evidence abstains and failed local-min is {BAND_RED}"
+)
+
 
 def _resolve(path_like: str | Path) -> Path:
     path = Path(path_like)
@@ -91,6 +121,7 @@ def _row_to_candidate(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def _blocked_artifact(status: str, input_csv: Path, detail: str) -> dict[str, Any]:
+    band_fields = _band_summary_fields({}, selected_count=0)
     return {
         "packet_type": PACKET_TYPE,
         "schema_version": REPORT_SCHEMA_VERSION,
@@ -103,10 +134,35 @@ def _blocked_artifact(status: str, input_csv: Path, detail: str) -> dict[str, An
             "candidate_count": 0,
             "top_k_only_policy_enforced": True,
             "pocketmd_lite_claim_safe": False,
+            **band_fields,
             **_READ_ONLY_FLAGS,
         },
         "rows": [],
         "claim_boundary": CLAIM_BOUNDARY,
+    }
+
+
+def _band_summary_fields(band_counts: dict[str, Any], *, selected_count: int) -> dict[str, Any]:
+    counts = {band: int(band_counts.get(band, 0) or 0) for band in BAND_KEYS}
+    claim_grade_ready = sum(counts[band] for band in CLAIM_GRADE_BANDS)
+    selected_band_count = sum(counts[band] for band in (BAND_GREEN, BAND_YELLOW, BAND_RED, BAND_ABSTAIN))
+    return {
+        "green_row_count": counts[BAND_GREEN],
+        "yellow_row_count": counts[BAND_YELLOW],
+        "red_row_count": counts[BAND_RED],
+        "abstain_row_count": counts[BAND_ABSTAIN],
+        "coarse_only_row_count": counts[BAND_COARSE_ONLY],
+        "claim_grade_metric_ready_row_count": claim_grade_ready,
+        "selected_banding_row_count": selected_band_count,
+        "claim_grade_band_counts": {
+            BAND_GREEN: counts[BAND_GREEN],
+            BAND_YELLOW: counts[BAND_YELLOW],
+            BAND_RED: counts[BAND_RED],
+            BAND_ABSTAIN: counts[BAND_ABSTAIN],
+        },
+        "banding_surface_ready": selected_count > 0 and selected_band_count == selected_count,
+        "green_band_condition": GREEN_BAND_CONDITION,
+        "green_band_condition_text": GREEN_BAND_CONDITION_TEXT,
     }
 
 
@@ -139,9 +195,12 @@ def build_pocketmd_lite_report_artifact(input_csv: str | Path) -> dict[str, Any]
     summary = dict(report["summary"])
     band_counts = summary.get("band_counts") or {}
     selected_count = int(summary.get("refined_count") or 0)
-    blocker_count = int(band_counts.get("yellow", 0)) + int(band_counts.get("red", 0)) + int(
-        band_counts.get("abstain", 0)
+    blocker_count = (
+        int(band_counts.get(BAND_YELLOW, 0))
+        + int(band_counts.get(BAND_RED, 0))
+        + int(band_counts.get(BAND_ABSTAIN, 0))
     )
+    band_fields = _band_summary_fields(band_counts, selected_count=selected_count)
     summary.update(
         {
             "status": (
@@ -153,6 +212,7 @@ def build_pocketmd_lite_report_artifact(input_csv: str | Path) -> dict[str, Any]
             "selected_top_k_count": selected_count,
             "refinement_blocker_count": blocker_count,
             "pocketmd_lite_claim_safe": selected_count > 0 and blocker_count == 0,
+            **band_fields,
             **_READ_ONLY_FLAGS,
         }
     )
@@ -187,6 +247,12 @@ def _render_markdown(artifact: dict[str, Any]) -> str:
         f"- selected_top_k_count: `{summary.get('selected_top_k_count', 0)}`",
         f"- pocketmd_lite_claim_safe: `{str(summary.get('pocketmd_lite_claim_safe')).lower()}`",
         f"- refinement_blocker_count: `{summary.get('refinement_blocker_count', 0)}`",
+        f"- green_row_count: `{summary.get('green_row_count', 0)}`",
+        f"- yellow_row_count: `{summary.get('yellow_row_count', 0)}`",
+        f"- red_row_count: `{summary.get('red_row_count', 0)}`",
+        f"- abstain_row_count: `{summary.get('abstain_row_count', 0)}`",
+        f"- claim_grade_metric_ready_row_count: `{summary.get('claim_grade_metric_ready_row_count', 0)}`",
+        f"- green_band_condition: `{summary.get('green_band_condition_text')}`",
         f"- mean_uncertainty_score: `{summary.get('mean_uncertainty_score')}`",
         f"- high_uncertainty_count: `{summary.get('high_uncertainty_count')}`",
         f"- local_min_survival_reported_count: `{summary.get('local_min_survival_reported_count')}`",

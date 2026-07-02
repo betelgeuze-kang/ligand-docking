@@ -18,7 +18,18 @@ import math
 from pathlib import Path
 from typing import Any
 
-from betelgeuze_product.pocketmd_lite_contract import build_pocketmd_lite_assessment
+from betelgeuze_product.pocketmd_lite_contract import (
+    BAND_ABSTAIN,
+    BAND_COARSE_ONLY,
+    BAND_GREEN,
+    BAND_RED,
+    BAND_YELLOW,
+    CONTACT_PERSISTENCE_MIN,
+    HBOND_PERSISTENCE_MIN,
+    LOCAL_MIN_SURVIVAL_RMSD_A,
+    MAX_CLASH_COUNT,
+    build_pocketmd_lite_assessment,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -49,6 +60,26 @@ READ_ONLY_FLAGS = {
     "candidate_csv_update_allowed": False,
     "claim_promotion_allowed": False,
 }
+
+BAND_KEYS = (BAND_GREEN, BAND_YELLOW, BAND_RED, BAND_ABSTAIN, BAND_COARSE_ONLY)
+GREEN_BAND_CONDITION = {
+    "local_min_ligand_rmsd_a_lte": LOCAL_MIN_SURVIVAL_RMSD_A,
+    "hbond_persistence_gte": HBOND_PERSISTENCE_MIN,
+    "contact_persistence_gte": CONTACT_PERSISTENCE_MIN,
+    "initial_clash_count_required": True,
+    "clash_count_lte": MAX_CLASH_COUNT,
+    "clash_relief_report_required": True,
+    "missing_evidence_band": BAND_ABSTAIN,
+    "local_min_failure_band": BAND_RED,
+}
+GREEN_BAND_CONDITION_TEXT = (
+    f"green requires local_min_ligand_rmsd_a <= {LOCAL_MIN_SURVIVAL_RMSD_A}, "
+    f"hbond_persistence >= {HBOND_PERSISTENCE_MIN}, "
+    f"contact_persistence >= {CONTACT_PERSISTENCE_MIN}, "
+    "initial_clash_count present, "
+    f"clash_count <= {MAX_CLASH_COUNT}, and clash-relief fields reportable; "
+    f"missing evidence abstains and failed local-min is {BAND_RED}"
+)
 
 CSV_COLUMNS = [
     "entry_id",
@@ -269,6 +300,7 @@ def build_pocketmd_lite_topk_refinement_audit(
     ]
     selected_rows = [row for row in rows if row["selected_for_refine"]]
     claim_grade_ready_rows = [row for row in selected_rows if row["claim_grade_metric_ready"]]
+    band_counts = {band: sum(1 for row in rows if row["band"] == band) for band in BAND_KEYS}
     missing_metric_counts: dict[str, int] = {}
     for row in selected_rows:
         for metric in row["claim_grade_missing_metrics"]:
@@ -354,6 +386,32 @@ def build_pocketmd_lite_topk_refinement_audit(
         "candidate_count": len(rows),
         "selected_top_k_count": len(selected_rows),
         "top_k_only_policy_enforced": bool(report_summary.get("top_k_only_policy_enforced") is True),
+        "green_row_count": band_counts[BAND_GREEN],
+        "yellow_row_count": band_counts[BAND_YELLOW],
+        "red_row_count": band_counts[BAND_RED],
+        "abstain_row_count": band_counts[BAND_ABSTAIN],
+        "coarse_only_row_count": band_counts[BAND_COARSE_ONLY],
+        "claim_grade_band_counts": {
+            BAND_GREEN: band_counts[BAND_GREEN],
+            BAND_YELLOW: band_counts[BAND_YELLOW],
+            BAND_RED: band_counts[BAND_RED],
+            BAND_ABSTAIN: band_counts[BAND_ABSTAIN],
+        },
+        "selected_banding_row_count": (
+            band_counts[BAND_GREEN] + band_counts[BAND_YELLOW] + band_counts[BAND_RED] + band_counts[BAND_ABSTAIN]
+        ),
+        "banding_surface_ready": bool(
+            selected_rows
+            and (
+                band_counts[BAND_GREEN]
+                + band_counts[BAND_YELLOW]
+                + band_counts[BAND_RED]
+                + band_counts[BAND_ABSTAIN]
+            )
+            == len(selected_rows)
+        ),
+        "green_band_condition": report_summary.get("green_band_condition") or GREEN_BAND_CONDITION,
+        "green_band_condition_text": report_summary.get("green_band_condition_text") or GREEN_BAND_CONDITION_TEXT,
         "claim_grade_refinement_evidence_ready": claim_grade_ready,
         "claim_grade_report_evidence_ready": report_evidence_ready,
         "claim_grade_fill_preview_evidence_ready": bool(claim_grade_ready and candidate_fill_preview_ready),
@@ -450,6 +508,11 @@ def render_markdown(payload: dict[str, Any]) -> str:
         "",
         f"- status: `{summary['status']}`",
         f"- selected_top_k_count: `{summary['selected_top_k_count']}`",
+        f"- green_row_count: `{summary['green_row_count']}`",
+        f"- yellow_row_count: `{summary['yellow_row_count']}`",
+        f"- red_row_count: `{summary['red_row_count']}`",
+        f"- abstain_row_count: `{summary['abstain_row_count']}`",
+        f"- green_band_condition: `{summary['green_band_condition_text']}`",
         f"- claim_grade_refinement_evidence_ready: `{str(summary['claim_grade_refinement_evidence_ready']).lower()}`",
         f"- candidate_metric_fill_preview_ready: `{str(summary['candidate_metric_fill_preview_ready']).lower()}`",
         f"- proxy_topk_telemetry_ready: `{str(summary['proxy_topk_telemetry_ready']).lower()}`",

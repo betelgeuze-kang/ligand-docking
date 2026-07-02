@@ -54,6 +54,31 @@ def test_materializes_green_top_k_report(tmp_path: Path) -> None:
     assert summary["pocketmd_lite_claim_safe"] is True
     assert summary["selected_top_k_count"] == 2
     assert summary["refinement_blocker_count"] == 0
+    assert summary["green_row_count"] == 2
+    assert summary["yellow_row_count"] == 0
+    assert summary["red_row_count"] == 0
+    assert summary["abstain_row_count"] == 0
+    assert summary["coarse_only_row_count"] == 0
+    assert summary["claim_grade_metric_ready_row_count"] == 2
+    assert summary["selected_banding_row_count"] == 2
+    assert summary["claim_grade_band_counts"] == {
+        "green": 2,
+        "yellow": 0,
+        "red": 0,
+        "abstain": 0,
+    }
+    assert summary["banding_surface_ready"] is True
+    assert summary["green_band_condition"] == {
+        "local_min_ligand_rmsd_a_lte": 2.0,
+        "hbond_persistence_gte": 0.5,
+        "contact_persistence_gte": 0.5,
+        "initial_clash_count_required": True,
+        "clash_count_lte": 0,
+        "clash_relief_report_required": True,
+        "missing_evidence_band": "abstain",
+        "local_min_failure_band": "red",
+    }
+    assert "local_min_ligand_rmsd_a <= 2.0" in summary["green_band_condition_text"]
     assert summary["mean_uncertainty_score"] is not None
     assert summary["high_uncertainty_count"] == 0
     assert summary["local_min_survival_reported_count"] == 2
@@ -80,6 +105,13 @@ def test_missing_refinement_evidence_abstains_and_blocks(tmp_path: Path) -> None
     assert summary["status"] == "blocked_pocketmd_lite_report"
     assert summary["pocketmd_lite_claim_safe"] is False
     assert summary["refinement_blocker_count"] == 1
+    assert summary["green_row_count"] == 0
+    assert summary["yellow_row_count"] == 0
+    assert summary["red_row_count"] == 0
+    assert summary["abstain_row_count"] == 1
+    assert summary["claim_grade_metric_ready_row_count"] == 0
+    assert summary["selected_banding_row_count"] == 1
+    assert summary["banding_surface_ready"] is True
     assert artifact["rows"][0]["band"] == "abstain"
     assert artifact["rows"][0]["reason_code"] == "missing_refinement_evidence"
     assert artifact["rows"][0]["uncertainty_score"] == 1.0
@@ -104,6 +136,8 @@ def test_non_top_k_candidate_is_coarse_only_not_blocker(tmp_path: Path) -> None:
 
     assert artifact["summary"]["selected_top_k_count"] == 0
     assert artifact["summary"]["refinement_blocker_count"] == 0
+    assert artifact["summary"]["coarse_only_row_count"] == 1
+    assert artifact["summary"]["banding_surface_ready"] is False
     assert artifact["rows"][0]["band"] == "coarse_only"
 
 
@@ -111,6 +145,8 @@ def test_fail_closed_on_missing_csv(tmp_path: Path) -> None:
     artifact = mod.build_pocketmd_lite_report_artifact(tmp_path / "missing.csv")
     assert artifact["materializer_status"] == mod.STATUS_BLOCKED_MISSING
     assert artifact["summary"]["status"] == "blocked_pocketmd_lite_report"
+    assert artifact["summary"]["green_band_condition"]["missing_evidence_band"] == "abstain"
+    assert artifact["summary"]["claim_grade_metric_ready_row_count"] == 0
 
 
 def test_fail_closed_on_bad_bool(tmp_path: Path) -> None:
@@ -146,7 +182,9 @@ def test_main_writes_artifacts(tmp_path: Path) -> None:
 
     assert rc == 0
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["status"] == "pocketmd_lite_report_ready"
-    assert out_md.read_text(encoding="utf-8").startswith("# PocketMD Lite Report")
+    out_md_text = out_md.read_text(encoding="utf-8")
+    assert out_md_text.startswith("# PocketMD Lite Report")
+    assert "green_band_condition" in out_md_text
     row = list(csv.DictReader(out_csv.open(encoding="utf-8")))[0]
     assert row["band"] == "green"
     assert row["uncertainty_posture"] == "green_low_uncertainty"

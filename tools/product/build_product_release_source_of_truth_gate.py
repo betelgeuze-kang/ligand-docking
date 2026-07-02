@@ -2768,12 +2768,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_status": "blocked_product_goal_completion_audit",
         "required_true_fields": [],
         "required_int_exact_fields": {
-            "release_blocker_fail_count": 3,
+            "release_blocker_fail_count": 2,
         },
         "required_text_exact_fields": {
-            "primary_release_blocker_requirement_id": "R4_cameo_optional_live_validation",
-            "primary_release_blocker_tier": "release",
-            "primary_release_blocker": "cameo_optional_live_lane_not_clean",
+            "primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+            "primary_release_blocker_tier": "full_commercial_scope",
+            "primary_release_blocker": "full_scope_claim_closure_not_ready",
         },
     },
     {
@@ -5000,12 +5000,12 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
         "required_status": "operator_actions_required",
         "required_true_fields": [],
         "required_int_exact_fields": {
-            "product_goal_release_blocker_fail_count": 3,
+            "product_goal_release_blocker_fail_count": 2,
         },
         "required_text_exact_fields": {
-            "product_goal_primary_release_blocker_requirement_id": "R4_cameo_optional_live_validation",
-            "product_goal_primary_release_blocker_tier": "release",
-            "product_goal_primary_release_blocker": "cameo_optional_live_lane_not_clean",
+            "product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+            "product_goal_primary_release_blocker_tier": "full_commercial_scope",
+            "product_goal_primary_release_blocker": "full_scope_claim_closure_not_ready",
             "primary_action_id": "product_ai_production:complete_residual_registry_guarded_promotion",
             "primary_action_required_input": (
                 "production_promotion_allowed;customer_facing_auto_correction_allowed;"
@@ -5025,7 +5025,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "production_ai_registry_promotion_priority_packet_ready",
         ],
         "required_int_exact_fields": {
-            "product_goal_release_blocker_fail_count": 3,
+            "product_goal_release_blocker_fail_count": 2,
             "full_commercial_evidence_receipt_entry_count": 2,
             "full_commercial_evidence_receipt_operator_input_required_count": 2,
             "full_commercial_evidence_receipt_current_action_required_count": 2,
@@ -5091,9 +5091,9 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "product_scope_breadth_evidence_priority_receipt_approval_token_required": (
                 "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
             ),
-            "product_goal_primary_release_blocker_requirement_id": "R4_cameo_optional_live_validation",
-            "product_goal_primary_release_blocker_tier": "release",
-            "product_goal_primary_release_blocker": "cameo_optional_live_lane_not_clean",
+            "product_goal_primary_release_blocker_requirement_id": "R8_full_scope_claim_closure",
+            "product_goal_primary_release_blocker_tier": "full_commercial_scope",
+            "product_goal_primary_release_blocker": "full_scope_claim_closure_not_ready",
             "primary_action_id": "product_ai_production:complete_residual_registry_guarded_promotion",
             "primary_action_required_input": (
                 "production_promotion_allowed;customer_facing_auto_correction_allowed;"
@@ -5162,7 +5162,7 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "production_ai_registry_promotion_priority_packet_ready",
         ],
         "required_int_exact_fields": {
-            "completion_audit_release_blocker_bottleneck_count": 3,
+            "completion_audit_release_blocker_bottleneck_count": 2,
             "full_commercial_evidence_receipt_entry_count": 2,
             "full_commercial_evidence_receipt_operator_input_required_count": 2,
             "full_commercial_evidence_receipt_current_action_required_count": 2,

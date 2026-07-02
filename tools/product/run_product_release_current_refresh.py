@@ -222,7 +222,7 @@ FINAL_GATE_SPECS = [
             "third_party_license_review_gate_approved_review_asset_count": 1,
             "third_party_license_review_gate_source_hard_blocker_count": 0,
             "third_party_license_review_gate_source_operator_review_item_count": 1,
-            "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 3,
+            "goal_bottleneck_briefing_completion_audit_release_blocker_bottleneck_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_entry_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_operator_input_required_count": 2,
             "goal_bottleneck_briefing_full_commercial_evidence_receipt_current_action_required_count": 2,
