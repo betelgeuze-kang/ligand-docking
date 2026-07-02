@@ -10,6 +10,12 @@ router = APIRouter(prefix="/product", tags=["product-operator-cockpit"])
 
 ROOT = Path(__file__).resolve().parents[1]
 PRODUCT_OPERATOR_COCKPIT_ARTIFACT = ROOT / "runs" / "product_operator_cockpit_current.json"
+PR38_SPLIT_ACCEPTANCE_PACKET_ARTIFACT = (
+    ROOT / ".betelgeuze" / "pr38_split_acceptance_packet_current.json"
+)
+PR38_CHILD_PR_VERIFICATION_MATRIX_ARTIFACT = (
+    ROOT / ".betelgeuze" / "pr38_child_pr_verification_matrix_current.json"
+)
 
 CLAIM_BOUNDARY = (
     "Product operator cockpit endpoint only; it reads the local cockpit artifact and renders operator-facing "
@@ -38,6 +44,11 @@ def _list(packet: dict[str, Any], key: str) -> list[Any]:
     return list(value) if isinstance(value, list) else []
 
 
+def _dict_rows(packet: dict[str, Any], key: str = "rows") -> list[dict[str, Any]]:
+    value = packet.get(key)
+    return [row for row in value if isinstance(row, dict)] if isinstance(value, list) else []
+
+
 def _int(value: Any) -> int:
     try:
         return int(float(value))
@@ -56,6 +67,127 @@ def _string_list(value: Any) -> list[str]:
     if isinstance(value, list):
         return [str(item) for item in value if str(item or "").strip()]
     return []
+
+
+def _pr38_verification_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "sequence": _int(row.get("sequence")),
+            "slice_id": str(row.get("slice_id") or ""),
+            "changed_file_count": _int(row.get("changed_file_count")),
+            "integration_touchpoint_count": _int(row.get("integration_touchpoint_count")),
+            "hunk_split_review_required": bool(row.get("hunk_split_review_required") is True),
+            "focused_test_required": bool(row.get("focused_test_required") is True),
+            "focused_test_command": str(row.get("focused_test_command") or ""),
+            "ai_verify_required": bool(row.get("ai_verify_required") is True),
+            "ai_verify_command": str(row.get("ai_verify_command") or ""),
+            "product_mode_required": bool(row.get("product_mode_required") is True),
+            "product_mode_command": str(row.get("product_mode_command") or ""),
+            "product_mode_expected_result": str(row.get("product_mode_expected_result") or ""),
+            "claim_boundary_review_required": bool(
+                row.get("claim_boundary_review_required") is True
+            ),
+            "child_pr_verification_matrix_ready": bool(
+                row.get("child_pr_verification_matrix_ready") is True
+            ),
+            "verification_blockers": _string_list(row.get("verification_blockers")),
+            "paid_pilot_wording_allowed": bool(row.get("paid_pilot_wording_allowed") is True),
+            "branch_commit_work_allowed_by_this_matrix": bool(
+                row.get("branch_commit_work_allowed_by_this_matrix") is True
+            ),
+            "execution_enabled": bool(row.get("execution_enabled") is True),
+            "external_state_mutated": bool(row.get("external_state_mutated") is True),
+        }
+        for row in rows
+    ]
+
+
+def _pr38_split_surface() -> dict[str, Any]:
+    acceptance_packet = _read_json_object(PR38_SPLIT_ACCEPTANCE_PACKET_ARTIFACT)
+    matrix_packet = _read_json_object(PR38_CHILD_PR_VERIFICATION_MATRIX_ARTIFACT)
+    acceptance = _summary(acceptance_packet)
+    matrix = _summary(matrix_packet)
+    verification_rows = _pr38_verification_rows(_dict_rows(matrix_packet))
+    matrix_ready = bool(matrix.get("verification_matrix_ready") is True)
+    acceptance_ready = bool(acceptance.get("split_acceptance_ready") is True)
+    return {
+        "pr38_split_acceptance_artifact_path": str(PR38_SPLIT_ACCEPTANCE_PACKET_ARTIFACT),
+        "pr38_split_acceptance_present": bool(acceptance),
+        "pr38_split_acceptance_status": str(acceptance.get("status") or ""),
+        "pr38_split_acceptance_ready": acceptance_ready,
+        "pr38_child_pr_verification_matrix_artifact_path": str(
+            PR38_CHILD_PR_VERIFICATION_MATRIX_ARTIFACT
+        ),
+        "pr38_child_pr_verification_matrix_present": bool(matrix),
+        "pr38_child_pr_verification_matrix_status": str(matrix.get("status") or ""),
+        "pr38_child_pr_verification_matrix_ready": matrix_ready,
+        "pr38_split_ready_for_human_branch_approval": bool(
+            acceptance_ready and matrix_ready and verification_rows
+        ),
+        "pr38_operator_branch_approval_required": bool(
+            acceptance_ready and matrix_ready and verification_rows
+        ),
+        "pr38_child_pr_count": _int(
+            matrix.get("child_pr_count") or acceptance.get("child_pr_count")
+        ),
+        "pr38_ready_child_pr_count": _int(
+            matrix.get("ready_child_pr_count") or acceptance.get("ready_child_pr_count")
+        ),
+        "pr38_blocked_child_pr_count": _int(
+            matrix.get("blocked_child_pr_count") or acceptance.get("blocked_child_pr_count")
+        ),
+        "pr38_blocked_slice_ids": _string_list(
+            matrix.get("blocked_slice_ids") or acceptance.get("blocked_slice_ids")
+        ),
+        "pr38_focused_test_required_count": _int(matrix.get("focused_test_required_count")),
+        "pr38_ai_verify_required_count": _int(matrix.get("ai_verify_required_count")),
+        "pr38_product_mode_required_count": _int(matrix.get("product_mode_required_count")),
+        "pr38_hunk_split_review_required_count": _int(
+            matrix.get("hunk_split_review_required_count")
+            or acceptance.get("hunk_split_review_required_count")
+        ),
+        "pr38_claim_boundary_review_required_count": _int(
+            matrix.get("claim_boundary_review_required_count")
+        ),
+        "pr38_product_mode_expected_result": str(
+            matrix.get("product_mode_expected_result")
+            or acceptance.get("product_mode_expected_result")
+            or ""
+        ),
+        "pr38_product_mode_expected_fail_closed_blockers": _string_list(
+            matrix.get("product_mode_expected_fail_closed_blockers")
+            or acceptance.get("product_mode_expected_fail_closed_blockers")
+        ),
+        "pr38_product_mode_claim_boundary_expected_locks": _string_list(
+            matrix.get("product_mode_claim_boundary_expected_locks")
+            or acceptance.get("product_mode_claim_boundary_expected_locks")
+        ),
+        "pr38_paid_pilot_wording_allowed": bool(
+            matrix.get("paid_pilot_wording_allowed") is True
+            or acceptance.get("paid_pilot_wording_allowed") is True
+        ),
+        "pr38_branch_commit_work_allowed": bool(
+            matrix.get("branch_commit_work_allowed_by_this_matrix") is True
+            or acceptance.get("branch_commit_work_allowed_by_this_packet") is True
+        ),
+        "pr38_patches_applied": bool(
+            matrix.get("patches_applied") is True or acceptance.get("patches_applied") is True
+        ),
+        "pr38_branches_created": bool(
+            matrix.get("branches_created") is True or acceptance.get("branches_created") is True
+        ),
+        "pr38_next_slice_id": str(verification_rows[0]["slice_id"] if verification_rows else ""),
+        "pr38_next_focused_test_command": str(
+            verification_rows[0]["focused_test_command"] if verification_rows else ""
+        ),
+        "pr38_next_ai_verify_command": str(
+            verification_rows[0]["ai_verify_command"] if verification_rows else ""
+        ),
+        "pr38_next_required_step": str(
+            matrix.get("next_required_step") or acceptance.get("next_required_step") or ""
+        ),
+        "pr38_verification_rows": verification_rows,
+    }
 
 
 def _missing_response() -> dict[str, Any]:
@@ -238,6 +370,39 @@ def _missing_response() -> dict[str, Any]:
         "pm_priority_queue_first_blocked_item_id": "",
         "pm_priority_queue_first_blocker": "",
         "pm_priority_queue_next_required_step": "",
+        "pr38_split_acceptance_artifact_path": str(PR38_SPLIT_ACCEPTANCE_PACKET_ARTIFACT),
+        "pr38_split_acceptance_present": False,
+        "pr38_split_acceptance_status": "",
+        "pr38_split_acceptance_ready": False,
+        "pr38_child_pr_verification_matrix_artifact_path": str(
+            PR38_CHILD_PR_VERIFICATION_MATRIX_ARTIFACT
+        ),
+        "pr38_child_pr_verification_matrix_present": False,
+        "pr38_child_pr_verification_matrix_status": "",
+        "pr38_child_pr_verification_matrix_ready": False,
+        "pr38_split_ready_for_human_branch_approval": False,
+        "pr38_operator_branch_approval_required": False,
+        "pr38_child_pr_count": 0,
+        "pr38_ready_child_pr_count": 0,
+        "pr38_blocked_child_pr_count": 0,
+        "pr38_blocked_slice_ids": [],
+        "pr38_focused_test_required_count": 0,
+        "pr38_ai_verify_required_count": 0,
+        "pr38_product_mode_required_count": 0,
+        "pr38_hunk_split_review_required_count": 0,
+        "pr38_claim_boundary_review_required_count": 0,
+        "pr38_product_mode_expected_result": "",
+        "pr38_product_mode_expected_fail_closed_blockers": [],
+        "pr38_product_mode_claim_boundary_expected_locks": [],
+        "pr38_paid_pilot_wording_allowed": False,
+        "pr38_branch_commit_work_allowed": False,
+        "pr38_patches_applied": False,
+        "pr38_branches_created": False,
+        "pr38_next_slice_id": "",
+        "pr38_next_focused_test_command": "",
+        "pr38_next_ai_verify_command": "",
+        "pr38_next_required_step": "",
+        "pr38_verification_rows": [],
         "release_allowed": False,
         "panels": [],
         "claim_matrix": [],
@@ -681,6 +846,7 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         "pm_priority_queue_next_required_step": str(
             summary.get("pm_priority_queue_next_required_step") or ""
         ),
+        **_pr38_split_surface(),
         "release_allowed": bool(summary.get("release_allowed") is True),
         "panels": _list(packet, "rows"),
         "claim_matrix": _list(packet, "claim_matrix"),

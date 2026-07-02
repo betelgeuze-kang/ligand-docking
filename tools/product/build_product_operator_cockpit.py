@@ -31,6 +31,10 @@ DEFAULT_DEVELOPER_PREVIEW_JSON = "runs/developer_preview_final_gate_audit_curren
 DEFAULT_F2G_F2H_PREFLIGHT_JSON = ".betelgeuze/f2g_f2h_surface_preflight.local.json"
 DEFAULT_F2G_F2H_RECOVERY_JSON = ".betelgeuze/f2g_f2h_authoritative_surface_recovery_packet.local.json"
 DEFAULT_ENTERPRISE_ON_PREM_JSON = "runs/enterprise_on_prem_readiness_gate_current.json"
+DEFAULT_PR38_SPLIT_ACCEPTANCE_JSON = ".betelgeuze/pr38_split_acceptance_packet_current.json"
+DEFAULT_PR38_CHILD_PR_VERIFICATION_MATRIX_JSON = (
+    ".betelgeuze/pr38_child_pr_verification_matrix_current.json"
+)
 DEFAULT_OUT_JSON = "runs/product_operator_cockpit_current.json"
 DEFAULT_OUT_CSV = "runs/product_operator_cockpit_current.csv"
 DEFAULT_OUT_MD = "runs/product_operator_cockpit_current.md"
@@ -640,6 +644,10 @@ def build_product_operator_cockpit(
     f2g_f2h_preflight_json: str | Path = DEFAULT_F2G_F2H_PREFLIGHT_JSON,
     f2g_f2h_recovery_json: str | Path = DEFAULT_F2G_F2H_RECOVERY_JSON,
     enterprise_on_prem_json: str | Path = DEFAULT_ENTERPRISE_ON_PREM_JSON,
+    pr38_split_acceptance_json: str | Path = DEFAULT_PR38_SPLIT_ACCEPTANCE_JSON,
+    pr38_child_pr_verification_matrix_json: str | Path = (
+        DEFAULT_PR38_CHILD_PR_VERIFICATION_MATRIX_JSON
+    ),
     root: Path = ROOT,
 ) -> dict[str, Any]:
     capabilities = _summary(_read_json(capabilities_json, root=root))
@@ -669,6 +677,11 @@ def build_product_operator_cockpit(
     f2g_recovery = _summary(f2g_recovery_payload)
     f2g_recovery_rows = _rows(f2g_recovery_payload)
     enterprise_on_prem = _summary(_read_json(enterprise_on_prem_json, root=root))
+    pr38_acceptance_payload = _read_json(pr38_split_acceptance_json, root=root)
+    pr38_acceptance = _summary(pr38_acceptance_payload)
+    pr38_matrix_payload = _read_json(pr38_child_pr_verification_matrix_json, root=root)
+    pr38_matrix = _summary(pr38_matrix_payload)
+    pr38_matrix_rows = _rows(pr38_matrix_payload)
 
     capabilities_present = bool(capabilities)
     restricted_scope_claim_guard_ready = _bool_true(capabilities.get("restricted_scope_claim_guard_ready"))
@@ -1054,6 +1067,84 @@ def build_product_operator_cockpit(
     enterprise_rollback_retry_ready = _bool_true(
         enterprise_on_prem.get("rollback_retry_idempotency_ready")
     )
+    pr38_split_acceptance_present = bool(pr38_acceptance)
+    pr38_split_acceptance_ready = _bool_true(pr38_acceptance.get("split_acceptance_ready"))
+    pr38_child_pr_verification_matrix_present = bool(pr38_matrix)
+    pr38_child_pr_verification_matrix_ready = _bool_true(
+        pr38_matrix.get("verification_matrix_ready")
+    )
+    pr38_split_ready_for_human_branch_approval = bool(
+        pr38_split_acceptance_ready
+        and pr38_child_pr_verification_matrix_ready
+        and pr38_matrix_rows
+    )
+    pr38_child_pr_count = _int(
+        pr38_matrix.get("child_pr_count") or pr38_acceptance.get("child_pr_count")
+    )
+    pr38_ready_child_pr_count = _int(
+        pr38_matrix.get("ready_child_pr_count") or pr38_acceptance.get("ready_child_pr_count")
+    )
+    pr38_blocked_child_pr_count = _int(
+        pr38_matrix.get("blocked_child_pr_count") or pr38_acceptance.get("blocked_child_pr_count")
+    )
+    pr38_blocked_slice_ids = _string_list(
+        pr38_matrix.get("blocked_slice_ids") or pr38_acceptance.get("blocked_slice_ids")
+    )
+    pr38_focused_test_required_count = _int(pr38_matrix.get("focused_test_required_count"))
+    pr38_ai_verify_required_count = _int(pr38_matrix.get("ai_verify_required_count"))
+    pr38_product_mode_required_count = _int(pr38_matrix.get("product_mode_required_count"))
+    pr38_hunk_split_review_required_count = _int(
+        pr38_matrix.get("hunk_split_review_required_count")
+        or pr38_acceptance.get("hunk_split_review_required_count")
+    )
+    pr38_claim_boundary_review_required_count = _int(
+        pr38_matrix.get("claim_boundary_review_required_count")
+    )
+    pr38_product_mode_expected_result = _first_text(
+        pr38_matrix.get("product_mode_expected_result"),
+        pr38_acceptance.get("product_mode_expected_result"),
+    )
+    pr38_product_mode_expected_fail_closed_blockers = _string_list(
+        pr38_matrix.get("product_mode_expected_fail_closed_blockers")
+        or pr38_acceptance.get("product_mode_expected_fail_closed_blockers")
+    )
+    pr38_product_mode_claim_boundary_expected_locks = _string_list(
+        pr38_matrix.get("product_mode_claim_boundary_expected_locks")
+        or pr38_acceptance.get("product_mode_claim_boundary_expected_locks")
+    )
+    pr38_paid_pilot_wording_allowed = _bool_true(
+        pr38_matrix.get("paid_pilot_wording_allowed")
+    ) or _bool_true(pr38_acceptance.get("paid_pilot_wording_allowed"))
+    pr38_branch_commit_work_allowed = _bool_true(
+        pr38_matrix.get("branch_commit_work_allowed_by_this_matrix")
+    ) or _bool_true(pr38_acceptance.get("branch_commit_work_allowed_by_this_packet"))
+    pr38_patches_applied = _bool_true(pr38_matrix.get("patches_applied")) or _bool_true(
+        pr38_acceptance.get("patches_applied")
+    )
+    pr38_branches_created = _bool_true(pr38_matrix.get("branches_created")) or _bool_true(
+        pr38_acceptance.get("branches_created")
+    )
+    pr38_next_row = pr38_matrix_rows[0] if pr38_matrix_rows else {}
+    pr38_next_slice_id = _first_text(pr38_next_row.get("slice_id"))
+    pr38_next_focused_test_command = _first_text(pr38_next_row.get("focused_test_command"))
+    pr38_next_ai_verify_command = _first_text(pr38_next_row.get("ai_verify_command"))
+    pr38_next_required_step = _first_text(
+        pr38_matrix.get("next_required_step"),
+        pr38_acceptance.get("next_required_step"),
+    )
+    pr38_split_source_ready = (
+        pr38_split_acceptance_present
+        and pr38_child_pr_verification_matrix_present
+        and pr38_split_acceptance_ready
+        and pr38_child_pr_verification_matrix_ready
+    )
+    pr38_panel_blockers = list(pr38_blocked_slice_ids)
+    if not pr38_split_acceptance_ready:
+        pr38_panel_blockers.append("pr38_split_acceptance_not_ready")
+    if not pr38_child_pr_verification_matrix_ready:
+        pr38_panel_blockers.append("pr38_child_pr_verification_matrix_not_ready")
+    if pr38_split_ready_for_human_branch_approval:
+        pr38_panel_blockers.append("human_branch_commit_approval_required")
 
     claim_rows = _build_claim_rows(
         restricted_scope_claim_guard_ready=restricted_scope_claim_guard_ready,
@@ -1440,6 +1531,61 @@ def build_product_operator_cockpit(
             if enterprise_ready
             else [enterprise_primary_blocker or "enterprise_on_prem_readiness_blocked"],
             claim_boundary=_text(enterprise_on_prem.get("claim_boundary")) or CLAIM_BOUNDARY,
+            root=root,
+        ),
+        _panel(
+            panel_id="pr38_child_pr_split_queue",
+            title="PR #38 child PR split queue",
+            route="/product/operator-cockpit#pr38-child-pr-split",
+            artifact_path=(
+                pr38_child_pr_verification_matrix_json
+                if pr38_child_pr_verification_matrix_present
+                else pr38_split_acceptance_json
+            ),
+            artifact_present=pr38_split_acceptance_present
+            or pr38_child_pr_verification_matrix_present,
+            status=_first_text(
+                pr38_matrix.get("status"),
+                pr38_acceptance.get("status"),
+                "missing_pr38_child_pr_verification_matrix",
+            ),
+            surface_ready=True,
+            source_artifact_ready=pr38_split_source_ready,
+            operator_action_required=True,
+            claim_allowed=False,
+            primary_metric=_join_metrics(
+                _count_metric("child_prs", pr38_child_pr_count),
+                _count_metric("ready", pr38_ready_child_pr_count),
+                _count_metric("blocked", pr38_blocked_child_pr_count),
+                _count_metric("focused_tests", pr38_focused_test_required_count),
+                _count_metric("ai_verify", pr38_ai_verify_required_count),
+            ),
+            secondary_metric=_join_metrics(
+                _count_metric("product_mode", pr38_product_mode_required_count),
+                _count_metric("hunk_review", pr38_hunk_split_review_required_count),
+                _count_metric("claim_review", pr38_claim_boundary_review_required_count),
+                _metric("branch_commit_allowed", pr38_branch_commit_work_allowed),
+                _metric("patches_applied", pr38_patches_applied),
+                _metric("branches_created", pr38_branches_created),
+                _metric("next_slice", pr38_next_slice_id),
+            ),
+            next_action=_first_text(
+                pr38_next_required_step,
+                "Prepare the PR #38 split acceptance packet and verification matrix before branch work.",
+            ),
+            allowed_claim_text=(
+                "PR #38 split verification queue may be displayed as reviewer handoff evidence."
+            ),
+            disallowed_claim_text=(
+                "Branch, commit, push, merge, paid-pilot, and product-readiness claims stay disallowed "
+                "until explicit human approval and per-child verification complete."
+            ),
+            blockers=pr38_panel_blockers,
+            claim_boundary=_first_text(
+                pr38_matrix.get("claim_boundary"),
+                pr38_acceptance.get("claim_boundary"),
+                CLAIM_BOUNDARY,
+            ),
             root=root,
         ),
         _panel(
@@ -1874,6 +2020,40 @@ def build_product_operator_cockpit(
         "enterprise_on_prem_license_control_ready": enterprise_license_control_ready,
         "enterprise_on_prem_support_bundle_recovery_drill_ready": enterprise_support_bundle_ready,
         "enterprise_on_prem_rollback_retry_idempotency_ready": enterprise_rollback_retry_ready,
+        "pr38_split_acceptance_present": pr38_split_acceptance_present,
+        "pr38_split_acceptance_status": _text(pr38_acceptance.get("status")),
+        "pr38_split_acceptance_ready": pr38_split_acceptance_ready,
+        "pr38_child_pr_verification_matrix_present": pr38_child_pr_verification_matrix_present,
+        "pr38_child_pr_verification_matrix_status": _text(pr38_matrix.get("status")),
+        "pr38_child_pr_verification_matrix_ready": pr38_child_pr_verification_matrix_ready,
+        "pr38_split_ready_for_human_branch_approval": (
+            pr38_split_ready_for_human_branch_approval
+        ),
+        "pr38_operator_branch_approval_required": pr38_split_ready_for_human_branch_approval,
+        "pr38_child_pr_count": pr38_child_pr_count,
+        "pr38_ready_child_pr_count": pr38_ready_child_pr_count,
+        "pr38_blocked_child_pr_count": pr38_blocked_child_pr_count,
+        "pr38_blocked_slice_ids": pr38_blocked_slice_ids,
+        "pr38_focused_test_required_count": pr38_focused_test_required_count,
+        "pr38_ai_verify_required_count": pr38_ai_verify_required_count,
+        "pr38_product_mode_required_count": pr38_product_mode_required_count,
+        "pr38_hunk_split_review_required_count": pr38_hunk_split_review_required_count,
+        "pr38_claim_boundary_review_required_count": pr38_claim_boundary_review_required_count,
+        "pr38_product_mode_expected_result": pr38_product_mode_expected_result,
+        "pr38_product_mode_expected_fail_closed_blockers": (
+            pr38_product_mode_expected_fail_closed_blockers
+        ),
+        "pr38_product_mode_claim_boundary_expected_locks": (
+            pr38_product_mode_claim_boundary_expected_locks
+        ),
+        "pr38_paid_pilot_wording_allowed": pr38_paid_pilot_wording_allowed,
+        "pr38_branch_commit_work_allowed": pr38_branch_commit_work_allowed,
+        "pr38_patches_applied": pr38_patches_applied,
+        "pr38_branches_created": pr38_branches_created,
+        "pr38_next_slice_id": pr38_next_slice_id,
+        "pr38_next_focused_test_command": pr38_next_focused_test_command,
+        "pr38_next_ai_verify_command": pr38_next_ai_verify_command,
+        "pr38_next_required_step": pr38_next_required_step,
         "f2g_f2h_preflight_present": f2g_preflight_present,
         "f2g_f2h_recovery_packet_present": f2g_recovery_present,
         "f2g_f2h_preflight_status": f2g_preflight_status,
@@ -1948,6 +2128,11 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--f2g-f2h-preflight-json", default=DEFAULT_F2G_F2H_PREFLIGHT_JSON)
     parser.add_argument("--f2g-f2h-recovery-json", default=DEFAULT_F2G_F2H_RECOVERY_JSON)
     parser.add_argument("--enterprise-on-prem-json", default=DEFAULT_ENTERPRISE_ON_PREM_JSON)
+    parser.add_argument("--pr38-split-acceptance-json", default=DEFAULT_PR38_SPLIT_ACCEPTANCE_JSON)
+    parser.add_argument(
+        "--pr38-child-pr-verification-matrix-json",
+        default=DEFAULT_PR38_CHILD_PR_VERIFICATION_MATRIX_JSON,
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -1975,6 +2160,8 @@ def main(argv: list[str] | None = None) -> int:
         f2g_f2h_preflight_json=args.f2g_f2h_preflight_json,
         f2g_f2h_recovery_json=args.f2g_f2h_recovery_json,
         enterprise_on_prem_json=args.enterprise_on_prem_json,
+        pr38_split_acceptance_json=args.pr38_split_acceptance_json,
+        pr38_child_pr_verification_matrix_json=args.pr38_child_pr_verification_matrix_json,
     )
     write_product_operator_cockpit_outputs(
         payload,

@@ -14,7 +14,109 @@ def _write_json(path: Path, payload: dict) -> None:
 
 def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, tmp_path: Path) -> None:
     artifact = tmp_path / "runs/product_operator_cockpit_current.json"
+    acceptance = tmp_path / ".betelgeuze/pr38_split_acceptance_packet_current.json"
+    matrix = tmp_path / ".betelgeuze/pr38_child_pr_verification_matrix_current.json"
     monkeypatch.setattr(mod, "PRODUCT_OPERATOR_COCKPIT_ARTIFACT", artifact)
+    monkeypatch.setattr(mod, "PR38_SPLIT_ACCEPTANCE_PACKET_ARTIFACT", acceptance)
+    monkeypatch.setattr(mod, "PR38_CHILD_PR_VERIFICATION_MATRIX_ARTIFACT", matrix)
+    _write_json(
+        acceptance,
+        {
+            "summary": {
+                "status": "pr38_split_acceptance_packet_ready",
+                "split_acceptance_ready": True,
+                "child_pr_count": 5,
+                "ready_child_pr_count": 5,
+                "blocked_child_pr_count": 0,
+                "blocked_slice_ids": [],
+                "hunk_split_review_required_count": 7,
+                "product_mode_expected_result": "pass_product_smoke_claim_boundaries_locked",
+                "product_mode_claim_boundary_expected_locks": [
+                    "paid_pilot_wording_allowed=false",
+                    "public_benchmark_claim_allowed=false",
+                ],
+                "paid_pilot_wording_allowed": False,
+                "branch_commit_work_allowed_by_this_packet": False,
+                "patches_applied": False,
+                "branches_created": False,
+                "next_required_step": "Request explicit human approval for branch/commit work.",
+            }
+        },
+    )
+    _write_json(
+        matrix,
+        {
+            "summary": {
+                "status": "pr38_child_pr_verification_matrix_ready",
+                "verification_matrix_ready": True,
+                "split_acceptance_ready": True,
+                "child_pr_count": 5,
+                "ready_child_pr_count": 5,
+                "blocked_child_pr_count": 0,
+                "blocked_slice_ids": [],
+                "focused_test_required_count": 5,
+                "ai_verify_required_count": 5,
+                "product_mode_required_count": 5,
+                "hunk_split_review_required_count": 2,
+                "claim_boundary_review_required_count": 5,
+                "product_mode_expected_result": "pass_product_smoke_claim_boundaries_locked",
+                "product_mode_expected_fail_closed_blockers": [],
+                "product_mode_claim_boundary_expected_locks": [
+                    "paid_pilot_wording_allowed=false",
+                    "public_benchmark_claim_allowed=false",
+                ],
+                "paid_pilot_wording_allowed": False,
+                "branch_commit_work_allowed_by_this_matrix": False,
+                "patches_applied": False,
+                "branches_created": False,
+                "next_required_step": "Run each row's focused test command and ai-verify.",
+            },
+            "rows": [
+                {
+                    "sequence": 1,
+                    "slice_id": "f2g_f2h_preflight",
+                    "changed_file_count": 5,
+                    "integration_touchpoint_count": 0,
+                    "hunk_split_review_required": False,
+                    "focused_test_required": True,
+                    "focused_test_command": "pytest f2g",
+                    "ai_verify_required": True,
+                    "ai_verify_command": "./scripts/ai-verify.sh",
+                    "product_mode_required": True,
+                    "product_mode_command": "AI_VERIFY_MODE=product ./scripts/ai-verify.sh",
+                    "product_mode_expected_result": "pass_product_smoke_claim_boundaries_locked",
+                    "claim_boundary_review_required": True,
+                    "child_pr_verification_matrix_ready": True,
+                    "verification_blockers": [],
+                    "paid_pilot_wording_allowed": False,
+                    "branch_commit_work_allowed_by_this_matrix": False,
+                    "execution_enabled": False,
+                    "external_state_mutated": False,
+                },
+                {
+                    "sequence": 2,
+                    "slice_id": "public_benchmark_phase2",
+                    "changed_file_count": 14,
+                    "integration_touchpoint_count": 0,
+                    "hunk_split_review_required": False,
+                    "focused_test_required": True,
+                    "focused_test_command": "pytest benchmark",
+                    "ai_verify_required": True,
+                    "ai_verify_command": "./scripts/ai-verify.sh",
+                    "product_mode_required": True,
+                    "product_mode_command": "AI_VERIFY_MODE=product ./scripts/ai-verify.sh",
+                    "product_mode_expected_result": "pass_product_smoke_claim_boundaries_locked",
+                    "claim_boundary_review_required": True,
+                    "child_pr_verification_matrix_ready": True,
+                    "verification_blockers": [],
+                    "paid_pilot_wording_allowed": False,
+                    "branch_commit_work_allowed_by_this_matrix": False,
+                    "execution_enabled": False,
+                    "external_state_mutated": False,
+                },
+            ],
+        },
+    )
     _write_json(
         artifact,
         {
@@ -529,6 +631,62 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["pm_priority_queue_next_required_step"] == (
         "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
     )
+    assert response["pr38_split_acceptance_present"] is True
+    assert response["pr38_split_acceptance_status"] == "pr38_split_acceptance_packet_ready"
+    assert response["pr38_split_acceptance_ready"] is True
+    assert response["pr38_child_pr_verification_matrix_present"] is True
+    assert response["pr38_child_pr_verification_matrix_status"] == (
+        "pr38_child_pr_verification_matrix_ready"
+    )
+    assert response["pr38_child_pr_verification_matrix_ready"] is True
+    assert response["pr38_split_ready_for_human_branch_approval"] is True
+    assert response["pr38_operator_branch_approval_required"] is True
+    assert response["pr38_child_pr_count"] == 5
+    assert response["pr38_ready_child_pr_count"] == 5
+    assert response["pr38_blocked_child_pr_count"] == 0
+    assert response["pr38_blocked_slice_ids"] == []
+    assert response["pr38_focused_test_required_count"] == 5
+    assert response["pr38_ai_verify_required_count"] == 5
+    assert response["pr38_product_mode_required_count"] == 5
+    assert response["pr38_hunk_split_review_required_count"] == 2
+    assert response["pr38_claim_boundary_review_required_count"] == 5
+    assert response["pr38_product_mode_expected_result"] == (
+        "pass_product_smoke_claim_boundaries_locked"
+    )
+    assert response["pr38_product_mode_expected_fail_closed_blockers"] == []
+    assert response["pr38_product_mode_claim_boundary_expected_locks"] == [
+        "paid_pilot_wording_allowed=false",
+        "public_benchmark_claim_allowed=false",
+    ]
+    assert response["pr38_paid_pilot_wording_allowed"] is False
+    assert response["pr38_branch_commit_work_allowed"] is False
+    assert response["pr38_patches_applied"] is False
+    assert response["pr38_branches_created"] is False
+    assert response["pr38_next_slice_id"] == "f2g_f2h_preflight"
+    assert response["pr38_next_focused_test_command"] == "pytest f2g"
+    assert response["pr38_next_ai_verify_command"] == "./scripts/ai-verify.sh"
+    assert response["pr38_next_required_step"] == "Run each row's focused test command and ai-verify."
+    assert response["pr38_verification_rows"][0] == {
+        "sequence": 1,
+        "slice_id": "f2g_f2h_preflight",
+        "changed_file_count": 5,
+        "integration_touchpoint_count": 0,
+        "hunk_split_review_required": False,
+        "focused_test_required": True,
+        "focused_test_command": "pytest f2g",
+        "ai_verify_required": True,
+        "ai_verify_command": "./scripts/ai-verify.sh",
+        "product_mode_required": True,
+        "product_mode_command": "AI_VERIFY_MODE=product ./scripts/ai-verify.sh",
+        "product_mode_expected_result": "pass_product_smoke_claim_boundaries_locked",
+        "claim_boundary_review_required": True,
+        "child_pr_verification_matrix_ready": True,
+        "verification_blockers": [],
+        "paid_pilot_wording_allowed": False,
+        "branch_commit_work_allowed_by_this_matrix": False,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+    }
     assert response["panels"][0]["panel_id"] == "product_capabilities_dashboard"
     assert response["claim_matrix"][0]["claim_id"] == "paid_pilot_wording"
     assert response["execution_enabled"] is False
@@ -540,6 +698,16 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
 def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(monkeypatch, tmp_path: Path) -> None:
     missing = tmp_path / "runs/product_operator_cockpit_current.json"
     monkeypatch.setattr(mod, "PRODUCT_OPERATOR_COCKPIT_ARTIFACT", missing)
+    monkeypatch.setattr(
+        mod,
+        "PR38_SPLIT_ACCEPTANCE_PACKET_ARTIFACT",
+        tmp_path / ".betelgeuze/missing-pr38-split.json",
+    )
+    monkeypatch.setattr(
+        mod,
+        "PR38_CHILD_PR_VERIFICATION_MATRIX_ARTIFACT",
+        tmp_path / ".betelgeuze/missing-pr38-matrix.json",
+    )
 
     response = asyncio.run(mod.get_product_operator_cockpit())
 
@@ -705,6 +873,35 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["pm_priority_queue_first_blocked_item_id"] == ""
     assert response["pm_priority_queue_first_blocker"] == ""
     assert response["pm_priority_queue_next_required_step"] == ""
+    assert response["pr38_split_acceptance_present"] is False
+    assert response["pr38_split_acceptance_status"] == ""
+    assert response["pr38_split_acceptance_ready"] is False
+    assert response["pr38_child_pr_verification_matrix_present"] is False
+    assert response["pr38_child_pr_verification_matrix_status"] == ""
+    assert response["pr38_child_pr_verification_matrix_ready"] is False
+    assert response["pr38_split_ready_for_human_branch_approval"] is False
+    assert response["pr38_operator_branch_approval_required"] is False
+    assert response["pr38_child_pr_count"] == 0
+    assert response["pr38_ready_child_pr_count"] == 0
+    assert response["pr38_blocked_child_pr_count"] == 0
+    assert response["pr38_blocked_slice_ids"] == []
+    assert response["pr38_focused_test_required_count"] == 0
+    assert response["pr38_ai_verify_required_count"] == 0
+    assert response["pr38_product_mode_required_count"] == 0
+    assert response["pr38_hunk_split_review_required_count"] == 0
+    assert response["pr38_claim_boundary_review_required_count"] == 0
+    assert response["pr38_product_mode_expected_result"] == ""
+    assert response["pr38_product_mode_expected_fail_closed_blockers"] == []
+    assert response["pr38_product_mode_claim_boundary_expected_locks"] == []
+    assert response["pr38_paid_pilot_wording_allowed"] is False
+    assert response["pr38_branch_commit_work_allowed"] is False
+    assert response["pr38_patches_applied"] is False
+    assert response["pr38_branches_created"] is False
+    assert response["pr38_next_slice_id"] == ""
+    assert response["pr38_next_focused_test_command"] == ""
+    assert response["pr38_next_ai_verify_command"] == ""
+    assert response["pr38_next_required_step"] == ""
+    assert response["pr38_verification_rows"] == []
     assert response["panels"] == []
     assert response["claim_matrix"] == []
     assert response["execution_enabled"] is False
