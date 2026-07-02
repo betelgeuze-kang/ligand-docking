@@ -116,7 +116,24 @@ def _write_inputs(
             "work_order_ready": True,
             "same_input_score_template_ready": True,
             "score_template_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
-            "score_value_pending_count": 32,
+            "score_template_validation_ready": comparison_ready,
+            "score_template_filled_score_row_count": 16 if comparison_ready else 0,
+            "score_value_pending_count": 0 if comparison_ready else 32,
+            "invalid_score_value_count": 0,
+            "operator_metadata_pending_count": 0 if comparison_ready else 32,
+            "operator_placeholder_pending_count": 0 if comparison_ready else 96,
+            "license_ok_pending_count": 0 if comparison_ready else 16,
+            "approval_token_pending_count": 0 if comparison_ready else 16,
+            "score_template_blocker_count": 0 if comparison_ready else 5,
+            "score_template_blockers": []
+            if comparison_ready
+            else [
+                "same_input_score_values_pending",
+                "operator_score_metadata_pending",
+                "operator_score_placeholders_unfilled",
+                "license_ok_pending",
+                "approval_token_pending",
+            ],
             "adapter_command_after_fill": (
                 "python3 tools/build_pdbbind_casf_pose_affinity_results.py "
                 "--comparison-scores-csv runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
@@ -159,7 +176,15 @@ def test_public_benchmark_external_receipts_audit_blocks_unapproved_receipts(
     assert summary["claim_promotion_allowed"] is False
     assert rows["benchmark_ledger_review"]["ready"] is True
     assert summary["vina_gnina_comparison_work_order_ready"] is True
+    assert summary["vina_gnina_score_template_validation_ready"] is False
+    assert summary["vina_gnina_score_template_filled_score_row_count"] == 0
     assert summary["vina_gnina_score_value_pending_count"] == 32
+    assert summary["vina_gnina_operator_metadata_pending_count"] == 32
+    assert summary["vina_gnina_operator_placeholder_pending_count"] == 96
+    assert summary["vina_gnina_license_ok_pending_count"] == 16
+    assert summary["vina_gnina_approval_token_pending_count"] == 16
+    assert summary["vina_gnina_score_template_blocker_count"] == 5
+    assert "approval_token_pending" in summary["vina_gnina_score_template_blockers"]
     assert summary["vina_gnina_score_template_csv"] == (
         "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
     )
@@ -182,6 +207,8 @@ def test_public_benchmark_external_receipts_audit_ready_when_all_steps_pass(
     assert summary["ready_step_count"] == 7
     assert summary["blocked_step_count"] == 0
     assert summary["blockers"] == []
+    assert summary["vina_gnina_score_template_validation_ready"] is True
+    assert summary["vina_gnina_score_value_pending_count"] == 0
     assert summary["receipt_blocked_row_count"] == 0
     assert summary["claim_promotion_allowed"] is False
 

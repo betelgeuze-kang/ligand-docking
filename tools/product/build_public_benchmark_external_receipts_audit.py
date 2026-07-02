@@ -324,6 +324,9 @@ def build_public_benchmark_external_receipts_audit(
             secondary_metric=_join_metrics(
                 _metric("same_input_rows", _bool_true(results.get("comparison_adapter_same_input_row_count_match"))),
                 _metric("work_order_ready", vina_gnina_work_order_ready),
+                _metric("template_fill_ready", _bool_true(vina_gnina_work_order.get("score_template_validation_ready"))),
+                _metric("pending_scores", _int(vina_gnina_work_order.get("score_value_pending_count"))),
+                _metric("approval_pending", _int(vina_gnina_work_order.get("approval_token_pending_count"))),
                 _metric("status", results.get("vina_gnina_comparison_adapter_status")),
             ),
             blocker="" if comparison_ready else "vina_gnina_same_input_score_evidence_missing",
@@ -399,7 +402,28 @@ def build_public_benchmark_external_receipts_audit(
         "vina_gnina_comparison_work_order_ready": bool(vina_gnina_work_order_ready),
         "vina_gnina_comparison_work_order_status": _text(vina_gnina_work_order.get("status")),
         "vina_gnina_score_template_csv": _text(vina_gnina_work_order.get("score_template_csv")),
+        "vina_gnina_score_template_validation_ready": _bool_true(
+            vina_gnina_work_order.get("score_template_validation_ready")
+        ),
+        "vina_gnina_score_template_filled_score_row_count": _int(
+            vina_gnina_work_order.get("score_template_filled_score_row_count")
+        ),
         "vina_gnina_score_value_pending_count": _int(vina_gnina_work_order.get("score_value_pending_count")),
+        "vina_gnina_invalid_score_value_count": _int(vina_gnina_work_order.get("invalid_score_value_count")),
+        "vina_gnina_operator_metadata_pending_count": _int(
+            vina_gnina_work_order.get("operator_metadata_pending_count")
+        ),
+        "vina_gnina_operator_placeholder_pending_count": _int(
+            vina_gnina_work_order.get("operator_placeholder_pending_count")
+        ),
+        "vina_gnina_license_ok_pending_count": _int(vina_gnina_work_order.get("license_ok_pending_count")),
+        "vina_gnina_approval_token_pending_count": _int(
+            vina_gnina_work_order.get("approval_token_pending_count")
+        ),
+        "vina_gnina_score_template_blocker_count": _int(
+            vina_gnina_work_order.get("score_template_blocker_count")
+        ),
+        "vina_gnina_score_template_blockers": vina_gnina_work_order.get("score_template_blockers", []),
         "vina_gnina_adapter_command_after_fill": _text(vina_gnina_work_order.get("adapter_command_after_fill")),
         "pose_count": _int(results.get("pose_count")),
         "pose_success_rate": results.get("pose_success_rate"),

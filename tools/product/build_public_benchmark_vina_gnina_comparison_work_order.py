@@ -44,6 +44,19 @@ CSV_FIELDS = [
     "approval_token",
 ]
 
+SCORE_FIELDS = ("vina_score", "gnina_score")
+OPERATOR_METADATA_FIELDS = (
+    "comparison_score_source",
+    "comparison_score_artifact_path",
+    "comparison_score_artifact_sha256",
+    "operator_engine_versions",
+    "operator_prep_policy_sha256",
+    "operator_method",
+    "operator_reviewed_at_utc",
+    "operator_id",
+)
+PLACEHOLDER_PREFIX = "OPERATOR_FILL_"
+
 
 def _resolve(path_like: str | Path, *, root: Path = ROOT) -> Path:
     path = Path(path_like)
@@ -89,6 +102,18 @@ def _int(value: Any) -> int:
         return 0
 
 
+def _is_number(value: Any) -> bool:
+    try:
+        float(_text(value))
+    except ValueError:
+        return False
+    return bool(_text(value))
+
+
+def _is_placeholder(value: Any) -> bool:
+    return _text(value).startswith(PLACEHOLDER_PREFIX)
+
+
 def _sha256_file(path_like: str | Path, *, root: Path = ROOT) -> str:
     path = _resolve(path_like, root=root)
     if not path.is_file():
@@ -129,6 +154,73 @@ def _complex_id(pose_id: str) -> str:
     return pose_id.split("_", 1)[0] if "_" in pose_id else pose_id
 
 
+def validate_vina_gnina_score_template(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    row_count = len(rows)
+    score_value_pending_count = 0
+    invalid_score_value_count = 0
+    metadata_pending_count = 0
+    placeholder_value_count = 0
+    license_pending_count = 0
+    approval_token_pending_count = 0
+    filled_score_row_count = 0
+
+    for row in rows:
+        row_scores_ready = True
+        for field in SCORE_FIELDS:
+            value = row.get(field)
+            if not _text(value):
+                score_value_pending_count += 1
+                row_scores_ready = False
+            elif not _is_number(value):
+                invalid_score_value_count += 1
+                row_scores_ready = False
+        if row_scores_ready:
+            filled_score_row_count += 1
+
+        for field in OPERATOR_METADATA_FIELDS:
+            value = row.get(field)
+            if not _text(value):
+                metadata_pending_count += 1
+            if _is_placeholder(value):
+                placeholder_value_count += 1
+
+        if _text(row.get("license_ok")).lower() not in {"1", "true", "yes", "y"}:
+            license_pending_count += 1
+        if _text(row.get("approval_token")) != APPROVAL_TOKEN:
+            approval_token_pending_count += 1
+
+    blockers: list[str] = []
+    if row_count == 0:
+        blockers.append("same_input_score_rows_missing")
+    if score_value_pending_count:
+        blockers.append("same_input_score_values_pending")
+    if invalid_score_value_count:
+        blockers.append("same_input_score_values_invalid")
+    if metadata_pending_count:
+        blockers.append("operator_score_metadata_pending")
+    if placeholder_value_count:
+        blockers.append("operator_score_placeholders_unfilled")
+    if license_pending_count:
+        blockers.append("license_ok_pending")
+    if approval_token_pending_count:
+        blockers.append("approval_token_pending")
+
+    validation_ready = row_count > 0 and not blockers
+    return {
+        "score_template_validation_ready": validation_ready,
+        "score_template_row_count": row_count,
+        "score_template_filled_score_row_count": filled_score_row_count,
+        "score_value_pending_count": score_value_pending_count,
+        "invalid_score_value_count": invalid_score_value_count,
+        "operator_metadata_pending_count": metadata_pending_count,
+        "operator_placeholder_pending_count": placeholder_value_count,
+        "license_ok_pending_count": license_pending_count,
+        "approval_token_pending_count": approval_token_pending_count,
+        "score_template_blocker_count": len(blockers),
+        "score_template_blockers": blockers,
+    }
+
+
 def build_public_benchmark_vina_gnina_comparison_work_order(
     *,
     results_json: str | Path = DEFAULT_RESULTS_JSON,
@@ -146,7 +238,6 @@ def build_public_benchmark_vina_gnina_comparison_work_order(
     work_order_ready = bool(
         result_present and pose_ids and adapter_contract_ready and subset_identity_sha256 and row_count_matches_pose_count
     )
-    score_value_pending_count = len(pose_ids) * 2
     rows = [
         {
             "pose_id": pose_id,
@@ -166,6 +257,7 @@ def build_public_benchmark_vina_gnina_comparison_work_order(
         }
         for pose_id in pose_ids
     ]
+    validation = validate_vina_gnina_score_template(rows)
     out_csv_display = _display(out_csv, root=root)
     adapter_command = (
         "python3 tools/build_pdbbind_casf_pose_affinity_results.py "
@@ -192,12 +284,22 @@ def build_public_benchmark_vina_gnina_comparison_work_order(
         ),
         "work_order_ready": work_order_ready,
         "same_input_score_template_ready": work_order_ready,
-        "comparison_score_evidence_ready": False,
+        "score_template_validation_ready": validation["score_template_validation_ready"],
+        "comparison_score_evidence_ready": validation["score_template_validation_ready"],
         "claim_promotion_allowed": False,
         "pose_row_count": len(pose_ids),
         "pose_count": pose_count,
         "complex_count": len({_complex_id(pose_id) for pose_id in pose_ids}),
-        "score_value_pending_count": score_value_pending_count,
+        "score_value_pending_count": validation["score_value_pending_count"],
+        "score_template_row_count": validation["score_template_row_count"],
+        "score_template_filled_score_row_count": validation["score_template_filled_score_row_count"],
+        "invalid_score_value_count": validation["invalid_score_value_count"],
+        "operator_metadata_pending_count": validation["operator_metadata_pending_count"],
+        "operator_placeholder_pending_count": validation["operator_placeholder_pending_count"],
+        "license_ok_pending_count": validation["license_ok_pending_count"],
+        "approval_token_pending_count": validation["approval_token_pending_count"],
+        "score_template_blocker_count": validation["score_template_blocker_count"],
+        "score_template_blockers": validation["score_template_blockers"],
         "required_engine_ids": ["vina", "gnina"],
         "comparison_adapter_schema_version": COMPARISON_SCHEMA_VERSION,
         "comparison_adapter_contract_ready": adapter_contract_ready,
@@ -250,6 +352,9 @@ def _render_md(payload: dict[str, Any]) -> str:
         f"- pose_row_count: `{summary['pose_row_count']}`",
         f"- complex_count: `{summary['complex_count']}`",
         f"- score_value_pending_count: `{summary['score_value_pending_count']}`",
+        f"- operator_metadata_pending_count: `{summary['operator_metadata_pending_count']}`",
+        f"- approval_token_pending_count: `{summary['approval_token_pending_count']}`",
+        f"- score_template_validation_ready: `{summary['score_template_validation_ready']}`",
         f"- score_template_csv: `{summary['score_template_csv']}`",
         f"- approval_token_required: `{summary['approval_token_required']}`",
         "",
