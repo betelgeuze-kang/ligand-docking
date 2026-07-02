@@ -895,6 +895,19 @@ def build_product_operator_cockpit(
     customer_shadow_work_order_primary_required_action = _first_text(
         customer_shadow.get("customer_shadow_work_order_primary_required_action")
     )
+    customer_shadow_intake_schema_ready = _bool_true(
+        customer_shadow.get("customer_shadow_intake_schema_ready")
+    )
+    customer_shadow_minimum_met = _bool_true(customer_shadow.get("customer_shadow_minimum_met"))
+    customer_shadow_raw_data_stored_in_repo = _bool_true(
+        customer_shadow.get("customer_raw_data_stored_in_repo")
+    )
+    customer_shadow_invalid_row_count = _int(customer_shadow.get("invalid_row_count"))
+    customer_shadow_mock_fixture_row_count = _int(customer_shadow.get("mock_fixture_row_count"))
+    customer_shadow_required_column_count = _int(customer_shadow.get("required_column_count"))
+    customer_shadow_redistribution_required_value = _bool_true(
+        customer_shadow.get("redistribution_allowed_required_value")
+    )
     paid_pilot_wording_allowed = release_allowed and customer_shadow_paid_pilot_ready
 
     developer_preview_present = bool(developer_preview)
@@ -1355,6 +1368,51 @@ def build_product_operator_cockpit(
             root=root,
         ),
         _panel(
+            panel_id="customer_shadow_evidence_panel",
+            title="Customer shadow evidence panel",
+            route="/goal/customer-shadow",
+            artifact_path=customer_shadow_json,
+            artifact_present=bool(customer_shadow),
+            status=_text(customer_shadow.get("status") or "missing_customer_shadow_evidence_status"),
+            surface_ready=True,
+            source_artifact_ready=bool(customer_shadow) and customer_shadow_intake_schema_ready,
+            operator_action_required=not customer_shadow_paid_pilot_ready,
+            claim_allowed=False,
+            primary_metric=_join_metrics(
+                _count_metric("completed_cases", customer_shadow_completed_case_count),
+                _count_metric("required_cases", customer_shadow_required_case_count),
+                _count_metric("missing_cases", customer_shadow_missing_case_count),
+                _metric("minimum_met", customer_shadow_minimum_met),
+            ),
+            secondary_metric=_join_metrics(
+                _metric("schema_ready", customer_shadow_intake_schema_ready),
+                _count_metric("real_rows", customer_shadow_real_row_count),
+                _count_metric("mock_rows", customer_shadow_mock_fixture_row_count),
+                _count_metric("invalid_rows", customer_shadow_invalid_row_count),
+                _count_metric("retained_raw_data", customer_shadow_retained_raw_data_count),
+                _metric("raw_data_in_repo", customer_shadow_raw_data_stored_in_repo),
+                _count_metric("redistribution_false", customer_shadow_redistribution_false_count),
+                _metric("redistribution_required", customer_shadow_redistribution_required_value),
+                _count_metric("anonymized_summaries", customer_shadow_anonymized_summary_count),
+                _count_metric("reviewer_signoffs", customer_shadow_reviewer_signoff_count),
+                _count_metric("required_columns", customer_shadow_required_column_count),
+                _count_metric("work_order_rows", customer_shadow_work_order_rows),
+                _metric("work_order_primary", customer_shadow_work_order_primary_slot),
+            ),
+            next_action=_first_text(
+                customer_shadow.get("next_required_step"),
+                customer_shadow_work_order_primary_required_action,
+                "Collect three reviewed customer-shadow metadata rows without storing customer raw data in the repo.",
+            ),
+            allowed_claim_text="Customer-shadow intake status can be displayed as privacy-preserving operator evidence.",
+            disallowed_claim_text="Paid-pilot wording remains disallowed until three reviewed customer-shadow rows pass.",
+            blockers=[]
+            if customer_shadow_paid_pilot_ready
+            else [customer_shadow_work_order_primary_required_action or "customer_shadow_evidence_incomplete"],
+            claim_boundary=_text(customer_shadow.get("claim_boundary")) or CLAIM_BOUNDARY,
+            root=root,
+        ),
+        _panel(
             panel_id="claim_boundary_matrix",
             title="Allowed/disallowed claim text",
             route="/product/operator-cockpit#claim-boundary",
@@ -1527,6 +1585,15 @@ def build_product_operator_cockpit(
         "customer_shadow_work_order_primary_case_slot_id": customer_shadow_work_order_primary_slot,
         "customer_shadow_work_order_primary_required_action": (
             customer_shadow_work_order_primary_required_action
+        ),
+        "customer_shadow_intake_schema_ready": customer_shadow_intake_schema_ready,
+        "customer_shadow_minimum_met": customer_shadow_minimum_met,
+        "customer_shadow_raw_data_stored_in_repo": customer_shadow_raw_data_stored_in_repo,
+        "customer_shadow_invalid_row_count": customer_shadow_invalid_row_count,
+        "customer_shadow_mock_fixture_row_count": customer_shadow_mock_fixture_row_count,
+        "customer_shadow_required_column_count": customer_shadow_required_column_count,
+        "customer_shadow_redistribution_allowed_required_value": (
+            customer_shadow_redistribution_required_value
         ),
         "developer_preview_clean_baseline_ready": developer_preview_clean_baseline_ready,
         "developer_preview_gate_count": developer_preview_gate_count,

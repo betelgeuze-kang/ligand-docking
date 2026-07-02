@@ -154,6 +154,13 @@ def _missing_response() -> dict[str, Any]:
         "customer_shadow_work_order_row_count": 0,
         "customer_shadow_work_order_primary_case_slot_id": "",
         "customer_shadow_work_order_primary_required_action": "",
+        "customer_shadow_intake_schema_ready": False,
+        "customer_shadow_minimum_met": False,
+        "customer_shadow_raw_data_stored_in_repo": False,
+        "customer_shadow_invalid_row_count": 0,
+        "customer_shadow_mock_fixture_row_count": 0,
+        "customer_shadow_required_column_count": 0,
+        "customer_shadow_redistribution_allowed_required_value": False,
         "developer_preview_clean_baseline_ready": False,
         "developer_preview_gate_count": 0,
         "developer_preview_ready_gate_count": 0,
@@ -420,6 +427,23 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "customer_shadow_work_order_primary_required_action": str(
             summary.get("customer_shadow_work_order_primary_required_action") or ""
+        ),
+        "customer_shadow_intake_schema_ready": bool(
+            summary.get("customer_shadow_intake_schema_ready") is True
+        ),
+        "customer_shadow_minimum_met": bool(summary.get("customer_shadow_minimum_met") is True),
+        "customer_shadow_raw_data_stored_in_repo": bool(
+            summary.get("customer_shadow_raw_data_stored_in_repo") is True
+        ),
+        "customer_shadow_invalid_row_count": _int(summary.get("customer_shadow_invalid_row_count")),
+        "customer_shadow_mock_fixture_row_count": _int(
+            summary.get("customer_shadow_mock_fixture_row_count")
+        ),
+        "customer_shadow_required_column_count": _int(
+            summary.get("customer_shadow_required_column_count")
+        ),
+        "customer_shadow_redistribution_allowed_required_value": bool(
+            summary.get("customer_shadow_redistribution_allowed_required_value") is True
         ),
         "developer_preview_clean_baseline_ready": bool(
             summary.get("developer_preview_clean_baseline_ready") is True

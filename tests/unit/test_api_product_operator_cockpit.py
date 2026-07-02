@@ -124,6 +124,13 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "customer_shadow_work_order_primary_required_action": (
                     "Add one reviewed real customer-shadow metadata row."
                 ),
+                "customer_shadow_intake_schema_ready": True,
+                "customer_shadow_minimum_met": False,
+                "customer_shadow_raw_data_stored_in_repo": False,
+                "customer_shadow_invalid_row_count": 0,
+                "customer_shadow_mock_fixture_row_count": 0,
+                "customer_shadow_required_column_count": 12,
+                "customer_shadow_redistribution_allowed_required_value": False,
                 "developer_preview_clean_baseline_ready": False,
                 "developer_preview_gate_count": 6,
                 "developer_preview_ready_gate_count": 3,
@@ -270,6 +277,13 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["customer_shadow_work_order_primary_required_action"] == (
         "Add one reviewed real customer-shadow metadata row."
     )
+    assert response["customer_shadow_intake_schema_ready"] is True
+    assert response["customer_shadow_minimum_met"] is False
+    assert response["customer_shadow_raw_data_stored_in_repo"] is False
+    assert response["customer_shadow_invalid_row_count"] == 0
+    assert response["customer_shadow_mock_fixture_row_count"] == 0
+    assert response["customer_shadow_required_column_count"] == 12
+    assert response["customer_shadow_redistribution_allowed_required_value"] is False
     assert response["developer_preview_clean_baseline_ready"] is False
     assert response["developer_preview_gate_count"] == 6
     assert response["developer_preview_ready_gate_count"] == 3
@@ -402,6 +416,13 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["customer_shadow_work_order_row_count"] == 0
     assert response["customer_shadow_work_order_primary_case_slot_id"] == ""
     assert response["customer_shadow_work_order_primary_required_action"] == ""
+    assert response["customer_shadow_intake_schema_ready"] is False
+    assert response["customer_shadow_minimum_met"] is False
+    assert response["customer_shadow_raw_data_stored_in_repo"] is False
+    assert response["customer_shadow_invalid_row_count"] == 0
+    assert response["customer_shadow_mock_fixture_row_count"] == 0
+    assert response["customer_shadow_required_column_count"] == 0
+    assert response["customer_shadow_redistribution_allowed_required_value"] is False
     assert response["developer_preview_clean_baseline_ready"] is False
     assert response["developer_preview_gate_count"] == 0
     assert response["developer_preview_ready_gate_count"] == 0

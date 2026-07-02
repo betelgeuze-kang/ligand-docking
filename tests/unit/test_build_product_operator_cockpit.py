@@ -314,14 +314,21 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         {
             "summary": {
                 "status": "blocked_customer_shadow_evidence_status",
+                "customer_shadow_intake_schema_ready": True,
+                "customer_shadow_minimum_met": False,
                 "real_customer_shadow_row_count": 1,
                 "completed_customer_shadow_case_count": 0,
                 "required_completed_customer_shadow_case_count": 3,
                 "missing_completed_customer_shadow_case_count": 3,
+                "customer_raw_data_stored_in_repo": False,
                 "customer_retained_raw_data_count": 1,
                 "redistribution_allowed_false_count": 1,
+                "redistribution_allowed_required_value": False,
                 "anonymized_result_summary_count": 1,
                 "reviewer_signoff_count": 0,
+                "invalid_row_count": 0,
+                "mock_fixture_row_count": 0,
+                "required_column_count": 12,
                 "blocker_count": 2,
                 "customer_shadow_work_order_ready": False,
                 "customer_shadow_work_order_row_count": 3,
@@ -452,7 +459,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["status"] == "product_operator_cockpit_ready_claims_blocked"
     assert summary["phase8_surface_ready"] is True
     assert summary["required_phase8_panel_count"] == 9
-    assert summary["observed_phase8_panel_count"] == 11
+    assert summary["observed_phase8_panel_count"] == 12
     assert summary["missing_required_phase8_panel_count"] == 0
     assert summary["paid_pilot_wording_allowed"] is False
     assert summary["general_platform_claim_allowed"] is False
@@ -546,6 +553,13 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["customer_shadow_work_order_primary_required_action"] == (
         "Add one reviewed real customer-shadow metadata row."
     )
+    assert summary["customer_shadow_intake_schema_ready"] is True
+    assert summary["customer_shadow_minimum_met"] is False
+    assert summary["customer_shadow_raw_data_stored_in_repo"] is False
+    assert summary["customer_shadow_invalid_row_count"] == 0
+    assert summary["customer_shadow_mock_fixture_row_count"] == 0
+    assert summary["customer_shadow_required_column_count"] == 12
+    assert summary["customer_shadow_redistribution_allowed_required_value"] is False
     assert summary["developer_preview_clean_baseline_ready"] is False
     assert summary["developer_preview_gate_count"] == 6
     assert summary["developer_preview_ready_gate_count"] == 3
@@ -710,6 +724,35 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert (
         "customer_shadow_work_order_action=Add one reviewed real customer-shadow metadata row."
         in panels["claim_boundary_matrix"]["secondary_metric"]
+    )
+    assert panels["customer_shadow_evidence_panel"]["route"] == "/goal/customer-shadow"
+    assert panels["customer_shadow_evidence_panel"]["source_artifact_ready"] is True
+    assert panels["customer_shadow_evidence_panel"]["operator_action_required"] is True
+    assert panels["customer_shadow_evidence_panel"]["claim_allowed"] is False
+    assert "completed_cases=0" in panels["customer_shadow_evidence_panel"]["primary_metric"]
+    assert "required_cases=3" in panels["customer_shadow_evidence_panel"]["primary_metric"]
+    assert "missing_cases=3" in panels["customer_shadow_evidence_panel"]["primary_metric"]
+    assert "minimum_met=false" in panels["customer_shadow_evidence_panel"]["primary_metric"]
+    assert "schema_ready=true" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    assert "real_rows=1" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    assert "mock_rows=0" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    assert "invalid_rows=0" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    assert "retained_raw_data=1" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    assert "raw_data_in_repo=false" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    assert "redistribution_false=1" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    assert "redistribution_required=false" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    assert "anonymized_summaries=1" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    assert "reviewer_signoffs=0" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    assert "required_columns=12" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    assert "work_order_rows=3" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    assert "work_order_primary=customer_shadow_case_1" in (
+        panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    )
+    assert panels["customer_shadow_evidence_panel"]["blockers"] == [
+        "Add one reviewed real customer-shadow metadata row."
+    ]
+    assert panels["customer_shadow_evidence_panel"]["disallowed_claim_text"] == (
+        "Paid-pilot wording remains disallowed until three reviewed customer-shadow rows pass."
     )
     assert panels["developer_preview_final_gates"]["route"] == "/goal/developer-preview"
     assert panels["developer_preview_final_gates"]["source_artifact_ready"] is True
