@@ -24,6 +24,7 @@ EXPECTED_ENDPOINTS = {
     "/status": "get_goal_status",
     "/readiness": "get_goal_readiness",
     "/priority-queue": "get_goal_priority_queue",
+    "/developer-preview": "get_goal_developer_preview",
     "/actions": "get_goal_actions",
     "/operator-intake-kit": "get_goal_operator_intake_kit",
     "/release-decision": "get_goal_release_decision",
@@ -35,6 +36,7 @@ EXPECTED_ENDPOINTS = {
 EXPECTED_ARTIFACT_CONSTANTS = {
     "GOAL_READINESS_ROLLUP_ARTIFACT",
     "PM_PRIORITY_QUEUE_ARTIFACT",
+    "DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT",
     "GOAL_OPERATOR_ACTION_BOARD_ARTIFACT",
     "GOAL_OPERATOR_INTAKE_KIT_MANIFEST",
     "GOAL_RELEASE_DECISION_ARTIFACT",
@@ -817,7 +819,7 @@ def build_goal_api_surface_contract(*, root: str | Path = ".") -> dict[str, Any]
             f"missing={','.join(missing_endpoints) or 'none'}",
             "all expected /goal read-only endpoints are present",
             "api/goal.py",
-            "Operators need one API family for status, readiness, priority queue, actions, release decision, burndown, and API contract inspection.",
+            "Operators need one API family for status, readiness, priority queue, Developer Preview gates, actions, release decision, burndown, and API contract inspection.",
         ),
         _row(
             "goal_local_artifact_sources_present",

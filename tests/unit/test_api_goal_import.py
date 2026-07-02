@@ -1032,6 +1032,71 @@ def test_goal_priority_queue_endpoint_reads_fail_closed_pm_queue(monkeypatch, tm
     assert missing["external_state_mutated"] is False
 
 
+def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tmp_path: Path) -> None:
+    from api import goal as goal_api
+
+    artifact = tmp_path / "runs/developer_preview_final_gate_audit_current.json"
+    artifact.parent.mkdir(parents=True)
+    artifact.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "blocked_developer_preview_final_gate_audit",
+                    "developer_preview_clean_baseline_ready": False,
+                    "gate_count": 6,
+                    "ready_gate_count": 3,
+                    "blocked_gate_count": 3,
+                    "receipt_work_order_row_count": 29,
+                    "primary_blocker_id": "benchmark_results_clean_checkout_regenerated",
+                    "next_required_step": "Attach clean-checkout receipt.",
+                    "claim_boundary": "developer preview boundary",
+                },
+                "rows": [
+                    {
+                        "gate_id": "benchmark_results_clean_checkout_regenerated",
+                        "status": "blocked_developer_preview_gate",
+                        "ready": False,
+                    }
+                ],
+                "receipt_work_order_rows": [
+                    {
+                        "gate_id": "benchmark_results_clean_checkout_regenerated",
+                        "receipt_artifact": ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+                        "blocker_detail": "status=blocked_developer_preview_clean_checkout_benchmark_receipt",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(goal_api, "DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT", artifact)
+
+    response = asyncio.run(goal_api.get_goal_developer_preview())
+
+    assert response["status"] == "blocked_developer_preview_final_gate_audit"
+    assert response["developer_preview_clean_baseline_ready"] is False
+    assert response["gate_count"] == 6
+    assert response["ready_gate_count"] == 3
+    assert response["blocked_gate_count"] == 3
+    assert response["receipt_work_order_row_count"] == 29
+    assert response["rows"][0]["gate_id"] == "benchmark_results_clean_checkout_regenerated"
+    assert response["receipt_work_order_rows"][0]["blocker_detail"] == (
+        "status=blocked_developer_preview_clean_checkout_benchmark_receipt"
+    )
+    assert response["execution_enabled"] is False
+    assert response["external_state_mutated"] is False
+    assert response["claim_boundary"] == "developer preview boundary"
+
+    monkeypatch.setattr(goal_api, "DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT", tmp_path / "missing.json")
+    missing = asyncio.run(goal_api.get_goal_developer_preview())
+    assert missing["status"] == "missing_developer_preview_final_gate_audit"
+    assert missing["developer_preview_clean_baseline_ready"] is False
+    assert missing["gate_count"] == 0
+    assert missing["receipt_work_order_rows"] == []
+    assert missing["execution_enabled"] is False
+    assert missing["external_state_mutated"] is False
+
+
 def test_api_app_imports_with_goal_router() -> None:
     from api.main import app
     from api.goal import (
@@ -1039,6 +1104,7 @@ def test_api_app_imports_with_goal_router() -> None:
         get_goal_api_contract,
         get_goal_bottlenecks,
         get_goal_burndown,
+        get_goal_developer_preview,
         get_goal_operator_intake_kit,
         get_goal_priority_queue,
         get_goal_readiness,
@@ -1050,6 +1116,7 @@ def test_api_app_imports_with_goal_router() -> None:
     assert "/goal/status" in paths
     assert "/goal/readiness" in paths
     assert "/goal/priority-queue" in paths
+    assert "/goal/developer-preview" in paths
     assert "/goal/actions" in paths
     assert "/goal/operator-intake-kit" in paths
     assert "/goal/release-decision" in paths

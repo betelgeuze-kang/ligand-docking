@@ -17,6 +17,7 @@ GOAL_RELEASE_BURNDOWN_ARTIFACT = ROOT / "runs" / "goal_release_burndown_work_ord
 GOAL_BOTTLENECK_BRIEFING_ARTIFACT = ROOT / "runs" / "goal_bottleneck_briefing_current.json"
 GOAL_API_SURFACE_CONTRACT_ARTIFACT = ROOT / "runs" / "goal_api_surface_contract_current.json"
 PM_PRIORITY_QUEUE_ARTIFACT = ROOT / ".betelgeuze" / "pm_priority_queue_status_current.json"
+DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT = ROOT / "runs" / "developer_preview_final_gate_audit_current.json"
 PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT = ROOT / "runs" / "product_goal_completion_audit_current.json"
 PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT = (
     ROOT / "runs" / "product_commercial_readiness_handoff_bundle_current.json"
@@ -3422,6 +3423,47 @@ async def get_goal_priority_queue() -> dict[str, Any]:
             summary.get("first_blocked_next_action") or first_blocked_item.get("next_action") or ""
         ),
         "rows": rows,
+        **_mutation_flags(),
+        "claim_boundary": summary.get("claim_boundary") or CLAIM_BOUNDARY,
+    }
+
+
+@router.get("/developer-preview")
+async def get_goal_developer_preview() -> dict[str, Any]:
+    packet = _read_json_object(DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT)
+    summary = _summary(packet)
+    receipt_work_order_rows = packet.get("receipt_work_order_rows")
+    work_rows = (
+        [row for row in receipt_work_order_rows if isinstance(row, dict)]
+        if isinstance(receipt_work_order_rows, list)
+        else []
+    )
+    if not summary:
+        return {
+            "status": "missing_developer_preview_final_gate_audit",
+            "artifact_path": str(DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT),
+            "developer_preview_clean_baseline_ready": False,
+            "gate_count": 0,
+            "ready_gate_count": 0,
+            "blocked_gate_count": 0,
+            "receipt_work_order_row_count": 0,
+            "rows": [],
+            "receipt_work_order_rows": [],
+            **_mutation_flags(),
+            "claim_boundary": CLAIM_BOUNDARY,
+        }
+    return {
+        **summary,
+        "artifact_path": str(DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT),
+        "developer_preview_clean_baseline_ready": bool(
+            summary.get("developer_preview_clean_baseline_ready") is True
+        ),
+        "gate_count": _int(summary.get("gate_count")),
+        "ready_gate_count": _int(summary.get("ready_gate_count")),
+        "blocked_gate_count": _int(summary.get("blocked_gate_count")),
+        "receipt_work_order_row_count": _int(summary.get("receipt_work_order_row_count")),
+        "rows": _rows(packet),
+        "receipt_work_order_rows": work_rows,
         **_mutation_flags(),
         "claim_boundary": summary.get("claim_boundary") or CLAIM_BOUNDARY,
     }
