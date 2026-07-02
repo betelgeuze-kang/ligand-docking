@@ -64,15 +64,25 @@ def test_verification_matrix_requires_focused_tests_ai_verify_and_claim_review(t
     assert summary["verification_matrix_ready"] is True
     assert summary["focused_test_required_count"] == 3
     assert summary["ai_verify_required_count"] == 3
-    assert summary["product_mode_required_count"] == 2
+    assert summary["product_mode_required_count"] == 3
+    assert summary["product_mode_expected_result"] == "pass_product_smoke_claim_boundaries_locked"
+    assert summary["product_mode_claim_boundary_expected_locks"] == (
+        mod.PRODUCT_MODE_CLAIM_LOCK_EXPECTATIONS
+    )
     assert summary["hunk_split_review_required_count"] == 1
     assert summary["paid_pilot_wording_allowed"] is False
     rows = {row["slice_id"]: row for row in payload["rows"]}
-    assert rows["f2g_f2h_preflight"]["product_mode_required"] is False
+    assert rows["f2g_f2h_preflight"]["product_mode_required"] is True
+    assert rows["f2g_f2h_preflight"]["product_mode_expected_result"] == (
+        "pass_product_smoke_claim_boundaries_locked"
+    )
     assert rows["public_benchmark_phase2"]["product_mode_required"] is True
     assert rows["source_of_truth_refresh"]["hunk_split_review_required"] is True
     assert rows["source_of_truth_refresh"]["child_pr_verification_matrix_ready"] is True
     assert rows["public_benchmark_phase2"]["product_mode_expected_blockers"] == mod.KNOWN_PRODUCT_MODE_BLOCKERS
+    assert rows["public_benchmark_phase2"]["product_mode_claim_boundary_expected_locks"] == (
+        mod.PRODUCT_MODE_CLAIM_LOCK_EXPECTATIONS
+    )
 
 
 def test_verification_matrix_blocks_missing_focused_test_command(tmp_path: Path) -> None:

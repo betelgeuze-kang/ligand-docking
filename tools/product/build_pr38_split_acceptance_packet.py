@@ -30,11 +30,15 @@ DEFAULT_OUT_MD = ".betelgeuze/pr38_split_acceptance_packet_current.md"
 PACKET_TYPE = "pr38_split_acceptance_packet"
 SCHEMA_VERSION = "pr38_split_acceptance_packet_v1"
 
-KNOWN_PRODUCT_MODE_BLOCKERS = [
-    "commercial_independence_restricted_self_hosted",
-    "capability_surface_restricted_scope_ready",
-    "release_source_of_truth_ready",
-    "release_refresh_final_gates_verified",
+KNOWN_PRODUCT_MODE_BLOCKERS: list[str] = []
+
+PRODUCT_MODE_CLAIM_LOCK_EXPECTATIONS = [
+    "paid_pilot_wording_allowed=false",
+    "public_benchmark_claim_allowed=false",
+    "gpcr_broad_claim_allowed=false",
+    "pocketmd_lite_claim_allowed=false",
+    "f2g_f2h_placeholder_surface_creation_allowed=false",
+    "f2h_continuation_allowed=false",
 ]
 
 CLAIM_BOUNDARY = (
@@ -202,6 +206,8 @@ def build_pr38_split_acceptance_packet(
         "hunk_split_review_required_count": int(split_summary.get("hunk_split_review_required_count") or 0),
         "source_of_truth_registry_reconciles_last": bool(plan_summary.get("source_of_truth_registry_reconciles_last") is True),
         "product_mode_expected_fail_closed_blockers": KNOWN_PRODUCT_MODE_BLOCKERS,
+        "product_mode_expected_result": "pass_product_smoke_claim_boundaries_locked",
+        "product_mode_claim_boundary_expected_locks": PRODUCT_MODE_CLAIM_LOCK_EXPECTATIONS,
         "paid_pilot_wording_allowed": False,
         "branch_commit_work_allowed_by_this_packet": False,
         "claim_boundary": CLAIM_BOUNDARY,

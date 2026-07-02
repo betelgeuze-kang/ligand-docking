@@ -120,6 +120,10 @@ def test_split_acceptance_packet_requires_all_receipts_and_preserves_claim_lock(
     assert summary["paid_pilot_wording_allowed"] is False
     assert summary["branch_commit_work_allowed_by_this_packet"] is False
     assert summary["product_mode_expected_fail_closed_blockers"] == mod.KNOWN_PRODUCT_MODE_BLOCKERS
+    assert summary["product_mode_expected_result"] == "pass_product_smoke_claim_boundaries_locked"
+    assert summary["product_mode_claim_boundary_expected_locks"] == (
+        mod.PRODUCT_MODE_CLAIM_LOCK_EXPECTATIONS
+    )
     rows = {row["slice_id"]: row for row in payload["rows"]}
     assert rows["slice_b"]["integration_touchpoint_count"] == 1
     assert rows["slice_a"]["slice_acceptance_ready"] is True

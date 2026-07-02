@@ -15,7 +15,10 @@ from pathlib import Path
 from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
-from tools.product.build_pr38_split_acceptance_packet import KNOWN_PRODUCT_MODE_BLOCKERS
+from tools.product.build_pr38_split_acceptance_packet import (
+    KNOWN_PRODUCT_MODE_BLOCKERS,
+    PRODUCT_MODE_CLAIM_LOCK_EXPECTATIONS,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -31,6 +34,7 @@ AI_VERIFY_COMMAND = "./scripts/ai-verify.sh"
 PRODUCT_VERIFY_COMMAND = "AI_VERIFY_MODE=product ./scripts/ai-verify.sh"
 
 PRODUCT_MODE_REQUIRED_SLICE_IDS = {
+    "f2g_f2h_preflight",
     "public_benchmark_phase2",
     "gpcr_hard_decoy_closure",
     "pocketmd_lite_recovery",
@@ -116,9 +120,14 @@ def build_pr38_child_pr_verification_matrix(
                 "product_mode_required": product_mode_required,
                 "product_mode_command": PRODUCT_VERIFY_COMMAND if product_mode_required else "",
                 "product_mode_expected_result": (
-                    "fail_closed_known_readiness_blockers" if product_mode_required else "not_required_for_this_slice"
+                    "pass_product_smoke_claim_boundaries_locked"
+                    if product_mode_required
+                    else "not_required_for_this_slice"
                 ),
                 "product_mode_expected_blockers": KNOWN_PRODUCT_MODE_BLOCKERS if product_mode_required else [],
+                "product_mode_claim_boundary_expected_locks": (
+                    PRODUCT_MODE_CLAIM_LOCK_EXPECTATIONS if product_mode_required else []
+                ),
                 "claim_boundary_review_required": True,
                 "claim_boundary": claim_boundary,
                 "paid_pilot_wording_allowed": False,
@@ -148,12 +157,14 @@ def build_pr38_child_pr_verification_matrix(
         "hunk_split_review_required_count": sum(1 for row in rows if row["hunk_split_review_required"]),
         "claim_boundary_review_required_count": len(rows),
         "product_mode_expected_fail_closed_blockers": KNOWN_PRODUCT_MODE_BLOCKERS,
+        "product_mode_expected_result": "pass_product_smoke_claim_boundaries_locked",
+        "product_mode_claim_boundary_expected_locks": PRODUCT_MODE_CLAIM_LOCK_EXPECTATIONS,
         "paid_pilot_wording_allowed": False,
         "branch_commit_work_allowed_by_this_matrix": False,
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
             "After explicit human approval for branch/commit work, run each row's focused test command and "
-            "ai-verify before child PR review; product-mode rows should remain fail-closed on known blockers."
+            "ai-verify before child PR review; product-mode rows should pass smoke while claim locks remain false."
             if ready
             else "Repair blocked verification rows before branch extraction or review."
         ),
