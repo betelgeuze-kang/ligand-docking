@@ -83,6 +83,9 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "router_claim_allowed": False,
                 "platform_claim_allowed": False,
                 "promotion_blocker_count": 2,
+                "promotion_work_order_row_count": 2,
+                "promotion_work_order_lane_count": 2,
+                "promotion_work_order_primary_blocker": "broad_scope:formal_broad_claim_review_not_approved",
                 "promotion_blockers": [
                     "broad_scope:formal_broad_claim_review_not_approved",
                     "scorer_router_promotion_gate_not_ready",
@@ -235,6 +238,11 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["general_platform_claim_allowed"] is False
     assert summary["gpcr_hard_decoy_metric_ready"] is True
     assert summary["gpcr_broad_claim_allowed"] is False
+    assert summary["gpcr_promotion_work_order_row_count"] == 2
+    assert summary["gpcr_promotion_work_order_lane_count"] == 2
+    assert summary["gpcr_promotion_work_order_primary_blocker"] == (
+        "broad_scope:formal_broad_claim_review_not_approved"
+    )
     assert summary["pocketmd_lite_claim_allowed"] is False
     assert summary["pocketmd_lite_report_evidence_ready"] is False
     assert summary["pocketmd_lite_fill_preview_evidence_ready"] is True
@@ -269,6 +277,11 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert panels["hbond_backmap_candidate_table"]["blockers"] == []
     assert "pr_auc_ci_low=0.5598" in panels["gpcr_hard_decoy_blocker_panel"]["primary_metric"]
     assert panels["gpcr_hard_decoy_blocker_panel"]["claim_allowed"] is False
+    assert "promotion_work_order_rows=2" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
+    assert "promotion_work_order_lanes=2" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
+    assert "promotion_work_order_primary=broad_scope:formal_broad_claim_review_not_approved" in (
+        panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
+    )
     assert panels["pocketmd_lite_report_panel"]["operator_action_required"] is True
     assert "green=5" in panels["pocketmd_lite_report_panel"]["primary_metric"]
     assert "abstain=0" in panels["pocketmd_lite_report_panel"]["primary_metric"]

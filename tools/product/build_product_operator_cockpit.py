@@ -614,6 +614,9 @@ def build_product_operator_cockpit(
             _bool_true(gpcr.get("platform_claim_allowed")),
         ]
     )
+    gpcr_promotion_work_order_rows = _int(gpcr.get("promotion_work_order_row_count"))
+    gpcr_promotion_work_order_lanes = _int(gpcr.get("promotion_work_order_lane_count"))
+    gpcr_promotion_work_order_primary = _first_text(gpcr.get("promotion_work_order_primary_blocker"))
 
     pocketmd_present = bool(pocketmd)
     pocketmd_refinement_ready = _bool_true(pocketmd.get("claim_grade_refinement_evidence_ready"))
@@ -813,6 +816,9 @@ def build_product_operator_cockpit(
             secondary_metric=_join_metrics(
                 _metric("decoys_above_positive", gpcr.get("preregistered_decoys_above_positive_count")),
                 _metric("promotion_blockers", _int(gpcr.get("promotion_blocker_count"))),
+                _count_metric("promotion_work_order_rows", gpcr_promotion_work_order_rows),
+                _count_metric("promotion_work_order_lanes", gpcr_promotion_work_order_lanes),
+                _metric("promotion_work_order_primary", gpcr_promotion_work_order_primary),
             ),
             next_action=_first_text(
                 gpcr.get("next_required_step"),
@@ -1056,6 +1062,9 @@ def build_product_operator_cockpit(
         "general_platform_claim_allowed": general_platform_claim_allowed,
         "gpcr_hard_decoy_metric_ready": gpcr_metric_ready,
         "gpcr_broad_claim_allowed": gpcr_broad_claim_allowed,
+        "gpcr_promotion_work_order_row_count": gpcr_promotion_work_order_rows,
+        "gpcr_promotion_work_order_lane_count": gpcr_promotion_work_order_lanes,
+        "gpcr_promotion_work_order_primary_blocker": gpcr_promotion_work_order_primary,
         "pocketmd_lite_refinement_evidence_ready": pocketmd_refinement_ready,
         "pocketmd_lite_report_evidence_ready": pocketmd_report_ready,
         "pocketmd_lite_fill_preview_evidence_ready": pocketmd_fill_preview_ready,

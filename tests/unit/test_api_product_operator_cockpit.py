@@ -39,6 +39,11 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "general_platform_claim_allowed": False,
                 "gpcr_hard_decoy_metric_ready": True,
                 "gpcr_broad_claim_allowed": False,
+                "gpcr_promotion_work_order_row_count": 2,
+                "gpcr_promotion_work_order_lane_count": 2,
+                "gpcr_promotion_work_order_primary_blocker": (
+                    "broad_scope:formal_broad_claim_review_not_approved"
+                ),
                 "pocketmd_lite_refinement_evidence_ready": True,
                 "pocketmd_lite_report_evidence_ready": False,
                 "pocketmd_lite_fill_preview_evidence_ready": True,
@@ -85,6 +90,11 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["general_platform_claim_allowed"] is False
     assert response["gpcr_hard_decoy_metric_ready"] is True
     assert response["gpcr_broad_claim_allowed"] is False
+    assert response["gpcr_promotion_work_order_row_count"] == 2
+    assert response["gpcr_promotion_work_order_lane_count"] == 2
+    assert response["gpcr_promotion_work_order_primary_blocker"] == (
+        "broad_scope:formal_broad_claim_review_not_approved"
+    )
     assert response["pocketmd_lite_report_evidence_ready"] is False
     assert response["pocketmd_lite_fill_preview_evidence_ready"] is True
     assert response["pocketmd_lite_preview_requires_canonical_review"] is True
@@ -129,6 +139,9 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["paid_pilot_wording_allowed"] is False
     assert response["general_platform_claim_allowed"] is False
     assert response["gpcr_broad_claim_allowed"] is False
+    assert response["gpcr_promotion_work_order_row_count"] == 0
+    assert response["gpcr_promotion_work_order_lane_count"] == 0
+    assert response["gpcr_promotion_work_order_primary_blocker"] == ""
     assert response["pocketmd_lite_report_evidence_ready"] is False
     assert response["pocketmd_lite_fill_preview_evidence_ready"] is False
     assert response["pocketmd_lite_preview_requires_canonical_review"] is False

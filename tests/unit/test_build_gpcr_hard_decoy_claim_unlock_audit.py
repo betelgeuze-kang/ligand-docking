@@ -148,8 +148,23 @@ def test_claim_unlock_audit_marks_metric_ready_but_promotion_locked(tmp_path: Pa
     assert summary["claim_promotion_allowed"] is False
     assert summary["broad_promotion_remains_locked"] is True
     assert "active_scorer_apply_not_allowed" in summary["promotion_blockers"]
+    assert summary["promotion_work_order_ready"] is False
+    assert summary["promotion_work_order_row_count"] == len(summary["promotion_blockers"])
+    assert summary["promotion_work_order_lane_count"] == 4
+    assert summary["promotion_work_order_primary_blocker"] == "active_scorer:residual_registry_production_promotion_not_allowed"
     assert summary["effective_phase3_metrics"]["ranking_pr_auc_ci_low"] == 0.5597832604
     assert summary["effective_phase3_metrics"]["decoys_above_positive_count"] == 0
+    work_rows = {row["blocker"]: row for row in payload["promotion_work_order_rows"]}
+    assert work_rows["active_scorer_apply_not_allowed"]["lane_id"] == "active_scorer"
+    assert work_rows["active_scorer_apply_not_allowed"]["required_action"] == (
+        "Keep active scorer apply disabled until guarded promotion gates pass."
+    )
+    assert work_rows["broad_scope:formal_broad_claim_review_not_approved"]["lane_id"] == (
+        "broad_scope_review"
+    )
+    assert work_rows["scorer_router_promotion_gate_not_ready"]["required_action"] == (
+        "Refresh scorer/router promotion readiness until the gate is ready."
+    )
 
 
 def test_claim_unlock_audit_blocks_without_independent_repeat_pass(tmp_path: Path) -> None:
@@ -222,4 +237,6 @@ def test_main_writes_claim_unlock_audit_artifacts(tmp_path: Path) -> None:
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["packet_type"] == "gpcr_hard_decoy_claim_unlock_audit"
     assert payload["summary"]["phase3_exit_metric_conditions_ready"] is True
-    assert out_md.read_text(encoding="utf-8").startswith("# GPCR Hard-Decoy Claim-Unlock Audit")
+    md = out_md.read_text(encoding="utf-8")
+    assert md.startswith("# GPCR Hard-Decoy Claim-Unlock Audit")
+    assert "Promotion Work Order" in md

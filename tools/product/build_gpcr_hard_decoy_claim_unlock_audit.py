@@ -112,6 +112,66 @@ def _gate_row(
     }
 
 
+def _promotion_blocker_lane(blocker: str) -> str:
+    text = str(blocker)
+    if text.startswith("active_scorer:") or "active_scorer" in text or "residual_registry" in text:
+        return "active_scorer"
+    if "target_heldout" in text:
+        return "target_heldout_review"
+    if text.startswith("broad_scope:") or "broad_claim" in text or "broad_scope" in text:
+        return "broad_scope_review"
+    if "scorer_router" in text or "router" in text:
+        return "scorer_router_promotion"
+    return "gpcr_promotion_review"
+
+
+def _promotion_blocker_action(blocker: str) -> str:
+    text = str(blocker)
+    detail = text.split(":", 1)[1] if ":" in text else text
+    if detail == "formal_broad_claim_review_not_approved":
+        return "Complete and approve the GPCR broad-claim review receipt."
+    if detail == "scorer_router_promotion_gate_not_approved":
+        return "Approve the scorer/router promotion gate after metric evidence review."
+    if detail == "scorer_router_promotion_gate_not_ready":
+        return "Refresh scorer/router promotion readiness until the gate is ready."
+    if detail == "target_heldout_broad_scope_review_not_approved":
+        return "Approve target-heldout broad-scope review before any broad GPCR claim."
+    if detail == "active_scorer_apply_not_allowed":
+        return "Keep active scorer apply disabled until guarded promotion gates pass."
+    if detail == "operational_gate_refresh_not_complete":
+        return "Refresh the operational active-scorer gate and rerun the promotion decision packet."
+    if detail == "phase_a_claim_closure_not_ready":
+        return "Close Phase A claim evidence before active scorer promotion."
+    if detail == "residual_registry_production_promotion_not_allowed":
+        return "Complete the guarded residual registry promotion operator receipt."
+    return "Resolve this GPCR promotion blocker before broad claim unlock."
+
+
+def _promotion_work_order_rows(
+    promotion_blockers: list[str],
+    *,
+    broad_scope_evidence: str,
+    active_scorer_evidence: str,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for blocker in promotion_blockers:
+        lane = _promotion_blocker_lane(blocker)
+        source_artifact = active_scorer_evidence if lane == "active_scorer" else broad_scope_evidence
+        rows.append(
+            {
+                "lane_id": lane,
+                "blocker": blocker,
+                "required_action": _promotion_blocker_action(blocker),
+                "source_artifact": source_artifact,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "claim_boundary": CLAIM_BOUNDARY,
+            }
+        )
+    return rows
+
+
 def _metric_ready(ci_low: float | None, top20: float | None, decoys: float | None, anchor_ready: bool) -> bool:
     return (
         ci_low is not None
@@ -237,6 +297,11 @@ def build_gpcr_hard_decoy_claim_unlock_audit(
     promotion_blockers.extend(f"broad_scope:{item}" for item in broad_blockers)
     promotion_blockers.extend(f"active_scorer:{item}" for item in active_blockers)
     promotion_blockers = sorted(set(promotion_blockers))
+    promotion_work_order_rows = _promotion_work_order_rows(
+        promotion_blockers,
+        broad_scope_evidence=broad_scope_evidence,
+        active_scorer_evidence=active_scorer_evidence,
+    )
 
     rows = [
         _gate_row(
@@ -358,6 +423,17 @@ def build_gpcr_hard_decoy_claim_unlock_audit(
         "metric_blockers": sorted(metric_blockers),
         "promotion_blocker_count": len(promotion_blockers),
         "promotion_blockers": promotion_blockers,
+        "promotion_work_order_ready": not promotion_work_order_rows,
+        "promotion_work_order_row_count": len(promotion_work_order_rows),
+        "promotion_work_order_lane_count": len(
+            {row["lane_id"] for row in promotion_work_order_rows}
+        ),
+        "promotion_work_order_primary_lane_id": (
+            promotion_work_order_rows[0]["lane_id"] if promotion_work_order_rows else ""
+        ),
+        "promotion_work_order_primary_blocker": (
+            promotion_work_order_rows[0]["blocker"] if promotion_work_order_rows else ""
+        ),
         "broad_scope_readiness_status": broad_summary.get("status", "missing"),
         "active_scorer_decision_status": active_summary.get("status", "missing"),
         "next_required_step": next_required_step,
@@ -368,6 +444,7 @@ def build_gpcr_hard_decoy_claim_unlock_audit(
         "schema_version": SCHEMA_VERSION,
         "summary": summary,
         "rows": rows,
+        "promotion_work_order_rows": promotion_work_order_rows,
         "evidence": {
             "official_suite_json": official_evidence,
             "preregistered_replay_json": preregistered_evidence,
@@ -401,6 +478,7 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- independent_repeat_top20_hit_rate: `{summary['independent_repeat_top20_hit_rate']}`",
         f"- metric_blockers: `{', '.join(metric_blockers) or '(none)'}`",
         f"- promotion_blockers: `{', '.join(promotion_blockers) or '(none)'}`",
+        f"- promotion_work_order_row_count: `{summary['promotion_work_order_row_count']}`",
         "",
         "## Gates",
         "",
@@ -416,6 +494,20 @@ def render_markdown(payload: dict[str, Any]) -> str:
                 threshold=row["threshold"],
                 blocker=row["blocker"] or "(none)",
             )
+        )
+    lines.extend(
+        [
+            "",
+            "## Promotion Work Order",
+            "",
+            "| lane | blocker | action | source |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
+    for row in payload.get("promotion_work_order_rows", []):
+        lines.append(
+            f"| `{row['lane_id']}` | `{row['blocker']}` | {row['required_action']} | "
+            f"`{row['source_artifact']}` |"
         )
     lines.extend(["", "## Claim Boundary", "", CLAIM_BOUNDARY, ""])
     return "\n".join(lines)

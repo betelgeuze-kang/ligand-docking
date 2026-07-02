@@ -79,6 +79,9 @@ def _missing_response() -> dict[str, Any]:
         "general_platform_claim_allowed": False,
         "gpcr_hard_decoy_metric_ready": False,
         "gpcr_broad_claim_allowed": False,
+        "gpcr_promotion_work_order_row_count": 0,
+        "gpcr_promotion_work_order_lane_count": 0,
+        "gpcr_promotion_work_order_primary_blocker": "",
         "pocketmd_lite_refinement_evidence_ready": False,
         "pocketmd_lite_report_evidence_ready": False,
         "pocketmd_lite_fill_preview_evidence_ready": False,
@@ -152,6 +155,15 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         "general_platform_claim_allowed": bool(summary.get("general_platform_claim_allowed") is True),
         "gpcr_hard_decoy_metric_ready": bool(summary.get("gpcr_hard_decoy_metric_ready") is True),
         "gpcr_broad_claim_allowed": bool(summary.get("gpcr_broad_claim_allowed") is True),
+        "gpcr_promotion_work_order_row_count": _int(
+            summary.get("gpcr_promotion_work_order_row_count")
+        ),
+        "gpcr_promotion_work_order_lane_count": _int(
+            summary.get("gpcr_promotion_work_order_lane_count")
+        ),
+        "gpcr_promotion_work_order_primary_blocker": str(
+            summary.get("gpcr_promotion_work_order_primary_blocker") or ""
+        ),
         "pocketmd_lite_refinement_evidence_ready": bool(
             summary.get("pocketmd_lite_refinement_evidence_ready") is True
         ),
