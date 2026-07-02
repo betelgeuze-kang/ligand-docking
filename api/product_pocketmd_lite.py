@@ -41,6 +41,42 @@ def _read_json_object(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
+def _int(value: Any) -> int:
+    try:
+        return int(float(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _row_values(rows: list[Any], field: str) -> list[float]:
+    values: list[float] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        value = row.get(field)
+        if value in ("", None):
+            continue
+        try:
+            values.append(float(value))
+        except (TypeError, ValueError):
+            continue
+    return values
+
+
+def _row_sum(rows: list[Any], field: str) -> float:
+    return sum(_row_values(rows, field))
+
+
+def _row_max(rows: list[Any], field: str) -> float:
+    values = _row_values(rows, field)
+    return max(values) if values else 0.0
+
+
+def _row_min(rows: list[Any], field: str) -> float:
+    values = _row_values(rows, field)
+    return min(values) if values else 0.0
+
+
 @router.get("/pocketmd-lite-report")
 async def get_product_pocketmd_lite_report() -> dict[str, Any]:
     """Return the read-only PocketMD Lite top-k refinement report surface."""
@@ -142,8 +178,29 @@ async def get_product_pocketmd_lite_topk_refinement_audit() -> dict[str, Any]:
             "proxy_topk_telemetry_ready": False,
             "claim_grade_metric_ready_count": 0,
             "claim_grade_missing_candidate_count": 0,
+            "claim_grade_band_counts": {},
+            "green_row_count": 0,
+            "yellow_row_count": 0,
+            "red_row_count": 0,
+            "abstain_row_count": 0,
+            "claim_grade_fill_preview_evidence_ready": False,
+            "claim_grade_local_min_reported_count": 0,
+            "claim_grade_local_min_survival_count": 0,
+            "claim_grade_hbond_reported_count": 0,
+            "claim_grade_contact_reported_count": 0,
+            "claim_grade_initial_clash_reported_count": 0,
+            "claim_grade_final_clash_reported_count": 0,
+            "claim_grade_clash_relief_reported_count": 0,
+            "local_min_ligand_rmsd_a_max": 0.0,
+            "hbond_persistence_min": 0.0,
+            "contact_persistence_min": 0.0,
+            "initial_clash_count_total": 0.0,
+            "final_clash_count_total": 0.0,
+            "clash_relief_count_total": 0.0,
             "missing_refinement_metric_names": [],
             "missing_refinement_metric_counts": {},
+            "green_band_condition_text": "",
+            "top_k_only_policy_enforced": False,
             "claim_promotion_allowed": False,
             "execution_enabled": False,
             "docking_results_emitted": False,
@@ -162,10 +219,43 @@ async def get_product_pocketmd_lite_topk_refinement_audit() -> dict[str, Any]:
         ),
         "claim_grade_report_evidence_ready": bool(summary.get("claim_grade_report_evidence_ready") is True),
         "proxy_topk_telemetry_ready": bool(summary.get("proxy_topk_telemetry_ready") is True),
-        "claim_grade_metric_ready_count": int(summary.get("claim_grade_metric_ready_count") or 0),
-        "claim_grade_missing_candidate_count": int(summary.get("claim_grade_missing_candidate_count") or 0),
+        "claim_grade_metric_ready_count": _int(summary.get("claim_grade_metric_ready_count")),
+        "claim_grade_missing_candidate_count": _int(summary.get("claim_grade_missing_candidate_count")),
+        "claim_grade_band_counts": summary.get("claim_grade_band_counts", {}),
+        "green_row_count": _int(summary.get("green_row_count")),
+        "yellow_row_count": _int(summary.get("yellow_row_count")),
+        "red_row_count": _int(summary.get("red_row_count")),
+        "abstain_row_count": _int(summary.get("abstain_row_count")),
+        "claim_grade_fill_preview_evidence_ready": bool(
+            summary.get("claim_grade_fill_preview_evidence_ready") is True
+        ),
+        "claim_grade_local_min_reported_count": _int(
+            summary.get("claim_grade_local_min_reported_count")
+        ),
+        "claim_grade_local_min_survival_count": _int(
+            summary.get("claim_grade_local_min_survival_count")
+        ),
+        "claim_grade_hbond_reported_count": _int(summary.get("claim_grade_hbond_reported_count")),
+        "claim_grade_contact_reported_count": _int(summary.get("claim_grade_contact_reported_count")),
+        "claim_grade_initial_clash_reported_count": _int(
+            summary.get("claim_grade_initial_clash_reported_count")
+        ),
+        "claim_grade_final_clash_reported_count": _int(
+            summary.get("claim_grade_final_clash_reported_count")
+        ),
+        "claim_grade_clash_relief_reported_count": _int(
+            summary.get("claim_grade_clash_relief_reported_count")
+        ),
+        "local_min_ligand_rmsd_a_max": _row_max(rows, "local_min_ligand_rmsd_a"),
+        "hbond_persistence_min": _row_min(rows, "hbond_persistence"),
+        "contact_persistence_min": _row_min(rows, "contact_persistence"),
+        "initial_clash_count_total": _row_sum(rows, "initial_clash_count"),
+        "final_clash_count_total": _row_sum(rows, "clash_count"),
+        "clash_relief_count_total": _row_sum(rows, "clash_relief_count"),
         "missing_refinement_metric_names": summary.get("missing_refinement_metric_names", []),
         "missing_refinement_metric_counts": summary.get("missing_refinement_metric_counts", {}),
+        "green_band_condition_text": str(summary.get("green_band_condition_text") or ""),
+        "top_k_only_policy_enforced": bool(summary.get("top_k_only_policy_enforced") is True),
         "claim_promotion_allowed": bool(summary.get("claim_promotion_allowed") is True),
         "execution_enabled": False,
         "docking_results_emitted": False,
