@@ -6067,12 +6067,16 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
 
     assert developer_preview_spec["artifact_path"] == "runs/developer_preview_final_gate_audit_current.json"
     assert developer_preview_spec["builder_command"] == mod.DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND
+    assert "tools/build_backmapping_scoring_batch_smoke_benchmark.py" in developer_preview_spec["depends_on"]
     assert "tools/build_product_execution_preflight.py" in developer_preview_spec["depends_on"]
     assert "tools/build_product_execution_work_order.py" in developer_preview_spec["depends_on"]
+    assert "tools/build_product_pose_sampling_readiness.py" in developer_preview_spec["depends_on"]
+    assert "tools/product/build_backmapping_scoring_batch_smoke_benchmark.py" in developer_preview_spec["depends_on"]
     assert "tools/product/build_developer_preview_final_gate_audit.py" in developer_preview_spec["depends_on"]
     assert "tools/product/build_developer_preview_new_user_observation_receipt.py" in developer_preview_spec["depends_on"]
     assert "tools/product/build_developer_preview_platform_reproducibility_receipt.py" in developer_preview_spec["depends_on"]
     assert "tools/product/build_developer_preview_silent_import_loss_receipt.py" in developer_preview_spec["depends_on"]
+    assert "tools/product/build_product_pose_sampling_readiness.py" in developer_preview_spec["depends_on"]
     assert "docs/developer_preview_final_gate_action_register.md" in developer_preview_spec["depends_on"]
     assert mod.DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert hbond_spec["artifact_path"] == "runs/hbond_backmap_report_current.json"
