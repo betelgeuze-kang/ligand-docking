@@ -273,6 +273,175 @@ def _report_blocker_rows(
     return blocker_rows
 
 
+def _claim_grade_readiness_rows(
+    summary: dict[str, Any],
+    preview_summary: dict[str, Any],
+    preview_rows: list[Any],
+) -> list[dict[str, Any]]:
+    preview_ready = bool(
+        preview_summary.get("status") == "pocketmd_lite_report_ready"
+        and preview_summary.get("top_k_refinement_evidence_ready") is True
+    )
+    canonical_ready = bool(
+        summary.get("status") == "pocketmd_lite_report_ready"
+        and summary.get("top_k_refinement_evidence_ready") is True
+        and summary.get("pocketmd_lite_claim_safe") is True
+    )
+    preview_candidate_count = _int(preview_summary.get("candidate_count")) or len(
+        [row for row in preview_rows if isinstance(row, dict)]
+    )
+    required_metric_count = preview_candidate_count or 1
+    local_min_values = _row_values(preview_rows, "local_min_ligand_rmsd_a")
+    hbond_values = _row_values(preview_rows, "hbond_persistence")
+    contact_values = _row_values(preview_rows, "contact_persistence")
+    initial_clash_values = _row_values(preview_rows, "initial_clash_count")
+    final_clash_values = _row_values(preview_rows, "clash_count")
+    clash_relief_values = _row_values(preview_rows, "clash_relief_count")
+    adrb2_green_count = sum(
+        1
+        for row in preview_rows
+        if isinstance(row, dict)
+        and "ADRB2" in str(row.get("entry_id") or "")
+        and row.get("band") == "green"
+        and row.get("claim_safe") is True
+    )
+    recovered_targets = {
+        target_id
+        for target_id in ("DRD3", "OPRD1")
+        for row in preview_rows
+        if isinstance(row, dict)
+        and target_id in str(row.get("entry_id") or "")
+        and row.get("band") == "green"
+        and row.get("claim_safe") is True
+    }
+    rows: list[dict[str, Any]] = []
+
+    def add_row(
+        requirement_id: str,
+        ready: bool,
+        observed_value: str,
+        required_value: str,
+        blocker: str,
+        operator_action: str,
+    ) -> None:
+        rows.append(
+            {
+                "requirement_id": requirement_id,
+                "ready": ready,
+                "observed_value": observed_value,
+                "required_value": required_value,
+                "blocker": "" if ready else blocker,
+                "operator_action": "" if ready else operator_action,
+                "claim_promotion_allowed": False,
+                "candidate_csv_update_allowed": False,
+                "execution_enabled": False,
+                "docking_results_emitted": False,
+                "external_state_mutated": False,
+            }
+        )
+
+    add_row(
+        "preview_claim_grade_metric_report_ready",
+        preview_ready,
+        str(preview_summary.get("status") or ""),
+        "pocketmd_lite_report_ready",
+        "preview_claim_grade_metric_report_not_ready",
+        "Run the bounded metric collector, candidate fill preview, and preview report.",
+    )
+    add_row(
+        "adrb2_three_collection_ready_rows",
+        preview_ready and adrb2_green_count >= 3,
+        str(adrb2_green_count),
+        ">=3",
+        f"adrb2_collection_ready_rows_below_required:{adrb2_green_count}/3",
+        "Recover or rerun bounded metrics for three ADRB2 collection-ready rows.",
+    )
+    add_row(
+        "drd3_oprd1_atom_frame_recovery",
+        preview_ready and recovered_targets == {"DRD3", "OPRD1"},
+        ",".join(sorted(recovered_targets)),
+        "DRD3,OPRD1",
+        "drd3_oprd1_atom_frame_recovery_incomplete",
+        "Recover DRD3 and OPRD1 atomized protein/ligand frames and rerun metrics.",
+    )
+    add_row(
+        "local_min_ligand_rmsd_ready",
+        preview_ready
+        and len(local_min_values) >= required_metric_count
+        and bool(local_min_values)
+        and max(local_min_values) <= 2.0,
+        f"reported={len(local_min_values)}; max={max(local_min_values) if local_min_values else ''}",
+        "all rows reported and max<=2.0A",
+        "local_min_ligand_rmsd_not_claim_grade",
+        "Recover exact local-min RMSD metrics for every selected top-k row.",
+    )
+    add_row(
+        "hbond_persistence_ready",
+        preview_ready
+        and len(hbond_values) >= required_metric_count
+        and bool(hbond_values)
+        and min(hbond_values) >= 0.5,
+        f"reported={len(hbond_values)}; min={min(hbond_values) if hbond_values else ''}",
+        "all rows reported and min>=0.5",
+        "hbond_persistence_not_claim_grade",
+        "Recover H-bond persistence metrics for every selected top-k row.",
+    )
+    add_row(
+        "contact_persistence_ready",
+        preview_ready
+        and len(contact_values) >= required_metric_count
+        and bool(contact_values)
+        and min(contact_values) >= 0.5,
+        f"reported={len(contact_values)}; min={min(contact_values) if contact_values else ''}",
+        "all rows reported and min>=0.5",
+        "contact_persistence_not_claim_grade",
+        "Recover contact persistence metrics for every selected top-k row.",
+    )
+    add_row(
+        "clash_relief_ready",
+        preview_ready
+        and len(initial_clash_values) >= required_metric_count
+        and len(final_clash_values) >= required_metric_count
+        and len(clash_relief_values) >= required_metric_count
+        and bool(final_clash_values)
+        and max(final_clash_values) <= 0,
+        (
+            f"initial={len(initial_clash_values)}; final={len(final_clash_values)}; "
+            f"relief={len(clash_relief_values)}; final_max="
+            f"{max(final_clash_values) if final_clash_values else ''}"
+        ),
+        "initial/final/relief reported for all rows and final_clash_count<=0",
+        "clash_relief_not_claim_grade",
+        "Recover initial/final clash counts and clash-relief metrics for every row.",
+    )
+    add_row(
+        "green_yellow_red_abstain_banding_ready",
+        preview_ready
+        and _int(preview_summary.get("green_row_count")) >= required_metric_count
+        and _int(preview_summary.get("yellow_row_count")) == 0
+        and _int(preview_summary.get("red_row_count")) == 0
+        and _int(preview_summary.get("abstain_row_count")) == 0,
+        (
+            f"green={_int(preview_summary.get('green_row_count'))}; "
+            f"yellow={_int(preview_summary.get('yellow_row_count'))}; "
+            f"red={_int(preview_summary.get('red_row_count'))}; "
+            f"abstain={_int(preview_summary.get('abstain_row_count'))}"
+        ),
+        "all selected rows green; yellow/red/abstain=0",
+        "claim_grade_banding_not_green",
+        "Review banding and recover any missing or failed claim-grade metrics.",
+    )
+    add_row(
+        "canonical_report_review_closed",
+        canonical_ready,
+        str(summary.get("status") or ""),
+        "canonical pocketmd_lite_report_ready and claim_safe=true",
+        "preview_metrics_require_canonical_review",
+        "Review preview metrics and update canonical candidate CSV/report if approved.",
+    )
+    return rows
+
+
 @router.get("/pocketmd-lite-report")
 async def get_product_pocketmd_lite_report() -> dict[str, Any]:
     """Return the read-only PocketMD Lite top-k refinement report surface."""
@@ -280,10 +449,18 @@ async def get_product_pocketmd_lite_report() -> dict[str, Any]:
     artifact = _read_json_object(POCKETMD_LITE_REPORT_ARTIFACT)
     summary = _summary(artifact)
     rows = artifact.get("rows") if isinstance(artifact.get("rows"), list) else []
-    preview_summary = _summary(
-        _read_json_object(POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_ARTIFACT)
+    preview_artifact = _read_json_object(
+        POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_ARTIFACT
+    )
+    preview_summary = _summary(preview_artifact)
+    preview_rows = (
+        preview_artifact.get("rows")
+        if isinstance(preview_artifact.get("rows"), list)
+        else []
     )
     if not artifact or not summary:
+        readiness_rows = _claim_grade_readiness_rows({}, preview_summary, preview_rows)
+        blocked_readiness_rows = [row for row in readiness_rows if not row["ready"]]
         return {
             "status": "missing_pocketmd_lite_report",
             "artifact_path": str(POCKETMD_LITE_REPORT_ARTIFACT),
@@ -312,6 +489,12 @@ async def get_product_pocketmd_lite_report() -> dict[str, Any]:
             "clash_relief_count_total": 0.0,
             "missing_refinement_metric_names": [],
             "missing_refinement_metric_counts": {},
+            "claim_grade_readiness_row_count": len(readiness_rows),
+            "claim_grade_readiness_ready_row_count": len(readiness_rows)
+            - len(blocked_readiness_rows),
+            "claim_grade_readiness_blocked_row_count": len(blocked_readiness_rows),
+            "claim_grade_readiness_rows": readiness_rows,
+            "claim_grade_readiness_blocked_rows": blocked_readiness_rows,
             "next_required_step": "",
             "report_row_count": 0,
             "report_rows": [],
@@ -338,6 +521,8 @@ async def get_product_pocketmd_lite_report() -> dict[str, Any]:
         }
     report_rows = _report_rows(rows)
     blocker_rows = _report_blocker_rows(summary, report_rows, preview_summary)
+    readiness_rows = _claim_grade_readiness_rows(summary, preview_summary, preview_rows)
+    blocked_readiness_rows = [row for row in readiness_rows if not row["ready"]]
     preview_ready = bool(
         preview_summary.get("status") == "pocketmd_lite_report_ready"
         and preview_summary.get("top_k_refinement_evidence_ready") is True
@@ -392,6 +577,12 @@ async def get_product_pocketmd_lite_report() -> dict[str, Any]:
             else {}
         ),
         "green_band_condition_text": str(summary.get("green_band_condition_text") or ""),
+        "claim_grade_readiness_row_count": len(readiness_rows),
+        "claim_grade_readiness_ready_row_count": len(readiness_rows)
+        - len(blocked_readiness_rows),
+        "claim_grade_readiness_blocked_row_count": len(blocked_readiness_rows),
+        "claim_grade_readiness_rows": readiness_rows,
+        "claim_grade_readiness_blocked_rows": blocked_readiness_rows,
         "next_required_step": str(summary.get("next_required_step") or ""),
         "report_row_count": len(report_rows),
         "report_rows": report_rows,

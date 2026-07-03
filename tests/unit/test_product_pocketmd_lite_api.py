@@ -7,6 +7,66 @@ from pathlib import Path
 import pytest
 
 
+def _claim_grade_preview_rows() -> list[dict[str, object]]:
+    return [
+        {
+            "entry_id": "ADRB2_GPCR_BLIND:carvedilol",
+            "band": "green",
+            "claim_safe": True,
+            "local_min_ligand_rmsd_a": "1.1",
+            "hbond_persistence": "1.0",
+            "contact_persistence": "1.0",
+            "initial_clash_count": "9",
+            "clash_count": "0",
+            "clash_relief_count": "9",
+        },
+        {
+            "entry_id": "ADRB2_GPCR_BLIND:timolol",
+            "band": "green",
+            "claim_safe": True,
+            "local_min_ligand_rmsd_a": "1.2",
+            "hbond_persistence": "1.0",
+            "contact_persistence": "1.0",
+            "initial_clash_count": "7",
+            "clash_count": "0",
+            "clash_relief_count": "7",
+        },
+        {
+            "entry_id": "ADRB2_GPCR_BLIND:carazolol",
+            "band": "green",
+            "claim_safe": True,
+            "local_min_ligand_rmsd_a": "1.3",
+            "hbond_persistence": "1.0",
+            "contact_persistence": "1.0",
+            "initial_clash_count": "8",
+            "clash_count": "0",
+            "clash_relief_count": "8",
+        },
+        {
+            "entry_id": "CHEMBL234_DRD3_HUMAN:CHEMBL5841759",
+            "band": "green",
+            "claim_safe": True,
+            "local_min_ligand_rmsd_a": "1.4",
+            "hbond_persistence": "1.0",
+            "contact_persistence": "1.0",
+            "initial_clash_count": "6",
+            "clash_count": "0",
+            "clash_relief_count": "6",
+        },
+        {
+            "entry_id": "CHEMBL236_OPRD1_HUMAN:CHEMBL67192",
+            "band": "green",
+            "claim_safe": True,
+            "local_min_ligand_rmsd_a": "1.5",
+            "hbond_persistence": "1.0",
+            "contact_persistence": "1.0",
+            "initial_clash_count": "5",
+            "clash_count": "0",
+            "clash_relief_count": "5",
+        },
+    ]
+
+
 def test_pocketmd_lite_report_endpoint_exposes_operator_panel_rows(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -97,11 +157,17 @@ def test_pocketmd_lite_report_endpoint_exposes_operator_panel_rows(
             {
                 "summary": {
                     "status": "pocketmd_lite_report_ready",
+                    "candidate_count": 5,
+                    "selected_top_k_count": 5,
                     "top_k_refinement_evidence_ready": True,
                     "pocketmd_lite_claim_safe": True,
-                    "claim_grade_metric_ready_row_count": 2,
-                    "green_row_count": 2,
-                }
+                    "claim_grade_metric_ready_row_count": 5,
+                    "green_row_count": 5,
+                    "yellow_row_count": 0,
+                    "red_row_count": 0,
+                    "abstain_row_count": 0,
+                },
+                "rows": _claim_grade_preview_rows(),
             }
         ),
         encoding="utf-8",
@@ -119,8 +185,8 @@ def test_pocketmd_lite_report_endpoint_exposes_operator_panel_rows(
     assert payload["report_panel_ready"] is True
     assert payload["preview_report_ready"] is True
     assert payload["preview_pocketmd_lite_claim_safe"] is True
-    assert payload["preview_claim_grade_metric_ready_row_count"] == 2
-    assert payload["preview_green_row_count"] == 2
+    assert payload["preview_claim_grade_metric_ready_row_count"] == 5
+    assert payload["preview_green_row_count"] == 5
     assert payload["canonical_review_required"] is True
     assert payload["claim_promotion_allowed"] is False
     assert payload["candidate_csv_update_allowed"] is False
@@ -175,6 +241,31 @@ def test_pocketmd_lite_report_endpoint_exposes_operator_panel_rows(
     }
     assert payload["blocker_row_count"] == len(payload["blocker_rows"])
     assert all(row["claim_promotion_allowed"] is False for row in payload["blocker_rows"])
+    assert payload["claim_grade_readiness_row_count"] == 9
+    assert payload["claim_grade_readiness_ready_row_count"] == 8
+    assert payload["claim_grade_readiness_blocked_row_count"] == 1
+    readiness = {
+        row["requirement_id"]: row for row in payload["claim_grade_readiness_rows"]
+    }
+    assert readiness["preview_claim_grade_metric_report_ready"]["ready"] is True
+    assert readiness["adrb2_three_collection_ready_rows"]["ready"] is True
+    assert readiness["drd3_oprd1_atom_frame_recovery"]["ready"] is True
+    assert readiness["local_min_ligand_rmsd_ready"]["ready"] is True
+    assert readiness["hbond_persistence_ready"]["ready"] is True
+    assert readiness["contact_persistence_ready"]["ready"] is True
+    assert readiness["clash_relief_ready"]["ready"] is True
+    assert readiness["green_yellow_red_abstain_banding_ready"]["ready"] is True
+    assert readiness["canonical_report_review_closed"]["ready"] is False
+    assert readiness["canonical_report_review_closed"]["blocker"] == (
+        "preview_metrics_require_canonical_review"
+    )
+    assert all(
+        row["claim_promotion_allowed"] is False
+        and row["candidate_csv_update_allowed"] is False
+        and row["execution_enabled"] is False
+        and row["external_state_mutated"] is False
+        for row in payload["claim_grade_readiness_rows"]
+    )
     assert payload["execution_enabled"] is False
     assert payload["docking_results_emitted"] is False
     assert payload["external_state_mutated"] is False
@@ -187,6 +278,11 @@ def test_pocketmd_lite_report_endpoint_is_fail_closed_when_missing(
     from api import product_pocketmd_lite as mod
 
     monkeypatch.setattr(mod, "POCKETMD_LITE_REPORT_ARTIFACT", tmp_path / "missing.json")
+    monkeypatch.setattr(
+        mod,
+        "POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_ARTIFACT",
+        tmp_path / "missing-preview.json",
+    )
 
     payload = asyncio.run(mod.get_product_pocketmd_lite_report())
 
@@ -198,6 +294,12 @@ def test_pocketmd_lite_report_endpoint_is_fail_closed_when_missing(
     assert payload["report_rows"] == []
     assert payload["blocker_row_count"] == 1
     assert payload["blocker_rows"][0]["blocker_id"] == "pocketmd_lite_report_missing"
+    assert payload["claim_grade_readiness_row_count"] == 9
+    assert payload["claim_grade_readiness_ready_row_count"] == 0
+    assert payload["claim_grade_readiness_blocked_row_count"] == 9
+    assert payload["claim_grade_readiness_blocked_rows"] == payload[
+        "claim_grade_readiness_rows"
+    ]
     assert payload["claim_promotion_allowed"] is False
     assert payload["candidate_csv_update_allowed"] is False
     assert payload["local_min_ligand_rmsd_a_max"] == 0.0
