@@ -759,6 +759,59 @@ def _developer_preview_requirement_surface(
     }
 
 
+def _developer_preview_source_blocker_detail_rows(
+    source_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    detail_rows: list[dict[str, Any]] = []
+    for row in source_rows:
+        detail = str(row.get("blocker_detail") or row.get("blocker") or "").strip()
+        if not detail:
+            continue
+        source_label = ""
+        blocker_expression = detail
+        for prefix in ("baseline_source_blocker=", "source_blocker="):
+            if blocker_expression.startswith(prefix):
+                source_label = prefix.removesuffix("=")
+                blocker_expression = blocker_expression[len(prefix) :]
+                break
+        blocker_id = blocker_expression
+        source_argument = ""
+        source_artifact_path = ""
+        if blocker_expression.endswith(":missing"):
+            blocker_id = "missing_source_artifact"
+            source_artifact_path = blocker_expression.removesuffix(":missing")
+        elif ":" in blocker_expression:
+            parts = blocker_expression.split(":", 2)
+            blocker_id = parts[0]
+            if len(parts) > 1 and parts[1].startswith("--"):
+                source_argument = parts[1]
+                source_artifact_path = parts[2] if len(parts) > 2 else ""
+            elif len(parts) > 1:
+                source_artifact_path = ":".join(parts[1:])
+        detail_rows.append(
+            {
+                "gate_id": str(row.get("gate_id") or ""),
+                "priority": str(row.get("priority") or ""),
+                "receipt_artifact": str(row.get("receipt_artifact") or ""),
+                "receipt_kind": str(row.get("receipt_kind") or ""),
+                "source_label": source_label,
+                "blocker_id": blocker_id,
+                "blocker_detail": detail,
+                "source_argument": source_argument,
+                "source_artifact_path": source_artifact_path,
+                "required_action": str(row.get("required_action") or ""),
+                "next_required_step": str(row.get("next_required_step") or ""),
+                "operator_action_required": True,
+                "developer_demo_wording_allowed": False,
+                "paid_pilot_wording_allowed": False,
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+    return detail_rows
+
+
 def _developer_preview_work_order_surface(work_rows: list[dict[str, Any]]) -> dict[str, Any]:
     blocked_rows = [
         row
@@ -788,6 +841,10 @@ def _developer_preview_work_order_surface(work_rows: list[dict[str, Any]]) -> di
         }
 
     primary = _summary_row(blocked_rows[0]) if blocked_rows else {}
+    source_detail_rows = _developer_preview_source_blocker_detail_rows(source_rows)
+    stage5_rows = [
+        row for row in source_detail_rows if row["blocker_id"] == "stage5_input_missing"
+    ]
     return {
         "receipt_work_order_blocked_row_count": len(blocked_rows),
         "receipt_work_order_contract_blocker_row_count": len(contract_rows),
@@ -795,6 +852,17 @@ def _developer_preview_work_order_surface(work_rows: list[dict[str, Any]]) -> di
         "receipt_work_order_primary_blocked_row": primary,
         "blocked_receipt_work_order_rows": [_summary_row(row) for row in blocked_rows],
         "source_receipt_work_order_rows": [_summary_row(row) for row in source_rows],
+        "developer_preview_source_blocker_detail_row_count": len(source_detail_rows),
+        "developer_preview_source_blocker_detail_rows": source_detail_rows,
+        "developer_preview_primary_source_blocker_detail_row": (
+            source_detail_rows[0] if source_detail_rows else {}
+        ),
+        "developer_preview_missing_stage5_input_count": len(stage5_rows),
+        "developer_preview_missing_stage5_input_paths": [
+            str(row["source_artifact_path"])
+            for row in stage5_rows
+            if str(row.get("source_artifact_path") or "")
+        ],
     }
 
 
@@ -4138,6 +4206,11 @@ async def get_goal_developer_preview() -> dict[str, Any]:
             "receipt_work_order_primary_blocked_row": {},
             "blocked_receipt_work_order_rows": [],
             "source_receipt_work_order_rows": [],
+            "developer_preview_source_blocker_detail_row_count": 0,
+            "developer_preview_source_blocker_detail_rows": [],
+            "developer_preview_primary_source_blocker_detail_row": {},
+            "developer_preview_missing_stage5_input_count": 0,
+            "developer_preview_missing_stage5_input_paths": [],
             **_developer_preview_clean_checkout_receipt_surface(
                 DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT
             ),

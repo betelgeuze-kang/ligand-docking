@@ -1123,6 +1123,25 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
                         ],
                         "required_zero_fields": ["blocker_count", "failed_count"],
                         "next_required_step": "Run Gate A.",
+                    },
+                    {
+                        "gate_id": "benchmark_results_clean_checkout_regenerated",
+                        "priority": "A",
+                        "receipt_artifact": ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+                        "receipt_kind": "required",
+                        "blocker_scope": "receipt_source",
+                        "blocker_detail": (
+                            "baseline_source_blocker=stage5_input_missing:"
+                            "--scores-csv:/tmp/dp/runs/stage5_scores.csv"
+                        ),
+                        "required_action": "Restore or regenerate missing stage5 input CSVs.",
+                        "required_receipt_status": "developer_preview_clean_checkout_benchmark_receipt_ready",
+                        "required_true_fields": [
+                            "clean_checkout_benchmark_regenerated",
+                            "ai_verify_passed",
+                        ],
+                        "required_zero_fields": ["blocker_count", "failed_count"],
+                        "next_required_step": "Run Gate A.",
                     }
                 ],
             }
@@ -1227,9 +1246,9 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     assert response["receipt_work_order_rows"][0]["blocker_detail"] == (
         "status=blocked_developer_preview_clean_checkout_benchmark_receipt"
     )
-    assert response["receipt_work_order_blocked_row_count"] == 2
+    assert response["receipt_work_order_blocked_row_count"] == 3
     assert response["receipt_work_order_contract_blocker_row_count"] == 1
-    assert response["receipt_work_order_source_blocker_row_count"] == 1
+    assert response["receipt_work_order_source_blocker_row_count"] == 2
     assert response["receipt_work_order_primary_blocked_row"]["blocker_scope"] == (
         "receipt_contract"
     )
@@ -1239,6 +1258,39 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     assert response["source_receipt_work_order_rows"][0]["required_action"] == (
         "Resolve this receipt blocker and rebuild the Developer Preview audit."
     )
+    assert response["developer_preview_source_blocker_detail_row_count"] == 2
+    assert response["developer_preview_source_blocker_detail_rows"][0]["blocker_id"] == (
+        "baseline_task_count_zero"
+    )
+    assert response["developer_preview_source_blocker_detail_rows"][1] == {
+        "gate_id": "benchmark_results_clean_checkout_regenerated",
+        "priority": "A",
+        "receipt_artifact": ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+        "receipt_kind": "required",
+        "source_label": "baseline_source_blocker",
+        "blocker_id": "stage5_input_missing",
+        "blocker_detail": (
+            "baseline_source_blocker=stage5_input_missing:"
+            "--scores-csv:/tmp/dp/runs/stage5_scores.csv"
+        ),
+        "source_argument": "--scores-csv",
+        "source_artifact_path": "/tmp/dp/runs/stage5_scores.csv",
+        "required_action": "Restore or regenerate missing stage5 input CSVs.",
+        "next_required_step": "Run Gate A.",
+        "operator_action_required": True,
+        "developer_demo_wording_allowed": False,
+        "paid_pilot_wording_allowed": False,
+        "claim_promotion_allowed": False,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+    }
+    assert response["developer_preview_primary_source_blocker_detail_row"] == (
+        response["developer_preview_source_blocker_detail_rows"][0]
+    )
+    assert response["developer_preview_missing_stage5_input_count"] == 1
+    assert response["developer_preview_missing_stage5_input_paths"] == [
+        "/tmp/dp/runs/stage5_scores.csv"
+    ]
     assert response["clean_checkout_receipt_status"] == (
         "blocked_developer_preview_clean_checkout_benchmark_receipt"
     )
@@ -1276,6 +1328,11 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     assert missing["receipt_work_order_primary_blocked_row"] == {}
     assert missing["blocked_receipt_work_order_rows"] == []
     assert missing["source_receipt_work_order_rows"] == []
+    assert missing["developer_preview_source_blocker_detail_row_count"] == 0
+    assert missing["developer_preview_source_blocker_detail_rows"] == []
+    assert missing["developer_preview_primary_source_blocker_detail_row"] == {}
+    assert missing["developer_preview_missing_stage5_input_count"] == 0
+    assert missing["developer_preview_missing_stage5_input_paths"] == []
     assert missing["receipt_work_order_primary_source_blocker"] == ""
     assert missing["clean_checkout_receipt_ready"] is False
     assert missing["developer_demo_wording_allowed"] is False
