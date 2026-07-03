@@ -209,6 +209,38 @@ def _customer_shadow_work_order_rows(payload: dict[str, Any]) -> list[dict[str, 
     return rows
 
 
+def _hbond_backmap_candidate_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _rows(payload):
+        rows.append(
+            {
+                "entry_id": _text(row.get("entry_id")),
+                "evidence_tier": _text(row.get("evidence_tier")),
+                "claim_safe": _bool_true(row.get("claim_safe")),
+                "backmap_status": _text(row.get("backmap_status")),
+                "mapping_source": _text(row.get("mapping_source")),
+                "site_count": _int(row.get("site_count")),
+                "mapped_site_count": _int(row.get("mapped_site_count")),
+                "donor_count": _int(row.get("donor_count")),
+                "acceptor_count": _int(row.get("acceptor_count")),
+                "max_onsps_sites": _int(row.get("max_onsps_sites")),
+                "polar_site_elements": _string_list(row.get("polar_site_elements")),
+                "hbond_angle_score": _float(row.get("hbond_angle_score")),
+                "two_bead_vs_four_bead_delta": _float(
+                    row.get("two_bead_vs_four_bead_delta")
+                ),
+                "reason_code": _text(row.get("reason_code")),
+                "reason_detail": _text(row.get("reason_detail")),
+                "report_version": _text(row.get("report_version")),
+                "claim_boundary": _text(row.get("claim_boundary")),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _public_benchmark_field_work_order_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in _dict_list(payload, "field_work_order_rows"):
@@ -873,6 +905,7 @@ def build_product_operator_cockpit(
     goal = _summary(_read_json(goal_readiness_json, root=root))
     hbond_payload = _read_json(hbond_json, root=root)
     hbond = _summary(hbond_payload)
+    hbond_backmap_candidate_row_preview = _hbond_backmap_candidate_rows(hbond_payload)
     gpcr_payload = _read_json(gpcr_json, root=root)
     gpcr = _summary(gpcr_payload)
     gpcr_promotion_work_order_row_preview = _gpcr_promotion_work_order_rows(gpcr_payload)
@@ -2066,6 +2099,7 @@ def build_product_operator_cockpit(
         "disallowed_claim_text": disallowed_claim_text,
         "paid_pilot_wording_allowed": paid_pilot_wording_allowed,
         "general_platform_claim_allowed": general_platform_claim_allowed,
+        "hbond_backmap_candidate_rows": hbond_backmap_candidate_row_preview,
         "gpcr_hard_decoy_metric_ready": gpcr_metric_ready,
         "gpcr_broad_claim_allowed": gpcr_broad_claim_allowed,
         "gpcr_phase3_closure_present": gpcr_phase3_closure_present,

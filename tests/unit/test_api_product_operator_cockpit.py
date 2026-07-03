@@ -162,6 +162,30 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 ),
                 "paid_pilot_wording_allowed": False,
                 "general_platform_claim_allowed": False,
+                "hbond_backmap_candidate_rows": [
+                    {
+                        "entry_id": "ADRB2::LIG-1",
+                        "evidence_tier": "claim_safe",
+                        "claim_safe": True,
+                        "backmap_status": "ok",
+                        "mapping_source": "rdkit_etkdg",
+                        "site_count": 2,
+                        "mapped_site_count": 2,
+                        "donor_count": 1,
+                        "acceptor_count": 1,
+                        "max_onsps_sites": 4,
+                        "polar_site_elements": ["N", "O"],
+                        "hbond_angle_score": 0.75,
+                        "two_bead_vs_four_bead_delta": None,
+                        "reason_code": "",
+                        "reason_detail": "",
+                        "report_version": "hbond_backmap_report_v1",
+                        "claim_boundary": "hbond interpretability only",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    }
+                ],
                 "gpcr_hard_decoy_metric_ready": True,
                 "gpcr_broad_claim_allowed": False,
                 "gpcr_phase3_closure_present": True,
@@ -623,6 +647,30 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     )
     assert response["paid_pilot_wording_allowed"] is False
     assert response["general_platform_claim_allowed"] is False
+    assert response["hbond_backmap_candidate_rows"] == [
+        {
+            "entry_id": "ADRB2::LIG-1",
+            "evidence_tier": "claim_safe",
+            "claim_safe": True,
+            "backmap_status": "ok",
+            "mapping_source": "rdkit_etkdg",
+            "site_count": 2,
+            "mapped_site_count": 2,
+            "donor_count": 1,
+            "acceptor_count": 1,
+            "max_onsps_sites": 4,
+            "polar_site_elements": ["N", "O"],
+            "hbond_angle_score": 0.75,
+            "two_bead_vs_four_bead_delta": None,
+            "reason_code": "",
+            "reason_detail": "",
+            "report_version": "hbond_backmap_report_v1",
+            "claim_boundary": "hbond interpretability only",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
     assert response["gpcr_hard_decoy_metric_ready"] is True
     assert response["gpcr_broad_claim_allowed"] is False
     assert response["gpcr_phase3_closure_present"] is True
@@ -1108,6 +1156,7 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["disallowed_claim_text"] == ""
     assert response["paid_pilot_wording_allowed"] is False
     assert response["general_platform_claim_allowed"] is False
+    assert response["hbond_backmap_candidate_rows"] == []
     assert response["gpcr_broad_claim_allowed"] is False
     assert response["gpcr_phase3_closure_present"] is False
     assert response["gpcr_phase3_closure_evidence_ready"] is False

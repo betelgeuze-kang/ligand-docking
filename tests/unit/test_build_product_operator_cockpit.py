@@ -76,7 +76,28 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "total_acceptor_sites": 1,
             },
             "rows": [
-                {"entry_id": "ADRB2::LIG-1", "claim_safe": True},
+                {
+                    "entry_id": "ADRB2::LIG-1",
+                    "evidence_tier": "claim_safe",
+                    "claim_safe": True,
+                    "backmap_status": "ok",
+                    "mapping_source": "rdkit_etkdg",
+                    "site_count": 2,
+                    "mapped_site_count": 2,
+                    "donor_count": 1,
+                    "acceptor_count": 1,
+                    "max_onsps_sites": 4,
+                    "polar_site_elements": ["N", "O"],
+                    "hbond_angle_score": 0.75,
+                    "two_bead_vs_four_bead_delta": None,
+                    "reason_code": "",
+                    "reason_detail": "",
+                    "report_version": "hbond_backmap_report_v1",
+                    "claim_boundary": "hbond interpretability only",
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
                 {"entry_id": "ADRB2::LIG-2", "claim_safe": False},
             ],
         },
@@ -841,6 +862,28 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         "enterprise_on_prem_platform_claim"
     )
     assert summary["general_platform_claim_allowed"] is False
+    assert summary["hbond_backmap_candidate_rows"][0] == {
+        "entry_id": "ADRB2::LIG-1",
+        "evidence_tier": "claim_safe",
+        "claim_safe": True,
+        "backmap_status": "ok",
+        "mapping_source": "rdkit_etkdg",
+        "site_count": 2,
+        "mapped_site_count": 2,
+        "donor_count": 1,
+        "acceptor_count": 1,
+        "max_onsps_sites": 4,
+        "polar_site_elements": ["N", "O"],
+        "hbond_angle_score": 0.75,
+        "two_bead_vs_four_bead_delta": None,
+        "reason_code": "",
+        "reason_detail": "",
+        "report_version": "hbond_backmap_report_v1",
+        "claim_boundary": "hbond interpretability only",
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_promotion_allowed": False,
+    }
     assert summary["gpcr_hard_decoy_metric_ready"] is True
     assert summary["gpcr_broad_claim_allowed"] is False
     assert summary["gpcr_phase3_closure_present"] is True

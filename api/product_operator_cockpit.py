@@ -63,6 +63,13 @@ def _float(value: Any) -> float:
         return 0.0
 
 
+def _optional_float(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _string_list(value: Any) -> list[str]:
     if isinstance(value, list):
         return [str(item) for item in value if str(item or "").strip()]
@@ -141,6 +148,41 @@ def _customer_shadow_work_order_rows(value: Any) -> list[dict[str, Any]]:
             }
         )
     return work_rows
+
+
+def _hbond_backmap_candidate_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    candidate_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        candidate_rows.append(
+            {
+                "entry_id": str(row.get("entry_id") or ""),
+                "evidence_tier": str(row.get("evidence_tier") or ""),
+                "claim_safe": bool(row.get("claim_safe") is True),
+                "backmap_status": str(row.get("backmap_status") or ""),
+                "mapping_source": str(row.get("mapping_source") or ""),
+                "site_count": _int(row.get("site_count")),
+                "mapped_site_count": _int(row.get("mapped_site_count")),
+                "donor_count": _int(row.get("donor_count")),
+                "acceptor_count": _int(row.get("acceptor_count")),
+                "max_onsps_sites": _int(row.get("max_onsps_sites")),
+                "polar_site_elements": _string_list(row.get("polar_site_elements")),
+                "hbond_angle_score": _optional_float(row.get("hbond_angle_score")),
+                "two_bead_vs_four_bead_delta": _optional_float(
+                    row.get("two_bead_vs_four_bead_delta")
+                ),
+                "reason_code": str(row.get("reason_code") or ""),
+                "reason_detail": str(row.get("reason_detail") or ""),
+                "report_version": str(row.get("report_version") or ""),
+                "claim_boundary": str(row.get("claim_boundary") or ""),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return candidate_rows
 
 
 def _public_benchmark_field_work_order_rows(value: Any) -> list[dict[str, Any]]:
@@ -462,6 +504,7 @@ def _missing_response() -> dict[str, Any]:
         "disallowed_claim_ids": [],
         "allowed_claim_text": "",
         "disallowed_claim_text": "",
+        "hbond_backmap_candidate_rows": [],
         "gpcr_hard_decoy_metric_ready": False,
         "gpcr_broad_claim_allowed": False,
         "gpcr_phase3_closure_present": False,
@@ -700,6 +743,9 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         "disallowed_claim_text": str(summary.get("disallowed_claim_text") or ""),
         "paid_pilot_wording_allowed": bool(summary.get("paid_pilot_wording_allowed") is True),
         "general_platform_claim_allowed": bool(summary.get("general_platform_claim_allowed") is True),
+        "hbond_backmap_candidate_rows": _hbond_backmap_candidate_rows(
+            summary.get("hbond_backmap_candidate_rows")
+        ),
         "gpcr_hard_decoy_metric_ready": bool(summary.get("gpcr_hard_decoy_metric_ready") is True),
         "gpcr_broad_claim_allowed": bool(summary.get("gpcr_broad_claim_allowed") is True),
         "gpcr_phase3_closure_present": bool(summary.get("gpcr_phase3_closure_present") is True),
