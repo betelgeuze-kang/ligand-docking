@@ -95,11 +95,24 @@ def test_vina_gnina_score_template_receipt_ready_when_all_rows_reviewed(tmp_path
     assert summary["score_template_filled_score_row_count"] == 2
     assert summary["pending_field_count"] == 0
     assert summary["pending_field_counts"] == {}
+    assert summary["score_evidence_required_field_count"] == 12
+    assert summary["score_evidence_ready_field_count"] == 12
+    assert summary["score_evidence_blocked_field_count"] == 0
+    assert summary["score_evidence_primary_field_id"] == ""
+    assert summary["score_evidence_primary_pending_row_count"] == 0
     assert summary["blocker_count"] == 0
     assert summary["claim_promotion_allowed"] is False
     assert summary["execution_enabled"] is False
     assert summary["external_state_mutated"] is False
     assert {row["status"] for row in payload["rows"]} == {"ready"}
+    assert all(
+        row["status"] == "pass"
+        and row["operator_action_required"] is False
+        and row["execution_enabled"] is False
+        and row["external_state_mutated"] is False
+        and row["claim_promotion_allowed"] is False
+        for row in payload["score_evidence_field_rows"]
+    )
 
 
 def test_vina_gnina_score_template_receipt_blocks_empty_operator_template(tmp_path: Path) -> None:
@@ -120,6 +133,7 @@ def test_vina_gnina_score_template_receipt_blocks_empty_operator_template(tmp_pa
     )
     summary = payload["summary"]
     blockers = ";".join(summary["blockers"])
+    field_rows = {row["field_id"]: row for row in payload["score_evidence_field_rows"]}
 
     assert summary["status"] == "blocked_public_benchmark_vina_gnina_score_template_receipt"
     assert summary["score_template_receipt_ready"] is False
@@ -128,11 +142,39 @@ def test_vina_gnina_score_template_receipt_blocks_empty_operator_template(tmp_pa
     assert summary["pending_field_counts"]["vina_score"] == 1
     assert summary["pending_field_counts"]["gnina_score"] == 1
     assert summary["pending_field_counts"]["approval_token"] == 1
+    assert summary["score_evidence_required_field_ids"] == [
+        "vina_score",
+        "gnina_score",
+        "comparison_score_source",
+        "comparison_score_artifact_path",
+        "comparison_score_artifact_sha256",
+        "operator_engine_versions",
+        "operator_prep_policy_sha256",
+        "operator_method",
+        "operator_reviewed_at_utc",
+        "operator_id",
+        "license_ok",
+        "approval_token",
+    ]
+    assert summary["score_evidence_required_field_count"] == 12
+    assert summary["score_evidence_ready_field_count"] == 4
+    assert summary["score_evidence_blocked_field_count"] == 8
+    assert summary["score_evidence_primary_field_id"] == "vina_score"
+    assert summary["score_evidence_primary_pending_row_count"] == 1
+    assert summary["score_evidence_primary_required_action"] == (
+        "Fill numeric vina_score values from the same-input engine replay for every pending pose."
+    )
     assert "same_input_score_values_pending" in blockers
     assert "approval_token_pending" in blockers
     assert payload["rows"][0]["status"] == "blocked"
     assert "vina_score" in payload["rows"][0]["missing_fields"]
     assert "approval_token" in payload["rows"][0]["missing_fields"]
+    assert field_rows["vina_score"]["status"] == "blocked"
+    assert field_rows["vina_score"]["pending_row_count"] == 1
+    assert field_rows["comparison_score_artifact_sha256"]["status"] == "pass"
+    assert field_rows["approval_token"]["required_action"] == (
+        f"Fill approval_token with {APPROVAL_TOKEN} after operator review."
+    )
 
 
 def test_vina_gnina_score_template_receipt_blocks_row_count_mismatch(tmp_path: Path) -> None:
@@ -181,3 +223,4 @@ def test_vina_gnina_score_template_receipt_cli_writes_outputs(tmp_path: Path) ->
     assert payload["summary"]["packet_type"] == "public_benchmark_vina_gnina_score_template_receipt"
     assert out_csv.read_text(encoding="utf-8").startswith("pose_id,complex_id,status,")
     assert "Public Benchmark Vina/GNINA Score Template Receipt" in out_md.read_text(encoding="utf-8")
+    assert "Score Evidence Field Checklist" in out_md.read_text(encoding="utf-8")

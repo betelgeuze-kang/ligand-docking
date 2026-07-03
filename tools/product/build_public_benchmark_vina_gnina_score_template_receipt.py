@@ -25,6 +25,20 @@ DEFAULT_OUT_MD = "runs/public_benchmark_vina_gnina_score_template_receipt_curren
 
 PACKET_TYPE = "public_benchmark_vina_gnina_score_template_receipt"
 SCHEMA_VERSION = "public_benchmark_vina_gnina_score_template_receipt_v1"
+SCORE_EVIDENCE_REQUIRED_FIELD_IDS = [
+    "vina_score",
+    "gnina_score",
+    "comparison_score_source",
+    "comparison_score_artifact_path",
+    "comparison_score_artifact_sha256",
+    "operator_engine_versions",
+    "operator_prep_policy_sha256",
+    "operator_method",
+    "operator_reviewed_at_utc",
+    "operator_id",
+    "license_ok",
+    "approval_token",
+]
 
 CLAIM_BOUNDARY = (
     "Public benchmark Vina/GNINA same-input score-template receipt only; it validates an operator-filled "
@@ -178,6 +192,61 @@ def _pending_field_counts(row_checks: list[dict[str, Any]]) -> dict[str, int]:
     return dict(sorted(counts.items()))
 
 
+def _score_evidence_field_required_action(field_id: str) -> str:
+    if field_id in {"vina_score", "gnina_score"}:
+        return f"Fill numeric {field_id} values from the same-input engine replay for every pending pose."
+    if field_id == "comparison_score_source":
+        return "Record the reviewed source for the same-input Vina/GNINA score evidence."
+    if field_id == "comparison_score_artifact_path":
+        return "Attach the local score artifact path for the same-input Vina/GNINA replay."
+    if field_id == "comparison_score_artifact_sha256":
+        return "Record the SHA256 for the attached same-input score artifact."
+    if field_id == "operator_engine_versions":
+        return "Record the reviewed Vina and GNINA engine versions."
+    if field_id == "operator_prep_policy_sha256":
+        return "Record the preparation policy SHA256 used for the same-input comparison."
+    if field_id == "operator_method":
+        return "Record the reviewed same-input method description."
+    if field_id == "operator_reviewed_at_utc":
+        return "Record the UTC operator review timestamp."
+    if field_id == "operator_id":
+        return "Record a non-secret operator id for the review."
+    if field_id == "license_ok":
+        return "Set license_ok=true only after the benchmark input and receipt license review passes."
+    if field_id == "approval_token":
+        return f"Fill approval_token with {APPROVAL_TOKEN} after operator review."
+    return f"Fill {field_id} for every pending score-template row."
+
+
+def _score_evidence_field_rows(
+    pending_field_counts: dict[str, int],
+    *,
+    row_count: int,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for field_id in SCORE_EVIDENCE_REQUIRED_FIELD_IDS:
+        pending_row_count = _int(pending_field_counts.get(field_id))
+        ready = pending_row_count == 0
+        rows.append(
+            {
+                "field_id": field_id,
+                "status": "pass" if ready else "blocked",
+                "ready": ready,
+                "pending_row_count": pending_row_count,
+                "row_count": row_count,
+                "required_action": ""
+                if ready
+                else _score_evidence_field_required_action(field_id),
+                "operator_action_required": not ready,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "claim_boundary": CLAIM_BOUNDARY,
+            }
+        )
+    return rows
+
+
 def build_public_benchmark_vina_gnina_score_template_receipt(
     *,
     work_order_json: str | Path = DEFAULT_WORK_ORDER_JSON,
@@ -189,6 +258,16 @@ def build_public_benchmark_vina_gnina_score_template_receipt(
     validation = validate_vina_gnina_score_template(rows)
     row_checks = [_row_status(row) for row in rows]
     pending_field_counts = _pending_field_counts(row_checks)
+    score_evidence_field_rows = _score_evidence_field_rows(
+        pending_field_counts,
+        row_count=len(rows),
+    )
+    score_evidence_blocked_field_rows = [
+        row for row in score_evidence_field_rows if not row["ready"]
+    ]
+    score_evidence_primary_field_row = (
+        score_evidence_blocked_field_rows[0] if score_evidence_blocked_field_rows else {}
+    )
 
     missing_columns = [field for field in SCORE_TEMPLATE_FIELDS if field not in fieldnames]
     work_order_present = bool(work_order)
@@ -258,6 +337,21 @@ def build_public_benchmark_vina_gnina_score_template_receipt(
         "approval_token_pending_count": validation["approval_token_pending_count"],
         "pending_field_count": sum(pending_field_counts.values()),
         "pending_field_counts": pending_field_counts,
+        "score_evidence_required_field_ids": list(SCORE_EVIDENCE_REQUIRED_FIELD_IDS),
+        "score_evidence_required_field_count": len(SCORE_EVIDENCE_REQUIRED_FIELD_IDS),
+        "score_evidence_ready_field_count": (
+            len(score_evidence_field_rows) - len(score_evidence_blocked_field_rows)
+        ),
+        "score_evidence_blocked_field_count": len(score_evidence_blocked_field_rows),
+        "score_evidence_primary_field_id": _text(
+            score_evidence_primary_field_row.get("field_id")
+        ),
+        "score_evidence_primary_pending_row_count": _int(
+            score_evidence_primary_field_row.get("pending_row_count")
+        ),
+        "score_evidence_primary_required_action": _text(
+            score_evidence_primary_field_row.get("required_action")
+        ),
         "score_template_blocker_count": validation["score_template_blocker_count"],
         "score_template_blockers": validation["score_template_blockers"],
         "blocker_count": len(blockers),
@@ -275,7 +369,11 @@ def build_public_benchmark_vina_gnina_score_template_receipt(
             else "Fill every score-template row with same-input Vina/GNINA scores, review metadata, license_ok=true, and the approval token, then rebuild this receipt."
         ),
     }
-    return {"summary": summary, "rows": row_checks}
+    return {
+        "summary": summary,
+        "rows": row_checks,
+        "score_evidence_field_rows": score_evidence_field_rows,
+    }
 
 
 def _write_json(path_like: str | Path, payload: dict[str, Any], *, root: Path = ROOT) -> None:
@@ -307,6 +405,7 @@ def _render_md(payload: dict[str, Any]) -> str:
         f"- operator_metadata_pending_count: `{summary['operator_metadata_pending_count']}`",
         f"- license_ok_pending_count: `{summary['license_ok_pending_count']}`",
         f"- approval_token_pending_count: `{summary['approval_token_pending_count']}`",
+        f"- score_evidence_blocked_field_count: `{summary['score_evidence_blocked_field_count']}`",
         f"- blocker_count: `{summary['blocker_count']}`",
         "",
         "| pose_id | status | blocker |",
@@ -314,6 +413,20 @@ def _render_md(payload: dict[str, Any]) -> str:
     ]
     for row in payload["rows"]:
         lines.append(f"| `{row['pose_id']}` | `{row['status']}` | `{row['blocker'] or '-'}` |")
+    lines.extend(
+        [
+            "",
+            "## Score Evidence Field Checklist",
+            "",
+            "| field | status | pending rows | action |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
+    for row in payload.get("score_evidence_field_rows", []):
+        lines.append(
+            f"| `{row['field_id']}` | `{row['status']}` | `{row['pending_row_count']}` | "
+            f"{row['required_action'] or '-'} |"
+        )
     lines.extend(["", CLAIM_BOUNDARY, ""])
     return "\n".join(lines)
 

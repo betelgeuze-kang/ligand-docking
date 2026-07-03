@@ -25,6 +25,9 @@ DEFAULT_PUBLIC_BENCHMARK_JSON = "runs/public_benchmark_external_receipts_audit_c
 DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON = (
     "runs/public_benchmark_receipt_attach_packet_current.json"
 )
+DEFAULT_PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_JSON = (
+    "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+)
 DEFAULT_GOAL_RELEASE_DECISION_JSON = "runs/goal_release_decision_gate_current.json"
 DEFAULT_RELEASE_ACTIONS_JSON = "runs/goal_operator_action_board_current.json"
 DEFAULT_PM_PRIORITY_QUEUE_JSON = ".betelgeuze/pm_priority_queue_status_current.json"
@@ -623,6 +626,32 @@ def _public_benchmark_receipt_attach_lane_rows(
                 "execution_enabled": False,
                 "external_state_mutated": False,
                 "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
+def _public_benchmark_vina_gnina_score_evidence_field_rows(
+    payload: dict[str, Any],
+) -> list[dict[str, Any]]:
+    summary = _summary(payload)
+    claim_boundary = _text(summary.get("claim_boundary")) or CLAIM_BOUNDARY
+    rows: list[dict[str, Any]] = []
+    for row in _dict_list(payload, "score_evidence_field_rows"):
+        ready = _bool_true(row.get("ready"))
+        rows.append(
+            {
+                "field_id": _text(row.get("field_id")),
+                "status": _text(row.get("status")),
+                "ready": ready,
+                "pending_row_count": _int(row.get("pending_row_count")),
+                "row_count": _int(row.get("row_count")),
+                "required_action": _text(row.get("required_action")),
+                "operator_action_required": not ready,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "claim_boundary": _text(row.get("claim_boundary")) or claim_boundary,
             }
         )
     return rows
@@ -1555,6 +1584,9 @@ def build_product_operator_cockpit(
     public_benchmark_receipt_attach_packet_json: str | Path = (
         DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON
     ),
+    public_benchmark_vina_gnina_score_template_receipt_json: str | Path = (
+        DEFAULT_PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_JSON
+    ),
     goal_release_decision_json: str | Path = DEFAULT_GOAL_RELEASE_DECISION_JSON,
     release_actions_json: str | Path = DEFAULT_RELEASE_ACTIONS_JSON,
     pm_priority_queue_json: str | Path = DEFAULT_PM_PRIORITY_QUEUE_JSON,
@@ -1624,6 +1656,18 @@ def build_product_operator_cockpit(
     )
     public_benchmark_receipt_attach_lane_rows = (
         _public_benchmark_receipt_attach_lane_rows(public_receipt_attach_payload)
+    )
+    public_vina_gnina_score_template_receipt_payload = _read_json(
+        public_benchmark_vina_gnina_score_template_receipt_json,
+        root=root,
+    )
+    public_vina_gnina_score_template_receipt = _summary(
+        public_vina_gnina_score_template_receipt_payload
+    )
+    public_vina_gnina_score_evidence_field_row_preview = (
+        _public_benchmark_vina_gnina_score_evidence_field_rows(
+            public_vina_gnina_score_template_receipt_payload
+        )
     )
     release_decision_payload = _read_json(goal_release_decision_json, root=root)
     release_decision = _summary(release_decision_payload)
@@ -2069,6 +2113,54 @@ def build_product_operator_cockpit(
     public_vina_adapter_command_after_fill = _first_text(
         public_benchmark.get("vina_gnina_adapter_command_after_fill"),
         public_receipt_attach_packet.get("vina_gnina_adapter_command_after_fill"),
+        public_vina_gnina_score_template_receipt.get("adapter_command_after_fill"),
+    )
+    public_vina_score_receipt_present = bool(public_vina_gnina_score_template_receipt)
+    public_vina_score_receipt_status = _text(
+        public_vina_gnina_score_template_receipt.get("status")
+    )
+    public_vina_score_receipt_ready = _bool_true(
+        public_vina_gnina_score_template_receipt.get("score_template_receipt_ready")
+    )
+    public_vina_score_evidence_required_field_count = _int(
+        public_vina_gnina_score_template_receipt.get(
+            "score_evidence_required_field_count"
+        )
+    ) or len(public_vina_gnina_score_evidence_field_row_preview)
+    public_vina_score_evidence_ready_field_count = _int(
+        public_vina_gnina_score_template_receipt.get("score_evidence_ready_field_count")
+    ) or sum(
+        1 for row in public_vina_gnina_score_evidence_field_row_preview if row["ready"]
+    )
+    public_vina_score_evidence_blocked_field_count = _int(
+        public_vina_gnina_score_template_receipt.get(
+            "score_evidence_blocked_field_count"
+        )
+    ) or sum(
+        1 for row in public_vina_gnina_score_evidence_field_row_preview if not row["ready"]
+    )
+    public_vina_score_evidence_blocked_rows = [
+        row for row in public_vina_gnina_score_evidence_field_row_preview if not row["ready"]
+    ]
+    public_vina_score_evidence_primary_row = (
+        public_vina_score_evidence_blocked_rows[0]
+        if public_vina_score_evidence_blocked_rows
+        else {}
+    )
+    public_vina_score_evidence_primary_field_id = _first_text(
+        public_vina_gnina_score_template_receipt.get("score_evidence_primary_field_id"),
+        public_vina_score_evidence_primary_row.get("field_id"),
+    )
+    public_vina_score_evidence_primary_pending_row_count = _int(
+        public_vina_gnina_score_template_receipt.get(
+            "score_evidence_primary_pending_row_count"
+        )
+    ) or _int(public_vina_score_evidence_primary_row.get("pending_row_count"))
+    public_vina_score_evidence_primary_required_action = _first_text(
+        public_vina_gnina_score_template_receipt.get(
+            "score_evidence_primary_required_action"
+        ),
+        public_vina_score_evidence_primary_row.get("required_action"),
     )
 
     release_actions_present = bool(release_actions)
@@ -2901,6 +2993,24 @@ def build_product_operator_cockpit(
                 ),
                 _metric("pending_scores", public_vina_pending_scores),
                 _metric("pending_score_fields", public_vina_pending_fields),
+                _metric("score_receipt_status", public_vina_score_receipt_status),
+                _metric("score_receipt_ready", public_vina_score_receipt_ready),
+                _count_metric(
+                    "score_evidence_fields",
+                    public_vina_score_evidence_required_field_count,
+                ),
+                _count_metric(
+                    "score_evidence_blocked_fields",
+                    public_vina_score_evidence_blocked_field_count,
+                ),
+                _metric(
+                    "score_evidence_primary_field",
+                    public_vina_score_evidence_primary_field_id,
+                ),
+                _count_metric(
+                    "score_evidence_primary_rows",
+                    public_vina_score_evidence_primary_pending_row_count,
+                ),
                 _metric("pending_receipt_fields", public_metric_pending_fields),
                 _metric("pending_receipt_tokens", public_metric_pending_tokens),
                 _count_metric("field_work_order_rows", public_field_work_order_rows),
@@ -3591,6 +3701,36 @@ def build_product_operator_cockpit(
         ),
         "public_benchmark_vina_gnina_pending_score_count": public_vina_pending_scores,
         "public_benchmark_vina_gnina_pending_field_count": public_vina_pending_fields,
+        "public_benchmark_vina_gnina_score_receipt_present": (
+            public_vina_score_receipt_present
+        ),
+        "public_benchmark_vina_gnina_score_receipt_status": (
+            public_vina_score_receipt_status
+        ),
+        "public_benchmark_vina_gnina_score_receipt_ready": (
+            public_vina_score_receipt_ready
+        ),
+        "public_benchmark_vina_gnina_score_evidence_required_field_count": (
+            public_vina_score_evidence_required_field_count
+        ),
+        "public_benchmark_vina_gnina_score_evidence_ready_field_count": (
+            public_vina_score_evidence_ready_field_count
+        ),
+        "public_benchmark_vina_gnina_score_evidence_blocked_field_count": (
+            public_vina_score_evidence_blocked_field_count
+        ),
+        "public_benchmark_vina_gnina_score_evidence_primary_field_id": (
+            public_vina_score_evidence_primary_field_id
+        ),
+        "public_benchmark_vina_gnina_score_evidence_primary_pending_row_count": (
+            public_vina_score_evidence_primary_pending_row_count
+        ),
+        "public_benchmark_vina_gnina_score_evidence_primary_required_action": (
+            public_vina_score_evidence_primary_required_action
+        ),
+        "public_benchmark_vina_gnina_score_evidence_field_rows": (
+            public_vina_gnina_score_evidence_field_row_preview
+        ),
         "public_benchmark_metric_source_pending_field_count": public_metric_pending_fields,
         "public_benchmark_metric_source_pending_approval_token_count": public_metric_pending_tokens,
         "public_benchmark_field_work_order_row_count": public_field_work_order_rows,
@@ -4055,6 +4195,10 @@ def _parser() -> argparse.ArgumentParser:
         default=DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON,
     )
     parser.add_argument(
+        "--public-benchmark-vina-gnina-score-template-receipt-json",
+        default=DEFAULT_PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_JSON,
+    )
+    parser.add_argument(
         "--goal-release-decision-json",
         default=DEFAULT_GOAL_RELEASE_DECISION_JSON,
     )
@@ -4107,6 +4251,9 @@ def main(argv: list[str] | None = None) -> int:
         pocketmd_metric_source_audit_json=args.pocketmd_metric_source_audit_json,
         public_benchmark_json=args.public_benchmark_json,
         public_benchmark_receipt_attach_packet_json=args.public_benchmark_receipt_attach_packet_json,
+        public_benchmark_vina_gnina_score_template_receipt_json=(
+            args.public_benchmark_vina_gnina_score_template_receipt_json
+        ),
         goal_release_decision_json=args.goal_release_decision_json,
         release_actions_json=args.release_actions_json,
         pm_priority_queue_json=args.pm_priority_queue_json,

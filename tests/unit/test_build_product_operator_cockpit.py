@@ -28,6 +28,9 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         ),
         "public": tmp_path / "runs/public_benchmark_external_receipts_audit_current.json",
         "public_attach": tmp_path / "runs/public_benchmark_receipt_attach_packet_current.json",
+        "public_vina_gnina_score_receipt": (
+            tmp_path / "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+        ),
         "release_decision": tmp_path / "runs/goal_release_decision_gate_current.json",
         "release": tmp_path / "runs/goal_operator_action_board_current.json",
         "pm_queue": tmp_path / ".betelgeuze/pm_priority_queue_status_current.json",
@@ -602,6 +605,58 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                     "external_state_mutated": True,
                     "claim_promotion_allowed": True,
                 }
+            ],
+        },
+    )
+    _write_json(
+        paths["public_vina_gnina_score_receipt"],
+        {
+            "summary": {
+                "status": "blocked_public_benchmark_vina_gnina_score_template_receipt",
+                "score_template_receipt_ready": False,
+                "score_evidence_required_field_count": 12,
+                "score_evidence_ready_field_count": 0,
+                "score_evidence_blocked_field_count": 12,
+                "score_evidence_primary_field_id": "vina_score",
+                "score_evidence_primary_pending_row_count": 16,
+                "score_evidence_primary_required_action": (
+                    "Fill numeric vina_score values from the same-input engine replay for every pending pose."
+                ),
+                "adapter_command_after_fill": (
+                    "python3 tools/build_pdbbind_casf_pose_affinity_results.py --comparison-scores-csv "
+                    "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                ),
+                "claim_boundary": "score receipt fixture boundary",
+            },
+            "score_evidence_field_rows": [
+                {
+                    "field_id": "vina_score",
+                    "status": "blocked",
+                    "ready": False,
+                    "pending_row_count": 16,
+                    "row_count": 16,
+                    "required_action": (
+                        "Fill numeric vina_score values from the same-input engine replay for every pending pose."
+                    ),
+                    "operator_action_required": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+                {
+                    "field_id": "approval_token",
+                    "status": "blocked",
+                    "ready": False,
+                    "pending_row_count": 16,
+                    "row_count": 16,
+                    "required_action": (
+                        "Fill approval_token with APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES after operator review."
+                    ),
+                    "operator_action_required": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
             ],
         },
     )
@@ -1557,6 +1612,9 @@ def _build_payload(tmp_path: Path) -> dict:
         pocketmd_metric_source_audit_json=paths["pocketmd_metric_source"],
         public_benchmark_json=paths["public"],
         public_benchmark_receipt_attach_packet_json=paths["public_attach"],
+        public_benchmark_vina_gnina_score_template_receipt_json=(
+            paths["public_vina_gnina_score_receipt"]
+        ),
         goal_release_decision_json=paths["release_decision"],
         release_actions_json=paths["release"],
         pm_priority_queue_json=paths["pm_queue"],
@@ -1933,6 +1991,61 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     ] is False
     assert summary["public_benchmark_vina_gnina_pending_score_count"] == 32
     assert summary["public_benchmark_vina_gnina_pending_field_count"] == 192
+    assert summary["public_benchmark_vina_gnina_score_receipt_present"] is True
+    assert summary["public_benchmark_vina_gnina_score_receipt_status"] == (
+        "blocked_public_benchmark_vina_gnina_score_template_receipt"
+    )
+    assert summary["public_benchmark_vina_gnina_score_receipt_ready"] is False
+    assert summary[
+        "public_benchmark_vina_gnina_score_evidence_required_field_count"
+    ] == 12
+    assert summary["public_benchmark_vina_gnina_score_evidence_ready_field_count"] == 0
+    assert summary[
+        "public_benchmark_vina_gnina_score_evidence_blocked_field_count"
+    ] == 12
+    assert summary[
+        "public_benchmark_vina_gnina_score_evidence_primary_field_id"
+    ] == "vina_score"
+    assert summary[
+        "public_benchmark_vina_gnina_score_evidence_primary_pending_row_count"
+    ] == 16
+    assert summary[
+        "public_benchmark_vina_gnina_score_evidence_primary_required_action"
+    ] == (
+        "Fill numeric vina_score values from the same-input engine replay for every pending pose."
+    )
+    assert summary["public_benchmark_vina_gnina_score_evidence_field_rows"] == [
+        {
+            "field_id": "vina_score",
+            "status": "blocked",
+            "ready": False,
+            "pending_row_count": 16,
+            "row_count": 16,
+            "required_action": (
+                "Fill numeric vina_score values from the same-input engine replay for every pending pose."
+            ),
+            "operator_action_required": True,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+            "claim_boundary": "score receipt fixture boundary",
+        },
+        {
+            "field_id": "approval_token",
+            "status": "blocked",
+            "ready": False,
+            "pending_row_count": 16,
+            "row_count": 16,
+            "required_action": (
+                "Fill approval_token with APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES after operator review."
+            ),
+            "operator_action_required": True,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+            "claim_boundary": "score receipt fixture boundary",
+        },
+    ]
     assert summary["public_benchmark_metric_source_pending_field_count"] == 510
     assert summary["public_benchmark_metric_source_pending_approval_token_count"] == 51
     assert summary["public_benchmark_field_work_order_row_count"] == 22
@@ -2788,6 +2901,21 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     )
     assert "pending_scores=32" in panels["public_benchmark_scorecard"]["secondary_metric"]
     assert "pending_score_fields=192" in panels["public_benchmark_scorecard"]["secondary_metric"]
+    assert (
+        "score_receipt_status=blocked_public_benchmark_vina_gnina_score_template_receipt"
+        in panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
+    assert "score_receipt_ready=false" in panels["public_benchmark_scorecard"]["secondary_metric"]
+    assert "score_evidence_fields=12" in panels["public_benchmark_scorecard"]["secondary_metric"]
+    assert "score_evidence_blocked_fields=12" in (
+        panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
+    assert "score_evidence_primary_field=vina_score" in (
+        panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
+    assert "score_evidence_primary_rows=16" in (
+        panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
     assert "pending_receipt_fields=510" in panels["public_benchmark_scorecard"]["secondary_metric"]
     assert "pending_receipt_tokens=51" in panels["public_benchmark_scorecard"]["secondary_metric"]
     assert "field_work_order_rows=22" in panels["public_benchmark_scorecard"]["secondary_metric"]
