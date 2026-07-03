@@ -13,6 +13,88 @@ def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def _write_score_template_receipt(path: Path) -> None:
+    _write_json(
+        path,
+        {
+            "summary": {
+                "status": "blocked_public_benchmark_vina_gnina_score_template_receipt",
+                "score_template_receipt_ready": False,
+                "score_template_validation_ready": False,
+                "work_order_ready": True,
+                "score_template_csv": (
+                    "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                ),
+                "score_template_row_count": 16,
+                "score_template_filled_score_row_count": 0,
+                "pending_field_count": 192,
+                "pending_field_counts": {
+                    "vina_score": 16,
+                    "gnina_score": 16,
+                    "license_ok": 16,
+                    "approval_token": 16,
+                },
+                "score_evidence_required_field_count": 12,
+                "score_evidence_ready_field_count": 0,
+                "score_evidence_blocked_field_count": 12,
+                "score_evidence_required_field_ids": [
+                    "vina_score",
+                    "gnina_score",
+                    "comparison_score_source",
+                    "comparison_score_artifact_path",
+                    "comparison_score_artifact_sha256",
+                    "operator_engine_versions",
+                    "operator_prep_policy_sha256",
+                    "operator_method",
+                    "operator_reviewed_at_utc",
+                    "operator_id",
+                    "license_ok",
+                    "approval_token",
+                ],
+                "score_evidence_primary_field_id": "vina_score",
+                "score_evidence_primary_pending_row_count": 16,
+                "score_evidence_primary_required_action": (
+                    "Fill numeric vina_score values from the same-input engine replay."
+                ),
+                "score_template_blocker_count": 5,
+                "score_template_blockers": [
+                    "same_input_score_values_pending",
+                    "operator_score_metadata_pending",
+                    "license_ok_pending",
+                    "approval_token_pending",
+                ],
+                "approval_token_required": (
+                    "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES"
+                ),
+                "score_value_pending_count": 32,
+                "operator_metadata_pending_count": 32,
+                "operator_placeholder_pending_count": 96,
+                "license_ok_pending_count": 16,
+                "approval_token_pending_count": 16,
+            },
+            "rows": [
+                {
+                    "pose_id": "1abc_pose_001",
+                    "complex_id": "1abc",
+                    "status": "blocked",
+                    "score_values_ready": False,
+                    "metadata_ready": False,
+                    "license_ok": False,
+                    "approval_token_ok": False,
+                    "missing_fields": "vina_score;gnina_score;license_ok;approval_token",
+                    "blocker": (
+                        "score_values_missing_or_invalid;"
+                        "license_ok_pending;approval_token_pending"
+                    ),
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                }
+            ],
+        },
+    )
+
+
 def test_public_benchmark_endpoint_exposes_scorecard_panel_rows(
     tmp_path: Path,
     monkeypatch,
@@ -21,8 +103,16 @@ def test_public_benchmark_endpoint_exposes_scorecard_panel_rows(
 
     work_order = tmp_path / "runs/product_public_benchmark_work_order_current.json"
     receipts = tmp_path / "runs/public_benchmark_external_receipts_audit_current.json"
+    score_receipt = (
+        tmp_path / "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+    )
     monkeypatch.setattr(mod, "PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_ARTIFACT", work_order)
     monkeypatch.setattr(mod, "PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT", receipts)
+    monkeypatch.setattr(
+        mod,
+        "PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_ARTIFACT",
+        score_receipt,
+    )
     _write_json(
         work_order,
         {
@@ -98,6 +188,7 @@ def test_public_benchmark_endpoint_exposes_scorecard_panel_rows(
             }
         },
     )
+    _write_score_template_receipt(score_receipt)
 
     response = TestClient(app).get("/product/public-benchmark")
 
@@ -147,6 +238,38 @@ def test_public_benchmark_endpoint_exposes_scorecard_panel_rows(
     assert body["external_receipt_blocker_rows"][0]["blocker_id"] == (
         "vina_gnina_same_input_comparison"
     )
+    assert body["vina_gnina_score_template_receipt_present"] is True
+    assert body["vina_gnina_score_template_receipt_status"] == (
+        "blocked_public_benchmark_vina_gnina_score_template_receipt"
+    )
+    assert body["vina_gnina_score_template_receipt_ready"] is False
+    assert body["vina_gnina_score_template_work_order_ready"] is True
+    assert body["vina_gnina_score_template_row_count"] == 16
+    assert body["vina_gnina_score_template_blocked_row_count"] == 1
+    assert body["vina_gnina_score_template_pending_field_count"] == 192
+    assert body["vina_gnina_score_template_pending_field_counts"] == {
+        "vina_score": 16,
+        "gnina_score": 16,
+        "license_ok": 16,
+        "approval_token": 16,
+    }
+    assert body["vina_gnina_score_template_score_evidence_required_field_count"] == 12
+    assert body["vina_gnina_score_template_score_evidence_blocked_field_count"] == 12
+    assert body["vina_gnina_score_template_score_evidence_primary_field_id"] == "vina_score"
+    assert body["vina_gnina_score_template_score_evidence_primary_pending_row_count"] == 16
+    assert body["vina_gnina_score_template_approval_token_required"] == (
+        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES"
+    )
+    assert body["vina_gnina_score_template_primary_blocked_row"]["pose_id"] == "1abc_pose_001"
+    assert body["vina_gnina_score_template_rows"][0]["missing_fields"] == [
+        "vina_score",
+        "gnina_score",
+        "license_ok",
+        "approval_token",
+    ]
+    assert body["vina_gnina_score_template_rows"][0]["claim_promotion_allowed"] is False
+    assert body["vina_gnina_score_template_rows"][0]["execution_enabled"] is False
+    assert body["vina_gnina_score_template_rows"][0]["external_state_mutated"] is False
     assert body["external_beta_claim_allowed"] is False
     assert body["claim_promotion_allowed"] is False
     assert body["execution_enabled"] is False
@@ -170,6 +293,11 @@ def test_public_benchmark_endpoint_is_fail_closed_when_missing(
         "PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT",
         tmp_path / "missing_receipts.json",
     )
+    monkeypatch.setattr(
+        mod,
+        "PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_ARTIFACT",
+        tmp_path / "missing_score_receipt.json",
+    )
 
     response = TestClient(app).get("/product/public-benchmark")
 
@@ -185,6 +313,9 @@ def test_public_benchmark_endpoint_is_fail_closed_when_missing(
     )
     assert body["external_receipts_ready"] is False
     assert body["external_receipt_blocker_rows"] == []
+    assert body["vina_gnina_score_template_receipt_present"] is False
+    assert body["vina_gnina_score_template_receipt_ready"] is False
+    assert body["vina_gnina_score_template_rows"] == []
     assert body["external_beta_claim_allowed"] is False
     assert body["execution_enabled"] is False
     assert body["docking_results_emitted"] is False
@@ -207,6 +338,11 @@ def test_public_benchmark_external_receipts_endpoint_missing_attach_packet(
         "PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT",
         tmp_path / "missing_attach.json",
     )
+    monkeypatch.setattr(
+        mod,
+        "PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_ARTIFACT",
+        tmp_path / "missing_score_receipt.json",
+    )
 
     response = TestClient(app).get("/product/public-benchmark-external-receipts-audit")
 
@@ -228,6 +364,9 @@ def test_public_benchmark_external_receipts_endpoint_missing_attach_packet(
     assert body["score_evidence_row_work_order_row_count"] == 0
     assert body["score_evidence_row_work_order_pending_field_count"] == 0
     assert body["score_evidence_row_work_order_rows"] == []
+    assert body["vina_gnina_score_template_receipt_present"] is False
+    assert body["vina_gnina_score_template_receipt_ready"] is False
+    assert body["vina_gnina_score_template_rows"] == []
     assert body["claim_promotion_allowed"] is False
     assert body["execution_enabled"] is False
     assert body["external_state_mutated"] is False
@@ -241,8 +380,16 @@ def test_public_benchmark_external_receipts_endpoint_surfaces_attach_work_order(
 
     audit = tmp_path / "runs/public_benchmark_external_receipts_audit_current.json"
     attach = tmp_path / "runs/public_benchmark_receipt_attach_packet_current.json"
+    score_receipt = (
+        tmp_path / "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+    )
     monkeypatch.setattr(mod, "PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT", audit)
     monkeypatch.setattr(mod, "PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT", attach)
+    monkeypatch.setattr(
+        mod,
+        "PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_ARTIFACT",
+        score_receipt,
+    )
     _write_json(
         audit,
         {
@@ -484,6 +631,7 @@ def test_public_benchmark_external_receipts_endpoint_surfaces_attach_work_order(
             ],
         },
     )
+    _write_score_template_receipt(score_receipt)
 
     response = TestClient(app).get("/product/public-benchmark-external-receipts-audit")
 
@@ -565,6 +713,27 @@ def test_public_benchmark_external_receipts_endpoint_surfaces_attach_work_order(
     assert body["score_evidence_row_work_order_rows"][0]["execution_enabled"] is False
     assert body["score_evidence_row_work_order_rows"][0]["external_state_mutated"] is False
     assert body["score_evidence_row_work_order_rows"][0]["claim_promotion_allowed"] is False
+    assert body["vina_gnina_score_template_receipt_present"] is True
+    assert body["vina_gnina_score_template_receipt_status"] == (
+        "blocked_public_benchmark_vina_gnina_score_template_receipt"
+    )
+    assert body["vina_gnina_score_template_receipt_ready"] is False
+    assert body["vina_gnina_score_template_work_order_ready"] is True
+    assert body["vina_gnina_score_template_row_count"] == 16
+    assert body["vina_gnina_score_template_blocked_row_count"] == 1
+    assert body["vina_gnina_score_template_score_evidence_required_field_count"] == 12
+    assert body["vina_gnina_score_template_score_evidence_blocked_field_count"] == 12
+    assert body["vina_gnina_score_template_score_evidence_primary_field_id"] == "vina_score"
+    assert body["vina_gnina_score_template_license_ok_pending_count"] == 16
+    assert body["vina_gnina_score_template_approval_token_pending_count"] == 16
+    assert body["vina_gnina_score_template_primary_blocked_row"]["blockers"] == [
+        "score_values_missing_or_invalid",
+        "license_ok_pending",
+        "approval_token_pending",
+    ]
+    assert body["vina_gnina_score_template_rows"][0]["execution_enabled"] is False
+    assert body["vina_gnina_score_template_rows"][0]["external_state_mutated"] is False
+    assert body["vina_gnina_score_template_rows"][0]["claim_promotion_allowed"] is False
     assert body["metric_source_receipt_approval_token_pending_count"] == 51
     assert body["claim_promotion_allowed"] is False
 
@@ -579,6 +748,11 @@ def test_public_benchmark_external_receipts_endpoint_falls_back_to_embedded_atta
     attach = tmp_path / "runs/public_benchmark_receipt_attach_packet_current.json"
     monkeypatch.setattr(mod, "PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT", audit)
     monkeypatch.setattr(mod, "PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT", attach)
+    monkeypatch.setattr(
+        mod,
+        "PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_ARTIFACT",
+        tmp_path / "missing_score_receipt.json",
+    )
     _write_json(
         audit,
         {
@@ -738,3 +912,5 @@ def test_public_benchmark_external_receipts_endpoint_falls_back_to_embedded_atta
     assert body["score_evidence_row_work_order_rows"][0]["execution_enabled"] is False
     assert body["score_evidence_row_work_order_rows"][0]["external_state_mutated"] is False
     assert body["score_evidence_row_work_order_rows"][0]["claim_promotion_allowed"] is False
+    assert body["vina_gnina_score_template_receipt_present"] is False
+    assert body["vina_gnina_score_template_rows"] == []

@@ -19,6 +19,9 @@ PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT = (
 PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT = (
     ROOT / "runs" / "public_benchmark_receipt_attach_packet_current.json"
 )
+PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_ARTIFACT = (
+    ROOT / "runs" / "public_benchmark_vina_gnina_score_template_receipt_current.json"
+)
 EXTERNAL_METRIC_SCORECARD_ARTIFACT = ROOT / "runs" / "external_metric_scorecard_current.json"
 PRODUCT_TRAJECTORY_SLA_CONTRACT_ARTIFACT = ROOT / "runs" / "product_trajectory_sla_contract_current.json"
 
@@ -472,6 +475,115 @@ def _receipt_attach_surface(
     }
 
 
+def _vina_gnina_score_template_receipt_surface(packet: dict[str, Any]) -> dict[str, Any]:
+    summary = _summary(packet)
+    rows_value = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    pending_field_counts = summary.get("pending_field_counts")
+    pending_counts = (
+        {str(key): _int(value) for key, value in pending_field_counts.items()}
+        if isinstance(pending_field_counts, dict)
+        else {}
+    )
+    rows: list[dict[str, Any]] = []
+    for row in rows_value:
+        if not isinstance(row, dict):
+            continue
+        ready = bool(str(row.get("status") or "") == "pass")
+        rows.append(
+            {
+                "pose_id": str(row.get("pose_id") or ""),
+                "complex_id": str(row.get("complex_id") or ""),
+                "status": str(row.get("status") or ""),
+                "score_values_ready": bool(row.get("score_values_ready") is True),
+                "metadata_ready": bool(row.get("metadata_ready") is True),
+                "license_ok": bool(row.get("license_ok") is True),
+                "approval_token_ok": bool(row.get("approval_token_ok") is True),
+                "missing_fields": _split_text_list(row.get("missing_fields")),
+                "blockers": _split_text_list(row.get("blocker") or row.get("blockers")),
+                "operator_action_required": not ready,
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+    blocked_rows = [row for row in rows if row["operator_action_required"]]
+    return {
+        "vina_gnina_score_template_receipt_artifact_path": str(
+            PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_ARTIFACT
+        ),
+        "vina_gnina_score_template_receipt_present": bool(summary),
+        "vina_gnina_score_template_receipt_status": str(summary.get("status") or ""),
+        "vina_gnina_score_template_receipt_ready": bool(
+            summary.get("score_template_receipt_ready") is True
+        ),
+        "vina_gnina_score_template_validation_ready": bool(
+            summary.get("score_template_validation_ready") is True
+        ),
+        "vina_gnina_score_template_work_order_ready": bool(
+            summary.get("work_order_ready") is True
+        ),
+        "vina_gnina_score_template_csv": str(summary.get("score_template_csv") or ""),
+        "vina_gnina_score_template_row_count": _int(summary.get("score_template_row_count")),
+        "vina_gnina_score_template_blocked_row_count": len(blocked_rows),
+        "vina_gnina_score_template_primary_blocked_row": blocked_rows[0] if blocked_rows else {},
+        "vina_gnina_score_template_filled_score_row_count": _int(
+            summary.get("score_template_filled_score_row_count")
+        ),
+        "vina_gnina_score_template_pending_field_count": _int(
+            summary.get("pending_field_count")
+        ),
+        "vina_gnina_score_template_pending_field_counts": pending_counts,
+        "vina_gnina_score_template_score_evidence_required_field_count": _int(
+            summary.get("score_evidence_required_field_count")
+        ),
+        "vina_gnina_score_template_score_evidence_ready_field_count": _int(
+            summary.get("score_evidence_ready_field_count")
+        ),
+        "vina_gnina_score_template_score_evidence_blocked_field_count": _int(
+            summary.get("score_evidence_blocked_field_count")
+        ),
+        "vina_gnina_score_template_score_evidence_required_field_ids": _split_text_list(
+            summary.get("score_evidence_required_field_ids")
+        ),
+        "vina_gnina_score_template_score_evidence_primary_field_id": str(
+            summary.get("score_evidence_primary_field_id") or ""
+        ),
+        "vina_gnina_score_template_score_evidence_primary_pending_row_count": _int(
+            summary.get("score_evidence_primary_pending_row_count")
+        ),
+        "vina_gnina_score_template_score_evidence_primary_required_action": str(
+            summary.get("score_evidence_primary_required_action") or ""
+        ),
+        "vina_gnina_score_template_blocker_count": _int(
+            summary.get("score_template_blocker_count")
+            if summary.get("score_template_blocker_count") is not None
+            else summary.get("blocker_count")
+        ),
+        "vina_gnina_score_template_blockers": _split_text_list(
+            summary.get("score_template_blockers") or summary.get("blockers")
+        ),
+        "vina_gnina_score_template_approval_token_required": str(
+            summary.get("approval_token_required") or ""
+        ),
+        "vina_gnina_score_template_score_value_pending_count": _int(
+            summary.get("score_value_pending_count")
+        ),
+        "vina_gnina_score_template_operator_metadata_pending_count": _int(
+            summary.get("operator_metadata_pending_count")
+        ),
+        "vina_gnina_score_template_operator_placeholder_pending_count": _int(
+            summary.get("operator_placeholder_pending_count")
+        ),
+        "vina_gnina_score_template_license_ok_pending_count": _int(
+            summary.get("license_ok_pending_count")
+        ),
+        "vina_gnina_score_template_approval_token_pending_count": _int(
+            summary.get("approval_token_pending_count")
+        ),
+        "vina_gnina_score_template_rows": rows,
+    }
+
+
 @router.get("/external-metrics")
 async def get_product_external_metrics() -> dict[str, Any]:
     packet = _read_json_object(EXTERNAL_METRIC_SCORECARD_ARTIFACT)
@@ -520,6 +632,9 @@ async def get_product_public_benchmark_external_receipts_audit() -> dict[str, An
         receipt_attach_packet,
         fallback_packet=packet,
     )
+    score_template_receipt_surface = _vina_gnina_score_template_receipt_surface(
+        _read_json_object(PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_ARTIFACT)
+    )
     summary = _summary(packet)
     rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
     if not summary:
@@ -559,6 +674,7 @@ async def get_product_public_benchmark_external_receipts_audit() -> dict[str, An
             "benchmark_ledger_entry_count": 0,
             "benchmark_ledger_external_safe_count": 0,
             **receipt_attach_surface,
+            **score_template_receipt_surface,
             "blocked_steps": [],
             "steps": [],
             "execution_enabled": False,
@@ -651,6 +767,7 @@ async def get_product_public_benchmark_external_receipts_audit() -> dict[str, An
             summary.get("benchmark_ledger_external_safe_count")
         ),
         **receipt_attach_surface,
+        **score_template_receipt_surface,
         "blocked_steps": _blocked_public_benchmark_steps(rows),
         "steps": rows,
         "execution_enabled": False,
@@ -666,6 +783,9 @@ async def get_product_public_benchmark() -> dict[str, Any]:
     summary = _summary(packet)
     rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
     receipts_summary = _summary(_read_json_object(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT))
+    score_template_receipt_surface = _vina_gnina_score_template_receipt_surface(
+        _read_json_object(PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_ARTIFACT)
+    )
     if not summary:
         return {
             "status": "missing_product_public_benchmark_work_order",
@@ -719,6 +839,7 @@ async def get_product_public_benchmark() -> dict[str, Any]:
             "requires_competition_season": False,
             "requires_paid_vps": False,
             "suite_rows": [],
+            **score_template_receipt_surface,
             "execution_enabled": False,
             "docking_results_emitted": False,
             "external_state_mutated": False,
@@ -794,6 +915,7 @@ async def get_product_public_benchmark() -> dict[str, Any]:
         "download_executed": bool(summary.get("download_executed") is True),
         "suite_rows": suite_rows,
         "suites": rows,
+        **score_template_receipt_surface,
         "claim_promotion_allowed": False,
         "execution_enabled": False,
         "docking_results_emitted": False,
