@@ -7,6 +7,207 @@ from pathlib import Path
 import pytest
 
 
+def test_pocketmd_lite_report_endpoint_exposes_operator_panel_rows(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pytest.importorskip("fastapi")
+    from api import product_pocketmd_lite as mod
+
+    canonical = tmp_path / "pocketmd_lite_report_current.json"
+    preview = tmp_path / "pocketmd_lite_candidate_metric_fill_preview_report_current.json"
+    canonical.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "blocked_pocketmd_lite_report",
+                    "schema_version": "pocketmd_lite_contract_v1",
+                    "candidate_count": 2,
+                    "selected_top_k_count": 2,
+                    "refinement_blocker_count": 1,
+                    "top_k_refinement_evidence_ready": False,
+                    "pocketmd_lite_claim_safe": False,
+                    "claim_grade_metric_ready_row_count": 1,
+                    "band_counts": {"green": 1, "yellow": 0, "red": 0, "abstain": 1},
+                    "green_row_count": 1,
+                    "yellow_row_count": 0,
+                    "red_row_count": 0,
+                    "abstain_row_count": 1,
+                    "missing_refinement_metric_names": [
+                        "local_min_ligand_rmsd_a",
+                        "hbond_persistence",
+                    ],
+                    "missing_refinement_metric_counts": {
+                        "local_min_ligand_rmsd_a": 1,
+                        "hbond_persistence": 1,
+                    },
+                    "green_band_condition_text": "green requires exact recovered metrics",
+                },
+                "rows": [
+                    {
+                        "entry_id": "ADRB2.compound_001",
+                        "family": "gpcr",
+                        "selected_for_refine": True,
+                        "band": "abstain",
+                        "claim_safe": False,
+                        "local_min_ligand_rmsd_a": None,
+                        "local_min_survived": None,
+                        "hbond_persistence": None,
+                        "contact_persistence": "0.9",
+                        "initial_clash_count": None,
+                        "clash_count": "0",
+                        "clash_relief_count": None,
+                        "evidence_completeness": "0.4",
+                        "uncertainty_score": "1.0",
+                        "uncertainty_posture": "missing_refinement_evidence_high_uncertainty",
+                        "reason_code": "missing_refinement_evidence",
+                        "missing_evidence_fields": [
+                            "local_min_ligand_rmsd_a",
+                            "hbond_persistence",
+                        ],
+                        "review_flags": [],
+                    },
+                    {
+                        "entry_id": "ADRB2.compound_002",
+                        "family": "gpcr",
+                        "selected_for_refine": True,
+                        "band": "green",
+                        "claim_safe": True,
+                        "local_min_ligand_rmsd_a": "1.4",
+                        "local_min_survived": True,
+                        "hbond_persistence": "0.7",
+                        "contact_persistence": "0.95",
+                        "initial_clash_count": "11",
+                        "clash_count": "0",
+                        "clash_relief_count": "11",
+                        "evidence_completeness": "1.0",
+                        "uncertainty_score": "0.2",
+                        "uncertainty_posture": "green_low_uncertainty",
+                        "reason_code": "",
+                        "missing_evidence_fields": [],
+                        "review_flags": [],
+                    },
+                ],
+                "claim_boundary": "PocketMD Lite report boundary.",
+            }
+        ),
+        encoding="utf-8",
+    )
+    preview.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "pocketmd_lite_report_ready",
+                    "top_k_refinement_evidence_ready": True,
+                    "pocketmd_lite_claim_safe": True,
+                    "claim_grade_metric_ready_row_count": 2,
+                    "green_row_count": 2,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(mod, "POCKETMD_LITE_REPORT_ARTIFACT", canonical)
+    monkeypatch.setattr(
+        mod,
+        "POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_ARTIFACT",
+        preview,
+    )
+
+    payload = asyncio.run(mod.get_product_pocketmd_lite_report())
+
+    assert payload["status"] == "blocked_pocketmd_lite_report"
+    assert payload["report_panel_ready"] is True
+    assert payload["preview_report_ready"] is True
+    assert payload["preview_pocketmd_lite_claim_safe"] is True
+    assert payload["preview_claim_grade_metric_ready_row_count"] == 2
+    assert payload["preview_green_row_count"] == 2
+    assert payload["canonical_review_required"] is True
+    assert payload["claim_promotion_allowed"] is False
+    assert payload["candidate_csv_update_allowed"] is False
+    assert payload["report_row_count"] == 2
+    assert payload["local_min_ligand_rmsd_a_max"] == 1.4
+    assert payload["hbond_persistence_min"] == 0.7
+    assert payload["contact_persistence_min"] == 0.9
+    assert payload["initial_clash_count_total"] == 11
+    assert payload["final_clash_count_total"] == 0
+    assert payload["clash_relief_count_total"] == 11
+    assert payload["report_rows"][0] == {
+        "entry_id": "ADRB2.compound_001",
+        "family": "gpcr",
+        "selected_for_refine": True,
+        "band": "abstain",
+        "claim_safe": False,
+        "local_min_ligand_rmsd_a": None,
+        "local_min_survived": None,
+        "hbond_persistence": None,
+        "contact_persistence": 0.9,
+        "initial_clash_count": None,
+        "final_clash_count": 0,
+        "clash_relief_count": None,
+        "evidence_completeness": 0.4,
+        "uncertainty_score": 1.0,
+        "uncertainty_posture": "missing_refinement_evidence_high_uncertainty",
+        "reason_code": "missing_refinement_evidence",
+        "missing_evidence_fields": ["local_min_ligand_rmsd_a", "hbond_persistence"],
+        "review_flags": [],
+        "operator_action_required": True,
+        "recommended_next_action": "recover_exact_refinement_metric_fields",
+        "claim_promotion_allowed": False,
+        "candidate_csv_update_allowed": False,
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": False,
+    }
+    assert payload["report_rows"][1]["operator_action_required"] is False
+    assert payload["report_rows"][1]["recommended_next_action"] == (
+        "review_and_promote_to_canonical_report_if_approved"
+    )
+    assert {
+        row["blocker_id"]
+        for row in payload["blocker_rows"]
+    } >= {
+        "pocketmd_lite_top_k_refinement_evidence_not_ready",
+        "pocketmd_lite_claim_safe_false",
+        "missing_refinement_metric:local_min_ligand_rmsd_a",
+        "missing_refinement_metric:hbond_persistence",
+        "candidate_refinement_evidence:ADRB2.compound_001",
+        "preview_metrics_require_canonical_review",
+    }
+    assert payload["blocker_row_count"] == len(payload["blocker_rows"])
+    assert all(row["claim_promotion_allowed"] is False for row in payload["blocker_rows"])
+    assert payload["execution_enabled"] is False
+    assert payload["docking_results_emitted"] is False
+    assert payload["external_state_mutated"] is False
+
+
+def test_pocketmd_lite_report_endpoint_is_fail_closed_when_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pytest.importorskip("fastapi")
+    from api import product_pocketmd_lite as mod
+
+    monkeypatch.setattr(mod, "POCKETMD_LITE_REPORT_ARTIFACT", tmp_path / "missing.json")
+
+    payload = asyncio.run(mod.get_product_pocketmd_lite_report())
+
+    assert payload["status"] == "missing_pocketmd_lite_report"
+    assert payload["report_panel_ready"] is False
+    assert payload["preview_report_ready"] is False
+    assert payload["canonical_review_required"] is False
+    assert payload["report_row_count"] == 0
+    assert payload["report_rows"] == []
+    assert payload["blocker_row_count"] == 1
+    assert payload["blocker_rows"][0]["blocker_id"] == "pocketmd_lite_report_missing"
+    assert payload["claim_promotion_allowed"] is False
+    assert payload["candidate_csv_update_allowed"] is False
+    assert payload["local_min_ligand_rmsd_a_max"] == 0.0
+    assert payload["hbond_persistence_min"] == 0.0
+    assert payload["contact_persistence_min"] == 0.0
+    assert payload["execution_enabled"] is False
+    assert payload["docking_results_emitted"] is False
+    assert payload["external_state_mutated"] is False
+
+
 def test_pocketmd_lite_candidate_metric_fill_preview_report_endpoint_reads_artifact(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
