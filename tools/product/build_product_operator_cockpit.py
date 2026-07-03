@@ -235,6 +235,32 @@ def _product_capability_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
+def _goal_readiness_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    summary = _summary(payload)
+    claim_boundary = _text(summary.get("claim_boundary")) or CLAIM_BOUNDARY
+    rows: list[dict[str, Any]] = []
+    for row in _rows(payload):
+        rows.append(
+            {
+                "lane_id": _text(row.get("lane_id")),
+                "lane_status": _text(row.get("lane_status")),
+                "artifact_path": _text(row.get("artifact_path")),
+                "artifact_present": _bool_true(row.get("artifact_present")),
+                "approval_token_required": _text(row.get("approval_token_required")),
+                "blocker_count": _int(row.get("blocker_count")),
+                "observed_status": _text(row.get("observed_status")),
+                "next_required_step": _text(row.get("next_required_step")),
+                "reclaim_size_gb": _float(row.get("reclaim_size_gb")),
+                "claim_boundary": _text(row.get("claim_boundary")) or claim_boundary,
+                "action_executed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _api_customer_flow_release_evidence_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     summary = _summary(payload)
     claim_boundary = _text(summary.get("claim_boundary")) or CLAIM_BOUNDARY
@@ -1053,7 +1079,9 @@ def build_product_operator_cockpit(
     capabilities_payload = _read_json(capabilities_json, root=root)
     capabilities = _summary(capabilities_payload)
     product_capability_row_preview = _product_capability_rows(capabilities_payload)
-    goal = _summary(_read_json(goal_readiness_json, root=root))
+    goal_payload = _read_json(goal_readiness_json, root=root)
+    goal = _summary(goal_payload)
+    goal_readiness_row_preview = _goal_readiness_rows(goal_payload)
     hbond_payload = _read_json(hbond_json, root=root)
     hbond = _summary(hbond_payload)
     hbond_backmap_candidate_row_preview = _hbond_backmap_candidate_rows(hbond_payload)
@@ -1145,6 +1173,14 @@ def build_product_operator_cockpit(
         or goal.get("release_allowed")
     )
     goal_operator_pending_count = _int(goal.get("operator_or_external_pending_lane_count"))
+    goal_readiness_row_count = len(goal_readiness_row_preview)
+    goal_readiness_action_required_row_count = sum(
+        1
+        for row in goal_readiness_row_preview
+        if row["approval_token_required"]
+        or "pending" in _text(row["lane_status"]).lower()
+        or _int(row["blocker_count"]) > 0
+    )
 
     hbond_present = bool(hbond)
     hbond_status = _text(hbond.get("status") or hbond_payload.get("status"))
@@ -2299,6 +2335,11 @@ def build_product_operator_cockpit(
         "product_capability_row_count": product_capability_row_count,
         "product_capability_blocker_row_count": product_capability_blocker_row_count,
         "product_capability_rows": product_capability_row_preview,
+        "goal_readiness_row_count": goal_readiness_row_count,
+        "goal_readiness_action_required_row_count": (
+            goal_readiness_action_required_row_count
+        ),
+        "goal_readiness_rows": goal_readiness_row_preview,
         "hbond_backmap_candidate_rows": hbond_backmap_candidate_row_preview,
         "gpcr_hard_decoy_metric_ready": gpcr_metric_ready,
         "gpcr_broad_claim_allowed": gpcr_broad_claim_allowed,

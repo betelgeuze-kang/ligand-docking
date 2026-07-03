@@ -95,7 +95,53 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "operator_or_external_pending_lane_count": 3,
                 "goal_completion_audit_goal_complete": False,
                 "release_complete_lane_ready": False,
-            }
+                "claim_boundary": "goal readiness fixture boundary",
+            },
+            "rows": [
+                {
+                    "lane_id": "commercial_product_execution",
+                    "lane_status": "operator_approval_pending",
+                    "artifact_path": (
+                        "runs/product_readiness_gate_current.json;"
+                        "runs/product_execution_preflight_current.json"
+                    ),
+                    "artifact_present": True,
+                    "approval_token_required": "APPROVE_PRODUCT_DOCKING_EXECUTION",
+                    "blocker_count": 0,
+                    "observed_status": "product_handoff_ready;product_execution_preflight_ready",
+                    "next_required_step": (
+                        "Pilot packet is ready for final human review and restricted customer handoff."
+                    ),
+                    "reclaim_size_gb": 0,
+                    "action_executed": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                },
+                {
+                    "lane_id": "product_ai_architecture",
+                    "lane_status": "evidence_ready",
+                    "artifact_path": (
+                        "runs/product_ai_architecture_gap_closure_current.json;"
+                        "runs/product_ai_architecture_execution_backlog_current.json"
+                    ),
+                    "artifact_present": True,
+                    "approval_token_required": "",
+                    "blocker_count": 0,
+                    "observed_status": (
+                        "blocked_product_ai_architecture_gap_closure;"
+                        "release_blocking_work_item_count=0"
+                    ),
+                    "next_required_step": (
+                        "Keep optional AI architecture gaps deferred until promotion decision."
+                    ),
+                    "reclaim_size_gb": 0,
+                    "claim_boundary": "goal optional architecture row boundary",
+                    "action_executed": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+            ],
         },
     )
     _write_json(
@@ -1092,6 +1138,55 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
             "bundle_assembled": False,
             "docking_results_emitted": False,
             "claim_boundary": "general platform claim row boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+    ]
+    assert summary["goal_readiness_row_count"] == 2
+    assert summary["goal_readiness_action_required_row_count"] == 1
+    assert summary["goal_readiness_rows"] == [
+        {
+            "lane_id": "commercial_product_execution",
+            "lane_status": "operator_approval_pending",
+            "artifact_path": (
+                "runs/product_readiness_gate_current.json;"
+                "runs/product_execution_preflight_current.json"
+            ),
+            "artifact_present": True,
+            "approval_token_required": "APPROVE_PRODUCT_DOCKING_EXECUTION",
+            "blocker_count": 0,
+            "observed_status": "product_handoff_ready;product_execution_preflight_ready",
+            "next_required_step": (
+                "Pilot packet is ready for final human review and restricted customer handoff."
+            ),
+            "reclaim_size_gb": 0.0,
+            "claim_boundary": "goal readiness fixture boundary",
+            "action_executed": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+        {
+            "lane_id": "product_ai_architecture",
+            "lane_status": "evidence_ready",
+            "artifact_path": (
+                "runs/product_ai_architecture_gap_closure_current.json;"
+                "runs/product_ai_architecture_execution_backlog_current.json"
+            ),
+            "artifact_present": True,
+            "approval_token_required": "",
+            "blocker_count": 0,
+            "observed_status": (
+                "blocked_product_ai_architecture_gap_closure;"
+                "release_blocking_work_item_count=0"
+            ),
+            "next_required_step": (
+                "Keep optional AI architecture gaps deferred until promotion decision."
+            ),
+            "reclaim_size_gb": 0.0,
+            "claim_boundary": "goal optional architecture row boundary",
+            "action_executed": False,
             "execution_enabled": False,
             "external_state_mutated": False,
             "claim_promotion_allowed": False,

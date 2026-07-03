@@ -177,6 +177,33 @@ def _product_capability_rows(value: Any) -> list[dict[str, Any]]:
     return capability_rows
 
 
+def _goal_readiness_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    readiness_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        readiness_rows.append(
+            {
+                "lane_id": str(row.get("lane_id") or ""),
+                "lane_status": str(row.get("lane_status") or ""),
+                "artifact_path": str(row.get("artifact_path") or ""),
+                "artifact_present": bool(row.get("artifact_present") is True),
+                "approval_token_required": str(row.get("approval_token_required") or ""),
+                "blocker_count": _int(row.get("blocker_count")),
+                "observed_status": str(row.get("observed_status") or ""),
+                "next_required_step": str(row.get("next_required_step") or ""),
+                "reclaim_size_gb": _float(row.get("reclaim_size_gb")),
+                "claim_boundary": str(row.get("claim_boundary") or CLAIM_BOUNDARY),
+                "action_executed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return readiness_rows
+
+
 def _api_customer_flow_release_evidence_rows(value: Any) -> list[dict[str, Any]]:
     rows = value if isinstance(value, list) else []
     evidence_rows: list[dict[str, Any]] = []
@@ -667,6 +694,9 @@ def _missing_response() -> dict[str, Any]:
         "product_capability_row_count": 0,
         "product_capability_blocker_row_count": 0,
         "product_capability_rows": [],
+        "goal_readiness_row_count": 0,
+        "goal_readiness_action_required_row_count": 0,
+        "goal_readiness_rows": [],
         "hbond_backmap_candidate_rows": [],
         "gpcr_hard_decoy_metric_ready": False,
         "gpcr_broad_claim_allowed": False,
@@ -929,6 +959,13 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "product_capability_rows": _product_capability_rows(
             summary.get("product_capability_rows")
+        ),
+        "goal_readiness_row_count": _int(summary.get("goal_readiness_row_count")),
+        "goal_readiness_action_required_row_count": _int(
+            summary.get("goal_readiness_action_required_row_count")
+        ),
+        "goal_readiness_rows": _goal_readiness_rows(
+            summary.get("goal_readiness_rows")
         ),
         "hbond_backmap_candidate_rows": _hbond_backmap_candidate_rows(
             summary.get("hbond_backmap_candidate_rows")

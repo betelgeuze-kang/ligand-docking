@@ -198,6 +198,57 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                         "claim_promotion_allowed": True,
                     },
                 ],
+                "goal_readiness_row_count": 2,
+                "goal_readiness_action_required_row_count": 1,
+                "goal_readiness_rows": [
+                    {
+                        "lane_id": "commercial_product_execution",
+                        "lane_status": "operator_approval_pending",
+                        "artifact_path": (
+                            "runs/product_readiness_gate_current.json;"
+                            "runs/product_execution_preflight_current.json"
+                        ),
+                        "artifact_present": True,
+                        "approval_token_required": "APPROVE_PRODUCT_DOCKING_EXECUTION",
+                        "blocker_count": 0,
+                        "observed_status": (
+                            "product_handoff_ready;product_execution_preflight_ready"
+                        ),
+                        "next_required_step": (
+                            "Pilot packet is ready for final human review and restricted customer handoff."
+                        ),
+                        "reclaim_size_gb": 0,
+                        "claim_boundary": "goal readiness fixture boundary",
+                        "action_executed": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                    {
+                        "lane_id": "product_ai_architecture",
+                        "lane_status": "evidence_ready",
+                        "artifact_path": (
+                            "runs/product_ai_architecture_gap_closure_current.json;"
+                            "runs/product_ai_architecture_execution_backlog_current.json"
+                        ),
+                        "artifact_present": True,
+                        "approval_token_required": "",
+                        "blocker_count": 0,
+                        "observed_status": (
+                            "blocked_product_ai_architecture_gap_closure;"
+                            "release_blocking_work_item_count=0"
+                        ),
+                        "next_required_step": (
+                            "Keep optional AI architecture gaps deferred until promotion decision."
+                        ),
+                        "reclaim_size_gb": 0,
+                        "claim_boundary": "goal optional architecture row boundary",
+                        "action_executed": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                ],
                 "hbond_backmap_candidate_rows": [
                     {
                         "entry_id": "ADRB2::LIG-1",
@@ -907,6 +958,55 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
             "claim_promotion_allowed": False,
         },
     ]
+    assert response["goal_readiness_row_count"] == 2
+    assert response["goal_readiness_action_required_row_count"] == 1
+    assert response["goal_readiness_rows"] == [
+        {
+            "lane_id": "commercial_product_execution",
+            "lane_status": "operator_approval_pending",
+            "artifact_path": (
+                "runs/product_readiness_gate_current.json;"
+                "runs/product_execution_preflight_current.json"
+            ),
+            "artifact_present": True,
+            "approval_token_required": "APPROVE_PRODUCT_DOCKING_EXECUTION",
+            "blocker_count": 0,
+            "observed_status": "product_handoff_ready;product_execution_preflight_ready",
+            "next_required_step": (
+                "Pilot packet is ready for final human review and restricted customer handoff."
+            ),
+            "reclaim_size_gb": 0.0,
+            "claim_boundary": "goal readiness fixture boundary",
+            "action_executed": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+        {
+            "lane_id": "product_ai_architecture",
+            "lane_status": "evidence_ready",
+            "artifact_path": (
+                "runs/product_ai_architecture_gap_closure_current.json;"
+                "runs/product_ai_architecture_execution_backlog_current.json"
+            ),
+            "artifact_present": True,
+            "approval_token_required": "",
+            "blocker_count": 0,
+            "observed_status": (
+                "blocked_product_ai_architecture_gap_closure;"
+                "release_blocking_work_item_count=0"
+            ),
+            "next_required_step": (
+                "Keep optional AI architecture gaps deferred until promotion decision."
+            ),
+            "reclaim_size_gb": 0.0,
+            "claim_boundary": "goal optional architecture row boundary",
+            "action_executed": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+    ]
     assert response["hbond_backmap_candidate_rows"] == [
         {
             "entry_id": "ADRB2::LIG-1",
@@ -1609,6 +1709,9 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["product_capability_row_count"] == 0
     assert response["product_capability_blocker_row_count"] == 0
     assert response["product_capability_rows"] == []
+    assert response["goal_readiness_row_count"] == 0
+    assert response["goal_readiness_action_required_row_count"] == 0
+    assert response["goal_readiness_rows"] == []
     assert response["hbond_backmap_candidate_rows"] == []
     assert response["gpcr_broad_claim_allowed"] is False
     assert response["gpcr_phase3_closure_present"] is False
