@@ -133,6 +133,177 @@ def test_goal_readiness_missing_artifact_keeps_dashboard_shape(
     assert response["external_state_mutated"] is False
 
 
+def test_goal_developer_preview_exposes_requirement_rows_fail_closed(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    artifact = tmp_path / "runs/developer_preview_final_gate_audit_current.json"
+    clean_checkout_receipt = (
+        tmp_path / ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+    )
+    monkeypatch.setattr(mod, "DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT", artifact)
+    monkeypatch.setattr(
+        mod,
+        "DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT",
+        clean_checkout_receipt,
+    )
+    _write_json(
+        artifact,
+        {
+            "summary": {
+                "status": "blocked_developer_preview_final_gate_audit",
+                "developer_preview_clean_baseline_ready": True,
+                "gate_count": 2,
+                "ready_gate_count": 1,
+                "blocked_gate_count": 1,
+                "receipt_work_order_row_count": 1,
+                "claim_boundary": "developer preview fixture boundary",
+            },
+            "rows": [
+                {
+                    "gate_id": "benchmark_results_clean_checkout_regenerated",
+                    "priority": "A",
+                    "status": "blocked_developer_preview_gate",
+                    "ready": False,
+                    "blocker": "clean_checkout_receipt_not_ready",
+                    "blockers": "clean_checkout_receipt_not_ready;review_missing",
+                    "receipt_artifacts": (
+                        ".betelgeuze/"
+                        "developer_preview_clean_checkout_benchmark_receipt.json"
+                    ),
+                    "present_receipt_count": 1,
+                    "required_receipt_count": 1,
+                    "present_blocked_receipt_count": 1,
+                    "receipt_blocker_count": 2,
+                    "receipt_blockers": "review_missing;blocker_count_nonzero",
+                    "primary_metric": "required_ready=false",
+                    "secondary_metric": "present_receipts=1; required_receipts=1",
+                    "next_required_step": "Attach reviewed clean-checkout receipt.",
+                },
+                {
+                    "gate_id": "silent_import_loss_zero",
+                    "priority": "B",
+                    "status": "developer_preview_gate_ready",
+                    "ready": True,
+                    "receipt_artifacts": (
+                        ".betelgeuze/developer_preview_silent_import_loss_receipt.json"
+                    ),
+                    "present_receipt_count": 1,
+                    "required_receipt_count": 1,
+                    "present_blocked_receipt_count": 0,
+                    "receipt_blocker_count": 0,
+                    "next_required_step": "Keep import-loss receipt current.",
+                },
+            ],
+            "receipt_work_order_rows": [
+                {
+                    "gate_id": "benchmark_results_clean_checkout_regenerated",
+                    "priority": "A",
+                    "receipt_artifact": (
+                        ".betelgeuze/"
+                        "developer_preview_clean_checkout_benchmark_receipt.json"
+                    ),
+                    "receipt_kind": "required",
+                    "blocker_scope": "receipt_contract",
+                    "blocker_detail": "review_missing",
+                    "required_action": "Attach reviewed clean-checkout receipt.",
+                    "required_receipt_status": (
+                        "developer_preview_clean_checkout_benchmark_receipt_ready"
+                    ),
+                    "required_true_fields": (
+                        "clean_checkout_benchmark_regenerated,"
+                        "reviewed_receipt_attached"
+                    ),
+                    "required_zero_fields": "blocker_count,failed_count",
+                    "next_required_step": "Attach reviewed clean-checkout receipt.",
+                }
+            ],
+        },
+    )
+
+    response = asyncio.run(mod.get_goal_developer_preview())
+
+    assert response["status"] == "blocked_developer_preview_final_gate_audit"
+    assert response["developer_preview_requirement_row_count"] == 6
+    assert response["developer_preview_requirement_ready_row_count"] == 1
+    assert response["developer_preview_requirement_blocked_row_count"] == 5
+    assert response["developer_preview_requirement_all_ready"] is False
+    assert response["developer_demo_wording_allowed"] is False
+    assert response["paid_pilot_wording_allowed"] is False
+    rows = {
+        row["requirement_id"]: row
+        for row in response["developer_preview_requirement_rows"]
+    }
+    assert rows["benchmark_results_clean_checkout_regenerated"]["blocker"] == (
+        "clean_checkout_receipt_not_ready"
+    )
+    assert rows["benchmark_results_clean_checkout_regenerated"][
+        "operator_action_required"
+    ] is True
+    assert rows["silent_import_loss_zero"]["ready"] is True
+    assert rows["silent_import_loss_zero"]["operator_action_required"] is False
+    assert rows["large_models_crash_oom_free"]["status"] == (
+        "missing_developer_preview_gate"
+    )
+    assert rows["large_models_crash_oom_free"]["blocker"] == (
+        "developer_preview_gate_missing"
+    )
+    assert response["developer_demo_wording_blocker_gate_ids"] == [
+        "benchmark_results_clean_checkout_regenerated",
+        "selected_medium_models_pass_or_approved_review",
+        "large_models_crash_oom_free",
+        "linux_windows_reproducibility_confirmed",
+        "new_user_core_workflow_observation_passed",
+    ]
+    assert all(
+        row["developer_demo_wording_allowed"] is False
+        and row["paid_pilot_wording_allowed"] is False
+        and row["claim_promotion_allowed"] is False
+        and row["execution_enabled"] is False
+        and row["external_state_mutated"] is False
+        for row in response["developer_preview_requirement_rows"]
+    )
+    assert response["receipt_work_order_blocked_row_count"] == 1
+    assert response["execution_enabled"] is False
+    assert response["external_state_mutated"] is False
+    assert response["claim_boundary"] == "developer preview fixture boundary"
+
+
+def test_goal_developer_preview_missing_artifact_keeps_requirements_fail_closed(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        mod,
+        "DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT",
+        tmp_path / "runs/missing_developer_preview_final_gate_audit_current.json",
+    )
+    monkeypatch.setattr(
+        mod,
+        "DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT",
+        tmp_path / ".betelgeuze/missing_developer_preview_clean_checkout_receipt.json",
+    )
+
+    response = asyncio.run(mod.get_goal_developer_preview())
+
+    assert response["status"] == "missing_developer_preview_final_gate_audit"
+    assert response["developer_preview_requirement_row_count"] == 6
+    assert response["developer_preview_requirement_ready_row_count"] == 0
+    assert response["developer_preview_requirement_blocked_row_count"] == 6
+    assert response["developer_preview_requirement_all_ready"] is False
+    assert response["developer_preview_requirement_blocked_rows"] == response[
+        "developer_preview_requirement_rows"
+    ]
+    assert response["developer_demo_wording_allowed"] is False
+    assert response["paid_pilot_wording_allowed"] is False
+    assert all(
+        row["blocker"] == "developer_preview_gate_missing"
+        for row in response["developer_preview_requirement_rows"]
+    )
+    assert response["execution_enabled"] is False
+    assert response["external_state_mutated"] is False
+
+
 def test_goal_customer_shadow_exposes_paid_pilot_requirement_rows(
     tmp_path: Path,
     monkeypatch,

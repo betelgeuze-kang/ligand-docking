@@ -21,6 +21,30 @@ DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT = ROOT / "runs" / "developer_preview
 DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT = (
     ROOT / ".betelgeuze" / "developer_preview_clean_checkout_benchmark_receipt.json"
 )
+DEVELOPER_PREVIEW_REQUIREMENT_DEFINITIONS = (
+    (
+        "benchmark_results_clean_checkout_regenerated",
+        "A",
+        "clean_checkout_benchmark_regeneration",
+    ),
+    ("silent_import_loss_zero", "B", "silent_import_loss_zero"),
+    (
+        "selected_medium_models_pass_or_approved_review",
+        "C",
+        "selected_medium_models_pass_or_approved_review",
+    ),
+    ("large_models_crash_oom_free", "D", "large_models_crash_oom_free"),
+    (
+        "linux_windows_reproducibility_confirmed",
+        "E",
+        "linux_windows_reproducibility",
+    ),
+    (
+        "new_user_core_workflow_observation_passed",
+        "F",
+        "new_user_core_workflow_observation",
+    ),
+)
 PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT = (
     ROOT / "runs" / "public_benchmark_external_receipts_audit_current.json"
 )
@@ -603,6 +627,75 @@ def _developer_preview_gate_summaries(rows: list[dict[str, Any]]) -> list[dict[s
             }
         )
     return summaries
+
+
+def _developer_preview_requirement_surface(
+    gate_summaries: list[dict[str, Any]],
+) -> dict[str, Any]:
+    gates_by_id = {str(row.get("gate_id") or ""): row for row in gate_summaries}
+    requirement_rows: list[dict[str, Any]] = []
+    for gate_id, priority, requirement_label in DEVELOPER_PREVIEW_REQUIREMENT_DEFINITIONS:
+        gate = gates_by_id.get(gate_id, {})
+        ready = bool(gate.get("ready") is True)
+        blockers = _delimited_string_list(gate.get("blockers"))
+        receipt_blockers = _delimited_string_list(gate.get("receipt_blockers"))
+        blocker = str(gate.get("blocker") or "").strip()
+        if blocker and blocker not in blockers:
+            blockers.insert(0, blocker)
+        if not blockers and receipt_blockers:
+            blockers = receipt_blockers[:]
+        if not ready and not blockers:
+            blockers = [
+                "developer_preview_gate_missing"
+                if not gate
+                else "developer_preview_gate_not_ready"
+            ]
+        requirement_rows.append(
+            {
+                "requirement_id": gate_id,
+                "gate_id": gate_id,
+                "requirement_label": requirement_label,
+                "priority": str(gate.get("priority") or priority),
+                "status": str(gate.get("status") or "missing_developer_preview_gate"),
+                "ready": ready,
+                "blocker": blockers[0] if blockers else "",
+                "blockers": blockers,
+                "receipt_artifacts": _delimited_string_list(gate.get("receipt_artifacts")),
+                "present_receipt_count": _int(gate.get("present_receipt_count")),
+                "required_receipt_count": _int(gate.get("required_receipt_count")),
+                "present_blocked_receipt_count": _int(
+                    gate.get("present_blocked_receipt_count")
+                ),
+                "receipt_blocker_count": _int(gate.get("receipt_blocker_count")),
+                "receipt_blockers": receipt_blockers,
+                "primary_metric": str(gate.get("primary_metric") or ""),
+                "secondary_metric": str(gate.get("secondary_metric") or ""),
+                "next_required_step": str(gate.get("next_required_step") or ""),
+                "operator_action_required": not ready,
+                "developer_demo_wording_allowed": False,
+                "paid_pilot_wording_allowed": False,
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+    blocked_rows = [row for row in requirement_rows if not row["ready"]]
+    return {
+        "developer_preview_requirement_row_count": len(requirement_rows),
+        "developer_preview_requirement_ready_row_count": (
+            len(requirement_rows) - len(blocked_rows)
+        ),
+        "developer_preview_requirement_blocked_row_count": len(blocked_rows),
+        "developer_preview_requirement_all_ready": bool(requirement_rows) and not blocked_rows,
+        "developer_preview_requirement_rows": requirement_rows,
+        "developer_preview_requirement_blocked_rows": blocked_rows,
+        "developer_demo_wording_blocker_gate_ids": [
+            str(row["gate_id"]) for row in blocked_rows
+        ],
+        "developer_demo_wording_blockers": [
+            str(row["blocker"]) for row in blocked_rows if str(row.get("blocker") or "")
+        ],
+    }
 
 
 def _developer_preview_work_order_surface(work_rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -3922,6 +4015,8 @@ async def get_goal_developer_preview() -> dict[str, Any]:
         if isinstance(receipt_work_order_rows, list)
         else []
     )
+    gate_summaries = _developer_preview_gate_summaries(gate_rows)
+    requirement_surface = _developer_preview_requirement_surface(gate_summaries)
     if not summary:
         return {
             "status": "missing_developer_preview_final_gate_audit",
@@ -3939,6 +4034,7 @@ async def get_goal_developer_preview() -> dict[str, Any]:
             "rows": [],
             "gate_summaries": [],
             "blocked_gate_summaries": [],
+            **requirement_surface,
             "receipt_work_order_rows": [],
             "receipt_work_order_blocked_row_count": 0,
             "receipt_work_order_contract_blocker_row_count": 0,
@@ -3957,7 +4053,6 @@ async def get_goal_developer_preview() -> dict[str, Any]:
     clean_checkout_surface = _developer_preview_clean_checkout_receipt_surface(
         DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT
     )
-    gate_summaries = _developer_preview_gate_summaries(gate_rows)
     return {
         **summary,
         "artifact_path": str(DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT),
@@ -3971,11 +4066,13 @@ async def get_goal_developer_preview() -> dict[str, Any]:
         "rows": gate_rows,
         "gate_summaries": gate_summaries,
         "blocked_gate_summaries": [row for row in gate_summaries if not row["ready"]],
+        **requirement_surface,
         "receipt_work_order_rows": work_rows,
         **_developer_preview_work_order_surface(work_rows),
         **clean_checkout_surface,
         "developer_demo_wording_allowed": bool(
             summary.get("developer_preview_clean_baseline_ready") is True
+            and requirement_surface["developer_preview_requirement_all_ready"] is True
         ),
         **_mutation_flags(),
         "claim_boundary": summary.get("claim_boundary") or CLAIM_BOUNDARY,
