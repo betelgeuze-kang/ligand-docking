@@ -21,6 +21,9 @@ DEFAULT_POCKETMD_JSON = "runs/pocketmd_lite_topk_refinement_audit_current.json"
 DEFAULT_POCKETMD_METRIC_SOURCE_AUDIT_JSON = (
     "runs/pocketmd_lite_claim_grade_metric_source_audit_current.json"
 )
+DEFAULT_POCKETMD_CANONICAL_REVIEW_JSON = (
+    "runs/pocketmd_lite_canonical_report_review_packet_current.json"
+)
 DEFAULT_PUBLIC_BENCHMARK_JSON = "runs/public_benchmark_external_receipts_audit_current.json"
 DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON = (
     "runs/public_benchmark_receipt_attach_packet_current.json"
@@ -1671,6 +1674,7 @@ def build_product_operator_cockpit(
     pocketmd_metric_source_audit_json: str | Path = (
         DEFAULT_POCKETMD_METRIC_SOURCE_AUDIT_JSON
     ),
+    pocketmd_canonical_review_json: str | Path = DEFAULT_POCKETMD_CANONICAL_REVIEW_JSON,
     public_benchmark_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_JSON,
     public_benchmark_receipt_attach_packet_json: str | Path = (
         DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON
@@ -1737,6 +1741,11 @@ def build_product_operator_cockpit(
     pocketmd_lite_metric_source_audit_row_preview = (
         _pocketmd_lite_metric_source_audit_rows(pocketmd_metric_source_payload)
     )
+    pocketmd_canonical_review_payload = _read_json(
+        pocketmd_canonical_review_json,
+        root=root,
+    )
+    pocketmd_canonical_review = _summary(pocketmd_canonical_review_payload)
     public_benchmark_payload = _read_json(public_benchmark_json, root=root)
     public_benchmark = _summary(public_benchmark_payload)
     public_benchmark_external_receipt_step_rows = (
@@ -2105,8 +2114,32 @@ def build_product_operator_cockpit(
         for row in pocketmd_lite_metric_source_audit_row_preview
         if row["operator_action_required"]
     )
+    pocketmd_canonical_review_present = bool(pocketmd_canonical_review)
+    pocketmd_canonical_review_required = _bool_true(
+        pocketmd_canonical_review.get("operator_approval_required")
+    )
+    pocketmd_canonical_review_status = _text(
+        pocketmd_canonical_review.get("status")
+        or pocketmd_canonical_review_payload.get("status")
+    )
+    pocketmd_canonical_report_ready = _bool_true(
+        pocketmd_canonical_review.get("canonical_report_ready")
+    )
+    pocketmd_canonical_preview_report_ready = _bool_true(
+        pocketmd_canonical_review.get("preview_report_ready")
+    )
+    pocketmd_canonical_review_row_count = _int(
+        pocketmd_canonical_review.get("review_row_count")
+    )
+    pocketmd_canonical_ready_review_row_count = _int(
+        pocketmd_canonical_review.get("ready_review_row_count")
+    )
+    pocketmd_canonical_approval_token_required = _first_text(
+        pocketmd_canonical_review.get("approval_token_required")
+    )
     pocketmd_metric_source_canonical_review_required = bool(
-        pocketmd_fill_preview_ready and not pocketmd_report_ready
+        pocketmd_canonical_review_required
+        or (pocketmd_fill_preview_ready and not pocketmd_report_ready)
     )
     pocketmd_metric_source_blockers = []
     if not pocketmd_metric_source_audit_ready:
@@ -3101,6 +3134,13 @@ def build_product_operator_cockpit(
                 _metric("refinement_ready", pocketmd_refinement_ready),
                 _metric("report_ready", pocketmd_report_ready),
                 _metric("preview_ready", pocketmd_fill_preview_ready),
+                _metric("canonical_review_required", pocketmd_canonical_review_required),
+                _metric("canonical_review_status", pocketmd_canonical_review_status),
+                _count_metric("canonical_review_rows", pocketmd_canonical_review_row_count),
+                _count_metric(
+                    "canonical_ready_review_rows",
+                    pocketmd_canonical_ready_review_row_count,
+                ),
                 _metric("local_min_rmsd_max", pocketmd_local_min_ligand_rmsd_a_max),
                 _metric("hbond_persistence_min", pocketmd_hbond_persistence_min),
                 _metric("contact_persistence_min", pocketmd_contact_persistence_min),
@@ -3110,6 +3150,9 @@ def build_product_operator_cockpit(
                 _metric("promotion_allowed", pocketmd_promotion_allowed),
             ),
             next_action=_first_text(
+                pocketmd_canonical_review.get("next_required_step")
+                if pocketmd_canonical_review_required
+                else "",
                 pocketmd.get("next_required_step"),
                 "Finish claim-grade report evidence before PocketMD Lite customer-facing wording.",
             ),
@@ -3118,7 +3161,9 @@ def build_product_operator_cockpit(
             blockers=[]
             if pocketmd_lite_claim_allowed
             else [
-                "pocketmd_lite_claim_promotion_missing"
+                "pocketmd_lite_canonical_review_required"
+                if pocketmd_canonical_review_required
+                else "pocketmd_lite_claim_promotion_missing"
                 if pocketmd_refinement_ready and pocketmd_report_ready
                 else "pocketmd_lite_preview_not_canonical_report"
                 if pocketmd_refinement_ready and pocketmd_fill_preview_ready and not pocketmd_report_ready
@@ -3167,9 +3212,15 @@ def build_product_operator_cockpit(
                 ),
                 _metric("preview_ready", pocketmd_fill_preview_ready),
                 _metric("report_ready", pocketmd_report_ready),
+                _metric("canonical_review_required", pocketmd_canonical_review_required),
+                _metric("canonical_report_ready", pocketmd_canonical_report_ready),
+                _metric("canonical_review_status", pocketmd_canonical_review_status),
                 _metric("promotion_allowed", False),
             ),
             next_action=_first_text(
+                pocketmd_canonical_review.get("next_required_step")
+                if pocketmd_canonical_review_required
+                else "",
                 pocketmd_metric_source.get("next_required_step"),
                 pocketmd.get("next_required_step"),
                 "Extract exact NPZ metric fields into the candidate fill preview, then rerun the canonical PocketMD Lite report.",
@@ -3902,7 +3953,21 @@ def build_product_operator_cockpit(
         "pocketmd_lite_report_evidence_ready": pocketmd_report_ready,
         "pocketmd_lite_fill_preview_evidence_ready": pocketmd_fill_preview_ready,
         "pocketmd_lite_preview_requires_canonical_review": (
-            pocketmd_fill_preview_ready and not pocketmd_report_ready
+            pocketmd_metric_source_canonical_review_required
+        ),
+        "pocketmd_lite_canonical_review_present": pocketmd_canonical_review_present,
+        "pocketmd_lite_canonical_review_required": pocketmd_canonical_review_required,
+        "pocketmd_lite_canonical_review_status": pocketmd_canonical_review_status,
+        "pocketmd_lite_canonical_report_ready": pocketmd_canonical_report_ready,
+        "pocketmd_lite_canonical_preview_report_ready": (
+            pocketmd_canonical_preview_report_ready
+        ),
+        "pocketmd_lite_canonical_review_row_count": pocketmd_canonical_review_row_count,
+        "pocketmd_lite_canonical_ready_review_row_count": (
+            pocketmd_canonical_ready_review_row_count
+        ),
+        "pocketmd_lite_canonical_approval_token_required": (
+            pocketmd_canonical_approval_token_required
         ),
         "pocketmd_lite_claim_grade_metric_ready_row_count": (
             pocketmd_claim_grade_metric_ready_row_count
@@ -4510,6 +4575,10 @@ def _parser() -> argparse.ArgumentParser:
         "--pocketmd-metric-source-audit-json",
         default=DEFAULT_POCKETMD_METRIC_SOURCE_AUDIT_JSON,
     )
+    parser.add_argument(
+        "--pocketmd-canonical-review-json",
+        default=DEFAULT_POCKETMD_CANONICAL_REVIEW_JSON,
+    )
     parser.add_argument("--public-benchmark-json", default=DEFAULT_PUBLIC_BENCHMARK_JSON)
     parser.add_argument(
         "--public-benchmark-receipt-attach-packet-json",
@@ -4570,6 +4639,7 @@ def main(argv: list[str] | None = None) -> int:
         gpcr_phase3_closure_json=args.gpcr_phase3_closure_json,
         pocketmd_json=args.pocketmd_json,
         pocketmd_metric_source_audit_json=args.pocketmd_metric_source_audit_json,
+        pocketmd_canonical_review_json=args.pocketmd_canonical_review_json,
         public_benchmark_json=args.public_benchmark_json,
         public_benchmark_receipt_attach_packet_json=args.public_benchmark_receipt_attach_packet_json,
         public_benchmark_vina_gnina_score_template_receipt_json=(

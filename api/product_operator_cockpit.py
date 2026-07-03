@@ -1063,6 +1063,14 @@ def _missing_response() -> dict[str, Any]:
         "pocketmd_lite_report_evidence_ready": False,
         "pocketmd_lite_fill_preview_evidence_ready": False,
         "pocketmd_lite_preview_requires_canonical_review": False,
+        "pocketmd_lite_canonical_review_present": False,
+        "pocketmd_lite_canonical_review_required": False,
+        "pocketmd_lite_canonical_review_status": "",
+        "pocketmd_lite_canonical_report_ready": False,
+        "pocketmd_lite_canonical_preview_report_ready": False,
+        "pocketmd_lite_canonical_review_row_count": 0,
+        "pocketmd_lite_canonical_ready_review_row_count": 0,
+        "pocketmd_lite_canonical_approval_token_required": "",
         "pocketmd_lite_claim_grade_metric_ready_row_count": 0,
         "pocketmd_lite_local_min_ligand_rmsd_a_max": 0.0,
         "pocketmd_lite_hbond_persistence_min": 0.0,
@@ -1461,6 +1469,30 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "pocketmd_lite_preview_requires_canonical_review": bool(
             summary.get("pocketmd_lite_preview_requires_canonical_review") is True
+        ),
+        "pocketmd_lite_canonical_review_present": bool(
+            summary.get("pocketmd_lite_canonical_review_present") is True
+        ),
+        "pocketmd_lite_canonical_review_required": bool(
+            summary.get("pocketmd_lite_canonical_review_required") is True
+        ),
+        "pocketmd_lite_canonical_review_status": str(
+            summary.get("pocketmd_lite_canonical_review_status") or ""
+        ),
+        "pocketmd_lite_canonical_report_ready": bool(
+            summary.get("pocketmd_lite_canonical_report_ready") is True
+        ),
+        "pocketmd_lite_canonical_preview_report_ready": bool(
+            summary.get("pocketmd_lite_canonical_preview_report_ready") is True
+        ),
+        "pocketmd_lite_canonical_review_row_count": _int(
+            summary.get("pocketmd_lite_canonical_review_row_count")
+        ),
+        "pocketmd_lite_canonical_ready_review_row_count": _int(
+            summary.get("pocketmd_lite_canonical_ready_review_row_count")
+        ),
+        "pocketmd_lite_canonical_approval_token_required": str(
+            summary.get("pocketmd_lite_canonical_approval_token_required") or ""
         ),
         "pocketmd_lite_claim_grade_metric_ready_row_count": _int(
             summary.get("pocketmd_lite_claim_grade_metric_ready_row_count")

@@ -26,6 +26,9 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         "pocketmd_metric_source": (
             tmp_path / "runs/pocketmd_lite_claim_grade_metric_source_audit_current.json"
         ),
+        "pocketmd_canonical_review": (
+            tmp_path / "runs/pocketmd_lite_canonical_report_review_packet_current.json"
+        ),
         "public": tmp_path / "runs/public_benchmark_external_receipts_audit_current.json",
         "public_attach": tmp_path / "runs/public_benchmark_receipt_attach_packet_current.json",
         "public_vina_gnina_score_receipt": (
@@ -521,6 +524,25 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                     "claim_promotion_allowed": True,
                 },
             ],
+        },
+    )
+    _write_json(
+        paths["pocketmd_canonical_review"],
+        {
+            "summary": {
+                "status": "pocketmd_lite_canonical_report_review_packet_ready",
+                "operator_approval_required": True,
+                "approval_token_required": "APPROVE_POCKETMD_LITE_CANONICAL_METRIC_FILL",
+                "canonical_report_ready": False,
+                "preview_report_ready": True,
+                "canonical_claim_safe": False,
+                "preview_claim_safe": True,
+                "review_row_count": 2,
+                "ready_review_row_count": 2,
+                "next_required_step": (
+                    "Operator review required before canonical candidate CSV update."
+                ),
+            }
         },
     )
     _write_json(
@@ -1794,6 +1816,7 @@ def _build_payload(tmp_path: Path) -> dict:
         gpcr_phase3_closure_json=paths["gpcr_phase3"],
         pocketmd_json=paths["pocketmd"],
         pocketmd_metric_source_audit_json=paths["pocketmd_metric_source"],
+        pocketmd_canonical_review_json=paths["pocketmd_canonical_review"],
         public_benchmark_json=paths["public"],
         public_benchmark_receipt_attach_packet_json=paths["public_attach"],
         public_benchmark_vina_gnina_score_template_receipt_json=(
@@ -1824,6 +1847,36 @@ def _build_payload(tmp_path: Path) -> dict:
         pr38_split_acceptance_json=paths["pr38_acceptance"],
         pr38_child_pr_verification_matrix_json=paths["pr38_matrix"],
         root=tmp_path,
+    )
+
+
+def test_product_operator_cockpit_keeps_pocketmd_preview_under_canonical_review(
+    tmp_path: Path,
+) -> None:
+    paths = _write_inputs(tmp_path)
+    pocketmd_payload = json.loads(paths["pocketmd"].read_text(encoding="utf-8"))
+    pocketmd_payload["summary"]["claim_grade_report_evidence_ready"] = True
+    pocketmd_payload["summary"]["next_required_step"] = "Review the green preview bands."
+    paths["pocketmd"].write_text(json.dumps(pocketmd_payload), encoding="utf-8")
+
+    payload = mod.build_product_operator_cockpit(root=tmp_path)
+    summary = payload["summary"]
+    panels = {row["panel_id"]: row for row in payload["rows"]}
+
+    assert summary["pocketmd_lite_report_evidence_ready"] is True
+    assert summary["pocketmd_lite_fill_preview_evidence_ready"] is True
+    assert summary["pocketmd_lite_preview_requires_canonical_review"] is True
+    assert summary["pocketmd_lite_canonical_review_required"] is True
+    assert summary["pocketmd_lite_metric_source_canonical_review_required"] is True
+    assert panels["pocketmd_lite_report_panel"]["blockers"] == [
+        "pocketmd_lite_canonical_review_required"
+    ]
+    assert "report_ready=true" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
+    assert "canonical_review_required=true" in (
+        panels["pocketmd_lite_report_panel"]["secondary_metric"]
+    )
+    assert panels["pocketmd_lite_report_panel"]["next_action"] == (
+        "Operator review required before canonical candidate CSV update."
     )
 
 
@@ -2077,6 +2130,18 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["pocketmd_lite_report_evidence_ready"] is False
     assert summary["pocketmd_lite_fill_preview_evidence_ready"] is True
     assert summary["pocketmd_lite_preview_requires_canonical_review"] is True
+    assert summary["pocketmd_lite_canonical_review_present"] is True
+    assert summary["pocketmd_lite_canonical_review_required"] is True
+    assert summary["pocketmd_lite_canonical_review_status"] == (
+        "pocketmd_lite_canonical_report_review_packet_ready"
+    )
+    assert summary["pocketmd_lite_canonical_report_ready"] is False
+    assert summary["pocketmd_lite_canonical_preview_report_ready"] is True
+    assert summary["pocketmd_lite_canonical_review_row_count"] == 2
+    assert summary["pocketmd_lite_canonical_ready_review_row_count"] == 2
+    assert summary["pocketmd_lite_canonical_approval_token_required"] == (
+        "APPROVE_POCKETMD_LITE_CANONICAL_METRIC_FILL"
+    )
     assert summary["pocketmd_lite_claim_grade_metric_ready_row_count"] == 2
     assert summary["pocketmd_lite_local_min_ligand_rmsd_a_max"] == 1.29
     assert summary["pocketmd_lite_hbond_persistence_min"] == 0.8
@@ -3153,6 +3218,19 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "abstain=0" in panels["pocketmd_lite_report_panel"]["primary_metric"]
     assert "report_ready=false" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
     assert "preview_ready=true" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
+    assert "canonical_review_required=true" in (
+        panels["pocketmd_lite_report_panel"]["secondary_metric"]
+    )
+    assert (
+        "canonical_review_status=pocketmd_lite_canonical_report_review_packet_ready"
+        in panels["pocketmd_lite_report_panel"]["secondary_metric"]
+    )
+    assert "canonical_review_rows=2" in (
+        panels["pocketmd_lite_report_panel"]["secondary_metric"]
+    )
+    assert "canonical_ready_review_rows=2" in (
+        panels["pocketmd_lite_report_panel"]["secondary_metric"]
+    )
     assert "local_min_rmsd_max=1.29" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
     assert "hbond_persistence_min=0.8" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
     assert "contact_persistence_min=0.9" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
@@ -3161,7 +3239,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "clash_relief=78" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
     assert "promotion_allowed=false" in panels["pocketmd_lite_report_panel"]["secondary_metric"]
     assert panels["pocketmd_lite_report_panel"]["blockers"] == [
-        "pocketmd_lite_preview_not_canonical_report"
+        "pocketmd_lite_canonical_review_required"
     ]
     metric_source_panel = panels["pocketmd_lite_metric_source_audit"]
     assert metric_source_panel["route"] == (
@@ -3180,6 +3258,12 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "selected_proxy_only=2" in metric_source_panel["secondary_metric"]
     assert "preview_ready=true" in metric_source_panel["secondary_metric"]
     assert "report_ready=false" in metric_source_panel["secondary_metric"]
+    assert "canonical_review_required=true" in metric_source_panel["secondary_metric"]
+    assert "canonical_report_ready=false" in metric_source_panel["secondary_metric"]
+    assert (
+        "canonical_review_status=pocketmd_lite_canonical_report_review_packet_ready"
+        in metric_source_panel["secondary_metric"]
+    )
     assert "promotion_allowed=false" in metric_source_panel["secondary_metric"]
     assert metric_source_panel["blockers"] == [
         "metric_source_extraction_required",
@@ -3778,6 +3862,8 @@ def test_product_operator_cockpit_cli_writes_current_artifacts(tmp_path: Path) -
             str(paths["pocketmd"]),
             "--pocketmd-metric-source-audit-json",
             str(paths["pocketmd_metric_source"]),
+            "--pocketmd-canonical-review-json",
+            str(paths["pocketmd_canonical_review"]),
             "--public-benchmark-json",
             str(paths["public"]),
             "--public-benchmark-receipt-attach-packet-json",

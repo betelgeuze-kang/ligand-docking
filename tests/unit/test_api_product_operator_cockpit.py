@@ -360,6 +360,18 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "pocketmd_lite_report_evidence_ready": False,
                 "pocketmd_lite_fill_preview_evidence_ready": True,
                 "pocketmd_lite_preview_requires_canonical_review": True,
+                "pocketmd_lite_canonical_review_present": True,
+                "pocketmd_lite_canonical_review_required": True,
+                "pocketmd_lite_canonical_review_status": (
+                    "pocketmd_lite_canonical_report_review_packet_ready"
+                ),
+                "pocketmd_lite_canonical_report_ready": False,
+                "pocketmd_lite_canonical_preview_report_ready": True,
+                "pocketmd_lite_canonical_review_row_count": 2,
+                "pocketmd_lite_canonical_ready_review_row_count": 2,
+                "pocketmd_lite_canonical_approval_token_required": (
+                    "APPROVE_POCKETMD_LITE_CANONICAL_METRIC_FILL"
+                ),
                 "pocketmd_lite_claim_grade_metric_ready_row_count": 2,
                 "pocketmd_lite_local_min_ligand_rmsd_a_max": 1.29,
                 "pocketmd_lite_hbond_persistence_min": 0.8,
@@ -1531,6 +1543,18 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["pocketmd_lite_report_evidence_ready"] is False
     assert response["pocketmd_lite_fill_preview_evidence_ready"] is True
     assert response["pocketmd_lite_preview_requires_canonical_review"] is True
+    assert response["pocketmd_lite_canonical_review_present"] is True
+    assert response["pocketmd_lite_canonical_review_required"] is True
+    assert response["pocketmd_lite_canonical_review_status"] == (
+        "pocketmd_lite_canonical_report_review_packet_ready"
+    )
+    assert response["pocketmd_lite_canonical_report_ready"] is False
+    assert response["pocketmd_lite_canonical_preview_report_ready"] is True
+    assert response["pocketmd_lite_canonical_review_row_count"] == 2
+    assert response["pocketmd_lite_canonical_ready_review_row_count"] == 2
+    assert response["pocketmd_lite_canonical_approval_token_required"] == (
+        "APPROVE_POCKETMD_LITE_CANONICAL_METRIC_FILL"
+    )
     assert response["pocketmd_lite_claim_grade_metric_ready_row_count"] == 2
     assert response["pocketmd_lite_local_min_ligand_rmsd_a_max"] == 1.29
     assert response["pocketmd_lite_hbond_persistence_min"] == 0.8
@@ -2525,6 +2549,14 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["pocketmd_lite_report_evidence_ready"] is False
     assert response["pocketmd_lite_fill_preview_evidence_ready"] is False
     assert response["pocketmd_lite_preview_requires_canonical_review"] is False
+    assert response["pocketmd_lite_canonical_review_present"] is False
+    assert response["pocketmd_lite_canonical_review_required"] is False
+    assert response["pocketmd_lite_canonical_review_status"] == ""
+    assert response["pocketmd_lite_canonical_report_ready"] is False
+    assert response["pocketmd_lite_canonical_preview_report_ready"] is False
+    assert response["pocketmd_lite_canonical_review_row_count"] == 0
+    assert response["pocketmd_lite_canonical_ready_review_row_count"] == 0
+    assert response["pocketmd_lite_canonical_approval_token_required"] == ""
     assert response["pocketmd_lite_claim_grade_metric_ready_row_count"] == 0
     assert response["pocketmd_lite_local_min_ligand_rmsd_a_max"] == 0.0
     assert response["pocketmd_lite_hbond_persistence_min"] == 0.0
