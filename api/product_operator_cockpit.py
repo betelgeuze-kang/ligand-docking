@@ -1198,6 +1198,16 @@ def _missing_response() -> dict[str, Any]:
         "customer_shadow_required_column_count": 0,
         "customer_shadow_redistribution_allowed_required_value": False,
         "developer_preview_clean_baseline_ready": False,
+        "developer_preview_final_gate_evidence_present": False,
+        "developer_preview_demo_allowed": False,
+        "developer_preview_demo_blocked": True,
+        "developer_preview_operator_action_required": True,
+        "developer_preview_primary_blocker": "",
+        "developer_preview_primary_next_required_step": "",
+        "developer_preview_paid_pilot_wording_allowed": False,
+        "developer_preview_claim_promotion_allowed": False,
+        "developer_preview_execution_enabled": False,
+        "developer_preview_external_state_mutated": False,
         "developer_preview_gate_count": 0,
         "developer_preview_ready_gate_count": 0,
         "developer_preview_blocked_gate_count": 0,
@@ -1343,6 +1353,46 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
     claim_boundary_rows = _claim_boundary_rows(_list(packet, "claim_matrix"))
     allowed_claim_rows = [row for row in claim_boundary_rows if row["allowed"]]
     disallowed_claim_rows = [row for row in claim_boundary_rows if not row["allowed"]]
+    developer_preview_gate_rows = _developer_preview_gate_rows(
+        summary.get("developer_preview_gate_rows")
+    )
+    developer_preview_blocked_gate_rows = [
+        row for row in developer_preview_gate_rows if not row["ready"]
+    ]
+    developer_preview_clean_baseline_ready = bool(
+        summary.get("developer_preview_clean_baseline_ready") is True
+    )
+    developer_preview_gate_count = _int(summary.get("developer_preview_gate_count"))
+    developer_preview_ready_gate_count = _int(
+        summary.get("developer_preview_ready_gate_count")
+    )
+    developer_preview_blocked_gate_count = _int(
+        summary.get("developer_preview_blocked_gate_count")
+    )
+    developer_preview_demo_allowed = bool(
+        developer_preview_clean_baseline_ready
+        and developer_preview_gate_count >= 6
+        and developer_preview_blocked_gate_count == 0
+        and developer_preview_ready_gate_count >= developer_preview_gate_count
+    )
+    developer_preview_primary_blocker = str(
+        summary.get("developer_preview_receipt_work_order_primary_source_blocker") or ""
+    )
+    if not developer_preview_primary_blocker and developer_preview_blocked_gate_rows:
+        first_blocked_gate = developer_preview_blocked_gate_rows[0]
+        developer_preview_primary_blocker = str(
+            first_blocked_gate.get("blocker")
+            or (first_blocked_gate.get("blockers") or [""])[0]
+            or ""
+        )
+    developer_preview_primary_next_required_step = str(
+        summary.get("developer_preview_receipt_work_order_primary_source_blocker_required_action")
+        or ""
+    )
+    if not developer_preview_primary_next_required_step and developer_preview_blocked_gate_rows:
+        developer_preview_primary_next_required_step = str(
+            developer_preview_blocked_gate_rows[0].get("next_required_step") or ""
+        )
 
     return {
         "status": summary.get("status", ""),
@@ -1874,22 +1924,30 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         "customer_shadow_redistribution_allowed_required_value": bool(
             summary.get("customer_shadow_redistribution_allowed_required_value") is True
         ),
-        "developer_preview_clean_baseline_ready": bool(
-            summary.get("developer_preview_clean_baseline_ready") is True
+        "developer_preview_clean_baseline_ready": developer_preview_clean_baseline_ready,
+        "developer_preview_final_gate_evidence_present": bool(
+            developer_preview_gate_count > 0
+            or len(developer_preview_gate_rows) > 0
+            or str(summary.get("developer_preview_primary_blocker_id") or "")
         ),
-        "developer_preview_gate_count": _int(summary.get("developer_preview_gate_count")),
-        "developer_preview_ready_gate_count": _int(
-            summary.get("developer_preview_ready_gate_count")
+        "developer_preview_demo_allowed": developer_preview_demo_allowed,
+        "developer_preview_demo_blocked": not developer_preview_demo_allowed,
+        "developer_preview_operator_action_required": not developer_preview_demo_allowed,
+        "developer_preview_primary_blocker": developer_preview_primary_blocker,
+        "developer_preview_primary_next_required_step": (
+            developer_preview_primary_next_required_step
         ),
-        "developer_preview_blocked_gate_count": _int(
-            summary.get("developer_preview_blocked_gate_count")
-        ),
+        "developer_preview_paid_pilot_wording_allowed": False,
+        "developer_preview_claim_promotion_allowed": False,
+        "developer_preview_execution_enabled": False,
+        "developer_preview_external_state_mutated": False,
+        "developer_preview_gate_count": developer_preview_gate_count,
+        "developer_preview_ready_gate_count": developer_preview_ready_gate_count,
+        "developer_preview_blocked_gate_count": developer_preview_blocked_gate_count,
         "developer_preview_gate_row_count": _int(
             summary.get("developer_preview_gate_row_count")
         ),
-        "developer_preview_gate_rows": _developer_preview_gate_rows(
-            summary.get("developer_preview_gate_rows")
-        ),
+        "developer_preview_gate_rows": developer_preview_gate_rows,
         "developer_preview_receipt_work_order_row_count": _int(
             summary.get("developer_preview_receipt_work_order_row_count")
         ),

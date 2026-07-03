@@ -2085,6 +2085,20 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["customer_shadow_required_column_count"] == 12
     assert response["customer_shadow_redistribution_allowed_required_value"] is False
     assert response["developer_preview_clean_baseline_ready"] is False
+    assert response["developer_preview_final_gate_evidence_present"] is True
+    assert response["developer_preview_demo_allowed"] is False
+    assert response["developer_preview_demo_blocked"] is True
+    assert response["developer_preview_operator_action_required"] is True
+    assert response["developer_preview_primary_blocker"] == (
+        ".betelgeuze/developer_preview_clean_checkout_ai_verify.log:missing"
+    )
+    assert response["developer_preview_primary_next_required_step"] == (
+        "Attach the missing source evidence required by the receipt."
+    )
+    assert response["developer_preview_paid_pilot_wording_allowed"] is False
+    assert response["developer_preview_claim_promotion_allowed"] is False
+    assert response["developer_preview_execution_enabled"] is False
+    assert response["developer_preview_external_state_mutated"] is False
     assert response["developer_preview_gate_count"] == 6
     assert response["developer_preview_ready_gate_count"] == 3
     assert response["developer_preview_blocked_gate_count"] == 3
@@ -2695,6 +2709,16 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["customer_shadow_required_column_count"] == 0
     assert response["customer_shadow_redistribution_allowed_required_value"] is False
     assert response["developer_preview_clean_baseline_ready"] is False
+    assert response["developer_preview_final_gate_evidence_present"] is False
+    assert response["developer_preview_demo_allowed"] is False
+    assert response["developer_preview_demo_blocked"] is True
+    assert response["developer_preview_operator_action_required"] is True
+    assert response["developer_preview_primary_blocker"] == ""
+    assert response["developer_preview_primary_next_required_step"] == ""
+    assert response["developer_preview_paid_pilot_wording_allowed"] is False
+    assert response["developer_preview_claim_promotion_allowed"] is False
+    assert response["developer_preview_execution_enabled"] is False
+    assert response["developer_preview_external_state_mutated"] is False
     assert response["developer_preview_gate_count"] == 0
     assert response["developer_preview_ready_gate_count"] == 0
     assert response["developer_preview_blocked_gate_count"] == 0
