@@ -51,6 +51,15 @@ PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT = (
 PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT = (
     ROOT / "runs" / "public_benchmark_receipt_attach_packet_current.json"
 )
+PUBLIC_BENCHMARK_SEQUENCE_DEFINITIONS = (
+    ("casf_pdbbind_default_manifest", 1, "CASF/PDBBind default manifest"),
+    ("subset_dry_run", 2, "subset dry-run"),
+    ("pose_rmsd_2a_5a", 3, "pose RMSD 2A/5A"),
+    ("posebusters_validity", 4, "PoseBusters validity"),
+    ("vina_gnina_same_input_comparison", 5, "Vina/GNINA same input comparison"),
+    ("benchmark_receipt_attach", 6, "benchmark receipt attach"),
+    ("benchmark_ledger_review", 7, "benchmark ledger review"),
+)
 CUSTOMER_SHADOW_EVIDENCE_STATUS_ARTIFACT = (
     ROOT / "runs" / "customer_shadow_evidence_status_current.json"
 )
@@ -787,6 +796,41 @@ def _developer_preview_work_order_surface(work_rows: list[dict[str, Any]]) -> di
         "blocked_receipt_work_order_rows": [_summary_row(row) for row in blocked_rows],
         "source_receipt_work_order_rows": [_summary_row(row) for row in source_rows],
     }
+
+
+def _public_benchmark_sequence_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows_by_step = {str(row.get("step_id") or ""): row for row in rows}
+    sequence_rows: list[dict[str, Any]] = []
+    for step_id, sequence_index, label in PUBLIC_BENCHMARK_SEQUENCE_DEFINITIONS:
+        row = rows_by_step.get(step_id, {})
+        ready = bool(row.get("ready") is True and str(row.get("status") or "") == "ready")
+        blocker = str(row.get("blocker") or "").strip()
+        if not ready and not blocker:
+            blocker = (
+                "public_benchmark_external_receipts_audit_missing"
+                if not row
+                else "public_benchmark_sequence_step_not_ready"
+            )
+        sequence_rows.append(
+            {
+                "step_id": step_id,
+                "sequence_index": sequence_index,
+                "label": label,
+                "status": str(row.get("status") or "missing_public_benchmark_step"),
+                "ready": ready,
+                "blocker": "" if ready else blocker,
+                "evidence_artifact": str(row.get("evidence_artifact") or ""),
+                "primary_metric": str(row.get("primary_metric") or ""),
+                "secondary_metric": str(row.get("secondary_metric") or ""),
+                "next_required_step": str(row.get("next_required_step") or ""),
+                "operator_action_required": not ready,
+                "external_beta_claim_allowed": False,
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+    return sequence_rows
 
 
 def _accuracy_parity_release_fields(release: dict[str, Any]) -> dict[str, Any]:
@@ -4143,14 +4187,28 @@ async def get_goal_public_benchmark() -> dict[str, Any]:
         if isinstance(field_rows_value, list)
         else []
     )
+    audit_rows = _rows(audit_packet)
+    sequence_rows = _public_benchmark_sequence_rows(audit_rows)
+    blocked_sequence_rows = [row for row in sequence_rows if not row["ready"]]
     if not audit and not attach:
+        missing_sequence_rows = _public_benchmark_sequence_rows([])
         return {
             "status": "missing_public_benchmark_receipts",
             "audit_artifact_path": str(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT),
             "receipt_attach_packet_artifact_path": str(PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT),
             "external_benchmark_receipts_ready": False,
+            "external_benchmark_sequence_ready": False,
+            "external_beta_claim_allowed": False,
             "receipt_attach_packet_ready": False,
             "blocker_count": 0,
+            "external_benchmark_sequence_row_count": len(missing_sequence_rows),
+            "external_benchmark_sequence_ready_row_count": 0,
+            "external_benchmark_sequence_blocked_row_count": len(missing_sequence_rows),
+            "external_benchmark_sequence_rows": missing_sequence_rows,
+            "external_benchmark_sequence_blocked_rows": missing_sequence_rows,
+            "external_beta_claim_blocker_step_ids": [
+                str(row["step_id"]) for row in missing_sequence_rows
+            ],
             "field_work_order_row_count": 0,
             "field_work_order_primary_lane_id": "",
             "field_work_order_primary_field_name": "",
@@ -4172,20 +4230,38 @@ async def get_goal_public_benchmark() -> dict[str, Any]:
         or "blocked_public_benchmark_receipts"
     )
     next_required_step = str(attach.get("next_required_step") or audit.get("next_required_step") or "")
+    external_benchmark_receipts_ready = bool(
+        attach.get("external_benchmark_receipts_ready") is True
+        and audit.get("external_benchmark_receipts_ready") is True
+    )
+    external_benchmark_sequence_ready = bool(sequence_rows and not blocked_sequence_rows)
+    external_beta_claim_allowed = bool(
+        external_benchmark_receipts_ready
+        and external_benchmark_sequence_ready
+        and audit.get("claim_promotion_allowed") is True
+        and attach.get("claim_promotion_allowed") is True
+    )
     return {
         "status": status,
         "audit_artifact_path": str(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT),
         "receipt_attach_packet_artifact_path": str(PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT),
         "audit_status": str(audit.get("status") or ""),
         "receipt_attach_packet_status": str(attach.get("status") or ""),
-        "external_benchmark_receipts_ready": bool(
-            attach.get("external_benchmark_receipts_ready") is True
-            and audit.get("external_benchmark_receipts_ready") is True
-        ),
+        "external_benchmark_receipts_ready": external_benchmark_receipts_ready,
+        "external_benchmark_sequence_ready": external_benchmark_sequence_ready,
+        "external_beta_claim_allowed": external_beta_claim_allowed,
         "receipt_attach_packet_ready": bool(attach.get("receipt_attach_packet_ready") is True),
         "blocker_count": max(_int(audit.get("blocker_count")), _int(attach.get("blocker_count"))),
         "ready_step_count": _int(audit.get("ready_step_count")),
         "blocked_step_count": _int(audit.get("blocked_step_count")),
+        "external_benchmark_sequence_row_count": len(sequence_rows),
+        "external_benchmark_sequence_ready_row_count": len(sequence_rows) - len(blocked_sequence_rows),
+        "external_benchmark_sequence_blocked_row_count": len(blocked_sequence_rows),
+        "external_benchmark_sequence_rows": sequence_rows,
+        "external_benchmark_sequence_blocked_rows": blocked_sequence_rows,
+        "external_beta_claim_blocker_step_ids": [
+            str(row["step_id"]) for row in blocked_sequence_rows
+        ],
         "receipt_blocked_row_count": _int(audit.get("receipt_blocked_row_count")),
         "field_work_order_row_count": _int(attach.get("field_work_order_row_count")),
         "field_work_order_primary_lane_id": str(attach.get("field_work_order_primary_lane_id") or ""),
@@ -4218,7 +4294,7 @@ async def get_goal_public_benchmark() -> dict[str, Any]:
             attach.get("metric_source_receipt_manual_field_pending_count")
         ),
         "next_required_step": next_required_step,
-        "rows": _rows(audit_packet),
+        "rows": audit_rows,
         "receipt_attach_rows": _rows(attach_packet),
         "field_work_order_rows": field_work_order_rows,
         **_mutation_flags(),

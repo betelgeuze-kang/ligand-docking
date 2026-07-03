@@ -1305,10 +1305,32 @@ def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, 
                 },
                 "rows": [
                     {
-                        "step_id": "vina_gnina_same_input_comparison",
-                        "status": "blocked",
-                        "ready": False,
+                        "step_id": step_id,
+                        "status": "ready" if ready else "blocked",
+                        "ready": ready,
+                        "blocker": "" if ready else blocker,
+                        "evidence_artifact": f"runs/{step_id}.json",
+                        "primary_metric": f"{step_id}:primary",
+                        "secondary_metric": f"{step_id}:secondary",
+                        "next_required_step": f"{step_id}:next",
                     }
+                    for step_id, ready, blocker in [
+                        ("casf_pdbbind_default_manifest", True, ""),
+                        ("subset_dry_run", True, ""),
+                        ("pose_rmsd_2a_5a", True, ""),
+                        ("posebusters_validity", True, ""),
+                        (
+                            "vina_gnina_same_input_comparison",
+                            False,
+                            "vina_gnina_same_input_score_evidence_missing",
+                        ),
+                        (
+                            "benchmark_receipt_attach",
+                            False,
+                            "benchmark_metric_source_receipt_rows_unapproved",
+                        ),
+                        ("benchmark_ledger_review", True, ""),
+                    ]
                 ],
             }
         ),
@@ -1377,10 +1399,38 @@ def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, 
     assert response["audit_status"] == "blocked_public_benchmark_external_receipts_audit"
     assert response["receipt_attach_packet_status"] == "blocked_public_benchmark_receipt_attach_packet"
     assert response["external_benchmark_receipts_ready"] is False
+    assert response["external_benchmark_sequence_ready"] is False
+    assert response["external_beta_claim_allowed"] is False
     assert response["receipt_attach_packet_ready"] is False
     assert response["blocker_count"] == 2
     assert response["ready_step_count"] == 5
     assert response["blocked_step_count"] == 2
+    assert response["external_benchmark_sequence_row_count"] == 7
+    assert response["external_benchmark_sequence_ready_row_count"] == 5
+    assert response["external_benchmark_sequence_blocked_row_count"] == 2
+    assert response["external_beta_claim_blocker_step_ids"] == [
+        "vina_gnina_same_input_comparison",
+        "benchmark_receipt_attach",
+    ]
+    assert [row["step_id"] for row in response["external_benchmark_sequence_rows"]] == [
+        "casf_pdbbind_default_manifest",
+        "subset_dry_run",
+        "pose_rmsd_2a_5a",
+        "posebusters_validity",
+        "vina_gnina_same_input_comparison",
+        "benchmark_receipt_attach",
+        "benchmark_ledger_review",
+    ]
+    assert response["external_benchmark_sequence_blocked_rows"][0]["blocker"] == (
+        "vina_gnina_same_input_score_evidence_missing"
+    )
+    assert all(
+        row["external_beta_claim_allowed"] is False
+        and row["claim_promotion_allowed"] is False
+        and row["execution_enabled"] is False
+        and row["external_state_mutated"] is False
+        for row in response["external_benchmark_sequence_rows"]
+    )
     assert response["receipt_blocked_row_count"] == 51
     assert response["field_work_order_row_count"] == 22
     assert response["field_work_order_primary_lane_id"] == "vina_gnina_same_input_scores"
@@ -1404,7 +1454,7 @@ def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, 
     )
     assert response["vina_gnina_score_value_pending_count"] == 32
     assert response["metric_source_receipt_manual_field_pending_count"] == 510
-    assert response["rows"][0]["step_id"] == "vina_gnina_same_input_comparison"
+    assert response["rows"][0]["step_id"] == "casf_pdbbind_default_manifest"
     assert response["receipt_attach_rows"][0]["lane_id"] == "vina_gnina_same_input_scores"
     assert response["field_work_order_rows"][0]["field_name"] == "approval_token"
     assert response["next_required_step"] == "Fill score-template rows."
@@ -1421,6 +1471,14 @@ def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, 
     missing = asyncio.run(goal_api.get_goal_public_benchmark())
     assert missing["status"] == "missing_public_benchmark_receipts"
     assert missing["external_benchmark_receipts_ready"] is False
+    assert missing["external_benchmark_sequence_ready"] is False
+    assert missing["external_beta_claim_allowed"] is False
+    assert missing["external_benchmark_sequence_row_count"] == 7
+    assert missing["external_benchmark_sequence_ready_row_count"] == 0
+    assert missing["external_benchmark_sequence_blocked_row_count"] == 7
+    assert missing["external_benchmark_sequence_blocked_rows"] == missing[
+        "external_benchmark_sequence_rows"
+    ]
     assert missing["receipt_attach_packet_ready"] is False
     assert missing["field_work_order_primary_required_action"] == ""
     assert missing["field_work_order_rows"] == []
