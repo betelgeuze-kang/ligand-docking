@@ -2073,6 +2073,8 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/ai_md_product_evidence_bundle_current.json",
             "runs/api_customer_flow_release_evidence_current.json",
             "runs/customer_shadow_evidence_status_current.json",
+            "runs/developer_preview_final_gate_audit_current.json",
+            ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
             "runs/enterprise_on_prem_readiness_gate_current.json",
         ],
     },

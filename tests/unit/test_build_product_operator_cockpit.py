@@ -35,6 +35,9 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         "api_customer_flow": tmp_path / "runs/api_customer_flow_release_evidence_current.json",
         "customer": tmp_path / "runs/customer_shadow_evidence_status_current.json",
         "developer_preview": tmp_path / "runs/developer_preview_final_gate_audit_current.json",
+        "developer_preview_clean_checkout_receipt": (
+            tmp_path / ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+        ),
         "f2g_preflight": tmp_path / ".betelgeuze/f2g_f2h_surface_preflight.local.json",
         "f2g_recovery": (
             tmp_path / ".betelgeuze/f2g_f2h_authoritative_surface_recovery_packet.local.json"
@@ -1097,6 +1100,123 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         },
     )
     _write_json(
+        paths["developer_preview_clean_checkout_receipt"],
+        {
+            "summary": {
+                "status": "blocked_developer_preview_clean_checkout_benchmark_receipt",
+                "stage5_required_argument_count": 4,
+                "stage5_input_family_row_count": 4,
+                "stage5_missing_input_count": 2,
+                "stage5_recovery_task_count": 1,
+                "stage5_primary_task_key": "stage5_gpcr",
+                "stage5_primary_source_argument": "--scores-csv",
+                "stage5_primary_source_artifact_path": "runs/missing_stage5_scores.csv",
+            },
+            "stage5_input_family_rows": [
+                {
+                    "set_id": "set1_core_blind",
+                    "task_id": "gpcr_core_full",
+                    "task_key": "stage5_gpcr",
+                    "domain": "gpcr",
+                    "kind": "ligand_stress",
+                    "profile_json": "config/profile.json",
+                    "pipeline_summary_json": "runs/stage5_gpcr_summary.json",
+                    "pipeline_summary_present": True,
+                    "pipeline_summary_resolution_source": "copied_files",
+                    "source_error_type": "TaskSourceError",
+                    "source_error_blocker": (
+                        "stage5_input_missing:"
+                        "--scores-csv:runs/missing_stage5_scores.csv"
+                    ),
+                    "source_argument": "--scores-csv",
+                    "source_artifact_path": "runs/missing_stage5_scores.csv",
+                    "source_artifact_present": False,
+                    "source_artifact_missing": True,
+                    "required_action": "Restore stage5 scores.",
+                    "operator_action_required": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+                {
+                    "set_id": "set1_core_blind",
+                    "task_id": "gpcr_core_full",
+                    "task_key": "stage5_gpcr",
+                    "domain": "gpcr",
+                    "kind": "ligand_stress",
+                    "profile_json": "config/profile.json",
+                    "pipeline_summary_json": "runs/stage5_gpcr_summary.json",
+                    "pipeline_summary_present": True,
+                    "pipeline_summary_resolution_source": "copied_files",
+                    "source_error_type": "TaskSourceError",
+                    "source_error_blocker": (
+                        "stage5_input_missing:"
+                        "--scores-csv:runs/missing_stage5_scores.csv"
+                    ),
+                    "source_argument": "--labels-csv",
+                    "source_artifact_path": "runs/stage5_labels.csv",
+                    "source_artifact_present": True,
+                    "source_artifact_missing": False,
+                    "required_action": "Keep stage5 labels.",
+                    "operator_action_required": False,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+                {
+                    "set_id": "set1_core_blind",
+                    "task_id": "gpcr_core_full",
+                    "task_key": "stage5_gpcr",
+                    "domain": "gpcr",
+                    "kind": "ligand_stress",
+                    "profile_json": "config/profile.json",
+                    "pipeline_summary_json": "runs/stage5_gpcr_summary.json",
+                    "pipeline_summary_present": True,
+                    "pipeline_summary_resolution_source": "copied_files",
+                    "source_error_type": "TaskSourceError",
+                    "source_error_blocker": (
+                        "stage5_input_missing:"
+                        "--scores-csv:runs/missing_stage5_scores.csv"
+                    ),
+                    "source_argument": "--split-csv",
+                    "source_artifact_path": "runs/missing_stage5_split.csv",
+                    "source_artifact_present": False,
+                    "source_artifact_missing": True,
+                    "required_action": "Restore stage5 split.",
+                    "operator_action_required": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+                {
+                    "set_id": "set1_core_blind",
+                    "task_id": "gpcr_core_full",
+                    "task_key": "stage5_gpcr",
+                    "domain": "gpcr",
+                    "kind": "ligand_stress",
+                    "profile_json": "config/profile.json",
+                    "pipeline_summary_json": "runs/stage5_gpcr_summary.json",
+                    "pipeline_summary_present": True,
+                    "pipeline_summary_resolution_source": "copied_files",
+                    "source_error_type": "TaskSourceError",
+                    "source_error_blocker": (
+                        "stage5_input_missing:"
+                        "--scores-csv:runs/missing_stage5_scores.csv"
+                    ),
+                    "source_argument": "--expected-keys-csv",
+                    "source_artifact_path": "runs/stage5_expected_keys.csv",
+                    "source_artifact_present": True,
+                    "source_artifact_missing": False,
+                    "required_action": "Keep stage5 expected keys.",
+                    "operator_action_required": False,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+            ],
+        },
+    )
+    _write_json(
         paths["f2g_preflight"],
         {
             "summary": {
@@ -1322,6 +1442,9 @@ def _build_payload(tmp_path: Path) -> dict:
         api_customer_flow_json=paths["api_customer_flow"],
         customer_shadow_json=paths["customer"],
         developer_preview_json=paths["developer_preview"],
+        developer_preview_clean_checkout_receipt_json=(
+            paths["developer_preview_clean_checkout_receipt"]
+        ),
         f2g_f2h_preflight_json=paths["f2g_preflight"],
         f2g_f2h_recovery_json=paths["f2g_recovery"],
         enterprise_on_prem_json=paths["enterprise"],
@@ -2131,6 +2254,43 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
             "claim_promotion_allowed": False,
         }
     ]
+    assert summary["developer_preview_clean_checkout_receipt_present"] is True
+    assert summary["developer_preview_clean_checkout_receipt_status"] == (
+        "blocked_developer_preview_clean_checkout_benchmark_receipt"
+    )
+    assert summary["developer_preview_clean_checkout_stage5_required_argument_count"] == 4
+    assert summary["developer_preview_clean_checkout_stage5_input_family_row_count"] == 4
+    assert summary["developer_preview_clean_checkout_stage5_missing_input_count"] == 2
+    assert summary["developer_preview_clean_checkout_stage5_recovery_task_count"] == 1
+    assert summary["developer_preview_clean_checkout_stage5_primary_task_key"] == (
+        "stage5_gpcr"
+    )
+    assert summary["developer_preview_clean_checkout_stage5_primary_source_argument"] == (
+        "--scores-csv"
+    )
+    assert summary[
+        "developer_preview_clean_checkout_stage5_primary_source_artifact_path"
+    ] == "runs/missing_stage5_scores.csv"
+    assert len(summary["developer_preview_clean_checkout_stage5_input_family_rows"]) == 4
+    assert len(summary["developer_preview_clean_checkout_stage5_missing_input_rows"]) == 2
+    assert (
+        summary["developer_preview_clean_checkout_stage5_input_family_rows"][0][
+            "source_argument"
+        ]
+        == "--scores-csv"
+    )
+    assert (
+        summary["developer_preview_clean_checkout_stage5_missing_input_rows"][1][
+            "source_artifact_path"
+        ]
+        == "runs/missing_stage5_split.csv"
+    )
+    assert all(
+        row["execution_enabled"] is False
+        and row["external_state_mutated"] is False
+        and row["claim_promotion_allowed"] is False
+        for row in summary["developer_preview_clean_checkout_stage5_input_family_rows"]
+    )
     assert summary["developer_preview_receipt_work_order_rows"] == [
         {
             "gate_id": "benchmark_results_clean_checkout_regenerated",
@@ -2686,6 +2846,22 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "stage5_primary_source_arg=--scores-csv" in (
         panels["developer_preview_final_gates"]["secondary_metric"]
     )
+    assert (
+        "clean_checkout_receipt=blocked_developer_preview_clean_checkout_benchmark_receipt"
+        in panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "clean_checkout_stage5_input_family_rows=4" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "clean_checkout_stage5_missing_inputs=2" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "clean_checkout_stage5_recovery_tasks=1" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "clean_checkout_stage5_primary_source_arg=--scores-csv" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
     assert "primary_gate=benchmark_results_clean_checkout_regenerated" in (
         panels["developer_preview_final_gates"]["secondary_metric"]
     )
@@ -2878,6 +3054,8 @@ def test_product_operator_cockpit_cli_writes_current_artifacts(tmp_path: Path) -
             str(paths["customer"]),
             "--developer-preview-json",
             str(paths["developer_preview"]),
+            "--developer-preview-clean-checkout-receipt-json",
+            str(paths["developer_preview_clean_checkout_receipt"]),
             "--f2g-f2h-preflight-json",
             str(paths["f2g_preflight"]),
             "--f2g-f2h-recovery-json",

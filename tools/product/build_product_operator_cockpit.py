@@ -32,6 +32,9 @@ DEFAULT_EVIDENCE_BUNDLE_JSON = "runs/ai_md_product_evidence_bundle_current.json"
 DEFAULT_API_CUSTOMER_FLOW_JSON = "runs/api_customer_flow_release_evidence_current.json"
 DEFAULT_CUSTOMER_SHADOW_JSON = "runs/customer_shadow_evidence_status_current.json"
 DEFAULT_DEVELOPER_PREVIEW_JSON = "runs/developer_preview_final_gate_audit_current.json"
+DEFAULT_DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_JSON = (
+    ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+)
 DEFAULT_F2G_F2H_PREFLIGHT_JSON = ".betelgeuze/f2g_f2h_surface_preflight.local.json"
 DEFAULT_F2G_F2H_RECOVERY_JSON = ".betelgeuze/f2g_f2h_authoritative_surface_recovery_packet.local.json"
 DEFAULT_ENTERPRISE_ON_PREM_JSON = "runs/enterprise_on_prem_readiness_gate_current.json"
@@ -831,6 +834,42 @@ def _developer_preview_stage5_recovery_rows(payload: dict[str, Any]) -> list[dic
     return rows
 
 
+def _developer_preview_clean_checkout_stage5_input_rows(
+    payload: dict[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _dict_list(payload, "stage5_input_family_rows"):
+        rows.append(
+            {
+                "set_id": _text(row.get("set_id")),
+                "task_id": _text(row.get("task_id")),
+                "task_key": _text(row.get("task_key")),
+                "domain": _text(row.get("domain")),
+                "kind": _text(row.get("kind")),
+                "profile_json": _text(row.get("profile_json")),
+                "pipeline_summary_json": _text(row.get("pipeline_summary_json")),
+                "pipeline_summary_present": _bool_true(
+                    row.get("pipeline_summary_present")
+                ),
+                "pipeline_summary_resolution_source": _text(
+                    row.get("pipeline_summary_resolution_source")
+                ),
+                "source_error_type": _text(row.get("source_error_type")),
+                "source_error_blocker": _text(row.get("source_error_blocker")),
+                "source_argument": _text(row.get("source_argument")),
+                "source_artifact_path": _text(row.get("source_artifact_path")),
+                "source_artifact_present": _bool_true(row.get("source_artifact_present")),
+                "source_artifact_missing": _bool_true(row.get("source_artifact_missing")),
+                "required_action": _text(row.get("required_action")),
+                "operator_action_required": _bool_true(row.get("operator_action_required")),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _release_decision_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in _rows(payload):
@@ -1458,6 +1497,9 @@ def build_product_operator_cockpit(
     api_customer_flow_json: str | Path = DEFAULT_API_CUSTOMER_FLOW_JSON,
     customer_shadow_json: str | Path = DEFAULT_CUSTOMER_SHADOW_JSON,
     developer_preview_json: str | Path = DEFAULT_DEVELOPER_PREVIEW_JSON,
+    developer_preview_clean_checkout_receipt_json: str | Path = (
+        DEFAULT_DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_JSON
+    ),
     f2g_f2h_preflight_json: str | Path = DEFAULT_F2G_F2H_PREFLIGHT_JSON,
     f2g_f2h_recovery_json: str | Path = DEFAULT_F2G_F2H_RECOVERY_JSON,
     enterprise_on_prem_json: str | Path = DEFAULT_ENTERPRISE_ON_PREM_JSON,
@@ -1551,6 +1593,18 @@ def build_product_operator_cockpit(
     )
     developer_preview_stage5_recovery_row_preview = (
         _developer_preview_stage5_recovery_rows(developer_preview_payload)
+    )
+    developer_preview_clean_checkout_receipt_payload = _read_json(
+        developer_preview_clean_checkout_receipt_json,
+        root=root,
+    )
+    developer_preview_clean_checkout_receipt = _summary(
+        developer_preview_clean_checkout_receipt_payload
+    )
+    developer_preview_clean_checkout_stage5_input_row_preview = (
+        _developer_preview_clean_checkout_stage5_input_rows(
+            developer_preview_clean_checkout_receipt_payload
+        )
     )
     f2g_preflight_payload = _read_json(f2g_f2h_preflight_json, root=root)
     f2g_preflight = _summary(f2g_preflight_payload)
@@ -2139,6 +2193,56 @@ def build_product_operator_cockpit(
         developer_preview.get("stage5_primary_source_artifact_path"),
         developer_preview_stage5_first_row.get("source_artifact_path"),
     )
+    developer_preview_clean_checkout_receipt_present = bool(
+        developer_preview_clean_checkout_receipt
+    )
+    developer_preview_clean_checkout_receipt_status = _text(
+        developer_preview_clean_checkout_receipt.get("status")
+    )
+    developer_preview_clean_checkout_stage5_input_family_row_count = _int(
+        developer_preview_clean_checkout_receipt.get("stage5_input_family_row_count")
+    ) or len(developer_preview_clean_checkout_stage5_input_row_preview)
+    developer_preview_clean_checkout_stage5_missing_input_count = _int(
+        developer_preview_clean_checkout_receipt.get("stage5_missing_input_count")
+    ) or sum(
+        1
+        for row in developer_preview_clean_checkout_stage5_input_row_preview
+        if row["source_artifact_missing"]
+    )
+    developer_preview_clean_checkout_stage5_recovery_task_count = _int(
+        developer_preview_clean_checkout_receipt.get("stage5_recovery_task_count")
+    ) or len(
+        {
+            row["task_key"]
+            for row in developer_preview_clean_checkout_stage5_input_row_preview
+            if row["task_key"]
+        }
+    )
+    developer_preview_clean_checkout_stage5_required_argument_count = _int(
+        developer_preview_clean_checkout_receipt.get("stage5_required_argument_count")
+    )
+    developer_preview_clean_checkout_missing_input_rows = [
+        row
+        for row in developer_preview_clean_checkout_stage5_input_row_preview
+        if row["source_artifact_missing"]
+    ]
+    developer_preview_clean_checkout_stage5_first_missing_row = (
+        developer_preview_clean_checkout_missing_input_rows[0]
+        if developer_preview_clean_checkout_missing_input_rows
+        else {}
+    )
+    developer_preview_clean_checkout_stage5_primary_task_key = _first_text(
+        developer_preview_clean_checkout_receipt.get("stage5_primary_task_key"),
+        developer_preview_clean_checkout_stage5_first_missing_row.get("task_key"),
+    )
+    developer_preview_clean_checkout_stage5_primary_source_argument = _first_text(
+        developer_preview_clean_checkout_receipt.get("stage5_primary_source_argument"),
+        developer_preview_clean_checkout_stage5_first_missing_row.get("source_argument"),
+    )
+    developer_preview_clean_checkout_stage5_primary_source_artifact_path = _first_text(
+        developer_preview_clean_checkout_receipt.get("stage5_primary_source_artifact_path"),
+        developer_preview_clean_checkout_stage5_first_missing_row.get("source_artifact_path"),
+    )
     f2g_preflight_present = bool(f2g_preflight)
     f2g_recovery_present = bool(f2g_recovery)
     f2g_first_recovery_row = _first_non_pass_row(f2g_recovery_rows)
@@ -2646,6 +2750,26 @@ def build_product_operator_cockpit(
                 _metric(
                     "stage5_primary_source_arg",
                     developer_preview_stage5_primary_source_argument,
+                ),
+                _metric(
+                    "clean_checkout_receipt",
+                    developer_preview_clean_checkout_receipt_status,
+                ),
+                _count_metric(
+                    "clean_checkout_stage5_input_family_rows",
+                    developer_preview_clean_checkout_stage5_input_family_row_count,
+                ),
+                _count_metric(
+                    "clean_checkout_stage5_missing_inputs",
+                    developer_preview_clean_checkout_stage5_missing_input_count,
+                ),
+                _count_metric(
+                    "clean_checkout_stage5_recovery_tasks",
+                    developer_preview_clean_checkout_stage5_recovery_task_count,
+                ),
+                _metric(
+                    "clean_checkout_stage5_primary_source_arg",
+                    developer_preview_clean_checkout_stage5_primary_source_argument,
                 ),
                 _count_metric(
                     "primary_required_true_fields",
@@ -3413,6 +3537,39 @@ def build_product_operator_cockpit(
         "developer_preview_stage5_recovery_rows": (
             developer_preview_stage5_recovery_row_preview
         ),
+        "developer_preview_clean_checkout_receipt_present": (
+            developer_preview_clean_checkout_receipt_present
+        ),
+        "developer_preview_clean_checkout_receipt_status": (
+            developer_preview_clean_checkout_receipt_status
+        ),
+        "developer_preview_clean_checkout_stage5_required_argument_count": (
+            developer_preview_clean_checkout_stage5_required_argument_count
+        ),
+        "developer_preview_clean_checkout_stage5_input_family_row_count": (
+            developer_preview_clean_checkout_stage5_input_family_row_count
+        ),
+        "developer_preview_clean_checkout_stage5_missing_input_count": (
+            developer_preview_clean_checkout_stage5_missing_input_count
+        ),
+        "developer_preview_clean_checkout_stage5_recovery_task_count": (
+            developer_preview_clean_checkout_stage5_recovery_task_count
+        ),
+        "developer_preview_clean_checkout_stage5_primary_task_key": (
+            developer_preview_clean_checkout_stage5_primary_task_key
+        ),
+        "developer_preview_clean_checkout_stage5_primary_source_argument": (
+            developer_preview_clean_checkout_stage5_primary_source_argument
+        ),
+        "developer_preview_clean_checkout_stage5_primary_source_artifact_path": (
+            developer_preview_clean_checkout_stage5_primary_source_artifact_path
+        ),
+        "developer_preview_clean_checkout_stage5_input_family_rows": (
+            developer_preview_clean_checkout_stage5_input_row_preview
+        ),
+        "developer_preview_clean_checkout_stage5_missing_input_rows": (
+            developer_preview_clean_checkout_missing_input_rows
+        ),
         "enterprise_on_prem_readiness_present": enterprise_present,
         "enterprise_on_prem_ready": enterprise_ready,
         "enterprise_on_prem_claim_allowed": False,
@@ -3578,6 +3735,10 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--api-customer-flow-json", default=DEFAULT_API_CUSTOMER_FLOW_JSON)
     parser.add_argument("--customer-shadow-json", default=DEFAULT_CUSTOMER_SHADOW_JSON)
     parser.add_argument("--developer-preview-json", default=DEFAULT_DEVELOPER_PREVIEW_JSON)
+    parser.add_argument(
+        "--developer-preview-clean-checkout-receipt-json",
+        default=DEFAULT_DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_JSON,
+    )
     parser.add_argument("--f2g-f2h-preflight-json", default=DEFAULT_F2G_F2H_PREFLIGHT_JSON)
     parser.add_argument("--f2g-f2h-recovery-json", default=DEFAULT_F2G_F2H_RECOVERY_JSON)
     parser.add_argument("--enterprise-on-prem-json", default=DEFAULT_ENTERPRISE_ON_PREM_JSON)
@@ -3612,6 +3773,9 @@ def main(argv: list[str] | None = None) -> int:
         api_customer_flow_json=args.api_customer_flow_json,
         customer_shadow_json=args.customer_shadow_json,
         developer_preview_json=args.developer_preview_json,
+        developer_preview_clean_checkout_receipt_json=(
+            args.developer_preview_clean_checkout_receipt_json
+        ),
         f2g_f2h_preflight_json=args.f2g_f2h_preflight_json,
         f2g_f2h_recovery_json=args.f2g_f2h_recovery_json,
         enterprise_on_prem_json=args.enterprise_on_prem_json,
