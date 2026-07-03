@@ -131,6 +131,37 @@ def _field_work_order_rows(rows: list[Any]) -> list[dict[str, Any]]:
     return work_rows
 
 
+def _score_evidence_row_work_order_rows(rows: list[Any]) -> list[dict[str, Any]]:
+    work_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        missing_fields = _string_list(row.get("missing_fields"))
+        work_rows.append(
+            {
+                "work_order_id": str(row.get("work_order_id") or ""),
+                "status": str(row.get("status") or ""),
+                "pose_id": str(row.get("pose_id") or ""),
+                "complex_id": str(row.get("complex_id") or ""),
+                "operator_csv": str(row.get("operator_csv") or ""),
+                "source_artifact": str(row.get("source_artifact") or ""),
+                "missing_field_count": _int(row.get("missing_field_count")) or len(missing_fields),
+                "missing_fields": missing_fields,
+                "primary_missing_field": str(row.get("primary_missing_field") or ""),
+                "primary_required_action": str(row.get("primary_required_action") or ""),
+                "required_action": str(row.get("required_action") or ""),
+                "blocker_count": _int(row.get("blocker_count")),
+                "blockers": _string_list(row.get("blockers")),
+                "operator_action_required": bool(row.get("operator_action_required") is not False),
+                "claim_boundary": str(row.get("claim_boundary") or ""),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return work_rows
+
+
 def _receipt_attach_lane_rows(rows: list[Any]) -> list[dict[str, Any]]:
     lane_rows: list[dict[str, Any]] = []
     for row in rows:
@@ -313,6 +344,11 @@ def _receipt_attach_surface(
             packet = fallback_packet
             embedded_fallback = True
     rows = packet.get("field_work_order_rows") if isinstance(packet.get("field_work_order_rows"), list) else []
+    score_row_work_order_rows = (
+        packet.get("score_evidence_row_work_order_rows")
+        if isinstance(packet.get("score_evidence_row_work_order_rows"), list)
+        else []
+    )
     lane_rows = _receipt_attach_lane_rows(
         packet.get("rows")
         if packet_present and isinstance(packet.get("rows"), list)
@@ -380,6 +416,48 @@ def _receipt_attach_surface(
             summary.get("field_work_order_primary_source_artifact") or ""
         ),
         "field_work_order_rows": _field_work_order_rows(rows),
+        "score_evidence_row_work_order_ready": bool(
+            summary.get("score_evidence_row_work_order_ready") is True
+        ),
+        "score_evidence_row_work_order_row_count": _int(
+            summary.get("score_evidence_row_work_order_row_count")
+        ),
+        "score_evidence_row_work_order_pending_field_count": _int(
+            summary.get("score_evidence_row_work_order_pending_field_count")
+        ),
+        "score_evidence_row_work_order_primary_work_order_id": str(
+            summary.get("score_evidence_row_work_order_primary_work_order_id") or ""
+        ),
+        "score_evidence_row_work_order_primary_pose_id": str(
+            summary.get("score_evidence_row_work_order_primary_pose_id") or ""
+        ),
+        "score_evidence_row_work_order_primary_complex_id": str(
+            summary.get("score_evidence_row_work_order_primary_complex_id") or ""
+        ),
+        "score_evidence_row_work_order_primary_missing_field_count": _int(
+            summary.get("score_evidence_row_work_order_primary_missing_field_count")
+        ),
+        "score_evidence_row_work_order_primary_missing_fields": _string_list(
+            summary.get("score_evidence_row_work_order_primary_missing_fields")
+        ),
+        "score_evidence_row_work_order_primary_missing_field": str(
+            summary.get("score_evidence_row_work_order_primary_missing_field") or ""
+        ),
+        "score_evidence_row_work_order_primary_required_action": str(
+            summary.get("score_evidence_row_work_order_primary_required_action") or ""
+        ),
+        "score_evidence_row_work_order_primary_field_required_action": str(
+            summary.get("score_evidence_row_work_order_primary_field_required_action") or ""
+        ),
+        "score_evidence_row_work_order_primary_operator_csv": str(
+            summary.get("score_evidence_row_work_order_primary_operator_csv") or ""
+        ),
+        "score_evidence_row_work_order_primary_source_artifact": str(
+            summary.get("score_evidence_row_work_order_primary_source_artifact") or ""
+        ),
+        "score_evidence_row_work_order_rows": _score_evidence_row_work_order_rows(
+            score_row_work_order_rows
+        ),
         "metric_source_receipt_csv": str(summary.get("metric_source_receipt_csv") or ""),
         "metric_source_receipt_row_count": _int(summary.get("metric_source_receipt_row_count")),
         "metric_source_receipt_blocked_row_count": _int(

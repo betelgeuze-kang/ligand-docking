@@ -224,6 +224,10 @@ def test_public_benchmark_external_receipts_endpoint_missing_attach_packet(
     assert body["field_work_order_row_count"] == 0
     assert body["field_work_order_pending_field_count"] == 0
     assert body["field_work_order_rows"] == []
+    assert body["score_evidence_row_work_order_ready"] is False
+    assert body["score_evidence_row_work_order_row_count"] == 0
+    assert body["score_evidence_row_work_order_pending_field_count"] == 0
+    assert body["score_evidence_row_work_order_rows"] == []
     assert body["claim_promotion_allowed"] is False
     assert body["execution_enabled"] is False
     assert body["external_state_mutated"] is False
@@ -318,6 +322,43 @@ def test_public_benchmark_external_receipts_endpoint_surfaces_attach_work_order(
                 "metric_source_receipt_blocked_row_count": 51,
                 "metric_source_receipt_manual_field_pending_count": 510,
                 "metric_source_receipt_approval_token_pending_count": 51,
+                "score_evidence_row_work_order_ready": False,
+                "score_evidence_row_work_order_row_count": 16,
+                "score_evidence_row_work_order_pending_field_count": 192,
+                "score_evidence_row_work_order_primary_work_order_id": (
+                    "vina_gnina_same_input_score_row:1abc_pose_001"
+                ),
+                "score_evidence_row_work_order_primary_pose_id": "1abc_pose_001",
+                "score_evidence_row_work_order_primary_complex_id": "1abc",
+                "score_evidence_row_work_order_primary_missing_field_count": 12,
+                "score_evidence_row_work_order_primary_missing_fields": [
+                    "vina_score",
+                    "gnina_score",
+                    "comparison_score_source",
+                    "comparison_score_artifact_path",
+                    "comparison_score_artifact_sha256",
+                    "operator_engine_versions",
+                    "operator_prep_policy_sha256",
+                    "operator_method",
+                    "operator_reviewed_at_utc",
+                    "operator_id",
+                    "license_ok",
+                    "approval_token",
+                ],
+                "score_evidence_row_work_order_primary_missing_field": "vina_score",
+                "score_evidence_row_work_order_primary_required_action": (
+                    "Fill the missing same-input score, metadata, license, and approval fields "
+                    "for this pose row, then rebuild the receipt."
+                ),
+                "score_evidence_row_work_order_primary_field_required_action": (
+                    "Fill numeric vina_score values from the same-input engine replay for every pending pose."
+                ),
+                "score_evidence_row_work_order_primary_operator_csv": (
+                    "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                ),
+                "score_evidence_row_work_order_primary_source_artifact": (
+                    "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+                ),
             },
             "rows": [
                 {
@@ -392,6 +433,55 @@ def test_public_benchmark_external_receipts_endpoint_surfaces_attach_work_order(
                     "claim_promotion_allowed": True,
                 }
             ],
+            "score_evidence_row_work_order_rows": [
+                {
+                    "work_order_id": "vina_gnina_same_input_score_row:1abc_pose_001",
+                    "status": "blocked",
+                    "pose_id": "1abc_pose_001",
+                    "complex_id": "1abc",
+                    "operator_csv": (
+                        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                    ),
+                    "source_artifact": (
+                        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+                    ),
+                    "missing_field_count": 12,
+                    "missing_fields": [
+                        "vina_score",
+                        "gnina_score",
+                        "comparison_score_source",
+                        "comparison_score_artifact_path",
+                        "comparison_score_artifact_sha256",
+                        "operator_engine_versions",
+                        "operator_prep_policy_sha256",
+                        "operator_method",
+                        "operator_reviewed_at_utc",
+                        "operator_id",
+                        "license_ok",
+                        "approval_token",
+                    ],
+                    "primary_missing_field": "vina_score",
+                    "primary_required_action": (
+                        "Fill numeric vina_score values from the same-input engine replay for every pending pose."
+                    ),
+                    "required_action": (
+                        "Fill the missing same-input score, metadata, license, and approval fields "
+                        "for this pose row, then rebuild the receipt."
+                    ),
+                    "blocker_count": 4,
+                    "blockers": [
+                        "score_values_missing_or_invalid",
+                        "operator_metadata_missing_or_placeholder",
+                        "license_ok_pending",
+                        "approval_token_pending",
+                    ],
+                    "operator_action_required": True,
+                    "claim_boundary": "same-input Vina/GNINA score receipt only",
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                }
+            ],
         },
     )
 
@@ -439,6 +529,42 @@ def test_public_benchmark_external_receipts_endpoint_surfaces_attach_work_order(
     assert body["field_work_order_rows"][0]["execution_enabled"] is False
     assert body["field_work_order_rows"][0]["external_state_mutated"] is False
     assert body["field_work_order_rows"][0]["claim_promotion_allowed"] is False
+    assert body["score_evidence_row_work_order_ready"] is False
+    assert body["score_evidence_row_work_order_row_count"] == 16
+    assert body["score_evidence_row_work_order_pending_field_count"] == 192
+    assert body["score_evidence_row_work_order_primary_work_order_id"] == (
+        "vina_gnina_same_input_score_row:1abc_pose_001"
+    )
+    assert body["score_evidence_row_work_order_primary_pose_id"] == "1abc_pose_001"
+    assert body["score_evidence_row_work_order_primary_complex_id"] == "1abc"
+    assert body["score_evidence_row_work_order_primary_missing_field_count"] == 12
+    assert body["score_evidence_row_work_order_primary_missing_fields"] == [
+        "vina_score",
+        "gnina_score",
+        "comparison_score_source",
+        "comparison_score_artifact_path",
+        "comparison_score_artifact_sha256",
+        "operator_engine_versions",
+        "operator_prep_policy_sha256",
+        "operator_method",
+        "operator_reviewed_at_utc",
+        "operator_id",
+        "license_ok",
+        "approval_token",
+    ]
+    assert body["score_evidence_row_work_order_primary_missing_field"] == "vina_score"
+    assert body["score_evidence_row_work_order_primary_required_action"] == (
+        "Fill the missing same-input score, metadata, license, and approval fields "
+        "for this pose row, then rebuild the receipt."
+    )
+    assert body["score_evidence_row_work_order_primary_field_required_action"] == (
+        "Fill numeric vina_score values from the same-input engine replay for every pending pose."
+    )
+    assert body["score_evidence_row_work_order_rows"][0]["pose_id"] == "1abc_pose_001"
+    assert body["score_evidence_row_work_order_rows"][0]["missing_field_count"] == 12
+    assert body["score_evidence_row_work_order_rows"][0]["execution_enabled"] is False
+    assert body["score_evidence_row_work_order_rows"][0]["external_state_mutated"] is False
+    assert body["score_evidence_row_work_order_rows"][0]["claim_promotion_allowed"] is False
     assert body["metric_source_receipt_approval_token_pending_count"] == 51
     assert body["claim_promotion_allowed"] is False
 
@@ -493,6 +619,21 @@ def test_public_benchmark_external_receipts_endpoint_falls_back_to_embedded_atta
                 "field_work_order_primary_source_artifact": (
                     "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
                 ),
+                "score_evidence_row_work_order_ready": False,
+                "score_evidence_row_work_order_row_count": 1,
+                "score_evidence_row_work_order_pending_field_count": 12,
+                "score_evidence_row_work_order_primary_pose_id": "1abc_pose_001",
+                "score_evidence_row_work_order_primary_complex_id": "1abc",
+                "score_evidence_row_work_order_primary_missing_field_count": 12,
+                "score_evidence_row_work_order_primary_missing_fields": [
+                    "vina_score",
+                    "gnina_score",
+                    "approval_token",
+                ],
+                "score_evidence_row_work_order_primary_missing_field": "vina_score",
+                "score_evidence_row_work_order_primary_required_action": (
+                    "Fill the missing same-input score row."
+                ),
             },
             "rows": [],
             "receipt_attach_lane_rows": [
@@ -543,6 +684,31 @@ def test_public_benchmark_external_receipts_endpoint_falls_back_to_embedded_atta
                     "claim_promotion_allowed": True,
                 }
             ],
+            "score_evidence_row_work_order_rows": [
+                {
+                    "work_order_id": "vina_gnina_same_input_score_row:1abc_pose_001",
+                    "status": "blocked",
+                    "pose_id": "1abc_pose_001",
+                    "complex_id": "1abc",
+                    "operator_csv": (
+                        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                    ),
+                    "source_artifact": (
+                        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+                    ),
+                    "missing_field_count": 12,
+                    "missing_fields": ["vina_score", "gnina_score", "approval_token"],
+                    "primary_missing_field": "vina_score",
+                    "primary_required_action": (
+                        "Fill numeric vina_score values from the same-input engine replay."
+                    ),
+                    "required_action": "Fill the missing same-input score row.",
+                    "operator_action_required": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                }
+            ],
         },
     )
 
@@ -560,3 +726,15 @@ def test_public_benchmark_external_receipts_endpoint_falls_back_to_embedded_atta
     assert body["field_work_order_rows"][0]["execution_enabled"] is False
     assert body["field_work_order_rows"][0]["external_state_mutated"] is False
     assert body["field_work_order_rows"][0]["claim_promotion_allowed"] is False
+    assert body["score_evidence_row_work_order_row_count"] == 1
+    assert body["score_evidence_row_work_order_pending_field_count"] == 12
+    assert body["score_evidence_row_work_order_primary_pose_id"] == "1abc_pose_001"
+    assert body["score_evidence_row_work_order_primary_missing_fields"] == [
+        "vina_score",
+        "gnina_score",
+        "approval_token",
+    ]
+    assert body["score_evidence_row_work_order_rows"][0]["pose_id"] == "1abc_pose_001"
+    assert body["score_evidence_row_work_order_rows"][0]["execution_enabled"] is False
+    assert body["score_evidence_row_work_order_rows"][0]["external_state_mutated"] is False
+    assert body["score_evidence_row_work_order_rows"][0]["claim_promotion_allowed"] is False

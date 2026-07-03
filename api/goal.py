@@ -181,6 +181,37 @@ def _rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
     return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
 
 
+def _score_evidence_row_work_order_rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = packet.get("score_evidence_row_work_order_rows")
+    source_rows = [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+    work_rows: list[dict[str, Any]] = []
+    for row in source_rows:
+        missing_fields = _string_list(row.get("missing_fields"))
+        work_rows.append(
+            {
+                "work_order_id": str(row.get("work_order_id") or ""),
+                "status": str(row.get("status") or ""),
+                "pose_id": str(row.get("pose_id") or ""),
+                "complex_id": str(row.get("complex_id") or ""),
+                "operator_csv": str(row.get("operator_csv") or ""),
+                "source_artifact": str(row.get("source_artifact") or ""),
+                "missing_field_count": _int(row.get("missing_field_count")) or len(missing_fields),
+                "missing_fields": missing_fields,
+                "primary_missing_field": str(row.get("primary_missing_field") or ""),
+                "primary_required_action": str(row.get("primary_required_action") or ""),
+                "required_action": str(row.get("required_action") or ""),
+                "blocker_count": _int(row.get("blocker_count")),
+                "blockers": _string_list(row.get("blockers")),
+                "operator_action_required": bool(row.get("operator_action_required") is not False),
+                "claim_boundary": str(row.get("claim_boundary") or ""),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return work_rows
+
+
 def _blockers(packet: dict[str, Any]) -> list[dict[str, Any]]:
     blockers = packet.get("blockers")
     return [row for row in blockers if isinstance(row, dict)] if isinstance(blockers, list) else []
@@ -4330,6 +4361,7 @@ async def get_goal_public_benchmark() -> dict[str, Any]:
         if isinstance(field_rows_value, list)
         else []
     )
+    score_evidence_row_work_order_rows = _score_evidence_row_work_order_rows(attach_packet)
     audit_rows = _rows(audit_packet)
     sequence_rows = _public_benchmark_sequence_rows(audit_rows)
     blocked_sequence_rows = [row for row in sequence_rows if not row["ready"]]
@@ -4364,6 +4396,20 @@ async def get_goal_public_benchmark() -> dict[str, Any]:
             "rows": [],
             "receipt_attach_rows": [],
             "field_work_order_rows": [],
+            "score_evidence_row_work_order_ready": False,
+            "score_evidence_row_work_order_row_count": 0,
+            "score_evidence_row_work_order_pending_field_count": 0,
+            "score_evidence_row_work_order_primary_work_order_id": "",
+            "score_evidence_row_work_order_primary_pose_id": "",
+            "score_evidence_row_work_order_primary_complex_id": "",
+            "score_evidence_row_work_order_primary_missing_field_count": 0,
+            "score_evidence_row_work_order_primary_missing_fields": [],
+            "score_evidence_row_work_order_primary_missing_field": "",
+            "score_evidence_row_work_order_primary_required_action": "",
+            "score_evidence_row_work_order_primary_field_required_action": "",
+            "score_evidence_row_work_order_primary_operator_csv": "",
+            "score_evidence_row_work_order_primary_source_artifact": "",
+            "score_evidence_row_work_order_rows": [],
             **_mutation_flags(),
             "claim_boundary": CLAIM_BOUNDARY,
         }
@@ -4427,6 +4473,45 @@ async def get_goal_public_benchmark() -> dict[str, Any]:
         "field_work_order_primary_source_artifact": str(
             attach.get("field_work_order_primary_source_artifact") or ""
         ),
+        "score_evidence_row_work_order_ready": bool(
+            attach.get("score_evidence_row_work_order_ready") is True
+        ),
+        "score_evidence_row_work_order_row_count": _int(
+            attach.get("score_evidence_row_work_order_row_count")
+        ),
+        "score_evidence_row_work_order_pending_field_count": _int(
+            attach.get("score_evidence_row_work_order_pending_field_count")
+        ),
+        "score_evidence_row_work_order_primary_work_order_id": str(
+            attach.get("score_evidence_row_work_order_primary_work_order_id") or ""
+        ),
+        "score_evidence_row_work_order_primary_pose_id": str(
+            attach.get("score_evidence_row_work_order_primary_pose_id") or ""
+        ),
+        "score_evidence_row_work_order_primary_complex_id": str(
+            attach.get("score_evidence_row_work_order_primary_complex_id") or ""
+        ),
+        "score_evidence_row_work_order_primary_missing_field_count": _int(
+            attach.get("score_evidence_row_work_order_primary_missing_field_count")
+        ),
+        "score_evidence_row_work_order_primary_missing_fields": _string_list(
+            attach.get("score_evidence_row_work_order_primary_missing_fields")
+        ),
+        "score_evidence_row_work_order_primary_missing_field": str(
+            attach.get("score_evidence_row_work_order_primary_missing_field") or ""
+        ),
+        "score_evidence_row_work_order_primary_required_action": str(
+            attach.get("score_evidence_row_work_order_primary_required_action") or ""
+        ),
+        "score_evidence_row_work_order_primary_field_required_action": str(
+            attach.get("score_evidence_row_work_order_primary_field_required_action") or ""
+        ),
+        "score_evidence_row_work_order_primary_operator_csv": str(
+            attach.get("score_evidence_row_work_order_primary_operator_csv") or ""
+        ),
+        "score_evidence_row_work_order_primary_source_artifact": str(
+            attach.get("score_evidence_row_work_order_primary_source_artifact") or ""
+        ),
         "vina_gnina_score_value_pending_count": _int(attach.get("vina_gnina_score_value_pending_count")),
         "vina_gnina_operator_metadata_pending_count": _int(
             attach.get("vina_gnina_operator_metadata_pending_count")
@@ -4440,6 +4525,7 @@ async def get_goal_public_benchmark() -> dict[str, Any]:
         "rows": audit_rows,
         "receipt_attach_rows": _rows(attach_packet),
         "field_work_order_rows": field_work_order_rows,
+        "score_evidence_row_work_order_rows": score_evidence_row_work_order_rows,
         **_mutation_flags(),
         "claim_boundary": attach.get("claim_boundary") or audit.get("claim_boundary") or CLAIM_BOUNDARY,
     }
