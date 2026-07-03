@@ -46,6 +46,9 @@ def _write_inputs(
         "score_template_receipt": (
             tmp_path / "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
         ),
+        "execution_preflight": (
+            tmp_path / "runs/public_benchmark_vina_gnina_execution_preflight_current.json"
+        ),
     }
     _write_summary(
         paths["materialization"],
@@ -223,6 +226,21 @@ def _write_inputs(
             "next_required_step": "Fill Vina/GNINA same-input scores.",
         },
     )
+    _write_summary(
+        paths["execution_preflight"],
+        {
+            "status": "public_benchmark_vina_gnina_execution_preflight_ready"
+            if comparison_ready
+            else "blocked_public_benchmark_vina_gnina_execution_preflight",
+            "execution_preflight_ready": comparison_ready,
+            "score_template_row_count": 16,
+            "ready_for_local_same_input_scoring_row_count": 16 if comparison_ready else 0,
+            "blocked_for_local_same_input_scoring_row_count": 0 if comparison_ready else 16,
+            "vina_binary_present": comparison_ready,
+            "gnina_binary_present": comparison_ready,
+            "blockers": [] if comparison_ready else ["vina_binary_missing", "gnina_binary_missing"],
+        },
+    )
     return paths
 
 
@@ -239,6 +257,7 @@ def _build(tmp_path: Path, *, comparison_ready: bool, receipt_ready: bool) -> di
         benchmark_ledger_json=paths["ledger"],
         vina_gnina_work_order_json=paths["work_order"],
         vina_gnina_score_template_receipt_json=paths["score_template_receipt"],
+        vina_gnina_execution_preflight_json=paths["execution_preflight"],
         root=tmp_path,
     )
 
@@ -261,6 +280,12 @@ def test_public_benchmark_external_receipts_audit_blocks_unapproved_receipts(
     assert summary["vina_gnina_comparison_work_order_ready"] is True
     assert summary["vina_gnina_score_template_receipt_present"] is True
     assert summary["vina_gnina_score_template_receipt_ready"] is False
+    assert summary["vina_gnina_execution_preflight_present"] is True
+    assert summary["vina_gnina_execution_preflight_ready"] is False
+    assert summary["vina_gnina_execution_preflight_vina_binary_present"] is False
+    assert summary["vina_gnina_execution_preflight_gnina_binary_present"] is False
+    assert summary["vina_gnina_execution_preflight_blocked_for_local_same_input_scoring_row_count"] == 16
+    assert "vina_binary_missing" in summary["vina_gnina_execution_preflight_blockers"]
     assert summary["vina_gnina_score_template_validation_ready"] is False
     assert summary["vina_gnina_score_template_filled_score_row_count"] == 0
     assert summary["vina_gnina_score_value_pending_count"] == 32
@@ -328,6 +353,8 @@ def test_public_benchmark_external_receipts_audit_ready_when_all_steps_pass(
     assert summary["blockers"] == []
     assert summary["vina_gnina_score_template_validation_ready"] is True
     assert summary["vina_gnina_score_template_receipt_ready"] is True
+    assert summary["vina_gnina_execution_preflight_ready"] is True
+    assert summary["vina_gnina_execution_preflight_ready_for_local_same_input_scoring_row_count"] == 16
     assert summary["vina_gnina_score_value_pending_count"] == 0
     assert summary["vina_gnina_pending_field_count"] == 0
     assert summary["receipt_blocked_row_count"] == 0
@@ -368,6 +395,8 @@ def test_public_benchmark_external_receipts_audit_cli_writes_outputs(tmp_path: P
             str(paths["work_order"]),
             "--vina-gnina-score-template-receipt-json",
             str(paths["score_template_receipt"]),
+            "--vina-gnina-execution-preflight-json",
+            str(paths["execution_preflight"]),
             "--out-json",
             str(out_json),
             "--out-csv",

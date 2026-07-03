@@ -26,6 +26,9 @@ DEFAULT_VINA_GNINA_WORK_ORDER_JSON = "runs/public_benchmark_vina_gnina_compariso
 DEFAULT_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_JSON = (
     "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
 )
+DEFAULT_VINA_GNINA_EXECUTION_PREFLIGHT_JSON = (
+    "runs/public_benchmark_vina_gnina_execution_preflight_current.json"
+)
 DEFAULT_OUT_JSON = "runs/public_benchmark_external_receipts_audit_current.json"
 DEFAULT_OUT_CSV = "runs/public_benchmark_external_receipts_audit_current.csv"
 DEFAULT_OUT_MD = "runs/public_benchmark_external_receipts_audit_current.md"
@@ -370,6 +373,7 @@ def build_public_benchmark_external_receipts_audit(
     benchmark_ledger_json: str | Path = DEFAULT_BENCHMARK_LEDGER_JSON,
     vina_gnina_work_order_json: str | Path = DEFAULT_VINA_GNINA_WORK_ORDER_JSON,
     vina_gnina_score_template_receipt_json: str | Path = DEFAULT_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_JSON,
+    vina_gnina_execution_preflight_json: str | Path = DEFAULT_VINA_GNINA_EXECUTION_PREFLIGHT_JSON,
     root: Path = ROOT,
 ) -> dict[str, Any]:
     materialization = _summary(_read_json(materialization_json, root=root))
@@ -383,7 +387,11 @@ def build_public_benchmark_external_receipts_audit(
     vina_gnina_score_template_receipt = _summary(
         _read_json(vina_gnina_score_template_receipt_json, root=root)
     )
+    vina_gnina_execution_preflight = _summary(
+        _read_json(vina_gnina_execution_preflight_json, root=root)
+    )
     score_template_receipt_present = _file_exists(vina_gnina_score_template_receipt_json, root=root)
+    execution_preflight_present = _file_exists(vina_gnina_execution_preflight_json, root=root)
 
     manifest_ready = (
         _file_exists(materialization_json, root=root)
@@ -692,6 +700,30 @@ def build_public_benchmark_external_receipts_audit(
             vina_gnina_score_template_receipt_json,
             root=root,
         ),
+        "vina_gnina_execution_preflight_present": execution_preflight_present,
+        "vina_gnina_execution_preflight_ready": _bool_true(
+            vina_gnina_execution_preflight.get("execution_preflight_ready")
+        ),
+        "vina_gnina_execution_preflight_status": _text(
+            vina_gnina_execution_preflight.get("status")
+        ),
+        "vina_gnina_execution_preflight_json": _display(
+            vina_gnina_execution_preflight_json,
+            root=root,
+        ),
+        "vina_gnina_execution_preflight_vina_binary_present": _bool_true(
+            vina_gnina_execution_preflight.get("vina_binary_present")
+        ),
+        "vina_gnina_execution_preflight_gnina_binary_present": _bool_true(
+            vina_gnina_execution_preflight.get("gnina_binary_present")
+        ),
+        "vina_gnina_execution_preflight_ready_for_local_same_input_scoring_row_count": _int(
+            vina_gnina_execution_preflight.get("ready_for_local_same_input_scoring_row_count")
+        ),
+        "vina_gnina_execution_preflight_blocked_for_local_same_input_scoring_row_count": _int(
+            vina_gnina_execution_preflight.get("blocked_for_local_same_input_scoring_row_count")
+        ),
+        "vina_gnina_execution_preflight_blockers": vina_gnina_execution_preflight.get("blockers", []),
         "vina_gnina_score_template_csv": score_template_csv,
         "vina_gnina_score_template_row_count": vina_gnina_score_template_row_count,
         "vina_gnina_score_template_validation_ready": _bool_true(
@@ -910,6 +942,10 @@ def _parser() -> argparse.ArgumentParser:
         "--vina-gnina-score-template-receipt-json",
         default=DEFAULT_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_JSON,
     )
+    parser.add_argument(
+        "--vina-gnina-execution-preflight-json",
+        default=DEFAULT_VINA_GNINA_EXECUTION_PREFLIGHT_JSON,
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -929,6 +965,7 @@ def main(argv: list[str] | None = None) -> int:
         benchmark_ledger_json=args.benchmark_ledger_json,
         vina_gnina_work_order_json=args.vina_gnina_work_order_json,
         vina_gnina_score_template_receipt_json=args.vina_gnina_score_template_receipt_json,
+        vina_gnina_execution_preflight_json=args.vina_gnina_execution_preflight_json,
     )
     _write_json(args.out_json, payload)
     _write_csv(args.out_csv, payload["rows"])
