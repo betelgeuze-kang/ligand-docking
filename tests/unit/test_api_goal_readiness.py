@@ -242,6 +242,38 @@ def test_goal_developer_preview_exposes_requirement_rows_fail_closed(
                     "next_required_step": "Attach reviewed clean-checkout receipt.",
                 }
             ],
+            "stage5_recovery_rows": [
+                {
+                    "gate_id": "benchmark_results_clean_checkout_regenerated",
+                    "priority": "A",
+                    "receipt_artifact": (
+                        ".betelgeuze/"
+                        "developer_preview_clean_checkout_benchmark_receipt.json"
+                    ),
+                    "receipt_kind": "required",
+                    "blocker_detail": (
+                        "baseline_source_blocker=stage5_input_missing:"
+                        "--scores-csv:runs/missing_stage5_scores.csv"
+                    ),
+                    "source_label": "baseline_source_blocker",
+                    "blocker_id": "stage5_input_missing",
+                    "source_argument": "--scores-csv",
+                    "source_artifact_path": "runs/missing_stage5_scores.csv",
+                    "source_artifact_present": False,
+                    "task_key": "missing_stage5_scores",
+                    "required_stage5_arguments": (
+                        "--scores-csv;--labels-csv;--split-csv;--expected-keys-csv"
+                    ),
+                    "required_stage5_argument_count": 4,
+                    "required_action": (
+                        "Restore or regenerate this stage5 input family."
+                    ),
+                    "operator_action_required": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                }
+            ],
         },
     )
 
@@ -288,6 +320,44 @@ def test_goal_developer_preview_exposes_requirement_rows_fail_closed(
         for row in response["developer_preview_requirement_rows"]
     )
     assert response["receipt_work_order_blocked_row_count"] == 1
+    assert response["developer_preview_stage5_recovery_row_count"] == 1
+    assert response["developer_preview_stage5_primary_recovery_row"] == (
+        response["developer_preview_stage5_recovery_rows"][0]
+    )
+    assert response["developer_preview_stage5_recovery_rows"] == [
+        {
+            "gate_id": "benchmark_results_clean_checkout_regenerated",
+            "priority": "A",
+            "receipt_artifact": (
+                ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+            ),
+            "receipt_kind": "required",
+            "blocker_id": "stage5_input_missing",
+            "blocker_detail": (
+                "baseline_source_blocker=stage5_input_missing:"
+                "--scores-csv:runs/missing_stage5_scores.csv"
+            ),
+            "source_label": "baseline_source_blocker",
+            "source_argument": "--scores-csv",
+            "source_artifact_path": "runs/missing_stage5_scores.csv",
+            "source_artifact_present": False,
+            "task_key": "missing_stage5_scores",
+            "required_stage5_arguments": [
+                "--scores-csv",
+                "--labels-csv",
+                "--split-csv",
+                "--expected-keys-csv",
+            ],
+            "required_stage5_argument_count": 4,
+            "required_action": "Restore or regenerate this stage5 input family.",
+            "operator_action_required": True,
+            "developer_demo_wording_allowed": False,
+            "paid_pilot_wording_allowed": False,
+            "claim_promotion_allowed": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+        }
+    ]
     assert response["developer_preview_linux_reproducibility_receipt_present"] is False
     assert response["developer_preview_windows_reproducibility_receipt_present"] is False
     assert response["developer_preview_new_user_observation_receipt_present"] is False
@@ -348,6 +418,9 @@ def test_goal_developer_preview_missing_artifact_keeps_requirements_fail_closed(
     assert response["developer_preview_windows_reproducibility_requirement_rows"] == []
     assert response["developer_preview_new_user_observation_receipt_present"] is False
     assert response["developer_preview_new_user_observation_template_rows"] == []
+    assert response["developer_preview_stage5_recovery_row_count"] == 0
+    assert response["developer_preview_stage5_primary_recovery_row"] == {}
+    assert response["developer_preview_stage5_recovery_rows"] == []
     assert response["execution_enabled"] is False
     assert response["external_state_mutated"] is False
 

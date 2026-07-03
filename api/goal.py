@@ -1117,6 +1117,45 @@ def _developer_preview_work_order_surface(work_rows: list[dict[str, Any]]) -> di
     }
 
 
+def _developer_preview_stage5_recovery_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    recovery_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        recovery_rows.append(
+            {
+                "gate_id": str(row.get("gate_id") or ""),
+                "priority": str(row.get("priority") or ""),
+                "receipt_artifact": str(row.get("receipt_artifact") or ""),
+                "receipt_kind": str(row.get("receipt_kind") or ""),
+                "blocker_id": str(row.get("blocker_id") or ""),
+                "blocker_detail": str(row.get("blocker_detail") or ""),
+                "source_label": str(row.get("source_label") or ""),
+                "source_argument": str(row.get("source_argument") or ""),
+                "source_artifact_path": str(row.get("source_artifact_path") or ""),
+                "source_artifact_present": bool(row.get("source_artifact_present") is True),
+                "task_key": str(row.get("task_key") or ""),
+                "required_stage5_arguments": _delimited_string_list(
+                    row.get("required_stage5_arguments")
+                ),
+                "required_stage5_argument_count": _int(
+                    row.get("required_stage5_argument_count")
+                ),
+                "required_action": str(row.get("required_action") or ""),
+                "operator_action_required": bool(
+                    row.get("operator_action_required") is not False
+                ),
+                "developer_demo_wording_allowed": False,
+                "paid_pilot_wording_allowed": False,
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+    return recovery_rows
+
+
 def _public_benchmark_sequence_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     rows_by_step = {str(row.get("step_id") or ""): row for row in rows}
     sequence_rows: list[dict[str, Any]] = []
@@ -4564,6 +4603,9 @@ async def get_goal_developer_preview() -> dict[str, Any]:
             "developer_preview_primary_source_blocker_detail_row": {},
             "developer_preview_missing_stage5_input_count": 0,
             "developer_preview_missing_stage5_input_paths": [],
+            "developer_preview_stage5_recovery_row_count": 0,
+            "developer_preview_stage5_primary_recovery_row": {},
+            "developer_preview_stage5_recovery_rows": [],
             **_developer_preview_clean_checkout_receipt_surface(
                 DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT
             ),
@@ -4586,6 +4628,9 @@ async def get_goal_developer_preview() -> dict[str, Any]:
     clean_checkout_surface = _developer_preview_clean_checkout_receipt_surface(
         DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT
     )
+    stage5_recovery_rows = _developer_preview_stage5_recovery_rows(
+        packet.get("stage5_recovery_rows")
+    )
     return {
         **summary,
         "artifact_path": str(DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT),
@@ -4602,6 +4647,11 @@ async def get_goal_developer_preview() -> dict[str, Any]:
         **requirement_surface,
         "receipt_work_order_rows": work_rows,
         **_developer_preview_work_order_surface(work_rows),
+        "developer_preview_stage5_recovery_row_count": len(stage5_recovery_rows),
+        "developer_preview_stage5_primary_recovery_row": (
+            stage5_recovery_rows[0] if stage5_recovery_rows else {}
+        ),
+        "developer_preview_stage5_recovery_rows": stage5_recovery_rows,
         **clean_checkout_surface,
         **_developer_preview_platform_reproducibility_surface(
             DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_ARTIFACT,
