@@ -100,6 +100,10 @@ def test_vina_gnina_score_template_receipt_ready_when_all_rows_reviewed(tmp_path
     assert summary["score_evidence_blocked_field_count"] == 0
     assert summary["score_evidence_primary_field_id"] == ""
     assert summary["score_evidence_primary_pending_row_count"] == 0
+    assert summary["score_evidence_row_work_order_ready"] is True
+    assert summary["score_evidence_row_work_order_row_count"] == 0
+    assert summary["score_evidence_row_work_order_primary_pose_id"] == ""
+    assert summary["score_evidence_row_work_order_primary_missing_fields"] == []
     assert summary["blocker_count"] == 0
     assert summary["claim_promotion_allowed"] is False
     assert summary["execution_enabled"] is False
@@ -113,6 +117,7 @@ def test_vina_gnina_score_template_receipt_ready_when_all_rows_reviewed(tmp_path
         and row["claim_promotion_allowed"] is False
         for row in payload["score_evidence_field_rows"]
     )
+    assert payload["score_evidence_row_work_order_rows"] == []
 
 
 def test_vina_gnina_score_template_receipt_blocks_empty_operator_template(tmp_path: Path) -> None:
@@ -164,6 +169,25 @@ def test_vina_gnina_score_template_receipt_blocks_empty_operator_template(tmp_pa
     assert summary["score_evidence_primary_required_action"] == (
         "Fill numeric vina_score values from the same-input engine replay for every pending pose."
     )
+    assert summary["score_evidence_row_work_order_ready"] is False
+    assert summary["score_evidence_row_work_order_row_count"] == 1
+    assert summary["score_evidence_row_work_order_primary_pose_id"] == "1abc_pose_001"
+    assert summary["score_evidence_row_work_order_primary_complex_id"] == "1abc"
+    assert summary["score_evidence_row_work_order_primary_missing_field_count"] == 8
+    assert summary["score_evidence_row_work_order_primary_missing_fields"] == [
+        "vina_score",
+        "gnina_score",
+        "comparison_score_source",
+        "comparison_score_artifact_path",
+        "operator_reviewed_at_utc",
+        "operator_id",
+        "license_ok",
+        "approval_token",
+    ]
+    assert summary["score_evidence_row_work_order_primary_required_action"] == (
+        "Fill the missing same-input score, metadata, license, and approval fields "
+        "for this pose row, then rebuild the receipt."
+    )
     assert "same_input_score_values_pending" in blockers
     assert "approval_token_pending" in blockers
     assert payload["rows"][0]["status"] == "blocked"
@@ -175,6 +199,51 @@ def test_vina_gnina_score_template_receipt_blocks_empty_operator_template(tmp_pa
     assert field_rows["approval_token"]["required_action"] == (
         f"Fill approval_token with {APPROVAL_TOKEN} after operator review."
     )
+    assert payload["score_evidence_row_work_order_rows"] == [
+        {
+            "work_order_id": "vina_gnina_same_input_score_row:1abc_pose_001",
+            "pose_id": "1abc_pose_001",
+            "complex_id": "1abc",
+            "status": "blocked",
+            "operator_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
+            "missing_field_count": 8,
+            "missing_fields": [
+                "vina_score",
+                "gnina_score",
+                "comparison_score_source",
+                "comparison_score_artifact_path",
+                "operator_reviewed_at_utc",
+                "operator_id",
+                "license_ok",
+                "approval_token",
+            ],
+            "blocker_count": 4,
+            "blockers": [
+                "score_values_missing_or_invalid",
+                "operator_metadata_missing_or_placeholder",
+                "license_ok_pending",
+                "approval_token_pending",
+            ],
+            "score_values_ready": False,
+            "metadata_ready": False,
+            "license_ok": False,
+            "approval_token_ok": False,
+            "primary_missing_field": "vina_score",
+            "primary_required_action": (
+                "Fill numeric vina_score values from the same-input engine replay for every pending pose."
+            ),
+            "required_action": (
+                "Fill the missing same-input score, metadata, license, and approval "
+                "fields for this pose row, then rebuild the receipt."
+            ),
+            "approval_token_required": APPROVAL_TOKEN,
+            "operator_action_required": True,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+            "claim_boundary": mod.CLAIM_BOUNDARY,
+        }
+    ]
 
 
 def test_vina_gnina_score_template_receipt_blocks_row_count_mismatch(tmp_path: Path) -> None:
@@ -224,3 +293,4 @@ def test_vina_gnina_score_template_receipt_cli_writes_outputs(tmp_path: Path) ->
     assert out_csv.read_text(encoding="utf-8").startswith("pose_id,complex_id,status,")
     assert "Public Benchmark Vina/GNINA Score Template Receipt" in out_md.read_text(encoding="utf-8")
     assert "Score Evidence Field Checklist" in out_md.read_text(encoding="utf-8")
+    assert "Score Evidence Row Work Order" in out_md.read_text(encoding="utf-8")

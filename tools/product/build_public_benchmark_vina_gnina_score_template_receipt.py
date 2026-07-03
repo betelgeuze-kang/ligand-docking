@@ -247,6 +247,58 @@ def _score_evidence_field_rows(
     return rows
 
 
+def _score_evidence_row_work_order_rows(
+    row_checks: list[dict[str, Any]],
+    *,
+    score_template_csv: str | Path,
+    root: Path,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    operator_csv = _display(score_template_csv, root=root)
+    for row in row_checks:
+        if _text(row.get("status")) == "ready":
+            continue
+        missing_fields = [
+            field for field in _text(row.get("missing_fields")).split(";") if field
+        ]
+        blockers = [blocker for blocker in _text(row.get("blocker")).split(";") if blocker]
+        primary_missing_field = missing_fields[0] if missing_fields else ""
+        rows.append(
+            {
+                "work_order_id": f"vina_gnina_same_input_score_row:{_text(row.get('pose_id'))}",
+                "pose_id": _text(row.get("pose_id")),
+                "complex_id": _text(row.get("complex_id")),
+                "status": "blocked",
+                "operator_csv": operator_csv,
+                "missing_field_count": len(missing_fields),
+                "missing_fields": missing_fields,
+                "blocker_count": len(blockers),
+                "blockers": blockers,
+                "score_values_ready": _bool_true(row.get("score_values_ready")),
+                "metadata_ready": _bool_true(row.get("metadata_ready")),
+                "license_ok": _bool_true(row.get("license_ok")),
+                "approval_token_ok": _bool_true(row.get("approval_token_ok")),
+                "primary_missing_field": primary_missing_field,
+                "primary_required_action": _score_evidence_field_required_action(
+                    primary_missing_field
+                )
+                if primary_missing_field
+                else "",
+                "required_action": (
+                    "Fill the missing same-input score, metadata, license, and approval "
+                    "fields for this pose row, then rebuild the receipt."
+                ),
+                "approval_token_required": APPROVAL_TOKEN,
+                "operator_action_required": True,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "claim_boundary": CLAIM_BOUNDARY,
+            }
+        )
+    return rows
+
+
 def build_public_benchmark_vina_gnina_score_template_receipt(
     *,
     work_order_json: str | Path = DEFAULT_WORK_ORDER_JSON,
@@ -267,6 +319,16 @@ def build_public_benchmark_vina_gnina_score_template_receipt(
     ]
     score_evidence_primary_field_row = (
         score_evidence_blocked_field_rows[0] if score_evidence_blocked_field_rows else {}
+    )
+    score_evidence_row_work_order_rows = _score_evidence_row_work_order_rows(
+        row_checks,
+        score_template_csv=score_template_csv,
+        root=root,
+    )
+    score_evidence_primary_row_work_order = (
+        score_evidence_row_work_order_rows[0]
+        if score_evidence_row_work_order_rows
+        else {}
     )
 
     missing_columns = [field for field in SCORE_TEMPLATE_FIELDS if field not in fieldnames]
@@ -352,6 +414,25 @@ def build_public_benchmark_vina_gnina_score_template_receipt(
         "score_evidence_primary_required_action": _text(
             score_evidence_primary_field_row.get("required_action")
         ),
+        "score_evidence_row_work_order_ready": not score_evidence_row_work_order_rows,
+        "score_evidence_row_work_order_row_count": len(score_evidence_row_work_order_rows),
+        "score_evidence_row_work_order_primary_pose_id": _text(
+            score_evidence_primary_row_work_order.get("pose_id")
+        ),
+        "score_evidence_row_work_order_primary_complex_id": _text(
+            score_evidence_primary_row_work_order.get("complex_id")
+        ),
+        "score_evidence_row_work_order_primary_missing_field_count": _int(
+            score_evidence_primary_row_work_order.get("missing_field_count")
+        ),
+        "score_evidence_row_work_order_primary_missing_fields": (
+            score_evidence_primary_row_work_order.get("missing_fields", [])
+            if score_evidence_primary_row_work_order
+            else []
+        ),
+        "score_evidence_row_work_order_primary_required_action": _text(
+            score_evidence_primary_row_work_order.get("required_action")
+        ),
         "score_template_blocker_count": validation["score_template_blocker_count"],
         "score_template_blockers": validation["score_template_blockers"],
         "blocker_count": len(blockers),
@@ -373,6 +454,7 @@ def build_public_benchmark_vina_gnina_score_template_receipt(
         "summary": summary,
         "rows": row_checks,
         "score_evidence_field_rows": score_evidence_field_rows,
+        "score_evidence_row_work_order_rows": score_evidence_row_work_order_rows,
     }
 
 
@@ -406,6 +488,7 @@ def _render_md(payload: dict[str, Any]) -> str:
         f"- license_ok_pending_count: `{summary['license_ok_pending_count']}`",
         f"- approval_token_pending_count: `{summary['approval_token_pending_count']}`",
         f"- score_evidence_blocked_field_count: `{summary['score_evidence_blocked_field_count']}`",
+        f"- score_evidence_row_work_order_row_count: `{summary['score_evidence_row_work_order_row_count']}`",
         f"- blocker_count: `{summary['blocker_count']}`",
         "",
         "| pose_id | status | blocker |",
@@ -426,6 +509,20 @@ def _render_md(payload: dict[str, Any]) -> str:
         lines.append(
             f"| `{row['field_id']}` | `{row['status']}` | `{row['pending_row_count']}` | "
             f"{row['required_action'] or '-'} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Score Evidence Row Work Order",
+            "",
+            "| pose | complex | missing fields | primary action |",
+            "| --- | --- | ---: | --- |",
+        ]
+    )
+    for row in payload.get("score_evidence_row_work_order_rows", []):
+        lines.append(
+            f"| `{row['pose_id']}` | `{row['complex_id']}` | `{row['missing_field_count']}` | "
+            f"{row['primary_required_action'] or row['required_action']} |"
         )
     lines.extend(["", CLAIM_BOUNDARY, ""])
     return "\n".join(lines)
