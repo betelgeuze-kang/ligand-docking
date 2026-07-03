@@ -18,6 +18,9 @@ POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_ARTIFACT = (
 POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_ARTIFACT = (
     ROOT / "runs" / "pocketmd_lite_candidate_metric_fill_preview_report_current.json"
 )
+POCKETMD_LITE_CANONICAL_REPORT_REVIEW_PACKET_ARTIFACT = (
+    ROOT / "runs" / "pocketmd_lite_canonical_report_review_packet_current.json"
+)
 
 _REPORT_CLAIM_BOUNDARY_MISSING = (
     "PocketMD Lite report endpoint only; the local report artifact is missing or invalid. "
@@ -243,6 +246,162 @@ def _metric_source_audit_rows(rows: list[Any]) -> list[dict[str, Any]]:
             }
         )
     return audit_rows
+
+
+def _canonical_review_rows(rows: list[Any]) -> list[dict[str, Any]]:
+    review_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        review_rows.append(
+            {
+                "entry_id": str(row.get("entry_id") or ""),
+                "review_ready": bool(row.get("review_ready") is True),
+                "review_action": str(row.get("review_action") or ""),
+                "metric_fill_status": str(row.get("metric_fill_status") or ""),
+                "metric_source_npz": str(row.get("metric_source_npz") or ""),
+                "canonical_band": str(row.get("canonical_band") or ""),
+                "preview_band": str(row.get("preview_band") or ""),
+                "canonical_claim_safe": bool(row.get("canonical_claim_safe") is True),
+                "preview_claim_safe": bool(row.get("preview_claim_safe") is True),
+                "canonical_missing_metric_names": _string_list(
+                    row.get("canonical_missing_metric_names")
+                ),
+                "preview_missing_metric_names": _string_list(
+                    row.get("preview_missing_metric_names")
+                ),
+                "canonical_update_candidate": bool(
+                    row.get("canonical_update_candidate") is True
+                ),
+                "canonical_local_min_ligand_rmsd_a": _float_or_none(
+                    row.get("canonical_local_min_ligand_rmsd_a")
+                ),
+                "preview_local_min_ligand_rmsd_a": _float_or_none(
+                    row.get("preview_local_min_ligand_rmsd_a")
+                ),
+                "canonical_hbond_persistence": _float_or_none(
+                    row.get("canonical_hbond_persistence")
+                ),
+                "preview_hbond_persistence": _float_or_none(
+                    row.get("preview_hbond_persistence")
+                ),
+                "canonical_contact_persistence": _float_or_none(
+                    row.get("canonical_contact_persistence")
+                ),
+                "preview_contact_persistence": _float_or_none(
+                    row.get("preview_contact_persistence")
+                ),
+                "canonical_initial_clash_count": _int_or_none(
+                    row.get("canonical_initial_clash_count")
+                ),
+                "preview_initial_clash_count": _int_or_none(
+                    row.get("preview_initial_clash_count")
+                ),
+                "canonical_final_clash_count": _int_or_none(
+                    row.get("canonical_clash_count")
+                ),
+                "preview_final_clash_count": _int_or_none(row.get("preview_clash_count")),
+                "canonical_clash_relief_count": _int_or_none(
+                    row.get("canonical_clash_relief_count")
+                ),
+                "preview_clash_relief_count": _int_or_none(
+                    row.get("preview_clash_relief_count")
+                ),
+                "blockers": _string_list(row.get("blockers")),
+                "operator_action_required": bool(row.get("review_ready") is not True),
+                "claim_promotion_allowed": False,
+                "candidate_csv_update_allowed": False,
+                "refinement_execution_enabled": False,
+                "execution_enabled": False,
+                "docking_results_emitted": False,
+                "external_state_mutated": False,
+            }
+        )
+    return review_rows
+
+
+def _canonical_report_review_surface(packet: dict[str, Any]) -> dict[str, Any]:
+    summary = _summary(packet)
+    rows = _canonical_review_rows(
+        packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    )
+    return {
+        "canonical_review_packet_artifact_path": str(
+            POCKETMD_LITE_CANONICAL_REPORT_REVIEW_PACKET_ARTIFACT
+        ),
+        "canonical_review_packet_present": bool(summary),
+        "canonical_review_packet_status": str(summary.get("status") or ""),
+        "canonical_review_packet_ready": bool(
+            summary.get("status") == "pocketmd_lite_canonical_report_review_packet_ready"
+        ),
+        "canonical_review_operator_approval_required": bool(
+            summary.get("operator_approval_required") is True
+        ),
+        "canonical_review_approval_token_required": str(
+            summary.get("approval_token_required") or ""
+        ),
+        "canonical_review_candidate_csv_update_allowed": False,
+        "canonical_review_canonical_candidate_csv_mutated": bool(
+            summary.get("canonical_candidate_csv_mutated") is True
+        ),
+        "canonical_review_canonical_candidate_csv": str(
+            summary.get("canonical_candidate_csv") or ""
+        ),
+        "canonical_review_preview_candidate_csv": str(
+            summary.get("preview_candidate_csv") or ""
+        ),
+        "canonical_review_review_row_count": _int(summary.get("review_row_count")),
+        "canonical_review_ready_review_row_count": _int(
+            summary.get("ready_review_row_count")
+        ),
+        "canonical_review_blocked_review_row_count": _int(
+            summary.get("blocked_review_row_count")
+        ),
+        "canonical_review_selected_top_k_count": _int(
+            summary.get("selected_top_k_count")
+        ),
+        "canonical_review_preview_report_ready": bool(
+            summary.get("preview_report_ready") is True
+        ),
+        "canonical_review_preview_claim_safe": bool(
+            summary.get("preview_claim_safe") is True
+        ),
+        "canonical_review_preview_green_row_count": _int(
+            summary.get("preview_green_row_count")
+        ),
+        "canonical_review_preview_abstain_row_count": _int(
+            summary.get("preview_abstain_row_count")
+        ),
+        "canonical_review_canonical_report_ready": bool(
+            summary.get("canonical_report_ready") is True
+        ),
+        "canonical_review_canonical_claim_safe": bool(
+            summary.get("canonical_claim_safe") is True
+        ),
+        "canonical_review_canonical_green_row_count": _int(
+            summary.get("canonical_green_row_count")
+        ),
+        "canonical_review_canonical_abstain_row_count": _int(
+            summary.get("canonical_abstain_row_count")
+        ),
+        "canonical_review_canonical_missing_refinement_metric_names": _string_list(
+            summary.get("canonical_missing_refinement_metric_names")
+        ),
+        "canonical_review_metric_source_audit_ready": bool(
+            summary.get("metric_source_audit_ready") is True
+        ),
+        "canonical_review_candidate_fill_preview_ready": bool(
+            summary.get("candidate_fill_preview_ready") is True
+        ),
+        "canonical_review_next_required_step": str(
+            summary.get("next_required_step") or ""
+        ),
+        "canonical_review_rows": rows,
+        "canonical_review_claim_promotion_allowed": False,
+        "canonical_review_refinement_execution_enabled": False,
+        "canonical_review_execution_enabled": False,
+        "canonical_review_external_state_mutated": False,
+    }
 
 
 def _report_blocker_rows(
@@ -601,6 +760,9 @@ async def get_product_pocketmd_lite_report() -> dict[str, Any]:
         if isinstance(preview_artifact.get("rows"), list)
         else []
     )
+    canonical_review_surface = _canonical_report_review_surface(
+        _read_json_object(POCKETMD_LITE_CANONICAL_REPORT_REVIEW_PACKET_ARTIFACT)
+    )
     if not artifact or not summary:
         readiness_rows = _claim_grade_readiness_rows({}, preview_summary, preview_rows)
         blocked_readiness_rows = [row for row in readiness_rows if not row["ready"]]
@@ -660,6 +822,7 @@ async def get_product_pocketmd_lite_report() -> dict[str, Any]:
             "docking_results_emitted": False,
             "external_state_mutated": False,
             "candidates": [],
+            **canonical_review_surface,
             "claim_boundary": _REPORT_CLAIM_BOUNDARY_MISSING,
         }
     report_rows = _report_rows(rows)
@@ -737,6 +900,7 @@ async def get_product_pocketmd_lite_report() -> dict[str, Any]:
         "docking_results_emitted": False,
         "external_state_mutated": False,
         "candidates": rows,
+        **canonical_review_surface,
         "claim_boundary": artifact.get("claim_boundary", ""),
     }
 

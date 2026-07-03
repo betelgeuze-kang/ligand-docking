@@ -75,6 +75,7 @@ def test_pocketmd_lite_report_endpoint_exposes_operator_panel_rows(
 
     canonical = tmp_path / "pocketmd_lite_report_current.json"
     preview = tmp_path / "pocketmd_lite_candidate_metric_fill_preview_report_current.json"
+    review_packet = tmp_path / "pocketmd_lite_canonical_report_review_packet_current.json"
     canonical.write_text(
         json.dumps(
             {
@@ -172,11 +173,100 @@ def test_pocketmd_lite_report_endpoint_exposes_operator_panel_rows(
         ),
         encoding="utf-8",
     )
+    review_packet.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "pocketmd_lite_canonical_report_review_packet_ready",
+                    "operator_approval_required": True,
+                    "approval_token_required": "APPROVE_POCKETMD_LITE_CANONICAL_METRIC_FILL",
+                    "candidate_csv_update_allowed": True,
+                    "canonical_candidate_csv_mutated": False,
+                    "canonical_candidate_csv": "config/pocketmd_lite_candidates_current.csv",
+                    "preview_candidate_csv": (
+                        "runs/pocketmd_lite_candidate_metric_fill_preview_current.candidates.csv"
+                    ),
+                    "review_row_count": 5,
+                    "ready_review_row_count": 5,
+                    "blocked_review_row_count": 0,
+                    "selected_top_k_count": 5,
+                    "preview_report_ready": True,
+                    "preview_claim_safe": True,
+                    "preview_green_row_count": 5,
+                    "preview_abstain_row_count": 0,
+                    "canonical_report_ready": False,
+                    "canonical_claim_safe": False,
+                    "canonical_green_row_count": 0,
+                    "canonical_abstain_row_count": 5,
+                    "canonical_missing_refinement_metric_names": [
+                        "local_min_ligand_rmsd_a",
+                        "hbond_persistence",
+                        "initial_clash_count",
+                    ],
+                    "metric_source_audit_ready": True,
+                    "candidate_fill_preview_ready": True,
+                    "next_required_step": (
+                        "Operator review required before canonical candidate CSV update."
+                    ),
+                    "claim_promotion_allowed": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                },
+                "rows": [
+                    {
+                        "entry_id": "ADRB2_GPCR_BLIND:carvedilol",
+                        "review_ready": True,
+                        "review_action": (
+                            "operator_review_preview_metrics_before_canonical_candidate_csv_update"
+                        ),
+                        "metric_fill_status": "filled_from_claim_grade_probe",
+                        "metric_source_npz": (
+                            "runs/pocketmd_lite_bounded_metric_collector_current/"
+                            "ADRB2_GPCR_BLIND__carvedilol__bounded_metrics.npz"
+                        ),
+                        "canonical_band": "abstain",
+                        "preview_band": "green",
+                        "canonical_claim_safe": False,
+                        "preview_claim_safe": True,
+                        "canonical_missing_metric_names": (
+                            "local_min_ligand_rmsd_a;hbond_persistence;initial_clash_count"
+                        ),
+                        "preview_missing_metric_names": [],
+                        "canonical_update_candidate": True,
+                        "canonical_local_min_ligand_rmsd_a": None,
+                        "preview_local_min_ligand_rmsd_a": "1.298",
+                        "canonical_hbond_persistence": None,
+                        "preview_hbond_persistence": "1.0",
+                        "canonical_contact_persistence": "1.0",
+                        "preview_contact_persistence": "1.0",
+                        "canonical_initial_clash_count": None,
+                        "preview_initial_clash_count": "57",
+                        "canonical_clash_count": "0",
+                        "preview_clash_count": "0",
+                        "canonical_clash_relief_count": None,
+                        "preview_clash_relief_count": "57",
+                        "blockers": [],
+                        "claim_promotion_allowed": True,
+                        "candidate_csv_update_allowed": True,
+                        "refinement_execution_enabled": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
     monkeypatch.setattr(mod, "POCKETMD_LITE_REPORT_ARTIFACT", canonical)
     monkeypatch.setattr(
         mod,
         "POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_ARTIFACT",
         preview,
+    )
+    monkeypatch.setattr(
+        mod,
+        "POCKETMD_LITE_CANONICAL_REPORT_REVIEW_PACKET_ARTIFACT",
+        review_packet,
     )
 
     payload = asyncio.run(mod.get_product_pocketmd_lite_report())
@@ -259,6 +349,75 @@ def test_pocketmd_lite_report_endpoint_exposes_operator_panel_rows(
     assert readiness["canonical_report_review_closed"]["blocker"] == (
         "preview_metrics_require_canonical_review"
     )
+    assert payload["canonical_review_packet_present"] is True
+    assert payload["canonical_review_packet_ready"] is True
+    assert payload["canonical_review_operator_approval_required"] is True
+    assert payload["canonical_review_approval_token_required"] == (
+        "APPROVE_POCKETMD_LITE_CANONICAL_METRIC_FILL"
+    )
+    assert payload["canonical_review_candidate_csv_update_allowed"] is False
+    assert payload["canonical_review_canonical_candidate_csv_mutated"] is False
+    assert payload["canonical_review_review_row_count"] == 5
+    assert payload["canonical_review_ready_review_row_count"] == 5
+    assert payload["canonical_review_blocked_review_row_count"] == 0
+    assert payload["canonical_review_preview_report_ready"] is True
+    assert payload["canonical_review_preview_claim_safe"] is True
+    assert payload["canonical_review_preview_green_row_count"] == 5
+    assert payload["canonical_review_canonical_report_ready"] is False
+    assert payload["canonical_review_canonical_claim_safe"] is False
+    assert payload["canonical_review_canonical_abstain_row_count"] == 5
+    assert payload["canonical_review_metric_source_audit_ready"] is True
+    assert payload["canonical_review_candidate_fill_preview_ready"] is True
+    assert payload["canonical_review_next_required_step"] == (
+        "Operator review required before canonical candidate CSV update."
+    )
+    assert payload["canonical_review_rows"][0] == {
+        "entry_id": "ADRB2_GPCR_BLIND:carvedilol",
+        "review_ready": True,
+        "review_action": (
+            "operator_review_preview_metrics_before_canonical_candidate_csv_update"
+        ),
+        "metric_fill_status": "filled_from_claim_grade_probe",
+        "metric_source_npz": (
+            "runs/pocketmd_lite_bounded_metric_collector_current/"
+            "ADRB2_GPCR_BLIND__carvedilol__bounded_metrics.npz"
+        ),
+        "canonical_band": "abstain",
+        "preview_band": "green",
+        "canonical_claim_safe": False,
+        "preview_claim_safe": True,
+        "canonical_missing_metric_names": [
+            "local_min_ligand_rmsd_a",
+            "hbond_persistence",
+            "initial_clash_count",
+        ],
+        "preview_missing_metric_names": [],
+        "canonical_update_candidate": True,
+        "canonical_local_min_ligand_rmsd_a": None,
+        "preview_local_min_ligand_rmsd_a": 1.298,
+        "canonical_hbond_persistence": None,
+        "preview_hbond_persistence": 1.0,
+        "canonical_contact_persistence": 1.0,
+        "preview_contact_persistence": 1.0,
+        "canonical_initial_clash_count": None,
+        "preview_initial_clash_count": 57,
+        "canonical_final_clash_count": 0,
+        "preview_final_clash_count": 0,
+        "canonical_clash_relief_count": None,
+        "preview_clash_relief_count": 57,
+        "blockers": [],
+        "operator_action_required": False,
+        "claim_promotion_allowed": False,
+        "candidate_csv_update_allowed": False,
+        "refinement_execution_enabled": False,
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": False,
+    }
+    assert payload["canonical_review_claim_promotion_allowed"] is False
+    assert payload["canonical_review_refinement_execution_enabled"] is False
+    assert payload["canonical_review_execution_enabled"] is False
+    assert payload["canonical_review_external_state_mutated"] is False
     assert all(
         row["claim_promotion_allowed"] is False
         and row["candidate_csv_update_allowed"] is False
@@ -283,6 +442,11 @@ def test_pocketmd_lite_report_endpoint_is_fail_closed_when_missing(
         "POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_ARTIFACT",
         tmp_path / "missing-preview.json",
     )
+    monkeypatch.setattr(
+        mod,
+        "POCKETMD_LITE_CANONICAL_REPORT_REVIEW_PACKET_ARTIFACT",
+        tmp_path / "missing-review-packet.json",
+    )
 
     payload = asyncio.run(mod.get_product_pocketmd_lite_report())
 
@@ -300,6 +464,10 @@ def test_pocketmd_lite_report_endpoint_is_fail_closed_when_missing(
     assert payload["claim_grade_readiness_blocked_rows"] == payload[
         "claim_grade_readiness_rows"
     ]
+    assert payload["canonical_review_packet_present"] is False
+    assert payload["canonical_review_packet_ready"] is False
+    assert payload["canonical_review_review_row_count"] == 0
+    assert payload["canonical_review_rows"] == []
     assert payload["claim_promotion_allowed"] is False
     assert payload["candidate_csv_update_allowed"] is False
     assert payload["local_min_ligand_rmsd_a_max"] == 0.0
