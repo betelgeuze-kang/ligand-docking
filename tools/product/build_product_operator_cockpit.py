@@ -209,6 +209,32 @@ def _customer_shadow_work_order_rows(payload: dict[str, Any]) -> list[dict[str, 
     return rows
 
 
+def _product_capability_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    summary = _summary(payload)
+    claim_boundary = _text(summary.get("claim_boundary")) or CLAIM_BOUNDARY
+    rows: list[dict[str, Any]] = []
+    for row in _rows(payload):
+        rows.append(
+            {
+                "capability_id": _text(row.get("capability_id")),
+                "domain": _text(row.get("domain")),
+                "status": _text(row.get("status")),
+                "required": _bool_true(row.get("required")),
+                "release_blocker": _bool_true(row.get("release_blocker")),
+                "artifact_path": _text(row.get("artifact_path")),
+                "observed": _text(row.get("observed")),
+                "reason": _text(row.get("reason")),
+                "bundle_assembled": _bool_true(row.get("bundle_assembled")),
+                "docking_results_emitted": False,
+                "claim_boundary": _text(row.get("claim_boundary")) or claim_boundary,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _api_customer_flow_release_evidence_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     summary = _summary(payload)
     claim_boundary = _text(summary.get("claim_boundary")) or CLAIM_BOUNDARY
@@ -1024,7 +1050,9 @@ def build_product_operator_cockpit(
     ),
     root: Path = ROOT,
 ) -> dict[str, Any]:
-    capabilities = _summary(_read_json(capabilities_json, root=root))
+    capabilities_payload = _read_json(capabilities_json, root=root)
+    capabilities = _summary(capabilities_payload)
+    product_capability_row_preview = _product_capability_rows(capabilities_payload)
     goal = _summary(_read_json(goal_readiness_json, root=root))
     hbond_payload = _read_json(hbond_json, root=root)
     hbond = _summary(hbond_payload)
@@ -1103,6 +1131,12 @@ def build_product_operator_cockpit(
     restricted_scope_claim_guard_ready = _bool_true(capabilities.get("restricted_scope_claim_guard_ready"))
     general_platform_claim_allowed = _bool_true(capabilities.get("general_platform_claim_allowed"))
     capabilities_source_ready = capabilities_present and _int(capabilities.get("capability_count")) > 0
+    product_capability_row_count = len(product_capability_row_preview)
+    product_capability_blocker_row_count = sum(
+        1
+        for row in product_capability_row_preview
+        if row["release_blocker"] or _text(row["status"]).lower() != "ready"
+    )
 
     goal_present = bool(goal)
     release_allowed = _bool_true(
@@ -2262,6 +2296,9 @@ def build_product_operator_cockpit(
         "disallowed_claim_text": disallowed_claim_text,
         "paid_pilot_wording_allowed": paid_pilot_wording_allowed,
         "general_platform_claim_allowed": general_platform_claim_allowed,
+        "product_capability_row_count": product_capability_row_count,
+        "product_capability_blocker_row_count": product_capability_blocker_row_count,
+        "product_capability_rows": product_capability_row_preview,
         "hbond_backmap_candidate_rows": hbond_backmap_candidate_row_preview,
         "gpcr_hard_decoy_metric_ready": gpcr_metric_ready,
         "gpcr_broad_claim_allowed": gpcr_broad_claim_allowed,

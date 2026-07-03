@@ -162,6 +162,42 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 ),
                 "paid_pilot_wording_allowed": False,
                 "general_platform_claim_allowed": False,
+                "product_capability_row_count": 2,
+                "product_capability_blocker_row_count": 1,
+                "product_capability_rows": [
+                    {
+                        "capability_id": "molecular_structure_analysis_intake",
+                        "domain": "structure_analysis",
+                        "status": "ready",
+                        "required": True,
+                        "release_blocker": False,
+                        "artifact_path": "runs/product_readiness_gate_current.json",
+                        "observed": "target_id=ADRB2;family=gpcr",
+                        "reason": "guarded structure-analysis intake is exposed",
+                        "bundle_assembled": True,
+                        "docking_results_emitted": True,
+                        "claim_boundary": "capability fixture boundary",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                    {
+                        "capability_id": "general_platform_claim",
+                        "domain": "claim_boundary",
+                        "status": "blocked",
+                        "required": False,
+                        "release_blocker": True,
+                        "artifact_path": "runs/product_capability_surface_contract_current.json",
+                        "observed": "general_platform_claim_allowed=False",
+                        "reason": "general platform wording remains locked",
+                        "bundle_assembled": False,
+                        "docking_results_emitted": True,
+                        "claim_boundary": "general platform claim row boundary",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                ],
                 "hbond_backmap_candidate_rows": [
                     {
                         "entry_id": "ADRB2::LIG-1",
@@ -835,6 +871,42 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     )
     assert response["paid_pilot_wording_allowed"] is False
     assert response["general_platform_claim_allowed"] is False
+    assert response["product_capability_row_count"] == 2
+    assert response["product_capability_blocker_row_count"] == 1
+    assert response["product_capability_rows"] == [
+        {
+            "capability_id": "molecular_structure_analysis_intake",
+            "domain": "structure_analysis",
+            "status": "ready",
+            "required": True,
+            "release_blocker": False,
+            "artifact_path": "runs/product_readiness_gate_current.json",
+            "observed": "target_id=ADRB2;family=gpcr",
+            "reason": "guarded structure-analysis intake is exposed",
+            "bundle_assembled": True,
+            "docking_results_emitted": False,
+            "claim_boundary": "capability fixture boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+        {
+            "capability_id": "general_platform_claim",
+            "domain": "claim_boundary",
+            "status": "blocked",
+            "required": False,
+            "release_blocker": True,
+            "artifact_path": "runs/product_capability_surface_contract_current.json",
+            "observed": "general_platform_claim_allowed=False",
+            "reason": "general platform wording remains locked",
+            "bundle_assembled": False,
+            "docking_results_emitted": False,
+            "claim_boundary": "general platform claim row boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+    ]
     assert response["hbond_backmap_candidate_rows"] == [
         {
             "entry_id": "ADRB2::LIG-1",
@@ -1534,6 +1606,9 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["disallowed_claim_text"] == ""
     assert response["paid_pilot_wording_allowed"] is False
     assert response["general_platform_claim_allowed"] is False
+    assert response["product_capability_row_count"] == 0
+    assert response["product_capability_blocker_row_count"] == 0
+    assert response["product_capability_rows"] == []
     assert response["hbond_backmap_candidate_rows"] == []
     assert response["gpcr_broad_claim_allowed"] is False
     assert response["gpcr_phase3_closure_present"] is False

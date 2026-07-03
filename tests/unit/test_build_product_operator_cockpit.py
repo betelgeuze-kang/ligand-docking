@@ -50,7 +50,40 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "restricted_scope_claim_guard_ready": True,
                 "general_platform_claim_allowed": False,
                 "blocked_claim_scopes": ["general_protein_ligand_platform"],
-            }
+                "claim_boundary": "capability fixture boundary",
+            },
+            "rows": [
+                {
+                    "capability_id": "molecular_structure_analysis_intake",
+                    "domain": "structure_analysis",
+                    "status": "ready",
+                    "required": True,
+                    "release_blocker": False,
+                    "artifact_path": "runs/product_readiness_gate_current.json",
+                    "observed": "target_id=ADRB2;family=gpcr",
+                    "reason": "guarded structure-analysis intake is exposed",
+                    "bundle_assembled": True,
+                    "docking_results_emitted": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                },
+                {
+                    "capability_id": "general_platform_claim",
+                    "domain": "claim_boundary",
+                    "status": "blocked",
+                    "required": False,
+                    "release_blocker": True,
+                    "artifact_path": "runs/product_capability_surface_contract_current.json",
+                    "observed": "general_platform_claim_allowed=False",
+                    "reason": "general platform wording remains locked",
+                    "bundle_assembled": False,
+                    "docking_results_emitted": True,
+                    "claim_boundary": "general platform claim row boundary",
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+            ],
         },
     )
     _write_json(
@@ -1028,6 +1061,42 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         "enterprise_on_prem_platform_claim"
     )
     assert summary["general_platform_claim_allowed"] is False
+    assert summary["product_capability_row_count"] == 2
+    assert summary["product_capability_blocker_row_count"] == 1
+    assert summary["product_capability_rows"] == [
+        {
+            "capability_id": "molecular_structure_analysis_intake",
+            "domain": "structure_analysis",
+            "status": "ready",
+            "required": True,
+            "release_blocker": False,
+            "artifact_path": "runs/product_readiness_gate_current.json",
+            "observed": "target_id=ADRB2;family=gpcr",
+            "reason": "guarded structure-analysis intake is exposed",
+            "bundle_assembled": True,
+            "docking_results_emitted": False,
+            "claim_boundary": "capability fixture boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+        {
+            "capability_id": "general_platform_claim",
+            "domain": "claim_boundary",
+            "status": "blocked",
+            "required": False,
+            "release_blocker": True,
+            "artifact_path": "runs/product_capability_surface_contract_current.json",
+            "observed": "general_platform_claim_allowed=False",
+            "reason": "general platform wording remains locked",
+            "bundle_assembled": False,
+            "docking_results_emitted": False,
+            "claim_boundary": "general platform claim row boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+    ]
     assert summary["hbond_backmap_candidate_rows"][0] == {
         "entry_id": "ADRB2::LIG-1",
         "evidence_tier": "claim_safe",

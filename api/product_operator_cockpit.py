@@ -150,6 +150,33 @@ def _customer_shadow_work_order_rows(value: Any) -> list[dict[str, Any]]:
     return work_rows
 
 
+def _product_capability_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    capability_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        capability_rows.append(
+            {
+                "capability_id": str(row.get("capability_id") or ""),
+                "domain": str(row.get("domain") or ""),
+                "status": str(row.get("status") or ""),
+                "required": bool(row.get("required") is True),
+                "release_blocker": bool(row.get("release_blocker") is True),
+                "artifact_path": str(row.get("artifact_path") or ""),
+                "observed": str(row.get("observed") or ""),
+                "reason": str(row.get("reason") or ""),
+                "bundle_assembled": bool(row.get("bundle_assembled") is True),
+                "docking_results_emitted": False,
+                "claim_boundary": str(row.get("claim_boundary") or CLAIM_BOUNDARY),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return capability_rows
+
+
 def _api_customer_flow_release_evidence_rows(value: Any) -> list[dict[str, Any]]:
     rows = value if isinstance(value, list) else []
     evidence_rows: list[dict[str, Any]] = []
@@ -637,6 +664,9 @@ def _missing_response() -> dict[str, Any]:
         "disallowed_claim_ids": [],
         "allowed_claim_text": "",
         "disallowed_claim_text": "",
+        "product_capability_row_count": 0,
+        "product_capability_blocker_row_count": 0,
+        "product_capability_rows": [],
         "hbond_backmap_candidate_rows": [],
         "gpcr_hard_decoy_metric_ready": False,
         "gpcr_broad_claim_allowed": False,
@@ -893,6 +923,13 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         "disallowed_claim_text": str(summary.get("disallowed_claim_text") or ""),
         "paid_pilot_wording_allowed": bool(summary.get("paid_pilot_wording_allowed") is True),
         "general_platform_claim_allowed": bool(summary.get("general_platform_claim_allowed") is True),
+        "product_capability_row_count": _int(summary.get("product_capability_row_count")),
+        "product_capability_blocker_row_count": _int(
+            summary.get("product_capability_blocker_row_count")
+        ),
+        "product_capability_rows": _product_capability_rows(
+            summary.get("product_capability_rows")
+        ),
         "hbond_backmap_candidate_rows": _hbond_backmap_candidate_rows(
             summary.get("hbond_backmap_candidate_rows")
         ),
