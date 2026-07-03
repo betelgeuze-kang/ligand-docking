@@ -57,10 +57,8 @@ def test_remaining_work_doc_tracks_current_release_metrics() -> None:
     assert "`artifact_count=31`" not in text
     assert "`artifact_count=33`" not in text
     assert "`check_count=21`" not in text
-    assert "`check_count=24`" not in text
     assert "`check_count=25`" not in text
     assert "`pass_count=21`" not in text
-    assert "`pass_count=24`" not in text
     assert "`pass_count=25`" not in text
     assert "`command_count=76`" not in text
     assert "`command_count=88`" not in text

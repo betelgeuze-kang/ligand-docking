@@ -1887,10 +1887,10 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `R9_engine_refinement_claim_promotion` release blocker로 기록한다. 따라서
   full-scope claim closure나 restricted delivery accounting이 green이어도,
   refine-tier claim-grade evidence가 없으면 `goal_complete=false`가 유지된다.
-  최신 audit summary는 `release_blocker_fail_count=5`,
-  `release_blocker_requirement_ids=[R1_local_self_hosted_product, R3_commercial_independence, R7_restricted_local_delivery_ready, R8_full_scope_claim_closure, R9_engine_refinement_claim_promotion]`,
-  `primary_release_blocker_requirement_id=R1_local_self_hosted_product`,
-  `primary_release_blocker=local_product_surface_not_ready`를 노출한다.
+  최신 audit summary는 `release_blocker_fail_count=2`,
+  `release_blocker_requirement_ids=[R8_full_scope_claim_closure, R9_engine_refinement_claim_promotion]`,
+  `primary_release_blocker_requirement_id=R8_full_scope_claim_closure`,
+  `primary_release_blocker=scope_breadth_claim_evidence_missing`을 노출한다.
   `runs/goal_operator_action_board_current.json`도 같은 blocker를
   `primary_release_blocker_action_id=product_scope_expansion:resolve_full_scope_breadth_evidence_receipt`와
   `primary_release_blocker_action_required_input=config/product_scope_breadth_evidence_receipt_current.csv`로 연결한다.
@@ -1933,9 +1933,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   R9_engine_refinement_claim_promotion, ACCURACY:ligand_ranking]`,
   `restricted_release_allowed=true`, `full_commercial_release_allowed=false`,
   `full_commercial_release_blocker_visibility_ready=true`,
-  `completion_audit_release_blocker_bottleneck_count=5`,
-  `commercial_readiness_handoff_bundle_artifact_reference_count=43`를 노출하고,
-  `product_goal_primary_release_blocker_requirement_id=R1_local_self_hosted_product`,
+  `completion_audit_release_blocker_bottleneck_count=2`,
+  `commercial_readiness_handoff_bundle_artifact_reference_count=51`를 노출하고,
+  `product_goal_primary_release_blocker_requirement_id=R8_full_scope_claim_closure`,
   `primary_release_blocker_action_id=product_scope_expansion:resolve_full_scope_breadth_evidence_receipt`,
   `primary_release_blocker_action_required_input=config/product_scope_breadth_evidence_receipt_current.csv`도
   action board/intake kit에서 끌어와 노출한다. `goal_api_surface_contract_current.json`은 이
@@ -2137,7 +2137,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `local_scope_breadth_receipt` / `local_scope_breadth_receipt_template`
   artifact reference로 추적하며, 최신
   `local_missing_artifact_reference_count=0`, `local_required_artifact_reference_count=47`,
-  `artifact_reference_count=43`이다. 여기에 AQP1 첫 return bundle의
+  `artifact_reference_count=51`이다. 여기에 AQP1 첫 return bundle의
   `local_scope_transporter_p0_return_bundle_artifact` 5종도 포함되며,
   `config/ligand_binding_reference_blind_aqp1_v1.csv`,
   `config/ligand_eval_splits_blind_aqp1_v1.csv`,
@@ -2371,9 +2371,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   `cameo_validation_operations_dossier_current.json`을
   freshness row 및 semantic-ready row로 함께 검증해, R8 receipt와 상용 readiness
   handoff 입력 순서, 상위 상태 API/병목 브리핑 자체가 릴리스 freshness 감시 밖으로
-  빠지지 않게 한다. 최신 source-of-truth는 `row_count=149`, `pass_count=149`,
-  `blocker_count=0`, `artifact_row_count=93`, `semantic_status_row_count=54`,
-  `release_refresh_command_count=121`, `stale_artifact_count=0`,
+  빠지지 않게 한다. 최신 source-of-truth는 `row_count=192`, `pass_count=192`,
+  `blocker_count=0`, `artifact_row_count=133`, `semantic_status_row_count=57`,
+  `release_refresh_command_count=203`, `stale_artifact_count=0`,
   `semantic_status_blocker_count=0`, `readme_drift_count=0`이다.
   refresh chain은 `build_residual_force_derivation_validation.py` 직후
   `build_residual_energy_force_label_validation.py`,
@@ -2386,9 +2386,9 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   bottleneck briefing, full commercial matrix, release bundle, handoff bundle,
   privacy scan, source-of-truth gate까지 downstream 산출물을 한 번 더 재생성하고,
   refresh runner final gate는 source-of-truth, quality gate verification,
-  release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=149`,
-  `pass_count=149`, `artifact_row_count=93`, `semantic_status_row_count=54`,
-  `readme_row_count=2`, `release_refresh_command_count=121`를 exact-check해
+  release decision, action board 4개 surface를 검증한다. source-of-truth final gate는 `row_count=192`,
+  `pass_count=192`, `artifact_row_count=133`, `semantic_status_row_count=57`,
+  `readme_row_count=2`, `release_refresh_command_count=203`를 exact-check해
   downstream readiness row가 조용히 빠지는 회귀를 막고,
   `product_quality_gate_verification_current.json` final gate는
   `product_quality_gate_verified`, `quality_gate_ready=true`,
@@ -2407,11 +2407,10 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   operational quality verifier가 release bundle/source-of-truth/final refresh 안에만
   머물지 않고 operator-facing decision surface에서도 직접 확인된다.
   action board echo는
-  `goal_release_decision_gate_status=blocked_goal_release_decision`,
-  `goal_release_allowed=false`, `goal_release_blocker_count=3`으로 남아 있으므로
-  operator-facing 보드가 한 cycle 전 release-decision 상태를 들고 있어도
-  verified refresh로 통과하지 않는다. 이 blocked 상태는 restricted independent release
-  gate의 현재 보수적 판정이며, full-commercial claim은 readiness/frontier에서
+  `goal_release_decision_gate_status=goal_release_ready`,
+  `goal_release_allowed=true`, `goal_release_blocker_count=0`으로 동기화되어
+  operator-facing 보드가 한 cycle 전 release-decision 상태를 들고 있지 않음을
+  verified refresh에서 확인한다. full-commercial claim은 readiness/frontier에서
   `full_commercial_release_allowed=false`와 R8/R9/ACCURACY blocker로 별도 잠긴다.
   `goal_bottleneck_briefing`은 burndown row의 `release_observed`/`release_required`
   문자열을 최신 release-decision row에서 보정해, R8/R9 completion-audit blocker
@@ -3140,8 +3139,8 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   product scope-breadth evidence receipt,
   product full-commercial blocker evidence matrix
   artifact를 하나의 release bundle manifest로 묶고 operator promotion policy를
-  `operator_approval_required`로 고정한다. 최신 상태는 `artifact_count=34`,
-  `check_count=26`, `pass_count=26`, `blocker_count=0`이다.
+  `operator_approval_required`로 고정한다. 최신 상태는 `artifact_count=32`,
+  `check_count=24`, `pass_count=24`, `blocker_count=0`이다.
 - `deploy/docker-compose.product.yml`, `deploy/k8s/configmap.yaml`,
   `deploy/systemd/api-server.env.example`, `deploy/systemd/api-worker.env.example`은
   `PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED=1`을 product deployment default로
@@ -3167,10 +3166,10 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   commercial readiness operator packet/freshness/execution ladder/handoff,
   최종 release bundle 재생성을 포함하며,
   최신 계획 결과는
-  `product_release_current_refresh_planned`, `command_count=137`, `executed_count=0`,
-  `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=false`,
-  `final_gate_count=0`, `final_gate_blocker_count=0`이다. `--execute`가 아직 수행되지
-  않았으므로 이 refresh plan은 실행 증거가 아니라 source-of-truth 순서 확인 증거다.
+  `product_release_current_refresh_verified`, `command_count=138`, `executed_count=138`,
+  `failed_count=0`, `timed_out_count=0`, `final_gate_verification_ready=true`,
+  `final_gate_count=4`, `final_gate_blocker_count=0`이다. 이 refresh plan은
+  source-of-truth 순서 확인과 final gate 검증 증거다.
 - `runs/deploy_ops_legal_gap_closure_current.json`은 이제 rollout readiness와 actual
   rollout smoke receipt를 분리한 뒤 `deploy_ops_legal_gap_closure_complete`,
   `closed_gap_count=6`, `open_gap_ids=[]`로 닫혔다.
@@ -3394,7 +3393,7 @@ builder artifact가 green이어도 full-commercial claim으로 자동 승격되�
   execution readiness gate, product launch R4 preflight, product quality gate
   verification receipt, product scope-breadth
   evidence receipt, product full-commercial blocker evidence matrix를 포함해
-  `artifact_count=34`, `check_count=26`, `pass_count=26`,
+  `artifact_count=32`, `check_count=24`, `pass_count=24`,
   `blocker_count=0` 상태다.
 
 ### H. Viewer 외부 의존성
