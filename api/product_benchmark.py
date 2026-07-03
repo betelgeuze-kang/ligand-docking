@@ -332,6 +332,90 @@ def _external_receipt_blocker_rows(summary: dict[str, Any]) -> list[dict[str, An
     return blocker_rows
 
 
+def _external_beta_requirement_rows(rows: list[Any]) -> list[dict[str, Any]]:
+    requirement_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        ready = bool(row.get("ready") is True and str(row.get("status") or "") == "ready")
+        requirement_rows.append(
+            {
+                "requirement_id": str(row.get("requirement_id") or ""),
+                "status": str(row.get("status") or ""),
+                "ready": ready,
+                "required_value": str(row.get("required_value") or ""),
+                "observed_value": str(row.get("observed_value") or ""),
+                "blocker": str(row.get("blocker") or ""),
+                "evidence_artifact": str(row.get("evidence_artifact") or ""),
+                "operator_action": str(row.get("operator_action") or ""),
+                "operator_action_required": not ready,
+                "external_beta_wording_allowed": False,
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_boundary": str(row.get("claim_boundary") or ""),
+            }
+        )
+    return requirement_rows
+
+
+def _external_beta_surface(packet: dict[str, Any]) -> dict[str, Any]:
+    summary = _summary(packet)
+    rows = _external_beta_requirement_rows(
+        packet.get("external_beta_requirement_rows")
+        if isinstance(packet.get("external_beta_requirement_rows"), list)
+        else []
+    )
+    blocked_rows = [row for row in rows if row["operator_action_required"]]
+    ready_rows = [row for row in rows if row["ready"]]
+    requirement_ids = _string_list(summary.get("external_beta_requirement_ids")) or [
+        row["requirement_id"] for row in rows if row["requirement_id"]
+    ]
+    receipts_ready = bool(summary.get("external_benchmark_receipts_ready") is True)
+    candidate_ready = bool(summary.get("external_beta_candidate_ready") is True)
+    wording_allowed = bool(
+        receipts_ready
+        and candidate_ready
+        and summary.get("external_beta_wording_allowed") is True
+        and summary.get("claim_promotion_allowed") is True
+    )
+    return {
+        "external_beta_candidate_ready": candidate_ready,
+        "external_beta_wording_allowed": wording_allowed,
+        "external_beta_operator_action_required": not wording_allowed,
+        "external_beta_requirement_row_count": _int(
+            summary.get("external_beta_requirement_row_count")
+        )
+        or len(rows),
+        "external_beta_requirement_ready_row_count": _int(
+            summary.get("external_beta_requirement_ready_row_count")
+        )
+        or len(ready_rows),
+        "external_beta_requirement_blocked_row_count": _int(
+            summary.get("external_beta_requirement_blocked_row_count")
+        )
+        or len(blocked_rows),
+        "external_beta_requirement_ids": requirement_ids,
+        "external_beta_primary_requirement_id": str(
+            summary.get("external_beta_primary_requirement_id")
+            or (blocked_rows[0]["requirement_id"] if blocked_rows else "")
+        ),
+        "external_beta_primary_blocker": str(
+            summary.get("external_beta_primary_blocker")
+            or (blocked_rows[0]["blocker"] if blocked_rows else "")
+        ),
+        "external_beta_primary_operator_action": str(
+            summary.get("external_beta_primary_operator_action")
+            or (blocked_rows[0]["operator_action"] if blocked_rows else "")
+        ),
+        "external_beta_requirement_rows": rows,
+        "external_beta_blocked_requirement_rows": blocked_rows,
+        "external_beta_claim_promotion_allowed": False,
+        "external_beta_execution_enabled": False,
+        "external_beta_external_state_mutated": False,
+    }
+
+
 def _receipt_attach_surface(
     packet: dict[str, Any],
     *,
@@ -627,6 +711,7 @@ async def get_product_external_metrics() -> dict[str, Any]:
 @router.get("/public-benchmark-external-receipts-audit")
 async def get_product_public_benchmark_external_receipts_audit() -> dict[str, Any]:
     packet = _read_json_object(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT)
+    external_beta_surface = _external_beta_surface(packet)
     receipt_attach_packet = _read_json_object(PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT)
     receipt_attach_surface = _receipt_attach_surface(
         receipt_attach_packet,
@@ -642,6 +727,7 @@ async def get_product_public_benchmark_external_receipts_audit() -> dict[str, An
             "status": "missing_public_benchmark_external_receipts_audit",
             "artifact_path": str(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT),
             "external_benchmark_receipts_ready": False,
+            **external_beta_surface,
             "claim_promotion_allowed": False,
             "step_count": 7,
             "ready_step_count": 0,
@@ -690,6 +776,7 @@ async def get_product_public_benchmark_external_receipts_audit() -> dict[str, An
         "status": summary.get("status", ""),
         "artifact_path": str(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT),
         "external_benchmark_receipts_ready": bool(summary.get("external_benchmark_receipts_ready") is True),
+        **external_beta_surface,
         "claim_promotion_allowed": bool(summary.get("claim_promotion_allowed") is True),
         "step_count": int(summary.get("step_count") or 0),
         "ready_step_count": int(summary.get("ready_step_count") or 0),
@@ -782,7 +869,9 @@ async def get_product_public_benchmark() -> dict[str, Any]:
     packet = _read_json_object(PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_ARTIFACT)
     summary = _summary(packet)
     rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
-    receipts_summary = _summary(_read_json_object(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT))
+    receipts_packet = _read_json_object(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT)
+    receipts_summary = _summary(receipts_packet)
+    external_beta_surface = _external_beta_surface(receipts_packet)
     score_template_receipt_surface = _vina_gnina_score_template_receipt_surface(
         _read_json_object(PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_ARTIFACT)
     )
@@ -812,6 +901,7 @@ async def get_product_public_benchmark() -> dict[str, Any]:
             "external_receipt_blocker_row_count": 0,
             "external_receipt_blocker_rows": [],
             "external_beta_claim_allowed": False,
+            **external_beta_surface,
             "public_benchmark_validation_ready": False,
             "open_suite_count": 0,
             "materialization_required_suite_count": 0,
@@ -878,6 +968,7 @@ async def get_product_public_benchmark() -> dict[str, Any]:
             receipts_summary.get("external_benchmark_receipts_ready") is True
             and receipts_summary.get("claim_promotion_allowed") is True
         ),
+        **external_beta_surface,
         "public_benchmark_validation_ready": bool(summary.get("public_benchmark_validation_ready") is True),
         "suite_count": int(summary.get("suite_count") or 0),
         "open_suite_count": int(summary.get("open_suite_count") or 0),

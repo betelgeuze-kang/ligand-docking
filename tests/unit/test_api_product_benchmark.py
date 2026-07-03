@@ -178,6 +178,18 @@ def test_public_benchmark_endpoint_exposes_scorecard_panel_rows(
             "summary": {
                 "status": "blocked_public_benchmark_external_receipts_audit",
                 "external_benchmark_receipts_ready": False,
+                "external_beta_candidate_ready": False,
+                "external_beta_wording_allowed": True,
+                "external_beta_requirement_row_count": 2,
+                "external_beta_requirement_ready_row_count": 1,
+                "external_beta_requirement_blocked_row_count": 1,
+                "external_beta_requirement_ids": [
+                    "casf_pdbbind_default_manifest",
+                    "vina_gnina_same_input_comparison",
+                ],
+                "external_beta_primary_requirement_id": "vina_gnina_same_input_comparison",
+                "external_beta_primary_blocker": "vina_gnina_same_input_score_evidence_missing",
+                "external_beta_primary_operator_action": "Fill Vina/GNINA same-input scores.",
                 "claim_promotion_allowed": False,
                 "blocker_count": 2,
                 "blockers": [
@@ -185,7 +197,41 @@ def test_public_benchmark_endpoint_exposes_scorecard_panel_rows(
                     "benchmark_receipt_attach:benchmark_metric_source_receipt_rows_unapproved",
                 ],
                 "primary_blocker_next_required_step": "Fill Vina/GNINA same-input scores.",
-            }
+            },
+            "external_beta_requirement_rows": [
+                {
+                    "requirement_id": "casf_pdbbind_default_manifest",
+                    "status": "ready",
+                    "ready": True,
+                    "required_value": "ready",
+                    "observed_value": "ready",
+                    "blocker": "",
+                    "evidence_artifact": (
+                        "runs/pdbbind_casf_pose_affinity_materialization_manifest_current.json"
+                    ),
+                    "operator_action": "",
+                    "claim_boundary": "external beta fixture boundary",
+                    "external_beta_wording_allowed": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+                {
+                    "requirement_id": "vina_gnina_same_input_comparison",
+                    "status": "blocked",
+                    "ready": False,
+                    "required_value": "ready",
+                    "observed_value": "blocked",
+                    "blocker": "vina_gnina_same_input_score_evidence_missing",
+                    "evidence_artifact": "runs/pdbbind_casf_pose_affinity_results_current.json",
+                    "operator_action": "Fill Vina/GNINA same-input scores.",
+                    "claim_boundary": "external beta fixture boundary",
+                    "external_beta_wording_allowed": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+            ],
         },
     )
     _write_score_template_receipt(score_receipt)
@@ -238,6 +284,45 @@ def test_public_benchmark_endpoint_exposes_scorecard_panel_rows(
     assert body["external_receipt_blocker_rows"][0]["blocker_id"] == (
         "vina_gnina_same_input_comparison"
     )
+    assert body["external_beta_candidate_ready"] is False
+    assert body["external_beta_wording_allowed"] is False
+    assert body["external_beta_operator_action_required"] is True
+    assert body["external_beta_requirement_row_count"] == 2
+    assert body["external_beta_requirement_ready_row_count"] == 1
+    assert body["external_beta_requirement_blocked_row_count"] == 1
+    assert body["external_beta_primary_requirement_id"] == (
+        "vina_gnina_same_input_comparison"
+    )
+    assert body["external_beta_primary_blocker"] == (
+        "vina_gnina_same_input_score_evidence_missing"
+    )
+    assert body["external_beta_primary_operator_action"] == (
+        "Fill Vina/GNINA same-input scores."
+    )
+    assert body["external_beta_requirement_rows"][0] == {
+        "requirement_id": "casf_pdbbind_default_manifest",
+        "status": "ready",
+        "ready": True,
+        "required_value": "ready",
+        "observed_value": "ready",
+        "blocker": "",
+        "evidence_artifact": (
+            "runs/pdbbind_casf_pose_affinity_materialization_manifest_current.json"
+        ),
+        "operator_action": "",
+        "operator_action_required": False,
+        "external_beta_wording_allowed": False,
+        "claim_promotion_allowed": False,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_boundary": "external beta fixture boundary",
+    }
+    assert body["external_beta_blocked_requirement_rows"][0]["requirement_id"] == (
+        "vina_gnina_same_input_comparison"
+    )
+    assert body["external_beta_claim_promotion_allowed"] is False
+    assert body["external_beta_execution_enabled"] is False
+    assert body["external_beta_external_state_mutated"] is False
     assert body["vina_gnina_score_template_receipt_present"] is True
     assert body["vina_gnina_score_template_receipt_status"] == (
         "blocked_public_benchmark_vina_gnina_score_template_receipt"
@@ -313,6 +398,12 @@ def test_public_benchmark_endpoint_is_fail_closed_when_missing(
     )
     assert body["external_receipts_ready"] is False
     assert body["external_receipt_blocker_rows"] == []
+    assert body["external_beta_candidate_ready"] is False
+    assert body["external_beta_wording_allowed"] is False
+    assert body["external_beta_operator_action_required"] is True
+    assert body["external_beta_requirement_row_count"] == 0
+    assert body["external_beta_requirement_rows"] == []
+    assert body["external_beta_blocked_requirement_rows"] == []
     assert body["vina_gnina_score_template_receipt_present"] is False
     assert body["vina_gnina_score_template_receipt_ready"] is False
     assert body["vina_gnina_score_template_rows"] == []
@@ -350,6 +441,12 @@ def test_public_benchmark_external_receipts_endpoint_missing_attach_packet(
     body = response.json()
     assert body["status"] == "missing_public_benchmark_external_receipts_audit"
     assert body["external_benchmark_receipts_ready"] is False
+    assert body["external_beta_candidate_ready"] is False
+    assert body["external_beta_wording_allowed"] is False
+    assert body["external_beta_operator_action_required"] is True
+    assert body["external_beta_requirement_row_count"] == 0
+    assert body["external_beta_requirement_rows"] == []
+    assert body["external_beta_blocked_requirement_rows"] == []
     assert body["receipt_attach_packet_present"] is False
     assert body["receipt_attach_packet_ready"] is False
     assert body["field_work_order_ready"] is False
@@ -396,6 +493,18 @@ def test_public_benchmark_external_receipts_endpoint_surfaces_attach_work_order(
             "summary": {
                 "status": "blocked_public_benchmark_external_receipts_audit",
                 "external_benchmark_receipts_ready": False,
+                "external_beta_candidate_ready": False,
+                "external_beta_wording_allowed": True,
+                "external_beta_requirement_row_count": 2,
+                "external_beta_requirement_ready_row_count": 1,
+                "external_beta_requirement_blocked_row_count": 1,
+                "external_beta_requirement_ids": [
+                    "casf_pdbbind_default_manifest",
+                    "vina_gnina_same_input_comparison",
+                ],
+                "external_beta_primary_requirement_id": "vina_gnina_same_input_comparison",
+                "external_beta_primary_blocker": "vina_gnina_same_input_score_evidence_missing",
+                "external_beta_primary_operator_action": "Fill Vina/GNINA same-input scores.",
                 "claim_promotion_allowed": False,
                 "step_count": 7,
                 "ready_step_count": 5,
@@ -423,6 +532,40 @@ def test_public_benchmark_external_receipts_endpoint_surfaces_attach_work_order(
                     "blocker": "vina_gnina_same_input_score_evidence_missing",
                     "next_required_step": "Fill Vina/GNINA same-input scores.",
                 }
+            ],
+            "external_beta_requirement_rows": [
+                {
+                    "requirement_id": "casf_pdbbind_default_manifest",
+                    "status": "ready",
+                    "ready": True,
+                    "required_value": "ready",
+                    "observed_value": "ready",
+                    "blocker": "",
+                    "evidence_artifact": (
+                        "runs/pdbbind_casf_pose_affinity_materialization_manifest_current.json"
+                    ),
+                    "operator_action": "",
+                    "claim_boundary": "external beta fixture boundary",
+                    "external_beta_wording_allowed": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+                {
+                    "requirement_id": "vina_gnina_same_input_comparison",
+                    "status": "blocked",
+                    "ready": False,
+                    "required_value": "ready",
+                    "observed_value": "blocked",
+                    "blocker": "vina_gnina_same_input_score_evidence_missing",
+                    "evidence_artifact": "runs/pdbbind_casf_pose_affinity_results_current.json",
+                    "operator_action": "Fill Vina/GNINA same-input scores.",
+                    "claim_boundary": "external beta fixture boundary",
+                    "external_beta_wording_allowed": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
             ],
         },
     )
@@ -640,6 +783,28 @@ def test_public_benchmark_external_receipts_endpoint_surfaces_attach_work_order(
     assert body["status"] == "blocked_public_benchmark_external_receipts_audit"
     assert body["ready_step_count"] == 5
     assert body["blocked_step_count"] == 2
+    assert body["external_beta_candidate_ready"] is False
+    assert body["external_beta_wording_allowed"] is False
+    assert body["external_beta_operator_action_required"] is True
+    assert body["external_beta_requirement_row_count"] == 2
+    assert body["external_beta_requirement_ready_row_count"] == 1
+    assert body["external_beta_requirement_blocked_row_count"] == 1
+    assert body["external_beta_primary_requirement_id"] == (
+        "vina_gnina_same_input_comparison"
+    )
+    assert body["external_beta_primary_blocker"] == (
+        "vina_gnina_same_input_score_evidence_missing"
+    )
+    assert body["external_beta_requirement_rows"][0]["requirement_id"] == (
+        "casf_pdbbind_default_manifest"
+    )
+    assert body["external_beta_requirement_rows"][0]["external_beta_wording_allowed"] is False
+    assert body["external_beta_requirement_rows"][0]["execution_enabled"] is False
+    assert body["external_beta_requirement_rows"][0]["external_state_mutated"] is False
+    assert body["external_beta_requirement_rows"][0]["claim_promotion_allowed"] is False
+    assert body["external_beta_blocked_requirement_rows"][0]["requirement_id"] == (
+        "vina_gnina_same_input_comparison"
+    )
     assert body["receipt_attach_packet_present"] is True
     assert body["receipt_attach_embedded_in_audit"] is False
     assert body["receipt_attach_packet_ready"] is False
