@@ -20,6 +20,12 @@ DEFAULT_OUT_MD = ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt
 
 PACKET_TYPE = "developer_preview_clean_checkout_benchmark_receipt"
 SCHEMA_VERSION = "developer_preview_clean_checkout_benchmark_receipt_v1"
+STAGE5_REQUIRED_ARGUMENTS = [
+    "--scores-csv",
+    "--labels-csv",
+    "--split-csv",
+    "--expected-keys-csv",
+]
 
 CLAIM_BOUNDARY = (
     "Developer Preview clean-checkout benchmark receipt only; it reads local ai-verify output and "
@@ -101,6 +107,171 @@ def _artifact_exists(path_like: Any, *, root: Path) -> bool:
     if not text:
         return False
     return _resolve(text, root=root).is_file()
+
+
+def _get_flag(cmd: list[Any], flag: str) -> str:
+    for i, token in enumerate(cmd):
+        if str(token) == flag and i + 1 < len(cmd):
+            return _text(cmd[i + 1])
+    return ""
+
+
+def _stage5_task_key(source_artifact_path: str) -> str:
+    if not source_artifact_path:
+        return ""
+    stem = Path(source_artifact_path).stem
+    for suffix in ("_stage4_calibration_scores", "_stage3_scores"):
+        if stem.endswith(suffix):
+            return stem[: -len(suffix)]
+    return stem
+
+
+def _source_argument_from_blocker(blocker: str) -> str:
+    parts = _text(blocker).split(":", 2)
+    if len(parts) > 1 and parts[1].startswith("--"):
+        return parts[1]
+    return ""
+
+
+def _source_path_from_blocker(blocker: str) -> str:
+    parts = _text(blocker).split(":", 2)
+    if len(parts) == 3 and parts[1].startswith("--"):
+        return parts[2]
+    return ""
+
+
+def _stage5_cmd_from_pipeline(path_like: str, *, root: Path) -> list[Any]:
+    payload = _read_json(path_like, root=root)
+    stages = payload.get("stages") if isinstance(payload.get("stages"), dict) else {}
+    stage5 = (
+        stages.get("stage5_ranking_eval")
+        if isinstance(stages.get("stage5_ranking_eval"), dict)
+        else {}
+    )
+    cmd = stage5.get("cmd")
+    return list(cmd) if isinstance(cmd, list) else []
+
+
+def _stage5_input_family_rows(
+    payload: dict[str, Any],
+    *,
+    root: Path,
+) -> list[dict[str, Any]]:
+    summary = _summary(payload)
+    task_source_errors = (
+        summary.get("task_source_errors")
+        if isinstance(summary.get("task_source_errors"), list)
+        else []
+    )
+    rows: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+
+    for error_row in task_source_errors:
+        if not isinstance(error_row, dict):
+            continue
+        blocker = _text(error_row.get("blocker") or error_row.get("source_error"))
+        if not blocker.startswith("stage5_input_missing:"):
+            continue
+        missing_argument = _source_argument_from_blocker(blocker)
+        missing_path = _source_path_from_blocker(blocker)
+        pipeline_summary_json = _text(error_row.get("pipeline_summary_json"))
+        stage5_cmd = _stage5_cmd_from_pipeline(pipeline_summary_json, root=root)
+        task_key = _stage5_task_key(missing_path) or _text(error_row.get("task_id"))
+        for argument in STAGE5_REQUIRED_ARGUMENTS:
+            source_path = _get_flag(stage5_cmd, argument)
+            if not source_path and argument == missing_argument:
+                source_path = missing_path
+            if not source_path:
+                source_path = f"{_text(error_row.get('task_id'))}:{argument}:flag_missing"
+            display_path = _display(source_path, root=root)
+            key = (task_key, argument, display_path)
+            if key in seen:
+                continue
+            seen.add(key)
+            present = _resolve(source_path, root=root).is_file() if source_path else False
+            missing = not present
+            rows.append(
+                {
+                    "set_id": _text(error_row.get("set_id")),
+                    "task_id": _text(error_row.get("task_id")),
+                    "task_key": task_key,
+                    "domain": _text(error_row.get("domain")),
+                    "kind": _text(error_row.get("kind")),
+                    "profile_json": _display(_text(error_row.get("profile_json")), root=root),
+                    "pipeline_summary_json": _display(pipeline_summary_json, root=root),
+                    "pipeline_summary_present": _artifact_exists(
+                        pipeline_summary_json,
+                        root=root,
+                    ),
+                    "pipeline_summary_resolution_source": _text(
+                        error_row.get("pipeline_summary_resolution_source")
+                    ),
+                    "source_error_type": _text(error_row.get("source_error_type")),
+                    "source_error": _text(error_row.get("source_error")),
+                    "source_error_blocker": blocker,
+                    "source_argument": argument,
+                    "source_artifact_path": display_path,
+                    "source_artifact_present": present,
+                    "source_artifact_missing": missing,
+                    "required_action": (
+                        "Restore or regenerate this clean-checkout stage5 input CSV, then "
+                        "rebuild the baseline summary and reviewed receipt."
+                    )
+                    if missing
+                    else "Keep this stage5 input CSV with the clean-checkout baseline family.",
+                    "operator_action_required": missing,
+                    "execution_enabled": False,
+                    "external_state_mutated": False,
+                    "claim_promotion_allowed": False,
+                    "claim_boundary": CLAIM_BOUNDARY,
+                }
+            )
+
+    if rows:
+        return rows
+
+    blockers = (
+        [_text(item) for item in summary.get("blockers", []) if _text(item)]
+        if isinstance(summary.get("blockers"), list)
+        else []
+    )
+    for blocker in blockers:
+        if not blocker.startswith("stage5_input_missing:"):
+            continue
+        argument = _source_argument_from_blocker(blocker)
+        source_path = _source_path_from_blocker(blocker)
+        display_path = _display(source_path, root=root)
+        present = _resolve(source_path, root=root).is_file() if source_path else False
+        rows.append(
+            {
+                "set_id": "",
+                "task_id": "",
+                "task_key": _stage5_task_key(source_path),
+                "domain": "",
+                "kind": "",
+                "profile_json": "",
+                "pipeline_summary_json": "",
+                "pipeline_summary_present": False,
+                "pipeline_summary_resolution_source": "",
+                "source_error_type": "",
+                "source_error": blocker,
+                "source_error_blocker": blocker,
+                "source_argument": argument,
+                "source_artifact_path": display_path,
+                "source_artifact_present": present,
+                "source_artifact_missing": not present,
+                "required_action": (
+                    "Restore or regenerate this clean-checkout stage5 input CSV, then "
+                    "rebuild the baseline summary and reviewed receipt."
+                ),
+                "operator_action_required": not present,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "claim_boundary": CLAIM_BOUNDARY,
+            }
+        )
+    return rows
 
 
 def _baseline_checks(payload: dict[str, Any], *, root: Path) -> dict[str, Any]:
@@ -194,6 +365,11 @@ def build_developer_preview_clean_checkout_benchmark_receipt(
     ai_verify_ok = _ai_verify_passed(ai_verify_text)
     baseline_payload = _read_json(baseline_summary_json, root=root)
     baseline = _baseline_checks(baseline_payload, root=root)
+    stage5_input_family_rows = _stage5_input_family_rows(baseline_payload, root=root)
+    stage5_missing_rows = [
+        row for row in stage5_input_family_rows if _bool_true(row.get("source_artifact_missing"))
+    ]
+    stage5_primary_row = stage5_missing_rows[0] if stage5_missing_rows else {}
     reviewer_present = bool(_text(reviewer_id))
     reviewed_at_present = bool(_text(reviewed_at_utc))
 
@@ -287,6 +463,29 @@ def build_developer_preview_clean_checkout_benchmark_receipt(
             ],
         },
     ]
+    if stage5_input_family_rows:
+        rows.append(
+            {
+                "check": "stage5_input_family_recovery",
+                "status": "blocked" if stage5_missing_rows else "pass",
+                "input_family_row_count": len(stage5_input_family_rows),
+                "missing_input_count": len(stage5_missing_rows),
+                "task_count": len(
+                    {
+                        row["task_key"]
+                        for row in stage5_input_family_rows
+                        if _text(row.get("task_key"))
+                    }
+                ),
+                "blockers": [
+                    "stage5_input_missing:{source_argument}:{source_artifact_path}".format(
+                        source_argument=row["source_argument"],
+                        source_artifact_path=row["source_artifact_path"],
+                    )
+                    for row in stage5_missing_rows
+                ],
+            }
+        )
     summary = {
         "packet_type": PACKET_TYPE,
         "schema_version": SCHEMA_VERSION,
@@ -314,6 +513,22 @@ def build_developer_preview_clean_checkout_benchmark_receipt(
         "baseline_task_source_error_count": baseline["task_source_error_count"],
         "baseline_summary_blocker_count": baseline["summary_blocker_count"],
         "baseline_summary_blockers": baseline["summary_blockers"],
+        "stage5_required_arguments": list(STAGE5_REQUIRED_ARGUMENTS),
+        "stage5_required_argument_count": len(STAGE5_REQUIRED_ARGUMENTS),
+        "stage5_input_family_row_count": len(stage5_input_family_rows),
+        "stage5_recovery_task_count": len(
+            {
+                row["task_key"]
+                for row in stage5_input_family_rows
+                if _text(row.get("task_key"))
+            }
+        ),
+        "stage5_missing_input_count": len(stage5_missing_rows),
+        "stage5_primary_task_key": _text(stage5_primary_row.get("task_key")),
+        "stage5_primary_source_argument": _text(stage5_primary_row.get("source_argument")),
+        "stage5_primary_source_artifact_path": _text(
+            stage5_primary_row.get("source_artifact_path")
+        ),
         "claim_promotion_allowed": False,
         "execution_enabled": False,
         "external_state_mutated": False,
@@ -325,7 +540,11 @@ def build_developer_preview_clean_checkout_benchmark_receipt(
             "then rebuild this receipt with explicit operator review metadata."
         ),
     }
-    return {"summary": summary, "rows": rows}
+    return {
+        "summary": summary,
+        "rows": rows,
+        "stage5_input_family_rows": stage5_input_family_rows,
+    }
 
 
 def _write_json(path_like: str | Path, payload: dict[str, Any], *, root: Path = ROOT) -> None:
@@ -346,6 +565,8 @@ def _render_md(payload: dict[str, Any]) -> str:
         f"- blocker_count: `{summary['blocker_count']}`",
         f"- failed_count: `{summary['failed_count']}`",
         f"- baseline_task_count: `{summary['baseline_task_count']}`",
+        f"- stage5_recovery_task_count: `{summary['stage5_recovery_task_count']}`",
+        f"- stage5_missing_input_count: `{summary['stage5_missing_input_count']}`",
         "",
         "| check | status | blockers |",
         "| --- | --- | --- |",
@@ -353,6 +574,22 @@ def _render_md(payload: dict[str, Any]) -> str:
     for row in payload["rows"]:
         blockers = ";".join(str(item) for item in row.get("blockers", [])) or "-"
         lines.append(f"| `{row['check']}` | `{row['status']}` | `{blockers}` |")
+    if payload.get("stage5_input_family_rows"):
+        lines.extend(
+            [
+                "",
+                "## Stage5 Input Family Recovery",
+                "",
+                "| task | argument | source artifact | present | action |",
+                "| --- | --- | --- | --- | --- |",
+            ]
+        )
+        for row in payload["stage5_input_family_rows"]:
+            lines.append(
+                f"| `{row['task_key']}` | `{row['source_argument']}` | "
+                f"`{row['source_artifact_path']}` | `{row['source_artifact_present']}` | "
+                f"{row['required_action']} |"
+            )
     lines.extend(["", CLAIM_BOUNDARY, ""])
     return "\n".join(lines)
 

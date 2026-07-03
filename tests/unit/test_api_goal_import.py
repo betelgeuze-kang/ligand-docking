@@ -1167,6 +1167,13 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
                     "baseline_score_leaderboard_count": 0,
                     "baseline_score_leaderboard_csv_count": 0,
                     "baseline_ranking_summary_missing_count": 0,
+                    "stage5_required_argument_count": 4,
+                    "stage5_input_family_row_count": 2,
+                    "stage5_recovery_task_count": 1,
+                    "stage5_missing_input_count": 1,
+                    "stage5_primary_task_key": "stage5_scores",
+                    "stage5_primary_source_argument": "--scores-csv",
+                    "stage5_primary_source_artifact_path": "/tmp/dp/runs/stage5_scores.csv",
                 },
                 "rows": [
                     {
@@ -1195,6 +1202,58 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
                             "reviewer_id_missing",
                             "reviewed_at_utc_missing",
                         ],
+                    },
+                ],
+                "stage5_input_family_rows": [
+                    {
+                        "set_id": "set1_core_blind",
+                        "task_id": "gpcr_core_full",
+                        "task_key": "stage5_scores",
+                        "domain": "gpcr",
+                        "kind": "ligand_stress",
+                        "profile_json": "config/profile.json",
+                        "pipeline_summary_json": "runs/pipeline_summary.json",
+                        "pipeline_summary_present": True,
+                        "pipeline_summary_resolution_source": "copied_files",
+                        "source_error_type": "TaskSourceError",
+                        "source_error_blocker": (
+                            "stage5_input_missing:"
+                            "--scores-csv:/tmp/dp/runs/stage5_scores.csv"
+                        ),
+                        "source_argument": "--scores-csv",
+                        "source_artifact_path": "/tmp/dp/runs/stage5_scores.csv",
+                        "source_artifact_present": False,
+                        "source_artifact_missing": True,
+                        "required_action": "Restore stage5 scores.",
+                        "operator_action_required": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                    {
+                        "set_id": "set1_core_blind",
+                        "task_id": "gpcr_core_full",
+                        "task_key": "stage5_scores",
+                        "domain": "gpcr",
+                        "kind": "ligand_stress",
+                        "profile_json": "config/profile.json",
+                        "pipeline_summary_json": "runs/pipeline_summary.json",
+                        "pipeline_summary_present": True,
+                        "pipeline_summary_resolution_source": "copied_files",
+                        "source_error_type": "TaskSourceError",
+                        "source_error_blocker": (
+                            "stage5_input_missing:"
+                            "--scores-csv:/tmp/dp/runs/stage5_scores.csv"
+                        ),
+                        "source_argument": "--labels-csv",
+                        "source_artifact_path": "/tmp/dp/runs/stage5_labels.csv",
+                        "source_artifact_present": True,
+                        "source_artifact_missing": False,
+                        "required_action": "Keep stage5 labels.",
+                        "operator_action_required": False,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
                     },
                 ],
             }
@@ -1307,6 +1366,26 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     assert response["clean_checkout_source_evidence"][1]["check"] == "baseline_summary"
     assert "baseline_task_count_zero" in response["clean_checkout_source_blockers"]
     assert "reviewer_id_missing" in response["clean_checkout_source_blockers"]
+    assert response["clean_checkout_stage5_required_argument_count"] == 4
+    assert response["clean_checkout_stage5_input_family_row_count"] == 2
+    assert response["clean_checkout_stage5_recovery_task_count"] == 1
+    assert response["clean_checkout_stage5_missing_input_count"] == 1
+    assert response["clean_checkout_stage5_primary_task_key"] == "stage5_scores"
+    assert response["clean_checkout_stage5_primary_source_argument"] == "--scores-csv"
+    assert response["clean_checkout_stage5_primary_source_artifact_path"] == (
+        "/tmp/dp/runs/stage5_scores.csv"
+    )
+    assert response["clean_checkout_stage5_input_family_rows"][0]["source_argument"] == (
+        "--scores-csv"
+    )
+    assert response["clean_checkout_stage5_input_family_rows"][0]["execution_enabled"] is False
+    assert (
+        response["clean_checkout_stage5_input_family_rows"][0]["claim_promotion_allowed"]
+        is False
+    )
+    assert response["clean_checkout_stage5_missing_input_rows"][0]["source_artifact_path"] == (
+        "/tmp/dp/runs/stage5_scores.csv"
+    )
     assert response["developer_demo_wording_allowed"] is False
     assert response["paid_pilot_wording_allowed"] is False
     assert response["execution_enabled"] is False

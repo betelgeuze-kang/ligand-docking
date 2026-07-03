@@ -572,6 +572,44 @@ def _developer_preview_clean_checkout_receipt_surface(receipt_path: Path) -> dic
     packet = _read_json_object(receipt_path)
     summary = _summary(packet)
     rows = _rows(packet)
+    stage5_input_family_rows = (
+        packet.get("stage5_input_family_rows")
+        if isinstance(packet.get("stage5_input_family_rows"), list)
+        else []
+    )
+    clean_stage5_rows = [
+        {
+            "set_id": str(row.get("set_id") or ""),
+            "task_id": str(row.get("task_id") or ""),
+            "task_key": str(row.get("task_key") or ""),
+            "domain": str(row.get("domain") or ""),
+            "kind": str(row.get("kind") or ""),
+            "profile_json": str(row.get("profile_json") or ""),
+            "pipeline_summary_json": str(row.get("pipeline_summary_json") or ""),
+            "pipeline_summary_present": bool(row.get("pipeline_summary_present") is True),
+            "pipeline_summary_resolution_source": str(
+                row.get("pipeline_summary_resolution_source") or ""
+            ),
+            "source_error_type": str(row.get("source_error_type") or ""),
+            "source_error_blocker": str(row.get("source_error_blocker") or ""),
+            "source_argument": str(row.get("source_argument") or ""),
+            "source_artifact_path": str(row.get("source_artifact_path") or ""),
+            "source_artifact_present": bool(row.get("source_artifact_present") is True),
+            "source_artifact_missing": bool(row.get("source_artifact_missing") is True),
+            "required_action": str(row.get("required_action") or ""),
+            "operator_action_required": bool(row.get("operator_action_required") is True),
+            "developer_demo_wording_allowed": False,
+            "paid_pilot_wording_allowed": False,
+            "claim_promotion_allowed": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+        }
+        for row in stage5_input_family_rows
+        if isinstance(row, dict)
+    ]
+    clean_stage5_missing_rows = [
+        row for row in clean_stage5_rows if row["source_artifact_missing"]
+    ]
     row_by_check = {str(row.get("check") or ""): row for row in rows}
     source_evidence = [
         {
@@ -605,6 +643,15 @@ def _developer_preview_clean_checkout_receipt_surface(receipt_path: Path) -> dic
             "clean_checkout_source_evidence_ready": False,
             "clean_checkout_source_evidence": [],
             "clean_checkout_source_blockers": ["developer_preview_clean_checkout_benchmark_receipt_missing"],
+            "clean_checkout_stage5_required_argument_count": 0,
+            "clean_checkout_stage5_input_family_row_count": 0,
+            "clean_checkout_stage5_recovery_task_count": 0,
+            "clean_checkout_stage5_missing_input_count": 0,
+            "clean_checkout_stage5_primary_task_key": "",
+            "clean_checkout_stage5_primary_source_argument": "",
+            "clean_checkout_stage5_primary_source_artifact_path": "",
+            "clean_checkout_stage5_input_family_rows": [],
+            "clean_checkout_stage5_missing_input_rows": [],
             "developer_demo_wording_allowed": False,
             "paid_pilot_wording_allowed": False,
         }
@@ -655,6 +702,29 @@ def _developer_preview_clean_checkout_receipt_surface(receipt_path: Path) -> dic
         ),
         "clean_checkout_source_evidence": source_evidence,
         "clean_checkout_source_blockers": source_blockers,
+        "clean_checkout_stage5_required_argument_count": _int(
+            summary.get("stage5_required_argument_count")
+        ),
+        "clean_checkout_stage5_input_family_row_count": _int(
+            summary.get("stage5_input_family_row_count")
+        ),
+        "clean_checkout_stage5_recovery_task_count": _int(
+            summary.get("stage5_recovery_task_count")
+        ),
+        "clean_checkout_stage5_missing_input_count": _int(
+            summary.get("stage5_missing_input_count")
+        ),
+        "clean_checkout_stage5_primary_task_key": str(
+            summary.get("stage5_primary_task_key") or ""
+        ),
+        "clean_checkout_stage5_primary_source_argument": str(
+            summary.get("stage5_primary_source_argument") or ""
+        ),
+        "clean_checkout_stage5_primary_source_artifact_path": str(
+            summary.get("stage5_primary_source_artifact_path") or ""
+        ),
+        "clean_checkout_stage5_input_family_rows": clean_stage5_rows,
+        "clean_checkout_stage5_missing_input_rows": clean_stage5_missing_rows,
         "developer_demo_wording_allowed": receipt_ready,
         "paid_pilot_wording_allowed": False,
     }

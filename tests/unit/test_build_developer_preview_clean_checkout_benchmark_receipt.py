@@ -159,6 +159,112 @@ def test_clean_checkout_benchmark_receipt_surfaces_baseline_source_blockers(
     )
 
 
+def test_clean_checkout_benchmark_receipt_surfaces_stage5_input_family(
+    tmp_path: Path,
+) -> None:
+    ai_verify_log = tmp_path / ".betelgeuze/developer_preview_clean_checkout_ai_verify.log"
+    ai_verify_log.parent.mkdir(parents=True, exist_ok=True)
+    ai_verify_log.write_text("verify ok (smoke)\n", encoding="utf-8")
+    runs_dir = tmp_path / "runs"
+    scores_csv = runs_dir / "dp_task_stage3_scores.csv"
+    labels_csv = runs_dir / "dp_task_labels.csv"
+    split_csv = runs_dir / "dp_task_split.csv"
+    expected_keys_csv = runs_dir / "dp_task_expected_keys.csv"
+    labels_csv.parent.mkdir(parents=True, exist_ok=True)
+    labels_csv.write_text("ligand_id,label\n", encoding="utf-8")
+    expected_keys_csv.write_text("ligand_id\n", encoding="utf-8")
+    pipeline_summary = runs_dir / "dp_task_summary.json"
+    _write_json(
+        pipeline_summary,
+        {
+            "stages": {
+                "stage5_ranking_eval": {
+                    "cmd": [
+                        "python3",
+                        "tools/product/evaluate_ligand_ranking_metrics.py",
+                        "--scores-csv",
+                        str(scores_csv),
+                        "--labels-csv",
+                        str(labels_csv),
+                        "--split-csv",
+                        str(split_csv),
+                        "--expected-keys-csv",
+                        str(expected_keys_csv),
+                        "--out-json",
+                        str(runs_dir / "dp_task_ranking_summary.json"),
+                    ],
+                },
+            },
+        },
+    )
+    baseline_summary = (
+        tmp_path
+        / ".betelgeuze/developer_preview_external_baselines"
+        / "biorxiv_baseline_comparison_developer_preview_clean_checkout"
+        / "summary.json"
+    )
+    blocker = f"stage5_input_missing:--scores-csv:{scores_csv}"
+    _write_json(
+        baseline_summary,
+        {
+            "bundle_root": str(baseline_summary.parent),
+            "task_count": 1,
+            "task_winner_count_current": 0,
+            "task_winner_count_noncurrent": 0,
+            "task_source_error_count": 1,
+            "blockers": [blocker],
+            "task_source_errors": [
+                {
+                    "set_id": "set1_core_blind",
+                    "task_id": "gpcr_core_full",
+                    "domain": "gpcr",
+                    "kind": "ligand_stress",
+                    "profile_json": str(tmp_path / "config/profile.json"),
+                    "pipeline_summary_json": str(pipeline_summary),
+                    "pipeline_summary_resolution_source": "copied_files",
+                    "source_error_type": "TaskSourceError",
+                    "source_error": blocker,
+                    "blocker": blocker,
+                }
+            ],
+            "score_leaderboard": [],
+            "tasks": [
+                {
+                    "set_id": "set1_core_blind",
+                    "task_id": "gpcr_core_full",
+                    "current_score_col": "",
+                    "score_rows": [],
+                }
+            ],
+        },
+    )
+
+    payload = mod.build_developer_preview_clean_checkout_benchmark_receipt(
+        ai_verify_log=ai_verify_log,
+        baseline_summary_json=baseline_summary,
+        root=tmp_path,
+    )
+    summary = payload["summary"]
+    family_rows = payload["stage5_input_family_rows"]
+    missing_rows = [row for row in family_rows if row["source_artifact_missing"]]
+
+    assert summary["stage5_required_argument_count"] == 4
+    assert summary["stage5_input_family_row_count"] == 4
+    assert summary["stage5_recovery_task_count"] == 1
+    assert summary["stage5_missing_input_count"] == 2
+    assert summary["stage5_primary_task_key"] == "dp_task"
+    assert summary["stage5_primary_source_argument"] == "--scores-csv"
+    assert summary["stage5_primary_source_artifact_path"] == "runs/dp_task_stage3_scores.csv"
+    assert {row["source_argument"] for row in missing_rows} == {
+        "--scores-csv",
+        "--split-csv",
+    }
+    assert all(row["execution_enabled"] is False for row in family_rows)
+    assert all(row["claim_promotion_allowed"] is False for row in family_rows)
+    assert payload["rows"][-1]["check"] == "stage5_input_family_recovery"
+    assert payload["rows"][-1]["missing_input_count"] == 2
+
+
 def test_clean_checkout_benchmark_receipt_cli_writes_outputs(tmp_path: Path) -> None:
     ai_verify_log, baseline_summary = _write_ready_sources(tmp_path)
     out_json = tmp_path / ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"

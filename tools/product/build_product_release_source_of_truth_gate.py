@@ -1627,6 +1627,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "tools/build_product_execution_work_order.py",
             "tools/build_product_pose_sampling_readiness.py",
             "tools/product/build_backmapping_scoring_batch_smoke_benchmark.py",
+            "tools/product/build_developer_preview_clean_checkout_benchmark_receipt.py",
             "tools/product/build_developer_preview_large_model_oom_guard_receipt.py",
             "tools/product/build_developer_preview_final_gate_audit.py",
             "tools/product/build_developer_preview_new_user_observation_receipt.py",
