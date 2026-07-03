@@ -369,6 +369,48 @@ def _developer_preview_receipt_work_order_rows(payload: dict[str, Any]) -> list[
     return rows
 
 
+def _release_operator_action_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _rows(payload):
+        rows.append(
+            {
+                "lane_id": _text(row.get("lane_id")),
+                "action_type": _text(row.get("action_type")),
+                "status": _text(row.get("status")),
+                "priority": _int(row.get("priority")),
+                "approval_token": _text(row.get("approval_token")),
+                "required_input": _text(row.get("required_input")),
+                "artifact_path": _text(row.get("artifact_path")),
+                "command": _text(row.get("command")),
+                "reason": _text(row.get("reason")),
+                "recommended_action": _text(row.get("recommended_action")),
+                "operator_completion_artifact_id": _text(
+                    row.get("operator_completion_artifact_id")
+                ),
+                "operator_completion_completion_rule": _text(
+                    row.get("operator_completion_completion_rule")
+                ),
+                "operator_completion_next_action": _text(
+                    row.get("operator_completion_next_action")
+                ),
+                "operator_completion_required_fields_or_columns": _text(
+                    row.get("operator_completion_required_fields_or_columns")
+                ),
+                "parallelizable_with_primary_action": _bool_true(
+                    row.get("parallelizable_with_primary_action")
+                ),
+                "parallel_lane_precondition": _text(row.get("parallel_lane_precondition")),
+                "action_executed": False,
+                "delete_executed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "claim_boundary": _text(row.get("claim_boundary")) or CLAIM_BOUNDARY,
+            }
+        )
+    return rows
+
+
 def _enterprise_on_prem_control_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in _rows(payload):
@@ -928,7 +970,11 @@ def build_product_operator_cockpit(
     public_benchmark_field_work_order_rows = _public_benchmark_field_work_order_rows(
         public_receipt_attach_payload
     )
-    release_actions = _summary(_read_json(release_actions_json, root=root))
+    release_actions_payload = _read_json(release_actions_json, root=root)
+    release_actions = _summary(release_actions_payload)
+    release_operator_action_row_preview = _release_operator_action_rows(
+        release_actions_payload
+    )
     pm_queue_payload = _read_json(pm_priority_queue_json, root=root)
     pm_queue = _summary(pm_queue_payload)
     pm_queue_rows = _rows(pm_queue_payload)
@@ -1165,6 +1211,10 @@ def build_product_operator_cockpit(
     release_actions_present = bool(release_actions)
     release_blocker_count = _int(
         release_actions.get("goal_release_blocker_count") or release_actions.get("blocker_count")
+    )
+    release_operator_action_row_count = len(release_operator_action_row_preview)
+    first_release_operator_action_row = (
+        release_operator_action_row_preview[0] if release_operator_action_row_preview else {}
     )
     pm_queue_present = bool(pm_queue)
     pm_queue_blocked_count = _int(pm_queue.get("blocked_item_count"))
@@ -2370,6 +2420,26 @@ def build_product_operator_cockpit(
         "pm_priority_queue_first_blocked_item_id": pm_queue_first_blocked_item_id,
         "pm_priority_queue_first_blocker": pm_queue_first_blocker,
         "pm_priority_queue_next_required_step": pm_queue_first_action,
+        "release_operator_action_row_count": release_operator_action_row_count,
+        "release_operator_action_primary_lane_id": _text(
+            first_release_operator_action_row.get("lane_id")
+        ),
+        "release_operator_action_primary_action_type": _text(
+            first_release_operator_action_row.get("action_type")
+        ),
+        "release_operator_action_primary_status": _text(
+            first_release_operator_action_row.get("status")
+        ),
+        "release_operator_action_primary_approval_token": _text(
+            first_release_operator_action_row.get("approval_token")
+        ),
+        "release_operator_action_primary_required_input": _text(
+            first_release_operator_action_row.get("required_input")
+        ),
+        "release_operator_action_primary_command": _text(
+            first_release_operator_action_row.get("command")
+        ),
+        "release_operator_action_rows": release_operator_action_row_preview,
         "release_allowed": release_allowed,
         "next_required_step": (
             pm_queue_first_action

@@ -604,6 +604,64 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "pm_priority_queue_next_required_step": (
                     "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
                 ),
+                "release_operator_action_row_count": 1,
+                "release_operator_action_primary_lane_id": "product_ai_production",
+                "release_operator_action_primary_action_type": (
+                    "complete_residual_registry_guarded_promotion"
+                ),
+                "release_operator_action_primary_status": "required",
+                "release_operator_action_primary_approval_token": (
+                    "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+                ),
+                "release_operator_action_primary_required_input": (
+                    "production_promotion_allowed;default_residual_mode"
+                ),
+                "release_operator_action_primary_command": (
+                    "python3 tools/build_residual_model_registry.py && "
+                    "python3 tools/build_product_production_ai_checkpoint_readiness.py"
+                ),
+                "release_operator_action_rows": [
+                    {
+                        "lane_id": "product_ai_production",
+                        "action_type": "complete_residual_registry_guarded_promotion",
+                        "status": "required",
+                        "priority": 0,
+                        "approval_token": "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION",
+                        "required_input": "production_promotion_allowed;default_residual_mode",
+                        "artifact_path": (
+                            "runs/product_goal_completion_audit_current.json;"
+                            "runs/residual_model_registry_current.json"
+                        ),
+                        "command": (
+                            "python3 tools/build_residual_model_registry.py && "
+                            "python3 tools/build_product_production_ai_checkpoint_readiness.py"
+                        ),
+                        "reason": "registry promotion gates are not satisfied",
+                        "recommended_action": (
+                            "Complete the guarded production AI registry promotion receipt."
+                        ),
+                        "operator_completion_artifact_id": (
+                            "residual_model_registry_guarded_promotion"
+                        ),
+                        "operator_completion_completion_rule": (
+                            "registry_promotion_missing_gate_count=0"
+                        ),
+                        "operator_completion_next_action": (
+                            "Complete the guarded production AI registry promotion receipt."
+                        ),
+                        "operator_completion_required_fields_or_columns": (
+                            "production_promotion_allowed;default_residual_mode"
+                        ),
+                        "parallelizable_with_primary_action": True,
+                        "parallel_lane_precondition": "claim promotion remains locked",
+                        "action_executed": True,
+                        "delete_executed": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                        "claim_boundary": "unsafe fixture value should be preserved as text only",
+                    }
+                ],
                 "release_allowed": False,
                 "next_required_step": "Keep claims locked.",
                 "claim_boundary": "cockpit boundary",
@@ -1064,6 +1122,66 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["pm_priority_queue_next_required_step"] == (
         "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
     )
+    assert response["release_operator_action_row_count"] == 1
+    assert response["release_operator_action_primary_lane_id"] == "product_ai_production"
+    assert (
+        response["release_operator_action_primary_action_type"]
+        == "complete_residual_registry_guarded_promotion"
+    )
+    assert response["release_operator_action_primary_status"] == "required"
+    assert (
+        response["release_operator_action_primary_approval_token"]
+        == "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+    )
+    assert (
+        response["release_operator_action_primary_required_input"]
+        == "production_promotion_allowed;default_residual_mode"
+    )
+    assert "tools/build_residual_model_registry.py" in (
+        response["release_operator_action_primary_command"]
+    )
+    assert response["release_operator_action_rows"] == [
+        {
+            "lane_id": "product_ai_production",
+            "action_type": "complete_residual_registry_guarded_promotion",
+            "status": "required",
+            "priority": 0,
+            "approval_token": "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION",
+            "required_input": "production_promotion_allowed;default_residual_mode",
+            "artifact_path": (
+                "runs/product_goal_completion_audit_current.json;"
+                "runs/residual_model_registry_current.json"
+            ),
+            "command": (
+                "python3 tools/build_residual_model_registry.py && "
+                "python3 tools/build_product_production_ai_checkpoint_readiness.py"
+            ),
+            "reason": "registry promotion gates are not satisfied",
+            "recommended_action": (
+                "Complete the guarded production AI registry promotion receipt."
+            ),
+            "operator_completion_artifact_id": (
+                "residual_model_registry_guarded_promotion"
+            ),
+            "operator_completion_completion_rule": (
+                "registry_promotion_missing_gate_count=0"
+            ),
+            "operator_completion_next_action": (
+                "Complete the guarded production AI registry promotion receipt."
+            ),
+            "operator_completion_required_fields_or_columns": (
+                "production_promotion_allowed;default_residual_mode"
+            ),
+            "parallelizable_with_primary_action": True,
+            "parallel_lane_precondition": "claim promotion remains locked",
+            "action_executed": False,
+            "delete_executed": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+            "claim_boundary": "unsafe fixture value should be preserved as text only",
+        }
+    ]
     assert response["pr38_split_acceptance_present"] is True
     assert response["pr38_split_acceptance_status"] == "pr38_split_acceptance_packet_ready"
     assert response["pr38_split_acceptance_ready"] is True
@@ -1315,6 +1433,14 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["pm_priority_queue_first_blocked_item_id"] == ""
     assert response["pm_priority_queue_first_blocker"] == ""
     assert response["pm_priority_queue_next_required_step"] == ""
+    assert response["release_operator_action_row_count"] == 0
+    assert response["release_operator_action_primary_lane_id"] == ""
+    assert response["release_operator_action_primary_action_type"] == ""
+    assert response["release_operator_action_primary_status"] == ""
+    assert response["release_operator_action_primary_approval_token"] == ""
+    assert response["release_operator_action_primary_required_input"] == ""
+    assert response["release_operator_action_primary_command"] == ""
+    assert response["release_operator_action_rows"] == []
     assert response["pr38_split_acceptance_present"] is False
     assert response["pr38_split_acceptance_status"] == ""
     assert response["pr38_split_acceptance_ready"] is False

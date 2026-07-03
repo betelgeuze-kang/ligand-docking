@@ -365,7 +365,49 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "primary_action_id": "product_ai_production:complete_residual_registry_guarded_promotion",
                 "primary_action_recommended_action": "Complete the guarded production AI registry promotion receipt.",
                 "goal_release_decision_gate_status": "blocked_goal_release_decision",
-            }
+            },
+            "rows": [
+                {
+                    "lane_id": "product_ai_production",
+                    "action_type": "complete_residual_registry_guarded_promotion",
+                    "status": "required",
+                    "priority": 0,
+                    "approval_token": "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION",
+                    "required_input": "production_promotion_allowed;default_residual_mode",
+                    "artifact_path": (
+                        "runs/product_goal_completion_audit_current.json;"
+                        "runs/residual_model_registry_current.json"
+                    ),
+                    "command": (
+                        "python3 tools/build_residual_model_registry.py && "
+                        "python3 tools/build_product_production_ai_checkpoint_readiness.py"
+                    ),
+                    "reason": "registry promotion gates are not satisfied",
+                    "recommended_action": (
+                        "Complete the guarded production AI registry promotion receipt."
+                    ),
+                    "operator_completion_artifact_id": (
+                        "residual_model_registry_guarded_promotion"
+                    ),
+                    "operator_completion_completion_rule": (
+                        "registry_promotion_missing_gate_count=0"
+                    ),
+                    "operator_completion_next_action": (
+                        "Complete the guarded production AI registry promotion receipt."
+                    ),
+                    "operator_completion_required_fields_or_columns": (
+                        "production_promotion_allowed;default_residual_mode"
+                    ),
+                    "parallelizable_with_primary_action": True,
+                    "parallel_lane_precondition": "claim promotion remains locked",
+                    "action_executed": True,
+                    "delete_executed": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                    "claim_boundary": "unsafe fixture value should be preserved as text only",
+                }
+            ],
         },
     )
     _write_json(
@@ -1439,6 +1481,66 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     )
     assert panels["release_blockers_operator_actions"]["blockers"] == [
         "f2g_authoritative_surfaces_missing"
+    ]
+    assert summary["release_operator_action_row_count"] == 1
+    assert summary["release_operator_action_primary_lane_id"] == "product_ai_production"
+    assert (
+        summary["release_operator_action_primary_action_type"]
+        == "complete_residual_registry_guarded_promotion"
+    )
+    assert summary["release_operator_action_primary_status"] == "required"
+    assert (
+        summary["release_operator_action_primary_approval_token"]
+        == "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION"
+    )
+    assert (
+        summary["release_operator_action_primary_required_input"]
+        == "production_promotion_allowed;default_residual_mode"
+    )
+    assert "tools/build_residual_model_registry.py" in (
+        summary["release_operator_action_primary_command"]
+    )
+    assert summary["release_operator_action_rows"] == [
+        {
+            "lane_id": "product_ai_production",
+            "action_type": "complete_residual_registry_guarded_promotion",
+            "status": "required",
+            "priority": 0,
+            "approval_token": "APPROVE_PRODUCTION_AI_REGISTRY_PROMOTION",
+            "required_input": "production_promotion_allowed;default_residual_mode",
+            "artifact_path": (
+                "runs/product_goal_completion_audit_current.json;"
+                "runs/residual_model_registry_current.json"
+            ),
+            "command": (
+                "python3 tools/build_residual_model_registry.py && "
+                "python3 tools/build_product_production_ai_checkpoint_readiness.py"
+            ),
+            "reason": "registry promotion gates are not satisfied",
+            "recommended_action": (
+                "Complete the guarded production AI registry promotion receipt."
+            ),
+            "operator_completion_artifact_id": (
+                "residual_model_registry_guarded_promotion"
+            ),
+            "operator_completion_completion_rule": (
+                "registry_promotion_missing_gate_count=0"
+            ),
+            "operator_completion_next_action": (
+                "Complete the guarded production AI registry promotion receipt."
+            ),
+            "operator_completion_required_fields_or_columns": (
+                "production_promotion_allowed;default_residual_mode"
+            ),
+            "parallelizable_with_primary_action": True,
+            "parallel_lane_precondition": "claim promotion remains locked",
+            "action_executed": False,
+            "delete_executed": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+            "claim_boundary": "unsafe fixture value should be preserved as text only",
+        }
     ]
     assert panels["evidence_bundle_export"]["source_artifact_ready"] is True
     assert "api_customer_flow_ready=true" in panels["evidence_bundle_export"]["secondary_metric"]

@@ -384,6 +384,53 @@ def _f2g_f2h_recovery_rows(value: Any) -> list[dict[str, Any]]:
     return recovery_rows
 
 
+def _release_operator_action_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    action_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        action_rows.append(
+            {
+                "lane_id": str(row.get("lane_id") or ""),
+                "action_type": str(row.get("action_type") or ""),
+                "status": str(row.get("status") or ""),
+                "priority": _int(row.get("priority")),
+                "approval_token": str(row.get("approval_token") or ""),
+                "required_input": str(row.get("required_input") or ""),
+                "artifact_path": str(row.get("artifact_path") or ""),
+                "command": str(row.get("command") or ""),
+                "reason": str(row.get("reason") or ""),
+                "recommended_action": str(row.get("recommended_action") or ""),
+                "operator_completion_artifact_id": str(
+                    row.get("operator_completion_artifact_id") or ""
+                ),
+                "operator_completion_completion_rule": str(
+                    row.get("operator_completion_completion_rule") or ""
+                ),
+                "operator_completion_next_action": str(
+                    row.get("operator_completion_next_action") or ""
+                ),
+                "operator_completion_required_fields_or_columns": str(
+                    row.get("operator_completion_required_fields_or_columns") or ""
+                ),
+                "parallelizable_with_primary_action": bool(
+                    row.get("parallelizable_with_primary_action") is True
+                ),
+                "parallel_lane_precondition": str(
+                    row.get("parallel_lane_precondition") or ""
+                ),
+                "action_executed": False,
+                "delete_executed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "claim_boundary": str(row.get("claim_boundary") or CLAIM_BOUNDARY),
+            }
+        )
+    return action_rows
+
+
 def _pr38_split_surface() -> dict[str, Any]:
     acceptance_packet = _read_json_object(PR38_SPLIT_ACCEPTANCE_PACKET_ARTIFACT)
     matrix_packet = _read_json_object(PR38_CHILD_PR_VERIFICATION_MATRIX_ARTIFACT)
@@ -661,6 +708,14 @@ def _missing_response() -> dict[str, Any]:
         "pm_priority_queue_first_blocked_item_id": "",
         "pm_priority_queue_first_blocker": "",
         "pm_priority_queue_next_required_step": "",
+        "release_operator_action_row_count": 0,
+        "release_operator_action_primary_lane_id": "",
+        "release_operator_action_primary_action_type": "",
+        "release_operator_action_primary_status": "",
+        "release_operator_action_primary_approval_token": "",
+        "release_operator_action_primary_required_input": "",
+        "release_operator_action_primary_command": "",
+        "release_operator_action_rows": [],
         "pr38_split_acceptance_artifact_path": str(PR38_SPLIT_ACCEPTANCE_PACKET_ARTIFACT),
         "pr38_split_acceptance_present": False,
         "pr38_split_acceptance_status": "",
@@ -1165,6 +1220,30 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         "pm_priority_queue_first_blocker": str(summary.get("pm_priority_queue_first_blocker") or ""),
         "pm_priority_queue_next_required_step": str(
             summary.get("pm_priority_queue_next_required_step") or ""
+        ),
+        "release_operator_action_row_count": _int(
+            summary.get("release_operator_action_row_count")
+        ),
+        "release_operator_action_primary_lane_id": str(
+            summary.get("release_operator_action_primary_lane_id") or ""
+        ),
+        "release_operator_action_primary_action_type": str(
+            summary.get("release_operator_action_primary_action_type") or ""
+        ),
+        "release_operator_action_primary_status": str(
+            summary.get("release_operator_action_primary_status") or ""
+        ),
+        "release_operator_action_primary_approval_token": str(
+            summary.get("release_operator_action_primary_approval_token") or ""
+        ),
+        "release_operator_action_primary_required_input": str(
+            summary.get("release_operator_action_primary_required_input") or ""
+        ),
+        "release_operator_action_primary_command": str(
+            summary.get("release_operator_action_primary_command") or ""
+        ),
+        "release_operator_action_rows": _release_operator_action_rows(
+            summary.get("release_operator_action_rows")
         ),
         **_pr38_split_surface(),
         "release_allowed": bool(summary.get("release_allowed") is True),
