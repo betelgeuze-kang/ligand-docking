@@ -131,6 +131,38 @@ def _field_work_order_rows(rows: list[Any]) -> list[dict[str, Any]]:
     return work_rows
 
 
+def _receipt_attach_lane_rows(rows: list[Any]) -> list[dict[str, Any]]:
+    lane_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        ready = bool(row.get("ready") is True and str(row.get("status") or "") == "ready")
+        lane_rows.append(
+            {
+                "lane_id": str(row.get("lane_id") or ""),
+                "status": str(row.get("status") or ""),
+                "ready": ready,
+                "blocker": str(row.get("blocker") or ""),
+                "source_artifact": str(row.get("source_artifact") or ""),
+                "operator_csv": str(row.get("operator_csv") or ""),
+                "row_count": _int(row.get("row_count")),
+                "pending_value_count": _int(row.get("pending_value_count")),
+                "pending_metadata_count": _int(row.get("pending_metadata_count")),
+                "pending_license_count": _int(row.get("pending_license_count")),
+                "pending_approval_token_count": _int(
+                    row.get("pending_approval_token_count")
+                ),
+                "approval_token_required": str(row.get("approval_token_required") or ""),
+                "next_required_step": str(row.get("next_required_step") or ""),
+                "operator_action_required": not ready,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return lane_rows
+
+
 def _metric_gate_pass(value: float | None, threshold: float | None) -> bool | None:
     if value is None or threshold is None:
         return None
@@ -269,6 +301,10 @@ def _external_receipt_blocker_rows(summary: dict[str, Any]) -> list[dict[str, An
 def _receipt_attach_surface(packet: dict[str, Any]) -> dict[str, Any]:
     summary = _summary(packet)
     rows = packet.get("field_work_order_rows") if isinstance(packet.get("field_work_order_rows"), list) else []
+    lane_rows = _receipt_attach_lane_rows(
+        packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    )
+    blocked_lane_rows = [row for row in lane_rows if row["operator_action_required"]]
     return {
         "receipt_attach_packet_artifact_path": str(PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT),
         "receipt_attach_packet_present": bool(summary),
@@ -279,6 +315,12 @@ def _receipt_attach_surface(packet: dict[str, Any]) -> dict[str, Any]:
         "receipt_attach_primary_blocker_id": str(summary.get("primary_blocker_id") or ""),
         "receipt_attach_primary_blocker": str(summary.get("primary_blocker") or ""),
         "receipt_attach_next_required_step": str(summary.get("next_required_step") or ""),
+        "receipt_attach_lane_row_count": len(lane_rows),
+        "receipt_attach_blocked_lane_count": len(blocked_lane_rows),
+        "receipt_attach_primary_blocked_lane_row": (
+            blocked_lane_rows[0] if blocked_lane_rows else {}
+        ),
+        "receipt_attach_lane_rows": lane_rows,
         "field_work_order_ready": bool(summary.get("field_work_order_ready") is True),
         "field_work_order_row_count": _int(summary.get("field_work_order_row_count")),
         "field_work_order_pending_field_count": _int(

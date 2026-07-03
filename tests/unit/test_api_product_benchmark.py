@@ -217,6 +217,10 @@ def test_public_benchmark_external_receipts_endpoint_missing_attach_packet(
     assert body["receipt_attach_packet_present"] is False
     assert body["receipt_attach_packet_ready"] is False
     assert body["field_work_order_ready"] is False
+    assert body["receipt_attach_lane_row_count"] == 0
+    assert body["receipt_attach_blocked_lane_count"] == 0
+    assert body["receipt_attach_primary_blocked_lane_row"] == {}
+    assert body["receipt_attach_lane_rows"] == []
     assert body["field_work_order_row_count"] == 0
     assert body["field_work_order_pending_field_count"] == 0
     assert body["field_work_order_rows"] == []
@@ -315,6 +319,57 @@ def test_public_benchmark_external_receipts_endpoint_surfaces_attach_work_order(
                 "metric_source_receipt_manual_field_pending_count": 510,
                 "metric_source_receipt_approval_token_pending_count": 51,
             },
+            "rows": [
+                {
+                    "lane_id": "vina_gnina_same_input_scores",
+                    "status": "blocked",
+                    "ready": False,
+                    "blocker": "vina_gnina_same_input_score_evidence_missing",
+                    "source_artifact": "runs/public_benchmark_vina_gnina_score_template_receipt_current.json",
+                    "operator_csv": (
+                        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                    ),
+                    "row_count": 16,
+                    "pending_value_count": 32,
+                    "pending_metadata_count": 128,
+                    "pending_license_count": 16,
+                    "pending_approval_token_count": 16,
+                    "approval_token_required": (
+                        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES"
+                    ),
+                    "next_required_step": "Fill every Vina/GNINA same-input score template row.",
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+                {
+                    "lane_id": "metric_source_receipt_rows",
+                    "status": "blocked",
+                    "ready": False,
+                    "blocker": "benchmark_metric_source_receipt_rows_unapproved",
+                    "source_artifact": (
+                        "runs/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.json"
+                    ),
+                    "operator_csv": (
+                        "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+                    ),
+                    "row_count": 51,
+                    "pending_value_count": 510,
+                    "pending_metadata_count": 510,
+                    "pending_license_count": 0,
+                    "pending_approval_token_count": 51,
+                    "approval_token_required": (
+                        "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+                    ),
+                    "next_required_step": (
+                        "Fill reviewed metric values, methods, artifact review fields, "
+                        "license flags, and approval token for every metric-source receipt row."
+                    ),
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+            ],
             "field_work_order_rows": [
                 {
                     "lane_id": "vina_gnina_same_input_scores",
@@ -351,6 +406,30 @@ def test_public_benchmark_external_receipts_endpoint_surfaces_attach_work_order(
     assert body["receipt_attach_packet_ready"] is False
     assert body["receipt_attach_blocker_count"] == 2
     assert body["receipt_attach_primary_blocker_id"] == "vina_gnina_same_input_scores"
+    assert body["receipt_attach_lane_row_count"] == 2
+    assert body["receipt_attach_blocked_lane_count"] == 2
+    assert body["receipt_attach_primary_blocked_lane_row"] == {
+        "lane_id": "vina_gnina_same_input_scores",
+        "status": "blocked",
+        "ready": False,
+        "blocker": "vina_gnina_same_input_score_evidence_missing",
+        "source_artifact": "runs/public_benchmark_vina_gnina_score_template_receipt_current.json",
+        "operator_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
+        "row_count": 16,
+        "pending_value_count": 32,
+        "pending_metadata_count": 128,
+        "pending_license_count": 16,
+        "pending_approval_token_count": 16,
+        "approval_token_required": "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES",
+        "next_required_step": "Fill every Vina/GNINA same-input score template row.",
+        "operator_action_required": True,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_promotion_allowed": False,
+    }
+    assert body["receipt_attach_lane_rows"][1]["lane_id"] == "metric_source_receipt_rows"
+    assert body["receipt_attach_lane_rows"][1]["pending_value_count"] == 510
+    assert body["receipt_attach_lane_rows"][1]["claim_promotion_allowed"] is False
     assert body["field_work_order_row_count"] == 2
     assert body["field_work_order_pending_field_count"] == 19
     assert body["field_work_order_primary_field_name"] == "approval_token"
