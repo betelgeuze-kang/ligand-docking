@@ -25,6 +25,13 @@ CLAIM_BOUNDARY = (
     "upload, email, deploy, or mutate external state."
 )
 
+STAGE5_REQUIRED_ARGUMENTS = [
+    "--scores-csv",
+    "--labels-csv",
+    "--split-csv",
+    "--expected-keys-csv",
+]
+
 CSV_FIELDS = [
     "priority",
     "gate_id",
@@ -269,6 +276,54 @@ def _split_receipt_blocker(blocker: str) -> tuple[str, str]:
     return "", text
 
 
+def _source_blocker_parts(detail: str, *, root: Path = ROOT) -> dict[str, Any]:
+    blocker_detail = _text(detail)
+    source_label = ""
+    blocker_expression = blocker_detail
+    for prefix in ("baseline_source_blocker=", "source_blocker="):
+        if blocker_expression.startswith(prefix):
+            source_label = prefix.removesuffix("=")
+            blocker_expression = blocker_expression[len(prefix) :]
+            break
+
+    blocker_id = blocker_expression
+    source_argument = ""
+    source_artifact_path = ""
+    if blocker_expression.endswith(":missing"):
+        blocker_id = "missing_source_artifact"
+        source_artifact_path = blocker_expression.removesuffix(":missing")
+    elif ":" in blocker_expression:
+        parts = blocker_expression.split(":", 2)
+        blocker_id = parts[0]
+        if len(parts) > 1 and parts[1].startswith("--"):
+            source_argument = parts[1]
+            source_artifact_path = parts[2] if len(parts) > 2 else ""
+        elif len(parts) > 1:
+            source_artifact_path = ":".join(parts[1:])
+
+    return {
+        "source_label": source_label,
+        "blocker_id": blocker_id,
+        "source_argument": source_argument,
+        "source_artifact_path": _display(source_artifact_path, root=root)
+        if source_artifact_path
+        else "",
+        "source_artifact_present": _resolve(source_artifact_path, root=root).is_file()
+        if source_artifact_path
+        else False,
+    }
+
+
+def _stage5_task_key(source_artifact_path: str) -> str:
+    if not source_artifact_path:
+        return ""
+    stem = Path(source_artifact_path).stem
+    for suffix in ("_stage4_calibration_scores", "_stage3_scores"):
+        if stem.endswith(suffix):
+            return stem[: -len(suffix)]
+    return stem
+
+
 def _blocker_required_action(detail: str) -> str:
     if "stage5_input_missing" in detail:
         return (
@@ -313,7 +368,11 @@ def _receipt_requirement_index() -> dict[str, dict[str, Any]]:
     return requirements
 
 
-def _receipt_work_order_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _receipt_work_order_rows(
+    rows: list[dict[str, Any]],
+    *,
+    root: Path = ROOT,
+) -> list[dict[str, Any]]:
     receipt_requirements = _receipt_requirement_index()
     work_rows: list[dict[str, Any]] = []
     for row in rows:
@@ -325,6 +384,11 @@ def _receipt_work_order_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]
             required_true_fields = list(requirement.get("required_true_fields", []))
             required_zero_fields = list(requirement.get("required_zero_fields", []))
             blocker_scope = "receipt_source" if ":source_blocker=" in blocker else "receipt_contract"
+            source_parts = (
+                _source_blocker_parts(detail, root=root)
+                if blocker_scope == "receipt_source"
+                else {}
+            )
             work_rows.append(
                 {
                     "priority": row["priority"],
@@ -339,6 +403,14 @@ def _receipt_work_order_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]
                     "required_zero_field_count": len(required_zero_fields),
                     "blocker": blocker,
                     "blocker_detail": detail,
+                    "source_label": source_parts.get("source_label", ""),
+                    "blocker_id": source_parts.get("blocker_id", ""),
+                    "source_argument": source_parts.get("source_argument", ""),
+                    "source_artifact_path": source_parts.get("source_artifact_path", ""),
+                    "source_artifact_present": source_parts.get(
+                        "source_artifact_present",
+                        False,
+                    ),
                     "required_action": _blocker_required_action(detail),
                     "next_required_step": row["next_required_step"],
                     "execution_enabled": False,
@@ -348,6 +420,45 @@ def _receipt_work_order_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]
                 }
             )
     return work_rows
+
+
+def _stage5_recovery_rows(
+    receipt_work_order_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in receipt_work_order_rows:
+        if row.get("blocker_scope") != "receipt_source":
+            continue
+        if row.get("blocker_id") != "stage5_input_missing":
+            continue
+        source_path = _text(row.get("source_artifact_path"))
+        rows.append(
+            {
+                "priority": _text(row.get("priority")),
+                "gate_id": _text(row.get("gate_id")),
+                "receipt_artifact": _text(row.get("receipt_artifact")),
+                "receipt_kind": _text(row.get("receipt_kind")),
+                "blocker_detail": _text(row.get("blocker_detail")),
+                "source_label": _text(row.get("source_label")),
+                "blocker_id": _text(row.get("blocker_id")),
+                "source_argument": _text(row.get("source_argument")),
+                "source_artifact_path": source_path,
+                "source_artifact_present": _bool_true(row.get("source_artifact_present")),
+                "task_key": _stage5_task_key(source_path),
+                "required_stage5_arguments": list(STAGE5_REQUIRED_ARGUMENTS),
+                "required_stage5_argument_count": len(STAGE5_REQUIRED_ARGUMENTS),
+                "required_action": (
+                    "Restore or regenerate this stage5 input family from the clean-checkout "
+                    "baseline run, then rebuild the clean-checkout benchmark receipt."
+                ),
+                "operator_action_required": True,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "claim_boundary": CLAIM_BOUNDARY,
+            }
+        )
+    return rows
 
 
 def _artifact_check(artifact: dict[str, Any], *, root: Path) -> dict[str, Any]:
@@ -483,9 +594,13 @@ def build_developer_preview_final_gate_audit(
         for row in blocked_rows
         for blocker in row["receipt_blockers"]
     ]
-    receipt_work_order_rows = _receipt_work_order_rows(rows)
+    receipt_work_order_rows = _receipt_work_order_rows(rows, root=root)
     receipt_source_blocker_rows = [
         row for row in receipt_work_order_rows if row.get("blocker_scope") == "receipt_source"
+    ]
+    stage5_recovery_rows = _stage5_recovery_rows(receipt_work_order_rows)
+    missing_stage5_recovery_rows = [
+        row for row in stage5_recovery_rows if not row["source_artifact_present"]
     ]
     present_blocked_receipt_count = sum(
         int(row["present_blocked_receipt_count"])
@@ -543,6 +658,19 @@ def build_developer_preview_final_gate_audit(
         "receipt_work_order_primary_source_blocker_required_action": (
             receipt_source_blocker_rows[0]["required_action"] if receipt_source_blocker_rows else ""
         ),
+        "stage5_recovery_work_order_ready": not stage5_recovery_rows,
+        "stage5_recovery_row_count": len(stage5_recovery_rows),
+        "stage5_missing_source_artifact_count": len(missing_stage5_recovery_rows),
+        "stage5_required_argument_count": len(STAGE5_REQUIRED_ARGUMENTS),
+        "stage5_primary_task_key": (
+            stage5_recovery_rows[0]["task_key"] if stage5_recovery_rows else ""
+        ),
+        "stage5_primary_source_argument": (
+            stage5_recovery_rows[0]["source_argument"] if stage5_recovery_rows else ""
+        ),
+        "stage5_primary_source_artifact_path": (
+            stage5_recovery_rows[0]["source_artifact_path"] if stage5_recovery_rows else ""
+        ),
         "register_gate_id_count": len(materialized_gate_ids),
         "register_gate_ids_complete": materialized_gate_ids == {spec["gate_id"] for spec in GATE_SPECS},
         "primary_blocker_id": blocked_rows[0]["gate_id"] if blocked_rows else "",
@@ -555,7 +683,12 @@ def build_developer_preview_final_gate_audit(
         if blocked_rows
         else "Developer Preview final gates are ready for operator review.",
     }
-    return {"summary": summary, "rows": rows, "receipt_work_order_rows": receipt_work_order_rows}
+    return {
+        "summary": summary,
+        "rows": rows,
+        "receipt_work_order_rows": receipt_work_order_rows,
+        "stage5_recovery_rows": stage5_recovery_rows,
+    }
 
 
 def _write_json(path_like: str | Path, payload: dict[str, Any], *, root: Path = ROOT) -> None:
@@ -595,6 +728,8 @@ def _render_md(payload: dict[str, Any]) -> str:
         f"- receipt_blocker_count: `{summary['receipt_blocker_count']}`",
         f"- receipt_work_order_row_count: `{summary['receipt_work_order_row_count']}`",
         f"- receipt_work_order_source_blocker_count: `{summary['receipt_work_order_source_blocker_count']}`",
+        f"- stage5_recovery_row_count: `{summary['stage5_recovery_row_count']}`",
+        f"- stage5_missing_source_artifact_count: `{summary['stage5_missing_source_artifact_count']}`",
         f"- primary_blocker_id: `{summary['primary_blocker_id']}`",
         f"- primary_source_blocker: `{summary['receipt_work_order_primary_source_blocker']}`",
         "",
@@ -624,6 +759,21 @@ def _render_md(payload: dict[str, Any]) -> str:
             f"| `{row['gate_id']}` | `{row['receipt_artifact']}` | "
             f"`{row['required_receipt_status']}` | `{required_fields}` | "
             f"`{row['blocker_detail']}` | {row['required_action']} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Stage5 Source Recovery",
+            "",
+            "| gate | task | source argument | source artifact | present | action |",
+            "| --- | --- | --- | --- | --- | --- |",
+        ]
+    )
+    for row in payload.get("stage5_recovery_rows", []):
+        lines.append(
+            f"| `{row['gate_id']}` | `{row['task_key']}` | `{row['source_argument']}` | "
+            f"`{row['source_artifact_path']}` | `{row['source_artifact_present']}` | "
+            f"{row['required_action']} |"
         )
     lines.extend(["", CLAIM_BOUNDARY, ""])
     return "\n".join(lines)

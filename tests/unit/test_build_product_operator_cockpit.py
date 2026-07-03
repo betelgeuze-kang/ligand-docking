@@ -853,6 +853,12 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "receipt_work_order_primary_source_blocker_required_action": (
                     "Attach the missing source evidence required by the receipt."
                 ),
+                "stage5_recovery_row_count": 1,
+                "stage5_missing_source_artifact_count": 1,
+                "stage5_required_argument_count": 4,
+                "stage5_primary_task_key": "stage5_gpcr",
+                "stage5_primary_source_argument": "--scores-csv",
+                "stage5_primary_source_artifact_path": "runs/missing_stage5_scores.csv",
                 "primary_blocker_id": "benchmark_results_clean_checkout_regenerated",
                 "next_required_step": "Attach the clean-checkout benchmark receipt.",
                 "blockers": [
@@ -946,6 +952,39 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                     ],
                     "required_zero_field_count": 2,
                     "required_zero_fields": ["blocker_count", "failed_count"],
+                    "claim_boundary": "developer preview boundary",
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                }
+            ],
+            "stage5_recovery_rows": [
+                {
+                    "priority": "A",
+                    "gate_id": "benchmark_results_clean_checkout_regenerated",
+                    "receipt_artifact": (
+                        ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+                    ),
+                    "receipt_kind": "required",
+                    "blocker_detail": (
+                        "baseline_source_blocker=stage5_input_missing:"
+                        "--scores-csv:runs/missing_stage5_scores.csv"
+                    ),
+                    "source_label": "baseline_source_blocker",
+                    "blocker_id": "stage5_input_missing",
+                    "source_argument": "--scores-csv",
+                    "source_artifact_path": "runs/missing_stage5_scores.csv",
+                    "source_artifact_present": False,
+                    "task_key": "stage5_gpcr",
+                    "required_stage5_arguments": [
+                        "--scores-csv",
+                        "--labels-csv",
+                        "--split-csv",
+                        "--expected-keys-csv",
+                    ],
+                    "required_stage5_argument_count": 4,
+                    "required_action": "Restore this stage5 input family.",
+                    "operator_action_required": True,
                     "claim_boundary": "developer preview boundary",
                     "execution_enabled": True,
                     "external_state_mutated": True,
@@ -1898,6 +1937,48 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary[
         "developer_preview_receipt_work_order_primary_source_blocker_required_action"
     ] == "Attach the missing source evidence required by the receipt."
+    assert summary["developer_preview_stage5_recovery_row_count"] == 1
+    assert summary["developer_preview_stage5_missing_source_artifact_count"] == 1
+    assert summary["developer_preview_stage5_required_argument_count"] == 4
+    assert summary["developer_preview_stage5_primary_task_key"] == "stage5_gpcr"
+    assert summary["developer_preview_stage5_primary_source_argument"] == "--scores-csv"
+    assert (
+        summary["developer_preview_stage5_primary_source_artifact_path"]
+        == "runs/missing_stage5_scores.csv"
+    )
+    assert summary["developer_preview_stage5_recovery_rows"] == [
+        {
+            "priority": "A",
+            "gate_id": "benchmark_results_clean_checkout_regenerated",
+            "receipt_artifact": (
+                ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+            ),
+            "receipt_kind": "required",
+            "blocker_detail": (
+                "baseline_source_blocker=stage5_input_missing:"
+                "--scores-csv:runs/missing_stage5_scores.csv"
+            ),
+            "source_label": "baseline_source_blocker",
+            "blocker_id": "stage5_input_missing",
+            "source_argument": "--scores-csv",
+            "source_artifact_path": "runs/missing_stage5_scores.csv",
+            "source_artifact_present": False,
+            "task_key": "stage5_gpcr",
+            "required_stage5_arguments": [
+                "--scores-csv",
+                "--labels-csv",
+                "--split-csv",
+                "--expected-keys-csv",
+            ],
+            "required_stage5_argument_count": 4,
+            "required_action": "Restore this stage5 input family.",
+            "operator_action_required": True,
+            "claim_boundary": "developer preview boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
     assert summary["developer_preview_receipt_work_order_rows"] == [
         {
             "gate_id": "benchmark_results_clean_checkout_regenerated",
@@ -2418,6 +2499,18 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "receipt_work_order_rows=29" in panels["developer_preview_final_gates"]["secondary_metric"]
     assert "receipt_blockers=12" in panels["developer_preview_final_gates"]["secondary_metric"]
     assert "source_blockers=7" in panels["developer_preview_final_gates"]["secondary_metric"]
+    assert "stage5_recovery_rows=1" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_missing_sources=1" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_primary_task=stage5_gpcr" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_primary_source_arg=--scores-csv" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
     assert "primary_gate=benchmark_results_clean_checkout_regenerated" in (
         panels["developer_preview_final_gates"]["secondary_metric"]
     )

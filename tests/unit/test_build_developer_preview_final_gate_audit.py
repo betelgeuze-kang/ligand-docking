@@ -173,6 +173,11 @@ def test_developer_preview_final_gate_audit_blocks_missing_receipts(tmp_path: Pa
     assert summary["receipt_work_order_primary_source_blocker_receipt_artifact"] == ""
     assert summary["receipt_work_order_primary_source_blocker"] == ""
     assert summary["receipt_work_order_primary_source_blocker_required_action"] == ""
+    assert summary["stage5_recovery_work_order_ready"] is True
+    assert summary["stage5_recovery_row_count"] == 0
+    assert summary["stage5_missing_source_artifact_count"] == 0
+    assert summary["stage5_primary_task_key"] == ""
+    assert payload["stage5_recovery_rows"] == []
     assert payload["receipt_work_order_rows"][0]["blocker_scope"] == "receipt_contract"
     assert rows["benchmark_results_clean_checkout_regenerated"]["blocker"].endswith(":missing")
     assert rows["linux_windows_reproducibility_confirmed"]["required_receipt_count"] == 2
@@ -326,10 +331,58 @@ def test_developer_preview_final_gate_audit_guides_stage5_input_recovery(
         "Restore or regenerate the missing clean-checkout stage5 input CSVs "
         "(scores, labels, split, and expected-key queue), then rebuild the baseline receipt."
     )
+    assert summary["stage5_recovery_work_order_ready"] is False
+    assert summary["stage5_recovery_row_count"] == 1
+    assert summary["stage5_missing_source_artifact_count"] == 1
+    assert summary["stage5_required_argument_count"] == 4
+    assert summary["stage5_primary_task_key"] == "missing_scores"
+    assert summary["stage5_primary_source_argument"] == "--scores-csv"
+    assert summary["stage5_primary_source_artifact_path"] == "/tmp/missing_scores.csv"
     assert source_rows[0]["required_action"] == (
         "Restore or regenerate the missing clean-checkout stage5 input CSVs "
         "(scores, labels, split, and expected-key queue), then rebuild the baseline receipt."
     )
+    assert source_rows[0]["source_label"] == "baseline_source_blocker"
+    assert source_rows[0]["blocker_id"] == "stage5_input_missing"
+    assert source_rows[0]["source_argument"] == "--scores-csv"
+    assert source_rows[0]["source_artifact_path"] == "/tmp/missing_scores.csv"
+    assert source_rows[0]["source_artifact_present"] is False
+    assert payload["stage5_recovery_rows"] == [
+        {
+            "priority": "A",
+            "gate_id": "benchmark_results_clean_checkout_regenerated",
+            "receipt_artifact": (
+                ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+            ),
+            "receipt_kind": "required",
+            "blocker_detail": (
+                "baseline_source_blocker=stage5_input_missing:"
+                "--scores-csv:/tmp/missing_scores.csv"
+            ),
+            "source_label": "baseline_source_blocker",
+            "blocker_id": "stage5_input_missing",
+            "source_argument": "--scores-csv",
+            "source_artifact_path": "/tmp/missing_scores.csv",
+            "source_artifact_present": False,
+            "task_key": "missing_scores",
+            "required_stage5_arguments": [
+                "--scores-csv",
+                "--labels-csv",
+                "--split-csv",
+                "--expected-keys-csv",
+            ],
+            "required_stage5_argument_count": 4,
+            "required_action": (
+                "Restore or regenerate this stage5 input family from the clean-checkout "
+                "baseline run, then rebuild the clean-checkout benchmark receipt."
+            ),
+            "operator_action_required": True,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+            "claim_boundary": mod.CLAIM_BOUNDARY,
+        }
+    ]
 
 
 def test_developer_preview_final_gate_audit_ready_when_all_receipts_pass(tmp_path: Path) -> None:
@@ -349,6 +402,10 @@ def test_developer_preview_final_gate_audit_ready_when_all_receipts_pass(tmp_pat
     assert summary["receipt_work_order_row_count"] == 0
     assert summary["receipt_work_order_source_blocker_count"] == 0
     assert summary["receipt_work_order_primary_source_blocker"] == ""
+    assert summary["stage5_recovery_work_order_ready"] is True
+    assert summary["stage5_recovery_row_count"] == 0
+    assert summary["stage5_missing_source_artifact_count"] == 0
+    assert payload["stage5_recovery_rows"] == []
     assert payload["receipt_work_order_rows"] == []
     assert summary["claim_promotion_allowed"] is False
 
@@ -379,4 +436,5 @@ def test_developer_preview_final_gate_audit_cli_writes_outputs(tmp_path: Path) -
     md = out_md.read_text(encoding="utf-8")
     assert "Developer Preview Final Gate Audit" in md
     assert "Receipt Work Order" in md
+    assert "Stage5 Source Recovery" in md
     assert "expected status" in md

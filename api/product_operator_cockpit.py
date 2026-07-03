@@ -587,6 +587,42 @@ def _developer_preview_receipt_work_order_rows(value: Any) -> list[dict[str, Any
     return work_rows
 
 
+def _developer_preview_stage5_recovery_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    recovery_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        recovery_rows.append(
+            {
+                "priority": str(row.get("priority") or ""),
+                "gate_id": str(row.get("gate_id") or ""),
+                "receipt_artifact": str(row.get("receipt_artifact") or ""),
+                "receipt_kind": str(row.get("receipt_kind") or ""),
+                "blocker_detail": str(row.get("blocker_detail") or ""),
+                "source_label": str(row.get("source_label") or ""),
+                "blocker_id": str(row.get("blocker_id") or ""),
+                "source_argument": str(row.get("source_argument") or ""),
+                "source_artifact_path": str(row.get("source_artifact_path") or ""),
+                "source_artifact_present": bool(row.get("source_artifact_present") is True),
+                "task_key": str(row.get("task_key") or ""),
+                "required_stage5_arguments": _string_list(
+                    row.get("required_stage5_arguments")
+                ),
+                "required_stage5_argument_count": _int(
+                    row.get("required_stage5_argument_count")
+                ),
+                "required_action": str(row.get("required_action") or ""),
+                "operator_action_required": bool(row.get("operator_action_required") is True),
+                "claim_boundary": str(row.get("claim_boundary") or ""),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return recovery_rows
+
+
 def _enterprise_on_prem_control_rows(value: Any) -> list[dict[str, Any]]:
     rows = value if isinstance(value, list) else []
     control_rows: list[dict[str, Any]] = []
@@ -982,6 +1018,13 @@ def _missing_response() -> dict[str, Any]:
         "developer_preview_receipt_work_order_primary_source_blocker": "",
         "developer_preview_receipt_work_order_primary_source_blocker_required_action": "",
         "developer_preview_receipt_work_order_rows": [],
+        "developer_preview_stage5_recovery_row_count": 0,
+        "developer_preview_stage5_missing_source_artifact_count": 0,
+        "developer_preview_stage5_required_argument_count": 0,
+        "developer_preview_stage5_primary_task_key": "",
+        "developer_preview_stage5_primary_source_argument": "",
+        "developer_preview_stage5_primary_source_artifact_path": "",
+        "developer_preview_stage5_recovery_rows": [],
         "enterprise_on_prem_readiness_present": False,
         "enterprise_on_prem_ready": False,
         "enterprise_on_prem_claim_allowed": False,
@@ -1542,6 +1585,27 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "developer_preview_receipt_work_order_rows": _developer_preview_receipt_work_order_rows(
             summary.get("developer_preview_receipt_work_order_rows")
+        ),
+        "developer_preview_stage5_recovery_row_count": _int(
+            summary.get("developer_preview_stage5_recovery_row_count")
+        ),
+        "developer_preview_stage5_missing_source_artifact_count": _int(
+            summary.get("developer_preview_stage5_missing_source_artifact_count")
+        ),
+        "developer_preview_stage5_required_argument_count": _int(
+            summary.get("developer_preview_stage5_required_argument_count")
+        ),
+        "developer_preview_stage5_primary_task_key": str(
+            summary.get("developer_preview_stage5_primary_task_key") or ""
+        ),
+        "developer_preview_stage5_primary_source_argument": str(
+            summary.get("developer_preview_stage5_primary_source_argument") or ""
+        ),
+        "developer_preview_stage5_primary_source_artifact_path": str(
+            summary.get("developer_preview_stage5_primary_source_artifact_path") or ""
+        ),
+        "developer_preview_stage5_recovery_rows": _developer_preview_stage5_recovery_rows(
+            summary.get("developer_preview_stage5_recovery_rows")
         ),
         "enterprise_on_prem_readiness_present": bool(
             summary.get("enterprise_on_prem_readiness_present") is True

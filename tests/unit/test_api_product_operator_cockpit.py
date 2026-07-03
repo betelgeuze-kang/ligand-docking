@@ -821,6 +821,47 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                         "claim_promotion_allowed": True,
                     }
                 ],
+                "developer_preview_stage5_recovery_row_count": 1,
+                "developer_preview_stage5_missing_source_artifact_count": 1,
+                "developer_preview_stage5_required_argument_count": 4,
+                "developer_preview_stage5_primary_task_key": "stage5_gpcr",
+                "developer_preview_stage5_primary_source_argument": "--scores-csv",
+                "developer_preview_stage5_primary_source_artifact_path": (
+                    "runs/missing_stage5_scores.csv"
+                ),
+                "developer_preview_stage5_recovery_rows": [
+                    {
+                        "priority": "A",
+                        "gate_id": "benchmark_results_clean_checkout_regenerated",
+                        "receipt_artifact": (
+                            ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+                        ),
+                        "receipt_kind": "required",
+                        "blocker_detail": (
+                            "baseline_source_blocker=stage5_input_missing:"
+                            "--scores-csv:runs/missing_stage5_scores.csv"
+                        ),
+                        "source_label": "baseline_source_blocker",
+                        "blocker_id": "stage5_input_missing",
+                        "source_argument": "--scores-csv",
+                        "source_artifact_path": "runs/missing_stage5_scores.csv",
+                        "source_artifact_present": False,
+                        "task_key": "stage5_gpcr",
+                        "required_stage5_arguments": [
+                            "--scores-csv",
+                            "--labels-csv",
+                            "--split-csv",
+                            "--expected-keys-csv",
+                        ],
+                        "required_stage5_argument_count": 4,
+                        "required_action": "Restore this stage5 input family.",
+                        "operator_action_required": True,
+                        "claim_boundary": "developer preview boundary",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    }
+                ],
                 "enterprise_on_prem_readiness_present": True,
                 "enterprise_on_prem_ready": False,
                 "enterprise_on_prem_claim_allowed": False,
@@ -1751,6 +1792,48 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
             "claim_promotion_allowed": False,
         }
     ]
+    assert response["developer_preview_stage5_recovery_row_count"] == 1
+    assert response["developer_preview_stage5_missing_source_artifact_count"] == 1
+    assert response["developer_preview_stage5_required_argument_count"] == 4
+    assert response["developer_preview_stage5_primary_task_key"] == "stage5_gpcr"
+    assert response["developer_preview_stage5_primary_source_argument"] == "--scores-csv"
+    assert (
+        response["developer_preview_stage5_primary_source_artifact_path"]
+        == "runs/missing_stage5_scores.csv"
+    )
+    assert response["developer_preview_stage5_recovery_rows"] == [
+        {
+            "priority": "A",
+            "gate_id": "benchmark_results_clean_checkout_regenerated",
+            "receipt_artifact": (
+                ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+            ),
+            "receipt_kind": "required",
+            "blocker_detail": (
+                "baseline_source_blocker=stage5_input_missing:"
+                "--scores-csv:runs/missing_stage5_scores.csv"
+            ),
+            "source_label": "baseline_source_blocker",
+            "blocker_id": "stage5_input_missing",
+            "source_argument": "--scores-csv",
+            "source_artifact_path": "runs/missing_stage5_scores.csv",
+            "source_artifact_present": False,
+            "task_key": "stage5_gpcr",
+            "required_stage5_arguments": [
+                "--scores-csv",
+                "--labels-csv",
+                "--split-csv",
+                "--expected-keys-csv",
+            ],
+            "required_stage5_argument_count": 4,
+            "required_action": "Restore this stage5 input family.",
+            "operator_action_required": True,
+            "claim_boundary": "developer preview boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
     assert response["enterprise_on_prem_readiness_present"] is True
     assert response["enterprise_on_prem_ready"] is False
     assert response["enterprise_on_prem_claim_allowed"] is False
@@ -2181,6 +2264,13 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
         "developer_preview_receipt_work_order_primary_source_blocker_required_action"
     ] == ""
     assert response["developer_preview_receipt_work_order_rows"] == []
+    assert response["developer_preview_stage5_recovery_row_count"] == 0
+    assert response["developer_preview_stage5_missing_source_artifact_count"] == 0
+    assert response["developer_preview_stage5_required_argument_count"] == 0
+    assert response["developer_preview_stage5_primary_task_key"] == ""
+    assert response["developer_preview_stage5_primary_source_argument"] == ""
+    assert response["developer_preview_stage5_primary_source_artifact_path"] == ""
+    assert response["developer_preview_stage5_recovery_rows"] == []
     assert response["enterprise_on_prem_readiness_present"] is False
     assert response["enterprise_on_prem_ready"] is False
     assert response["enterprise_on_prem_claim_allowed"] is False

@@ -750,6 +750,39 @@ def _developer_preview_receipt_work_order_rows(payload: dict[str, Any]) -> list[
     return rows
 
 
+def _developer_preview_stage5_recovery_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _dict_list(payload, "stage5_recovery_rows"):
+        rows.append(
+            {
+                "priority": _text(row.get("priority")),
+                "gate_id": _text(row.get("gate_id")),
+                "receipt_artifact": _text(row.get("receipt_artifact")),
+                "receipt_kind": _text(row.get("receipt_kind")),
+                "blocker_detail": _text(row.get("blocker_detail")),
+                "source_label": _text(row.get("source_label")),
+                "blocker_id": _text(row.get("blocker_id")),
+                "source_argument": _text(row.get("source_argument")),
+                "source_artifact_path": _text(row.get("source_artifact_path")),
+                "source_artifact_present": _bool_true(row.get("source_artifact_present")),
+                "task_key": _text(row.get("task_key")),
+                "required_stage5_arguments": _string_list(
+                    row.get("required_stage5_arguments")
+                ),
+                "required_stage5_argument_count": _int(
+                    row.get("required_stage5_argument_count")
+                ),
+                "required_action": _text(row.get("required_action")),
+                "operator_action_required": _bool_true(row.get("operator_action_required")),
+                "claim_boundary": _text(row.get("claim_boundary")),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _release_decision_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in _rows(payload):
@@ -1457,6 +1490,9 @@ def build_product_operator_cockpit(
     developer_preview_receipt_work_order_row_preview = (
         _developer_preview_receipt_work_order_rows(developer_preview_payload)
     )
+    developer_preview_stage5_recovery_row_preview = (
+        _developer_preview_stage5_recovery_rows(developer_preview_payload)
+    )
     f2g_preflight_payload = _read_json(f2g_f2h_preflight_json, root=root)
     f2g_preflight = _summary(f2g_preflight_payload)
     f2g_recovery_payload = _read_json(f2g_f2h_recovery_json, root=root)
@@ -1972,6 +2008,32 @@ def build_product_operator_cockpit(
     developer_preview_primary_source_blocker_action = _first_text(
         developer_preview.get("receipt_work_order_primary_source_blocker_required_action")
     )
+    developer_preview_stage5_recovery_row_count = _int(
+        developer_preview.get("stage5_recovery_row_count")
+    ) or len(developer_preview_stage5_recovery_row_preview)
+    developer_preview_stage5_missing_source_artifact_count = _int(
+        developer_preview.get("stage5_missing_source_artifact_count")
+    )
+    developer_preview_stage5_required_argument_count = _int(
+        developer_preview.get("stage5_required_argument_count")
+    )
+    developer_preview_stage5_first_row = (
+        developer_preview_stage5_recovery_row_preview[0]
+        if developer_preview_stage5_recovery_row_preview
+        else {}
+    )
+    developer_preview_stage5_primary_task_key = _first_text(
+        developer_preview.get("stage5_primary_task_key"),
+        developer_preview_stage5_first_row.get("task_key"),
+    )
+    developer_preview_stage5_primary_source_argument = _first_text(
+        developer_preview.get("stage5_primary_source_argument"),
+        developer_preview_stage5_first_row.get("source_argument"),
+    )
+    developer_preview_stage5_primary_source_artifact_path = _first_text(
+        developer_preview.get("stage5_primary_source_artifact_path"),
+        developer_preview_stage5_first_row.get("source_artifact_path"),
+    )
     f2g_preflight_present = bool(f2g_preflight)
     f2g_recovery_present = bool(f2g_recovery)
     f2g_first_recovery_row = _first_non_pass_row(f2g_recovery_rows)
@@ -2410,6 +2472,19 @@ def build_product_operator_cockpit(
                 _metric("primary_source_receipt", developer_preview_primary_source_blocker_receipt),
                 _metric("primary_source_blocker", developer_preview_primary_source_blocker),
                 _metric("primary_source_action", developer_preview_primary_source_blocker_action),
+                _count_metric(
+                    "stage5_recovery_rows",
+                    developer_preview_stage5_recovery_row_count,
+                ),
+                _count_metric(
+                    "stage5_missing_sources",
+                    developer_preview_stage5_missing_source_artifact_count,
+                ),
+                _metric("stage5_primary_task", developer_preview_stage5_primary_task_key),
+                _metric(
+                    "stage5_primary_source_arg",
+                    developer_preview_stage5_primary_source_argument,
+                ),
                 _count_metric(
                     "primary_required_true_fields",
                     len(developer_preview_primary_required_true_fields),
@@ -3125,6 +3200,27 @@ def build_product_operator_cockpit(
         ),
         "developer_preview_receipt_work_order_rows": (
             developer_preview_receipt_work_order_row_preview
+        ),
+        "developer_preview_stage5_recovery_row_count": (
+            developer_preview_stage5_recovery_row_count
+        ),
+        "developer_preview_stage5_missing_source_artifact_count": (
+            developer_preview_stage5_missing_source_artifact_count
+        ),
+        "developer_preview_stage5_required_argument_count": (
+            developer_preview_stage5_required_argument_count
+        ),
+        "developer_preview_stage5_primary_task_key": (
+            developer_preview_stage5_primary_task_key
+        ),
+        "developer_preview_stage5_primary_source_argument": (
+            developer_preview_stage5_primary_source_argument
+        ),
+        "developer_preview_stage5_primary_source_artifact_path": (
+            developer_preview_stage5_primary_source_artifact_path
+        ),
+        "developer_preview_stage5_recovery_rows": (
+            developer_preview_stage5_recovery_row_preview
         ),
         "enterprise_on_prem_readiness_present": enterprise_present,
         "enterprise_on_prem_ready": enterprise_ready,
