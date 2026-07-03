@@ -231,6 +231,44 @@ def _public_benchmark_field_work_order_rows(payload: dict[str, Any]) -> list[dic
     return rows
 
 
+def _pocketmd_lite_claim_grade_metric_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _rows(payload):
+        rows.append(
+            {
+                "entry_id": _text(row.get("entry_id")),
+                "band": _text(row.get("band")),
+                "uncertainty_posture": _text(row.get("uncertainty_posture")),
+                "uncertainty_score": _float(row.get("uncertainty_score")) or 0.0,
+                "claim_grade_metric_ready": _bool_true(row.get("claim_grade_metric_ready")),
+                "claim_safe": _bool_true(row.get("claim_safe")),
+                "selected_for_refine": _bool_true(row.get("selected_for_refine")),
+                "local_min_ligand_rmsd_a": _float(row.get("local_min_ligand_rmsd_a")) or 0.0,
+                "local_min_survived": _bool_true(row.get("local_min_survived")),
+                "hbond_persistence": _float(row.get("hbond_persistence")) or 0.0,
+                "contact_persistence": _float(row.get("contact_persistence")) or 0.0,
+                "initial_clash_count": _int(row.get("initial_clash_count")),
+                "final_clash_count": _int(row.get("clash_count")),
+                "clash_relief_count": _int(row.get("clash_relief_count")),
+                "claim_grade_missing_metrics": _string_list(
+                    row.get("claim_grade_missing_metrics")
+                ),
+                "blockers": _string_list(row.get("blockers")),
+                "trajectory_probe_status": _text(row.get("trajectory_probe_status")),
+                "candidate_metric_fill_status": _text(row.get("candidate_metric_fill_status")),
+                "recommended_next_local_action": _text(
+                    row.get("recommended_next_local_action")
+                ),
+                "candidate_csv_update_allowed": False,
+                "refinement_execution_enabled": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _public_benchmark_external_receipt_step_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in _rows(payload):
@@ -842,6 +880,9 @@ def build_product_operator_cockpit(
     pocketmd_payload = _read_json(pocketmd_json, root=root)
     pocketmd = _summary(pocketmd_payload)
     pocketmd_rows = _rows(pocketmd_payload)
+    pocketmd_lite_claim_grade_metric_row_preview = (
+        _pocketmd_lite_claim_grade_metric_rows(pocketmd_payload)
+    )
     public_benchmark_payload = _read_json(public_benchmark_json, root=root)
     public_benchmark = _summary(public_benchmark_payload)
     public_benchmark_external_receipt_step_rows = (
@@ -2059,6 +2100,9 @@ def build_product_operator_cockpit(
         "pocketmd_lite_clash_relief_count_total": pocketmd_clash_relief_count_total,
         "pocketmd_lite_green_band_condition_text": pocketmd_green_band_condition_text,
         "pocketmd_lite_claim_allowed": pocketmd_lite_claim_allowed,
+        "pocketmd_lite_claim_grade_metric_rows": (
+            pocketmd_lite_claim_grade_metric_row_preview
+        ),
         "public_benchmark_claim_allowed": public_benchmark_claim_allowed,
         "public_benchmark_receipt_attach_packet_ready": public_attach_ready,
         "public_benchmark_receipt_attach_packet_present": public_attach_present,

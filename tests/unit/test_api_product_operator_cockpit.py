@@ -212,6 +212,36 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                     "green requires local-min RMSD, hbond/contact persistence, and clash relief."
                 ),
                 "pocketmd_lite_claim_allowed": False,
+                "pocketmd_lite_claim_grade_metric_rows": [
+                    {
+                        "entry_id": "ADRB2_GPCR_BLIND:carvedilol",
+                        "band": "green",
+                        "uncertainty_posture": "green_low_uncertainty",
+                        "uncertainty_score": 0.23,
+                        "claim_grade_metric_ready": True,
+                        "claim_safe": True,
+                        "selected_for_refine": True,
+                        "local_min_ligand_rmsd_a": 1.29,
+                        "local_min_survived": True,
+                        "hbond_persistence": 0.8,
+                        "contact_persistence": 1.0,
+                        "initial_clash_count": 57,
+                        "final_clash_count": 0,
+                        "clash_relief_count": 57,
+                        "claim_grade_missing_metrics": [],
+                        "blockers": [],
+                        "trajectory_probe_status": (
+                            "pocketmd_lite_metric_collection_probe_ready"
+                        ),
+                        "candidate_metric_fill_status": "filled_from_claim_grade_probe",
+                        "recommended_next_local_action": "review_green_band_metrics",
+                        "candidate_csv_update_allowed": True,
+                        "refinement_execution_enabled": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    }
+                ],
                 "public_benchmark_claim_allowed": False,
                 "public_benchmark_receipt_attach_packet_ready": False,
                 "public_benchmark_receipt_attach_packet_present": True,
@@ -636,6 +666,34 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["pocketmd_lite_green_band_condition_text"] == (
         "green requires local-min RMSD, hbond/contact persistence, and clash relief."
     )
+    assert response["pocketmd_lite_claim_grade_metric_rows"] == [
+        {
+            "entry_id": "ADRB2_GPCR_BLIND:carvedilol",
+            "band": "green",
+            "uncertainty_posture": "green_low_uncertainty",
+            "uncertainty_score": 0.23,
+            "claim_grade_metric_ready": True,
+            "claim_safe": True,
+            "selected_for_refine": True,
+            "local_min_ligand_rmsd_a": 1.29,
+            "local_min_survived": True,
+            "hbond_persistence": 0.8,
+            "contact_persistence": 1.0,
+            "initial_clash_count": 57,
+            "final_clash_count": 0,
+            "clash_relief_count": 57,
+            "claim_grade_missing_metrics": [],
+            "blockers": [],
+            "trajectory_probe_status": "pocketmd_lite_metric_collection_probe_ready",
+            "candidate_metric_fill_status": "filled_from_claim_grade_probe",
+            "recommended_next_local_action": "review_green_band_metrics",
+            "candidate_csv_update_allowed": False,
+            "refinement_execution_enabled": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
     assert response["public_benchmark_receipt_attach_packet_ready"] is False
     assert response["public_benchmark_receipt_attach_packet_present"] is True
     assert response["public_benchmark_vina_gnina_pending_score_count"] == 32
@@ -1076,6 +1134,7 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["pocketmd_lite_clash_relief_count_total"] == 0.0
     assert response["pocketmd_lite_green_band_condition_text"] == ""
     assert response["pocketmd_lite_claim_allowed"] is False
+    assert response["pocketmd_lite_claim_grade_metric_rows"] == []
     assert response["public_benchmark_claim_allowed"] is False
     assert response["public_benchmark_receipt_attach_packet_ready"] is False
     assert response["public_benchmark_receipt_attach_packet_present"] is False

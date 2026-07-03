@@ -163,13 +163,29 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
             "rows": [
                 {
                     "entry_id": "ADRB2_GPCR_BLIND:carvedilol",
+                    "band": "green",
+                    "uncertainty_posture": "green_low_uncertainty",
+                    "uncertainty_score": 0.23,
                     "claim_grade_metric_ready": True,
+                    "claim_safe": True,
+                    "selected_for_refine": True,
                     "local_min_ligand_rmsd_a": 1.29,
+                    "local_min_survived": True,
                     "hbond_persistence": 0.8,
                     "contact_persistence": 1.0,
                     "initial_clash_count": 57,
                     "clash_count": 0,
                     "clash_relief_count": 57,
+                    "claim_grade_missing_metrics": [],
+                    "blockers": [],
+                    "trajectory_probe_status": "pocketmd_lite_metric_collection_probe_ready",
+                    "candidate_metric_fill_status": "filled_from_claim_grade_probe",
+                    "recommended_next_local_action": "review_green_band_metrics",
+                    "candidate_csv_update_allowed": True,
+                    "refinement_execution_enabled": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
                 },
                 {
                     "entry_id": "ADRB2_GPCR_BLIND:timolol",
@@ -869,6 +885,33 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["pocketmd_lite_green_band_condition_text"] == (
         "green requires local-min RMSD, hbond/contact persistence, and clash relief."
     )
+    assert len(summary["pocketmd_lite_claim_grade_metric_rows"]) == 2
+    assert summary["pocketmd_lite_claim_grade_metric_rows"][0] == {
+        "entry_id": "ADRB2_GPCR_BLIND:carvedilol",
+        "band": "green",
+        "uncertainty_posture": "green_low_uncertainty",
+        "uncertainty_score": 0.23,
+        "claim_grade_metric_ready": True,
+        "claim_safe": True,
+        "selected_for_refine": True,
+        "local_min_ligand_rmsd_a": 1.29,
+        "local_min_survived": True,
+        "hbond_persistence": 0.8,
+        "contact_persistence": 1.0,
+        "initial_clash_count": 57,
+        "final_clash_count": 0,
+        "clash_relief_count": 57,
+        "claim_grade_missing_metrics": [],
+        "blockers": [],
+        "trajectory_probe_status": "pocketmd_lite_metric_collection_probe_ready",
+        "candidate_metric_fill_status": "filled_from_claim_grade_probe",
+        "recommended_next_local_action": "review_green_band_metrics",
+        "candidate_csv_update_allowed": False,
+        "refinement_execution_enabled": False,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_promotion_allowed": False,
+    }
     assert summary["public_benchmark_claim_allowed"] is False
     assert summary["public_benchmark_receipt_attach_packet_ready"] is False
     assert summary["public_benchmark_receipt_attach_packet_present"] is True

@@ -168,6 +168,49 @@ def _public_benchmark_field_work_order_rows(value: Any) -> list[dict[str, Any]]:
     return work_rows
 
 
+def _pocketmd_lite_claim_grade_metric_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    metric_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        metric_rows.append(
+            {
+                "entry_id": str(row.get("entry_id") or ""),
+                "band": str(row.get("band") or ""),
+                "uncertainty_posture": str(row.get("uncertainty_posture") or ""),
+                "uncertainty_score": _float(row.get("uncertainty_score")),
+                "claim_grade_metric_ready": bool(row.get("claim_grade_metric_ready") is True),
+                "claim_safe": bool(row.get("claim_safe") is True),
+                "selected_for_refine": bool(row.get("selected_for_refine") is True),
+                "local_min_ligand_rmsd_a": _float(row.get("local_min_ligand_rmsd_a")),
+                "local_min_survived": bool(row.get("local_min_survived") is True),
+                "hbond_persistence": _float(row.get("hbond_persistence")),
+                "contact_persistence": _float(row.get("contact_persistence")),
+                "initial_clash_count": _int(row.get("initial_clash_count")),
+                "final_clash_count": _int(row.get("final_clash_count")),
+                "clash_relief_count": _int(row.get("clash_relief_count")),
+                "claim_grade_missing_metrics": _string_list(
+                    row.get("claim_grade_missing_metrics")
+                ),
+                "blockers": _string_list(row.get("blockers")),
+                "trajectory_probe_status": str(row.get("trajectory_probe_status") or ""),
+                "candidate_metric_fill_status": str(
+                    row.get("candidate_metric_fill_status") or ""
+                ),
+                "recommended_next_local_action": str(
+                    row.get("recommended_next_local_action") or ""
+                ),
+                "candidate_csv_update_allowed": False,
+                "refinement_execution_enabled": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return metric_rows
+
+
 def _public_benchmark_external_receipt_step_rows(value: Any) -> list[dict[str, Any]]:
     rows = value if isinstance(value, list) else []
     step_rows: list[dict[str, Any]] = []
@@ -447,6 +490,7 @@ def _missing_response() -> dict[str, Any]:
         "pocketmd_lite_clash_relief_count_total": 0.0,
         "pocketmd_lite_green_band_condition_text": "",
         "pocketmd_lite_claim_allowed": False,
+        "pocketmd_lite_claim_grade_metric_rows": [],
         "public_benchmark_claim_allowed": False,
         "public_benchmark_receipt_attach_packet_ready": False,
         "public_benchmark_receipt_attach_packet_present": False,
@@ -732,6 +776,9 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
             summary.get("pocketmd_lite_green_band_condition_text") or ""
         ),
         "pocketmd_lite_claim_allowed": bool(summary.get("pocketmd_lite_claim_allowed") is True),
+        "pocketmd_lite_claim_grade_metric_rows": _pocketmd_lite_claim_grade_metric_rows(
+            summary.get("pocketmd_lite_claim_grade_metric_rows")
+        ),
         "public_benchmark_claim_allowed": bool(summary.get("public_benchmark_claim_allowed") is True),
         "public_benchmark_receipt_attach_packet_ready": bool(
             summary.get("public_benchmark_receipt_attach_packet_ready") is True
