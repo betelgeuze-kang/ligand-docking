@@ -417,6 +417,38 @@ def _public_benchmark_field_work_order_rows(payload: dict[str, Any]) -> list[dic
     return rows
 
 
+def _public_benchmark_receipt_attach_lane_rows(
+    payload: dict[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _rows(payload):
+        ready = _bool_true(row.get("ready")) and _text(row.get("status")) == "ready"
+        rows.append(
+            {
+                "lane_id": _text(row.get("lane_id")),
+                "status": _text(row.get("status")),
+                "ready": ready,
+                "blocker": _text(row.get("blocker")),
+                "source_artifact": _text(row.get("source_artifact")),
+                "operator_csv": _text(row.get("operator_csv")),
+                "row_count": _int(row.get("row_count")),
+                "pending_value_count": _int(row.get("pending_value_count")),
+                "pending_metadata_count": _int(row.get("pending_metadata_count")),
+                "pending_license_count": _int(row.get("pending_license_count")),
+                "pending_approval_token_count": _int(
+                    row.get("pending_approval_token_count")
+                ),
+                "approval_token_required": _text(row.get("approval_token_required")),
+                "next_required_step": _text(row.get("next_required_step")),
+                "operator_action_required": not ready,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _pocketmd_lite_claim_grade_metric_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in _rows(payload):
@@ -1193,6 +1225,9 @@ def build_product_operator_cockpit(
     public_benchmark_field_work_order_rows = _public_benchmark_field_work_order_rows(
         public_receipt_attach_payload
     )
+    public_benchmark_receipt_attach_lane_rows = (
+        _public_benchmark_receipt_attach_lane_rows(public_receipt_attach_payload)
+    )
     release_actions_payload = _read_json(release_actions_json, root=root)
     release_actions = _summary(release_actions_payload)
     release_operator_action_row_preview = _release_operator_action_rows(
@@ -1391,6 +1426,58 @@ def build_product_operator_cockpit(
     public_attach_blockers = _string_list(public_receipt_attach_packet.get("blockers"))
     if public_attach_blockers:
         public_blockers = public_attach_blockers
+    public_receipt_attach_lane_rows = len(public_benchmark_receipt_attach_lane_rows)
+    public_receipt_attach_blocked_lane_rows = [
+        row
+        for row in public_benchmark_receipt_attach_lane_rows
+        if row["operator_action_required"]
+    ]
+    public_receipt_attach_blocked_lanes = len(public_receipt_attach_blocked_lane_rows)
+    public_receipt_attach_primary_blocked_lane_row = (
+        public_receipt_attach_blocked_lane_rows[0]
+        if public_receipt_attach_blocked_lane_rows
+        else {}
+    )
+    public_receipt_attach_primary_blocked_lane_id = _first_text(
+        public_receipt_attach_primary_blocked_lane_row.get("lane_id")
+        if public_receipt_attach_primary_blocked_lane_row
+        else ""
+    )
+    public_receipt_attach_primary_blocked_lane_next_step = _first_text(
+        public_receipt_attach_primary_blocked_lane_row.get("next_required_step")
+        if public_receipt_attach_primary_blocked_lane_row
+        else ""
+    )
+    public_receipt_attach_primary_blocked_lane_operator_csv = _first_text(
+        public_receipt_attach_primary_blocked_lane_row.get("operator_csv")
+        if public_receipt_attach_primary_blocked_lane_row
+        else ""
+    )
+    public_receipt_attach_primary_blocked_lane_source_artifact = _first_text(
+        public_receipt_attach_primary_blocked_lane_row.get("source_artifact")
+        if public_receipt_attach_primary_blocked_lane_row
+        else ""
+    )
+    public_receipt_attach_primary_blocked_lane_pending_values = _int(
+        public_receipt_attach_primary_blocked_lane_row.get("pending_value_count")
+        if public_receipt_attach_primary_blocked_lane_row
+        else 0
+    )
+    public_receipt_attach_primary_blocked_lane_pending_metadata = _int(
+        public_receipt_attach_primary_blocked_lane_row.get("pending_metadata_count")
+        if public_receipt_attach_primary_blocked_lane_row
+        else 0
+    )
+    public_receipt_attach_primary_blocked_lane_pending_license = _int(
+        public_receipt_attach_primary_blocked_lane_row.get("pending_license_count")
+        if public_receipt_attach_primary_blocked_lane_row
+        else 0
+    )
+    public_receipt_attach_primary_blocked_lane_pending_tokens = _int(
+        public_receipt_attach_primary_blocked_lane_row.get("pending_approval_token_count")
+        if public_receipt_attach_primary_blocked_lane_row
+        else 0
+    )
     public_vina_pending_scores = _int(
         public_receipt_attach_packet.get("vina_gnina_score_value_pending_count")
     )
@@ -1976,6 +2063,33 @@ def build_product_operator_cockpit(
                     _bool_true(public_benchmark.get("vina_gnina_comparison_adapter_score_evidence_ready")),
                 ),
                 _metric("attach_packet_ready", public_attach_ready),
+                _count_metric("receipt_attach_lanes", public_receipt_attach_lane_rows),
+                _count_metric("receipt_attach_blocked_lanes", public_receipt_attach_blocked_lanes),
+                _metric("receipt_primary_lane", public_receipt_attach_primary_blocked_lane_id),
+                _count_metric(
+                    "receipt_primary_pending_values",
+                    public_receipt_attach_primary_blocked_lane_pending_values,
+                ),
+                _count_metric(
+                    "receipt_primary_pending_metadata",
+                    public_receipt_attach_primary_blocked_lane_pending_metadata,
+                ),
+                _count_metric(
+                    "receipt_primary_pending_license",
+                    public_receipt_attach_primary_blocked_lane_pending_license,
+                ),
+                _count_metric(
+                    "receipt_primary_pending_tokens",
+                    public_receipt_attach_primary_blocked_lane_pending_tokens,
+                ),
+                _metric(
+                    "receipt_primary_operator_csv",
+                    public_receipt_attach_primary_blocked_lane_operator_csv,
+                ),
+                _metric(
+                    "receipt_primary_source",
+                    public_receipt_attach_primary_blocked_lane_source_artifact,
+                ),
                 _metric("pending_scores", public_vina_pending_scores),
                 _metric("pending_score_fields", public_vina_pending_fields),
                 _metric("pending_receipt_fields", public_metric_pending_fields),
@@ -2000,6 +2114,7 @@ def build_product_operator_cockpit(
                 _metric("claim_promotion_allowed", _bool_true(public_benchmark.get("claim_promotion_allowed"))),
             ),
             next_action=_first_text(
+                public_receipt_attach_primary_blocked_lane_next_step,
                 public_field_work_order_primary_required_action,
                 public_primary_next_required_step,
                 public_benchmark.get("top_required_input"),
@@ -2480,6 +2595,40 @@ def build_product_operator_cockpit(
         "public_benchmark_claim_allowed": public_benchmark_claim_allowed,
         "public_benchmark_receipt_attach_packet_ready": public_attach_ready,
         "public_benchmark_receipt_attach_packet_present": public_attach_present,
+        "public_benchmark_receipt_attach_lane_row_count": public_receipt_attach_lane_rows,
+        "public_benchmark_receipt_attach_blocked_lane_count": (
+            public_receipt_attach_blocked_lanes
+        ),
+        "public_benchmark_receipt_attach_primary_blocked_lane_row": (
+            public_receipt_attach_primary_blocked_lane_row
+        ),
+        "public_benchmark_receipt_attach_lane_rows": (
+            public_benchmark_receipt_attach_lane_rows
+        ),
+        "public_benchmark_receipt_attach_primary_blocked_lane_id": (
+            public_receipt_attach_primary_blocked_lane_id
+        ),
+        "public_benchmark_receipt_attach_primary_blocked_lane_next_required_step": (
+            public_receipt_attach_primary_blocked_lane_next_step
+        ),
+        "public_benchmark_receipt_attach_primary_blocked_lane_operator_csv": (
+            public_receipt_attach_primary_blocked_lane_operator_csv
+        ),
+        "public_benchmark_receipt_attach_primary_blocked_lane_source_artifact": (
+            public_receipt_attach_primary_blocked_lane_source_artifact
+        ),
+        "public_benchmark_receipt_attach_primary_blocked_lane_pending_value_count": (
+            public_receipt_attach_primary_blocked_lane_pending_values
+        ),
+        "public_benchmark_receipt_attach_primary_blocked_lane_pending_metadata_count": (
+            public_receipt_attach_primary_blocked_lane_pending_metadata
+        ),
+        "public_benchmark_receipt_attach_primary_blocked_lane_pending_license_count": (
+            public_receipt_attach_primary_blocked_lane_pending_license
+        ),
+        "public_benchmark_receipt_attach_primary_blocked_lane_pending_approval_token_count": (
+            public_receipt_attach_primary_blocked_lane_pending_tokens
+        ),
         "public_benchmark_vina_gnina_pending_score_count": public_vina_pending_scores,
         "public_benchmark_vina_gnina_pending_field_count": public_vina_pending_fields,
         "public_benchmark_metric_source_pending_field_count": public_metric_pending_fields,

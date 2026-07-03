@@ -405,6 +405,61 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 ),
                 "next_required_step": "Fill the receipt attach packet rows before rerunning the benchmark audit.",
             },
+            "rows": [
+                {
+                    "lane_id": "vina_gnina_same_input_scores",
+                    "status": "blocked",
+                    "ready": False,
+                    "blocker": "vina_gnina_same_input_score_evidence_missing",
+                    "source_artifact": (
+                        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+                    ),
+                    "operator_csv": (
+                        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                    ),
+                    "row_count": 16,
+                    "pending_value_count": 32,
+                    "pending_metadata_count": 128,
+                    "pending_license_count": 16,
+                    "pending_approval_token_count": 16,
+                    "approval_token_required": (
+                        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES"
+                    ),
+                    "next_required_step": (
+                        "Fill every Vina/GNINA same-input score template row."
+                    ),
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+                {
+                    "lane_id": "metric_source_receipt_rows",
+                    "status": "blocked",
+                    "ready": False,
+                    "blocker": "benchmark_metric_source_receipt_rows_unapproved",
+                    "source_artifact": (
+                        "runs/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.json"
+                    ),
+                    "operator_csv": (
+                        "config/refine_tier_public_benchmark_statistical_support_metric_source_payload_operator_receipt_current.csv"
+                    ),
+                    "row_count": 51,
+                    "pending_value_count": 510,
+                    "pending_metadata_count": 510,
+                    "pending_license_count": 0,
+                    "pending_approval_token_count": 51,
+                    "approval_token_required": (
+                        "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS"
+                    ),
+                    "next_required_step": (
+                        "Fill reviewed metric values, methods, artifact review fields, "
+                        "license flags, and approval token for every metric-source receipt row."
+                    ),
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+            ],
             "field_work_order_rows": [
                 {
                     "lane_id": "vina_gnina_same_input_scores",
@@ -1341,6 +1396,60 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["public_benchmark_claim_allowed"] is False
     assert summary["public_benchmark_receipt_attach_packet_ready"] is False
     assert summary["public_benchmark_receipt_attach_packet_present"] is True
+    assert summary["public_benchmark_receipt_attach_lane_row_count"] == 2
+    assert summary["public_benchmark_receipt_attach_blocked_lane_count"] == 2
+    assert summary["public_benchmark_receipt_attach_primary_blocked_lane_id"] == (
+        "vina_gnina_same_input_scores"
+    )
+    assert summary[
+        "public_benchmark_receipt_attach_primary_blocked_lane_next_required_step"
+    ] == "Fill every Vina/GNINA same-input score template row."
+    assert summary["public_benchmark_receipt_attach_primary_blocked_lane_operator_csv"] == (
+        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+    )
+    assert summary[
+        "public_benchmark_receipt_attach_primary_blocked_lane_source_artifact"
+    ] == "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+    assert summary[
+        "public_benchmark_receipt_attach_primary_blocked_lane_pending_value_count"
+    ] == 32
+    assert summary[
+        "public_benchmark_receipt_attach_primary_blocked_lane_pending_metadata_count"
+    ] == 128
+    assert summary[
+        "public_benchmark_receipt_attach_primary_blocked_lane_pending_license_count"
+    ] == 16
+    assert summary[
+        "public_benchmark_receipt_attach_primary_blocked_lane_pending_approval_token_count"
+    ] == 16
+    assert summary["public_benchmark_receipt_attach_primary_blocked_lane_row"] == {
+        "lane_id": "vina_gnina_same_input_scores",
+        "status": "blocked",
+        "ready": False,
+        "blocker": "vina_gnina_same_input_score_evidence_missing",
+        "source_artifact": "runs/public_benchmark_vina_gnina_score_template_receipt_current.json",
+        "operator_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
+        "row_count": 16,
+        "pending_value_count": 32,
+        "pending_metadata_count": 128,
+        "pending_license_count": 16,
+        "pending_approval_token_count": 16,
+        "approval_token_required": "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES",
+        "next_required_step": "Fill every Vina/GNINA same-input score template row.",
+        "operator_action_required": True,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_promotion_allowed": False,
+    }
+    assert summary["public_benchmark_receipt_attach_lane_rows"][1]["lane_id"] == (
+        "metric_source_receipt_rows"
+    )
+    assert summary["public_benchmark_receipt_attach_lane_rows"][1][
+        "pending_value_count"
+    ] == 510
+    assert summary["public_benchmark_receipt_attach_lane_rows"][1][
+        "claim_promotion_allowed"
+    ] is False
     assert summary["public_benchmark_vina_gnina_pending_score_count"] == 32
     assert summary["public_benchmark_vina_gnina_pending_field_count"] == 192
     assert summary["public_benchmark_metric_source_pending_field_count"] == 510
@@ -1923,6 +2032,33 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "blocked_receipt_rows=51" in panels["public_benchmark_scorecard"]["primary_metric"]
     assert "vina_gnina_score_evidence=false" in panels["public_benchmark_scorecard"]["secondary_metric"]
     assert "attach_packet_ready=false" in panels["public_benchmark_scorecard"]["secondary_metric"]
+    assert "receipt_attach_lanes=2" in panels["public_benchmark_scorecard"]["secondary_metric"]
+    assert "receipt_attach_blocked_lanes=2" in (
+        panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
+    assert "receipt_primary_lane=vina_gnina_same_input_scores" in (
+        panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
+    assert "receipt_primary_pending_values=32" in (
+        panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
+    assert "receipt_primary_pending_metadata=128" in (
+        panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
+    assert "receipt_primary_pending_license=16" in (
+        panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
+    assert "receipt_primary_pending_tokens=16" in (
+        panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
+    assert (
+        "receipt_primary_operator_csv=runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+        in panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
+    assert (
+        "receipt_primary_source=runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+        in panels["public_benchmark_scorecard"]["secondary_metric"]
+    )
     assert "pending_scores=32" in panels["public_benchmark_scorecard"]["secondary_metric"]
     assert "pending_score_fields=192" in panels["public_benchmark_scorecard"]["secondary_metric"]
     assert "pending_receipt_fields=510" in panels["public_benchmark_scorecard"]["secondary_metric"]
@@ -1969,8 +2105,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         "metric_source_receipt_rows:benchmark_metric_source_receipt_rows_unapproved",
     ]
     assert panels["public_benchmark_scorecard"]["next_action"] == (
-        "Fill approval_token with APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES "
-        "after operator review."
+        "Fill every Vina/GNINA same-input score template row."
     )
     assert panels["release_blockers_operator_actions"]["claim_allowed"] is False
     assert panels["release_blockers_operator_actions"]["status"] == "pm_priority_queue_blocked"
