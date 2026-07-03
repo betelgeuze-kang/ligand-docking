@@ -738,6 +738,10 @@ def _panel(
     }
 
 
+def _claim_text_for_status(*, allowed: bool, allowed_text: str, disallowed_text: str) -> str:
+    return allowed_text if allowed else disallowed_text
+
+
 def _build_claim_rows(
     *,
     restricted_scope_claim_guard_ready: bool,
@@ -752,6 +756,7 @@ def _build_claim_rows(
     customer_shadow_paid_pilot_ready: bool,
     enterprise_on_prem_ready: bool,
 ) -> list[dict[str, Any]]:
+    paid_pilot_allowed = release_allowed and customer_shadow_paid_pilot_ready
     rows = [
         {
             "claim_id": "operator_cockpit_surface",
@@ -785,38 +790,67 @@ def _build_claim_rows(
         },
         {
             "claim_id": "paid_pilot_wording",
-            "allowed": release_allowed and customer_shadow_paid_pilot_ready,
-            "claim_text": "Paid pilot wording is allowed.",
+            "allowed": paid_pilot_allowed,
+            "claim_text": _claim_text_for_status(
+                allowed=paid_pilot_allowed,
+                allowed_text="Paid pilot wording is allowed for reviewed restricted-pilot evidence.",
+                disallowed_text=(
+                    "Paid pilot wording is not allowed until release and customer-shadow "
+                    "evidence gates pass."
+                ),
+            ),
             "boundary": "Requires release allowance and reviewed customer-shadow evidence.",
         },
         {
             "claim_id": "general_platform_claim",
             "allowed": general_platform_claim_allowed,
-            "claim_text": "General protein-ligand platform claim is allowed.",
+            "claim_text": _claim_text_for_status(
+                allowed=general_platform_claim_allowed,
+                allowed_text="General protein-ligand platform claim is allowed.",
+                disallowed_text="General protein-ligand platform claim is not allowed.",
+            ),
             "boundary": "Blocked unless explicitly approved by capability and release gates.",
         },
         {
             "claim_id": "broad_gpcr_claim",
             "allowed": gpcr_broad_claim_allowed,
-            "claim_text": "Broad GPCR/router/scorer claim is allowed.",
+            "claim_text": _claim_text_for_status(
+                allowed=gpcr_broad_claim_allowed,
+                allowed_text="Broad GPCR/router/scorer claim is allowed.",
+                disallowed_text="Broad GPCR/router/scorer claim is not allowed.",
+            ),
             "boundary": "Blocked until broad claim review and router promotion gates pass.",
         },
         {
             "claim_id": "pocketmd_lite_customer_claim",
             "allowed": pocketmd_claim_allowed,
-            "claim_text": "PocketMD Lite customer-facing claim-grade reporting is allowed.",
+            "claim_text": _claim_text_for_status(
+                allowed=pocketmd_claim_allowed,
+                allowed_text="PocketMD Lite customer-facing claim-grade reporting is allowed.",
+                disallowed_text=(
+                    "PocketMD Lite customer-facing claim-grade reporting is not allowed."
+                ),
+            ),
             "boundary": "Blocked until claim-grade report evidence and promotion gates pass.",
         },
         {
             "claim_id": "public_benchmark_claim",
             "allowed": public_benchmark_claim_allowed,
-            "claim_text": "Public benchmark claim-grade support is allowed.",
+            "claim_text": _claim_text_for_status(
+                allowed=public_benchmark_claim_allowed,
+                allowed_text="Public benchmark claim-grade support is allowed.",
+                disallowed_text="Public benchmark claim-grade support is not allowed.",
+            ),
             "boundary": "Blocked until benchmark readiness and receipt ledger pass.",
         },
         {
             "claim_id": "enterprise_on_prem_platform_claim",
             "allowed": enterprise_on_prem_ready,
-            "claim_text": "Enterprise/on-prem platform claim is allowed.",
+            "claim_text": _claim_text_for_status(
+                allowed=enterprise_on_prem_ready,
+                allowed_text="Enterprise/on-prem platform claim is allowed.",
+                disallowed_text="Enterprise/on-prem platform claim is not allowed.",
+            ),
             "boundary": "Blocked until OIDC/RBAC, TLS/exposure, object storage, GPU scheduler, tracing, support, and drills pass.",
         },
     ]

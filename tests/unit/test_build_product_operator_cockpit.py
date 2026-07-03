@@ -1136,6 +1136,29 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         "pocketmd_lite_customer_claim; public_benchmark_claim; "
         "enterprise_on_prem_platform_claim"
     )
+    assert claims["paid_pilot_wording"]["claim_text"] == (
+        "Paid pilot wording is not allowed until release and customer-shadow "
+        "evidence gates pass."
+    )
+    assert claims["general_platform_claim"]["claim_text"] == (
+        "General protein-ligand platform claim is not allowed."
+    )
+    assert claims["broad_gpcr_claim"]["claim_text"] == (
+        "Broad GPCR/router/scorer claim is not allowed."
+    )
+    assert claims["pocketmd_lite_customer_claim"]["claim_text"] == (
+        "PocketMD Lite customer-facing claim-grade reporting is not allowed."
+    )
+    assert claims["public_benchmark_claim"]["claim_text"] == (
+        "Public benchmark claim-grade support is not allowed."
+    )
+    assert claims["enterprise_on_prem_platform_claim"]["claim_text"] == (
+        "Enterprise/on-prem platform claim is not allowed."
+    )
+    assert all(
+        " is allowed" not in claims[claim_id]["claim_text"]
+        for claim_id in summary["disallowed_claim_ids"]
+    )
     assert summary["general_platform_claim_allowed"] is False
     assert summary["product_capability_row_count"] == 2
     assert summary["product_capability_blocker_row_count"] == 1
