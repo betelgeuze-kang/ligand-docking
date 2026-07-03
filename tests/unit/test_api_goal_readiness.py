@@ -131,3 +131,155 @@ def test_goal_readiness_missing_artifact_keeps_dashboard_shape(
     assert response["execution_enabled"] is False
     assert response["action_executed"] is False
     assert response["external_state_mutated"] is False
+
+
+def test_goal_customer_shadow_exposes_paid_pilot_requirement_rows(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    artifact = tmp_path / "runs/customer_shadow_evidence_status_current.json"
+    monkeypatch.setattr(mod, "CUSTOMER_SHADOW_EVIDENCE_STATUS_ARTIFACT", artifact)
+    _write_json(
+        artifact,
+        {
+            "summary": {
+                "status": "blocked_customer_shadow_evidence_status",
+                "customer_shadow_intake_schema_ready": True,
+                "customer_shadow_minimum_met": False,
+                "row_count": 2,
+                "real_customer_shadow_row_count": 2,
+                "completed_customer_shadow_case_count": 1,
+                "required_completed_customer_shadow_case_count": 3,
+                "missing_completed_customer_shadow_case_count": 2,
+                "mock_fixture_row_count": 0,
+                "invalid_row_count": 0,
+                "customer_retained_raw_data_count": 3,
+                "redistribution_allowed_false_count": 1,
+                "anonymized_result_summary_count": 2,
+                "reviewer_signoff_count": 0,
+                "customer_raw_data_stored_in_repo": False,
+                "redistribution_allowed_required_value": False,
+                "required_column_count": 12,
+                "missing_required_columns": [],
+                "blocker_count": 1,
+                "customer_shadow_work_order_ready": False,
+                "customer_shadow_work_order_row_count": 2,
+                "customer_shadow_work_order_missing_case_count": 2,
+                "paid_pilot_evidence_ready": False,
+                "paid_pilot_claim_allowed": False,
+                "commercial_readiness_promotion_allowed": False,
+                "readiness_promotion_allowed": False,
+                "next_required_step": "Collect reviewed customer-shadow evidence.",
+                "claim_boundary": "customer shadow fixture boundary",
+            },
+            "rows": [
+                {
+                    "case_id": "customer_shadow_case_0",
+                    "row_kind": "customer_shadow",
+                    "status": "pass",
+                    "counts_toward_minimum": True,
+                    "completed_schema_valid": True,
+                    "is_mock_fixture": False,
+                    "blocker_count": 0,
+                    "blockers": "",
+                    "raw_data_custody": "customer_retained",
+                    "customer_retained_raw_data": "true",
+                    "redistribution_allowed": "false",
+                    "raw_data_stored_in_repo": "false",
+                    "reviewer_signoff_status": "approved",
+                }
+            ],
+            "blockers": [
+                {
+                    "case_id": "minimum_completed_cases",
+                    "row_kind": "minimum",
+                    "status": "fail",
+                    "counts_toward_minimum": False,
+                    "blocker_count": 1,
+                    "blockers": "missing_completed_customer_shadow_case_count:2",
+                    "next_action": "Add two reviewed real customer-shadow rows.",
+                }
+            ],
+            "customer_shadow_work_order_rows": [
+                {
+                    "work_order_id": "customer_shadow_case_slot_2",
+                    "case_slot_id": "customer_shadow_case_2",
+                    "status": "missing_customer_shadow_evidence",
+                    "required_row_kind": "customer_shadow",
+                    "operator_csv": "config/customer_shadow_evidence_intake_template.csv",
+                    "required_action": "Add one reviewed real customer-shadow metadata row.",
+                    "required_raw_data_custody": "customer_retained",
+                    "required_customer_retained_raw_data": True,
+                    "required_redistribution_allowed": False,
+                    "required_raw_data_stored_in_repo": False,
+                    "required_derived_metadata_fields": ["artifact_fingerprint"],
+                    "required_reviewer_signoff_status": "approved",
+                    "required_source_artifact_fingerprint": "sha256",
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                }
+            ],
+        },
+    )
+
+    response = asyncio.run(mod.get_goal_customer_shadow())
+
+    assert response["status"] == "blocked_customer_shadow_evidence_status"
+    assert response["paid_pilot_wording_allowed"] is False
+    assert response["paid_pilot_requirement_row_count"] == 14
+    assert response["paid_pilot_requirement_ready_row_count"] == 5
+    assert response["paid_pilot_requirement_blocked_row_count"] == 9
+    rows = {
+        row["requirement_id"]: row
+        for row in response["paid_pilot_requirement_rows"]
+    }
+    assert rows["completed_customer_shadow_cases"]["blocker"] == (
+        "completed_customer_shadow_cases_below_required:1/3"
+    )
+    assert rows["customer_retained_raw_data"]["ready"] is True
+    assert rows["redistribution_allowed_false"]["blocker"] == (
+        "redistribution_false_rows_below_required:1/3"
+    )
+    assert rows["reviewer_signoff"]["operator_action"] == (
+        "Add reviewer signoff for each counted customer-shadow row."
+    )
+    assert rows["customer_shadow_work_order_closed"]["blocker"] == (
+        "customer_shadow_work_order_rows_open:2"
+    )
+    assert all(
+        row["paid_pilot_wording_allowed"] is False
+        and row["claim_promotion_allowed"] is False
+        and row["execution_enabled"] is False
+        and row["external_state_mutated"] is False
+        for row in response["paid_pilot_requirement_rows"]
+    )
+    assert response["customer_shadow_work_order_blocked_rows"][0]["execution_enabled"] is False
+    assert response["customer_shadow_work_order_blocked_rows"][0]["external_state_mutated"] is False
+    assert response["execution_enabled"] is False
+    assert response["external_state_mutated"] is False
+    assert response["claim_boundary"] == "customer shadow fixture boundary"
+
+
+def test_goal_customer_shadow_missing_artifact_keeps_paid_pilot_rows_fail_closed(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        mod,
+        "CUSTOMER_SHADOW_EVIDENCE_STATUS_ARTIFACT",
+        tmp_path / "runs/missing_customer_shadow_evidence_status_current.json",
+    )
+
+    response = asyncio.run(mod.get_goal_customer_shadow())
+
+    assert response["status"] == "missing_customer_shadow_evidence_status"
+    assert response["paid_pilot_wording_allowed"] is False
+    assert response["paid_pilot_requirement_row_count"] == 14
+    assert response["paid_pilot_requirement_ready_row_count"] == 0
+    assert response["paid_pilot_requirement_blocked_row_count"] == 14
+    assert all(not row["ready"] for row in response["paid_pilot_requirement_rows"])
+    assert response["paid_pilot_requirement_blocked_rows"] == response[
+        "paid_pilot_requirement_rows"
+    ]
+    assert response["execution_enabled"] is False
+    assert response["external_state_mutated"] is False
