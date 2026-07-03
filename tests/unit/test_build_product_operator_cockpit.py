@@ -573,6 +573,21 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                     "python3 tools/build_pdbbind_casf_pose_affinity_results.py --comparison-scores-csv "
                     "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
                 ),
+                "external_beta_candidate_ready": False,
+                "external_beta_wording_allowed": False,
+                "external_beta_requirement_row_count": 3,
+                "external_beta_requirement_ready_row_count": 1,
+                "external_beta_requirement_blocked_row_count": 2,
+                "external_beta_requirement_ids": [
+                    "casf_pdbbind_default_manifest",
+                    "vina_gnina_same_input_comparison",
+                    "benchmark_receipt_attach",
+                ],
+                "external_beta_primary_requirement_id": "vina_gnina_same_input_comparison",
+                "external_beta_primary_blocker": "vina_gnina_same_input_score_evidence_missing",
+                "external_beta_primary_operator_action": (
+                    "Fill every score-template row with same-input scores."
+                ),
                 "blockers": [
                     "vina_gnina_same_input_comparison:vina_gnina_same_input_score_evidence_missing",
                     "benchmark_receipt_attach:benchmark_metric_source_receipt_rows_unapproved",
@@ -598,6 +613,57 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                     "external_state_mutated": True,
                     "claim_promotion_allowed": True,
                 }
+            ],
+            "external_beta_requirement_rows": [
+                {
+                    "requirement_id": "casf_pdbbind_default_manifest",
+                    "status": "ready",
+                    "ready": True,
+                    "required_value": "ready",
+                    "observed_value": "ready",
+                    "blocker": "",
+                    "evidence_artifact": "runs/manifest.json",
+                    "operator_action": "",
+                    "claim_boundary": "external beta receipt audit only",
+                    "external_beta_wording_allowed": True,
+                    "claim_promotion_allowed": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                },
+                {
+                    "requirement_id": "vina_gnina_same_input_comparison",
+                    "status": "blocked",
+                    "ready": False,
+                    "required_value": "score_evidence_ready",
+                    "observed_value": "score_evidence_missing",
+                    "blocker": "vina_gnina_same_input_score_evidence_missing",
+                    "evidence_artifact": (
+                        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+                    ),
+                    "operator_action": (
+                        "Fill every score-template row with same-input scores."
+                    ),
+                    "claim_boundary": "external beta receipt audit only",
+                    "external_beta_wording_allowed": True,
+                    "claim_promotion_allowed": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                },
+                {
+                    "requirement_id": "benchmark_receipt_attach",
+                    "status": "blocked",
+                    "ready": False,
+                    "required_value": "receipt_attach_ready",
+                    "observed_value": "metric_source_rows_unapproved",
+                    "blocker": "benchmark_metric_source_receipt_rows_unapproved",
+                    "evidence_artifact": "runs/public_benchmark_receipt_attach_packet_current.json",
+                    "operator_action": "Approve receipt rows after operator review.",
+                    "claim_boundary": "external beta receipt audit only",
+                    "external_beta_wording_allowed": True,
+                    "claim_promotion_allowed": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                },
             ],
         },
     )
@@ -2504,6 +2570,40 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
             "claim_promotion_allowed": False,
         }
     ]
+    assert summary["public_benchmark_external_beta_candidate_ready"] is False
+    assert summary["public_benchmark_external_beta_wording_allowed"] is False
+    assert summary["public_benchmark_external_beta_operator_action_required"] is True
+    assert summary["public_benchmark_external_beta_requirement_row_count"] == 3
+    assert summary["public_benchmark_external_beta_requirement_ready_row_count"] == 1
+    assert summary["public_benchmark_external_beta_requirement_blocked_row_count"] == 2
+    assert summary["public_benchmark_external_beta_requirement_ids"] == [
+        "casf_pdbbind_default_manifest",
+        "vina_gnina_same_input_comparison",
+        "benchmark_receipt_attach",
+    ]
+    assert summary["public_benchmark_external_beta_primary_requirement_id"] == (
+        "vina_gnina_same_input_comparison"
+    )
+    assert summary["public_benchmark_external_beta_primary_blocker"] == (
+        "vina_gnina_same_input_score_evidence_missing"
+    )
+    assert summary["public_benchmark_external_beta_primary_operator_action"] == (
+        "Fill every score-template row with same-input scores."
+    )
+    assert [
+        row["requirement_id"]
+        for row in summary["public_benchmark_external_beta_blocked_requirement_rows"]
+    ] == ["vina_gnina_same_input_comparison", "benchmark_receipt_attach"]
+    assert all(
+        row["external_beta_wording_allowed"] is False
+        and row["claim_promotion_allowed"] is False
+        and row["execution_enabled"] is False
+        and row["external_state_mutated"] is False
+        for row in summary["public_benchmark_external_beta_requirement_rows"]
+    )
+    assert summary["public_benchmark_external_beta_claim_promotion_allowed"] is False
+    assert summary["public_benchmark_external_beta_execution_enabled"] is False
+    assert summary["public_benchmark_external_beta_external_state_mutated"] is False
     assert summary["public_benchmark_primary_blocker_id"] == "vina_gnina_same_input_scores"
     assert summary["public_benchmark_primary_blocker"] == (
         "vina_gnina_same_input_score_evidence_missing"

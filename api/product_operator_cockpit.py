@@ -593,6 +593,34 @@ def _public_benchmark_external_receipt_step_rows(value: Any) -> list[dict[str, A
     return step_rows
 
 
+def _public_benchmark_external_beta_requirement_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    requirement_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        ready = bool(row.get("ready") is True and str(row.get("status") or "") == "ready")
+        requirement_rows.append(
+            {
+                "requirement_id": str(row.get("requirement_id") or ""),
+                "status": str(row.get("status") or ""),
+                "ready": ready,
+                "required_value": str(row.get("required_value") or ""),
+                "observed_value": str(row.get("observed_value") or ""),
+                "blocker": str(row.get("blocker") or ""),
+                "evidence_artifact": str(row.get("evidence_artifact") or ""),
+                "operator_action": str(row.get("operator_action") or ""),
+                "operator_action_required": not ready,
+                "external_beta_wording_allowed": False,
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_boundary": str(row.get("claim_boundary") or ""),
+            }
+        )
+    return requirement_rows
+
+
 def _gpcr_promotion_work_order_rows(value: Any) -> list[dict[str, Any]]:
     rows = value if isinstance(value, list) else []
     work_rows: list[dict[str, Any]] = []
@@ -1098,6 +1126,21 @@ def _missing_response() -> dict[str, Any]:
         "pocketmd_lite_metric_source_canonical_review_required": False,
         "pocketmd_lite_metric_source_rows": [],
         "public_benchmark_claim_allowed": False,
+        "public_benchmark_external_beta_candidate_ready": False,
+        "public_benchmark_external_beta_wording_allowed": False,
+        "public_benchmark_external_beta_operator_action_required": True,
+        "public_benchmark_external_beta_requirement_row_count": 0,
+        "public_benchmark_external_beta_requirement_ready_row_count": 0,
+        "public_benchmark_external_beta_requirement_blocked_row_count": 0,
+        "public_benchmark_external_beta_requirement_ids": [],
+        "public_benchmark_external_beta_primary_requirement_id": "",
+        "public_benchmark_external_beta_primary_blocker": "",
+        "public_benchmark_external_beta_primary_operator_action": "",
+        "public_benchmark_external_beta_requirement_rows": [],
+        "public_benchmark_external_beta_blocked_requirement_rows": [],
+        "public_benchmark_external_beta_claim_promotion_allowed": False,
+        "public_benchmark_external_beta_execution_enabled": False,
+        "public_benchmark_external_beta_external_state_mutated": False,
         "public_benchmark_receipt_attach_packet_ready": False,
         "public_benchmark_receipt_attach_packet_present": False,
         "public_benchmark_vina_gnina_pending_score_count": 0,
@@ -1393,6 +1436,17 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         developer_preview_primary_next_required_step = str(
             developer_preview_blocked_gate_rows[0].get("next_required_step") or ""
         )
+    public_external_beta_requirement_rows = (
+        _public_benchmark_external_beta_requirement_rows(
+            summary.get("public_benchmark_external_beta_requirement_rows")
+        )
+    )
+    public_external_beta_blocked_requirement_rows = [
+        row for row in public_external_beta_requirement_rows if row["operator_action_required"]
+    ]
+    public_external_beta_ready_requirement_rows = [
+        row for row in public_external_beta_requirement_rows if row["ready"]
+    ]
 
     return {
         "status": summary.get("status", ""),
@@ -1614,6 +1668,48 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
             summary.get("pocketmd_lite_metric_source_rows")
         ),
         "public_benchmark_claim_allowed": bool(summary.get("public_benchmark_claim_allowed") is True),
+        "public_benchmark_external_beta_candidate_ready": bool(
+            summary.get("public_benchmark_external_beta_candidate_ready") is True
+        ),
+        "public_benchmark_external_beta_wording_allowed": bool(
+            summary.get("public_benchmark_external_beta_wording_allowed") is True
+        ),
+        "public_benchmark_external_beta_operator_action_required": bool(
+            summary.get("public_benchmark_external_beta_operator_action_required") is not False
+        ),
+        "public_benchmark_external_beta_requirement_row_count": _int(
+            summary.get("public_benchmark_external_beta_requirement_row_count")
+        )
+        or len(public_external_beta_requirement_rows),
+        "public_benchmark_external_beta_requirement_ready_row_count": _int(
+            summary.get("public_benchmark_external_beta_requirement_ready_row_count")
+        )
+        or len(public_external_beta_ready_requirement_rows),
+        "public_benchmark_external_beta_requirement_blocked_row_count": _int(
+            summary.get("public_benchmark_external_beta_requirement_blocked_row_count")
+        )
+        or len(public_external_beta_blocked_requirement_rows),
+        "public_benchmark_external_beta_requirement_ids": _string_list(
+            summary.get("public_benchmark_external_beta_requirement_ids")
+        ),
+        "public_benchmark_external_beta_primary_requirement_id": str(
+            summary.get("public_benchmark_external_beta_primary_requirement_id") or ""
+        ),
+        "public_benchmark_external_beta_primary_blocker": str(
+            summary.get("public_benchmark_external_beta_primary_blocker") or ""
+        ),
+        "public_benchmark_external_beta_primary_operator_action": str(
+            summary.get("public_benchmark_external_beta_primary_operator_action") or ""
+        ),
+        "public_benchmark_external_beta_requirement_rows": (
+            public_external_beta_requirement_rows
+        ),
+        "public_benchmark_external_beta_blocked_requirement_rows": (
+            public_external_beta_blocked_requirement_rows
+        ),
+        "public_benchmark_external_beta_claim_promotion_allowed": False,
+        "public_benchmark_external_beta_execution_enabled": False,
+        "public_benchmark_external_beta_external_state_mutated": False,
         "public_benchmark_receipt_attach_packet_ready": bool(
             summary.get("public_benchmark_receipt_attach_packet_ready") is True
         ),

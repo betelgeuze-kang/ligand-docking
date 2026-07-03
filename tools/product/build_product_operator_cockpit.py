@@ -806,6 +806,33 @@ def _public_benchmark_external_receipt_step_rows(payload: dict[str, Any]) -> lis
     return rows
 
 
+def _public_benchmark_external_beta_requirement_rows(
+    payload: dict[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _dict_list(payload, "external_beta_requirement_rows"):
+        ready = _bool_true(row.get("ready")) and _text(row.get("status")) == "ready"
+        rows.append(
+            {
+                "requirement_id": _text(row.get("requirement_id")),
+                "status": _text(row.get("status")),
+                "ready": ready,
+                "required_value": _text(row.get("required_value")),
+                "observed_value": _text(row.get("observed_value")),
+                "blocker": _text(row.get("blocker")),
+                "evidence_artifact": _text(row.get("evidence_artifact")),
+                "operator_action": _text(row.get("operator_action")),
+                "operator_action_required": not ready,
+                "external_beta_wording_allowed": False,
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_boundary": _text(row.get("claim_boundary")),
+            }
+        )
+    return rows
+
+
 def _gpcr_promotion_work_order_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in _dict_list(payload, "promotion_work_order_rows"):
@@ -1756,6 +1783,15 @@ def build_product_operator_cockpit(
     public_benchmark_external_receipt_step_rows = (
         _public_benchmark_external_receipt_step_rows(public_benchmark_payload)
     )
+    public_external_beta_requirement_rows = (
+        _public_benchmark_external_beta_requirement_rows(public_benchmark_payload)
+    )
+    public_external_beta_blocked_requirement_rows = [
+        row for row in public_external_beta_requirement_rows if row["operator_action_required"]
+    ]
+    public_external_beta_ready_requirement_rows = [
+        row for row in public_external_beta_requirement_rows if row["ready"]
+    ]
     public_receipt_attach_payload = _read_json(
         public_benchmark_receipt_attach_packet_json, root=root
     )
@@ -2162,6 +2198,55 @@ def build_product_operator_cockpit(
     public_benchmark_claim_allowed = (
         public_acceptance_ready and _bool_true(public_benchmark.get("claim_promotion_allowed"))
     )
+    public_external_beta_candidate_ready = _bool_true(
+        public_benchmark.get("external_beta_candidate_ready")
+    )
+    public_external_beta_wording_allowed = bool(
+        public_external_receipts_ready
+        and public_external_beta_candidate_ready
+        and _bool_true(public_benchmark.get("external_beta_wording_allowed"))
+        and _bool_true(public_benchmark.get("claim_promotion_allowed"))
+    )
+    public_external_beta_requirement_ids = _string_list(
+        public_benchmark.get("external_beta_requirement_ids")
+    ) or [
+        row["requirement_id"]
+        for row in public_external_beta_requirement_rows
+        if row["requirement_id"]
+    ]
+    public_external_beta_primary_requirement_id = _first_text(
+        public_benchmark.get("external_beta_primary_requirement_id"),
+        (
+            public_external_beta_blocked_requirement_rows[0]["requirement_id"]
+            if public_external_beta_blocked_requirement_rows
+            else ""
+        ),
+    )
+    public_external_beta_primary_blocker = _first_text(
+        public_benchmark.get("external_beta_primary_blocker"),
+        (
+            public_external_beta_blocked_requirement_rows[0]["blocker"]
+            if public_external_beta_blocked_requirement_rows
+            else ""
+        ),
+    )
+    public_external_beta_primary_operator_action = _first_text(
+        public_benchmark.get("external_beta_primary_operator_action"),
+        (
+            public_external_beta_blocked_requirement_rows[0]["operator_action"]
+            if public_external_beta_blocked_requirement_rows
+            else ""
+        ),
+    )
+    public_external_beta_requirement_row_count = _int(
+        public_benchmark.get("external_beta_requirement_row_count")
+    ) or len(public_external_beta_requirement_rows)
+    public_external_beta_requirement_ready_row_count = _int(
+        public_benchmark.get("external_beta_requirement_ready_row_count")
+    ) or len(public_external_beta_ready_requirement_rows)
+    public_external_beta_requirement_blocked_row_count = _int(
+        public_benchmark.get("external_beta_requirement_blocked_row_count")
+    ) or len(public_external_beta_blocked_requirement_rows)
     public_receipt_blocked_rows = _first_text(
         public_benchmark.get("receipt_blocked_row_count"),
         public_benchmark.get(
@@ -3268,8 +3353,23 @@ def build_product_operator_cockpit(
                 _metric("blocked_steps", public_benchmark.get("blocked_step_count")),
                 _metric("blocked_receipt_rows", public_receipt_blocked_rows),
                 _metric("acceptance_ready", public_acceptance_ready),
+                _count_metric(
+                    "external_beta_requirements",
+                    public_external_beta_requirement_row_count,
+                ),
+                _count_metric(
+                    "external_beta_ready",
+                    public_external_beta_requirement_ready_row_count,
+                ),
+                _count_metric(
+                    "external_beta_blocked",
+                    public_external_beta_requirement_blocked_row_count,
+                ),
             ),
             secondary_metric=_join_metrics(
+                _metric("external_beta_wording_allowed", public_external_beta_wording_allowed),
+                _metric("external_beta_primary", public_external_beta_primary_requirement_id),
+                _metric("external_beta_blocker", public_external_beta_primary_blocker),
                 _metric(
                     "vina_gnina_score_evidence",
                     _bool_true(public_benchmark.get("vina_gnina_comparison_adapter_score_evidence_ready")),
@@ -4035,6 +4135,39 @@ def build_product_operator_cockpit(
             pocketmd_lite_metric_source_audit_row_preview
         ),
         "public_benchmark_claim_allowed": public_benchmark_claim_allowed,
+        "public_benchmark_external_beta_candidate_ready": public_external_beta_candidate_ready,
+        "public_benchmark_external_beta_wording_allowed": public_external_beta_wording_allowed,
+        "public_benchmark_external_beta_operator_action_required": (
+            not public_external_beta_wording_allowed
+        ),
+        "public_benchmark_external_beta_requirement_row_count": (
+            public_external_beta_requirement_row_count
+        ),
+        "public_benchmark_external_beta_requirement_ready_row_count": (
+            public_external_beta_requirement_ready_row_count
+        ),
+        "public_benchmark_external_beta_requirement_blocked_row_count": (
+            public_external_beta_requirement_blocked_row_count
+        ),
+        "public_benchmark_external_beta_requirement_ids": public_external_beta_requirement_ids,
+        "public_benchmark_external_beta_primary_requirement_id": (
+            public_external_beta_primary_requirement_id
+        ),
+        "public_benchmark_external_beta_primary_blocker": (
+            public_external_beta_primary_blocker
+        ),
+        "public_benchmark_external_beta_primary_operator_action": (
+            public_external_beta_primary_operator_action
+        ),
+        "public_benchmark_external_beta_requirement_rows": (
+            public_external_beta_requirement_rows
+        ),
+        "public_benchmark_external_beta_blocked_requirement_rows": (
+            public_external_beta_blocked_requirement_rows
+        ),
+        "public_benchmark_external_beta_claim_promotion_allowed": False,
+        "public_benchmark_external_beta_execution_enabled": False,
+        "public_benchmark_external_beta_external_state_mutated": False,
         "public_benchmark_receipt_attach_packet_ready": public_attach_ready,
         "public_benchmark_receipt_attach_packet_present": public_attach_present,
         "public_benchmark_receipt_attach_lane_row_count": public_receipt_attach_lane_rows,
