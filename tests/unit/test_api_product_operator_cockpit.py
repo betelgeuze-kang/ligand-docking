@@ -917,7 +917,30 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "claim_boundary": "cockpit boundary",
             },
             "rows": [{"panel_id": "product_capabilities_dashboard", "route": "/product/capabilities"}],
-            "claim_matrix": [{"claim_id": "paid_pilot_wording", "allowed": False}],
+            "claim_matrix": [
+                {
+                    "claim_id": "paid_pilot_wording",
+                    "allowed": False,
+                    "claim_text": "Paid pilot wording is not allowed.",
+                    "boundary": "Customer shadow evidence is incomplete.",
+                    "reason": "customer_shadow_evidence_missing",
+                    "source_artifact": "runs/customer_shadow_evidence_status_current.json",
+                    "operator_action": "collect_three_reviewed_customer_shadow_rows",
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+                {
+                    "claim_id": "operator_cockpit_surface",
+                    "allowed": True,
+                    "claim_text": "Read-only operator cockpit renders current artifact status.",
+                    "claim_boundary": "Status surface only.",
+                    "next_required_step": "Keep claim promotion locks visible.",
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+            ],
         },
     )
 
@@ -953,6 +976,43 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
         "pocketmd_lite_customer_claim; public_benchmark_claim; "
         "enterprise_on_prem_platform_claim"
     )
+    assert response["claim_boundary_row_count"] == 2
+    assert response["allowed_claim_row_count"] == 1
+    assert response["disallowed_claim_row_count"] == 1
+    assert response["claim_boundary_rows"] == [
+        {
+            "claim_id": "paid_pilot_wording",
+            "claim_status": "disallowed",
+            "allowed": False,
+            "claim_text": "Paid pilot wording is not allowed.",
+            "boundary": "Customer shadow evidence is incomplete.",
+            "reason": "customer_shadow_evidence_missing",
+            "source_artifact": "runs/customer_shadow_evidence_status_current.json",
+            "operator_action": "collect_three_reviewed_customer_shadow_rows",
+            "paid_pilot_wording_allowed": False,
+            "general_platform_claim_allowed": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+        {
+            "claim_id": "operator_cockpit_surface",
+            "claim_status": "allowed",
+            "allowed": True,
+            "claim_text": "Read-only operator cockpit renders current artifact status.",
+            "boundary": "Status surface only.",
+            "reason": "",
+            "source_artifact": "",
+            "operator_action": "Keep claim promotion locks visible.",
+            "paid_pilot_wording_allowed": False,
+            "general_platform_claim_allowed": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+    ]
+    assert response["allowed_claim_rows"] == [response["claim_boundary_rows"][1]]
+    assert response["disallowed_claim_rows"] == [response["claim_boundary_rows"][0]]
     assert response["paid_pilot_wording_allowed"] is False
     assert response["general_platform_claim_allowed"] is False
     assert response["product_capability_row_count"] == 2
@@ -1738,6 +1798,7 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     }
     assert response["panels"][0]["panel_id"] == "product_capabilities_dashboard"
     assert response["claim_matrix"][0]["claim_id"] == "paid_pilot_wording"
+    assert response["claim_matrix"][1]["claim_id"] == "operator_cockpit_surface"
     assert response["execution_enabled"] is False
     assert response["docking_results_emitted"] is False
     assert response["external_state_mutated"] is False
@@ -1770,6 +1831,12 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["disallowed_claim_ids"] == []
     assert response["allowed_claim_text"] == ""
     assert response["disallowed_claim_text"] == ""
+    assert response["claim_boundary_row_count"] == 0
+    assert response["allowed_claim_row_count"] == 0
+    assert response["disallowed_claim_row_count"] == 0
+    assert response["claim_boundary_rows"] == []
+    assert response["allowed_claim_rows"] == []
+    assert response["disallowed_claim_rows"] == []
     assert response["paid_pilot_wording_allowed"] is False
     assert response["general_platform_claim_allowed"] is False
     assert response["product_capability_row_count"] == 0

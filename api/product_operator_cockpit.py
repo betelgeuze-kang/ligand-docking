@@ -76,6 +76,35 @@ def _string_list(value: Any) -> list[str]:
     return []
 
 
+def _claim_boundary_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    claim_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        allowed = bool(row.get("allowed") is True)
+        claim_rows.append(
+            {
+                "claim_id": str(row.get("claim_id") or ""),
+                "claim_status": "allowed" if allowed else "disallowed",
+                "allowed": allowed,
+                "claim_text": str(row.get("claim_text") or ""),
+                "boundary": str(row.get("boundary") or row.get("claim_boundary") or ""),
+                "reason": str(row.get("reason") or row.get("blocker") or ""),
+                "source_artifact": str(row.get("source_artifact") or ""),
+                "operator_action": str(
+                    row.get("operator_action") or row.get("next_required_step") or ""
+                ),
+                "paid_pilot_wording_allowed": False,
+                "general_platform_claim_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return claim_rows
+
+
 def _pr38_verification_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
         {
@@ -752,6 +781,12 @@ def _missing_response() -> dict[str, Any]:
         "disallowed_claim_ids": [],
         "allowed_claim_text": "",
         "disallowed_claim_text": "",
+        "claim_boundary_row_count": 0,
+        "allowed_claim_row_count": 0,
+        "disallowed_claim_row_count": 0,
+        "claim_boundary_rows": [],
+        "allowed_claim_rows": [],
+        "disallowed_claim_rows": [],
         "product_capability_row_count": 0,
         "product_capability_blocker_row_count": 0,
         "product_capability_rows": [],
@@ -992,6 +1027,9 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
     summary = _summary(packet)
     if not summary:
         return _missing_response()
+    claim_boundary_rows = _claim_boundary_rows(_list(packet, "claim_matrix"))
+    allowed_claim_rows = [row for row in claim_boundary_rows if row["allowed"]]
+    disallowed_claim_rows = [row for row in claim_boundary_rows if not row["allowed"]]
 
     return {
         "status": summary.get("status", ""),
@@ -1015,6 +1053,12 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         "disallowed_claim_ids": _string_list(summary.get("disallowed_claim_ids")),
         "allowed_claim_text": str(summary.get("allowed_claim_text") or ""),
         "disallowed_claim_text": str(summary.get("disallowed_claim_text") or ""),
+        "claim_boundary_row_count": len(claim_boundary_rows),
+        "allowed_claim_row_count": len(allowed_claim_rows),
+        "disallowed_claim_row_count": len(disallowed_claim_rows),
+        "claim_boundary_rows": claim_boundary_rows,
+        "allowed_claim_rows": allowed_claim_rows,
+        "disallowed_claim_rows": disallowed_claim_rows,
         "paid_pilot_wording_allowed": bool(summary.get("paid_pilot_wording_allowed") is True),
         "general_platform_claim_allowed": bool(summary.get("general_platform_claim_allowed") is True),
         "product_capability_row_count": _int(summary.get("product_capability_row_count")),
