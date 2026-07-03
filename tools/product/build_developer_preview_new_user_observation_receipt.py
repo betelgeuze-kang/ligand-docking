@@ -16,6 +16,16 @@ DEFAULT_OUT_MD = ".betelgeuze/developer_preview_new_user_observation_receipt.md"
 
 PACKET_TYPE = "developer_preview_new_user_observation_receipt"
 SCHEMA_VERSION = "developer_preview_new_user_observation_receipt_v1"
+OBSERVATION_REVIEW_REQUIRED_FIELD_IDS = [
+    "observer_id_present",
+    "observed_at_utc_present",
+    "observer_signoff",
+    "anonymized_notes_only",
+    "anonymized_summary_present",
+    "hidden_state_blockers_absent",
+    "raw_customer_data_not_stored_in_repo",
+    "customer_retained_raw_data",
+]
 
 CLAIM_BOUNDARY = (
     "Developer Preview new-user observation receipt only; it records derived/anonymized operator review "
@@ -78,6 +88,110 @@ def _split_hidden_blockers(values: list[str] | None) -> list[str]:
     return blockers
 
 
+def _template_row(
+    *,
+    field_id: str,
+    label: str,
+    ready: bool,
+    observed: str,
+    blocker: str,
+    required_action: str,
+) -> dict[str, Any]:
+    return {
+        "field_id": field_id,
+        "label": label,
+        "status": "pass" if ready else "blocked",
+        "ready": ready,
+        "observed": observed,
+        "blocker": "" if ready else blocker,
+        "required_action": "" if ready else required_action,
+        "raw_customer_data_allowed": False,
+        "stores_private_notes": False,
+        "operator_action_required": not ready,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_promotion_allowed": False,
+        "claim_boundary": CLAIM_BOUNDARY,
+    }
+
+
+def _observation_review_template_rows(
+    *,
+    reviewer_present: bool,
+    observed_at_present: bool,
+    observer_signoff: bool,
+    anonymized_notes_only: bool,
+    anonymized_summary_present: bool,
+    hidden_state_blocker_count: int,
+) -> list[dict[str, Any]]:
+    return [
+        _template_row(
+            field_id="observer_id_present",
+            label="Observer ID recorded as derived operator metadata",
+            ready=reviewer_present,
+            observed="present" if reviewer_present else "missing",
+            blocker="observer_id_missing",
+            required_action="Record a non-secret observer id in the reviewed receipt.",
+        ),
+        _template_row(
+            field_id="observed_at_utc_present",
+            label="Observation timestamp recorded in UTC",
+            ready=observed_at_present,
+            observed="present" if observed_at_present else "missing",
+            blocker="observed_at_utc_missing",
+            required_action="Record the observed_at_utc timestamp for the session.",
+        ),
+        _template_row(
+            field_id="observer_signoff",
+            label="Observer explicitly signed off",
+            ready=observer_signoff,
+            observed="true" if observer_signoff else "false",
+            blocker="observer_signoff_missing",
+            required_action="Attach explicit observer signoff for the observed workflow.",
+        ),
+        _template_row(
+            field_id="anonymized_notes_only",
+            label="Only anonymized notes are stored",
+            ready=anonymized_notes_only,
+            observed="true" if anonymized_notes_only else "false",
+            blocker="anonymized_notes_only_not_true",
+            required_action="Confirm stored notes contain only anonymized/derived metadata.",
+        ),
+        _template_row(
+            field_id="anonymized_summary_present",
+            label="Anonymized workflow summary present",
+            ready=anonymized_summary_present,
+            observed="present" if anonymized_summary_present else "missing",
+            blocker="anonymized_summary_missing",
+            required_action="Add a derived, anonymized summary of the observed workflow.",
+        ),
+        _template_row(
+            field_id="hidden_state_blockers_absent",
+            label="No hidden local state was required",
+            ready=hidden_state_blocker_count == 0,
+            observed=f"hidden_state_blocker_count={hidden_state_blocker_count}",
+            blocker="hidden_state_blockers_present",
+            required_action="Resolve or document hidden local-state dependencies before signoff.",
+        ),
+        _template_row(
+            field_id="raw_customer_data_not_stored_in_repo",
+            label="Raw customer data is not stored in the repo",
+            ready=True,
+            observed="false",
+            blocker="raw_customer_data_stored_in_repo",
+            required_action="Remove raw customer data from repository storage.",
+        ),
+        _template_row(
+            field_id="customer_retained_raw_data",
+            label="Raw data remains customer-retained",
+            ready=True,
+            observed="true",
+            blocker="customer_retained_raw_data_not_true",
+            required_action="Keep raw data customer-retained and store only derived metadata.",
+        ),
+    ]
+
+
 def build_developer_preview_new_user_observation_receipt(
     *,
     work_order_json: str | Path = DEFAULT_WORK_ORDER_JSON,
@@ -109,6 +223,20 @@ def build_developer_preview_new_user_observation_receipt(
     observed_at_present = bool(_text(observed_at_utc))
     anonymized_summary_present = bool(_text(anonymized_summary))
     hidden_state_blocker_count = len(hidden_blockers)
+    observation_review_template_rows = _observation_review_template_rows(
+        reviewer_present=reviewer_present,
+        observed_at_present=observed_at_present,
+        observer_signoff=observer_signoff,
+        anonymized_notes_only=anonymized_notes_only,
+        anonymized_summary_present=anonymized_summary_present,
+        hidden_state_blocker_count=hidden_state_blocker_count,
+    )
+    observation_review_blocked_rows = [
+        row for row in observation_review_template_rows if not row["ready"]
+    ]
+    observation_review_primary_row = (
+        observation_review_blocked_rows[0] if observation_review_blocked_rows else {}
+    )
 
     blockers: list[str] = []
     if not work_order:
@@ -190,6 +318,25 @@ def build_developer_preview_new_user_observation_receipt(
         "blockers": blockers,
         "hidden_state_blocker_count": hidden_state_blocker_count,
         "hidden_state_blockers": hidden_blockers,
+        "observation_review_required_field_ids": list(
+            OBSERVATION_REVIEW_REQUIRED_FIELD_IDS
+        ),
+        "observation_review_required_field_count": len(
+            OBSERVATION_REVIEW_REQUIRED_FIELD_IDS
+        ),
+        "observation_review_ready_field_count": (
+            len(observation_review_template_rows) - len(observation_review_blocked_rows)
+        ),
+        "observation_review_blocked_field_count": len(observation_review_blocked_rows),
+        "observation_review_primary_field_id": _text(
+            observation_review_primary_row.get("field_id")
+        ),
+        "observation_review_primary_blocker": _text(
+            observation_review_primary_row.get("blocker")
+        ),
+        "observation_review_primary_required_action": _text(
+            observation_review_primary_row.get("required_action")
+        ),
         "work_order_ready": work_order_ready,
         "preflight_ready": preflight_ready,
         "observer_id_present": reviewer_present,
@@ -208,7 +355,11 @@ def build_developer_preview_new_user_observation_receipt(
             "receipt with observer signoff plus anonymized notes only."
         ),
     }
-    return {"summary": summary, "rows": rows}
+    return {
+        "summary": summary,
+        "rows": rows,
+        "observation_review_template_rows": observation_review_template_rows,
+    }
 
 
 def _write_json(path_like: str | Path, payload: dict[str, Any], *, root: Path = ROOT) -> None:
@@ -227,6 +378,7 @@ def _render_md(payload: dict[str, Any]) -> str:
         f"- anonymized_notes_only: `{summary['anonymized_notes_only']}`",
         f"- blocker_count: `{summary['blocker_count']}`",
         f"- hidden_state_blocker_count: `{summary['hidden_state_blocker_count']}`",
+        f"- observation_review_blocked_field_count: `{summary['observation_review_blocked_field_count']}`",
         f"- raw_customer_data_stored_in_repo: `{summary['raw_customer_data_stored_in_repo']}`",
         "",
         "| check | status | blockers |",
@@ -235,6 +387,20 @@ def _render_md(payload: dict[str, Any]) -> str:
     for row in payload["rows"]:
         blockers = ";".join(str(item) for item in row.get("blockers", [])) or "-"
         lines.append(f"| `{row['check']}` | `{row['status']}` | `{blockers}` |")
+    lines.extend(
+        [
+            "",
+            "## Observation Review Template",
+            "",
+            "| field | status | observed | blocker | action |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+    )
+    for row in payload.get("observation_review_template_rows", []):
+        lines.append(
+            f"| `{row['field_id']}` | `{row['status']}` | `{row['observed']}` | "
+            f"`{row['blocker'] or '-'}` | {row['required_action'] or '-'} |"
+        )
     lines.extend(["", CLAIM_BOUNDARY, ""])
     return "\n".join(lines)
 

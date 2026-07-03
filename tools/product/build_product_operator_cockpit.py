@@ -35,6 +35,9 @@ DEFAULT_DEVELOPER_PREVIEW_JSON = "runs/developer_preview_final_gate_audit_curren
 DEFAULT_DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_JSON = (
     ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
 )
+DEFAULT_DEVELOPER_PREVIEW_NEW_USER_OBSERVATION_RECEIPT_JSON = (
+    ".betelgeuze/developer_preview_new_user_observation_receipt.json"
+)
 DEFAULT_F2G_F2H_PREFLIGHT_JSON = ".betelgeuze/f2g_f2h_surface_preflight.local.json"
 DEFAULT_F2G_F2H_RECOVERY_JSON = ".betelgeuze/f2g_f2h_authoritative_surface_recovery_packet.local.json"
 DEFAULT_ENTERPRISE_ON_PREM_JSON = "runs/enterprise_on_prem_readiness_gate_current.json"
@@ -870,6 +873,35 @@ def _developer_preview_clean_checkout_stage5_input_rows(
     return rows
 
 
+def _developer_preview_new_user_observation_template_rows(
+    payload: dict[str, Any],
+) -> list[dict[str, Any]]:
+    summary = _summary(payload)
+    claim_boundary = _text(summary.get("claim_boundary")) or CLAIM_BOUNDARY
+    rows: list[dict[str, Any]] = []
+    for row in _dict_list(payload, "observation_review_template_rows"):
+        ready = _bool_true(row.get("ready"))
+        rows.append(
+            {
+                "field_id": _text(row.get("field_id")),
+                "label": _text(row.get("label")),
+                "status": _text(row.get("status")),
+                "ready": ready,
+                "observed": _text(row.get("observed")),
+                "blocker": _text(row.get("blocker")),
+                "required_action": _text(row.get("required_action")),
+                "raw_customer_data_allowed": False,
+                "stores_private_notes": False,
+                "operator_action_required": not ready,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "claim_boundary": _text(row.get("claim_boundary")) or claim_boundary,
+            }
+        )
+    return rows
+
+
 def _release_decision_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in _rows(payload):
@@ -1500,6 +1532,9 @@ def build_product_operator_cockpit(
     developer_preview_clean_checkout_receipt_json: str | Path = (
         DEFAULT_DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_JSON
     ),
+    developer_preview_new_user_observation_receipt_json: str | Path = (
+        DEFAULT_DEVELOPER_PREVIEW_NEW_USER_OBSERVATION_RECEIPT_JSON
+    ),
     f2g_f2h_preflight_json: str | Path = DEFAULT_F2G_F2H_PREFLIGHT_JSON,
     f2g_f2h_recovery_json: str | Path = DEFAULT_F2G_F2H_RECOVERY_JSON,
     enterprise_on_prem_json: str | Path = DEFAULT_ENTERPRISE_ON_PREM_JSON,
@@ -1604,6 +1639,18 @@ def build_product_operator_cockpit(
     developer_preview_clean_checkout_stage5_input_row_preview = (
         _developer_preview_clean_checkout_stage5_input_rows(
             developer_preview_clean_checkout_receipt_payload
+        )
+    )
+    developer_preview_new_user_observation_receipt_payload = _read_json(
+        developer_preview_new_user_observation_receipt_json,
+        root=root,
+    )
+    developer_preview_new_user_observation_receipt = _summary(
+        developer_preview_new_user_observation_receipt_payload
+    )
+    developer_preview_new_user_observation_template_row_preview = (
+        _developer_preview_new_user_observation_template_rows(
+            developer_preview_new_user_observation_receipt_payload
         )
     )
     f2g_preflight_payload = _read_json(f2g_f2h_preflight_json, root=root)
@@ -2243,6 +2290,63 @@ def build_product_operator_cockpit(
         developer_preview_clean_checkout_receipt.get("stage5_primary_source_artifact_path"),
         developer_preview_clean_checkout_stage5_first_missing_row.get("source_artifact_path"),
     )
+    developer_preview_new_user_observation_receipt_present = bool(
+        developer_preview_new_user_observation_receipt
+    )
+    developer_preview_new_user_observation_receipt_status = _text(
+        developer_preview_new_user_observation_receipt.get("status")
+    )
+    developer_preview_new_user_observation_required_field_count = _int(
+        developer_preview_new_user_observation_receipt.get(
+            "observation_review_required_field_count"
+        )
+    ) or len(developer_preview_new_user_observation_template_row_preview)
+    developer_preview_new_user_observation_ready_field_count = _int(
+        developer_preview_new_user_observation_receipt.get(
+            "observation_review_ready_field_count"
+        )
+    ) or sum(
+        1
+        for row in developer_preview_new_user_observation_template_row_preview
+        if row["ready"]
+    )
+    developer_preview_new_user_observation_blocked_field_count = _int(
+        developer_preview_new_user_observation_receipt.get(
+            "observation_review_blocked_field_count"
+        )
+    ) or sum(
+        1
+        for row in developer_preview_new_user_observation_template_row_preview
+        if not row["ready"]
+    )
+    developer_preview_new_user_observation_blocked_rows = [
+        row
+        for row in developer_preview_new_user_observation_template_row_preview
+        if not row["ready"]
+    ]
+    developer_preview_new_user_observation_primary_row = (
+        developer_preview_new_user_observation_blocked_rows[0]
+        if developer_preview_new_user_observation_blocked_rows
+        else {}
+    )
+    developer_preview_new_user_observation_primary_field_id = _first_text(
+        developer_preview_new_user_observation_receipt.get(
+            "observation_review_primary_field_id"
+        ),
+        developer_preview_new_user_observation_primary_row.get("field_id"),
+    )
+    developer_preview_new_user_observation_primary_blocker = _first_text(
+        developer_preview_new_user_observation_receipt.get(
+            "observation_review_primary_blocker"
+        ),
+        developer_preview_new_user_observation_primary_row.get("blocker"),
+    )
+    developer_preview_new_user_observation_primary_required_action = _first_text(
+        developer_preview_new_user_observation_receipt.get(
+            "observation_review_primary_required_action"
+        ),
+        developer_preview_new_user_observation_primary_row.get("required_action"),
+    )
     f2g_preflight_present = bool(f2g_preflight)
     f2g_recovery_present = bool(f2g_recovery)
     f2g_first_recovery_row = _first_non_pass_row(f2g_recovery_rows)
@@ -2770,6 +2874,26 @@ def build_product_operator_cockpit(
                 _metric(
                     "clean_checkout_stage5_primary_source_arg",
                     developer_preview_clean_checkout_stage5_primary_source_argument,
+                ),
+                _metric(
+                    "new_user_observation_receipt",
+                    developer_preview_new_user_observation_receipt_status,
+                ),
+                _count_metric(
+                    "new_user_observation_fields",
+                    developer_preview_new_user_observation_required_field_count,
+                ),
+                _count_metric(
+                    "new_user_observation_blocked_fields",
+                    developer_preview_new_user_observation_blocked_field_count,
+                ),
+                _metric(
+                    "new_user_observation_primary_field",
+                    developer_preview_new_user_observation_primary_field_id,
+                ),
+                _metric(
+                    "new_user_observation_primary_action",
+                    developer_preview_new_user_observation_primary_required_action,
                 ),
                 _count_metric(
                     "primary_required_true_fields",
@@ -3570,6 +3694,33 @@ def build_product_operator_cockpit(
         "developer_preview_clean_checkout_stage5_missing_input_rows": (
             developer_preview_clean_checkout_missing_input_rows
         ),
+        "developer_preview_new_user_observation_receipt_present": (
+            developer_preview_new_user_observation_receipt_present
+        ),
+        "developer_preview_new_user_observation_receipt_status": (
+            developer_preview_new_user_observation_receipt_status
+        ),
+        "developer_preview_new_user_observation_required_field_count": (
+            developer_preview_new_user_observation_required_field_count
+        ),
+        "developer_preview_new_user_observation_ready_field_count": (
+            developer_preview_new_user_observation_ready_field_count
+        ),
+        "developer_preview_new_user_observation_blocked_field_count": (
+            developer_preview_new_user_observation_blocked_field_count
+        ),
+        "developer_preview_new_user_observation_primary_field_id": (
+            developer_preview_new_user_observation_primary_field_id
+        ),
+        "developer_preview_new_user_observation_primary_blocker": (
+            developer_preview_new_user_observation_primary_blocker
+        ),
+        "developer_preview_new_user_observation_primary_required_action": (
+            developer_preview_new_user_observation_primary_required_action
+        ),
+        "developer_preview_new_user_observation_template_rows": (
+            developer_preview_new_user_observation_template_row_preview
+        ),
         "enterprise_on_prem_readiness_present": enterprise_present,
         "enterprise_on_prem_ready": enterprise_ready,
         "enterprise_on_prem_claim_allowed": False,
@@ -3739,6 +3890,10 @@ def _parser() -> argparse.ArgumentParser:
         "--developer-preview-clean-checkout-receipt-json",
         default=DEFAULT_DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_JSON,
     )
+    parser.add_argument(
+        "--developer-preview-new-user-observation-receipt-json",
+        default=DEFAULT_DEVELOPER_PREVIEW_NEW_USER_OBSERVATION_RECEIPT_JSON,
+    )
     parser.add_argument("--f2g-f2h-preflight-json", default=DEFAULT_F2G_F2H_PREFLIGHT_JSON)
     parser.add_argument("--f2g-f2h-recovery-json", default=DEFAULT_F2G_F2H_RECOVERY_JSON)
     parser.add_argument("--enterprise-on-prem-json", default=DEFAULT_ENTERPRISE_ON_PREM_JSON)
@@ -3775,6 +3930,9 @@ def main(argv: list[str] | None = None) -> int:
         developer_preview_json=args.developer_preview_json,
         developer_preview_clean_checkout_receipt_json=(
             args.developer_preview_clean_checkout_receipt_json
+        ),
+        developer_preview_new_user_observation_receipt_json=(
+            args.developer_preview_new_user_observation_receipt_json
         ),
         f2g_f2h_preflight_json=args.f2g_f2h_preflight_json,
         f2g_f2h_recovery_json=args.f2g_f2h_recovery_json,

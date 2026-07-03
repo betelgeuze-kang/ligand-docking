@@ -54,6 +54,10 @@ def test_new_user_observation_receipt_ready_with_signoff(tmp_path: Path) -> None
     assert summary["anonymized_notes_only"] is True
     assert summary["blocker_count"] == 0
     assert summary["hidden_state_blocker_count"] == 0
+    assert summary["observation_review_required_field_count"] == 8
+    assert summary["observation_review_ready_field_count"] == 8
+    assert summary["observation_review_blocked_field_count"] == 0
+    assert summary["observation_review_primary_field_id"] == ""
     assert summary["work_order_ready"] is True
     assert summary["preflight_ready"] is True
     assert summary["raw_customer_data_stored_in_repo"] is False
@@ -72,14 +76,41 @@ def test_new_user_observation_receipt_blocks_without_signoff(tmp_path: Path) -> 
     )
     summary = payload["summary"]
     blockers = ";".join(summary["blockers"])
+    template_rows = {
+        row["field_id"]: row for row in payload["observation_review_template_rows"]
+    }
 
     assert summary["status"] == "blocked_developer_preview_new_user_observation_receipt"
     assert summary["observer_signoff"] is False
     assert summary["anonymized_notes_only"] is False
     assert summary["hidden_state_blocker_count"] == 1
+    assert summary["observation_review_required_field_ids"] == [
+        "observer_id_present",
+        "observed_at_utc_present",
+        "observer_signoff",
+        "anonymized_notes_only",
+        "anonymized_summary_present",
+        "hidden_state_blockers_absent",
+        "raw_customer_data_not_stored_in_repo",
+        "customer_retained_raw_data",
+    ]
+    assert summary["observation_review_required_field_count"] == 8
+    assert summary["observation_review_ready_field_count"] == 2
+    assert summary["observation_review_blocked_field_count"] == 6
+    assert summary["observation_review_primary_field_id"] == "observer_id_present"
+    assert summary["observation_review_primary_blocker"] == "observer_id_missing"
+    assert summary["observation_review_primary_required_action"] == (
+        "Record a non-secret observer id in the reviewed receipt."
+    )
     assert "observer_signoff_missing" in blockers
     assert "anonymized_notes_only_not_true" in blockers
     assert "hidden_state_blockers_present" in blockers
+    assert template_rows["observer_signoff"]["status"] == "blocked"
+    assert template_rows["hidden_state_blockers_absent"]["observed"] == (
+        "hidden_state_blocker_count=1"
+    )
+    assert template_rows["raw_customer_data_not_stored_in_repo"]["status"] == "pass"
+    assert all(row["execution_enabled"] is False for row in template_rows.values())
 
 
 def test_new_user_observation_receipt_cli_writes_outputs(tmp_path: Path) -> None:
@@ -111,3 +142,4 @@ def test_new_user_observation_receipt_cli_writes_outputs(tmp_path: Path) -> None
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["packet_type"] == "developer_preview_new_user_observation_receipt"
     assert "Developer Preview New-User Observation Receipt" in out_md.read_text(encoding="utf-8")
+    assert "Observation Review Template" in out_md.read_text(encoding="utf-8")

@@ -38,6 +38,9 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         "developer_preview_clean_checkout_receipt": (
             tmp_path / ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
         ),
+        "developer_preview_new_user_observation_receipt": (
+            tmp_path / ".betelgeuze/developer_preview_new_user_observation_receipt.json"
+        ),
         "f2g_preflight": tmp_path / ".betelgeuze/f2g_f2h_surface_preflight.local.json",
         "f2g_recovery": (
             tmp_path / ".betelgeuze/f2g_f2h_authoritative_surface_recovery_packet.local.json"
@@ -1217,6 +1220,57 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         },
     )
     _write_json(
+        paths["developer_preview_new_user_observation_receipt"],
+        {
+            "summary": {
+                "status": "blocked_developer_preview_new_user_observation_receipt",
+                "observation_review_required_field_count": 8,
+                "observation_review_ready_field_count": 2,
+                "observation_review_blocked_field_count": 6,
+                "observation_review_primary_field_id": "observer_id_present",
+                "observation_review_primary_blocker": "observer_id_missing",
+                "observation_review_primary_required_action": (
+                    "Record a non-secret observer id in the reviewed receipt."
+                ),
+                "claim_boundary": "new-user observation boundary",
+            },
+            "observation_review_template_rows": [
+                {
+                    "field_id": "observer_id_present",
+                    "label": "Observer ID recorded as derived operator metadata",
+                    "status": "blocked",
+                    "ready": False,
+                    "observed": "missing",
+                    "blocker": "observer_id_missing",
+                    "required_action": (
+                        "Record a non-secret observer id in the reviewed receipt."
+                    ),
+                    "raw_customer_data_allowed": True,
+                    "stores_private_notes": True,
+                    "operator_action_required": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+                {
+                    "field_id": "raw_customer_data_not_stored_in_repo",
+                    "label": "Raw customer data is not stored in the repo",
+                    "status": "pass",
+                    "ready": True,
+                    "observed": "false",
+                    "blocker": "",
+                    "required_action": "",
+                    "raw_customer_data_allowed": True,
+                    "stores_private_notes": True,
+                    "operator_action_required": False,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+            ],
+        },
+    )
+    _write_json(
         paths["f2g_preflight"],
         {
             "summary": {
@@ -1444,6 +1498,9 @@ def _build_payload(tmp_path: Path) -> dict:
         developer_preview_json=paths["developer_preview"],
         developer_preview_clean_checkout_receipt_json=(
             paths["developer_preview_clean_checkout_receipt"]
+        ),
+        developer_preview_new_user_observation_receipt_json=(
+            paths["developer_preview_new_user_observation_receipt"]
         ),
         f2g_f2h_preflight_json=paths["f2g_preflight"],
         f2g_f2h_recovery_json=paths["f2g_recovery"],
@@ -2291,6 +2348,56 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         and row["claim_promotion_allowed"] is False
         for row in summary["developer_preview_clean_checkout_stage5_input_family_rows"]
     )
+    assert summary["developer_preview_new_user_observation_receipt_present"] is True
+    assert summary["developer_preview_new_user_observation_receipt_status"] == (
+        "blocked_developer_preview_new_user_observation_receipt"
+    )
+    assert summary["developer_preview_new_user_observation_required_field_count"] == 8
+    assert summary["developer_preview_new_user_observation_ready_field_count"] == 2
+    assert summary["developer_preview_new_user_observation_blocked_field_count"] == 6
+    assert summary["developer_preview_new_user_observation_primary_field_id"] == (
+        "observer_id_present"
+    )
+    assert summary["developer_preview_new_user_observation_primary_blocker"] == (
+        "observer_id_missing"
+    )
+    assert summary["developer_preview_new_user_observation_primary_required_action"] == (
+        "Record a non-secret observer id in the reviewed receipt."
+    )
+    assert summary["developer_preview_new_user_observation_template_rows"] == [
+        {
+            "field_id": "observer_id_present",
+            "label": "Observer ID recorded as derived operator metadata",
+            "status": "blocked",
+            "ready": False,
+            "observed": "missing",
+            "blocker": "observer_id_missing",
+            "required_action": "Record a non-secret observer id in the reviewed receipt.",
+            "raw_customer_data_allowed": False,
+            "stores_private_notes": False,
+            "operator_action_required": True,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+            "claim_boundary": "new-user observation boundary",
+        },
+        {
+            "field_id": "raw_customer_data_not_stored_in_repo",
+            "label": "Raw customer data is not stored in the repo",
+            "status": "pass",
+            "ready": True,
+            "observed": "false",
+            "blocker": "",
+            "required_action": "",
+            "raw_customer_data_allowed": False,
+            "stores_private_notes": False,
+            "operator_action_required": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+            "claim_boundary": "new-user observation boundary",
+        },
+    ]
     assert summary["developer_preview_receipt_work_order_rows"] == [
         {
             "gate_id": "benchmark_results_clean_checkout_regenerated",
@@ -2861,6 +2968,23 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     )
     assert "clean_checkout_stage5_primary_source_arg=--scores-csv" in (
         panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert (
+        "new_user_observation_receipt=blocked_developer_preview_new_user_observation_receipt"
+        in panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "new_user_observation_fields=8" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "new_user_observation_blocked_fields=6" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "new_user_observation_primary_field=observer_id_present" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert (
+        "new_user_observation_primary_action=Record a non-secret observer id in the reviewed receipt."
+        in panels["developer_preview_final_gates"]["secondary_metric"]
     )
     assert "primary_gate=benchmark_results_clean_checkout_regenerated" in (
         panels["developer_preview_final_gates"]["secondary_metric"]
