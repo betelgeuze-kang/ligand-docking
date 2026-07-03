@@ -452,7 +452,43 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "bundle_tar_member_count": 14,
                 "bundle_validation_pass": True,
                 "release_claim_ready": False,
-            }
+                "claim_boundary": "bundle fixture boundary",
+            },
+            "rows": [
+                {
+                    "artifact_id": "ai_md_engine_kpi_report_json",
+                    "role": "local_pc_runtime_report",
+                    "artifact_path": "runs/ai_md_engine_kpi_report_current.json",
+                    "bundle_arcname": "runs/ai_md_engine_kpi_report_current.json",
+                    "required": True,
+                    "exists": True,
+                    "missing": False,
+                    "included_in_bundle": True,
+                    "release_blocker": False,
+                    "sha256": "abc123",
+                    "size_bytes": 143772,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+                {
+                    "artifact_id": "optional_runtime_plot",
+                    "role": "runtime_plot",
+                    "artifact_path": "runs/ai_md_runtime_scaling_plot_current.svg",
+                    "bundle_arcname": "runs/ai_md_runtime_scaling_plot_current.svg",
+                    "required": False,
+                    "exists": True,
+                    "missing": False,
+                    "included_in_bundle": True,
+                    "release_blocker": False,
+                    "sha256": "def456",
+                    "size_bytes": 2048,
+                    "claim_boundary": "plot artifact row boundary",
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+            ],
         },
     )
     _write_json(
@@ -1120,6 +1156,45 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
     )
     assert summary["evidence_bundle_export_ready"] is True
+    assert summary["evidence_bundle_export_row_count"] == 2
+    assert summary["evidence_bundle_export_blocker_row_count"] == 0
+    assert summary["evidence_bundle_export_required_missing_row_count"] == 0
+    assert summary["evidence_bundle_export_rows"] == [
+        {
+            "artifact_id": "ai_md_engine_kpi_report_json",
+            "role": "local_pc_runtime_report",
+            "artifact_path": "runs/ai_md_engine_kpi_report_current.json",
+            "bundle_arcname": "runs/ai_md_engine_kpi_report_current.json",
+            "required": True,
+            "exists": True,
+            "missing": False,
+            "included_in_bundle": True,
+            "release_blocker": False,
+            "sha256": "abc123",
+            "size_bytes": 143772,
+            "claim_boundary": "bundle fixture boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+        {
+            "artifact_id": "optional_runtime_plot",
+            "role": "runtime_plot",
+            "artifact_path": "runs/ai_md_runtime_scaling_plot_current.svg",
+            "bundle_arcname": "runs/ai_md_runtime_scaling_plot_current.svg",
+            "required": False,
+            "exists": True,
+            "missing": False,
+            "included_in_bundle": True,
+            "release_blocker": False,
+            "sha256": "def456",
+            "size_bytes": 2048,
+            "claim_boundary": "plot artifact row boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+    ]
     assert summary["api_customer_flow_release_evidence_present"] is True
     assert summary["api_customer_flow_release_evidence_ready"] is True
     assert summary["api_customer_flow_release_evidence_status"] == "api_customer_flow_release_evidence_ready"

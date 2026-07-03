@@ -232,6 +232,33 @@ def _api_customer_flow_release_evidence_rows(payload: dict[str, Any]) -> list[di
     return rows
 
 
+def _evidence_bundle_export_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    summary = _summary(payload)
+    claim_boundary = _text(summary.get("claim_boundary")) or CLAIM_BOUNDARY
+    rows: list[dict[str, Any]] = []
+    for row in _rows(payload):
+        rows.append(
+            {
+                "artifact_id": _text(row.get("artifact_id")),
+                "role": _text(row.get("role")),
+                "artifact_path": _text(row.get("artifact_path")),
+                "bundle_arcname": _text(row.get("bundle_arcname")),
+                "required": _bool_true(row.get("required")),
+                "exists": _bool_true(row.get("exists")),
+                "missing": _bool_true(row.get("missing")),
+                "included_in_bundle": _bool_true(row.get("included_in_bundle")),
+                "release_blocker": _bool_true(row.get("release_blocker")),
+                "sha256": _text(row.get("sha256")),
+                "size_bytes": _int(row.get("size_bytes")),
+                "claim_boundary": _text(row.get("claim_boundary")) or claim_boundary,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _hbond_backmap_candidate_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in _rows(payload):
@@ -1001,7 +1028,11 @@ def build_product_operator_cockpit(
     pm_queue_payload = _read_json(pm_priority_queue_json, root=root)
     pm_queue = _summary(pm_queue_payload)
     pm_queue_rows = _rows(pm_queue_payload)
-    evidence_bundle = _summary(_read_json(evidence_bundle_json, root=root))
+    evidence_bundle_payload = _read_json(evidence_bundle_json, root=root)
+    evidence_bundle = _summary(evidence_bundle_payload)
+    evidence_bundle_export_row_preview = _evidence_bundle_export_rows(
+        evidence_bundle_payload
+    )
     api_customer_flow_payload = _read_json(api_customer_flow_json, root=root)
     api_customer_flow = _summary(api_customer_flow_payload)
     api_customer_flow_release_evidence_row_preview = (
@@ -1261,6 +1292,19 @@ def build_product_operator_cockpit(
         _bool_true(evidence_bundle.get("bundle_export_ready"))
         and _bool_true(evidence_bundle.get("bundle_tar_exists"))
         and _bool_true(evidence_bundle.get("bundle_validation_pass"))
+    )
+    evidence_bundle_export_row_count = len(evidence_bundle_export_row_preview)
+    evidence_bundle_export_blocker_row_count = sum(
+        1
+        for row in evidence_bundle_export_row_preview
+        if row["release_blocker"]
+        or row["missing"]
+        or (row["required"] and not row["included_in_bundle"])
+    )
+    evidence_bundle_export_required_missing_row_count = sum(
+        1
+        for row in evidence_bundle_export_row_preview
+        if row["required"] and (row["missing"] or not row["exists"])
     )
     api_customer_flow_present = bool(api_customer_flow)
     api_customer_flow_ready = (
@@ -2267,6 +2311,14 @@ def build_product_operator_cockpit(
             public_vina_adapter_command_after_fill
         ),
         "evidence_bundle_export_ready": evidence_bundle_export_ready,
+        "evidence_bundle_export_row_count": evidence_bundle_export_row_count,
+        "evidence_bundle_export_blocker_row_count": (
+            evidence_bundle_export_blocker_row_count
+        ),
+        "evidence_bundle_export_required_missing_row_count": (
+            evidence_bundle_export_required_missing_row_count
+        ),
+        "evidence_bundle_export_rows": evidence_bundle_export_row_preview,
         "api_customer_flow_release_evidence_present": api_customer_flow_present,
         "api_customer_flow_release_evidence_ready": api_customer_flow_ready,
         "api_customer_flow_release_evidence_status": _text(api_customer_flow.get("status")),

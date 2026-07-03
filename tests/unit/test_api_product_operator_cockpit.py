@@ -360,6 +360,45 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                     "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
                 ),
                 "evidence_bundle_export_ready": True,
+                "evidence_bundle_export_row_count": 2,
+                "evidence_bundle_export_blocker_row_count": 0,
+                "evidence_bundle_export_required_missing_row_count": 0,
+                "evidence_bundle_export_rows": [
+                    {
+                        "artifact_id": "ai_md_engine_kpi_report_json",
+                        "role": "local_pc_runtime_report",
+                        "artifact_path": "runs/ai_md_engine_kpi_report_current.json",
+                        "bundle_arcname": "runs/ai_md_engine_kpi_report_current.json",
+                        "required": True,
+                        "exists": True,
+                        "missing": False,
+                        "included_in_bundle": True,
+                        "release_blocker": False,
+                        "sha256": "abc123",
+                        "size_bytes": 143772,
+                        "claim_boundary": "bundle fixture boundary",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                    {
+                        "artifact_id": "optional_runtime_plot",
+                        "role": "runtime_plot",
+                        "artifact_path": "runs/ai_md_runtime_scaling_plot_current.svg",
+                        "bundle_arcname": "runs/ai_md_runtime_scaling_plot_current.svg",
+                        "required": False,
+                        "exists": True,
+                        "missing": False,
+                        "included_in_bundle": True,
+                        "release_blocker": False,
+                        "sha256": "def456",
+                        "size_bytes": 2048,
+                        "claim_boundary": "plot artifact row boundary",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                ],
                 "api_customer_flow_release_evidence_present": True,
                 "api_customer_flow_release_evidence_ready": True,
                 "api_customer_flow_release_evidence_status": "api_customer_flow_release_evidence_ready",
@@ -924,6 +963,45 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
         "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
     )
     assert response["evidence_bundle_export_ready"] is True
+    assert response["evidence_bundle_export_row_count"] == 2
+    assert response["evidence_bundle_export_blocker_row_count"] == 0
+    assert response["evidence_bundle_export_required_missing_row_count"] == 0
+    assert response["evidence_bundle_export_rows"] == [
+        {
+            "artifact_id": "ai_md_engine_kpi_report_json",
+            "role": "local_pc_runtime_report",
+            "artifact_path": "runs/ai_md_engine_kpi_report_current.json",
+            "bundle_arcname": "runs/ai_md_engine_kpi_report_current.json",
+            "required": True,
+            "exists": True,
+            "missing": False,
+            "included_in_bundle": True,
+            "release_blocker": False,
+            "sha256": "abc123",
+            "size_bytes": 143772,
+            "claim_boundary": "bundle fixture boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+        {
+            "artifact_id": "optional_runtime_plot",
+            "role": "runtime_plot",
+            "artifact_path": "runs/ai_md_runtime_scaling_plot_current.svg",
+            "bundle_arcname": "runs/ai_md_runtime_scaling_plot_current.svg",
+            "required": False,
+            "exists": True,
+            "missing": False,
+            "included_in_bundle": True,
+            "release_blocker": False,
+            "sha256": "def456",
+            "size_bytes": 2048,
+            "claim_boundary": "plot artifact row boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+    ]
     assert response["api_customer_flow_release_evidence_present"] is True
     assert response["api_customer_flow_release_evidence_ready"] is True
     assert response["api_customer_flow_release_evidence_status"] == "api_customer_flow_release_evidence_ready"
@@ -1395,6 +1473,10 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["public_benchmark_metric_source_receipt_csv"] == ""
     assert response["public_benchmark_vina_gnina_adapter_command_after_fill"] == ""
     assert response["evidence_bundle_export_ready"] is False
+    assert response["evidence_bundle_export_row_count"] == 0
+    assert response["evidence_bundle_export_blocker_row_count"] == 0
+    assert response["evidence_bundle_export_required_missing_row_count"] == 0
+    assert response["evidence_bundle_export_rows"] == []
     assert response["api_customer_flow_release_evidence_present"] is False
     assert response["api_customer_flow_release_evidence_ready"] is False
     assert response["api_customer_flow_release_evidence_status"] == ""

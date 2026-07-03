@@ -174,6 +174,34 @@ def _api_customer_flow_release_evidence_rows(value: Any) -> list[dict[str, Any]]
     return evidence_rows
 
 
+def _evidence_bundle_export_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    bundle_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        bundle_rows.append(
+            {
+                "artifact_id": str(row.get("artifact_id") or ""),
+                "role": str(row.get("role") or ""),
+                "artifact_path": str(row.get("artifact_path") or ""),
+                "bundle_arcname": str(row.get("bundle_arcname") or ""),
+                "required": bool(row.get("required") is True),
+                "exists": bool(row.get("exists") is True),
+                "missing": bool(row.get("missing") is True),
+                "included_in_bundle": bool(row.get("included_in_bundle") is True),
+                "release_blocker": bool(row.get("release_blocker") is True),
+                "sha256": str(row.get("sha256") or ""),
+                "size_bytes": _int(row.get("size_bytes")),
+                "claim_boundary": str(row.get("claim_boundary") or CLAIM_BOUNDARY),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return bundle_rows
+
+
 def _hbond_backmap_candidate_rows(value: Any) -> list[dict[str, Any]]:
     rows = value if isinstance(value, list) else []
     candidate_rows: list[dict[str, Any]] = []
@@ -632,6 +660,10 @@ def _missing_response() -> dict[str, Any]:
         "public_benchmark_metric_source_receipt_csv": "",
         "public_benchmark_vina_gnina_adapter_command_after_fill": "",
         "evidence_bundle_export_ready": False,
+        "evidence_bundle_export_row_count": 0,
+        "evidence_bundle_export_blocker_row_count": 0,
+        "evidence_bundle_export_required_missing_row_count": 0,
+        "evidence_bundle_export_rows": [],
         "api_customer_flow_release_evidence_present": False,
         "api_customer_flow_release_evidence_ready": False,
         "api_customer_flow_release_evidence_status": "",
@@ -986,6 +1018,18 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
             summary.get("public_benchmark_vina_gnina_adapter_command_after_fill") or ""
         ),
         "evidence_bundle_export_ready": bool(summary.get("evidence_bundle_export_ready") is True),
+        "evidence_bundle_export_row_count": _int(
+            summary.get("evidence_bundle_export_row_count")
+        ),
+        "evidence_bundle_export_blocker_row_count": _int(
+            summary.get("evidence_bundle_export_blocker_row_count")
+        ),
+        "evidence_bundle_export_required_missing_row_count": _int(
+            summary.get("evidence_bundle_export_required_missing_row_count")
+        ),
+        "evidence_bundle_export_rows": _evidence_bundle_export_rows(
+            summary.get("evidence_bundle_export_rows")
+        ),
         "api_customer_flow_release_evidence_present": bool(
             summary.get("api_customer_flow_release_evidence_present") is True
         ),
