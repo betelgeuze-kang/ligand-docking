@@ -40,8 +40,38 @@ def _write_artifact(path: Path) -> None:
                     "docking_results_emitted": False,
                 },
                 "targets": [
-                    {"target_id": "DRD2", "gate_status": "blocked", "claim_safe": False},
-                    {"target_id": "HTR2A", "gate_status": "green", "claim_safe": True},
+                    {
+                        "target_id": "DRD2",
+                        "gate_status": "blocked",
+                        "claim_safe": False,
+                        "ranking_pr_auc": 0.41,
+                        "ranking_pr_auc_ci_low": 0.32,
+                        "top20_hit_rate": 0.1,
+                        "decoys_above_positive_count": 2,
+                        "positive_target_rank": 3,
+                        "anchor_margin_a": -0.5,
+                        "positive_anchor_distance_a": 5.1,
+                        "top_decoy_anchor_distance_a": 4.6,
+                        "decoy_class_counts": {"over_anchored": 1, "same_signature": 1},
+                        "root_cause_tags": "over_anchored;same_signature",
+                        "blockers": ["ranking_pr_auc_ci_low_below_min"],
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                    {
+                        "target_id": "HTR2A",
+                        "gate_status": "green",
+                        "claim_safe": True,
+                        "ranking_pr_auc": 0.71,
+                        "ranking_pr_auc_ci_low": 0.56,
+                        "top20_hit_rate": 1.0,
+                        "decoys_above_positive_count": 0,
+                        "positive_target_rank": 1,
+                        "anchor_margin_a": 0.25,
+                        "positive_anchor_distance_a": 4.2,
+                        "top_decoy_anchor_distance_a": 4.45,
+                    },
                     {"target_id": "OPRM1", "gate_status": "blocked", "claim_safe": False},
                 ],
                 "claim_boundary": "GPCR hard-decoy suite contract ...",
@@ -62,6 +92,12 @@ def test_gpcr_hard_decoy_route_missing_artifact_fail_closed(tmp_path, monkeypatc
     assert payload["first_blocked_required_target"] == "DRD2"
     assert payload["target_count"] == 0
     assert payload["targets"] == []
+    assert payload["blocker_panel_ready"] is False
+    assert payload["target_rows"] == []
+    assert payload["blocker_row_count"] == 1
+    assert payload["blocker_rows"][0]["blocker_id"] == "gpcr_hard_decoy_suite_report_missing"
+    assert payload["blocker_rows"][0]["claim_promotion_allowed"] is False
+    assert payload["claim_promotion_allowed"] is False
     assert payload["execution_enabled"] is False
     assert payload["docking_results_emitted"] is False
     assert payload["external_state_mutated"] is False
@@ -81,6 +117,44 @@ def test_gpcr_hard_decoy_route_present_artifact_response(tmp_path, monkeypatch) 
     assert payload["first_blocked_required_target"] == "DRD2"
     assert payload["gate"] == {"ci_low_min": 0.45, "top20_min": 0.2}
     assert len(payload["targets"]) == 3
+    assert payload["blocker_panel_ready"] is True
+    assert payload["target_metric_row_count"] == 3
+    assert payload["target_metric_green_row_count"] == 1
+    assert payload["blocker_row_count"] == 3
+    assert payload["blocker_rows"][0]["blocker_id"] == "broad_gpcr_claim_locked"
+    assert payload["blocker_rows"][0]["blocker_type"] == "family_claim_lock"
+    assert payload["blocker_rows"][0]["claim_promotion_allowed"] is False
+    assert payload["target_rows"][0] == {
+        "target_id": "DRD2",
+        "gate_status": "blocked",
+        "claim_safe": False,
+        "metric_gate_pass": False,
+        "ranking_pr_auc": 0.41,
+        "ranking_pr_auc_ci_low": 0.32,
+        "top20_hit_rate": 0.1,
+        "decoys_above_positive_count": 2,
+        "positive_target_rank": 3,
+        "positive_count": 0,
+        "retained_positive_count": 0,
+        "retained_target_row_count": 0,
+        "anchor_margin_a": -0.5,
+        "positive_not_out_anchored": False,
+        "positive_anchor_distance_a": 5.1,
+        "top_decoy_anchor_distance_a": 4.6,
+        "top_decoy_retained_count": 0,
+        "decoy_class_counts": {"over_anchored": 1, "same_signature": 1},
+        "root_cause_tags": ["over_anchored", "same_signature"],
+        "blockers": ["ranking_pr_auc_ci_low_below_min"],
+        "operator_action_required": True,
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": False,
+        "claim_promotion_allowed": False,
+    }
+    assert payload["target_rows"][1]["metric_gate_pass"] is True
+    assert payload["target_rows"][1]["operator_action_required"] is False
+    assert payload["target_rows"][1]["claim_promotion_allowed"] is False
+    assert payload["claim_promotion_allowed"] is False
     assert payload["execution_enabled"] is False
     assert payload["docking_results_emitted"] is False
     assert payload["external_state_mutated"] is False

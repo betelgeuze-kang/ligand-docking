@@ -31,6 +31,143 @@ def _read_json_object(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
+def _int(value: Any) -> int:
+    try:
+        return int(float(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _float_or_none(value: Any) -> float | None:
+    if value in ("", None):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _string_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value if str(item or "").strip()]
+    if isinstance(value, str) and value.strip():
+        return [part.strip() for part in value.replace(";", ",").split(",") if part.strip()]
+    return []
+
+
+def _int_dict(value: Any) -> dict[str, int]:
+    if not isinstance(value, dict):
+        return {}
+    return {str(key): _int(val) for key, val in value.items()}
+
+
+def _target_rows(targets: list[Any]) -> list[dict[str, Any]]:
+    target_rows: list[dict[str, Any]] = []
+    for row in targets:
+        if not isinstance(row, dict):
+            continue
+        blockers = _string_list(row.get("blockers"))
+        claim_safe = bool(row.get("claim_safe") is True)
+        gate_status = str(row.get("gate_status") or "")
+        anchor_margin = _float_or_none(row.get("anchor_margin_a"))
+        target_rows.append(
+            {
+                "target_id": str(row.get("target_id") or ""),
+                "gate_status": gate_status,
+                "claim_safe": claim_safe,
+                "metric_gate_pass": bool(claim_safe and gate_status == "green"),
+                "ranking_pr_auc": _float_or_none(row.get("ranking_pr_auc")),
+                "ranking_pr_auc_ci_low": _float_or_none(row.get("ranking_pr_auc_ci_low")),
+                "top20_hit_rate": _float_or_none(row.get("top20_hit_rate")),
+                "decoys_above_positive_count": _int(row.get("decoys_above_positive_count")),
+                "positive_target_rank": _int(row.get("positive_target_rank")),
+                "positive_count": _int(row.get("positive_count")),
+                "retained_positive_count": _int(row.get("retained_positive_count")),
+                "retained_target_row_count": _int(row.get("retained_target_row_count")),
+                "anchor_margin_a": anchor_margin,
+                "positive_not_out_anchored": bool(anchor_margin is not None and anchor_margin >= 0.0),
+                "positive_anchor_distance_a": _float_or_none(row.get("positive_anchor_distance_a")),
+                "top_decoy_anchor_distance_a": _float_or_none(
+                    row.get("top_decoy_anchor_distance_a")
+                ),
+                "top_decoy_retained_count": _int(row.get("top_decoy_retained_count")),
+                "decoy_class_counts": _int_dict(row.get("decoy_class_counts")),
+                "root_cause_tags": _string_list(row.get("root_cause_tags")),
+                "blockers": blockers,
+                "operator_action_required": bool((not claim_safe) or gate_status != "green" or blockers),
+                "execution_enabled": False,
+                "docking_results_emitted": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return target_rows
+
+
+def _blocker_rows(summary: dict[str, Any], target_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    blocker_rows: list[dict[str, Any]] = []
+    if summary.get("claim_locked") is True or summary.get("family_claim_safe") is not True:
+        blocker_rows.append(
+            {
+                "blocker_id": "broad_gpcr_claim_locked",
+                "target_id": "",
+                "blocker_type": "family_claim_lock",
+                "status": str(summary.get("status") or ""),
+                "claim_locked": bool(summary.get("claim_locked") is True),
+                "claim_safe": False,
+                "reason": str(summary.get("claim_lock_reason") or "family_claim_safe_not_true"),
+                "next_required_step": str(
+                    summary.get("claim_lock_reason")
+                    or "Clear all target gates and ledger review before broad GPCR/router promotion."
+                ),
+                "operator_action_required": True,
+                "execution_enabled": False,
+                "docking_results_emitted": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    for target_id in _string_list(summary.get("missing_required_target_ids")):
+        blocker_rows.append(
+            {
+                "blocker_id": "missing_required_target",
+                "target_id": target_id,
+                "blocker_type": "missing_target_row",
+                "status": "missing",
+                "claim_locked": True,
+                "claim_safe": False,
+                "reason": "required target row missing",
+                "next_required_step": "Add the required target row and rerun the hard-decoy suite.",
+                "operator_action_required": True,
+                "execution_enabled": False,
+                "docking_results_emitted": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    for row in target_rows:
+        if row["operator_action_required"] is not True:
+            continue
+        blocker_rows.append(
+            {
+                "blocker_id": "target_metric_gate_blocked",
+                "target_id": row["target_id"],
+                "blocker_type": "target_metric_gate",
+                "status": row["gate_status"],
+                "claim_locked": True,
+                "claim_safe": False,
+                "reason": ",".join(row["blockers"]) or "target metric gate not green",
+                "next_required_step": "Repair target-specific hard-decoy ranking, decoy separation, or anchor support evidence.",
+                "operator_action_required": True,
+                "execution_enabled": False,
+                "docking_results_emitted": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return blocker_rows
+
+
 @router.get("/gpcr-hard-decoy-suite-report")
 async def get_product_gpcr_hard_decoy_suite_report() -> dict[str, Any]:
     """Return the read-only GPCR hard-decoy suite gate surface.
@@ -58,12 +195,41 @@ async def get_product_gpcr_hard_decoy_suite_report() -> dict[str, Any]:
             "missing_required_target_ids": list(_DEFAULT_REQUIRED_TARGET_IDS),
             "first_blocked_required_target": _DEFAULT_REQUIRED_TARGET_IDS[0],
             "gate": {},
+            "claim_locked": True,
+            "claim_lock_reason": "gpcr_hard_decoy_suite_report_missing",
+            "diagnostic_family_claim_safe_before_claim_lock": False,
+            "diagnostic_status_before_claim_lock": "",
+            "blocker_panel_ready": False,
+            "target_metric_row_count": 0,
+            "target_metric_green_row_count": 0,
+            "target_rows": [],
+            "blocker_row_count": 1,
+            "blocker_rows": [
+                {
+                    "blocker_id": "gpcr_hard_decoy_suite_report_missing",
+                    "target_id": "",
+                    "blocker_type": "missing_artifact",
+                    "status": "missing_gpcr_hard_decoy_suite_report",
+                    "claim_locked": True,
+                    "claim_safe": False,
+                    "reason": "local GPCR hard-decoy suite artifact is missing or invalid",
+                    "next_required_step": "Regenerate the GPCR hard-decoy suite report before any broad GPCR/router claim review.",
+                    "operator_action_required": True,
+                    "execution_enabled": False,
+                    "docking_results_emitted": False,
+                    "external_state_mutated": False,
+                    "claim_promotion_allowed": False,
+                }
+            ],
+            "claim_promotion_allowed": False,
             "execution_enabled": False,
             "docking_results_emitted": False,
             "external_state_mutated": False,
             "targets": [],
             "claim_boundary": _CLAIM_BOUNDARY_MISSING,
         }
+    target_rows = _target_rows(targets)
+    blocker_rows = _blocker_rows(summary, target_rows)
     return {
         "status": summary.get("status"),
         "artifact_path": str(GPCR_HARD_DECOY_SUITE_ARTIFACT),
@@ -77,6 +243,21 @@ async def get_product_gpcr_hard_decoy_suite_report() -> dict[str, Any]:
         "missing_required_target_ids": summary.get("missing_required_target_ids", []),
         "first_blocked_required_target": summary.get("first_blocked_required_target", ""),
         "gate": summary.get("gate", {}),
+        "claim_locked": bool(summary.get("claim_locked") is True),
+        "claim_lock_reason": str(summary.get("claim_lock_reason") or ""),
+        "diagnostic_family_claim_safe_before_claim_lock": bool(
+            summary.get("diagnostic_family_claim_safe_before_claim_lock") is True
+        ),
+        "diagnostic_status_before_claim_lock": str(
+            summary.get("diagnostic_status_before_claim_lock") or ""
+        ),
+        "blocker_panel_ready": True,
+        "target_metric_row_count": len(target_rows),
+        "target_metric_green_row_count": sum(1 for row in target_rows if row["metric_gate_pass"]),
+        "target_rows": target_rows,
+        "blocker_row_count": len(blocker_rows),
+        "blocker_rows": blocker_rows,
+        "claim_promotion_allowed": False,
         "execution_enabled": False,
         "docking_results_emitted": False,
         "external_state_mutated": False,
