@@ -150,6 +150,30 @@ def _customer_shadow_work_order_rows(value: Any) -> list[dict[str, Any]]:
     return work_rows
 
 
+def _api_customer_flow_release_evidence_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    evidence_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        evidence_rows.append(
+            {
+                "check_id": str(row.get("check_id") or ""),
+                "status": str(row.get("status") or ""),
+                "release_blocker": bool(row.get("release_blocker") is True),
+                "artifact_path": str(row.get("artifact_path") or ""),
+                "required": str(row.get("required") or ""),
+                "observed": str(row.get("observed") or ""),
+                "reason": str(row.get("reason") or ""),
+                "claim_boundary": str(row.get("claim_boundary") or CLAIM_BOUNDARY),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return evidence_rows
+
+
 def _hbond_backmap_candidate_rows(value: Any) -> list[dict[str, Any]]:
     rows = value if isinstance(value, list) else []
     candidate_rows: list[dict[str, Any]] = []
@@ -618,6 +642,9 @@ def _missing_response() -> dict[str, Any]:
         "api_customer_flow_result_manifest_signature_verified": False,
         "api_customer_flow_restricted_runtime_ready": False,
         "api_customer_flow_bundle_validation_ready": False,
+        "api_customer_flow_release_evidence_row_count": 0,
+        "api_customer_flow_release_evidence_blocker_row_count": 0,
+        "api_customer_flow_release_evidence_rows": [],
         "customer_shadow_paid_pilot_evidence_ready": False,
         "customer_shadow_real_row_count": 0,
         "customer_shadow_completed_case_count": 0,
@@ -988,6 +1015,17 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "api_customer_flow_bundle_validation_ready": bool(
             summary.get("api_customer_flow_bundle_validation_ready") is True
+        ),
+        "api_customer_flow_release_evidence_row_count": _int(
+            summary.get("api_customer_flow_release_evidence_row_count")
+        ),
+        "api_customer_flow_release_evidence_blocker_row_count": _int(
+            summary.get("api_customer_flow_release_evidence_blocker_row_count")
+        ),
+        "api_customer_flow_release_evidence_rows": (
+            _api_customer_flow_release_evidence_rows(
+                summary.get("api_customer_flow_release_evidence_rows")
+            )
         ),
         "customer_shadow_paid_pilot_evidence_ready": bool(
             summary.get("customer_shadow_paid_pilot_evidence_ready") is True

@@ -209,6 +209,29 @@ def _customer_shadow_work_order_rows(payload: dict[str, Any]) -> list[dict[str, 
     return rows
 
 
+def _api_customer_flow_release_evidence_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    summary = _summary(payload)
+    claim_boundary = _text(summary.get("claim_boundary")) or CLAIM_BOUNDARY
+    rows: list[dict[str, Any]] = []
+    for row in _rows(payload):
+        rows.append(
+            {
+                "check_id": _text(row.get("check_id")),
+                "status": _text(row.get("status")),
+                "release_blocker": _bool_true(row.get("release_blocker")),
+                "artifact_path": _text(row.get("artifact_path")),
+                "required": _text(row.get("required")),
+                "observed": _text(row.get("observed")),
+                "reason": _text(row.get("reason")),
+                "claim_boundary": _text(row.get("claim_boundary")) or claim_boundary,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _hbond_backmap_candidate_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in _rows(payload):
@@ -979,7 +1002,11 @@ def build_product_operator_cockpit(
     pm_queue = _summary(pm_queue_payload)
     pm_queue_rows = _rows(pm_queue_payload)
     evidence_bundle = _summary(_read_json(evidence_bundle_json, root=root))
-    api_customer_flow = _summary(_read_json(api_customer_flow_json, root=root))
+    api_customer_flow_payload = _read_json(api_customer_flow_json, root=root)
+    api_customer_flow = _summary(api_customer_flow_payload)
+    api_customer_flow_release_evidence_row_preview = (
+        _api_customer_flow_release_evidence_rows(api_customer_flow_payload)
+    )
     customer_shadow_payload = _read_json(customer_shadow_json, root=root)
     customer_shadow = _summary(customer_shadow_payload)
     customer_shadow_work_order_row_preview = _customer_shadow_work_order_rows(
@@ -1244,6 +1271,14 @@ def build_product_operator_cockpit(
         and _bool_true(api_customer_flow.get("result_manifest_signature_verified"))
         and _bool_true(api_customer_flow.get("bundle_validation_ready"))
         and _int(api_customer_flow.get("blocker_count")) == 0
+    )
+    api_customer_flow_release_evidence_row_count = len(
+        api_customer_flow_release_evidence_row_preview
+    )
+    api_customer_flow_release_evidence_blocker_row_count = sum(
+        1
+        for row in api_customer_flow_release_evidence_row_preview
+        if row["release_blocker"] or _text(row["status"]).lower() != "pass"
     )
 
     customer_shadow_paid_pilot_ready = _bool_true(customer_shadow.get("paid_pilot_evidence_ready"))
@@ -2249,6 +2284,15 @@ def build_product_operator_cockpit(
         ),
         "api_customer_flow_bundle_validation_ready": _bool_true(
             api_customer_flow.get("bundle_validation_ready")
+        ),
+        "api_customer_flow_release_evidence_row_count": (
+            api_customer_flow_release_evidence_row_count
+        ),
+        "api_customer_flow_release_evidence_blocker_row_count": (
+            api_customer_flow_release_evidence_blocker_row_count
+        ),
+        "api_customer_flow_release_evidence_rows": (
+            api_customer_flow_release_evidence_row_preview
         ),
         "customer_shadow_paid_pilot_evidence_ready": customer_shadow_paid_pilot_ready,
         "customer_shadow_real_row_count": customer_shadow_real_row_count,

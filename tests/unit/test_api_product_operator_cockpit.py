@@ -370,6 +370,39 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "api_customer_flow_result_manifest_signature_verified": True,
                 "api_customer_flow_restricted_runtime_ready": True,
                 "api_customer_flow_bundle_validation_ready": True,
+                "api_customer_flow_release_evidence_row_count": 2,
+                "api_customer_flow_release_evidence_blocker_row_count": 0,
+                "api_customer_flow_release_evidence_rows": [
+                    {
+                        "check_id": "tier_alpha_smoke_live_job_ready",
+                        "status": "pass",
+                        "release_blocker": False,
+                        "artifact_path": "runs/tier_alpha_adrb2_dispatch_smoke_current.json",
+                        "required": "tier alpha smoke pass",
+                        "observed": "runner_execution_ok=True",
+                        "reason": "prove the validated runner drained a restricted job",
+                        "claim_boundary": "api customer flow fixture boundary",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                    {
+                        "check_id": "bundle_validation_ready",
+                        "status": "pass",
+                        "release_blocker": False,
+                        "artifact_path": (
+                            "runs/product_bundle_contract_current.json;"
+                            "runs/product_delivery_evidence_contract_current.json"
+                        ),
+                        "required": "bundle validation passed",
+                        "observed": "bundle_validation=True;delivery_claim=True",
+                        "reason": "customer flow terminates in validated bundle gates",
+                        "claim_boundary": "bundle validation row boundary",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                ],
                 "customer_shadow_paid_pilot_evidence_ready": False,
                 "customer_shadow_real_row_count": 1,
                 "customer_shadow_completed_case_count": 0,
@@ -901,6 +934,39 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["api_customer_flow_result_manifest_signature_verified"] is True
     assert response["api_customer_flow_restricted_runtime_ready"] is True
     assert response["api_customer_flow_bundle_validation_ready"] is True
+    assert response["api_customer_flow_release_evidence_row_count"] == 2
+    assert response["api_customer_flow_release_evidence_blocker_row_count"] == 0
+    assert response["api_customer_flow_release_evidence_rows"] == [
+        {
+            "check_id": "tier_alpha_smoke_live_job_ready",
+            "status": "pass",
+            "release_blocker": False,
+            "artifact_path": "runs/tier_alpha_adrb2_dispatch_smoke_current.json",
+            "required": "tier alpha smoke pass",
+            "observed": "runner_execution_ok=True",
+            "reason": "prove the validated runner drained a restricted job",
+            "claim_boundary": "api customer flow fixture boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+        {
+            "check_id": "bundle_validation_ready",
+            "status": "pass",
+            "release_blocker": False,
+            "artifact_path": (
+                "runs/product_bundle_contract_current.json;"
+                "runs/product_delivery_evidence_contract_current.json"
+            ),
+            "required": "bundle validation passed",
+            "observed": "bundle_validation=True;delivery_claim=True",
+            "reason": "customer flow terminates in validated bundle gates",
+            "claim_boundary": "bundle validation row boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+    ]
     assert response["customer_shadow_paid_pilot_evidence_ready"] is False
     assert response["customer_shadow_real_row_count"] == 1
     assert response["customer_shadow_completed_case_count"] == 0
@@ -1339,6 +1405,9 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["api_customer_flow_result_manifest_signature_verified"] is False
     assert response["api_customer_flow_restricted_runtime_ready"] is False
     assert response["api_customer_flow_bundle_validation_ready"] is False
+    assert response["api_customer_flow_release_evidence_row_count"] == 0
+    assert response["api_customer_flow_release_evidence_blocker_row_count"] == 0
+    assert response["api_customer_flow_release_evidence_rows"] == []
     assert response["customer_shadow_paid_pilot_evidence_ready"] is False
     assert response["customer_shadow_real_row_count"] == 0
     assert response["customer_shadow_completed_case_count"] == 0
