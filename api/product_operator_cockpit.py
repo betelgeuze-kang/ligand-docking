@@ -351,6 +351,40 @@ def _gpcr_promotion_work_order_rows(value: Any) -> list[dict[str, Any]]:
     return work_rows
 
 
+def _developer_preview_gate_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    gate_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        gate_rows.append(
+            {
+                "gate_id": str(row.get("gate_id") or ""),
+                "priority": str(row.get("priority") or ""),
+                "status": str(row.get("status") or ""),
+                "ready": bool(row.get("ready") is True),
+                "receipt_artifacts": str(row.get("receipt_artifacts") or ""),
+                "required_receipt_count": _int(row.get("required_receipt_count")),
+                "present_receipt_count": _int(row.get("present_receipt_count")),
+                "present_blocked_receipt_count": _int(
+                    row.get("present_blocked_receipt_count")
+                ),
+                "receipt_blocker_count": _int(row.get("receipt_blocker_count")),
+                "primary_metric": str(row.get("primary_metric") or ""),
+                "secondary_metric": str(row.get("secondary_metric") or ""),
+                "blocker": str(row.get("blocker") or ""),
+                "blockers": _string_list(row.get("blockers")),
+                "receipt_blockers": _string_list(row.get("receipt_blockers")),
+                "next_required_step": str(row.get("next_required_step") or ""),
+                "claim_boundary": str(row.get("claim_boundary") or ""),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return gate_rows
+
+
 def _developer_preview_receipt_work_order_rows(value: Any) -> list[dict[str, Any]]:
     rows = value if isinstance(value, list) else []
     work_rows: list[dict[str, Any]] = []
@@ -712,6 +746,8 @@ def _missing_response() -> dict[str, Any]:
         "developer_preview_gate_count": 0,
         "developer_preview_ready_gate_count": 0,
         "developer_preview_blocked_gate_count": 0,
+        "developer_preview_gate_row_count": 0,
+        "developer_preview_gate_rows": [],
         "developer_preview_receipt_work_order_row_count": 0,
         "developer_preview_receipt_blocker_count": 0,
         "developer_preview_primary_blocker_id": "",
@@ -1161,6 +1197,12 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "developer_preview_blocked_gate_count": _int(
             summary.get("developer_preview_blocked_gate_count")
+        ),
+        "developer_preview_gate_row_count": _int(
+            summary.get("developer_preview_gate_row_count")
+        ),
+        "developer_preview_gate_rows": _developer_preview_gate_rows(
+            summary.get("developer_preview_gate_rows")
         ),
         "developer_preview_receipt_work_order_row_count": _int(
             summary.get("developer_preview_receipt_work_order_row_count")

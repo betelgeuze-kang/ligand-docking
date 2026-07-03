@@ -391,6 +391,37 @@ def _gpcr_promotion_work_order_rows(payload: dict[str, Any]) -> list[dict[str, A
     return rows
 
 
+def _developer_preview_gate_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _rows(payload):
+        rows.append(
+            {
+                "gate_id": _text(row.get("gate_id")),
+                "priority": _text(row.get("priority")),
+                "status": _text(row.get("status")),
+                "ready": _bool_true(row.get("ready")),
+                "receipt_artifacts": _text(row.get("receipt_artifacts")),
+                "required_receipt_count": _int(row.get("required_receipt_count")),
+                "present_receipt_count": _int(row.get("present_receipt_count")),
+                "present_blocked_receipt_count": _int(
+                    row.get("present_blocked_receipt_count")
+                ),
+                "receipt_blocker_count": _int(row.get("receipt_blocker_count")),
+                "primary_metric": _text(row.get("primary_metric")),
+                "secondary_metric": _text(row.get("secondary_metric")),
+                "blocker": _text(row.get("blocker")),
+                "blockers": _string_list(row.get("blockers")),
+                "receipt_blockers": _string_list(row.get("receipt_blockers")),
+                "next_required_step": _text(row.get("next_required_step")),
+                "claim_boundary": _text(row.get("claim_boundary")),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _developer_preview_receipt_work_order_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in _dict_list(payload, "receipt_work_order_rows"):
@@ -1045,6 +1076,9 @@ def build_product_operator_cockpit(
     )
     developer_preview_payload = _read_json(developer_preview_json, root=root)
     developer_preview = _summary(developer_preview_payload)
+    developer_preview_gate_row_preview = _developer_preview_gate_rows(
+        developer_preview_payload
+    )
     developer_preview_receipt_work_order_row_preview = (
         _developer_preview_receipt_work_order_rows(developer_preview_payload)
     )
@@ -2403,6 +2437,8 @@ def build_product_operator_cockpit(
         "developer_preview_gate_count": developer_preview_gate_count,
         "developer_preview_ready_gate_count": developer_preview_ready_gate_count,
         "developer_preview_blocked_gate_count": developer_preview_blocked_gate_count,
+        "developer_preview_gate_row_count": len(developer_preview_gate_row_preview),
+        "developer_preview_gate_rows": developer_preview_gate_row_preview,
         "developer_preview_receipt_work_order_row_count": developer_preview_receipt_work_order_rows,
         "developer_preview_receipt_blocker_count": developer_preview_receipt_blocker_count,
         "developer_preview_primary_blocker_id": developer_preview_primary_blocker_id,

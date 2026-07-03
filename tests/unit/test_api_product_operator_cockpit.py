@@ -512,6 +512,64 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "developer_preview_gate_count": 6,
                 "developer_preview_ready_gate_count": 3,
                 "developer_preview_blocked_gate_count": 3,
+                "developer_preview_gate_row_count": 2,
+                "developer_preview_gate_rows": [
+                    {
+                        "gate_id": "benchmark_results_clean_checkout_regenerated",
+                        "priority": "A",
+                        "status": "blocked_developer_preview_gate",
+                        "ready": False,
+                        "receipt_artifacts": (
+                            ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+                        ),
+                        "required_receipt_count": 1,
+                        "present_receipt_count": 1,
+                        "present_blocked_receipt_count": 1,
+                        "receipt_blocker_count": 5,
+                        "primary_metric": "required_ready=false; review_ready=false",
+                        "secondary_metric": "present_receipts=1; required_receipts=1",
+                        "blocker": (
+                            ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:"
+                            "status=blocked_developer_preview_clean_checkout_benchmark_receipt"
+                        ),
+                        "blockers": [
+                            ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:"
+                            "status=blocked_developer_preview_clean_checkout_benchmark_receipt"
+                        ],
+                        "receipt_blockers": [
+                            ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:"
+                            "clean_checkout_benchmark_regenerated_not_true"
+                        ],
+                        "next_required_step": "Attach the clean-checkout benchmark receipt.",
+                        "claim_boundary": "developer preview boundary",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                    {
+                        "gate_id": "silent_import_loss_zero",
+                        "priority": "A",
+                        "status": "developer_preview_gate_ready",
+                        "ready": True,
+                        "receipt_artifacts": (
+                            ".betelgeuze/developer_preview_silent_import_receipt.json"
+                        ),
+                        "required_receipt_count": 1,
+                        "present_receipt_count": 1,
+                        "present_blocked_receipt_count": 0,
+                        "receipt_blocker_count": 0,
+                        "primary_metric": "silent_import_loss=0",
+                        "secondary_metric": "present_receipts=1; required_receipts=1",
+                        "blocker": "",
+                        "blockers": [],
+                        "receipt_blockers": [],
+                        "next_required_step": "",
+                        "claim_boundary": "developer preview boundary",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                ],
                 "developer_preview_receipt_work_order_row_count": 29,
                 "developer_preview_receipt_blocker_count": 12,
                 "developer_preview_receipt_work_order_source_blocker_count": 7,
@@ -1115,6 +1173,64 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["developer_preview_gate_count"] == 6
     assert response["developer_preview_ready_gate_count"] == 3
     assert response["developer_preview_blocked_gate_count"] == 3
+    assert response["developer_preview_gate_row_count"] == 2
+    assert response["developer_preview_gate_rows"] == [
+        {
+            "gate_id": "benchmark_results_clean_checkout_regenerated",
+            "priority": "A",
+            "status": "blocked_developer_preview_gate",
+            "ready": False,
+            "receipt_artifacts": (
+                ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+            ),
+            "required_receipt_count": 1,
+            "present_receipt_count": 1,
+            "present_blocked_receipt_count": 1,
+            "receipt_blocker_count": 5,
+            "primary_metric": "required_ready=false; review_ready=false",
+            "secondary_metric": "present_receipts=1; required_receipts=1",
+            "blocker": (
+                ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:"
+                "status=blocked_developer_preview_clean_checkout_benchmark_receipt"
+            ),
+            "blockers": [
+                ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:"
+                "status=blocked_developer_preview_clean_checkout_benchmark_receipt"
+            ],
+            "receipt_blockers": [
+                ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json:"
+                "clean_checkout_benchmark_regenerated_not_true"
+            ],
+            "next_required_step": "Attach the clean-checkout benchmark receipt.",
+            "claim_boundary": "developer preview boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+        {
+            "gate_id": "silent_import_loss_zero",
+            "priority": "A",
+            "status": "developer_preview_gate_ready",
+            "ready": True,
+            "receipt_artifacts": (
+                ".betelgeuze/developer_preview_silent_import_receipt.json"
+            ),
+            "required_receipt_count": 1,
+            "present_receipt_count": 1,
+            "present_blocked_receipt_count": 0,
+            "receipt_blocker_count": 0,
+            "primary_metric": "silent_import_loss=0",
+            "secondary_metric": "present_receipts=1; required_receipts=1",
+            "blocker": "",
+            "blockers": [],
+            "receipt_blockers": [],
+            "next_required_step": "",
+            "claim_boundary": "developer preview boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+    ]
     assert response["developer_preview_receipt_work_order_row_count"] == 29
     assert response["developer_preview_receipt_blocker_count"] == 12
     assert response["developer_preview_receipt_work_order_source_blocker_count"] == 7
@@ -1525,6 +1641,8 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["developer_preview_gate_count"] == 0
     assert response["developer_preview_ready_gate_count"] == 0
     assert response["developer_preview_blocked_gate_count"] == 0
+    assert response["developer_preview_gate_row_count"] == 0
+    assert response["developer_preview_gate_rows"] == []
     assert response["developer_preview_receipt_work_order_row_count"] == 0
     assert response["developer_preview_receipt_blocker_count"] == 0
     assert response["developer_preview_primary_blocker_id"] == ""
