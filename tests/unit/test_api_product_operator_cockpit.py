@@ -275,6 +275,54 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 ],
                 "gpcr_hard_decoy_metric_ready": True,
                 "gpcr_broad_claim_allowed": False,
+                "gpcr_hard_decoy_actual_closure_ready": True,
+                "gpcr_hard_decoy_actual_closure_metrics_ready": True,
+                "gpcr_actual_closure_target_row_count": 1,
+                "gpcr_actual_closure_ready_target_ids": ["DRD2"],
+                "gpcr_actual_closure_requirement_ready_count": 2,
+                "gpcr_actual_closure_requirement_blocked_count": 0,
+                "gpcr_actual_closure_blocker_count": 0,
+                "gpcr_actual_closure_blockers": [],
+                "gpcr_actual_closure_min_anchor_margin_a": 0.428378429,
+                "gpcr_actual_closure_max_decoys_above_positive": 0,
+                "gpcr_actual_closure_target_rows": [
+                    {
+                        "target_id": "DRD2",
+                        "status": "ready",
+                        "actual_values_populated": True,
+                        "closure_ready": True,
+                        "gate_status": "green",
+                        "ranking_pr_auc": 0.7074856066,
+                        "ranking_pr_auc_ci_low": 0.5597832604,
+                        "top20_hit_rate": 1.0,
+                        "decoys_above_positive_count": 0,
+                        "positive_target_rank": 1,
+                        "anchor_margin_a": 0.428378429,
+                        "positive_not_out_anchored_by_top_decoy": True,
+                        "positive_ligand_id": "CHEMBL156164",
+                        "top_decoy_ligand_id": "decoy_CHEMBL217_DRD2_HUMAN_00352",
+                        "over_anchored_decoy_count": 0,
+                        "same_signature_decoy_count": 0,
+                        "multipolar_decoy_count": 0,
+                        "root_cause_tags": [],
+                        "blockers": [],
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    }
+                ],
+                "gpcr_actual_closure_requirement_rows": [
+                    {
+                        "requirement_id": "decoys_above_positive_count_eq_0",
+                        "status": "ready",
+                        "observed": {"effective": 0, "target_total": 0},
+                        "threshold": 0,
+                        "blocker": "",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    }
+                ],
                 "gpcr_phase3_closure_present": True,
                 "gpcr_phase3_closure_evidence_ready": True,
                 "gpcr_phase3_exit_metric_conditions_ready": True,
@@ -1318,6 +1366,56 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     ]
     assert response["gpcr_hard_decoy_metric_ready"] is True
     assert response["gpcr_broad_claim_allowed"] is False
+    assert response["gpcr_hard_decoy_actual_closure_ready"] is True
+    assert response["gpcr_hard_decoy_actual_closure_metrics_ready"] is True
+    assert response["gpcr_actual_closure_target_row_count"] == 1
+    assert response["gpcr_actual_closure_ready_target_ids"] == ["DRD2"]
+    assert response["gpcr_actual_closure_requirement_ready_count"] == 2
+    assert response["gpcr_actual_closure_requirement_blocked_count"] == 0
+    assert response["gpcr_actual_closure_blocker_count"] == 0
+    assert response["gpcr_actual_closure_blockers"] == []
+    assert response["gpcr_actual_closure_min_anchor_margin_a"] == 0.428378429
+    assert response["gpcr_actual_closure_max_decoys_above_positive"] == 0.0
+    assert response["gpcr_actual_closure_target_rows"] == [
+        {
+            "target_id": "DRD2",
+            "status": "ready",
+            "actual_values_populated": True,
+            "closure_ready": True,
+            "gate_status": "green",
+            "ranking_pr_auc": 0.7074856066,
+            "ranking_pr_auc_ci_low": 0.5597832604,
+            "top20_hit_rate": 1.0,
+            "decoys_above_positive_count": 0,
+            "positive_target_rank": 1,
+            "anchor_margin_a": 0.428378429,
+            "positive_not_out_anchored_by_top_decoy": True,
+            "positive_ligand_id": "CHEMBL156164",
+            "top_decoy_ligand_id": "decoy_CHEMBL217_DRD2_HUMAN_00352",
+            "over_anchored_decoy_count": 0,
+            "same_signature_decoy_count": 0,
+            "multipolar_decoy_count": 0,
+            "root_cause_tags": [],
+            "blockers": [],
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
+    assert response["gpcr_actual_closure_requirement_rows"] == [
+        {
+            "requirement_id": "decoys_above_positive_count_eq_0",
+            "status": "ready",
+            "ready": True,
+            "observed": {"effective": 0, "target_total": 0},
+            "threshold": 0,
+            "blocker": "",
+            "operator_action_required": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
     assert response["gpcr_phase3_closure_present"] is True
     assert response["gpcr_phase3_closure_evidence_ready"] is True
     assert response["gpcr_phase3_exit_metric_conditions_ready"] is True
@@ -2230,7 +2328,20 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["goal_readiness_action_required_row_count"] == 0
     assert response["goal_readiness_rows"] == []
     assert response["hbond_backmap_candidate_rows"] == []
+    assert response["gpcr_hard_decoy_metric_ready"] is False
     assert response["gpcr_broad_claim_allowed"] is False
+    assert response["gpcr_hard_decoy_actual_closure_ready"] is False
+    assert response["gpcr_hard_decoy_actual_closure_metrics_ready"] is False
+    assert response["gpcr_actual_closure_target_row_count"] == 0
+    assert response["gpcr_actual_closure_ready_target_ids"] == []
+    assert response["gpcr_actual_closure_requirement_ready_count"] == 0
+    assert response["gpcr_actual_closure_requirement_blocked_count"] == 0
+    assert response["gpcr_actual_closure_blocker_count"] == 0
+    assert response["gpcr_actual_closure_blockers"] == []
+    assert response["gpcr_actual_closure_min_anchor_margin_a"] == 0.0
+    assert response["gpcr_actual_closure_max_decoys_above_positive"] == 0.0
+    assert response["gpcr_actual_closure_target_rows"] == []
+    assert response["gpcr_actual_closure_requirement_rows"] == []
     assert response["gpcr_phase3_closure_present"] is False
     assert response["gpcr_phase3_closure_evidence_ready"] is False
     assert response["gpcr_phase3_exit_metric_conditions_ready"] is False

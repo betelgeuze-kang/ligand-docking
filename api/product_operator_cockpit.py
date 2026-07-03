@@ -574,6 +574,67 @@ def _gpcr_promotion_work_order_rows(value: Any) -> list[dict[str, Any]]:
     return work_rows
 
 
+def _gpcr_actual_closure_target_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    target_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        target_rows.append(
+            {
+                "target_id": str(row.get("target_id") or ""),
+                "status": str(row.get("status") or ""),
+                "actual_values_populated": bool(row.get("actual_values_populated") is True),
+                "closure_ready": bool(row.get("closure_ready") is True),
+                "gate_status": str(row.get("gate_status") or ""),
+                "ranking_pr_auc": _optional_float(row.get("ranking_pr_auc")),
+                "ranking_pr_auc_ci_low": _optional_float(row.get("ranking_pr_auc_ci_low")),
+                "top20_hit_rate": _optional_float(row.get("top20_hit_rate")),
+                "decoys_above_positive_count": _int(row.get("decoys_above_positive_count")),
+                "positive_target_rank": _int(row.get("positive_target_rank")),
+                "anchor_margin_a": _optional_float(row.get("anchor_margin_a")),
+                "positive_not_out_anchored_by_top_decoy": bool(
+                    row.get("positive_not_out_anchored_by_top_decoy") is True
+                ),
+                "positive_ligand_id": str(row.get("positive_ligand_id") or ""),
+                "top_decoy_ligand_id": str(row.get("top_decoy_ligand_id") or ""),
+                "over_anchored_decoy_count": _int(row.get("over_anchored_decoy_count")),
+                "same_signature_decoy_count": _int(row.get("same_signature_decoy_count")),
+                "multipolar_decoy_count": _int(row.get("multipolar_decoy_count")),
+                "root_cause_tags": _string_list(row.get("root_cause_tags")),
+                "blockers": _string_list(row.get("blockers")),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return target_rows
+
+
+def _gpcr_actual_closure_requirement_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    requirement_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        ready = str(row.get("status") or "") == "ready"
+        requirement_rows.append(
+            {
+                "requirement_id": str(row.get("requirement_id") or ""),
+                "status": str(row.get("status") or ""),
+                "ready": ready,
+                "observed": row.get("observed"),
+                "threshold": row.get("threshold"),
+                "blocker": str(row.get("blocker") or ""),
+                "operator_action_required": not ready,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return requirement_rows
+
+
 def _developer_preview_gate_rows(value: Any) -> list[dict[str, Any]]:
     rows = value if isinstance(value, list) else []
     gate_rows: list[dict[str, Any]] = []
@@ -938,6 +999,18 @@ def _missing_response() -> dict[str, Any]:
         "hbond_backmap_candidate_rows": [],
         "gpcr_hard_decoy_metric_ready": False,
         "gpcr_broad_claim_allowed": False,
+        "gpcr_hard_decoy_actual_closure_ready": False,
+        "gpcr_hard_decoy_actual_closure_metrics_ready": False,
+        "gpcr_actual_closure_target_row_count": 0,
+        "gpcr_actual_closure_ready_target_ids": [],
+        "gpcr_actual_closure_requirement_ready_count": 0,
+        "gpcr_actual_closure_requirement_blocked_count": 0,
+        "gpcr_actual_closure_blocker_count": 0,
+        "gpcr_actual_closure_blockers": [],
+        "gpcr_actual_closure_min_anchor_margin_a": 0.0,
+        "gpcr_actual_closure_max_decoys_above_positive": 0.0,
+        "gpcr_actual_closure_target_rows": [],
+        "gpcr_actual_closure_requirement_rows": [],
         "gpcr_phase3_closure_present": False,
         "gpcr_phase3_closure_evidence_ready": False,
         "gpcr_phase3_exit_metric_conditions_ready": False,
@@ -1257,6 +1330,42 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "gpcr_hard_decoy_metric_ready": bool(summary.get("gpcr_hard_decoy_metric_ready") is True),
         "gpcr_broad_claim_allowed": bool(summary.get("gpcr_broad_claim_allowed") is True),
+        "gpcr_hard_decoy_actual_closure_ready": bool(
+            summary.get("gpcr_hard_decoy_actual_closure_ready") is True
+        ),
+        "gpcr_hard_decoy_actual_closure_metrics_ready": bool(
+            summary.get("gpcr_hard_decoy_actual_closure_metrics_ready") is True
+        ),
+        "gpcr_actual_closure_target_row_count": _int(
+            summary.get("gpcr_actual_closure_target_row_count")
+        ),
+        "gpcr_actual_closure_ready_target_ids": _string_list(
+            summary.get("gpcr_actual_closure_ready_target_ids")
+        ),
+        "gpcr_actual_closure_requirement_ready_count": _int(
+            summary.get("gpcr_actual_closure_requirement_ready_count")
+        ),
+        "gpcr_actual_closure_requirement_blocked_count": _int(
+            summary.get("gpcr_actual_closure_requirement_blocked_count")
+        ),
+        "gpcr_actual_closure_blocker_count": _int(
+            summary.get("gpcr_actual_closure_blocker_count")
+        ),
+        "gpcr_actual_closure_blockers": _string_list(
+            summary.get("gpcr_actual_closure_blockers")
+        ),
+        "gpcr_actual_closure_min_anchor_margin_a": _float(
+            summary.get("gpcr_actual_closure_min_anchor_margin_a")
+        ),
+        "gpcr_actual_closure_max_decoys_above_positive": _float(
+            summary.get("gpcr_actual_closure_max_decoys_above_positive")
+        ),
+        "gpcr_actual_closure_target_rows": _gpcr_actual_closure_target_rows(
+            summary.get("gpcr_actual_closure_target_rows")
+        ),
+        "gpcr_actual_closure_requirement_rows": _gpcr_actual_closure_requirement_rows(
+            summary.get("gpcr_actual_closure_requirement_rows")
+        ),
         "gpcr_phase3_closure_present": bool(summary.get("gpcr_phase3_closure_present") is True),
         "gpcr_phase3_closure_evidence_ready": bool(
             summary.get("gpcr_phase3_closure_evidence_ready") is True

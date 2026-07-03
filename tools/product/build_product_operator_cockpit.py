@@ -780,6 +780,61 @@ def _gpcr_promotion_work_order_rows(payload: dict[str, Any]) -> list[dict[str, A
     return rows
 
 
+def _gpcr_actual_closure_target_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _dict_list(payload, "actual_closure_target_rows"):
+        rows.append(
+            {
+                "target_id": _text(row.get("target_id")),
+                "status": _text(row.get("status")),
+                "actual_values_populated": _bool_true(row.get("actual_values_populated")),
+                "closure_ready": _bool_true(row.get("closure_ready")),
+                "gate_status": _text(row.get("gate_status")),
+                "ranking_pr_auc": _float(row.get("ranking_pr_auc")),
+                "ranking_pr_auc_ci_low": _float(row.get("ranking_pr_auc_ci_low")),
+                "top20_hit_rate": _float(row.get("top20_hit_rate")),
+                "decoys_above_positive_count": _int(row.get("decoys_above_positive_count")),
+                "positive_target_rank": _int(row.get("positive_target_rank")),
+                "anchor_margin_a": _float(row.get("anchor_margin_a")),
+                "positive_not_out_anchored_by_top_decoy": _bool_true(
+                    row.get("positive_not_out_anchored_by_top_decoy")
+                ),
+                "positive_ligand_id": _text(row.get("positive_ligand_id")),
+                "top_decoy_ligand_id": _text(row.get("top_decoy_ligand_id")),
+                "over_anchored_decoy_count": _int(row.get("over_anchored_decoy_count")),
+                "same_signature_decoy_count": _int(row.get("same_signature_decoy_count")),
+                "multipolar_decoy_count": _int(row.get("multipolar_decoy_count")),
+                "root_cause_tags": _string_list(row.get("root_cause_tags")),
+                "blockers": _string_list(row.get("blockers")),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
+def _gpcr_actual_closure_requirement_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _dict_list(payload, "actual_closure_requirement_rows"):
+        ready = _text(row.get("status")) == "ready"
+        rows.append(
+            {
+                "requirement_id": _text(row.get("requirement_id")),
+                "status": _text(row.get("status")),
+                "ready": ready,
+                "observed": row.get("observed"),
+                "threshold": row.get("threshold"),
+                "blocker": _text(row.get("blocker")),
+                "operator_action_required": not ready,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _developer_preview_gate_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in _rows(payload):
@@ -1627,6 +1682,10 @@ def build_product_operator_cockpit(
     gpcr_payload = _read_json(gpcr_json, root=root)
     gpcr = _summary(gpcr_payload)
     gpcr_promotion_work_order_row_preview = _gpcr_promotion_work_order_rows(gpcr_payload)
+    gpcr_actual_closure_target_row_preview = _gpcr_actual_closure_target_rows(gpcr_payload)
+    gpcr_actual_closure_requirement_row_preview = _gpcr_actual_closure_requirement_rows(
+        gpcr_payload
+    )
     gpcr_phase3_closure = _summary(_read_json(gpcr_phase3_closure_json, root=root))
     pocketmd_payload = _read_json(pocketmd_json, root=root)
     pocketmd = _summary(pocketmd_payload)
@@ -1835,7 +1894,16 @@ def build_product_operator_cockpit(
     hbond_source_ready = hbond_present and hbond_status == "hbond_backmap_report_ready"
 
     gpcr_present = bool(gpcr)
-    gpcr_metric_ready = _bool_true(gpcr.get("hard_decoy_metric_claim_unlock_ready"))
+    gpcr_actual_closure_field_present = "gpcr_hard_decoy_actual_closure_ready" in gpcr
+    gpcr_actual_closure_ready = _bool_true(
+        gpcr.get("gpcr_hard_decoy_actual_closure_ready")
+    )
+    gpcr_actual_closure_metrics_ready = _bool_true(
+        gpcr.get("gpcr_hard_decoy_actual_closure_metrics_ready")
+    )
+    gpcr_metric_ready = _bool_true(gpcr.get("hard_decoy_metric_claim_unlock_ready")) and (
+        not gpcr_actual_closure_field_present or gpcr_actual_closure_ready
+    )
     gpcr_broad_claim_allowed = all(
         [
             _bool_true(gpcr.get("claim_promotion_allowed")),
@@ -1846,6 +1914,28 @@ def build_product_operator_cockpit(
     gpcr_promotion_work_order_rows = _int(gpcr.get("promotion_work_order_row_count"))
     gpcr_promotion_work_order_lanes = _int(gpcr.get("promotion_work_order_lane_count"))
     gpcr_promotion_work_order_primary = _first_text(gpcr.get("promotion_work_order_primary_blocker"))
+    gpcr_actual_closure_target_row_count = _int(
+        gpcr.get("actual_closure_target_row_count")
+    ) or len(gpcr_actual_closure_target_row_preview)
+    gpcr_actual_closure_ready_target_ids = _string_list(
+        gpcr.get("actual_closure_ready_target_ids")
+    )
+    gpcr_actual_closure_requirement_ready_count = _int(
+        gpcr.get("actual_closure_requirement_ready_count")
+    ) or sum(1 for row in gpcr_actual_closure_requirement_row_preview if row["ready"])
+    gpcr_actual_closure_requirement_blocked_count = _int(
+        gpcr.get("actual_closure_requirement_blocked_count")
+    ) or sum(1 for row in gpcr_actual_closure_requirement_row_preview if not row["ready"])
+    gpcr_actual_closure_blocker_count = _int(gpcr.get("actual_closure_blocker_count"))
+    gpcr_actual_closure_blockers = _string_list(gpcr.get("actual_closure_blockers"))
+    gpcr_actual_closure_min_anchor_margin_a = _min_float_or_zero(
+        gpcr_actual_closure_target_row_preview,
+        "anchor_margin_a",
+    )
+    gpcr_actual_closure_max_decoys_above_positive = _max_float_or_zero(
+        gpcr_actual_closure_target_row_preview,
+        "decoys_above_positive_count",
+    )
     gpcr_phase3_closure_present = bool(gpcr_phase3_closure)
     gpcr_phase3_closure_ready = _bool_true(gpcr_phase3_closure.get("phase3_closure_evidence_ready"))
     gpcr_phase3_exit_metric_ready = _bool_true(
@@ -2805,6 +2895,28 @@ def build_product_operator_cockpit(
                 _metric("top20_hit_rate", gpcr_primary_top20_hit_rate),
             ),
             secondary_metric=_join_metrics(
+                _metric("actual_closure_ready", gpcr_actual_closure_ready),
+                _count_metric("actual_targets", gpcr_actual_closure_target_row_count),
+                _count_metric(
+                    "actual_ready_targets",
+                    len(gpcr_actual_closure_ready_target_ids),
+                ),
+                _count_metric(
+                    "actual_ready_requirements",
+                    gpcr_actual_closure_requirement_ready_count,
+                ),
+                _count_metric(
+                    "actual_blocked_requirements",
+                    gpcr_actual_closure_requirement_blocked_count,
+                ),
+                _metric(
+                    "actual_min_anchor_margin",
+                    gpcr_actual_closure_min_anchor_margin_a,
+                ),
+                _metric(
+                    "actual_max_decoys_above_positive",
+                    gpcr_actual_closure_max_decoys_above_positive,
+                ),
                 _metric(
                     "decoys_above_positive",
                     gpcr_phase3_effective_decoys_above_positive
@@ -3598,6 +3710,28 @@ def build_product_operator_cockpit(
         "hbond_backmap_candidate_rows": hbond_backmap_candidate_row_preview,
         "gpcr_hard_decoy_metric_ready": gpcr_metric_ready,
         "gpcr_broad_claim_allowed": gpcr_broad_claim_allowed,
+        "gpcr_hard_decoy_actual_closure_ready": gpcr_actual_closure_ready,
+        "gpcr_hard_decoy_actual_closure_metrics_ready": gpcr_actual_closure_metrics_ready,
+        "gpcr_actual_closure_target_row_count": gpcr_actual_closure_target_row_count,
+        "gpcr_actual_closure_ready_target_ids": gpcr_actual_closure_ready_target_ids,
+        "gpcr_actual_closure_requirement_ready_count": (
+            gpcr_actual_closure_requirement_ready_count
+        ),
+        "gpcr_actual_closure_requirement_blocked_count": (
+            gpcr_actual_closure_requirement_blocked_count
+        ),
+        "gpcr_actual_closure_blocker_count": gpcr_actual_closure_blocker_count,
+        "gpcr_actual_closure_blockers": gpcr_actual_closure_blockers,
+        "gpcr_actual_closure_min_anchor_margin_a": (
+            gpcr_actual_closure_min_anchor_margin_a
+        ),
+        "gpcr_actual_closure_max_decoys_above_positive": (
+            gpcr_actual_closure_max_decoys_above_positive
+        ),
+        "gpcr_actual_closure_target_rows": gpcr_actual_closure_target_row_preview,
+        "gpcr_actual_closure_requirement_rows": (
+            gpcr_actual_closure_requirement_row_preview
+        ),
         "gpcr_phase3_closure_present": gpcr_phase3_closure_present,
         "gpcr_phase3_closure_evidence_ready": gpcr_phase3_closure_ready,
         "gpcr_phase3_exit_metric_conditions_ready": gpcr_phase3_exit_metric_ready,

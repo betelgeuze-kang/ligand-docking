@@ -206,6 +206,14 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
             "summary": {
                 "status": "gpcr_hard_decoy_claim_unlock_metric_evidence_ready_promotion_locked",
                 "hard_decoy_metric_claim_unlock_ready": True,
+                "gpcr_hard_decoy_actual_closure_ready": True,
+                "gpcr_hard_decoy_actual_closure_metrics_ready": True,
+                "actual_closure_target_row_count": 3,
+                "actual_closure_ready_target_ids": ["DRD2", "HTR2A", "OPRM1"],
+                "actual_closure_requirement_ready_count": 10,
+                "actual_closure_requirement_blocked_count": 0,
+                "actual_closure_blocker_count": 0,
+                "actual_closure_blockers": [],
                 "preregistered_ranking_pr_auc_ci_low": 0.5597832604695224,
                 "preregistered_top20_hit_rate": 1.0,
                 "preregistered_decoys_above_positive_count": 0,
@@ -221,6 +229,102 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                     "scorer_router_promotion_gate_not_ready",
                 ],
             },
+            "actual_closure_target_rows": [
+                {
+                    "target_id": "DRD2",
+                    "status": "ready",
+                    "actual_values_populated": True,
+                    "closure_ready": True,
+                    "gate_status": "green",
+                    "ranking_pr_auc": 0.7074856066,
+                    "ranking_pr_auc_ci_low": 0.5597832604,
+                    "top20_hit_rate": 1.0,
+                    "decoys_above_positive_count": 0,
+                    "positive_target_rank": 1,
+                    "anchor_margin_a": 0.428378429,
+                    "positive_not_out_anchored_by_top_decoy": True,
+                    "positive_ligand_id": "CHEMBL156164",
+                    "top_decoy_ligand_id": "decoy_CHEMBL217_DRD2_HUMAN_00352",
+                    "over_anchored_decoy_count": 0,
+                    "same_signature_decoy_count": 0,
+                    "multipolar_decoy_count": 0,
+                    "root_cause_tags": [],
+                    "blockers": [],
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+                {
+                    "target_id": "HTR2A",
+                    "status": "ready",
+                    "actual_values_populated": True,
+                    "closure_ready": True,
+                    "gate_status": "green",
+                    "ranking_pr_auc": 0.7074856066,
+                    "ranking_pr_auc_ci_low": 0.5597832604,
+                    "top20_hit_rate": 1.0,
+                    "decoys_above_positive_count": 0,
+                    "positive_target_rank": 1,
+                    "anchor_margin_a": 0.0459732453,
+                    "positive_not_out_anchored_by_top_decoy": True,
+                    "positive_ligand_id": "CHEMBL253022",
+                    "top_decoy_ligand_id": "decoy_CHEMBL224_HTR2A_HUMAN_06751",
+                    "over_anchored_decoy_count": 0,
+                    "same_signature_decoy_count": 0,
+                    "multipolar_decoy_count": 0,
+                    "root_cause_tags": [],
+                    "blockers": [],
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+                {
+                    "target_id": "OPRM1",
+                    "status": "ready",
+                    "actual_values_populated": True,
+                    "closure_ready": True,
+                    "gate_status": "green",
+                    "ranking_pr_auc": 0.7074856066,
+                    "ranking_pr_auc_ci_low": 0.5597832604,
+                    "top20_hit_rate": 1.0,
+                    "decoys_above_positive_count": 0,
+                    "positive_target_rank": 1,
+                    "anchor_margin_a": 0.0162301302,
+                    "positive_not_out_anchored_by_top_decoy": True,
+                    "positive_ligand_id": "CHEMBL58362",
+                    "top_decoy_ligand_id": "decoy_CHEMBL233_OPRM1_HUMAN_07326",
+                    "over_anchored_decoy_count": 0,
+                    "same_signature_decoy_count": 0,
+                    "multipolar_decoy_count": 0,
+                    "root_cause_tags": [],
+                    "blockers": [],
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+            ],
+            "actual_closure_requirement_rows": [
+                {
+                    "requirement_id": "drd2_htr2a_oprm1_actual_rows_populated",
+                    "status": "ready",
+                    "observed": ["DRD2", "HTR2A", "OPRM1"],
+                    "threshold": ["DRD2", "HTR2A", "OPRM1"],
+                    "blocker": "",
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+                {
+                    "requirement_id": "decoys_above_positive_count_eq_0",
+                    "status": "ready",
+                    "observed": {"effective": 0, "target_total": 0},
+                    "threshold": 0,
+                    "blocker": "",
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+            ],
             "promotion_work_order_rows": [
                 {
                     "lane_id": "active_scorer",
@@ -1815,6 +1919,52 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     }
     assert summary["gpcr_hard_decoy_metric_ready"] is True
     assert summary["gpcr_broad_claim_allowed"] is False
+    assert summary["gpcr_hard_decoy_actual_closure_ready"] is True
+    assert summary["gpcr_hard_decoy_actual_closure_metrics_ready"] is True
+    assert summary["gpcr_actual_closure_target_row_count"] == 3
+    assert summary["gpcr_actual_closure_ready_target_ids"] == ["DRD2", "HTR2A", "OPRM1"]
+    assert summary["gpcr_actual_closure_requirement_ready_count"] == 10
+    assert summary["gpcr_actual_closure_requirement_blocked_count"] == 0
+    assert summary["gpcr_actual_closure_blocker_count"] == 0
+    assert summary["gpcr_actual_closure_blockers"] == []
+    assert summary["gpcr_actual_closure_min_anchor_margin_a"] == 0.0162301302
+    assert summary["gpcr_actual_closure_max_decoys_above_positive"] == 0.0
+    assert summary["gpcr_actual_closure_target_rows"][0] == {
+        "target_id": "DRD2",
+        "status": "ready",
+        "actual_values_populated": True,
+        "closure_ready": True,
+        "gate_status": "green",
+        "ranking_pr_auc": 0.7074856066,
+        "ranking_pr_auc_ci_low": 0.5597832604,
+        "top20_hit_rate": 1.0,
+        "decoys_above_positive_count": 0,
+        "positive_target_rank": 1,
+        "anchor_margin_a": 0.428378429,
+        "positive_not_out_anchored_by_top_decoy": True,
+        "positive_ligand_id": "CHEMBL156164",
+        "top_decoy_ligand_id": "decoy_CHEMBL217_DRD2_HUMAN_00352",
+        "over_anchored_decoy_count": 0,
+        "same_signature_decoy_count": 0,
+        "multipolar_decoy_count": 0,
+        "root_cause_tags": [],
+        "blockers": [],
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_promotion_allowed": False,
+    }
+    assert summary["gpcr_actual_closure_requirement_rows"][0] == {
+        "requirement_id": "drd2_htr2a_oprm1_actual_rows_populated",
+        "status": "ready",
+        "ready": True,
+        "observed": ["DRD2", "HTR2A", "OPRM1"],
+        "threshold": ["DRD2", "HTR2A", "OPRM1"],
+        "blocker": "",
+        "operator_action_required": False,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_promotion_allowed": False,
+    }
     assert summary["gpcr_phase3_closure_present"] is True
     assert summary["gpcr_phase3_closure_evidence_ready"] is True
     assert summary["gpcr_phase3_exit_metric_conditions_ready"] is True
@@ -2816,6 +2966,13 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "pr_auc_ci_low=0.5598" in panels["gpcr_hard_decoy_blocker_panel"]["primary_metric"]
     assert panels["gpcr_hard_decoy_blocker_panel"]["claim_allowed"] is False
     assert "top20_hit_rate=1" in panels["gpcr_hard_decoy_blocker_panel"]["primary_metric"]
+    assert "actual_closure_ready=true" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
+    assert "actual_targets=3" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
+    assert "actual_ready_targets=3" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
+    assert "actual_ready_requirements=10" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
+    assert "actual_blocked_requirements=0" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
+    assert "actual_min_anchor_margin=0.01623" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
+    assert "actual_max_decoys_above_positive=0" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
     assert "decoys_above_positive=0" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
     assert "phase3_closure_ready=true" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
     assert "phase3_exit_metric_ready=true" in panels["gpcr_hard_decoy_blocker_panel"]["secondary_metric"]
