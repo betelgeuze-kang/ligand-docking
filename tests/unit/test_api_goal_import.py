@@ -1655,6 +1655,9 @@ def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, 
 
     audit_artifact = tmp_path / "runs/public_benchmark_external_receipts_audit_current.json"
     attach_artifact = tmp_path / "runs/public_benchmark_receipt_attach_packet_current.json"
+    score_receipt_artifact = (
+        tmp_path / "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+    )
     audit_artifact.parent.mkdir(parents=True)
     audit_artifact.write_text(
         json.dumps(
@@ -1842,8 +1845,94 @@ def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, 
         ),
         encoding="utf-8",
     )
+    score_receipt_artifact.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "blocked_public_benchmark_vina_gnina_score_template_receipt",
+                    "score_template_receipt_ready": False,
+                    "score_template_validation_ready": False,
+                    "work_order_ready": True,
+                    "score_template_csv": (
+                        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                    ),
+                    "score_template_row_count": 16,
+                    "score_template_filled_score_row_count": 0,
+                    "pending_field_count": 192,
+                    "pending_field_counts": {
+                        "vina_score": 16,
+                        "gnina_score": 16,
+                        "license_ok": 16,
+                        "approval_token": 16,
+                    },
+                    "score_evidence_required_field_count": 12,
+                    "score_evidence_ready_field_count": 0,
+                    "score_evidence_blocked_field_count": 12,
+                    "score_evidence_required_field_ids": [
+                        "vina_score",
+                        "gnina_score",
+                        "comparison_score_source",
+                        "comparison_score_artifact_path",
+                        "comparison_score_artifact_sha256",
+                        "operator_engine_versions",
+                        "operator_prep_policy_sha256",
+                        "operator_method",
+                        "operator_reviewed_at_utc",
+                        "operator_id",
+                        "license_ok",
+                        "approval_token",
+                    ],
+                    "score_evidence_primary_field_id": "vina_score",
+                    "score_evidence_primary_pending_row_count": 16,
+                    "score_evidence_primary_required_action": (
+                        "Fill numeric vina_score values from the same-input engine replay."
+                    ),
+                    "score_template_blocker_count": 5,
+                    "score_template_blockers": [
+                        "same_input_score_values_pending",
+                        "operator_score_metadata_pending",
+                        "license_ok_pending",
+                        "approval_token_pending",
+                    ],
+                    "approval_token_required": (
+                        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES"
+                    ),
+                    "score_value_pending_count": 32,
+                    "operator_metadata_pending_count": 32,
+                    "operator_placeholder_pending_count": 96,
+                    "license_ok_pending_count": 16,
+                    "approval_token_pending_count": 16,
+                },
+                "rows": [
+                    {
+                        "pose_id": "1abc_pose_001",
+                        "complex_id": "1abc",
+                        "status": "blocked",
+                        "score_values_ready": False,
+                        "metadata_ready": False,
+                        "license_ok": False,
+                        "approval_token_ok": False,
+                        "missing_fields": "vina_score;gnina_score;license_ok;approval_token",
+                        "blocker": (
+                            "score_values_missing_or_invalid;"
+                            "license_ok_pending;approval_token_pending"
+                        ),
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
     monkeypatch.setattr(goal_api, "PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT", audit_artifact)
     monkeypatch.setattr(goal_api, "PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT", attach_artifact)
+    monkeypatch.setattr(
+        goal_api,
+        "PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_ARTIFACT",
+        score_receipt_artifact,
+    )
 
     response = asyncio.run(goal_api.get_goal_public_benchmark())
 
@@ -1941,6 +2030,56 @@ def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, 
     assert response["score_evidence_row_work_order_primary_source_artifact"] == (
         "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
     )
+    assert response["vina_gnina_score_template_receipt_present"] is True
+    assert response["vina_gnina_score_template_receipt_status"] == (
+        "blocked_public_benchmark_vina_gnina_score_template_receipt"
+    )
+    assert response["vina_gnina_score_template_receipt_ready"] is False
+    assert response["vina_gnina_score_template_validation_ready"] is False
+    assert response["vina_gnina_score_template_work_order_ready"] is True
+    assert response["vina_gnina_score_template_csv"] == (
+        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+    )
+    assert response["vina_gnina_score_template_row_count"] == 16
+    assert response["vina_gnina_score_template_pending_field_count"] == 192
+    assert response["vina_gnina_score_template_pending_field_counts"] == {
+        "vina_score": 16,
+        "gnina_score": 16,
+        "license_ok": 16,
+        "approval_token": 16,
+    }
+    assert response["vina_gnina_score_template_score_evidence_required_field_count"] == 12
+    assert response["vina_gnina_score_template_score_evidence_blocked_field_count"] == 12
+    assert response["vina_gnina_score_template_score_evidence_primary_field_id"] == "vina_score"
+    assert response["vina_gnina_score_template_score_evidence_primary_pending_row_count"] == 16
+    assert response["vina_gnina_score_template_score_evidence_primary_required_action"] == (
+        "Fill numeric vina_score values from the same-input engine replay."
+    )
+    assert response["vina_gnina_score_template_approval_token_required"] == (
+        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES"
+    )
+    assert response["vina_gnina_score_template_license_ok_pending_count"] == 16
+    assert response["vina_gnina_score_template_approval_token_pending_count"] == 16
+    assert response["vina_gnina_score_template_rows"][0] == {
+        "pose_id": "1abc_pose_001",
+        "complex_id": "1abc",
+        "status": "blocked",
+        "score_values_ready": False,
+        "metadata_ready": False,
+        "license_ok": False,
+        "approval_token_ok": False,
+        "missing_fields": ["vina_score", "gnina_score", "license_ok", "approval_token"],
+        "blockers": [
+            "score_values_missing_or_invalid",
+            "license_ok_pending",
+            "approval_token_pending",
+        ],
+        "operator_action_required": True,
+        "external_beta_claim_allowed": False,
+        "claim_promotion_allowed": False,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+    }
     assert response["vina_gnina_score_value_pending_count"] == 32
     assert response["metric_source_receipt_manual_field_pending_count"] == 510
     assert response["rows"][0]["step_id"] == "casf_pdbbind_default_manifest"
@@ -1962,6 +2101,11 @@ def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, 
         "PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT",
         tmp_path / "missing-attach.json",
     )
+    monkeypatch.setattr(
+        goal_api,
+        "PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_ARTIFACT",
+        tmp_path / "missing-score-template-receipt.json",
+    )
     missing = asyncio.run(goal_api.get_goal_public_benchmark())
     assert missing["status"] == "missing_public_benchmark_receipts"
     assert missing["external_benchmark_receipts_ready"] is False
@@ -1978,6 +2122,8 @@ def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, 
     assert missing["field_work_order_rows"] == []
     assert missing["score_evidence_row_work_order_row_count"] == 0
     assert missing["score_evidence_row_work_order_rows"] == []
+    assert missing["vina_gnina_score_template_receipt_present"] is False
+    assert missing["vina_gnina_score_template_rows"] == []
     assert missing["execution_enabled"] is False
     assert missing["external_state_mutated"] is False
 

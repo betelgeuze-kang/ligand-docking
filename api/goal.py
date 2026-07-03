@@ -60,6 +60,9 @@ PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT = (
 PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT = (
     ROOT / "runs" / "public_benchmark_receipt_attach_packet_current.json"
 )
+PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_ARTIFACT = (
+    ROOT / "runs" / "public_benchmark_vina_gnina_score_template_receipt_current.json"
+)
 PUBLIC_BENCHMARK_SEQUENCE_DEFINITIONS = (
     ("casf_pdbbind_default_manifest", 1, "CASF/PDBBind default manifest"),
     ("subset_dry_run", 2, "subset dry-run"),
@@ -1147,6 +1150,108 @@ def _public_benchmark_sequence_rows(rows: list[dict[str, Any]]) -> list[dict[str
             }
         )
     return sequence_rows
+
+
+def _public_benchmark_vina_gnina_score_template_receipt_surface(
+    receipt_path: Path,
+) -> dict[str, Any]:
+    packet = _read_json_object(receipt_path)
+    summary = _summary(packet)
+    pending_field_counts = summary.get("pending_field_counts")
+    pending_counts = (
+        {str(key): _int(value) for key, value in pending_field_counts.items()}
+        if isinstance(pending_field_counts, dict)
+        else {}
+    )
+    rows: list[dict[str, Any]] = []
+    for row in _rows(packet):
+        rows.append(
+            {
+                "pose_id": str(row.get("pose_id") or ""),
+                "complex_id": str(row.get("complex_id") or ""),
+                "status": str(row.get("status") or ""),
+                "score_values_ready": bool(row.get("score_values_ready") is True),
+                "metadata_ready": bool(row.get("metadata_ready") is True),
+                "license_ok": bool(row.get("license_ok") is True),
+                "approval_token_ok": bool(row.get("approval_token_ok") is True),
+                "missing_fields": _delimited_string_list(row.get("missing_fields")),
+                "blockers": _delimited_string_list(row.get("blocker")),
+                "operator_action_required": str(row.get("status") or "") != "pass",
+                "external_beta_claim_allowed": False,
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+    return {
+        "vina_gnina_score_template_receipt_artifact_path": str(receipt_path),
+        "vina_gnina_score_template_receipt_present": bool(summary),
+        "vina_gnina_score_template_receipt_status": str(summary.get("status") or ""),
+        "vina_gnina_score_template_receipt_ready": bool(
+            summary.get("score_template_receipt_ready") is True
+        ),
+        "vina_gnina_score_template_validation_ready": bool(
+            summary.get("score_template_validation_ready") is True
+        ),
+        "vina_gnina_score_template_work_order_ready": bool(
+            summary.get("work_order_ready") is True
+        ),
+        "vina_gnina_score_template_csv": str(summary.get("score_template_csv") or ""),
+        "vina_gnina_score_template_row_count": _int(summary.get("score_template_row_count")),
+        "vina_gnina_score_template_filled_score_row_count": _int(
+            summary.get("score_template_filled_score_row_count")
+        ),
+        "vina_gnina_score_template_pending_field_count": _int(
+            summary.get("pending_field_count")
+        ),
+        "vina_gnina_score_template_pending_field_counts": pending_counts,
+        "vina_gnina_score_template_score_evidence_required_field_count": _int(
+            summary.get("score_evidence_required_field_count")
+        ),
+        "vina_gnina_score_template_score_evidence_ready_field_count": _int(
+            summary.get("score_evidence_ready_field_count")
+        ),
+        "vina_gnina_score_template_score_evidence_blocked_field_count": _int(
+            summary.get("score_evidence_blocked_field_count")
+        ),
+        "vina_gnina_score_template_score_evidence_required_field_ids": _string_list(
+            summary.get("score_evidence_required_field_ids")
+        ),
+        "vina_gnina_score_template_score_evidence_primary_field_id": str(
+            summary.get("score_evidence_primary_field_id") or ""
+        ),
+        "vina_gnina_score_template_score_evidence_primary_pending_row_count": _int(
+            summary.get("score_evidence_primary_pending_row_count")
+        ),
+        "vina_gnina_score_template_score_evidence_primary_required_action": str(
+            summary.get("score_evidence_primary_required_action") or ""
+        ),
+        "vina_gnina_score_template_blocker_count": _int(
+            summary.get("score_template_blocker_count")
+        ),
+        "vina_gnina_score_template_blockers": _string_list(
+            summary.get("score_template_blockers")
+        ),
+        "vina_gnina_score_template_approval_token_required": str(
+            summary.get("approval_token_required") or ""
+        ),
+        "vina_gnina_score_template_score_value_pending_count": _int(
+            summary.get("score_value_pending_count")
+        ),
+        "vina_gnina_score_template_operator_metadata_pending_count": _int(
+            summary.get("operator_metadata_pending_count")
+        ),
+        "vina_gnina_score_template_operator_placeholder_pending_count": _int(
+            summary.get("operator_placeholder_pending_count")
+        ),
+        "vina_gnina_score_template_license_ok_pending_count": _int(
+            summary.get("license_ok_pending_count")
+        ),
+        "vina_gnina_score_template_approval_token_pending_count": _int(
+            summary.get("approval_token_pending_count")
+        ),
+        "vina_gnina_score_template_rows": rows,
+    }
 
 
 def _accuracy_parity_release_fields(release: dict[str, Any]) -> dict[str, Any]:
@@ -4522,6 +4627,11 @@ async def get_goal_developer_preview() -> dict[str, Any]:
 async def get_goal_public_benchmark() -> dict[str, Any]:
     audit_packet = _read_json_object(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT)
     attach_packet = _read_json_object(PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT)
+    score_template_receipt_surface = (
+        _public_benchmark_vina_gnina_score_template_receipt_surface(
+            PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_ARTIFACT
+        )
+    )
     audit = _summary(audit_packet)
     attach = _summary(attach_packet)
     field_rows_value = attach_packet.get("field_work_order_rows")
@@ -4579,6 +4689,7 @@ async def get_goal_public_benchmark() -> dict[str, Any]:
             "score_evidence_row_work_order_primary_operator_csv": "",
             "score_evidence_row_work_order_primary_source_artifact": "",
             "score_evidence_row_work_order_rows": [],
+            **score_template_receipt_surface,
             **_mutation_flags(),
             "claim_boundary": CLAIM_BOUNDARY,
         }
@@ -4695,6 +4806,7 @@ async def get_goal_public_benchmark() -> dict[str, Any]:
         "receipt_attach_rows": _rows(attach_packet),
         "field_work_order_rows": field_work_order_rows,
         "score_evidence_row_work_order_rows": score_evidence_row_work_order_rows,
+        **score_template_receipt_surface,
         **_mutation_flags(),
         "claim_boundary": attach.get("claim_boundary") or audit.get("claim_boundary") or CLAIM_BOUNDARY,
     }
