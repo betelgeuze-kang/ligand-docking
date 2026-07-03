@@ -665,6 +665,36 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "paid_pilot_evidence_ready": False,
                 "paid_pilot_claim_allowed": False,
             },
+            "rows": [
+                {
+                    "case_id": "customer_shadow_case_0",
+                    "case_slot_id": "customer_shadow_case_0",
+                    "row_kind": "customer_shadow",
+                    "case_domain": "gpcr",
+                    "raw_data_custody": "customer_retained",
+                    "customer_retained_raw_data": True,
+                    "raw_data_stored_in_repo": False,
+                    "redistribution_allowed": False,
+                    "anonymized_result_summary": "Aggregate-only restricted workflow summary.",
+                    "reviewer_id": "reviewer-1",
+                    "reviewer_signoff_status": "pending",
+                    "reviewed_at_utc": "",
+                    "source_artifact_fingerprint": "sha256:source",
+                    "artifact_fingerprint": "sha256:artifact",
+                    "derived_metadata_fields": [
+                        "artifact_fingerprint",
+                        "case_domain",
+                        "input_size_class",
+                        "result_metric_summary",
+                        "runner_profile",
+                    ],
+                    "claim_boundary": "customer shadow fixture boundary",
+                    "raw_data_ingested": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                }
+            ],
             "customer_shadow_work_order_rows": [
                 {
                     "work_order_id": "customer_shadow_case_slot_1",
@@ -1518,6 +1548,39 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
             "claim_promotion_allowed": False,
         }
     ]
+    assert summary["customer_shadow_evidence_row_count"] == 1
+    assert summary["customer_shadow_reviewed_evidence_row_count"] == 0
+    assert summary["customer_shadow_evidence_rows"] == [
+        {
+            "case_id": "customer_shadow_case_0",
+            "case_slot_id": "customer_shadow_case_0",
+            "row_kind": "customer_shadow",
+            "case_domain": "gpcr",
+            "raw_data_custody": "customer_retained",
+            "customer_retained_raw_data": True,
+            "raw_data_stored_in_repo": False,
+            "redistribution_allowed": False,
+            "anonymized_result_summary_present": True,
+            "reviewer_id_present": True,
+            "reviewer_signoff_status": "pending",
+            "reviewed_at_utc": "",
+            "source_artifact_fingerprint": "sha256:source",
+            "artifact_fingerprint": "sha256:artifact",
+            "derived_metadata_fields": [
+                "artifact_fingerprint",
+                "case_domain",
+                "input_size_class",
+                "result_metric_summary",
+                "runner_profile",
+            ],
+            "reviewed_customer_shadow_row_ready": False,
+            "claim_boundary": "customer shadow fixture boundary",
+            "raw_data_ingested": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
     assert summary["customer_shadow_intake_schema_ready"] is True
     assert summary["customer_shadow_minimum_met"] is False
     assert summary["customer_shadow_raw_data_stored_in_repo"] is False
@@ -1992,6 +2055,8 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "minimum_met=false" in panels["customer_shadow_evidence_panel"]["primary_metric"]
     assert "schema_ready=true" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
     assert "real_rows=1" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    assert "evidence_rows=1" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    assert "reviewed_evidence_rows=0" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
     assert "mock_rows=0" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
     assert "invalid_rows=0" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
     assert "retained_raw_data=1" in panels["customer_shadow_evidence_panel"]["secondary_metric"]

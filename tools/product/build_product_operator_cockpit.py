@@ -209,6 +209,58 @@ def _customer_shadow_work_order_rows(payload: dict[str, Any]) -> list[dict[str, 
     return rows
 
 
+def _customer_shadow_evidence_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    summary = _summary(payload)
+    claim_boundary = _text(summary.get("claim_boundary")) or CLAIM_BOUNDARY
+    rows: list[dict[str, Any]] = []
+    for row in _rows(payload):
+        row_kind = _text(row.get("row_kind"))
+        raw_data_custody = _text(row.get("raw_data_custody"))
+        anonymized_summary_present = bool(_text(row.get("anonymized_result_summary")))
+        reviewer_id_present = bool(_text(row.get("reviewer_id")))
+        reviewer_signoff_status = _text(row.get("reviewer_signoff_status"))
+        source_artifact_fingerprint = _text(row.get("source_artifact_fingerprint"))
+        artifact_fingerprint = _text(row.get("artifact_fingerprint"))
+        reviewed_customer_shadow_row_ready = (
+            row_kind == "customer_shadow"
+            and raw_data_custody == "customer_retained"
+            and row.get("customer_retained_raw_data") is True
+            and row.get("raw_data_stored_in_repo") is False
+            and row.get("redistribution_allowed") is False
+            and anonymized_summary_present
+            and reviewer_id_present
+            and reviewer_signoff_status == "approved"
+            and bool(source_artifact_fingerprint)
+            and bool(artifact_fingerprint)
+        )
+        rows.append(
+            {
+                "case_id": _first_text(row.get("case_id"), row.get("case_slot_id")),
+                "case_slot_id": _first_text(row.get("case_slot_id"), row.get("case_id")),
+                "row_kind": row_kind,
+                "case_domain": _text(row.get("case_domain")),
+                "raw_data_custody": raw_data_custody,
+                "customer_retained_raw_data": _bool_true(row.get("customer_retained_raw_data")),
+                "raw_data_stored_in_repo": _bool_true(row.get("raw_data_stored_in_repo")),
+                "redistribution_allowed": _bool_true(row.get("redistribution_allowed")),
+                "anonymized_result_summary_present": anonymized_summary_present,
+                "reviewer_id_present": reviewer_id_present,
+                "reviewer_signoff_status": reviewer_signoff_status,
+                "reviewed_at_utc": _text(row.get("reviewed_at_utc")),
+                "source_artifact_fingerprint": source_artifact_fingerprint,
+                "artifact_fingerprint": artifact_fingerprint,
+                "derived_metadata_fields": _string_list(row.get("derived_metadata_fields")),
+                "reviewed_customer_shadow_row_ready": reviewed_customer_shadow_row_ready,
+                "claim_boundary": _text(row.get("claim_boundary")) or claim_boundary,
+                "raw_data_ingested": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _product_capability_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     summary = _summary(payload)
     claim_boundary = _text(summary.get("claim_boundary")) or CLAIM_BOUNDARY
@@ -1130,6 +1182,9 @@ def build_product_operator_cockpit(
     customer_shadow_work_order_row_preview = _customer_shadow_work_order_rows(
         customer_shadow_payload
     )
+    customer_shadow_evidence_row_preview = _customer_shadow_evidence_rows(
+        customer_shadow_payload
+    )
     developer_preview_payload = _read_json(developer_preview_json, root=root)
     developer_preview = _summary(developer_preview_payload)
     developer_preview_gate_row_preview = _developer_preview_gate_rows(
@@ -1486,6 +1541,12 @@ def build_product_operator_cockpit(
     customer_shadow_required_column_count = _int(customer_shadow.get("required_column_count"))
     customer_shadow_redistribution_required_value = _bool_true(
         customer_shadow.get("redistribution_allowed_required_value")
+    )
+    customer_shadow_evidence_row_count = len(customer_shadow_evidence_row_preview)
+    customer_shadow_reviewed_evidence_row_count = sum(
+        1
+        for row in customer_shadow_evidence_row_preview
+        if row.get("reviewed_customer_shadow_row_ready") is True
     )
     paid_pilot_wording_allowed = release_allowed and customer_shadow_paid_pilot_ready
 
@@ -2205,6 +2266,8 @@ def build_product_operator_cockpit(
             secondary_metric=_join_metrics(
                 _metric("schema_ready", customer_shadow_intake_schema_ready),
                 _count_metric("real_rows", customer_shadow_real_row_count),
+                _count_metric("evidence_rows", customer_shadow_evidence_row_count),
+                _count_metric("reviewed_evidence_rows", customer_shadow_reviewed_evidence_row_count),
                 _count_metric("mock_rows", customer_shadow_mock_fixture_row_count),
                 _count_metric("invalid_rows", customer_shadow_invalid_row_count),
                 _count_metric("retained_raw_data", customer_shadow_retained_raw_data_count),
@@ -2264,6 +2327,8 @@ def build_product_operator_cockpit(
             secondary_metric=_join_metrics(
                 _metric("customer_shadow_ready", customer_shadow_paid_pilot_ready),
                 _count_metric("real_rows", customer_shadow_real_row_count),
+                _count_metric("evidence_rows", customer_shadow_evidence_row_count),
+                _count_metric("reviewed_evidence_rows", customer_shadow_reviewed_evidence_row_count),
                 _count_metric("missing_customer_rows", customer_shadow_missing_case_count),
                 _count_metric("retained_raw_data", customer_shadow_retained_raw_data_count),
                 _count_metric("redistribution_false", customer_shadow_redistribution_false_count),
@@ -2502,6 +2567,9 @@ def build_product_operator_cockpit(
             customer_shadow_work_order_primary_required_source_artifact_fingerprint
         ),
         "customer_shadow_work_order_rows": customer_shadow_work_order_row_preview,
+        "customer_shadow_evidence_row_count": customer_shadow_evidence_row_count,
+        "customer_shadow_reviewed_evidence_row_count": customer_shadow_reviewed_evidence_row_count,
+        "customer_shadow_evidence_rows": customer_shadow_evidence_row_preview,
         "customer_shadow_intake_schema_ready": customer_shadow_intake_schema_ready,
         "customer_shadow_minimum_met": customer_shadow_minimum_met,
         "customer_shadow_raw_data_stored_in_repo": customer_shadow_raw_data_stored_in_repo,

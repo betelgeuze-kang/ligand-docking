@@ -150,6 +150,67 @@ def _customer_shadow_work_order_rows(value: Any) -> list[dict[str, Any]]:
     return work_rows
 
 
+def _customer_shadow_evidence_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    evidence_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        row_kind = str(row.get("row_kind") or "")
+        raw_data_custody = str(row.get("raw_data_custody") or "")
+        anonymized_summary_present = bool(
+            row.get("anonymized_result_summary_present") is True
+            or str(row.get("anonymized_result_summary") or "").strip()
+        )
+        reviewer_id_present = bool(
+            row.get("reviewer_id_present") is True
+            or str(row.get("reviewer_id") or "").strip()
+        )
+        reviewer_signoff_status = str(row.get("reviewer_signoff_status") or "")
+        source_artifact_fingerprint = str(row.get("source_artifact_fingerprint") or "")
+        artifact_fingerprint = str(row.get("artifact_fingerprint") or "")
+        reviewed_customer_shadow_row_ready = bool(
+            row_kind == "customer_shadow"
+            and raw_data_custody == "customer_retained"
+            and row.get("customer_retained_raw_data") is True
+            and row.get("raw_data_stored_in_repo") is False
+            and row.get("redistribution_allowed") is False
+            and anonymized_summary_present
+            and reviewer_id_present
+            and reviewer_signoff_status == "approved"
+            and bool(source_artifact_fingerprint)
+            and bool(artifact_fingerprint)
+        )
+        case_id = str(row.get("case_id") or row.get("case_slot_id") or "")
+        case_slot_id = str(row.get("case_slot_id") or row.get("case_id") or "")
+        evidence_rows.append(
+            {
+                "case_id": case_id,
+                "case_slot_id": case_slot_id,
+                "row_kind": row_kind,
+                "case_domain": str(row.get("case_domain") or ""),
+                "raw_data_custody": raw_data_custody,
+                "customer_retained_raw_data": bool(row.get("customer_retained_raw_data") is True),
+                "raw_data_stored_in_repo": bool(row.get("raw_data_stored_in_repo") is True),
+                "redistribution_allowed": bool(row.get("redistribution_allowed") is True),
+                "anonymized_result_summary_present": anonymized_summary_present,
+                "reviewer_id_present": reviewer_id_present,
+                "reviewer_signoff_status": reviewer_signoff_status,
+                "reviewed_at_utc": str(row.get("reviewed_at_utc") or ""),
+                "source_artifact_fingerprint": source_artifact_fingerprint,
+                "artifact_fingerprint": artifact_fingerprint,
+                "derived_metadata_fields": _string_list(row.get("derived_metadata_fields")),
+                "reviewed_customer_shadow_row_ready": reviewed_customer_shadow_row_ready,
+                "claim_boundary": str(row.get("claim_boundary") or CLAIM_BOUNDARY),
+                "raw_data_ingested": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return evidence_rows
+
+
 def _product_capability_rows(value: Any) -> list[dict[str, Any]]:
     rows = value if isinstance(value, list) else []
     capability_rows: list[dict[str, Any]] = []
@@ -795,6 +856,9 @@ def _missing_response() -> dict[str, Any]:
         "customer_shadow_work_order_primary_required_reviewer_signoff_status": "",
         "customer_shadow_work_order_primary_required_source_artifact_fingerprint": "",
         "customer_shadow_work_order_rows": [],
+        "customer_shadow_evidence_row_count": 0,
+        "customer_shadow_reviewed_evidence_row_count": 0,
+        "customer_shadow_evidence_rows": [],
         "customer_shadow_intake_schema_ready": False,
         "customer_shadow_minimum_met": False,
         "customer_shadow_raw_data_stored_in_repo": False,
@@ -1244,6 +1308,15 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "customer_shadow_work_order_rows": _customer_shadow_work_order_rows(
             summary.get("customer_shadow_work_order_rows")
+        ),
+        "customer_shadow_evidence_row_count": _int(
+            summary.get("customer_shadow_evidence_row_count")
+        ),
+        "customer_shadow_reviewed_evidence_row_count": _int(
+            summary.get("customer_shadow_reviewed_evidence_row_count")
+        ),
+        "customer_shadow_evidence_rows": _customer_shadow_evidence_rows(
+            summary.get("customer_shadow_evidence_rows")
         ),
         "customer_shadow_intake_schema_ready": bool(
             summary.get("customer_shadow_intake_schema_ready") is True

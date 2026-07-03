@@ -588,6 +588,39 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                         "claim_promotion_allowed": True,
                     }
                 ],
+                "customer_shadow_evidence_row_count": 1,
+                "customer_shadow_reviewed_evidence_row_count": 0,
+                "customer_shadow_evidence_rows": [
+                    {
+                        "case_id": "customer_shadow_case_0",
+                        "case_slot_id": "customer_shadow_case_0",
+                        "row_kind": "customer_shadow",
+                        "case_domain": "gpcr",
+                        "raw_data_custody": "customer_retained",
+                        "customer_retained_raw_data": True,
+                        "raw_data_stored_in_repo": False,
+                        "redistribution_allowed": False,
+                        "anonymized_result_summary_present": True,
+                        "reviewer_id_present": True,
+                        "reviewer_signoff_status": "pending",
+                        "reviewed_at_utc": "",
+                        "source_artifact_fingerprint": "sha256:source",
+                        "artifact_fingerprint": "sha256:artifact",
+                        "derived_metadata_fields": [
+                            "artifact_fingerprint",
+                            "case_domain",
+                            "input_size_class",
+                            "result_metric_summary",
+                            "runner_profile",
+                        ],
+                        "reviewed_customer_shadow_row_ready": True,
+                        "claim_boundary": "customer shadow fixture boundary",
+                        "raw_data_ingested": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    }
+                ],
                 "customer_shadow_intake_schema_ready": True,
                 "customer_shadow_minimum_met": False,
                 "customer_shadow_raw_data_stored_in_repo": False,
@@ -1334,6 +1367,39 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
             "claim_promotion_allowed": False,
         }
     ]
+    assert response["customer_shadow_evidence_row_count"] == 1
+    assert response["customer_shadow_reviewed_evidence_row_count"] == 0
+    assert response["customer_shadow_evidence_rows"] == [
+        {
+            "case_id": "customer_shadow_case_0",
+            "case_slot_id": "customer_shadow_case_0",
+            "row_kind": "customer_shadow",
+            "case_domain": "gpcr",
+            "raw_data_custody": "customer_retained",
+            "customer_retained_raw_data": True,
+            "raw_data_stored_in_repo": False,
+            "redistribution_allowed": False,
+            "anonymized_result_summary_present": True,
+            "reviewer_id_present": True,
+            "reviewer_signoff_status": "pending",
+            "reviewed_at_utc": "",
+            "source_artifact_fingerprint": "sha256:source",
+            "artifact_fingerprint": "sha256:artifact",
+            "derived_metadata_fields": [
+                "artifact_fingerprint",
+                "case_domain",
+                "input_size_class",
+                "result_metric_summary",
+                "runner_profile",
+            ],
+            "reviewed_customer_shadow_row_ready": False,
+            "claim_boundary": "customer shadow fixture boundary",
+            "raw_data_ingested": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
     assert response["customer_shadow_intake_schema_ready"] is True
     assert response["customer_shadow_minimum_met"] is False
     assert response["customer_shadow_raw_data_stored_in_repo"] is False
@@ -1808,6 +1874,9 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["customer_shadow_work_order_primary_required_reviewer_signoff_status"] == ""
     assert response["customer_shadow_work_order_primary_required_source_artifact_fingerprint"] == ""
     assert response["customer_shadow_work_order_rows"] == []
+    assert response["customer_shadow_evidence_row_count"] == 0
+    assert response["customer_shadow_reviewed_evidence_row_count"] == 0
+    assert response["customer_shadow_evidence_rows"] == []
     assert response["customer_shadow_intake_schema_ready"] is False
     assert response["customer_shadow_minimum_met"] is False
     assert response["customer_shadow_raw_data_stored_in_repo"] is False
