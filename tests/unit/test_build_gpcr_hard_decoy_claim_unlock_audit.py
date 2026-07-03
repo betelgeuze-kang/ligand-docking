@@ -23,7 +23,78 @@ def _official_diagnostic_green() -> dict[str, object]:
             "green_target_ids": ["DRD2", "HTR2A", "OPRM1"],
             "blocked_target_ids": [],
             "missing_required_target_ids": [],
-        }
+        },
+        "targets": [
+            {
+                "target_id": "DRD2",
+                "gate_status": "green",
+                "claim_safe": True,
+                "ranking_pr_auc": 0.72,
+                "ranking_pr_auc_ci_low": 0.55,
+                "top20_hit_rate": 0.30,
+                "decoys_above_positive_count": 0,
+                "positive_target_rank": 1,
+                "positive_anchor_distance_a": 3.1,
+                "top_decoy_anchor_distance_a": 3.4,
+                "anchor_margin_a": 0.3,
+                "retained_target_row_count": 10000,
+                "retained_positive_count": 4,
+                "top_decoy_retained_count": 9996,
+                "decoy_class_counts": {
+                    "over_anchored": 0,
+                    "same_signature": 0,
+                    "multipolar": 0,
+                },
+                "root_cause_tags": [],
+                "blockers": [],
+            },
+            {
+                "target_id": "HTR2A",
+                "gate_status": "green",
+                "claim_safe": True,
+                "ranking_pr_auc": 0.75,
+                "ranking_pr_auc_ci_low": 0.56,
+                "top20_hit_rate": 0.30,
+                "decoys_above_positive_count": 0,
+                "positive_target_rank": 1,
+                "positive_anchor_distance_a": 3.2,
+                "top_decoy_anchor_distance_a": 3.5,
+                "anchor_margin_a": 0.3,
+                "retained_target_row_count": 10000,
+                "retained_positive_count": 4,
+                "top_decoy_retained_count": 9996,
+                "decoy_class_counts": {
+                    "over_anchored": 0,
+                    "same_signature": 0,
+                    "multipolar": 0,
+                },
+                "root_cause_tags": [],
+                "blockers": [],
+            },
+            {
+                "target_id": "OPRM1",
+                "gate_status": "green",
+                "claim_safe": True,
+                "ranking_pr_auc": 0.78,
+                "ranking_pr_auc_ci_low": 0.57,
+                "top20_hit_rate": 0.30,
+                "decoys_above_positive_count": 0,
+                "positive_target_rank": 1,
+                "positive_anchor_distance_a": 3.3,
+                "top_decoy_anchor_distance_a": 3.6,
+                "anchor_margin_a": 0.3,
+                "retained_target_row_count": 10000,
+                "retained_positive_count": 4,
+                "top_decoy_retained_count": 9996,
+                "decoy_class_counts": {
+                    "over_anchored": 0,
+                    "same_signature": 0,
+                    "multipolar": 0,
+                },
+                "root_cause_tags": [],
+                "blockers": [],
+            },
+        ],
     }
 
 
@@ -154,6 +225,21 @@ def test_claim_unlock_audit_marks_metric_ready_but_promotion_locked(tmp_path: Pa
     assert summary["promotion_work_order_primary_blocker"] == "active_scorer:residual_registry_production_promotion_not_allowed"
     assert summary["effective_phase3_metrics"]["ranking_pr_auc_ci_low"] == 0.5597832604
     assert summary["effective_phase3_metrics"]["decoys_above_positive_count"] == 0
+    assert summary["gpcr_hard_decoy_actual_closure_metrics_ready"] is True
+    assert summary["gpcr_hard_decoy_actual_closure_ready"] is True
+    assert summary["actual_closure_blockers"] == []
+    assert summary["actual_closure_metric_blockers"] == []
+    assert summary["actual_closure_ready_target_ids"] == ["DRD2", "HTR2A", "OPRM1"]
+    actual_rows = {row["target_id"]: row for row in payload["actual_closure_target_rows"]}
+    assert set(actual_rows) == {"DRD2", "HTR2A", "OPRM1"}
+    assert actual_rows["DRD2"]["ranking_pr_auc_ci_low"] == 0.55
+    assert actual_rows["HTR2A"]["decoys_above_positive_count"] == 0
+    assert actual_rows["OPRM1"]["positive_not_out_anchored_by_top_decoy"] is True
+    requirement_rows = {row["requirement_id"]: row for row in payload["actual_closure_requirement_rows"]}
+    assert requirement_rows["ranking_pr_auc_ci_low_ge_0p45"]["status"] == "ready"
+    assert requirement_rows["top20_hit_rate_ge_0p20"]["status"] == "ready"
+    assert requirement_rows["decoys_above_positive_count_eq_0"]["status"] == "ready"
+    assert requirement_rows["broad_gpcr_claim_locked_until_ledger_approval"]["status"] == "ready"
     work_rows = {row["blocker"]: row for row in payload["promotion_work_order_rows"]}
     assert work_rows["active_scorer_apply_not_allowed"]["lane_id"] == "active_scorer"
     assert work_rows["active_scorer_apply_not_allowed"]["required_action"] == (
@@ -194,6 +280,39 @@ def test_claim_unlock_audit_blocks_without_independent_repeat_pass(tmp_path: Pat
     assert summary["status"] == "blocked_gpcr_hard_decoy_claim_unlock_audit"
     assert summary["phase3_exit_metric_conditions_ready"] is False
     assert "independent_repeat_metric_evidence_not_passed" in summary["metric_blockers"]
+
+
+def test_claim_unlock_audit_blocks_without_actual_target_rows(tmp_path: Path) -> None:
+    official = tmp_path / "official.json"
+    preregistered = tmp_path / "preregistered.json"
+    repeat = tmp_path / "repeat.json"
+    scorecard = tmp_path / "scorecard.json"
+    broad = tmp_path / "broad.json"
+    active = tmp_path / "active.json"
+    official_payload = _official_diagnostic_green()
+    official_payload["targets"] = []  # type: ignore[index]
+    _write_json(official, official_payload)
+    _write_json(preregistered, _preregistered_replay())
+    _write_json(repeat, _independent_repeat())
+    _write_json(scorecard, _restricted_pass_scorecard())
+    _write_json(broad, _broad_scope_blocked())
+    _write_json(active, _active_scorer_blocked())
+
+    payload = mod.build_gpcr_hard_decoy_claim_unlock_audit(
+        official_suite_json=official,
+        preregistered_replay_json=preregistered,
+        independent_repeat_json=repeat,
+        accuracy_scorecard_json=scorecard,
+        broad_scope_readiness_json=broad,
+        active_scorer_decision_json=active,
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "blocked_gpcr_hard_decoy_claim_unlock_audit"
+    assert summary["hard_decoy_metric_claim_unlock_ready"] is False
+    assert summary["gpcr_hard_decoy_actual_closure_metrics_ready"] is False
+    assert "actual_closure_target_rows_not_ready" in summary["metric_blockers"]
+    assert "required_gpcr_actual_target_rows_missing_or_incomplete" in summary["actual_closure_blockers"]
 
 
 def test_main_writes_claim_unlock_audit_artifacts(tmp_path: Path) -> None:
@@ -239,4 +358,6 @@ def test_main_writes_claim_unlock_audit_artifacts(tmp_path: Path) -> None:
     assert payload["summary"]["phase3_exit_metric_conditions_ready"] is True
     md = out_md.read_text(encoding="utf-8")
     assert md.startswith("# GPCR Hard-Decoy Claim-Unlock Audit")
+    assert "Actual Closure Targets" in md
+    assert "Actual Closure Checklist" in md
     assert "Promotion Work Order" in md

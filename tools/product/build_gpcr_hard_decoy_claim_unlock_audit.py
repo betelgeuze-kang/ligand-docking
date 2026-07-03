@@ -37,6 +37,8 @@ SCHEMA_VERSION = "gpcr_hard_decoy_claim_unlock_audit_v1"
 
 CI_LOW_MIN = 0.45
 TOP20_MIN = 0.20
+REQUIRED_ACTUAL_CLOSURE_TARGET_IDS = ("DRD2", "HTR2A", "OPRM1")
+ROOT_CAUSE_DECOY_CLASSES = ("over_anchored", "same_signature", "multipolar")
 
 CLAIM_BOUNDARY = (
     "GPCR hard-decoy claim-unlock audit only. It reads local evidence artifacts and records whether "
@@ -183,6 +185,252 @@ def _metric_ready(ci_low: float | None, top20: float | None, decoys: float | Non
     )
 
 
+def _int(value: Any) -> int | None:
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return None
+    return number
+
+
+def _target_by_id(targets: list[Any]) -> dict[str, dict[str, Any]]:
+    rows: dict[str, dict[str, Any]] = {}
+    for target in targets:
+        if not isinstance(target, dict):
+            continue
+        target_id = str(target.get("target_id") or "").strip()
+        if target_id:
+            rows[target_id] = target
+    return rows
+
+
+def _nonempty_list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
+def _decoy_class_clear(target: dict[str, Any], decoy_class: str) -> bool:
+    counts = target.get("decoy_class_counts")
+    if not isinstance(counts, dict):
+        return False
+    return _int(counts.get(decoy_class)) == 0
+
+
+def _actual_closure_target_rows(
+    *,
+    official_targets: list[Any],
+    replay_target_rows: dict[str, Any],
+    required_target_ids: tuple[str, ...] = REQUIRED_ACTUAL_CLOSURE_TARGET_IDS,
+) -> list[dict[str, Any]]:
+    official_by_id = _target_by_id(official_targets)
+    rows: list[dict[str, Any]] = []
+    for target_id in required_target_ids:
+        official = official_by_id.get(target_id, {})
+        replay = replay_target_rows.get(target_id)
+        replay_row = replay if isinstance(replay, dict) else {}
+        ranking_pr_auc = _float(official.get("ranking_pr_auc"))
+        ci_low = _float(official.get("ranking_pr_auc_ci_low"))
+        top20 = _float(official.get("top20_hit_rate"))
+        decoys = _int(official.get("decoys_above_positive_count"))
+        anchor_margin = _float(official.get("anchor_margin_a"))
+        blockers = [str(item) for item in _nonempty_list(official.get("blockers"))]
+        root_causes = [str(item) for item in _nonempty_list(official.get("root_cause_tags"))]
+        decoy_class_counts = official.get("decoy_class_counts")
+        if not isinstance(decoy_class_counts, dict):
+            decoy_class_counts = {}
+        actual_values_populated = all(
+            value is not None for value in (ranking_pr_auc, ci_low, top20, decoys, anchor_margin)
+        )
+        positive_not_out_anchored = anchor_margin is not None and anchor_margin >= 0.0
+        closure_ready = (
+            actual_values_populated
+            and ci_low is not None
+            and ci_low >= CI_LOW_MIN
+            and top20 is not None
+            and top20 >= TOP20_MIN
+            and decoys == 0
+            and positive_not_out_anchored
+            and official.get("gate_status") == "green"
+            and official.get("claim_safe") is True
+            and not blockers
+        )
+        rows.append(
+            {
+                "target_id": target_id,
+                "status": "ready" if closure_ready else "blocked",
+                "actual_values_populated": actual_values_populated,
+                "closure_ready": closure_ready,
+                "gate_status": official.get("gate_status", "missing"),
+                "claim_safe_before_broad_lock": official.get("claim_safe") is True,
+                "ranking_pr_auc": ranking_pr_auc,
+                "ranking_pr_auc_ci_low": ci_low,
+                "ranking_pr_auc_ci_low_min": CI_LOW_MIN,
+                "top20_hit_rate": top20,
+                "top20_hit_rate_min": TOP20_MIN,
+                "decoys_above_positive_count": decoys,
+                "decoys_above_positive_count_max": 0,
+                "positive_target_rank": _int(official.get("positive_target_rank")),
+                "positive_anchor_distance_a": _float(official.get("positive_anchor_distance_a")),
+                "top_decoy_anchor_distance_a": _float(official.get("top_decoy_anchor_distance_a")),
+                "anchor_margin_a": anchor_margin,
+                "positive_not_out_anchored_by_top_decoy": positive_not_out_anchored,
+                "positive_ligand_id": str(replay_row.get("positive_ligand_id") or ""),
+                "top_decoy_ligand_id": str(replay_row.get("top_decoy_ligand_id") or ""),
+                "retained_target_row_count": _int(official.get("retained_target_row_count")),
+                "retained_positive_count": _int(official.get("retained_positive_count")),
+                "top_decoy_retained_count": _int(official.get("top_decoy_retained_count")),
+                "decoy_class_counts": decoy_class_counts,
+                "over_anchored_decoy_count": _int(decoy_class_counts.get("over_anchored")),
+                "same_signature_decoy_count": _int(decoy_class_counts.get("same_signature")),
+                "multipolar_decoy_count": _int(decoy_class_counts.get("multipolar")),
+                "root_cause_tags": root_causes,
+                "blockers": blockers,
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_boundary": CLAIM_BOUNDARY,
+            }
+        )
+    return rows
+
+
+def _actual_closure_requirement_rows(
+    target_rows: list[dict[str, Any]],
+    *,
+    effective_metrics: dict[str, Any],
+    official_diagnostic_green: bool,
+    preregistered_replay_ready: bool,
+    repeat_metric_ready: bool,
+    broad_promotion_remains_locked: bool,
+) -> list[dict[str, Any]]:
+    target_by_id = {str(row.get("target_id")): row for row in target_rows}
+    required_present = all(target_by_id.get(target_id, {}).get("actual_values_populated") for target_id in REQUIRED_ACTUAL_CLOSURE_TARGET_IDS)
+    all_targets_ready = all(target_by_id.get(target_id, {}).get("closure_ready") is True for target_id in REQUIRED_ACTUAL_CLOSURE_TARGET_IDS)
+    target_ci_values = [
+        _float(row.get("ranking_pr_auc_ci_low")) for row in target_rows if _float(row.get("ranking_pr_auc_ci_low")) is not None
+    ]
+    target_top20_values = [
+        _float(row.get("top20_hit_rate")) for row in target_rows if _float(row.get("top20_hit_rate")) is not None
+    ]
+    target_decoy_total = sum(_int(row.get("decoys_above_positive_count")) or 0 for row in target_rows)
+    anchor_ready = all(row.get("positive_not_out_anchored_by_top_decoy") is True for row in target_rows)
+    root_cause_clear = {
+        decoy_class: all(_decoy_class_clear(row, decoy_class) for row in target_rows)
+        for decoy_class in ROOT_CAUSE_DECOY_CLASSES
+    }
+    aggregate_ci = _float(effective_metrics.get("ranking_pr_auc_ci_low"))
+    aggregate_top20 = _float(effective_metrics.get("top20_hit_rate"))
+    aggregate_decoys = _int(effective_metrics.get("decoys_above_positive_count"))
+    rows = [
+        {
+            "requirement_id": "drd2_htr2a_oprm1_actual_rows_populated",
+            "status": "ready" if required_present else "blocked",
+            "observed": sorted(target_by_id),
+            "threshold": list(REQUIRED_ACTUAL_CLOSURE_TARGET_IDS),
+            "blocker": "" if required_present else "required_gpcr_actual_target_rows_missing_or_incomplete",
+            "claim_promotion_allowed": False,
+        },
+        {
+            "requirement_id": "ranking_pr_auc_ci_low_ge_0p45",
+            "status": "ready"
+            if aggregate_ci is not None
+            and aggregate_ci >= CI_LOW_MIN
+            and target_ci_values
+            and min(target_ci_values) >= CI_LOW_MIN
+            else "blocked",
+            "observed": {"effective": aggregate_ci, "target_min": min(target_ci_values) if target_ci_values else None},
+            "threshold": CI_LOW_MIN,
+            "blocker": "gpcr_hard_decoy_ranking_pr_auc_ci_low_below_gate",
+            "claim_promotion_allowed": False,
+        },
+        {
+            "requirement_id": "top20_hit_rate_ge_0p20",
+            "status": "ready"
+            if aggregate_top20 is not None
+            and aggregate_top20 >= TOP20_MIN
+            and target_top20_values
+            and min(target_top20_values) >= TOP20_MIN
+            else "blocked",
+            "observed": {"effective": aggregate_top20, "target_min": min(target_top20_values) if target_top20_values else None},
+            "threshold": TOP20_MIN,
+            "blocker": "gpcr_hard_decoy_top20_hit_rate_below_gate",
+            "claim_promotion_allowed": False,
+        },
+        {
+            "requirement_id": "decoys_above_positive_count_eq_0",
+            "status": "ready" if aggregate_decoys == 0 and target_decoy_total == 0 else "blocked",
+            "observed": {"effective": aggregate_decoys, "target_total": target_decoy_total},
+            "threshold": 0,
+            "blocker": "gpcr_hard_decoy_decoys_above_positive_present",
+            "claim_promotion_allowed": False,
+        },
+        {
+            "requirement_id": "positive_not_out_anchored_by_top_decoys",
+            "status": "ready" if anchor_ready else "blocked",
+            "observed": [row.get("anchor_margin_a") for row in target_rows],
+            "threshold": "all target anchor margins >= 0.0",
+            "blocker": "gpcr_hard_decoy_positive_out_anchored_by_top_decoy",
+            "claim_promotion_allowed": False,
+        },
+        {
+            "requirement_id": "over_anchored_decoy_response_clear",
+            "status": "ready" if root_cause_clear["over_anchored"] else "blocked",
+            "observed": [row.get("over_anchored_decoy_count") for row in target_rows],
+            "threshold": "all required target over_anchored decoy counts == 0",
+            "blocker": "gpcr_hard_decoy_over_anchored_decoys_present",
+            "claim_promotion_allowed": False,
+        },
+        {
+            "requirement_id": "same_signature_decoy_response_clear",
+            "status": "ready" if root_cause_clear["same_signature"] else "blocked",
+            "observed": [row.get("same_signature_decoy_count") for row in target_rows],
+            "threshold": "all required target same_signature decoy counts == 0",
+            "blocker": "gpcr_hard_decoy_same_signature_decoys_present",
+            "claim_promotion_allowed": False,
+        },
+        {
+            "requirement_id": "multipolar_decoy_response_clear",
+            "status": "ready" if root_cause_clear["multipolar"] else "blocked",
+            "observed": [row.get("multipolar_decoy_count") for row in target_rows],
+            "threshold": "all required target multipolar decoy counts == 0",
+            "blocker": "gpcr_hard_decoy_multipolar_decoys_present",
+            "claim_promotion_allowed": False,
+        },
+        {
+            "requirement_id": "hard_decoy_suite_repeat_evidence_ready",
+            "status": "ready"
+            if official_diagnostic_green and preregistered_replay_ready and repeat_metric_ready and all_targets_ready
+            else "blocked",
+            "observed": {
+                "official_diagnostic_green": official_diagnostic_green,
+                "preregistered_replay_ready": preregistered_replay_ready,
+                "independent_repeat_ready": repeat_metric_ready,
+                "all_required_targets_ready": all_targets_ready,
+            },
+            "threshold": "official suite, pre-registered replay, independent repeat, and target rows ready",
+            "blocker": "gpcr_hard_decoy_repeat_evidence_not_ready",
+            "claim_promotion_allowed": False,
+        },
+        {
+            "requirement_id": "broad_gpcr_claim_locked_until_ledger_approval",
+            "status": "ready" if broad_promotion_remains_locked else "blocked",
+            "observed": {
+                "broad_promotion_remains_locked": broad_promotion_remains_locked,
+                "claim_promotion_allowed": False,
+            },
+            "threshold": "broad claim remains locked until ledger/operator approval",
+            "blocker": "broad_gpcr_claim_not_locked_for_ledger_review",
+            "claim_promotion_allowed": False,
+        },
+    ]
+    for row in rows:
+        if row["status"] == "ready":
+            row["blocker"] = ""
+        row["execution_enabled"] = False
+        row["external_state_mutated"] = False
+        row["claim_boundary"] = CLAIM_BOUNDARY
+    return rows
+
+
 def build_gpcr_hard_decoy_claim_unlock_audit(
     *,
     official_suite_json: str | Path = DEFAULT_OFFICIAL_SUITE_JSON,
@@ -302,6 +550,48 @@ def build_gpcr_hard_decoy_claim_unlock_audit(
         broad_scope_evidence=broad_scope_evidence,
         active_scorer_evidence=active_scorer_evidence,
     )
+    replay_target_rows = preregistered_metrics.get("target_rows")
+    replay_target_rows = replay_target_rows if isinstance(replay_target_rows, dict) else {}
+    actual_closure_target_rows = _actual_closure_target_rows(
+        official_targets=_list(official.get("targets")),
+        replay_target_rows=replay_target_rows,
+    )
+    actual_closure_requirement_rows = _actual_closure_requirement_rows(
+        actual_closure_target_rows,
+        effective_metrics=effective_metrics,
+        official_diagnostic_green=official_diagnostic_green,
+        preregistered_replay_ready=preregistered_replay_ready,
+        repeat_metric_ready=repeat_metric_ready,
+        broad_promotion_remains_locked=bool(promotion_blockers),
+    )
+    actual_closure_ready_target_ids = [
+        str(row["target_id"]) for row in actual_closure_target_rows if row.get("closure_ready") is True
+    ]
+    actual_closure_missing_target_ids = [
+        target_id
+        for target_id in REQUIRED_ACTUAL_CLOSURE_TARGET_IDS
+        if not any(
+            row.get("target_id") == target_id and row.get("actual_values_populated") is True
+            for row in actual_closure_target_rows
+        )
+    ]
+    actual_closure_blockers = sorted(
+        str(row["blocker"])
+        for row in actual_closure_requirement_rows
+        if row.get("status") != "ready" and row.get("blocker")
+    )
+    actual_closure_metric_blockers = sorted(
+        str(row["blocker"])
+        for row in actual_closure_requirement_rows
+        if row.get("requirement_id") != "broad_gpcr_claim_locked_until_ledger_approval"
+        and row.get("status") != "ready"
+        and row.get("blocker")
+    )
+    actual_closure_metrics_ready = not actual_closure_metric_blockers
+    actual_closure_ready = actual_closure_metrics_ready and bool(promotion_blockers)
+    if actual_closure_metric_blockers:
+        metric_blockers.append("actual_closure_target_rows_not_ready")
+    hard_decoy_metric_ready = bool(hard_decoy_metric_ready and actual_closure_metrics_ready)
 
     rows = [
         _gate_row(
@@ -419,6 +709,23 @@ def build_gpcr_hard_decoy_claim_unlock_audit(
         "accuracy_parity_metric_blockers": scorecard_readiness.get("metric_blockers", []),
         "accuracy_parity_claim_scope_lock_only": bool(scorecard_readiness.get("claim_scope_lock_only")),
         "effective_phase3_metrics": effective_metrics,
+        "gpcr_hard_decoy_actual_closure_metrics_ready": actual_closure_metrics_ready,
+        "gpcr_hard_decoy_actual_closure_ready": actual_closure_ready,
+        "actual_closure_required_target_ids": list(REQUIRED_ACTUAL_CLOSURE_TARGET_IDS),
+        "actual_closure_target_row_count": len(actual_closure_target_rows),
+        "actual_closure_ready_target_ids": actual_closure_ready_target_ids,
+        "actual_closure_missing_target_ids": actual_closure_missing_target_ids,
+        "actual_closure_requirement_ready_count": sum(
+            1 for row in actual_closure_requirement_rows if row.get("status") == "ready"
+        ),
+        "actual_closure_requirement_blocked_count": sum(
+            1 for row in actual_closure_requirement_rows if row.get("status") != "ready"
+        ),
+        "actual_closure_blocker_count": len(actual_closure_blockers),
+        "actual_closure_blockers": actual_closure_blockers,
+        "actual_closure_metric_blocker_count": len(actual_closure_metric_blockers),
+        "actual_closure_metric_blockers": actual_closure_metric_blockers,
+        "broad_gpcr_claim_locked_until_ledger_approval": bool(promotion_blockers),
         "metric_blocker_count": len(metric_blockers),
         "metric_blockers": sorted(metric_blockers),
         "promotion_blocker_count": len(promotion_blockers),
@@ -444,6 +751,8 @@ def build_gpcr_hard_decoy_claim_unlock_audit(
         "schema_version": SCHEMA_VERSION,
         "summary": summary,
         "rows": rows,
+        "actual_closure_target_rows": actual_closure_target_rows,
+        "actual_closure_requirement_rows": actual_closure_requirement_rows,
         "promotion_work_order_rows": promotion_work_order_rows,
         "evidence": {
             "official_suite_json": official_evidence,
@@ -476,6 +785,9 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- preregistered_decoys_above_positive_count: `{summary['preregistered_decoys_above_positive_count']}`",
         f"- independent_repeat_ranking_pr_auc_ci_low: `{summary['independent_repeat_ranking_pr_auc_ci_low']}`",
         f"- independent_repeat_top20_hit_rate: `{summary['independent_repeat_top20_hit_rate']}`",
+        f"- gpcr_hard_decoy_actual_closure_ready: `{str(summary['gpcr_hard_decoy_actual_closure_ready']).lower()}`",
+        f"- actual_closure_ready_target_ids: `{', '.join(summary['actual_closure_ready_target_ids']) or '(none)'}`",
+        f"- actual_closure_blockers: `{', '.join(summary['actual_closure_blockers']) or '(none)'}`",
         f"- metric_blockers: `{', '.join(metric_blockers) or '(none)'}`",
         f"- promotion_blockers: `{', '.join(promotion_blockers) or '(none)'}`",
         f"- promotion_work_order_row_count: `{summary['promotion_work_order_row_count']}`",
@@ -493,6 +805,48 @@ def render_markdown(payload: dict[str, Any]) -> str:
                 observed=row["observed"],
                 threshold=row["threshold"],
                 blocker=row["blocker"] or "(none)",
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "## Actual Closure Targets",
+            "",
+            "| target | status | CI-low | top20 | decoys_above | anchor_margin | not_out_anchored | blockers |",
+            "| --- | --- | --: | --: | --: | --: | --- | --- |",
+        ]
+    )
+    for row in payload.get("actual_closure_target_rows", []):
+        blockers = row.get("blockers") if isinstance(row.get("blockers"), list) else []
+        lines.append(
+            "| `{target}` | `{status}` | `{ci}` | `{top20}` | `{decoys}` | `{anchor}` | `{anchor_ready}` | {blockers} |".format(
+                target=row.get("target_id", ""),
+                status=row.get("status", ""),
+                ci=row.get("ranking_pr_auc_ci_low"),
+                top20=row.get("top20_hit_rate"),
+                decoys=row.get("decoys_above_positive_count"),
+                anchor=row.get("anchor_margin_a"),
+                anchor_ready=str(row.get("positive_not_out_anchored_by_top_decoy")).lower(),
+                blockers=", ".join(str(item) for item in blockers) or "(none)",
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "## Actual Closure Checklist",
+            "",
+            "| requirement | status | observed | threshold | blocker |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+    )
+    for row in payload.get("actual_closure_requirement_rows", []):
+        lines.append(
+            "| `{requirement}` | `{status}` | `{observed}` | `{threshold}` | {blocker} |".format(
+                requirement=row.get("requirement_id", ""),
+                status=row.get("status", ""),
+                observed=row.get("observed"),
+                threshold=row.get("threshold"),
+                blocker=row.get("blocker") or "(none)",
             )
         )
     lines.extend(
