@@ -76,6 +76,13 @@ def _string_list(value: Any) -> list[str]:
     return []
 
 
+def _semicolon_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value if str(item or "").strip()]
+    text = str(value or "").strip()
+    return [part.strip() for part in text.split(";") if part.strip()]
+
+
 def _claim_boundary_rows(value: Any) -> list[dict[str, Any]]:
     rows = value if isinstance(value, list) else []
     claim_rows: list[dict[str, Any]] = []
@@ -932,6 +939,65 @@ def _release_decision_rows(value: Any) -> list[dict[str, Any]]:
     return decision_rows
 
 
+def _full_commercial_blocker_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    blocker_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        ready = bool(row.get("ready") is True)
+        blocker_rows.append(
+            {
+                "release_blocker_id": str(row.get("release_blocker_id") or ""),
+                "evidence_domain": str(row.get("evidence_domain") or ""),
+                "evidence_row_id": str(row.get("evidence_row_id") or ""),
+                "status": str(row.get("status") or ""),
+                "ready": ready,
+                "claim_ready": bool(row.get("claim_ready") is True),
+                "evidence_artifact": str(row.get("evidence_artifact") or ""),
+                "evidence_artifact_present": bool(
+                    row.get("evidence_artifact_present") is True
+                ),
+                "expected_evidence_status": str(
+                    row.get("expected_evidence_status") or ""
+                ),
+                "observed_evidence_status": str(
+                    row.get("observed_evidence_status") or ""
+                ),
+                "receipt_csv": str(row.get("receipt_csv") or ""),
+                "receipt_json": str(row.get("receipt_json") or ""),
+                "receipt_status": str(row.get("receipt_status") or ""),
+                "receipt_ready": bool(row.get("receipt_ready") is True),
+                "receipt_ready_key": str(row.get("receipt_ready_key") or ""),
+                "operator_review_surface_ready": bool(
+                    row.get("operator_review_surface_ready") is True
+                ),
+                "operator_manual_pending_field_count": _int(
+                    row.get("operator_manual_pending_field_count")
+                ),
+                "operator_manual_pending_fields": _semicolon_list(
+                    row.get("operator_manual_pending_fields")
+                ),
+                "approval_token_required": str(
+                    row.get("approval_token_required") or ""
+                ),
+                "post_return_acceptance_artifact": str(
+                    row.get("post_return_acceptance_artifact") or ""
+                ),
+                "blocker": "" if ready else str(row.get("blocker") or ""),
+                "blockers": [] if ready else _semicolon_list(row.get("blockers")),
+                "next_required_step": "" if ready else str(
+                    row.get("next_required_step") or ""
+                ),
+                "claim_boundary": str(row.get("claim_boundary") or CLAIM_BOUNDARY),
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+    return blocker_rows
+
+
 def _pr38_split_surface() -> dict[str, Any]:
     acceptance_packet = _read_json_object(PR38_SPLIT_ACCEPTANCE_PACKET_ARTIFACT)
     matrix_packet = _read_json_object(PR38_CHILD_PR_VERIFICATION_MATRIX_ARTIFACT)
@@ -1326,6 +1392,21 @@ def _missing_response() -> dict[str, Any]:
         "release_operator_action_primary_required_input": "",
         "release_operator_action_primary_command": "",
         "release_operator_action_rows": [],
+        "product_full_commercial_blocker_matrix_present": False,
+        "product_full_commercial_blocker_matrix_status": "",
+        "product_full_commercial_blocker_matrix_ready": False,
+        "product_full_commercial_blocker_matrix_row_count": 0,
+        "product_full_commercial_blocker_matrix_blocked_row_count": 0,
+        "product_full_commercial_blocker_matrix_primary_release_blocker_id": "",
+        "product_full_commercial_blocker_matrix_primary_evidence_row_id": "",
+        "product_full_commercial_blocker_matrix_primary_blocker": "",
+        "product_full_commercial_blocker_matrix_primary_next_required_step": "",
+        "product_full_commercial_blocker_matrix_primary_approval_token_required": "",
+        "product_full_commercial_blocker_matrix_rows": [],
+        "product_full_commercial_blocker_matrix_blocked_rows": [],
+        "product_full_commercial_blocker_matrix_claim_promotion_allowed": False,
+        "product_full_commercial_blocker_matrix_execution_enabled": False,
+        "product_full_commercial_blocker_matrix_external_state_mutated": False,
         "release_decision_present": False,
         "release_decision_status": "",
         "release_decision_release_allowed": False,
@@ -1446,6 +1527,12 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
     ]
     public_external_beta_ready_requirement_rows = [
         row for row in public_external_beta_requirement_rows if row["ready"]
+    ]
+    full_commercial_rows = _full_commercial_blocker_rows(
+        summary.get("product_full_commercial_blocker_matrix_rows")
+    )
+    full_commercial_blocked_rows = [
+        row for row in full_commercial_rows if not row["ready"]
     ]
 
     return {
@@ -2230,6 +2317,51 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         "release_operator_action_rows": _release_operator_action_rows(
             summary.get("release_operator_action_rows")
         ),
+        "product_full_commercial_blocker_matrix_present": bool(
+            summary.get("product_full_commercial_blocker_matrix_present") is True
+        ),
+        "product_full_commercial_blocker_matrix_status": str(
+            summary.get("product_full_commercial_blocker_matrix_status") or ""
+        ),
+        "product_full_commercial_blocker_matrix_ready": bool(
+            summary.get("product_full_commercial_blocker_matrix_ready") is True
+        ),
+        "product_full_commercial_blocker_matrix_row_count": _int(
+            summary.get("product_full_commercial_blocker_matrix_row_count")
+        )
+        or len(full_commercial_rows),
+        "product_full_commercial_blocker_matrix_blocked_row_count": _int(
+            summary.get("product_full_commercial_blocker_matrix_blocked_row_count")
+        )
+        or len(full_commercial_blocked_rows),
+        "product_full_commercial_blocker_matrix_primary_release_blocker_id": str(
+            summary.get("product_full_commercial_blocker_matrix_primary_release_blocker_id")
+            or ""
+        ),
+        "product_full_commercial_blocker_matrix_primary_evidence_row_id": str(
+            summary.get("product_full_commercial_blocker_matrix_primary_evidence_row_id")
+            or ""
+        ),
+        "product_full_commercial_blocker_matrix_primary_blocker": str(
+            summary.get("product_full_commercial_blocker_matrix_primary_blocker") or ""
+        ),
+        "product_full_commercial_blocker_matrix_primary_next_required_step": str(
+            summary.get("product_full_commercial_blocker_matrix_primary_next_required_step")
+            or ""
+        ),
+        "product_full_commercial_blocker_matrix_primary_approval_token_required": str(
+            summary.get(
+                "product_full_commercial_blocker_matrix_primary_approval_token_required"
+            )
+            or ""
+        ),
+        "product_full_commercial_blocker_matrix_rows": full_commercial_rows,
+        "product_full_commercial_blocker_matrix_blocked_rows": (
+            full_commercial_blocked_rows
+        ),
+        "product_full_commercial_blocker_matrix_claim_promotion_allowed": False,
+        "product_full_commercial_blocker_matrix_execution_enabled": False,
+        "product_full_commercial_blocker_matrix_external_state_mutated": False,
         "release_decision_present": bool(summary.get("release_decision_present") is True),
         "release_decision_status": str(summary.get("release_decision_status") or ""),
         "release_decision_release_allowed": bool(

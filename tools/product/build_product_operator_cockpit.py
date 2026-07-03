@@ -33,6 +33,9 @@ DEFAULT_PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_JSON = (
 )
 DEFAULT_GOAL_RELEASE_DECISION_JSON = "runs/goal_release_decision_gate_current.json"
 DEFAULT_RELEASE_ACTIONS_JSON = "runs/goal_operator_action_board_current.json"
+DEFAULT_FULL_COMMERCIAL_BLOCKER_MATRIX_JSON = (
+    "runs/product_full_commercial_blocker_evidence_matrix_current.json"
+)
 DEFAULT_PM_PRIORITY_QUEUE_JSON = ".betelgeuze/pm_priority_queue_status_current.json"
 DEFAULT_EVIDENCE_BUNDLE_JSON = "runs/ai_md_product_evidence_bundle_current.json"
 DEFAULT_API_CUSTOMER_FLOW_JSON = "runs/api_customer_flow_release_evidence_current.json"
@@ -169,6 +172,12 @@ def _string_list(value: Any) -> list[str]:
         return [_text(item) for item in value if _text(item)]
     text = _text(value)
     return [text] if text else []
+
+
+def _semicolon_list(value: Any) -> list[str]:
+    if isinstance(value, (list, tuple)):
+        return [_text(item) for item in value if _text(item)]
+    return [part.strip() for part in _text(value).split(";") if part.strip()]
 
 
 def _first_text(*values: Any) -> str:
@@ -1156,6 +1165,60 @@ def _release_operator_action_rows(payload: dict[str, Any]) -> list[dict[str, Any
     return rows
 
 
+def _full_commercial_blocker_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    summary = _summary(payload)
+    claim_boundary = _text(summary.get("claim_boundary")) or CLAIM_BOUNDARY
+    rows: list[dict[str, Any]] = []
+    for row in _rows(payload):
+        status = _text(row.get("row_status") or row.get("status"))
+        row_blockers = _semicolon_list(row.get("row_blockers") or row.get("blockers"))
+        ready = (
+            status.lower() in {"ready", "pass"}
+            and _bool_true(row.get("claim_ready"))
+            and _bool_true(row.get("receipt_ready"))
+        )
+        rows.append(
+            {
+                "release_blocker_id": _text(row.get("release_blocker_id")),
+                "evidence_domain": _text(row.get("evidence_domain")),
+                "evidence_row_id": _text(row.get("evidence_row_id")),
+                "status": status,
+                "ready": ready,
+                "claim_ready": _bool_true(row.get("claim_ready")),
+                "evidence_artifact": _text(row.get("evidence_artifact")),
+                "evidence_artifact_present": _bool_true(row.get("evidence_artifact_present")),
+                "expected_evidence_status": _text(row.get("expected_evidence_status")),
+                "observed_evidence_status": _text(row.get("observed_evidence_status")),
+                "receipt_csv": _text(row.get("receipt_csv")),
+                "receipt_json": _text(row.get("receipt_json")),
+                "receipt_status": _text(row.get("receipt_status")),
+                "receipt_ready": _bool_true(row.get("receipt_ready")),
+                "receipt_ready_key": _text(row.get("receipt_ready_key")),
+                "operator_review_surface_ready": _bool_true(
+                    row.get("operator_review_surface_ready")
+                ),
+                "operator_manual_pending_field_count": _int(
+                    row.get("operator_manual_pending_field_count")
+                ),
+                "operator_manual_pending_fields": _semicolon_list(
+                    row.get("operator_manual_pending_fields")
+                ),
+                "approval_token_required": _text(row.get("approval_token_required")),
+                "post_return_acceptance_artifact": _text(
+                    row.get("post_return_acceptance_artifact")
+                ),
+                "blocker": "" if ready else (row_blockers[0] if row_blockers else status),
+                "blockers": [] if ready else row_blockers,
+                "next_required_step": "" if ready else _text(row.get("next_required_step")),
+                "claim_boundary": _text(row.get("claim_boundary")) or claim_boundary,
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+    return rows
+
+
 def _enterprise_on_prem_control_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in _rows(payload):
@@ -1716,6 +1779,9 @@ def build_product_operator_cockpit(
     ),
     goal_release_decision_json: str | Path = DEFAULT_GOAL_RELEASE_DECISION_JSON,
     release_actions_json: str | Path = DEFAULT_RELEASE_ACTIONS_JSON,
+    full_commercial_blocker_matrix_json: str | Path = (
+        DEFAULT_FULL_COMMERCIAL_BLOCKER_MATRIX_JSON
+    ),
     pm_priority_queue_json: str | Path = DEFAULT_PM_PRIORITY_QUEUE_JSON,
     evidence_bundle_json: str | Path = DEFAULT_EVIDENCE_BUNDLE_JSON,
     api_customer_flow_json: str | Path = DEFAULT_API_CUSTOMER_FLOW_JSON,
@@ -1840,6 +1906,17 @@ def build_product_operator_cockpit(
     release_actions = _summary(release_actions_payload)
     release_operator_action_row_preview = _release_operator_action_rows(
         release_actions_payload
+    )
+    full_commercial_payload = _read_json(full_commercial_blocker_matrix_json, root=root)
+    full_commercial = _summary(full_commercial_payload)
+    full_commercial_blocker_row_preview = _full_commercial_blocker_rows(
+        full_commercial_payload
+    )
+    full_commercial_blocked_rows = [
+        row for row in full_commercial_blocker_row_preview if not row["ready"]
+    ]
+    full_commercial_primary_blocked_row = (
+        full_commercial_blocked_rows[0] if full_commercial_blocked_rows else {}
     )
     pm_queue_payload = _read_json(pm_priority_queue_json, root=root)
     pm_queue = _summary(pm_queue_payload)
@@ -2527,7 +2604,38 @@ def build_product_operator_cockpit(
         pm_queue.get("next_required_step"),
     )
     pm_queue_blocked = pm_queue_present and pm_queue_blocked_count > 0
-    release_panel_claim_allowed = release_allowed and not pm_queue_blocked
+    full_commercial_present = bool(full_commercial)
+    full_commercial_ready = (
+        full_commercial_present
+        and _text(full_commercial.get("status"))
+        == "product_full_commercial_blocker_evidence_matrix_ready"
+        and not full_commercial_blocked_rows
+    )
+    full_commercial_blocked = full_commercial_present and not full_commercial_ready
+    full_commercial_row_count = len(full_commercial_blocker_row_preview)
+    full_commercial_blocked_row_count = len(full_commercial_blocked_rows)
+    full_commercial_primary_release_blocker_id = _first_text(
+        full_commercial_primary_blocked_row.get("release_blocker_id"),
+        full_commercial.get("first_blocked_release_blocker_id"),
+    )
+    full_commercial_primary_evidence_row_id = _first_text(
+        full_commercial_primary_blocked_row.get("evidence_row_id"),
+        full_commercial.get("first_blocked_evidence_row_id"),
+    )
+    full_commercial_primary_blocker = _first_text(
+        full_commercial_primary_blocked_row.get("blocker"),
+        full_commercial.get("first_blocked_evidence_row_id"),
+    )
+    full_commercial_primary_next_step = _first_text(
+        full_commercial_primary_blocked_row.get("next_required_step"),
+        full_commercial.get("next_required_step"),
+    )
+    full_commercial_primary_approval_token = _first_text(
+        full_commercial_primary_blocked_row.get("approval_token_required")
+    )
+    release_panel_claim_allowed = (
+        release_allowed and not pm_queue_blocked and not full_commercial_blocked
+    )
 
     evidence_bundle_present = bool(evidence_bundle)
     evidence_bundle_export_ready = (
@@ -3740,15 +3848,21 @@ def build_product_operator_cockpit(
             title="Release blockers / operator actions",
             route="/goal/actions",
             artifact_path=pm_priority_queue_json if pm_queue_present else release_actions_json,
-            artifact_present=release_actions_present or pm_queue_present,
+            artifact_present=release_actions_present or pm_queue_present or full_commercial_present,
             status=(
                 "pm_priority_queue_blocked"
                 if pm_queue_blocked
+                else "full_commercial_blockers_present"
+                if full_commercial_blocked
                 else _text(release_actions.get("status") or "missing_goal_operator_action_board")
             ),
             surface_ready=True,
-            source_artifact_ready=release_actions_present or pm_queue_present,
-            operator_action_required=(not release_allowed) or pm_queue_blocked,
+            source_artifact_ready=(
+                release_actions_present or pm_queue_present or full_commercial_present
+            ),
+            operator_action_required=(
+                (not release_allowed) or pm_queue_blocked or full_commercial_blocked
+            ),
             claim_allowed=release_panel_claim_allowed,
             primary_metric=_join_metrics(
                 _metric("release_allowed", release_allowed),
@@ -3761,6 +3875,10 @@ def build_product_operator_cockpit(
                 _metric("release_blockers", release_blocker_count),
                 _metric("pm_queue_status", pm_queue.get("status")),
                 _count_metric("pm_queue_blocked_items", pm_queue_blocked_count),
+                _count_metric(
+                    "full_commercial_blocked_rows",
+                    full_commercial_blocked_row_count,
+                ),
             ),
             secondary_metric=_join_metrics(
                 _metric("primary_action", release_actions.get("primary_action_id")),
@@ -3776,10 +3894,20 @@ def build_product_operator_cockpit(
                 _metric("decision_primary_artifact", release_decision_primary_blocker_artifact),
                 _metric("pm_first_blocked_item", pm_queue_first_blocked_item_id),
                 _metric("pm_first_blocker", pm_queue_first_blocker),
+                _metric("full_commercial_primary", full_commercial_primary_release_blocker_id),
+                _metric(
+                    "full_commercial_evidence_row",
+                    full_commercial_primary_evidence_row_id,
+                ),
+                _metric(
+                    "full_commercial_approval_token",
+                    full_commercial_primary_approval_token,
+                ),
             ),
             next_action=_first_text(
                 release_decision.get("next_required_step") if not release_allowed else "",
                 pm_queue_first_action if pm_queue_blocked else "",
+                full_commercial_primary_next_step if full_commercial_blocked else "",
                 release_actions.get("primary_action_recommended_action"),
                 release_actions.get("next_required_step"),
                 "Resolve the primary operator action before release promotion.",
@@ -3794,6 +3922,7 @@ def build_product_operator_cockpit(
                         if not release_allowed
                         else "",
                         pm_queue_first_blocker if pm_queue_blocked else "",
+                        full_commercial_primary_blocker if full_commercial_blocked else "",
                     ]
                     if blocker
                 ]
@@ -4686,6 +4815,39 @@ def build_product_operator_cockpit(
             first_release_operator_action_row.get("command")
         ),
         "release_operator_action_rows": release_operator_action_row_preview,
+        "product_full_commercial_blocker_matrix_present": full_commercial_present,
+        "product_full_commercial_blocker_matrix_status": _text(
+            full_commercial.get("status")
+        ),
+        "product_full_commercial_blocker_matrix_ready": full_commercial_ready,
+        "product_full_commercial_blocker_matrix_row_count": full_commercial_row_count,
+        "product_full_commercial_blocker_matrix_blocked_row_count": (
+            full_commercial_blocked_row_count
+        ),
+        "product_full_commercial_blocker_matrix_primary_release_blocker_id": (
+            full_commercial_primary_release_blocker_id
+        ),
+        "product_full_commercial_blocker_matrix_primary_evidence_row_id": (
+            full_commercial_primary_evidence_row_id
+        ),
+        "product_full_commercial_blocker_matrix_primary_blocker": (
+            full_commercial_primary_blocker
+        ),
+        "product_full_commercial_blocker_matrix_primary_next_required_step": (
+            full_commercial_primary_next_step
+        ),
+        "product_full_commercial_blocker_matrix_primary_approval_token_required": (
+            full_commercial_primary_approval_token
+        ),
+        "product_full_commercial_blocker_matrix_rows": (
+            full_commercial_blocker_row_preview
+        ),
+        "product_full_commercial_blocker_matrix_blocked_rows": (
+            full_commercial_blocked_rows
+        ),
+        "product_full_commercial_blocker_matrix_claim_promotion_allowed": False,
+        "product_full_commercial_blocker_matrix_execution_enabled": False,
+        "product_full_commercial_blocker_matrix_external_state_mutated": False,
         "release_decision_present": release_decision_present,
         "release_decision_status": _text(release_decision.get("status")),
         "release_decision_release_allowed": release_decision_release_allowed,
@@ -4702,6 +4864,7 @@ def build_product_operator_cockpit(
         "next_required_step": _first_text(
             release_decision.get("next_required_step") if not release_allowed else "",
             pm_queue_first_action if pm_queue_blocked else "",
+            full_commercial_primary_next_step if full_commercial_blocked else "",
             action_panels[0]["next_action"] if action_panels else "",
         ),
         "execution_enabled": False,
@@ -4757,6 +4920,10 @@ def _parser() -> argparse.ArgumentParser:
         default=DEFAULT_GOAL_RELEASE_DECISION_JSON,
     )
     parser.add_argument("--release-actions-json", default=DEFAULT_RELEASE_ACTIONS_JSON)
+    parser.add_argument(
+        "--full-commercial-blocker-matrix-json",
+        default=DEFAULT_FULL_COMMERCIAL_BLOCKER_MATRIX_JSON,
+    )
     parser.add_argument("--pm-priority-queue-json", default=DEFAULT_PM_PRIORITY_QUEUE_JSON)
     parser.add_argument("--evidence-bundle-json", default=DEFAULT_EVIDENCE_BUNDLE_JSON)
     parser.add_argument("--api-customer-flow-json", default=DEFAULT_API_CUSTOMER_FLOW_JSON)
@@ -4811,6 +4978,7 @@ def main(argv: list[str] | None = None) -> int:
         ),
         goal_release_decision_json=args.goal_release_decision_json,
         release_actions_json=args.release_actions_json,
+        full_commercial_blocker_matrix_json=args.full_commercial_blocker_matrix_json,
         pm_priority_queue_json=args.pm_priority_queue_json,
         evidence_bundle_json=args.evidence_bundle_json,
         api_customer_flow_json=args.api_customer_flow_json,

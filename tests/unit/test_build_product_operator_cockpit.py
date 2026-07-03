@@ -36,6 +36,9 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         ),
         "release_decision": tmp_path / "runs/goal_release_decision_gate_current.json",
         "release": tmp_path / "runs/goal_operator_action_board_current.json",
+        "full_commercial": (
+            tmp_path / "runs/product_full_commercial_blocker_evidence_matrix_current.json"
+        ),
         "pm_queue": tmp_path / ".betelgeuze/pm_priority_queue_status_current.json",
         "bundle": tmp_path / "runs/ai_md_product_evidence_bundle_current.json",
         "api_customer_flow": tmp_path / "runs/api_customer_flow_release_evidence_current.json",
@@ -1022,6 +1025,87 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         },
     )
     _write_json(
+        paths["full_commercial"],
+        {
+            "summary": {
+                "status": "blocked_product_full_commercial_blocker_evidence_matrix",
+                "matrix_row_count": 2,
+                "blocked_matrix_row_count": 1,
+                "first_blocked_release_blocker_id": "R8_full_scope_claim_closure",
+                "first_blocked_evidence_row_id": "direct_binding_evidence_missing",
+                "release_blocker_visibility_ready": True,
+                "claim_boundary": "full commercial fixture boundary",
+            },
+            "rows": [
+                {
+                    "release_blocker_id": "R8_full_scope_claim_closure",
+                    "evidence_domain": "full_commercial_scope",
+                    "evidence_row_id": "direct_binding_evidence_missing",
+                    "row_status": "blocked",
+                    "claim_ready": False,
+                    "evidence_artifact": "OPERATOR_FILL_LOCAL_EVIDENCE_JSON",
+                    "evidence_artifact_present": False,
+                    "expected_evidence_status": (
+                        "product_scope_transporter_direct_binding_evidence_ready"
+                    ),
+                    "observed_evidence_status": "missing",
+                    "receipt_csv": "config/product_scope_breadth_evidence_receipt_current.csv",
+                    "receipt_json": "runs/product_scope_breadth_evidence_receipt_current.json",
+                    "receipt_status": "blocked_product_scope_breadth_evidence_receipt",
+                    "receipt_ready": False,
+                    "receipt_ready_key": "full_scope_evidence_receipt_ready",
+                    "operator_review_surface_ready": True,
+                    "operator_manual_pending_field_count": 6,
+                    "operator_manual_pending_fields": (
+                        "evidence_artifact;claim_ready;reviewer;reviewed_at_utc;"
+                        "license_ok;approval_token"
+                    ),
+                    "approval_token_required": (
+                        "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+                    ),
+                    "post_return_acceptance_artifact": (
+                        "runs/product_scope_breadth_evidence_receipt_current.json"
+                    ),
+                    "row_blockers": (
+                        "operator_placeholders_unfilled;evidence_artifact_not_found;"
+                        "claim_ready_not_true"
+                    ),
+                    "next_required_step": (
+                        "Replace placeholder receipt rows with local evidence JSON paths."
+                    ),
+                    "claim_promotion_allowed": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                },
+                {
+                    "release_blocker_id": "R9_external_benchmark_receipts",
+                    "evidence_domain": "public_benchmark",
+                    "evidence_row_id": "benchmark_receipt_ready",
+                    "row_status": "ready",
+                    "claim_ready": True,
+                    "evidence_artifact": "runs/public_benchmark_external_receipts_audit_current.json",
+                    "evidence_artifact_present": True,
+                    "expected_evidence_status": "public_benchmark_external_receipts_ready",
+                    "observed_evidence_status": "ready",
+                    "receipt_csv": "config/public_benchmark_receipt.csv",
+                    "receipt_json": "runs/public_benchmark_external_receipts_audit_current.json",
+                    "receipt_status": "ready",
+                    "receipt_ready": True,
+                    "receipt_ready_key": "external_benchmark_receipts_ready",
+                    "operator_review_surface_ready": True,
+                    "operator_manual_pending_field_count": 0,
+                    "operator_manual_pending_fields": "",
+                    "approval_token_required": "",
+                    "row_blockers": "",
+                    "next_required_step": "",
+                    "claim_promotion_allowed": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                },
+            ],
+        },
+    )
+    _write_json(
         paths["pm_queue"],
         {
             "summary": {
@@ -1904,6 +1988,7 @@ def _build_payload(tmp_path: Path) -> dict:
         ),
         goal_release_decision_json=paths["release_decision"],
         release_actions_json=paths["release"],
+        full_commercial_blocker_matrix_json=paths["full_commercial"],
         pm_priority_queue_json=paths["pm_queue"],
         evidence_bundle_json=paths["bundle"],
         api_customer_flow_json=paths["api_customer_flow"],
@@ -3525,6 +3610,9 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     )
     assert "decision_blockers=1" in panels["release_blockers_operator_actions"]["primary_metric"]
     assert "pm_queue_blocked_items=5" in panels["release_blockers_operator_actions"]["primary_metric"]
+    assert "full_commercial_blocked_rows=1" in (
+        panels["release_blockers_operator_actions"]["primary_metric"]
+    )
     assert "decision_gate=blocked_goal_release_decision" in (
         panels["release_blockers_operator_actions"]["secondary_metric"]
     )
@@ -3539,6 +3627,16 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "pm_first_blocker=f2g_authoritative_surfaces_missing" in (
         panels["release_blockers_operator_actions"]["secondary_metric"]
     )
+    assert "full_commercial_primary=R8_full_scope_claim_closure" in (
+        panels["release_blockers_operator_actions"]["secondary_metric"]
+    )
+    assert "full_commercial_evidence_row=direct_binding_evidence_missing" in (
+        panels["release_blockers_operator_actions"]["secondary_metric"]
+    )
+    assert (
+        "full_commercial_approval_token=APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+        in panels["release_blockers_operator_actions"]["secondary_metric"]
+    )
     assert panels["release_blockers_operator_actions"]["next_action"] == (
         "Clear third-party license review gate before release."
     )
@@ -3548,6 +3646,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
             "redistribution review visible as an operator/legal boundary."
         ),
         "f2g_authoritative_surfaces_missing",
+        "operator_placeholders_unfilled",
     ]
     assert summary["release_allowed"] is False
     assert summary["release_decision_present"] is True
@@ -3652,6 +3751,51 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
             "claim_boundary": "unsafe fixture value should be preserved as text only",
         }
     ]
+    assert summary["product_full_commercial_blocker_matrix_present"] is True
+    assert summary["product_full_commercial_blocker_matrix_status"] == (
+        "blocked_product_full_commercial_blocker_evidence_matrix"
+    )
+    assert summary["product_full_commercial_blocker_matrix_ready"] is False
+    assert summary["product_full_commercial_blocker_matrix_row_count"] == 2
+    assert summary["product_full_commercial_blocker_matrix_blocked_row_count"] == 1
+    assert summary[
+        "product_full_commercial_blocker_matrix_primary_release_blocker_id"
+    ] == "R8_full_scope_claim_closure"
+    assert summary[
+        "product_full_commercial_blocker_matrix_primary_evidence_row_id"
+    ] == "direct_binding_evidence_missing"
+    assert summary["product_full_commercial_blocker_matrix_primary_blocker"] == (
+        "operator_placeholders_unfilled"
+    )
+    assert summary[
+        "product_full_commercial_blocker_matrix_primary_approval_token_required"
+    ] == "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+    assert summary["product_full_commercial_blocker_matrix_blocked_rows"] == [
+        summary["product_full_commercial_blocker_matrix_rows"][0]
+    ]
+    blocked_commercial_row = summary["product_full_commercial_blocker_matrix_rows"][0]
+    assert blocked_commercial_row["operator_manual_pending_fields"] == [
+        "evidence_artifact",
+        "claim_ready",
+        "reviewer",
+        "reviewed_at_utc",
+        "license_ok",
+        "approval_token",
+    ]
+    assert blocked_commercial_row["blockers"] == [
+        "operator_placeholders_unfilled",
+        "evidence_artifact_not_found",
+        "claim_ready_not_true",
+    ]
+    assert all(
+        row["claim_promotion_allowed"] is False
+        and row["execution_enabled"] is False
+        and row["external_state_mutated"] is False
+        for row in summary["product_full_commercial_blocker_matrix_rows"]
+    )
+    assert summary["product_full_commercial_blocker_matrix_claim_promotion_allowed"] is False
+    assert summary["product_full_commercial_blocker_matrix_execution_enabled"] is False
+    assert summary["product_full_commercial_blocker_matrix_external_state_mutated"] is False
     assert panels["evidence_bundle_export"]["source_artifact_ready"] is True
     assert "api_customer_flow_ready=true" in panels["evidence_bundle_export"]["secondary_metric"]
     assert "tier_alpha=tier_alpha_adrb2_dispatch_smoke_pass" in (
@@ -4005,6 +4149,8 @@ def test_product_operator_cockpit_cli_writes_current_artifacts(tmp_path: Path) -
             str(paths["public_attach"]),
             "--release-actions-json",
             str(paths["release"]),
+            "--full-commercial-blocker-matrix-json",
+            str(paths["full_commercial"]),
             "--pm-priority-queue-json",
             str(paths["pm_queue"]),
             "--evidence-bundle-json",

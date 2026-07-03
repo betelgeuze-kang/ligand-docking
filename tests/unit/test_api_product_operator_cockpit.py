@@ -1294,6 +1294,170 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                         "claim_boundary": "unsafe fixture value should be preserved as text only",
                     }
                 ],
+                "product_full_commercial_blocker_matrix_present": True,
+                "product_full_commercial_blocker_matrix_status": (
+                    "blocked_product_full_commercial_blocker_evidence_matrix"
+                ),
+                "product_full_commercial_blocker_matrix_ready": False,
+                "product_full_commercial_blocker_matrix_row_count": 2,
+                "product_full_commercial_blocker_matrix_blocked_row_count": 1,
+                "product_full_commercial_blocker_matrix_primary_release_blocker_id": (
+                    "R8_full_scope_claim_closure"
+                ),
+                "product_full_commercial_blocker_matrix_primary_evidence_row_id": (
+                    "direct_binding_evidence_missing"
+                ),
+                "product_full_commercial_blocker_matrix_primary_blocker": (
+                    "operator_placeholders_unfilled"
+                ),
+                "product_full_commercial_blocker_matrix_primary_next_required_step": (
+                    "Replace placeholder receipt rows with local evidence JSON paths."
+                ),
+                "product_full_commercial_blocker_matrix_primary_approval_token_required": (
+                    "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+                ),
+                "product_full_commercial_blocker_matrix_rows": [
+                    {
+                        "release_blocker_id": "R8_full_scope_claim_closure",
+                        "evidence_domain": "full_commercial_scope",
+                        "evidence_row_id": "direct_binding_evidence_missing",
+                        "status": "blocked",
+                        "ready": False,
+                        "claim_ready": False,
+                        "evidence_artifact": "OPERATOR_FILL_LOCAL_EVIDENCE_JSON",
+                        "evidence_artifact_present": False,
+                        "expected_evidence_status": (
+                            "product_scope_transporter_direct_binding_evidence_ready"
+                        ),
+                        "observed_evidence_status": "missing",
+                        "receipt_csv": "config/product_scope_breadth_evidence_receipt_current.csv",
+                        "receipt_json": (
+                            "runs/product_scope_breadth_evidence_receipt_current.json"
+                        ),
+                        "receipt_status": "blocked_product_scope_breadth_evidence_receipt",
+                        "receipt_ready": False,
+                        "receipt_ready_key": "full_scope_evidence_receipt_ready",
+                        "operator_review_surface_ready": True,
+                        "operator_manual_pending_field_count": 6,
+                        "operator_manual_pending_fields": [
+                            "evidence_artifact",
+                            "claim_ready",
+                            "reviewer",
+                            "reviewed_at_utc",
+                            "license_ok",
+                            "approval_token",
+                        ],
+                        "approval_token_required": (
+                            "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+                        ),
+                        "post_return_acceptance_artifact": (
+                            "runs/product_scope_breadth_evidence_receipt_current.json"
+                        ),
+                        "blocker": "operator_placeholders_unfilled",
+                        "blockers": [
+                            "operator_placeholders_unfilled",
+                            "evidence_artifact_not_found",
+                            "claim_ready_not_true",
+                        ],
+                        "next_required_step": (
+                            "Replace placeholder receipt rows with local evidence JSON paths."
+                        ),
+                        "claim_boundary": "full commercial fixture boundary",
+                        "claim_promotion_allowed": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                    },
+                    {
+                        "release_blocker_id": "R9_external_benchmark_receipts",
+                        "evidence_domain": "public_benchmark",
+                        "evidence_row_id": "benchmark_receipt_ready",
+                        "status": "ready",
+                        "ready": True,
+                        "claim_ready": True,
+                        "evidence_artifact": (
+                            "runs/public_benchmark_external_receipts_audit_current.json"
+                        ),
+                        "evidence_artifact_present": True,
+                        "expected_evidence_status": (
+                            "public_benchmark_external_receipts_ready"
+                        ),
+                        "observed_evidence_status": "ready",
+                        "receipt_csv": "config/public_benchmark_receipt.csv",
+                        "receipt_json": (
+                            "runs/public_benchmark_external_receipts_audit_current.json"
+                        ),
+                        "receipt_status": "ready",
+                        "receipt_ready": True,
+                        "receipt_ready_key": "external_benchmark_receipts_ready",
+                        "operator_review_surface_ready": True,
+                        "operator_manual_pending_field_count": 0,
+                        "operator_manual_pending_fields": [],
+                        "approval_token_required": "",
+                        "post_return_acceptance_artifact": "",
+                        "blocker": "",
+                        "blockers": [],
+                        "next_required_step": "",
+                        "claim_boundary": "full commercial fixture boundary",
+                        "claim_promotion_allowed": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                    },
+                ],
+                "product_full_commercial_blocker_matrix_blocked_rows": [
+                    {
+                        "release_blocker_id": "R8_full_scope_claim_closure",
+                        "evidence_domain": "full_commercial_scope",
+                        "evidence_row_id": "direct_binding_evidence_missing",
+                        "status": "blocked",
+                        "ready": False,
+                        "claim_ready": False,
+                        "evidence_artifact": "OPERATOR_FILL_LOCAL_EVIDENCE_JSON",
+                        "evidence_artifact_present": False,
+                        "expected_evidence_status": (
+                            "product_scope_transporter_direct_binding_evidence_ready"
+                        ),
+                        "observed_evidence_status": "missing",
+                        "receipt_csv": "config/product_scope_breadth_evidence_receipt_current.csv",
+                        "receipt_json": (
+                            "runs/product_scope_breadth_evidence_receipt_current.json"
+                        ),
+                        "receipt_status": "blocked_product_scope_breadth_evidence_receipt",
+                        "receipt_ready": False,
+                        "receipt_ready_key": "full_scope_evidence_receipt_ready",
+                        "operator_review_surface_ready": True,
+                        "operator_manual_pending_field_count": 6,
+                        "operator_manual_pending_fields": [
+                            "evidence_artifact",
+                            "claim_ready",
+                            "reviewer",
+                            "reviewed_at_utc",
+                            "license_ok",
+                            "approval_token",
+                        ],
+                        "approval_token_required": (
+                            "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+                        ),
+                        "post_return_acceptance_artifact": (
+                            "runs/product_scope_breadth_evidence_receipt_current.json"
+                        ),
+                        "blocker": "operator_placeholders_unfilled",
+                        "blockers": [
+                            "operator_placeholders_unfilled",
+                            "evidence_artifact_not_found",
+                            "claim_ready_not_true",
+                        ],
+                        "next_required_step": (
+                            "Replace placeholder receipt rows with local evidence JSON paths."
+                        ),
+                        "claim_boundary": "full commercial fixture boundary",
+                        "claim_promotion_allowed": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                    }
+                ],
+                "product_full_commercial_blocker_matrix_claim_promotion_allowed": True,
+                "product_full_commercial_blocker_matrix_execution_enabled": True,
+                "product_full_commercial_blocker_matrix_external_state_mutated": True,
                 "release_decision_present": True,
                 "release_decision_status": "blocked_goal_release_decision",
                 "release_decision_release_allowed": False,
@@ -2521,6 +2685,52 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
             "claim_boundary": "unsafe fixture value should be preserved as text only",
         }
     ]
+    assert response["product_full_commercial_blocker_matrix_present"] is True
+    assert response["product_full_commercial_blocker_matrix_status"] == (
+        "blocked_product_full_commercial_blocker_evidence_matrix"
+    )
+    assert response["product_full_commercial_blocker_matrix_ready"] is False
+    assert response["product_full_commercial_blocker_matrix_row_count"] == 2
+    assert response["product_full_commercial_blocker_matrix_blocked_row_count"] == 1
+    assert response[
+        "product_full_commercial_blocker_matrix_primary_release_blocker_id"
+    ] == "R8_full_scope_claim_closure"
+    assert response[
+        "product_full_commercial_blocker_matrix_primary_evidence_row_id"
+    ] == "direct_binding_evidence_missing"
+    assert response["product_full_commercial_blocker_matrix_primary_blocker"] == (
+        "operator_placeholders_unfilled"
+    )
+    assert response[
+        "product_full_commercial_blocker_matrix_primary_approval_token_required"
+    ] == "APPROVE_PRODUCT_SCOPE_BREADTH_EVIDENCE_RECEIPT"
+    assert response["product_full_commercial_blocker_matrix_blocked_rows"] == [
+        response["product_full_commercial_blocker_matrix_rows"][0]
+    ]
+    assert response["product_full_commercial_blocker_matrix_rows"][0][
+        "operator_manual_pending_fields"
+    ] == [
+        "evidence_artifact",
+        "claim_ready",
+        "reviewer",
+        "reviewed_at_utc",
+        "license_ok",
+        "approval_token",
+    ]
+    assert response["product_full_commercial_blocker_matrix_rows"][0]["blockers"] == [
+        "operator_placeholders_unfilled",
+        "evidence_artifact_not_found",
+        "claim_ready_not_true",
+    ]
+    assert all(
+        row["claim_promotion_allowed"] is False
+        and row["execution_enabled"] is False
+        and row["external_state_mutated"] is False
+        for row in response["product_full_commercial_blocker_matrix_rows"]
+    )
+    assert response["product_full_commercial_blocker_matrix_claim_promotion_allowed"] is False
+    assert response["product_full_commercial_blocker_matrix_execution_enabled"] is False
+    assert response["product_full_commercial_blocker_matrix_external_state_mutated"] is False
     assert response["release_decision_present"] is True
     assert response["release_decision_status"] == "blocked_goal_release_decision"
     assert response["release_decision_release_allowed"] is False
@@ -2914,6 +3124,24 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["release_operator_action_primary_required_input"] == ""
     assert response["release_operator_action_primary_command"] == ""
     assert response["release_operator_action_rows"] == []
+    assert response["product_full_commercial_blocker_matrix_present"] is False
+    assert response["product_full_commercial_blocker_matrix_status"] == ""
+    assert response["product_full_commercial_blocker_matrix_ready"] is False
+    assert response["product_full_commercial_blocker_matrix_row_count"] == 0
+    assert response["product_full_commercial_blocker_matrix_blocked_row_count"] == 0
+    assert response["product_full_commercial_blocker_matrix_primary_release_blocker_id"] == ""
+    assert response["product_full_commercial_blocker_matrix_primary_evidence_row_id"] == ""
+    assert response["product_full_commercial_blocker_matrix_primary_blocker"] == ""
+    assert response["product_full_commercial_blocker_matrix_primary_next_required_step"] == ""
+    assert (
+        response["product_full_commercial_blocker_matrix_primary_approval_token_required"]
+        == ""
+    )
+    assert response["product_full_commercial_blocker_matrix_rows"] == []
+    assert response["product_full_commercial_blocker_matrix_blocked_rows"] == []
+    assert response["product_full_commercial_blocker_matrix_claim_promotion_allowed"] is False
+    assert response["product_full_commercial_blocker_matrix_execution_enabled"] is False
+    assert response["product_full_commercial_blocker_matrix_external_state_mutated"] is False
     assert response["release_decision_present"] is False
     assert response["release_decision_status"] == ""
     assert response["release_decision_release_allowed"] is False
