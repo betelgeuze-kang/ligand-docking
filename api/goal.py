@@ -150,6 +150,39 @@ def _blockers(packet: dict[str, Any]) -> list[dict[str, Any]]:
     return [row for row in blockers if isinstance(row, dict)] if isinstance(blockers, list) else []
 
 
+def _goal_readiness_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    readiness_rows: list[dict[str, Any]] = []
+    for row in rows:
+        lane_status = str(row.get("lane_status") or "")
+        blocker_count = _int(row.get("blocker_count"))
+        approval_token_required = str(row.get("approval_token_required") or "")
+        operator_action_required = (
+            lane_status == "operator_approval_pending"
+            or blocker_count > 0
+            or bool(approval_token_required)
+        )
+        readiness_rows.append(
+            {
+                "lane_id": str(row.get("lane_id") or ""),
+                "lane_status": lane_status,
+                "artifact_path": str(row.get("artifact_path") or ""),
+                "artifact_present": bool(row.get("artifact_present") is True),
+                "observed_status": str(row.get("observed_status") or ""),
+                "next_required_step": str(row.get("next_required_step") or ""),
+                "blocker_count": blocker_count,
+                "approval_token_required": approval_token_required,
+                "operator_action_required": operator_action_required,
+                "reclaim_size_gb": _float(row.get("reclaim_size_gb")),
+                "blockers": _delimited_string_list(row.get("blockers")),
+                "execution_enabled": False,
+                "action_executed": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return readiness_rows
+
+
 def _row_blockers(row: dict[str, Any]) -> list[str]:
     blockers = row.get("blockers")
     if isinstance(blockers, list):
@@ -3654,13 +3687,25 @@ async def get_goal_readiness() -> dict[str, Any]:
             "status": "missing_goal_readiness_rollup",
             "artifact_path": str(GOAL_READINESS_ROLLUP_ARTIFACT),
             "release_allowed": False,
+            "readiness_row_count": 0,
+            "readiness_action_required_row_count": 0,
+            "readiness_rows": [],
+            "rows": [],
+            "blockers": [],
             **_mutation_flags(),
             "claim_boundary": CLAIM_BOUNDARY,
         }
+    source_rows = _rows(packet)
+    readiness_rows = _goal_readiness_rows(source_rows)
     return {
         **summary,
         "artifact_path": str(GOAL_READINESS_ROLLUP_ARTIFACT),
-        "rows": _rows(packet),
+        "readiness_row_count": len(readiness_rows),
+        "readiness_action_required_row_count": sum(
+            1 for row in readiness_rows if row["operator_action_required"] is True
+        ),
+        "readiness_rows": readiness_rows,
+        "rows": source_rows,
         "blockers": _blockers(packet),
         **_mutation_flags(),
     }
