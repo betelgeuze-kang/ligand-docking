@@ -84,6 +84,10 @@ STEP_IDS = (
     "benchmark_receipt_attach",
     "benchmark_ledger_review",
 )
+EXTERNAL_BETA_REQUIREMENT_IDS = STEP_IDS + (
+    "external_benchmark_receipts_ready",
+    "external_beta_claim_review_allowed",
+)
 
 CSV_FIELDS = [
     "step_id",
@@ -357,6 +361,34 @@ def _receipt_attach_lane(
         "execution_enabled": False,
         "external_state_mutated": False,
         "claim_promotion_allowed": False,
+        "claim_boundary": CLAIM_BOUNDARY,
+    }
+
+
+def _external_beta_requirement_row(
+    *,
+    requirement_id: str,
+    ready: bool,
+    evidence_artifact: str | Path,
+    observed_value: Any,
+    required_value: Any,
+    blocker: str,
+    operator_action: str,
+    root: Path,
+) -> dict[str, Any]:
+    return {
+        "requirement_id": requirement_id,
+        "status": "ready" if ready else "blocked",
+        "ready": ready,
+        "evidence_artifact": _display(evidence_artifact, root=root),
+        "observed_value": _csv_value(observed_value),
+        "required_value": _csv_value(required_value),
+        "blocker": "" if ready else blocker,
+        "operator_action": "" if ready else operator_action,
+        "external_beta_wording_allowed": False,
+        "claim_promotion_allowed": False,
+        "execution_enabled": False,
+        "external_state_mutated": False,
         "claim_boundary": CLAIM_BOUNDARY,
     }
 
@@ -666,6 +698,58 @@ def build_public_benchmark_external_receipts_audit(
     blocked_rows = [row for row in rows if not row["ready"]]
     blockers = [f"{row['step_id']}:{row['blocker']}" for row in blocked_rows]
     external_ready = len(ready_rows) == len(rows)
+    external_beta_requirement_rows = [
+        _external_beta_requirement_row(
+            requirement_id=row["step_id"],
+            ready=bool(row["ready"]),
+            evidence_artifact=row["evidence_artifact"],
+            observed_value=row["status"],
+            required_value="ready",
+            blocker=row["blocker"],
+            operator_action=row["next_required_step"],
+            root=root,
+        )
+        for row in rows
+    ]
+    external_beta_requirement_rows.extend(
+        [
+            _external_beta_requirement_row(
+                requirement_id="external_benchmark_receipts_ready",
+                ready=external_ready,
+                evidence_artifact=DEFAULT_OUT_JSON,
+                observed_value=f"{len(ready_rows)}/{len(rows)}",
+                required_value=f"{len(rows)}/{len(rows)}",
+                blocker="external_benchmark_receipts_incomplete",
+                operator_action=(
+                    blocked_rows[0]["next_required_step"]
+                    if blocked_rows
+                    else "Attach this audit to external beta review."
+                ),
+                root=root,
+            ),
+            _external_beta_requirement_row(
+                requirement_id="external_beta_claim_review_allowed",
+                ready=False,
+                evidence_artifact=DEFAULT_OUT_JSON,
+                observed_value=False,
+                required_value="explicit_human_review_after_receipts_ready",
+                blocker="external_beta_claim_review_not_approved",
+                operator_action=(
+                    "Keep external beta wording disabled until the benchmark receipts, same-input "
+                    "comparison, and ledger review are explicitly approved."
+                ),
+                root=root,
+            ),
+        ]
+    )
+    external_beta_blocked_requirement_rows = [
+        row for row in external_beta_requirement_rows if not row["ready"]
+    ]
+    primary_external_beta_requirement = (
+        external_beta_blocked_requirement_rows[0]
+        if external_beta_blocked_requirement_rows
+        else {}
+    )
     summary = {
         "packet_type": PACKET_TYPE,
         "schema_version": SCHEMA_VERSION,
@@ -675,6 +759,25 @@ def build_public_benchmark_external_receipts_audit(
             else "blocked_public_benchmark_external_receipts_audit"
         ),
         "external_benchmark_receipts_ready": external_ready,
+        "external_beta_candidate_ready": external_ready,
+        "external_beta_wording_allowed": False,
+        "external_beta_requirement_ids": list(EXTERNAL_BETA_REQUIREMENT_IDS),
+        "external_beta_requirement_row_count": len(external_beta_requirement_rows),
+        "external_beta_requirement_ready_row_count": (
+            len(external_beta_requirement_rows) - len(external_beta_blocked_requirement_rows)
+        ),
+        "external_beta_requirement_blocked_row_count": len(
+            external_beta_blocked_requirement_rows
+        ),
+        "external_beta_primary_requirement_id": _text(
+            primary_external_beta_requirement.get("requirement_id")
+        ),
+        "external_beta_primary_blocker": _text(
+            primary_external_beta_requirement.get("blocker")
+        ),
+        "external_beta_primary_operator_action": _text(
+            primary_external_beta_requirement.get("operator_action")
+        ),
         "claim_promotion_allowed": False,
         "step_count": len(rows),
         "ready_step_count": len(ready_rows),
@@ -840,6 +943,7 @@ def build_public_benchmark_external_receipts_audit(
         "rows": rows,
         "receipt_attach_lane_rows": receipt_attach_lane_rows,
         "field_work_order_rows": field_work_order_rows,
+        "external_beta_requirement_rows": external_beta_requirement_rows,
     }
 
 
@@ -874,6 +978,10 @@ def _render_md(payload: dict[str, Any]) -> str:
         "",
         f"- status: `{summary['status']}`",
         f"- external_benchmark_receipts_ready: `{summary['external_benchmark_receipts_ready']}`",
+        f"- external_beta_candidate_ready: `{summary['external_beta_candidate_ready']}`",
+        f"- external_beta_wording_allowed: `{summary['external_beta_wording_allowed']}`",
+        f"- external_beta_requirement_blocked_row_count: `{summary['external_beta_requirement_blocked_row_count']}`",
+        f"- external_beta_primary_requirement_id: `{summary['external_beta_primary_requirement_id']}`",
         f"- ready_step_count: `{summary['ready_step_count']}` / `{summary['step_count']}`",
         f"- blocker_count: `{summary['blocker_count']}`",
         f"- primary_blocker_id: `{summary['primary_blocker_id']}`",
@@ -887,6 +995,20 @@ def _render_md(payload: dict[str, Any]) -> str:
     for row in payload["rows"]:
         lines.append(
             f"| `{row['step_id']}` | `{row['status']}` | {row['primary_metric']} | `{row['blocker']}` |"
+        )
+    lines.extend(
+        [
+            "",
+            "## External Beta Requirement Checklist",
+            "",
+            "| requirement | status | observed | required | blocker | action |",
+            "| --- | --- | --- | --- | --- | --- |",
+        ]
+    )
+    for row in payload.get("external_beta_requirement_rows", []):
+        lines.append(
+            f"| `{row['requirement_id']}` | `{row['status']}` | `{row['observed_value']}` | "
+            f"`{row['required_value']}` | `{row['blocker'] or '-'}` | {row['operator_action'] or '-'} |"
         )
     lines.extend(
         [

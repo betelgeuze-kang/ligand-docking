@@ -271,6 +271,24 @@ def test_public_benchmark_external_receipts_audit_blocks_unapproved_receipts(
 
     assert summary["status"] == "blocked_public_benchmark_external_receipts_audit"
     assert summary["external_benchmark_receipts_ready"] is False
+    assert summary["external_beta_candidate_ready"] is False
+    assert summary["external_beta_wording_allowed"] is False
+    assert summary["external_beta_requirement_ids"] == [
+        "casf_pdbbind_default_manifest",
+        "subset_dry_run",
+        "pose_rmsd_2a_5a",
+        "posebusters_validity",
+        "vina_gnina_same_input_comparison",
+        "benchmark_receipt_attach",
+        "benchmark_ledger_review",
+        "external_benchmark_receipts_ready",
+        "external_beta_claim_review_allowed",
+    ]
+    assert summary["external_beta_requirement_row_count"] == 9
+    assert summary["external_beta_requirement_ready_row_count"] == 5
+    assert summary["external_beta_requirement_blocked_row_count"] == 4
+    assert summary["external_beta_primary_requirement_id"] == "vina_gnina_same_input_comparison"
+    assert summary["external_beta_primary_blocker"] == "vina_gnina_same_input_score_evidence_missing"
     assert summary["ready_step_count"] == 5
     assert summary["blocked_step_count"] == 2
     assert summary["primary_blocker_id"] == "vina_gnina_same_input_comparison"
@@ -325,6 +343,21 @@ def test_public_benchmark_external_receipts_audit_blocks_unapproved_receipts(
     assert payload["receipt_attach_lane_rows"][0]["execution_enabled"] is False
     assert payload["receipt_attach_lane_rows"][0]["external_state_mutated"] is False
     assert payload["receipt_attach_lane_rows"][0]["claim_promotion_allowed"] is False
+    requirement_rows = {
+        row["requirement_id"]: row for row in payload["external_beta_requirement_rows"]
+    }
+    assert requirement_rows["casf_pdbbind_default_manifest"]["ready"] is True
+    assert requirement_rows["vina_gnina_same_input_comparison"]["ready"] is False
+    assert requirement_rows["benchmark_receipt_attach"]["ready"] is False
+    assert requirement_rows["external_benchmark_receipts_ready"]["observed_value"] == "5/7"
+    assert requirement_rows["external_benchmark_receipts_ready"]["required_value"] == "7/7"
+    assert all(
+        row["external_beta_wording_allowed"] is False
+        and row["claim_promotion_allowed"] is False
+        and row["execution_enabled"] is False
+        and row["external_state_mutated"] is False
+        for row in payload["external_beta_requirement_rows"]
+    )
     assert payload["field_work_order_rows"][0]["field_name"] == "approval_token"
     assert payload["field_work_order_rows"][0]["pending_row_count"] == 16
     assert payload["field_work_order_rows"][0]["execution_enabled"] is False
@@ -348,6 +381,13 @@ def test_public_benchmark_external_receipts_audit_ready_when_all_steps_pass(
 
     assert summary["status"] == "public_benchmark_external_receipts_audit_ready"
     assert summary["external_benchmark_receipts_ready"] is True
+    assert summary["external_beta_candidate_ready"] is True
+    assert summary["external_beta_wording_allowed"] is False
+    assert summary["external_beta_requirement_row_count"] == 9
+    assert summary["external_beta_requirement_ready_row_count"] == 8
+    assert summary["external_beta_requirement_blocked_row_count"] == 1
+    assert summary["external_beta_primary_requirement_id"] == "external_beta_claim_review_allowed"
+    assert summary["external_beta_primary_blocker"] == "external_beta_claim_review_not_approved"
     assert summary["ready_step_count"] == 7
     assert summary["blocked_step_count"] == 0
     assert summary["blockers"] == []
@@ -365,6 +405,11 @@ def test_public_benchmark_external_receipts_audit_ready_when_all_steps_pass(
     assert payload["receipt_attach_lane_rows"][0]["ready"] is True
     assert payload["field_work_order_rows"] == []
     assert summary["claim_promotion_allowed"] is False
+    requirement_rows = {
+        row["requirement_id"]: row for row in payload["external_beta_requirement_rows"]
+    }
+    assert requirement_rows["external_benchmark_receipts_ready"]["ready"] is True
+    assert requirement_rows["external_beta_claim_review_allowed"]["ready"] is False
 
 
 def test_public_benchmark_external_receipts_audit_cli_writes_outputs(tmp_path: Path) -> None:
@@ -413,5 +458,6 @@ def test_public_benchmark_external_receipts_audit_cli_writes_outputs(tmp_path: P
     assert "vina_gnina_same_input_comparison" in out_csv.read_text(encoding="utf-8")
     md = out_md.read_text(encoding="utf-8")
     assert "Public Benchmark External Receipts Audit" in md
+    assert "External Beta Requirement Checklist" in md
     assert "Receipt Attach Lanes" in md
     assert "Field Work Order" in md
