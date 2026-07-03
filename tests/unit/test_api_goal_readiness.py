@@ -304,6 +304,117 @@ def test_goal_developer_preview_missing_artifact_keeps_requirements_fail_closed(
     assert response["external_state_mutated"] is False
 
 
+def test_goal_api_customer_flow_exposes_release_evidence_rows(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    artifact = tmp_path / "runs/api_customer_flow_release_evidence_current.json"
+    monkeypatch.setattr(mod, "API_CUSTOMER_FLOW_RELEASE_EVIDENCE_ARTIFACT", artifact)
+    check_ids = [
+        "api_dispatch_live_job_ready",
+        "tier_alpha_smoke_live_job_ready",
+        "worker_lease_and_runner_profile_ready",
+        "signed_result_manifest_ready",
+        "bundle_validation_ready",
+        "restricted_unattended_runtime_ready",
+    ]
+    _write_json(
+        artifact,
+        {
+            "summary": {
+                "status": "api_customer_flow_release_evidence_ready",
+                "formal_release_evidence_ready": True,
+                "clean_install_flow_ready": True,
+                "tier_alpha_runner_execution_ok": True,
+                "tier_alpha_worker_dispatch_enqueued": True,
+                "result_manifest_signature_verified": True,
+                "bundle_validation_ready": True,
+                "restricted_unattended_runtime_ready": True,
+                "general_platform_claim_allowed": False,
+                "check_count": 6,
+                "pass_count": 6,
+                "blocker_count": 0,
+                "blocked_check_ids": [],
+                "tier_alpha_smoke_status": "tier_alpha_adrb2_dispatch_smoke_pass",
+                "tier_alpha_evidence_mode": "live_job_recovered_from_completed_artifacts",
+                "e2e_evidence_mode": "live_job",
+                "result_manifest": "runs/tier_alpha/result_manifest.json",
+                "result_manifest_sha256": "abc123",
+                "allowed_scope_families": ["gpcr", "ion_channel", "kinase"],
+                "claim_boundary": "api customer flow fixture boundary",
+            },
+            "rows": [
+                {
+                    "check_id": check_id,
+                    "status": "pass",
+                    "release_blocker": False,
+                    "artifact_path": f"runs/{check_id}.json",
+                    "required": f"{check_id}:required",
+                    "observed": f"{check_id}:observed",
+                    "reason": f"{check_id}:reason",
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                }
+                for check_id in check_ids
+            ],
+        },
+    )
+
+    response = asyncio.run(mod.get_goal_api_customer_flow())
+
+    assert response["status"] == "api_customer_flow_release_evidence_ready"
+    assert response["api_customer_flow_release_evidence_ready"] is True
+    assert response["api_customer_local_workflow_claim_allowed"] is True
+    assert response["restricted_scope_customer_flow_claim_allowed"] is True
+    assert response["paid_pilot_wording_allowed"] is False
+    assert response["tier_alpha_smoke_status"] == "tier_alpha_adrb2_dispatch_smoke_pass"
+    assert response["result_manifest_signature_verified"] is True
+    assert response["bundle_validation_ready"] is True
+    assert response["restricted_unattended_runtime_ready"] is True
+    assert response["general_platform_claim_allowed"] is False
+    assert response["requirement_row_count"] == 6
+    assert response["requirement_ready_row_count"] == 6
+    assert response["requirement_blocked_row_count"] == 0
+    assert response["requirement_blocked_rows"] == []
+    assert [row["check_id"] for row in response["requirement_rows"]] == check_ids
+    assert all(
+        row["ready"] is True
+        and row["execution_enabled"] is False
+        and row["external_state_mutated"] is False
+        and row["claim_promotion_allowed"] is False
+        and row["paid_pilot_wording_allowed"] is False
+        for row in response["requirement_rows"]
+    )
+    assert response["execution_enabled"] is False
+    assert response["external_state_mutated"] is False
+    assert response["claim_boundary"] == "api customer flow fixture boundary"
+
+
+def test_goal_api_customer_flow_missing_artifact_fails_closed(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        mod,
+        "API_CUSTOMER_FLOW_RELEASE_EVIDENCE_ARTIFACT",
+        tmp_path / "runs/missing_api_customer_flow_release_evidence_current.json",
+    )
+
+    response = asyncio.run(mod.get_goal_api_customer_flow())
+
+    assert response["status"] == "missing_api_customer_flow_release_evidence"
+    assert response["api_customer_flow_release_evidence_ready"] is False
+    assert response["api_customer_local_workflow_claim_allowed"] is False
+    assert response["restricted_scope_customer_flow_claim_allowed"] is False
+    assert response["paid_pilot_wording_allowed"] is False
+    assert response["blocker_count"] == 1
+    assert response["blocked_check_ids"] == ["api_customer_flow_release_evidence_missing"]
+    assert response["requirement_row_count"] == 0
+    assert response["requirement_rows"] == []
+    assert response["execution_enabled"] is False
+    assert response["external_state_mutated"] is False
+
+
 def test_goal_customer_shadow_exposes_paid_pilot_requirement_rows(
     tmp_path: Path,
     monkeypatch,

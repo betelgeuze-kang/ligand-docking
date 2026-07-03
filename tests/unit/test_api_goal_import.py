@@ -1702,6 +1702,7 @@ def test_api_app_imports_with_goal_router() -> None:
     from api.goal import (
         get_goal_actions,
         get_goal_api_contract,
+        get_goal_api_customer_flow,
         get_goal_bottlenecks,
         get_goal_burndown,
         get_goal_customer_shadow,
@@ -1721,6 +1722,7 @@ def test_api_app_imports_with_goal_router() -> None:
     assert "/goal/developer-preview" in paths
     assert "/goal/public-benchmark" in paths
     assert "/goal/customer-shadow" in paths
+    assert "/goal/api-customer-flow" in paths
     assert "/goal/actions" in paths
     assert "/goal/operator-intake-kit" in paths
     assert "/goal/release-decision" in paths
@@ -1769,6 +1771,7 @@ def test_api_app_imports_with_goal_router() -> None:
     burndown = asyncio.run(get_goal_burndown())
     bottlenecks = asyncio.run(get_goal_bottlenecks())
     api_contract = asyncio.run(get_goal_api_contract())
+    api_customer_flow = asyncio.run(get_goal_api_customer_flow())
 
     assert status["status"] == release_artifact.get("status")
     assert status["release_allowed"] is (release_artifact.get("release_allowed") is True)
@@ -3081,6 +3084,11 @@ def test_api_app_imports_with_goal_router() -> None:
     assert len(bottlenecks["bottlenecks"]) == int(bottlenecks_artifact.get("bottleneck_count") or 0)
 
     assert api_contract["status"] == api_contract_artifact.get("status")
+    assert api_customer_flow["status"] in {
+        "api_customer_flow_release_evidence_ready",
+        "blocked_api_customer_flow_release_evidence",
+        "missing_api_customer_flow_release_evidence",
+    }
     assert api_contract["surface_ready"] is True
     assert api_contract["blocker_count"] == 0
 

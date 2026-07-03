@@ -54,6 +54,9 @@ PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT = (
 CUSTOMER_SHADOW_EVIDENCE_STATUS_ARTIFACT = (
     ROOT / "runs" / "customer_shadow_evidence_status_current.json"
 )
+API_CUSTOMER_FLOW_RELEASE_EVIDENCE_ARTIFACT = (
+    ROOT / "runs" / "api_customer_flow_release_evidence_current.json"
+)
 PRODUCT_GOAL_COMPLETION_AUDIT_ARTIFACT = ROOT / "runs" / "product_goal_completion_audit_current.json"
 PRODUCT_COMMERCIAL_READINESS_HANDOFF_BUNDLE_ARTIFACT = (
     ROOT / "runs" / "product_commercial_readiness_handoff_bundle_current.json"
@@ -505,6 +508,55 @@ def _customer_shadow_paid_pilot_requirement_rows(summary: dict[str, Any]) -> lis
         "Keep commercial readiness promotion disabled until reviewed evidence passes.",
     )
     return rows
+
+
+def _api_customer_flow_release_ready(summary: dict[str, Any]) -> bool:
+    return bool(
+        str(summary.get("status") or "") == "api_customer_flow_release_evidence_ready"
+        and summary.get("formal_release_evidence_ready") is True
+        and summary.get("clean_install_flow_ready") is True
+        and summary.get("tier_alpha_runner_execution_ok") is True
+        and summary.get("tier_alpha_worker_dispatch_enqueued") is True
+        and summary.get("result_manifest_signature_verified") is True
+        and summary.get("bundle_validation_ready") is True
+        and summary.get("restricted_unattended_runtime_ready") is True
+        and summary.get("general_platform_claim_allowed") is not True
+        and _int(summary.get("pass_count")) == _int(summary.get("check_count"))
+        and _int(summary.get("check_count")) > 0
+        and _int(summary.get("blocker_count")) == 0
+    )
+
+
+def _api_customer_flow_requirement_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    requirement_rows: list[dict[str, Any]] = []
+    for row in rows:
+        check_id = str(row.get("check_id") or "").strip()
+        if not check_id:
+            continue
+        status = str(row.get("status") or "")
+        release_blocker = bool(row.get("release_blocker") is True)
+        ready = status == "pass" and not release_blocker
+        requirement_rows.append(
+            {
+                "check_id": check_id,
+                "status": status,
+                "ready": ready,
+                "release_blocker": release_blocker,
+                "artifact_path": str(row.get("artifact_path") or ""),
+                "required": str(row.get("required") or ""),
+                "observed": str(row.get("observed") or ""),
+                "reason": str(row.get("reason") or ""),
+                "blocker": (
+                    "" if ready else str(row.get("observed") or status or "not_ready")
+                ),
+                "operator_action_required": not ready,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "paid_pilot_wording_allowed": False,
+            }
+        )
+    return requirement_rows
 
 
 def _developer_preview_clean_checkout_receipt_surface(receipt_path: Path) -> dict[str, Any]:
@@ -4367,6 +4419,95 @@ async def get_goal_customer_shadow() -> dict[str, Any]:
         "customer_shadow_work_order_blocked_rows": work_order_blocked_rows,
         "rows": rows,
         "customer_shadow_work_order_rows": work_order_rows,
+        **_mutation_flags(),
+        "claim_boundary": summary.get("claim_boundary") or CLAIM_BOUNDARY,
+    }
+
+
+@router.get("/api-customer-flow")
+async def get_goal_api_customer_flow() -> dict[str, Any]:
+    packet = _read_json_object(API_CUSTOMER_FLOW_RELEASE_EVIDENCE_ARTIFACT)
+    summary = _summary(packet)
+    rows = _api_customer_flow_requirement_rows(_rows(packet))
+    blocked_rows = [row for row in rows if not row["ready"]]
+    if not summary:
+        return {
+            "status": "missing_api_customer_flow_release_evidence",
+            "artifact_path": str(API_CUSTOMER_FLOW_RELEASE_EVIDENCE_ARTIFACT),
+            "api_customer_flow_release_evidence_ready": False,
+            "api_customer_local_workflow_claim_allowed": False,
+            "restricted_scope_customer_flow_claim_allowed": False,
+            "paid_pilot_wording_allowed": False,
+            "formal_release_evidence_ready": False,
+            "clean_install_flow_ready": False,
+            "tier_alpha_runner_execution_ok": False,
+            "tier_alpha_worker_dispatch_enqueued": False,
+            "result_manifest_signature_verified": False,
+            "bundle_validation_ready": False,
+            "restricted_unattended_runtime_ready": False,
+            "general_platform_claim_allowed": False,
+            "check_count": 0,
+            "pass_count": 0,
+            "blocker_count": 1,
+            "blocked_check_ids": ["api_customer_flow_release_evidence_missing"],
+            "tier_alpha_smoke_status": "",
+            "tier_alpha_evidence_mode": "",
+            "e2e_evidence_mode": "",
+            "result_manifest": "",
+            "result_manifest_sha256": "",
+            "allowed_scope_families": [],
+            "requirement_row_count": 0,
+            "requirement_ready_row_count": 0,
+            "requirement_blocked_row_count": 0,
+            "requirement_rows": [],
+            "requirement_blocked_rows": [],
+            "next_required_step": "Build API customer-flow release evidence before claiming the local API workflow.",
+            **_mutation_flags(),
+            "claim_boundary": CLAIM_BOUNDARY,
+        }
+    ready = _api_customer_flow_release_ready(summary)
+    return {
+        **summary,
+        "artifact_path": str(API_CUSTOMER_FLOW_RELEASE_EVIDENCE_ARTIFACT),
+        "api_customer_flow_release_evidence_ready": ready,
+        "api_customer_local_workflow_claim_allowed": ready,
+        "restricted_scope_customer_flow_claim_allowed": ready,
+        "paid_pilot_wording_allowed": False,
+        "formal_release_evidence_ready": bool(
+            summary.get("formal_release_evidence_ready") is True
+        ),
+        "clean_install_flow_ready": bool(summary.get("clean_install_flow_ready") is True),
+        "tier_alpha_runner_execution_ok": bool(
+            summary.get("tier_alpha_runner_execution_ok") is True
+        ),
+        "tier_alpha_worker_dispatch_enqueued": bool(
+            summary.get("tier_alpha_worker_dispatch_enqueued") is True
+        ),
+        "result_manifest_signature_verified": bool(
+            summary.get("result_manifest_signature_verified") is True
+        ),
+        "bundle_validation_ready": bool(summary.get("bundle_validation_ready") is True),
+        "restricted_unattended_runtime_ready": bool(
+            summary.get("restricted_unattended_runtime_ready") is True
+        ),
+        "general_platform_claim_allowed": bool(
+            summary.get("general_platform_claim_allowed") is True
+        ),
+        "check_count": _int(summary.get("check_count")),
+        "pass_count": _int(summary.get("pass_count")),
+        "blocker_count": _int(summary.get("blocker_count")),
+        "blocked_check_ids": _string_list(summary.get("blocked_check_ids")),
+        "tier_alpha_smoke_status": str(summary.get("tier_alpha_smoke_status") or ""),
+        "tier_alpha_evidence_mode": str(summary.get("tier_alpha_evidence_mode") or ""),
+        "e2e_evidence_mode": str(summary.get("e2e_evidence_mode") or ""),
+        "result_manifest": str(summary.get("result_manifest") or ""),
+        "result_manifest_sha256": str(summary.get("result_manifest_sha256") or ""),
+        "allowed_scope_families": _string_list(summary.get("allowed_scope_families")),
+        "requirement_row_count": len(rows),
+        "requirement_ready_row_count": len(rows) - len(blocked_rows),
+        "requirement_blocked_row_count": len(blocked_rows),
+        "requirement_rows": rows,
+        "requirement_blocked_rows": blocked_rows,
         **_mutation_flags(),
         "claim_boundary": summary.get("claim_boundary") or CLAIM_BOUNDARY,
     }
