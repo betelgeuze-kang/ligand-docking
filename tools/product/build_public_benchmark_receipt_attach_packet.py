@@ -115,8 +115,22 @@ def _summary(payload: dict[str, Any]) -> dict[str, Any]:
     return summary if isinstance(summary, dict) else payload
 
 
+def _dict_list(payload: dict[str, Any], key: str) -> list[dict[str, Any]]:
+    rows = payload.get(key)
+    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+
+
 def _text(value: Any) -> str:
     return "" if value is None else str(value).strip()
+
+
+def _string_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [_text(item) for item in value if _text(item)]
+    if isinstance(value, tuple):
+        return [_text(item) for item in value if _text(item)]
+    text = _text(value)
+    return [text] if text else []
 
 
 def _int(value: Any) -> int:
@@ -256,6 +270,49 @@ def _build_field_work_order_rows(
     return rows
 
 
+def _score_evidence_row_work_order_rows(
+    payload: dict[str, Any],
+    *,
+    source_artifact: str | Path,
+    root: Path,
+) -> list[dict[str, Any]]:
+    summary = _summary(payload)
+    claim_boundary = _text(summary.get("claim_boundary")) or CLAIM_BOUNDARY
+    source = _display(source_artifact, root=root)
+    rows: list[dict[str, Any]] = []
+    for row in _dict_list(payload, "score_evidence_row_work_order_rows"):
+        missing_fields = _string_list(row.get("missing_fields"))
+        rows.append(
+            {
+                "work_order_id": _text(row.get("work_order_id")),
+                "status": _text(row.get("status")) or "blocked",
+                "pose_id": _text(row.get("pose_id")),
+                "complex_id": _text(row.get("complex_id")),
+                "operator_csv": _text(row.get("operator_csv")),
+                "source_artifact": source,
+                "missing_field_count": _int(row.get("missing_field_count"))
+                or len(missing_fields),
+                "missing_fields": missing_fields,
+                "primary_missing_field": _text(row.get("primary_missing_field")),
+                "primary_required_action": _text(row.get("primary_required_action")),
+                "required_action": _text(row.get("required_action")),
+                "blocker_count": _int(row.get("blocker_count")),
+                "blockers": _string_list(row.get("blockers")),
+                "score_values_ready": _bool_true(row.get("score_values_ready")),
+                "metadata_ready": _bool_true(row.get("metadata_ready")),
+                "license_ok": _bool_true(row.get("license_ok")),
+                "approval_token_ok": _bool_true(row.get("approval_token_ok")),
+                "approval_token_required": _text(row.get("approval_token_required")),
+                "operator_action_required": row.get("operator_action_required") is not False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "claim_boundary": _text(row.get("claim_boundary")) or claim_boundary,
+            }
+        )
+    return rows
+
+
 def _lane(
     *,
     lane_id: str,
@@ -305,7 +362,8 @@ def build_public_benchmark_receipt_attach_packet(
 ) -> dict[str, Any]:
     audit = _summary(_read_json(external_receipts_audit_json, root=root))
     vina_gnina = _summary(_read_json(vina_gnina_work_order_json, root=root))
-    vina_gnina_receipt = _summary(_read_json(vina_gnina_score_template_receipt_json, root=root))
+    vina_gnina_receipt_payload = _read_json(vina_gnina_score_template_receipt_json, root=root)
+    vina_gnina_receipt = _summary(vina_gnina_receipt_payload)
     metric_receipt = _summary(_read_json(metric_source_receipt_json, root=root))
     vina_gnina_receipt_present = bool(vina_gnina_receipt)
     vina_gnina_source = vina_gnina_receipt if vina_gnina_receipt_present else vina_gnina
@@ -378,10 +436,35 @@ def build_public_benchmark_receipt_attach_packet(
         metric_source_receipt_csv=metric_source_receipt_csv,
         root=root,
     )
+    score_evidence_row_work_order_rows = _score_evidence_row_work_order_rows(
+        vina_gnina_receipt_payload if vina_gnina_receipt_present else {},
+        source_artifact=vina_gnina_score_template_receipt_json,
+        root=root,
+    )
     ready_rows = [row for row in rows if row["ready"]]
     blocked_rows = [row for row in rows if not row["ready"]]
     packet_ready = len(ready_rows) == len(rows)
     primary_work_order_row = field_work_order_rows[0] if field_work_order_rows else {}
+    primary_score_row_work_order = (
+        score_evidence_row_work_order_rows[0] if score_evidence_row_work_order_rows else {}
+    )
+    score_evidence_row_work_order_row_count = len(score_evidence_row_work_order_rows) or _int(
+        vina_gnina_receipt.get("score_evidence_row_work_order_row_count")
+    )
+    score_evidence_row_work_order_pending_field_count = sum(
+        _int(row.get("missing_field_count")) for row in score_evidence_row_work_order_rows
+    )
+    if not score_evidence_row_work_order_pending_field_count:
+        score_evidence_row_work_order_pending_field_count = (
+            _int(vina_gnina_receipt.get("score_evidence_row_work_order_primary_missing_field_count"))
+            if score_evidence_row_work_order_row_count
+            else 0
+        )
+    score_evidence_row_work_order_ready = (
+        _bool_true(vina_gnina_receipt.get("score_evidence_row_work_order_ready"))
+        if "score_evidence_row_work_order_ready" in vina_gnina_receipt
+        else score_evidence_row_work_order_row_count == 0
+    )
     summary = {
         "packet_type": PACKET_TYPE,
         "schema_version": SCHEMA_VERSION,
@@ -420,6 +503,50 @@ def build_public_benchmark_receipt_attach_packet(
         "field_work_order_primary_source_artifact": _text(
             primary_work_order_row.get("source_artifact")
         ),
+        "score_evidence_row_work_order_ready": score_evidence_row_work_order_ready,
+        "score_evidence_row_work_order_row_count": score_evidence_row_work_order_row_count,
+        "score_evidence_row_work_order_pending_field_count": (
+            score_evidence_row_work_order_pending_field_count
+        ),
+        "score_evidence_row_work_order_primary_work_order_id": _text(
+            primary_score_row_work_order.get("work_order_id")
+        ),
+        "score_evidence_row_work_order_primary_pose_id": _text(
+            primary_score_row_work_order.get("pose_id")
+        )
+        or _text(vina_gnina_receipt.get("score_evidence_row_work_order_primary_pose_id")),
+        "score_evidence_row_work_order_primary_complex_id": _text(
+            primary_score_row_work_order.get("complex_id")
+        )
+        or _text(vina_gnina_receipt.get("score_evidence_row_work_order_primary_complex_id")),
+        "score_evidence_row_work_order_primary_missing_field_count": _int(
+            primary_score_row_work_order.get("missing_field_count")
+        )
+        or _int(vina_gnina_receipt.get("score_evidence_row_work_order_primary_missing_field_count")),
+        "score_evidence_row_work_order_primary_missing_fields": _string_list(
+            primary_score_row_work_order.get("missing_fields")
+        )
+        or _string_list(vina_gnina_receipt.get("score_evidence_row_work_order_primary_missing_fields")),
+        "score_evidence_row_work_order_primary_missing_field": _text(
+            primary_score_row_work_order.get("primary_missing_field")
+        ),
+        "score_evidence_row_work_order_primary_required_action": _text(
+            primary_score_row_work_order.get("required_action")
+        )
+        or _text(
+            vina_gnina_receipt.get("score_evidence_row_work_order_primary_required_action")
+        ),
+        "score_evidence_row_work_order_primary_field_required_action": _text(
+            primary_score_row_work_order.get("primary_required_action")
+        ),
+        "score_evidence_row_work_order_primary_operator_csv": _text(
+            primary_score_row_work_order.get("operator_csv")
+        )
+        or _display(vina_gnina_score_template_csv, root=root),
+        "score_evidence_row_work_order_primary_source_artifact": _text(
+            primary_score_row_work_order.get("source_artifact")
+        )
+        or _display(vina_gnina_score_template_receipt_json, root=root),
         "primary_blocker_id": blocked_rows[0]["lane_id"] if blocked_rows else "",
         "primary_blocker": blocked_rows[0]["blocker"] if blocked_rows else "",
         "external_receipts_audit_status": _text(audit.get("status")),
@@ -457,7 +584,12 @@ def build_public_benchmark_receipt_attach_packet(
         if blocked_rows
         else "Receipt attach packet is ready; rerun the external benchmark receipts audit.",
     }
-    return {"summary": summary, "rows": rows, "field_work_order_rows": field_work_order_rows}
+    return {
+        "summary": summary,
+        "rows": rows,
+        "field_work_order_rows": field_work_order_rows,
+        "score_evidence_row_work_order_rows": score_evidence_row_work_order_rows,
+    }
 
 
 def _write_json(path_like: str | Path, payload: dict[str, Any], *, root: Path = ROOT) -> None:
@@ -497,6 +629,12 @@ def _render_md(payload: dict[str, Any]) -> str:
         f"- field_work_order_ready: `{summary['field_work_order_ready']}`",
         f"- field_work_order_row_count: `{summary['field_work_order_row_count']}`",
         f"- field_work_order_pending_field_count: `{summary['field_work_order_pending_field_count']}`",
+        f"- score_evidence_row_work_order_ready: `{summary['score_evidence_row_work_order_ready']}`",
+        f"- score_evidence_row_work_order_row_count: `{summary['score_evidence_row_work_order_row_count']}`",
+        (
+            "- score_evidence_row_work_order_pending_field_count: "
+            f"`{summary['score_evidence_row_work_order_pending_field_count']}`"
+        ),
         "",
         "| lane | status | rows | pending values | pending approvals | blocker |",
         "| --- | --- | ---: | ---: | ---: | --- |",
@@ -520,6 +658,21 @@ def _render_md(payload: dict[str, Any]) -> str:
         lines.append(
             f"| `{row['lane_id']}` | `{row['field_name']}` | `{row['pending_row_count']}` | "
             f"{row['required_value']} | {row['required_action']} | `{row['operator_csv']}` |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Score Evidence Row Work Order",
+            "",
+            "| pose | complex | missing fields | primary field | action | operator csv |",
+            "| --- | --- | ---: | --- | --- | --- |",
+        ]
+    )
+    for row in payload.get("score_evidence_row_work_order_rows", []):
+        lines.append(
+            f"| `{row['pose_id']}` | `{row['complex_id']}` | `{row['missing_field_count']}` | "
+            f"`{row['primary_missing_field']}` | {row['required_action']} | "
+            f"`{row['operator_csv']}` |"
         )
     lines.extend(["", CLAIM_BOUNDARY, ""])
     return "\n".join(lines)

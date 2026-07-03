@@ -599,6 +599,42 @@ def _public_benchmark_field_work_order_rows(payload: dict[str, Any]) -> list[dic
     return rows
 
 
+def _public_benchmark_score_evidence_row_work_order_rows(
+    payload: dict[str, Any],
+    *,
+    source_artifact: str = "",
+) -> list[dict[str, Any]]:
+    summary = _summary(payload)
+    claim_boundary = _text(summary.get("claim_boundary")) or CLAIM_BOUNDARY
+    rows: list[dict[str, Any]] = []
+    for row in _dict_list(payload, "score_evidence_row_work_order_rows"):
+        missing_fields = _string_list(row.get("missing_fields"))
+        rows.append(
+            {
+                "work_order_id": _text(row.get("work_order_id")),
+                "status": _text(row.get("status")) or "blocked",
+                "pose_id": _text(row.get("pose_id")),
+                "complex_id": _text(row.get("complex_id")),
+                "operator_csv": _text(row.get("operator_csv")),
+                "source_artifact": _text(row.get("source_artifact")) or source_artifact,
+                "missing_field_count": _int(row.get("missing_field_count"))
+                or len(missing_fields),
+                "missing_fields": missing_fields,
+                "primary_missing_field": _text(row.get("primary_missing_field")),
+                "primary_required_action": _text(row.get("primary_required_action")),
+                "required_action": _text(row.get("required_action")),
+                "blocker_count": _int(row.get("blocker_count")),
+                "blockers": _string_list(row.get("blockers")),
+                "operator_action_required": row.get("operator_action_required") is not False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "claim_boundary": _text(row.get("claim_boundary")) or claim_boundary,
+            }
+        )
+    return rows
+
+
 def _public_benchmark_receipt_attach_lane_rows(
     payload: dict[str, Any],
 ) -> list[dict[str, Any]]:
@@ -1728,6 +1764,25 @@ def build_product_operator_cockpit(
             public_vina_gnina_score_template_receipt_payload
         )
     )
+    public_score_evidence_row_work_order_row_preview = (
+        _public_benchmark_score_evidence_row_work_order_rows(
+            public_receipt_attach_payload,
+            source_artifact=_artifact(
+                public_benchmark_vina_gnina_score_template_receipt_json,
+                root=root,
+            ),
+        )
+    )
+    if not public_score_evidence_row_work_order_row_preview:
+        public_score_evidence_row_work_order_row_preview = (
+            _public_benchmark_score_evidence_row_work_order_rows(
+                public_vina_gnina_score_template_receipt_payload,
+                source_artifact=_artifact(
+                    public_benchmark_vina_gnina_score_template_receipt_json,
+                    root=root,
+                ),
+            )
+        )
     release_decision_payload = _read_json(goal_release_decision_json, root=root)
     release_decision = _summary(release_decision_payload)
     release_decision_row_preview = _release_decision_rows(release_decision_payload)
@@ -2251,6 +2306,83 @@ def build_product_operator_cockpit(
             "score_evidence_primary_required_action"
         ),
         public_vina_score_evidence_primary_row.get("required_action"),
+    )
+    public_score_row_work_order_count = _int(
+        public_receipt_attach_packet.get("score_evidence_row_work_order_row_count")
+    ) or _int(
+        public_vina_gnina_score_template_receipt.get("score_evidence_row_work_order_row_count")
+    ) or len(public_score_evidence_row_work_order_row_preview)
+    public_score_row_work_order_ready = (
+        _bool_true(public_receipt_attach_packet.get("score_evidence_row_work_order_ready"))
+        if "score_evidence_row_work_order_ready" in public_receipt_attach_packet
+        else _bool_true(
+            public_vina_gnina_score_template_receipt.get("score_evidence_row_work_order_ready")
+        )
+        if "score_evidence_row_work_order_ready" in public_vina_gnina_score_template_receipt
+        else public_score_row_work_order_count == 0
+    )
+    public_score_row_work_order_pending_fields = _int(
+        public_receipt_attach_packet.get("score_evidence_row_work_order_pending_field_count")
+    ) or sum(
+        _int(row.get("missing_field_count"))
+        for row in public_score_evidence_row_work_order_row_preview
+    )
+    public_score_row_work_order_primary_row = (
+        public_score_evidence_row_work_order_row_preview[0]
+        if public_score_evidence_row_work_order_row_preview
+        else {}
+    )
+    public_score_row_work_order_primary_pose_id = _first_text(
+        public_receipt_attach_packet.get("score_evidence_row_work_order_primary_pose_id"),
+        public_vina_gnina_score_template_receipt.get(
+            "score_evidence_row_work_order_primary_pose_id"
+        ),
+        public_score_row_work_order_primary_row.get("pose_id"),
+    )
+    public_score_row_work_order_primary_complex_id = _first_text(
+        public_receipt_attach_packet.get("score_evidence_row_work_order_primary_complex_id"),
+        public_vina_gnina_score_template_receipt.get(
+            "score_evidence_row_work_order_primary_complex_id"
+        ),
+        public_score_row_work_order_primary_row.get("complex_id"),
+    )
+    public_score_row_work_order_primary_missing_count = _int(
+        public_receipt_attach_packet.get(
+            "score_evidence_row_work_order_primary_missing_field_count"
+        )
+    ) or _int(
+        public_vina_gnina_score_template_receipt.get(
+            "score_evidence_row_work_order_primary_missing_field_count"
+        )
+    ) or _int(public_score_row_work_order_primary_row.get("missing_field_count"))
+    public_score_row_work_order_primary_missing_fields = _string_list(
+        public_receipt_attach_packet.get("score_evidence_row_work_order_primary_missing_fields")
+    ) or _string_list(
+        public_vina_gnina_score_template_receipt.get(
+            "score_evidence_row_work_order_primary_missing_fields"
+        )
+    ) or _string_list(public_score_row_work_order_primary_row.get("missing_fields"))
+    public_score_row_work_order_primary_missing_field = _first_text(
+        public_receipt_attach_packet.get("score_evidence_row_work_order_primary_missing_field"),
+        public_score_row_work_order_primary_row.get("primary_missing_field"),
+    )
+    public_score_row_work_order_primary_required_action = _first_text(
+        public_receipt_attach_packet.get(
+            "score_evidence_row_work_order_primary_required_action"
+        ),
+        public_vina_gnina_score_template_receipt.get(
+            "score_evidence_row_work_order_primary_required_action"
+        ),
+        public_score_row_work_order_primary_row.get("required_action"),
+    )
+    public_score_row_work_order_primary_operator_csv = _first_text(
+        public_receipt_attach_packet.get("score_evidence_row_work_order_primary_operator_csv"),
+        public_score_row_work_order_primary_row.get("operator_csv"),
+    )
+    public_score_row_work_order_primary_source_artifact = _first_text(
+        public_receipt_attach_packet.get("score_evidence_row_work_order_primary_source_artifact"),
+        public_score_row_work_order_primary_row.get("source_artifact"),
+        public_vina_score_template_receipt_json,
     )
 
     release_actions_present = bool(release_actions)
@@ -3123,6 +3255,25 @@ def build_product_operator_cockpit(
                     "score_evidence_primary_rows",
                     public_vina_score_evidence_primary_pending_row_count,
                 ),
+                _metric("score_row_work_order_ready", public_score_row_work_order_ready),
+                _count_metric("score_row_work_orders", public_score_row_work_order_count),
+                _count_metric(
+                    "score_row_pending_fields",
+                    public_score_row_work_order_pending_fields,
+                ),
+                _metric("score_row_primary_pose", public_score_row_work_order_primary_pose_id),
+                _metric(
+                    "score_row_primary_complex",
+                    public_score_row_work_order_primary_complex_id,
+                ),
+                _count_metric(
+                    "score_row_primary_missing_fields",
+                    public_score_row_work_order_primary_missing_count,
+                ),
+                _metric(
+                    "score_row_primary_field",
+                    public_score_row_work_order_primary_missing_field,
+                ),
                 _metric("pending_receipt_fields", public_metric_pending_fields),
                 _metric("pending_receipt_tokens", public_metric_pending_tokens),
                 _count_metric("field_work_order_rows", public_field_work_order_rows),
@@ -3864,6 +4015,42 @@ def build_product_operator_cockpit(
         ),
         "public_benchmark_vina_gnina_score_evidence_field_rows": (
             public_vina_gnina_score_evidence_field_row_preview
+        ),
+        "public_benchmark_score_evidence_row_work_order_ready": (
+            public_score_row_work_order_ready
+        ),
+        "public_benchmark_score_evidence_row_work_order_row_count": (
+            public_score_row_work_order_count
+        ),
+        "public_benchmark_score_evidence_row_work_order_pending_field_count": (
+            public_score_row_work_order_pending_fields
+        ),
+        "public_benchmark_score_evidence_row_work_order_primary_pose_id": (
+            public_score_row_work_order_primary_pose_id
+        ),
+        "public_benchmark_score_evidence_row_work_order_primary_complex_id": (
+            public_score_row_work_order_primary_complex_id
+        ),
+        "public_benchmark_score_evidence_row_work_order_primary_missing_field_count": (
+            public_score_row_work_order_primary_missing_count
+        ),
+        "public_benchmark_score_evidence_row_work_order_primary_missing_fields": (
+            public_score_row_work_order_primary_missing_fields
+        ),
+        "public_benchmark_score_evidence_row_work_order_primary_missing_field": (
+            public_score_row_work_order_primary_missing_field
+        ),
+        "public_benchmark_score_evidence_row_work_order_primary_required_action": (
+            public_score_row_work_order_primary_required_action
+        ),
+        "public_benchmark_score_evidence_row_work_order_primary_operator_csv": (
+            public_score_row_work_order_primary_operator_csv
+        ),
+        "public_benchmark_score_evidence_row_work_order_primary_source_artifact": (
+            public_score_row_work_order_primary_source_artifact
+        ),
+        "public_benchmark_score_evidence_row_work_order_rows": (
+            public_score_evidence_row_work_order_row_preview
         ),
         "public_benchmark_metric_source_pending_field_count": public_metric_pending_fields,
         "public_benchmark_metric_source_pending_approval_token_count": public_metric_pending_tokens,

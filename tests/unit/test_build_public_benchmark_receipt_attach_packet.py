@@ -12,6 +12,11 @@ def _write_summary(path: Path, summary: dict) -> None:
     path.write_text(json.dumps({"summary": summary}, indent=2) + "\n", encoding="utf-8")
 
 
+def _write_payload(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
 def _write_csv(path: Path, fieldnames: list[str], rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
@@ -70,32 +75,121 @@ def _write_inputs(tmp_path: Path, *, ready: bool) -> dict[str, Path]:
             {"pose_id": "2def_pose_001", "vina_score": "-6.4" if ready else "", "gnina_score": "-7.0" if ready else ""},
         ],
     )
-    _write_summary(
+    score_row_work_order_rows = []
+    if not ready:
+        score_row_work_order_rows = [
+            {
+                "work_order_id": "vina_gnina_same_input_score_row:1abc_pose_001",
+                "status": "blocked",
+                "pose_id": "1abc_pose_001",
+                "complex_id": "1abc",
+                "operator_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
+                "missing_field_count": 4,
+                "missing_fields": ["approval_token", "gnina_score", "operator_id", "vina_score"],
+                "primary_missing_field": "approval_token",
+                "primary_required_action": (
+                    f"Fill approval_token with {mod.VINA_GNINA_APPROVAL_TOKEN} after operator review."
+                ),
+                "required_action": (
+                    "Fill the missing same-input score, metadata, license, and approval fields "
+                    "for this pose row, then rebuild the receipt."
+                ),
+                "blocker_count": 4,
+                "blockers": [
+                    "score_values_missing_or_invalid",
+                    "operator_metadata_missing_or_placeholder",
+                    "license_ok_pending",
+                    "approval_token_pending",
+                ],
+                "score_values_ready": False,
+                "metadata_ready": False,
+                "license_ok": False,
+                "approval_token_ok": False,
+                "approval_token_required": mod.VINA_GNINA_APPROVAL_TOKEN,
+                "operator_action_required": True,
+                "execution_enabled": True,
+                "external_state_mutated": True,
+                "claim_promotion_allowed": True,
+                "claim_boundary": "same-input Vina/GNINA score receipt only",
+            },
+            {
+                "work_order_id": "vina_gnina_same_input_score_row:2def_pose_001",
+                "status": "blocked",
+                "pose_id": "2def_pose_001",
+                "complex_id": "2def",
+                "operator_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
+                "missing_field_count": 4,
+                "missing_fields": ["approval_token", "gnina_score", "operator_id", "vina_score"],
+                "primary_missing_field": "approval_token",
+                "primary_required_action": (
+                    f"Fill approval_token with {mod.VINA_GNINA_APPROVAL_TOKEN} after operator review."
+                ),
+                "required_action": (
+                    "Fill the missing same-input score, metadata, license, and approval fields "
+                    "for this pose row, then rebuild the receipt."
+                ),
+                "blocker_count": 4,
+                "blockers": [
+                    "score_values_missing_or_invalid",
+                    "operator_metadata_missing_or_placeholder",
+                    "license_ok_pending",
+                    "approval_token_pending",
+                ],
+                "score_values_ready": False,
+                "metadata_ready": False,
+                "license_ok": False,
+                "approval_token_ok": False,
+                "approval_token_required": mod.VINA_GNINA_APPROVAL_TOKEN,
+                "operator_action_required": True,
+                "execution_enabled": True,
+                "external_state_mutated": True,
+                "claim_promotion_allowed": True,
+                "claim_boundary": "same-input Vina/GNINA score receipt only",
+            },
+        ]
+    _write_payload(
         paths["score_receipt"],
         {
-            "status": "public_benchmark_vina_gnina_score_template_receipt_ready"
-            if ready
-            else "blocked_public_benchmark_vina_gnina_score_template_receipt",
-            "score_template_receipt_ready": ready,
-            "score_template_validation_ready": ready,
-            "score_template_row_count": 2,
-            "score_value_pending_count": 0 if ready else 4,
-            "operator_metadata_pending_count": 0 if ready else 16,
-            "operator_placeholder_pending_count": 0 if ready else 16,
-            "license_ok_pending_count": 0 if ready else 2,
-            "approval_token_pending_count": 0 if ready else 2,
-            "pending_field_counts": {}
-            if ready
-            else {
-                "approval_token": 2,
-                "gnina_score": 2,
-                "operator_id": 2,
-                "vina_score": 2,
+            "summary": {
+                "status": "public_benchmark_vina_gnina_score_template_receipt_ready"
+                if ready
+                else "blocked_public_benchmark_vina_gnina_score_template_receipt",
+                "score_template_receipt_ready": ready,
+                "score_template_validation_ready": ready,
+                "score_template_row_count": 2,
+                "score_value_pending_count": 0 if ready else 4,
+                "operator_metadata_pending_count": 0 if ready else 16,
+                "operator_placeholder_pending_count": 0 if ready else 16,
+                "license_ok_pending_count": 0 if ready else 2,
+                "approval_token_pending_count": 0 if ready else 2,
+                "pending_field_counts": {}
+                if ready
+                else {
+                    "approval_token": 2,
+                    "gnina_score": 2,
+                    "operator_id": 2,
+                    "vina_score": 2,
+                },
+                "score_template_blocker_count": 0 if ready else 5,
+                "score_template_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
+                "approval_token_required": mod.VINA_GNINA_APPROVAL_TOKEN,
+                "next_required_step": "Fill every Vina/GNINA same-input score row.",
+                "score_evidence_row_work_order_ready": ready,
+                "score_evidence_row_work_order_row_count": 0 if ready else 2,
+                "score_evidence_row_work_order_primary_pose_id": "" if ready else "1abc_pose_001",
+                "score_evidence_row_work_order_primary_complex_id": "" if ready else "1abc",
+                "score_evidence_row_work_order_primary_missing_field_count": 0 if ready else 4,
+                "score_evidence_row_work_order_primary_missing_fields": []
+                if ready
+                else ["approval_token", "gnina_score", "operator_id", "vina_score"],
+                "score_evidence_row_work_order_primary_required_action": ""
+                if ready
+                else (
+                    "Fill the missing same-input score, metadata, license, and approval fields "
+                    "for this pose row, then rebuild the receipt."
+                ),
             },
-            "score_template_blocker_count": 0 if ready else 5,
-            "score_template_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
-            "approval_token_required": mod.VINA_GNINA_APPROVAL_TOKEN,
-            "next_required_step": "Fill every Vina/GNINA same-input score row.",
+            "score_evidence_row_work_order_rows": score_row_work_order_rows,
         },
     )
     _write_summary(
@@ -180,6 +274,35 @@ def test_public_benchmark_receipt_attach_packet_blocks_pending_operator_fields(t
     assert summary["field_work_order_primary_source_artifact"] == (
         "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
     )
+    assert summary["score_evidence_row_work_order_ready"] is False
+    assert summary["score_evidence_row_work_order_row_count"] == 2
+    assert summary["score_evidence_row_work_order_pending_field_count"] == 8
+    assert summary["score_evidence_row_work_order_primary_work_order_id"] == (
+        "vina_gnina_same_input_score_row:1abc_pose_001"
+    )
+    assert summary["score_evidence_row_work_order_primary_pose_id"] == "1abc_pose_001"
+    assert summary["score_evidence_row_work_order_primary_complex_id"] == "1abc"
+    assert summary["score_evidence_row_work_order_primary_missing_field_count"] == 4
+    assert summary["score_evidence_row_work_order_primary_missing_fields"] == [
+        "approval_token",
+        "gnina_score",
+        "operator_id",
+        "vina_score",
+    ]
+    assert summary["score_evidence_row_work_order_primary_missing_field"] == "approval_token"
+    assert summary["score_evidence_row_work_order_primary_required_action"] == (
+        "Fill the missing same-input score, metadata, license, and approval fields "
+        "for this pose row, then rebuild the receipt."
+    )
+    assert summary["score_evidence_row_work_order_primary_field_required_action"] == (
+        f"Fill approval_token with {mod.VINA_GNINA_APPROVAL_TOKEN} after operator review."
+    )
+    assert summary["score_evidence_row_work_order_primary_operator_csv"] == (
+        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+    )
+    assert summary["score_evidence_row_work_order_primary_source_artifact"] == (
+        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+    )
     assert rows["vina_gnina_same_input_scores"]["pending_value_count"] == 4
     assert rows["vina_gnina_same_input_scores"]["pending_metadata_count"] == 32
     assert rows["vina_gnina_same_input_scores"]["pending_approval_token_count"] == 2
@@ -194,6 +317,14 @@ def test_public_benchmark_receipt_attach_packet_blocks_pending_operator_fields(t
     )
     assert field_rows[("metric_source_receipt_rows", "metric_value")]["pending_row_count"] == 3
     assert field_rows[("metric_source_receipt_rows", "approval_token")]["pending_row_count"] == 3
+    score_row = payload["score_evidence_row_work_order_rows"][0]
+    assert score_row["work_order_id"] == "vina_gnina_same_input_score_row:1abc_pose_001"
+    assert score_row["source_artifact"] == (
+        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+    )
+    assert score_row["execution_enabled"] is False
+    assert score_row["external_state_mutated"] is False
+    assert score_row["claim_promotion_allowed"] is False
     assert summary["execution_enabled"] is False
     assert summary["external_state_mutated"] is False
 
@@ -211,6 +342,9 @@ def test_public_benchmark_receipt_attach_packet_ready_when_lanes_are_filled(tmp_
     assert summary["field_work_order_ready"] is True
     assert summary["field_work_order_row_count"] == 0
     assert payload["field_work_order_rows"] == []
+    assert summary["score_evidence_row_work_order_ready"] is True
+    assert summary["score_evidence_row_work_order_row_count"] == 0
+    assert payload["score_evidence_row_work_order_rows"] == []
     assert summary["claim_promotion_allowed"] is False
 
 
@@ -246,9 +380,12 @@ def test_public_benchmark_receipt_attach_packet_cli_writes_outputs(tmp_path: Pat
     written = json.loads(out_json.read_text(encoding="utf-8"))
     assert written["summary"]["packet_type"] == "public_benchmark_receipt_attach_packet"
     assert written["summary"]["field_work_order_row_count"] == 14
+    assert written["summary"]["score_evidence_row_work_order_row_count"] == 2
     assert "vina_gnina_same_input_scores" in out_csv.read_text(encoding="utf-8")
     md = out_md.read_text(encoding="utf-8")
     assert "Public Benchmark Receipt Attach Packet" in md
     assert "Field Work Order" in md
+    assert "Score Evidence Row Work Order" in md
+    assert "1abc_pose_001" in md
     assert "metric_value" in md
     assert "Fill approval_token with" in md

@@ -433,6 +433,41 @@ def _public_benchmark_field_work_order_rows(value: Any) -> list[dict[str, Any]]:
     return work_rows
 
 
+def _public_benchmark_score_evidence_row_work_order_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    work_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        missing_fields = _string_list(row.get("missing_fields"))
+        work_rows.append(
+            {
+                "work_order_id": str(row.get("work_order_id") or ""),
+                "status": str(row.get("status") or ""),
+                "pose_id": str(row.get("pose_id") or ""),
+                "complex_id": str(row.get("complex_id") or ""),
+                "operator_csv": str(row.get("operator_csv") or ""),
+                "source_artifact": str(row.get("source_artifact") or ""),
+                "missing_field_count": _int(row.get("missing_field_count"))
+                or len(missing_fields),
+                "missing_fields": missing_fields,
+                "primary_missing_field": str(row.get("primary_missing_field") or ""),
+                "primary_required_action": str(row.get("primary_required_action") or ""),
+                "required_action": str(row.get("required_action") or ""),
+                "blocker_count": _int(row.get("blocker_count")),
+                "blockers": _string_list(row.get("blockers")),
+                "operator_action_required": bool(
+                    row.get("operator_action_required") is not False
+                ),
+                "claim_boundary": str(row.get("claim_boundary") or ""),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return work_rows
+
+
 def _pocketmd_lite_claim_grade_metric_rows(value: Any) -> list[dict[str, Any]]:
     rows = value if isinstance(value, list) else []
     metric_rows: list[dict[str, Any]] = []
@@ -1067,6 +1102,18 @@ def _missing_response() -> dict[str, Any]:
         "public_benchmark_field_work_order_primary_operator_csv": "",
         "public_benchmark_field_work_order_primary_source_artifact": "",
         "public_benchmark_field_work_order_rows": [],
+        "public_benchmark_score_evidence_row_work_order_ready": False,
+        "public_benchmark_score_evidence_row_work_order_row_count": 0,
+        "public_benchmark_score_evidence_row_work_order_pending_field_count": 0,
+        "public_benchmark_score_evidence_row_work_order_primary_pose_id": "",
+        "public_benchmark_score_evidence_row_work_order_primary_complex_id": "",
+        "public_benchmark_score_evidence_row_work_order_primary_missing_field_count": 0,
+        "public_benchmark_score_evidence_row_work_order_primary_missing_fields": [],
+        "public_benchmark_score_evidence_row_work_order_primary_missing_field": "",
+        "public_benchmark_score_evidence_row_work_order_primary_required_action": "",
+        "public_benchmark_score_evidence_row_work_order_primary_operator_csv": "",
+        "public_benchmark_score_evidence_row_work_order_primary_source_artifact": "",
+        "public_benchmark_score_evidence_row_work_order_rows": [],
         "public_benchmark_external_receipt_step_rows": [],
         "public_benchmark_primary_blocker_id": "",
         "public_benchmark_primary_blocker": "",
@@ -1527,6 +1574,57 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "public_benchmark_field_work_order_rows": _public_benchmark_field_work_order_rows(
             summary.get("public_benchmark_field_work_order_rows")
+        ),
+        "public_benchmark_score_evidence_row_work_order_ready": bool(
+            summary.get("public_benchmark_score_evidence_row_work_order_ready") is True
+        ),
+        "public_benchmark_score_evidence_row_work_order_row_count": _int(
+            summary.get("public_benchmark_score_evidence_row_work_order_row_count")
+        ),
+        "public_benchmark_score_evidence_row_work_order_pending_field_count": _int(
+            summary.get("public_benchmark_score_evidence_row_work_order_pending_field_count")
+        ),
+        "public_benchmark_score_evidence_row_work_order_primary_pose_id": str(
+            summary.get("public_benchmark_score_evidence_row_work_order_primary_pose_id") or ""
+        ),
+        "public_benchmark_score_evidence_row_work_order_primary_complex_id": str(
+            summary.get("public_benchmark_score_evidence_row_work_order_primary_complex_id")
+            or ""
+        ),
+        "public_benchmark_score_evidence_row_work_order_primary_missing_field_count": _int(
+            summary.get(
+                "public_benchmark_score_evidence_row_work_order_primary_missing_field_count"
+            )
+        ),
+        "public_benchmark_score_evidence_row_work_order_primary_missing_fields": _string_list(
+            summary.get(
+                "public_benchmark_score_evidence_row_work_order_primary_missing_fields"
+            )
+        ),
+        "public_benchmark_score_evidence_row_work_order_primary_missing_field": str(
+            summary.get("public_benchmark_score_evidence_row_work_order_primary_missing_field")
+            or ""
+        ),
+        "public_benchmark_score_evidence_row_work_order_primary_required_action": str(
+            summary.get(
+                "public_benchmark_score_evidence_row_work_order_primary_required_action"
+            )
+            or ""
+        ),
+        "public_benchmark_score_evidence_row_work_order_primary_operator_csv": str(
+            summary.get("public_benchmark_score_evidence_row_work_order_primary_operator_csv")
+            or ""
+        ),
+        "public_benchmark_score_evidence_row_work_order_primary_source_artifact": str(
+            summary.get(
+                "public_benchmark_score_evidence_row_work_order_primary_source_artifact"
+            )
+            or ""
+        ),
+        "public_benchmark_score_evidence_row_work_order_rows": (
+            _public_benchmark_score_evidence_row_work_order_rows(
+                summary.get("public_benchmark_score_evidence_row_work_order_rows")
+            )
         ),
         "public_benchmark_external_receipt_step_rows": (
             _public_benchmark_external_receipt_step_rows(

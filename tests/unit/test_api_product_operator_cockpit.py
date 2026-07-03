@@ -508,6 +508,90 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                         "claim_promotion_allowed": True,
                     }
                 ],
+                "public_benchmark_score_evidence_row_work_order_ready": False,
+                "public_benchmark_score_evidence_row_work_order_row_count": 16,
+                "public_benchmark_score_evidence_row_work_order_pending_field_count": 192,
+                "public_benchmark_score_evidence_row_work_order_primary_pose_id": (
+                    "1abc_pose_001"
+                ),
+                "public_benchmark_score_evidence_row_work_order_primary_complex_id": "1abc",
+                "public_benchmark_score_evidence_row_work_order_primary_missing_field_count": 12,
+                "public_benchmark_score_evidence_row_work_order_primary_missing_fields": [
+                    "vina_score",
+                    "gnina_score",
+                    "comparison_score_source",
+                    "comparison_score_artifact_path",
+                    "comparison_score_artifact_sha256",
+                    "operator_engine_versions",
+                    "operator_prep_policy_sha256",
+                    "operator_method",
+                    "operator_reviewed_at_utc",
+                    "operator_id",
+                    "license_ok",
+                    "approval_token",
+                ],
+                "public_benchmark_score_evidence_row_work_order_primary_missing_field": (
+                    "vina_score"
+                ),
+                "public_benchmark_score_evidence_row_work_order_primary_required_action": (
+                    "Fill the missing same-input score, metadata, license, and approval fields "
+                    "for this pose row, then rebuild the receipt."
+                ),
+                "public_benchmark_score_evidence_row_work_order_primary_operator_csv": (
+                    "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                ),
+                "public_benchmark_score_evidence_row_work_order_primary_source_artifact": (
+                    "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+                ),
+                "public_benchmark_score_evidence_row_work_order_rows": [
+                    {
+                        "work_order_id": "vina_gnina_same_input_score_row:1abc_pose_001",
+                        "status": "blocked",
+                        "pose_id": "1abc_pose_001",
+                        "complex_id": "1abc",
+                        "operator_csv": (
+                            "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                        ),
+                        "source_artifact": (
+                            "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+                        ),
+                        "missing_field_count": 12,
+                        "missing_fields": [
+                            "vina_score",
+                            "gnina_score",
+                            "comparison_score_source",
+                            "comparison_score_artifact_path",
+                            "comparison_score_artifact_sha256",
+                            "operator_engine_versions",
+                            "operator_prep_policy_sha256",
+                            "operator_method",
+                            "operator_reviewed_at_utc",
+                            "operator_id",
+                            "license_ok",
+                            "approval_token",
+                        ],
+                        "primary_missing_field": "vina_score",
+                        "primary_required_action": (
+                            "Fill numeric vina_score values from the same-input engine replay for every pending pose."
+                        ),
+                        "required_action": (
+                            "Fill the missing same-input score, metadata, license, and approval fields "
+                            "for this pose row, then rebuild the receipt."
+                        ),
+                        "blocker_count": 4,
+                        "blockers": [
+                            "score_values_missing_or_invalid",
+                            "operator_metadata_missing_or_placeholder",
+                            "license_ok_pending",
+                            "approval_token_pending",
+                        ],
+                        "operator_action_required": True,
+                        "claim_boundary": "same-input Vina/GNINA score receipt only",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    }
+                ],
                 "public_benchmark_external_receipt_step_rows": [
                     {
                         "step_id": "vina_gnina_same_input_comparison",
@@ -1579,6 +1663,89 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
             "approval_token_required": "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES",
             "operator_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
             "source_artifact": "runs/public_benchmark_vina_gnina_score_template_receipt_current.json",
+            "claim_boundary": "same-input Vina/GNINA score receipt only",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
+    assert response["public_benchmark_score_evidence_row_work_order_ready"] is False
+    assert response["public_benchmark_score_evidence_row_work_order_row_count"] == 16
+    assert response["public_benchmark_score_evidence_row_work_order_pending_field_count"] == 192
+    assert response["public_benchmark_score_evidence_row_work_order_primary_pose_id"] == (
+        "1abc_pose_001"
+    )
+    assert response["public_benchmark_score_evidence_row_work_order_primary_complex_id"] == "1abc"
+    assert (
+        response["public_benchmark_score_evidence_row_work_order_primary_missing_field_count"]
+        == 12
+    )
+    assert response["public_benchmark_score_evidence_row_work_order_primary_missing_fields"] == [
+        "vina_score",
+        "gnina_score",
+        "comparison_score_source",
+        "comparison_score_artifact_path",
+        "comparison_score_artifact_sha256",
+        "operator_engine_versions",
+        "operator_prep_policy_sha256",
+        "operator_method",
+        "operator_reviewed_at_utc",
+        "operator_id",
+        "license_ok",
+        "approval_token",
+    ]
+    assert response["public_benchmark_score_evidence_row_work_order_primary_missing_field"] == (
+        "vina_score"
+    )
+    assert response["public_benchmark_score_evidence_row_work_order_primary_required_action"] == (
+        "Fill the missing same-input score, metadata, license, and approval fields "
+        "for this pose row, then rebuild the receipt."
+    )
+    assert response["public_benchmark_score_evidence_row_work_order_primary_operator_csv"] == (
+        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+    )
+    assert response["public_benchmark_score_evidence_row_work_order_primary_source_artifact"] == (
+        "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+    )
+    assert response["public_benchmark_score_evidence_row_work_order_rows"] == [
+        {
+            "work_order_id": "vina_gnina_same_input_score_row:1abc_pose_001",
+            "status": "blocked",
+            "pose_id": "1abc_pose_001",
+            "complex_id": "1abc",
+            "operator_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
+            "source_artifact": "runs/public_benchmark_vina_gnina_score_template_receipt_current.json",
+            "missing_field_count": 12,
+            "missing_fields": [
+                "vina_score",
+                "gnina_score",
+                "comparison_score_source",
+                "comparison_score_artifact_path",
+                "comparison_score_artifact_sha256",
+                "operator_engine_versions",
+                "operator_prep_policy_sha256",
+                "operator_method",
+                "operator_reviewed_at_utc",
+                "operator_id",
+                "license_ok",
+                "approval_token",
+            ],
+            "primary_missing_field": "vina_score",
+            "primary_required_action": (
+                "Fill numeric vina_score values from the same-input engine replay for every pending pose."
+            ),
+            "required_action": (
+                "Fill the missing same-input score, metadata, license, and approval fields "
+                "for this pose row, then rebuild the receipt."
+            ),
+            "blocker_count": 4,
+            "blockers": [
+                "score_values_missing_or_invalid",
+                "operator_metadata_missing_or_placeholder",
+                "license_ok_pending",
+                "approval_token_pending",
+            ],
+            "operator_action_required": True,
             "claim_boundary": "same-input Vina/GNINA score receipt only",
             "execution_enabled": False,
             "external_state_mutated": False,
