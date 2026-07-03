@@ -170,6 +170,9 @@ POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_COMMAND = (
     "--out-md runs/pocketmd_lite_candidate_metric_fill_preview_report_current.md "
     "--out-csv runs/pocketmd_lite_candidate_metric_fill_preview_report_current.csv"
 )
+POCKETMD_LITE_CANONICAL_REPORT_REVIEW_PACKET_COMMAND = (
+    "python3 tools/product/build_pocketmd_lite_canonical_report_review_packet.py"
+)
 POCKETMD_LITE_TOPK_REFINEMENT_AUDIT_COMMAND = (
     "python3 tools/product/build_pocketmd_lite_topk_refinement_audit.py"
 )
@@ -260,6 +263,7 @@ RELEASE_REFRESH_COMMANDS = [
     POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_COMMAND,
     POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_COMMAND,
     POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_COMMAND,
+    POCKETMD_LITE_CANONICAL_REPORT_REVIEW_PACKET_COMMAND,
     POCKETMD_LITE_TOPK_REFINEMENT_AUDIT_COMMAND,
     "python3 tools/build_product_capability_surface_contract.py",
     "python3 tools/build_product_commercial_independence_gate.py",
@@ -1222,6 +1226,20 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "artifact_id": "pocketmd_lite_canonical_report_review_packet",
+        "artifact_path": "runs/pocketmd_lite_canonical_report_review_packet_current.json",
+        "builder_command": POCKETMD_LITE_CANONICAL_REPORT_REVIEW_PACKET_COMMAND,
+        "depends_on": [
+            "tools/product/build_pocketmd_lite_canonical_report_review_packet.py",
+            "runs/pocketmd_lite_report_current.json",
+            "runs/pocketmd_lite_candidate_metric_fill_preview_report_current.json",
+            "runs/pocketmd_lite_candidate_metric_fill_preview_current.json",
+            "runs/pocketmd_lite_claim_grade_metric_source_audit_current.json",
+            "config/pocketmd_lite_candidates_current.csv",
+            "runs/pocketmd_lite_candidate_metric_fill_preview_current.candidates.csv",
+        ],
+    },
+    {
         "artifact_id": "pocketmd_lite_topk_refinement_audit",
         "artifact_path": "runs/pocketmd_lite_topk_refinement_audit_current.json",
         "builder_command": POCKETMD_LITE_TOPK_REFINEMENT_AUDIT_COMMAND,
@@ -1261,6 +1279,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/pocketmd_lite_report_current.json",
             "runs/pocketmd_lite_remaining_evidence_queue_current.json",
             "runs/pocketmd_lite_candidate_metric_fill_preview_report_current.json",
+            "runs/pocketmd_lite_canonical_report_review_packet_current.json",
             "runs/pocketmd_lite_topk_refinement_audit_current.json",
         ],
     },
