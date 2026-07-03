@@ -18,6 +18,22 @@ DEFAULT_OUT_CSV = "runs/customer_shadow_evidence_status_current.csv"
 DEFAULT_OUT_MD = "runs/customer_shadow_evidence_status_current.md"
 
 MIN_COMPLETED_CASES = 3
+PAID_PILOT_REQUIREMENT_IDS = [
+    "customer_shadow_intake_schema_ready",
+    "completed_customer_shadow_cases",
+    "real_customer_shadow_rows",
+    "customer_retained_raw_data",
+    "redistribution_allowed_false",
+    "anonymized_result_summary",
+    "reviewer_signoff",
+    "no_invalid_customer_shadow_rows",
+    "customer_raw_data_not_stored_in_repo",
+    "redistribution_allowed_required_value_false",
+    "customer_shadow_work_order_closed",
+    "paid_pilot_evidence_ready",
+    "paid_pilot_claim_allowed",
+    "commercial_readiness_promotion_allowed",
+]
 REQUIRED_COLUMNS = [
     "case_id",
     "row_kind",
@@ -81,6 +97,13 @@ def _bool(value: Any) -> bool | None:
     if text in {"0", "false", "no", "n"}:
         return False
     return None
+
+
+def _int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _split_fields(value: Any) -> set[str]:
@@ -242,6 +265,169 @@ def _build_work_order_rows(
     return rows
 
 
+def _paid_pilot_requirement_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
+    required = _int(summary.get("required_completed_customer_shadow_case_count")) or MIN_COMPLETED_CASES
+    next_required_step = _text(summary.get("next_required_step"))
+    summary_present = bool(summary)
+    rows: list[dict[str, Any]] = []
+
+    def count_row(
+        requirement_id: str,
+        observed_key: str,
+        blocker_id: str,
+        operator_action: str,
+    ) -> None:
+        observed = _int(summary.get(observed_key))
+        ready = summary_present and observed >= required
+        rows.append(
+            {
+                "requirement_id": requirement_id,
+                "requirement_type": "minimum_count",
+                "ready": ready,
+                "observed_count": observed,
+                "required_count": required,
+                "observed_value": str(observed),
+                "required_value": str(required),
+                "blocker": "" if ready else f"{blocker_id}:{observed}/{required}",
+                "operator_action": "" if ready else operator_action,
+                "paid_pilot_wording_allowed": False,
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_boundary": CLAIM_BOUNDARY,
+            }
+        )
+
+    def bool_row(
+        requirement_id: str,
+        ready: bool,
+        observed_value: Any,
+        required_value: Any,
+        blocker_id: str,
+        operator_action: str,
+    ) -> None:
+        rows.append(
+            {
+                "requirement_id": requirement_id,
+                "requirement_type": "boolean",
+                "ready": ready,
+                "observed_count": 1 if ready else 0,
+                "required_count": 1,
+                "observed_value": str(observed_value).lower(),
+                "required_value": str(required_value).lower(),
+                "blocker": "" if ready else blocker_id,
+                "operator_action": "" if ready else operator_action,
+                "paid_pilot_wording_allowed": False,
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_boundary": CLAIM_BOUNDARY,
+            }
+        )
+
+    bool_row(
+        "customer_shadow_intake_schema_ready",
+        summary_present and summary.get("customer_shadow_intake_schema_ready") is True,
+        summary.get("customer_shadow_intake_schema_ready"),
+        True,
+        "customer_shadow_intake_schema_not_ready",
+        "Rebuild the customer-shadow evidence status with the required intake schema.",
+    )
+    count_row(
+        "completed_customer_shadow_cases",
+        "completed_customer_shadow_case_count",
+        "completed_customer_shadow_cases_below_required",
+        "Collect reviewed customer-shadow rows that count toward the minimum.",
+    )
+    count_row(
+        "real_customer_shadow_rows",
+        "real_customer_shadow_row_count",
+        "real_customer_shadow_rows_below_required",
+        "Replace mock or placeholder rows with real reviewed customer-shadow rows.",
+    )
+    count_row(
+        "customer_retained_raw_data",
+        "customer_retained_raw_data_count",
+        "customer_retained_raw_data_rows_below_required",
+        "Keep customer raw data customer-retained and record only derived metadata.",
+    )
+    count_row(
+        "redistribution_allowed_false",
+        "redistribution_allowed_false_count",
+        "redistribution_false_rows_below_required",
+        "Set redistribution_allowed=false on every counted customer-shadow row.",
+    )
+    count_row(
+        "anonymized_result_summary",
+        "anonymized_result_summary_count",
+        "anonymized_summary_rows_below_required",
+        "Attach anonymized result summaries for counted customer-shadow rows.",
+    )
+    count_row(
+        "reviewer_signoff",
+        "reviewer_signoff_count",
+        "reviewer_signoff_rows_below_required",
+        "Add reviewer signoff for each counted customer-shadow row.",
+    )
+    bool_row(
+        "no_invalid_customer_shadow_rows",
+        summary_present and _int(summary.get("invalid_row_count")) == 0,
+        _int(summary.get("invalid_row_count")),
+        0,
+        f"invalid_customer_shadow_rows:{_int(summary.get('invalid_row_count'))}",
+        "Repair invalid customer-shadow rows before paid pilot wording.",
+    )
+    bool_row(
+        "customer_raw_data_not_stored_in_repo",
+        summary_present and summary.get("customer_raw_data_stored_in_repo") is False,
+        summary.get("customer_raw_data_stored_in_repo"),
+        False,
+        "customer_raw_data_stored_in_repo",
+        "Remove customer raw data from repo-managed artifacts and retain it with the customer.",
+    )
+    bool_row(
+        "redistribution_allowed_required_value_false",
+        summary_present and summary.get("redistribution_allowed_required_value") is False,
+        summary.get("redistribution_allowed_required_value"),
+        False,
+        "redistribution_allowed_required_value_not_false",
+        "Keep the required redistribution_allowed value set to false.",
+    )
+    bool_row(
+        "customer_shadow_work_order_closed",
+        summary_present and _int(summary.get("customer_shadow_work_order_row_count")) == 0,
+        _int(summary.get("customer_shadow_work_order_row_count")),
+        0,
+        f"customer_shadow_work_order_rows_open:{_int(summary.get('customer_shadow_work_order_row_count'))}",
+        next_required_step or "Close all customer-shadow work-order rows.",
+    )
+    bool_row(
+        "paid_pilot_evidence_ready",
+        summary.get("paid_pilot_evidence_ready") is True,
+        summary.get("paid_pilot_evidence_ready"),
+        True,
+        "paid_pilot_evidence_not_ready",
+        next_required_step or "Complete paid-pilot customer-shadow evidence.",
+    )
+    bool_row(
+        "paid_pilot_claim_allowed",
+        summary.get("paid_pilot_claim_allowed") is True,
+        summary.get("paid_pilot_claim_allowed"),
+        True,
+        "paid_pilot_claim_not_approved",
+        "Keep paid pilot wording disabled until review explicitly approves the claim.",
+    )
+    bool_row(
+        "commercial_readiness_promotion_allowed",
+        summary.get("commercial_readiness_promotion_allowed") is True,
+        summary.get("commercial_readiness_promotion_allowed"),
+        True,
+        "commercial_readiness_promotion_not_approved",
+        "Keep commercial readiness promotion disabled until reviewed evidence passes.",
+    )
+    return rows
+
+
 def build_customer_shadow_evidence_status(
     *,
     intake_csv: str = DEFAULT_INTAKE_CSV,
@@ -393,11 +579,42 @@ def build_customer_shadow_evidence_status(
             }
         )
     summary["blocker_count"] = len(blockers)
+    paid_pilot_requirement_rows = _paid_pilot_requirement_rows(summary)
+    paid_pilot_requirement_blocked_rows = [
+        row for row in paid_pilot_requirement_rows if not row["ready"]
+    ]
+    paid_pilot_requirement_primary_row = (
+        paid_pilot_requirement_blocked_rows[0]
+        if paid_pilot_requirement_blocked_rows
+        else {}
+    )
+    summary.update(
+        {
+            "paid_pilot_requirement_ids": list(PAID_PILOT_REQUIREMENT_IDS),
+            "paid_pilot_requirement_row_count": len(paid_pilot_requirement_rows),
+            "paid_pilot_requirement_ready_row_count": (
+                len(paid_pilot_requirement_rows) - len(paid_pilot_requirement_blocked_rows)
+            ),
+            "paid_pilot_requirement_blocked_row_count": len(
+                paid_pilot_requirement_blocked_rows
+            ),
+            "paid_pilot_requirement_primary_id": _text(
+                paid_pilot_requirement_primary_row.get("requirement_id")
+            ),
+            "paid_pilot_requirement_primary_blocker": _text(
+                paid_pilot_requirement_primary_row.get("blocker")
+            ),
+            "paid_pilot_requirement_primary_action": _text(
+                paid_pilot_requirement_primary_row.get("operator_action")
+            ),
+        }
+    )
     return {
         "summary": summary,
         "rows": rows,
         "blockers": blockers,
         "customer_shadow_work_order_rows": work_order_rows,
+        "paid_pilot_requirement_rows": paid_pilot_requirement_rows,
     }
 
 
@@ -425,6 +642,8 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"- customer_shadow_work_order_primary_operator_csv: `{s['customer_shadow_work_order_primary_operator_csv']}`",
         f"- customer_shadow_work_order_primary_required_raw_data_custody: `{s['customer_shadow_work_order_primary_required_raw_data_custody']}`",
         f"- customer_shadow_work_order_primary_required_redistribution_allowed: `{s['customer_shadow_work_order_primary_required_redistribution_allowed']}`",
+        f"- paid_pilot_requirement_blocked_row_count: `{s['paid_pilot_requirement_blocked_row_count']}`",
+        f"- paid_pilot_requirement_primary_id: `{s['paid_pilot_requirement_primary_id']}`",
         f"- blocker_count: `{s['blocker_count']}`",
         f"- commercial_readiness_promotion_allowed: `{s['commercial_readiness_promotion_allowed']}`",
         "",
@@ -451,6 +670,20 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
             f"| `{row['case_slot_id']}` | `{row['status']}` | `{row['required_row_kind']}` | "
             f"`{row['required_raw_data_custody']}` | `{row['required_redistribution_allowed']}` | "
             f"{row['required_action']} | `{row['operator_csv']}` |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Paid Pilot Requirement Checklist",
+            "",
+            "| requirement | ready | observed | required | blocker | action |",
+            "| --- | --- | --- | --- | --- | --- |",
+        ]
+    )
+    for row in payload["paid_pilot_requirement_rows"]:
+        lines.append(
+            f"| `{row['requirement_id']}` | `{row['ready']}` | `{row['observed_value']}` | "
+            f"`{row['required_value']}` | `{row['blocker'] or '-'}` | {row['operator_action'] or '-'} |"
         )
     lines.extend(["", "## Claim Boundary", "", s["claim_boundary"], "", "## Next Step", "", f"- {s['next_required_step']}", ""])
     path.parent.mkdir(parents=True, exist_ok=True)

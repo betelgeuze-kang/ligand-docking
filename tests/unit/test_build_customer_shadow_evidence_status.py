@@ -84,7 +84,47 @@ def test_header_only_template_blocks_until_three_real_cases(tmp_path: Path) -> N
     assert summary["paid_pilot_evidence_ready"] is False
     assert summary["paid_pilot_claim_allowed"] is False
     assert summary["commercial_readiness_promotion_allowed"] is False
+    assert summary["paid_pilot_requirement_ids"] == [
+        "customer_shadow_intake_schema_ready",
+        "completed_customer_shadow_cases",
+        "real_customer_shadow_rows",
+        "customer_retained_raw_data",
+        "redistribution_allowed_false",
+        "anonymized_result_summary",
+        "reviewer_signoff",
+        "no_invalid_customer_shadow_rows",
+        "customer_raw_data_not_stored_in_repo",
+        "redistribution_allowed_required_value_false",
+        "customer_shadow_work_order_closed",
+        "paid_pilot_evidence_ready",
+        "paid_pilot_claim_allowed",
+        "commercial_readiness_promotion_allowed",
+    ]
+    assert summary["paid_pilot_requirement_row_count"] == 14
+    assert summary["paid_pilot_requirement_ready_row_count"] == 4
+    assert summary["paid_pilot_requirement_blocked_row_count"] == 10
+    assert summary["paid_pilot_requirement_primary_id"] == "completed_customer_shadow_cases"
+    assert summary["paid_pilot_requirement_primary_blocker"] == (
+        "completed_customer_shadow_cases_below_required:0/3"
+    )
+    assert summary["paid_pilot_requirement_primary_action"] == (
+        "Collect reviewed customer-shadow rows that count toward the minimum."
+    )
     assert payload["blockers"][0]["case_id"] == "minimum_completed_cases"
+    requirements = {row["requirement_id"]: row for row in payload["paid_pilot_requirement_rows"]}
+    assert requirements["customer_shadow_intake_schema_ready"]["ready"] is True
+    assert requirements["completed_customer_shadow_cases"]["observed_count"] == 0
+    assert requirements["completed_customer_shadow_cases"]["required_count"] == 3
+    assert requirements["customer_shadow_work_order_closed"]["blocker"] == (
+        "customer_shadow_work_order_rows_open:3"
+    )
+    assert all(
+        row["paid_pilot_wording_allowed"] is False
+        and row["claim_promotion_allowed"] is False
+        and row["execution_enabled"] is False
+        and row["external_state_mutated"] is False
+        for row in payload["paid_pilot_requirement_rows"]
+    )
     work_orders = payload["customer_shadow_work_order_rows"]
     assert [row["case_slot_id"] for row in work_orders] == [
         "customer_shadow_case_1",
@@ -144,6 +184,18 @@ def test_three_completed_customer_shadow_rows_ready_but_do_not_promote_claims(tm
     assert summary["readiness_promotion_allowed"] is False
     assert summary["customer_shadow_work_order_ready"] is True
     assert summary["customer_shadow_work_order_row_count"] == 0
+    assert summary["paid_pilot_requirement_row_count"] == 14
+    assert summary["paid_pilot_requirement_ready_row_count"] == 12
+    assert summary["paid_pilot_requirement_blocked_row_count"] == 2
+    assert summary["paid_pilot_requirement_primary_id"] == "paid_pilot_claim_allowed"
+    assert summary["paid_pilot_requirement_primary_blocker"] == "paid_pilot_claim_not_approved"
+    requirement_rows = {
+        row["requirement_id"]: row for row in payload["paid_pilot_requirement_rows"]
+    }
+    assert requirement_rows["completed_customer_shadow_cases"]["ready"] is True
+    assert requirement_rows["paid_pilot_evidence_ready"]["ready"] is True
+    assert requirement_rows["paid_pilot_claim_allowed"]["ready"] is False
+    assert requirement_rows["commercial_readiness_promotion_allowed"]["ready"] is False
     assert summary["customer_shadow_work_order_primary_case_slot_id"] == ""
     assert summary["customer_shadow_work_order_primary_operator_csv"] == ""
     assert summary["customer_shadow_work_order_primary_required_derived_metadata_fields"] == []
@@ -207,3 +259,4 @@ def test_cli_writes_json_csv_and_markdown(tmp_path: Path) -> None:
     md = out_md.read_text(encoding="utf-8")
     assert "Customer Shadow Evidence Status" in md
     assert "Customer Shadow Work Order" in md
+    assert "Paid Pilot Requirement Checklist" in md
