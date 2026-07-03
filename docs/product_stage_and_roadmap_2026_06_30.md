@@ -17,7 +17,7 @@ What is real:
 What is not yet real:
 
 - G1/F2 solver closure is not available in this checkout. F2g/F2h are blocked because the real-MGT, `real_per_element` assembled tangent, near-null mode packet, and support/elastic-link context are absent.
-- Release readiness is blocked by stale/source-of-truth and final refresh gates.
+- Release freshness and the restricted release decision are now green, but this is not paid-pilot or full-commercial readiness.
 - Scientific validity is not claim-grade for broad docking/MD/free-energy/platform positioning.
 - Developer Preview is not clean-baseline ready.
 - Customer shadow evidence is schema-ready but has 0/3 real cases.
@@ -25,7 +25,7 @@ What is not yet real:
 
 The right commercial posture is therefore:
 
-> Sell only as an operator-reviewed, local, restricted pilot/evidence-bundle workflow after final release freshness and DP baseline gates close. Do not sell as an autonomous solver, AlphaFold-like structure engine, calibrated Delta G/FEP engine, broad GPCR/platform system, or production AI/GPU solver until the named evidence gates close.
+> Sell only as an operator-reviewed, local, restricted pilot/evidence-bundle workflow after DP baseline, customer shadow, and external benchmark evidence gates close. Do not sell as an autonomous solver, AlphaFold-like structure engine, calibrated Delta G/FEP engine, broad GPCR/platform system, or production AI/GPU solver until the named evidence gates close.
 
 ## Evidence Snapshot
 
@@ -33,13 +33,13 @@ The right commercial posture is therefore:
 | --- | --- | --- |
 | PM queue | `.betelgeuze/pm_priority_queue_status_current.json`: `blocked_pm_priority_queue`, `ready_item_count=6`, `blocked_item_count=2` | Queue hygiene is mostly under control; F2g/F2h are the remaining technical blockers. |
 | F2g/F2h | `.betelgeuze/f2g_f2h_surface_preflight.local.json`: `blocker_count=8`, no real-MGT/tangent/near-null/support context candidates | Cannot honestly perform requested support/elastic-link audit or continuation from current checkout. |
-| Independent readiness | `scripts/check_independent_product_readiness.py`: `blocked_independent_product_readiness`, `pass_count=5`, `blocker_count=2` | Restricted product is close in accounting terms, but release source-of-truth and final refresh gates block readiness. |
-| Release source of truth | `runs/product_release_source_of_truth_gate_current.json`: `blocked_product_release_source_of_truth_gate`, `pass_count=85`, `blocker_count=71`, `stale_artifact_count=37` | Too stale for release/pilot claims. Needs refresh discipline before any customer promise. |
-| Release decision | `runs/goal_release_decision_gate_current.json`: `blocked_goal_release_decision`, `release_allowed=false`, `full_commercial_release_allowed=false`, `blocker_count=5` | Not release-ready. |
-| Delivery/pilot packets | `product_delivery_evidence_contract_ready`, `product_pilot_packet_ready` | Packaging/evidence surface exists, but it is downstream of blocked release/customer/science gates. |
-| API customer flow | `blocked_api_customer_flow_release_evidence`, `pass_count=4/6`, `blocker_count=2` | API customer-flow release evidence is not ready; Tier alpha dispatch smoke and bundle refresh remain. |
-| Developer Preview | `docs/developer_preview_final_gate_action_register.md`: six final gates defined, all still pending receipts | DP is organized but not clean-baseline ready. |
-| External benchmarks | four tracked items are `missing_not_attached`; dry-run blocked on missing default manifest | Operational evidence queue exists; no benchmark receipt closure. |
+| Independent readiness | `scripts/check_independent_product_readiness.py`: product smoke verifies quality/readiness/capability with no smoke blockers | Restricted product accounting is green enough for operator-reviewed local release checks, but not for paid-pilot or full-commercial claims. |
+| Release source of truth | `runs/product_release_source_of_truth_gate_current.json`: `product_release_source_of_truth_gate_ready`, `pass_count=192`, `blocker_count=0`, `stale_artifact_count=0` | Release freshness is currently closed. Keep refreshing it after every evidence-surface change. |
+| Release decision | `runs/goal_release_decision_gate_current.json`: `goal_release_ready`, `release_allowed=true`, `restricted_release_allowed=true`, `blocker_count=0` | Restricted release decision is clear; paid pilot and full-commercial wording remain separately locked by customer shadow/R8/R9/benchmark evidence. |
+| Delivery/pilot packets | `product_delivery_evidence_contract_ready`, `product_pilot_packet_ready` | Packaging/evidence surface exists, but it is downstream of blocked DP/customer/science gates. |
+| API customer flow | `api_customer_flow_release_evidence_ready`, `blocker_count=0` | API customer-flow release evidence is ready for restricted-scope release gates. |
+| Developer Preview | `runs/developer_preview_final_gate_audit_current.json`: six final gates, `ready_gate_count=3`, `blocked_gate_count=3`; `silent_import_loss_zero`, selected medium models, and large-model guard are ready | DP is progressing but not clean-baseline ready; clean checkout, Windows reproducibility, and new-user observation still block demo baseline. |
+| External benchmarks | `blocked_public_benchmark_external_receipts_audit`, `blocker_count=2`, primary blocker `vina_gnina_same_input_score_evidence_missing` | Operational evidence queue exists; same-input Vina/GNINA score rows and reviewed metadata still block external benchmark receipts. |
 | Customer shadow | schema ready, `completed_customer_shadow_case_count=0`, required `3` | Future commercial readiness is blocked until real reviewed customer metadata rows exist. |
 | GPU/HIP | ROCm environment and local benchmark ready; `product_production_ai_gpu_return_intake` blocked | GPU/HIP is performance/residency evidence only, not solver-truth or production residual promotion. |
 | Science frontier | `blocked_science_accuracy_frontier`, public benchmark p05 below claim-grade floor and R8/R9 receipts pending | Restricted science diagnostics exist, but broad/commercial accuracy claims are blocked. |
@@ -50,12 +50,12 @@ The right commercial posture is therefore:
 | --- | --- | --- |
 | Lab prototype | Code paths and diagnostics exist. | Passed. |
 | Evidence-accounted prototype | Gates, receipts, and claim boundaries exist. | Mostly passed. This is the product's strongest area. |
-| Restricted technical preview | Operator can show scoped local workflow without broad claims. | Partially passed, blocked by Developer Preview final gates and API customer-flow release evidence. |
+| Restricted technical preview | Operator can show scoped local workflow without broad claims. | Mostly passed for release/API flow; still blocked as a clean Developer Preview baseline by A/E/F final gates. |
 | Restricted paid pilot | Customer-facing evidence bundle, clean baseline, shadow intake, release freshness, and support playbook are ready. | Not yet. |
 | Commercial scientific solver | Validated science claims, external benchmarks, row-level public holdouts, customer outcomes, and operational SLOs are defensible. | Not yet. |
 | Broad platform | Enterprise workflow, security, governance, scale, wetlab/external validation, and broad claim review are complete. | Not yet. |
 
-Current label: **Restricted Tier-alpha pilot, pre-paid-pilot, evidence-accounted but science/preview/release blocked.**
+Current label: **Restricted Tier-alpha pilot, pre-paid-pilot, evidence-accounted but science/preview/customer/benchmark blocked.**
 
 ## Strategic Product Thesis
 
@@ -85,8 +85,8 @@ Must close:
 
 1. Release source-of-truth refresh
    - Evidence required: `product_release_source_of_truth_gate` blocker count materially reduced to zero for release freshness, or every contradiction explicitly documented.
-   - Current blocker: `blocker_count=71`, `stale_artifact_count=37`.
-   - Owner action: run approved release refresh chain, then rerun source-of-truth and release decision gates.
+   - Current state: `blocker_count=0`, `stale_artifact_count=0`, `release_source_of_truth_ready=true`.
+   - Owner action: keep this gate fresh after every generated artifact, API surface, or roadmap evidence change.
 
 2. Final release refresh gates
    - Evidence required: `final_gate_verification_ready=true`, `final_gate_blocker_count=0`.
@@ -138,17 +138,18 @@ Time horizon: 2-4 weeks, parallel to Phase 1 where possible.
 
 Six final gates:
 
-1. Clean-checkout benchmark regeneration
-2. Silent import loss zero
-3. Selected medium models pass or approved review
-4. Large models crash/OOM-free
-5. Linux/Windows reproducibility
-6. New-user core workflow observation
+1. Clean-checkout benchmark regeneration - blocked
+2. Silent import loss zero - ready
+3. Selected medium models pass or approved review - ready
+4. Large models crash/OOM-free - ready
+5. Linux/Windows reproducibility - blocked on Windows receipt
+6. New-user core workflow observation - blocked
 
 Evidence required:
 
 - For each gate, a receipt under `.betelgeuze/` first.
 - Only after review, protected evidence refresh may be considered.
+- Current audit: `ready_gate_count=3`, `blocked_gate_count=3`, primary blocker `benchmark_results_clean_checkout_regenerated`.
 
 Exit criteria:
 
@@ -165,8 +166,8 @@ Time horizon: 4-8 weeks after Phase 0/2 progress.
 Must close:
 
 1. API customer-flow release evidence
-   - Current state: `blocked_api_customer_flow_release_evidence`, `pass_count=4/6`.
-   - Evidence required: Tier alpha dispatch smoke, API E2E/restricted execution evidence, bundle validation artifacts.
+   - Current state: `api_customer_flow_release_evidence_ready`, `pass_count=6/6`, `blocker_count=0`.
+   - Evidence required: keep Tier alpha dispatch smoke, API E2E/restricted execution evidence, and bundle validation artifacts fresh after release-surface changes.
 
 2. Customer shadow intake
    - Current state: schema ready, `0/3` completed cases.
@@ -265,9 +266,9 @@ Exit criteria:
 
 ### First 30 days
 
-- Fix release source-of-truth and refresh final gates.
+- Keep release source-of-truth fresh and refresh final gates after every evidence-surface change.
 - Restore or locate F2/G1 real-MGT diagnostic surfaces.
-- Execute DP gates A/B/F first: clean checkout, silent import loss, new-user workflow.
+- Execute remaining DP gates A/E/F: clean checkout, Windows reproducibility, new-user workflow.
 - Convert customer shadow schema into three operator-ready intake requests.
 - Keep all broad claims frozen.
 
@@ -301,7 +302,7 @@ The next highest-leverage engineering task is not another broad feature. It is:
 
 > Restore the F2/G1 real-MGT diagnostic surfaces or document their authoritative source, then rerun `tools/build_f2g_f2h_surface_preflight.py`.
 
-If that preflight turns green, proceed immediately to the F2g support/elastic-link reconciliation audit. If it stays blocked, shift engineering energy to Developer Preview gates A/B/F and release freshness while the missing solver inputs are recovered.
+If that preflight turns green, proceed immediately to the F2g support/elastic-link reconciliation audit. If it stays blocked, shift engineering energy to Developer Preview gates A/E/F while the missing solver inputs are recovered and release freshness is kept green.
 
 ## 2026-06-30 Execution Update
 
