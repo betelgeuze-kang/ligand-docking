@@ -35,6 +35,12 @@ DEFAULT_DEVELOPER_PREVIEW_JSON = "runs/developer_preview_final_gate_audit_curren
 DEFAULT_DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_JSON = (
     ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
 )
+DEFAULT_DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_JSON = (
+    ".betelgeuze/developer_preview_linux_reproducibility_receipt.json"
+)
+DEFAULT_DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_JSON = (
+    ".betelgeuze/developer_preview_windows_reproducibility_receipt.json"
+)
 DEFAULT_DEVELOPER_PREVIEW_NEW_USER_OBSERVATION_RECEIPT_JSON = (
     ".betelgeuze/developer_preview_new_user_observation_receipt.json"
 )
@@ -902,6 +908,33 @@ def _developer_preview_new_user_observation_template_rows(
     return rows
 
 
+def _developer_preview_platform_evidence_requirement_rows(
+    payload: dict[str, Any],
+) -> list[dict[str, Any]]:
+    summary = _summary(payload)
+    claim_boundary = _text(summary.get("claim_boundary")) or CLAIM_BOUNDARY
+    rows: list[dict[str, Any]] = []
+    for row in _dict_list(payload, "platform_evidence_requirement_rows"):
+        ready = _bool_true(row.get("ready"))
+        rows.append(
+            {
+                "field_id": _text(row.get("field_id")),
+                "label": _text(row.get("label")),
+                "status": _text(row.get("status")),
+                "ready": ready,
+                "observed": _text(row.get("observed")),
+                "blocker": _text(row.get("blocker")),
+                "required_action": _text(row.get("required_action")),
+                "operator_action_required": not ready,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "claim_boundary": _text(row.get("claim_boundary")) or claim_boundary,
+            }
+        )
+    return rows
+
+
 def _release_decision_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in _rows(payload):
@@ -1532,6 +1565,12 @@ def build_product_operator_cockpit(
     developer_preview_clean_checkout_receipt_json: str | Path = (
         DEFAULT_DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_JSON
     ),
+    developer_preview_linux_reproducibility_receipt_json: str | Path = (
+        DEFAULT_DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_JSON
+    ),
+    developer_preview_windows_reproducibility_receipt_json: str | Path = (
+        DEFAULT_DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_JSON
+    ),
     developer_preview_new_user_observation_receipt_json: str | Path = (
         DEFAULT_DEVELOPER_PREVIEW_NEW_USER_OBSERVATION_RECEIPT_JSON
     ),
@@ -1639,6 +1678,25 @@ def build_product_operator_cockpit(
     developer_preview_clean_checkout_stage5_input_row_preview = (
         _developer_preview_clean_checkout_stage5_input_rows(
             developer_preview_clean_checkout_receipt_payload
+        )
+    )
+    developer_preview_linux_reproducibility_receipt_payload = _read_json(
+        developer_preview_linux_reproducibility_receipt_json,
+        root=root,
+    )
+    developer_preview_linux_reproducibility_receipt = _summary(
+        developer_preview_linux_reproducibility_receipt_payload
+    )
+    developer_preview_windows_reproducibility_receipt_payload = _read_json(
+        developer_preview_windows_reproducibility_receipt_json,
+        root=root,
+    )
+    developer_preview_windows_reproducibility_receipt = _summary(
+        developer_preview_windows_reproducibility_receipt_payload
+    )
+    developer_preview_windows_reproducibility_requirement_row_preview = (
+        _developer_preview_platform_evidence_requirement_rows(
+            developer_preview_windows_reproducibility_receipt_payload
         )
     )
     developer_preview_new_user_observation_receipt_payload = _read_json(
@@ -2290,6 +2348,69 @@ def build_product_operator_cockpit(
         developer_preview_clean_checkout_receipt.get("stage5_primary_source_artifact_path"),
         developer_preview_clean_checkout_stage5_first_missing_row.get("source_artifact_path"),
     )
+    developer_preview_linux_reproducibility_receipt_present = bool(
+        developer_preview_linux_reproducibility_receipt
+    )
+    developer_preview_linux_reproducibility_receipt_status = _text(
+        developer_preview_linux_reproducibility_receipt.get("status")
+    )
+    developer_preview_windows_reproducibility_receipt_present = bool(
+        developer_preview_windows_reproducibility_receipt
+    )
+    developer_preview_windows_reproducibility_receipt_status = _text(
+        developer_preview_windows_reproducibility_receipt.get("status")
+    )
+    developer_preview_windows_reproducibility_required_field_count = _int(
+        developer_preview_windows_reproducibility_receipt.get(
+            "platform_evidence_required_field_count"
+        )
+    ) or len(developer_preview_windows_reproducibility_requirement_row_preview)
+    developer_preview_windows_reproducibility_ready_field_count = _int(
+        developer_preview_windows_reproducibility_receipt.get(
+            "platform_evidence_ready_field_count"
+        )
+    ) or sum(
+        1
+        for row in developer_preview_windows_reproducibility_requirement_row_preview
+        if row["ready"]
+    )
+    developer_preview_windows_reproducibility_blocked_field_count = _int(
+        developer_preview_windows_reproducibility_receipt.get(
+            "platform_evidence_blocked_field_count"
+        )
+    ) or sum(
+        1
+        for row in developer_preview_windows_reproducibility_requirement_row_preview
+        if not row["ready"]
+    )
+    developer_preview_windows_reproducibility_blocked_rows = [
+        row
+        for row in developer_preview_windows_reproducibility_requirement_row_preview
+        if not row["ready"]
+    ]
+    developer_preview_windows_reproducibility_primary_row = (
+        developer_preview_windows_reproducibility_blocked_rows[0]
+        if developer_preview_windows_reproducibility_blocked_rows
+        else {}
+    )
+    developer_preview_windows_reproducibility_primary_field_id = _first_text(
+        developer_preview_windows_reproducibility_receipt.get(
+            "platform_evidence_primary_field_id"
+        ),
+        developer_preview_windows_reproducibility_primary_row.get("field_id"),
+    )
+    developer_preview_windows_reproducibility_primary_blocker = _first_text(
+        developer_preview_windows_reproducibility_receipt.get(
+            "platform_evidence_primary_blocker"
+        ),
+        developer_preview_windows_reproducibility_primary_row.get("blocker"),
+    )
+    developer_preview_windows_reproducibility_primary_required_action = _first_text(
+        developer_preview_windows_reproducibility_receipt.get(
+            "platform_evidence_primary_required_action"
+        ),
+        developer_preview_windows_reproducibility_primary_row.get("required_action"),
+    )
     developer_preview_new_user_observation_receipt_present = bool(
         developer_preview_new_user_observation_receipt
     )
@@ -2874,6 +2995,30 @@ def build_product_operator_cockpit(
                 _metric(
                     "clean_checkout_stage5_primary_source_arg",
                     developer_preview_clean_checkout_stage5_primary_source_argument,
+                ),
+                _metric(
+                    "linux_reproducibility_receipt",
+                    developer_preview_linux_reproducibility_receipt_status,
+                ),
+                _metric(
+                    "windows_reproducibility_receipt",
+                    developer_preview_windows_reproducibility_receipt_status,
+                ),
+                _count_metric(
+                    "windows_reproducibility_fields",
+                    developer_preview_windows_reproducibility_required_field_count,
+                ),
+                _count_metric(
+                    "windows_reproducibility_blocked_fields",
+                    developer_preview_windows_reproducibility_blocked_field_count,
+                ),
+                _metric(
+                    "windows_reproducibility_primary_field",
+                    developer_preview_windows_reproducibility_primary_field_id,
+                ),
+                _metric(
+                    "windows_reproducibility_primary_action",
+                    developer_preview_windows_reproducibility_primary_required_action,
                 ),
                 _metric(
                     "new_user_observation_receipt",
@@ -3694,6 +3839,39 @@ def build_product_operator_cockpit(
         "developer_preview_clean_checkout_stage5_missing_input_rows": (
             developer_preview_clean_checkout_missing_input_rows
         ),
+        "developer_preview_linux_reproducibility_receipt_present": (
+            developer_preview_linux_reproducibility_receipt_present
+        ),
+        "developer_preview_linux_reproducibility_receipt_status": (
+            developer_preview_linux_reproducibility_receipt_status
+        ),
+        "developer_preview_windows_reproducibility_receipt_present": (
+            developer_preview_windows_reproducibility_receipt_present
+        ),
+        "developer_preview_windows_reproducibility_receipt_status": (
+            developer_preview_windows_reproducibility_receipt_status
+        ),
+        "developer_preview_windows_reproducibility_required_field_count": (
+            developer_preview_windows_reproducibility_required_field_count
+        ),
+        "developer_preview_windows_reproducibility_ready_field_count": (
+            developer_preview_windows_reproducibility_ready_field_count
+        ),
+        "developer_preview_windows_reproducibility_blocked_field_count": (
+            developer_preview_windows_reproducibility_blocked_field_count
+        ),
+        "developer_preview_windows_reproducibility_primary_field_id": (
+            developer_preview_windows_reproducibility_primary_field_id
+        ),
+        "developer_preview_windows_reproducibility_primary_blocker": (
+            developer_preview_windows_reproducibility_primary_blocker
+        ),
+        "developer_preview_windows_reproducibility_primary_required_action": (
+            developer_preview_windows_reproducibility_primary_required_action
+        ),
+        "developer_preview_windows_reproducibility_requirement_rows": (
+            developer_preview_windows_reproducibility_requirement_row_preview
+        ),
         "developer_preview_new_user_observation_receipt_present": (
             developer_preview_new_user_observation_receipt_present
         ),
@@ -3891,6 +4069,14 @@ def _parser() -> argparse.ArgumentParser:
         default=DEFAULT_DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_JSON,
     )
     parser.add_argument(
+        "--developer-preview-linux-reproducibility-receipt-json",
+        default=DEFAULT_DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_JSON,
+    )
+    parser.add_argument(
+        "--developer-preview-windows-reproducibility-receipt-json",
+        default=DEFAULT_DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_JSON,
+    )
+    parser.add_argument(
         "--developer-preview-new-user-observation-receipt-json",
         default=DEFAULT_DEVELOPER_PREVIEW_NEW_USER_OBSERVATION_RECEIPT_JSON,
     )
@@ -3930,6 +4116,12 @@ def main(argv: list[str] | None = None) -> int:
         developer_preview_json=args.developer_preview_json,
         developer_preview_clean_checkout_receipt_json=(
             args.developer_preview_clean_checkout_receipt_json
+        ),
+        developer_preview_linux_reproducibility_receipt_json=(
+            args.developer_preview_linux_reproducibility_receipt_json
+        ),
+        developer_preview_windows_reproducibility_receipt_json=(
+            args.developer_preview_windows_reproducibility_receipt_json
         ),
         developer_preview_new_user_observation_receipt_json=(
             args.developer_preview_new_user_observation_receipt_json

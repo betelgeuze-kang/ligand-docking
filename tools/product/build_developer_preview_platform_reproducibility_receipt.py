@@ -24,6 +24,17 @@ DEFAULT_WINDOWS_OUT_MD = ".betelgeuze/developer_preview_windows_reproducibility_
 
 PACKET_TYPE = "developer_preview_platform_reproducibility_receipt"
 SCHEMA_VERSION = "developer_preview_platform_reproducibility_receipt_v1"
+PLATFORM_EVIDENCE_REQUIRED_FIELD_IDS = [
+    "platform_supported",
+    "ai_verify_log_present",
+    "ai_verify_passed",
+    "pytest_junit_present",
+    "pytest_junit_parseable",
+    "pytest_test_count_positive",
+    "pytest_failure_count_zero",
+    "pytest_error_count_zero",
+    "platform_matches_expected",
+]
 
 CLAIM_BOUNDARY = (
     "Developer Preview platform reproducibility receipt only; it reads local ai-verify output and pytest "
@@ -146,6 +157,122 @@ def _ai_verify_passed(log_text: str) -> bool:
     return "verify ok" in lower and "traceback" not in lower and "failed" not in lower
 
 
+def _requirement_row(
+    *,
+    field_id: str,
+    label: str,
+    ready: bool,
+    observed: str,
+    blocker: str,
+    required_action: str,
+) -> dict[str, Any]:
+    return {
+        "field_id": field_id,
+        "label": label,
+        "status": "pass" if ready else "blocked",
+        "ready": ready,
+        "observed": observed,
+        "blocker": "" if ready else blocker,
+        "required_action": "" if ready else required_action,
+        "operator_action_required": not ready,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_promotion_allowed": False,
+        "claim_boundary": CLAIM_BOUNDARY,
+    }
+
+
+def _platform_evidence_requirement_rows(
+    *,
+    normalized_platform: str,
+    valid_platform: bool,
+    ai_verify_present: bool,
+    ai_verify_ok: bool,
+    junit: dict[str, Any],
+    platform_match: bool,
+    observed_platform_system: str,
+) -> list[dict[str, Any]]:
+    junit_present = bool(junit.get("present"))
+    junit_parseable = bool(junit_present and not junit.get("parse_error"))
+    test_count = _int(junit.get("test_count"))
+    failure_count = _int(junit.get("failure_count"))
+    error_count = _int(junit.get("error_count"))
+    return [
+        _requirement_row(
+            field_id="platform_supported",
+            label="Requested platform is supported by the receipt contract",
+            ready=valid_platform,
+            observed=normalized_platform,
+            blocker=f"platform={normalized_platform}:unsupported",
+            required_action="Use one of the supported platform ids: linux or windows.",
+        ),
+        _requirement_row(
+            field_id="ai_verify_log_present",
+            label="ai-verify log is attached",
+            ready=ai_verify_present,
+            observed="present" if ai_verify_present else "missing",
+            blocker="ai_verify_log_missing",
+            required_action="Run ai-verify on this platform and attach the captured log.",
+        ),
+        _requirement_row(
+            field_id="ai_verify_passed",
+            label="ai-verify log contains a passing result",
+            ready=ai_verify_present and ai_verify_ok,
+            observed=str(ai_verify_ok).lower(),
+            blocker="ai_verify_not_passed",
+            required_action="Re-run ai-verify on this platform until the log records verify ok.",
+        ),
+        _requirement_row(
+            field_id="pytest_junit_present",
+            label="pytest JUnit XML is attached",
+            ready=junit_present,
+            observed="present" if junit_present else "missing",
+            blocker="pytest_junit_missing",
+            required_action="Run the approved pytest command set and attach the JUnit XML.",
+        ),
+        _requirement_row(
+            field_id="pytest_junit_parseable",
+            label="pytest JUnit XML is parseable",
+            ready=junit_parseable,
+            observed="parseable" if junit_parseable else str(junit.get("parse_error") or "missing"),
+            blocker="pytest_junit_not_parseable",
+            required_action="Attach a parseable pytest JUnit XML file for this platform.",
+        ),
+        _requirement_row(
+            field_id="pytest_test_count_positive",
+            label="pytest command set recorded at least one test",
+            ready=junit_parseable and test_count > 0,
+            observed=f"test_count={test_count}",
+            blocker="pytest_test_count_zero",
+            required_action="Run the approved pytest command set and preserve its JUnit test count.",
+        ),
+        _requirement_row(
+            field_id="pytest_failure_count_zero",
+            label="pytest failure count is zero",
+            ready=junit_parseable and failure_count == 0,
+            observed=f"failure_count={failure_count}",
+            blocker="pytest_failure_count_nonzero",
+            required_action="Clear pytest failures before claiming platform reproducibility.",
+        ),
+        _requirement_row(
+            field_id="pytest_error_count_zero",
+            label="pytest error count is zero",
+            ready=junit_parseable and error_count == 0,
+            observed=f"error_count={error_count}",
+            blocker="pytest_error_count_nonzero",
+            required_action="Clear pytest errors before claiming platform reproducibility.",
+        ),
+        _requirement_row(
+            field_id="platform_matches_expected",
+            label="Observed platform matches the requested receipt platform",
+            ready=platform_match,
+            observed=f"expected={normalized_platform};observed={observed_platform_system}",
+            blocker="platform_mismatch",
+            required_action="Build this receipt on the matching platform or attach matching platform evidence.",
+        ),
+    ]
+
+
 def build_developer_preview_platform_reproducibility_receipt(
     *,
     platform_id: str = DEFAULT_PLATFORM,
@@ -220,6 +347,21 @@ def build_developer_preview_platform_reproducibility_receipt(
             "blockers": [blocker for blocker in blockers if blocker.startswith("platform")],
         },
     ]
+    platform_evidence_requirement_rows = _platform_evidence_requirement_rows(
+        normalized_platform=normalized_platform,
+        valid_platform=valid_platform,
+        ai_verify_present=ai_verify_present,
+        ai_verify_ok=ai_verify_ok,
+        junit=junit,
+        platform_match=platform_match,
+        observed_platform_system=observed_platform_system,
+    )
+    platform_evidence_blocked_rows = [
+        row for row in platform_evidence_requirement_rows if not row["ready"]
+    ]
+    platform_evidence_primary_row = (
+        platform_evidence_blocked_rows[0] if platform_evidence_blocked_rows else {}
+    )
     summary = {
         "packet_type": PACKET_TYPE,
         "schema_version": SCHEMA_VERSION,
@@ -242,6 +384,25 @@ def build_developer_preview_platform_reproducibility_receipt(
         "observed_platform_system": observed_platform_system,
         "observed_platform_platform": platform_lib.platform(),
         "python_version": sys.version.split()[0],
+        "platform_evidence_required_field_ids": list(
+            PLATFORM_EVIDENCE_REQUIRED_FIELD_IDS
+        ),
+        "platform_evidence_required_field_count": len(
+            PLATFORM_EVIDENCE_REQUIRED_FIELD_IDS
+        ),
+        "platform_evidence_ready_field_count": (
+            len(platform_evidence_requirement_rows) - len(platform_evidence_blocked_rows)
+        ),
+        "platform_evidence_blocked_field_count": len(platform_evidence_blocked_rows),
+        "platform_evidence_primary_field_id": str(
+            platform_evidence_primary_row.get("field_id") or ""
+        ),
+        "platform_evidence_primary_blocker": str(
+            platform_evidence_primary_row.get("blocker") or ""
+        ),
+        "platform_evidence_primary_required_action": str(
+            platform_evidence_primary_row.get("required_action") or ""
+        ),
         "claim_promotion_allowed": False,
         "execution_enabled": False,
         "external_state_mutated": False,
@@ -252,7 +413,11 @@ def build_developer_preview_platform_reproducibility_receipt(
         if ready and normalized_platform == "windows"
         else "Run the platform command set, capture ai-verify and pytest JUnit evidence, then rebuild this receipt.",
     }
-    return {"summary": summary, "rows": rows}
+    return {
+        "summary": summary,
+        "rows": rows,
+        "platform_evidence_requirement_rows": platform_evidence_requirement_rows,
+    }
 
 
 def _write_json(path_like: str | Path, payload: dict[str, Any], *, root: Path = ROOT) -> None:
@@ -273,6 +438,7 @@ def _render_md(payload: dict[str, Any]) -> str:
         f"- pytest_command_set_passed: `{summary['pytest_command_set_passed']}`",
         f"- platform_match: `{summary['platform_match']}`",
         f"- blocker_count: `{summary['blocker_count']}`",
+        f"- platform_evidence_blocked_field_count: `{summary['platform_evidence_blocked_field_count']}`",
         "",
         "| check | status | blockers |",
         "| --- | --- | --- |",
@@ -280,6 +446,20 @@ def _render_md(payload: dict[str, Any]) -> str:
     for row in payload["rows"]:
         blockers = ";".join(str(item) for item in row.get("blockers", [])) or "-"
         lines.append(f"| `{row['check']}` | `{row['status']}` | `{blockers}` |")
+    lines.extend(
+        [
+            "",
+            "## Platform Evidence Checklist",
+            "",
+            "| field | status | observed | blocker | action |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+    )
+    for row in payload.get("platform_evidence_requirement_rows", []):
+        lines.append(
+            f"| `{row['field_id']}` | `{row['status']}` | `{row['observed']}` | "
+            f"`{row['blocker'] or '-'}` | {row['required_action'] or '-'} |"
+        )
     lines.extend(["", CLAIM_BOUNDARY, ""])
     return "\n".join(lines)
 

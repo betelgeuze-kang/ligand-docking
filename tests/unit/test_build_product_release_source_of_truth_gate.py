@@ -6207,6 +6207,8 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
         "runs/customer_shadow_evidence_status_current.json",
         "runs/developer_preview_final_gate_audit_current.json",
         ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+        ".betelgeuze/developer_preview_linux_reproducibility_receipt.json",
+        ".betelgeuze/developer_preview_windows_reproducibility_receipt.json",
         ".betelgeuze/developer_preview_new_user_observation_receipt.json",
     ):
         assert source_artifact in depends_on

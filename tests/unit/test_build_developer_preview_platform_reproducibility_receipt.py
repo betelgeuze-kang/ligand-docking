@@ -47,9 +47,19 @@ def test_platform_reproducibility_receipt_ready_for_linux(tmp_path: Path) -> Non
     assert summary["ai_verify_passed"] is True
     assert summary["pytest_command_set_passed"] is True
     assert summary["blocker_count"] == 0
+    assert summary["platform_evidence_required_field_count"] == 9
+    assert summary["platform_evidence_ready_field_count"] == 9
+    assert summary["platform_evidence_blocked_field_count"] == 0
+    assert summary["platform_evidence_primary_field_id"] == ""
     assert summary["claim_promotion_allowed"] is False
     assert summary["execution_enabled"] is False
     assert summary["external_state_mutated"] is False
+    assert all(
+        row["execution_enabled"] is False
+        and row["external_state_mutated"] is False
+        and row["claim_promotion_allowed"] is False
+        for row in payload["platform_evidence_requirement_rows"]
+    )
 
 
 def test_platform_reproducibility_receipt_blocks_failed_inputs(tmp_path: Path) -> None:
@@ -67,15 +77,44 @@ def test_platform_reproducibility_receipt_blocks_failed_inputs(tmp_path: Path) -
     )
     summary = payload["summary"]
     blockers = ";".join(summary["blockers"])
+    checklist = {
+        row["field_id"]: row for row in payload["platform_evidence_requirement_rows"]
+    }
 
     assert summary["status"] == "blocked_developer_preview_platform_reproducibility_receipt"
     assert summary["command_set_passed"] is False
     assert summary["linux_receipt"] is False
     assert summary["ai_verify_passed"] is False
     assert summary["pytest_command_set_passed"] is False
+    assert summary["platform_evidence_required_field_ids"] == [
+        "platform_supported",
+        "ai_verify_log_present",
+        "ai_verify_passed",
+        "pytest_junit_present",
+        "pytest_junit_parseable",
+        "pytest_test_count_positive",
+        "pytest_failure_count_zero",
+        "pytest_error_count_zero",
+        "platform_matches_expected",
+    ]
+    assert summary["platform_evidence_required_field_count"] == 9
+    assert summary["platform_evidence_ready_field_count"] == 6
+    assert summary["platform_evidence_blocked_field_count"] == 3
+    assert summary["platform_evidence_primary_field_id"] == "ai_verify_passed"
+    assert summary["platform_evidence_primary_blocker"] == "ai_verify_not_passed"
+    assert summary["platform_evidence_primary_required_action"] == (
+        "Re-run ai-verify on this platform until the log records verify ok."
+    )
     assert "verify_ok_missing" in blockers
     assert "failure_count_nonzero" in blockers
     assert "platform_mismatch" in blockers
+    assert checklist["platform_supported"]["status"] == "pass"
+    assert checklist["ai_verify_log_present"]["status"] == "pass"
+    assert checklist["ai_verify_passed"]["status"] == "blocked"
+    assert checklist["pytest_failure_count_zero"]["status"] == "blocked"
+    assert checklist["platform_matches_expected"]["observed"] == (
+        "expected=linux;observed=Windows"
+    )
 
 
 def test_platform_reproducibility_receipt_cli_writes_outputs(tmp_path: Path) -> None:
@@ -104,6 +143,7 @@ def test_platform_reproducibility_receipt_cli_writes_outputs(tmp_path: Path) -> 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["summary"]["packet_type"] == "developer_preview_platform_reproducibility_receipt"
     assert "Developer Preview Platform Reproducibility Receipt" in out_md.read_text(encoding="utf-8")
+    assert "Platform Evidence Checklist" in out_md.read_text(encoding="utf-8")
 
 
 def test_platform_reproducibility_receipt_uses_platform_specific_defaults() -> None:

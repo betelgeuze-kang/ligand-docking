@@ -38,6 +38,12 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         "developer_preview_clean_checkout_receipt": (
             tmp_path / ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
         ),
+        "developer_preview_linux_reproducibility_receipt": (
+            tmp_path / ".betelgeuze/developer_preview_linux_reproducibility_receipt.json"
+        ),
+        "developer_preview_windows_reproducibility_receipt": (
+            tmp_path / ".betelgeuze/developer_preview_windows_reproducibility_receipt.json"
+        ),
         "developer_preview_new_user_observation_receipt": (
             tmp_path / ".betelgeuze/developer_preview_new_user_observation_receipt.json"
         ),
@@ -1220,6 +1226,68 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         },
     )
     _write_json(
+        paths["developer_preview_linux_reproducibility_receipt"],
+        {
+            "summary": {
+                "status": "developer_preview_platform_reproducibility_receipt_ready",
+                "platform_id": "linux",
+                "platform_evidence_required_field_count": 9,
+                "platform_evidence_ready_field_count": 9,
+                "platform_evidence_blocked_field_count": 0,
+                "claim_boundary": "linux reproducibility boundary",
+            },
+            "platform_evidence_requirement_rows": [],
+        },
+    )
+    _write_json(
+        paths["developer_preview_windows_reproducibility_receipt"],
+        {
+            "summary": {
+                "status": "blocked_developer_preview_platform_reproducibility_receipt",
+                "platform_id": "windows",
+                "platform_evidence_required_field_count": 9,
+                "platform_evidence_ready_field_count": 1,
+                "platform_evidence_blocked_field_count": 8,
+                "platform_evidence_primary_field_id": "ai_verify_log_present",
+                "platform_evidence_primary_blocker": "ai_verify_log_missing",
+                "platform_evidence_primary_required_action": (
+                    "Run ai-verify on this platform and attach the captured log."
+                ),
+                "claim_boundary": "windows reproducibility boundary",
+            },
+            "platform_evidence_requirement_rows": [
+                {
+                    "field_id": "platform_supported",
+                    "label": "Requested platform is supported by the receipt contract",
+                    "status": "pass",
+                    "ready": True,
+                    "observed": "windows",
+                    "blocker": "",
+                    "required_action": "",
+                    "operator_action_required": False,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+                {
+                    "field_id": "ai_verify_log_present",
+                    "label": "ai-verify log is attached",
+                    "status": "blocked",
+                    "ready": False,
+                    "observed": "missing",
+                    "blocker": "ai_verify_log_missing",
+                    "required_action": (
+                        "Run ai-verify on this platform and attach the captured log."
+                    ),
+                    "operator_action_required": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+            ],
+        },
+    )
+    _write_json(
         paths["developer_preview_new_user_observation_receipt"],
         {
             "summary": {
@@ -1498,6 +1566,12 @@ def _build_payload(tmp_path: Path) -> dict:
         developer_preview_json=paths["developer_preview"],
         developer_preview_clean_checkout_receipt_json=(
             paths["developer_preview_clean_checkout_receipt"]
+        ),
+        developer_preview_linux_reproducibility_receipt_json=(
+            paths["developer_preview_linux_reproducibility_receipt"]
+        ),
+        developer_preview_windows_reproducibility_receipt_json=(
+            paths["developer_preview_windows_reproducibility_receipt"]
         ),
         developer_preview_new_user_observation_receipt_json=(
             paths["developer_preview_new_user_observation_receipt"]
@@ -2348,6 +2422,56 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         and row["claim_promotion_allowed"] is False
         for row in summary["developer_preview_clean_checkout_stage5_input_family_rows"]
     )
+    assert summary["developer_preview_linux_reproducibility_receipt_present"] is True
+    assert summary["developer_preview_linux_reproducibility_receipt_status"] == (
+        "developer_preview_platform_reproducibility_receipt_ready"
+    )
+    assert summary["developer_preview_windows_reproducibility_receipt_present"] is True
+    assert summary["developer_preview_windows_reproducibility_receipt_status"] == (
+        "blocked_developer_preview_platform_reproducibility_receipt"
+    )
+    assert summary["developer_preview_windows_reproducibility_required_field_count"] == 9
+    assert summary["developer_preview_windows_reproducibility_ready_field_count"] == 1
+    assert summary["developer_preview_windows_reproducibility_blocked_field_count"] == 8
+    assert summary["developer_preview_windows_reproducibility_primary_field_id"] == (
+        "ai_verify_log_present"
+    )
+    assert summary["developer_preview_windows_reproducibility_primary_blocker"] == (
+        "ai_verify_log_missing"
+    )
+    assert summary[
+        "developer_preview_windows_reproducibility_primary_required_action"
+    ] == "Run ai-verify on this platform and attach the captured log."
+    assert summary["developer_preview_windows_reproducibility_requirement_rows"] == [
+        {
+            "field_id": "platform_supported",
+            "label": "Requested platform is supported by the receipt contract",
+            "status": "pass",
+            "ready": True,
+            "observed": "windows",
+            "blocker": "",
+            "required_action": "",
+            "operator_action_required": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+            "claim_boundary": "windows reproducibility boundary",
+        },
+        {
+            "field_id": "ai_verify_log_present",
+            "label": "ai-verify log is attached",
+            "status": "blocked",
+            "ready": False,
+            "observed": "missing",
+            "blocker": "ai_verify_log_missing",
+            "required_action": "Run ai-verify on this platform and attach the captured log.",
+            "operator_action_required": True,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+            "claim_boundary": "windows reproducibility boundary",
+        },
+    ]
     assert summary["developer_preview_new_user_observation_receipt_present"] is True
     assert summary["developer_preview_new_user_observation_receipt_status"] == (
         "blocked_developer_preview_new_user_observation_receipt"
@@ -2968,6 +3092,27 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     )
     assert "clean_checkout_stage5_primary_source_arg=--scores-csv" in (
         panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert (
+        "linux_reproducibility_receipt=developer_preview_platform_reproducibility_receipt_ready"
+        in panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert (
+        "windows_reproducibility_receipt=blocked_developer_preview_platform_reproducibility_receipt"
+        in panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "windows_reproducibility_fields=9" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "windows_reproducibility_blocked_fields=8" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "windows_reproducibility_primary_field=ai_verify_log_present" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert (
+        "windows_reproducibility_primary_action=Run ai-verify on this platform and attach the captured log."
+        in panels["developer_preview_final_gates"]["secondary_metric"]
     )
     assert (
         "new_user_observation_receipt=blocked_developer_preview_new_user_observation_receipt"
