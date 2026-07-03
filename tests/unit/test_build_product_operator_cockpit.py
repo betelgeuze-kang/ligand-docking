@@ -1713,6 +1713,50 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
             "claim_promotion_allowed": False,
         }
     ]
+    assert summary["customer_shadow_paid_pilot_requirement_row_count"] == 14
+    assert summary["customer_shadow_paid_pilot_requirement_blocked_count"] == 10
+    assert summary["customer_shadow_paid_pilot_requirement_primary_id"] == (
+        "completed_customer_shadow_cases"
+    )
+    assert summary["customer_shadow_paid_pilot_requirement_primary_blocker"] == (
+        "completed_customer_shadow_cases_below_required:0/3"
+    )
+    assert summary["customer_shadow_paid_pilot_requirement_primary_action"] == (
+        "Collect reviewed customer-shadow rows that count toward the minimum."
+    )
+    assert summary["customer_shadow_paid_pilot_requirement_primary_row"] == {
+        "requirement_id": "completed_customer_shadow_cases",
+        "requirement_type": "minimum_count",
+        "ready": False,
+        "observed_count": 0,
+        "required_count": 3,
+        "required_value": "3",
+        "observed_value": "0",
+        "blocker": "completed_customer_shadow_cases_below_required:0/3",
+        "operator_action": "Collect reviewed customer-shadow rows that count toward the minimum.",
+        "paid_pilot_wording_allowed": False,
+        "claim_promotion_allowed": False,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+    }
+    requirement_rows = {
+        row["requirement_id"]: row
+        for row in summary["customer_shadow_paid_pilot_requirement_rows"]
+    }
+    assert requirement_rows["customer_shadow_intake_schema_ready"]["ready"] is True
+    assert requirement_rows["reviewer_signoff"]["blocker"] == (
+        "reviewer_signoff_rows_below_required:0/3"
+    )
+    assert requirement_rows["customer_shadow_work_order_closed"]["blocker"] == (
+        "customer_shadow_work_order_rows_open:3"
+    )
+    assert requirement_rows["paid_pilot_claim_allowed"]["paid_pilot_wording_allowed"] is False
+    assert all(
+        row["execution_enabled"] is False
+        and row["external_state_mutated"] is False
+        and row["claim_promotion_allowed"] is False
+        for row in summary["customer_shadow_paid_pilot_requirement_rows"]
+    )
     assert summary["customer_shadow_intake_schema_ready"] is True
     assert summary["customer_shadow_minimum_met"] is False
     assert summary["customer_shadow_raw_data_stored_in_repo"] is False
@@ -2224,6 +2268,18 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "anonymized_summaries=1" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
     assert "reviewer_signoffs=0" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
     assert "required_columns=12" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    assert "paid_pilot_requirements=14" in (
+        panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    )
+    assert "paid_pilot_blocked_requirements=10" in (
+        panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    )
+    assert "paid_pilot_primary_requirement=completed_customer_shadow_cases" in (
+        panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    )
+    assert "paid_pilot_primary_blocker=completed_customer_shadow_cases_below_required:0/3" in (
+        panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    )
     assert "work_order_rows=3" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
     assert "work_order_primary=customer_shadow_case_1" in (
         panels["customer_shadow_evidence_panel"]["secondary_metric"]
@@ -2242,8 +2298,11 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     )
     assert "required_signoff=approved" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
     assert panels["customer_shadow_evidence_panel"]["blockers"] == [
-        "Add one reviewed real customer-shadow metadata row."
+        "completed_customer_shadow_cases_below_required:0/3"
     ]
+    assert panels["customer_shadow_evidence_panel"]["next_action"] == (
+        "Collect reviewed customer-shadow rows that count toward the minimum."
+    )
     assert panels["customer_shadow_evidence_panel"]["disallowed_claim_text"] == (
         "Paid-pilot wording remains disallowed until three reviewed customer-shadow rows pass."
     )

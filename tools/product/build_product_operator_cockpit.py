@@ -261,6 +261,169 @@ def _customer_shadow_evidence_rows(payload: dict[str, Any]) -> list[dict[str, An
     return rows
 
 
+def _customer_shadow_paid_pilot_requirement_rows(
+    summary: dict[str, Any],
+) -> list[dict[str, Any]]:
+    summary_present = bool(summary)
+    required = _int(summary.get("required_completed_customer_shadow_case_count")) or 3
+    next_required_step = _text(summary.get("next_required_step"))
+    rows: list[dict[str, Any]] = []
+
+    def count_row(
+        requirement_id: str,
+        observed_key: str,
+        blocker_id: str,
+        operator_action: str,
+    ) -> None:
+        observed = _int(summary.get(observed_key))
+        ready = summary_present and observed >= required
+        rows.append(
+            {
+                "requirement_id": requirement_id,
+                "requirement_type": "minimum_count",
+                "ready": ready,
+                "observed_count": observed,
+                "required_count": required,
+                "required_value": str(required),
+                "observed_value": str(observed),
+                "blocker": "" if ready else f"{blocker_id}:{observed}/{required}",
+                "operator_action": "" if ready else operator_action,
+                "paid_pilot_wording_allowed": False,
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+
+    def bool_row(
+        requirement_id: str,
+        ready: bool,
+        observed_value: Any,
+        required_value: Any,
+        blocker_id: str,
+        operator_action: str,
+    ) -> None:
+        rows.append(
+            {
+                "requirement_id": requirement_id,
+                "requirement_type": "boolean",
+                "ready": ready,
+                "observed_count": 1 if ready else 0,
+                "required_count": 1,
+                "required_value": str(required_value).lower(),
+                "observed_value": str(observed_value).lower(),
+                "blocker": "" if ready else blocker_id,
+                "operator_action": "" if ready else operator_action,
+                "paid_pilot_wording_allowed": False,
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+
+    bool_row(
+        "customer_shadow_intake_schema_ready",
+        summary_present and summary.get("customer_shadow_intake_schema_ready") is True,
+        summary.get("customer_shadow_intake_schema_ready"),
+        True,
+        "customer_shadow_intake_schema_not_ready",
+        "Rebuild the customer-shadow evidence status with the required intake schema.",
+    )
+    count_row(
+        "completed_customer_shadow_cases",
+        "completed_customer_shadow_case_count",
+        "completed_customer_shadow_cases_below_required",
+        "Collect reviewed customer-shadow rows that count toward the minimum.",
+    )
+    count_row(
+        "real_customer_shadow_rows",
+        "real_customer_shadow_row_count",
+        "real_customer_shadow_rows_below_required",
+        "Replace mock or placeholder rows with real reviewed customer-shadow rows.",
+    )
+    count_row(
+        "customer_retained_raw_data",
+        "customer_retained_raw_data_count",
+        "customer_retained_raw_data_rows_below_required",
+        "Keep customer raw data customer-retained and record only derived metadata.",
+    )
+    count_row(
+        "redistribution_allowed_false",
+        "redistribution_allowed_false_count",
+        "redistribution_false_rows_below_required",
+        "Set redistribution_allowed=false on every counted customer-shadow row.",
+    )
+    count_row(
+        "anonymized_result_summary",
+        "anonymized_result_summary_count",
+        "anonymized_summary_rows_below_required",
+        "Attach anonymized result summaries for counted customer-shadow rows.",
+    )
+    count_row(
+        "reviewer_signoff",
+        "reviewer_signoff_count",
+        "reviewer_signoff_rows_below_required",
+        "Add reviewer signoff for each counted customer-shadow row.",
+    )
+    bool_row(
+        "no_invalid_customer_shadow_rows",
+        summary_present and _int(summary.get("invalid_row_count")) == 0,
+        _int(summary.get("invalid_row_count")),
+        0,
+        f"invalid_customer_shadow_rows:{_int(summary.get('invalid_row_count'))}",
+        "Repair invalid customer-shadow rows before paid pilot wording.",
+    )
+    bool_row(
+        "customer_raw_data_not_stored_in_repo",
+        summary_present and summary.get("customer_raw_data_stored_in_repo") is False,
+        summary.get("customer_raw_data_stored_in_repo"),
+        False,
+        "customer_raw_data_stored_in_repo",
+        "Remove customer raw data from repo-managed artifacts and retain it with the customer.",
+    )
+    bool_row(
+        "redistribution_allowed_required_value_false",
+        summary_present and summary.get("redistribution_allowed_required_value") is False,
+        summary.get("redistribution_allowed_required_value"),
+        False,
+        "redistribution_allowed_required_value_not_false",
+        "Keep the required redistribution_allowed value set to false.",
+    )
+    bool_row(
+        "customer_shadow_work_order_closed",
+        summary_present and _int(summary.get("customer_shadow_work_order_row_count")) == 0,
+        _int(summary.get("customer_shadow_work_order_row_count")),
+        0,
+        f"customer_shadow_work_order_rows_open:{_int(summary.get('customer_shadow_work_order_row_count'))}",
+        next_required_step or "Close all customer-shadow work-order rows.",
+    )
+    bool_row(
+        "paid_pilot_evidence_ready",
+        summary.get("paid_pilot_evidence_ready") is True,
+        summary.get("paid_pilot_evidence_ready"),
+        True,
+        "paid_pilot_evidence_not_ready",
+        next_required_step or "Complete paid-pilot customer-shadow evidence.",
+    )
+    bool_row(
+        "paid_pilot_claim_allowed",
+        summary.get("paid_pilot_claim_allowed") is True,
+        summary.get("paid_pilot_claim_allowed"),
+        True,
+        "paid_pilot_claim_not_approved",
+        "Keep paid pilot wording disabled until review explicitly approves the claim.",
+    )
+    bool_row(
+        "commercial_readiness_promotion_allowed",
+        summary.get("commercial_readiness_promotion_allowed") is True,
+        summary.get("commercial_readiness_promotion_allowed"),
+        True,
+        "commercial_readiness_promotion_not_approved",
+        "Keep commercial readiness promotion disabled until reviewed evidence passes.",
+    )
+    return rows
+
+
 def _product_capability_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     summary = _summary(payload)
     claim_boundary = _text(summary.get("claim_boundary")) or CLAIM_BOUNDARY
@@ -1254,6 +1417,9 @@ def build_product_operator_cockpit(
     customer_shadow_evidence_row_preview = _customer_shadow_evidence_rows(
         customer_shadow_payload
     )
+    customer_shadow_paid_pilot_requirement_row_preview = (
+        _customer_shadow_paid_pilot_requirement_rows(customer_shadow)
+    )
     developer_preview_payload = _read_json(developer_preview_json, root=root)
     developer_preview = _summary(developer_preview_payload)
     developer_preview_gate_row_preview = _developer_preview_gate_rows(
@@ -1668,6 +1834,37 @@ def build_product_operator_cockpit(
         1
         for row in customer_shadow_evidence_row_preview
         if row.get("reviewed_customer_shadow_row_ready") is True
+    )
+    customer_shadow_paid_pilot_requirement_row_count = len(
+        customer_shadow_paid_pilot_requirement_row_preview
+    )
+    customer_shadow_paid_pilot_requirement_blocked_rows = [
+        row
+        for row in customer_shadow_paid_pilot_requirement_row_preview
+        if row.get("ready") is not True
+    ]
+    customer_shadow_paid_pilot_requirement_blocked_count = len(
+        customer_shadow_paid_pilot_requirement_blocked_rows
+    )
+    customer_shadow_paid_pilot_requirement_primary_row = (
+        customer_shadow_paid_pilot_requirement_blocked_rows[0]
+        if customer_shadow_paid_pilot_requirement_blocked_rows
+        else {}
+    )
+    customer_shadow_paid_pilot_requirement_primary_id = _first_text(
+        customer_shadow_paid_pilot_requirement_primary_row.get("requirement_id")
+        if customer_shadow_paid_pilot_requirement_primary_row
+        else ""
+    )
+    customer_shadow_paid_pilot_requirement_primary_blocker = _first_text(
+        customer_shadow_paid_pilot_requirement_primary_row.get("blocker")
+        if customer_shadow_paid_pilot_requirement_primary_row
+        else ""
+    )
+    customer_shadow_paid_pilot_requirement_primary_action = _first_text(
+        customer_shadow_paid_pilot_requirement_primary_row.get("operator_action")
+        if customer_shadow_paid_pilot_requirement_primary_row
+        else ""
     )
     paid_pilot_wording_allowed = release_allowed and customer_shadow_paid_pilot_ready
 
@@ -2426,6 +2623,22 @@ def build_product_operator_cockpit(
                 _count_metric("anonymized_summaries", customer_shadow_anonymized_summary_count),
                 _count_metric("reviewer_signoffs", customer_shadow_reviewer_signoff_count),
                 _count_metric("required_columns", customer_shadow_required_column_count),
+                _count_metric(
+                    "paid_pilot_requirements",
+                    customer_shadow_paid_pilot_requirement_row_count,
+                ),
+                _count_metric(
+                    "paid_pilot_blocked_requirements",
+                    customer_shadow_paid_pilot_requirement_blocked_count,
+                ),
+                _metric(
+                    "paid_pilot_primary_requirement",
+                    customer_shadow_paid_pilot_requirement_primary_id,
+                ),
+                _metric(
+                    "paid_pilot_primary_blocker",
+                    customer_shadow_paid_pilot_requirement_primary_blocker,
+                ),
                 _count_metric("work_order_rows", customer_shadow_work_order_rows),
                 _metric("work_order_primary", customer_shadow_work_order_primary_slot),
                 _metric("required_raw_custody", customer_shadow_work_order_primary_required_raw_data_custody),
@@ -2444,6 +2657,7 @@ def build_product_operator_cockpit(
                 _metric("required_signoff", customer_shadow_work_order_primary_required_reviewer_signoff_status),
             ),
             next_action=_first_text(
+                customer_shadow_paid_pilot_requirement_primary_action,
                 customer_shadow.get("next_required_step"),
                 customer_shadow_work_order_primary_required_action,
                 "Collect three reviewed customer-shadow metadata rows without storing customer raw data in the repo.",
@@ -2452,7 +2666,11 @@ def build_product_operator_cockpit(
             disallowed_claim_text="Paid-pilot wording remains disallowed until three reviewed customer-shadow rows pass.",
             blockers=[]
             if customer_shadow_paid_pilot_ready
-            else [customer_shadow_work_order_primary_required_action or "customer_shadow_evidence_incomplete"],
+            else [
+                customer_shadow_paid_pilot_requirement_primary_blocker
+                or customer_shadow_work_order_primary_required_action
+                or "customer_shadow_evidence_incomplete"
+            ],
             claim_boundary=_text(customer_shadow.get("claim_boundary")) or CLAIM_BOUNDARY,
             root=root,
         ),
@@ -2753,6 +2971,27 @@ def build_product_operator_cockpit(
         "customer_shadow_evidence_row_count": customer_shadow_evidence_row_count,
         "customer_shadow_reviewed_evidence_row_count": customer_shadow_reviewed_evidence_row_count,
         "customer_shadow_evidence_rows": customer_shadow_evidence_row_preview,
+        "customer_shadow_paid_pilot_requirement_row_count": (
+            customer_shadow_paid_pilot_requirement_row_count
+        ),
+        "customer_shadow_paid_pilot_requirement_blocked_count": (
+            customer_shadow_paid_pilot_requirement_blocked_count
+        ),
+        "customer_shadow_paid_pilot_requirement_primary_row": (
+            customer_shadow_paid_pilot_requirement_primary_row
+        ),
+        "customer_shadow_paid_pilot_requirement_primary_id": (
+            customer_shadow_paid_pilot_requirement_primary_id
+        ),
+        "customer_shadow_paid_pilot_requirement_primary_blocker": (
+            customer_shadow_paid_pilot_requirement_primary_blocker
+        ),
+        "customer_shadow_paid_pilot_requirement_primary_action": (
+            customer_shadow_paid_pilot_requirement_primary_action
+        ),
+        "customer_shadow_paid_pilot_requirement_rows": (
+            customer_shadow_paid_pilot_requirement_row_preview
+        ),
         "customer_shadow_intake_schema_ready": customer_shadow_intake_schema_ready,
         "customer_shadow_minimum_met": customer_shadow_minimum_met,
         "customer_shadow_raw_data_stored_in_repo": customer_shadow_raw_data_stored_in_repo,

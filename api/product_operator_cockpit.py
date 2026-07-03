@@ -240,6 +240,33 @@ def _customer_shadow_evidence_rows(value: Any) -> list[dict[str, Any]]:
     return evidence_rows
 
 
+def _customer_shadow_paid_pilot_requirement_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    requirement_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        ready = bool(row.get("ready") is True)
+        requirement_rows.append(
+            {
+                "requirement_id": str(row.get("requirement_id") or ""),
+                "requirement_type": str(row.get("requirement_type") or ""),
+                "ready": ready,
+                "observed_count": _int(row.get("observed_count")),
+                "required_count": _int(row.get("required_count")),
+                "required_value": str(row.get("required_value") or ""),
+                "observed_value": str(row.get("observed_value") or ""),
+                "blocker": "" if ready else str(row.get("blocker") or ""),
+                "operator_action": "" if ready else str(row.get("operator_action") or ""),
+                "paid_pilot_wording_allowed": False,
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+    return requirement_rows
+
+
 def _product_capability_rows(value: Any) -> list[dict[str, Any]]:
     rows = value if isinstance(value, list) else []
     capability_rows: list[dict[str, Any]] = []
@@ -894,6 +921,13 @@ def _missing_response() -> dict[str, Any]:
         "customer_shadow_evidence_row_count": 0,
         "customer_shadow_reviewed_evidence_row_count": 0,
         "customer_shadow_evidence_rows": [],
+        "customer_shadow_paid_pilot_requirement_row_count": 0,
+        "customer_shadow_paid_pilot_requirement_blocked_count": 0,
+        "customer_shadow_paid_pilot_requirement_primary_row": {},
+        "customer_shadow_paid_pilot_requirement_primary_id": "",
+        "customer_shadow_paid_pilot_requirement_primary_blocker": "",
+        "customer_shadow_paid_pilot_requirement_primary_action": "",
+        "customer_shadow_paid_pilot_requirement_rows": [],
         "customer_shadow_intake_schema_ready": False,
         "customer_shadow_minimum_met": False,
         "customer_shadow_raw_data_stored_in_repo": False,
@@ -1361,6 +1395,35 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "customer_shadow_evidence_rows": _customer_shadow_evidence_rows(
             summary.get("customer_shadow_evidence_rows")
+        ),
+        "customer_shadow_paid_pilot_requirement_row_count": _int(
+            summary.get("customer_shadow_paid_pilot_requirement_row_count")
+        ),
+        "customer_shadow_paid_pilot_requirement_blocked_count": _int(
+            summary.get("customer_shadow_paid_pilot_requirement_blocked_count")
+        ),
+        "customer_shadow_paid_pilot_requirement_primary_row": (
+            _customer_shadow_paid_pilot_requirement_rows(
+                [summary.get("customer_shadow_paid_pilot_requirement_primary_row")]
+            )[0]
+            if isinstance(
+                summary.get("customer_shadow_paid_pilot_requirement_primary_row"), dict
+            )
+            else {}
+        ),
+        "customer_shadow_paid_pilot_requirement_primary_id": str(
+            summary.get("customer_shadow_paid_pilot_requirement_primary_id") or ""
+        ),
+        "customer_shadow_paid_pilot_requirement_primary_blocker": str(
+            summary.get("customer_shadow_paid_pilot_requirement_primary_blocker") or ""
+        ),
+        "customer_shadow_paid_pilot_requirement_primary_action": str(
+            summary.get("customer_shadow_paid_pilot_requirement_primary_action") or ""
+        ),
+        "customer_shadow_paid_pilot_requirement_rows": (
+            _customer_shadow_paid_pilot_requirement_rows(
+                summary.get("customer_shadow_paid_pilot_requirement_rows")
+            )
         ),
         "customer_shadow_intake_schema_ready": bool(
             summary.get("customer_shadow_intake_schema_ready") is True

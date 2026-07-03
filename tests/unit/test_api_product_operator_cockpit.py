@@ -621,6 +621,66 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                         "claim_promotion_allowed": True,
                     }
                 ],
+                "customer_shadow_paid_pilot_requirement_row_count": 2,
+                "customer_shadow_paid_pilot_requirement_blocked_count": 1,
+                "customer_shadow_paid_pilot_requirement_primary_id": (
+                    "completed_customer_shadow_cases"
+                ),
+                "customer_shadow_paid_pilot_requirement_primary_blocker": (
+                    "completed_customer_shadow_cases_below_required:0/3"
+                ),
+                "customer_shadow_paid_pilot_requirement_primary_action": (
+                    "Collect reviewed customer-shadow rows that count toward the minimum."
+                ),
+                "customer_shadow_paid_pilot_requirement_primary_row": {
+                    "requirement_id": "completed_customer_shadow_cases",
+                    "requirement_type": "minimum_count",
+                    "ready": False,
+                    "observed_count": 0,
+                    "required_count": 3,
+                    "required_value": "3",
+                    "observed_value": "0",
+                    "blocker": "completed_customer_shadow_cases_below_required:0/3",
+                    "operator_action": (
+                        "Collect reviewed customer-shadow rows that count toward the minimum."
+                    ),
+                    "paid_pilot_wording_allowed": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+                "customer_shadow_paid_pilot_requirement_rows": [
+                    {
+                        "requirement_id": "customer_shadow_intake_schema_ready",
+                        "requirement_type": "boolean",
+                        "ready": True,
+                        "observed_count": 1,
+                        "required_count": 1,
+                        "required_value": "true",
+                        "observed_value": "true",
+                        "paid_pilot_wording_allowed": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                    {
+                        "requirement_id": "completed_customer_shadow_cases",
+                        "requirement_type": "minimum_count",
+                        "ready": False,
+                        "observed_count": 0,
+                        "required_count": 3,
+                        "required_value": "3",
+                        "observed_value": "0",
+                        "blocker": "completed_customer_shadow_cases_below_required:0/3",
+                        "operator_action": (
+                            "Collect reviewed customer-shadow rows that count toward the minimum."
+                        ),
+                        "paid_pilot_wording_allowed": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                ],
                 "customer_shadow_intake_schema_ready": True,
                 "customer_shadow_minimum_met": False,
                 "customer_shadow_raw_data_stored_in_repo": False,
@@ -1460,6 +1520,64 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
             "claim_promotion_allowed": False,
         }
     ]
+    assert response["customer_shadow_paid_pilot_requirement_row_count"] == 2
+    assert response["customer_shadow_paid_pilot_requirement_blocked_count"] == 1
+    assert response["customer_shadow_paid_pilot_requirement_primary_id"] == (
+        "completed_customer_shadow_cases"
+    )
+    assert response["customer_shadow_paid_pilot_requirement_primary_blocker"] == (
+        "completed_customer_shadow_cases_below_required:0/3"
+    )
+    assert response["customer_shadow_paid_pilot_requirement_primary_action"] == (
+        "Collect reviewed customer-shadow rows that count toward the minimum."
+    )
+    assert response["customer_shadow_paid_pilot_requirement_primary_row"] == {
+        "requirement_id": "completed_customer_shadow_cases",
+        "requirement_type": "minimum_count",
+        "ready": False,
+        "observed_count": 0,
+        "required_count": 3,
+        "required_value": "3",
+        "observed_value": "0",
+        "blocker": "completed_customer_shadow_cases_below_required:0/3",
+        "operator_action": "Collect reviewed customer-shadow rows that count toward the minimum.",
+        "paid_pilot_wording_allowed": False,
+        "claim_promotion_allowed": False,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+    }
+    assert response["customer_shadow_paid_pilot_requirement_rows"] == [
+        {
+            "requirement_id": "customer_shadow_intake_schema_ready",
+            "requirement_type": "boolean",
+            "ready": True,
+            "observed_count": 1,
+            "required_count": 1,
+            "required_value": "true",
+            "observed_value": "true",
+            "blocker": "",
+            "operator_action": "",
+            "paid_pilot_wording_allowed": False,
+            "claim_promotion_allowed": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+        },
+        {
+            "requirement_id": "completed_customer_shadow_cases",
+            "requirement_type": "minimum_count",
+            "ready": False,
+            "observed_count": 0,
+            "required_count": 3,
+            "required_value": "3",
+            "observed_value": "0",
+            "blocker": "completed_customer_shadow_cases_below_required:0/3",
+            "operator_action": "Collect reviewed customer-shadow rows that count toward the minimum.",
+            "paid_pilot_wording_allowed": False,
+            "claim_promotion_allowed": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+        },
+    ]
     assert response["customer_shadow_intake_schema_ready"] is True
     assert response["customer_shadow_minimum_met"] is False
     assert response["customer_shadow_raw_data_stored_in_repo"] is False
@@ -1944,6 +2062,13 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["customer_shadow_evidence_row_count"] == 0
     assert response["customer_shadow_reviewed_evidence_row_count"] == 0
     assert response["customer_shadow_evidence_rows"] == []
+    assert response["customer_shadow_paid_pilot_requirement_row_count"] == 0
+    assert response["customer_shadow_paid_pilot_requirement_blocked_count"] == 0
+    assert response["customer_shadow_paid_pilot_requirement_primary_row"] == {}
+    assert response["customer_shadow_paid_pilot_requirement_primary_id"] == ""
+    assert response["customer_shadow_paid_pilot_requirement_primary_blocker"] == ""
+    assert response["customer_shadow_paid_pilot_requirement_primary_action"] == ""
+    assert response["customer_shadow_paid_pilot_requirement_rows"] == []
     assert response["customer_shadow_intake_schema_ready"] is False
     assert response["customer_shadow_minimum_met"] is False
     assert response["customer_shadow_raw_data_stored_in_repo"] is False
