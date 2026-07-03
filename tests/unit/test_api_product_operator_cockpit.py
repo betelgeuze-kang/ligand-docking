@@ -756,7 +756,16 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                     "result_metric_summary",
                     "runner_profile",
                 ],
+                "customer_shadow_work_order_primary_required_anonymized_result_summary": (
+                    "At least 24 characters, aggregate only."
+                ),
                 "customer_shadow_work_order_primary_required_reviewer_signoff_status": "approved",
+                "customer_shadow_work_order_primary_required_reviewer_id": (
+                    "non-empty reviewer id"
+                ),
+                "customer_shadow_work_order_primary_required_reviewed_at_utc": (
+                    "timezone-aware ISO timestamp"
+                ),
                 "customer_shadow_work_order_primary_required_source_artifact_fingerprint": "sha256",
                 "customer_shadow_work_order_rows": [
                     {
@@ -777,7 +786,12 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                             "result_metric_summary",
                             "runner_profile",
                         ],
+                        "required_anonymized_result_summary": (
+                            "At least 24 characters, aggregate only."
+                        ),
                         "required_reviewer_signoff_status": "approved",
+                        "required_reviewer_id": "non-empty reviewer id",
+                        "required_reviewed_at_utc": "timezone-aware ISO timestamp",
                         "required_source_artifact_fingerprint": "sha256",
                         "execution_enabled": True,
                         "external_state_mutated": True,
@@ -1930,7 +1944,16 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
         "result_metric_summary",
         "runner_profile",
     ]
+    assert response["customer_shadow_work_order_primary_required_anonymized_result_summary"] == (
+        "At least 24 characters, aggregate only."
+    )
     assert response["customer_shadow_work_order_primary_required_reviewer_signoff_status"] == "approved"
+    assert response["customer_shadow_work_order_primary_required_reviewer_id"] == (
+        "non-empty reviewer id"
+    )
+    assert response["customer_shadow_work_order_primary_required_reviewed_at_utc"] == (
+        "timezone-aware ISO timestamp"
+    )
     assert response["customer_shadow_work_order_primary_required_source_artifact_fingerprint"] == "sha256"
     assert response["customer_shadow_work_order_rows"] == [
         {
@@ -1951,7 +1974,12 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "result_metric_summary",
                 "runner_profile",
             ],
+            "required_anonymized_result_summary": (
+                "At least 24 characters, aggregate only."
+            ),
             "required_reviewer_signoff_status": "approved",
+            "required_reviewer_id": "non-empty reviewer id",
+            "required_reviewed_at_utc": "timezone-aware ISO timestamp",
             "required_source_artifact_fingerprint": "sha256",
             "execution_enabled": False,
             "external_state_mutated": False,
@@ -2643,7 +2671,10 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["customer_shadow_work_order_primary_required_redistribution_allowed"] is False
     assert response["customer_shadow_work_order_primary_required_raw_data_stored_in_repo"] is False
     assert response["customer_shadow_work_order_primary_required_derived_metadata_fields"] == []
+    assert response["customer_shadow_work_order_primary_required_anonymized_result_summary"] == ""
     assert response["customer_shadow_work_order_primary_required_reviewer_signoff_status"] == ""
+    assert response["customer_shadow_work_order_primary_required_reviewer_id"] == ""
+    assert response["customer_shadow_work_order_primary_required_reviewed_at_utc"] == ""
     assert response["customer_shadow_work_order_primary_required_source_artifact_fingerprint"] == ""
     assert response["customer_shadow_work_order_rows"] == []
     assert response["customer_shadow_evidence_row_count"] == 0

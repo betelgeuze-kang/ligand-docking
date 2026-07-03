@@ -1802,7 +1802,14 @@ def test_goal_customer_shadow_endpoint_reads_fail_closed_evidence(monkeypatch, t
                         "result_metric_summary",
                         "runner_profile",
                     ],
+                    "customer_shadow_work_order_primary_required_anonymized_result_summary": (
+                        "At least 24 characters."
+                    ),
                     "customer_shadow_work_order_primary_required_reviewer_signoff_status": "approved",
+                    "customer_shadow_work_order_primary_required_reviewer_id": "non-empty reviewer id",
+                    "customer_shadow_work_order_primary_required_reviewed_at_utc": (
+                        "timezone-aware ISO timestamp"
+                    ),
                     "customer_shadow_work_order_primary_required_source_artifact_fingerprint": "sha256",
                     "paid_pilot_evidence_ready": False,
                     "paid_pilot_claim_allowed": False,
@@ -1936,7 +1943,14 @@ def test_goal_customer_shadow_endpoint_reads_fail_closed_evidence(monkeypatch, t
         "result_metric_summary",
         "runner_profile",
     ]
+    assert response["customer_shadow_work_order_primary_required_anonymized_result_summary"] == (
+        "At least 24 characters."
+    )
     assert response["customer_shadow_work_order_primary_required_reviewer_signoff_status"] == "approved"
+    assert response["customer_shadow_work_order_primary_required_reviewer_id"] == "non-empty reviewer id"
+    assert response["customer_shadow_work_order_primary_required_reviewed_at_utc"] == (
+        "timezone-aware ISO timestamp"
+    )
     assert response["customer_shadow_work_order_primary_required_source_artifact_fingerprint"] == "sha256"
     assert response["paid_pilot_evidence_ready"] is False
     assert response["paid_pilot_claim_allowed"] is False
@@ -1968,6 +1982,15 @@ def test_goal_customer_shadow_endpoint_reads_fail_closed_evidence(monkeypatch, t
     assert response["customer_shadow_work_order_blocked_row_count"] == 1
     assert response["customer_shadow_work_order_primary_row"]["case_slot_id"] == "customer_shadow_case_1"
     assert response["customer_shadow_work_order_primary_row"]["required_raw_data_stored_in_repo"] is False
+    assert response["customer_shadow_work_order_primary_row"][
+        "required_anonymized_result_summary"
+    ] == "At least 24 characters."
+    assert response["customer_shadow_work_order_primary_row"]["required_reviewer_id"] == (
+        "non-empty reviewer id"
+    )
+    assert response["customer_shadow_work_order_primary_row"]["required_reviewed_at_utc"] == (
+        "timezone-aware ISO timestamp"
+    )
     assert response["customer_shadow_work_order_blocked_rows"][0]["operator_csv"] == (
         "config/customer_shadow_evidence_intake_template.csv"
     )
@@ -2003,6 +2026,9 @@ def test_goal_customer_shadow_endpoint_reads_fail_closed_evidence(monkeypatch, t
     assert missing["customer_shadow_work_order_row_count"] == 0
     assert missing["customer_shadow_work_order_missing_case_count"] == 3
     assert missing["customer_shadow_work_order_primary_required_derived_metadata_fields"] == []
+    assert missing["customer_shadow_work_order_primary_required_anonymized_result_summary"] == ""
+    assert missing["customer_shadow_work_order_primary_required_reviewer_id"] == ""
+    assert missing["customer_shadow_work_order_primary_required_reviewed_at_utc"] == ""
     assert missing["paid_pilot_evidence_ready"] is False
     assert missing["paid_pilot_claim_allowed"] is False
     assert missing["paid_pilot_wording_allowed"] is False

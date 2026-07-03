@@ -217,9 +217,14 @@ def _customer_shadow_work_order_rows(payload: dict[str, Any]) -> list[dict[str, 
                 "required_derived_metadata_fields": _string_list(
                     row.get("required_derived_metadata_fields")
                 ),
+                "required_anonymized_result_summary": _text(
+                    row.get("required_anonymized_result_summary")
+                ),
                 "required_reviewer_signoff_status": _text(
                     row.get("required_reviewer_signoff_status")
                 ),
+                "required_reviewer_id": _text(row.get("required_reviewer_id")),
+                "required_reviewed_at_utc": _text(row.get("required_reviewed_at_utc")),
                 "required_source_artifact_fingerprint": _text(
                     row.get("required_source_artifact_fingerprint")
                 ),
@@ -2516,8 +2521,19 @@ def build_product_operator_cockpit(
     customer_shadow_work_order_primary_required_derived_metadata_fields = _string_list(
         customer_shadow.get("customer_shadow_work_order_primary_required_derived_metadata_fields")
     )
+    customer_shadow_work_order_primary_required_anonymized_result_summary = _first_text(
+        customer_shadow.get(
+            "customer_shadow_work_order_primary_required_anonymized_result_summary"
+        )
+    )
     customer_shadow_work_order_primary_required_reviewer_signoff_status = _first_text(
         customer_shadow.get("customer_shadow_work_order_primary_required_reviewer_signoff_status")
+    )
+    customer_shadow_work_order_primary_required_reviewer_id = _first_text(
+        customer_shadow.get("customer_shadow_work_order_primary_required_reviewer_id")
+    )
+    customer_shadow_work_order_primary_required_reviewed_at_utc = _first_text(
+        customer_shadow.get("customer_shadow_work_order_primary_required_reviewed_at_utc")
     )
     customer_shadow_work_order_primary_required_source_artifact_fingerprint = _first_text(
         customer_shadow.get("customer_shadow_work_order_primary_required_source_artifact_fingerprint")
@@ -3791,7 +3807,13 @@ def build_product_operator_cockpit(
                     "required_derived_metadata_fields",
                     len(customer_shadow_work_order_primary_required_derived_metadata_fields),
                 ),
+                _metric(
+                    "required_anonymized_summary",
+                    customer_shadow_work_order_primary_required_anonymized_result_summary,
+                ),
                 _metric("required_signoff", customer_shadow_work_order_primary_required_reviewer_signoff_status),
+                _metric("required_reviewer_id", customer_shadow_work_order_primary_required_reviewer_id),
+                _metric("required_reviewed_at", customer_shadow_work_order_primary_required_reviewed_at_utc),
             ),
             next_action=_first_text(
                 customer_shadow_paid_pilot_requirement_primary_action,
@@ -4229,8 +4251,17 @@ def build_product_operator_cockpit(
         "customer_shadow_work_order_primary_required_derived_metadata_fields": (
             customer_shadow_work_order_primary_required_derived_metadata_fields
         ),
+        "customer_shadow_work_order_primary_required_anonymized_result_summary": (
+            customer_shadow_work_order_primary_required_anonymized_result_summary
+        ),
         "customer_shadow_work_order_primary_required_reviewer_signoff_status": (
             customer_shadow_work_order_primary_required_reviewer_signoff_status
+        ),
+        "customer_shadow_work_order_primary_required_reviewer_id": (
+            customer_shadow_work_order_primary_required_reviewer_id
+        ),
+        "customer_shadow_work_order_primary_required_reviewed_at_utc": (
+            customer_shadow_work_order_primary_required_reviewed_at_utc
         ),
         "customer_shadow_work_order_primary_required_source_artifact_fingerprint": (
             customer_shadow_work_order_primary_required_source_artifact_fingerprint

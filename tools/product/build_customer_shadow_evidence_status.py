@@ -526,8 +526,17 @@ def build_customer_shadow_evidence_status(
         "customer_shadow_work_order_primary_required_derived_metadata_fields": list(
             primary_work_order_row.get("required_derived_metadata_fields", [])
         ),
+        "customer_shadow_work_order_primary_required_anonymized_result_summary": _text(
+            primary_work_order_row.get("required_anonymized_result_summary")
+        ),
         "customer_shadow_work_order_primary_required_reviewer_signoff_status": _text(
             primary_work_order_row.get("required_reviewer_signoff_status")
+        ),
+        "customer_shadow_work_order_primary_required_reviewer_id": _text(
+            primary_work_order_row.get("required_reviewer_id")
+        ),
+        "customer_shadow_work_order_primary_required_reviewed_at_utc": _text(
+            primary_work_order_row.get("required_reviewed_at_utc")
         ),
         "customer_shadow_work_order_primary_required_source_artifact_fingerprint": _text(
             primary_work_order_row.get("required_source_artifact_fingerprint")

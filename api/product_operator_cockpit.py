@@ -165,9 +165,14 @@ def _customer_shadow_work_order_rows(value: Any) -> list[dict[str, Any]]:
                 "required_derived_metadata_fields": _string_list(
                     row.get("required_derived_metadata_fields")
                 ),
+                "required_anonymized_result_summary": str(
+                    row.get("required_anonymized_result_summary") or ""
+                ),
                 "required_reviewer_signoff_status": str(
                     row.get("required_reviewer_signoff_status") or ""
                 ),
+                "required_reviewer_id": str(row.get("required_reviewer_id") or ""),
+                "required_reviewed_at_utc": str(row.get("required_reviewed_at_utc") or ""),
                 "required_source_artifact_fingerprint": str(
                     row.get("required_source_artifact_fingerprint") or ""
                 ),
@@ -1169,7 +1174,10 @@ def _missing_response() -> dict[str, Any]:
         "customer_shadow_work_order_primary_required_redistribution_allowed": False,
         "customer_shadow_work_order_primary_required_raw_data_stored_in_repo": False,
         "customer_shadow_work_order_primary_required_derived_metadata_fields": [],
+        "customer_shadow_work_order_primary_required_anonymized_result_summary": "",
         "customer_shadow_work_order_primary_required_reviewer_signoff_status": "",
+        "customer_shadow_work_order_primary_required_reviewer_id": "",
+        "customer_shadow_work_order_primary_required_reviewed_at_utc": "",
         "customer_shadow_work_order_primary_required_source_artifact_fingerprint": "",
         "customer_shadow_work_order_rows": [],
         "customer_shadow_evidence_row_count": 0,
@@ -1793,8 +1801,17 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         "customer_shadow_work_order_primary_required_derived_metadata_fields": _string_list(
             summary.get("customer_shadow_work_order_primary_required_derived_metadata_fields")
         ),
+        "customer_shadow_work_order_primary_required_anonymized_result_summary": str(
+            summary.get("customer_shadow_work_order_primary_required_anonymized_result_summary") or ""
+        ),
         "customer_shadow_work_order_primary_required_reviewer_signoff_status": str(
             summary.get("customer_shadow_work_order_primary_required_reviewer_signoff_status") or ""
+        ),
+        "customer_shadow_work_order_primary_required_reviewer_id": str(
+            summary.get("customer_shadow_work_order_primary_required_reviewer_id") or ""
+        ),
+        "customer_shadow_work_order_primary_required_reviewed_at_utc": str(
+            summary.get("customer_shadow_work_order_primary_required_reviewed_at_utc") or ""
         ),
         "customer_shadow_work_order_primary_required_source_artifact_fingerprint": str(
             summary.get("customer_shadow_work_order_primary_required_source_artifact_fingerprint") or ""

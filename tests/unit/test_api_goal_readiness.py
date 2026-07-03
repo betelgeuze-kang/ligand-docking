@@ -447,6 +447,15 @@ def test_goal_customer_shadow_exposes_paid_pilot_requirement_rows(
                 "customer_shadow_work_order_ready": False,
                 "customer_shadow_work_order_row_count": 2,
                 "customer_shadow_work_order_missing_case_count": 2,
+                "customer_shadow_work_order_primary_required_anonymized_result_summary": (
+                    "At least 24 characters."
+                ),
+                "customer_shadow_work_order_primary_required_reviewer_id": (
+                    "non-empty reviewer id"
+                ),
+                "customer_shadow_work_order_primary_required_reviewed_at_utc": (
+                    "timezone-aware ISO timestamp"
+                ),
                 "paid_pilot_evidence_ready": False,
                 "paid_pilot_claim_allowed": False,
                 "commercial_readiness_promotion_allowed": False,
@@ -495,7 +504,10 @@ def test_goal_customer_shadow_exposes_paid_pilot_requirement_rows(
                     "required_redistribution_allowed": False,
                     "required_raw_data_stored_in_repo": False,
                     "required_derived_metadata_fields": ["artifact_fingerprint"],
+                    "required_anonymized_result_summary": "At least 24 characters.",
                     "required_reviewer_signoff_status": "approved",
+                    "required_reviewer_id": "non-empty reviewer id",
+                    "required_reviewed_at_utc": "timezone-aware ISO timestamp",
                     "required_source_artifact_fingerprint": "sha256",
                     "execution_enabled": True,
                     "external_state_mutated": True,
@@ -528,6 +540,15 @@ def test_goal_customer_shadow_exposes_paid_pilot_requirement_rows(
     assert rows["customer_shadow_work_order_closed"]["blocker"] == (
         "customer_shadow_work_order_rows_open:2"
     )
+    assert response["customer_shadow_work_order_primary_required_anonymized_result_summary"] == (
+        "At least 24 characters."
+    )
+    assert response["customer_shadow_work_order_primary_required_reviewer_id"] == (
+        "non-empty reviewer id"
+    )
+    assert response["customer_shadow_work_order_primary_required_reviewed_at_utc"] == (
+        "timezone-aware ISO timestamp"
+    )
     assert all(
         row["paid_pilot_wording_allowed"] is False
         and row["claim_promotion_allowed"] is False
@@ -537,6 +558,15 @@ def test_goal_customer_shadow_exposes_paid_pilot_requirement_rows(
     )
     assert response["customer_shadow_work_order_blocked_rows"][0]["execution_enabled"] is False
     assert response["customer_shadow_work_order_blocked_rows"][0]["external_state_mutated"] is False
+    assert response["customer_shadow_work_order_blocked_rows"][0][
+        "required_anonymized_result_summary"
+    ] == "At least 24 characters."
+    assert response["customer_shadow_work_order_blocked_rows"][0]["required_reviewer_id"] == (
+        "non-empty reviewer id"
+    )
+    assert response["customer_shadow_work_order_blocked_rows"][0]["required_reviewed_at_utc"] == (
+        "timezone-aware ISO timestamp"
+    )
     assert response["execution_enabled"] is False
     assert response["external_state_mutated"] is False
     assert response["claim_boundary"] == "customer shadow fixture boundary"

@@ -78,7 +78,14 @@ def test_header_only_template_blocks_until_three_real_cases(tmp_path: Path) -> N
     assert summary["customer_shadow_work_order_primary_required_derived_metadata_fields"] == sorted(
         mod.REQUIRED_DERIVED_METADATA_FIELDS
     )
+    assert summary["customer_shadow_work_order_primary_required_anonymized_result_summary"] == (
+        "At least 24 characters, aggregate only, with no email or private identifiers."
+    )
     assert summary["customer_shadow_work_order_primary_required_reviewer_signoff_status"] == "approved"
+    assert summary["customer_shadow_work_order_primary_required_reviewer_id"] == "non-empty reviewer id"
+    assert summary["customer_shadow_work_order_primary_required_reviewed_at_utc"] == (
+        "timezone-aware ISO timestamp"
+    )
     assert summary["customer_shadow_work_order_primary_required_source_artifact_fingerprint"] == "sha256"
     assert summary["blocker_count"] == 1
     assert summary["paid_pilot_evidence_ready"] is False
@@ -199,6 +206,9 @@ def test_three_completed_customer_shadow_rows_ready_but_do_not_promote_claims(tm
     assert summary["customer_shadow_work_order_primary_case_slot_id"] == ""
     assert summary["customer_shadow_work_order_primary_operator_csv"] == ""
     assert summary["customer_shadow_work_order_primary_required_derived_metadata_fields"] == []
+    assert summary["customer_shadow_work_order_primary_required_anonymized_result_summary"] == ""
+    assert summary["customer_shadow_work_order_primary_required_reviewer_id"] == ""
+    assert summary["customer_shadow_work_order_primary_required_reviewed_at_utc"] == ""
     assert payload["blockers"] == []
     assert payload["customer_shadow_work_order_rows"] == []
 

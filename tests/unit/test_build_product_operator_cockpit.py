@@ -1126,7 +1126,16 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                     "result_metric_summary",
                     "runner_profile",
                 ],
+                "customer_shadow_work_order_primary_required_anonymized_result_summary": (
+                    "At least 24 characters, aggregate only."
+                ),
                 "customer_shadow_work_order_primary_required_reviewer_signoff_status": "approved",
+                "customer_shadow_work_order_primary_required_reviewer_id": (
+                    "non-empty reviewer id"
+                ),
+                "customer_shadow_work_order_primary_required_reviewed_at_utc": (
+                    "timezone-aware ISO timestamp"
+                ),
                 "customer_shadow_work_order_primary_required_source_artifact_fingerprint": "sha256",
                 "paid_pilot_evidence_ready": False,
                 "paid_pilot_claim_allowed": False,
@@ -1180,7 +1189,12 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                         "result_metric_summary",
                         "runner_profile",
                     ],
+                    "required_anonymized_result_summary": (
+                        "At least 24 characters, aggregate only."
+                    ),
                     "required_reviewer_signoff_status": "approved",
+                    "required_reviewer_id": "non-empty reviewer id",
+                    "required_reviewed_at_utc": "timezone-aware ISO timestamp",
                     "required_source_artifact_fingerprint": "sha256",
                     "execution_enabled": True,
                     "external_state_mutated": True,
@@ -2624,7 +2638,16 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         "result_metric_summary",
         "runner_profile",
     ]
+    assert summary["customer_shadow_work_order_primary_required_anonymized_result_summary"] == (
+        "At least 24 characters, aggregate only."
+    )
     assert summary["customer_shadow_work_order_primary_required_reviewer_signoff_status"] == "approved"
+    assert summary["customer_shadow_work_order_primary_required_reviewer_id"] == (
+        "non-empty reviewer id"
+    )
+    assert summary["customer_shadow_work_order_primary_required_reviewed_at_utc"] == (
+        "timezone-aware ISO timestamp"
+    )
     assert summary["customer_shadow_work_order_primary_required_source_artifact_fingerprint"] == "sha256"
     assert summary["customer_shadow_work_order_rows"] == [
         {
@@ -2645,7 +2668,10 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
                 "result_metric_summary",
                 "runner_profile",
             ],
+            "required_anonymized_result_summary": "At least 24 characters, aggregate only.",
             "required_reviewer_signoff_status": "approved",
+            "required_reviewer_id": "non-empty reviewer id",
+            "required_reviewed_at_utc": "timezone-aware ISO timestamp",
             "required_source_artifact_fingerprint": "sha256",
             "execution_enabled": False,
             "external_state_mutated": False,
@@ -3597,7 +3623,16 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "required_derived_metadata_fields=5" in (
         panels["customer_shadow_evidence_panel"]["secondary_metric"]
     )
+    assert "required_anonymized_summary=At least 24 characters, aggregate only." in (
+        panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    )
     assert "required_signoff=approved" in panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    assert "required_reviewer_id=non-empty reviewer id" in (
+        panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    )
+    assert "required_reviewed_at=timezone-aware ISO timestamp" in (
+        panels["customer_shadow_evidence_panel"]["secondary_metric"]
+    )
     assert panels["customer_shadow_evidence_panel"]["blockers"] == [
         "completed_customer_shadow_cases_below_required:0/3"
     ]
