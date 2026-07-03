@@ -1670,6 +1670,25 @@ def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, 
                     "blocked_step_count": 2,
                     "receipt_blocked_row_count": 51,
                     "next_required_step": "Fill public benchmark receipts.",
+                    "external_beta_candidate_ready": False,
+                    "external_beta_wording_allowed": False,
+                    "external_beta_requirement_row_count": 3,
+                    "external_beta_requirement_ready_row_count": 1,
+                    "external_beta_requirement_blocked_row_count": 2,
+                    "external_beta_requirement_ids": [
+                        "casf_pdbbind_default_manifest",
+                        "vina_gnina_same_input_comparison",
+                        "benchmark_receipt_attach",
+                    ],
+                    "external_beta_primary_requirement_id": (
+                        "vina_gnina_same_input_comparison"
+                    ),
+                    "external_beta_primary_blocker": (
+                        "vina_gnina_same_input_score_evidence_missing"
+                    ),
+                    "external_beta_primary_operator_action": (
+                        "Fill every score-template row with same-input scores."
+                    ),
                     "claim_boundary": "benchmark audit boundary",
                 },
                 "rows": [
@@ -1700,6 +1719,57 @@ def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, 
                         ),
                         ("benchmark_ledger_review", True, ""),
                     ]
+                ],
+                "external_beta_requirement_rows": [
+                    {
+                        "requirement_id": "casf_pdbbind_default_manifest",
+                        "status": "ready",
+                        "ready": True,
+                        "required_value": "ready",
+                        "observed_value": "ready",
+                        "blocker": "",
+                        "evidence_artifact": "runs/manifest.json",
+                        "operator_action": "",
+                        "claim_boundary": "external beta receipt audit only",
+                        "external_beta_wording_allowed": True,
+                        "claim_promotion_allowed": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                    },
+                    {
+                        "requirement_id": "vina_gnina_same_input_comparison",
+                        "status": "blocked",
+                        "ready": False,
+                        "required_value": "score_evidence_ready",
+                        "observed_value": "score_evidence_missing",
+                        "blocker": "vina_gnina_same_input_score_evidence_missing",
+                        "evidence_artifact": (
+                            "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+                        ),
+                        "operator_action": (
+                            "Fill every score-template row with same-input scores."
+                        ),
+                        "claim_boundary": "external beta receipt audit only",
+                        "external_beta_wording_allowed": True,
+                        "claim_promotion_allowed": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                    },
+                    {
+                        "requirement_id": "benchmark_receipt_attach",
+                        "status": "blocked",
+                        "ready": False,
+                        "required_value": "receipt_attach_ready",
+                        "observed_value": "metric_source_rows_unapproved",
+                        "blocker": "benchmark_metric_source_receipt_rows_unapproved",
+                        "evidence_artifact": "runs/public_benchmark_receipt_attach_packet_current.json",
+                        "operator_action": "Approve receipt rows after operator review.",
+                        "claim_boundary": "external beta receipt audit only",
+                        "external_beta_wording_allowed": True,
+                        "claim_promotion_allowed": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                    },
                 ],
             }
         ),
@@ -1942,6 +2012,40 @@ def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, 
     assert response["external_benchmark_receipts_ready"] is False
     assert response["external_benchmark_sequence_ready"] is False
     assert response["external_beta_claim_allowed"] is False
+    assert response["external_beta_candidate_ready"] is False
+    assert response["external_beta_wording_allowed"] is False
+    assert response["external_beta_operator_action_required"] is True
+    assert response["external_beta_requirement_row_count"] == 3
+    assert response["external_beta_requirement_ready_row_count"] == 1
+    assert response["external_beta_requirement_blocked_row_count"] == 2
+    assert response["external_beta_requirement_ids"] == [
+        "casf_pdbbind_default_manifest",
+        "vina_gnina_same_input_comparison",
+        "benchmark_receipt_attach",
+    ]
+    assert response["external_beta_primary_requirement_id"] == "vina_gnina_same_input_comparison"
+    assert response["external_beta_primary_blocker"] == (
+        "vina_gnina_same_input_score_evidence_missing"
+    )
+    assert response["external_beta_primary_operator_action"] == (
+        "Fill every score-template row with same-input scores."
+    )
+    assert [row["requirement_id"] for row in response["external_beta_blocked_requirement_rows"]] == [
+        "vina_gnina_same_input_comparison",
+        "benchmark_receipt_attach",
+    ]
+    assert response["external_beta_blocked_requirement_rows"][0]["operator_action_required"] is True
+    assert response["external_beta_requirement_rows"][0]["operator_action_required"] is False
+    assert all(
+        row["external_beta_wording_allowed"] is False
+        and row["claim_promotion_allowed"] is False
+        and row["execution_enabled"] is False
+        and row["external_state_mutated"] is False
+        for row in response["external_beta_requirement_rows"]
+    )
+    assert response["external_beta_claim_promotion_allowed"] is False
+    assert response["external_beta_execution_enabled"] is False
+    assert response["external_beta_external_state_mutated"] is False
     assert response["receipt_attach_packet_ready"] is False
     assert response["blocker_count"] == 2
     assert response["ready_step_count"] == 5
@@ -2111,6 +2215,14 @@ def test_goal_public_benchmark_endpoint_reads_fail_closed_receipts(monkeypatch, 
     assert missing["external_benchmark_receipts_ready"] is False
     assert missing["external_benchmark_sequence_ready"] is False
     assert missing["external_beta_claim_allowed"] is False
+    assert missing["external_beta_wording_allowed"] is False
+    assert missing["external_beta_operator_action_required"] is True
+    assert missing["external_beta_requirement_row_count"] == 0
+    assert missing["external_beta_requirement_rows"] == []
+    assert missing["external_beta_blocked_requirement_rows"] == []
+    assert missing["external_beta_claim_promotion_allowed"] is False
+    assert missing["external_beta_execution_enabled"] is False
+    assert missing["external_beta_external_state_mutated"] is False
     assert missing["external_benchmark_sequence_row_count"] == 7
     assert missing["external_benchmark_sequence_ready_row_count"] == 0
     assert missing["external_benchmark_sequence_blocked_row_count"] == 7

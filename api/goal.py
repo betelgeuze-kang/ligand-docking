@@ -1191,6 +1191,90 @@ def _public_benchmark_sequence_rows(rows: list[dict[str, Any]]) -> list[dict[str
     return sequence_rows
 
 
+def _public_benchmark_external_beta_requirement_rows(rows: list[Any]) -> list[dict[str, Any]]:
+    requirement_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        ready = bool(row.get("ready") is True and str(row.get("status") or "") == "ready")
+        requirement_rows.append(
+            {
+                "requirement_id": str(row.get("requirement_id") or ""),
+                "status": str(row.get("status") or ""),
+                "ready": ready,
+                "required_value": str(row.get("required_value") or ""),
+                "observed_value": str(row.get("observed_value") or ""),
+                "blocker": str(row.get("blocker") or ""),
+                "evidence_artifact": str(row.get("evidence_artifact") or ""),
+                "operator_action": str(row.get("operator_action") or ""),
+                "operator_action_required": not ready,
+                "external_beta_wording_allowed": False,
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_boundary": str(row.get("claim_boundary") or ""),
+            }
+        )
+    return requirement_rows
+
+
+def _public_benchmark_external_beta_surface(packet: dict[str, Any]) -> dict[str, Any]:
+    summary = _summary(packet)
+    rows = _public_benchmark_external_beta_requirement_rows(
+        packet.get("external_beta_requirement_rows")
+        if isinstance(packet.get("external_beta_requirement_rows"), list)
+        else []
+    )
+    blocked_rows = [row for row in rows if row["operator_action_required"]]
+    ready_rows = [row for row in rows if row["ready"]]
+    requirement_ids = _string_list(summary.get("external_beta_requirement_ids")) or [
+        row["requirement_id"] for row in rows if row["requirement_id"]
+    ]
+    receipts_ready = bool(summary.get("external_benchmark_receipts_ready") is True)
+    candidate_ready = bool(summary.get("external_beta_candidate_ready") is True)
+    wording_allowed = bool(
+        receipts_ready
+        and candidate_ready
+        and summary.get("external_beta_wording_allowed") is True
+        and summary.get("claim_promotion_allowed") is True
+    )
+    return {
+        "external_beta_candidate_ready": candidate_ready,
+        "external_beta_wording_allowed": wording_allowed,
+        "external_beta_operator_action_required": not wording_allowed,
+        "external_beta_requirement_row_count": _int(
+            summary.get("external_beta_requirement_row_count")
+        )
+        or len(rows),
+        "external_beta_requirement_ready_row_count": _int(
+            summary.get("external_beta_requirement_ready_row_count")
+        )
+        or len(ready_rows),
+        "external_beta_requirement_blocked_row_count": _int(
+            summary.get("external_beta_requirement_blocked_row_count")
+        )
+        or len(blocked_rows),
+        "external_beta_requirement_ids": requirement_ids,
+        "external_beta_primary_requirement_id": str(
+            summary.get("external_beta_primary_requirement_id")
+            or (blocked_rows[0]["requirement_id"] if blocked_rows else "")
+        ),
+        "external_beta_primary_blocker": str(
+            summary.get("external_beta_primary_blocker")
+            or (blocked_rows[0]["blocker"] if blocked_rows else "")
+        ),
+        "external_beta_primary_operator_action": str(
+            summary.get("external_beta_primary_operator_action")
+            or (blocked_rows[0]["operator_action"] if blocked_rows else "")
+        ),
+        "external_beta_requirement_rows": rows,
+        "external_beta_blocked_requirement_rows": blocked_rows,
+        "external_beta_claim_promotion_allowed": False,
+        "external_beta_execution_enabled": False,
+        "external_beta_external_state_mutated": False,
+    }
+
+
 def _public_benchmark_vina_gnina_score_template_receipt_surface(
     receipt_path: Path,
 ) -> dict[str, Any]:
@@ -4694,6 +4778,7 @@ async def get_goal_public_benchmark() -> dict[str, Any]:
     audit_rows = _rows(audit_packet)
     sequence_rows = _public_benchmark_sequence_rows(audit_rows)
     blocked_sequence_rows = [row for row in sequence_rows if not row["ready"]]
+    external_beta_surface = _public_benchmark_external_beta_surface(audit_packet)
     if not audit and not attach:
         missing_sequence_rows = _public_benchmark_sequence_rows([])
         return {
@@ -4739,6 +4824,7 @@ async def get_goal_public_benchmark() -> dict[str, Any]:
             "score_evidence_row_work_order_primary_operator_csv": "",
             "score_evidence_row_work_order_primary_source_artifact": "",
             "score_evidence_row_work_order_rows": [],
+            **external_beta_surface,
             **score_template_receipt_surface,
             **_mutation_flags(),
             "claim_boundary": CLAIM_BOUNDARY,
@@ -4856,6 +4942,7 @@ async def get_goal_public_benchmark() -> dict[str, Any]:
         "receipt_attach_rows": _rows(attach_packet),
         "field_work_order_rows": field_work_order_rows,
         "score_evidence_row_work_order_rows": score_evidence_row_work_order_rows,
+        **external_beta_surface,
         **score_template_receipt_surface,
         **_mutation_flags(),
         "claim_boundary": attach.get("claim_boundary") or audit.get("claim_boundary") or CLAIM_BOUNDARY,
