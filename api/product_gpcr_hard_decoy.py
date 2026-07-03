@@ -10,6 +10,9 @@ router = APIRouter(prefix="/product", tags=["product-gpcr-hard-decoy"])
 
 ROOT = Path(__file__).resolve().parents[1]
 GPCR_HARD_DECOY_SUITE_ARTIFACT = ROOT / "runs" / "gpcr_hard_decoy_suite_current.json"
+GPCR_HARD_DECOY_CLAIM_UNLOCK_AUDIT_ARTIFACT = (
+    ROOT / "runs" / "gpcr_hard_decoy_claim_unlock_audit_current.json"
+)
 
 # Default required target set (matches betelgeuze_product.gpcr_hard_decoy_suite).
 _DEFAULT_REQUIRED_TARGET_IDS = ["DRD2", "HTR2A", "OPRM1"]
@@ -29,6 +32,11 @@ def _read_json_object(path: Path) -> dict[str, Any]:
     except (OSError, json.JSONDecodeError):
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def _summary(payload: dict[str, Any]) -> dict[str, Any]:
+    summary = payload.get("summary")
+    return summary if isinstance(summary, dict) else payload
 
 
 def _int(value: Any) -> int:
@@ -59,6 +67,99 @@ def _int_dict(value: Any) -> dict[str, int]:
     if not isinstance(value, dict):
         return {}
     return {str(key): _int(val) for key, val in value.items()}
+
+
+def _promotion_work_order_rows(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    rows: list[dict[str, Any]] = []
+    for row in value:
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            {
+                "lane_id": str(row.get("lane_id") or ""),
+                "blocker": str(row.get("blocker") or ""),
+                "required_action": str(row.get("required_action") or ""),
+                "source_artifact": str(row.get("source_artifact") or ""),
+                "operator_action_required": True,
+                "execution_enabled": False,
+                "docking_results_emitted": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "claim_boundary": str(row.get("claim_boundary") or ""),
+            }
+        )
+    return rows
+
+
+def _claim_unlock_surface(packet: dict[str, Any]) -> dict[str, Any]:
+    summary = _summary(packet)
+    work_order_rows = _promotion_work_order_rows(packet.get("promotion_work_order_rows"))
+    primary_work_order = work_order_rows[0] if work_order_rows else {}
+    effective_metrics = summary.get("effective_phase3_metrics")
+    if not isinstance(effective_metrics, dict):
+        effective_metrics = {}
+    promotion_blockers = _string_list(summary.get("promotion_blockers"))
+    promotion_work_order_lane_count = _int(summary.get("promotion_work_order_lane_count")) or len(
+        {row["lane_id"] for row in work_order_rows if row["lane_id"]}
+    )
+    return {
+        "claim_unlock_audit_artifact_path": str(GPCR_HARD_DECOY_CLAIM_UNLOCK_AUDIT_ARTIFACT),
+        "claim_unlock_audit_present": bool(summary),
+        "claim_unlock_audit_status": str(summary.get("status") or ""),
+        "hard_decoy_metric_claim_unlock_ready": bool(
+            summary.get("hard_decoy_metric_claim_unlock_ready") is True
+        ),
+        "phase3_exit_metric_conditions_ready": bool(
+            summary.get("phase3_exit_metric_conditions_ready") is True
+        ),
+        "operator_claim_review_ready": bool(summary.get("operator_claim_review_ready") is True),
+        "broad_promotion_remains_locked": bool(
+            summary.get("broad_promotion_remains_locked") is not False
+        ),
+        "router_claim_allowed": False,
+        "platform_claim_allowed": False,
+        "claim_unlock_claim_promotion_allowed": False,
+        "effective_phase3_metric_source": str(effective_metrics.get("source") or ""),
+        "effective_phase3_ranking_pr_auc_ci_low": _float_or_none(
+            effective_metrics.get("ranking_pr_auc_ci_low")
+        ),
+        "effective_phase3_top20_hit_rate": _float_or_none(
+            effective_metrics.get("top20_hit_rate")
+        ),
+        "effective_phase3_decoys_above_positive_count": _int(
+            effective_metrics.get("decoys_above_positive_count")
+        ),
+        "effective_phase3_anchor_margin_nonnegative": bool(
+            effective_metrics.get("anchor_margin_nonnegative") is True
+        ),
+        "promotion_blocker_count": _int(summary.get("promotion_blocker_count"))
+        or len(promotion_blockers),
+        "promotion_blockers": promotion_blockers,
+        "promotion_work_order_ready": bool(summary.get("promotion_work_order_ready") is True),
+        "promotion_work_order_row_count": _int(summary.get("promotion_work_order_row_count"))
+        or len(work_order_rows),
+        "promotion_work_order_lane_count": promotion_work_order_lane_count,
+        "promotion_work_order_primary_lane_id": str(
+            summary.get("promotion_work_order_primary_lane_id")
+            or primary_work_order.get("lane_id")
+            or ""
+        ),
+        "promotion_work_order_primary_blocker": str(
+            summary.get("promotion_work_order_primary_blocker")
+            or primary_work_order.get("blocker")
+            or ""
+        ),
+        "promotion_work_order_primary_required_action": str(
+            primary_work_order.get("required_action") or ""
+        ),
+        "promotion_work_order_primary_source_artifact": str(
+            primary_work_order.get("source_artifact") or ""
+        ),
+        "promotion_work_order_rows": work_order_rows,
+        "claim_unlock_next_required_step": str(summary.get("next_required_step") or ""),
+    }
 
 
 def _target_rows(targets: list[Any]) -> list[dict[str, Any]]:
@@ -180,6 +281,8 @@ async def get_product_gpcr_hard_decoy_suite_report() -> dict[str, Any]:
     """
 
     artifact = _read_json_object(GPCR_HARD_DECOY_SUITE_ARTIFACT)
+    claim_unlock_packet = _read_json_object(GPCR_HARD_DECOY_CLAIM_UNLOCK_AUDIT_ARTIFACT)
+    claim_unlock_surface = _claim_unlock_surface(claim_unlock_packet)
     summary = artifact.get("summary") if isinstance(artifact.get("summary"), dict) else {}
     targets = artifact.get("targets") if isinstance(artifact.get("targets"), list) else []
     if not artifact or not summary:
@@ -222,6 +325,7 @@ async def get_product_gpcr_hard_decoy_suite_report() -> dict[str, Any]:
                 }
             ],
             "claim_promotion_allowed": False,
+            **claim_unlock_surface,
             "execution_enabled": False,
             "docking_results_emitted": False,
             "external_state_mutated": False,
@@ -258,6 +362,7 @@ async def get_product_gpcr_hard_decoy_suite_report() -> dict[str, Any]:
         "blocker_row_count": len(blocker_rows),
         "blocker_rows": blocker_rows,
         "claim_promotion_allowed": False,
+        **claim_unlock_surface,
         "execution_enabled": False,
         "docking_results_emitted": False,
         "external_state_mutated": False,
