@@ -353,6 +353,58 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                         "claim_promotion_allowed": True,
                     }
                 ],
+                "pocketmd_lite_metric_source_audit_present": True,
+                "pocketmd_lite_metric_source_audit_ready": True,
+                "pocketmd_lite_metric_source_extraction_ready": True,
+                "pocketmd_lite_metric_source_candidate_count": 2,
+                "pocketmd_lite_metric_source_exact_ready_count": 2,
+                "pocketmd_lite_metric_source_missing_count": 0,
+                "pocketmd_lite_metric_source_collection_input_ready_count": 2,
+                "pocketmd_lite_metric_source_selected_proxy_only_count": 2,
+                "pocketmd_lite_metric_source_operator_action_row_count": 1,
+                "pocketmd_lite_metric_source_canonical_review_required": True,
+                "pocketmd_lite_metric_source_rows": [
+                    {
+                        "entry_id": "ADRB2_GPCR_BLIND:carvedilol",
+                        "target": "ADRB2_GPCR_BLIND",
+                        "ligand_id": "carvedilol",
+                        "required_metrics": [
+                            "local_min_ligand_rmsd_a",
+                            "hbond_persistence",
+                            "initial_clash_count",
+                        ],
+                        "selected_npz_status": "proxy_only_trajectory",
+                        "selected_npz_schema": "coarse_two_bead_ca",
+                        "selected_exact_metric_ready": False,
+                        "selected_missing_exact_metric_fields": [
+                            "local_min_ligand_rmsd_a",
+                            "hbond_persistence",
+                            "initial_clash_count",
+                        ],
+                        "searched_npz_candidate_count": 3,
+                        "exact_metric_source_candidate_count": 1,
+                        "atomized_protein_candidate_count": 1,
+                        "ligand_atom_candidate_count": 1,
+                        "claim_grade_collection_input_candidate_count": 1,
+                        "best_candidate_npz": (
+                            "runs/pocketmd_lite_bounded_metric_collector_current/"
+                            "ADRB2_GPCR_BLIND__carvedilol__bounded_metrics.npz"
+                        ),
+                        "best_candidate_status": "exact_metric_source_ready",
+                        "best_candidate_blockers": [
+                            "ligand_trajectory_is_two_bead_proxy"
+                        ],
+                        "recommended_next_local_action": (
+                            "extract_exact_metric_fields_into_candidate_fill_preview_then_rerun_report"
+                        ),
+                        "operator_action_required": True,
+                        "candidate_csv_update_allowed": True,
+                        "refinement_execution_enabled": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    }
+                ],
                 "public_benchmark_claim_allowed": False,
                 "public_benchmark_receipt_attach_packet_ready": False,
                 "public_benchmark_receipt_attach_packet_present": True,
@@ -1335,6 +1387,56 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
             "claim_promotion_allowed": False,
         }
     ]
+    assert response["pocketmd_lite_metric_source_audit_present"] is True
+    assert response["pocketmd_lite_metric_source_audit_ready"] is True
+    assert response["pocketmd_lite_metric_source_extraction_ready"] is True
+    assert response["pocketmd_lite_metric_source_candidate_count"] == 2
+    assert response["pocketmd_lite_metric_source_exact_ready_count"] == 2
+    assert response["pocketmd_lite_metric_source_missing_count"] == 0
+    assert response["pocketmd_lite_metric_source_collection_input_ready_count"] == 2
+    assert response["pocketmd_lite_metric_source_selected_proxy_only_count"] == 2
+    assert response["pocketmd_lite_metric_source_operator_action_row_count"] == 1
+    assert response["pocketmd_lite_metric_source_canonical_review_required"] is True
+    assert response["pocketmd_lite_metric_source_rows"] == [
+        {
+            "entry_id": "ADRB2_GPCR_BLIND:carvedilol",
+            "target": "ADRB2_GPCR_BLIND",
+            "ligand_id": "carvedilol",
+            "required_metrics": [
+                "local_min_ligand_rmsd_a",
+                "hbond_persistence",
+                "initial_clash_count",
+            ],
+            "selected_npz_status": "proxy_only_trajectory",
+            "selected_npz_schema": "coarse_two_bead_ca",
+            "selected_exact_metric_ready": False,
+            "selected_missing_exact_metric_fields": [
+                "local_min_ligand_rmsd_a",
+                "hbond_persistence",
+                "initial_clash_count",
+            ],
+            "searched_npz_candidate_count": 3,
+            "exact_metric_source_candidate_count": 1,
+            "atomized_protein_candidate_count": 1,
+            "ligand_atom_candidate_count": 1,
+            "claim_grade_collection_input_candidate_count": 1,
+            "best_candidate_npz": (
+                "runs/pocketmd_lite_bounded_metric_collector_current/"
+                "ADRB2_GPCR_BLIND__carvedilol__bounded_metrics.npz"
+            ),
+            "best_candidate_status": "exact_metric_source_ready",
+            "best_candidate_blockers": ["ligand_trajectory_is_two_bead_proxy"],
+            "recommended_next_local_action": (
+                "extract_exact_metric_fields_into_candidate_fill_preview_then_rerun_report"
+            ),
+            "operator_action_required": True,
+            "candidate_csv_update_allowed": False,
+            "refinement_execution_enabled": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
     assert response["public_benchmark_receipt_attach_packet_ready"] is False
     assert response["public_benchmark_receipt_attach_packet_present"] is True
     assert response["public_benchmark_vina_gnina_pending_score_count"] == 32
@@ -2155,6 +2257,17 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["pocketmd_lite_green_band_condition_text"] == ""
     assert response["pocketmd_lite_claim_allowed"] is False
     assert response["pocketmd_lite_claim_grade_metric_rows"] == []
+    assert response["pocketmd_lite_metric_source_audit_present"] is False
+    assert response["pocketmd_lite_metric_source_audit_ready"] is False
+    assert response["pocketmd_lite_metric_source_extraction_ready"] is False
+    assert response["pocketmd_lite_metric_source_candidate_count"] == 0
+    assert response["pocketmd_lite_metric_source_exact_ready_count"] == 0
+    assert response["pocketmd_lite_metric_source_missing_count"] == 0
+    assert response["pocketmd_lite_metric_source_collection_input_ready_count"] == 0
+    assert response["pocketmd_lite_metric_source_selected_proxy_only_count"] == 0
+    assert response["pocketmd_lite_metric_source_operator_action_row_count"] == 0
+    assert response["pocketmd_lite_metric_source_canonical_review_required"] is False
+    assert response["pocketmd_lite_metric_source_rows"] == []
     assert response["public_benchmark_claim_allowed"] is False
     assert response["public_benchmark_receipt_attach_packet_ready"] is False
     assert response["public_benchmark_receipt_attach_packet_present"] is False

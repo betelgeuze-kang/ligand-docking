@@ -420,6 +420,241 @@ def test_pocketmd_lite_candidate_metric_fill_preview_report_endpoint_is_fail_clo
     assert payload["external_state_mutated"] is False
 
 
+def test_pocketmd_lite_claim_grade_metric_source_audit_endpoint_reads_artifact(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pytest.importorskip("fastapi")
+    from api import product_pocketmd_lite as mod
+
+    artifact = tmp_path / "pocketmd_lite_claim_grade_metric_source_audit_current.json"
+    canonical = tmp_path / "pocketmd_lite_report_current.json"
+    preview = tmp_path / "pocketmd_lite_candidate_metric_fill_preview_report_current.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "pocketmd_lite_claim_grade_metric_source_audit_ready",
+                    "schema_version": "pocketmd_lite_claim_grade_metric_source_audit_v1",
+                    "candidate_count": 2,
+                    "searched_npz_candidate_count": 5,
+                    "exact_metric_source_ready_count": 2,
+                    "missing_exact_metric_source_count": 0,
+                    "claim_grade_collection_input_ready_count": 2,
+                    "selected_proxy_only_count": 2,
+                    "atomized_protein_source_candidate_count": 2,
+                    "ligand_atom_source_candidate_count": 2,
+                    "partial_atomized_protein_only_candidate_count": 1,
+                    "probe_status": "pocketmd_lite_metric_collection_probe_ready",
+                    "next_required_step": "Extract exact metric fields into the preview CSV.",
+                    "claim_promotion_allowed": True,
+                    "candidate_csv_update_allowed": True,
+                    "refinement_execution_enabled": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                },
+                "rows": [
+                    {
+                        "entry_id": "ADRB2_GPCR_BLIND:carvedilol",
+                        "target": "ADRB2_GPCR_BLIND",
+                        "ligand_id": "carvedilol",
+                        "required_metrics": [
+                            "local_min_ligand_rmsd_a",
+                            "hbond_persistence",
+                            "initial_clash_count",
+                        ],
+                        "selected_npz_status": "proxy_only_trajectory",
+                        "selected_npz_schema": "coarse_two_bead_ca",
+                        "selected_exact_metric_ready": False,
+                        "selected_missing_exact_metric_fields": [
+                            "local_min_ligand_rmsd_a",
+                            "hbond_persistence",
+                        ],
+                        "selected_protein_atom_frame_count": 0,
+                        "selected_ligand_atom_frame_count": 0,
+                        "searched_npz_candidate_count": 3,
+                        "exact_metric_source_candidate_count": 1,
+                        "atomized_protein_candidate_count": 1,
+                        "ligand_atom_candidate_count": 1,
+                        "claim_grade_collection_input_candidate_count": 1,
+                        "best_candidate_npz": "runs/bounded_metrics.npz",
+                        "best_candidate_status": "exact_metric_source_ready",
+                        "best_candidate_blockers": ["ligand_trajectory_is_two_bead_proxy"],
+                        "recommended_next_local_action": (
+                            "extract_exact_metric_fields_into_candidate_fill_preview_then_rerun_report"
+                        ),
+                        "claim_promotion_allowed": True,
+                        "candidate_csv_update_allowed": True,
+                        "refinement_execution_enabled": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                    },
+                    {
+                        "entry_id": "CHEMBL236_OPRD1_HUMAN:CHEMBL67192",
+                        "target": "CHEMBL236_OPRD1_HUMAN",
+                        "ligand_id": "CHEMBL67192",
+                        "required_metrics": "local_min_ligand_rmsd_a;hbond_persistence",
+                        "selected_npz_status": "exact_metric_source_ready",
+                        "selected_npz_schema": "bounded_atomized",
+                        "selected_exact_metric_ready": True,
+                        "selected_missing_exact_metric_fields": [],
+                        "searched_npz_candidate_count": 2,
+                        "exact_metric_source_candidate_count": 1,
+                        "atomized_protein_candidate_count": 1,
+                        "ligand_atom_candidate_count": 1,
+                        "claim_grade_collection_input_candidate_count": 1,
+                        "best_candidate_npz": "runs/oprd1_bounded_metrics.npz",
+                        "best_candidate_status": "exact_metric_source_ready",
+                    },
+                ],
+                "claim_boundary": "metric source audit boundary",
+            }
+        ),
+        encoding="utf-8",
+    )
+    canonical.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "blocked_pocketmd_lite_report",
+                    "top_k_refinement_evidence_ready": False,
+                    "pocketmd_lite_claim_safe": False,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    preview.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "pocketmd_lite_report_ready",
+                    "top_k_refinement_evidence_ready": True,
+                    "pocketmd_lite_claim_safe": True,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        mod,
+        "POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_ARTIFACT",
+        artifact,
+    )
+    monkeypatch.setattr(mod, "POCKETMD_LITE_REPORT_ARTIFACT", canonical)
+    monkeypatch.setattr(
+        mod,
+        "POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_ARTIFACT",
+        preview,
+    )
+
+    payload = asyncio.run(mod.get_product_pocketmd_lite_claim_grade_metric_source_audit())
+
+    assert payload["status"] == "pocketmd_lite_claim_grade_metric_source_audit_ready"
+    assert payload["audit_panel_ready"] is True
+    assert payload["claim_grade_metric_source_audit_ready"] is True
+    assert payload["metric_source_extraction_ready"] is True
+    assert payload["canonical_report_ready"] is False
+    assert payload["preview_report_ready"] is True
+    assert payload["canonical_review_required"] is True
+    assert payload["candidate_count"] == 2
+    assert payload["searched_npz_candidate_count"] == 5
+    assert payload["exact_metric_source_ready_count"] == 2
+    assert payload["missing_exact_metric_source_count"] == 0
+    assert payload["claim_grade_collection_input_ready_count"] == 2
+    assert payload["selected_proxy_only_count"] == 2
+    assert payload["probe_status"] == "pocketmd_lite_metric_collection_probe_ready"
+    assert payload["metric_source_row_count"] == 2
+    assert payload["metric_source_operator_action_row_count"] == 1
+    assert payload["metric_source_rows"][0] == {
+        "entry_id": "ADRB2_GPCR_BLIND:carvedilol",
+        "target": "ADRB2_GPCR_BLIND",
+        "ligand_id": "carvedilol",
+        "required_metrics": [
+            "local_min_ligand_rmsd_a",
+            "hbond_persistence",
+            "initial_clash_count",
+        ],
+        "selected_npz_status": "proxy_only_trajectory",
+        "selected_npz_schema": "coarse_two_bead_ca",
+        "selected_exact_metric_ready": False,
+        "selected_missing_exact_metric_fields": [
+            "local_min_ligand_rmsd_a",
+            "hbond_persistence",
+        ],
+        "selected_protein_atom_frame_count": 0,
+        "selected_ligand_atom_frame_count": 0,
+        "searched_npz_candidate_count": 3,
+        "exact_metric_source_candidate_count": 1,
+        "atomized_protein_candidate_count": 1,
+        "ligand_atom_candidate_count": 1,
+        "claim_grade_collection_input_candidate_count": 1,
+        "best_candidate_npz": "runs/bounded_metrics.npz",
+        "best_candidate_status": "exact_metric_source_ready",
+        "best_candidate_blockers": ["ligand_trajectory_is_two_bead_proxy"],
+        "recommended_next_local_action": (
+            "extract_exact_metric_fields_into_candidate_fill_preview_then_rerun_report"
+        ),
+        "operator_action_required": True,
+        "claim_promotion_allowed": False,
+        "candidate_csv_update_allowed": False,
+        "refinement_execution_enabled": False,
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": False,
+    }
+    assert payload["metric_source_rows"][1]["operator_action_required"] is False
+    assert {
+        row["blocker_id"]
+        for row in payload["blocker_rows"]
+    } == {
+        "metric_source_extraction_required",
+        "canonical_report_review_required",
+    }
+    assert all(row["claim_promotion_allowed"] is False for row in payload["blocker_rows"])
+    assert payload["claim_promotion_allowed"] is False
+    assert payload["candidate_csv_update_allowed"] is False
+    assert payload["refinement_execution_enabled"] is False
+    assert payload["execution_enabled"] is False
+    assert payload["docking_results_emitted"] is False
+    assert payload["external_state_mutated"] is False
+    assert payload["claim_boundary"] == "metric source audit boundary"
+
+
+def test_pocketmd_lite_claim_grade_metric_source_audit_endpoint_is_fail_closed_when_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pytest.importorskip("fastapi")
+    from api import product_pocketmd_lite as mod
+
+    monkeypatch.setattr(
+        mod,
+        "POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_ARTIFACT",
+        tmp_path / "missing.json",
+    )
+
+    payload = asyncio.run(mod.get_product_pocketmd_lite_claim_grade_metric_source_audit())
+
+    assert payload["status"] == "missing_pocketmd_lite_claim_grade_metric_source_audit"
+    assert payload["audit_panel_ready"] is False
+    assert payload["claim_grade_metric_source_audit_ready"] is False
+    assert payload["metric_source_extraction_ready"] is False
+    assert payload["canonical_report_ready"] is False
+    assert payload["preview_report_ready"] is False
+    assert payload["canonical_review_required"] is False
+    assert payload["metric_source_row_count"] == 0
+    assert payload["metric_source_rows"] == []
+    assert payload["blocker_row_count"] == 1
+    assert payload["blocker_rows"][0]["blocker_id"] == (
+        "pocketmd_lite_claim_grade_metric_source_audit_missing"
+    )
+    assert payload["claim_promotion_allowed"] is False
+    assert payload["candidate_csv_update_allowed"] is False
+    assert payload["refinement_execution_enabled"] is False
+    assert payload["execution_enabled"] is False
+    assert payload["docking_results_emitted"] is False
+    assert payload["external_state_mutated"] is False
+
+
 def test_pocketmd_lite_topk_refinement_audit_endpoint_reads_artifact(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

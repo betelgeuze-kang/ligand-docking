@@ -12,6 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 POCKETMD_LITE_REPORT_ARTIFACT = ROOT / "runs" / "pocketmd_lite_report_current.json"
 POCKETMD_LITE_REMAINING_QUEUE_ARTIFACT = ROOT / "runs" / "pocketmd_lite_remaining_evidence_queue_current.json"
 POCKETMD_LITE_TOPK_REFINEMENT_AUDIT_ARTIFACT = ROOT / "runs" / "pocketmd_lite_topk_refinement_audit_current.json"
+POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_ARTIFACT = (
+    ROOT / "runs" / "pocketmd_lite_claim_grade_metric_source_audit_current.json"
+)
 POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_ARTIFACT = (
     ROOT / "runs" / "pocketmd_lite_candidate_metric_fill_preview_report_current.json"
 )
@@ -31,6 +34,12 @@ _TOPK_AUDIT_CLAIM_BOUNDARY_MISSING = (
     "PocketMD Lite top-k refinement audit endpoint only; the local audit artifact is missing or invalid. "
     "It does not run local-min, micro-MD, H-bond scoring, docking, emit scientific results, promote claims, "
     "or mutate external state. Proxy telemetry cannot satisfy claim-grade refinement evidence."
+)
+
+_METRIC_SOURCE_AUDIT_CLAIM_BOUNDARY_MISSING = (
+    "PocketMD Lite claim-grade metric source audit endpoint only; the local audit artifact is missing or "
+    "invalid. It does not run local-min, micro-MD, H-bond scoring, docking, copy metric payloads, update "
+    "candidate CSVs, promote claims, or mutate external state."
 )
 
 _PREVIEW_REPORT_CLAIM_BOUNDARY_MISSING = (
@@ -179,6 +188,63 @@ def _report_rows(rows: list[Any]) -> list[dict[str, Any]]:
     return report_rows
 
 
+def _metric_source_audit_rows(rows: list[Any]) -> list[dict[str, Any]]:
+    audit_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        selected_missing = _string_list(row.get("selected_missing_exact_metric_fields"))
+        selected_exact_metric_ready = bool(row.get("selected_exact_metric_ready") is True)
+        operator_action_required = bool(
+            selected_missing or not selected_exact_metric_ready
+        )
+        audit_rows.append(
+            {
+                "entry_id": str(row.get("entry_id") or ""),
+                "target": str(row.get("target") or ""),
+                "ligand_id": str(row.get("ligand_id") or ""),
+                "required_metrics": _string_list(row.get("required_metrics")),
+                "selected_npz_status": str(row.get("selected_npz_status") or ""),
+                "selected_npz_schema": str(row.get("selected_npz_schema") or ""),
+                "selected_exact_metric_ready": selected_exact_metric_ready,
+                "selected_missing_exact_metric_fields": selected_missing,
+                "selected_protein_atom_frame_count": _int(
+                    row.get("selected_protein_atom_frame_count")
+                ),
+                "selected_ligand_atom_frame_count": _int(
+                    row.get("selected_ligand_atom_frame_count")
+                ),
+                "searched_npz_candidate_count": _int(
+                    row.get("searched_npz_candidate_count")
+                ),
+                "exact_metric_source_candidate_count": _int(
+                    row.get("exact_metric_source_candidate_count")
+                ),
+                "atomized_protein_candidate_count": _int(
+                    row.get("atomized_protein_candidate_count")
+                ),
+                "ligand_atom_candidate_count": _int(row.get("ligand_atom_candidate_count")),
+                "claim_grade_collection_input_candidate_count": _int(
+                    row.get("claim_grade_collection_input_candidate_count")
+                ),
+                "best_candidate_npz": str(row.get("best_candidate_npz") or ""),
+                "best_candidate_status": str(row.get("best_candidate_status") or ""),
+                "best_candidate_blockers": _string_list(row.get("best_candidate_blockers")),
+                "recommended_next_local_action": str(
+                    row.get("recommended_next_local_action") or ""
+                ),
+                "operator_action_required": operator_action_required,
+                "claim_promotion_allowed": False,
+                "candidate_csv_update_allowed": False,
+                "refinement_execution_enabled": False,
+                "execution_enabled": False,
+                "docking_results_emitted": False,
+                "external_state_mutated": False,
+            }
+        )
+    return audit_rows
+
+
 def _report_blocker_rows(
     summary: dict[str, Any],
     report_rows: list[dict[str, Any]],
@@ -264,6 +330,83 @@ def _report_blocker_rows(
                     preview_summary.get("claim_grade_metric_ready_row_count")
                 ),
                 "operator_action": "review_preview_report_and_update_canonical_candidate_csv",
+                "claim_promotion_allowed": False,
+                "candidate_csv_update_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+    return blocker_rows
+
+
+def _metric_source_audit_blocker_rows(
+    summary: dict[str, Any],
+    audit_rows: list[dict[str, Any]],
+    canonical_summary: dict[str, Any],
+    preview_summary: dict[str, Any],
+) -> list[dict[str, Any]]:
+    blocker_rows: list[dict[str, Any]] = []
+    audit_ready = bool(
+        summary.get("status") == "pocketmd_lite_claim_grade_metric_source_audit_ready"
+        and _int(summary.get("missing_exact_metric_source_count")) == 0
+    )
+    canonical_ready = bool(
+        canonical_summary.get("status") == "pocketmd_lite_report_ready"
+        and canonical_summary.get("top_k_refinement_evidence_ready") is True
+        and canonical_summary.get("pocketmd_lite_claim_safe") is True
+    )
+    preview_ready = bool(
+        preview_summary.get("status") == "pocketmd_lite_report_ready"
+        and preview_summary.get("top_k_refinement_evidence_ready") is True
+    )
+    operator_row_count = sum(1 for row in audit_rows if row["operator_action_required"])
+    if not audit_ready:
+        blocker_rows.append(
+            {
+                "blocker_id": "pocketmd_lite_claim_grade_metric_source_audit_not_ready",
+                "blocker_type": "metric_source_audit",
+                "severity": "blocker",
+                "operator_action": "recover_claim_grade_metric_sources_or_collection_inputs",
+                "claim_promotion_allowed": False,
+                "candidate_csv_update_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+    if operator_row_count:
+        blocker_rows.append(
+            {
+                "blocker_id": "metric_source_extraction_required",
+                "blocker_type": "operator_work_order",
+                "severity": "operator_review",
+                "affected_row_count": operator_row_count,
+                "operator_action": "extract_exact_metric_fields_into_candidate_fill_preview",
+                "claim_promotion_allowed": False,
+                "candidate_csv_update_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+    if preview_ready and not canonical_ready:
+        blocker_rows.append(
+            {
+                "blocker_id": "canonical_report_review_required",
+                "blocker_type": "canonical_review",
+                "severity": "operator_review",
+                "operator_action": "review_preview_metrics_and_update_canonical_report_if_approved",
+                "claim_promotion_allowed": False,
+                "candidate_csv_update_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+    if not preview_ready:
+        blocker_rows.append(
+            {
+                "blocker_id": "claim_grade_preview_report_not_ready",
+                "blocker_type": "preview_report",
+                "severity": "blocker",
+                "operator_action": "run_candidate_metric_fill_preview_and_preview_report",
                 "claim_promotion_allowed": False,
                 "candidate_csv_update_allowed": False,
                 "execution_enabled": False,
@@ -751,6 +894,152 @@ async def get_product_pocketmd_lite_candidate_metric_fill_preview_report() -> di
         "external_state_mutated": False,
         "candidates": rows,
         "claim_boundary": summary.get("claim_boundary") or artifact.get("claim_boundary", ""),
+    }
+
+
+@router.get("/pocketmd-lite-claim-grade-metric-source-audit")
+async def get_product_pocketmd_lite_claim_grade_metric_source_audit() -> dict[str, Any]:
+    """Return the read-only PocketMD Lite claim-grade metric source audit surface."""
+
+    artifact = _read_json_object(POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_ARTIFACT)
+    summary = _summary(artifact)
+    rows = artifact.get("rows") if isinstance(artifact.get("rows"), list) else []
+    canonical_artifact = _read_json_object(POCKETMD_LITE_REPORT_ARTIFACT)
+    canonical_summary = _summary(canonical_artifact)
+    preview_artifact = _read_json_object(
+        POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_ARTIFACT
+    )
+    preview_summary = _summary(preview_artifact)
+    if not artifact or not summary:
+        return {
+            "status": "missing_pocketmd_lite_claim_grade_metric_source_audit",
+            "artifact_path": str(POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_ARTIFACT),
+            "audit_panel_ready": False,
+            "claim_grade_metric_source_audit_ready": False,
+            "metric_source_extraction_ready": False,
+            "canonical_report_artifact_path": str(POCKETMD_LITE_REPORT_ARTIFACT),
+            "canonical_report_status": "",
+            "canonical_report_ready": False,
+            "preview_report_artifact_path": str(
+                POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_ARTIFACT
+            ),
+            "preview_report_status": "",
+            "preview_report_ready": False,
+            "canonical_review_required": False,
+            "candidate_count": 0,
+            "searched_npz_candidate_count": 0,
+            "exact_metric_source_ready_count": 0,
+            "missing_exact_metric_source_count": 0,
+            "claim_grade_collection_input_ready_count": 0,
+            "selected_proxy_only_count": 0,
+            "atomized_protein_source_candidate_count": 0,
+            "ligand_atom_source_candidate_count": 0,
+            "partial_atomized_protein_only_candidate_count": 0,
+            "probe_status": "",
+            "metric_source_row_count": 0,
+            "metric_source_operator_action_row_count": 0,
+            "metric_source_rows": [],
+            "blocker_row_count": 1,
+            "blocker_rows": [
+                {
+                    "blocker_id": "pocketmd_lite_claim_grade_metric_source_audit_missing",
+                    "blocker_type": "missing_artifact",
+                    "severity": "blocker",
+                    "operator_action": "build_pocketmd_lite_claim_grade_metric_source_audit",
+                    "claim_promotion_allowed": False,
+                    "candidate_csv_update_allowed": False,
+                    "execution_enabled": False,
+                    "external_state_mutated": False,
+                }
+            ],
+            "next_required_step": "",
+            "claim_promotion_allowed": False,
+            "candidate_csv_update_allowed": False,
+            "refinement_execution_enabled": False,
+            "execution_enabled": False,
+            "docking_results_emitted": False,
+            "external_state_mutated": False,
+            "claim_boundary": _METRIC_SOURCE_AUDIT_CLAIM_BOUNDARY_MISSING,
+        }
+
+    audit_rows = _metric_source_audit_rows(rows)
+    blocker_rows = _metric_source_audit_blocker_rows(
+        summary,
+        audit_rows,
+        canonical_summary,
+        preview_summary,
+    )
+    canonical_ready = bool(
+        canonical_summary.get("status") == "pocketmd_lite_report_ready"
+        and canonical_summary.get("top_k_refinement_evidence_ready") is True
+        and canonical_summary.get("pocketmd_lite_claim_safe") is True
+    )
+    preview_ready = bool(
+        preview_summary.get("status") == "pocketmd_lite_report_ready"
+        and preview_summary.get("top_k_refinement_evidence_ready") is True
+    )
+    audit_ready = bool(
+        summary.get("status") == "pocketmd_lite_claim_grade_metric_source_audit_ready"
+        and _int(summary.get("missing_exact_metric_source_count")) == 0
+    )
+    operator_action_row_count = sum(
+        1 for row in audit_rows if row["operator_action_required"]
+    )
+    return {
+        "status": summary.get("status"),
+        "artifact_path": str(POCKETMD_LITE_CLAIM_GRADE_METRIC_SOURCE_AUDIT_ARTIFACT),
+        "schema_version": str(summary.get("schema_version") or ""),
+        "audit_panel_ready": True,
+        "claim_grade_metric_source_audit_ready": audit_ready,
+        "metric_source_extraction_ready": bool(
+            audit_ready
+            and _int(summary.get("exact_metric_source_ready_count")) >= len(audit_rows)
+            and len(audit_rows) > 0
+        ),
+        "canonical_report_artifact_path": str(POCKETMD_LITE_REPORT_ARTIFACT),
+        "canonical_report_status": str(canonical_summary.get("status") or ""),
+        "canonical_report_ready": canonical_ready,
+        "preview_report_artifact_path": str(
+            POCKETMD_LITE_CANDIDATE_METRIC_FILL_PREVIEW_REPORT_ARTIFACT
+        ),
+        "preview_report_status": str(preview_summary.get("status") or ""),
+        "preview_report_ready": preview_ready,
+        "canonical_review_required": bool(preview_ready and not canonical_ready),
+        "candidate_count": _int(summary.get("candidate_count")),
+        "searched_npz_candidate_count": _int(summary.get("searched_npz_candidate_count")),
+        "exact_metric_source_ready_count": _int(
+            summary.get("exact_metric_source_ready_count")
+        ),
+        "missing_exact_metric_source_count": _int(
+            summary.get("missing_exact_metric_source_count")
+        ),
+        "claim_grade_collection_input_ready_count": _int(
+            summary.get("claim_grade_collection_input_ready_count")
+        ),
+        "selected_proxy_only_count": _int(summary.get("selected_proxy_only_count")),
+        "atomized_protein_source_candidate_count": _int(
+            summary.get("atomized_protein_source_candidate_count")
+        ),
+        "ligand_atom_source_candidate_count": _int(
+            summary.get("ligand_atom_source_candidate_count")
+        ),
+        "partial_atomized_protein_only_candidate_count": _int(
+            summary.get("partial_atomized_protein_only_candidate_count")
+        ),
+        "probe_status": str(summary.get("probe_status") or ""),
+        "metric_source_row_count": len(audit_rows),
+        "metric_source_operator_action_row_count": operator_action_row_count,
+        "metric_source_rows": audit_rows,
+        "blocker_row_count": len(blocker_rows),
+        "blocker_rows": blocker_rows,
+        "next_required_step": str(summary.get("next_required_step") or ""),
+        "claim_promotion_allowed": False,
+        "candidate_csv_update_allowed": False,
+        "refinement_execution_enabled": False,
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": False,
+        "claim_boundary": artifact.get("claim_boundary", ""),
     }
 
 

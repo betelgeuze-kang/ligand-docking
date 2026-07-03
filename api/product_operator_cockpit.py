@@ -476,6 +476,58 @@ def _pocketmd_lite_claim_grade_metric_rows(value: Any) -> list[dict[str, Any]]:
     return metric_rows
 
 
+def _pocketmd_lite_metric_source_audit_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    metric_source_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        selected_missing = _string_list(row.get("selected_missing_exact_metric_fields"))
+        selected_exact_ready = bool(row.get("selected_exact_metric_ready") is True)
+        metric_source_rows.append(
+            {
+                "entry_id": str(row.get("entry_id") or ""),
+                "target": str(row.get("target") or ""),
+                "ligand_id": str(row.get("ligand_id") or ""),
+                "required_metrics": _string_list(row.get("required_metrics")),
+                "selected_npz_status": str(row.get("selected_npz_status") or ""),
+                "selected_npz_schema": str(row.get("selected_npz_schema") or ""),
+                "selected_exact_metric_ready": selected_exact_ready,
+                "selected_missing_exact_metric_fields": selected_missing,
+                "searched_npz_candidate_count": _int(
+                    row.get("searched_npz_candidate_count")
+                ),
+                "exact_metric_source_candidate_count": _int(
+                    row.get("exact_metric_source_candidate_count")
+                ),
+                "atomized_protein_candidate_count": _int(
+                    row.get("atomized_protein_candidate_count")
+                ),
+                "ligand_atom_candidate_count": _int(
+                    row.get("ligand_atom_candidate_count")
+                ),
+                "claim_grade_collection_input_candidate_count": _int(
+                    row.get("claim_grade_collection_input_candidate_count")
+                ),
+                "best_candidate_npz": str(row.get("best_candidate_npz") or ""),
+                "best_candidate_status": str(row.get("best_candidate_status") or ""),
+                "best_candidate_blockers": _string_list(row.get("best_candidate_blockers")),
+                "recommended_next_local_action": str(
+                    row.get("recommended_next_local_action") or ""
+                ),
+                "operator_action_required": bool(
+                    selected_missing or not selected_exact_ready
+                ),
+                "candidate_csv_update_allowed": False,
+                "refinement_execution_enabled": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return metric_source_rows
+
+
 def _public_benchmark_external_receipt_step_rows(value: Any) -> list[dict[str, Any]]:
     rows = value if isinstance(value, list) else []
     step_rows: list[dict[str, Any]] = []
@@ -913,6 +965,17 @@ def _missing_response() -> dict[str, Any]:
         "pocketmd_lite_green_band_condition_text": "",
         "pocketmd_lite_claim_allowed": False,
         "pocketmd_lite_claim_grade_metric_rows": [],
+        "pocketmd_lite_metric_source_audit_present": False,
+        "pocketmd_lite_metric_source_audit_ready": False,
+        "pocketmd_lite_metric_source_extraction_ready": False,
+        "pocketmd_lite_metric_source_candidate_count": 0,
+        "pocketmd_lite_metric_source_exact_ready_count": 0,
+        "pocketmd_lite_metric_source_missing_count": 0,
+        "pocketmd_lite_metric_source_collection_input_ready_count": 0,
+        "pocketmd_lite_metric_source_selected_proxy_only_count": 0,
+        "pocketmd_lite_metric_source_operator_action_row_count": 0,
+        "pocketmd_lite_metric_source_canonical_review_required": False,
+        "pocketmd_lite_metric_source_rows": [],
         "public_benchmark_claim_allowed": False,
         "public_benchmark_receipt_attach_packet_ready": False,
         "public_benchmark_receipt_attach_packet_present": False,
@@ -1270,6 +1333,39 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         "pocketmd_lite_claim_allowed": bool(summary.get("pocketmd_lite_claim_allowed") is True),
         "pocketmd_lite_claim_grade_metric_rows": _pocketmd_lite_claim_grade_metric_rows(
             summary.get("pocketmd_lite_claim_grade_metric_rows")
+        ),
+        "pocketmd_lite_metric_source_audit_present": bool(
+            summary.get("pocketmd_lite_metric_source_audit_present") is True
+        ),
+        "pocketmd_lite_metric_source_audit_ready": bool(
+            summary.get("pocketmd_lite_metric_source_audit_ready") is True
+        ),
+        "pocketmd_lite_metric_source_extraction_ready": bool(
+            summary.get("pocketmd_lite_metric_source_extraction_ready") is True
+        ),
+        "pocketmd_lite_metric_source_candidate_count": _int(
+            summary.get("pocketmd_lite_metric_source_candidate_count")
+        ),
+        "pocketmd_lite_metric_source_exact_ready_count": _int(
+            summary.get("pocketmd_lite_metric_source_exact_ready_count")
+        ),
+        "pocketmd_lite_metric_source_missing_count": _int(
+            summary.get("pocketmd_lite_metric_source_missing_count")
+        ),
+        "pocketmd_lite_metric_source_collection_input_ready_count": _int(
+            summary.get("pocketmd_lite_metric_source_collection_input_ready_count")
+        ),
+        "pocketmd_lite_metric_source_selected_proxy_only_count": _int(
+            summary.get("pocketmd_lite_metric_source_selected_proxy_only_count")
+        ),
+        "pocketmd_lite_metric_source_operator_action_row_count": _int(
+            summary.get("pocketmd_lite_metric_source_operator_action_row_count")
+        ),
+        "pocketmd_lite_metric_source_canonical_review_required": bool(
+            summary.get("pocketmd_lite_metric_source_canonical_review_required") is True
+        ),
+        "pocketmd_lite_metric_source_rows": _pocketmd_lite_metric_source_audit_rows(
+            summary.get("pocketmd_lite_metric_source_rows")
         ),
         "public_benchmark_claim_allowed": bool(summary.get("public_benchmark_claim_allowed") is True),
         "public_benchmark_receipt_attach_packet_ready": bool(

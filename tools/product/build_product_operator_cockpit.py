@@ -18,6 +18,9 @@ DEFAULT_HBOND_JSON = "runs/hbond_backmap_report_current.json"
 DEFAULT_GPCR_JSON = "runs/gpcr_hard_decoy_claim_unlock_audit_current.json"
 DEFAULT_GPCR_PHASE3_CLOSURE_JSON = "runs/gpcr_hard_decoy_phase3_closure_gap_dossier_current.json"
 DEFAULT_POCKETMD_JSON = "runs/pocketmd_lite_topk_refinement_audit_current.json"
+DEFAULT_POCKETMD_METRIC_SOURCE_AUDIT_JSON = (
+    "runs/pocketmd_lite_claim_grade_metric_source_audit_current.json"
+)
 DEFAULT_PUBLIC_BENCHMARK_JSON = "runs/public_benchmark_external_receipts_audit_current.json"
 DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON = (
     "runs/public_benchmark_receipt_attach_packet_current.json"
@@ -641,6 +644,51 @@ def _pocketmd_lite_claim_grade_metric_rows(payload: dict[str, Any]) -> list[dict
                 "recommended_next_local_action": _text(
                     row.get("recommended_next_local_action")
                 ),
+                "candidate_csv_update_allowed": False,
+                "refinement_execution_enabled": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
+def _pocketmd_lite_metric_source_audit_rows(
+    payload: dict[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _rows(payload):
+        selected_missing = _string_list(row.get("selected_missing_exact_metric_fields"))
+        selected_exact_ready = _bool_true(row.get("selected_exact_metric_ready"))
+        rows.append(
+            {
+                "entry_id": _text(row.get("entry_id")),
+                "target": _text(row.get("target")),
+                "ligand_id": _text(row.get("ligand_id")),
+                "required_metrics": _string_list(row.get("required_metrics")),
+                "selected_npz_status": _text(row.get("selected_npz_status")),
+                "selected_npz_schema": _text(row.get("selected_npz_schema")),
+                "selected_exact_metric_ready": selected_exact_ready,
+                "selected_missing_exact_metric_fields": selected_missing,
+                "searched_npz_candidate_count": _int(row.get("searched_npz_candidate_count")),
+                "exact_metric_source_candidate_count": _int(
+                    row.get("exact_metric_source_candidate_count")
+                ),
+                "atomized_protein_candidate_count": _int(
+                    row.get("atomized_protein_candidate_count")
+                ),
+                "ligand_atom_candidate_count": _int(row.get("ligand_atom_candidate_count")),
+                "claim_grade_collection_input_candidate_count": _int(
+                    row.get("claim_grade_collection_input_candidate_count")
+                ),
+                "best_candidate_npz": _text(row.get("best_candidate_npz")),
+                "best_candidate_status": _text(row.get("best_candidate_status")),
+                "best_candidate_blockers": _string_list(row.get("best_candidate_blockers")),
+                "recommended_next_local_action": _text(
+                    row.get("recommended_next_local_action")
+                ),
+                "operator_action_required": bool(selected_missing or not selected_exact_ready),
                 "candidate_csv_update_allowed": False,
                 "refinement_execution_enabled": False,
                 "execution_enabled": False,
@@ -1396,6 +1444,9 @@ def build_product_operator_cockpit(
     gpcr_json: str | Path = DEFAULT_GPCR_JSON,
     gpcr_phase3_closure_json: str | Path = DEFAULT_GPCR_PHASE3_CLOSURE_JSON,
     pocketmd_json: str | Path = DEFAULT_POCKETMD_JSON,
+    pocketmd_metric_source_audit_json: str | Path = (
+        DEFAULT_POCKETMD_METRIC_SOURCE_AUDIT_JSON
+    ),
     public_benchmark_json: str | Path = DEFAULT_PUBLIC_BENCHMARK_JSON,
     public_benchmark_receipt_attach_packet_json: str | Path = (
         DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON
@@ -1434,6 +1485,14 @@ def build_product_operator_cockpit(
     pocketmd_rows = _rows(pocketmd_payload)
     pocketmd_lite_claim_grade_metric_row_preview = (
         _pocketmd_lite_claim_grade_metric_rows(pocketmd_payload)
+    )
+    pocketmd_metric_source_payload = _read_json(
+        pocketmd_metric_source_audit_json,
+        root=root,
+    )
+    pocketmd_metric_source = _summary(pocketmd_metric_source_payload)
+    pocketmd_lite_metric_source_audit_row_preview = (
+        _pocketmd_lite_metric_source_audit_rows(pocketmd_metric_source_payload)
     )
     public_benchmark_payload = _read_json(public_benchmark_json, root=root)
     public_benchmark = _summary(public_benchmark_payload)
@@ -1662,6 +1721,52 @@ def build_product_operator_cockpit(
         pocketmd.get("green_band_condition_text"),
         pocketmd.get("green_band_condition"),
     )
+    pocketmd_metric_source_present = bool(pocketmd_metric_source)
+    pocketmd_metric_source_status = _text(
+        pocketmd_metric_source.get("status")
+        or pocketmd_metric_source_payload.get("status")
+    )
+    pocketmd_metric_source_candidate_count = _int(
+        pocketmd_metric_source.get("candidate_count")
+    ) or len(pocketmd_lite_metric_source_audit_row_preview)
+    pocketmd_metric_source_exact_ready_count = _int(
+        pocketmd_metric_source.get("exact_metric_source_ready_count")
+    )
+    pocketmd_metric_source_missing_count = _int(
+        pocketmd_metric_source.get("missing_exact_metric_source_count")
+    )
+    pocketmd_metric_source_collection_input_ready_count = _int(
+        pocketmd_metric_source.get("claim_grade_collection_input_ready_count")
+    )
+    pocketmd_metric_source_selected_proxy_only_count = _int(
+        pocketmd_metric_source.get("selected_proxy_only_count")
+    )
+    pocketmd_metric_source_audit_ready = bool(
+        pocketmd_metric_source_present
+        and pocketmd_metric_source_status
+        == "pocketmd_lite_claim_grade_metric_source_audit_ready"
+        and pocketmd_metric_source_missing_count == 0
+    )
+    pocketmd_metric_source_extraction_ready = bool(
+        pocketmd_metric_source_audit_ready
+        and pocketmd_metric_source_candidate_count > 0
+        and pocketmd_metric_source_exact_ready_count >= pocketmd_metric_source_candidate_count
+    )
+    pocketmd_metric_source_operator_action_row_count = sum(
+        1
+        for row in pocketmd_lite_metric_source_audit_row_preview
+        if row["operator_action_required"]
+    )
+    pocketmd_metric_source_canonical_review_required = bool(
+        pocketmd_fill_preview_ready and not pocketmd_report_ready
+    )
+    pocketmd_metric_source_blockers = []
+    if not pocketmd_metric_source_audit_ready:
+        pocketmd_metric_source_blockers.append("pocketmd_lite_metric_source_audit_not_ready")
+    if pocketmd_metric_source_operator_action_row_count:
+        pocketmd_metric_source_blockers.append("metric_source_extraction_required")
+    if pocketmd_metric_source_canonical_review_required:
+        pocketmd_metric_source_blockers.append("canonical_report_review_required")
 
     public_present = bool(public_benchmark)
     public_external_receipts_ready = _bool_true(public_benchmark.get("external_benchmark_receipts_ready"))
@@ -2358,6 +2463,63 @@ def build_product_operator_cockpit(
             root=root,
         ),
         _panel(
+            panel_id="pocketmd_lite_metric_source_audit",
+            title="PocketMD Lite metric-source audit",
+            route="/product/pocketmd-lite-claim-grade-metric-source-audit",
+            artifact_path=pocketmd_metric_source_audit_json,
+            artifact_present=pocketmd_metric_source_present,
+            status=pocketmd_metric_source_status
+            or "missing_pocketmd_lite_claim_grade_metric_source_audit",
+            surface_ready=True,
+            source_artifact_ready=(
+                pocketmd_metric_source_present and pocketmd_metric_source_audit_ready
+            ),
+            operator_action_required=bool(
+                not pocketmd_metric_source_extraction_ready
+                or pocketmd_metric_source_operator_action_row_count
+                or pocketmd_metric_source_canonical_review_required
+            ),
+            claim_allowed=False,
+            primary_metric=_join_metrics(
+                _metric("audit_ready", pocketmd_metric_source_audit_ready),
+                _count_metric("exact_sources", pocketmd_metric_source_exact_ready_count),
+                _count_metric("missing_sources", pocketmd_metric_source_missing_count),
+                _count_metric(
+                    "collection_inputs",
+                    pocketmd_metric_source_collection_input_ready_count,
+                ),
+                _count_metric("candidates", pocketmd_metric_source_candidate_count),
+            ),
+            secondary_metric=_join_metrics(
+                _metric("extraction_ready", pocketmd_metric_source_extraction_ready),
+                _count_metric(
+                    "operator_rows",
+                    pocketmd_metric_source_operator_action_row_count,
+                ),
+                _count_metric(
+                    "selected_proxy_only",
+                    pocketmd_metric_source_selected_proxy_only_count,
+                ),
+                _metric("preview_ready", pocketmd_fill_preview_ready),
+                _metric("report_ready", pocketmd_report_ready),
+                _metric("promotion_allowed", False),
+            ),
+            next_action=_first_text(
+                pocketmd_metric_source.get("next_required_step"),
+                pocketmd.get("next_required_step"),
+                "Extract exact NPZ metric fields into the candidate fill preview, then rerun the canonical PocketMD Lite report.",
+            ),
+            allowed_claim_text="Metric-source audit evidence may be displayed for operator review.",
+            disallowed_claim_text=(
+                "PocketMD Lite claim-grade customer wording remains disallowed until exact "
+                "metrics are extracted into the canonical report and promotion is approved."
+            ),
+            blockers=pocketmd_metric_source_blockers,
+            claim_boundary=_text(pocketmd_metric_source.get("claim_boundary"))
+            or CLAIM_BOUNDARY,
+            root=root,
+        ),
+        _panel(
             panel_id="public_benchmark_scorecard",
             title="Public benchmark scorecard",
             route="/product/public-benchmark-external-receipts-audit",
@@ -2968,6 +3130,35 @@ def build_product_operator_cockpit(
         "pocketmd_lite_claim_grade_metric_rows": (
             pocketmd_lite_claim_grade_metric_row_preview
         ),
+        "pocketmd_lite_metric_source_audit_present": pocketmd_metric_source_present,
+        "pocketmd_lite_metric_source_audit_ready": pocketmd_metric_source_audit_ready,
+        "pocketmd_lite_metric_source_extraction_ready": (
+            pocketmd_metric_source_extraction_ready
+        ),
+        "pocketmd_lite_metric_source_candidate_count": (
+            pocketmd_metric_source_candidate_count
+        ),
+        "pocketmd_lite_metric_source_exact_ready_count": (
+            pocketmd_metric_source_exact_ready_count
+        ),
+        "pocketmd_lite_metric_source_missing_count": (
+            pocketmd_metric_source_missing_count
+        ),
+        "pocketmd_lite_metric_source_collection_input_ready_count": (
+            pocketmd_metric_source_collection_input_ready_count
+        ),
+        "pocketmd_lite_metric_source_selected_proxy_only_count": (
+            pocketmd_metric_source_selected_proxy_only_count
+        ),
+        "pocketmd_lite_metric_source_operator_action_row_count": (
+            pocketmd_metric_source_operator_action_row_count
+        ),
+        "pocketmd_lite_metric_source_canonical_review_required": (
+            pocketmd_metric_source_canonical_review_required
+        ),
+        "pocketmd_lite_metric_source_rows": (
+            pocketmd_lite_metric_source_audit_row_preview
+        ),
         "public_benchmark_claim_allowed": public_benchmark_claim_allowed,
         "public_benchmark_receipt_attach_packet_ready": public_attach_ready,
         "public_benchmark_receipt_attach_packet_present": public_attach_present,
@@ -3368,6 +3559,10 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--gpcr-json", default=DEFAULT_GPCR_JSON)
     parser.add_argument("--gpcr-phase3-closure-json", default=DEFAULT_GPCR_PHASE3_CLOSURE_JSON)
     parser.add_argument("--pocketmd-json", default=DEFAULT_POCKETMD_JSON)
+    parser.add_argument(
+        "--pocketmd-metric-source-audit-json",
+        default=DEFAULT_POCKETMD_METRIC_SOURCE_AUDIT_JSON,
+    )
     parser.add_argument("--public-benchmark-json", default=DEFAULT_PUBLIC_BENCHMARK_JSON)
     parser.add_argument(
         "--public-benchmark-receipt-attach-packet-json",
@@ -3407,6 +3602,7 @@ def main(argv: list[str] | None = None) -> int:
         gpcr_json=args.gpcr_json,
         gpcr_phase3_closure_json=args.gpcr_phase3_closure_json,
         pocketmd_json=args.pocketmd_json,
+        pocketmd_metric_source_audit_json=args.pocketmd_metric_source_audit_json,
         public_benchmark_json=args.public_benchmark_json,
         public_benchmark_receipt_attach_packet_json=args.public_benchmark_receipt_attach_packet_json,
         goal_release_decision_json=args.goal_release_decision_json,

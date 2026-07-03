@@ -23,6 +23,9 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         "gpcr": tmp_path / "runs/gpcr_hard_decoy_claim_unlock_audit_current.json",
         "gpcr_phase3": tmp_path / "runs/gpcr_hard_decoy_phase3_closure_gap_dossier_current.json",
         "pocketmd": tmp_path / "runs/pocketmd_lite_topk_refinement_audit_current.json",
+        "pocketmd_metric_source": (
+            tmp_path / "runs/pocketmd_lite_claim_grade_metric_source_audit_current.json"
+        ),
         "public": tmp_path / "runs/public_benchmark_external_receipts_audit_current.json",
         "public_attach": tmp_path / "runs/public_benchmark_receipt_attach_packet_current.json",
         "release_decision": tmp_path / "runs/goal_release_decision_gate_current.json",
@@ -297,6 +300,106 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                     "initial_clash_count": 22,
                     "clash_count": 1,
                     "clash_relief_count": 21,
+                },
+            ],
+        },
+    )
+    _write_json(
+        paths["pocketmd_metric_source"],
+        {
+            "summary": {
+                "status": "pocketmd_lite_claim_grade_metric_source_audit_ready",
+                "candidate_count": 2,
+                "exact_metric_source_ready_count": 2,
+                "missing_exact_metric_source_count": 0,
+                "claim_grade_collection_input_ready_count": 2,
+                "selected_proxy_only_count": 2,
+                "searched_npz_candidate_count": 6,
+                "claim_promotion_allowed": True,
+                "candidate_csv_update_allowed": True,
+                "refinement_execution_enabled": True,
+                "execution_enabled": True,
+                "external_state_mutated": True,
+                "next_required_step": (
+                    "Extract exact NPZ metric fields into the candidate fill preview, "
+                    "then rerun the PocketMD Lite report."
+                ),
+                "claim_boundary": "metric source audit fixture boundary",
+            },
+            "rows": [
+                {
+                    "entry_id": "ADRB2_GPCR_BLIND:carvedilol",
+                    "target": "ADRB2_GPCR_BLIND",
+                    "ligand_id": "carvedilol",
+                    "required_metrics": [
+                        "local_min_ligand_rmsd_a",
+                        "hbond_persistence",
+                        "initial_clash_count",
+                    ],
+                    "selected_npz_status": "proxy_only_trajectory",
+                    "selected_npz_schema": "coarse_two_bead_ca",
+                    "selected_exact_metric_ready": False,
+                    "selected_missing_exact_metric_fields": [
+                        "local_min_ligand_rmsd_a",
+                        "hbond_persistence",
+                        "initial_clash_count",
+                    ],
+                    "searched_npz_candidate_count": 3,
+                    "exact_metric_source_candidate_count": 1,
+                    "atomized_protein_candidate_count": 1,
+                    "ligand_atom_candidate_count": 1,
+                    "claim_grade_collection_input_candidate_count": 1,
+                    "best_candidate_npz": (
+                        "runs/pocketmd_lite_bounded_metric_collector_current/"
+                        "ADRB2_GPCR_BLIND__carvedilol__bounded_metrics.npz"
+                    ),
+                    "best_candidate_status": "exact_metric_source_ready",
+                    "best_candidate_blockers": ["ligand_trajectory_is_two_bead_proxy"],
+                    "recommended_next_local_action": (
+                        "extract_exact_metric_fields_into_candidate_fill_preview_then_rerun_report"
+                    ),
+                    "candidate_csv_update_allowed": True,
+                    "refinement_execution_enabled": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                },
+                {
+                    "entry_id": "ADRB2_GPCR_BLIND:timolol",
+                    "target": "ADRB2_GPCR_BLIND",
+                    "ligand_id": "timolol",
+                    "required_metrics": [
+                        "local_min_ligand_rmsd_a",
+                        "hbond_persistence",
+                        "initial_clash_count",
+                    ],
+                    "selected_npz_status": "proxy_only_trajectory",
+                    "selected_npz_schema": "coarse_two_bead_ca",
+                    "selected_exact_metric_ready": False,
+                    "selected_missing_exact_metric_fields": [
+                        "local_min_ligand_rmsd_a",
+                        "hbond_persistence",
+                        "initial_clash_count",
+                    ],
+                    "searched_npz_candidate_count": 3,
+                    "exact_metric_source_candidate_count": 1,
+                    "atomized_protein_candidate_count": 1,
+                    "ligand_atom_candidate_count": 1,
+                    "claim_grade_collection_input_candidate_count": 1,
+                    "best_candidate_npz": (
+                        "runs/pocketmd_lite_bounded_metric_collector_current/"
+                        "ADRB2_GPCR_BLIND__timolol__bounded_metrics.npz"
+                    ),
+                    "best_candidate_status": "exact_metric_source_ready",
+                    "best_candidate_blockers": ["ligand_trajectory_is_two_bead_proxy"],
+                    "recommended_next_local_action": (
+                        "extract_exact_metric_fields_into_candidate_fill_preview_then_rerun_report"
+                    ),
+                    "candidate_csv_update_allowed": True,
+                    "refinement_execution_enabled": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
                 },
             ],
         },
@@ -1209,6 +1312,7 @@ def _build_payload(tmp_path: Path) -> dict:
         gpcr_json=paths["gpcr"],
         gpcr_phase3_closure_json=paths["gpcr_phase3"],
         pocketmd_json=paths["pocketmd"],
+        pocketmd_metric_source_audit_json=paths["pocketmd_metric_source"],
         public_benchmark_json=paths["public"],
         public_benchmark_receipt_attach_packet_json=paths["public_attach"],
         goal_release_decision_json=paths["release_decision"],
@@ -1236,7 +1340,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["status"] == "product_operator_cockpit_ready_claims_blocked"
     assert summary["phase8_surface_ready"] is True
     assert summary["required_phase8_panel_count"] == 9
-    assert summary["observed_phase8_panel_count"] == 14
+    assert summary["observed_phase8_panel_count"] == 15
     assert summary["missing_required_phase8_panel_count"] == 0
     assert summary["paid_pilot_wording_allowed"] is False
     assert summary["allowed_claim_count"] == 5
@@ -1462,6 +1566,54 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         "trajectory_probe_status": "pocketmd_lite_metric_collection_probe_ready",
         "candidate_metric_fill_status": "filled_from_claim_grade_probe",
         "recommended_next_local_action": "review_green_band_metrics",
+        "candidate_csv_update_allowed": False,
+        "refinement_execution_enabled": False,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_promotion_allowed": False,
+    }
+    assert summary["pocketmd_lite_metric_source_audit_present"] is True
+    assert summary["pocketmd_lite_metric_source_audit_ready"] is True
+    assert summary["pocketmd_lite_metric_source_extraction_ready"] is True
+    assert summary["pocketmd_lite_metric_source_candidate_count"] == 2
+    assert summary["pocketmd_lite_metric_source_exact_ready_count"] == 2
+    assert summary["pocketmd_lite_metric_source_missing_count"] == 0
+    assert summary["pocketmd_lite_metric_source_collection_input_ready_count"] == 2
+    assert summary["pocketmd_lite_metric_source_selected_proxy_only_count"] == 2
+    assert summary["pocketmd_lite_metric_source_operator_action_row_count"] == 2
+    assert summary["pocketmd_lite_metric_source_canonical_review_required"] is True
+    assert summary["pocketmd_lite_metric_source_rows"][0] == {
+        "entry_id": "ADRB2_GPCR_BLIND:carvedilol",
+        "target": "ADRB2_GPCR_BLIND",
+        "ligand_id": "carvedilol",
+        "required_metrics": [
+            "local_min_ligand_rmsd_a",
+            "hbond_persistence",
+            "initial_clash_count",
+        ],
+        "selected_npz_status": "proxy_only_trajectory",
+        "selected_npz_schema": "coarse_two_bead_ca",
+        "selected_exact_metric_ready": False,
+        "selected_missing_exact_metric_fields": [
+            "local_min_ligand_rmsd_a",
+            "hbond_persistence",
+            "initial_clash_count",
+        ],
+        "searched_npz_candidate_count": 3,
+        "exact_metric_source_candidate_count": 1,
+        "atomized_protein_candidate_count": 1,
+        "ligand_atom_candidate_count": 1,
+        "claim_grade_collection_input_candidate_count": 1,
+        "best_candidate_npz": (
+            "runs/pocketmd_lite_bounded_metric_collector_current/"
+            "ADRB2_GPCR_BLIND__carvedilol__bounded_metrics.npz"
+        ),
+        "best_candidate_status": "exact_metric_source_ready",
+        "best_candidate_blockers": ["ligand_trajectory_is_two_bead_proxy"],
+        "recommended_next_local_action": (
+            "extract_exact_metric_fields_into_candidate_fill_preview_then_rerun_report"
+        ),
+        "operator_action_required": True,
         "candidate_csv_update_allowed": False,
         "refinement_execution_enabled": False,
         "execution_enabled": False,
@@ -2187,6 +2339,29 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert panels["pocketmd_lite_report_panel"]["blockers"] == [
         "pocketmd_lite_preview_not_canonical_report"
     ]
+    metric_source_panel = panels["pocketmd_lite_metric_source_audit"]
+    assert metric_source_panel["route"] == (
+        "/product/pocketmd-lite-claim-grade-metric-source-audit"
+    )
+    assert metric_source_panel["source_artifact_ready"] is True
+    assert metric_source_panel["operator_action_required"] is True
+    assert metric_source_panel["claim_allowed"] is False
+    assert "audit_ready=true" in metric_source_panel["primary_metric"]
+    assert "exact_sources=2" in metric_source_panel["primary_metric"]
+    assert "missing_sources=0" in metric_source_panel["primary_metric"]
+    assert "collection_inputs=2" in metric_source_panel["primary_metric"]
+    assert "candidates=2" in metric_source_panel["primary_metric"]
+    assert "extraction_ready=true" in metric_source_panel["secondary_metric"]
+    assert "operator_rows=2" in metric_source_panel["secondary_metric"]
+    assert "selected_proxy_only=2" in metric_source_panel["secondary_metric"]
+    assert "preview_ready=true" in metric_source_panel["secondary_metric"]
+    assert "report_ready=false" in metric_source_panel["secondary_metric"]
+    assert "promotion_allowed=false" in metric_source_panel["secondary_metric"]
+    assert metric_source_panel["blockers"] == [
+        "metric_source_extraction_required",
+        "canonical_report_review_required",
+    ]
+    assert metric_source_panel["claim_boundary"] == "metric source audit fixture boundary"
     assert panels["public_benchmark_scorecard"]["route"] == "/product/public-benchmark-external-receipts-audit"
     assert "ready_steps=5" in panels["public_benchmark_scorecard"]["primary_metric"]
     assert "blocked_steps=2" in panels["public_benchmark_scorecard"]["primary_metric"]
@@ -2687,6 +2862,8 @@ def test_product_operator_cockpit_cli_writes_current_artifacts(tmp_path: Path) -
             str(paths["gpcr"]),
             "--pocketmd-json",
             str(paths["pocketmd"]),
+            "--pocketmd-metric-source-audit-json",
+            str(paths["pocketmd_metric_source"]),
             "--public-benchmark-json",
             str(paths["public"]),
             "--public-benchmark-receipt-attach-packet-json",
