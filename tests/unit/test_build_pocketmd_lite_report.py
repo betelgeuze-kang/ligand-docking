@@ -91,8 +91,79 @@ def test_materializes_green_top_k_report(tmp_path: Path) -> None:
     assert summary["clash_relief_observed_count"] == 2
     assert summary["missing_refinement_metric_names"] == []
     assert summary["top_k_refinement_evidence_ready"] is True
+    assert summary["pocketmd_lite_claim_grade_contract_ready"] is False
+    assert summary["pocketmd_lite_claim_promotion_allowed"] is False
+    assert summary["claim_grade_requirement_ids"] == [
+        "selected_top_k_minimum_met",
+        "adrb2_three_collection_ready_rows",
+        "drd3_oprd1_atom_frame_recovery",
+        "local_min_ligand_rmsd_ready",
+        "hbond_persistence_ready",
+        "contact_persistence_ready",
+        "clash_relief_ready",
+        "green_yellow_red_abstain_banding_ready",
+        "pocketmd_lite_claim_grade_contract_ready",
+        "pocketmd_lite_claim_promotion_review_allowed",
+    ]
+    assert summary["claim_grade_requirement_row_count"] == 10
+    assert summary["claim_grade_requirement_ready_row_count"] == 4
+    assert summary["claim_grade_requirement_blocked_row_count"] == 6
+    assert summary["claim_grade_primary_requirement_id"] == "selected_top_k_minimum_met"
+    assert summary["claim_grade_primary_blocker"] == "selected_top_k_rows_below_required:2/3"
+    requirements = {
+        row["requirement_id"]: row for row in artifact["claim_grade_requirement_rows"]
+    }
+    assert requirements["local_min_ligand_rmsd_ready"]["ready"] is True
+    assert requirements["hbond_persistence_ready"]["ready"] is True
+    assert requirements["contact_persistence_ready"]["ready"] is True
+    assert requirements["clash_relief_ready"]["ready"] is True
+    assert requirements["pocketmd_lite_claim_promotion_review_allowed"]["ready"] is False
+    assert all(
+        row["claim_promotion_allowed"] is False
+        and row["candidate_csv_update_allowed"] is False
+        and row["execution_enabled"] is False
+        and row["external_state_mutated"] is False
+        for row in artifact["claim_grade_requirement_rows"]
+    )
     assert all(row["band"] == "green" for row in artifact["rows"])
     assert all(row["uncertainty_posture"] == "green_low_uncertainty" for row in artifact["rows"])
+
+
+def test_claim_grade_contract_ready_requires_targeted_green_rows(tmp_path: Path) -> None:
+    input_csv = tmp_path / "in.csv"
+    _write_csv(
+        input_csv,
+        [
+            _green_row("ADRB2_GPCR_BLIND:carvedilol"),
+            _green_row("ADRB2_GPCR_BLIND:timolol"),
+            _green_row("ADRB2_GPCR_BLIND:carazolol"),
+            _green_row("CHEMBL234_DRD3_HUMAN:CHEMBL5841759"),
+            _green_row("CHEMBL236_OPRD1_HUMAN:CHEMBL67192"),
+        ],
+    )
+
+    artifact = mod.build_pocketmd_lite_report_artifact(input_csv)
+    summary = artifact["summary"]
+
+    assert summary["status"] == "pocketmd_lite_report_ready"
+    assert summary["pocketmd_lite_claim_safe"] is True
+    assert summary["pocketmd_lite_claim_grade_contract_ready"] is True
+    assert summary["pocketmd_lite_claim_promotion_allowed"] is False
+    assert summary["claim_grade_requirement_row_count"] == 10
+    assert summary["claim_grade_requirement_ready_row_count"] == 9
+    assert summary["claim_grade_requirement_blocked_row_count"] == 1
+    assert summary["claim_grade_primary_requirement_id"] == (
+        "pocketmd_lite_claim_promotion_review_allowed"
+    )
+    requirements = {
+        row["requirement_id"]: row for row in artifact["claim_grade_requirement_rows"]
+    }
+    assert requirements["adrb2_three_collection_ready_rows"]["ready"] is True
+    assert requirements["adrb2_three_collection_ready_rows"]["observed_value"] == "3"
+    assert requirements["drd3_oprd1_atom_frame_recovery"]["ready"] is True
+    assert requirements["drd3_oprd1_atom_frame_recovery"]["observed_value"] == "DRD3,OPRD1"
+    assert requirements["green_yellow_red_abstain_banding_ready"]["ready"] is True
+    assert requirements["pocketmd_lite_claim_promotion_review_allowed"]["ready"] is False
 
 
 def test_missing_refinement_evidence_abstains_and_blocks(tmp_path: Path) -> None:
@@ -126,6 +197,9 @@ def test_missing_refinement_evidence_abstains_and_blocks(tmp_path: Path) -> None
     ]
     assert summary["missing_refinement_metric_counts"]["local_min_ligand_rmsd_a"] == 1
     assert summary["top_k_refinement_evidence_ready"] is False
+    assert summary["pocketmd_lite_claim_grade_contract_ready"] is False
+    assert summary["claim_grade_requirement_blocked_row_count"] == 10
+    assert summary["claim_grade_primary_requirement_id"] == "selected_top_k_minimum_met"
 
 
 def test_non_top_k_candidate_is_coarse_only_not_blocker(tmp_path: Path) -> None:
@@ -147,6 +221,10 @@ def test_fail_closed_on_missing_csv(tmp_path: Path) -> None:
     assert artifact["summary"]["status"] == "blocked_pocketmd_lite_report"
     assert artifact["summary"]["green_band_condition"]["missing_evidence_band"] == "abstain"
     assert artifact["summary"]["claim_grade_metric_ready_row_count"] == 0
+    assert artifact["summary"]["claim_grade_requirement_blocked_row_count"] == 10
+    assert artifact["claim_grade_requirement_rows"][0]["requirement_id"] == (
+        "selected_top_k_minimum_met"
+    )
 
 
 def test_fail_closed_on_bad_bool(tmp_path: Path) -> None:
@@ -185,6 +263,7 @@ def test_main_writes_artifacts(tmp_path: Path) -> None:
     out_md_text = out_md.read_text(encoding="utf-8")
     assert out_md_text.startswith("# PocketMD Lite Report")
     assert "green_band_condition" in out_md_text
+    assert "Claim-Grade Requirement Checklist" in out_md_text
     row = list(csv.DictReader(out_csv.open(encoding="utf-8")))[0]
     assert row["band"] == "green"
     assert row["uncertainty_posture"] == "green_low_uncertainty"

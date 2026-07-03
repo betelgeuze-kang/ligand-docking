@@ -66,6 +66,21 @@ _READ_ONLY_FLAGS = {
 
 BAND_KEYS = (BAND_GREEN, BAND_YELLOW, BAND_RED, BAND_ABSTAIN, BAND_COARSE_ONLY)
 CLAIM_GRADE_BANDS = (BAND_GREEN, BAND_YELLOW, BAND_RED)
+MIN_CLAIM_GRADE_GREEN_ROWS = 3
+REQUIRED_ADRB2_GREEN_ROWS = 3
+REQUIRED_RECOVERED_TARGET_IDS = ("DRD3", "OPRD1")
+CLAIM_GRADE_REQUIREMENT_IDS = (
+    "selected_top_k_minimum_met",
+    "adrb2_three_collection_ready_rows",
+    "drd3_oprd1_atom_frame_recovery",
+    "local_min_ligand_rmsd_ready",
+    "hbond_persistence_ready",
+    "contact_persistence_ready",
+    "clash_relief_ready",
+    "green_yellow_red_abstain_banding_ready",
+    "pocketmd_lite_claim_grade_contract_ready",
+    "pocketmd_lite_claim_promotion_review_allowed",
+)
 GREEN_BAND_CONDITION = {
     "local_min_ligand_rmsd_a_lte": LOCAL_MIN_SURVIVAL_RMSD_A,
     "hbond_persistence_gte": HBOND_PERSISTENCE_MIN,
@@ -122,22 +137,26 @@ def _row_to_candidate(row: dict[str, Any]) -> dict[str, Any]:
 
 def _blocked_artifact(status: str, input_csv: Path, detail: str) -> dict[str, Any]:
     band_fields = _band_summary_fields({}, selected_count=0)
+    summary = {
+        "schema_version": REPORT_SCHEMA_VERSION,
+        "status": "blocked_pocketmd_lite_report",
+        "candidate_count": 0,
+        "top_k_only_policy_enforced": True,
+        "pocketmd_lite_claim_safe": False,
+        **band_fields,
+        **_READ_ONLY_FLAGS,
+    }
+    claim_grade_requirement_rows = _claim_grade_requirement_rows(summary, [])
+    summary.update(_claim_grade_requirement_summary(claim_grade_requirement_rows))
     return {
         "packet_type": PACKET_TYPE,
         "schema_version": REPORT_SCHEMA_VERSION,
         "materializer_status": status,
         "input_csv": str(input_csv),
         "detail": detail,
-        "summary": {
-            "schema_version": REPORT_SCHEMA_VERSION,
-            "status": "blocked_pocketmd_lite_report",
-            "candidate_count": 0,
-            "top_k_only_policy_enforced": True,
-            "pocketmd_lite_claim_safe": False,
-            **band_fields,
-            **_READ_ONLY_FLAGS,
-        },
+        "summary": summary,
         "rows": [],
+        "claim_grade_requirement_rows": claim_grade_requirement_rows,
         "claim_boundary": CLAIM_BOUNDARY,
     }
 
@@ -163,6 +182,231 @@ def _band_summary_fields(band_counts: dict[str, Any], *, selected_count: int) ->
         "banding_surface_ready": selected_count > 0 and selected_band_count == selected_count,
         "green_band_condition": GREEN_BAND_CONDITION,
         "green_band_condition_text": GREEN_BAND_CONDITION_TEXT,
+    }
+
+
+def _value_list(rows: list[dict[str, Any]], field: str) -> list[float]:
+    values: list[float] = []
+    for row in rows:
+        value = row.get(field)
+        if value is None or value == "":
+            continue
+        values.append(float(value))
+    return values
+
+
+def _target_green_count(rows: list[dict[str, Any]], target_id: str) -> int:
+    return sum(
+        1
+        for row in rows
+        if target_id in _text(row.get("entry_id"))
+        and row.get("band") == BAND_GREEN
+        and row.get("claim_safe") is True
+    )
+
+
+def _claim_grade_requirement_row(
+    *,
+    requirement_id: str,
+    ready: bool,
+    observed_value: str,
+    required_value: str,
+    blocker: str,
+    operator_action: str,
+) -> dict[str, Any]:
+    return {
+        "requirement_id": requirement_id,
+        "ready": ready,
+        "status": "ready" if ready else "blocked",
+        "observed_value": observed_value,
+        "required_value": required_value,
+        "blocker": "" if ready else blocker,
+        "operator_action": "" if ready else operator_action,
+        "claim_promotion_allowed": False,
+        "candidate_csv_update_allowed": False,
+        "refinement_execution_enabled": False,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_boundary": CLAIM_BOUNDARY,
+    }
+
+
+def _claim_grade_requirement_rows(
+    summary: dict[str, Any],
+    rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    selected_count = int(summary.get("selected_top_k_count") or summary.get("refined_count") or 0)
+    required_metric_count = selected_count or MIN_CLAIM_GRADE_GREEN_ROWS
+    green_count = int(summary.get("green_row_count") or 0)
+    yellow_count = int(summary.get("yellow_row_count") or 0)
+    red_count = int(summary.get("red_row_count") or 0)
+    abstain_count = int(summary.get("abstain_row_count") or 0)
+    local_min_values = _value_list(rows, "local_min_ligand_rmsd_a")
+    hbond_values = _value_list(rows, "hbond_persistence")
+    contact_values = _value_list(rows, "contact_persistence")
+    initial_clash_values = _value_list(rows, "initial_clash_count")
+    final_clash_values = _value_list(rows, "clash_count")
+    clash_relief_values = _value_list(rows, "clash_relief_count")
+    adrb2_green_count = _target_green_count(rows, "ADRB2")
+    recovered_targets = sorted(
+        target_id
+        for target_id in REQUIRED_RECOVERED_TARGET_IDS
+        if _target_green_count(rows, target_id) > 0
+    )
+
+    requirement_rows = [
+        _claim_grade_requirement_row(
+            requirement_id="selected_top_k_minimum_met",
+            ready=selected_count >= MIN_CLAIM_GRADE_GREEN_ROWS,
+            observed_value=str(selected_count),
+            required_value=f">={MIN_CLAIM_GRADE_GREEN_ROWS}",
+            blocker=f"selected_top_k_rows_below_required:{selected_count}/{MIN_CLAIM_GRADE_GREEN_ROWS}",
+            operator_action="Collect claim-grade metrics for at least three selected top-k rows.",
+        ),
+        _claim_grade_requirement_row(
+            requirement_id="adrb2_three_collection_ready_rows",
+            ready=adrb2_green_count >= REQUIRED_ADRB2_GREEN_ROWS,
+            observed_value=str(adrb2_green_count),
+            required_value=f">={REQUIRED_ADRB2_GREEN_ROWS}",
+            blocker=f"adrb2_collection_ready_rows_below_required:{adrb2_green_count}/{REQUIRED_ADRB2_GREEN_ROWS}",
+            operator_action="Run bounded metric collection for three ADRB2 collection-ready rows.",
+        ),
+        _claim_grade_requirement_row(
+            requirement_id="drd3_oprd1_atom_frame_recovery",
+            ready=tuple(recovered_targets) == REQUIRED_RECOVERED_TARGET_IDS,
+            observed_value=",".join(recovered_targets),
+            required_value=",".join(REQUIRED_RECOVERED_TARGET_IDS),
+            blocker="drd3_oprd1_atom_frame_recovery_incomplete",
+            operator_action="Recover DRD3 and OPRD1 protein/ligand atom frames, then rerun metrics.",
+        ),
+        _claim_grade_requirement_row(
+            requirement_id="local_min_ligand_rmsd_ready",
+            ready=(
+                len(local_min_values) >= required_metric_count
+                and bool(local_min_values)
+                and max(local_min_values) <= LOCAL_MIN_SURVIVAL_RMSD_A
+            ),
+            observed_value=(
+                f"reported={len(local_min_values)}; "
+                f"max={max(local_min_values) if local_min_values else ''}"
+            ),
+            required_value=f"all selected rows reported and max<={LOCAL_MIN_SURVIVAL_RMSD_A}A",
+            blocker="local_min_ligand_rmsd_not_claim_grade",
+            operator_action="Recover exact local-min ligand RMSD for every selected top-k row.",
+        ),
+        _claim_grade_requirement_row(
+            requirement_id="hbond_persistence_ready",
+            ready=(
+                len(hbond_values) >= required_metric_count
+                and bool(hbond_values)
+                and min(hbond_values) >= HBOND_PERSISTENCE_MIN
+            ),
+            observed_value=(
+                f"reported={len(hbond_values)}; "
+                f"min={min(hbond_values) if hbond_values else ''}"
+            ),
+            required_value=f"all selected rows reported and min>={HBOND_PERSISTENCE_MIN}",
+            blocker="hbond_persistence_not_claim_grade",
+            operator_action="Recover H-bond persistence for every selected top-k row.",
+        ),
+        _claim_grade_requirement_row(
+            requirement_id="contact_persistence_ready",
+            ready=(
+                len(contact_values) >= required_metric_count
+                and bool(contact_values)
+                and min(contact_values) >= CONTACT_PERSISTENCE_MIN
+            ),
+            observed_value=(
+                f"reported={len(contact_values)}; "
+                f"min={min(contact_values) if contact_values else ''}"
+            ),
+            required_value=f"all selected rows reported and min>={CONTACT_PERSISTENCE_MIN}",
+            blocker="contact_persistence_not_claim_grade",
+            operator_action="Recover contact persistence for every selected top-k row.",
+        ),
+        _claim_grade_requirement_row(
+            requirement_id="clash_relief_ready",
+            ready=(
+                len(initial_clash_values) >= required_metric_count
+                and len(final_clash_values) >= required_metric_count
+                and len(clash_relief_values) >= required_metric_count
+                and bool(final_clash_values)
+                and max(final_clash_values) <= MAX_CLASH_COUNT
+            ),
+            observed_value=(
+                f"initial={len(initial_clash_values)}; final={len(final_clash_values)}; "
+                f"relief={len(clash_relief_values)}; "
+                f"final_max={max(final_clash_values) if final_clash_values else ''}"
+            ),
+            required_value=(
+                "initial/final/relief reported for all selected rows and "
+                f"final_clash_count<={MAX_CLASH_COUNT}"
+            ),
+            blocker="clash_relief_not_claim_grade",
+            operator_action="Recover initial/final clash counts and clash relief for every selected row.",
+        ),
+        _claim_grade_requirement_row(
+            requirement_id="green_yellow_red_abstain_banding_ready",
+            ready=(
+                selected_count >= MIN_CLAIM_GRADE_GREEN_ROWS
+                and green_count >= selected_count
+                and yellow_count == 0
+                and red_count == 0
+                and abstain_count == 0
+            ),
+            observed_value=(
+                f"green={green_count}; yellow={yellow_count}; red={red_count}; abstain={abstain_count}"
+            ),
+            required_value="all selected rows green; yellow/red/abstain=0",
+            blocker="claim_grade_banding_not_green",
+            operator_action="Review banding and recover missing or failed claim-grade metrics.",
+        ),
+    ]
+    contract_ready = all(row["ready"] for row in requirement_rows)
+    requirement_rows.append(
+        _claim_grade_requirement_row(
+            requirement_id="pocketmd_lite_claim_grade_contract_ready",
+            ready=contract_ready,
+            observed_value=str(contract_ready).lower(),
+            required_value="true",
+            blocker="pocketmd_lite_claim_grade_contract_not_ready",
+            operator_action="Close every PocketMD Lite claim-grade metric requirement.",
+        )
+    )
+    requirement_rows.append(
+        _claim_grade_requirement_row(
+            requirement_id="pocketmd_lite_claim_promotion_review_allowed",
+            ready=False,
+            observed_value="false",
+            required_value="explicit_human_review_after_contract_ready",
+            blocker="pocketmd_lite_claim_promotion_not_approved",
+            operator_action="Keep PocketMD Lite claim wording disabled until explicit review approval.",
+        )
+    )
+    return requirement_rows
+
+
+def _claim_grade_requirement_summary(requirement_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    blocked_rows = [row for row in requirement_rows if not row["ready"]]
+    primary = blocked_rows[0] if blocked_rows else {}
+    contract = next(
+        (
+            row
+            for row in requirement_rows
+            if row["requirement_id"] == "pocketmd_lite_claim_grade_contract_ready"
+        ),
+        {},
+    )
+    return {
+        "claim_grade_requirement_ids": list(CLAIM_GRADE_REQUIREMENT_IDS),
+        "claim_grade_requirement_row_count": len(requirement_rows),
+        "claim_grade_requirement_ready_row_count": len(requirement_rows) - len(blocked_rows),
+        "claim_grade_requirement_blocked_row_count": len(blocked_rows),
+        "claim_grade_primary_requirement_id": _text(primary.get("requirement_id")),
+        "claim_grade_primary_blocker": _text(primary.get("blocker")),
+        "claim_grade_primary_operator_action": _text(primary.get("operator_action")),
+        "pocketmd_lite_claim_grade_contract_ready": bool(contract.get("ready") is True),
+        "pocketmd_lite_claim_promotion_allowed": False,
     }
 
 
@@ -216,6 +460,8 @@ def build_pocketmd_lite_report_artifact(input_csv: str | Path) -> dict[str, Any]
             **_READ_ONLY_FLAGS,
         }
     )
+    claim_grade_requirement_rows = _claim_grade_requirement_rows(summary, report["rows"])
+    summary.update(_claim_grade_requirement_summary(claim_grade_requirement_rows))
     return {
         "packet_type": PACKET_TYPE,
         "schema_version": REPORT_SCHEMA_VERSION,
@@ -224,6 +470,7 @@ def build_pocketmd_lite_report_artifact(input_csv: str | Path) -> dict[str, Any]
         "detail": "",
         "summary": summary,
         "rows": report["rows"],
+        "claim_grade_requirement_rows": claim_grade_requirement_rows,
         "claim_boundary": CLAIM_BOUNDARY,
     }
 
@@ -246,6 +493,10 @@ def _render_markdown(artifact: dict[str, Any]) -> str:
         f"- candidate_count: `{summary.get('candidate_count')}`",
         f"- selected_top_k_count: `{summary.get('selected_top_k_count', 0)}`",
         f"- pocketmd_lite_claim_safe: `{str(summary.get('pocketmd_lite_claim_safe')).lower()}`",
+        f"- pocketmd_lite_claim_grade_contract_ready: `{str(summary.get('pocketmd_lite_claim_grade_contract_ready')).lower()}`",
+        f"- pocketmd_lite_claim_promotion_allowed: `{str(summary.get('pocketmd_lite_claim_promotion_allowed')).lower()}`",
+        f"- claim_grade_requirement_blocked_row_count: `{summary.get('claim_grade_requirement_blocked_row_count', 0)}`",
+        f"- claim_grade_primary_requirement_id: `{summary.get('claim_grade_primary_requirement_id', '')}`",
         f"- refinement_blocker_count: `{summary.get('refinement_blocker_count', 0)}`",
         f"- green_row_count: `{summary.get('green_row_count', 0)}`",
         f"- yellow_row_count: `{summary.get('yellow_row_count', 0)}`",
@@ -264,11 +515,39 @@ def _render_markdown(artifact: dict[str, Any]) -> str:
         "",
     ]
     if artifact["materializer_status"] != STATUS_MATERIALIZED:
+        lines.extend(
+            [
+                "## Claim-Grade Requirement Checklist",
+                "",
+                "| requirement | status | observed | required | blocker | action |",
+                "| --- | --- | --- | --- | --- | --- |",
+            ]
+        )
+        for row in artifact.get("claim_grade_requirement_rows", []):
+            lines.append(
+                f"| `{row['requirement_id']}` | `{row['status']}` | `{row['observed_value']}` | "
+                f"`{row['required_value']}` | `{row['blocker'] or '-'}` | {row['operator_action'] or '-'} |"
+            )
+        lines.append("")
         lines.append(f"> **Blocked (fail-closed):** {artifact['detail']}")
         return "\n".join(lines) + "\n"
 
     lines.extend(
         [
+            "## Claim-Grade Requirement Checklist",
+            "",
+            "| requirement | status | observed | required | blocker | action |",
+            "| --- | --- | --- | --- | --- | --- |",
+        ]
+    )
+    for row in artifact.get("claim_grade_requirement_rows", []):
+        lines.append(
+            f"| `{row['requirement_id']}` | `{row['status']}` | `{row['observed_value']}` | "
+            f"`{row['required_value']}` | `{row['blocker'] or '-'}` | {row['operator_action'] or '-'} |"
+        )
+    lines.extend(
+        [
+            "",
             "## Candidates",
             "",
             "| entry | band | selected | local-min RMSD | H-bond | contact | clash relief | uncertainty | reason |",
