@@ -298,22 +298,51 @@ def _external_receipt_blocker_rows(summary: dict[str, Any]) -> list[dict[str, An
     return blocker_rows
 
 
-def _receipt_attach_surface(packet: dict[str, Any]) -> dict[str, Any]:
+def _receipt_attach_surface(
+    packet: dict[str, Any],
+    *,
+    fallback_packet: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     summary = _summary(packet)
+    packet_present = bool(summary)
+    embedded_fallback = False
+    if not summary and isinstance(fallback_packet, dict):
+        fallback_summary = _summary(fallback_packet)
+        if fallback_summary:
+            summary = fallback_summary
+            packet = fallback_packet
+            embedded_fallback = True
     rows = packet.get("field_work_order_rows") if isinstance(packet.get("field_work_order_rows"), list) else []
     lane_rows = _receipt_attach_lane_rows(
-        packet.get("rows") if isinstance(packet.get("rows"), list) else []
+        packet.get("rows")
+        if packet_present and isinstance(packet.get("rows"), list)
+        else packet.get("receipt_attach_lane_rows")
+        if isinstance(packet.get("receipt_attach_lane_rows"), list)
+        else []
     )
     blocked_lane_rows = [row for row in lane_rows if row["operator_action_required"]]
     return {
         "receipt_attach_packet_artifact_path": str(PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT),
-        "receipt_attach_packet_present": bool(summary),
+        "receipt_attach_packet_present": packet_present,
+        "receipt_attach_embedded_in_audit": embedded_fallback,
         "receipt_attach_packet_status": str(summary.get("status") or ""),
         "receipt_attach_packet_ready": bool(summary.get("receipt_attach_packet_ready") is True),
-        "receipt_attach_blocker_count": _int(summary.get("blocker_count")),
+        "receipt_attach_blocker_count": _int(
+            summary.get("receipt_attach_blocker_count")
+            if summary.get("receipt_attach_blocker_count") is not None
+            else summary.get("blocker_count")
+        ),
         "receipt_attach_blockers": _string_list(summary.get("blockers")),
-        "receipt_attach_primary_blocker_id": str(summary.get("primary_blocker_id") or ""),
-        "receipt_attach_primary_blocker": str(summary.get("primary_blocker") or ""),
+        "receipt_attach_primary_blocker_id": str(
+            summary.get("receipt_attach_primary_blocker_id")
+            or summary.get("primary_blocker_id")
+            or ""
+        ),
+        "receipt_attach_primary_blocker": str(
+            summary.get("receipt_attach_primary_blocker")
+            or summary.get("primary_blocker")
+            or ""
+        ),
         "receipt_attach_next_required_step": str(summary.get("next_required_step") or ""),
         "receipt_attach_lane_row_count": len(lane_rows),
         "receipt_attach_blocked_lane_count": len(blocked_lane_rows),
@@ -409,7 +438,10 @@ async def get_product_external_metrics() -> dict[str, Any]:
 async def get_product_public_benchmark_external_receipts_audit() -> dict[str, Any]:
     packet = _read_json_object(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT)
     receipt_attach_packet = _read_json_object(PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT)
-    receipt_attach_surface = _receipt_attach_surface(receipt_attach_packet)
+    receipt_attach_surface = _receipt_attach_surface(
+        receipt_attach_packet,
+        fallback_packet=packet,
+    )
     summary = _summary(packet)
     rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
     if not summary:

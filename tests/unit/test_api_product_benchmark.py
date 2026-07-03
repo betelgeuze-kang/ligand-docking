@@ -403,6 +403,7 @@ def test_public_benchmark_external_receipts_endpoint_surfaces_attach_work_order(
     assert body["ready_step_count"] == 5
     assert body["blocked_step_count"] == 2
     assert body["receipt_attach_packet_present"] is True
+    assert body["receipt_attach_embedded_in_audit"] is False
     assert body["receipt_attach_packet_ready"] is False
     assert body["receipt_attach_blocker_count"] == 2
     assert body["receipt_attach_primary_blocker_id"] == "vina_gnina_same_input_scores"
@@ -440,3 +441,122 @@ def test_public_benchmark_external_receipts_endpoint_surfaces_attach_work_order(
     assert body["field_work_order_rows"][0]["claim_promotion_allowed"] is False
     assert body["metric_source_receipt_approval_token_pending_count"] == 51
     assert body["claim_promotion_allowed"] is False
+
+
+def test_public_benchmark_external_receipts_endpoint_falls_back_to_embedded_attach_rows(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import api.product_benchmark as mod
+
+    audit = tmp_path / "runs/public_benchmark_external_receipts_audit_current.json"
+    attach = tmp_path / "runs/public_benchmark_receipt_attach_packet_current.json"
+    monkeypatch.setattr(mod, "PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT", audit)
+    monkeypatch.setattr(mod, "PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_ARTIFACT", attach)
+    _write_json(
+        audit,
+        {
+            "summary": {
+                "status": "blocked_public_benchmark_external_receipts_audit",
+                "external_benchmark_receipts_ready": False,
+                "claim_promotion_allowed": False,
+                "step_count": 7,
+                "ready_step_count": 5,
+                "blocked_step_count": 2,
+                "blocker_count": 2,
+                "blockers": [
+                    "vina_gnina_same_input_comparison:vina_gnina_same_input_score_evidence_missing"
+                ],
+                "receipt_attach_packet_ready": False,
+                "receipt_attach_blocker_count": 2,
+                "receipt_attach_primary_blocker_id": "vina_gnina_same_input_scores",
+                "receipt_attach_primary_blocker": "vina_gnina_same_input_score_evidence_missing",
+                "field_work_order_ready": False,
+                "field_work_order_row_count": 1,
+                "field_work_order_pending_field_count": 16,
+                "field_work_order_primary_lane_id": "vina_gnina_same_input_scores",
+                "field_work_order_primary_field_name": "approval_token",
+                "field_work_order_primary_pending_row_count": 16,
+                "field_work_order_primary_required_value": (
+                    "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES for approval_token"
+                ),
+                "field_work_order_primary_required_action": (
+                    "Fill approval_token with "
+                    "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES after operator review."
+                ),
+                "field_work_order_primary_approval_token_required": (
+                    "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES"
+                ),
+                "field_work_order_primary_operator_csv": (
+                    "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                ),
+                "field_work_order_primary_source_artifact": (
+                    "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
+                ),
+            },
+            "rows": [],
+            "receipt_attach_lane_rows": [
+                {
+                    "lane_id": "vina_gnina_same_input_scores",
+                    "status": "blocked",
+                    "ready": False,
+                    "blocker": "vina_gnina_same_input_score_evidence_missing",
+                    "source_artifact": "runs/public_benchmark_vina_gnina_score_template_receipt_current.json",
+                    "operator_csv": (
+                        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                    ),
+                    "row_count": 16,
+                    "pending_value_count": 32,
+                    "pending_metadata_count": 128,
+                    "pending_license_count": 16,
+                    "pending_approval_token_count": 16,
+                    "approval_token_required": (
+                        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES"
+                    ),
+                    "next_required_step": "Fill every Vina/GNINA same-input score template row.",
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                }
+            ],
+            "field_work_order_rows": [
+                {
+                    "lane_id": "vina_gnina_same_input_scores",
+                    "field_name": "approval_token",
+                    "pending_row_count": 16,
+                    "source_artifact": "runs/public_benchmark_vina_gnina_score_template_receipt_current.json",
+                    "operator_csv": (
+                        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+                    ),
+                    "required_value": (
+                        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES for approval_token"
+                    ),
+                    "approval_token_required": (
+                        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES"
+                    ),
+                    "required_action": (
+                        "Fill approval_token with "
+                        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES after operator review."
+                    ),
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                }
+            ],
+        },
+    )
+
+    response = TestClient(app).get("/product/public-benchmark-external-receipts-audit")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["receipt_attach_packet_present"] is False
+    assert body["receipt_attach_embedded_in_audit"] is True
+    assert body["receipt_attach_lane_row_count"] == 1
+    assert body["receipt_attach_primary_blocker_id"] == "vina_gnina_same_input_scores"
+    assert body["receipt_attach_primary_blocked_lane_row"]["execution_enabled"] is False
+    assert body["field_work_order_row_count"] == 1
+    assert body["field_work_order_rows"][0]["field_name"] == "approval_token"
+    assert body["field_work_order_rows"][0]["execution_enabled"] is False
+    assert body["field_work_order_rows"][0]["external_state_mutated"] is False
+    assert body["field_work_order_rows"][0]["claim_promotion_allowed"] is False

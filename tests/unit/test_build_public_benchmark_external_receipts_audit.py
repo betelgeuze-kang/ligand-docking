@@ -99,6 +99,20 @@ def _write_inputs(
             "blocked_row_count": 0 if receipt_ready else receipt_rows,
             "receipt_manual_field_pending_count": 0 if receipt_ready else receipt_rows * 10,
             "receipt_approval_token_pending_count": 0 if receipt_ready else receipt_rows,
+            "receipt_metric_value_pending_count": 0 if receipt_ready else receipt_rows,
+            "receipt_method_pending_count": 0 if receipt_ready else receipt_rows,
+            "receipt_input_artifacts_reviewed_pending_count": 0 if receipt_ready else receipt_rows,
+            "receipt_input_artifact_sha256s_reviewed_pending_count": (
+                0 if receipt_ready else receipt_rows
+            ),
+            "receipt_metric_source_artifact_reviewed_pending_count": (
+                0 if receipt_ready else receipt_rows
+            ),
+            "receipt_payload_schema_reviewed_pending_count": 0 if receipt_ready else receipt_rows,
+            "receipt_license_ok_pending_count": 0 if receipt_ready else receipt_rows,
+            "receipt_operator_id_pending_count": 0 if receipt_ready else receipt_rows,
+            "receipt_reviewed_at_utc_pending_count": 0 if receipt_ready else receipt_rows,
+            "approval_token_required": "APPROVE_R9_STATISTICAL_SUPPORT_METRIC_SOURCE_PAYLOADS",
             "claim_promotion_allowed": receipt_ready,
         },
     )
@@ -119,6 +133,7 @@ def _write_inputs(
             "work_order_ready": True,
             "same_input_score_template_ready": True,
             "score_template_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
+            "score_template_row_count": 16,
             "score_template_validation_ready": comparison_ready,
             "score_template_filled_score_row_count": 16 if comparison_ready else 0,
             "score_value_pending_count": 0 if comparison_ready else 32,
@@ -169,6 +184,7 @@ def _write_inputs(
             else "blocked_public_benchmark_vina_gnina_score_template_receipt",
             "score_template_receipt_ready": comparison_ready,
             "score_template_csv": "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv",
+            "score_template_row_count": 16,
             "score_template_validation_ready": comparison_ready,
             "score_template_filled_score_row_count": 16 if comparison_ready else 0,
             "score_value_pending_count": 0 if comparison_ready else 32,
@@ -260,6 +276,37 @@ def test_public_benchmark_external_receipts_audit_blocks_unapproved_receipts(
     assert summary["vina_gnina_score_template_csv"] == (
         "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
     )
+    assert summary["receipt_attach_packet_ready"] is False
+    assert summary["receipt_attach_lane_row_count"] == 2
+    assert summary["receipt_attach_blocked_lane_count"] == 2
+    assert summary["receipt_attach_primary_blocker_id"] == "vina_gnina_same_input_scores"
+    assert summary["receipt_attach_primary_blocker"] == "vina_gnina_same_input_score_evidence_missing"
+    assert summary["receipt_attach_primary_operator_csv"] == (
+        "runs/public_benchmark_vina_gnina_same_input_scores_template_current.csv"
+    )
+    assert summary["field_work_order_ready"] is False
+    assert summary["field_work_order_row_count"] == 22
+    assert summary["field_work_order_pending_field_count"] == 702
+    assert summary["field_work_order_primary_lane_id"] == "vina_gnina_same_input_scores"
+    assert summary["field_work_order_primary_field_name"] == "approval_token"
+    assert summary["field_work_order_primary_pending_row_count"] == 16
+    assert summary["field_work_order_primary_required_value"] == (
+        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES for approval_token"
+    )
+    assert summary["field_work_order_primary_approval_token_required"] == (
+        "APPROVE_PUBLIC_BENCHMARK_VINA_GNINA_SAME_INPUT_SCORES"
+    )
+    assert payload["receipt_attach_lane_rows"][0]["operator_action_required"] is True
+    assert payload["receipt_attach_lane_rows"][0]["execution_enabled"] is False
+    assert payload["receipt_attach_lane_rows"][0]["external_state_mutated"] is False
+    assert payload["receipt_attach_lane_rows"][0]["claim_promotion_allowed"] is False
+    assert payload["field_work_order_rows"][0]["field_name"] == "approval_token"
+    assert payload["field_work_order_rows"][0]["pending_row_count"] == 16
+    assert payload["field_work_order_rows"][0]["execution_enabled"] is False
+    assert payload["field_work_order_rows"][0]["external_state_mutated"] is False
+    assert payload["field_work_order_rows"][0]["claim_promotion_allowed"] is False
+    assert payload["field_work_order_rows"][-1]["lane_id"] == "metric_source_receipt_rows"
+    assert payload["field_work_order_rows"][-1]["field_name"] == "approval_token"
     assert rows["vina_gnina_same_input_comparison"]["blocker"] == (
         "vina_gnina_same_input_score_evidence_missing"
     )
@@ -284,6 +331,12 @@ def test_public_benchmark_external_receipts_audit_ready_when_all_steps_pass(
     assert summary["vina_gnina_score_value_pending_count"] == 0
     assert summary["vina_gnina_pending_field_count"] == 0
     assert summary["receipt_blocked_row_count"] == 0
+    assert summary["receipt_attach_packet_ready"] is True
+    assert summary["receipt_attach_blocked_lane_count"] == 0
+    assert summary["field_work_order_ready"] is True
+    assert summary["field_work_order_row_count"] == 0
+    assert payload["receipt_attach_lane_rows"][0]["ready"] is True
+    assert payload["field_work_order_rows"] == []
     assert summary["claim_promotion_allowed"] is False
 
 
@@ -326,5 +379,10 @@ def test_public_benchmark_external_receipts_audit_cli_writes_outputs(tmp_path: P
 
     written = json.loads(out_json.read_text(encoding="utf-8"))
     assert written["summary"]["status"] == "blocked_public_benchmark_external_receipts_audit"
+    assert written["summary"]["field_work_order_row_count"] == 22
+    assert written["field_work_order_rows"][0]["field_name"] == "approval_token"
     assert "vina_gnina_same_input_comparison" in out_csv.read_text(encoding="utf-8")
-    assert "Public Benchmark External Receipts Audit" in out_md.read_text(encoding="utf-8")
+    md = out_md.read_text(encoding="utf-8")
+    assert "Public Benchmark External Receipts Audit" in md
+    assert "Receipt Attach Lanes" in md
+    assert "Field Work Order" in md
