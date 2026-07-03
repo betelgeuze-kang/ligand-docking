@@ -92,6 +92,12 @@ contain top-k rows before expensive refinement evidence exists; those rows
 `abstain` until local-min survival, contact persistence, H-bond persistence,
 baseline/final clash counts, and clash relief are supplied.
 
+When the exact bounded metric collector supplies final clash counts, the
+claim-grade preview must use those exact final clash counts even if the older
+stage3/contact-clash candidate row already contains `clash_count=0`. Residual
+exact clashes downgrade the row to review/blocked banding; a pre-existing
+stage3 zero must not create a green band.
+
 ```
 python3 tools/product/build_pocketmd_lite_stage3_contact_clash_intake.py
 python3 tools/product/build_pocketmd_lite_report.py

@@ -49,7 +49,7 @@ def _write_rank_selected_candidate_csv(path: Path) -> None:
         writer.writerows(rows)
 
 
-def _write_probe(path: Path, *, claim_ready: bool) -> None:
+def _write_probe(path: Path, *, claim_ready: bool, exact_clash_count: int | None = None) -> None:
     row = {
         "entry_id": "T:L",
         "claim_grade_metric_ready": claim_ready,
@@ -69,6 +69,8 @@ def _write_probe(path: Path, *, claim_ready: bool) -> None:
                 "exact_initial_clash_count": 2,
             }
         )
+        if exact_clash_count is not None:
+            row["exact_clash_count"] = exact_clash_count
     path.write_text(
         json.dumps(
             {
@@ -160,6 +162,40 @@ def test_candidate_metric_fill_preview_writes_report_ready_candidate_csv(tmp_pat
     report = build_pocketmd_lite_report.build_pocketmd_lite_report_artifact(out_candidate_csv)
     assert report["summary"]["status"] == "pocketmd_lite_report_ready"
     assert report["rows"][0]["band"] == "green"
+
+
+def test_candidate_metric_fill_preview_uses_exact_final_clash_count_over_stage3_zero(
+    tmp_path: Path,
+) -> None:
+    candidate_csv = tmp_path / "candidates.csv"
+    probe_json = tmp_path / "probe.json"
+    out_candidate_csv = tmp_path / "preview.candidates.csv"
+    _write_candidate_csv(candidate_csv)
+    _write_probe(probe_json, claim_ready=True, exact_clash_count=3)
+
+    payload = mod.build_pocketmd_lite_candidate_metric_fill_preview(
+        candidate_csv=candidate_csv,
+        probe_json=probe_json,
+        out_candidate_csv=out_candidate_csv,
+    )
+    mod.write_outputs(
+        payload,
+        out_json=tmp_path / "preview.json",
+        out_md=tmp_path / "preview.md",
+        out_csv=tmp_path / "preview.rows.csv",
+        out_candidate_csv=out_candidate_csv,
+    )
+
+    row = payload["rows"][0]
+    assert row["proposed_clash_count"] == 3
+    assert row["overridden_metric_names"] == ["clash_count"]
+    preview_rows = list(csv.DictReader(out_candidate_csv.open(encoding="utf-8")))
+    assert preview_rows[0]["clash_count"] == "3"
+
+    report = build_pocketmd_lite_report.build_pocketmd_lite_report_artifact(out_candidate_csv)
+    assert report["summary"]["status"] == "blocked_pocketmd_lite_report"
+    assert report["rows"][0]["band"] == "yellow"
+    assert report["rows"][0]["review_flags"] == ["residual_clash"]
 
 
 def test_candidate_metric_fill_preview_cli_writes_outputs(tmp_path: Path) -> None:

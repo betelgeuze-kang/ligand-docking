@@ -33,7 +33,9 @@ SCHEMA_VERSION = "pocketmd_lite_candidate_metric_fill_preview_v1"
 CLAIM_BOUNDARY = (
     "PocketMD Lite candidate metric fill preview only. It copies the candidate CSV into a separate preview "
     "artifact and fills claim-grade local-min, H-bond, and baseline clash fields only from explicit exact metric "
-    "probe fields. It does not accept coarse proxy telemetry as claim-grade evidence, does not mutate the "
+    "probe fields. Exact claim-grade probe fields supersede older stage3/proxy candidate values for the preview "
+    "so residual final clashes cannot be hidden by a pre-existing zero clash count. It does not accept coarse "
+    "proxy telemetry as claim-grade evidence, does not mutate the "
     "canonical candidate CSV, does not run local-min or micro-MD, does not promote claims, and does not mutate "
     "external state."
 )
@@ -73,6 +75,7 @@ ROW_CSV_COLUMNS = [
     "claim_grade_metric_ready",
     "fill_ready",
     "blocked_metric_names",
+    "overridden_metric_names",
     "proposed_metric_names",
     "proposed_local_min_ligand_rmsd_a",
     "proposed_hbond_persistence",
@@ -90,6 +93,8 @@ PREVIEW_METADATA_COLUMNS = [
     "pocketmd_lite_metric_fill_source_probe_status",
     "pocketmd_lite_metric_fill_source_npz",
 ]
+
+EXACT_METRIC_PRECEDENCE_COLUMNS = frozenset(PROBE_TO_CANDIDATE_METRICS.values())
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -149,6 +154,14 @@ def _fmt(value: Any) -> str:
     return str(value)
 
 
+def _same_num(left: Any, right: Any) -> bool:
+    left_num = _num(left)
+    right_num = _num(right)
+    if left_num is None or right_num is None:
+        return _text(left) == _text(right)
+    return math.isclose(left_num, right_num, rel_tol=1.0e-9, abs_tol=1.0e-9)
+
+
 def _read_json(path_like: str | Path) -> dict[str, Any]:
     path = _resolve(path_like)
     try:
@@ -187,12 +200,21 @@ def _proposed_metrics(candidate_row: dict[str, Any], probe_row: dict[str, Any]) 
         value = _num(probe_row.get(probe_key))
         if value is None:
             continue
-        # Keep reviewed canonical values if they are already present; this
-        # preview fills gaps rather than overwriting existing evidence.
-        if _text(candidate_row.get(candidate_key)):
+        if _text(candidate_row.get(candidate_key)) and (
+            candidate_key not in EXACT_METRIC_PRECEDENCE_COLUMNS
+            or _same_num(candidate_row.get(candidate_key), value)
+        ):
             continue
         proposed[candidate_key] = value
     return proposed
+
+
+def _overridden_metrics(candidate_row: dict[str, Any], proposed: dict[str, float]) -> list[str]:
+    return sorted(
+        metric
+        for metric, value in proposed.items()
+        if _text(candidate_row.get(metric)) and not _same_num(candidate_row.get(metric), value)
+    )
 
 
 def _blocked_metrics(candidate_row: dict[str, Any], proposed: dict[str, float]) -> list[str]:
@@ -215,7 +237,7 @@ def _preview_candidate_rows(
         fill = fill_by_entry.get(_text(candidate.get("entry_id")), {})
         for metric in (*REQUIRED_FILL_METRICS, *OPTIONAL_FILL_METRICS):
             proposed_value = fill.get(f"proposed_{metric}")
-            if proposed_value is not None and not _text(row.get(metric)):
+            if proposed_value is not None:
                 row[metric] = _fmt(proposed_value)
         row["pocketmd_lite_metric_fill_status"] = (
             "filled_from_claim_grade_probe" if fill.get("fill_ready") is True else "not_filled"
@@ -243,6 +265,7 @@ def build_pocketmd_lite_candidate_metric_fill_preview(
         entry_id = _text(candidate.get("entry_id"))
         probe_row = probe_rows.get(entry_id, {})
         proposed = _proposed_metrics(candidate, probe_row)
+        overridden_metrics = _overridden_metrics(candidate, proposed)
         blocked_metrics = _blocked_metrics(candidate, proposed)
         claim_ready = bool(probe_row.get("claim_grade_metric_ready") is True)
         fill_ready = bool(claim_ready and not blocked_metrics)
@@ -261,6 +284,7 @@ def build_pocketmd_lite_candidate_metric_fill_preview(
                 "claim_grade_metric_ready": claim_ready,
                 "fill_ready": fill_ready,
                 "blocked_metric_names": blocked_metrics,
+                "overridden_metric_names": overridden_metrics,
                 "proposed_metric_names": sorted(proposed),
                 "proposed_local_min_ligand_rmsd_a": proposed.get("local_min_ligand_rmsd_a"),
                 "proposed_hbond_persistence": proposed.get("hbond_persistence"),
@@ -309,6 +333,9 @@ def build_pocketmd_lite_candidate_metric_fill_preview(
         "preview_candidate_csv_ready": bool(fill_rows),
         "blocked_metric_names": sorted(
             {metric for row in fill_rows for metric in row["blocked_metric_names"]}
+        ),
+        "overridden_metric_names": sorted(
+            {metric for row in fill_rows for metric in row["overridden_metric_names"]}
         ),
         "next_required_step": (
             "Run the PocketMD Lite report against the preview candidate CSV and review the top-k bands."
@@ -370,20 +397,22 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- fill_ready_row_count: `{summary['fill_ready_row_count']}`",
         f"- blocked_fill_row_count: `{summary['blocked_fill_row_count']}`",
         f"- blocked_metric_names: `{', '.join(summary['blocked_metric_names']) or '(none)'}`",
+        f"- overridden_metric_names: `{', '.join(summary['overridden_metric_names']) or '(none)'}`",
         f"- preview_candidate_csv: `{summary['preview_candidate_csv']}`",
         f"- canonical_candidate_csv_mutated: `{str(summary['canonical_candidate_csv_mutated']).lower()}`",
         "",
         "## Rows",
         "",
-        "| entry | fill ready | proposed metrics | blocked metrics | source |",
-        "| --- | --- | --- | --- | --- |",
+        "| entry | fill ready | proposed metrics | overridden metrics | blocked metrics | source |",
+        "| --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
-            "| `{entry}` | `{ready}` | `{proposed}` | `{blocked}` | `{source}` |".format(
+            "| `{entry}` | `{ready}` | `{proposed}` | `{overridden}` | `{blocked}` | `{source}` |".format(
                 entry=row["entry_id"],
                 ready=str(row["fill_ready"]).lower(),
                 proposed=", ".join(row["proposed_metric_names"]) or "(none)",
+                overridden=", ".join(row["overridden_metric_names"]) or "(none)",
                 blocked=", ".join(row["blocked_metric_names"]) or "(none)",
                 source=row["source_trajectory_npz"] or "(none)",
             )
