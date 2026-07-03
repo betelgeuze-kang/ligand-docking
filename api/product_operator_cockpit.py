@@ -688,6 +688,33 @@ def _release_operator_action_rows(value: Any) -> list[dict[str, Any]]:
     return action_rows
 
 
+def _release_decision_rows(value: Any) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    decision_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        decision_rows.append(
+            {
+                "lane_id": str(row.get("lane_id") or ""),
+                "check": str(row.get("check") or ""),
+                "status": str(row.get("status") or ""),
+                "release_blocker": bool(row.get("release_blocker") is True),
+                "artifact_path": str(row.get("artifact_path") or ""),
+                "required": str(row.get("required") or ""),
+                "observed": str(row.get("observed") or ""),
+                "reason": str(row.get("reason") or ""),
+                "action_executed": False,
+                "delete_executed": False,
+                "outbound_email_enabled": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return decision_rows
+
+
 def _pr38_split_surface() -> dict[str, Any]:
     acceptance_packet = _read_json_object(PR38_SPLIT_ACCEPTANCE_PACKET_ARTIFACT)
     matrix_packet = _read_json_object(PR38_CHILD_PR_VERIFICATION_MATRIX_ARTIFACT)
@@ -1004,6 +1031,16 @@ def _missing_response() -> dict[str, Any]:
         "release_operator_action_primary_required_input": "",
         "release_operator_action_primary_command": "",
         "release_operator_action_rows": [],
+        "release_decision_present": False,
+        "release_decision_status": "",
+        "release_decision_release_allowed": False,
+        "release_decision_restricted_release_allowed": False,
+        "release_decision_blocker_count": 0,
+        "release_decision_primary_blocker_check": "",
+        "release_decision_primary_blocker_reason": "",
+        "release_decision_primary_blocker_required": "",
+        "release_decision_primary_blocker_artifact": "",
+        "release_decision_rows": [],
         "pr38_split_acceptance_artifact_path": str(PR38_SPLIT_ACCEPTANCE_PACKET_ARTIFACT),
         "pr38_split_acceptance_present": False,
         "pr38_split_acceptance_status": "",
@@ -1622,6 +1659,32 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "release_operator_action_rows": _release_operator_action_rows(
             summary.get("release_operator_action_rows")
+        ),
+        "release_decision_present": bool(summary.get("release_decision_present") is True),
+        "release_decision_status": str(summary.get("release_decision_status") or ""),
+        "release_decision_release_allowed": bool(
+            summary.get("release_decision_release_allowed") is True
+        ),
+        "release_decision_restricted_release_allowed": bool(
+            summary.get("release_decision_restricted_release_allowed") is True
+        ),
+        "release_decision_blocker_count": _int(
+            summary.get("release_decision_blocker_count")
+        ),
+        "release_decision_primary_blocker_check": str(
+            summary.get("release_decision_primary_blocker_check") or ""
+        ),
+        "release_decision_primary_blocker_reason": str(
+            summary.get("release_decision_primary_blocker_reason") or ""
+        ),
+        "release_decision_primary_blocker_required": str(
+            summary.get("release_decision_primary_blocker_required") or ""
+        ),
+        "release_decision_primary_blocker_artifact": str(
+            summary.get("release_decision_primary_blocker_artifact") or ""
+        ),
+        "release_decision_rows": _release_decision_rows(
+            summary.get("release_decision_rows")
         ),
         **_pr38_split_surface(),
         "release_allowed": bool(summary.get("release_allowed") is True),

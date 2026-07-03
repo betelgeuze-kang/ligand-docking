@@ -972,6 +972,45 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                         "claim_boundary": "unsafe fixture value should be preserved as text only",
                     }
                 ],
+                "release_decision_present": True,
+                "release_decision_status": "blocked_goal_release_decision",
+                "release_decision_release_allowed": False,
+                "release_decision_restricted_release_allowed": False,
+                "release_decision_blocker_count": 1,
+                "release_decision_primary_blocker_check": (
+                    "third_party_license_review_gate_recorded"
+                ),
+                "release_decision_primary_blocker_reason": (
+                    "The final release decision must keep JSZip dual-license "
+                    "redistribution review visible as an operator/legal boundary."
+                ),
+                "release_decision_primary_blocker_required": (
+                    "third-party license review gate ready for JSZip"
+                ),
+                "release_decision_primary_blocker_artifact": (
+                    "runs/third_party_license_review_gate_current.json"
+                ),
+                "release_decision_rows": [
+                    {
+                        "lane_id": "commercial_product_release",
+                        "check": "third_party_license_review_gate_recorded",
+                        "status": "fail",
+                        "release_blocker": True,
+                        "artifact_path": "runs/third_party_license_review_gate_current.json",
+                        "required": "third-party license review gate ready for JSZip",
+                        "observed": "third_party_license_review_gate_ready;review_csv_present=false",
+                        "reason": (
+                            "The final release decision must keep JSZip dual-license "
+                            "redistribution review visible as an operator/legal boundary."
+                        ),
+                        "action_executed": True,
+                        "delete_executed": True,
+                        "outbound_email_enabled": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    }
+                ],
                 "release_allowed": False,
                 "next_required_step": "Keep claims locked.",
                 "claim_boundary": "cockpit boundary",
@@ -1858,6 +1897,48 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
             "claim_boundary": "unsafe fixture value should be preserved as text only",
         }
     ]
+    assert response["release_decision_present"] is True
+    assert response["release_decision_status"] == "blocked_goal_release_decision"
+    assert response["release_decision_release_allowed"] is False
+    assert response["release_decision_restricted_release_allowed"] is False
+    assert response["release_decision_blocker_count"] == 1
+    assert (
+        response["release_decision_primary_blocker_check"]
+        == "third_party_license_review_gate_recorded"
+    )
+    assert response["release_decision_primary_blocker_reason"] == (
+        "The final release decision must keep JSZip dual-license "
+        "redistribution review visible as an operator/legal boundary."
+    )
+    assert (
+        response["release_decision_primary_blocker_required"]
+        == "third-party license review gate ready for JSZip"
+    )
+    assert (
+        response["release_decision_primary_blocker_artifact"]
+        == "runs/third_party_license_review_gate_current.json"
+    )
+    assert response["release_decision_rows"] == [
+        {
+            "lane_id": "commercial_product_release",
+            "check": "third_party_license_review_gate_recorded",
+            "status": "fail",
+            "release_blocker": True,
+            "artifact_path": "runs/third_party_license_review_gate_current.json",
+            "required": "third-party license review gate ready for JSZip",
+            "observed": "third_party_license_review_gate_ready;review_csv_present=false",
+            "reason": (
+                "The final release decision must keep JSZip dual-license "
+                "redistribution review visible as an operator/legal boundary."
+            ),
+            "action_executed": False,
+            "delete_executed": False,
+            "outbound_email_enabled": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
+    ]
     assert response["pr38_split_acceptance_present"] is True
     assert response["pr38_split_acceptance_status"] == "pr38_split_acceptance_packet_ready"
     assert response["pr38_split_acceptance_ready"] is True
@@ -2149,6 +2230,16 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["release_operator_action_primary_required_input"] == ""
     assert response["release_operator_action_primary_command"] == ""
     assert response["release_operator_action_rows"] == []
+    assert response["release_decision_present"] is False
+    assert response["release_decision_status"] == ""
+    assert response["release_decision_release_allowed"] is False
+    assert response["release_decision_restricted_release_allowed"] is False
+    assert response["release_decision_blocker_count"] == 0
+    assert response["release_decision_primary_blocker_check"] == ""
+    assert response["release_decision_primary_blocker_reason"] == ""
+    assert response["release_decision_primary_blocker_required"] == ""
+    assert response["release_decision_primary_blocker_artifact"] == ""
+    assert response["release_decision_rows"] == []
     assert response["pr38_split_acceptance_present"] is False
     assert response["pr38_split_acceptance_status"] == ""
     assert response["pr38_split_acceptance_ready"] is False

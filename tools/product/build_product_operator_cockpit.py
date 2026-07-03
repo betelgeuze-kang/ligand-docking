@@ -22,6 +22,7 @@ DEFAULT_PUBLIC_BENCHMARK_JSON = "runs/public_benchmark_external_receipts_audit_c
 DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON = (
     "runs/public_benchmark_receipt_attach_packet_current.json"
 )
+DEFAULT_GOAL_RELEASE_DECISION_JSON = "runs/goal_release_decision_gate_current.json"
 DEFAULT_RELEASE_ACTIONS_JSON = "runs/goal_operator_action_board_current.json"
 DEFAULT_PM_PRIORITY_QUEUE_JSON = ".betelgeuze/pm_priority_queue_status_current.json"
 DEFAULT_EVIDENCE_BUNDLE_JSON = "runs/ai_md_product_evidence_bundle_current.json"
@@ -749,6 +750,30 @@ def _developer_preview_receipt_work_order_rows(payload: dict[str, Any]) -> list[
     return rows
 
 
+def _release_decision_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _rows(payload):
+        rows.append(
+            {
+                "lane_id": _text(row.get("lane_id")),
+                "check": _text(row.get("check")),
+                "status": _text(row.get("status")),
+                "release_blocker": _bool_true(row.get("release_blocker")),
+                "artifact_path": _text(row.get("artifact_path")),
+                "required": _text(row.get("required")),
+                "observed": _text(row.get("observed")),
+                "reason": _text(row.get("reason")),
+                "action_executed": False,
+                "delete_executed": False,
+                "outbound_email_enabled": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return rows
+
+
 def _release_operator_action_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in _rows(payload):
@@ -1342,6 +1367,7 @@ def build_product_operator_cockpit(
     public_benchmark_receipt_attach_packet_json: str | Path = (
         DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON
     ),
+    goal_release_decision_json: str | Path = DEFAULT_GOAL_RELEASE_DECISION_JSON,
     release_actions_json: str | Path = DEFAULT_RELEASE_ACTIONS_JSON,
     pm_priority_queue_json: str | Path = DEFAULT_PM_PRIORITY_QUEUE_JSON,
     evidence_bundle_json: str | Path = DEFAULT_EVIDENCE_BUNDLE_JSON,
@@ -1391,6 +1417,9 @@ def build_product_operator_cockpit(
     public_benchmark_receipt_attach_lane_rows = (
         _public_benchmark_receipt_attach_lane_rows(public_receipt_attach_payload)
     )
+    release_decision_payload = _read_json(goal_release_decision_json, root=root)
+    release_decision = _summary(release_decision_payload)
+    release_decision_row_preview = _release_decision_rows(release_decision_payload)
     release_actions_payload = _read_json(release_actions_json, root=root)
     release_actions = _summary(release_actions_payload)
     release_operator_action_row_preview = _release_operator_action_rows(
@@ -1457,11 +1486,41 @@ def build_product_operator_cockpit(
     )
 
     goal_present = bool(goal)
-    release_allowed = _bool_true(
-        release_actions.get("goal_release_allowed")
-        or release_actions.get("release_allowed")
-        or goal.get("release_allowed")
+    release_decision_present = bool(release_decision)
+    release_decision_release_allowed = _bool_true(release_decision.get("release_allowed"))
+    release_decision_restricted_release_allowed = _bool_true(
+        release_decision.get("restricted_release_allowed")
     )
+    release_decision_blocker_count = _int(release_decision.get("blocker_count"))
+    release_decision_blocker_rows = [
+        row
+        for row in release_decision_row_preview
+        if row["release_blocker"] or _text(row["status"]).lower() != "pass"
+    ]
+    release_decision_primary_blocker_row = (
+        release_decision_blocker_rows[0] if release_decision_blocker_rows else {}
+    )
+    release_decision_primary_blocker_check = _first_text(
+        release_decision_primary_blocker_row.get("check")
+        if release_decision_primary_blocker_row
+        else ""
+    )
+    release_decision_primary_blocker_reason = _first_text(
+        release_decision_primary_blocker_row.get("reason")
+        if release_decision_primary_blocker_row
+        else ""
+    )
+    release_decision_primary_blocker_required = _first_text(
+        release_decision_primary_blocker_row.get("required")
+        if release_decision_primary_blocker_row
+        else ""
+    )
+    release_decision_primary_blocker_artifact = _first_text(
+        release_decision_primary_blocker_row.get("artifact_path")
+        if release_decision_primary_blocker_row
+        else ""
+    )
+    release_allowed = bool(release_decision_present and release_decision_release_allowed)
     goal_operator_pending_count = _int(goal.get("operator_or_external_pending_lane_count"))
     goal_readiness_row_count = len(goal_readiness_row_preview)
     goal_readiness_action_required_row_count = sum(
@@ -2523,17 +2582,33 @@ def build_product_operator_cockpit(
             claim_allowed=release_panel_claim_allowed,
             primary_metric=_join_metrics(
                 _metric("release_allowed", release_allowed),
+                _metric(
+                    "restricted_release_allowed",
+                    release_decision_restricted_release_allowed,
+                ),
+                _metric("decision_release_allowed", release_decision_release_allowed),
+                _count_metric("decision_blockers", release_decision_blocker_count),
                 _metric("release_blockers", release_blocker_count),
                 _metric("pm_queue_status", pm_queue.get("status")),
                 _count_metric("pm_queue_blocked_items", pm_queue_blocked_count),
             ),
             secondary_metric=_join_metrics(
                 _metric("primary_action", release_actions.get("primary_action_id")),
-                _metric("decision_gate", release_actions.get("goal_release_decision_gate_status")),
+                _metric(
+                    "decision_gate",
+                    _first_text(
+                        release_decision.get("status"),
+                        release_actions.get("goal_release_decision_gate_status"),
+                    ),
+                ),
+                _metric("decision_primary_check", release_decision_primary_blocker_check),
+                _metric("decision_primary_reason", release_decision_primary_blocker_reason),
+                _metric("decision_primary_artifact", release_decision_primary_blocker_artifact),
                 _metric("pm_first_blocked_item", pm_queue_first_blocked_item_id),
                 _metric("pm_first_blocker", pm_queue_first_blocker),
             ),
             next_action=_first_text(
+                release_decision.get("next_required_step") if not release_allowed else "",
                 pm_queue_first_action if pm_queue_blocked else "",
                 release_actions.get("primary_action_recommended_action"),
                 release_actions.get("next_required_step"),
@@ -2542,9 +2617,17 @@ def build_product_operator_cockpit(
             allowed_claim_text="Operator actions can be displayed as release blockers.",
             disallowed_claim_text="Release or paid-pilot wording remains disallowed while release_allowed=false.",
             blockers=(
-                [pm_queue_first_blocker or "pm_priority_queue_blocked"]
-                if pm_queue_blocked
-                else ([] if release_allowed else ["goal_release_allowed_false"])
+                [
+                    blocker
+                    for blocker in [
+                        release_decision_primary_blocker_reason
+                        if not release_allowed
+                        else "",
+                        pm_queue_first_blocker if pm_queue_blocked else "",
+                    ]
+                    if blocker
+                ]
+                or ([] if release_allowed else ["goal_release_allowed_false"])
             ),
             claim_boundary=_text(release_actions.get("claim_boundary")) or CLAIM_BOUNDARY,
             root=root,
@@ -3140,11 +3223,23 @@ def build_product_operator_cockpit(
             first_release_operator_action_row.get("command")
         ),
         "release_operator_action_rows": release_operator_action_row_preview,
+        "release_decision_present": release_decision_present,
+        "release_decision_status": _text(release_decision.get("status")),
+        "release_decision_release_allowed": release_decision_release_allowed,
+        "release_decision_restricted_release_allowed": (
+            release_decision_restricted_release_allowed
+        ),
+        "release_decision_blocker_count": release_decision_blocker_count,
+        "release_decision_primary_blocker_check": release_decision_primary_blocker_check,
+        "release_decision_primary_blocker_reason": release_decision_primary_blocker_reason,
+        "release_decision_primary_blocker_required": release_decision_primary_blocker_required,
+        "release_decision_primary_blocker_artifact": release_decision_primary_blocker_artifact,
+        "release_decision_rows": release_decision_row_preview,
         "release_allowed": release_allowed,
-        "next_required_step": (
-            pm_queue_first_action
-            if pm_queue_blocked
-            else (action_panels[0]["next_action"] if action_panels else "")
+        "next_required_step": _first_text(
+            release_decision.get("next_required_step") if not release_allowed else "",
+            pm_queue_first_action if pm_queue_blocked else "",
+            action_panels[0]["next_action"] if action_panels else "",
         ),
         "execution_enabled": False,
         "docking_results_emitted": False,
@@ -3182,6 +3277,10 @@ def _parser() -> argparse.ArgumentParser:
         "--public-benchmark-receipt-attach-packet-json",
         default=DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON,
     )
+    parser.add_argument(
+        "--goal-release-decision-json",
+        default=DEFAULT_GOAL_RELEASE_DECISION_JSON,
+    )
     parser.add_argument("--release-actions-json", default=DEFAULT_RELEASE_ACTIONS_JSON)
     parser.add_argument("--pm-priority-queue-json", default=DEFAULT_PM_PRIORITY_QUEUE_JSON)
     parser.add_argument("--evidence-bundle-json", default=DEFAULT_EVIDENCE_BUNDLE_JSON)
@@ -3214,6 +3313,7 @@ def main(argv: list[str] | None = None) -> int:
         pocketmd_json=args.pocketmd_json,
         public_benchmark_json=args.public_benchmark_json,
         public_benchmark_receipt_attach_packet_json=args.public_benchmark_receipt_attach_packet_json,
+        goal_release_decision_json=args.goal_release_decision_json,
         release_actions_json=args.release_actions_json,
         pm_priority_queue_json=args.pm_priority_queue_json,
         evidence_bundle_json=args.evidence_bundle_json,

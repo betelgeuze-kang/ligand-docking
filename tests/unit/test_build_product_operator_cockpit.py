@@ -25,6 +25,7 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         "pocketmd": tmp_path / "runs/pocketmd_lite_topk_refinement_audit_current.json",
         "public": tmp_path / "runs/public_benchmark_external_receipts_audit_current.json",
         "public_attach": tmp_path / "runs/public_benchmark_receipt_attach_packet_current.json",
+        "release_decision": tmp_path / "runs/goal_release_decision_gate_current.json",
         "release": tmp_path / "runs/goal_operator_action_board_current.json",
         "pm_queue": tmp_path / ".betelgeuze/pm_priority_queue_status_current.json",
         "bundle": tmp_path / "runs/ai_md_product_evidence_bundle_current.json",
@@ -490,11 +491,45 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         },
     )
     _write_json(
+        paths["release_decision"],
+        {
+            "summary": {
+                "status": "blocked_goal_release_decision",
+                "release_allowed": False,
+                "restricted_release_allowed": False,
+                "blocker_count": 1,
+                "next_required_step": "Clear third-party license review gate before release.",
+                "claim_boundary": "release decision fixture boundary",
+            },
+            "rows": [
+                {
+                    "lane_id": "commercial_product_release",
+                    "check": "third_party_license_review_gate_recorded",
+                    "status": "fail",
+                    "release_blocker": True,
+                    "artifact_path": "runs/third_party_license_review_gate_current.json",
+                    "required": "third-party license review gate ready for JSZip",
+                    "observed": "third_party_license_review_gate_ready;review_csv_present=false",
+                    "reason": (
+                        "The final release decision must keep JSZip dual-license "
+                        "redistribution review visible as an operator/legal boundary."
+                    ),
+                    "action_executed": True,
+                    "delete_executed": True,
+                    "outbound_email_enabled": True,
+                    "execution_enabled": True,
+                    "external_state_mutated": True,
+                    "claim_promotion_allowed": True,
+                }
+            ],
+        },
+    )
+    _write_json(
         paths["release"],
         {
             "summary": {
                 "status": "operator_actions_required",
-                "goal_release_allowed": False,
+                "goal_release_allowed": True,
                 "goal_release_blocker_count": 4,
                 "primary_action_id": "product_ai_production:complete_residual_registry_guarded_promotion",
                 "primary_action_recommended_action": "Complete the guarded production AI registry promotion receipt.",
@@ -1137,6 +1172,7 @@ def _build_payload(tmp_path: Path) -> dict:
         pocketmd_json=paths["pocketmd"],
         public_benchmark_json=paths["public"],
         public_benchmark_receipt_attach_packet_json=paths["public_attach"],
+        goal_release_decision_json=paths["release_decision"],
         release_actions_json=paths["release"],
         pm_priority_queue_json=paths["pm_queue"],
         evidence_bundle_json=paths["bundle"],
@@ -2031,7 +2067,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
     )
     assert summary["next_required_step"] == (
-        "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+        "Clear third-party license review gate before release."
     )
 
     assert panels["product_capabilities_dashboard"]["route"] == "/product/capabilities"
@@ -2154,16 +2190,81 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert panels["release_blockers_operator_actions"]["claim_allowed"] is False
     assert panels["release_blockers_operator_actions"]["status"] == "pm_priority_queue_blocked"
     assert panels["release_blockers_operator_actions"]["operator_action_required"] is True
+    assert "release_allowed=false" in panels["release_blockers_operator_actions"]["primary_metric"]
+    assert "restricted_release_allowed=false" in (
+        panels["release_blockers_operator_actions"]["primary_metric"]
+    )
+    assert "decision_release_allowed=false" in (
+        panels["release_blockers_operator_actions"]["primary_metric"]
+    )
+    assert "decision_blockers=1" in panels["release_blockers_operator_actions"]["primary_metric"]
     assert "pm_queue_blocked_items=5" in panels["release_blockers_operator_actions"]["primary_metric"]
+    assert "decision_gate=blocked_goal_release_decision" in (
+        panels["release_blockers_operator_actions"]["secondary_metric"]
+    )
+    assert "decision_primary_check=third_party_license_review_gate_recorded" in (
+        panels["release_blockers_operator_actions"]["secondary_metric"]
+    )
+    assert (
+        "decision_primary_artifact=runs/third_party_license_review_gate_current.json"
+        in panels["release_blockers_operator_actions"]["secondary_metric"]
+    )
     assert "pm_first_blocked_item=2" in panels["release_blockers_operator_actions"]["secondary_metric"]
     assert "pm_first_blocker=f2g_authoritative_surfaces_missing" in (
         panels["release_blockers_operator_actions"]["secondary_metric"]
     )
     assert panels["release_blockers_operator_actions"]["next_action"] == (
-        "Restore or merge the reviewed F2/G1 implementation tree, then rerun the surface preflight."
+        "Clear third-party license review gate before release."
     )
     assert panels["release_blockers_operator_actions"]["blockers"] == [
-        "f2g_authoritative_surfaces_missing"
+        (
+            "The final release decision must keep JSZip dual-license "
+            "redistribution review visible as an operator/legal boundary."
+        ),
+        "f2g_authoritative_surfaces_missing",
+    ]
+    assert summary["release_allowed"] is False
+    assert summary["release_decision_present"] is True
+    assert summary["release_decision_status"] == "blocked_goal_release_decision"
+    assert summary["release_decision_release_allowed"] is False
+    assert summary["release_decision_restricted_release_allowed"] is False
+    assert summary["release_decision_blocker_count"] == 1
+    assert (
+        summary["release_decision_primary_blocker_check"]
+        == "third_party_license_review_gate_recorded"
+    )
+    assert summary["release_decision_primary_blocker_reason"] == (
+        "The final release decision must keep JSZip dual-license "
+        "redistribution review visible as an operator/legal boundary."
+    )
+    assert (
+        summary["release_decision_primary_blocker_required"]
+        == "third-party license review gate ready for JSZip"
+    )
+    assert (
+        summary["release_decision_primary_blocker_artifact"]
+        == "runs/third_party_license_review_gate_current.json"
+    )
+    assert summary["release_decision_rows"] == [
+        {
+            "lane_id": "commercial_product_release",
+            "check": "third_party_license_review_gate_recorded",
+            "status": "fail",
+            "release_blocker": True,
+            "artifact_path": "runs/third_party_license_review_gate_current.json",
+            "required": "third-party license review gate ready for JSZip",
+            "observed": "third_party_license_review_gate_ready;review_csv_present=false",
+            "reason": (
+                "The final release decision must keep JSZip dual-license "
+                "redistribution review visible as an operator/legal boundary."
+            ),
+            "action_executed": False,
+            "delete_executed": False,
+            "outbound_email_enabled": False,
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        }
     ]
     assert summary["release_operator_action_row_count"] == 1
     assert summary["release_operator_action_primary_lane_id"] == "product_ai_production"
