@@ -57,6 +57,35 @@ def _string_list(value: Any) -> list[str]:
     return []
 
 
+def _split_text_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item or "").strip()]
+    if isinstance(value, str) and value.strip():
+        return [
+            part.strip()
+            for part in value.replace(";", ",").split(",")
+            if part.strip()
+        ]
+    return []
+
+
+def _float_or_none(value: Any) -> float | None:
+    if value in ("", None):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _bool_value(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "pass", "ready"}
+    return bool(value)
+
+
 def _blocked_public_benchmark_steps(rows: list[Any]) -> list[dict[str, Any]]:
     blocked_steps: list[dict[str, Any]] = []
     for row in rows:
@@ -100,6 +129,141 @@ def _field_work_order_rows(rows: list[Any]) -> list[dict[str, Any]]:
             }
         )
     return work_rows
+
+
+def _metric_gate_pass(value: float | None, threshold: float | None) -> bool | None:
+    if value is None or threshold is None:
+        return None
+    return value >= threshold
+
+
+def _suite_scorecard_ready(row: dict[str, Any]) -> bool:
+    status = str(row.get("scorecard_status") or "")
+    value = _float_or_none(row.get("primary_metric_value"))
+    threshold = _float_or_none(row.get("primary_metric_threshold"))
+    gate_pass = _metric_gate_pass(value, threshold)
+    return bool(
+        row.get("work_order_status") == "ready"
+        and _bool_value(row.get("local_artifact_preflight_ready"))
+        and _bool_value(row.get("result_provenance_present"))
+        and "pass" in status
+        and not _split_text_list(row.get("scorecard_blockers"))
+        and not _split_text_list(row.get("blocker"))
+        and gate_pass is not False
+    )
+
+
+def _public_benchmark_suite_rows(rows: list[Any]) -> list[dict[str, Any]]:
+    suite_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        value = _float_or_none(row.get("primary_metric_value"))
+        threshold = _float_or_none(row.get("primary_metric_threshold"))
+        gate_pass = _metric_gate_pass(value, threshold)
+        blockers = _split_text_list(row.get("scorecard_blockers")) + _split_text_list(
+            row.get("blocker")
+        )
+        suite_rows.append(
+            {
+                "suite_id": str(row.get("suite_id") or ""),
+                "benchmark_family": str(row.get("benchmark_family") or ""),
+                "required_for_commercial_release": _bool_value(
+                    row.get("required_for_commercial_release")
+                ),
+                "work_order_status": str(row.get("work_order_status") or ""),
+                "scorecard_status": str(row.get("scorecard_status") or ""),
+                "scorecard_ready": _suite_scorecard_ready(row),
+                "primary_metric": str(row.get("primary_metric") or ""),
+                "primary_metric_value": value,
+                "primary_metric_threshold": threshold,
+                "primary_metric_gate_pass": gate_pass,
+                "scorecard_row_csv": str(row.get("scorecard_row_csv") or ""),
+                "scorecard_artifact": str(row.get("scorecard_row") or row.get("result_artifact") or ""),
+                "materialization_status": str(row.get("materialization_status") or ""),
+                "materialization_manifest": str(row.get("materialization_manifest") or ""),
+                "result_provenance_json": str(row.get("result_provenance_json") or ""),
+                "result_provenance_present": _bool_value(row.get("result_provenance_present")),
+                "local_artifact_preflight_ready": _bool_value(
+                    row.get("local_artifact_preflight_ready")
+                ),
+                "missing_local_input_artifact_count": _int(
+                    row.get("missing_local_input_artifact_count")
+                ),
+                "missing_local_output_artifact_count": _int(
+                    row.get("missing_local_output_artifact_count")
+                ),
+                "blockers": blockers,
+                "operator_action_required": not _suite_scorecard_ready(row),
+                "recommended_next_action": (
+                    "review_public_benchmark_scorecard"
+                    if _suite_scorecard_ready(row)
+                    else str(row.get("refresh_command") or row.get("scorecard_command") or "")
+                ),
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "docking_results_emitted": False,
+                "external_state_mutated": False,
+            }
+        )
+    return suite_rows
+
+
+def _public_benchmark_scorecard_blocker_rows(
+    suite_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    blocker_rows: list[dict[str, Any]] = []
+    for row in suite_rows:
+        if row["scorecard_ready"]:
+            continue
+        blockers = row["blockers"] or ["suite_scorecard_not_ready"]
+        blocker_rows.append(
+            {
+                "blocker_id": f"public_benchmark_scorecard:{row['suite_id']}",
+                "blocker_type": "suite_scorecard",
+                "severity": "blocker",
+                "suite_id": row["suite_id"],
+                "scorecard_status": row["scorecard_status"],
+                "primary_metric": row["primary_metric"],
+                "primary_metric_value": row["primary_metric_value"],
+                "primary_metric_threshold": row["primary_metric_threshold"],
+                "primary_metric_gate_pass": row["primary_metric_gate_pass"],
+                "blockers": blockers,
+                "operator_action": row["recommended_next_action"],
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+    return blocker_rows
+
+
+def _external_receipt_blocker_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
+    if not summary:
+        return []
+    blocker_rows: list[dict[str, Any]] = []
+    blockers = _string_list(summary.get("blockers"))
+    if not blockers and summary.get("external_benchmark_receipts_ready") is not True:
+        blockers = ["external_benchmark_receipts_not_ready"]
+    for blocker in blockers:
+        blocker_id, _, reason = blocker.partition(":")
+        blocker_rows.append(
+            {
+                "blocker_id": blocker_id or blocker,
+                "blocker_type": "external_receipt",
+                "severity": "blocker",
+                "reason": reason or blocker,
+                "operator_action": str(
+                    summary.get("primary_blocker_next_required_step")
+                    or summary.get("next_required_step")
+                    or ""
+                ),
+                "claim_promotion_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        )
+    return blocker_rows
 
 
 def _receipt_attach_surface(packet: dict[str, Any]) -> dict[str, Any]:
@@ -349,10 +513,33 @@ async def get_product_public_benchmark() -> dict[str, Any]:
     packet = _read_json_object(PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_ARTIFACT)
     summary = _summary(packet)
     rows = packet.get("rows") if isinstance(packet.get("rows"), list) else []
+    receipts_summary = _summary(_read_json_object(PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT))
     if not summary:
         return {
             "status": "missing_product_public_benchmark_work_order",
             "artifact_path": str(PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_ARTIFACT),
+            "scorecard_panel_ready": False,
+            "suite_row_count": 0,
+            "suite_green_row_count": 0,
+            "suite_blocked_row_count": 0,
+            "scorecard_blocker_row_count": 1,
+            "scorecard_blocker_rows": [
+                {
+                    "blocker_id": "product_public_benchmark_work_order_missing",
+                    "blocker_type": "missing_artifact",
+                    "severity": "blocker",
+                    "operator_action": "build_product_public_benchmark_work_order",
+                    "claim_promotion_allowed": False,
+                    "execution_enabled": False,
+                    "external_state_mutated": False,
+                }
+            ],
+            "external_receipts_status": "",
+            "external_receipts_ready": False,
+            "external_receipts_blocker_count": 0,
+            "external_receipt_blocker_row_count": 0,
+            "external_receipt_blocker_rows": [],
+            "external_beta_claim_allowed": False,
             "public_benchmark_validation_ready": False,
             "open_suite_count": 0,
             "materialization_required_suite_count": 0,
@@ -379,6 +566,7 @@ async def get_product_public_benchmark() -> dict[str, Any]:
             "requires_24h_server": False,
             "requires_competition_season": False,
             "requires_paid_vps": False,
+            "suite_rows": [],
             "execution_enabled": False,
             "docking_results_emitted": False,
             "external_state_mutated": False,
@@ -387,11 +575,36 @@ async def get_product_public_benchmark() -> dict[str, Any]:
                 "It does not download datasets, run docking, compute metrics, or mutate external state."
             ),
         }
+    suite_rows = _public_benchmark_suite_rows(rows)
+    scorecard_blocker_rows = _public_benchmark_scorecard_blocker_rows(suite_rows)
+    external_receipt_blocker_rows = _external_receipt_blocker_rows(receipts_summary)
+    scorecard_panel_ready = bool(
+        summary.get("public_benchmark_validation_ready") is True
+        and suite_rows
+        and not scorecard_blocker_rows
+    )
     return {
         "status": summary.get("status"),
         "artifact_path": str(PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_ARTIFACT),
         "source_public_benchmark_status": summary.get("source_public_benchmark_status", ""),
         "source_public_benchmark_json": summary.get("source_public_benchmark_json", ""),
+        "scorecard_panel_ready": scorecard_panel_ready,
+        "suite_row_count": len(suite_rows),
+        "suite_green_row_count": sum(1 for row in suite_rows if row["scorecard_ready"]),
+        "suite_blocked_row_count": sum(1 for row in suite_rows if not row["scorecard_ready"]),
+        "scorecard_blocker_row_count": len(scorecard_blocker_rows),
+        "scorecard_blocker_rows": scorecard_blocker_rows,
+        "external_receipts_status": str(receipts_summary.get("status") or ""),
+        "external_receipts_ready": bool(
+            receipts_summary.get("external_benchmark_receipts_ready") is True
+        ),
+        "external_receipts_blocker_count": _int(receipts_summary.get("blocker_count")),
+        "external_receipt_blocker_row_count": len(external_receipt_blocker_rows),
+        "external_receipt_blocker_rows": external_receipt_blocker_rows,
+        "external_beta_claim_allowed": bool(
+            receipts_summary.get("external_benchmark_receipts_ready") is True
+            and receipts_summary.get("claim_promotion_allowed") is True
+        ),
         "public_benchmark_validation_ready": bool(summary.get("public_benchmark_validation_ready") is True),
         "suite_count": int(summary.get("suite_count") or 0),
         "open_suite_count": int(summary.get("open_suite_count") or 0),
@@ -427,7 +640,9 @@ async def get_product_public_benchmark() -> dict[str, Any]:
         "requires_paid_vps": bool(summary.get("requires_paid_vps") is True),
         "requires_institution_registration": bool(summary.get("requires_institution_registration") is True),
         "download_executed": bool(summary.get("download_executed") is True),
+        "suite_rows": suite_rows,
         "suites": rows,
+        "claim_promotion_allowed": False,
         "execution_enabled": False,
         "docking_results_emitted": False,
         "external_state_mutated": False,

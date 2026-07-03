@@ -558,12 +558,35 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert public_benchmark["suite_result_provenance_command_count"] == 5
     assert public_benchmark["suite_result_provenance_present_count"] == 5
     assert public_benchmark["local_artifact_preflight_ready_suite_count"] == 5
+    assert public_benchmark["scorecard_panel_ready"] is True
+    assert public_benchmark["suite_row_count"] == public_benchmark["suite_count"]
+    assert public_benchmark["suite_green_row_count"] == public_benchmark["suite_count"]
+    assert public_benchmark["suite_blocked_row_count"] == 0
+    assert public_benchmark["scorecard_blocker_row_count"] == 0
+    assert public_benchmark["scorecard_blocker_rows"] == []
+    assert len(public_benchmark["suite_rows"]) == public_benchmark["suite_count"]
+    assert all(row["scorecard_ready"] is True for row in public_benchmark["suite_rows"])
+    assert all(row["claim_promotion_allowed"] is False for row in public_benchmark["suite_rows"])
     assert public_benchmark["requires_24h_server"] is False
     assert public_benchmark["requires_competition_season"] is False
     assert public_benchmark["requires_paid_vps"] is False
 
     public_benchmark_receipts = asyncio.run(product.get_product_public_benchmark_external_receipts_audit())
     public_benchmark_receipts_source = _artifact_summary("public_benchmark_external_receipts_audit_current.json")
+    assert public_benchmark["external_receipts_status"] == public_benchmark_receipts_source.get(
+        "status", ""
+    )
+    assert public_benchmark["external_receipts_ready"] is (
+        public_benchmark_receipts_source.get("external_benchmark_receipts_ready") is True
+    )
+    assert public_benchmark["external_receipts_blocker_count"] == int(
+        public_benchmark_receipts_source.get("blocker_count") or 0
+    )
+    assert public_benchmark["external_receipt_blocker_row_count"] == int(
+        public_benchmark_receipts_source.get("blocker_count") or 0
+    )
+    assert public_benchmark["external_beta_claim_allowed"] is False
+    assert public_benchmark["claim_promotion_allowed"] is False
     assert public_benchmark_receipts["status"] == public_benchmark_receipts_source.get("status")
     assert public_benchmark_receipts["external_benchmark_receipts_ready"] is (
         public_benchmark_receipts_source.get("external_benchmark_receipts_ready") is True

@@ -13,6 +13,184 @@ def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def test_public_benchmark_endpoint_exposes_scorecard_panel_rows(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import api.product_benchmark as mod
+
+    work_order = tmp_path / "runs/product_public_benchmark_work_order_current.json"
+    receipts = tmp_path / "runs/public_benchmark_external_receipts_audit_current.json"
+    monkeypatch.setattr(mod, "PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_ARTIFACT", work_order)
+    monkeypatch.setattr(mod, "PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT", receipts)
+    _write_json(
+        work_order,
+        {
+            "summary": {
+                "status": "product_public_benchmark_work_order_clear",
+                "public_benchmark_validation_ready": True,
+                "suite_count": 2,
+                "open_suite_count": 2,
+                "suite_result_provenance_present_count": 1,
+                "local_artifact_preflight_ready_suite_count": 1,
+            },
+            "rows": [
+                {
+                    "suite_id": "lit_pcba_virtual_screening",
+                    "benchmark_family": "protein_ligand_virtual_screening",
+                    "required_for_commercial_release": True,
+                    "work_order_status": "ready",
+                    "scorecard_status": "lit_pcba_scorecard_pass",
+                    "primary_metric": "EF1",
+                    "primary_metric_value": "4.7",
+                    "primary_metric_threshold": "1.2",
+                    "scorecard_row_csv": "runs/lit_pcba_scorecard_row_current.csv",
+                    "scorecard_row": "runs/lit_pcba_scorecard_current.json",
+                    "materialization_status": "lit_pcba_materialization_ready",
+                    "materialization_manifest": "runs/lit_pcba_materialization_manifest_current.json",
+                    "result_provenance_json": "runs/lit_pcba_result_provenance_current.json",
+                    "result_provenance_present": True,
+                    "local_artifact_preflight_ready": True,
+                    "scorecard_blockers": "",
+                    "blocker": "",
+                    "execution_enabled": True,
+                    "docking_results_emitted": True,
+                    "external_state_mutated": True,
+                },
+                {
+                    "suite_id": "pdbbind_casf_pose_affinity",
+                    "benchmark_family": "protein_ligand_pose_affinity",
+                    "required_for_commercial_release": True,
+                    "work_order_status": "blocked",
+                    "scorecard_status": "blocked_public_benchmark_suite_scorecard",
+                    "primary_metric": "pose_success_rate",
+                    "primary_metric_value": "0.1",
+                    "primary_metric_threshold": "0.35",
+                    "scorecard_row_csv": "runs/pdbbind_scorecard_row_current.csv",
+                    "scorecard_row": "runs/pdbbind_scorecard_current.json",
+                    "materialization_status": "blocked_public_benchmark_materialization",
+                    "result_provenance_json": "",
+                    "result_provenance_present": False,
+                    "local_artifact_preflight_ready": False,
+                    "scorecard_blockers": "primary_metric_below_threshold;result_provenance_missing",
+                    "blocker": "local_artifact_preflight_blocked",
+                    "refresh_command": "python3 tools/build_product_public_benchmark_work_order.py",
+                    "execution_enabled": True,
+                    "docking_results_emitted": True,
+                    "external_state_mutated": True,
+                },
+            ],
+        },
+    )
+    _write_json(
+        receipts,
+        {
+            "summary": {
+                "status": "blocked_public_benchmark_external_receipts_audit",
+                "external_benchmark_receipts_ready": False,
+                "claim_promotion_allowed": False,
+                "blocker_count": 2,
+                "blockers": [
+                    "vina_gnina_same_input_comparison:vina_gnina_same_input_score_evidence_missing",
+                    "benchmark_receipt_attach:benchmark_metric_source_receipt_rows_unapproved",
+                ],
+                "primary_blocker_next_required_step": "Fill Vina/GNINA same-input scores.",
+            }
+        },
+    )
+
+    response = TestClient(app).get("/product/public-benchmark")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "product_public_benchmark_work_order_clear"
+    assert body["scorecard_panel_ready"] is False
+    assert body["suite_row_count"] == 2
+    assert body["suite_green_row_count"] == 1
+    assert body["suite_blocked_row_count"] == 1
+    assert body["scorecard_blocker_row_count"] == 1
+    assert body["suite_rows"][0] == {
+        "suite_id": "lit_pcba_virtual_screening",
+        "benchmark_family": "protein_ligand_virtual_screening",
+        "required_for_commercial_release": True,
+        "work_order_status": "ready",
+        "scorecard_status": "lit_pcba_scorecard_pass",
+        "scorecard_ready": True,
+        "primary_metric": "EF1",
+        "primary_metric_value": 4.7,
+        "primary_metric_threshold": 1.2,
+        "primary_metric_gate_pass": True,
+        "scorecard_row_csv": "runs/lit_pcba_scorecard_row_current.csv",
+        "scorecard_artifact": "runs/lit_pcba_scorecard_current.json",
+        "materialization_status": "lit_pcba_materialization_ready",
+        "materialization_manifest": "runs/lit_pcba_materialization_manifest_current.json",
+        "result_provenance_json": "runs/lit_pcba_result_provenance_current.json",
+        "result_provenance_present": True,
+        "local_artifact_preflight_ready": True,
+        "missing_local_input_artifact_count": 0,
+        "missing_local_output_artifact_count": 0,
+        "blockers": [],
+        "operator_action_required": False,
+        "recommended_next_action": "review_public_benchmark_scorecard",
+        "claim_promotion_allowed": False,
+        "execution_enabled": False,
+        "docking_results_emitted": False,
+        "external_state_mutated": False,
+    }
+    assert body["scorecard_blocker_rows"][0]["suite_id"] == "pdbbind_casf_pose_affinity"
+    assert body["scorecard_blocker_rows"][0]["primary_metric_gate_pass"] is False
+    assert body["scorecard_blocker_rows"][0]["claim_promotion_allowed"] is False
+    assert body["external_receipts_status"] == "blocked_public_benchmark_external_receipts_audit"
+    assert body["external_receipts_ready"] is False
+    assert body["external_receipts_blocker_count"] == 2
+    assert body["external_receipt_blocker_row_count"] == 2
+    assert body["external_receipt_blocker_rows"][0]["blocker_id"] == (
+        "vina_gnina_same_input_comparison"
+    )
+    assert body["external_beta_claim_allowed"] is False
+    assert body["claim_promotion_allowed"] is False
+    assert body["execution_enabled"] is False
+    assert body["docking_results_emitted"] is False
+    assert body["external_state_mutated"] is False
+
+
+def test_public_benchmark_endpoint_is_fail_closed_when_missing(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import api.product_benchmark as mod
+
+    monkeypatch.setattr(
+        mod,
+        "PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_ARTIFACT",
+        tmp_path / "missing_work_order.json",
+    )
+    monkeypatch.setattr(
+        mod,
+        "PUBLIC_BENCHMARK_EXTERNAL_RECEIPTS_AUDIT_ARTIFACT",
+        tmp_path / "missing_receipts.json",
+    )
+
+    response = TestClient(app).get("/product/public-benchmark")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "missing_product_public_benchmark_work_order"
+    assert body["scorecard_panel_ready"] is False
+    assert body["suite_row_count"] == 0
+    assert body["suite_rows"] == []
+    assert body["scorecard_blocker_row_count"] == 1
+    assert body["scorecard_blocker_rows"][0]["blocker_id"] == (
+        "product_public_benchmark_work_order_missing"
+    )
+    assert body["external_receipts_ready"] is False
+    assert body["external_receipt_blocker_rows"] == []
+    assert body["external_beta_claim_allowed"] is False
+    assert body["execution_enabled"] is False
+    assert body["docking_results_emitted"] is False
+    assert body["external_state_mutated"] is False
+
+
 def test_public_benchmark_external_receipts_endpoint_missing_attach_packet(
     tmp_path: Path,
     monkeypatch,
