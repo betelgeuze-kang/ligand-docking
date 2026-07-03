@@ -1039,6 +1039,15 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     clean_checkout_receipt = (
         tmp_path / ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
     )
+    linux_reproducibility_receipt = (
+        tmp_path / ".betelgeuze/developer_preview_linux_reproducibility_receipt.json"
+    )
+    windows_reproducibility_receipt = (
+        tmp_path / ".betelgeuze/developer_preview_windows_reproducibility_receipt.json"
+    )
+    new_user_observation_receipt = (
+        tmp_path / ".betelgeuze/developer_preview_new_user_observation_receipt.json"
+    )
     artifact.parent.mkdir(parents=True)
     artifact.write_text(
         json.dumps(
@@ -1260,11 +1269,159 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
         ),
         encoding="utf-8",
     )
+    linux_reproducibility_receipt.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "developer_preview_platform_reproducibility_receipt_ready",
+                    "platform_id": "linux",
+                    "platform_evidence_required_field_count": 2,
+                    "platform_evidence_ready_field_count": 2,
+                    "platform_evidence_blocked_field_count": 0,
+                    "claim_boundary": "linux reproducibility boundary",
+                },
+                "platform_evidence_requirement_rows": [
+                    {
+                        "field_id": "platform_matches_expected",
+                        "label": "Observed platform matches Linux",
+                        "status": "pass",
+                        "ready": True,
+                        "observed": "Linux",
+                        "blocker": "",
+                        "required_action": "",
+                        "operator_action_required": False,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    windows_reproducibility_receipt.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "blocked_developer_preview_platform_reproducibility_receipt",
+                    "platform_id": "windows",
+                    "platform_evidence_required_field_count": 3,
+                    "platform_evidence_ready_field_count": 1,
+                    "platform_evidence_blocked_field_count": 2,
+                    "platform_evidence_primary_field_id": "ai_verify_log_present",
+                    "platform_evidence_primary_blocker": "ai_verify_log_missing",
+                    "platform_evidence_primary_required_action": (
+                        "Run ai-verify on Windows and attach the captured log."
+                    ),
+                    "claim_boundary": "windows reproducibility boundary",
+                },
+                "platform_evidence_requirement_rows": [
+                    {
+                        "field_id": "platform_supported",
+                        "label": "Requested platform is supported",
+                        "status": "pass",
+                        "ready": True,
+                        "observed": "windows",
+                        "blocker": "",
+                        "required_action": "",
+                        "operator_action_required": False,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                    {
+                        "field_id": "ai_verify_log_present",
+                        "label": "ai-verify log is attached",
+                        "status": "blocked",
+                        "ready": False,
+                        "observed": "missing",
+                        "blocker": "ai_verify_log_missing",
+                        "required_action": (
+                            "Run ai-verify on Windows and attach the captured log."
+                        ),
+                        "operator_action_required": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    new_user_observation_receipt.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "blocked_developer_preview_new_user_observation_receipt",
+                    "observation_review_required_field_count": 3,
+                    "observation_review_ready_field_count": 1,
+                    "observation_review_blocked_field_count": 2,
+                    "observation_review_primary_field_id": "observer_id_present",
+                    "observation_review_primary_blocker": "observer_id_missing",
+                    "observation_review_primary_required_action": (
+                        "Record a non-secret observer id in the reviewed receipt."
+                    ),
+                    "claim_boundary": "new-user observation boundary",
+                },
+                "observation_review_template_rows": [
+                    {
+                        "field_id": "observer_id_present",
+                        "label": "Observer ID recorded as derived operator metadata",
+                        "status": "blocked",
+                        "ready": False,
+                        "observed": "missing",
+                        "blocker": "observer_id_missing",
+                        "required_action": (
+                            "Record a non-secret observer id in the reviewed receipt."
+                        ),
+                        "raw_customer_data_allowed": True,
+                        "stores_private_notes": True,
+                        "operator_action_required": True,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                    {
+                        "field_id": "raw_customer_data_not_stored_in_repo",
+                        "label": "Raw customer data is not stored in the repo",
+                        "status": "pass",
+                        "ready": True,
+                        "observed": "false",
+                        "blocker": "",
+                        "required_action": "",
+                        "raw_customer_data_allowed": True,
+                        "stores_private_notes": True,
+                        "operator_action_required": False,
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
     monkeypatch.setattr(goal_api, "DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT", artifact)
     monkeypatch.setattr(
         goal_api,
         "DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT",
         clean_checkout_receipt,
+    )
+    monkeypatch.setattr(
+        goal_api,
+        "DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_ARTIFACT",
+        linux_reproducibility_receipt,
+    )
+    monkeypatch.setattr(
+        goal_api,
+        "DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_ARTIFACT",
+        windows_reproducibility_receipt,
+    )
+    monkeypatch.setattr(
+        goal_api,
+        "DEVELOPER_PREVIEW_NEW_USER_OBSERVATION_RECEIPT_ARTIFACT",
+        new_user_observation_receipt,
     )
 
     response = asyncio.run(goal_api.get_goal_developer_preview())
@@ -1386,6 +1543,58 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     assert response["clean_checkout_stage5_missing_input_rows"][0]["source_artifact_path"] == (
         "/tmp/dp/runs/stage5_scores.csv"
     )
+    assert response["developer_preview_linux_reproducibility_receipt_status"] == (
+        "developer_preview_platform_reproducibility_receipt_ready"
+    )
+    assert response["developer_preview_linux_reproducibility_ready_field_count"] == 2
+    assert response["developer_preview_linux_reproducibility_blocked_field_count"] == 0
+    assert response["developer_preview_windows_reproducibility_receipt_status"] == (
+        "blocked_developer_preview_platform_reproducibility_receipt"
+    )
+    assert response["developer_preview_windows_reproducibility_required_field_count"] == 3
+    assert response["developer_preview_windows_reproducibility_ready_field_count"] == 1
+    assert response["developer_preview_windows_reproducibility_blocked_field_count"] == 2
+    assert response["developer_preview_windows_reproducibility_primary_field_id"] == (
+        "ai_verify_log_present"
+    )
+    assert response["developer_preview_windows_reproducibility_primary_required_action"] == (
+        "Run ai-verify on Windows and attach the captured log."
+    )
+    assert response["developer_preview_windows_reproducibility_requirement_rows"][1] == {
+        "field_id": "ai_verify_log_present",
+        "label": "ai-verify log is attached",
+        "status": "blocked",
+        "ready": False,
+        "observed": "missing",
+        "blocker": "ai_verify_log_missing",
+        "required_action": "Run ai-verify on Windows and attach the captured log.",
+        "operator_action_required": True,
+        "execution_enabled": False,
+        "external_state_mutated": False,
+        "claim_promotion_allowed": False,
+        "claim_boundary": "windows reproducibility boundary",
+    }
+    assert response["developer_preview_new_user_observation_receipt_status"] == (
+        "blocked_developer_preview_new_user_observation_receipt"
+    )
+    assert response["developer_preview_new_user_observation_required_field_count"] == 3
+    assert response["developer_preview_new_user_observation_ready_field_count"] == 1
+    assert response["developer_preview_new_user_observation_blocked_field_count"] == 2
+    assert response["developer_preview_new_user_observation_primary_field_id"] == (
+        "observer_id_present"
+    )
+    assert response["developer_preview_new_user_observation_primary_required_action"] == (
+        "Record a non-secret observer id in the reviewed receipt."
+    )
+    assert response["developer_preview_new_user_observation_template_rows"][0][
+        "raw_customer_data_allowed"
+    ] is False
+    assert response["developer_preview_new_user_observation_template_rows"][0][
+        "stores_private_notes"
+    ] is False
+    assert response["developer_preview_new_user_observation_template_rows"][0][
+        "execution_enabled"
+    ] is False
     assert response["developer_demo_wording_allowed"] is False
     assert response["paid_pilot_wording_allowed"] is False
     assert response["execution_enabled"] is False
@@ -1393,6 +1602,21 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     assert response["claim_boundary"] == "developer preview boundary"
 
     monkeypatch.setattr(goal_api, "DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT", tmp_path / "missing.json")
+    monkeypatch.setattr(
+        goal_api,
+        "DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_ARTIFACT",
+        tmp_path / ".betelgeuze/missing_linux_reproducibility_receipt.json",
+    )
+    monkeypatch.setattr(
+        goal_api,
+        "DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_ARTIFACT",
+        tmp_path / ".betelgeuze/missing_windows_reproducibility_receipt.json",
+    )
+    monkeypatch.setattr(
+        goal_api,
+        "DEVELOPER_PREVIEW_NEW_USER_OBSERVATION_RECEIPT_ARTIFACT",
+        tmp_path / ".betelgeuze/missing_new_user_observation_receipt.json",
+    )
     missing = asyncio.run(goal_api.get_goal_developer_preview())
     assert missing["status"] == "missing_developer_preview_final_gate_audit"
     assert missing["developer_preview_clean_baseline_ready"] is False
@@ -1408,6 +1632,12 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     assert missing["blocked_receipt_work_order_rows"] == []
     assert missing["source_receipt_work_order_rows"] == []
     assert missing["developer_preview_source_blocker_detail_row_count"] == 0
+    assert missing["developer_preview_linux_reproducibility_receipt_present"] is False
+    assert missing["developer_preview_linux_reproducibility_requirement_rows"] == []
+    assert missing["developer_preview_windows_reproducibility_receipt_present"] is False
+    assert missing["developer_preview_windows_reproducibility_requirement_rows"] == []
+    assert missing["developer_preview_new_user_observation_receipt_present"] is False
+    assert missing["developer_preview_new_user_observation_template_rows"] == []
     assert missing["developer_preview_source_blocker_detail_rows"] == []
     assert missing["developer_preview_primary_source_blocker_detail_row"] == {}
     assert missing["developer_preview_missing_stage5_input_count"] == 0

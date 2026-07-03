@@ -141,11 +141,35 @@ def test_goal_developer_preview_exposes_requirement_rows_fail_closed(
     clean_checkout_receipt = (
         tmp_path / ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
     )
+    linux_reproducibility_receipt = (
+        tmp_path / ".betelgeuze/developer_preview_linux_reproducibility_receipt.json"
+    )
+    windows_reproducibility_receipt = (
+        tmp_path / ".betelgeuze/developer_preview_windows_reproducibility_receipt.json"
+    )
+    new_user_observation_receipt = (
+        tmp_path / ".betelgeuze/developer_preview_new_user_observation_receipt.json"
+    )
     monkeypatch.setattr(mod, "DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT", artifact)
     monkeypatch.setattr(
         mod,
         "DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT",
         clean_checkout_receipt,
+    )
+    monkeypatch.setattr(
+        mod,
+        "DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_ARTIFACT",
+        linux_reproducibility_receipt,
+    )
+    monkeypatch.setattr(
+        mod,
+        "DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_ARTIFACT",
+        windows_reproducibility_receipt,
+    )
+    monkeypatch.setattr(
+        mod,
+        "DEVELOPER_PREVIEW_NEW_USER_OBSERVATION_RECEIPT_ARTIFACT",
+        new_user_observation_receipt,
     )
     _write_json(
         artifact,
@@ -264,6 +288,9 @@ def test_goal_developer_preview_exposes_requirement_rows_fail_closed(
         for row in response["developer_preview_requirement_rows"]
     )
     assert response["receipt_work_order_blocked_row_count"] == 1
+    assert response["developer_preview_linux_reproducibility_receipt_present"] is False
+    assert response["developer_preview_windows_reproducibility_receipt_present"] is False
+    assert response["developer_preview_new_user_observation_receipt_present"] is False
     assert response["execution_enabled"] is False
     assert response["external_state_mutated"] is False
     assert response["claim_boundary"] == "developer preview fixture boundary"
@@ -283,6 +310,21 @@ def test_goal_developer_preview_missing_artifact_keeps_requirements_fail_closed(
         "DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT",
         tmp_path / ".betelgeuze/missing_developer_preview_clean_checkout_receipt.json",
     )
+    monkeypatch.setattr(
+        mod,
+        "DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_ARTIFACT",
+        tmp_path / ".betelgeuze/missing_developer_preview_linux_receipt.json",
+    )
+    monkeypatch.setattr(
+        mod,
+        "DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_ARTIFACT",
+        tmp_path / ".betelgeuze/missing_developer_preview_windows_receipt.json",
+    )
+    monkeypatch.setattr(
+        mod,
+        "DEVELOPER_PREVIEW_NEW_USER_OBSERVATION_RECEIPT_ARTIFACT",
+        tmp_path / ".betelgeuze/missing_developer_preview_new_user_receipt.json",
+    )
 
     response = asyncio.run(mod.get_goal_developer_preview())
 
@@ -300,6 +342,12 @@ def test_goal_developer_preview_missing_artifact_keeps_requirements_fail_closed(
         row["blocker"] == "developer_preview_gate_missing"
         for row in response["developer_preview_requirement_rows"]
     )
+    assert response["developer_preview_linux_reproducibility_receipt_present"] is False
+    assert response["developer_preview_linux_reproducibility_requirement_rows"] == []
+    assert response["developer_preview_windows_reproducibility_receipt_present"] is False
+    assert response["developer_preview_windows_reproducibility_requirement_rows"] == []
+    assert response["developer_preview_new_user_observation_receipt_present"] is False
+    assert response["developer_preview_new_user_observation_template_rows"] == []
     assert response["execution_enabled"] is False
     assert response["external_state_mutated"] is False
 

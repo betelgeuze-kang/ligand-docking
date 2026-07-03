@@ -21,6 +21,15 @@ DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_ARTIFACT = ROOT / "runs" / "developer_preview
 DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT = (
     ROOT / ".betelgeuze" / "developer_preview_clean_checkout_benchmark_receipt.json"
 )
+DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_ARTIFACT = (
+    ROOT / ".betelgeuze" / "developer_preview_linux_reproducibility_receipt.json"
+)
+DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_ARTIFACT = (
+    ROOT / ".betelgeuze" / "developer_preview_windows_reproducibility_receipt.json"
+)
+DEVELOPER_PREVIEW_NEW_USER_OBSERVATION_RECEIPT_ARTIFACT = (
+    ROOT / ".betelgeuze" / "developer_preview_new_user_observation_receipt.json"
+)
 DEVELOPER_PREVIEW_REQUIREMENT_DEFINITIONS = (
     (
         "benchmark_results_clean_checkout_regenerated",
@@ -758,6 +767,144 @@ def _developer_preview_clean_checkout_receipt_surface(receipt_path: Path) -> dic
         "clean_checkout_stage5_missing_input_rows": clean_stage5_missing_rows,
         "developer_demo_wording_allowed": receipt_ready,
         "paid_pilot_wording_allowed": False,
+    }
+
+
+def _developer_preview_platform_reproducibility_surface(
+    receipt_path: Path,
+    *,
+    prefix: str,
+) -> dict[str, Any]:
+    packet = _read_json_object(receipt_path)
+    summary = _summary(packet)
+    claim_boundary = str(summary.get("claim_boundary") or CLAIM_BOUNDARY)
+    rows = []
+    for row in (
+        packet.get("platform_evidence_requirement_rows")
+        if isinstance(packet.get("platform_evidence_requirement_rows"), list)
+        else []
+    ):
+        if not isinstance(row, dict):
+            continue
+        ready = bool(row.get("ready") is True)
+        rows.append(
+            {
+                "field_id": str(row.get("field_id") or ""),
+                "label": str(row.get("label") or ""),
+                "status": str(row.get("status") or ""),
+                "ready": ready,
+                "observed": str(row.get("observed") or ""),
+                "blocker": str(row.get("blocker") or ""),
+                "required_action": str(row.get("required_action") or ""),
+                "operator_action_required": not ready,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "claim_boundary": str(row.get("claim_boundary") or claim_boundary),
+            }
+        )
+    blocked_rows = [row for row in rows if not row["ready"]]
+    primary_row = blocked_rows[0] if blocked_rows else {}
+    return {
+        f"{prefix}_reproducibility_receipt_artifact_path": str(receipt_path),
+        f"{prefix}_reproducibility_receipt_present": bool(summary),
+        f"{prefix}_reproducibility_receipt_status": str(
+            summary.get("status") or f"missing_developer_preview_{prefix}_reproducibility_receipt"
+        ),
+        f"{prefix}_reproducibility_required_field_count": (
+            _int(summary.get("platform_evidence_required_field_count")) or len(rows)
+        ),
+        f"{prefix}_reproducibility_ready_field_count": (
+            _int(summary.get("platform_evidence_ready_field_count"))
+            or len([row for row in rows if row["ready"]])
+        ),
+        f"{prefix}_reproducibility_blocked_field_count": (
+            _int(summary.get("platform_evidence_blocked_field_count")) or len(blocked_rows)
+        ),
+        f"{prefix}_reproducibility_primary_field_id": str(
+            summary.get("platform_evidence_primary_field_id")
+            or primary_row.get("field_id")
+            or ""
+        ),
+        f"{prefix}_reproducibility_primary_blocker": str(
+            summary.get("platform_evidence_primary_blocker")
+            or primary_row.get("blocker")
+            or ""
+        ),
+        f"{prefix}_reproducibility_primary_required_action": str(
+            summary.get("platform_evidence_primary_required_action")
+            or primary_row.get("required_action")
+            or ""
+        ),
+        f"{prefix}_reproducibility_requirement_rows": rows,
+    }
+
+
+def _developer_preview_new_user_observation_surface(receipt_path: Path) -> dict[str, Any]:
+    packet = _read_json_object(receipt_path)
+    summary = _summary(packet)
+    claim_boundary = str(summary.get("claim_boundary") or CLAIM_BOUNDARY)
+    rows = []
+    for row in (
+        packet.get("observation_review_template_rows")
+        if isinstance(packet.get("observation_review_template_rows"), list)
+        else []
+    ):
+        if not isinstance(row, dict):
+            continue
+        ready = bool(row.get("ready") is True)
+        rows.append(
+            {
+                "field_id": str(row.get("field_id") or ""),
+                "label": str(row.get("label") or ""),
+                "status": str(row.get("status") or ""),
+                "ready": ready,
+                "observed": str(row.get("observed") or ""),
+                "blocker": str(row.get("blocker") or ""),
+                "required_action": str(row.get("required_action") or ""),
+                "raw_customer_data_allowed": False,
+                "stores_private_notes": False,
+                "operator_action_required": not ready,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "claim_boundary": str(row.get("claim_boundary") or claim_boundary),
+            }
+        )
+    blocked_rows = [row for row in rows if not row["ready"]]
+    primary_row = blocked_rows[0] if blocked_rows else {}
+    return {
+        "developer_preview_new_user_observation_receipt_artifact_path": str(receipt_path),
+        "developer_preview_new_user_observation_receipt_present": bool(summary),
+        "developer_preview_new_user_observation_receipt_status": str(
+            summary.get("status") or "missing_developer_preview_new_user_observation_receipt"
+        ),
+        "developer_preview_new_user_observation_required_field_count": (
+            _int(summary.get("observation_review_required_field_count")) or len(rows)
+        ),
+        "developer_preview_new_user_observation_ready_field_count": (
+            _int(summary.get("observation_review_ready_field_count"))
+            or len([row for row in rows if row["ready"]])
+        ),
+        "developer_preview_new_user_observation_blocked_field_count": (
+            _int(summary.get("observation_review_blocked_field_count")) or len(blocked_rows)
+        ),
+        "developer_preview_new_user_observation_primary_field_id": str(
+            summary.get("observation_review_primary_field_id")
+            or primary_row.get("field_id")
+            or ""
+        ),
+        "developer_preview_new_user_observation_primary_blocker": str(
+            summary.get("observation_review_primary_blocker")
+            or primary_row.get("blocker")
+            or ""
+        ),
+        "developer_preview_new_user_observation_primary_required_action": str(
+            summary.get("observation_review_primary_required_action")
+            or primary_row.get("required_action")
+            or ""
+        ),
+        "developer_preview_new_user_observation_template_rows": rows,
     }
 
 
@@ -4315,6 +4462,17 @@ async def get_goal_developer_preview() -> dict[str, Any]:
             **_developer_preview_clean_checkout_receipt_surface(
                 DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_ARTIFACT
             ),
+            **_developer_preview_platform_reproducibility_surface(
+                DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_ARTIFACT,
+                prefix="developer_preview_linux",
+            ),
+            **_developer_preview_platform_reproducibility_surface(
+                DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_ARTIFACT,
+                prefix="developer_preview_windows",
+            ),
+            **_developer_preview_new_user_observation_surface(
+                DEVELOPER_PREVIEW_NEW_USER_OBSERVATION_RECEIPT_ARTIFACT
+            ),
             "developer_demo_wording_allowed": False,
             "paid_pilot_wording_allowed": False,
             **_mutation_flags(),
@@ -4340,6 +4498,17 @@ async def get_goal_developer_preview() -> dict[str, Any]:
         "receipt_work_order_rows": work_rows,
         **_developer_preview_work_order_surface(work_rows),
         **clean_checkout_surface,
+        **_developer_preview_platform_reproducibility_surface(
+            DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_ARTIFACT,
+            prefix="developer_preview_linux",
+        ),
+        **_developer_preview_platform_reproducibility_surface(
+            DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_ARTIFACT,
+            prefix="developer_preview_windows",
+        ),
+        **_developer_preview_new_user_observation_surface(
+            DEVELOPER_PREVIEW_NEW_USER_OBSERVATION_RECEIPT_ARTIFACT
+        ),
         "developer_demo_wording_allowed": bool(
             summary.get("developer_preview_clean_baseline_ready") is True
             and requirement_surface["developer_preview_requirement_all_ready"] is True
