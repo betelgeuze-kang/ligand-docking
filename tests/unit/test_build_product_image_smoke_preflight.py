@@ -116,6 +116,18 @@ def test_product_image_smoke_preflight_contract_ready_with_docker_path(tmp_path:
     assert rows_by_id["workflow_build_smoke_self_hosted_by_default"]["passed"] is True
     assert rows_by_id["workflow_pre_checkout_workspace_artifact_recovery_declared"]["passed"] is True
     assert rows_by_id["api_worker_pre_checkout_workspace_artifact_recovery_declared"]["passed"] is True
+    assert (
+        rows_by_id["workflow_checkout_subdir_isolated_from_stale_workspace_runs"][
+            "passed"
+        ]
+        is True
+    )
+    assert (
+        rows_by_id["api_worker_checkout_subdir_isolated_from_stale_workspace_runs"][
+            "passed"
+        ]
+        is True
+    )
     assert rows_by_id["workflow_runner_temp_artifact_root_declared"]["passed"] is True
     assert rows_by_id["workflow_container_uid_gid_export_declared"]["passed"] is True
     assert rows_by_id["workflow_post_smoke_ownership_normalization_declared"]["passed"] is True
@@ -137,6 +149,15 @@ def test_product_image_smoke_preflight_contract_ready_with_docker_path(tmp_path:
         minimum_count=2,
     )
     assert mod._workflow_checkout_clean_false_ready(workflow, minimum_count=2)
+    assert mod._workflow_checkout_subdir_ready(
+        workflow,
+        checkout_path="product-ci-checkout",
+        minimum_count=2,
+    )
+    assert workflow.count("working-directory: product-ci-checkout") >= 4
+    assert "product-ci-checkout/runs/product_image_smoke_receipt_current.json" in workflow
+    assert "product-ci-checkout/runs/product_image_build_smoke.log" in workflow
+    assert "product-ci-checkout/runs/product_image_rocm_runtime_smoke.log" in workflow
     assert workflow.count("receipt_path=") >= 2
     assert workflow.count("build_log_path=") >= 2
     assert workflow.count("rocm_log_path=") >= 2
@@ -189,6 +210,12 @@ def test_product_image_smoke_preflight_contract_ready_with_docker_path(tmp_path:
         minimum_count=1,
     )
     assert mod._workflow_checkout_clean_false_ready(api_worker_workflow, minimum_count=1)
+    assert mod._workflow_checkout_subdir_ready(
+        api_worker_workflow,
+        checkout_path="product-ci-checkout",
+        minimum_count=1,
+    )
+    assert api_worker_workflow.count("working-directory: product-ci-checkout") >= 7
     assert "clean: false" in api_worker_workflow
     assert 'repair_path "${receipt_path}"' in api_worker_workflow
     assert 'repair_path "${build_log_path}"' in api_worker_workflow
@@ -234,6 +261,41 @@ def test_product_image_smoke_preflight_blocks_checkout_before_recovery(tmp_path:
     assert payload["summary"]["pre_checkout_cleanup_ready"] is False
     assert rows_by_id["workflow_pre_checkout_workspace_artifact_recovery_declared"]["passed"] is False
     assert {"code": "workflow_pre_checkout_workspace_artifact_recovery_declared"} in payload["blockers"]
+
+
+def test_product_image_smoke_preflight_blocks_checkout_without_subdir_isolation(
+    tmp_path: Path,
+) -> None:
+    _copy_product_image_preflight_fixture(tmp_path)
+    workflow_path = tmp_path / ".github" / "workflows" / "product-image-smoke.yml"
+    workflow_path.write_text(
+        workflow_path.read_text(encoding="utf-8").replace(
+            "          path: product-ci-checkout\n",
+            "",
+        ),
+        encoding="utf-8",
+    )
+
+    payload = mod.build_product_image_smoke_preflight(
+        root=tmp_path,
+        docker_cli_path="/usr/bin/docker",
+        docker_daemon_ready=True,
+        receipt_json=tmp_path / "missing_receipt.json",
+    )
+    rows_by_id = {row["check_id"]: row for row in payload["rows"]}
+
+    assert payload["summary"]["preflight_ready"] is False
+    assert payload["summary"]["workflow_contract_ready"] is False
+    assert payload["summary"]["pre_checkout_cleanup_ready"] is False
+    assert (
+        rows_by_id["workflow_checkout_subdir_isolated_from_stale_workspace_runs"][
+            "passed"
+        ]
+        is False
+    )
+    assert {"code": "workflow_checkout_subdir_isolated_from_stale_workspace_runs"} in payload[
+        "blockers"
+    ]
 
 
 def test_product_image_smoke_preflight_blocks_malformed_workspace_recovery_shell(

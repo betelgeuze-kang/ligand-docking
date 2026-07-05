@@ -15,6 +15,10 @@ def _patch_text(*, include_uid_guard: bool = True) -> str:
     tokens = [
         "Recover stale product image smoke workspace artifacts",
         "clean: false",
+        "path: product-ci-checkout",
+        "working-directory: product-ci-checkout",
+        "product-ci-checkout/runs/product_image_build_smoke.log",
+        "checkout_subdir_isolated",
         "${{ runner.temp }}/product_image_smoke_runner_artifacts",
         "runs/product_image_build_smoke.log\n+            ${{ runner.temp }}/product_image_smoke_runner_artifacts/**",
         "runs/product_image_rocm_runtime_smoke.log\n+            ${{ runner.temp }}/product_image_smoke_runner_artifacts/**",

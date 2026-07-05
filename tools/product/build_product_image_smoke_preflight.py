@@ -801,6 +801,25 @@ def _workflow_checkout_clean_false_ready(workflow: str, *, minimum_count: int) -
     return True
 
 
+def _workflow_checkout_subdir_ready(
+    workflow: str,
+    *,
+    checkout_path: str,
+    minimum_count: int,
+) -> bool:
+    lines = workflow.splitlines()
+    checkout_positions = [
+        index for index, line in enumerate(lines) if "actions/checkout@v5" in line
+    ]
+    if len(checkout_positions) < minimum_count:
+        return False
+    for checkout_index in checkout_positions[:minimum_count]:
+        checkout_window = "\n".join(lines[checkout_index : checkout_index + 8])
+        if f"path: {checkout_path}" not in checkout_window:
+            return False
+    return True
+
+
 def _workflow_workspace_recovery_shell_syntax_ready(
     workflow: str,
     *,
@@ -904,6 +923,11 @@ def build_product_image_smoke_preflight(
         workflow,
         minimum_count=2,
     )
+    product_workflow_checkout_subdir_ready = _workflow_checkout_subdir_ready(
+        workflow,
+        checkout_path="product-ci-checkout",
+        minimum_count=2,
+    )
     product_workflow_recovery_shell_syntax_ready = (
         _workflow_workspace_recovery_shell_syntax_ready(
             workflow,
@@ -917,6 +941,11 @@ def build_product_image_smoke_preflight(
     )
     api_worker_checkout_clean_false_ready = _workflow_checkout_clean_false_ready(
         api_worker_workflow,
+        minimum_count=1,
+    )
+    api_worker_checkout_subdir_ready = _workflow_checkout_subdir_ready(
+        api_worker_workflow,
+        checkout_path="product-ci-checkout",
         minimum_count=1,
     )
     api_worker_recovery_shell_syntax_ready = (
@@ -1211,6 +1240,19 @@ def build_product_image_smoke_preflight(
             ".github/workflows/product-image-smoke.yml",
         ),
         _contract_row(
+            "workflow_checkout_subdir_isolated_from_stale_workspace_runs",
+            product_workflow_checkout_subdir_ready
+            and workflow.count("working-directory: product-ci-checkout") >= 4
+            and "product-ci-checkout/runs/product_image_smoke_receipt_current.json" in workflow
+            and "product-ci-checkout/runs/product_image_build_smoke.log" in workflow
+            and "product-ci-checkout/runs/product_image_rocm_runtime_smoke.log" in workflow,
+            "checkout path product-ci-checkout declared"
+            if product_workflow_checkout_subdir_ready
+            else "missing",
+            "product-image-smoke checks out the repository into a clean subdirectory and runs repo commands there so stale root-owned workspace runs artifacts cannot break actions/checkout",
+            ".github/workflows/product-image-smoke.yml",
+        ),
+        _contract_row(
             "workflow_runner_temp_artifact_root_declared",
             workflow.count("PRODUCT_IMAGE_RUNNER_SMOKE_DIR: ${{ runner.temp }}/product_image_smoke_runner_artifacts") >= 2
             and "runs/product_image_smoke_runner_artifacts/**" not in workflow
@@ -1276,6 +1318,16 @@ def build_product_image_smoke_preflight(
             )
             else "missing",
             "self-hosted API worker workflow attempts stale product-image smoke workspace artifact recovery before checkout, disables checkout's broad workspace clean, and leaves fail-closed hygiene ownership to product-image-smoke",
+            ".github/workflows/product-api-worker.yml",
+        ),
+        _contract_row(
+            "api_worker_checkout_subdir_isolated_from_stale_workspace_runs",
+            api_worker_checkout_subdir_ready
+            and api_worker_workflow.count("working-directory: product-ci-checkout") >= 7,
+            "checkout path product-ci-checkout declared"
+            if api_worker_checkout_subdir_ready
+            else "missing",
+            "product-api-worker checks out the repository into a clean subdirectory and runs repo commands there so stale root-owned workspace runs artifacts cannot break actions/checkout",
             ".github/workflows/product-api-worker.yml",
         ),
         _contract_row(
@@ -1392,6 +1444,8 @@ def build_product_image_smoke_preflight(
             "exit_trap_runner_artifact_ownership_normalization_declared",
             "workflow_pre_checkout_workspace_artifact_recovery_declared",
             "api_worker_pre_checkout_workspace_artifact_recovery_declared",
+            "workflow_checkout_subdir_isolated_from_stale_workspace_runs",
+            "api_worker_checkout_subdir_isolated_from_stale_workspace_runs",
             "workflow_runner_temp_artifact_root_declared",
             "workflow_container_uid_gid_export_declared",
             "workflow_post_smoke_ownership_normalization_declared",
@@ -1404,6 +1458,8 @@ def build_product_image_smoke_preflight(
         in {
             "workflow_pre_checkout_workspace_artifact_recovery_declared",
             "api_worker_pre_checkout_workspace_artifact_recovery_declared",
+            "workflow_checkout_subdir_isolated_from_stale_workspace_runs",
+            "api_worker_checkout_subdir_isolated_from_stale_workspace_runs",
             "workflow_runner_temp_artifact_root_declared",
             "workflow_container_uid_gid_export_declared",
             "workflow_post_smoke_ownership_normalization_declared",
@@ -1416,6 +1472,8 @@ def build_product_image_smoke_preflight(
         in {
             "workflow_pre_checkout_workspace_artifact_recovery_declared",
             "api_worker_pre_checkout_workspace_artifact_recovery_declared",
+            "workflow_checkout_subdir_isolated_from_stale_workspace_runs",
+            "api_worker_checkout_subdir_isolated_from_stale_workspace_runs",
         }
     )
     receipt_present = bool(receipt)

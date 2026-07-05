@@ -192,9 +192,11 @@ def _workflow_source_contract(workflow_text: str, *, workflow_path: str) -> tupl
         "workflow_tag_filters": "tags:" in text and "v*" in text and "product-*" in text,
         "artifact_upload_action": "actions/upload-artifact@v4" in text,
         "artifact_upload_always": "if: always()" in text,
-        "receipt_artifact_path": "runs/product_image_smoke_receipt_current.json" in text,
-        "build_log_artifact_path": "runs/product_image_build_smoke.log" in text,
-        "rocm_log_artifact_path": "runs/product_image_rocm_runtime_smoke.log" in text,
+        "checkout_subdir_isolated": text.count("path: product-ci-checkout") >= 2
+        and text.count("working-directory: product-ci-checkout") >= 4,
+        "receipt_artifact_path": "product-ci-checkout/runs/product_image_smoke_receipt_current.json" in text,
+        "build_log_artifact_path": "product-ci-checkout/runs/product_image_build_smoke.log" in text,
+        "rocm_log_artifact_path": "product-ci-checkout/runs/product_image_rocm_runtime_smoke.log" in text,
         "pre_checkout_workspace_artifact_recovery": "Recover stale product image smoke workspace artifacts" in text
         and "sudo -n chown -R" in text
         and "rm -rf" in text

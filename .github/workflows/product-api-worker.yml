@@ -200,6 +200,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
+          path: product-ci-checkout
           clean: false
 
       - name: Set up Python
@@ -208,11 +209,13 @@ jobs:
           python-version: "3.11"
 
       - name: Install API test dependencies
+        working-directory: product-ci-checkout
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install -r requirements.txt -r requirements-api.txt
 
       - name: Compile API and worker modules
+        working-directory: product-ci-checkout
         run: |
           python3 -m py_compile \
             api/config.py \
@@ -271,6 +274,7 @@ jobs:
             tools/product/build_self_hosted_license_distribution_audit.py
 
       - name: Refresh release bundle local decision artifacts
+        working-directory: product-ci-checkout
         run: |
           python3 tools/product/bootstrap_api_worker_contract_artifacts.py
           python3 tools/build_viewer_asset_base_url_decision.py \
@@ -282,6 +286,7 @@ jobs:
           python3 deploy/product_release_bundle.py
 
       - name: Run API worker and deploy artifact tests
+        working-directory: product-ci-checkout
         run: |
           python3 -m pytest -q \
             tests/unit/test_docking_pipeline_hardening.py \
@@ -318,10 +323,12 @@ jobs:
             tests/unit/test_api_product_import.py
 
       - name: Validate API runner profiles
+        working-directory: product-ci-checkout
         run: |
           python3 tools/product/validate_api_runner_profiles.py --profiles-dir config/api_validated_runner_profiles
 
       - name: Build API runner profile enablement work order
+        working-directory: product-ci-checkout
         run: |
           python3 tools/product/build_api_runner_profile_enablement_work_order.py \
             --profiles-dir config/api_validated_runner_profiles \
@@ -331,6 +338,7 @@ jobs:
             --out-md /tmp/api_runner_profile_enablement_work_order.md
 
       - name: Smoke worker CLI with empty durable queue
+        working-directory: product-ci-checkout
         run: |
           tmpdir="$(mktemp -d)"
           API_JOB_STORE_PATH="$tmpdir/api_jobs.sqlite3" \
@@ -343,5 +351,6 @@ jobs:
             --poll-interval-seconds 0.01
 
       - name: Smoke alert delivery CLI with localhost receiver
+        working-directory: product-ci-checkout
         run: |
           python3 tools/smoke_alert_delivery.py --local-receiver-smoke

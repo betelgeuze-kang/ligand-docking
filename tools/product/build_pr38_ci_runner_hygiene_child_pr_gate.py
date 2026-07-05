@@ -80,6 +80,10 @@ REQUIRED_FOCUSED_TEST_TOKENS = [
 REQUIRED_PATCH_TOKENS = {
     "workspace_recovery_step": "Recover stale product image smoke workspace artifacts",
     "checkout_clean_false": "clean: false",
+    "checkout_subdir_path": "path: product-ci-checkout",
+    "checkout_subdir_working_directory": "working-directory: product-ci-checkout",
+    "checkout_subdir_artifact_upload_path": "product-ci-checkout/runs/product_image_build_smoke.log",
+    "release_ci_checkout_subdir_contract": "checkout_subdir_isolated",
     "runner_temp_output_dir": "${{ runner.temp }}/product_image_smoke_runner_artifacts",
     "container_uid_gid_export": 'PRODUCT_IMAGE_CONTAINER_UID_GID="$(id -u):$(id -g)"',
     "container_output_dirs_writable": "chmod -R a+rwX logs runs",

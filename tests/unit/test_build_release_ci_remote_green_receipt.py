@@ -50,19 +50,25 @@ jobs:
           rm -rf runs/product_image_smoke_runner_artifacts
       - uses: actions/checkout@v5
         with:
+          path: product-ci-checkout
           clean: false
       - name: Verify product image build smoke
+        working-directory: product-ci-checkout
         env:
           PRODUCT_IMAGE_RUNNER_SMOKE_DIR: ${{ runner.temp }}/product_image_smoke_runner_artifacts
         run: |
           export PRODUCT_IMAGE_CONTAINER_UID_GID="$(id -u):$(id -g)"
           bash deploy/verify_product_image.sh
+      - name: Normalize product image smoke artifact ownership
+        if: always()
+        working-directory: product-ci-checkout
+        run: bash scripts/normalize_product_image_smoke_artifact_ownership.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           path: |
-            runs/product_image_smoke_receipt_current.json
-            runs/product_image_build_smoke.log
+            product-ci-checkout/runs/product_image_smoke_receipt_current.json
+            product-ci-checkout/runs/product_image_build_smoke.log
   product-image-rocm-runtime-smoke:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/product-') }}
     runs-on: [self-hosted, linux, rocm]
@@ -73,19 +79,25 @@ jobs:
           rm -rf runs/product_image_smoke_runner_artifacts
       - uses: actions/checkout@v5
         with:
+          path: product-ci-checkout
           clean: false
       - name: Verify product image ROCm/HIP/Rust runtime smoke
+        working-directory: product-ci-checkout
         env:
           PRODUCT_IMAGE_RUNNER_SMOKE_DIR: ${{ runner.temp }}/product_image_smoke_runner_artifacts
         run: |
           export PRODUCT_IMAGE_CONTAINER_UID_GID="$(id -u):$(id -g)"
           bash deploy/verify_product_image.sh
+      - name: Normalize product image smoke artifact ownership
+        if: always()
+        working-directory: product-ci-checkout
+        run: bash scripts/normalize_product_image_smoke_artifact_ownership.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           path: |
-            runs/product_image_smoke_receipt_current.json
-            runs/product_image_rocm_runtime_smoke.log
+            product-ci-checkout/runs/product_image_smoke_receipt_current.json
+            product-ci-checkout/runs/product_image_rocm_runtime_smoke.log
             ${{ runner.temp }}/product_image_smoke_runner_artifacts/**
 """
 
@@ -193,6 +205,9 @@ def test_release_ci_remote_green_receipt_passes_with_complete_evidence(tmp_path:
     assert rows_by_id["product_image_workflow_source_contract_configured"]["observed"][
         "container_output_uid_gid_pinned"
     ] is True
+    assert rows_by_id["product_image_workflow_source_contract_configured"]["observed"][
+        "checkout_subdir_isolated"
+    ] is True
     assert "does not register runners" in summary["claim_boundary"]
 
 
@@ -258,6 +273,26 @@ def test_release_ci_remote_green_receipt_blocks_workflow_without_container_uid_e
     assert payload["summary"]["status"] == "blocked_release_ci_remote_green"
     assert payload["summary"]["workflow_source_contract_ready"] is False
     assert workflow_row["observed"]["container_output_uid_gid_pinned"] is False
+
+
+def test_release_ci_remote_green_receipt_blocks_workflow_without_checkout_subdir(
+    tmp_path: Path,
+) -> None:
+    inputs = _green_inputs(tmp_path)
+    workflow = _workflow_source().replace(
+        "          path: product-ci-checkout\n",
+        "",
+    )
+    inputs["workflow_yml"].write_text(workflow, encoding="utf-8")
+
+    payload = build_release_ci_remote_green_receipt(root=tmp_path, **inputs)
+    workflow_row = {
+        row["check_id"]: row for row in payload["rows"]
+    }["product_image_workflow_source_contract_configured"]
+
+    assert payload["summary"]["status"] == "blocked_release_ci_remote_green"
+    assert payload["summary"]["workflow_source_contract_ready"] is False
+    assert workflow_row["observed"]["checkout_subdir_isolated"] is False
 
 
 def test_release_ci_remote_green_receipt_does_not_accept_unrelated_scheduled_success(tmp_path: Path) -> None:
