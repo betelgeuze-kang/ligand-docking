@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -73,6 +75,43 @@ def _string_list(value: Any) -> list[str]:
         return [_text(item) for item in value if _text(item)]
     text = _text(value)
     return [text] if text else []
+
+
+def _shell_join(parts: list[str]) -> str:
+    return " ".join(shlex.quote(part) for part in parts)
+
+
+def _git_status_dirty_paths(root: Path) -> list[str]:
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(root),
+                "status",
+                "--porcelain",
+                "--untracked-files=all",
+                "-z",
+            ],
+            check=True,
+            capture_output=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return []
+    entries = result.stdout.split(b"\0")
+    paths: list[str] = []
+    index = 0
+    while index < len(entries):
+        entry = entries[index]
+        if not entry:
+            index += 1
+            continue
+        status = entry[:2]
+        path = entry[3:].decode("utf-8", errors="surrogateescape")
+        if path:
+            paths.append(path)
+        index += 2 if status[:1] in {b"R", b"C"} else 1
+    return paths
 
 
 def _check_row(
@@ -145,6 +184,10 @@ def build_pr38_ci_runner_hygiene_remote_rerun_preflight(
         and child_summary.get("local_git_head_matches_upstream") is True
         and child_summary.get("remote_ci_rerun_current_patch_published") is True
     )
+    required_dirty_paths = list(
+        child_summary.get("local_runner_hygiene_required_patch_file_dirty_paths") or []
+    )
+    all_dirty_paths = _git_status_dirty_paths(root_path) or required_dirty_paths
 
     rows = [
         _check_row(
@@ -167,6 +210,13 @@ def build_pr38_ci_runner_hygiene_remote_rerun_preflight(
             observed=str(dirty_count),
             required="0 dirty required runner-hygiene patch files",
             blocker="ci_runner_hygiene_required_patch_files_uncommitted",
+        ),
+        _check_row(
+            check_id="all_local_changes_committed",
+            passed=not all_dirty_paths,
+            observed=str(len(all_dirty_paths)),
+            required="0 dirty worktree files before remote CI rerun handoff",
+            blocker="ci_runner_hygiene_local_worktree_dirty",
         ),
         _check_row(
             check_id="current_head_published_to_upstream",
@@ -199,6 +249,20 @@ def build_pr38_ci_runner_hygiene_remote_rerun_preflight(
     ]
     failed_rows = [row for row in rows if not row["passed"]]
     preconditions_ready = not failed_rows
+    worktree_dir = ".betelgeuze/pr38_child_pr_worktrees/ci_runner_hygiene"
+    human_git_add_command = (
+        _shell_join(["git", "add", *all_dirty_paths])
+        if all_dirty_paths
+        else "git add <reviewed-files>"
+    )
+    human_commit_push_command_block = [
+        f"cd {shlex.quote(worktree_dir)}",
+        human_git_add_command,
+        "git commit -m '[codex] Isolate PR39 self-hosted checkout workspace'",
+        "git push",
+        "cd ../../..",
+        "bash .betelgeuze/pr38_child_pr_launch_command_pack_current/01-ci_runner_hygiene-post-push-remote-ci.sh",
+    ]
     summary = {
         "packet_type": PACKET_TYPE,
         "schema_version": SCHEMA_VERSION,
@@ -241,9 +305,26 @@ def build_pr38_ci_runner_hygiene_remote_rerun_preflight(
             child_summary.get("local_git_head_matches_upstream") is True
         ),
         "local_runner_hygiene_required_patch_file_dirty_count": dirty_count,
-        "local_runner_hygiene_required_patch_file_dirty_paths": list(
-            child_summary.get("local_runner_hygiene_required_patch_file_dirty_paths") or []
+        "local_runner_hygiene_required_patch_file_dirty_paths": required_dirty_paths,
+        "local_worktree_dirty_count": len(all_dirty_paths),
+        "local_worktree_dirty_paths": all_dirty_paths,
+        "human_owner_external_mutation_required": bool(
+            all_dirty_paths or not expected_ref_published_for_dispatch
         ),
+        "codex_should_not_run_handoff_commands": True,
+        "human_commit_worktree_dir": worktree_dir,
+        "human_commit_required_dirty_path_count": len(all_dirty_paths),
+        "human_commit_required_dirty_paths": all_dirty_paths,
+        "human_git_add_command": human_git_add_command,
+        "human_git_commit_command": (
+            "git commit -m '[codex] Isolate PR39 self-hosted checkout workspace'"
+        ),
+        "human_git_push_command": "git push",
+        "human_post_push_remote_ci_command": (
+            "bash .betelgeuze/pr38_child_pr_launch_command_pack_current/"
+            "01-ci_runner_hygiene-post-push-remote-ci.sh"
+        ),
+        "human_commit_push_command_block": human_commit_push_command_block,
         "remote_ci_rerun_current_patch_published": bool(
             child_summary.get("remote_ci_rerun_current_patch_published") is True
         ),
@@ -386,6 +467,11 @@ def _write_md(path_like: str | Path, payload: dict[str, Any], *, root: Path = RO
         f"- local_git_upstream_ref: `{summary['local_git_upstream_ref'] or '-'}`",
         f"- local_git_head_matches_upstream: `{summary['local_git_head_matches_upstream']}`",
         f"- local_runner_hygiene_required_patch_file_dirty_count: `{summary['local_runner_hygiene_required_patch_file_dirty_count']}`",
+        f"- local_worktree_dirty_count: `{summary['local_worktree_dirty_count']}`",
+        f"- human_owner_external_mutation_required: `{summary['human_owner_external_mutation_required']}`",
+        f"- codex_should_not_run_handoff_commands: `{summary['codex_should_not_run_handoff_commands']}`",
+        f"- human_commit_worktree_dir: `{summary['human_commit_worktree_dir']}`",
+        f"- human_commit_required_dirty_path_count: `{summary['human_commit_required_dirty_path_count']}`",
         f"- remote_ci_rerun_current_patch_published: `{summary['remote_ci_rerun_current_patch_published']}`",
         f"- product_ci_runtime_gate_status: `{summary['product_ci_runtime_gate_status'] or '-'}`",
         f"- product_ci_runtime_primary_blocker: `{summary['product_ci_runtime_primary_blocker'] or '-'}`",
@@ -419,6 +505,26 @@ def _write_md(path_like: str | Path, payload: dict[str, Any], *, root: Path = RO
     lines.extend(
         [
             "",
+            "## Human Commit/Push Handoff",
+            "",
+            "Run only after human review and approval. These commands may commit, push, and dispatch remote CI.",
+            "",
+            "```bash",
+            *summary["human_commit_push_command_block"],
+            "```",
+            "",
+            "Required dirty paths:",
+            "",
+        ]
+    )
+    if summary["human_commit_required_dirty_paths"]:
+        for dirty_path in summary["human_commit_required_dirty_paths"]:
+            lines.append(f"- `{dirty_path}`")
+    else:
+        lines.append("- `-`")
+    lines.extend(
+        [
+            "",
             "## Claim Boundary",
             "",
             summary["claim_boundary"],
@@ -430,7 +536,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any], *, root: Path = RO
         ]
     )
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(lines), encoding="utf-8")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _parser() -> argparse.ArgumentParser:

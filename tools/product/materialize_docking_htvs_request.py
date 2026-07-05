@@ -85,6 +85,15 @@ def _has_materializable_source(ligand: Any) -> bool:
     )
 
 
+def _first_unsupported_path_source_kind(candidate_lists: list[list[dict[str, Any]]]) -> str:
+    for rows in candidate_lists:
+        for ligand in rows:
+            for key in _PATH_SOURCE_FIELDS:
+                if _text(ligand.get(key)):
+                    return key
+    return ""
+
+
 def _recover_private_ligands(docking_job_id: str, request_sha256: str) -> list[dict[str, Any]]:
     """Recover original ligand sources from the encrypted private payload store.
 
@@ -189,6 +198,12 @@ def _resolve_materialization_inputs(
     synthetic_used = False
     if not ligands:
         if not allow_synthetic:
+            unsupported_kind = _first_unsupported_path_source_kind(candidate_lists)
+            if unsupported_kind:
+                raise DockingMaterializationError(
+                    "unsupported_ligand_source_for_htvs_materialization",
+                    unsupported_kind,
+                )
             raise DockingMaterializationError("ligand_source_unavailable_for_materialization")
         if expected_count not in {0, 1}:
             raise DockingMaterializationError(

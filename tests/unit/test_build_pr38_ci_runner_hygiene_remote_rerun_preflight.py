@@ -78,6 +78,14 @@ def test_remote_rerun_preflight_blocks_until_child_patch_is_published(
         "build_pr38_ci_runner_hygiene_child_pr_gate",
         lambda **_kwargs: _child_payload(published=False),
     )
+    monkeypatch.setattr(
+        mod,
+        "_git_status_dirty_paths",
+        lambda _root: [
+            "deploy/verify_product_image.sh",
+            "tools/product/ci_contract_fixture_packets.py",
+        ],
+    )
 
     payload = mod.build_pr38_ci_runner_hygiene_remote_rerun_preflight(
         product_ci_runtime_gate_json=runtime_gate,
@@ -108,11 +116,49 @@ def test_remote_rerun_preflight_blocks_until_child_patch_is_published(
         "gh workflow run --ref codex/pr38-ci-runner-hygiene command."
     )
     assert summary["local_runner_hygiene_required_patch_file_dirty_count"] == 21
+    assert summary["local_worktree_dirty_count"] == 2
+    assert summary["local_worktree_dirty_paths"] == [
+        "deploy/verify_product_image.sh",
+        "tools/product/ci_contract_fixture_packets.py",
+    ]
+    assert summary["human_owner_external_mutation_required"] is True
+    assert summary["codex_should_not_run_handoff_commands"] is True
+    assert summary["human_commit_worktree_dir"] == (
+        ".betelgeuze/pr38_child_pr_worktrees/ci_runner_hygiene"
+    )
+    assert summary["human_commit_required_dirty_path_count"] == 2
+    assert summary["human_commit_required_dirty_paths"] == [
+        "deploy/verify_product_image.sh",
+        "tools/product/ci_contract_fixture_packets.py",
+    ]
+    assert summary["human_git_add_command"] == (
+        "git add deploy/verify_product_image.sh tools/product/ci_contract_fixture_packets.py"
+    )
+    assert summary["human_git_commit_command"] == (
+        "git commit -m '[codex] Isolate PR39 self-hosted checkout workspace'"
+    )
+    assert summary["human_git_push_command"] == "git push"
+    assert summary["human_post_push_remote_ci_command"] == (
+        "bash .betelgeuze/pr38_child_pr_launch_command_pack_current/"
+        "01-ci_runner_hygiene-post-push-remote-ci.sh"
+    )
+    assert summary["human_commit_push_command_block"] == [
+        "cd .betelgeuze/pr38_child_pr_worktrees/ci_runner_hygiene",
+        "git add deploy/verify_product_image.sh tools/product/ci_contract_fixture_packets.py",
+        "git commit -m '[codex] Isolate PR39 self-hosted checkout workspace'",
+        "git push",
+        "cd ../../..",
+        (
+            "bash .betelgeuze/pr38_child_pr_launch_command_pack_current/"
+            "01-ci_runner_hygiene-post-push-remote-ci.sh"
+        ),
+    ]
     assert summary["remote_ci_rerun_current_patch_published"] is False
     assert summary["remote_ci_rerun_after_push_required"] is True
     assert summary["primary_blocker"] == "ci_runner_hygiene_wrong_branch_for_remote_rerun"
     assert "ci_runner_hygiene_wrong_branch_for_remote_rerun" in summary["blockers"]
     assert "ci_runner_hygiene_required_patch_files_uncommitted" in summary["blockers"]
+    assert "ci_runner_hygiene_local_worktree_dirty" in summary["blockers"]
     assert "ci_runner_hygiene_patch_not_published_for_remote_rerun" in summary["blockers"]
     assert summary["product_ci_runtime_gate_status"] == "blocked_product_ci_runtime_gate"
     assert summary["product_ci_runtime_primary_blocker"] == (
@@ -178,6 +224,12 @@ def test_remote_rerun_preflight_ready_when_child_branch_is_clean_and_pushed(
     assert summary["expected_remote_ci_rerun_ref_missing_required_action"] == ""
     assert summary["local_git_head_matches_upstream"] is True
     assert summary["local_runner_hygiene_required_patch_file_dirty_count"] == 0
+    assert summary["local_worktree_dirty_count"] == 0
+    assert summary["local_worktree_dirty_paths"] == []
+    assert summary["human_owner_external_mutation_required"] is False
+    assert summary["codex_should_not_run_handoff_commands"] is True
+    assert summary["human_commit_required_dirty_path_count"] == 0
+    assert summary["human_commit_required_dirty_paths"] == []
     assert summary["remote_ci_rerun_current_patch_published"] is True
     assert summary["remote_ci_rerun_after_push_required"] is False
     assert summary["expected_remote_ci_rerun_branch"] == (
