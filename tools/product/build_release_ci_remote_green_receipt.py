@@ -195,7 +195,18 @@ def _workflow_source_contract(workflow_text: str, *, workflow_path: str) -> tupl
         "receipt_artifact_path": "runs/product_image_smoke_receipt_current.json" in text,
         "build_log_artifact_path": "runs/product_image_build_smoke.log" in text,
         "rocm_log_artifact_path": "runs/product_image_rocm_runtime_smoke.log" in text,
-        "rocm_runner_artifacts_path": "runs/product_image_smoke_runner_artifacts/**" in text,
+        "pre_checkout_workspace_artifact_recovery": "Recover stale product image smoke workspace artifacts" in text
+        and "sudo -n chown -R" in text
+        and "rm -rf" in text
+        and "clean: false" in text,
+        "runner_temp_rocm_artifacts_path": "runner.temp" in text
+        and "PRODUCT_IMAGE_RUNNER_SMOKE_DIR: ${{ runner.temp }}/product_image_smoke_runner_artifacts" in text
+        and "product_image_smoke_runner_artifacts/**" in text,
+        "container_output_uid_gid_pinned": text.count(
+            'export PRODUCT_IMAGE_CONTAINER_UID_GID="$(id -u):$(id -g)"'
+        )
+        >= 2
+        and "PRODUCT_IMAGE_CONTAINER_UID_GID" in text,
     }
     pass_values = [value for key, value in checks.items() if key not in {"workflow_path", "workflow_sha256"}]
     return all(bool(value) for value in pass_values), checks
@@ -267,6 +278,8 @@ def build_release_ci_remote_green_receipt(
         "status": "release_ci_remote_green_ready" if not blockers else "blocked_release_ci_remote_green",
         "pass": not blockers,
         "blocker_count": len(blockers),
+        "primary_blocker": str(blockers[0].get("code") or "") if blockers else "",
+        "blockers": blockers,
         "linux_self_hosted_runner_ready": linux_ready,
         "rocm_self_hosted_runner_ready": rocm_ready,
         "main_required_checks_ready": main_required_checks_ready,

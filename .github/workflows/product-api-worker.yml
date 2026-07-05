@@ -168,8 +168,39 @@ jobs:
   api-worker-contract:
     runs-on: ${{ fromJSON(inputs.runner_labels_json || '["self-hosted","linux"]') }}
     steps:
+      - name: Recover stale product image smoke workspace artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          runs_dir="${GITHUB_WORKSPACE}/runs"
+          smoke_dir="${runs_dir}/product_image_smoke_runner_artifacts"
+          receipt_path="${runs_dir}/product_image_smoke_receipt_current.json"
+          build_log_path="${runs_dir}/product_image_build_smoke.log"
+          rocm_log_path="${runs_dir}/product_image_rocm_runtime_smoke.log"
+          repair_path() {
+            local path="$1"
+            if [[ -e "${path}" ]]; then
+              chown -R "$(id -u):$(id -g)" "${path}" 2>/dev/null || sudo -n chown -R "$(id -u):$(id -g)" "${path}" 2>/dev/null || true
+              chmod -R u+rwX "${path}" 2>/dev/null || sudo -n chmod -R u+rwX "${path}" 2>/dev/null || true
+            fi
+          }
+          if [[ -e "${runs_dir}" ]]; then
+            chown "$(id -u):$(id -g)" "${runs_dir}" 2>/dev/null || sudo -n chown "$(id -u):$(id -g)" "${runs_dir}" 2>/dev/null || true
+            chmod u+rwx "${runs_dir}" 2>/dev/null || sudo -n chmod u+rwx "${runs_dir}" 2>/dev/null || true
+          fi
+          repair_path "${receipt_path}"
+          repair_path "${build_log_path}"
+          repair_path "${rocm_log_path}"
+          if [[ -e "${smoke_dir}" ]]; then
+            repair_path "${smoke_dir}"
+            if ! rm -rf "${smoke_dir}"; then
+              echo "::warning::product_image_smoke_workspace_cleanup_failed path=${smoke_dir}; continuing because product-image-smoke owns the fail-closed hygiene receipt" >&2
+            fi
+          fi
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          clean: false
 
       - name: Set up Python
         uses: actions/setup-python@v6

@@ -62,5 +62,8 @@ importlib.import_module("tools.run_ligand_backmapping_scoring")
 print("product rocm hip rust import ok")
 PY
 
+RUN mkdir -p logs runs \
+    && chmod -R a+rwX logs runs
+
 EXPOSE 8000
 CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -90,6 +90,7 @@ def test_product_dockerfile_contains_worker_entrypoint_assets() -> None:
     assert "COPY rust_engine ./rust_engine" in dockerfile
     assert "requirements-product-rocm.txt" in dockerfile
     assert "tools/build_rust_hip_engine.py --output /app" in dockerfile
+    assert "chmod -R a+rwX logs runs" in dockerfile
     assert "FORCE_RUST_HIP=1" in dockerfile
     assert "API_VALIDATED_RUNNER_ENABLED=0" in dockerfile
     assert 'CMD ["uvicorn", "api.main:app"' in dockerfile
