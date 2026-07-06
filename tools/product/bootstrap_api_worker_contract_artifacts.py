@@ -63,9 +63,9 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
         ("tools/build_goal_readiness_rollup.py",),
         ("tools/build_goal_release_decision_gate.py",),
         ("tools/build_goal_release_burndown_work_order.py",),
-        ("tools/build_goal_bottleneck_briefing.py",),
         ("tools/build_goal_operator_action_board.py",),
         ("tools/build_goal_operator_intake_kit.py",),
+        ("tools/build_goal_bottleneck_briefing.py",),
         ("tools/build_goal_api_surface_contract.py",),
         ("tools/product/build_api_runner_profile_promotion_operator_receipt.py",),
         ("tools/product/build_self_hosted_license_distribution_audit.py",),
@@ -89,9 +89,15 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
     for command in builders:
         _run(*command)
     from tools.product.ci_contract_fixture_packets import (
+        write_cameo_api_surface_fixture_packets,
+        write_commercial_readiness_operator_surface_fixture_packets,
+        write_product_scope_breadth_priority_fixture_packets,
         write_production_ai_checkpoint_fixture_packets,
         write_deploy_ops_legal_closure_packets,
+        write_restricted_accuracy_parity_scorecard,
+        write_restricted_engine_refinement_claim_evidence_priority_packet,
         write_restricted_goal_bottleneck_briefing,
+        write_restricted_goal_release_decision_gate,
         write_restricted_commercial_readiness_handoff_bundle,
         write_restricted_production_ai_checkpoint_readiness_contract,
         write_restricted_product_goal_completion_audit,
@@ -101,6 +107,7 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
 
     write_full_gap_closure_fixture_packets(runs_dir)
     write_restricted_self_hosted_commercial_packets(runs_dir)
+    write_cameo_api_surface_fixture_packets(runs_dir)
     post_builders = [
         ("tools/build_product_scope_breadth_evidence_intake_readiness.py",),
         ("tools/build_product_scope_breadth_evidence_acquisition_queue.py",),
@@ -148,14 +155,17 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
         ("tools/build_goal_readiness_rollup.py",),
         ("tools/build_goal_release_decision_gate.py",),
         ("tools/build_goal_release_burndown_work_order.py",),
-        ("tools/build_goal_bottleneck_briefing.py",),
         ("tools/build_goal_operator_action_board.py",),
         ("tools/build_goal_operator_intake_kit.py",),
+        ("tools/build_goal_bottleneck_briefing.py",),
         ("tools/build_goal_api_surface_contract.py",),
     ]
     for command in post_builders:
         _run(*command)
     write_restricted_self_hosted_commercial_packets(runs_dir)
+    write_restricted_accuracy_parity_scorecard(runs_dir)
+    write_cameo_api_surface_fixture_packets(runs_dir)
+    write_product_scope_breadth_priority_fixture_packets(runs_dir)
     write_production_ai_checkpoint_fixture_packets(runs_dir)
     _run("tools/build_product_production_ai_checkpoint_readiness.py")
     write_restricted_production_ai_checkpoint_readiness_contract(runs_dir)
@@ -169,6 +179,7 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
         ("scripts/verify_quality_gate.py", "--quiet", "--out-json", "runs/product_quality_gate_verification_current.json"),
         ("tools/product/build_engine_refinement_tier_readiness.py",),
         ("tools/product/build_engine_refinement_claim_evidence_receipt.py",),
+        ("tools/product/build_engine_refinement_claim_evidence_priority_packet.py",),
         ("tools/product/build_engine_refinement_tier_readiness.py",),
         ("tools/product/build_product_scope_breadth_evidence_receipt.py",),
         ("tools/build_product_goal_completion_audit.py",),
@@ -177,19 +188,53 @@ def materialize(*, evidence_dir: str = "/tmp/api_runner_profile_evidence_templat
         ("tools/build_goal_readiness_rollup.py",),
         ("tools/build_goal_release_decision_gate.py",),
         ("tools/build_goal_release_burndown_work_order.py",),
-        ("tools/build_goal_bottleneck_briefing.py",),
         ("tools/build_goal_operator_action_board.py",),
         ("tools/build_goal_operator_intake_kit.py",),
+        ("tools/build_goal_bottleneck_briefing.py",),
         ("tools/build_goal_api_surface_contract.py",),
     ]
     for command in final_builders:
         _run(*command)
+    write_restricted_engine_refinement_claim_evidence_priority_packet(runs_dir)
     write_deploy_ops_legal_closure_packets(runs_dir)
     _run("tools/product/build_self_hosted_license_distribution_audit.py")
     write_restricted_product_goal_completion_audit(runs_dir)
     _run("tools/product/build_product_full_commercial_blocker_evidence_matrix.py")
     write_restricted_goal_bottleneck_briefing(runs_dir)
+    write_restricted_goal_release_decision_gate(runs_dir)
     _run("tools/product/build_product_full_commercial_blocker_evidence_matrix.py")
+    write_commercial_readiness_operator_surface_fixture_packets(runs_dir)
+    commercial_operator_builders = [
+        ("tools/build_production_ai_registry_promotion_operator_field_worksheet.py",),
+        ("tools/build_production_ai_registry_promotion_operator_staging_apply.py",),
+        ("tools/build_product_scope_breadth_evidence_operator_field_worksheet.py",),
+        ("tools/build_product_scope_breadth_evidence_operator_staging_apply.py",),
+        ("tools/build_aqp1_direct_binding_external_evidence_operator_fill_guide.py",),
+        ("tools/build_aqp1_direct_binding_external_evidence_operator_worksheet.py",),
+        (
+            "tools/build_aqp1_direct_binding_external_evidence_operator_staging_apply.py",
+            "--mode",
+            "preview",
+            "--staging-csv",
+            "runs/aqp1_direct_binding_external_evidence_intake_supplement_current.csv",
+        ),
+        ("tools/build_product_commercial_readiness_operator_packet.py",),
+    ]
+    for command in commercial_operator_builders:
+        _run(*command)
+    write_commercial_readiness_operator_surface_fixture_packets(runs_dir)
+    commercial_operator_followup_builders = [
+        ("tools/build_product_commercial_readiness_operator_packet_freshness.py",),
+        ("tools/build_product_commercial_readiness_execution_ladder.py",),
+        ("tools/build_product_commercial_readiness_handoff_bundle.py",),
+    ]
+    for command in commercial_operator_followup_builders:
+        _run(*command)
+    write_restricted_commercial_readiness_handoff_bundle(runs_dir)
+    write_restricted_product_goal_completion_audit(runs_dir)
+    _run("tools/product/build_product_full_commercial_blocker_evidence_matrix.py")
+    write_restricted_goal_bottleneck_briefing(runs_dir)
+    write_restricted_goal_release_decision_gate(runs_dir)
     _run("tools/product/build_product_launch_r4_preflight.py")
     _run("tools/build_goal_api_surface_contract.py")
 

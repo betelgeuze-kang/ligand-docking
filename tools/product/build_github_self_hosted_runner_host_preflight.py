@@ -28,6 +28,16 @@ API_WORKER_RERUN_COMMAND = (
     "gh workflow run product-api-worker.yml -f runner_labels_json='[\"self-hosted\",\"linux\"]'"
 )
 ROCM_RUNTIME_RERUN_COMMAND = "gh workflow run product-image-smoke.yml -f verify_mode=rocm-runtime"
+RUNNER_WORKSPACE_CLEANUP_COMMAND = (
+    'RUNNER_WORKSPACE="${RUNNER_WORKSPACE:-$(pwd)/.betelgeuze/github-runner/_work/ligand-docking/ligand-docking}" '
+    'bash -lc \'set -euo pipefail; '
+    'target="${RUNNER_WORKSPACE}/runs/product_image_smoke_runner_artifacts"; '
+    'if [[ -e "${target}" ]]; then '
+    'chown -R "$(id -u):$(id -g)" "${target}" 2>/dev/null || sudo -n chown -R "$(id -u):$(id -g)" "${target}"; '
+    'chmod -R u+rwX "${target}" 2>/dev/null || sudo -n chmod -R u+rwX "${target}"; '
+    'rm -rf "${target}"; '
+    'fi\''
+)
 
 CLAIM_BOUNDARY = (
     "Self-hosted runner host preflight only; records local Docker/ROCm product-runner readiness and "
@@ -86,6 +96,23 @@ def _online_runner_count(packet: dict[str, Any], required_labels: list[str]) -> 
     return count
 
 
+def _product_image_runner_hygiene_ready(summary: dict[str, Any]) -> bool:
+    return bool(
+        summary.get("receipt_runner_hygiene_ready") is True
+        and summary.get("receipt_runner_smoke_dir_outside_workspace") is True
+        and summary.get("receipt_container_output_uid_gid_pinned") is True
+        and summary.get("receipt_container_output_uid_gid_matches_host") is True
+        and summary.get("receipt_container_output_uid_gid_non_root") is True
+        and summary.get("receipt_workspace_runner_smoke_dir_cleanup_ready") is True
+    )
+
+
+def _workspace_smoke_artifact_cleanup_ready(summary: dict[str, Any]) -> bool:
+    if "workspace_smoke_artifact_current_cleanup_ready" not in summary:
+        return True
+    return bool(summary.get("workspace_smoke_artifact_current_cleanup_ready") is True)
+
+
 def _docker_cli_present() -> bool:
     return shutil.which("docker") is not None
 
@@ -127,6 +154,10 @@ def build_github_self_hosted_runner_host_preflight(
     )
     rocm_nodes = _rocm_device_nodes_ready() if rocm_device_nodes_ready is None else rocm_device_nodes_ready
 
+    product_image_runner_hygiene_ready = _product_image_runner_hygiene_ready(product_image_summary)
+    workspace_smoke_artifact_cleanup_ready = _workspace_smoke_artifact_cleanup_ready(
+        product_image_summary
+    )
     product_image_rocm_runtime_ready = bool(
         product_image_summary.get("status") == "product_image_smoke_preflight_ready"
         and product_image_summary.get("receipt_status") == "product_image_smoke_ready"
@@ -135,6 +166,8 @@ def build_github_self_hosted_runner_host_preflight(
         and product_image_summary.get("container_runtime_receipt_ready") is True
         and product_image_summary.get("container_runtime_rust_hip_backend_enabled") is True
         and product_image_summary.get("product_runner_claim_metadata_ready") is True
+        and product_image_runner_hygiene_ready
+        and workspace_smoke_artifact_cleanup_ready
     )
     local_runner_host_ready = bool(docker_cli and docker_daemon and rocm_nodes and product_image_rocm_runtime_ready)
     linux_online_count = _online_runner_count(runner_inventory, LINUX_LABELS)
@@ -151,6 +184,21 @@ def build_github_self_hosted_runner_host_preflight(
         blockers.append({"code": "rocm_device_nodes_missing"})
     if not product_image_rocm_runtime_ready:
         blockers.append({"code": "product_image_rocm_runtime_receipt_missing"})
+    if not product_image_runner_hygiene_ready:
+        blockers.append({"code": "product_image_runner_hygiene_receipt_missing"})
+    if not workspace_smoke_artifact_cleanup_ready:
+        blockers.append({"code": "product_image_workspace_smoke_artifact_current_cleanup_not_ready"})
+        if product_image_summary.get("workspace_smoke_artifact_current_bad_owner_path"):
+            blockers.append(
+                {"code": "product_image_workspace_smoke_artifact_current_owner_not_normalized"}
+            )
+        if product_image_summary.get("workspace_smoke_artifact_current_not_writable_path"):
+            blockers.append(
+                {"code": "product_image_workspace_smoke_artifact_current_not_writable"}
+            )
+    for blocker in product_image_summary.get("receipt_runner_hygiene_blockers") or []:
+        if isinstance(blocker, str) and blocker:
+            blockers.append({"code": f"product_image_{blocker}"})
     if local_runner_host_ready and registration_required:
         blockers.append({"code": "github_self_hosted_runner_registration_required"})
     if local_runner_host_ready and linux_online_count == 0:
@@ -167,6 +215,7 @@ def build_github_self_hosted_runner_host_preflight(
 
     if repo_runner_ready:
         next_required_steps = [
+            f"Before rerunning remote workflows, clear any stale product-image smoke worktree artifacts on the runner host: {RUNNER_WORKSPACE_CLEANUP_COMMAND}",
             f"Rerun API worker: {API_WORKER_RERUN_COMMAND}",
             f"Rerun ROCm runtime smoke: {ROCM_RUNTIME_RERUN_COMMAND}",
         ]
@@ -176,6 +225,7 @@ def build_github_self_hosted_runner_host_preflight(
             "Run the GitHub-provided download/config commands on this ROCm host; add custom label: rocm.",
             "Install/start the runner service from the GitHub-provided runner directory.",
             f"Refresh inventory: {INVENTORY_REFRESH_COMMAND}",
+            f"Before rerunning remote workflows, clear any stale product-image smoke worktree artifacts on the runner host: {RUNNER_WORKSPACE_CLEANUP_COMMAND}",
             f"Rerun API worker: {API_WORKER_RERUN_COMMAND}",
             f"Rerun ROCm runtime smoke: {ROCM_RUNTIME_RERUN_COMMAND}",
         ]
@@ -186,11 +236,35 @@ def build_github_self_hosted_runner_host_preflight(
         "local_runner_host_ready": local_runner_host_ready,
         "repo_self_hosted_runner_ready": repo_runner_ready,
         "repo_runner_registration_required": registration_required,
+        "blocker_count": len(blockers),
+        "primary_blocker": str(blockers[0].get("code") or "") if blockers else "",
+        "blockers": blockers,
         "docker_cli_present": docker_cli,
         "docker_daemon_accessible": docker_daemon,
         "rocm_device_nodes_ready": rocm_nodes,
         "product_image_rocm_runtime_ready": product_image_rocm_runtime_ready,
         "product_image_preflight_json": str(product_image_preflight_json),
+        "product_image_receipt_runner_hygiene_ready": product_image_runner_hygiene_ready,
+        "product_image_receipt_runner_hygiene_blockers": [
+            str(blocker)
+            for blocker in product_image_summary.get("receipt_runner_hygiene_blockers") or []
+            if str(blocker)
+        ],
+        "product_image_workspace_smoke_artifact_current_cleanup_ready": (
+            workspace_smoke_artifact_cleanup_ready
+        ),
+        "product_image_workspace_smoke_artifact_current_path": str(
+            product_image_summary.get("workspace_smoke_artifact_current_path") or ""
+        ),
+        "product_image_workspace_smoke_artifact_current_bad_owner_path": str(
+            product_image_summary.get("workspace_smoke_artifact_current_bad_owner_path") or ""
+        ),
+        "product_image_workspace_smoke_artifact_current_not_writable_path": str(
+            product_image_summary.get("workspace_smoke_artifact_current_not_writable_path") or ""
+        ),
+        "product_image_workspace_smoke_artifact_current_required_action": str(
+            product_image_summary.get("workspace_smoke_artifact_current_required_action") or ""
+        ),
         "runner_inventory_json": str(runner_inventory_json),
         "runner_inventory_present": bool(runner_inventory),
         "runner_inventory_total_count": int(runner_inventory.get("total_count") or 0),
@@ -205,6 +279,10 @@ def build_github_self_hosted_runner_host_preflight(
         "inventory_refresh_command": INVENTORY_REFRESH_COMMAND,
         "product_api_worker_rerun_command": API_WORKER_RERUN_COMMAND,
         "product_image_rocm_runtime_rerun_command": ROCM_RUNTIME_RERUN_COMMAND,
+        "runner_workspace_cleanup_command": RUNNER_WORKSPACE_CLEANUP_COMMAND,
+        "runner_workspace_cleanup_command_available": True,
+        "runner_workspace_cleanup_command_executed": False,
+        "runner_workspace_cleanup_command_mutates_files_if_run": True,
         "github_registration_token_requested": False,
         "runner_configured": repo_runner_ready,
         "runner_service_started": repo_runner_ready,
@@ -236,6 +314,10 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- docker_daemon_accessible: `{s['docker_daemon_accessible']}`",
         f"- rocm_device_nodes_ready: `{s['rocm_device_nodes_ready']}`",
         f"- product_image_rocm_runtime_ready: `{s['product_image_rocm_runtime_ready']}`",
+        f"- product_image_receipt_runner_hygiene_ready: `{s['product_image_receipt_runner_hygiene_ready']}`",
+        f"- product_image_workspace_smoke_artifact_current_cleanup_ready: `{s['product_image_workspace_smoke_artifact_current_cleanup_ready']}`",
+        f"- product_image_workspace_smoke_artifact_current_bad_owner_path: `{s['product_image_workspace_smoke_artifact_current_bad_owner_path']}`",
+        f"- product_image_workspace_smoke_artifact_current_not_writable_path: `{s['product_image_workspace_smoke_artifact_current_not_writable_path']}`",
         f"- runner_inventory_total_count: `{s['runner_inventory_total_count']}`",
         f"- linux_runner_online_count: `{s['linux_runner_online_count']}`",
         f"- rocm_runner_online_count: `{s['rocm_runner_online_count']}`",

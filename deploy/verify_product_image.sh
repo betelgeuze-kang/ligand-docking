@@ -6,6 +6,7 @@ IMAGE="${PRODUCT_IMAGE:-betelgeuze-md-product:local}"
 DOCKER_CMD="${DOCKER_CMD:-docker}"
 read -r -a DOCKER_BIN <<< "${DOCKER_CMD}"
 DOCKER_DISPLAY="${DOCKER_BIN[*]}"
+OWNERSHIP_REPAIR_IMAGE="${PRODUCT_IMAGE_OWNERSHIP_REPAIR_IMAGE:-busybox:1.36.1}"
 DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}"
 PRODUCT_IMAGE_REQUIRE_BUILDX="${PRODUCT_IMAGE_REQUIRE_BUILDX:-0}"
 PRODUCT_IMAGE_PRUNE_BEFORE_BUILD="${PRODUCT_IMAGE_PRUNE_BEFORE_BUILD:-0}"
@@ -22,18 +23,72 @@ RECEIPT_JSON="${PRODUCT_IMAGE_SMOKE_RECEIPT_JSON:-${ROOT}/runs/product_image_smo
 if [[ "${RECEIPT_JSON}" != /* ]]; then
   RECEIPT_JSON="${ROOT}/${RECEIPT_JSON}"
 fi
-RUNNER_SMOKE_DIR="${PRODUCT_IMAGE_RUNNER_SMOKE_DIR:-${ROOT}/runs/product_image_smoke_runner_artifacts}"
+DEFAULT_RUNNER_SMOKE_DIR="${RUNNER_TEMP:-/tmp}/product_image_smoke_runner_artifacts"
+RUNNER_SMOKE_DIR="${PRODUCT_IMAGE_RUNNER_SMOKE_DIR:-${DEFAULT_RUNNER_SMOKE_DIR}}"
 if [[ "${RUNNER_SMOKE_DIR}" != /* ]]; then
   RUNNER_SMOKE_DIR="${ROOT}/${RUNNER_SMOKE_DIR}"
 fi
+WORKSPACE_RUNNER_SMOKE_DIR="${PRODUCT_IMAGE_WORKSPACE_RUNNER_SMOKE_DIR:-${ROOT}/runs/product_image_smoke_runner_artifacts}"
+if [[ "${WORKSPACE_RUNNER_SMOKE_DIR}" != /* ]]; then
+  WORKSPACE_RUNNER_SMOKE_DIR="${ROOT}/${WORKSPACE_RUNNER_SMOKE_DIR}"
+fi
+RUNNER_HYGIENE_SCHEMA_VERSION="product_image_runner_hygiene_v1"
+HOST_UID="$(id -u)"
+HOST_GID="$(id -g)"
+HOST_UID_GID="${HOST_UID}:${HOST_GID}"
+CONTAINER_UID_GID="${PRODUCT_IMAGE_CONTAINER_UID_GID:-${HOST_UID_GID}}"
+CONTAINER_OUTPUT_UID_GID_PINNED=false
+if [[ "${CONTAINER_UID_GID}" =~ ^[0-9]+:[0-9]+$ ]]; then
+  CONTAINER_OUTPUT_UID_GID_PINNED=true
+fi
+CONTAINER_OUTPUT_UID_GID_MATCHES_HOST=false
+if [[ "${CONTAINER_UID_GID}" == "${HOST_UID_GID}" ]]; then
+  CONTAINER_OUTPUT_UID_GID_MATCHES_HOST=true
+fi
+CONTAINER_OUTPUT_UID_GID_NON_ROOT=true
+if [[ "${CONTAINER_UID_GID%%:*}" == "0" ]]; then
+  CONTAINER_OUTPUT_UID_GID_NON_ROOT=false
+fi
+RUNNER_SMOKE_DIR_OUTSIDE_WORKSPACE=true
+if [[ "${RUNNER_SMOKE_DIR}/" == "${ROOT}/"* ]]; then
+  RUNNER_SMOKE_DIR_OUTSIDE_WORKSPACE=false
+fi
+WORKSPACE_RUNNER_SMOKE_DIR_CLEANUP_READY=false
 
 write_blocked_receipt() {
   local status="$1"
   local reason="$2"
   local mode="${VERIFY_MODE//\"/}"
+  local runner_smoke_dir="${RUNNER_SMOKE_DIR//\"/}"
+  local workspace_runner_smoke_dir="${WORKSPACE_RUNNER_SMOKE_DIR//\"/}"
+  local host_uid_gid="${HOST_UID_GID//\"/}"
+  local container_uid_gid="${CONTAINER_UID_GID//\"/}"
+  local workspace_cleanup_blockers_json="[]"
+  local workspace_cleanup_required_action=""
+  if [[ "${reason}" == "workspace_smoke_dir_cleanup_failed" ]]; then
+    workspace_cleanup_blockers_json='["workspace_runner_smoke_dir_cleanup_not_ready"]'
+    workspace_cleanup_required_action="Repair ownership with sudo chown -R ${host_uid_gid} ${workspace_runner_smoke_dir} before treating product CI as verified."
+  fi
   mkdir -p "$(dirname "${RECEIPT_JSON}")"
-  printf '{"status":"%s","mode":"%s","reason":"%s","receipt_ready":false,"clean_container_smoke_ready":false,"product_runner_smoke_ready":false,"product_runner_claim_metadata_ready":false,"container_runtime_proof_ready":false,"runtime_neighbor_release_scaling_ready":false,"rust_hip_neighbor_provider_parity_ready":false,"receipt_failure_stage":"early_or_error_exit","external_state_mutated":false,"claim_boundary":"Fail-closed product image smoke receipt; product claim promotion requires a successful rocm-runtime receipt on a self-hosted ROCm runner."}\n' \
-    "${status}" "${mode}" "${reason}" > "${RECEIPT_JSON}"
+  repair_path_ownership "$(dirname "${RECEIPT_JSON}")"
+  repair_path_ownership "${RECEIPT_JSON}"
+  printf '{"status":"%s","mode":"%s","reason":"%s","receipt_ready":false,"clean_container_smoke_ready":false,"product_runner_smoke_ready":false,"product_runner_claim_metadata_ready":false,"container_runtime_proof_ready":false,"runtime_neighbor_release_scaling_ready":false,"rust_hip_neighbor_provider_parity_ready":false,"runner_hygiene_schema_version":"%s","runner_smoke_dir":"%s","workspace_runner_smoke_dir":"%s","runner_smoke_dir_outside_workspace":%s,"host_uid_gid":"%s","container_uid_gid":"%s","container_output_uid_gid_pinned":%s,"container_output_uid_gid_matches_host":%s,"container_output_uid_gid_non_root":%s,"workspace_runner_smoke_dir_cleanup_ready":%s,"workspace_runner_smoke_dir_cleanup_blockers":%s,"workspace_runner_smoke_dir_cleanup_required_action":"%s","next_required_step":"%s","receipt_failure_stage":"early_or_error_exit","external_state_mutated":false,"claim_boundary":"Fail-closed product image smoke receipt; product claim promotion requires a successful rocm-runtime receipt on a self-hosted ROCm runner."}\n' \
+    "${status}" \
+    "${mode}" \
+    "${reason}" \
+    "${RUNNER_HYGIENE_SCHEMA_VERSION}" \
+    "${runner_smoke_dir}" \
+    "${workspace_runner_smoke_dir}" \
+    "${RUNNER_SMOKE_DIR_OUTSIDE_WORKSPACE}" \
+    "${host_uid_gid}" \
+    "${container_uid_gid}" \
+    "${CONTAINER_OUTPUT_UID_GID_PINNED}" \
+    "${CONTAINER_OUTPUT_UID_GID_MATCHES_HOST}" \
+    "${CONTAINER_OUTPUT_UID_GID_NON_ROOT}" \
+    "${WORKSPACE_RUNNER_SMOKE_DIR_CLEANUP_READY}" \
+    "${workspace_cleanup_blockers_json}" \
+    "${workspace_cleanup_required_action}" \
+    "${workspace_cleanup_required_action}" > "${RECEIPT_JSON}"
 }
 
 on_exit_write_blocked_receipt() {
@@ -49,15 +104,111 @@ cleanup_container() {
   fi
 }
 
+needs_ownership_repair() {
+  local path="$1"
+  if [[ ! -e "${path}" ]]; then
+    return 1
+  fi
+  local bad_path=""
+  bad_path="$(find "${path}" \( ! -user "${HOST_UID}" -o ! -group "${HOST_GID}" -o ! -writable \) -print -quit 2>/dev/null || true)"
+  [[ -n "${bad_path}" ]]
+}
+
+docker_repair_ownership() {
+  local path="$1"
+  if [[ ! -e "${path}" ]]; then
+    return 0
+  fi
+  if ! needs_ownership_repair "${path}"; then
+    return 0
+  fi
+  if [[ "${#DOCKER_BIN[@]}" -eq 0 ]] || ! command -v "${DOCKER_BIN[0]}" >/dev/null 2>&1; then
+    return 0
+  fi
+  if ! "${DOCKER_BIN[@]}" info >/dev/null 2>&1; then
+    return 0
+  fi
+  local parent=""
+  local base=""
+  parent="$(cd "$(dirname "${path}")" && pwd -P)" || return 0
+  base="$(basename "${path}")"
+  "${DOCKER_BIN[@]}" run --rm \
+    -v "${parent}:/repair-root" \
+    "${OWNERSHIP_REPAIR_IMAGE}" \
+    sh -c 'chown -R "$1" "/repair-root/$2" && chmod -R u+rwX "/repair-root/$2"' \
+    sh "${HOST_UID_GID}" "${base}" >/dev/null 2>&1 || true
+}
+
+repair_path_ownership() {
+  local path="$1"
+  if [[ ! -e "${path}" ]]; then
+    return 0
+  fi
+  chown -R "${HOST_UID_GID}" "${path}" 2>/dev/null || sudo -n chown -R "${HOST_UID_GID}" "${path}" 2>/dev/null || true
+  chmod -R u+rwX "${path}" 2>/dev/null || sudo -n chmod -R u+rwX "${path}" 2>/dev/null || true
+  docker_repair_ownership "${path}"
+}
+
+repair_receipt_path() {
+  mkdir -p "$(dirname "${RECEIPT_JSON}")"
+  repair_path_ownership "$(dirname "${RECEIPT_JSON}")"
+  repair_path_ownership "${RECEIPT_JSON}"
+}
+
+clear_stale_receipt() {
+  repair_receipt_path
+  if [[ -e "${RECEIPT_JSON}" ]]; then
+    if ! rm -f "${RECEIPT_JSON}"; then
+      write_blocked_receipt "blocked_product_image_smoke" "receipt_path_cleanup_failed"
+      echo '{"status":"blocked_product_image_smoke","reason":"receipt_path_cleanup_failed","claim_boundary":"Verify script could not remove the stale product image smoke receipt; repair receipt path ownership before treating CI as verified."}'
+      exit 2
+    fi
+  fi
+}
+
+recover_workspace_smoke_dir() {
+  repair_path_ownership "${WORKSPACE_RUNNER_SMOKE_DIR}"
+  if [[ -e "${WORKSPACE_RUNNER_SMOKE_DIR}" ]]; then
+    if ! rm -rf "${WORKSPACE_RUNNER_SMOKE_DIR}"; then
+      write_blocked_receipt "blocked_product_image_smoke" "workspace_smoke_dir_cleanup_failed"
+      echo '{"status":"blocked_product_image_smoke","reason":"workspace_smoke_dir_cleanup_failed","claim_boundary":"Verify script could not clean the stale workspace smoke artifact directory; repair ownership before treating CI as verified."}'
+      exit 2
+    fi
+  fi
+  WORKSPACE_RUNNER_SMOKE_DIR_CLEANUP_READY=true
+}
+
+reset_runner_smoke_dir() {
+  repair_path_ownership "${RUNNER_SMOKE_DIR}"
+  if [[ -e "${RUNNER_SMOKE_DIR}" ]]; then
+    if ! rm -rf "${RUNNER_SMOKE_DIR}"; then
+      write_blocked_receipt "blocked_product_image_smoke" "runner_smoke_dir_cleanup_failed"
+      echo '{"status":"blocked_product_image_smoke","reason":"runner_smoke_dir_cleanup_failed","claim_boundary":"Verify script could not clean the runner smoke artifact directory; repair ownership before treating CI as verified."}'
+      exit 2
+    fi
+  fi
+  mkdir -p "${RUNNER_SMOKE_DIR}"
+}
+
+normalize_runner_artifacts_on_exit() {
+  repair_path_ownership "$(dirname "${RECEIPT_JSON}")"
+  repair_path_ownership "${RECEIPT_JSON}"
+  repair_path_ownership "${WORKSPACE_RUNNER_SMOKE_DIR}"
+  repair_path_ownership "${RUNNER_SMOKE_DIR}"
+}
+
 cleanup_and_on_exit_write_blocked_receipt() {
   local exit_code="$?"
   cleanup_container
+  normalize_runner_artifacts_on_exit
   if [[ "${exit_code}" -ne 0 && ! -s "${RECEIPT_JSON}" ]]; then
     write_blocked_receipt "blocked_product_image_smoke" "script_error_exit_${exit_code}"
+    normalize_runner_artifacts_on_exit
   fi
   exit "${exit_code}"
 }
 trap cleanup_and_on_exit_write_blocked_receipt EXIT
+clear_stale_receipt
 
 case "${VERIFY_MODE}" in
   build|rocm-runtime)
@@ -68,6 +219,30 @@ case "${VERIFY_MODE}" in
     exit 2
     ;;
 esac
+
+if [[ "${CONTAINER_OUTPUT_UID_GID_PINNED}" != "true" ]]; then
+  write_blocked_receipt "blocked_product_image_smoke" "container_uid_gid_invalid"
+  echo '{"status":"blocked_product_image_smoke","reason":"container_uid_gid_invalid","claim_boundary":"Container smoke output must run with a numeric host UID:GID so bind-mounted artifacts are not left root-owned or owned by another user."}'
+  exit 2
+fi
+if [[ "${CONTAINER_OUTPUT_UID_GID_NON_ROOT}" != "true" ]]; then
+  write_blocked_receipt "blocked_product_image_smoke" "container_uid_gid_root"
+  echo '{"status":"blocked_product_image_smoke","reason":"container_uid_gid_root","claim_boundary":"Container smoke output must not use UID 0 because self-hosted workspace cleanup must not inherit root-owned generated artifacts."}'
+  exit 2
+fi
+if [[ "${CONTAINER_OUTPUT_UID_GID_MATCHES_HOST}" != "true" ]]; then
+  write_blocked_receipt "blocked_product_image_smoke" "container_uid_gid_not_host"
+  echo '{"status":"blocked_product_image_smoke","reason":"container_uid_gid_not_host","claim_boundary":"Container smoke output must use the current runner host UID:GID so generated artifacts are not owned by another user."}'
+  exit 2
+fi
+
+if [[ "${RUNNER_SMOKE_DIR_OUTSIDE_WORKSPACE}" != "true" ]]; then
+  write_blocked_receipt "blocked_product_image_smoke" "runner_smoke_dir_inside_workspace"
+  echo '{"status":"blocked_product_image_smoke","reason":"runner_smoke_dir_inside_workspace","claim_boundary":"Product image smoke artifacts must be written outside the checkout workspace to avoid self-hosted cleanup ownership failures."}'
+  exit 2
+fi
+recover_workspace_smoke_dir
+repair_receipt_path
 
 if [[ "${#DOCKER_BIN[@]}" -eq 0 ]] || ! command -v "${DOCKER_BIN[0]}" >/dev/null 2>&1; then
   write_blocked_receipt "blocked_product_image_smoke" "docker_cli_missing"
@@ -121,6 +296,7 @@ if [[ "${VERIFY_MODE}" == "rocm-runtime" ]]; then
     DOCKER_DAEMON_ARGS+=(--group-add render)
   fi
 fi
+DOCKER_SMOKE_RUN_ARGS=("${DOCKER_RUN_ARGS[@]}" --user "${CONTAINER_UID_GID}" -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache)
 
 if [[ "${PRODUCT_IMAGE_PRUNE_BEFORE_BUILD}" == "1" ]]; then
   echo "Pruning stopped containers and dangling images before product image build" >&2
@@ -133,8 +309,8 @@ echo "Building product image: ${IMAGE}" >&2
 
 echo "Running ROCm/HIP/Rust import smoke inside container" >&2
 if [[ "${VERIFY_MODE}" == "rocm-runtime" ]]; then
-  mkdir -p "${RUNNER_SMOKE_DIR}"
-  "${DOCKER_BIN[@]}" run "${DOCKER_RUN_ARGS[@]}" \
+  reset_runner_smoke_dir
+  "${DOCKER_BIN[@]}" run "${DOCKER_SMOKE_RUN_ARGS[@]}" \
     -v "${RUNNER_SMOKE_DIR}:/smoke" \
     "${IMAGE}" \
     python -c "import json, pathlib, torch; from dataclasses import asdict; import ldi_arc_rust; import tools.run_ligand_backmapping_scoring; import api.main; import betelgeuze_product.cli; from core.rust_hip_backend import probe_rust_hip_backend; proof_path=pathlib.Path('/smoke/rocm_container_runtime_proof.json'); cgroup=pathlib.Path('/proc/1/cgroup').read_text(errors='ignore') if pathlib.Path('/proc/1/cgroup').exists() else ''; probe=probe_rust_hip_backend(device=torch.device('cuda')); payload={'schema_version':'rocm_container_runtime_proof_v1','in_container': pathlib.Path('/.dockerenv').exists() or 'docker' in cgroup or 'kubepods' in cgroup,'dev_kfd_present': pathlib.Path('/dev/kfd').exists(),'dev_dri_present': pathlib.Path('/dev/dri').exists(),'torch_hip_version': str(getattr(torch.version, 'hip', '') or ''),'torch_rocm_ready': bool(getattr(torch.version, 'hip', None)),'torch_cuda_available': bool(torch.cuda.is_available()),'visible_device_count': int(torch.cuda.device_count()) if torch.cuda.is_available() else 0,'visible_device_name': str(torch.cuda.get_device_name(0)) if torch.cuda.is_available() and torch.cuda.device_count() > 0 else '','ldi_arc_rust_import_ready': True,'product_runner_import_ready': True,'api_import_ready': True,'rust_hip_backend_enabled': bool(probe.enabled),'rust_hip_backend_reason': str(probe.reason),'rust_hip_kernel_name': str(probe.kernel_name or ''),'rust_hip_module_loaded': bool(probe.module_loaded)}; payload['proof_ready']=bool(payload['in_container'] and payload['dev_kfd_present'] and payload['dev_dri_present'] and payload['torch_rocm_ready'] and payload['torch_cuda_available'] and payload['visible_device_count'] > 0 and payload['ldi_arc_rust_import_ready'] and payload['product_runner_import_ready'] and payload['api_import_ready'] and payload['rust_hip_backend_enabled']); proof_path.write_text(json.dumps(payload, sort_keys=True)+'\n', encoding='utf-8'); print(json.dumps(payload, sort_keys=True)); assert payload['proof_ready'], payload"
@@ -164,7 +340,7 @@ q1,container,l1,CC(=O)N,/smoke/container_native.pdb,0,0,0,0,0,0,1.6,0,0
 q2,container,l2,CCCC,/smoke/container_native.pdb,0,0,0,0,0,0,1.6,0,0
 CSV
   echo "Running real validated runner dispatch smoke inside ROCm container" >&2
-  "${DOCKER_BIN[@]}" run "${DOCKER_RUN_ARGS[@]}" \
+  "${DOCKER_BIN[@]}" run "${DOCKER_SMOKE_RUN_ARGS[@]}" \
     -v "${RUNNER_SMOKE_DIR}:/smoke" \
     -e API_VALIDATED_RUNNER_ENABLED=1 \
     "${IMAGE}" \
@@ -174,7 +350,7 @@ CSV
       --out-json /smoke/tier_alpha_adrb2_dispatch_smoke.json
 
   echo "Running backmapping scoring claim-metadata smoke inside ROCm container" >&2
-  "${DOCKER_BIN[@]}" run "${DOCKER_RUN_ARGS[@]}" \
+  "${DOCKER_BIN[@]}" run "${DOCKER_SMOKE_RUN_ARGS[@]}" \
     -v "${RUNNER_SMOKE_DIR}:/smoke" \
     "${IMAGE}" \
     python tools/run_ligand_backmapping_scoring.py \
@@ -193,7 +369,7 @@ CSV
       --out-scores-csv /smoke/backmapping_scores.csv
 
   echo "Running fixed-density release-scale neighbor scaling gate inside ROCm container" >&2
-  "${DOCKER_BIN[@]}" run "${DOCKER_RUN_ARGS[@]}" \
+  "${DOCKER_BIN[@]}" run "${DOCKER_SMOKE_RUN_ARGS[@]}" \
     -v "${RUNNER_SMOKE_DIR}:/smoke" \
     "${IMAGE}" \
     python tools/product/run_runtime_neighbor_release_scaling.py \
@@ -206,7 +382,7 @@ CSV
       --out-svg /smoke/runtime_neighbor_release_scaling.svg
 
   echo "Running Rust/HIP neighbor-provider parity gate inside ROCm container" >&2
-  "${DOCKER_BIN[@]}" run "${DOCKER_RUN_ARGS[@]}" \
+  "${DOCKER_BIN[@]}" run "${DOCKER_SMOKE_RUN_ARGS[@]}" \
     -v "${RUNNER_SMOKE_DIR}:/smoke" \
     "${IMAGE}" \
     python tools/product/run_rust_hip_neighbor_provider_parity.py \
@@ -241,9 +417,18 @@ fi
 
 RECEIPT_JSON="${RECEIPT_JSON}" \
 RUNNER_SMOKE_DIR="${RUNNER_SMOKE_DIR}" \
+WORKSPACE_RUNNER_SMOKE_DIR="${WORKSPACE_RUNNER_SMOKE_DIR}" \
+RUNNER_HYGIENE_SCHEMA_VERSION="${RUNNER_HYGIENE_SCHEMA_VERSION}" \
+RUNNER_SMOKE_DIR_OUTSIDE_WORKSPACE="${RUNNER_SMOKE_DIR_OUTSIDE_WORKSPACE}" \
+WORKSPACE_RUNNER_SMOKE_DIR_CLEANUP_READY="${WORKSPACE_RUNNER_SMOKE_DIR_CLEANUP_READY}" \
 VERIFY_MODE="${VERIFY_MODE}" \
 IMAGE="${IMAGE}" \
 DOCKER_CMD_DISPLAY="${DOCKER_DISPLAY}" \
+HOST_UID_GID="${HOST_UID_GID}" \
+CONTAINER_UID_GID="${CONTAINER_UID_GID}" \
+CONTAINER_OUTPUT_UID_GID_PINNED="${CONTAINER_OUTPUT_UID_GID_PINNED}" \
+CONTAINER_OUTPUT_UID_GID_MATCHES_HOST="${CONTAINER_OUTPUT_UID_GID_MATCHES_HOST}" \
+CONTAINER_OUTPUT_UID_GID_NON_ROOT="${CONTAINER_OUTPUT_UID_GID_NON_ROOT}" \
 CLEAN_CONTAINER_SMOKE_READY="${clean_container_smoke_ready}" \
 PRODUCT_RUNNER_SMOKE_READY="${product_runner_smoke_ready}" \
 "${HOST_PYTHON}" - <<'PY'
@@ -262,6 +447,7 @@ def _read_json(path: Path) -> dict:
 
 path = Path(os.environ["RECEIPT_JSON"])
 smoke_dir = Path(os.environ["RUNNER_SMOKE_DIR"])
+workspace_smoke_dir = Path(os.environ["WORKSPACE_RUNNER_SMOKE_DIR"])
 runtime_proof = _read_json(smoke_dir / "rocm_container_runtime_proof.json")
 tier_alpha = _read_json(smoke_dir / "tier_alpha_adrb2_dispatch_smoke.json")
 tier_summary = tier_alpha.get("summary") if isinstance(tier_alpha.get("summary"), dict) else {}
@@ -351,7 +537,17 @@ payload = {
     "mode": os.environ["VERIFY_MODE"],
     "image": os.environ["IMAGE"],
     "docker_cmd": os.environ["DOCKER_CMD_DISPLAY"],
+    "runner_hygiene_schema_version": os.environ["RUNNER_HYGIENE_SCHEMA_VERSION"],
     "runner_smoke_dir": str(smoke_dir),
+    "workspace_runner_smoke_dir": str(workspace_smoke_dir),
+    "runner_smoke_dir_outside_workspace": os.environ["RUNNER_SMOKE_DIR_OUTSIDE_WORKSPACE"] == "true",
+    "workspace_runner_smoke_dir_cleanup_ready": os.environ["WORKSPACE_RUNNER_SMOKE_DIR_CLEANUP_READY"] == "true",
+    "workspace_runner_smoke_dir_exists_after_cleanup": workspace_smoke_dir.exists(),
+    "host_uid_gid": os.environ["HOST_UID_GID"],
+    "container_uid_gid": os.environ["CONTAINER_UID_GID"],
+    "container_output_uid_gid_pinned": os.environ["CONTAINER_OUTPUT_UID_GID_PINNED"] == "true",
+    "container_output_uid_gid_matches_host": os.environ["CONTAINER_OUTPUT_UID_GID_MATCHES_HOST"] == "true",
+    "container_output_uid_gid_non_root": os.environ["CONTAINER_OUTPUT_UID_GID_NON_ROOT"] == "true",
     "simulate_missing_profile_http": 422,
     "clean_container_smoke_ready": bool(
         os.environ["CLEAN_CONTAINER_SMOKE_READY"] == "true"

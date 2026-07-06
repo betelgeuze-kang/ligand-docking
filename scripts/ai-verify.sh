@@ -46,7 +46,8 @@ bash -n \
   scripts/ai-worker-cursor.sh \
   scripts/ai-worker-opencode.sh \
   scripts/ai-preflight.sh \
-  scripts/ai-verify.sh
+  scripts/ai-verify.sh \
+  scripts/normalize_product_image_smoke_artifact_ownership.sh
 
 echo "==> json"
 python3 -m json.tool opencode.json >/dev/null
@@ -67,7 +68,7 @@ test -x scripts/ai-worker-opencode.sh
 
 echo "==> Kiro design wrapper contract"
 mkdir -p .betelgeuze
-kiro_verify_prompt=".betelgeuze/ai_verify_kiro_design_prompt.md"
+kiro_verify_prompt="$(mktemp .betelgeuze/ai_verify_kiro_design_prompt.XXXXXX.md)"
 cat > "$kiro_verify_prompt" <<'EOF'
 # Kiro Design Verification Prompt
 

@@ -6,13 +6,19 @@ from pathlib import Path
 from tools.product.release_ci_remote_green_evidence_contract import (
     CONTRACT_SCHEMA_VERSION,
     EVIDENCE_INPUTS,
+    PLACEHOLDER_STATUS,
+    build_release_ci_remote_green_placeholder_payload,
     build_release_ci_remote_green_evidence_collect_manifest,
     build_release_ci_remote_green_evidence_contract,
     emit_release_ci_remote_green_collect_commands,
     emit_release_ci_remote_green_collect_shell_script,
+    emit_release_ci_remote_green_placeholder_evidence,
     execute_release_ci_remote_green_collect_commands,
     validate_release_ci_remote_green_evidence_files,
     validate_release_ci_remote_green_evidence_payload,
+)
+from tools.product.build_release_ci_remote_green_receipt import (
+    build_release_ci_remote_green_receipt,
 )
 
 
@@ -32,16 +38,19 @@ def test_release_ci_evidence_contract_lists_all_receipt_inputs() -> None:
         "release_tag_runs_json",
     }
     for row in contract["inputs"]:
-        assert row["collect_command"].startswith("gh api")
+        assert "gh api" in row["collect_command"]
         assert row["external_state_mutated"] is False
+    assert "--emit-placeholders" in contract["placeholder_builder_command"]
 
 
 def test_release_ci_evidence_collect_commands_include_failed_run_discovery() -> None:
     commands = emit_release_ci_remote_green_collect_commands()
 
     assert any("RELEASE_CI_FAILED_RUN_ID" in command for command in commands)
+    assert any("status=failure" in command for command in commands)
     assert any("actions/runners" in command for command in commands)
     assert any("protection/required_status_checks" in command for command in commands)
+    assert any("required_status_checks_unavailable_or_branch_unprotected" in command for command in commands)
     assert any("event=schedule" in command for command in commands)
     assert any("event=push" in command for command in commands)
 
@@ -111,6 +120,64 @@ def test_release_ci_evidence_file_validation_passes_for_complete_bundle(tmp_path
     assert validation["invalid_count"] == 0
 
 
+def test_release_ci_placeholder_payloads_are_shape_valid_but_fail_closed() -> None:
+    required_checks = build_release_ci_remote_green_placeholder_payload("main_required_checks")
+    assert required_checks["contexts"] == []
+    assert required_checks["placeholder"]["status"] == PLACEHOLDER_STATUS
+    assert required_checks["placeholder"]["external_state_mutated"] is False
+
+    validation = validate_release_ci_remote_green_evidence_payload(
+        "main_required_checks",
+        required_checks,
+    )
+
+    assert validation["valid"] is True
+
+
+def test_release_ci_placeholder_emission_preserves_existing_evidence(tmp_path: Path) -> None:
+    required_checks = tmp_path / "required_checks.json"
+    required_checks.write_text(
+        json.dumps({"contexts": ["product-image-build-smoke"], "checks": []}) + "\n",
+        encoding="utf-8",
+    )
+    paths = {"main_required_checks": required_checks}
+
+    result = emit_release_ci_remote_green_placeholder_evidence(root=tmp_path, paths=paths)
+    rows = {row["input_id"]: row for row in result["rows"]}
+
+    assert rows["main_required_checks"]["existed_before"] is True
+    assert rows["main_required_checks"]["wrote_placeholder"] is False
+    assert json.loads(required_checks.read_text(encoding="utf-8")) == {
+        "contexts": ["product-image-build-smoke"],
+        "checks": [],
+    }
+
+
+def test_release_ci_placeholder_bundle_keeps_receipt_blocked(tmp_path: Path) -> None:
+    emit_release_ci_remote_green_placeholder_evidence(root=tmp_path)
+    workflow = tmp_path / ".github/workflows/product-image-smoke.yml"
+    workflow.parent.mkdir(parents=True)
+    workflow.write_text("name: product-image-smoke\n", encoding="utf-8")
+
+    payload = build_release_ci_remote_green_receipt(
+        root=tmp_path,
+        runner_inventory_json="runs/github_self_hosted_runner_inventory_current.json",
+        branch_json="runs/release_ci_branch_main_current.json",
+        required_checks_json="runs/release_ci_required_status_checks_main_current.json",
+        schedule_runs_json="runs/release_ci_product_image_smoke_schedule_runs_current.json",
+        failed_run_artifacts_json="runs/release_ci_failed_run_artifacts_current.json",
+        release_tag_runs_json="runs/release_ci_product_image_smoke_push_runs_current.json",
+        workflow_yml=".github/workflows/product-image-smoke.yml",
+    )
+
+    summary = payload["summary"]
+    blocker_codes = {row["code"] for row in payload["blockers"]}
+    assert summary["status"] == "blocked_release_ci_remote_green"
+    assert summary["main_required_checks_ready"] is False
+    assert summary["external_state_mutated"] is False
+    assert "main_branch_required_checks_configured" in blocker_codes
+
+
 def test_release_ci_evidence_collect_manifest_embeds_contract_and_validation(tmp_path: Path) -> None:
     manifest = build_release_ci_remote_green_evidence_collect_manifest(root=tmp_path)
 
@@ -138,8 +205,10 @@ def test_release_ci_evidence_execute_uses_injected_runner_without_subprocess() -
     failed_run_rows = [row for row in result["rows"] if row["input_id"] == "failed_run_artifacts"]
     assert len(failed_run_rows) == 1
     assert len(failed_run_rows[0]["commands"]) == 1
-    assert "RELEASE_CI_FAILED_RUN_ID=$(gh run list" in failed_run_rows[0]["commands"][0]
+    assert "RELEASE_CI_FAILED_RUN_ID=$(gh api" in failed_run_rows[0]["commands"][0]
+    assert "status=failure" in failed_run_rows[0]["commands"][0]
     assert "actions/runs/${RELEASE_CI_FAILED_RUN_ID}/artifacts" in failed_run_rows[0]["commands"][0]
+    assert "no_failed_product_image_run_found" in failed_run_rows[0]["commands"][0]
 
 
 def test_release_ci_evidence_payload_validation_rejects_unknown_input_id() -> None:

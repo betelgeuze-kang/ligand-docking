@@ -97,7 +97,11 @@ def test_docking_dispatch_uses_configured_job_store_when_store_not_injected(
     reset_configured_job_store_for_tests()
     monkeypatch.setattr(job_store_mod.settings, "api_job_store_path", str(store_path))
     monkeypatch.setattr(docking_dispatch.settings, "api_job_store_path", str(store_path))
-    monkeypatch.setattr(docking_dispatch, "is_dispatch_eligible", lambda record: (True, "eligible"))
+    monkeypatch.setattr(
+        docking_dispatch,
+        "is_dispatch_eligible",
+        lambda record, **_kwargs: (True, "eligible"),
+    )
     monkeypatch.setattr(
         docking_dispatch,
         "mark_ledger_dispatched",
@@ -271,6 +275,7 @@ def test_product_rocm_hip_rust_requirements_are_installed_by_product_dockerfile(
     assert "COPY rust_engine ./rust_engine" in dockerfile
     assert "COPY third_party ./third_party" in dockerfile
     assert "tools/build_rust_hip_engine.py --output /app" in dockerfile
+    assert "chmod -R a+rwX logs runs" in dockerfile
     assert "torch.version.hip" in dockerfile
     assert "ldi_arc_rust" in dockerfile
     assert "torch==2.6.0" not in base_requirement_lines
@@ -305,9 +310,17 @@ def test_product_image_smoke_script_is_fail_closed_and_has_rocm_runtime_mode() -
     assert "build --progress=plain" in script
     assert 'HOST_PYTHON="${PRODUCT_IMAGE_HOST_PYTHON:-python3}"' in script
     assert "host_python_missing" in script
+    assert "DEFAULT_RUNNER_SMOKE_DIR" in script
+    assert "RUNNER_TEMP" in script
+    assert "PRODUCT_IMAGE_CONTAINER_UID_GID" in script
+    assert "DOCKER_SMOKE_RUN_ARGS" in script
+    assert "--user" in script
+    assert "runner_smoke_dir_cleanup_failed" in script
     assert "write_blocked_receipt" in script
     assert "cleanup_and_on_exit_write_blocked_receipt" in script
     assert "trap cleanup_and_on_exit_write_blocked_receipt EXIT" in script
+    assert "clear_stale_receipt" in script
+    assert "receipt_path_cleanup_failed" in script
     assert "receipt_failure_stage" in script
     assert '"${HOST_PYTHON}" - <<' in script
     assert "exit 2" in script
@@ -332,6 +345,10 @@ def test_product_image_smoke_script_is_fail_closed_and_has_rocm_runtime_mode() -
     assert "product claim promotion requires mode=rocm-runtime" in script
     assert "product_runner_claim_metadata_ready=true" in script
     assert "pull_request:" in workflow
+    assert "Recover stale product image smoke workspace artifacts" in workflow
+    assert "sudo -n chown -R" in workflow
+    assert "clean: false" in workflow
+    assert "runner.temp" in workflow
     assert "schedule:" in workflow
     assert 'cron: "0 6 * * 1"' in workflow
     assert "workflow_dispatch:" in workflow
