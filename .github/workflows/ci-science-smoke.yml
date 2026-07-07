@@ -37,6 +37,7 @@ jobs:
           sparse-checkout: |
             tools/**
             core/**
+            config/**
             tests/fixtures/tiny_docking/**
             tests/unit/test_p0_strict_ligand_mapping_queue.py
             tests/unit/test_build_pose_level_benchmark_report.py
