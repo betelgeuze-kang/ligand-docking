@@ -1,6 +1,6 @@
 # Science Limitations And Claim Boundaries
 
-Status: P1 product-safety and reviewer-readiness document  
+Status: P1/P2 product-safety and reviewer-readiness document  
 Scope: ligand HTVS / backmapping / local delivery surfaces in this repository
 
 ## Purpose
@@ -58,6 +58,17 @@ A reviewer should ask for these artifacts before reading a run as product-ready:
 3. Score contract: `claim.score_contract.customer_score_name=proxy_binding_energy_score` and `method_kind=heuristic_proxy`.
 4. Pose-level report: `pose_rmsd_A`, `clash_count`, `ligand_strain_kcal_mol`, `hbond_geometry_score`, and `contact_recovery` present for any pose-quality claim.
 5. CI evidence: clean unit/API/science smoke checks separate from self-hosted GPU/nightly checks.
+
+## P2 Lane Checklist
+
+P2 lanes are documented in `docs/P2_PRODUCT_SCIENCE_LANES.md` and implemented as separate work-order/evidence builders:
+
+1. All-atom refinement lane: `tools/product/build_allatom_refinement_lane.py`.
+2. External baseline adapter: `tools/product/build_external_docking_baseline_adapter.py`.
+3. Public benchmark manifest: `tools/product/build_public_benchmark_manifest.py`.
+
+A P2 lane can support a stronger review only after its generated JSON reports
+row-level evidence complete and still carries an explicit claim boundary.
 
 ## Safe Language
 
