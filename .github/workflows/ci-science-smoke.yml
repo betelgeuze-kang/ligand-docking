@@ -1,0 +1,45 @@
+name: ci-science-smoke
+
+on:
+  push:
+    paths:
+      - "tools/build_ligand_mapping_queue.py"
+      - "tools/product/strict_ligand_mapping_queue.py"
+      - "tools/product/build_pose_level_benchmark_report.py"
+      - "tests/fixtures/tiny_docking/**"
+      - "tests/unit/test_p0_strict_ligand_mapping_queue.py"
+      - "tests/unit/test_build_pose_level_benchmark_report.py"
+      - "docs/SCIENCE_LIMITATIONS.md"
+      - ".github/workflows/ci-science-smoke.yml"
+  pull_request:
+    paths:
+      - "tools/build_ligand_mapping_queue.py"
+      - "tools/product/strict_ligand_mapping_queue.py"
+      - "tools/product/build_pose_level_benchmark_report.py"
+      - "tests/fixtures/tiny_docking/**"
+      - "tests/unit/test_p0_strict_ligand_mapping_queue.py"
+      - "tests/unit/test_build_pose_level_benchmark_report.py"
+      - "docs/SCIENCE_LIMITATIONS.md"
+      - ".github/workflows/ci-science-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  science-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install science smoke dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pytest
+      - name: Run strict input and pose benchmark smoke tests
+        run: |
+          python -m pytest -q \
+            tests/unit/test_p0_strict_ligand_mapping_queue.py \
+            tests/unit/test_build_pose_level_benchmark_report.py
