@@ -8,6 +8,12 @@ import pytest
 
 from tools.product.strict_ligand_mapping_queue import run
 
+_TINY_PDB = """ATOM      1  N   GLY A   1       0.000   0.000   0.000  1.00 20.00           N
+ATOM      2  CA  GLY A   1       1.458   0.000   0.000  1.00 20.00           C
+ATOM      3  C   GLY A   1       2.028   1.410   0.000  1.00 20.00           C
+END
+"""
+
 
 def _write_csv(path: Path, rows: list[dict[str, object]]) -> Path:
     pd.DataFrame(rows).to_csv(path, index=False)
@@ -94,7 +100,7 @@ def test_strict_ligand_mapping_queue_blocks_non_explicit_pocket(tmp_path: Path) 
         [{"ligand_id": "LIG_A", "smiles": "C", "is_binder": 1}],
     )
     native_pdb = tmp_path / "native.pdb"
-    native_pdb.write_text("END\n", encoding="utf-8")
+    native_pdb.write_text(_TINY_PDB, encoding="utf-8")
     native_csv = _write_csv(
         tmp_path / "targets.csv",
         [{"target": "TINY_KINASE", "native_pdb_path": str(native_pdb)}],
