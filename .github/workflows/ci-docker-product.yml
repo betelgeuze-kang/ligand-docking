@@ -1,0 +1,59 @@
+name: ci-docker-product
+
+on:
+  push:
+    paths:
+      - "Dockerfile.product"
+      - "requirements*.txt"
+      - "requirements/**"
+      - "api/**"
+      - "core/**"
+      - "betelgeuze_engine/**"
+      - "betelgeuze_ai_md/**"
+      - "betelgeuze_product/**"
+      - "betelgeuze_cameo/**"
+      - "betelgeuze_cleanup/**"
+      - "tools/**"
+      - "config/**"
+      - "rust_engine/**"
+      - "third_party/**"
+      - "tests/unit/test_p1_dockerfile_contract.py"
+      - ".github/workflows/ci-docker-product.yml"
+  pull_request:
+    paths:
+      - "Dockerfile.product"
+      - "requirements*.txt"
+      - "requirements/**"
+      - "api/**"
+      - "core/**"
+      - "betelgeuze_engine/**"
+      - "betelgeuze_ai_md/**"
+      - "betelgeuze_product/**"
+      - "betelgeuze_cameo/**"
+      - "betelgeuze_cleanup/**"
+      - "tools/**"
+      - "config/**"
+      - "rust_engine/**"
+      - "third_party/**"
+      - "tests/unit/test_p1_dockerfile_contract.py"
+      - ".github/workflows/ci-docker-product.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dockerfile-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install pytest only
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+      - name: Validate Dockerfile product contract
+        run: |
+          python -m pytest -q tests/unit/test_p1_dockerfile_contract.py
