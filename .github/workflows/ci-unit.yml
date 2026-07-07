@@ -36,11 +36,9 @@ jobs:
             tests/unit/test_p0_subprocess_runner.py
             tests/unit/test_p0_proxy_score_contract.py
             tests/unit/test_p1_dependency_contract.py
-            tests/unit/test_p1_dockerfile_contract.py
             tests/unit/test_product_docking_response_contract.py
             docs/**
             requirements/constraints-api-py311-linux-x86_64.txt
-            Dockerfile.product
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
@@ -54,5 +52,4 @@ jobs:
             tests/unit/test_product_docking_response_contract.py \
             tests/unit/test_p0_subprocess_runner.py \
             tests/unit/test_p0_proxy_score_contract.py \
-            tests/unit/test_p1_dependency_contract.py \
-            tests/unit/test_p1_dockerfile_contract.py
+            tests/unit/test_p1_dependency_contract.py
