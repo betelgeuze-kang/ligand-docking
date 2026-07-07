@@ -60,6 +60,10 @@ on:
       - "tests/unit/test_build_refine_tier_public_benchmark_readiness.py"
       - "tests/unit/test_apply_refine_tier_public_benchmark_work_order.py"
       - "tests/unit/test_api_job_store.py"
+      - "tests/unit/test_api_path_safety.py"
+      - "tests/unit/test_product_docking_debug_guard.py"
+      - "tests/unit/test_sqlite_job_store_operational_settings.py"
+      - "tests/unit/test_worker_docking_ledger_sync.py"
       - "tests/unit/test_api_goal_import.py"
       - "tests/unit/test_api_casp17_import.py"
       - "tests/unit/test_api_cleanup_import.py"
@@ -138,6 +142,10 @@ on:
       - "tests/unit/test_build_refine_tier_public_benchmark_readiness.py"
       - "tests/unit/test_apply_refine_tier_public_benchmark_work_order.py"
       - "tests/unit/test_api_job_store.py"
+      - "tests/unit/test_api_path_safety.py"
+      - "tests/unit/test_product_docking_debug_guard.py"
+      - "tests/unit/test_sqlite_job_store_operational_settings.py"
+      - "tests/unit/test_worker_docking_ledger_sync.py"
       - "tests/unit/test_api_goal_import.py"
       - "tests/unit/test_api_casp17_import.py"
       - "tests/unit/test_api_cleanup_import.py"
@@ -221,6 +229,7 @@ jobs:
             api/config.py \
             api/docking_dispatch.py \
             api/job_store.py \
+            api/path_safety.py \
             api/runner_profile_contract.py \
             api/security.py \
             api/validated_runner.py \
@@ -291,6 +300,10 @@ jobs:
           python3 -m pytest -q \
             tests/unit/test_docking_pipeline_hardening.py \
             tests/unit/test_api_job_store.py \
+            tests/unit/test_api_path_safety.py \
+            tests/unit/test_product_docking_debug_guard.py \
+            tests/unit/test_sqlite_job_store_operational_settings.py \
+            tests/unit/test_worker_docking_ledger_sync.py \
             tests/unit/test_api_validated_runner_adapter.py \
             tests/unit/test_api_runner_profile_enablement_work_order.py \
             tests/unit/test_api_worker_deploy_artifacts.py \
