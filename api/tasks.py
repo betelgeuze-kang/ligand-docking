@@ -5,7 +5,11 @@ import os
 from typing import Any
 
 from api.config import settings
-from api.simulation_scope import UnsupportedSimulationScopeError, validate_simulation_request_scope
+from api.simulation_scope import (
+    PRODUCT_SIMULATION_SCOPE,
+    UnsupportedSimulationScopeError,
+    validate_simulation_request_scope,
+)
 from api.validated_runner import execute_validated_runner_profile
 from betelgeuze_product.tier_beta_vertical_slice import (
     is_tier_beta_vertical_slice_request,
@@ -35,11 +39,12 @@ async def run_simulation_async(job_id: str, request_data: dict[str, Any]):
 
         raise UnsupportedSimulationScopeError(
             "runner_profile_id is required for all /simulate jobs.",
+            product_scope=PRODUCT_SIMULATION_SCOPE,
         )
 
     except Exception as e:
-        # Update status to failed
-        with open(status_file_path, 'w') as sf:
+        # Update status to failed without leaking raw request data.
+        with open(status_file_path, "w", encoding="utf-8") as sf:
             json.dump({"job_id": job_id, "status": "failed", "error": str(e)}, sf)
         print(f"Simulation {job_id} failed: {e}")
-        raise e
+        raise
