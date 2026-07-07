@@ -25,8 +25,10 @@ def load_native_structure(target_name: str):
 
 
 def __getattr__(name: str) -> Any:
+    if name.startswith("__"):
+        raise AttributeError(name)
     return getattr(_module(), name)
 
 
 def __dir__() -> list[str]:
-    return sorted(set(globals()) | set(dir(_module())))
+    return sorted(set(globals()))
