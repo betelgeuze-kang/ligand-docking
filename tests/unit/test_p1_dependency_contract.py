@@ -12,7 +12,8 @@ def test_api_constraints_document_optional_httpx2_intent() -> None:
     text = constraints.read_text(encoding="utf-8")
     assert "fastapi" in text
     assert "pydantic-settings" in text
-    assert "httpx2<1" in text
+    assert "httpx2" in text
+    assert "not constrained" in text
 
     doc = matrix.read_text(encoding="utf-8")
     assert "httpx2" in doc
