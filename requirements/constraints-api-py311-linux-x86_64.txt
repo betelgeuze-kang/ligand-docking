@@ -4,10 +4,13 @@
 # RDKit, OpenMM, or full-forcefield dependencies into the default runtime.
 # Keep top-level API packages here so CI can install with:
 #   python -m pip install -c requirements/constraints-api-py311-linux-x86_64.txt -r requirements.txt -r requirements-api.txt
+#
+# `httpx2` remains intentionally documented in requirements-api.txt as an API
+# HTTP smoke helper, but is not constrained here because its release cadence is
+# decoupled from the server stack and it is not imported by the runtime API code.
 
 fastapi>=0.110,<1
 uvicorn>=0.30,<1
 pydantic-settings>=2,<3
 prometheus-client>=0.20,<1
 pytest>=8,<9
-httpx2<1
