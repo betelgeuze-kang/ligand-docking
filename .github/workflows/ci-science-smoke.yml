@@ -7,11 +7,16 @@ on:
       - "tools/pdb_loader.py"
       - "tools/product/strict_ligand_mapping_queue.py"
       - "tools/product/build_pose_level_benchmark_report.py"
+      - "tools/product/build_allatom_refinement_lane.py"
+      - "tools/product/build_external_docking_baseline_adapter.py"
+      - "tools/product/build_public_benchmark_manifest.py"
       - "betelgeuze_engine/**"
       - "tests/fixtures/tiny_docking/**"
       - "tests/unit/test_p0_strict_ligand_mapping_queue.py"
       - "tests/unit/test_build_pose_level_benchmark_report.py"
+      - "tests/unit/test_p2_*.py"
       - "docs/SCIENCE_LIMITATIONS.md"
+      - "docs/P2_PRODUCT_SCIENCE_LANES.md"
       - ".github/workflows/ci-science-smoke.yml"
   pull_request:
     paths:
@@ -19,11 +24,16 @@ on:
       - "tools/pdb_loader.py"
       - "tools/product/strict_ligand_mapping_queue.py"
       - "tools/product/build_pose_level_benchmark_report.py"
+      - "tools/product/build_allatom_refinement_lane.py"
+      - "tools/product/build_external_docking_baseline_adapter.py"
+      - "tools/product/build_public_benchmark_manifest.py"
       - "betelgeuze_engine/**"
       - "tests/fixtures/tiny_docking/**"
       - "tests/unit/test_p0_strict_ligand_mapping_queue.py"
       - "tests/unit/test_build_pose_level_benchmark_report.py"
+      - "tests/unit/test_p2_*.py"
       - "docs/SCIENCE_LIMITATIONS.md"
+      - "docs/P2_PRODUCT_SCIENCE_LANES.md"
       - ".github/workflows/ci-science-smoke.yml"
   workflow_dispatch:
 
@@ -46,7 +56,9 @@ jobs:
             tests/fixtures/tiny_docking/**
             tests/unit/test_p0_strict_ligand_mapping_queue.py
             tests/unit/test_build_pose_level_benchmark_report.py
+            tests/unit/test_p2_*.py
             docs/SCIENCE_LIMITATIONS.md
+            docs/P2_PRODUCT_SCIENCE_LANES.md
             requirements*.txt
             requirements/**
             pyproject.toml
@@ -57,13 +69,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install numpy pandas PyYAML pytest
-      - name: Run strict input and pose benchmark smoke tests
+      - name: Run strict input, pose benchmark, and P2 lane tests
         shell: bash
         run: |
           set -o pipefail
           python -m pytest -q \
             tests/unit/test_p0_strict_ligand_mapping_queue.py \
             tests/unit/test_build_pose_level_benchmark_report.py \
+            tests/unit/test_p2_*.py \
             2>&1 | tee science-smoke-output.log
       - name: Upload science smoke output
         if: always()
