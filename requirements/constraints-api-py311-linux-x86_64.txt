@@ -1,0 +1,13 @@
+# P1 API smoke constraints for CPython 3.11 on linux-x86_64.
+#
+# This file bounds the optional FastAPI/product API surface without moving API,
+# RDKit, OpenMM, or full-forcefield dependencies into the default runtime.
+# Keep top-level API packages here so CI can install with:
+#   python -m pip install -c requirements/constraints-api-py311-linux-x86_64.txt -r requirements.txt -r requirements-api.txt
+
+fastapi>=0.110,<1
+uvicorn>=0.30,<1
+pydantic-settings>=2,<3
+prometheus-client>=0.20,<1
+pytest>=8,<9
+httpx2<1
