@@ -9,6 +9,7 @@ on:
       - "tools/product/strict_ligand_mapping_queue.py"
       - "tools/product/subprocess_runner.py"
       - "betelgeuze_product/docking_response.py"
+      - "betelgeuze_engine/**"
       - "tests/fixtures/tiny_docking/**"
       - "tests/unit/test_p0_strict_ligand_mapping_queue.py"
       - "tests/unit/test_p0_subprocess_runner.py"
@@ -22,6 +23,7 @@ on:
       - "tools/product/strict_ligand_mapping_queue.py"
       - "tools/product/subprocess_runner.py"
       - "betelgeuze_product/docking_response.py"
+      - "betelgeuze_engine/**"
       - "tests/fixtures/tiny_docking/**"
       - "tests/unit/test_p0_strict_ligand_mapping_queue.py"
       - "tests/unit/test_p0_subprocess_runner.py"
@@ -45,6 +47,7 @@ jobs:
             core/**
             config/**
             betelgeuze_product/**
+            betelgeuze_engine/**
             tests/fixtures/tiny_docking/**
             tests/unit/test_p0_strict_ligand_mapping_queue.py
             tests/unit/test_p0_subprocess_runner.py
