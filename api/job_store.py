@@ -10,6 +10,8 @@ from typing import Any
 from api.config import settings
 from api.request_privacy import sanitize_request_for_ledger
 
+SQLITE_BUSY_TIMEOUT_MS = 5000
+
 
 def _utc_now_dt() -> datetime:
     return datetime.now(timezone.utc).replace(microsecond=0)
@@ -82,8 +84,18 @@ class SQLiteJobStore:
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(str(self.path))
+        conn = sqlite3.connect(
+            str(self.path),
+            timeout=max(float(SQLITE_BUSY_TIMEOUT_MS) / 1000.0, 0.1),
+        )
         conn.row_factory = sqlite3.Row
+        # SQLite is the local queue source of truth. WAL improves concurrent
+        # reader/worker behavior, and busy_timeout prevents transient lock races
+        # from surfacing as immediate OperationalError during lease handoff.
+        conn.execute("PRAGMA foreign_keys=ON")
+        conn.execute(f"PRAGMA busy_timeout={int(SQLITE_BUSY_TIMEOUT_MS)}")
+        if self.path.name != ":memory:":
+            conn.execute("PRAGMA journal_mode=WAL")
         return conn
 
     def _init_db(self) -> None:
@@ -211,34 +223,12 @@ class SQLiteJobStore:
         return events
 
     def mark_outbox_event_delivered(self, event_id: int) -> bool:
-        now = _utc_now()
-        with self._connect() as conn:
-            conn.execute("BEGIN IMMEDIATE")
-            row = conn.execute(
-                "SELECT delivery_state FROM simulation_job_outbox WHERE event_id=?",
-                (event_id,),
-            ).fetchone()
-            if row is None:
-                conn.rollback()
-                return False
-            if row["delivery_state"] == "delivered":
-                conn.commit()
-                return True
-            if row["delivery_state"] != "pending":
-                conn.rollback()
-                return False
-            conn.execute(
-                """
-                UPDATE simulation_job_outbox
-                SET delivery_state='delivered', updated_at_utc=?
-                WHERE event_id=?
-                """,
-                (now, event_id),
-            )
-            conn.commit()
-        return True
+        return self._mark_outbox_event_state(event_id, expected="pending", target="delivered")
 
     def mark_outbox_event_recovered(self, event_id: int) -> bool:
+        return self._mark_outbox_event_state(event_id, expected="pending", target="recovered")
+
+    def _mark_outbox_event_state(self, event_id: int, *, expected: str, target: str) -> bool:
         now = _utc_now()
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
@@ -249,19 +239,19 @@ class SQLiteJobStore:
             if row is None:
                 conn.rollback()
                 return False
-            if row["delivery_state"] == "recovered":
+            if row["delivery_state"] == target:
                 conn.commit()
                 return True
-            if row["delivery_state"] != "pending":
+            if row["delivery_state"] != expected:
                 conn.rollback()
                 return False
             conn.execute(
                 """
                 UPDATE simulation_job_outbox
-                SET delivery_state='recovered', updated_at_utc=?
+                SET delivery_state=?, updated_at_utc=?
                 WHERE event_id=?
                 """,
-                (now, event_id),
+                (target, now, event_id),
             )
             conn.commit()
         return True
@@ -320,11 +310,7 @@ class SQLiteJobStore:
         status: str = "submitted",
         max_attempts: int = 3,
     ) -> tuple[dict[str, Any], bool]:
-        """Atomically insert a queue row without resetting an existing job.
-
-        Returns ``(record, created)``. The existing row is preserved exactly
-        when another dispatcher has already inserted the same ``job_id``.
-        """
+        """Atomically insert a queue row without resetting an existing job."""
 
         now = _utc_now()
         request_json = json.dumps(
@@ -345,10 +331,6 @@ class SQLiteJobStore:
             )
             created = cursor.rowcount == 1
             if created:
-                # Emit the durable creation event in the same transaction so a
-                # crash/reopen can recover dispatcher-created jobs, matching the
-                # behavior of create_job(). When the row already exists we leave
-                # the existing job (and its prior outbox events) untouched.
                 self._insert_outbox_event(
                     conn,
                     job_id=job_id,
@@ -379,91 +361,24 @@ class SQLiteJobStore:
                 (job_id,),
             ).fetchone()
             previous_status = str(existing_row["status"]) if existing_row is not None else ""
-            if result_manifest_path is None:
-                if terminal_status:
-                    conn.execute(
-                        """
-                        UPDATE simulation_jobs
-                        SET status=?, error=?, result_file=?,
-                            worker_id='', lease_expires_at_utc='', heartbeat_at_utc='',
-                            updated_at_utc=?
-                        WHERE job_id=?
-                        """,
-                        (status, error, result_file, now, job_id),
-                    )
+
+            assignments = ["status=?", "error=?", "result_file=?", "updated_at_utc=?"]
+            values: list[Any] = [status, error, result_file, now]
+            if result_manifest_path is not None:
+                assignments.append("result_manifest_path=?")
+                values.append(result_manifest_path)
+                if evidence_bundle_path is not None and evidence_bundle_sha256 is not None:
+                    assignments.extend(["evidence_bundle_path=?", "evidence_bundle_sha256=?"])
+                    values.extend([evidence_bundle_path, evidence_bundle_sha256])
                 else:
-                    conn.execute(
-                        """
-                        UPDATE simulation_jobs
-                        SET status=?, error=?, result_file=?, updated_at_utc=?
-                        WHERE job_id=?
-                        """,
-                        (status, error, result_file, now, job_id),
-                    )
-            elif evidence_bundle_path is not None and evidence_bundle_sha256 is not None:
-                if terminal_status:
-                    conn.execute(
-                        """
-                        UPDATE simulation_jobs
-                        SET status=?, error=?, result_file=?, result_manifest_path=?,
-                            evidence_bundle_path=?, evidence_bundle_sha256=?,
-                            worker_id='', lease_expires_at_utc='', heartbeat_at_utc='',
-                            updated_at_utc=?
-                        WHERE job_id=?
-                        """,
-                        (
-                            status,
-                            error,
-                            result_file,
-                            result_manifest_path,
-                            evidence_bundle_path,
-                            evidence_bundle_sha256,
-                            now,
-                            job_id,
-                        ),
-                    )
-                else:
-                    conn.execute(
-                        """
-                        UPDATE simulation_jobs
-                        SET status=?, error=?, result_file=?, result_manifest_path=?,
-                            evidence_bundle_path=?, evidence_bundle_sha256=?, updated_at_utc=?
-                        WHERE job_id=?
-                        """,
-                        (
-                            status,
-                            error,
-                            result_file,
-                            result_manifest_path,
-                            evidence_bundle_path,
-                            evidence_bundle_sha256,
-                            now,
-                            job_id,
-                        ),
-                    )
-            else:
-                if terminal_status:
-                    conn.execute(
-                        """
-                        UPDATE simulation_jobs
-                        SET status=?, error=?, result_file=?, result_manifest_path=?,
-                            evidence_bundle_path='', evidence_bundle_sha256='',
-                            worker_id='', lease_expires_at_utc='', heartbeat_at_utc='',
-                            updated_at_utc=?
-                        WHERE job_id=?
-                        """,
-                        (status, error, result_file, result_manifest_path, now, job_id),
-                    )
-                else:
-                    conn.execute(
-                        """
-                        UPDATE simulation_jobs
-                        SET status=?, error=?, result_file=?, result_manifest_path=?,
-                            evidence_bundle_path='', evidence_bundle_sha256='', updated_at_utc=?
-                        WHERE job_id=?
-                        """,
-                        (status, error, result_file, result_manifest_path, now, job_id),
-                    )
+                    assignments.extend(["evidence_bundle_path=''", "evidence_bundle_sha256=''"])
+            if terminal_status:
+                assignments.extend(["worker_id=''", "lease_expires_at_utc=''", "heartbeat_at_utc=''"])
+            values.append(job_id)
+            conn.execute(
+                f"UPDATE simulation_jobs SET {', '.join(assignments)} WHERE job_id=?",
+                tuple(values),
+            )
             if terminal_status and existing_row is not None and previous_status != status:
                 self._insert_outbox_event(
                     conn,
