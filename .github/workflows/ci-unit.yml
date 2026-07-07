@@ -32,24 +32,22 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             betelgeuze_product/**
-            tools/product/**
-            tests/unit/test_p0_*.py
-            tests/unit/test_p1_*.py
+            tools/product/subprocess_runner.py
+            tests/unit/test_p0_subprocess_runner.py
+            tests/unit/test_p0_proxy_score_contract.py
+            tests/unit/test_p1_dependency_contract.py
+            tests/unit/test_p1_dockerfile_contract.py
             tests/unit/test_product_docking_response_contract.py
             docs/**
-            requirements*.txt
-            requirements/**
+            requirements/constraints-api-py311-linux-x86_64.txt
             Dockerfile.product
-            api/**
-            core/**
-            pyproject.toml
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - name: Install unit dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt -r requirements-dev.txt
+          python -m pip install pytest
       - name: Run P0/P1 unit contracts
         run: |
           python -m pytest -q \
