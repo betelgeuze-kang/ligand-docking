@@ -4,4 +4,4 @@ uvicorn[standard]
 pydantic-settings
 prometheus-client
 pytest
-httpx2
+httpx
