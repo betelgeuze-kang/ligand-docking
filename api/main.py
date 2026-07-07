@@ -44,6 +44,7 @@ from api.tasks import run_simulation_async
 from api.config import settings
 from api.startup_preflight import run_startup_preflight, check_key_staleness
 from api.job_store import SQLiteJobStore, get_configured_job_store
+from api.path_safety import PathSafetyError, resolve_existing_file_under
 from api.security import ProductSecurityMiddleware, security_metrics_text
 from api.worker import (
     job_results_dir,
@@ -124,6 +125,27 @@ def _model_to_dict(model: SimulationRequest) -> dict[str, Any]:
     if hasattr(model, "model_dump"):
         return model.model_dump()
     return model.dict()
+
+
+def _resolve_job_artifact_file(
+    job_id: str,
+    path_value: object,
+    *,
+    artifact_name: str,
+    missing_status_code: int = 404,
+) -> Path:
+    try:
+        return resolve_existing_file_under(job_results_dir(job_id), path_value)
+    except PathSafetyError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=f"{artifact_name} path escapes job result directory",
+        ) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=missing_status_code,
+            detail=f"{artifact_name} file not found",
+        ) from exc
 
 
 @app.post("/simulate", response_model=SimulationResponse)
@@ -261,16 +283,28 @@ def get_simulation_results(job_id: str):
         status_data.get("evidence_bundle_sha256"),
         record.get("evidence_bundle_sha256"),
     )
-    if not manifest_path or not os.path.exists(manifest_path):
+    if not manifest_path:
         raise HTTPException(
             status_code=403,
             detail="Completed job missing result manifest provenance",
         )
-    if not evidence_bundle_path or not os.path.exists(evidence_bundle_path):
+    manifest_path_obj = _resolve_job_artifact_file(
+        job_id,
+        manifest_path,
+        artifact_name="Completed job result manifest provenance",
+        missing_status_code=403,
+    )
+    if not evidence_bundle_path:
         raise HTTPException(
             status_code=403,
             detail="Completed job missing evidence bundle provenance",
         )
+    _resolve_job_artifact_file(
+        job_id,
+        evidence_bundle_path,
+        artifact_name="Completed job evidence bundle provenance",
+        missing_status_code=403,
+    )
     if len(evidence_bundle_sha256) != 64:
         raise HTTPException(
             status_code=403,
@@ -278,13 +312,18 @@ def get_simulation_results(job_id: str):
         )
 
     result_file = status_data.get("result_file")
-    if not result_file or not os.path.exists(result_file):
+    if not result_file:
         raise HTTPException(status_code=404, detail="Result file not found")
+    result_path = _resolve_job_artifact_file(
+        job_id,
+        result_file,
+        artifact_name="Result artifact",
+        missing_status_code=404,
+    )
 
-    result_path = Path(result_file)
     manifest_payload: dict[str, Any] = {}
     try:
-        loaded_manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+        loaded_manifest = json.loads(manifest_path_obj.read_text(encoding="utf-8"))
         manifest_payload = loaded_manifest if isinstance(loaded_manifest, dict) else {}
     except (OSError, json.JSONDecodeError):
         manifest_payload = {}
@@ -303,7 +342,7 @@ def get_simulation_results(job_id: str):
         except json.JSONDecodeError as exc:
             raise HTTPException(status_code=500, detail="Result JSON artifact is invalid") from exc
         return JSONResponse(payload)
-    return FileResponse(result_file, media_type=media_type, filename=os.path.basename(result_file))
+    return FileResponse(str(result_path), media_type=media_type, filename=os.path.basename(str(result_path)))
     # Or return a ResultsResponse object with a download link if serving via URL is preferred
     # return ResultsResponse(job_id=job_id, status="completed", result_url=f"/download/{job_id}")
 
