@@ -31,6 +31,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            tools/**
+            core/**
+            tests/fixtures/tiny_docking/**
+            tests/unit/test_p0_strict_ligand_mapping_queue.py
+            tests/unit/test_build_pose_level_benchmark_report.py
+            docs/SCIENCE_LIMITATIONS.md
+            requirements*.txt
+            requirements/**
+            pyproject.toml
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
