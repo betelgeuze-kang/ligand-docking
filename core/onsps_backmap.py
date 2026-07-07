@@ -57,11 +57,13 @@ def hbond_angle_score(protein_xyz, ligand_bead, pocket_center) -> float:
 
 
 def __getattr__(name: str) -> Any:
+    if name.startswith("__"):
+        raise AttributeError(name)
     return getattr(_module(), name)
 
 
 def __dir__() -> list[str]:
-    return sorted(set(globals()) | set(dir(_module())))
+    return sorted(set(globals()))
 
 
 __all__ = [
