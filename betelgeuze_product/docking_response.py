@@ -125,6 +125,40 @@ DOCKING_DIAGNOSTIC_KEYS: tuple[str, ...] = (
 
 _DEFAULT_LINKS_KEYS = ("self", "history", "cancel", "retry")
 
+PROXY_SCORE_CONTRACT: dict[str, Any] = {
+    "customer_score_name": "proxy_binding_energy_score",
+    "method_kind": "heuristic_proxy",
+    "internal_proxy_columns": [
+        "binding_energy_proxy",
+        "binding_energy_mmpbsa_kcal_mol_proxy",
+        "binding_energy_explicit_water_recheck_kcal_mol_proxy",
+    ],
+    "not_claimed_as": [
+        "experimental_delta_g",
+        "true_mm_pbsa",
+        "absolute_binding_free_energy",
+        "clinical_or_therapeutic_evidence",
+    ],
+    "customer_safe_label": "Proxy docking score for triage only; not an experimental ΔG or true MM/PBSA claim.",
+}
+
+
+def proxy_score_contract() -> dict[str, Any]:
+    """Customer-safe score naming contract.
+
+    Internal columns may keep historical names for regression compatibility, but
+    the API exposes a proxy label so customer reports do not over-read heuristic
+    or surrogate energies as experimental ΔG/MM-PBSA evidence.
+    """
+
+    return {
+        "customer_score_name": PROXY_SCORE_CONTRACT["customer_score_name"],
+        "method_kind": PROXY_SCORE_CONTRACT["method_kind"],
+        "internal_proxy_columns": list(PROXY_SCORE_CONTRACT["internal_proxy_columns"]),
+        "not_claimed_as": list(PROXY_SCORE_CONTRACT["not_claimed_as"]),
+        "customer_safe_label": PROXY_SCORE_CONTRACT["customer_safe_label"],
+    }
+
 
 def docking_validation_summary(record: dict[str, Any]) -> dict[str, Any]:
     blockers = record.get("blockers") or []
@@ -191,6 +225,7 @@ def docking_claim_summary(record: dict[str, Any]) -> dict[str, Any]:
         "general_platform_claim_allowed": bool(record.get("general_platform_claim_allowed", False)),
         "production_promotion_allowed": bool(record.get("production_ai_promotion_allowed", False)),
         "customer_pose_emission_allowed": bool(record.get("docking_results_emitted", False)),
+        "score_contract": proxy_score_contract(),
         "claim_boundary": record.get("claim_boundary", ""),
     }
 
@@ -257,18 +292,3 @@ def build_docking_submission_response(
     if debug:
         response.update(docking_diagnostics_envelope(record))
     return response
-
-
-__all__ = [
-    "DOCKING_SUBMISSION_TOP_LEVEL_KEYS",
-    "DOCKING_DIAGNOSTIC_KEYS",
-    "docking_validation_summary",
-    "docking_structure_summary",
-    "docking_progress_summary",
-    "docking_dispatch_summary",
-    "docking_claim_summary",
-    "docking_links",
-    "docking_diagnostics",
-    "docking_diagnostics_envelope",
-    "build_docking_submission_response",
-]
