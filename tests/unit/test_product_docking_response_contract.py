@@ -8,6 +8,7 @@ from betelgeuze_product.docking_response import (
     docking_claim_summary,
     docking_dispatch_summary,
     docking_links,
+    docking_readiness_summary,
 )
 
 
@@ -38,6 +39,10 @@ def _record() -> dict:
         "queue_position": 0,
         "worker_state": "not_started_fail_closed",
         "engine_dispatch_ready": True,
+        "execution_approval_authorized": False,
+        "execution_approval_next_required_step": "Provide operator approval token.",
+        "production_strict_inputs_pass": False,
+        "production_ai_abstention_enforced": True,
         "scope_claim_status": "scoped_allow",
         "scope_claim_allowed_for_request": True,
         "general_platform_claim_allowed": False,
@@ -61,6 +66,11 @@ def test_default_response_is_slim_and_grouped() -> None:
     resp = build_docking_submission_response(_record(), dispatch_outcome={"dispatched": True, "reason": "eligible"})
     assert set(resp.keys()) == set(DOCKING_SUBMISSION_TOP_LEVEL_KEYS)
     assert resp["job_id"] == "job-123"
+    assert resp["readiness"]["intake_valid"] is True
+    assert resp["readiness"]["execution_authorized"] is False
+    assert resp["readiness"]["science_inputs_strict"] is False
+    assert "missing_operator_execution_approval" in resp["readiness"]["blocking_reasons"]
+    assert "strict_science_inputs_not_bound" in resp["readiness"]["blocking_reasons"]
     assert resp["validation"]["warning_count"] == 1
     assert resp["structure"]["atom_count"] == 1200
     assert resp["progress"]["state"] == "ledger_intake_recorded"
@@ -107,6 +117,20 @@ def test_dispatch_summary_falls_back_to_record_when_no_outcome() -> None:
     assert summary["worker_dispatch_enqueued"] is True
     assert summary["worker_dispatch_reason"] == "replayed"
     assert summary["engine_dispatch_ready"] is True
+
+
+def test_readiness_summary_can_turn_green_for_restricted_runner() -> None:
+    record = _record()
+    record["execution_approval_authorized"] = True
+    record["production_strict_inputs_pass"] = True
+    record["production_ai_abstention_enforced"] = False
+    readiness = docking_readiness_summary(record)
+    assert readiness["intake_valid"] is True
+    assert readiness["execution_authorized"] is True
+    assert readiness["science_inputs_strict"] is True
+    assert readiness["runner_profile_ready"] is True
+    assert readiness["blocking_reasons"] == []
+    assert readiness["next_action"] == "Ready for the configured restricted runner path."
 
 
 def test_claim_summary_maps_existing_fields_only() -> None:
