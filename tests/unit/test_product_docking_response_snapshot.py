@@ -35,6 +35,10 @@ def _record() -> dict:
         "engine_dispatch_ready": True,
         "worker_dispatch_enqueued": False,
         "worker_dispatch_reason": "runner_input_materialization_not_ready",
+        "execution_approval_authorized": False,
+        "production_strict_inputs_pass": False,
+        "production_ai_abstention_enforced": True,
+        "execution_approval_next_required_step": "Provide operator approval token.",
         "scope_claim_status": "restricted_local_allowed",
         "scope_claim_allowed_for_request": True,
         "general_platform_claim_allowed": False,
@@ -67,6 +71,7 @@ def test_submission_response_top_level_keys_are_stable_snapshot() -> None:
         "validation_status",
         "execution_enabled",
         "docking_results_emitted",
+        "readiness",
         "validation",
         "structure",
         "progress",
@@ -82,6 +87,10 @@ def test_submission_response_groups_contract_for_gui() -> None:
         _record(), dispatch_outcome={"dispatched": True, "reason": "eligible"}
     )
 
+    assert response["readiness"]["intake_valid"] is True
+    assert response["readiness"]["execution_authorized"] is False
+    assert response["readiness"]["science_inputs_strict"] is False
+    assert "missing_operator_execution_approval" in response["readiness"]["blocking_reasons"]
     assert response["validation"] == {
         "status": "pass",
         "blocker_count": 0,
