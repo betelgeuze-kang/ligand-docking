@@ -1,0 +1,46 @@
+name: p0-product-safety-smoke
+
+on:
+  push:
+    paths:
+      - "tools/build_ligand_mapping_queue.py"
+      - "tools/run_ligand_htvs_pipeline.py"
+      - "tools/product/strict_ligand_mapping_queue.py"
+      - "tools/product/subprocess_runner.py"
+      - "betelgeuze_product/docking_response.py"
+      - "tests/fixtures/tiny_docking/**"
+      - "tests/unit/test_p0_*.py"
+      - ".github/workflows/p0-product-safety-smoke.yml"
+  pull_request:
+    paths:
+      - "tools/build_ligand_mapping_queue.py"
+      - "tools/run_ligand_htvs_pipeline.py"
+      - "tools/product/strict_ligand_mapping_queue.py"
+      - "tools/product/subprocess_runner.py"
+      - "betelgeuze_product/docking_response.py"
+      - "tests/fixtures/tiny_docking/**"
+      - "tests/unit/test_p0_*.py"
+      - ".github/workflows/p0-product-safety-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  p0-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install smoke dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pytest
+      - name: Run P0 product safety smoke tests
+        run: |
+          python -m pytest -q \
+            tests/unit/test_p0_strict_ligand_mapping_queue.py \
+            tests/unit/test_p0_subprocess_runner.py \
+            tests/unit/test_p0_proxy_score_contract.py
