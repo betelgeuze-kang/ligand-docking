@@ -17,6 +17,20 @@ def test_resolve_existing_file_under_accepts_root_child(tmp_path: Path) -> None:
     assert resolve_existing_file_under(root, artifact) == artifact.resolve()
 
 
+def test_resolve_existing_file_under_accepts_cwd_relative_contained_path(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path / "repo"
+    root = repo_root / "results" / "job-1"
+    root.mkdir(parents=True)
+    artifact = root / "result.json"
+    artifact.write_text("{}", encoding="utf-8")
+    monkeypatch.chdir(repo_root)
+
+    assert resolve_existing_file_under(root, "./results/job-1/result.json") == artifact.resolve()
+
+
 def test_resolve_under_root_rejects_parent_escape(tmp_path: Path) -> None:
     root = tmp_path / "job"
     root.mkdir()
