@@ -14,6 +14,10 @@ def _write_csv(path: Path, rows: list[dict[str, object]]) -> Path:
     return path
 
 
+def _bool_texts(series: pd.Series) -> set[str]:
+    return {str(value).strip().lower() for value in series.tolist()}
+
+
 def test_strict_ligand_mapping_queue_passes_with_explicit_geometry_and_pocket(tmp_path: Path) -> None:
     repo = Path(__file__).resolve().parents[2]
     ligand_csv = repo / "tests" / "fixtures" / "tiny_docking" / "ligands_explicit_beads.csv"
@@ -73,8 +77,8 @@ def test_strict_ligand_mapping_queue_passes_with_explicit_geometry_and_pocket(tm
             "science_input_blockers_json",
         ]
     ).issubset(queue.columns)
-    assert queue["production_strict_inputs"].astype(bool).all()
-    assert not queue["fallback_beads_used"].astype(bool).any()
+    assert _bool_texts(queue["production_strict_inputs"]) == {"true"}
+    assert _bool_texts(queue["fallback_beads_used"]) == {"false"}
     assert set(queue["ligand_geometry_source"]) == {"explicit_bead_coords_json"}
     assert set(queue["pocket_source"]) == {"target_pocket_csv"}
     assert set(queue["native_structure_source"]) == {"target_native_csv"}
