@@ -4,6 +4,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 import asyncio
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -17,6 +18,18 @@ from betelgeuze_ai_md.contracts.api_adapter import write_api_evidence_bundle
 SimulationRunner = Callable[[str, dict[str, Any]], Awaitable[None]]
 
 
+def _redacted_error_payload(error: Exception) -> dict[str, Any]:
+    text = str(error)
+    encoded = text.encode("utf-8")
+    return {
+        "redacted": True,
+        "redaction": "sha256",
+        "sha256": hashlib.sha256(encoded).hexdigest(),
+        "byte_length": len(encoded),
+        "exception_type": type(error).__name__,
+    }
+
+
 def _sync_docking_ledger_if_needed(
     *,
     job_id: str,
@@ -25,20 +38,18 @@ def _sync_docking_ledger_if_needed(
     result_file: str = "",
     error: str = "",
     worker_id: str = "",
-) -> None:
+) -> dict[str, Any]:
     params = request_data.get("runner_profile_params", {})
     if not isinstance(params, dict):
-        return
+        return {"sync_attempted": False, "reason": "runner_profile_params_not_object"}
     docking_job_id = str(params.get("docking_job_id", "") or "").strip()
     if not docking_job_id:
-        return
+        return {"sync_attempted": False, "reason": "docking_job_id_missing"}
     try:
-        from pathlib import Path
-
         from api.docking_dispatch import sync_ledger_from_simulation_result
 
         jobs_dir = Path(settings.results_storage_path) / "product_docking_jobs"
-        sync_ledger_from_simulation_result(
+        outcome = sync_ledger_from_simulation_result(
             jobs_dir,
             docking_job_id,
             status=status,
@@ -46,8 +57,16 @@ def _sync_docking_ledger_if_needed(
             error=error,
             worker_id=worker_id,
         )
-    except Exception:
-        return
+        return {"sync_attempted": True, **outcome}
+    except Exception as exc:
+        return {
+            "sync_attempted": True,
+            "synced": False,
+            "reason": "ledger_sync_exception",
+            "job_id": job_id,
+            "docking_job_id": docking_job_id,
+            "error": _redacted_error_payload(exc),
+        }
 
 
 def job_results_dir(job_id: str) -> str:
@@ -248,14 +267,16 @@ async def run_job_once(
                 "evidence_bundle_sha256": bundle_hash,
             }
         )
-        write_status_file(status_file_path, status_data)
-        _sync_docking_ledger_if_needed(
+        ledger_sync = _sync_docking_ledger_if_needed(
             job_id=job_id,
             request_data=request_data,
             status="completed",
             result_file=result_file,
             worker_id=worker_id,
         )
+        if ledger_sync.get("sync_attempted"):
+            status_data["docking_ledger_sync"] = ledger_sync
+        write_status_file(status_file_path, status_data)
         return store.update_job(
             job_id,
             status="completed",
@@ -266,7 +287,7 @@ async def run_job_once(
         )
     except Exception as exc:
         error = str(exc)
-        _sync_docking_ledger_if_needed(
+        ledger_sync = _sync_docking_ledger_if_needed(
             job_id=job_id,
             request_data=request_data,
             status="failed",
@@ -278,6 +299,8 @@ async def run_job_once(
             if released is not None and released.get("status") == "retry_ready":
                 status_data = read_status_file(status_file_path)
                 status_data.update({"job_id": job_id, "status": "retry_ready", "error": error})
+                if ledger_sync.get("sync_attempted"):
+                    status_data["docking_ledger_sync"] = ledger_sync
                 write_status_file(status_file_path, status_data)
                 return released
 
@@ -289,6 +312,8 @@ async def run_job_once(
         )
         status_data = read_status_file(status_file_path)
         status_data.update({"job_id": job_id, "status": "failed", "error": error, "result_manifest": manifest_path})
+        if ledger_sync.get("sync_attempted"):
+            status_data["docking_ledger_sync"] = ledger_sync
         write_status_file(status_file_path, status_data)
         return store.update_job(job_id, status="failed", error=error, result_manifest_path=manifest_path)
 
