@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from api.config import settings
@@ -34,6 +35,32 @@ router = APIRouter(prefix="/product", tags=["product-docking"])
 ROOT = Path(__file__).resolve().parents[1]
 RESIDUAL_MODEL_REGISTRY_ARTIFACT = ROOT / "runs" / "residual_model_registry_current.json"
 PRODUCT_SCOPE_CLAIM_GUARD_ARTIFACT = ROOT / "runs" / "product_scope_breadth_closure_checklist_current.json"
+
+
+def _debug_diagnostics_allowed() -> bool:
+    if os.getenv("PRODUCT_API_DEBUG_DIAGNOSTICS_ALLOWED", "0") == "1":
+        return True
+    # Keep local developer workflows unchanged. Any authenticated or hosted API
+    # posture must opt in explicitly before verbose internal diagnostics are
+    # returned to callers.
+    return not (
+        settings.product_api_auth_required
+        or settings.product_api_hosted_exposure_approved
+    )
+
+
+def _guard_debug_diagnostics(debug: bool) -> bool:
+    if bool(debug) and not _debug_diagnostics_allowed():
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "debug_diagnostics_not_allowed",
+                "message": "Product docking debug diagnostics require operator opt-in.",
+                "execution_enabled": False,
+                "docking_results_emitted": False,
+            },
+        )
+    return bool(debug)
 
 
 class LigandInput(BaseModel):
@@ -99,6 +126,7 @@ def _read_json_object(path: Path) -> dict[str, Any]:
 async def submit_docking_job(
     payload: DockingJobRequest, request: Request, debug: bool = False
 ) -> dict[str, Any]:
+    debug = _guard_debug_diagnostics(debug)
     record = build_docking_job_record(
         _model_to_dict(payload),
         source_host=request.client.host if request.client else "",
@@ -160,6 +188,7 @@ async def analyze_product_structure(payload: StructureAnalysisRequest) -> dict[s
 
 @router.get("/docking/jobs/{job_id}")
 async def get_docking_job(job_id: str, debug: bool = False) -> dict[str, Any]:
+    debug = _guard_debug_diagnostics(debug)
     path = _jobs_dir() / f"{job_id}.json"
     if not path.exists():
         return {
