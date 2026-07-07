@@ -47,6 +47,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            Dockerfile.product
+            requirements*.txt
+            requirements/**
+            api/**
+            core/**
+            betelgeuze_engine/**
+            betelgeuze_ai_md/**
+            betelgeuze_product/**
+            betelgeuze_cameo/**
+            betelgeuze_cleanup/**
+            tools/**
+            config/**
+            rust_engine/**
+            third_party/**
+            tests/unit/test_p1_dockerfile_contract.py
+            pyproject.toml
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
