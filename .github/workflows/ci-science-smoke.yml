@@ -7,6 +7,7 @@ on:
       - "tools/pdb_loader.py"
       - "tools/product/strict_ligand_mapping_queue.py"
       - "tools/product/build_pose_level_benchmark_report.py"
+      - "betelgeuze_engine/**"
       - "tests/fixtures/tiny_docking/**"
       - "tests/unit/test_p0_strict_ligand_mapping_queue.py"
       - "tests/unit/test_build_pose_level_benchmark_report.py"
@@ -18,6 +19,7 @@ on:
       - "tools/pdb_loader.py"
       - "tools/product/strict_ligand_mapping_queue.py"
       - "tools/product/build_pose_level_benchmark_report.py"
+      - "betelgeuze_engine/**"
       - "tests/fixtures/tiny_docking/**"
       - "tests/unit/test_p0_strict_ligand_mapping_queue.py"
       - "tests/unit/test_build_pose_level_benchmark_report.py"
@@ -40,6 +42,7 @@ jobs:
             tools/**
             core/**
             config/**
+            betelgeuze_engine/**
             tests/fixtures/tiny_docking/**
             tests/unit/test_p0_strict_ligand_mapping_queue.py
             tests/unit/test_build_pose_level_benchmark_report.py
