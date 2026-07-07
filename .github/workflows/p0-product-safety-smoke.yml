@@ -9,7 +9,9 @@ on:
       - "tools/product/subprocess_runner.py"
       - "betelgeuze_product/docking_response.py"
       - "tests/fixtures/tiny_docking/**"
-      - "tests/unit/test_p0_*.py"
+      - "tests/unit/test_p0_strict_ligand_mapping_queue.py"
+      - "tests/unit/test_p0_subprocess_runner.py"
+      - "tests/unit/test_p0_proxy_score_contract.py"
       - ".github/workflows/p0-product-safety-smoke.yml"
   pull_request:
     paths:
@@ -19,7 +21,9 @@ on:
       - "tools/product/subprocess_runner.py"
       - "betelgeuze_product/docking_response.py"
       - "tests/fixtures/tiny_docking/**"
-      - "tests/unit/test_p0_*.py"
+      - "tests/unit/test_p0_strict_ligand_mapping_queue.py"
+      - "tests/unit/test_p0_subprocess_runner.py"
+      - "tests/unit/test_p0_proxy_score_contract.py"
       - ".github/workflows/p0-product-safety-smoke.yml"
   workflow_dispatch:
 
@@ -37,9 +41,12 @@ jobs:
           sparse-checkout: |
             tools/**
             core/**
+            config/**
             betelgeuze_product/**
             tests/fixtures/tiny_docking/**
-            tests/unit/test_p0_*.py
+            tests/unit/test_p0_strict_ligand_mapping_queue.py
+            tests/unit/test_p0_subprocess_runner.py
+            tests/unit/test_p0_proxy_score_contract.py
             requirements*.txt
             requirements/**
             pyproject.toml
@@ -54,7 +61,11 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python -m pytest -q tests/unit/test_p0_*.py 2>&1 | tee p0-test-output.log
+          python -m pytest -q \
+            tests/unit/test_p0_strict_ligand_mapping_queue.py \
+            tests/unit/test_p0_subprocess_runner.py \
+            tests/unit/test_p0_proxy_score_contract.py \
+            2>&1 | tee p0-test-output.log
       - name: Upload test output
         if: always()
         uses: actions/upload-artifact@v4
