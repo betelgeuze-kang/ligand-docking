@@ -10,8 +10,8 @@ This module defines a small, stable, grouped response shape that the customer
 API and the GUI can depend on:
 
 - A short set of top-level identity/status fields.
-- Grouped summaries: ``validation``, ``structure``, ``progress``, ``dispatch``,
-  ``claim``, and ``links``.
+- Grouped summaries: ``readiness``, ``validation``, ``structure``, ``progress``,
+  ``dispatch``, ``claim``, and ``links``.
 - Internal diagnostics are exposed **only** when ``debug=True`` under a single
   ``diagnostics`` key, and the internal ``ledger_path`` is never exposed.
 
@@ -38,6 +38,7 @@ DOCKING_SUBMISSION_TOP_LEVEL_KEYS = frozenset(
         "validation_status",
         "execution_enabled",
         "docking_results_emitted",
+        "readiness",
         "validation",
         "structure",
         "progress",
@@ -65,11 +66,20 @@ DOCKING_DIAGNOSTIC_KEYS: tuple[str, ...] = (
     "production_ai_selected_sidecar_ready",
     "production_ai_selected_sidecar_missing_output_fields",
     "production_ai_blocked_reason",
+    "execution_approval_gate_ready",
+    "execution_approval_gate_status",
+    "execution_approval_token_required",
+    "execution_approval_authorized",
+    "execution_approval_operator_csv_present",
+    "execution_enabled_conditional_would_enable",
+    "execution_approval_row_status",
+    "execution_approval_next_required_step",
     "scope_claim_guard_ready",
     "allowed_scope_families",
     "blocked_claim_scopes",
     "claim_blocked_domains",
     "scope_claim_boundary_detail",
+    "scope_claim_guard_next_required_step",
     "ai_decision_graph_trace_ready",
     "ai_decision_graph_ordered_path",
     "ai_decision_graph_node_count",
@@ -123,8 +133,6 @@ DOCKING_DIAGNOSTIC_KEYS: tuple[str, ...] = (
     "long_running_status_persistence_ready",
 )
 
-_DEFAULT_LINKS_KEYS = ("self", "history", "cancel", "retry")
-
 PROXY_SCORE_CONTRACT: dict[str, Any] = {
     "customer_score_name": "proxy_binding_energy_score",
     "method_kind": "heuristic_proxy",
@@ -141,6 +149,14 @@ PROXY_SCORE_CONTRACT: dict[str, Any] = {
     ],
     "customer_safe_label": "Proxy docking score for triage only; not an experimental ΔG or true MM/PBSA claim.",
 }
+
+
+def _truthy(value: Any) -> bool:
+    return bool(value is True)
+
+
+def _text(value: Any) -> str:
+    return str(value or "").strip()
 
 
 def proxy_score_contract() -> dict[str, Any]:
@@ -218,6 +234,70 @@ def docking_dispatch_summary(
     }
 
 
+def docking_readiness_summary(record: dict[str, Any]) -> dict[str, Any]:
+    """Single customer/GUI readiness block for P1 product UX.
+
+    This block answers the common customer/operator questions without requiring
+    callers to inspect deep diagnostics: is intake valid, is execution approved,
+    are strict science inputs bound, is the runner ready, will this emit docking
+    results, and what is the next action?
+    """
+
+    intake_valid = _text(record.get("validation_status")) == "pass"
+    execution_authorized = _truthy(record.get("execution_approval_authorized")) or _truthy(
+        record.get("execution_enabled_conditional_would_enable")
+    )
+    strict_science_inputs = _truthy(record.get("science_inputs_strict")) or _truthy(
+        record.get("production_strict_inputs_pass")
+    )
+    runner_profile_ready = bool(record.get("engine_dispatch_ready", False))
+    will_emit = bool(record.get("docking_results_emitted", False))
+    blocking_reasons: list[str] = []
+
+    for blocker in record.get("blockers") or []:
+        if isinstance(blocker, dict):
+            code = _text(blocker.get("code"))
+            if code:
+                blocking_reasons.append(code)
+        else:
+            text = _text(blocker)
+            if text:
+                blocking_reasons.append(text)
+    if not intake_valid and "contract_validation_failed" not in blocking_reasons:
+        blocking_reasons.append("contract_validation_failed")
+    if not execution_authorized:
+        blocking_reasons.append("missing_operator_execution_approval")
+    if not strict_science_inputs:
+        blocking_reasons.append("strict_science_inputs_not_bound")
+    if not runner_profile_ready:
+        blocking_reasons.append("runner_profile_or_engine_dispatch_not_ready")
+    if bool(record.get("production_ai_abstention_enforced", False)):
+        blocking_reasons.append("production_ai_abstained")
+    if not bool(record.get("scope_claim_allowed_for_request", True)):
+        blocking_reasons.append("scope_claim_not_allowed")
+    blocking_reasons = list(dict.fromkeys(blocking_reasons))
+
+    if blocking_reasons:
+        next_action = _text(record.get("execution_approval_next_required_step")) or _text(
+            record.get("scope_claim_guard_next_required_step")
+        )
+        if not next_action:
+            next_action = "Resolve readiness blocking_reasons, bind strict input provenance, then rerun the same request sha256."
+    else:
+        next_action = "Ready for the configured restricted runner path."
+
+    return {
+        "intake_valid": bool(intake_valid),
+        "execution_authorized": bool(execution_authorized),
+        "science_inputs_strict": bool(strict_science_inputs),
+        "runner_profile_ready": bool(runner_profile_ready),
+        "will_emit_docking_results": bool(will_emit),
+        "blocking_reasons": blocking_reasons,
+        "blocking_reason_count": int(len(blocking_reasons)),
+        "next_action": next_action,
+    }
+
+
 def docking_claim_summary(record: dict[str, Any]) -> dict[str, Any]:
     return {
         "scope_claim_status": record.get("scope_claim_status", ""),
@@ -281,6 +361,7 @@ def build_docking_submission_response(
         "validation_status": record.get("validation_status", ""),
         "execution_enabled": bool(record.get("execution_enabled", False)),
         "docking_results_emitted": bool(record.get("docking_results_emitted", False)),
+        "readiness": docking_readiness_summary(record),
         "validation": docking_validation_summary(record),
         "structure": docking_structure_summary(record),
         "progress": docking_progress_summary(record),
