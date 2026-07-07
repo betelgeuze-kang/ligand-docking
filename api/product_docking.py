@@ -12,16 +12,7 @@ from api.docking_dispatch import dispatch_docking_job_if_eligible
 from api.job_store import get_configured_job_store
 from betelgeuze_product.docking_private_payload import configured_store, store_docking_request
 from betelgeuze_product.docking_request import build_docking_job_record, persist_docking_job_record
-from betelgeuze_product.docking_response import (
-    build_docking_submission_response,
-    docking_claim_summary,
-    docking_diagnostics_envelope,
-    docking_dispatch_summary,
-    docking_links,
-    docking_progress_summary,
-    docking_structure_summary,
-    docking_validation_summary,
-)
+from betelgeuze_product.docking_response import build_docking_submission_response
 from betelgeuze_product.job_orchestration import (
     cancel_job_record,
     job_history,
@@ -122,29 +113,9 @@ async def submit_docking_job(
         store=get_configured_job_store(),
     )
     # Stable, grouped customer/GUI response. The internal ledger_path is never
-    # exposed; verbose internals are returned only under debug=True. Keep the
-    # top-level keys in sync with DOCKING_SUBMISSION_TOP_LEVEL_KEYS (enforced by
-    # the product API contract check).
-    return {
-        "job_id": record["job_id"],
-        "status": record["status"],
-        "request_type": record["request_type"],
-        "family": record["family"],
-        "target_id": record["target_id"],
-        "customer_id": record["customer_id"],
-        "user_id": record["user_id"],
-        "validation_status": record["validation_status"],
-        "execution_enabled": record["execution_enabled"],
-        "docking_results_emitted": record["docking_results_emitted"],
-        "validation": docking_validation_summary(record),
-        "structure": docking_structure_summary(record),
-        "progress": docking_progress_summary(record),
-        "dispatch": docking_dispatch_summary(record, dispatch_outcome),
-        "claim": docking_claim_summary(record),
-        "links": docking_links(record),
-        "claim_boundary": record["claim_boundary"],
-        **(docking_diagnostics_envelope(record) if debug else {}),
-    }
+    # exposed; readiness gives the GUI one place to read execution blockers and
+    # next action.
+    return build_docking_submission_response(record, dispatch_outcome=dispatch_outcome, debug=debug)
 
 
 @router.post("/structure/analyze")
@@ -167,6 +138,16 @@ async def get_docking_job(job_id: str, debug: bool = False) -> dict[str, Any]:
             "status": "missing",
             "execution_enabled": False,
             "docking_results_emitted": False,
+            "readiness": {
+                "intake_valid": False,
+                "execution_authorized": False,
+                "science_inputs_strict": False,
+                "runner_profile_ready": False,
+                "will_emit_docking_results": False,
+                "blocking_reasons": ["job_record_missing"],
+                "blocking_reason_count": 1,
+                "next_action": "Submit a docking job or rerun with a persisted job id.",
+            },
         }
     record = json.loads(path.read_text(encoding="utf-8"))
     return build_docking_submission_response(record, debug=debug)
