@@ -11,10 +11,16 @@ if str(_repo.parent) not in _sys.path:
     _sys.path.insert(0, str(_repo.parent))
 
 from betelgeuze_engine.product.runners.htvs_pipeline import *  # noqa: F401,F403
-from betelgeuze_engine.product.runners.htvs_pipeline import main as _main
 
 _module = _import_module("betelgeuze_engine.product.runners.htvs_pipeline")
+try:
+    from tools.product.subprocess_runner import run_cmd as _p0_run_cmd
+
+    _module._run_cmd = _p0_run_cmd
+except Exception:  # pragma: no cover - keep legacy shim import-safe
+    pass
+
 _sys.modules[__name__] = _module
 
 if __name__ == "__main__":
-    raise SystemExit(_main())
+    raise SystemExit(_module.main())
