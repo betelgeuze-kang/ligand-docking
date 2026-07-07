@@ -26,7 +26,7 @@ through that file rather than duplicated in `pyproject.toml`.
 | `pydantic-settings` | no | no | `pydantic-settings` | no | no direct pin | Optional product API configuration dependency. Bounded in the P1 API constraints file. |
 | `prometheus-client` | no | no | `prometheus-client` | no | no direct pin | Optional API/ops metric helper. Bounded in the P1 API constraints file. |
 | `pytest` | no | no | API smoke helper | explicit dev tool through `requirements-dev.txt` | no direct pin | Test runner. API profile keeps it only for API smoke tests; broader dev installs should still use `requirements-dev.txt`. |
-| `httpx2` | no | no | `httpx2` | no | no direct pin | Optional API HTTP test helper retained intentionally for the current API smoke surface. It is not a runtime product dependency and is bounded in the P1 API constraints file. |
+| `httpx2` | no | no | `httpx2` | no | no direct pin | Optional API HTTP test helper retained intentionally for the current API smoke surface. It is not a runtime product dependency; it remains documented but not constrained because runtime API code does not import it. |
 | `rdkit` / `rdkit-pypi` | no | no | no | no | no direct pin | Chemistry/backmapping/product-runner capability dependency, but not in these five files. Current pinned product ROCm profile is `requirements-product-rocm.txt` with `rdkit-pypi==2022.9.5`. |
 | `openmm` | no | no | no | no | no direct pin | External/reference MD artifact and optional force-field/minimization dependency. Not pinned in these five files. |
 | `openff.toolkit`, `openmmforcefields`, `pdbfixer` | no | no | no | no | no direct pin | Optional full-forcefield repair/probe ecosystem. Not part of the default package, runtime, API, or dev install surface. |
@@ -41,7 +41,9 @@ through that file rather than duplicated in `pyproject.toml`.
   product surface and should not be required for offline local delivery.
 - `requirements/constraints-api-py311-linux-x86_64.txt` is a bounded API smoke
   profile for Python 3.11 on Linux. It constrains optional API packages without
-  moving them into the package or default runtime surface.
+  moving them into the package or default runtime surface. `httpx2` remains
+  documented in `requirements-api.txt` but unconstrained because it is a smoke
+  helper and is not imported by the runtime API code.
 - `requirements-dev.txt` imports the default runtime profile and adds test
   tooling.
 - RDKit/OpenMM-style dependencies are capability-specific. A reviewer should not
