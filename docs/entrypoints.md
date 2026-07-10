@@ -8,6 +8,7 @@ status packets.
 
 | Reviewer type | Start here | Then read | What this lane can claim now |
 | --- | --- | --- | --- |
+| Independent Engine v2 roadmap reviewer | `docs/independent_engine_v2_commercial_roadmap.ko.md` | `docs/independent_engine_v2_architecture.md`, `docs/independent_engine_v2_migration_matrix.md`, `config/independent_engine_v2_capabilities.yaml` | V2-0 internal CPU scaffold and long-term dependency/exit-gate plan only; scientific, docking, MD, GPU, and commercial claims remain blocked. |
 | Restricted local-delivery reviewer | `README.md`, `docs/local_delivery_runbook.md` | `docs/local_delivery_bundle_schema.md`, `docs/local_delivery_claim_policy.md`, `docs/post_green_improvement_plan.md` | Guarded local delivery only for the documented restricted scope when the bundle validator and verdict gate are green. |
 | Dependency/package reviewer | `docs/dependency_matrix.md` | `requirements-package.txt`, `requirements.txt`, `requirements-api.txt`, `requirements-dev.txt`, `pyproject.toml` | Dependency placement and install-surface intent. |
 | Product API reviewer | `README.md#product-api-simulate` | `api/`, `config/api_validated_runner_profiles/README.md`, `docs/tier_beta_vertical_slice_current.md` | Validated-runner ligand HTVS/backmapping scoring API only; not generic MD simulation. |
@@ -21,6 +22,9 @@ status packets.
 
 ## Lane Boundaries
 
+- Independent Engine v2 and the legacy/restricted product lane have separate
+  capability states. A green legacy delivery or product-operations receipt
+  does not complete a v2 scientific, benchmark, GPU, or commercial gate.
 - CASP17 uses only the repo's internal torch/coarse-grain physics path for the
   active lane. Do not use public/template structures, public target lookup,
   AlphaFold-family systems, or other-team models for active CASP17 work.

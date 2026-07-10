@@ -34,7 +34,10 @@ commercial-product claims remain blocked.
 Read [`docs/independent_engine_v2_architecture.md`](docs/independent_engine_v2_architecture.md)
 for the design and conditional complexity contract, and
 [`docs/independent_engine_v2_migration_matrix.md`](docs/independent_engine_v2_migration_matrix.md)
-for the reuse/replace/archive decisions and V2-0 through V2-7 gates.
+for the reuse/replace/archive decisions and V2-0 through V2-7 gates. The
+[Korean long-term commercial roadmap](docs/independent_engine_v2_commercial_roadmap.ko.md)
+records the dependency order and capability-promotion criteria for the complete
+independent protein and molecular-structure product.
 
 ## What Is Intentionally Not Tracked
 

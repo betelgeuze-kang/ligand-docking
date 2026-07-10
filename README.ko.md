@@ -34,7 +34,10 @@ GitHub에는 소스코드, 설정, 테스트, 문서, 스키마, 납품 템플�
 [`docs/independent_engine_v2_architecture.md`](docs/independent_engine_v2_architecture.md),
 재사용/교체/보관 결정과 V2-0~V2-7 게이트는
 [`docs/independent_engine_v2_migration_matrix.md`](docs/independent_engine_v2_migration_matrix.md)를
-기준으로 봅니다.
+기준으로 봅니다. 완전한 독립 상용 단백질·분자구조 분석 프로그램까지의
+장기 개발 순서와 capability 승격 기준은
+[`docs/independent_engine_v2_commercial_roadmap.ko.md`](docs/independent_engine_v2_commercial_roadmap.ko.md)에
+정리되어 있습니다.
 
 ## GitHub에 올리지 않는 것
 
