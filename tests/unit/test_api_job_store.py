@@ -547,16 +547,30 @@ def test_submit_simulation_defaults_to_queue_handoff(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import api.main as main
+    from starlette.requests import Request
+    from tests.unit.test_api_execution_authorization import (
+        _configure,
+        _write_profile_fixture,
+    )
 
     store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
     monkeypatch.setattr(main, "job_store", store)
     monkeypatch.setattr(main.settings, "results_storage_path", str(tmp_path / "results"))
     monkeypatch.setattr(main.settings, "api_inline_worker_enabled", False)
+    profiles, runner = _write_profile_fixture(
+        tmp_path,
+        profile_id="queue_customer",
+        execution_mode="restricted-production",
+        customer_allowed=True,
+    )
+    _configure(monkeypatch, tmp_path, profiles, runner)
+    request = Request({"type": "http", "method": "POST", "path": "/simulate", "headers": []})
 
     response = asyncio.run(
         main.submit_simulation(
-            SimulationRequest(target_name="Chignolin", pdb_id="1abc", runner_profile_id="smoke"),
+            SimulationRequest(target_name="Chignolin", pdb_id="1abc", runner_profile_id="queue_customer"),
             BackgroundTasks(),
+            request,
         )
     )
 
@@ -886,7 +900,7 @@ def test_get_results_fail_closed_without_evidence_bundle_provenance(
     client = TestClient(main.app)
     response = client.get("/results/job_raw_only")
     assert response.status_code == 403
-    assert "result manifest provenance" in response.json()["detail"]
+    assert "invalid artifact provenance" in response.json()["detail"]
 
 
 def test_get_results_fail_closed_without_evidence_bundle_fingerprint(

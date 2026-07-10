@@ -5,6 +5,8 @@ import sqlite3
 from pathlib import Path
 
 import pytest
+from fastapi import HTTPException
+from starlette.requests import Request
 
 
 def test_product_security_middleware_audits_blocked_requests_and_sets_headers(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -48,6 +50,33 @@ def test_product_security_middleware_audits_blocked_requests_and_sets_headers(tm
     assert audit_row["authorization_value_logged"] is False
     assert audit_row["audit_retention_days"] == 90
     assert "super-secret" not in audit_log.read_text(encoding="utf-8")
+
+
+def test_product_security_path_prefix_requires_segment_boundary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip("fastapi")
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from api.config import settings
+    from api.security import ProductSecurityMiddleware
+
+    monkeypatch.setattr(settings, "product_api_audit_log_path", str(tmp_path / "audit.jsonl"))
+    monkeypatch.setattr(settings, "product_api_auth_required", False)
+    monkeypatch.setattr(settings, "product_api_rate_limit_per_minute", 120)
+    monkeypatch.setattr(settings, "product_api_tenant_daily_quota", 5000)
+    app = FastAPI()
+    app.add_middleware(ProductSecurityMiddleware)
+
+    @app.get("/productevil")
+    def deceptive_prefix() -> dict[str, str]:
+        return {"status": "must-not-be-reachable"}
+
+    response = TestClient(app).get("/productevil")
+    assert response.status_code == 404
+    assert response.json()["code"] == "path_not_allowed"
 
 
 def test_product_security_middleware_sets_headers_on_allowed_requests(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -200,6 +229,106 @@ def test_product_security_middleware_blocks_tenant_quota(
     assert second.headers["X-Block-Code"] == "tenant_quota_exceeded"
 
 
+def test_authenticated_tenant_is_bound_to_server_token_configuration(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip("fastapi")
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from api.config import settings
+    from api.security import ProductSecurityMiddleware
+
+    monkeypatch.setattr(settings, "product_api_audit_log_path", str(tmp_path / "audit.jsonl"))
+    monkeypatch.setattr(settings, "product_api_auth_required", True)
+    monkeypatch.setattr(settings, "product_api_token", "tenant-token")
+    monkeypatch.setattr(settings, "product_api_admin_token", "")
+    monkeypatch.setattr(settings, "product_api_token_tenant_id", "tenant-a")
+    monkeypatch.setattr(settings, "product_api_rate_limit_per_minute", 120)
+    monkeypatch.setattr(settings, "product_api_tenant_daily_quota", 5000)
+
+    app = FastAPI()
+    app.add_middleware(ProductSecurityMiddleware)
+
+    @app.get("/product/identity")
+    def identity(request: Request) -> dict[str, str]:
+        return {"tenant_id": request.state.product_identity.tenant_id}
+
+    client = TestClient(app)
+    accepted = client.get(
+        "/product/identity",
+        headers={"Authorization": "Bearer tenant-token", "X-Tenant-ID": "tenant-a"},
+    )
+    mismatch = client.get(
+        "/product/identity",
+        headers={"Authorization": "Bearer tenant-token", "X-Tenant-ID": "tenant-b"},
+    )
+    assert accepted.status_code == 200
+    assert accepted.json()["tenant_id"] == "tenant-a"
+    assert mismatch.status_code == 403
+    assert mismatch.json()["code"] == "tenant_identity_mismatch"
+
+
+def test_identity_fails_closed_when_auth_is_configured_without_middleware(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from api.config import settings
+    from api.request_identity import request_identity
+
+    monkeypatch.setattr(settings, "product_api_auth_required", True)
+    monkeypatch.setattr(settings, "product_api_hosted_exposure_approved", False)
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/product/docking/jobs",
+            "headers": [(b"x-tenant-id", b"attacker-selected")],
+        }
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        request_identity(request)
+    assert exc_info.value.status_code == 401
+
+    with pytest.raises(HTTPException) as no_request_exc:
+        request_identity(None)
+    assert no_request_exc.value.status_code == 401
+
+
+def test_streamed_request_body_is_limited_without_content_length(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip("fastapi")
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from api.config import settings
+    from api.security import ProductSecurityMiddleware
+
+    monkeypatch.setattr(settings, "product_api_audit_log_path", str(tmp_path / "audit.jsonl"))
+    monkeypatch.setattr(settings, "product_api_auth_required", False)
+    monkeypatch.setattr(settings, "product_api_max_payload_bytes", 8)
+    monkeypatch.setattr(settings, "product_api_rate_limit_per_minute", 120)
+    monkeypatch.setattr(settings, "product_api_tenant_daily_quota", 5000)
+
+    app = FastAPI()
+    app.add_middleware(ProductSecurityMiddleware)
+
+    @app.post("/product/body")
+    async def body(request: Request) -> dict[str, int]:
+        return {"size": len(await request.body())}
+
+    response = TestClient(app).post(
+        "/product/body",
+        content=iter([b"12345", b"67890"]),
+        headers={"transfer-encoding": "chunked"},
+    )
+    assert response.status_code == 413
+    assert response.json()["code"] == "payload_too_large"
+
+
 def test_secure_api_submission_e2e(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient
@@ -207,6 +336,10 @@ def test_secure_api_submission_e2e(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     import api.main as main
     from api.config import settings
     from api.job_store import SQLiteJobStore, reset_configured_job_store_for_tests
+    from tests.unit.test_api_execution_authorization import (
+        _configure,
+        _write_profile_fixture,
+    )
 
     audit_log = tmp_path / "audit.jsonl"
     db_path = tmp_path / "api_jobs.sqlite3"
@@ -217,9 +350,17 @@ def test_secure_api_submission_e2e(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(settings, "product_api_audit_log_path", str(audit_log))
     monkeypatch.setattr(settings, "product_api_auth_required", True)
     monkeypatch.setattr(settings, "product_api_token", "expected-token")
+    monkeypatch.setattr(settings, "product_api_token_tenant_id", "tenant-secure-e2e")
     monkeypatch.setattr(settings, "product_api_rate_limit_per_minute", 120)
     monkeypatch.setattr(settings, "product_api_tenant_daily_quota", 5000)
     monkeypatch.setattr(settings, "api_inline_worker_enabled", False)
+    profiles, runner = _write_profile_fixture(
+        tmp_path,
+        profile_id="customer_secure",
+        execution_mode="restricted-production",
+        customer_allowed=True,
+    )
+    _configure(monkeypatch, tmp_path, profiles, runner)
 
     reset_configured_job_store_for_tests()
     monkeypatch.setattr(main, "job_store", None)
@@ -227,7 +368,7 @@ def test_secure_api_submission_e2e(tmp_path: Path, monkeypatch: pytest.MonkeyPat
 
     client = TestClient(main.app)
     private_payload = {
-        "runner_profile_id": "smoke",
+        "runner_profile_id": "customer_secure",
         "target_name": "ADRB2",
         "pdb_content": (
             "ATOM      1  CA  GLY A   1      12.104  13.207  14.321  1.00 10.00           C\n"
@@ -314,12 +455,13 @@ def test_secure_api_submission_e2e(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     blocked_rows = [row for row in audit_rows if row["path"] == "/simulate" and row["status_code"] == 401]
     assert len(blocked_rows) == 2
     for row in blocked_rows:
-        assert row["tenant_id"] == "tenant-secure-e2e"
+        assert row["tenant_id"] == "unauthenticated"
         assert row["request_body_logged"] is False
         assert row["authorization_value_logged"] is False
 
     success_rows = [row for row in audit_rows if row["path"] == "/simulate" and row["status_code"] == 200]
     assert len(success_rows) == 1
+    assert success_rows[0]["tenant_id"] == "tenant-secure-e2e"
     assert success_rows[0]["authorization_present"] is True
     assert success_rows[0]["request_body_logged"] is False
     assert success_rows[0]["authorization_value_logged"] is False

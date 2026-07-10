@@ -164,9 +164,16 @@ def parse_pdb_text(text: str) -> tuple[np.ndarray, str]:
 
 
 def validate_protein(protein_coords: np.ndarray, sequence: str) -> dict[str, object]:
-    n_res = protein_coords.shape[0]
+    coords = np.asarray(protein_coords, dtype=np.float64)
+    if coords.ndim != 2 or coords.shape[1] != 3:
+        return {"valid": False, "reason": "invalid_coordinate_shape", "blocked": True, "blocker": "invalid_coordinate_shape"}
+    n_res = coords.shape[0]
     if n_res == 0:
         return {"valid": False, "reason": "empty_protein_coords", "blocked": True, "blocker": "empty_protein_coords"}
+    if not np.isfinite(coords).all():
+        return {"valid": False, "reason": "nonfinite_coordinates", "blocked": True, "blocker": "nonfinite_coordinates"}
+    if float(np.max(np.ptp(coords, axis=0))) > 5000.0:
+        return {"valid": False, "reason": "coordinate_span_too_large", "blocked": True, "blocker": "coordinate_span_too_large"}
     if n_res < 10:
         return {"valid": False, "reason": "too_few_residues", "blocked": True, "blocker": "too_few_residues"}
     if n_res > 5000:

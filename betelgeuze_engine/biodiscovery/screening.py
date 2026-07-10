@@ -9,6 +9,8 @@ from typing import Any
 import numpy as np
 import torch
 
+from core.pocket_detection import detect_binding_pocket
+
 from betelgeuze_engine.benchmark.docking_gold import (
     DockingGoldRow,
     evaluate_docking_gold_slice,
@@ -138,6 +140,7 @@ class TierBetaScreeningResult:
     stage_records: list[dict[str, Any]] = field(default_factory=list)
     typed_input: dict[str, Any] = field(default_factory=dict)
     typed_output: dict[str, Any] = field(default_factory=dict)
+    scientific_decision_available: bool = False
 
 
 def _atom_count_from_smiles(smiles: str) -> int:
@@ -211,6 +214,8 @@ class TierBetaScreening:
         stability_dt: float = _DEFAULT_STABILITY_DT,
         stability_temp_k: float = _DEFAULT_STABILITY_TEMP_K,
         seed: int = _DEFAULT_SEED,
+        manifest_signing_key: str = "",
+        manifest_signing_key_id: str = "",
     ):
         self.device = torch.device(device)
         self.pocket_cutoff_a = float(pocket_cutoff_a)
@@ -220,6 +225,8 @@ class TierBetaScreening:
         self.stability_dt = float(stability_dt)
         self.stability_temp_k = float(stability_temp_k)
         self.seed = int(seed)
+        self.manifest_signing_key = str(manifest_signing_key or "")
+        self.manifest_signing_key_id = str(manifest_signing_key_id or "")
         self._rng = np.random.RandomState(self.seed)
 
     def _typed_input(self, protein_input: str, ligand_input: str) -> TierBetaScreeningInput:
@@ -308,7 +315,6 @@ class TierBetaScreening:
         state_pose_bundles: list[dict[str, Any]] = []
         state_records: list[dict[str, Any]] = []
         poses_generated = 0
-        ligand_center: np.ndarray | None = None
         for state in ligand_states:
             state_payload = state.to_dict()
             state_smiles = str(state.smiles or ligand_smiles)
@@ -353,8 +359,6 @@ class TierBetaScreening:
                 state_records.append(state_payload)
                 continue
             poses_generated += int(state_poses.shape[0])
-            if ligand_center is None:
-                ligand_center = state_poses[0].mean(axis=0)
             state_payload["scoring_status"] = "pose_conformers_generated"
             state_payload["poses_generated"] = int(state_poses.shape[0])
             state_payload["seed"] = state_seed
@@ -430,11 +434,23 @@ class TierBetaScreening:
             )
         )
 
-        resolved_pocket = (
-            list(pocket_residue_indices)
-            if pocket_residue_indices
-            else _resolve_pocket_indices(protein_coords, ligand_center, self.pocket_cutoff_a)
-        )
+        if pocket_residue_indices:
+            resolved_pocket = list(pocket_residue_indices)
+            pocket_diagnostics: dict[str, Any] = {
+                "status": "pocket_ready",
+                "method": "operator_supplied_residue_indices",
+            }
+        else:
+            pocket_diagnostics = detect_binding_pocket(protein_coords)
+            detected_center = np.asarray(
+                pocket_diagnostics.get("pocket_center", [0.0, 0.0, 0.0]),
+                dtype=np.float32,
+            )
+            resolved_pocket = _resolve_pocket_indices(
+                protein_coords,
+                detected_center,
+                self.pocket_cutoff_a,
+            )
         if any(int(idx) < 0 or int(idx) >= int(protein_coords.shape[0]) for idx in resolved_pocket):
             return self._fail("invalid_pocket_residue_indices",
                               protein_seq, protein_coords.shape[0], ligand_smiles,
@@ -447,16 +463,21 @@ class TierBetaScreening:
                               ligand_atom=ligand_atom,
                               typed_input=typed_input,
                               stage_records=stage_records)
+        if pocket_diagnostics.get("method") == "operator_supplied_residue_indices":
+            pocket_diagnostics["pocket_center"] = protein_coords[resolved_pocket].mean(axis=0).tolist()
         stage_records.append(
             StageRecord(
                 stage_id="pocket_resolution",
                 schema_version=_SCHEMA_VERSION,
                 status="pass",
-                diagnostics={"pocket_residue_indices": [int(idx) for idx in resolved_pocket]},
+                diagnostics={
+                    "pocket_residue_indices": [int(idx) for idx in resolved_pocket],
+                    "pocket_detection": pocket_diagnostics,
+                },
             )
         )
 
-        protein_beads = _virtual_protein_coords(protein_coords)
+        protein_beads = _virtual_protein_coords(protein_coords[resolved_pocket])
         pocket_center = protein_coords[resolved_pocket].mean(axis=0)
         pose_scores: list[dict[str, Any]] = []
         placed_pose_coords: dict[int, np.ndarray] = {}
@@ -561,8 +582,8 @@ class TierBetaScreening:
                 composite = float(diag.get("total_energy", ffield_score))
                 mm_energy = float(
                     mm_score.get(
-                        "deltaG_mm_gbsa_kcal_mol",
-                        mm_score.get("binding_energy_kcal_mol", float("inf")),
+                        "interaction_score_proxy",
+                        mm_score.get("deltaG_mm_gbsa_kcal_mol", float("inf")),
                     )
                 )
                 if math.isfinite(mm_energy):
@@ -573,7 +594,7 @@ class TierBetaScreening:
                     "name": "restricted_local_composite_score_v1",
                     "value": float(composite),
                     "lower_is_better": True,
-                    "components": ["guarded_forcefield_energy", "mm_gbsa_proxy_energy"],
+                    "components": ["guarded_interaction_energy", "gb_sa_interaction_score_proxy"],
                 }
                 abstention_reasons = [
                     reason
@@ -595,8 +616,8 @@ class TierBetaScreening:
                     "mm_gbsa_energy": mm_energy,
                     "composite_score": float(composite),
                     "score_components": {
-                        "guarded_forcefield_energy": float(diag.get("total_energy", float("inf"))),
-                        "mm_gbsa_proxy_energy": mm_energy,
+                        "guarded_interaction_energy": float(diag.get("interaction_energy_proxy", float("inf"))),
+                        "gb_sa_interaction_score_proxy": mm_energy,
                     },
                     "pose_search": {
                         "schema_version": "tier_beta_pose_search_v1",
@@ -795,6 +816,33 @@ class TierBetaScreening:
             )
         )
 
+        computation_prerequisites_complete = bool(
+            ligand_valid["claim_safe"]
+            and protein_valid["valid"]
+            and stability_ok
+            and pose_scores
+            and math.isfinite(best_score)
+        )
+        all_retained_poses_abstained = all(
+            bool(row.get("abstention", True)) for row in top_k_poses
+        )
+        # The restricted Tier-beta manifest deliberately marks scientific
+        # claims unsafe.  Put this gate into the manifest before hashing and
+        # signing so the returned stage list and signed evidence cannot drift.
+        stage_records.append(
+            StageRecord(
+                stage_id="scientific_decision_gate",
+                schema_version=_SCHEMA_VERSION,
+                status="blocked",
+                failure_code=FailureCode.RESTRICTED_TIER_BETA_UNVALIDATED.value,
+                diagnostics={
+                    "computation_prerequisites_complete": computation_prerequisites_complete,
+                    "scientific_decision_available": False,
+                    "all_retained_poses_abstained": all_retained_poses_abstained,
+                },
+            )
+        )
+
         manifest = self._build_manifest(
             protein_seq=protein_seq,
             protein_residues=protein_coords.shape[0],
@@ -818,7 +866,11 @@ class TierBetaScreening:
             stage_records=stage_records,
             typed_input=typed_input,
         )
-        if not isinstance(manifest, dict) or not manifest.get("signature") or not manifest.get("content_hash"):
+        if (
+            not isinstance(manifest, dict)
+            or not manifest.get("content_hash")
+            or (self.manifest_signing_key and not manifest.get("signature"))
+        ):
             return self._fail("unsigned_result_manifest",
                               protein_seq, protein_coords.shape[0], ligand_smiles,
                               ligand_atom=ligand_atom,
@@ -833,7 +885,12 @@ class TierBetaScreening:
             and stability_ok
             and pose_scores
             and math.isfinite(best_score)
-            and manifest.get("signature")
+            and manifest.get("content_hash")
+        )
+        scientific_decision_available = bool(
+            computation_complete
+            and not all_retained_poses_abstained
+            and bool(manifest.get("claim_metadata", {}).get("claim_safe", False))
         )
         blocked = ""
         if not computation_complete:
@@ -844,8 +901,6 @@ class TierBetaScreening:
                 parts.append("stability_failed")
             if not pose_scores:
                 parts.append("no_poses_scored")
-            if not manifest.get("signature"):
-                parts.append("unsigned_result_manifest")
             blocked = ";".join(parts) or "screening_claim_not_safe"
         failure_code = failure_code_for_reason(blocked)
         typed_output = TierBetaScreeningOutput(
@@ -858,6 +913,7 @@ class TierBetaScreening:
             poses_scored=int(len(pose_scores)),
             top_k=int(self.top_k),
             manifest_hash=str(manifest["content_hash"]),
+            scientific_decision_available=scientific_decision_available,
         )
 
         return TierBetaScreeningResult(
@@ -906,12 +962,14 @@ class TierBetaScreening:
                 "benchmark_metric_summary": benchmark_metric_summary,
                 "result_signed": bool(manifest.get("signature")),
                 "blocked_claims": _BLOCKED_CLAIMS,
+                "scientific_decision_available": scientific_decision_available,
             },
             result_manifest=manifest,
             failure_code=failure_code,
             stage_records=[stage.to_dict() for stage in stage_records],
             typed_input=typed_input.to_dict(),
             typed_output=typed_output.to_dict(),
+            scientific_decision_available=scientific_decision_available,
         )
 
     def _fail(
@@ -1025,6 +1083,8 @@ class TierBetaScreening:
             typed_input=typed_input,
             device=str(self.device),
             seed=int(self.seed),
+            signing_key=self.manifest_signing_key,
+            signing_key_id=self.manifest_signing_key_id,
         )
 
 

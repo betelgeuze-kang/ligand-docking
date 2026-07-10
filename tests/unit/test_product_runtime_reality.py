@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import hmac
 from pathlib import Path
 import subprocess
 import sys
@@ -25,16 +26,55 @@ def _write_completed_job(
     result_file.write_text(result_payload, encoding="utf-8")
     manifest_path = results_dir / "result_manifest.json"
     bundle_path = results_dir / "evidence_bundle.json"
-    manifest_path.write_text(result_manifest_payload, encoding="utf-8")
-    bundle_path.write_text('{"bundle_schema_version":"ai_md_evidence_bundle_v1"}\n', encoding="utf-8")
-    store.create_job(job_id, {"target_name": "Chignolin", "runner_profile_id": "smoke"}, status="completed")
+    from api.result_manifest import build_result_manifest
+    from betelgeuze_ai_md.contracts.api_adapter import write_api_evidence_bundle
+
+    request = {"target_name": "Chignolin", "runner_profile_id": "smoke"}
+    manifest = build_result_manifest(
+        job_id=job_id,
+        request=request,
+        status="completed",
+        result_file=str(result_file),
+        signing_key=main.settings.api_result_manifest_signing_key,
+        key_id=main.settings.api_result_manifest_key_id,
+    )
+    custom_manifest = json.loads(result_manifest_payload)
+    if isinstance(custom_manifest, dict):
+        manifest.pop("signature", None)
+        manifest.update(custom_manifest)
+        canonical = json.dumps(
+            manifest,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+        manifest["signature"] = hmac.new(
+            main.settings.api_result_manifest_signing_key.encode("utf-8"),
+            canonical,
+            hashlib.sha256,
+        ).hexdigest()
+    manifest_path.write_text(json.dumps(manifest) + "\n", encoding="utf-8")
+    try:
+        parsed_result = json.loads(result_payload)
+    except json.JSONDecodeError:
+        parsed_result = {}
+    bundle = write_api_evidence_bundle(
+        bundle_path,
+        job_id=job_id,
+        request=request,
+        result_manifest=manifest,
+        result_payload=parsed_result,
+        status_payload={"status": "completed"},
+    )
+    bundle_fingerprint = bundle.fingerprint()
+    store.create_job(job_id, request, status="completed")
     store.update_job(
         job_id,
         status="completed",
         result_file=str(result_file),
         result_manifest_path=str(manifest_path),
         evidence_bundle_path=str(bundle_path),
-        evidence_bundle_sha256="d" * 64,
+        evidence_bundle_sha256=bundle_fingerprint,
     )
     main.write_status_file(
         main.job_status_path(job_id),
@@ -44,7 +84,7 @@ def _write_completed_job(
             "result_file": str(result_file),
             "result_manifest": str(manifest_path),
             "evidence_bundle": str(bundle_path),
-            "evidence_bundle_sha256": "d" * 64,
+            "evidence_bundle_sha256": bundle_fingerprint,
         },
     )
 
@@ -149,6 +189,72 @@ def test_results_endpoint_returns_json_artifact_as_json(tmp_path: Path, monkeypa
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/json")
     assert response.json()["runner_kind"] == "fake_validated_runner"
+
+
+def test_results_endpoint_rejects_result_tampering_after_manifest_signing(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import api.main as main
+
+    store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
+    monkeypatch.setattr(main, "job_store", store)
+    monkeypatch.setattr(main.settings, "results_storage_path", str(tmp_path / "results"))
+    result_file = tmp_path / "results" / "job_tampered" / "runner_result.json"
+    _write_completed_job(
+        main=main,
+        store=store,
+        job_id="job_tampered",
+        result_file=result_file,
+        result_payload='{"ok":true}\n',
+    )
+    result_file.write_text('{"ok":false,"tampered":true}\n', encoding="utf-8")
+
+    response = TestClient(main.app).get("/results/job_tampered")
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Result artifact fingerprint mismatch"
+
+
+def test_results_endpoint_rejects_signed_manifest_for_wrong_request(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import api.main as main
+
+    store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
+    monkeypatch.setattr(main, "job_store", store)
+    monkeypatch.setattr(main.settings, "results_storage_path", str(tmp_path / "results"))
+    result_file = tmp_path / "results" / "job_wrong_request" / "runner_result.json"
+    _write_completed_job(
+        main=main,
+        store=store,
+        job_id="job_wrong_request",
+        result_file=result_file,
+        result_payload='{"ok":true}\n',
+    )
+
+    manifest_path = result_file.parent / "result_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest.pop("signature", None)
+    manifest["request_sha256"] = "0" * 64
+    canonical = json.dumps(
+        manifest,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    manifest["signature"] = hmac.new(
+        main.settings.api_result_manifest_signing_key.encode("utf-8"),
+        canonical,
+        hashlib.sha256,
+    ).hexdigest()
+    manifest_path.write_text(json.dumps(manifest) + "\n", encoding="utf-8")
+
+    response = TestClient(main.app).get("/results/job_wrong_request")
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Result manifest request binding is invalid"
 
 
 def test_results_endpoint_keeps_pdb_content_type(tmp_path: Path, monkeypatch) -> None:
@@ -282,7 +388,7 @@ def test_product_rocm_hip_rust_requirements_are_installed_by_product_dockerfile(
     assert "-r requirements-base.txt" in default_requirement_lines
     assert "torch==2.6.0" in default_requirement_lines
     assert "-r requirements-base.txt" in product_rocm_requirement_lines
-    assert "rdkit-pypi==2022.9.5" in product_rocm_requirement_lines
+    assert "rdkit==2025.9.6" in product_rocm_requirement_lines
     assert "-r requirements-rocm.txt" not in product_rocm_requirement_lines
     assert "-r requirements.txt" not in product_rocm_requirement_lines
     assert "torch==2.6.0" not in product_rocm_requirement_lines

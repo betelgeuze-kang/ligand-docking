@@ -1,2 +1,4 @@
 -r requirements.txt
-pytest
+-r requirements-api.txt
+pytest==9.1.1
+rdkit==2025.9.6

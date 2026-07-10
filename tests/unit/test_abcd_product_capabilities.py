@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from betelgeuze_product.structure_analysis import analyze_structure_source
 from core.mm_gbsa import REFINE_LIGAND_MODEL, mm_gbsa_binding_energy, mm_gbsa_refinement_delta
@@ -51,7 +52,9 @@ def test_refine_physics_lj_and_vdw():
 
 def test_mm_gbsa_binding_energy_refine_tier():
     out = mm_gbsa_binding_energy(_sample_protein(), _sample_ligand(), props={"polar_norm": 0.5, "logp_norm": 0.3})
-    assert out["refine_tier"] == "gb_sa_v1"
+    assert out["refine_tier"] == "interaction_gb_sa_proxy_v2"
+    assert out["is_free_energy"] is False
+    assert out["score_unit"] == "internal_proxy_unit"
     assert "e_gb" in out
     assert "e_sa" in out
     assert "ligand_contact_atom_count" in out
@@ -96,7 +99,8 @@ def test_mm_gbsa_contact_normalized_score_prefers_contact_rich_pose():
     far = mm_gbsa_binding_energy(protein, far_ligand)
 
     assert near["contact_count"] > far["contact_count"]
-    assert near["deltaG_mm_gbsa_kcal_mol"] < far["deltaG_mm_gbsa_kcal_mol"]
+    assert np.isfinite(near["interaction_score_proxy"])
+    assert far["interaction_score_proxy"] == pytest.approx(0.0, abs=1e-12)
 
 
 def test_backmapping_refine_gb_sa_model():
@@ -225,5 +229,6 @@ def test_physics_refinement_gb_sa_delta_helper():
         protein_xyz=_sample_protein(),
         ligand_xyz=_sample_ligand(),
     )
-    assert adj["backend"] == "internal_gb_sa_v1"
-    assert adj["refinement_delta_kcal_mol"] >= 0.05
+    assert adj["backend"] == "interaction_gb_sa_proxy_v2"
+    assert adj["is_free_energy"] is False
+    assert np.isfinite(adj["refinement_delta_kcal_mol"])

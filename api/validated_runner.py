@@ -9,12 +9,18 @@ import re
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
 
 from api.config import settings
+from api.path_security import confined_path
 from api.request_privacy import sanitize_request_for_ledger
+from api.runner_profile_contract import (
+    EXECUTION_MODE_SMOKE,
+    validate_runner_profile_execution_contract,
+)
 from betelgeuze_ai_md.contracts import EvidenceBundle
 from betelgeuze_ai_md.contracts.errors import ContractValidationError
 
@@ -26,6 +32,10 @@ ALLOWED_RUNNER_SCRIPTS = {
 }
 
 _PROFILE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]{1,80}$")
+_JOB_ID_RE = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
+EXECUTION_ORIGIN_CUSTOMER = "customer"
+EXECUTION_ORIGIN_INTERNAL = "internal"
+ALLOWED_EXECUTION_ORIGINS = {EXECUTION_ORIGIN_CUSTOMER, EXECUTION_ORIGIN_INTERNAL}
 
 
 def _repo_root() -> Path:
@@ -33,7 +43,10 @@ def _repo_root() -> Path:
 
 
 def _results_dir(job_id: str) -> Path:
-    return Path(settings.results_storage_path) / job_id
+    value = str(job_id or "").strip()
+    if not _JOB_ID_RE.fullmatch(value):
+        raise ValueError("job_id must be a simple identifier")
+    return confined_path(value, settings.results_storage_path, label="job results directory")
 
 
 def _status_path(job_id: str) -> Path:
@@ -160,43 +173,110 @@ def validate_profile_readiness(profile: dict[str, Any], *, runner_script_path: s
     }
 
 
-def _run_profile_command(command: list[str], *, timeout_seconds: int) -> dict[str, Any]:
-    proc = subprocess.Popen(
-        command,
-        cwd=str(_repo_root()),
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        shell=False,
-        start_new_session=True,
-    )
-    timed_out = False
-    try:
-        stdout, stderr = proc.communicate(timeout=max(1, int(timeout_seconds)))
-    except subprocess.TimeoutExpired:
-        timed_out = True
-        try:
-            os.killpg(proc.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        stdout, stderr = proc.communicate()
-    return {
-        "returncode": int(proc.returncode if proc.returncode is not None else -9),
-        "timed_out": timed_out,
-        "stdout": stdout or "",
-        "stderr": stderr or "",
-    }
+def authorize_runner_profile_execution(
+    request_data: dict[str, Any],
+    *,
+    execution_origin: str = EXECUTION_ORIGIN_CUSTOMER,
+) -> dict[str, Any]:
+    """Authorize a profile at the final execution boundary.
 
+    The origin is supplied by a trusted Python call site and is deliberately
+    never read from request JSON, preventing customer-controlled promotion to
+    an internal smoke execution.
+    """
 
-async def execute_validated_runner_profile(job_id: str, request_data: dict[str, Any]) -> dict[str, Any]:
     if not settings.api_validated_runner_enabled:
         raise NotImplementedError(
             "API validated runner execution is disabled; set API_VALIDATED_RUNNER_ENABLED=1 and provide an "
             "operator-approved runner profile."
         )
+    origin = str(execution_origin or "").strip().lower()
+    if origin not in ALLOWED_EXECUTION_ORIGINS:
+        raise PermissionError("invalid trusted execution origin")
 
     profile_id = _safe_profile_id(request_data.get("runner_profile_id"))
     profile = _load_profile(profile_id)
+    script = _runner_script(profile)
+    readiness = validate_profile_readiness(profile, runner_script_path=script)
+    execution_contract = validate_runner_profile_execution_contract(profile, require_explicit=True)
+    if origin == EXECUTION_ORIGIN_CUSTOMER and execution_contract["customer_submission_allowed"] is not True:
+        raise PermissionError(f"runner profile is not authorized for customer submission: {profile_id}")
+    if origin == EXECUTION_ORIGIN_INTERNAL and execution_contract["execution_mode"] == EXECUTION_MODE_SMOKE:
+        if execution_contract["synthetic_input_allowed"] is not True:
+            raise PermissionError(f"smoke runner profile does not allow synthetic/internal input: {profile_id}")
+    return {
+        "profile_id": profile_id,
+        "profile": profile,
+        "runner_script": script,
+        "readiness": readiness,
+        "execution_contract": execution_contract,
+        "execution_origin": origin,
+    }
+
+
+def _run_profile_command(command: list[str], *, timeout_seconds: int) -> dict[str, Any]:
+    # Runner output can contain customer structure details or third-party
+    # diagnostics.  Spool it outside memory, retain only non-content metadata,
+    # and never copy raw stdout/stderr into the public job ledger.
+    with tempfile.TemporaryFile(mode="w+b") as stdout_file, tempfile.TemporaryFile(mode="w+b") as stderr_file:
+        proc = subprocess.Popen(
+            command,
+            cwd=str(_repo_root()),
+            stdout=stdout_file,
+            stderr=stderr_file,
+            shell=False,
+            start_new_session=True,
+        )
+        timed_out = False
+        try:
+            proc.communicate(timeout=max(1, int(timeout_seconds)))
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            proc.communicate()
+
+        def summarize(handle: Any) -> dict[str, Any]:
+            handle.flush()
+            handle.seek(0)
+            digest = hashlib.sha256()
+            byte_count = 0
+            newline_count = 0
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+                byte_count += len(chunk)
+                newline_count += chunk.count(b"\n")
+            return {
+                "sha256": digest.hexdigest(),
+                "byte_count": byte_count,
+                "line_count": newline_count,
+                "content_retained": False,
+            }
+
+        stdout_summary = summarize(stdout_file)
+        stderr_summary = summarize(stderr_file)
+    return {
+        "returncode": int(proc.returncode if proc.returncode is not None else -9),
+        "timed_out": timed_out,
+        "stdout_summary": stdout_summary,
+        "stderr_summary": stderr_summary,
+    }
+
+
+async def execute_validated_runner_profile(
+    job_id: str,
+    request_data: dict[str, Any],
+    *,
+    execution_origin: str = EXECUTION_ORIGIN_CUSTOMER,
+) -> dict[str, Any]:
+    authorization = authorize_runner_profile_execution(
+        request_data,
+        execution_origin=execution_origin,
+    )
+    profile_id = str(authorization["profile_id"])
+    profile = dict(authorization["profile"])
     results_dir = _results_dir(job_id)
     results_dir.mkdir(parents=True, exist_ok=True)
     request_json_path = results_dir / "request.json"
@@ -215,6 +295,9 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
         "result_file": _render_template(result_file_template, {"job_id": job_id, "job_results_dir": str(results_dir), "request_json_path": str(request_json_path)}),
     }
     context["result_file"] = _render_template(result_file_template, context)
+    context["result_file"] = str(
+        confined_path(context["result_file"], results_dir, label="runner result file")
+    )
     if has_evidence_bundle_template:
         context["evidence_bundle"] = _render_template(
             evidence_bundle_template,
@@ -225,13 +308,20 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
                 "result_file": context["result_file"],
             },
         )
+        context["evidence_bundle"] = str(
+            confined_path(
+                context["evidence_bundle"],
+                results_dir,
+                label="runner evidence bundle",
+            )
+        )
 
     args = profile.get("arguments", [])
     if not isinstance(args, list) or not all(isinstance(item, str) for item in args):
         raise ValueError("runner profile arguments must be a list of strings")
 
-    script = _runner_script(profile)
-    readiness_record = validate_profile_readiness(profile, runner_script_path=script)
+    script = str(authorization["runner_script"])
+    readiness_record = dict(authorization["readiness"])
     command = [sys.executable, script] + [_render_template(item, context) for item in args]
 
     started = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
@@ -245,16 +335,34 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
     duration = max(time.time() - t0, 0.0)
     ended = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
 
-    result_file = Path(context["result_file"])
+    result_file = confined_path(
+        context["result_file"],
+        results_dir,
+        label="runner result file",
+    )
     evidence_bundle_path_value = context.get("evidence_bundle", "")
-    evidence_bundle_path = Path(evidence_bundle_path_value) if evidence_bundle_path_value else None
+    evidence_bundle_path = (
+        confined_path(
+            evidence_bundle_path_value,
+            results_dir,
+            label="runner evidence bundle",
+        )
+        if evidence_bundle_path_value
+        else None
+    )
     execution_record = {
         "adapter_version": "api_validated_runner_v1",
         "job_id": job_id,
         "profile_id": profile_id,
         "runner_script": str(profile.get("runner_script", "")),
         "profile_readiness": readiness_record,
-        "command": command,
+        "execution_contract": dict(authorization["execution_contract"]),
+        "execution_origin": str(authorization["execution_origin"]),
+        "command_executable": command[0],
+        "command_argument_count": max(0, len(command) - 1),
+        "command_sha256": hashlib.sha256(
+            json.dumps(command, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+        ).hexdigest(),
         "returncode": int(completed["returncode"]),
         "ok": bool(completed["returncode"] == 0),
         "timed_out": bool(completed["timed_out"]),
@@ -263,8 +371,8 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
         "started_at_utc": started,
         "ended_at_utc": ended,
         "duration_sec": float(duration),
-        "stdout_tail": "\n".join(str(completed["stdout"] or "").splitlines()[-40:]),
-        "stderr_tail": "\n".join(str(completed["stderr"] or "").splitlines()[-40:]),
+        "stdout_summary": dict(completed["stdout_summary"]),
+        "stderr_summary": dict(completed["stderr_summary"]),
         "result_file": str(result_file),
         "evidence_bundle_template": evidence_bundle_template or "",
         "native_evidence_bundle": str(evidence_bundle_path) if evidence_bundle_path else "",
@@ -281,7 +389,7 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
         error = (
             f"validated_runner_timeout:{timeout_seconds}s"
             if completed["timed_out"]
-            else execution_record["stderr_tail"] or "runner failed"
+            else f"validated_runner_failed:returncode={completed['returncode']}"
         )
         _write_status(
             job_id,

@@ -51,6 +51,13 @@ def _params(request_data: dict[str, Any]) -> dict[str, Any]:
     return dict(params) if isinstance(params, dict) else {}
 
 
+def _bounded_int(value: Any, *, default: int, minimum: int, maximum: int, name: str) -> int:
+    resolved = int(default if value is None else value)
+    if resolved < minimum or resolved > maximum:
+        raise ValueError(f"{name} must be between {minimum} and {maximum}")
+    return resolved
+
+
 def build_tier_beta_request_from_api(request_data: dict[str, Any]) -> dict[str, Any]:
     params = _params(request_data)
     protein_input = (
@@ -71,15 +78,53 @@ def build_tier_beta_request_from_api(request_data: dict[str, Any]) -> dict[str, 
     pocket_indices = params.get("pocket_residue_indices")
     if not isinstance(pocket_indices, list):
         pocket_indices = None
+    if pocket_indices is not None:
+        if len(pocket_indices) > 512:
+            raise ValueError("pocket_residue_indices cannot exceed 512 entries")
+        pocket_indices = [int(index) for index in pocket_indices]
+        if any(index < 0 for index in pocket_indices):
+            raise ValueError("pocket_residue_indices must be non-negative")
+    if len(str(protein_input or "")) > 10_000_000:
+        raise ValueError("protein_input exceeds maximum size")
+    if len(str(ligand_input or "")) > 5_000_000:
+        raise ValueError("ligand_input exceeds maximum size")
+    pose_count = _bounded_int(
+        params.get("pose_count"),
+        default=8,
+        minimum=1,
+        maximum=64,
+        name="pose_count",
+    )
+    top_k = _bounded_int(
+        params.get("top_k"),
+        default=3,
+        minimum=1,
+        maximum=20,
+        name="top_k",
+    )
+    if top_k > pose_count:
+        raise ValueError("top_k cannot exceed pose_count")
     return {
         "workflow_id": TIER_BETA_WORKFLOW_ID,
         "protein_input": str(protein_input or ""),
         "ligand_input": str(ligand_input or ""),
         "pocket_residue_indices": pocket_indices,
-        "pose_count": int(params.get("pose_count") or 8),
-        "top_k": int(params.get("top_k") or 3),
-        "stability_steps": int(params.get("stability_steps") or 0),
-        "seed": int(params.get("seed") or 42),
+        "pose_count": pose_count,
+        "top_k": top_k,
+        "stability_steps": _bounded_int(
+            params.get("stability_steps"),
+            default=0,
+            minimum=0,
+            maximum=10_000,
+            name="stability_steps",
+        ),
+        "seed": _bounded_int(
+            params.get("seed"),
+            default=42,
+            minimum=0,
+            maximum=2_147_483_647,
+            name="seed",
+        ),
     }
 
 
@@ -88,6 +133,8 @@ def run_tier_beta_vertical_slice_job(
     job_id: str,
     request_data: dict[str, Any],
     results_dir: str | Path,
+    manifest_signing_key: str = "",
+    manifest_signing_key_id: str = "",
 ) -> dict[str, Any]:
     request = build_tier_beta_request_from_api(request_data)
     out_dir = Path(results_dir)
@@ -99,6 +146,8 @@ def run_tier_beta_vertical_slice_job(
         top_k=int(request["top_k"]),
         stability_steps=int(request["stability_steps"]),
         seed=int(request["seed"]),
+        manifest_signing_key=manifest_signing_key,
+        manifest_signing_key_id=manifest_signing_key_id,
     )
     result = service.screen(
         protein_input=str(request["protein_input"]),
@@ -124,7 +173,9 @@ def run_tier_beta_vertical_slice_job(
         "result": _json_safe(result),
         "claim_metadata": _json_safe(result.claim_metadata),
         "result_manifest": _json_safe(result.result_manifest),
-        "docking_results_emitted": bool(result.ok),
+        "docking_results_emitted": bool(result.scientific_decision_available),
+        "computation_complete": bool(result.ok),
+        "scientific_decision_available": bool(result.scientific_decision_available),
         "execution_enabled": True,
         "external_state_mutated": False,
     }

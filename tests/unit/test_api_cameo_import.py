@@ -5,13 +5,15 @@ from pathlib import Path
 
 import pytest
 
+from tests.route_compat import route_paths
+
 TestClient = pytest.importorskip("fastapi.testclient").TestClient
 
 
 def test_api_app_imports_with_cameo_router() -> None:
     from api.main import app
 
-    paths = {route.path for route in app.routes}
+    paths = route_paths(app)
     assert "/cameo/targets" in paths
     assert "/cameo/operations" in paths
     assert "/cameo/architecture-validation" in paths

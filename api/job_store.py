@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -9,6 +10,15 @@ from typing import Any
 
 from api.config import settings
 from api.request_privacy import sanitize_request_for_ledger
+
+_JOB_ID_RE = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
+
+
+def validate_job_id(value: Any) -> str:
+    job_id = str(value or "").strip()
+    if not _JOB_ID_RE.fullmatch(job_id):
+        raise ValueError("job_id must be a simple 1-128 character identifier")
+    return job_id
 
 
 def _utc_now_dt() -> datetime:
@@ -92,6 +102,7 @@ class SQLiteJobStore:
                 """
                 CREATE TABLE IF NOT EXISTS simulation_jobs (
                     job_id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL DEFAULT 'local',
                     status TEXT NOT NULL,
                     request_json TEXT NOT NULL,
                     error TEXT NOT NULL DEFAULT '',
@@ -117,6 +128,8 @@ class SQLiteJobStore:
                 conn.execute(
                     "ALTER TABLE simulation_jobs ADD COLUMN result_manifest_path TEXT NOT NULL DEFAULT ''"
                 )
+            if "tenant_id" not in columns:
+                conn.execute("ALTER TABLE simulation_jobs ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'local'")
             if "evidence_bundle_path" not in columns:
                 conn.execute(
                     "ALTER TABLE simulation_jobs ADD COLUMN evidence_bundle_path TEXT NOT NULL DEFAULT ''"
@@ -273,7 +286,9 @@ class SQLiteJobStore:
         *,
         status: str = "submitted",
         max_attempts: int = 3,
+        tenant_id: str = "local",
     ) -> dict[str, Any]:
+        job_id = validate_job_id(job_id)
         now = _utc_now()
         request_json = json.dumps(sanitize_request_for_ledger(request), sort_keys=True, ensure_ascii=False)
         outbox_payload = _outbox_summary_from_request(job_id, status, request)
@@ -282,9 +297,9 @@ class SQLiteJobStore:
             conn.execute(
                 """
                 INSERT INTO simulation_jobs(
-                    job_id, status, request_json, max_attempts, created_at_utc, updated_at_utc
+                    job_id, tenant_id, status, request_json, max_attempts, created_at_utc, updated_at_utc
                 )
-                VALUES(?, ?, ?, ?, ?, ?)
+                VALUES(?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(job_id) DO UPDATE SET
                     status=excluded.status,
                     request_json=excluded.request_json,
@@ -300,7 +315,7 @@ class SQLiteJobStore:
                     max_attempts=excluded.max_attempts,
                     updated_at_utc=excluded.updated_at_utc
                 """,
-                (job_id, status, request_json, max_attempts, now, now),
+                (job_id, str(tenant_id or "local"), status, request_json, max_attempts, now, now),
             )
             self._insert_outbox_event(
                 conn,
@@ -319,6 +334,7 @@ class SQLiteJobStore:
         *,
         status: str = "submitted",
         max_attempts: int = 3,
+        tenant_id: str = "local",
     ) -> tuple[dict[str, Any], bool]:
         """Atomically insert a queue row without resetting an existing job.
 
@@ -326,6 +342,7 @@ class SQLiteJobStore:
         when another dispatcher has already inserted the same ``job_id``.
         """
 
+        job_id = validate_job_id(job_id)
         now = _utc_now()
         request_json = json.dumps(
             sanitize_request_for_ledger(request),
@@ -337,11 +354,11 @@ class SQLiteJobStore:
             cursor = conn.execute(
                 """
                 INSERT OR IGNORE INTO simulation_jobs(
-                    job_id, status, request_json, max_attempts, created_at_utc, updated_at_utc
+                    job_id, tenant_id, status, request_json, max_attempts, created_at_utc, updated_at_utc
                 )
-                VALUES(?, ?, ?, ?, ?, ?)
+                VALUES(?, ?, ?, ?, ?, ?, ?)
                 """,
-                (job_id, status, request_json, max_attempts, now, now),
+                (job_id, str(tenant_id or "local"), status, request_json, max_attempts, now, now),
             )
             created = cursor.rowcount == 1
             if created:

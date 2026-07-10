@@ -25,6 +25,24 @@ from tests.unit.test_biodiscovery_screening import MINI_PDB, VALID_SMILES
 
 FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "tier_beta"
 REPO_ROOT = Path(__file__).resolve().parents[2]
+TEST_MANIFEST_KEY = "tier-beta-unit-test-signing-key"
+
+
+def _enable_customer_tier_beta_profile(tmp_path: Path, monkeypatch, settings) -> None:
+    profile = json.loads(
+        (REPO_ROOT / "config/api_validated_runner_profiles/tier_beta_biodiscovery_direct.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    profile["customer_submission_allowed"] = True
+    profiles_dir = tmp_path / "profiles"
+    profiles_dir.mkdir(exist_ok=True)
+    (profiles_dir / "tier_beta_biodiscovery_direct.json").write_text(
+        json.dumps(profile),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(settings, "api_validated_runner_enabled", True)
+    monkeypatch.setattr(settings, "api_validated_runner_profiles_path", str(profiles_dir))
 
 
 def test_canonical_tier_beta_paths_do_not_use_subprocess_or_csv_handoff() -> None:
@@ -68,7 +86,7 @@ def _verify_local_manifest_signature(manifest: dict) -> bool:
     observed = str(manifest.get("signature") or "")
     payload = {key: value for key, value in manifest.items() if key != "signature"}
     expected = hmac.new(
-        _LOCAL_MANIFEST_KEY.encode("utf-8"),
+        TEST_MANIFEST_KEY.encode("utf-8"),
         json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8"),
         hashlib.sha256,
     ).hexdigest()
@@ -76,7 +94,14 @@ def _verify_local_manifest_signature(manifest: dict) -> bool:
 
 
 def test_service_pdb_smiles_success_signed_manifest_and_claim_limits() -> None:
-    result = TierBetaScreening(device="cpu", pose_count=4, top_k=2, stability_steps=0).screen(
+    result = TierBetaScreening(
+        device="cpu",
+        pose_count=4,
+        top_k=2,
+        stability_steps=0,
+        manifest_signing_key=TEST_MANIFEST_KEY,
+        manifest_signing_key_id="unit-test",
+    ).screen(
         protein_input=MINI_PDB,
         ligand_input=VALID_SMILES,
     )
@@ -168,6 +193,8 @@ def test_service_pdb_smiles_success_signed_manifest_and_claim_limits() -> None:
     assert result.failure_code == "none"
     assert result.typed_input["schema_version"] == result.schema_version
     assert result.typed_output["ok"] is True
+    assert result.scientific_decision_available is False
+    assert result.typed_output["scientific_decision_available"] is False
     stage_ids = [stage["stage_id"] for stage in result.stage_records]
     assert stage_ids == [
         "protein_preparation",
@@ -178,14 +205,23 @@ def test_service_pdb_smiles_success_signed_manifest_and_claim_limits() -> None:
         "scoring_ranking",
         "top_k_refine",
         "stability_simulation",
+        "scientific_decision_gate",
     ]
     assert result.result_manifest["stage_records"][0]["schema_version"] == result.schema_version
+    assert result.result_manifest["stage_records"] == result.stage_records
 
 
 def test_service_mmcif_smiles_success_signed_manifest() -> None:
     cif_path = FIXTURE_DIR / "mini_protein.cif"
 
-    result = TierBetaScreening(device="cpu", pose_count=4, top_k=2, stability_steps=0).screen(
+    result = TierBetaScreening(
+        device="cpu",
+        pose_count=4,
+        top_k=2,
+        stability_steps=0,
+        manifest_signing_key=TEST_MANIFEST_KEY,
+        manifest_signing_key_id="unit-test",
+    ).screen(
         protein_input=str(cif_path),
         ligand_input=VALID_SMILES,
     )
@@ -226,7 +262,14 @@ def test_deterministic_replay_hash_and_pose_ranking_are_stable() -> None:
 def test_service_pdb_sdf_success_preserves_molblock_topology_provenance() -> None:
     sdf_path = FIXTURE_DIR / "ethanol.sdf"
 
-    result = TierBetaScreening(device="cpu", pose_count=4, top_k=2, stability_steps=0).screen(
+    result = TierBetaScreening(
+        device="cpu",
+        pose_count=4,
+        top_k=2,
+        stability_steps=0,
+        manifest_signing_key=TEST_MANIFEST_KEY,
+        manifest_signing_key_id="unit-test",
+    ).screen(
         protein_input=MINI_PDB,
         ligand_input=str(sdf_path),
     )
@@ -380,7 +423,14 @@ def test_service_neighbor_overflow_fails_closed_before_signed_result(monkeypatch
 
     monkeypatch.setattr(screening, "_single_pose_score", _overflow_score)
 
-    result = TierBetaScreening(device="cpu", pose_count=2, top_k=1, stability_steps=0).screen(
+    result = TierBetaScreening(
+        device="cpu",
+        pose_count=2,
+        top_k=1,
+        stability_steps=0,
+        manifest_signing_key=TEST_MANIFEST_KEY,
+        manifest_signing_key_id="unit-test",
+    ).screen(
         protein_input=MINI_PDB,
         ligand_input=VALID_SMILES,
     )
@@ -403,7 +453,14 @@ def test_service_unsigned_result_manifest_fails_closed(monkeypatch) -> None:
 
     monkeypatch.setattr(TierBetaScreening, "_build_manifest", _unsigned_manifest)
 
-    result = TierBetaScreening(device="cpu", pose_count=2, top_k=1, stability_steps=0).screen(
+    result = TierBetaScreening(
+        device="cpu",
+        pose_count=2,
+        top_k=1,
+        stability_steps=0,
+        manifest_signing_key=TEST_MANIFEST_KEY,
+        manifest_signing_key_id="unit-test",
+    ).screen(
         protein_input=MINI_PDB,
         ligand_input=VALID_SMILES,
     )
@@ -425,6 +482,7 @@ def test_api_submit_worker_result_direct_e2e(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(settings, "results_storage_path", str(tmp_path / "results"))
     monkeypatch.setattr(settings, "api_job_store_path", str(tmp_path / "jobs.sqlite3"))
     monkeypatch.setattr(settings, "api_inline_worker_enabled", True)
+    _enable_customer_tier_beta_profile(tmp_path, monkeypatch, settings)
     api_main.job_store = None
     api_main._job_store_path = None
 
@@ -470,6 +528,7 @@ def test_api_placeholder_topology_fails_closed_without_retry_or_result(tmp_path,
     monkeypatch.setattr(settings, "results_storage_path", str(tmp_path / "results"))
     monkeypatch.setattr(settings, "api_job_store_path", str(tmp_path / "jobs.sqlite3"))
     monkeypatch.setattr(settings, "api_inline_worker_enabled", True)
+    _enable_customer_tier_beta_profile(tmp_path, monkeypatch, settings)
     api_main.job_store = None
     api_main._job_store_path = None
     placeholder = "ATOM      1  CA  UNK A   1       1.0     0.0     0.0  1.00  0.00           C\n" * 10
@@ -516,6 +575,9 @@ def test_product_tier_beta_router_submit_worker_result_direct_e2e(tmp_path, monk
     monkeypatch.setattr(settings, "results_storage_path", str(tmp_path / "results"))
     monkeypatch.setattr(settings, "api_job_store_path", str(tmp_path / "jobs.sqlite3"))
     monkeypatch.setattr(settings, "api_inline_worker_enabled", True)
+    _enable_customer_tier_beta_profile(tmp_path, monkeypatch, settings)
+    monkeypatch.setattr(settings, "product_api_local_path_inputs_enabled", True)
+    monkeypatch.setattr(settings, "product_api_local_input_root", str(FIXTURE_DIR))
     api_main.job_store = None
     api_main._job_store_path = None
 
@@ -563,7 +625,9 @@ def test_product_tier_beta_router_submit_worker_result_direct_e2e(tmp_path, monk
     payload = result.json()
     assert payload["result"]["ok"] is True
     assert payload["result"]["ligand_smiles"] == "CCO"
-    assert payload["docking_results_emitted"] is True
+    assert payload["docking_results_emitted"] is False
+    assert payload["computation_complete"] is True
+    assert payload["scientific_decision_available"] is False
     topology = payload["result"]["pose_scores"][0]["ligand_topology"]
     assert topology["input_source_kind"] == "sdf_path"
     assert topology["atom_elements"] == ["C", "C", "O"]
@@ -581,6 +645,7 @@ def test_product_tier_beta_router_placeholder_topology_fails_closed(tmp_path, mo
     monkeypatch.setattr(settings, "results_storage_path", str(tmp_path / "results"))
     monkeypatch.setattr(settings, "api_job_store_path", str(tmp_path / "jobs.sqlite3"))
     monkeypatch.setattr(settings, "api_inline_worker_enabled", True)
+    _enable_customer_tier_beta_profile(tmp_path, monkeypatch, settings)
     api_main.job_store = None
     api_main._job_store_path = None
     placeholder = "ATOM      1  CA  UNK A   1       1.0     0.0     0.0  1.00  0.00           C\n" * 10
@@ -798,6 +863,8 @@ def test_stability_simulation_records_md_reproducibility_diagnostics() -> None:
     assert "energy_drift" in stability
     assert stability["constraints"]["coordinate_clamp_box_a"] > 0
     assert stability["pbc_enabled"] is True
-    assert stability["thermostat"]["type"] == "langevin_proxy"
+    assert stability["thermostat"]["type"] == "overdamped_langevin_ligand_only_proxy"
+    assert stability["thermostat"]["kbt_kcal_mol"] == pytest.approx(0.59616123, rel=1e-5)
+    assert stability["constraints"]["protein_ligand_constraints"] == "receptor_fixed_ligand_mobile"
     assert stability["restart_reproducible"] is True
     assert stability["restart_seed"] == 7

@@ -14,12 +14,14 @@ the keys may be stale. It never blocks startup.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 DEV_RESULT_MANIFEST_SIGNING_KEY = "local-dev-result-manifest-signing-key-change-me"
 DEV_RESULT_MANIFEST_KEY_IDS = {"", "local-dev", "dev", "local"}
+TENANT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,79}$")
 
 
 def _flag(settings: Any, name: str, default: bool = False) -> bool:
@@ -39,6 +41,8 @@ def run_startup_preflight(settings: Any) -> None:
 
     auth_required = _flag(settings, "product_api_auth_required")
     token = _text(settings, "product_api_token")
+    token_tenant_id = _text(settings, "product_api_token_tenant_id")
+    admin_token = _text(settings, "product_api_admin_token")
     hosted_exposure = _flag(settings, "product_api_hosted_exposure_approved")
     tls_verified = _flag(settings, "product_api_tls_termination_operator_verified")
     signing_key = _text(settings, "api_result_manifest_signing_key")
@@ -51,6 +55,13 @@ def run_startup_preflight(settings: Any) -> None:
             "The server cannot authenticate any request in this state. Set "
             "PRODUCT_API_TOKEN or disable PRODUCT_API_AUTH_REQUIRED before starting."
         )
+    if auth_required and not TENANT_ID_RE.fullmatch(token_tenant_id):
+        _fatal(
+            "PRODUCT_API_TOKEN_TENANT_ID must be a valid 1-80 character tenant id "
+            "when authentication is required."
+        )
+    if token and admin_token and token == admin_token:
+        _fatal("PRODUCT_API_ADMIN_TOKEN must differ from PRODUCT_API_TOKEN.")
 
     if not hosted_exposure:
         return

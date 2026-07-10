@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
+from api.config import settings
+from api.path_security import confined_path
 from betelgeuze_product.docking_materialization_errors import DockingMaterializationError
 from betelgeuze_product.job_orchestration import read_job_record
 
@@ -118,6 +121,92 @@ def _recover_private_ligands(docking_job_id: str, request_sha256: str) -> list[d
     except Exception:
         return []
     return recovered or []
+
+
+def _recover_private_request(docking_job_id: str, request_sha256: str) -> dict[str, Any]:
+    if not docking_job_id or not request_sha256:
+        return {}
+    try:
+        from betelgeuze_product.docking_private_payload import (
+            configured_store,
+            recover_docking_request,
+        )
+
+        recovered = recover_docking_request(
+            configured_store(),
+            job_id=docking_job_id,
+            request_sha256=request_sha256,
+        )
+    except Exception:
+        return {}
+    return dict(recovered) if isinstance(recovered, dict) else {}
+
+
+def _materialize_target_structure(
+    request: dict[str, Any],
+    *,
+    out_dir: str,
+) -> dict[str, Any]:
+    pdb_content = _text(request.get("pdb_content"))
+    mmcif_content = _text(request.get("mmcif_content"))
+    pdb_path = _text(request.get("pdb_path"))
+    mmcif_path = _text(request.get("mmcif_path"))
+    source_kind = ""
+    content = ""
+    suffix = ""
+    if pdb_content:
+        source_kind, content, suffix = "pdb_content", pdb_content, ".pdb"
+    elif mmcif_content:
+        source_kind, content, suffix = "mmcif_content", mmcif_content, ".cif"
+    elif pdb_path:
+        source_kind, suffix = "pdb_path", ".pdb"
+        try:
+            path = confined_path(
+                pdb_path,
+                settings.product_api_local_input_root,
+                label="target pdb path",
+                must_exist=True,
+            )
+        except (FileNotFoundError, PermissionError) as exc:
+            raise DockingMaterializationError("target_structure_path_invalid") from exc
+        if path.stat().st_size > 10_000_000:
+            raise DockingMaterializationError("target_structure_exceeds_materialization_limit")
+        content = path.read_text(encoding="utf-8", errors="ignore")
+    elif mmcif_path:
+        source_kind, suffix = "mmcif_path", ".cif"
+        try:
+            path = confined_path(
+                mmcif_path,
+                settings.product_api_local_input_root,
+                label="target mmCIF path",
+                must_exist=True,
+            )
+        except (FileNotFoundError, PermissionError) as exc:
+            raise DockingMaterializationError("target_structure_path_invalid") from exc
+        if path.stat().st_size > 10_000_000:
+            raise DockingMaterializationError("target_structure_exceeds_materialization_limit")
+        content = path.read_text(encoding="utf-8", errors="ignore")
+    if not source_kind:
+        return {}
+    if suffix != ".pdb":
+        raise DockingMaterializationError(
+            "target_structure_format_not_supported_by_current_runner",
+            source_kind,
+        )
+    if len(content.encode("utf-8")) > 10_000_000:
+        raise DockingMaterializationError("target_structure_exceeds_materialization_limit")
+    if not any(line.startswith(("ATOM  ", "HETATM")) for line in content.splitlines()):
+        raise DockingMaterializationError("target_structure_has_no_pdb_atoms")
+    destination = Path(out_dir) / f"target_structure{suffix}"
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if destination.is_symlink():
+        raise DockingMaterializationError("target_structure_destination_symlink_forbidden")
+    destination.write_text(content.rstrip() + "\n", encoding="utf-8")
+    return {
+        "target_structure_path": str(destination),
+        "target_structure_source_kind": source_kind,
+        "target_structure_sha256": hashlib.sha256(destination.read_bytes()).hexdigest(),
+    }
 
 
 def _estimate_expected_ligand_count(
@@ -251,7 +340,13 @@ def _resolve_native_pdb_path(target: str) -> str:
     return ""
 
 
-def _ligand_row_from_intake(ligand: dict[str, Any], *, target: str, replica_idx: int) -> dict[str, Any]:
+def _ligand_row_from_intake(
+    ligand: dict[str, Any],
+    *,
+    target: str,
+    replica_idx: int,
+    target_structure_path: str = "",
+) -> dict[str, Any]:
     ligand_id = _text(
         ligand.get("compound_id")
         or ligand.get("ligand_id")
@@ -261,7 +356,11 @@ def _ligand_row_from_intake(ligand: dict[str, Any], *, target: str, replica_idx:
     smiles, source_kind = _resolve_ligand_smiles(ligand)
     slug = "".join(ch if ch.isalnum() else "_" for ch in ligand_id.lower())[:40] or f"ligand_{replica_idx:04d}"
     queue_id = f"{target.lower()}__rep{replica_idx:04d}__{slug}"
-    native_pdb_path = _text(ligand.get("native_pdb_path") or _resolve_native_pdb_path(target))
+    native_pdb_path = _text(
+        target_structure_path
+        or ligand.get("native_pdb_path")
+        or _resolve_native_pdb_path(target)
+    )
     return {
         "queue_id": queue_id,
         "target": str(target),
@@ -316,7 +415,11 @@ def _pocket_metadata_from_native_pdb(native_pdb_path: str) -> dict[str, Any]:
             "pocket_method": pocket.get("method", "geometric"),
         }
     except Exception as exc:
-        return {"pocket_status": "pocket_detection_failed", "pocket_error": str(exc)}
+        return {
+            "pocket_status": "pocket_detection_failed",
+            "pocket_error_code": type(exc).__name__,
+            "pocket_error_detail_retained": False,
+        }
 
 
 def materialize_from_docking_request(
@@ -338,8 +441,21 @@ def materialize_from_docking_request(
         target=target,
         family=family,
     )
+    private_request = _recover_private_request(
+        docking_job_id,
+        _text(params.get("request_sha256")),
+    )
+    target_structure = _materialize_target_structure(private_request, out_dir=out_dir)
+    restricted_production = _text(params.get("runner_execution_mode")) == "restricted-production"
+    if restricted_production and not target_structure:
+        raise DockingMaterializationError("target_structure_unavailable_for_materialization")
     rows = [
-        _ligand_row_from_intake(ligand, target=target, replica_idx=index)
+        _ligand_row_from_intake(
+            ligand,
+            target=target,
+            replica_idx=index,
+            target_structure_path=_text(target_structure.get("target_structure_path")),
+        )
         for index, ligand in enumerate(ligands)
     ]
     for row in rows:
@@ -367,6 +483,7 @@ def materialize_from_docking_request(
         "docking_job_id": docking_job_id,
         "request_json_path": str(request_json_path),
         "pocket_metadata": pocket_meta,
+        **target_structure,
     }
     meta_path = os.path.join(out_dir, "docking_htvs_materialized.json")
     Path(meta_path).write_text(

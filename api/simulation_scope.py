@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from betelgeuze_product.tier_beta_vertical_slice import is_tier_beta_vertical_slice_request
+from betelgeuze_product.tier_beta_vertical_slice import (
+    build_tier_beta_request_from_api,
+    is_tier_beta_vertical_slice_request,
+)
 
 PRODUCT_SIMULATION_SCOPE = (
     "ligand HTVS/backmapping via operator-approved validated runner profiles, plus restricted "
@@ -25,6 +28,7 @@ def request_has_runner_profile(request_data: dict[str, Any]) -> bool:
 
 def validate_simulation_request_scope(request_data: dict[str, Any]) -> None:
     if is_tier_beta_vertical_slice_request(request_data):
+        build_tier_beta_request_from_api(request_data)
         return
     if request_has_runner_profile(request_data):
         return

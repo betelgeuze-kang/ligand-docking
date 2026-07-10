@@ -42,6 +42,13 @@ def _redacted_ligand() -> dict:
     }
 
 
+def _target_pdb() -> str:
+    return (
+        "ATOM      1  CA  ALA A   1       0.000   0.000   0.000  1.00  0.00           C\n"
+        "ATOM      2  CA  GLY A   2       3.800   0.000   0.000  1.00  0.00           C\n"
+    )
+
+
 def test_htvs_materializer_rejects_redacted_hash_only_ligand(tmp_path: Path) -> None:
     request_path = _write_request(
         tmp_path / "request.json",
@@ -134,7 +141,11 @@ def test_backmapping_materializer_recovers_redacted_ligands_from_private_store(
         store,
         job_id=job_id,
         request_sha256=request_sha256,
-        request={"family": "gpcr", "ligands": [{"ligand_id": "LIG-001", "smiles": "CCO"}]},
+        request={
+            "family": "gpcr",
+            "pdb_content": _target_pdb(),
+            "ligands": [{"ligand_id": "LIG-001", "smiles": "CCO"}],
+        },
     )
     monkeypatch.setattr(dpp, "configured_store", lambda: store)
 
@@ -156,6 +167,8 @@ def test_backmapping_materializer_recovers_redacted_ligands_from_private_store(
     assert materialized["input_materialization_ready"] is True
     assert materialized["synthetic_input_used"] is False
     assert materialized["ligand_count"] == 1
+    assert len(materialized["target_structure_sha256"]) == 64
+    assert Path(materialized["target_structure_path"]).is_file()
     with Path(materialized["queue_csv"]).open("r", encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
     assert len(rows) == 1
@@ -210,7 +223,11 @@ def test_htvs_materializer_recovers_redacted_ligands_from_private_store(
         store,
         job_id=job_id,
         request_sha256=request_sha256,
-        request={"family": "gpcr", "ligands": [{"ligand_id": "LIG-001", "smiles": "CCO"}]},
+        request={
+            "family": "gpcr",
+            "pdb_content": _target_pdb(),
+            "ligands": [{"ligand_id": "LIG-001", "smiles": "CCO"}],
+        },
     )
     monkeypatch.setattr(dpp, "configured_store", lambda: store)
 
@@ -232,6 +249,8 @@ def test_htvs_materializer_recovers_redacted_ligands_from_private_store(
     assert materialized["input_materialization_ready"] is True
     assert materialized["synthetic_input_used"] is False
     assert materialized["ligand_count"] == 1
+    assert len(materialized["target_structure_sha256"]) == 64
+    assert Path(materialized["target_structure_path"]).is_file()
     with Path(materialized["queue_csv"]).open("r", encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
     assert len(rows) == 1

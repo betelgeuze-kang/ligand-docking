@@ -74,6 +74,7 @@ class TierBetaScreeningOutput:
     poses_scored: int
     top_k: int
     manifest_hash: str
+    scientific_decision_available: bool = False
     schema_version: str = SCHEMA_VERSION
 
     def to_dict(self) -> dict[str, Any]:

@@ -245,6 +245,7 @@ def enqueue_docking_job(
         job_id,
         simulate_request,
         status="submitted",
+        tenant_id=_text(record.get("customer_id")) or "local",
     )
     if not created:
         expected_request = sanitize_request_for_ledger(simulate_request)

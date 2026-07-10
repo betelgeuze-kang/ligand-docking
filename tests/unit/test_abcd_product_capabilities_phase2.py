@@ -50,8 +50,9 @@ def test_allatom_explicit_fep_stack():
     aa = allatom_energy(_prot(), ["C"] * 4)
     assert aa["bond_count"] >= 1
     assert aa["bond_model"] == "covalent_radii_equilibrium_with_coarse_trace_fallback"
-    assert aa["parameterization_level"] == "internal_united_atom_typed_v1"
-    assert aa["charge_model"] == "typed_partial_charge_neutralized_v1"
+    assert aa["parameterization_level"] == "internal_atom_typed_proxy_uncalibrated_v2"
+    assert aa["is_all_atom_force_field"] is False
+    assert aa["charge_model"] == "typed_partial_charge_preserve_net_v2"
     assert aa["parameter_calibration_status"] == "internal_proxy_uncalibrated"
     assert aa["claim_grade_parameterization_ready"] is False
     assert aa["charge_parameter_source"] == "internal_atom_type_proxy_uncalibrated"
@@ -60,7 +61,8 @@ def test_allatom_explicit_fep_stack():
     ex = explicit_solvation_energy(_prot(), ["C"] * 4)
     assert ex["water_count"] >= 0
     fep = estimate_binding_fep(_prot(), _lig(), n_windows=5, n_bootstrap=2)
-    assert fep["status"] == "fep_estimate_ready"
+    assert fep["status"] == "blocked_static_alchemical_endpoint_proxy"
+    assert fep["delta_g_fep_kcal_mol"] is None
     stack = compute_full_refine_stack(_prot(), _lig(), include_explicit=True, include_fep=True)
     assert "gb_sa" in stack and "allatom" in stack and "fep" in stack
     calibration = refine_stack_calibration_report(
@@ -71,7 +73,8 @@ def test_allatom_explicit_fep_stack():
         min_public_fep_pairs=5,
     )
     assert calibration["status"] == "blocked_solvent_fep_calibration_claim"
-    assert calibration["solvent_fep_surface_ready"] is True
+    assert calibration["solvent_fep_surface_ready"] is False
+    assert "fep_surface_not_ready" in calibration["blockers"]
     assert calibration["claim_grade_solvent_fep_calibration_ready"] is False
     assert "insufficient_public_solvent_pairs" in calibration["blockers"]
     assert "insufficient_public_fep_pairs" in calibration["blockers"]
@@ -101,7 +104,7 @@ def test_refine_stack_and_fep_use_typed_elements_when_provided():
         protein_elements=["C"] * int(protein.shape[0]),
         ligand_elements=["C"] * int(ligand.shape[0]),
     )
-    assert fep["status"] == "fep_estimate_ready"
+    assert fep["status"] == "blocked_static_alchemical_endpoint_proxy"
     assert fep["element_model"] == "typed_pairwise"
     assert fep["element_fallback_used"] is False
     assert fep["windows"][0]["e_cross"] != carbon_fep["windows"][0]["e_cross"]
@@ -121,7 +124,7 @@ def test_refine_stack_and_fep_use_typed_elements_when_provided():
     assert stack["allatom"]["atom_types"][0].startswith("N_")
     assert stack["allatom"]["atom_types"][-1].startswith("O_")
     assert stack["claim_safe"] is False
-    assert stack["calibration_status"] == "internal_solvent_fep_proxy_uncalibrated"
+    assert stack["calibration_status"] == "blocked_interaction_proxy_stack_uncalibrated_v2"
 
 
 def test_structure_quality_interface_proxy_is_reported_but_claim_blocked():
@@ -198,9 +201,9 @@ def test_allatom_atom_types_charges_and_bonded_nonbonded_exclusions():
     )
     assert included["e_nonbonded"] != excluded["e_nonbonded"]
     aa = allatom_energy(coords, elements)
-    assert aa["nonbonded_exclusions"] == "1-2_bonded_pairs"
+    assert aa["nonbonded_exclusions"] == "1-2_and_1-3_excluded_1-4_scaled"
     assert aa["atom_types"] == atom_types
-    assert abs(float(aa["net_charge_e"])) < 1e-8
+    assert aa["charge_model"] == "typed_partial_charge_preserve_net_v2"
 
 
 def test_allatom_atom_typing_coverage_reports_halogen_and_unknown_boundaries():

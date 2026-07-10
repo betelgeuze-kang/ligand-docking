@@ -15,6 +15,8 @@ class _FakeSettings:
         self,
         product_api_auth_required: bool = False,
         product_api_token: str = "",
+        product_api_token_tenant_id: str = "local",
+        product_api_admin_token: str = "",
         docking_private_payload_keys: str = "",
         product_api_secret_rotation_days: int = 30,
         product_api_hosted_exposure_approved: bool = False,
@@ -24,6 +26,8 @@ class _FakeSettings:
     ) -> None:
         self.product_api_auth_required = product_api_auth_required
         self.product_api_token = product_api_token
+        self.product_api_token_tenant_id = product_api_token_tenant_id
+        self.product_api_admin_token = product_api_admin_token
         self.docking_private_payload_keys = docking_private_payload_keys
         self.product_api_secret_rotation_days = product_api_secret_rotation_days
         self.product_api_hosted_exposure_approved = product_api_hosted_exposure_approved
@@ -65,11 +69,32 @@ def test_auth_required_valid_token_does_not_raise() -> None:
     run_startup_preflight(settings)
 
 
+def test_auth_required_rejects_invalid_server_bound_tenant() -> None:
+    settings = _FakeSettings(
+        product_api_auth_required=True,
+        product_api_token="my-secret-token",
+        product_api_token_tenant_id="../tenant",
+    )
+    with pytest.raises(SystemExit, match="PRODUCT_API_TOKEN_TENANT_ID"):
+        run_startup_preflight(settings)
+
+
+def test_admin_token_must_differ_from_tenant_token() -> None:
+    settings = _FakeSettings(
+        product_api_auth_required=True,
+        product_api_token="same-token",
+        product_api_admin_token="same-token",
+    )
+    with pytest.raises(SystemExit, match="PRODUCT_API_ADMIN_TOKEN"):
+        run_startup_preflight(settings)
+
+
 def _hosted_settings(**overrides: object) -> _FakeSettings:
     payload = {
         "product_api_hosted_exposure_approved": True,
         "product_api_auth_required": True,
         "product_api_token": "operator-token",
+        "product_api_token_tenant_id": "hosted-tenant",
         "product_api_tls_termination_operator_verified": True,
         "api_result_manifest_signing_key": "operator-managed-signing-secret",
         "api_result_manifest_key_id": "product-key-v1",

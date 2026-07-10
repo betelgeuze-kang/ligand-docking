@@ -9,7 +9,9 @@ from typing import Any
 from betelgeuze_engine.biodiscovery.contracts import CLAIM_SCOPE, SCHEMA_VERSION, StageRecord, TierBetaScreeningInput
 from betelgeuze_engine.biodiscovery.ligand_prep import ligand_topology_payload
 
-LOCAL_MANIFEST_KEY = "local-tier-beta-vertical-slice-signing-key"
+# Compatibility symbol only. Runtime signatures must use an operator-provided
+# key; no authentication key is embedded in source code.
+LOCAL_MANIFEST_KEY = ""
 CLAIM_BOUNDARY = (
     "Restricted local Tier-beta structure-based ligand screening vertical slice. "
     "Runs preparation, topology checks, pocket resolution, pose scoring, top-K refinement, "
@@ -50,6 +52,8 @@ def build_screening_manifest(
     device: str,
     seed: int,
     benchmark_metric_summary: dict[str, Any] | None = None,
+    signing_key: str = "",
+    signing_key_id: str = "",
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
@@ -134,19 +138,26 @@ def build_screening_manifest(
         json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
     ).hexdigest()
     payload["content_hash"] = content_hash
-    payload["signature_algorithm"] = "hmac-sha256"
-    payload["signature_key_id"] = "local-tier-beta"
-    signature_payload = dict(payload)
-    signature = hmac.new(
-        LOCAL_MANIFEST_KEY.encode("utf-8"),
-        json.dumps(
-            signature_payload,
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=True,
-        ).encode("utf-8"),
-        hashlib.sha256,
-    ).hexdigest()
-    payload["signature"] = signature
+    key = str(signing_key or "")
+    if key:
+        payload["signature_algorithm"] = "hmac-sha256"
+        payload["signature_key_id"] = str(signing_key_id or "operator-provided")
+        payload["signature_trust"] = "operator_key_hmac"
+        signature_payload = dict(payload)
+        payload["signature"] = hmac.new(
+            key.encode("utf-8"),
+            json.dumps(
+                signature_payload,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=True,
+            ).encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+    else:
+        payload["signature_algorithm"] = "none"
+        payload["signature_key_id"] = ""
+        payload["signature"] = ""
+        payload["signature_trust"] = "unsigned_local_diagnostic"
 
     return payload

@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import pytest
 
+from tests.route_compat import route_paths
+
 TestClient = pytest.importorskip("fastapi.testclient").TestClient
 
 
 def test_api_app_imports_with_cleanup_router() -> None:
     from api.main import app
 
-    paths = {route.path for route in app.routes}
+    paths = route_paths(app)
     assert "/cleanup/operations" in paths
     assert "/cleanup/approval-gate" in paths
     assert "/cleanup/completion" in paths

@@ -190,9 +190,9 @@ def _profile_payload(profile_id: str, fake_runner: Path, evidence: Path) -> dict
     return {
         "profile_id": profile_id,
         "enabled": True,
-        "execution_mode": "smoke",
-        "customer_submission_allowed": False,
-        "synthetic_input_allowed": True,
+        "execution_mode": "restricted-production",
+        "customer_submission_allowed": True,
+        "synthetic_input_allowed": False,
         "production_claim_allowed": False,
         "customer_pose_emission_allowed": False,
         "runner_script": str(fake_runner.resolve()),
@@ -276,7 +276,12 @@ def test_api_task_executes_operator_approved_runner_profile(
     assert result["runner_kind"] == "fake_validated_runner"
     assert result["target_name"] == "Chignolin"
     assert execution_record.exists()
-    assert "shell" not in json.loads(execution_record.read_text(encoding="utf-8"))
+    execution_payload = json.loads(execution_record.read_text(encoding="utf-8"))
+    assert "shell" not in execution_payload
+    assert "stdout_tail" not in execution_payload
+    assert "stderr_tail" not in execution_payload
+    assert execution_payload["stdout_summary"]["content_retained"] is False
+    assert execution_payload["stderr_summary"]["content_retained"] is False
 
 
 def test_validated_runner_timeout_records_fail_closed_execution(

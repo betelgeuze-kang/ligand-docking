@@ -1,4 +1,4 @@
-"""All-atom united-parameter force field tier (internal engine, O(N) cutoff)."""
+"""Topology-aware CPU reference interaction proxy with bounded scientific claims."""
 
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ import numpy as np
 
 from core.refine_physics import REFINE_TIER_CLAIM_BOUNDARY, lj_energy, mixing_sigma_epsilon, vdw_params_for_element
 
-ALLATOM_TIER = "allatom_united_v1"
+ALLATOM_TIER = "topology_aware_atom_typed_interaction_proxy_v2"
 ALLATOM_CLAIM_BOUNDARY = (
-    REFINE_TIER_CLAIM_BOUNDARY + " All-atom tier uses united-atom parameters and distance-based "
-    "bond inference plus typed internal partial charges; not AMBER/CHARMM parity."
+    REFINE_TIER_CLAIM_BOUNDARY + " The atom-typed tier uses uncalibrated internal parameters, distance-based "
+    "bond inference, and proxy partial charges; it is not an all-atom AMBER/CHARMM force field."
 )
 PARAMETER_CALIBRATION_STATUS = "internal_proxy_uncalibrated"
 
@@ -80,19 +80,31 @@ FORMAL_CHARGE_PROXY_BY_ATOM_TYPE = {
 }
 
 
-def infer_bonds(coords: np.ndarray, elements: list[str], *, max_bond_a: float = 4.2) -> list[tuple[int, int]]:
+def infer_bonds(
+    coords: np.ndarray,
+    elements: list[str],
+    *,
+    max_bond_a: float = 4.2,
+    fragment_ids: list[int] | None = None,
+) -> list[tuple[int, int]]:
     pts = np.asarray(coords, dtype=np.float64)
     n = pts.shape[0]
+    if fragment_ids is not None and len(fragment_ids) != n:
+        raise ValueError("fragment_ids must match atom count")
     bonds: list[tuple[int, int]] = []
     for i in range(n):
         ri = _radius(elements[i]) if i < len(elements) else 1.7
         for j in range(i + 1, n):
+            if fragment_ids is not None and fragment_ids[i] != fragment_ids[j]:
+                continue
             rj = _radius(elements[j]) if j < len(elements) else 1.7
             d = float(np.linalg.norm(pts[j] - pts[i]))
             if d <= _covalent_bond_threshold(ri, rj):
                 bonds.append((i, j))
     if not bonds:
         for i in range(n - 1):
+            if fragment_ids is not None and fragment_ids[i] != fragment_ids[i + 1]:
+                continue
             a = str(elements[i] if i < len(elements) else "C").upper()[:1]
             b = str(elements[i + 1] if i + 1 < len(elements) else "C").upper()[:1]
             if not (a == "C" and b == "C"):
@@ -587,7 +599,29 @@ def bonded_energy(
     return float(total)
 
 
-def angle_energy(coords: np.ndarray, bonds: list[tuple[int, int]], *, angle_k: float = _ANGLE_K) -> float:
+def _angle_target_radians(atom_type: str) -> float:
+    value = str(atom_type or "")
+    if value in {"C_SP"}:
+        return math.radians(180.0)
+    if value in {
+        "C_SP2",
+        "C_CARBONYL",
+        "C_CARBOXYLATE",
+        "N_POLAR",
+        "N_CATIONIC",
+        "P_PHOSPHATE",
+    }:
+        return math.radians(120.0)
+    return math.radians(109.5)
+
+
+def angle_energy(
+    coords: np.ndarray,
+    bonds: list[tuple[int, int]],
+    *,
+    atom_types: list[str] | None = None,
+    angle_k: float = _ANGLE_K,
+) -> float:
     pts = np.asarray(coords, dtype=np.float64)
     neighbors = _neighbors_from_bonds(bonds)
     total = 0.0
@@ -605,8 +639,41 @@ def angle_energy(coords: np.ndarray, bonds: list[tuple[int, int]], *, angle_k: f
                     continue
                 cos_theta = float(np.clip(np.dot(v1, v2) / (n1 * n2), -1.0, 1.0))
                 theta = math.acos(cos_theta)
-                total += 0.5 * float(angle_k) * (theta - math.radians(109.5)) ** 2
+                center_type = atom_types[j] if atom_types is not None and j < len(atom_types) else "C_SP3"
+                total += 0.5 * float(angle_k) * (theta - _angle_target_radians(center_type)) ** 2
     return float(total)
+
+
+def topology_nonbonded_rules(
+    atom_count: int,
+    bonds: list[tuple[int, int]],
+) -> tuple[set[tuple[int, int]], set[tuple[int, int]]]:
+    """Return excluded 1-2/1-3 pairs and scaled 1-4 pairs."""
+
+    neighbors = _neighbors_from_bonds(bonds)
+    excluded: set[tuple[int, int]] = set()
+    scaled_14: set[tuple[int, int]] = set()
+    for source in range(int(atom_count)):
+        distance = {source: 0}
+        frontier = [source]
+        while frontier:
+            current = frontier.pop(0)
+            if distance[current] >= 3:
+                continue
+            for neighbor in neighbors.get(current, []):
+                next_distance = distance[current] + 1
+                if neighbor not in distance or next_distance < distance[neighbor]:
+                    distance[neighbor] = next_distance
+                    frontier.append(neighbor)
+        for target, graph_distance in distance.items():
+            if target <= source:
+                continue
+            pair = (source, target)
+            if graph_distance in {1, 2}:
+                excluded.add(pair)
+            elif graph_distance == 3:
+                scaled_14.add(pair)
+    return excluded, scaled_14
 
 
 def nonbonded_energy(
@@ -616,6 +683,9 @@ def nonbonded_energy(
     atom_types: list[str] | None = None,
     charges: np.ndarray | None = None,
     exclude_pairs: set[tuple[int, int]] | None = None,
+    scale_14_pairs: set[tuple[int, int]] | None = None,
+    vdw_14_scale: float = 0.5,
+    coulomb_14_scale: float = 1.0 / 1.2,
     cutoff_a: float = 12.0,
     dielectric: float = 4.0,
 ) -> dict[str, float]:
@@ -623,11 +693,14 @@ def nonbonded_energy(
     n = pts.shape[0]
     inferred_types = infer_atom_types(pts, elements) if atom_types is None else list(atom_types)
     q = (
-        partial_charges_from_atom_types(inferred_types)
+        partial_charges_from_atom_types(inferred_types, neutralize=False)
         if charges is None
         else np.asarray(charges, dtype=np.float64).reshape(-1)
     )
+    if q.size != n:
+        raise ValueError("charges must match atom count")
     excluded = set(exclude_pairs or set())
+    scaled_14 = set(scale_14_pairs or set())
     e_vdw = 0.0
     e_coul = 0.0
     for i in range(n):
@@ -635,7 +708,7 @@ def nonbonded_energy(
             if (i, j) in excluded or (j, i) in excluded:
                 continue
             d = float(np.linalg.norm(pts[j] - pts[i]))
-            if d >= float(cutoff_a) or d < 1.0:
+            if d >= float(cutoff_a):
                 continue
             if atom_types is None:
                 si, ei = vdw_params_for_element(elements[i] if i < len(elements) else "C")
@@ -644,9 +717,18 @@ def nonbonded_energy(
                 si, ei = vdw_params_for_atom_type(inferred_types[i] if i < len(inferred_types) else "X_DEFAULT")
                 sj, ej = vdw_params_for_atom_type(inferred_types[j] if j < len(inferred_types) else "X_DEFAULT")
             sigma, epsilon = mixing_sigma_epsilon(si, ei, sj, ej)
-            e_vdw += float(lj_energy(np.asarray([d]), sigma, epsilon)[0])
+            pair = (min(i, j), max(i, j))
+            vdw_scale = float(vdw_14_scale) if pair in scaled_14 else 1.0
+            coul_scale = float(coulomb_14_scale) if pair in scaled_14 else 1.0
+            e_vdw += vdw_scale * float(lj_energy(np.asarray([d]), sigma, epsilon)[0])
             if abs(q[i]) > 1e-8 and abs(q[j]) > 1e-8:
-                e_coul += float(_COULOMB_PREF * q[i] * q[j] / (float(dielectric) * d))
+                e_coul += float(
+                    coul_scale
+                    * _COULOMB_PREF
+                    * q[i]
+                    * q[j]
+                    / (float(dielectric) * max(d, 0.5))
+                )
     return {"e_vdw": e_vdw, "e_coulomb": e_coul, "e_nonbonded": e_vdw + e_coul}
 
 
@@ -655,50 +737,92 @@ def allatom_energy(
     elements: list[str],
     *,
     bonds: list[tuple[int, int]] | None = None,
+    fragment_ids: list[int] | None = None,
     charges: np.ndarray | None = None,
+    target_net_charge: float | None = None,
     cutoff_a: float = 12.0,
 ) -> dict[str, Any]:
     pts = np.asarray(coords, dtype=np.float64)
-    inferred_bonds = infer_bonds(pts, elements) if bonds is None else list(bonds)
+    if pts.ndim != 2 or pts.shape[1] != 3:
+        raise ValueError("coords must have shape [N, 3]")
+    if not np.isfinite(pts).all():
+        raise ValueError("coords must contain only finite values")
+    if len(elements) != int(pts.shape[0]):
+        raise ValueError("elements must match atom count")
+    if fragment_ids is not None and len(fragment_ids) != int(pts.shape[0]):
+        raise ValueError("fragment_ids must match atom count")
+    inferred_bonds = (
+        infer_bonds(pts, elements, fragment_ids=fragment_ids)
+        if bonds is None
+        else [(min(int(i), int(j)), max(int(i), int(j))) for i, j in bonds]
+    )
+    if any(i < 0 or j >= int(pts.shape[0]) or i == j for i, j in inferred_bonds):
+        raise ValueError("bonds contain invalid atom indices")
+    inferred_bonds = sorted(set(inferred_bonds))
+    if fragment_ids is not None and any(fragment_ids[i] != fragment_ids[j] for i, j in inferred_bonds):
+        raise ValueError("bonds cannot cross fragment boundaries")
     atom_types = infer_atom_types(pts, elements, bonds=inferred_bonds)
     coverage = atom_typing_coverage_report(pts, elements, bonds=inferred_bonds)
     ionizable = ionizable_atom_typing_report(pts, elements, bonds=inferred_bonds)
     formal_charge = formal_charge_proxy_report(pts, elements, bonds=inferred_bonds)
     metal_cofactor = metal_cofactor_coordination_report(pts, elements)
     calibration = parameter_calibration_report()
-    q = partial_charges_from_atom_types(atom_types) if charges is None else np.asarray(charges, dtype=np.float64).reshape(-1)
+    q = (
+        partial_charges_from_atom_types(atom_types, neutralize=False)
+        if charges is None
+        else np.asarray(charges, dtype=np.float64).reshape(-1)
+    )
+    if q.size != int(pts.shape[0]):
+        raise ValueError("charges must match atom count")
+    if not np.isfinite(q).all():
+        raise ValueError("charges must contain only finite values")
+    if target_net_charge is not None and not np.isfinite(float(target_net_charge)):
+        raise ValueError("target_net_charge must be finite")
+    if target_net_charge is not None and q.size:
+        q = q + (float(target_net_charge) - float(np.sum(q))) / float(q.size)
     torsions = infer_torsions(inferred_bonds)
     impropers = infer_impropers(inferred_bonds, atom_types)
     bonded = (
         bonded_energy(pts, inferred_bonds, elements=elements)
-        + angle_energy(pts, inferred_bonds)
+        + angle_energy(pts, inferred_bonds, atom_types=atom_types)
         + dihedral_energy(pts, torsions)
         + improper_energy(pts, impropers)
     )
+    excluded_pairs, scaled_14_pairs = topology_nonbonded_rules(int(pts.shape[0]), inferred_bonds)
     nb = nonbonded_energy(
         pts,
         elements,
         atom_types=atom_types,
         charges=q,
-        exclude_pairs={(min(i, j), max(i, j)) for i, j in inferred_bonds},
+        exclude_pairs=excluded_pairs,
+        scale_14_pairs=scaled_14_pairs,
         cutoff_a=cutoff_a,
     )
     total = bonded + nb["e_nonbonded"]
     return {
         "refine_tier": ALLATOM_TIER,
-        "parameterization_level": "internal_united_atom_typed_v1",
+        "parameterization_level": "internal_atom_typed_proxy_uncalibrated_v2",
+        "is_all_atom_force_field": False,
+        "is_calibrated_force_field": False,
         "bond_model": "covalent_radii_equilibrium_with_coarse_trace_fallback",
-        "angle_model": "tetrahedral_harmonic_proxy",
+        "angle_model": "hybridization_aware_harmonic_proxy",
         "dihedral_model": "periodic_torsion_proxy_n3",
         "improper_model": "planarity_proxy_for_sp2_like_centers",
-        "charge_model": "typed_partial_charge_neutralized_v1" if charges is None else "caller_supplied",
+        "charge_model": (
+            "typed_partial_charge_preserve_net_v2"
+            if charges is None
+            else "caller_supplied_target_adjusted" if target_net_charge is not None else "caller_supplied"
+        ),
         "parameter_calibration_status": calibration["parameter_calibration_status"],
         "claim_grade_parameterization_ready": calibration["claim_grade_parameterization_ready"],
         "charge_parameter_source": calibration["charge_parameter_source"],
         "bonded_parameter_source": calibration["bonded_parameter_source"],
         "torsion_parameter_source": calibration["torsion_parameter_source"],
         "improper_parameter_source": calibration["improper_parameter_source"],
-        "nonbonded_exclusions": "1-2_bonded_pairs",
+        "nonbonded_exclusions": "1-2_and_1-3_excluded_1-4_scaled",
+        "excluded_pair_count": len(excluded_pairs),
+        "scaled_14_pair_count": len(scaled_14_pairs),
+        "fragment_count": len(set(fragment_ids)) if fragment_ids is not None else 1,
         "atom_types": atom_types,
         "atom_typing_coverage_status": coverage["status"],
         "atom_typing_coverage_fraction": coverage["coverage_fraction"],

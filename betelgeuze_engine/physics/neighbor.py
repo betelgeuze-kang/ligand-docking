@@ -14,6 +14,7 @@ class NeighborPairs:
     delta: torch.Tensor | None = None
     source: str = "provided"
     diagnostics: dict[str, Any] = field(default_factory=dict)
+    candidate_mask: torch.Tensor | None = None
 
     @property
     def is_dense(self) -> bool:
@@ -161,10 +162,6 @@ def neighbor_displacements(coords: torch.Tensor, pairs: NeighborPairs) -> torch.
         raise ValueError("coords must have shape [B, N, 3]")
     if pairs.idx.shape[0] != coords.shape[0] or pairs.idx.shape[1] != coords.shape[1]:
         raise ValueError("neighbor pairs must match coords batch and atom dimensions")
-    if pairs.delta is not None and not coords.requires_grad:
-        if pairs.delta.shape != (*pairs.idx.shape, 3):
-            raise ValueError("neighbor delta must have shape [B, N, K, 3]")
-        return pairs.delta.to(dtype=coords.dtype, device=coords.device)
     gather_idx = pairs.idx.clamp(min=0, max=max(int(coords.shape[1]) - 1, 0)).to(device=coords.device)
     expanded = gather_idx.unsqueeze(-1).expand(-1, -1, -1, 3)
     coords_j = torch.gather(coords.unsqueeze(1).expand(-1, coords.shape[1], -1, -1), 2, expanded)
@@ -172,6 +169,36 @@ def neighbor_displacements(coords: torch.Tensor, pairs: NeighborPairs) -> torch.
     if bool(pairs.diagnostics.get("pbc_enabled") is True) and pairs.diagnostics.get("box_size") is not None:
         return _minimum_image(delta, _box_tensor(pairs.diagnostics.get("box_size"), coords=coords))
     return delta
+
+
+def refresh_neighbor_geometry(
+    coords: torch.Tensor,
+    pairs: NeighborPairs,
+) -> NeighborPairs:
+    """Reuse compact neighbor indices while recomputing current geometry."""
+
+    delta = neighbor_displacements(coords, pairs)
+    dist = torch.linalg.vector_norm(delta, dim=-1)
+    candidate_mask = (
+        pairs.candidate_mask
+        if pairs.candidate_mask is not None
+        else pairs.mask
+    ).to(device=dist.device)
+    cutoff = float(pairs.diagnostics.get("cutoff") or 0.0)
+    active_mask = candidate_mask & (dist <= cutoff) if cutoff > 0.0 else candidate_mask
+    dist = torch.where(candidate_mask, dist, torch.zeros_like(dist))
+    diagnostics = dict(pairs.diagnostics)
+    diagnostics["pair_count"] = int(active_mask.sum().detach().cpu().item())
+    diagnostics["candidate_pair_count"] = int(candidate_mask.sum().detach().cpu().item())
+    return NeighborPairs(
+        idx=pairs.idx,
+        dist=dist,
+        mask=active_mask,
+        delta=delta,
+        source=pairs.source,
+        diagnostics=diagnostics,
+        candidate_mask=candidate_mask,
+    )
 
 
 def neighbor_upper_mask(pairs: NeighborPairs) -> torch.Tensor:
@@ -197,7 +224,7 @@ class CellListNeighborProvider:
             if int(step) - int(self._cached_step) >= int(self.config.rebuild_stride):
                 return True
         if float(self.config.skin) <= 0.0:
-            return False
+            return True
         if coords.shape != self._cached_coords.shape:
             return True
         displacement = (coords.detach() - self._cached_coords.to(device=coords.device, dtype=coords.dtype)).norm(dim=-1)
@@ -214,16 +241,18 @@ class CellListNeighborProvider:
             raise ValueError("coords must have shape [B, N, 3]")
         if not self.needs_rebuild(coords, step=step):
             assert self._cached_pairs is not None
-            diagnostics = dict(self._cached_pairs.diagnostics)
+            refreshed = refresh_neighbor_geometry(coords, self._cached_pairs)
+            diagnostics = dict(refreshed.diagnostics)
             diagnostics["rebuilt"] = False
             diagnostics["rebuild_reason"] = "cached"
             return NeighborPairs(
-                idx=self._cached_pairs.idx,
-                dist=self._cached_pairs.dist,
-                mask=self._cached_pairs.mask,
-                delta=self._cached_pairs.delta,
-                source=self._cached_pairs.source,
+                idx=refreshed.idx,
+                dist=refreshed.dist,
+                mask=refreshed.mask,
+                delta=refreshed.delta,
+                source=refreshed.source,
                 diagnostics=diagnostics,
+                candidate_mask=refreshed.candidate_mask,
             )
         pairs = self._build(coords, box=box)
         self._cached_pairs = pairs
@@ -317,6 +346,9 @@ class CellListNeighborProvider:
                     pair_count += 1
 
         overflow = bool(neighbor_overflow_count or cell_overflow_count)
+        candidate_mask = mask.clone()
+        active_mask = candidate_mask & (dist <= float(cfg.cutoff))
+        active_pair_count = int(active_mask.sum().detach().cpu().item())
         diagnostics = NeighborBuildDiagnostics(
             status="blocked_neighbor_provider_overflow" if overflow else "neighbor_provider_ready",
             source=self.source,
@@ -324,7 +356,7 @@ class CellListNeighborProvider:
             skin=float(cfg.skin),
             max_neighbor_count=max_neighbors,
             max_atoms_per_cell=int(cfg.max_atoms_per_cell),
-            pair_count=pair_count,
+            pair_count=active_pair_count,
             atom_count=atom_count,
             batch_size=batch,
             overflow=overflow,
@@ -338,13 +370,15 @@ class CellListNeighborProvider:
             nxn_allocation_observed=False,
         ).to_dict()
         diagnostics["box_size"] = _diagnostic_box_value(box_value)
+        diagnostics["candidate_pair_count"] = pair_count
         return NeighborPairs(
             idx=idx,
             dist=dist,
-            mask=mask,
+            mask=active_mask,
             delta=delta_out,
             source=self.source,
             diagnostics=diagnostics,
+            candidate_mask=candidate_mask,
         )
 
 
@@ -379,14 +413,19 @@ def neighbor_pairs_from_rust_hip_tensors(
     device = coords.device
     dtype = coords.dtype
     idx = nb_idx.to(device=device, dtype=torch.long).contiguous()
-    mask = nb_mask.to(device=device).bool().contiguous()
+    candidate_mask = nb_mask.to(device=device).bool().contiguous()
     box_value = _box_tensor(box if box is not None else config.box_size, coords=coords)
     gather_idx = idx.clamp(min=0, max=max(int(coords.shape[1]) - 1, 0))
     expanded = gather_idx.unsqueeze(-1).expand(-1, -1, -1, 3)
     coords_j = torch.gather(coords.unsqueeze(1).expand(-1, coords.shape[1], -1, -1), 2, expanded)
     delta = coords.unsqueeze(2) - coords_j
     delta = _minimum_image(delta, box_value).to(dtype=dtype, device=device)
-    dist = torch.where(mask, delta.norm(dim=-1), torch.zeros_like(mask, dtype=dtype))
+    dist = torch.where(
+        candidate_mask,
+        delta.norm(dim=-1),
+        torch.zeros_like(candidate_mask, dtype=dtype),
+    )
+    mask = candidate_mask & (dist <= float(config.cutoff))
 
     stats = dict(backend_stats or {})
     max_neighbors = int(idx.shape[-1])
@@ -420,6 +459,7 @@ def neighbor_pairs_from_rust_hip_tensors(
             "backend_stats": stats,
             "cap_expanded": bool(cap_expanded),
             "box_size": _diagnostic_box_value(box_value),
+            "candidate_pair_count": int(candidate_mask.sum().detach().cpu().item()),
         }
     )
     return NeighborPairs(
@@ -429,6 +469,7 @@ def neighbor_pairs_from_rust_hip_tensors(
         delta=delta,
         source="rust_hip_cell_list",
         diagnostics=diagnostics,
+        candidate_mask=candidate_mask,
     )
 
 
@@ -451,7 +492,7 @@ class RustHipNeighborProvider:
             if int(step) - int(self._cached_step) >= int(self.config.rebuild_stride):
                 return True
         if float(self.config.skin) <= 0.0:
-            return False
+            return True
         if coords.shape != self._cached_coords.shape:
             return True
         displacement = (coords.detach() - self._cached_coords.to(device=coords.device, dtype=coords.dtype)).norm(dim=-1)
@@ -514,16 +555,18 @@ class RustHipNeighborProvider:
             raise ValueError("coords must have shape [B, N, 3]")
         if not self.needs_rebuild(coords, step=step):
             assert self._cached_pairs is not None
-            diagnostics = dict(self._cached_pairs.diagnostics)
+            refreshed = refresh_neighbor_geometry(coords, self._cached_pairs)
+            diagnostics = dict(refreshed.diagnostics)
             diagnostics["rebuilt"] = False
             diagnostics["rebuild_reason"] = "cached"
             return NeighborPairs(
-                idx=self._cached_pairs.idx,
-                dist=self._cached_pairs.dist,
-                mask=self._cached_pairs.mask,
-                delta=self._cached_pairs.delta,
-                source=self._cached_pairs.source,
+                idx=refreshed.idx,
+                dist=refreshed.dist,
+                mask=refreshed.mask,
+                delta=refreshed.delta,
+                source=refreshed.source,
                 diagnostics=diagnostics,
+                candidate_mask=refreshed.candidate_mask,
             )
         if not coords.is_cuda:
             pairs = self._blocked_pairs(

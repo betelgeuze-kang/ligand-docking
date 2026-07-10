@@ -16,16 +16,16 @@ class SimulationRequest(BaseModel):
             "(ligand HTVS or backmapping scoring)."
         ),
     )
-    target_name: str  # e.g., "Chignolin"
+    target_name: str = Field(..., min_length=1, max_length=240)
     runner_profile_params: dict[str, Any] = Field(
         default_factory=dict,
         description="Metadata only; profile controls runner arguments.",
     )
-    pdb_id: Optional[str] = None  # Deprecated for generic MD; retained for profile metadata only
-    pdb_content: Optional[str] = None
-    steps: int = 1000
-    ai_model_path: Optional[str] = None
-    output_format: str = "pdb"
+    pdb_id: Optional[str] = Field(default=None, max_length=32)
+    pdb_content: Optional[str] = Field(default=None, max_length=10_000_000)
+    steps: int = Field(default=1000, ge=0, le=10_000)
+    ai_model_path: Optional[str] = Field(default=None, max_length=4096)
+    output_format: str = Field(default="pdb", max_length=32)
 
     @model_validator(mode="after")
     def _runner_profile_required(self) -> "SimulationRequest":

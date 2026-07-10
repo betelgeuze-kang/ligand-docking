@@ -424,12 +424,20 @@ class TestHelperFunctions:
 
     def test_screening_uses_canonical_manifest_signing_contract(self):
         assert _LOCAL_MANIFEST_KEY == biodiscovery_manifest.LOCAL_MANIFEST_KEY
-        result = TierBetaScreening(device="cpu", pose_count=2, top_k=1, stability_steps=0).screen(
+        result = TierBetaScreening(
+            device="cpu",
+            pose_count=2,
+            top_k=1,
+            stability_steps=0,
+            manifest_signing_key="unit-test-key",
+            manifest_signing_key_id="unit-test-key-id",
+        ).screen(
             protein_input=MINI_PDB,
             ligand_input=VALID_SMILES,
         )
         assert result.ok is True
-        assert result.result_manifest["signature_key_id"] == "local-tier-beta"
+        assert result.result_manifest["signature_key_id"] == "unit-test-key-id"
+        assert result.result_manifest["signature_trust"] == "operator_key_hmac"
         assert result.result_manifest["claim_metadata"]["claim_safe"] is False
         assert result.result_manifest["claim_boundary"] == biodiscovery_manifest.CLAIM_BOUNDARY
         assert result.result_manifest["blocked_claims"] == biodiscovery_manifest.BLOCKED_CLAIMS

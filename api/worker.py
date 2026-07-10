@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 
 from api.config import settings
-from api.job_store import SQLiteJobStore
+from api.job_store import SQLiteJobStore, validate_job_id
 from api.result_manifest import write_result_manifest
 from api.tasks import run_simulation_async
 from betelgeuze_ai_md.contracts.api_adapter import write_api_evidence_bundle
@@ -51,7 +51,7 @@ def _sync_docking_ledger_if_needed(
 
 
 def job_results_dir(job_id: str) -> str:
-    return os.path.join(settings.results_storage_path, job_id)
+    return os.path.join(settings.results_storage_path, validate_job_id(job_id))
 
 
 def job_status_path(job_id: str) -> str:
