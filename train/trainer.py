@@ -13,7 +13,8 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeRemainingColumn
 from core.config import config, logger
 from core.tracking import ExperimentTracker # MLflow tracking
-from train.runtime_inputs import build_runtime_inputs
+from train.checkpoint_contracts import canonical_model_state_dict
+from train.runtime_inputs import build_runtime_inputs, runtime_input_schema_metadata
 # ... 기타 필요한 imports ...
 
 console = Console()
@@ -75,6 +76,15 @@ class AIRouterTrainer:
             checkpoint_path or f"models/best_airouter_model_{self.model.__class__.__name__}.pth"
         )
         self.train_neighbor_k = int(max(config.get("training.neighbor_k", 10), 1))
+        self.train_neighbor_cutoff = float(config.get("training.neighbor_cutoff_angstrom", 12.0))
+        self.train_max_neighbor_candidates = int(config.get("training.max_neighbor_candidates", 64))
+        self.train_max_atoms_per_cell = int(config.get("training.max_atoms_per_cell", 64))
+        self.runtime_input_schema = runtime_input_schema_metadata(
+            neighbor_k=self.train_neighbor_k,
+            cutoff_angstrom=self.train_neighbor_cutoff,
+            max_neighbor_candidates=self.train_max_neighbor_candidates,
+            max_atoms_per_cell=self.train_max_atoms_per_cell,
+        )
         self.max_grad_norm = float(config.get("training.max_grad_norm", 1.0))
         amp_enabled_cfg = bool(config.get("training.use_amp", True))
         self.use_amp = bool(amp_enabled_cfg and getattr(self.device, "type", "cpu") == "cuda")
@@ -140,6 +150,9 @@ class AIRouterTrainer:
                 residue_types_batch=residue_types_batch,
                 sim_params_batch=sim_params_batch,
                 neighbor_k=self.train_neighbor_k,
+                neighbor_cutoff_angstrom=self.train_neighbor_cutoff,
+                max_neighbor_candidates=self.train_max_neighbor_candidates,
+                max_atoms_per_cell=self.train_max_atoms_per_cell,
             )
 
             autocast_ctx = (
@@ -218,6 +231,9 @@ class AIRouterTrainer:
                     residue_types_batch=residue_types_batch,
                     sim_params_batch=sim_params_batch,
                     neighbor_k=self.train_neighbor_k,
+                    neighbor_cutoff_angstrom=self.train_neighbor_cutoff,
+                    max_neighbor_candidates=self.train_max_neighbor_candidates,
+                    max_atoms_per_cell=self.train_max_atoms_per_cell,
                 )
 
                 autocast_ctx = (
@@ -281,7 +297,17 @@ class AIRouterTrainer:
                 self.best_val_loss = val_loss
                 self.early_stop_counter = 0
                 # Save best model
-                torch.save(self.model.state_dict(), self.checkpoint_path)
+                torch.save(
+                    {
+                        "checkpoint_format": "airouter_runtime_checkpoint/2.1.0",
+                        "state_dict_key_space": "canonical_unwrapped_model",
+                        "state_dict": canonical_model_state_dict(self.model),
+                        "runtime_input_schema": dict(self.runtime_input_schema),
+                        "epoch": int(epoch + 1),
+                        "best_validation_loss": float(val_loss),
+                    },
+                    self.checkpoint_path,
+                )
                 console.print(f"[green]✅ Best model saved at epoch {epoch+1}[/green]")
             else:
                 self.early_stop_counter += 1

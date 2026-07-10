@@ -73,7 +73,22 @@ class NeuralForceCorrection(nn.Module):
             "residue_features",
             torch.zeros(n, self.topo_feature_dim, device=c.device),
         )
-        topo_features_batch = topo_features.unsqueeze(0).expand(b, -1, -1)
+        if topo_features.ndim == 2:
+            topo_features_batch = topo_features.unsqueeze(0).expand(b, -1, -1)
+        elif topo_features.ndim == 3:
+            if topo_features.shape[0] == 1 and b > 1:
+                topo_features_batch = topo_features.expand(b, -1, -1)
+            elif topo_features.shape[0] == b:
+                topo_features_batch = topo_features
+            else:
+                raise ValueError("batched residue_features must match the coordinate batch")
+        else:
+            raise ValueError("residue_features must have shape [N, F] or [B, N, F]")
+        if topo_features_batch.shape[1:] != (n, self.topo_feature_dim):
+            raise ValueError(
+                f"residue_features must have trailing shape [{n}, {self.topo_feature_dim}]"
+            )
+        topo_features_batch = topo_features_batch.to(device=c.device, dtype=c.dtype)
         topo_encoded = self.topo_encoder(topo_features_batch)
 
         param_tensor = torch.tensor(

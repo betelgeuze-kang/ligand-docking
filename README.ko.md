@@ -10,6 +10,7 @@ GitHub에는 소스코드, 설정, 테스트, 문서, 스키마, 납품 템플�
 
 | 영역 | 역할 |
 | --- | --- |
+| `betelgeuze_engine_v2/` | 버전형 all-atom 계약, 제한된 희소 기하, 비어텐션 parity-aware 에너지 AI, torsion/temporal GNN, PINN loss, matrix-free projection을 담는 독립 엔진 경계입니다. |
 | `core/` | 물리 기반 MD 엔진 핵심 로직, integrator, topology, AI residual routing, spatial kernel, GPU/runtime 지원 코드입니다. |
 | `rust_engine/` | Rust/HIP 가속 엔진 스캐폴딩과 native build 표면입니다. 빌드 결과물은 Git에서 제외됩니다. |
 | `tools/` | 게이트, manifest, 납품 bundle, wetlab packet, evidence ledger, benchmark summary, 상용화 readiness를 만드는 CLI 도구입니다. |
@@ -21,6 +22,19 @@ GitHub에는 소스코드, 설정, 테스트, 문서, 스키마, 납품 템플�
 | `train/` | residual model training pipeline entry point입니다. |
 | `api/`, `viewer/`, `deploy/`, `monitoring/` | 로컬 서비스, 시각화, 배포, 운영 모니터링 스캐폴딩입니다. |
 | `requirements*.txt` | runtime, development, API, training, deployment, optional dependency를 나눈 파일입니다. |
+
+## 독립 Engine v2 리팩터링
+
+새 독립 과학 엔진 개발은 `betelgeuze_engine_v2/`에서 시작합니다. 기존
+`core/`와 제품 경로를 v2 결과로 조용히 재명명하지 않습니다. 현재 V2-0
+단계는 실행 가능한 CPU reference architecture와 명시적 adapter까지이며,
+과학 정확도·도킹·힘장·장거리 물리·GPU·상용 제품 주장은 계속 차단됩니다.
+
+설계와 조건부 복잡도 계약은
+[`docs/independent_engine_v2_architecture.md`](docs/independent_engine_v2_architecture.md),
+재사용/교체/보관 결정과 V2-0~V2-7 게이트는
+[`docs/independent_engine_v2_migration_matrix.md`](docs/independent_engine_v2_migration_matrix.md)를
+기준으로 봅니다.
 
 ## GitHub에 올리지 않는 것
 

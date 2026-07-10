@@ -1,0 +1,243 @@
+schema_version: 1
+engine_id: betelgeuze_independent_engine_v2
+implementation_stage: v2_0_scaffold
+generated_for: independent_solver_refactor
+
+independence_policy:
+  customer_runtime_external_solver_allowed: false
+  external_solver_reference_oracle_allowed: true
+  external_reference_result_is_v2_result: false
+  legacy_proxy_import_default_allowed: false
+  legacy_compact_neighbor_adapter_allowed: true
+  internal_cpu_reference_execution_allowed: true
+
+claim_policy:
+  accounting_green_is_scientific_validity: false
+  compile_green_is_scientific_validity: false
+  unit_tests_green_is_benchmark_validity: false
+  strict_end_to_end_o_n_allowed: false
+  gpu_acceleration_claim_allowed: false
+  cpu_rocm_parity_claim_allowed: false
+  independent_ai_accuracy_claim_allowed: false
+  docking_accuracy_claim_allowed: false
+  external_tool_parity_claim_allowed: false
+  protein_structure_analysis_accuracy_claim_allowed: false
+  all_atom_md_claim_allowed: false
+  calibrated_affinity_claim_allowed: false
+  fep_claim_allowed: false
+  protein_structure_prediction_claim_allowed: false
+  wetlab_hit_claim_allowed: false
+  independent_commercial_solver_claim_allowed: false
+  broad_platform_claim_allowed: false
+  customer_execution_enabled: false
+
+complexity_contract:
+  claim_state: conditional_contract_only
+  size_variable: atom_count_n
+  short_range_forward: O(N)
+  short_range_reverse: O(N)
+  temporal_training: O(W*N)_only_for_history_free_truncated_final_or_chunk_loss
+  pme_long_range: O(N log N)
+  fmm_long_range: expected_O(N)_only_at_fixed_error_and_order
+  assumptions:
+    fixed_physical_density: true
+    fixed_cutoff: true
+    maximum_neighbors_independent_of_n: true
+    hard_max_neighbors: 256
+    hard_max_atoms_per_cell: 256
+    neighbor_overflow_fails_closed: true
+    cell_occupancy_overflow_fails_closed: true
+    model_depth_independent_of_n: true
+    hard_max_local_energy_layers: 16
+    channel_width_independent_of_n: true
+    hard_max_local_hidden_width: 512
+    irrep_order_independent_of_n: true
+    projection_rank_independent_of_n: true
+    hard_max_projection_rank: 16
+    temporal_window_independent_of_n: true
+    docking_candidate_budget_independent_of_n: true
+    refinement_steps_independent_of_n: true
+    dense_n_by_n_projector_forbidden: true
+    dense_all_pairs_product_path_forbidden: true
+    full_attention_product_path_forbidden: true
+    full_hessian_or_jacobian_product_path_forbidden: true
+    global_qr_or_svd_product_path_forbidden: true
+  measured_scaling_evidence_ready: false
+
+geometry_policy:
+  coordinate_group: SE3
+  scalar_energy_proper_rotation_invariant: true
+  force_proper_rotation_equivariant: true
+  atom_permutation_contract_required: true
+  reflection_invariance_required: false
+  parity_aware_features_required: true
+  explicit_stereochemistry_required: true
+  explicit_stereo_fields_present: true
+  stereo_label_vocabulary_enforced: true
+  stereo_parser_coverage_validated: false
+  stereo_validator_enforcement_complete: false
+  distance_only_model_chirality_claim_allowed: false
+
+ai_policy:
+  transformer_allowed: false
+  full_attention_allowed: false
+  sparse_bounded_message_passing_required: true
+  primary_prediction: invariant_residual_energy
+  force_source: exact_energy_gradient
+  direct_force_head_conservative_claim_allowed: false
+  torsion_topology_gnn_is_temporal_gnn: false
+  torsion_descendant_rescan_allowed: false
+  temporal_history_policy: history_free_fixed_window_or_explicit_O_TN_history
+  pinn_role: loss_and_release_gate_only
+  pinn_is_md_solver: false
+
+projection_policy:
+  dense_projector_materialization_allowed: false
+  application: basis_times_solve_gram_times_basis_transpose_vector
+  fixed_or_bounded_local_rank_required: true
+  full_column_rank_required: true
+  rank_deficient_basis_fails_closed: true
+  exact_vector_adjoint_required: true
+  coordinate_dependent_basis_detach_is_exact: false
+  coordinate_dependent_basis_gradient_test_required: true
+
+capabilities:
+  - id: v2_contracts_and_molecular_identity
+    current_state: scaffold
+    scientific_validity_green: false
+    benchmark_validity_green: false
+    execution_enabled: false
+    blockers:
+      - complete_all_atom_parser_and_round_trip_evidence_missing
+      - parameter_and_chemistry_coverage_evidence_missing
+
+  - id: v2_sparse_geometry
+    current_state: scaffold_with_legacy_training_and_evaluator_adapters
+    scientific_validity_green: false
+    benchmark_validity_green: false
+    execution_enabled: false
+    implementation_evidence:
+      - compact_radius_graph_unit_contracts
+      - engine_owned_neighbor_and_cell_hard_caps
+      - legacy_training_b_n_k_output_adapter_without_torch_cdist
+      - runtime_input_schema_checkpoint_guard
+      - fail_closed_full_model_checkpoint_coverage_guard
+      - benchmark_ai_paths_rebuild_schema_2_1_nonperiodic_inputs
+      - sparse_evaluator_lj_and_overlap_metrics
+    blockers:
+      - release_scale_overflow_and_memory_evidence_missing
+      - native_v2_neighbor_provider_not_validated
+
+  - id: v2_non_attention_equivariant_ai
+    current_state: scaffold
+    scientific_validity_green: false
+    benchmark_validity_green: false
+    execution_enabled: false
+    blockers:
+      - periodic_minimum_image_energy_gradient_path_missing
+      - leakage_free_training_and_holdout_evidence_missing
+      - parity_chirality_and_ood_release_evidence_missing
+      - calibrated_uncertainty_evidence_missing
+
+  - id: v2_cpu_reference_orchestrator
+    current_state: fail_closed_internal_scaffold
+    internal_reference_execution_enabled: true
+    scientific_validity_green: false
+    benchmark_validity_green: false
+    execution_enabled: false
+    implementation_evidence:
+      - canonical_molecular_validation_connected
+      - compact_geometry_and_ai_reference_connected
+      - explicit_nonpromotion_blockers_in_result
+    blockers:
+      - periodic_minimum_image_energy_gradient_path_missing
+      - production_checkpoint_missing
+      - scientific_and_public_benchmark_evidence_missing
+      - real_rocm_parity_missing
+      - customer_product_route_not_authorized
+
+  - id: v2_independent_force_field
+    current_state: not_implemented
+    scientific_validity_green: false
+    benchmark_validity_green: false
+    execution_enabled: false
+    blockers:
+      - bonded_and_nonbonded_parameterization_missing
+      - force_energy_reference_validation_missing
+      - applicability_domain_missing
+
+  - id: v2_independent_docking
+    current_state: not_implemented
+    scientific_validity_green: false
+    benchmark_validity_green: false
+    execution_enabled: false
+    blockers:
+      - torsion_aware_global_search_missing
+      - public_pose_validity_and_ranking_rows_missing
+
+  - id: v2_protein_structure_analysis
+    current_state: not_implemented
+    scientific_validity_green: false
+    benchmark_validity_green: false
+    execution_enabled: false
+    blockers:
+      - exact_structure_metric_implementations_missing
+      - pocket_interface_mutation_and_quality_holdout_rows_missing
+      - applicability_domain_and_uncertainty_evidence_missing
+
+  - id: v2_independent_md
+    current_state: not_implemented
+    scientific_validity_green: false
+    benchmark_validity_green: false
+    execution_enabled: false
+    blockers:
+      - pbc_long_range_constraints_and_ensemble_integrators_missing
+      - conservation_and_ensemble_validation_missing
+
+  - id: v2_independent_free_energy
+    current_state: not_implemented
+    scientific_validity_green: false
+    benchmark_validity_green: false
+    execution_enabled: false
+    blockers:
+      - sampled_lambda_ensembles_and_overlap_diagnostics_missing
+      - bar_mbar_cycle_closure_and_holdout_evidence_missing
+
+  - id: v2_rocm_backend
+    current_state: blocked_cpu_reference_first
+    scientific_validity_green: false
+    benchmark_validity_green: false
+    execution_enabled: false
+    blockers:
+      - cpu_reference_not_frozen
+      - real_rocm_energy_force_gradient_parity_missing
+      - real_rocm_scaling_and_soak_evidence_missing
+
+  - id: v2_public_benchmark
+    current_state: blocked
+    scientific_validity_green: false
+    benchmark_validity_green: false
+    execution_enabled: false
+    blockers:
+      - non_empty_row_level_holdouts_missing
+      - dataset_and_result_hashes_missing
+      - commands_seeds_environment_and_confidence_intervals_missing
+
+  - id: v2_commercial_product
+    current_state: blocked
+    scientific_validity_green: false
+    benchmark_validity_green: false
+    execution_enabled: false
+    blockers:
+      - independent_scientific_capability_gates_not_passed
+      - product_recovery_security_installation_and_customer_shadow_evidence_missing
+
+promotion_requirements:
+  require_non_empty_row_level_evidence: true
+  require_input_and_result_sha256: true
+  require_command_seed_commit_and_environment: true
+  require_failure_rows: true
+  require_predeclared_thresholds: true
+  require_uncertainty_and_confidence_intervals: true
+  require_human_release_acceptance: true
+  external_state_mutated: false

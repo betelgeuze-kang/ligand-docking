@@ -16,6 +16,14 @@ from theory.strategy import StrategicOrchestrator
 from train.data_sources import build_sampling_weights, build_split_dataset
 from train.trainer import AIRouterTrainer
 from train.evaluator import evaluate_model
+from train.checkpoint_contracts import (
+    load_state_dict_fail_closed,
+    resolve_checkpoint_state_dict,
+)
+from train.runtime_inputs import (
+    current_runtime_input_schema_metadata,
+    require_runtime_input_checkpoint_schema,
+)
 from train.target_scheduler import resolve_targets
 
 try:
@@ -31,6 +39,15 @@ def _bool_from_env(name: str, default: bool) -> bool:
     if raw in ("0", "false", "no", "off"):
         return False
     return bool(default)
+
+
+def _utc_now_iso() -> str:
+    return (
+        dt.datetime.now(dt.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _int_from_env(name: str, default: int) -> int:
@@ -135,41 +152,25 @@ def _load_checkpoint_if_requested(model: nn.Module, checkpoint_path: str, strict
     if not os.path.exists(path):
         raise FileNotFoundError(f"checkpoint not found: {path}")
     payload = torch.load(path, map_location=config.DEVICE)
-    state_dict = payload
-    if isinstance(payload, dict) and not all(torch.is_tensor(v) for v in payload.values()):
-        for key in ("state_dict", "model_state_dict", "model", "weights"):
-            candidate = payload.get(key)
-            if isinstance(candidate, dict):
-                state_dict = candidate
-                break
-    if bool(strict):
-        load_ret = model.load_state_dict(state_dict, strict=True)
-        skipped_shape_mismatch = []
-    else:
-        # In non-strict mode, skip keys whose tensor shape no longer matches
-        # the current model (common during router architecture evolution).
-        model_state = model.state_dict()
-        filtered_state = {}
-        skipped_shape_mismatch = []
-        for key, value in state_dict.items():
-            if key not in model_state:
-                continue
-            ref_val = model_state[key]
-            if torch.is_tensor(value) and torch.is_tensor(ref_val):
-                if tuple(value.shape) != tuple(ref_val.shape):
-                    skipped_shape_mismatch.append(str(key))
-                    continue
-            filtered_state[key] = value
-        load_ret = model.load_state_dict(filtered_state, strict=False)
+    expected_runtime_schema = current_runtime_input_schema_metadata()
+    runtime_schema = require_runtime_input_checkpoint_schema(
+        payload,
+        expected=expected_runtime_schema,
+    )
+    state_dict, state_source = resolve_checkpoint_state_dict(payload)
+    load_info = load_state_dict_fail_closed(
+        model,
+        state_dict,
+        strict=bool(strict),
+        allow_partial=False,
+    )
     return {
         "requested": True,
         "loaded": True,
         "path": os.path.abspath(path),
-        "strict": bool(strict),
-        "missing_keys_count": int(len(getattr(load_ret, "missing_keys", []))),
-        "unexpected_keys_count": int(len(getattr(load_ret, "unexpected_keys", []))),
-        "skipped_shape_mismatch_count": int(len(skipped_shape_mismatch)),
-        "skipped_shape_mismatch_keys": skipped_shape_mismatch[:64],
+        "state_source": state_source,
+        **load_info,
+        "runtime_input_schema": dict(runtime_schema),
     }
 
 
@@ -654,7 +655,7 @@ def run_training_pipeline(
                 carry_ckpt = best_ckpt
 
         payload = {
-            "generated_at": dt.datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+            "generated_at": _utc_now_iso(),
             "target_mode": "all",
             "schedule": str(schedule),
             "seed": int(seed),
@@ -710,7 +711,7 @@ def run_training_pipeline(
     )
 
     payload = {
-        "generated_at": dt.datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+        "generated_at": _utc_now_iso(),
         "target_mode": "single",
         "target": target,
         "schedule": schedule,
@@ -824,7 +825,7 @@ if __name__ == "__main__":
         '--checkpoint_strict',
         action=argparse.BooleanOptionalAction,
         default=False,
-        help='Strict flag for model.load_state_dict when using --initial_checkpoint.',
+        help='Require exact state_dict keys; non-strict still requires full current-model coverage and only permits extra checkpoint keys.',
     )
     parser.add_argument(
         '--carry_over_checkpoint',

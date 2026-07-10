@@ -11,6 +11,14 @@ import torch
 
 from core.definitions import Config, ResearchConstants
 from theory.strategy import StrategicOrchestrator, _AIRouterTensorWrapper
+from train.checkpoint_contracts import (
+    load_state_dict_fail_closed,
+    resolve_checkpoint_state_dict,
+)
+from train.runtime_inputs import (
+    current_runtime_input_schema_metadata,
+    require_runtime_input_checkpoint_schema,
+)
 
 
 def _load_checkpoint_if_any(model: torch.nn.Module, checkpoint_path: str, strict: bool) -> Dict[str, Any]:
@@ -18,23 +26,23 @@ def _load_checkpoint_if_any(model: torch.nn.Module, checkpoint_path: str, strict
     if not path:
         return {"loaded": False, "path": None, "state_source": None}
     payload = torch.load(path, map_location="cpu")
-    state = payload
-    source = "root"
-    if isinstance(payload, dict):
-        for key in ("state_dict", "model_state_dict", "airouter_state_dict"):
-            if key in payload and isinstance(payload[key], dict):
-                state = payload[key]
-                source = key
-                break
-    if not isinstance(state, dict):
-        raise TypeError(f"checkpoint at {path} does not contain a state_dict-like payload")
-    missing, unexpected = model.load_state_dict(state, strict=bool(strict))
+    runtime_schema = require_runtime_input_checkpoint_schema(
+        payload,
+        expected=current_runtime_input_schema_metadata(),
+    )
+    state, source = resolve_checkpoint_state_dict(payload)
+    load_info = load_state_dict_fail_closed(
+        model,
+        state,
+        strict=bool(strict),
+        allow_partial=False,
+    )
     return {
         "loaded": True,
         "path": os.path.abspath(path),
         "state_source": source,
-        "missing_keys_count": int(len(missing)),
-        "unexpected_keys_count": int(len(unexpected)),
+        **load_info,
+        "runtime_input_schema": dict(runtime_schema),
     }
 
 
@@ -114,6 +122,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--ai-router-checkpoint-strict",
         action=argparse.BooleanOptionalAction,
         default=False,
+        help="Require exact keys; non-strict still requires full current-model coverage.",
     )
     p.add_argument(
         "--out-onnx",

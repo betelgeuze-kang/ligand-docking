@@ -3,9 +3,12 @@
 import torch
 import numpy as np
 from contextlib import nullcontext
-from torch.utils.data import DataLoader
-from train.dataset import AIRouterHDF5Dataset
-from train.runtime_inputs import build_runtime_inputs
+from betelgeuze_engine_v2.geometry import (
+    NeighborOverflowError,
+    RadiusGraphConfig,
+    build_compact_radius_graph,
+)
+from train.runtime_inputs import build_runtime_inputs, current_runtime_input_schema_metadata
 
 
 def _unpack_batch(batch):
@@ -23,21 +26,85 @@ def _unpack_batch(batch):
     raise ValueError(f"Unsupported batch size: {len(batch)}")
 
 
-def _pairwise_lj_energy(coords: torch.Tensor, sigma: float = 3.8, eps: float = 25.0, cutoff: float = 12.0) -> torch.Tensor:
+def _pairwise_lj_energy(
+    coords: torch.Tensor,
+    sigma: float = 3.8,
+    eps: float = 25.0,
+    cutoff: float = 12.0,
+) -> torch.Tensor:
+    """Reference local LJ metric evaluated on compact, unique sparse pairs."""
+
     bsz, n_atoms, _ = coords.shape
     if n_atoms <= 1:
         return torch.zeros((bsz,), device=coords.device, dtype=coords.dtype)
-    dmat = torch.cdist(coords, coords)
-    eye = torch.eye(n_atoms, device=coords.device, dtype=torch.bool).unsqueeze(0)
-    dmat = dmat.masked_fill(eye, float("inf"))
-    mask = dmat < float(cutoff)
-    r = dmat.clamp_min(2.0)
+    finite_samples = torch.isfinite(coords).all(dim=-1).all(dim=-1)
+    if not bool(finite_samples.all().item()):
+        energy = torch.full((bsz,), float("inf"), device=coords.device, dtype=coords.dtype)
+        if bool(finite_samples.any().item()):
+            energy[finite_samples] = _pairwise_lj_energy(
+                coords[finite_samples],
+                sigma=sigma,
+                eps=eps,
+                cutoff=cutoff,
+            )
+        return energy
+    try:
+        neighbors = build_compact_radius_graph(
+            coords,
+            RadiusGraphConfig(
+                cutoff_angstrom=float(cutoff),
+                max_neighbors=128,
+                max_atoms_per_cell=128,
+            ),
+        )
+    except NeighborOverflowError:
+        return torch.full((bsz,), float("inf"), device=coords.device, dtype=coords.dtype)
+    upper_mask = neighbors.upper_mask()
+    if not bool(upper_mask.any().item()):
+        return torch.zeros((bsz,), device=coords.device, dtype=coords.dtype)
+    batch_indices = torch.nonzero(upper_mask, as_tuple=True)[0]
+    r = neighbors.distances[upper_mask].clamp_min(2.0)
     inv = float(sigma) / r
     inv6 = inv.pow(6)
     inv12 = inv6.pow(2)
     e_pair = 4.0 * float(eps) * (inv12 - inv6)
-    e_pair = torch.where(mask, e_pair, torch.zeros_like(e_pair))
-    return 0.5 * e_pair.sum(dim=(-1, -2))
+    energy = torch.zeros((bsz,), device=coords.device, dtype=coords.dtype)
+    return energy.index_add(0, batch_indices, e_pair)
+
+
+def _sparse_overlap_flags(
+    coords: torch.Tensor,
+    *,
+    threshold: float = 1.2,
+) -> torch.Tensor:
+    """Return one fail-closed overlap flag per sample without N-by-N storage."""
+
+    batch_size, atom_count, _ = coords.shape
+    finite_samples = torch.isfinite(coords).all(dim=-1).all(dim=-1)
+    flags = ~finite_samples
+    if atom_count <= 1:
+        return flags
+    valid_indices = torch.nonzero(finite_samples, as_tuple=True)[0]
+    if valid_indices.numel() == 0:
+        return flags
+    try:
+        neighbors = build_compact_radius_graph(
+            coords[valid_indices],
+            RadiusGraphConfig(
+                cutoff_angstrom=float(threshold),
+                max_neighbors=64,
+                max_atoms_per_cell=64,
+            ),
+        )
+    except NeighborOverflowError:
+        # An overcrowded short-range cell is itself an invalid geometry for
+        # this metric, so capacity overflow cannot accidentally pass the gate.
+        flags[valid_indices] = True
+        return flags
+    edge_batches = torch.nonzero(neighbors.upper_mask(), as_tuple=True)[0]
+    if edge_batches.numel():
+        flags[valid_indices[edge_batches.unique()]] = True
+    return flags
 
 
 def evaluate_model(model, test_loader, device, metrics=['rmse', 'mae']):
@@ -57,6 +124,7 @@ def evaluate_model(model, test_loader, device, metrics=['rmse', 'mae']):
     all_coords = []
     use_amp = bool(getattr(device, "type", "cpu") == "cuda")
     amp_dtype = torch.bfloat16
+    runtime_schema = current_runtime_input_schema_metadata()
 
     with torch.inference_mode():
         for batch_idx, batch in enumerate(test_loader):
@@ -74,7 +142,10 @@ def evaluate_model(model, test_loader, device, metrics=['rmse', 'mae']):
                 coords_batch=coords_batch,
                 residue_types_batch=residue_types_batch,
                 sim_params_batch=sim_params_batch,
-                neighbor_k=10,
+                neighbor_k=int(runtime_schema["neighbor_k"]),
+                neighbor_cutoff_angstrom=float(runtime_schema["cutoff_angstrom"]),
+                max_neighbor_candidates=int(runtime_schema["max_neighbor_candidates"]),
+                max_atoms_per_cell=int(runtime_schema["max_atoms_per_cell"]),
             )
 
             autocast_ctx = (
@@ -126,7 +197,12 @@ def evaluate_model(model, test_loader, device, metrics=['rmse', 'mae']):
             c_next_target = coords_t + target_t * dt
             e_pred = _pairwise_lj_energy(c_next_pred)
             e_target = _pairwise_lj_energy(c_next_target)
-            drift_ratio = (e_pred - e_target).abs() / e_target.abs().clamp_min(1e-6)
+            finite_energy = torch.isfinite(e_pred) & torch.isfinite(e_target)
+            drift_ratio = torch.full_like(e_pred, float("inf"))
+            drift_ratio[finite_energy] = (
+                (e_pred[finite_energy] - e_target[finite_energy]).abs()
+                / e_target[finite_energy].abs().clamp_min(1e-6)
+            )
             results['energy_drift'] = float(drift_ratio.mean().item())
         elif metric == 'violation_rate':
             coords_t = torch.from_numpy(np.asarray(coords_array, dtype=np.float32)).to(device)
@@ -140,15 +216,7 @@ def evaluate_model(model, test_loader, device, metrics=['rmse', 'mae']):
             force_ratio = force_norm_pred / force_norm_target.clamp_min(1e-6)
             huge_force = force_ratio > 3.0
 
-            n_atoms = c_next_pred.shape[1]
-            if n_atoms > 1:
-                dmat = torch.cdist(c_next_pred, c_next_pred)
-                eye = torch.eye(n_atoms, device=device, dtype=torch.bool).unsqueeze(0)
-                dmat = dmat.masked_fill(eye, float("inf"))
-                min_dist = dmat.min(dim=-1).values.min(dim=-1).values
-                overlap = min_dist < 1.2
-            else:
-                overlap = torch.zeros_like(huge_force, dtype=torch.bool)
+            overlap = _sparse_overlap_flags(c_next_pred, threshold=1.2)
             nonfinite = ~torch.isfinite(pred_t).all(dim=-1).all(dim=-1)
             violation = nonfinite | huge_force | overlap
             results['violation_rate'] = float(violation.float().mean().item())

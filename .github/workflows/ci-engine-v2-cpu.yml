@@ -1,0 +1,127 @@
+name: ci-engine-v2-cpu
+
+on:
+  push:
+    paths:
+      - "betelgeuze_engine_v2/**"
+      - "core/ai_correction.py"
+      - "train/runtime_inputs.py"
+      - "train/checkpoint_contracts.py"
+      - "train/evaluator.py"
+      - "train/trainer.py"
+      - "train/train_pipeline.py"
+      - "benchmark/performance_bench.py"
+      - "tools/export_ai_router_onnx.py"
+      - "tests/unit/test_engine_v2_*.py"
+      - "tests/unit/test_runtime_inputs.py"
+      - "tests/unit/test_evaluator_metrics.py"
+      - "tests/unit/test_performance_bench_checkpoint.py"
+      - "tests/unit/test_checkpoint_consumers.py"
+      - "docs/independent_engine_v2_architecture.md"
+      - "docs/independent_engine_v2_migration_matrix.md"
+      - "config/independent_engine_v2_capabilities.yaml"
+      - "config/settings.yaml"
+      - "pyproject.toml"
+      - "requirements-package.txt"
+      - ".github/workflows/ci-engine-v2-cpu.yml"
+  pull_request:
+    paths:
+      - "betelgeuze_engine_v2/**"
+      - "core/ai_correction.py"
+      - "train/runtime_inputs.py"
+      - "train/checkpoint_contracts.py"
+      - "train/evaluator.py"
+      - "train/trainer.py"
+      - "train/train_pipeline.py"
+      - "benchmark/performance_bench.py"
+      - "tools/export_ai_router_onnx.py"
+      - "tests/unit/test_engine_v2_*.py"
+      - "tests/unit/test_runtime_inputs.py"
+      - "tests/unit/test_evaluator_metrics.py"
+      - "tests/unit/test_performance_bench_checkpoint.py"
+      - "tests/unit/test_checkpoint_consumers.py"
+      - "docs/independent_engine_v2_architecture.md"
+      - "docs/independent_engine_v2_migration_matrix.md"
+      - "config/independent_engine_v2_capabilities.yaml"
+      - "config/settings.yaml"
+      - "pyproject.toml"
+      - "requirements-package.txt"
+      - ".github/workflows/ci-engine-v2-cpu.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-cpu-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused-cpu-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+      BETELGEUZE_ENGINE_V2_DEVICE: cpu
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install focused CPU dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest==8.3.5 PyYAML==6.0.3 numpy==1.26.4 pandas==2.3.3 h5py==3.11.0 psutil==7.2.1 rich==14.3.1 "build>=1.2,<2"
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Validate capability contract
+        run: |
+          python -c "import pathlib, yaml; p=pathlib.Path('config/independent_engine_v2_capabilities.yaml'); d=yaml.safe_load(p.read_text()); assert d['schema_version'] == 1; assert d['claim_policy']['customer_execution_enabled'] is False; assert d['claim_policy']['gpu_acceleration_claim_allowed'] is False; assert d['claim_policy']['docking_accuracy_claim_allowed'] is False; assert d['complexity_contract']['claim_state'] == 'conditional_contract_only'"
+
+      - name: Compile Engine v2 modules and sparse legacy adapters
+        run: |
+          python -m compileall -q \
+            betelgeuze_engine_v2 \
+            core/ai_correction.py \
+            train/checkpoint_contracts.py \
+            train/runtime_inputs.py \
+            train/evaluator.py \
+            train/trainer.py \
+            train/train_pipeline.py \
+            benchmark/performance_bench.py \
+            tools/export_ai_router_onnx.py
+
+      - name: Run focused Engine v2 CPU tests
+        run: |
+          python -m pytest -q \
+            tests/unit/test_engine_v2_molecular_geometry.py \
+            tests/unit/test_engine_v2_ai_core.py \
+            tests/unit/test_engine_v2_orchestrator.py \
+            tests/unit/test_runtime_inputs.py \
+            tests/unit/test_evaluator_metrics.py \
+            tests/unit/test_performance_bench_checkpoint.py \
+            tests/unit/test_checkpoint_consumers.py
+
+      - name: Build and import wheel in an isolated environment
+        run: |
+          python -m build --wheel
+          python -m venv --system-site-packages /tmp/engine-v2-wheel-venv
+          /tmp/engine-v2-wheel-venv/bin/python -m pip install --no-deps dist/*.whl
+          cd /tmp
+          /tmp/engine-v2-wheel-venv/bin/python -c "import importlib.metadata as m; import betelgeuze_engine_v2 as v2; assert v2.__version__ == '2.0.0'; assert any(r.lower().startswith('torch') for r in (m.requires('betelgeuze-md-product') or []))"
+
+      - name: Record non-promotion boundary
+        run: |
+          echo "Engine v2 CPU compilation and unit tests are implementation evidence only."
+          echo "GPU, benchmark, scientific-validity, and product claims remain blocked."

@@ -10,6 +10,7 @@ The GitHub repository is intended to contain source code, configuration, tests, 
 
 | Area | Purpose |
 | --- | --- |
+| `betelgeuze_engine_v2/` | Clean independent-engine boundary: versioned all-atom contracts, bounded sparse geometry, non-attention parity-aware energy AI, torsion/temporal GNN primitives, PINN losses, and matrix-free projections. |
 | `core/` | Physics-first MD engine primitives, integrator logic, topology helpers, AI residual routing, spatial kernels, and GPU/runtime support. |
 | `rust_engine/` | Rust/HIP acceleration scaffolding and native build surface. Build outputs are ignored. |
 | `tools/` | Operational command-line tools for gates, manifests, delivery bundles, wetlab packets, evidence ledgers, benchmark summaries, and commercialization checks. |
@@ -21,6 +22,19 @@ The GitHub repository is intended to contain source code, configuration, tests, 
 | `train/` | Residual model training pipeline entry points. |
 | `api/`, `viewer/`, `deploy/`, `monitoring/` | Local service, visualization, deployment, and operational scaffolding. |
 | `requirements*.txt` | Split dependency surfaces for runtime, development, API, training, deployment, and optional extras. |
+
+## Independent Engine v2 Refactor
+
+New independent scientific work starts in `betelgeuze_engine_v2/`; the legacy
+`core/` and product routes are not silently relabelled as v2. The current V2-0
+slice provides an executable CPU reference architecture and explicit adapters,
+while scientific accuracy, docking, force-field, long-range physics, GPU, and
+commercial-product claims remain blocked.
+
+Read [`docs/independent_engine_v2_architecture.md`](docs/independent_engine_v2_architecture.md)
+for the design and conditional complexity contract, and
+[`docs/independent_engine_v2_migration_matrix.md`](docs/independent_engine_v2_migration_matrix.md)
+for the reuse/replace/archive decisions and V2-0 through V2-7 gates.
 
 ## What Is Intentionally Not Tracked
 

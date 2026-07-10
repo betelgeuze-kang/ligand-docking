@@ -20,6 +20,15 @@ import psutil # For CPU monitoring
 import os
 
 from core.gpu_metrics import sample_gpu_metrics as _sample_gpu_metrics
+from train.checkpoint_contracts import (
+    load_state_dict_fail_closed,
+    resolve_checkpoint_state_dict,
+)
+from train.runtime_inputs import (
+    build_runtime_inputs,
+    current_runtime_input_schema_metadata,
+    require_runtime_input_checkpoint_schema,
+)
 
 def _sync_if_cuda():
     if torch.cuda.is_available():
@@ -166,16 +175,8 @@ def _build_ai_graph_runner(
 
 
 def _resolve_checkpoint_state_dict(payload: Any) -> Tuple[Dict[str, torch.Tensor], str]:
-    if isinstance(payload, dict):
-        for key in ("state_dict", "model_state_dict", "model", "weights"):
-            candidate = payload.get(key)
-            if isinstance(candidate, dict):
-                return candidate, str(key)
-        if payload:
-            has_tensor_value = any(torch.is_tensor(v) for v in payload.values())
-            if has_tensor_value and all(isinstance(k, str) for k in payload.keys()):
-                return payload, "root"
-    raise ValueError("checkpoint payload does not contain a recognizable model state_dict")
+    state, source = resolve_checkpoint_state_dict(payload)
+    return dict(state), source
 
 
 def _normalize_target_key(name: str) -> str:
@@ -260,17 +261,57 @@ def _load_ai_router_checkpoint(
         raise FileNotFoundError(f"ai router checkpoint not found: {path_i}")
 
     payload = torch.load(path_i, map_location=config.DEVICE)
+    runtime_schema = require_runtime_input_checkpoint_schema(
+        payload,
+        expected=current_runtime_input_schema_metadata(),
+    )
     state_dict, state_source = _resolve_checkpoint_state_dict(payload)
-    load_ret = ai_model.load_state_dict(state_dict, strict=bool(strict))
-    missing_keys = list(getattr(load_ret, "missing_keys", []))
-    unexpected_keys = list(getattr(load_ret, "unexpected_keys", []))
+    load_info = load_state_dict_fail_closed(
+        ai_model,
+        state_dict,
+        strict=bool(strict),
+        allow_partial=False,
+    )
     return {
         "path": path_i,
         "loaded": True,
         "state_source": state_source,
-        "missing_keys_count": int(len(missing_keys)),
-        "unexpected_keys_count": int(len(unexpected_keys)),
+        **load_info,
+        "runtime_input_schema": dict(runtime_schema),
     }
+
+
+def _build_checkpoint_compatible_ai_inputs(
+    coordinates: torch.Tensor,
+    topology: Any,
+    sim_params: Mapping[str, object],
+) -> Tuple[Any, Tuple[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor, Dict[str, float]]:
+    """Use exactly the runtime-input schema recorded by current checkpoints."""
+
+    schema = current_runtime_input_schema_metadata()
+    if bool(schema.get("periodic", True)):
+        raise ValueError("legacy AI checkpoint runtime currently supports non-periodic inputs only")
+    resolver = getattr(topology, "residue_types_for_coordinate_count", None)
+    if callable(resolver):
+        residue_types = resolver(int(coordinates.shape[1]))
+    else:
+        residue_types = getattr(topology, "residue_types", None)
+    if not isinstance(residue_types, torch.Tensor) or residue_types.ndim != 1:
+        raise ValueError("benchmark topology cannot provide residue types aligned to coordinates")
+    if int(residue_types.shape[0]) != int(coordinates.shape[1]):
+        raise ValueError("benchmark residue types do not match the coordinate atom count")
+    residue_types_batch = residue_types.to(device=coordinates.device).unsqueeze(0).expand(
+        int(coordinates.shape[0]), -1
+    )
+    return build_runtime_inputs(
+        coordinates,
+        residue_types_batch,
+        sim_params_batch=sim_params,
+        neighbor_k=int(schema["neighbor_k"]),
+        neighbor_cutoff_angstrom=float(schema["cutoff_angstrom"]),
+        max_neighbor_candidates=int(schema["max_neighbor_candidates"]),
+        max_atoms_per_cell=int(schema["max_atoms_per_cell"]),
+    )
 
 
 def _clip_tensor_abs(x: torch.Tensor, clip_value: float) -> Tuple[torch.Tensor, int]:
@@ -701,14 +742,15 @@ def benchmark_simulation(
                     f_ai_corr_warm = None
                     if ai_enabled:
                         if needs_ai_eval:
-                            if nb_warm is None:
-                                nb_warm = sh.get_neighbor_data(c)
+                            ai_top_warm, ai_nb_warm, ai_pe_warm, ai_sim_warm = (
+                                _build_checkpoint_compatible_ai_inputs(c, top, sim_params_batch)
+                            )
                             f_ai_corr_warm, _ = ai_model(
                                 c,
-                                top,
-                                nb_warm,
-                                pe_warm,
-                                sim_params_batch,
+                                ai_top_warm,
+                                ai_nb_warm,
+                                ai_pe_warm,
+                                ai_sim_warm,
                                 collect_aux=ai_collect_aux_i,
                             )
                             f_ai_corr_warm, ai_clip_hits_warm = _clip_tensor_abs_runtime(
@@ -771,15 +813,16 @@ def benchmark_simulation(
         ai_graph_runner = _AIGraphRunner()
         if ai_enabled and ai_use_hip_graph_b:
             try:
-                nb_graph = sh.get_neighbor_data(c)
-                _f_core_graph, pe_graph = ff.compute(c, nb_graph)
+                ai_top_graph, ai_nb_graph, ai_pe_graph, ai_sim_graph = (
+                    _build_checkpoint_compatible_ai_inputs(c, top, sim_params_batch)
+                )
                 ai_graph_runner = _build_ai_graph_runner(
                     ai_model=ai_model,
-                    top=top,
-                    sim_params_batch=sim_params_batch,
+                    top=ai_top_graph,
+                    sim_params_batch=ai_sim_graph,
                     c_example=c,
-                    nb_example=nb_graph,
-                    pe_example=pe_graph,
+                    nb_example=ai_nb_graph,
+                    pe_example=ai_pe_graph,
                     collect_aux=ai_collect_aux_i,
                     warmup_iters=ai_graph_warmup_iters_i,
                 )
@@ -860,11 +903,12 @@ def benchmark_simulation(
                     nb = sh.get_neighbor_data(c) if needs_ai_eval else None
                     f_core, pe = ff.compute(c, nb)
                     if needs_ai_eval:
-                        if nb is None:
-                            nb = sh.get_neighbor_data(c)
+                        ai_top, ai_nb, ai_pe, ai_sim = _build_checkpoint_compatible_ai_inputs(
+                            c, top, sim_params_batch
+                        )
                         f_ai_corr = None
                         if ai_graph_runner.enabled:
-                            f_ai_corr = ai_graph_runner.run(c, nb, pe)
+                            f_ai_corr = ai_graph_runner.run(c, ai_nb, ai_pe)
                             if f_ai_corr is None:
                                 ai_graph_runner.enabled = False
                                 if ai_graph_runner.reason == "ok":
@@ -872,10 +916,10 @@ def benchmark_simulation(
                         if f_ai_corr is None:
                             f_ai_corr, _ = ai_model(
                                 c,
-                                top,
-                                nb,
-                                pe,
-                                sim_params_batch,
+                                ai_top,
+                                ai_nb,
+                                ai_pe,
+                                ai_sim,
                                 collect_aux=False,
                             )
                         if ai_correction_clip_f > 0.0:
@@ -993,12 +1037,13 @@ def benchmark_simulation(
                     f_ai_corr = None
                     if ai_enabled:
                         if needs_ai_eval:
-                            if nb is None:
-                                nb = sh.get_neighbor_data(c)
+                            ai_top, ai_nb, ai_pe, ai_sim = (
+                                _build_checkpoint_compatible_ai_inputs(c, top, sim_params_batch)
+                            )
                             t_ai_infer_start = time.perf_counter()
                             f_ai_corr = None
                             if ai_graph_runner.enabled:
-                                f_ai_corr = ai_graph_runner.run(c, nb, pe)
+                                f_ai_corr = ai_graph_runner.run(c, ai_nb, ai_pe)
                                 if f_ai_corr is None:
                                     ai_graph_runner.enabled = False
                                     if ai_graph_runner.reason == "ok":
@@ -1006,10 +1051,10 @@ def benchmark_simulation(
                             if f_ai_corr is None:
                                 f_ai_corr, _ = ai_model(
                                     c,
-                                    top,
-                                    nb,
-                                    pe,
-                                    sim_params_batch,
+                                    ai_top,
+                                    ai_nb,
+                                    ai_pe,
+                                    ai_sim,
                                     collect_aux=ai_collect_aux_i,
                                 )
                             component_breakdown["ai_infer_sec"] += max(time.perf_counter() - t_ai_infer_start, 0.0)
