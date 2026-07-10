@@ -41,10 +41,17 @@ jobs:
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
       PRODUCT_API_AUTH_REQUIRED: "0"
     steps:
-      - name: Check out source
+      - name: Check out dependency-light source
         uses: actions/checkout@v4
         with:
           show-progress: false
+          sparse-checkout: |
+            api
+            tests
+            tools/check_mobile_lite_environment.py
+            requirements-mobile.txt
+            pytest-mobile.ini
+          sparse-checkout-cone-mode: false
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -87,7 +94,13 @@ jobs:
           PY
 
       - name: Collect mobile tests without heavy scientific runtimes
-        run: python -m pytest -c pytest-mobile.ini --collect-only -q
+        shell: bash
+        run: |
+          set +e
+          python -m pytest -c pytest-mobile.ini --collect-only -q > mobile-collect.log 2>&1
+          status=$?
+          cat mobile-collect.log
+          exit "$status"
 
       - name: Run mobile API, route, security, and optional-runtime contracts
         run: python -m pytest -c pytest-mobile.ini -q
