@@ -99,18 +99,46 @@ Administrator identities may review cross-tenant records and request the bounded
 
 The read/list/cancel/retry authorization path is kept dependency-light. Scientific, chemistry, runner, and structure-analysis imports occur only after an authorized endpoint enters the relevant execution path.
 
-## Remaining SQLite simulation boundary
+## SQLite simulation ownership ledger
 
-The product docking JSON ledger now has route-level object authorization, but the separate SQLite simulation queue used by `/simulate`, `/status/{job_id}`, and `/results/{job_id}` still requires its own persisted tenant-owner column and endpoint checks.
+`api.simulation_job_ownership` adds a separate, durable ownership table in the same SQLite database as the simulation queue:
 
-Until that child slice lands, do not describe the whole API as completely multi-tenant isolated.
+```text
+simulation_job_ownership(
+  job_id PRIMARY KEY,
+  tenant_id,
+  created_at_utc,
+  updated_at_utc
+)
+```
+
+The separate table keeps queue and worker-lease behavior outside this security slice while making ownership explicit and reviewable.
+
+The ownership contract is:
+
+- job identifiers are allowlisted before SQL or filesystem use;
+- a non-administrator can create only for its authenticated tenant;
+- an administrator can explicitly create for another valid tenant;
+- an owner binding is idempotent for the same tenant and immutable across tenants;
+- an existing simulation queue row with no ownership row cannot be claimed later;
+- a queue row with no ownership row is inaccessible;
+- cross-tenant reads return HTTP 404;
+- ownership persists across process/store reopen.
+
+New queue-writing code should call `create_owned_job` or `create_owned_job_if_absent`, and reads should call `get_owned_job`. Calling the raw `SQLiteJobStore.create_job` method remains an internal legacy path and does not create an externally accessible owned job.
+
+## Remaining endpoint integration boundary
+
+The SQLite ownership primitive is implemented and tested, but `/simulate`, `/status/{job_id}`, and `/results/{job_id}` have not yet been rewired to use it in this slice.
+
+Until that integration child PR lands, do not describe the whole API as completely multi-tenant isolated. Existing unowned rows intentionally remain unavailable rather than being assigned to the first caller who knows their identifier.
 
 ## Claim boundary
 
-A green identity and product-job isolation test demonstrates only authentication and authorization for the named product docking ledger routes. It does not demonstrate:
+A green identity, product-job isolation, and SQLite ownership-ledger test demonstrates only the named authentication and authorization primitives. It does not demonstrate:
 
 - complete object authorization across every API route;
-- SQLite simulation status/result tenant isolation;
+- live `/simulate`, `/status`, and `/results` endpoint integration;
 - production secret management or rotation;
 - external identity-provider integration;
 - TLS termination correctness;
