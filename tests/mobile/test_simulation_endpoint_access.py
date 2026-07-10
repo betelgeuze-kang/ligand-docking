@@ -4,7 +4,8 @@ import ast
 from pathlib import Path
 
 import pytest
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.testclient import TestClient
 
 from api.config import settings
 from api.job_store import SQLiteJobStore
@@ -125,6 +126,25 @@ def test_ownership_store_cache_tracks_active_job_store_path(tmp_path: Path) -> N
     assert ownership_b is not ownership_a
 
 
+def test_fastapi_injects_request_when_direct_call_compatibility_default_is_none() -> None:
+    app = FastAPI()
+
+    @app.get("/request-probe")
+    def request_probe(request: Request = None) -> dict[str, object]:
+        return {
+            "request_injected": request is not None,
+            "path": request.url.path if request is not None else "",
+        }
+
+    response = TestClient(app).get("/request-probe")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "request_injected": True,
+        "path": "/request-probe",
+    }
+
+
 def _function_calls(tree: ast.Module, function_name: str) -> set[str]:
     target: ast.AST | None = None
     for node in tree.body:
@@ -158,9 +178,17 @@ def test_live_simulation_routes_are_wired_to_identity_and_ownership_helpers() ->
     assert "job_exists" not in status_calls
     assert "job_exists" not in result_calls
 
-    assert source.index("get_simulation_job_for_identity", source.index("def get_simulation_status")) < source.index(
-        "job_status_path(job_id)", source.index("def get_simulation_status")
+    assert source.index(
+        "get_simulation_job_for_identity",
+        source.index("def get_simulation_status"),
+    ) < source.index(
+        "job_status_path(job_id)",
+        source.index("def get_simulation_status"),
     )
-    assert source.index("get_simulation_job_for_identity", source.index("def get_simulation_results")) < source.index(
-        "job_status_path(job_id)", source.index("def get_simulation_results")
+    assert source.index(
+        "get_simulation_job_for_identity",
+        source.index("def get_simulation_results"),
+    ) < source.index(
+        "job_status_path(job_id)",
+        source.index("def get_simulation_results"),
     )
