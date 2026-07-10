@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     redis_db: int = int(os.getenv("REDIS_DB", 0))
     product_api_auth_required: bool = os.getenv("PRODUCT_API_AUTH_REQUIRED", "0") == "1"
     product_api_token: str = os.getenv("PRODUCT_API_TOKEN", "")
+    product_api_token_tenant_id: str = os.getenv("PRODUCT_API_TOKEN_TENANT_ID", "local")
+    product_api_admin_token: str = os.getenv("PRODUCT_API_ADMIN_TOKEN", "")
     product_api_rate_limit_per_minute: int = int(os.getenv("PRODUCT_API_RATE_LIMIT_PER_MINUTE", "120"))
     product_api_tenant_daily_quota: int = int(os.getenv("PRODUCT_API_TENANT_DAILY_QUOTA", "5000"))
     product_api_max_payload_bytes: int = int(os.getenv("PRODUCT_API_MAX_PAYLOAD_BYTES", "10485760"))
