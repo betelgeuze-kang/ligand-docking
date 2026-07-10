@@ -38,10 +38,13 @@ jobs:
     timeout-minutes: 15
     env:
       PYTHONDONTWRITEBYTECODE: "1"
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
       PRODUCT_API_AUTH_REQUIRED: "0"
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+        with:
+          show-progress: false
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -54,9 +57,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements-mobile.txt
-          python -m pip uninstall -y torch rdkit rdkit-pypi openmm h5py || true
+          python -m pip install --quiet --upgrade pip
+          python -m pip install --quiet -r requirements-mobile.txt
+          python -m pip uninstall -y torch rdkit rdkit-pypi openmm h5py >/dev/null 2>&1 || true
 
       - name: Enforce mobile dependency boundary
         run: python tools/check_mobile_lite_environment.py
@@ -68,6 +71,20 @@ jobs:
             tests/route_compat.py \
             tests/mobile \
             tools/check_mobile_lite_environment.py
+
+      - name: Import dependency-light test modules
+        run: |
+          python - <<'PY'
+          import importlib
+
+          for module_name in (
+              "tests.mobile.test_mobile_api_contracts",
+              "tests.mobile.test_mobile_security_contracts",
+              "tests.mobile.test_optional_runtime_boundaries",
+          ):
+              importlib.import_module(module_name)
+              print(f"imported: {module_name}")
+          PY
 
       - name: Collect mobile tests without heavy scientific runtimes
         run: python -m pytest -c pytest-mobile.ini --collect-only -q
