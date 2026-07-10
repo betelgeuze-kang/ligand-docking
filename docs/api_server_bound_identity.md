@@ -121,25 +121,42 @@ The ownership contract is:
 - an administrator can explicitly create for another valid tenant;
 - an owner binding is idempotent for the same tenant and immutable across tenants;
 - an existing simulation queue row with no ownership row cannot be claimed later;
-- a queue row with no ownership row is inaccessible;
+- authenticated/hosted access to a queue row with no ownership row is blocked;
 - cross-tenant reads return HTTP 404;
 - ownership persists across process/store reopen.
 
-New queue-writing code should call `create_owned_job` or `create_owned_job_if_absent`, and reads should call `get_owned_job`. Calling the raw `SQLiteJobStore.create_job` method remains an internal legacy path and does not create an externally accessible owned job.
+New queue-writing code should call `create_owned_job` or `create_owned_job_if_absent`, and reads should call `get_owned_job`. Calling the raw `SQLiteJobStore.create_job` method remains an internal legacy path and does not create an authenticated externally accessible owned job.
 
-## Remaining endpoint integration boundary
+## Live simulation endpoint integration
 
-The SQLite ownership primitive is implemented and tested, but `/simulate`, `/status/{job_id}`, and `/results/{job_id}` have not yet been rewired to use it in this slice.
+The live simulation routes now use the request identity and ownership adapter:
 
-Until that integration child PR lands, do not describe the whole API as completely multi-tenant isolated. Existing unowned rows intentionally remain unavailable rather than being assigned to the first caller who knows their identifier.
+```text
+POST /simulate
+GET  /status/{job_id}
+GET  /results/{job_id}
+```
+
+`POST /simulate` creates the ownership row and job row before creating status files or scheduling inline worker work. `GET /status/{job_id}` and `GET /results/{job_id}` authorize the SQLite object before reading status, manifest, bundle, or result paths.
+
+Authenticated and hosted requests always require a persisted owner binding. Missing, invalid, and cross-tenant identifiers are concealed as HTTP 404 at the object boundary.
+
+A narrow compatibility rule remains for trusted local development: when both authentication and hosted exposure are disabled, the unauthenticated `local` identity may read a legacy unowned queue row. The row is not silently assigned or mutated. Enabling authentication or hosted exposure immediately disables this compatibility rule.
+
+The worker's internal lease/heartbeat processing remains independent of caller identity after a job has been durably admitted. This slice does not alter runner selection, retry policy, scientific computation, or evidence generation.
+
+## Validation boundary
+
+The mobile CI validates the ownership adapter dynamically and verifies the `api.main` route wiring through AST-based source contracts because the complete application tree intentionally requires heavier product/science dependencies.
+
+The self-hosted `product-api-worker` lane remains the authority for full application import and the existing API job-store/security regression suite.
 
 ## Claim boundary
 
-A green identity, product-job isolation, and SQLite ownership-ledger test demonstrates only the named authentication and authorization primitives. It does not demonstrate:
+A green identity, product-job isolation, SQLite ownership-ledger, and route-wiring test demonstrates authorization for the named product and simulation job surfaces under the configured token model. It does not demonstrate:
 
-- complete object authorization across every API route;
-- live `/simulate`, `/status`, and `/results` endpoint integration;
-- production secret management or rotation;
-- external identity-provider integration;
+- authorization correctness for every future or unreviewed API route;
+- production secret management or automatic token rotation;
+- external identity-provider, per-user RBAC, or federated tenancy integration;
 - TLS termination correctness;
-- docking, scientific, GPU, benchmark, wetlab, paid-pilot, or commercial readiness.
+- docking accuracy, scientific validity, GPU parity, benchmark performance, wetlab evidence, paid-pilot readiness, or commercial readiness.
