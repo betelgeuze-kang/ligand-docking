@@ -101,16 +101,16 @@ jobs:
           PY
 
       - name: Collect mobile tests without heavy scientific runtimes
-        shell: bash
-        run: |
-          set +e
-          python -m pytest -c pytest-mobile.ini --collect-only -q > mobile-collect.log 2>&1
-          status=$?
-          cat mobile-collect.log
-          exit "$status"
+        run: python -m pytest -c pytest-mobile.ini --collect-only -q
 
-      - name: Run mobile API, route, security, and optional-runtime contracts
-        run: python -m pytest -c pytest-mobile.ini -q
+      - name: Run mobile API and route contracts
+        run: python -m pytest -c pytest-mobile.ini -q tests/mobile/test_mobile_api_contracts.py
+
+      - name: Run mobile security and SQLite privacy contracts
+        run: python -m pytest -c pytest-mobile.ini -q tests/mobile/test_mobile_security_contracts.py
+
+      - name: Run explicit optional-runtime skip probes
+        run: python -m pytest -c pytest-mobile.ini -q tests/mobile/test_optional_runtime_boundaries.py
 
       - name: Run established core security regression slice
         run: |
