@@ -55,7 +55,7 @@ The administrator token produces:
 }
 ```
 
-The middleware stores the resulting immutable identity on `request.state.product_identity`. Endpoint code should read it through `api.request_identity.request_identity` rather than trusting request headers directly.
+The middleware stores the resulting immutable identity on `request.state.product_identity`. Endpoint code reads it through `api.request_identity.request_identity` rather than trusting request headers directly.
 
 ## Local development
 
@@ -73,26 +73,45 @@ The allowlist requires a real path segment. For example:
 
 `/metrics` retains its existing unauthenticated monitoring exception. It receives a non-privileged local metrics identity and must remain secret-free.
 
-## Object authorization boundary
+## Product docking object authorization
 
-This slice establishes authentication identity primitives only. It does not, by itself, prove object-level tenant isolation for every job/result endpoint.
+The product docking ledger routes enforce the stored record's `customer_id`:
 
-Endpoints that load tenant-owned objects must additionally call:
-
-```python
-require_tenant_match(identity, owner_tenant_id, resource="job")
+```text
+GET  /product/docking/jobs
+GET  /product/docking/jobs/{job_id}
+GET  /product/docking/jobs/{job_id}/history
+POST /product/docking/jobs/{job_id}/cancel
+POST /product/docking/jobs/{job_id}/retry
 ```
 
-Cross-tenant access is reported as HTTP 404 to avoid confirming that another tenant's object exists. Administrator identities may bypass this ownership check for explicitly privileged operations.
+For non-administrator identities:
 
-The next child slice should bind tenant ownership into the SQLite job record and the product docking job endpoints, then add cross-tenant read/list/cancel/retry regression tests.
+- list filters are overwritten with the authenticated tenant;
+- cross-tenant reads and mutations return HTTP 404;
+- malformed job identifiers return HTTP 404 before a filesystem path is built;
+- `debug=true` is rejected;
+- cancel/retry event actors are derived from the authenticated principal, not a caller-provided `actor` field.
+
+On submission, a non-administrator cannot select a different `customer_id`. An omitted customer is filled from the server-derived identity. A privileged administrator may submit for an explicitly supplied valid customer.
+
+Administrator identities may review cross-tenant records and request the bounded diagnostics envelope. This does not grant permission to bypass scientific or release gates.
+
+The read/list/cancel/retry authorization path is kept dependency-light. Scientific, chemistry, runner, and structure-analysis imports occur only after an authorized endpoint enters the relevant execution path.
+
+## Remaining SQLite simulation boundary
+
+The product docking JSON ledger now has route-level object authorization, but the separate SQLite simulation queue used by `/simulate`, `/status/{job_id}`, and `/results/{job_id}` still requires its own persisted tenant-owner column and endpoint checks.
+
+Until that child slice lands, do not describe the whole API as completely multi-tenant isolated.
 
 ## Claim boundary
 
-A green identity test demonstrates only authentication and request-identity behavior. It does not demonstrate:
+A green identity and product-job isolation test demonstrates only authentication and authorization for the named product docking ledger routes. It does not demonstrate:
 
-- complete object authorization across all routes;
+- complete object authorization across every API route;
+- SQLite simulation status/result tenant isolation;
 - production secret management or rotation;
 - external identity-provider integration;
 - TLS termination correctness;
-- docking, scientific, GPU, benchmark, or commercial readiness.
+- docking, scientific, GPU, benchmark, wetlab, paid-pilot, or commercial readiness.
