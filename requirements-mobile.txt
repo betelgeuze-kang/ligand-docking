@@ -1,0 +1,13 @@
+# Mobile/CPU-light development profile.
+#
+# This profile is intentionally limited to API schemas, read-only route imports,
+# SQLite/security contracts, and source-level checks. It must not install or
+# imply validation of Torch, RDKit, OpenMM, h5py, CUDA, ROCm, or HIP execution.
+PyYAML==6.0.3
+pydantic==2.12.5
+fastapi==0.139.0
+starlette==1.3.1
+pydantic-settings==2.14.2
+prometheus-client==0.25.0
+httpx2==2.5.0
+pytest==9.1.1
