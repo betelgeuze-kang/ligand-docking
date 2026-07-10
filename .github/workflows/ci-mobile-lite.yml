@@ -47,7 +47,13 @@ jobs:
           show-progress: false
           sparse-checkout: |
             api
-            tests
+            betelgeuze_product/__init__.py
+            betelgeuze_product/payload_privacy.py
+            tests/__init__.py
+            tests/route_compat.py
+            tests/mobile
+            tests/unit/test_api_security_middleware.py
+            tests/unit/test_api_job_store.py
             tools/check_mobile_lite_environment.py
             requirements-mobile.txt
             pytest-mobile.ini
@@ -75,6 +81,7 @@ jobs:
         run: |
           python -m compileall -q \
             api \
+            betelgeuze_product/payload_privacy.py \
             tests/route_compat.py \
             tests/mobile \
             tools/check_mobile_lite_environment.py
