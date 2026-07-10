@@ -94,7 +94,11 @@ def get_simulation_job_for_identity(
     assigning legacy rows and keeps production fail-closed.
     """
 
-    normalized_job_id = validate_simulation_job_id(job_id)
+    try:
+        normalized_job_id = validate_simulation_job_id(job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=f"{resource} not found") from exc
+
     record = job_store.get_job(normalized_job_id)
     if record is None:
         raise HTTPException(status_code=404, detail=f"{resource} not found")
