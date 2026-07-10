@@ -8,6 +8,7 @@ on:
       - "pytest-mobile.ini"
       - "api/**"
       - "betelgeuze_product/tier_beta_vertical_slice.py"
+      - "core/claim_boundary.py"
       - "tests/mobile/**"
       - "tests/route_compat.py"
       - "tools/check_mobile_lite_environment.py"
@@ -21,6 +22,7 @@ on:
       - "pytest-mobile.ini"
       - "api/**"
       - "betelgeuze_product/tier_beta_vertical_slice.py"
+      - "core/claim_boundary.py"
       - "tests/mobile/**"
       - "tests/route_compat.py"
       - "tools/check_mobile_lite_environment.py"
@@ -52,6 +54,8 @@ jobs:
             betelgeuze_product/__init__.py
             betelgeuze_product/payload_privacy.py
             betelgeuze_product/tier_beta_vertical_slice.py
+            core/__init__.py
+            core/claim_boundary.py
             tests/__init__.py
             tests/route_compat.py
             tests/mobile
@@ -86,6 +90,7 @@ jobs:
             api \
             betelgeuze_product/payload_privacy.py \
             betelgeuze_product/tier_beta_vertical_slice.py \
+            core/claim_boundary.py \
             tests/route_compat.py \
             tests/mobile \
             tools/check_mobile_lite_environment.py
