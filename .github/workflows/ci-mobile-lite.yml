@@ -116,10 +116,22 @@ jobs:
       - name: Run explicit optional-runtime skip probes
         run: python -m pytest -c pytest-mobile.ini -q tests/mobile/test_optional_runtime_boundaries.py
 
-      - name: Run established core security regression slice
-        run: |
-          python -m pytest -c pytest-mobile.ini -q \
-            tests/unit/test_api_security_middleware.py::test_product_security_middleware_audits_blocked_requests_and_sets_headers \
-            tests/unit/test_api_security_middleware.py::test_product_security_middleware_sets_headers_on_allowed_requests \
-            tests/unit/test_api_security_middleware.py::test_metrics_endpoint_is_secret_free_and_exposes_runtime_counters \
-            tests/unit/test_api_job_store.py::test_sqlite_job_store_outbox_payload_excludes_private_material
+      - name: Regress blocked-request audit and redaction
+        run: >-
+          python -m pytest -c pytest-mobile.ini -q
+          tests/unit/test_api_security_middleware.py::test_product_security_middleware_audits_blocked_requests_and_sets_headers
+
+      - name: Regress allowed-request security headers
+        run: >-
+          python -m pytest -c pytest-mobile.ini -q
+          tests/unit/test_api_security_middleware.py::test_product_security_middleware_sets_headers_on_allowed_requests
+
+      - name: Regress secret-free security metrics
+        run: >-
+          python -m pytest -c pytest-mobile.ini -q
+          tests/unit/test_api_security_middleware.py::test_metrics_endpoint_is_secret_free_and_exposes_runtime_counters
+
+      - name: Regress SQLite outbox privacy
+        run: >-
+          python -m pytest -c pytest-mobile.ini -q
+          tests/unit/test_api_job_store.py::test_sqlite_job_store_outbox_payload_excludes_private_material
