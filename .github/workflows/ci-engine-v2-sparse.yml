@@ -1,0 +1,80 @@
+name: ci-engine-v2-sparse
+
+on:
+  pull_request:
+    paths:
+      - "betelgeuze_engine_v2/**"
+      - "tests/unit/test_engine_v2_contracts_molecular.py"
+      - "tests/unit/test_engine_v2_sparse_geometry_features.py"
+      - ".github/workflows/ci-engine-v2-sparse.yml"
+  push:
+    branches:
+      - "agent/v2-b-sparse-geometry-features"
+    paths:
+      - "betelgeuze_engine_v2/**"
+      - "tests/unit/test_engine_v2_contracts_molecular.py"
+      - "tests/unit/test_engine_v2_sparse_geometry_features.py"
+      - ".github/workflows/ci-engine-v2-sparse.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-sparse-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sparse-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+    steps:
+      - name: Check out sparse Engine v2 surface
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            tests/unit/test_engine_v2_contracts_molecular.py
+            tests/unit/test_engine_v2_sparse_geometry_features.py
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install focused CPU dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest==8.3.5
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Compile sparse Engine v2 modules
+        run: python -m compileall -q betelgeuze_engine_v2
+
+      - name: Run contracts, feature, and neighbor tests
+        run: |
+          python -m pytest -q \
+            tests/unit/test_engine_v2_contracts_molecular.py \
+            tests/unit/test_engine_v2_sparse_geometry_features.py
+
+      - name: Enforce bounded graph status
+        run: |
+          python - <<'PY'
+          import torch
+          from betelgeuze_engine_v2 import RadiusGraphConfig, build_compact_radius_graph
+          graph = build_compact_radius_graph(
+              torch.tensor([[[0., 0., 0.], [1., 0., 0.]]]),
+              RadiusGraphConfig(cutoff_angstrom=2.0, max_neighbors=1, max_atoms_per_cell=2),
+          )
+          assert graph.diagnostics.capacity_contract_satisfied
+          assert graph.diagnostics.to_dict()["scientific_claim_safe"] is False
+          PY
