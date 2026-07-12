@@ -1,0 +1,114 @@
+name: ci-engine-v2-orchestrator
+
+on:
+  pull_request:
+    paths:
+      - "betelgeuze_engine_v2/**"
+      - "tests/unit/test_engine_v2_contracts_molecular.py"
+      - "tests/unit/test_engine_v2_sparse_geometry_features.py"
+      - "tests/unit/test_engine_v2_ai_core.py"
+      - "tests/unit/test_engine_v2_periodic_energy.py"
+      - "tests/unit/test_engine_v2_orchestrator_contract.py"
+      - ".github/workflows/ci-engine-v2-orchestrator.yml"
+  push:
+    branches:
+      - "agent/v2-d-cpu-orchestrator"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-orchestrator-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  orchestrator-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+    steps:
+      - name: Check out Engine v2 CPU surface
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            tests/unit/test_engine_v2_contracts_molecular.py
+            tests/unit/test_engine_v2_sparse_geometry_features.py
+            tests/unit/test_engine_v2_ai_core.py
+            tests/unit/test_engine_v2_periodic_energy.py
+            tests/unit/test_engine_v2_orchestrator_contract.py
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install focused CPU dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest==8.3.5 numpy==1.26.4
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Compile Engine v2 CPU modules
+        run: python -m compileall -q betelgeuze_engine_v2
+
+      - name: Run inherited contract, sparse, AI, and periodic suites
+        run: |
+          python -m pytest -q \
+            tests/unit/test_engine_v2_contracts_molecular.py \
+            tests/unit/test_engine_v2_sparse_geometry_features.py \
+            tests/unit/test_engine_v2_ai_core.py \
+            tests/unit/test_engine_v2_periodic_energy.py
+
+      - name: Run orchestrator composition suite with diagnostic log
+        shell: bash
+        run: |
+          set +e
+          python -m pytest -vv -x tests/unit/test_engine_v2_orchestrator_contract.py > orchestrator-test.log 2>&1
+          status=$?
+          cat orchestrator-test.log
+          exit "$status"
+
+      - name: Upload orchestrator diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orchestrator-diagnostics-py${{ matrix.python-version }}-${{ github.run_id }}
+          path: orchestrator-test.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Verify total physical energy remains absent by default
+        run: |
+          python - <<'PY'
+          import torch
+          from betelgeuze_engine_v2 import (
+              AllAtomSystem, Atom, Bond, Chain, IndependentEngineV2,
+              IndependentEngineV2Config, Residue, StructureProvenance,
+          )
+          system = AllAtomSystem(
+              system_id="ci",
+              atoms=(
+                  Atom(index=0, name="C", element="C", atomic_number=6, residue_index=0),
+                  Atom(index=1, name="O", element="O", atomic_number=8, residue_index=0),
+              ),
+              bonds=(Bond(index=0, atom_i=0, atom_j=1),),
+              residues=(Residue(index=0, name="LIG", chain_index=0, sequence_number=1, atom_indices=(0,1), hetero=True),),
+              chains=(Chain(index=0, chain_id="L", residue_indices=(0,)),),
+              coordinates=torch.tensor([[[0.,0.,0.],[1.2,0.,0.]]], dtype=torch.float64),
+              provenance=StructureProvenance(source_format="unit_test", source_sha256="a"*64),
+          )
+          result = IndependentEngineV2(IndependentEngineV2Config(max_neighbors=1, max_atoms_per_cell=2)).run(system)
+          assert result.reference_scalar_energy is not None
+          assert result.total_physical_energy is None
+          assert not result.claim_safe
+          PY
