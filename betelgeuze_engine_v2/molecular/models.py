@@ -351,6 +351,7 @@ class AllAtomSystem:
             operations=(*self.provenance.operations, operation_name),
             parent_sha256=(*self.provenance.parent_sha256, parent_digest),
             transformation_chain_verified=False,
+            chemistry_validated=False,
             scientifically_validated=False,
             product_qualified=False,
             metadata=metadata,
