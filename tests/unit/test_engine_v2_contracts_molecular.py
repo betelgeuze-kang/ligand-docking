@@ -133,11 +133,12 @@ def test_coordinate_change_requires_operation_and_invalidates_transformation_cla
     )
     assert moved.provenance.source_digest_verified is True
     assert moved.provenance.transformation_chain_verified is False
-    assert moved.provenance.chemistry_validated is True
+    assert moved.provenance.chemistry_validated is False
     assert moved.provenance.scientifically_validated is False
     assert moved.provenance.product_qualified is False
     assert moved.provenance.parent_sha256[-1] == original_hash
     assert moved.provenance.operations[-1] == "rigid_translation_test"
+    assert moved.provenance.claim_stage is ClaimStage.CONTRACT_VALID
     assert moved.provenance.claim_safe is False
 
 
