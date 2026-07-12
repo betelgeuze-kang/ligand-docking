@@ -1,0 +1,113 @@
+name: ci-engine-v2-package
+
+on:
+  pull_request:
+    paths:
+      - "betelgeuze_engine_v2/**"
+      - "packaging/engine-v2/**"
+      - "tools/build_engine_v2_wheel.py"
+      - "tools/check_engine_v2_architecture.py"
+      - "tests/unit/test_engine_v2_packaging_guards.py"
+      - "docs/engine_v2_pr_overlap_matrix.md"
+      - ".github/workflows/ci-engine-v2-package.yml"
+  push:
+    branches:
+      - "agent/v2-f-package-ci-guards"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  independent-wheel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+    steps:
+      - name: Check out independent package surface
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            packaging/engine-v2
+            tools/build_engine_v2_wheel.py
+            tools/check_engine_v2_architecture.py
+            tests/unit/test_engine_v2_packaging_guards.py
+            docs/engine_v2_pr_overlap_matrix.md
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install build and CPU test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "build>=1.2,<2" pytest==8.3.5 numpy==1.26.4
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Compile and enforce Engine v2 AST boundaries
+        run: |
+          python -m compileall -q betelgeuze_engine_v2 tools/build_engine_v2_wheel.py tools/check_engine_v2_architecture.py
+          python tools/check_engine_v2_architecture.py
+          python -m pytest -q tests/unit/test_engine_v2_packaging_guards.py
+
+      - name: Build independent Engine v2 wheel
+        run: |
+          rm -rf dist-engine-v2
+          python tools/build_engine_v2_wheel.py --output-dir dist-engine-v2
+          test "$(find dist-engine-v2 -maxdepth 1 -name '*.whl' | wc -l)" -eq 1
+
+      - name: Install in a clean dependency-complete venv
+        shell: bash
+        run: |
+          set -euo pipefail
+          venv="/tmp/betelgeuze-engine-v2-${{ matrix.python-version }}"
+          rm -rf "$venv"
+          python -m venv "$venv"
+          grep -q '^include-system-site-packages = false$' "$venv/pyvenv.cfg"
+          "$venv/bin/python" -m pip install --upgrade pip
+          "$venv/bin/python" -m pip install numpy==1.26.4
+          "$venv/bin/python" -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+          "$venv/bin/python" -m pip install --no-deps dist-engine-v2/*.whl
+          "$venv/bin/python" -m pip check
+
+      - name: Import wheel outside checkout and verify package isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          venv="/tmp/betelgeuze-engine-v2-${{ matrix.python-version }}"
+          mkdir -p /tmp/engine-v2-outside
+          cd /tmp/engine-v2-outside
+          "$venv/bin/python" - <<'PY'
+          import importlib.metadata as metadata
+          import importlib.util
+          import sys
+          import betelgeuze_engine_v2 as engine
+
+          assert metadata.version("betelgeuze-engine-v2") == engine.DISTRIBUTION_VERSION
+          assert engine.DISTRIBUTION_NAME == "betelgeuze-engine-v2"
+          assert engine.__version__ == engine.ENGINE_API_VERSION
+          assert importlib.util.find_spec("api") is None
+          assert importlib.util.find_spec("core") is None
+          assert importlib.util.find_spec("train") is None
+          assert not any(name == "api" or name.startswith("api.") for name in sys.modules)
+          assert not any(name == "core" or name.startswith("core.") for name in sys.modules)
+          PY
+
+      - name: Record support boundary
+        run: |
+          echo "Engine v2 wheel supports Python >=3.10,<3.13."
+          echo "Python 3.13 is intentionally outside the declared range until its Torch runtime lane is validated."
