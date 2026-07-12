@@ -1,23 +1,25 @@
-"""Sparse parity-aware local energy model for the independent-engine prototype.
+"""Sparse parity-aware local scalar model for the independent Engine v2.
 
-The model is a CPU/GPU-portable PyTorch reference, not a calibrated molecular
-potential.  It uses bounded-degree message passing and scalar/vector geometric
-features.  It does not use a Transformer or pairwise attention.  Forces are
-computed only as the exact reverse-mode derivative of the predicted scalar
-energy.
+The model is an uncalibrated CPU/GPU-portable reference architecture. It uses
+bounded-degree message passing, no Transformer or pairwise attention, and
+reports forces only as the exact negative coordinate gradient of its scalar.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import math
 from typing import Any, Mapping
 
 import torch
 from torch import nn
 
+from betelgeuze_engine_v2.contracts import (
+    QuantityDescriptor,
+    UNCALIBRATED_ENERGY,
+    UNCALIBRATED_FORCE,
+)
 from betelgeuze_engine_v2.geometry.neighbors import MAX_COMPACT_NEIGHBORS
-
 from betelgeuze_engine_v2.ai.sparse_graph import (
     ComplexityMetadata,
     SparseNeighborGraph,
@@ -32,21 +34,20 @@ MAX_LOCAL_RADIAL_FEATURES = 256
 MAX_LOCAL_ENERGY_LAYERS = 16
 MIN_LOCAL_EDGE_DISTANCE_ANGSTROM = 1.0e-8
 
-
 LOCAL_ENERGY_COMPLEXITY = ComplexityMetadata(
     forward="O(L*(N*C^2 + E*C^2))",
     backward="O(L*(N*C^2 + E*C^2))",
     assumptions=(
         "E <= K*N and K is fixed independently of N",
         "layer count L, channel width C, and radial basis width are fixed",
-        "neighbor construction itself obeys a sparse bounded-degree contract",
+        "neighbor construction obeys a sparse bounded-degree contract",
     ),
     prohibited_dense_operations=(
         "N-by-N distance matrix",
         "N-by-N learned weights",
         "full Hessian or Jacobian materialization",
     ),
-    claim_scope="one local energy/force evaluation; not docking-search candidate count",
+    claim_scope="one local scalar/gradient evaluation; not docking-search complexity",
 )
 
 
@@ -83,6 +84,18 @@ class EnergyForcePrediction:
     parity_odd: torch.Tensor
     coordinates_used: torch.Tensor
     diagnostics: dict[str, object]
+    energy_descriptor: QuantityDescriptor = field(default=UNCALIBRATED_ENERGY)
+    force_descriptor: QuantityDescriptor = field(default=UNCALIBRATED_FORCE)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "energy": self.energy,
+            "forces": self.forces,
+            "parity_odd": self.parity_odd,
+            "diagnostics": dict(self.diagnostics),
+            "energy_descriptor": self.energy_descriptor.to_dict(),
+            "force_descriptor": self.force_descriptor.to_dict(),
+        }
 
 
 @dataclass
@@ -104,11 +117,14 @@ class _RadialBasis(nn.Module):
 
     def forward(self, distances: torch.Tensor) -> torch.Tensor:
         scaled = distances.unsqueeze(-1) - self.centers.to(
-            device=distances.device, dtype=distances.dtype
+            device=distances.device,
+            dtype=distances.dtype,
         )
         basis = torch.exp(-self.gamma * scaled.square())
         inside = distances < self.cutoff
-        envelope = 0.5 * (torch.cos(torch.pi * distances.clamp(max=self.cutoff) / self.cutoff) + 1.0)
+        envelope = 0.5 * (
+            torch.cos(torch.pi * distances.clamp(max=self.cutoff) / self.cutoff) + 1.0
+        )
         envelope = torch.where(inside, envelope, torch.zeros_like(envelope))
         return basis * envelope.unsqueeze(-1)
 
@@ -139,19 +155,13 @@ class _LocalScalarLayer(nn.Module):
     ) -> torch.Tensor:
         if src.numel():
             edge_input = torch.cat((node_state[src], node_state[dst], radial), dim=-1)
-            # Gate the entire learned message, including MLP biases and node
-            # terms.  Gating only the radial channels would leave a finite
-            # edge contribution that jumps when the neighbor list drops the
-            # edge at the cutoff.
             messages = self.message(edge_input) * envelope.unsqueeze(-1)
             aggregate = segment_sum(messages, dst, node_state.shape[0])
             degree = segment_sum(
-                envelope.unsqueeze(-1), dst, node_state.shape[0]
+                envelope.unsqueeze(-1),
+                dst,
+                node_state.shape[0],
             )
-            # A raw active-edge count jumps when an edge crosses the cutoff and
-            # rescales every other message at that node.  A smooth weighted
-            # normalization keeps both the aggregate and denominator
-            # continuous as an envelope decays to zero.
             aggregate = aggregate / (1.0 + degree).sqrt()
         else:
             aggregate = torch.zeros_like(node_state)
@@ -160,20 +170,12 @@ class _LocalScalarLayer(nn.Module):
 
 
 class ParityAwareLocalEnergyModel(nn.Module):
-    """Local scalar-energy network with an explicit parity-odd descriptor.
+    """Local scalar network with an explicit parity-odd descriptor."""
 
-    Three independently weighted equivariant local vectors are accumulated at
-    every atom.  Their scalar triple product is invariant under proper E(3)
-    motions and changes sign under reflection.  This lets the scalar-energy
-    head distinguish mirror configurations while preserving translation and
-    rotation invariance.  It is a parity-aware SE(3) construction rather than
-    a claim of a complete irreducible-representation implementation.
-    """
-
-    scientific_status = "unvalidated_reference_architecture"
+    scientific_status = "uncalibrated_reference_architecture"
     uses_dense_pair_matrix = False
     uses_pairwise_attention = False
-    force_definition = "negative_exact_autograd_gradient_of_scalar_energy"
+    force_definition = "negative_exact_autograd_gradient_of_reported_scalar"
 
     def __init__(self, config: LocalEnergyConfig):
         super().__init__()
@@ -249,6 +251,30 @@ class ParityAwareLocalEnergyModel(nn.Module):
             raise ValueError("atom_features must be finite")
         return int(coordinates.shape[0]), int(coordinates.shape[1])
 
+    @staticmethod
+    def _edge_displacements(
+        coordinates: torch.Tensor,
+        graph: SparseNeighborGraph,
+    ) -> torch.Tensor:
+        flat = coordinates.reshape(graph.node_count, 3)
+        displacement = flat[graph.src] - flat[graph.dst]
+        if graph.pbc_enabled:
+            if not graph.periodic_geometry_ready:
+                raise ValueError(
+                    "periodic sparse energy requires integer image_shifts and cell_vectors"
+                )
+            assert graph.image_shifts is not None
+            assert graph.cell_vectors is not None
+            lattice_translation = graph.image_shifts.to(
+                dtype=coordinates.dtype,
+                device=coordinates.device,
+            ) @ graph.cell_vectors.to(
+                dtype=coordinates.dtype,
+                device=coordinates.device,
+            )
+            displacement = displacement + lattice_translation
+        return displacement
+
     def energy_terms(
         self,
         coordinates: torch.Tensor,
@@ -256,37 +282,19 @@ class ParityAwareLocalEnergyModel(nn.Module):
         neighbors: SparseNeighborGraph | tuple[torch.Tensor, torch.Tensor] | Mapping[str, Any] | Any,
     ) -> LocalEnergyTerms:
         batch_size, atom_count = self._validate_inputs(coordinates, atom_features)
-        diagnostics_object = getattr(neighbors, "diagnostics", None)
-        if isinstance(diagnostics_object, Mapping):
-            neighbor_diagnostics = diagnostics_object
-        elif callable(getattr(diagnostics_object, "to_dict", None)):
-            neighbor_diagnostics = diagnostics_object.to_dict()
-        else:
-            neighbor_diagnostics = {}
-        periodic = neighbor_diagnostics.get("periodic")
-        pbc_enabled = bool(neighbor_diagnostics.get("pbc_enabled", False))
-        if periodic is not None:
-            pbc_enabled = pbc_enabled or any(bool(value) for value in periodic)
-        if pbc_enabled:
-            raise ValueError(
-                "periodic sparse energy is blocked until minimum-image displacement "
-                "recomputation is part of the exact coordinate-gradient path"
-            )
         graph = coerce_sparse_graph(
             neighbors,
             batch_size=batch_size,
             atom_count=atom_count,
             max_neighbors=int(self.config.max_neighbors),
             device=coordinates.device,
+            dtype=coordinates.dtype,
         )
-        if graph.pbc_enabled:
-            raise ValueError(
-                "periodic sparse energy is blocked until minimum-image displacement "
-                "recomputation is part of the exact coordinate-gradient path"
-            )
-        flat_coordinates = coordinates.reshape(batch_size * atom_count, 3)
-        flat_features = atom_features.reshape(batch_size * atom_count, atom_features.shape[-1])
-        displacement = flat_coordinates[graph.src] - flat_coordinates[graph.dst]
+        flat_features = atom_features.reshape(
+            batch_size * atom_count,
+            atom_features.shape[-1],
+        )
+        displacement = self._edge_displacements(coordinates, graph)
         distance = torch.linalg.vector_norm(displacement, dim=-1)
         minimum_edge_distance = max(
             MIN_LOCAL_EDGE_DISTANCE_ANGSTROM,
@@ -313,7 +321,8 @@ class ParityAwareLocalEnergyModel(nn.Module):
 
         if src.numel():
             edge_scalar = torch.cat(
-                (node_state[src], node_state[dst], radial), dim=-1
+                (node_state[src], node_state[dst], radial),
+                dim=-1,
             )
             branch_weights = self.vector_weights(edge_scalar) * envelope.unsqueeze(-1)
             unit = displacement / distance.clamp_min(1.0e-9).unsqueeze(-1)
@@ -327,18 +336,23 @@ class ParityAwareLocalEnergyModel(nn.Module):
             parity_odd = coordinates.new_zeros((graph.node_count,))
 
         head_input = torch.cat(
-            (node_state, parity_odd.unsqueeze(-1), parity_odd.square().unsqueeze(-1)), dim=-1
+            (
+                node_state,
+                parity_odd.unsqueeze(-1),
+                parity_odd.square().unsqueeze(-1),
+            ),
+            dim=-1,
         )
         per_atom = self.energy_head(head_input).squeeze(-1)
-        node_batch = torch.arange(batch_size, device=coordinates.device).repeat_interleave(atom_count)
+        node_batch = torch.arange(
+            batch_size,
+            device=coordinates.device,
+        ).repeat_interleave(atom_count)
         total = segment_sum(per_atom.unsqueeze(-1), node_batch, batch_size).squeeze(-1)
-        # Preserve an explicit zero-valued coordinate dependency.  With frozen
-        # parameters and no active edges, the learned per-atom baseline is
-        # otherwise constant and autograd has no output graph from which to
-        # return the physically correct zero force.
         total = total + 0.0 * coordinates[:, 0, 0]
         if not bool(torch.isfinite(total).all().item()):
             raise FloatingPointError("local energy produced a non-finite scalar result")
+
         diagnostics = self.complexity
         diagnostics.update(
             {
@@ -348,9 +362,14 @@ class ParityAwareLocalEnergyModel(nn.Module):
                 "active_edge_count": int(src.numel()),
                 "neighbor_source": graph.source,
                 "force_is_energy_gradient": True,
+                "periodic_image_gradient_path": bool(graph.pbc_enabled),
+                "periodic_geometry_ready": graph.periodic_geometry_ready,
                 "parity_odd_descriptor": "local_scalar_triple_product",
                 "parity_even_descriptor": "local_scalar_triple_product_squared",
                 "calibrated_potential": False,
+                "energy_descriptor": UNCALIBRATED_ENERGY.to_dict(),
+                "force_descriptor": UNCALIBRATED_FORCE.to_dict(),
+                "scientific_claim_safe": False,
             }
         )
         return LocalEnergyTerms(
@@ -376,7 +395,7 @@ class ParityAwareLocalEnergyModel(nn.Module):
         *,
         create_graph: bool = False,
     ) -> EnergyForcePrediction:
-        """Return scalar energy and its exact negative coordinate gradient."""
+        """Return the scalar and its exact negative coordinate gradient."""
 
         coordinates_used = coordinates
         if not coordinates_used.requires_grad:
