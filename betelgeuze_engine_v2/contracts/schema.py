@@ -1,8 +1,8 @@
-"""Version contracts shared by the independent engine v2 packages.
+"""Version taxonomy shared by independent Engine v2 contracts.
 
-The molecular schema is intentionally independent from package releases. A
-consumer can therefore reject a topology it cannot interpret before any
-scientific calculation is attempted.
+Distribution, API, molecular-state, runtime-input, checkpoint, and result
+versions are intentionally distinct. Consumers must validate the contract they
+actually consume instead of treating one package version as universal.
 """
 
 from __future__ import annotations
@@ -11,7 +11,12 @@ from dataclasses import dataclass
 import re
 
 
+DISTRIBUTION_NAME = "betelgeuze-engine-v2"
+DISTRIBUTION_VERSION = "0.1.0"
 ENGINE_API_VERSION = "2.0.0"
+ENGINE_RESULT_SCHEMA_VERSION = "2.0.0"
+CHECKPOINT_SCHEMA_VERSION = "2.0.0"
+RUNTIME_INPUT_SCHEMA_VERSION = "2.1.0"
 ALL_ATOM_SCHEMA_NAME = "betelgeuze.all_atom_system"
 ALL_ATOM_SCHEMA_VERSION = "2.0.0"
 ALL_ATOM_SCHEMA_ID = f"{ALL_ATOM_SCHEMA_NAME}/{ALL_ATOM_SCHEMA_VERSION}"
@@ -22,7 +27,7 @@ _SEMVER_RE = re.compile(
 
 
 class ContractVersionError(ValueError):
-    """Raised when a versioned payload is not compatible with engine v2."""
+    """Raised when a versioned payload is not compatible with Engine v2."""
 
 
 @dataclass(frozen=True, order=True)
@@ -42,6 +47,41 @@ class SemanticVersion:
 
     def __str__(self) -> str:
         return f"{self.major}.{self.minor}.{self.patch}"
+
+
+@dataclass(frozen=True)
+class VersionTaxonomy:
+    """Machine-readable inventory of independently evolving version surfaces."""
+
+    distribution_name: str = DISTRIBUTION_NAME
+    distribution_version: str = DISTRIBUTION_VERSION
+    engine_api_version: str = ENGINE_API_VERSION
+    molecular_schema_version: str = ALL_ATOM_SCHEMA_VERSION
+    result_schema_version: str = ENGINE_RESULT_SCHEMA_VERSION
+    checkpoint_schema_version: str = CHECKPOINT_SCHEMA_VERSION
+    runtime_input_schema_version: str = RUNTIME_INPUT_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        for field_name, value in self.to_dict().items():
+            if field_name == "distribution_name":
+                if not str(value).strip():
+                    raise ContractVersionError("distribution_name must be non-empty")
+            else:
+                SemanticVersion.parse(str(value))
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "distribution_name": self.distribution_name,
+            "distribution_version": self.distribution_version,
+            "engine_api_version": self.engine_api_version,
+            "molecular_schema_version": self.molecular_schema_version,
+            "result_schema_version": self.result_schema_version,
+            "checkpoint_schema_version": self.checkpoint_schema_version,
+            "runtime_input_schema_version": self.runtime_input_schema_version,
+        }
+
+
+VERSION_TAXONOMY = VersionTaxonomy()
 
 
 @dataclass(frozen=True)
@@ -65,7 +105,7 @@ class SchemaIdentity:
         if received.major != supported.major:
             raise ContractVersionError(
                 f"unsupported {self.name} major version {received.major}; "
-                f"engine v2 supports major {supported.major}"
+                f"Engine v2 supports major {supported.major}"
             )
         if received > supported:
             raise ContractVersionError(
