@@ -1,9 +1,8 @@
 """Bounded-degree graph contracts for the independent AI reference path.
 
-This module deliberately operates on edge lists.  It never materializes an
-``N x N`` distance, adjacency, attention, or projection matrix.  Linear
-complexity claims only apply when the maximum neighbor count is bounded
-independently of the atom count.
+This module operates only on compact edge lists. It never materializes an
+``N x N`` distance, adjacency, attention, or projection matrix. Linear-work
+claims apply only when maximum degree is bounded independently of atom count.
 """
 
 from __future__ import annotations
@@ -14,12 +13,11 @@ from typing import Any, Mapping
 import torch
 
 from betelgeuze_engine_v2.geometry.neighbors import MAX_COMPACT_NEIGHBORS
+from betelgeuze_engine_v2.molecular.models import UnitCell
 
 
 @dataclass(frozen=True)
 class ComplexityMetadata:
-    """Machine-readable scope for a deliberately narrow complexity claim."""
-
     forward: str
     backward: str
     assumptions: tuple[str, ...]
@@ -53,13 +51,36 @@ SPARSE_GRAPH_COMPLEXITY = ComplexityMetadata(
 )
 
 
+def _coerce_cell_vectors(
+    value: torch.Tensor | UnitCell | None,
+    *,
+    dtype: torch.dtype | None = None,
+    device: torch.device | str | None = None,
+) -> torch.Tensor | None:
+    if value is None:
+        return None
+    vectors = value.vectors if isinstance(value, UnitCell) else value
+    if not isinstance(vectors, torch.Tensor):
+        raise TypeError("cell_vectors must be a torch.Tensor or UnitCell")
+    if vectors.shape != (3, 3):
+        raise ValueError("cell_vectors must have shape [3, 3]")
+    if not vectors.is_floating_point():
+        raise TypeError("cell_vectors must use a floating dtype")
+    if not bool(torch.isfinite(vectors).all().item()):
+        raise ValueError("cell_vectors must be finite")
+    if dtype is not None or device is not None:
+        vectors = vectors.to(dtype=dtype or vectors.dtype, device=device or vectors.device)
+    return vectors
+
+
 @dataclass(frozen=True)
 class SparseNeighborGraph:
     """Directed sparse edges over a flattened ``[B, N]`` atom array.
 
-    ``src`` is the neighbor that sends a message and ``dst`` is the center
-    atom that receives it.  Both contain global flattened indices.  ``batch``
-    records the sample for every edge and is retained for diagnostics.
+    ``src`` is the neighbor sending a message and ``dst`` is the center atom.
+    For periodic graphs, ``image_shifts`` contains integer lattice multiples
+    added to ``r_src - r_dst``. ``cell_vectors`` stores three row lattice
+    vectors, making minimum-image reconstruction differentiable in coordinates.
     """
 
     src: torch.Tensor
@@ -71,6 +92,8 @@ class SparseNeighborGraph:
     source: str = "sparse_edges"
     pbc_enabled: bool = False
     periodic: tuple[bool, bool, bool] = (False, False, False)
+    image_shifts: torch.Tensor | None = None
+    cell_vectors: torch.Tensor | None = None
 
     def __post_init__(self) -> None:
         for name, value in (("src", self.src), ("dst", self.dst), ("batch", self.batch)):
@@ -82,15 +105,34 @@ class SparseNeighborGraph:
             raise ValueError("src, dst, and batch must have equal shapes")
         if int(self.batch_size) < 1 or int(self.atom_count) < 1:
             raise ValueError("batch_size and atom_count must be positive")
-        if int(self.max_neighbors) < 1:
-            raise ValueError("max_neighbors must be positive")
-        if int(self.max_neighbors) > MAX_COMPACT_NEIGHBORS:
-            raise ValueError(f"max_neighbors exceeds hard cap {MAX_COMPACT_NEIGHBORS}")
+        if int(self.max_neighbors) < 1 or int(self.max_neighbors) > MAX_COMPACT_NEIGHBORS:
+            raise ValueError(
+                f"max_neighbors must be in [1, {MAX_COMPACT_NEIGHBORS}]"
+            )
         if len(self.periodic) != 3:
             raise ValueError("periodic must contain three axis flags")
         periodic = tuple(bool(value) for value in self.periodic)
         object.__setattr__(self, "periodic", periodic)
-        object.__setattr__(self, "pbc_enabled", bool(self.pbc_enabled or any(periodic)))
+        pbc_enabled = bool(self.pbc_enabled or any(periodic))
+        object.__setattr__(self, "pbc_enabled", pbc_enabled)
+
+        if self.image_shifts is not None:
+            if self.image_shifts.shape != (self.src.numel(), 3):
+                raise ValueError("image_shifts must have shape [E, 3]")
+            if self.image_shifts.dtype != torch.long:
+                raise TypeError("image_shifts must use torch.long")
+            if self.image_shifts.device != self.src.device:
+                raise ValueError("image_shifts must share the edge-index device")
+        if self.cell_vectors is not None:
+            _coerce_cell_vectors(self.cell_vectors)
+        if pbc_enabled and self.image_shifts is None:
+            # The graph may still be retained for diagnostics, but an energy
+            # consumer must fail closed until image geometry is supplied.
+            pass
+        if not pbc_enabled and self.image_shifts is not None:
+            if bool((self.image_shifts != 0).any().item()):
+                raise ValueError("non-periodic graphs cannot carry nonzero image shifts")
+
         total = int(self.batch_size) * int(self.atom_count)
         if self.src.numel():
             if bool((self.src < 0).any().item()) or bool((self.src >= total).any().item()):
@@ -126,6 +168,13 @@ class SparseNeighborGraph:
         return int(self.batch_size) * int(self.atom_count)
 
     @property
+    def periodic_geometry_ready(self) -> bool:
+        return bool(
+            not self.pbc_enabled
+            or (self.image_shifts is not None and self.cell_vectors is not None)
+        )
+
+    @property
     def complexity(self) -> dict[str, object]:
         payload = SPARSE_GRAPH_COMPLEXITY.to_dict()
         payload.update(
@@ -136,11 +185,18 @@ class SparseNeighborGraph:
                 "source": self.source,
                 "pbc_enabled": bool(self.pbc_enabled),
                 "periodic": list(self.periodic),
+                "periodic_geometry_ready": self.periodic_geometry_ready,
+                "constructs_nxn": False,
             }
         )
         return payload
 
-    def to(self, device: torch.device | str) -> "SparseNeighborGraph":
+    def to(
+        self,
+        device: torch.device | str,
+        *,
+        dtype: torch.dtype | None = None,
+    ) -> "SparseNeighborGraph":
         return SparseNeighborGraph(
             src=self.src.to(device=device),
             dst=self.dst.to(device=device),
@@ -151,6 +207,10 @@ class SparseNeighborGraph:
             source=self.source,
             pbc_enabled=self.pbc_enabled,
             periodic=self.periodic,
+            image_shifts=None if self.image_shifts is None else self.image_shifts.to(device=device),
+            cell_vectors=None
+            if self.cell_vectors is None
+            else self.cell_vectors.to(device=device, dtype=dtype or self.cell_vectors.dtype),
         )
 
     @classmethod
@@ -166,6 +226,8 @@ class SparseNeighborGraph:
         source: str = "provided_sparse_edges",
         pbc_enabled: bool = False,
         periodic: tuple[bool, bool, bool] = (False, False, False),
+        image_shifts: torch.Tensor | None = None,
+        cell_vectors: torch.Tensor | UnitCell | None = None,
     ) -> "SparseNeighborGraph":
         src = torch.as_tensor(src, dtype=torch.long)
         dst = torch.as_tensor(dst, dtype=torch.long, device=src.device)
@@ -175,6 +237,12 @@ class SparseNeighborGraph:
             batch = torch.zeros_like(src)
         else:
             batch = torch.as_tensor(batch, dtype=torch.long, device=src.device)
+        if image_shifts is not None:
+            image_shifts = torch.as_tensor(
+                image_shifts,
+                dtype=torch.long,
+                device=src.device,
+            )
         return cls(
             src=src,
             dst=dst,
@@ -185,6 +253,8 @@ class SparseNeighborGraph:
             source=source,
             pbc_enabled=bool(pbc_enabled),
             periodic=periodic,
+            image_shifts=image_shifts,
+            cell_vectors=_coerce_cell_vectors(cell_vectors),
         )
 
     @classmethod
@@ -194,12 +264,9 @@ class SparseNeighborGraph:
         *,
         max_neighbors: int = 64,
         reject_dense_reference: bool = True,
+        cell: UnitCell | torch.Tensor | None = None,
     ) -> "SparseNeighborGraph":
-        """Adapt the legacy ``NeighborPairs`` contract without importing it.
-
-        Duck typing keeps the v2 AI boundary independent of the legacy physics
-        implementation while allowing its compact cell-list output to be reused.
-        """
+        """Adapt compact ``[B,N,K]`` neighbor rows without legacy imports."""
 
         idx = getattr(pairs, "idx", None)
         if idx is None:
@@ -214,7 +281,7 @@ class SparseNeighborGraph:
         batch_size, atom_count, width = (int(value) for value in idx.shape)
         if width > int(max_neighbors):
             raise ValueError(
-                f"neighbor width {width} exceeds the bounded-degree contract {int(max_neighbors)}"
+                f"neighbor width {width} exceeds bounded degree {int(max_neighbors)}"
             )
         diagnostics_object = getattr(pairs, "diagnostics", {})
         if isinstance(diagnostics_object, Mapping):
@@ -224,7 +291,7 @@ class SparseNeighborGraph:
         else:
             diagnostics = {}
         if reject_dense_reference and bool(diagnostics.get("nxn_allocation_observed", False)):
-            raise ValueError("dense reference neighbor pairs are not allowed in the v2 linear path")
+            raise ValueError("dense reference neighbor pairs are not allowed in the v2 path")
         status = str(diagnostics.get("status", ""))
         if bool(diagnostics.get("overflow", False)) or status.startswith("blocked"):
             raise ValueError("overflowed or blocked neighbor pairs are not allowed in the v2 path")
@@ -247,6 +314,14 @@ class SparseNeighborGraph:
         src = (idx + offsets)[valid]
         dst = (centers + offsets)[valid]
         edge_batch = sample[valid]
+
+        compact_shifts = getattr(pairs, "image_shifts", None)
+        edge_shifts = None
+        if compact_shifts is not None:
+            if not isinstance(compact_shifts, torch.Tensor) or compact_shifts.shape != (*idx.shape, 3):
+                raise ValueError("compact image_shifts must have shape [B,N,K,3]")
+            edge_shifts = compact_shifts.to(device=device, dtype=torch.long)[valid]
+
         return cls(
             src=src,
             dst=dst,
@@ -263,6 +338,8 @@ class SparseNeighborGraph:
             ),
             pbc_enabled=pbc_enabled,
             periodic=periodic,
+            image_shifts=edge_shifts,
+            cell_vectors=_coerce_cell_vectors(cell),
         )
 
     @classmethod
@@ -271,12 +348,15 @@ class SparseNeighborGraph:
         neighbors: Any,
         *,
         max_neighbors: int = 64,
+        cell: UnitCell | torch.Tensor | None = None,
     ) -> "SparseNeighborGraph":
-        """Explicit duck-typed adapter for v2 geometry ``CompactNeighborList``."""
-
         if not hasattr(neighbors, "indices"):
             raise TypeError("compact neighbor lists must expose indices")
-        return cls.from_neighbor_pairs(neighbors, max_neighbors=max_neighbors)
+        return cls.from_neighbor_pairs(
+            neighbors,
+            max_neighbors=max_neighbors,
+            cell=cell,
+        )
 
 
 def coerce_sparse_graph(
@@ -286,8 +366,9 @@ def coerce_sparse_graph(
     atom_count: int,
     max_neighbors: int,
     device: torch.device,
+    dtype: torch.dtype,
 ) -> SparseNeighborGraph:
-    """Normalize a sparse-edge, mapping, or legacy ``NeighborPairs`` input."""
+    """Normalize sparse edges, mappings, or compact neighbor rows."""
 
     if isinstance(neighbors, SparseNeighborGraph):
         graph = neighbors
@@ -309,14 +390,19 @@ def coerce_sparse_graph(
             max_neighbors=int(neighbors.get("max_neighbors", max_neighbors)),
             pbc_enabled=bool(neighbors.get("pbc_enabled", False)),
             periodic=tuple(neighbors.get("periodic", (False, False, False))),
+            image_shifts=neighbors.get("image_shifts"),
+            cell_vectors=neighbors.get("cell_vectors"),
         )
     else:
-        graph = SparseNeighborGraph.from_neighbor_pairs(neighbors, max_neighbors=max_neighbors)
+        graph = SparseNeighborGraph.from_neighbor_pairs(
+            neighbors,
+            max_neighbors=max_neighbors,
+        )
     if graph.batch_size != int(batch_size) or graph.atom_count != int(atom_count):
         raise ValueError("neighbor graph shape does not match the coordinate batch")
     if graph.max_neighbors > int(max_neighbors):
-        raise ValueError("neighbor graph exceeds the model's bounded-degree contract")
-    return graph.to(device)
+        raise ValueError("neighbor graph exceeds the model bounded-degree contract")
+    return graph.to(device, dtype=dtype)
 
 
 def segment_sum(values: torch.Tensor, indices: torch.Tensor, size: int) -> torch.Tensor:
