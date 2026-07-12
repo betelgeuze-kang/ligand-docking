@@ -1,0 +1,31 @@
+schema_version: 2
+engine_id: betelgeuze_independent_engine_v2
+implementation_stage: v2_e_runtime_checkpoint_contracts
+
+claim_policy:
+  customer_execution_enabled: false
+  scientific_validity_green: false
+  benchmark_validity_green: false
+  gpu_acceleration_claim_allowed: false
+  docking_accuracy_claim_allowed: false
+
+capabilities:
+  v2_cpu_reference_orchestrator:
+    current_state: fail_closed_internal_reference
+    execution_enabled: false
+    internal_reference_execution_enabled: true
+    blocker_source: betelgeuze_engine_v2.engine.REFERENCE_CLAIM_BLOCKERS
+    blockers:
+      - uncalibrated_checkpoint
+      - independent_physics_validation_missing
+      - public_benchmark_evidence_missing
+      - gpu_parity_evidence_missing
+      - product_integration_not_qualified
+
+promotion_requirements:
+  require_strict_checkpoint_contract: true
+  require_runtime_vocabulary_fingerprint: true
+  require_runtime_conditioning_batch_preservation: true
+  require_non_empty_row_level_evidence: true
+  require_failure_rows: true
+  external_state_mutated: false
