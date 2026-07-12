@@ -1,0 +1,61 @@
+"""Canonical all-atom molecular representation for Engine v2."""
+
+from .models import (
+    AllAtomSystem,
+    Atom,
+    Bond,
+    Chain,
+    Residue,
+    StructureProvenance,
+    UnitCell,
+    atomic_number_for_element,
+    canonical_element_symbol,
+    element_for_atomic_number,
+)
+from .serialization import (
+    CanonicalSerializationError,
+    canonical_coordinates_payload,
+    canonical_coordinates_sha256,
+    canonical_json_bytes,
+    canonical_json_value,
+    canonical_system_payload,
+    canonical_system_sha256,
+    canonical_topology_payload,
+    canonical_topology_sha256,
+    sha256_canonical,
+)
+from .validation import (
+    MolecularValidationError,
+    ValidationIssue,
+    ValidationReport,
+    require_valid_all_atom_system,
+    validate_all_atom_system,
+)
+
+__all__ = [
+    "AllAtomSystem",
+    "Atom",
+    "Bond",
+    "CanonicalSerializationError",
+    "Chain",
+    "MolecularValidationError",
+    "Residue",
+    "StructureProvenance",
+    "UnitCell",
+    "ValidationIssue",
+    "ValidationReport",
+    "atomic_number_for_element",
+    "canonical_coordinates_payload",
+    "canonical_coordinates_sha256",
+    "canonical_element_symbol",
+    "canonical_json_bytes",
+    "canonical_json_value",
+    "canonical_system_payload",
+    "canonical_system_sha256",
+    "canonical_topology_payload",
+    "canonical_topology_sha256",
+    "element_for_atomic_number",
+    "require_valid_all_atom_system",
+    "sha256_canonical",
+    "validate_all_atom_system",
+]
