@@ -1,7 +1,8 @@
-"""Independent Engine v2 contracts, sparse geometry, AI, and projections.
+"""Independent Engine v2 reference package.
 
-The package still exposes reference components only. The internal orchestrator,
-legacy adapters, and distributable wheel follow in later stacked PRs.
+This surface includes contracts, sparse geometry, mathematical AI/projection
+primitives, and a fail-closed CPU orchestrator. It is not a calibrated docking,
+MD, free-energy, GPU, or product engine.
 """
 
 from .ai import (
@@ -37,6 +38,17 @@ from .contracts import (
     UNCALIBRATED_ENERGY,
     UNCALIBRATED_FORCE,
 )
+from .engine import (
+    REFERENCE_CLAIM_BLOCKERS,
+    REFERENCE_EXECUTION_MODE,
+    RIGID_PROJECTION_NOTE,
+    ClaimBlocker,
+    EngineExecutionProvenance,
+    IndependentEngineV2,
+    IndependentEngineV2Config,
+    IndependentEngineV2Result,
+    run_internal_cpu_reference,
+)
 from .features import (
     ATOM_FEATURE_NAMES,
     ATOM_FEATURE_SCHEMA_VERSION,
@@ -70,9 +82,13 @@ from .molecular import (
     validate_all_atom_system,
 )
 from .physics import (
+    EnergyCompositionResult,
+    EnergyTermResult,
+    IndependentPhysicsProvider,
     MAX_FIXED_PROJECTION_RANK,
     ProjectionDiagnostics,
     ProjectionRankError,
+    compose_energy_terms,
     fixed_rank_orthogonal_complement,
     fixed_rank_projection_adjoint,
     project_rigid_body_forces,
@@ -93,6 +109,9 @@ __all__ = [
     "MAX_COMPACT_NEIGHBORS",
     "MAX_FIXED_PROJECTION_RANK",
     "NEIGHBOR_SCHEMA_VERSION",
+    "REFERENCE_CLAIM_BLOCKERS",
+    "REFERENCE_EXECUTION_MODE",
+    "RIGID_PROJECTION_NOTE",
     "RUNTIME_INPUT_SCHEMA_VERSION",
     "VERSION_TAXONOMY",
     "AllAtomSystem",
@@ -100,9 +119,17 @@ __all__ = [
     "AtomFeatureBatch",
     "Bond",
     "Chain",
+    "ClaimBlocker",
     "ClaimStage",
     "CompactNeighborList",
+    "EnergyCompositionResult",
     "EnergyForcePrediction",
+    "EnergyTermResult",
+    "EngineExecutionProvenance",
+    "IndependentEngineV2",
+    "IndependentEngineV2Config",
+    "IndependentEngineV2Result",
+    "IndependentPhysicsProvider",
     "KinematicResult",
     "LocalEnergyConfig",
     "LocalEnergyTerms",
@@ -134,12 +161,14 @@ __all__ = [
     "canonical_coordinates_sha256",
     "canonical_system_sha256",
     "canonical_topology_sha256",
+    "compose_energy_terms",
     "evaluate_physics_gates",
     "fixed_rank_orthogonal_complement",
     "fixed_rank_projection_adjoint",
     "physics_informed_objective",
     "project_rigid_body_forces",
     "require_valid_all_atom_system",
+    "run_internal_cpu_reference",
     "torsion_tree_forward_kinematics",
     "validate_all_atom_system",
 ]
