@@ -89,7 +89,22 @@ jobs:
             tests/unit/test_engine_v2_orchestrator_contract.py
 
       - name: Run runtime vocabulary conditioning and checkpoint contracts
-        run: python -m pytest -vv tests/unit/test_engine_v2_runtime_checkpoint_contracts.py
+        shell: bash
+        run: |
+          set +e
+          python -m pytest -vv -x tests/unit/test_engine_v2_runtime_checkpoint_contracts.py > runtime-contracts.log 2>&1
+          status=$?
+          cat runtime-contracts.log
+          exit "$status"
+
+      - name: Upload runtime contract diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-contracts-py${{ matrix.python-version }}-${{ github.run_id }}
+          path: runtime-contracts.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Enforce source-level migration boundaries
         run: |
