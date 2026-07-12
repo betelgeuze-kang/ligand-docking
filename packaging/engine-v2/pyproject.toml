@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "betelgeuze-engine-v2"
+version = "0.1.0"
+description = "Fail-closed independent molecular Engine v2 reference contracts and CPU primitives."
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "numpy>=1.26,<3",
+  "torch==2.6.0",
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Operating System :: OS Independent",
+]
+
+[tool.setuptools.packages.find]
+include = ["betelgeuze_engine_v2*"]
+exclude = ["tests*", "api*", "core*", "train*", "betelgeuze_product*"]
