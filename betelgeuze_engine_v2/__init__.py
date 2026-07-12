@@ -1,9 +1,28 @@
-"""Independent Engine v2 contract, molecular, and sparse-geometry package.
+"""Independent Engine v2 contracts, sparse geometry, AI, and projections.
 
-Later stacked PRs add AI primitives, the internal CPU orchestrator, legacy
-adapters, and packaging without changing this ownership boundary.
+The package still exposes reference components only. The internal orchestrator,
+legacy adapters, and distributable wheel follow in later stacked PRs.
 """
 
+from .ai import (
+    EnergyForcePrediction,
+    KinematicResult,
+    LocalEnergyConfig,
+    LocalEnergyTerms,
+    ParityAwareLocalEnergyModel,
+    PhysicsGateResult,
+    PhysicsGateThresholds,
+    PhysicsLossWeights,
+    PhysicsObjectiveResult,
+    SparseNeighborGraph,
+    TemporalRollout,
+    TemporalStateGNN,
+    TorsionTopologyGNN,
+    axis_angle_matrix,
+    evaluate_physics_gates,
+    physics_informed_objective,
+    torsion_tree_forward_kinematics,
+)
 from .contracts import (
     ALL_ATOM_SCHEMA_ID,
     CHECKPOINT_SCHEMA_VERSION,
@@ -50,6 +69,14 @@ from .molecular import (
     require_valid_all_atom_system,
     validate_all_atom_system,
 )
+from .physics import (
+    MAX_FIXED_PROJECTION_RANK,
+    ProjectionDiagnostics,
+    ProjectionRankError,
+    fixed_rank_orthogonal_complement,
+    fixed_rank_projection_adjoint,
+    project_rigid_body_forces,
+)
 
 __version__ = ENGINE_API_VERSION
 
@@ -64,6 +91,7 @@ __all__ = [
     "ENGINE_RESULT_SCHEMA_VERSION",
     "MAX_COMPACT_ATOMS_PER_CELL",
     "MAX_COMPACT_NEIGHBORS",
+    "MAX_FIXED_PROJECTION_RANK",
     "NEIGHBOR_SCHEMA_VERSION",
     "RUNTIME_INPUT_SCHEMA_VERSION",
     "VERSION_TAXONOMY",
@@ -74,22 +102,44 @@ __all__ = [
     "Chain",
     "ClaimStage",
     "CompactNeighborList",
+    "EnergyForcePrediction",
+    "KinematicResult",
+    "LocalEnergyConfig",
+    "LocalEnergyTerms",
     "MolecularValidationError",
     "NeighborBuildDiagnostics",
     "NeighborOverflowError",
+    "ParityAwareLocalEnergyModel",
+    "PhysicsGateResult",
+    "PhysicsGateThresholds",
+    "PhysicsLossWeights",
+    "PhysicsObjectiveResult",
+    "ProjectionDiagnostics",
+    "ProjectionRankError",
     "QuantityDescriptor",
     "RadiusGraphConfig",
     "Residue",
+    "SparseNeighborGraph",
     "StructureProvenance",
+    "TemporalRollout",
+    "TemporalStateGNN",
+    "TorsionTopologyGNN",
     "UNCALIBRATED_ENERGY",
     "UNCALIBRATED_FORCE",
     "UnitCell",
     "ValidationReport",
+    "axis_angle_matrix",
     "build_compact_radius_graph",
     "build_deterministic_atom_features",
     "canonical_coordinates_sha256",
     "canonical_system_sha256",
     "canonical_topology_sha256",
+    "evaluate_physics_gates",
+    "fixed_rank_orthogonal_complement",
+    "fixed_rank_projection_adjoint",
+    "physics_informed_objective",
+    "project_rigid_body_forces",
     "require_valid_all_atom_system",
+    "torsion_tree_forward_kinematics",
     "validate_all_atom_system",
 ]
