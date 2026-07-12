@@ -269,7 +269,7 @@ def test_bounded_docking_search_is_deterministic_and_keeps_failed_candidates() -
     with pytest.raises(ValueError, match="cycle"):
         TorsionSearchSpace(
             local_offsets=torch.zeros((3, 3), dtype=torch.float64),
-            parent=torch.tensor([1, 2, 0], dtype=torch.long),
+            parent=torch.tensor([-1, 2, 1], dtype=torch.long),
             local_axes=torch.tensor([[0.0, 0.0, 1.0]] * 3, dtype=torch.float64),
             rotatable_mask=torch.tensor([False, True, True]),
         )
