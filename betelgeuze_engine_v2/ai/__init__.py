@@ -4,7 +4,7 @@ from betelgeuze_engine_v2.ai.energy import (
     EnergyForcePrediction,
     LocalEnergyConfig,
     LocalEnergyTerms,
-    ParityAwareLocalEnergyModel,
+    ParityAwareLocalEnergyModel as _ParityAwareLocalEnergyModel,
 )
 from betelgeuze_engine_v2.ai.physics_informed import (
     PhysicsGateResult,
@@ -26,6 +26,22 @@ from betelgeuze_engine_v2.ai.torsion import (
     axis_angle_matrix,
     torsion_tree_forward_kinematics,
 )
+
+
+class ParityAwareLocalEnergyModel(_ParityAwareLocalEnergyModel):
+    """Public compatibility shell around the exact image-gradient implementation."""
+
+    def energy_terms(self, coordinates, atom_features, neighbors):  # type: ignore[no-untyped-def]
+        try:
+            return super().energy_terms(coordinates, atom_features, neighbors)
+        except ValueError as exc:
+            if "periodic sparse energy requires" in str(exc):
+                raise ValueError(
+                    "periodic sparse energy is blocked until integer image_shifts "
+                    "and cell_vectors are supplied"
+                ) from exc
+            raise
+
 
 __all__ = [
     "ComplexityMetadata",
