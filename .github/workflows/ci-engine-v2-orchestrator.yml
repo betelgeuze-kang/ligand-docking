@@ -61,14 +61,31 @@ jobs:
       - name: Compile Engine v2 CPU modules
         run: python -m compileall -q betelgeuze_engine_v2
 
-      - name: Run complete stacked CPU reference suite
+      - name: Run inherited contract, sparse, AI, and periodic suites
         run: |
           python -m pytest -q \
             tests/unit/test_engine_v2_contracts_molecular.py \
             tests/unit/test_engine_v2_sparse_geometry_features.py \
             tests/unit/test_engine_v2_ai_core.py \
-            tests/unit/test_engine_v2_periodic_energy.py \
-            tests/unit/test_engine_v2_orchestrator_contract.py
+            tests/unit/test_engine_v2_periodic_energy.py
+
+      - name: Run orchestrator composition suite with diagnostic log
+        shell: bash
+        run: |
+          set +e
+          python -m pytest -vv -x tests/unit/test_engine_v2_orchestrator_contract.py > orchestrator-test.log 2>&1
+          status=$?
+          cat orchestrator-test.log
+          exit "$status"
+
+      - name: Upload orchestrator diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orchestrator-diagnostics-py${{ matrix.python-version }}-${{ github.run_id }}
+          path: orchestrator-test.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Verify total physical energy remains absent by default
         run: |
