@@ -1,0 +1,76 @@
+name: ci-engine-v2-contracts
+
+on:
+  pull_request:
+    paths:
+      - "betelgeuze_engine_v2/contracts/**"
+      - "betelgeuze_engine_v2/molecular/**"
+      - "betelgeuze_engine_v2/__init__.py"
+      - "tests/unit/test_engine_v2_contracts_molecular.py"
+      - ".github/workflows/ci-engine-v2-contracts.yml"
+  push:
+    branches:
+      - "agent/v2-a-contracts-molecular"
+    paths:
+      - "betelgeuze_engine_v2/contracts/**"
+      - "betelgeuze_engine_v2/molecular/**"
+      - "betelgeuze_engine_v2/__init__.py"
+      - "tests/unit/test_engine_v2_contracts_molecular.py"
+      - ".github/workflows/ci-engine-v2-contracts.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-contracts-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+    steps:
+      - name: Check out contract surface only
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            tests/unit/test_engine_v2_contracts_molecular.py
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install focused CPU dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest==8.3.5
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Compile contract modules
+        run: python -m compileall -q betelgeuze_engine_v2
+
+      - name: Run staged contract and provenance tests
+        run: python -m pytest -q tests/unit/test_engine_v2_contracts_molecular.py
+
+      - name: Enforce non-promotion boundary
+        run: |
+          python - <<'PY'
+          from betelgeuze_engine_v2 import ClaimStage, UNCALIBRATED_ENERGY
+          assert ClaimStage.CONTRACT_VALID.claim_safe is False
+          assert UNCALIBRATED_ENERGY.physical_quantity is False
+          assert UNCALIBRATED_ENERGY.unit is None
+          PY
