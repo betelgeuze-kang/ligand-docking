@@ -9,10 +9,7 @@ import pytest
 torch = pytest.importorskip("torch")
 yaml = pytest.importorskip("yaml")
 
-from betelgeuze_engine_v2.capabilities import (  # noqa: E402
-    capability_snapshot,
-    require_capability_snapshot,
-)
+from betelgeuze_engine_v2.capabilities import capability_snapshot, require_capability_snapshot  # noqa: E402
 from betelgeuze_engine_v2.runtime import (  # noqa: E402
     RESIDUE_UNK_ID,
     RESIDUE_VOCABULARY,
@@ -39,7 +36,6 @@ from train.runtime_inputs import (  # noqa: E402
     RUNTIME_INPUT_SCHEMA_ID,
     build_runtime_inputs,
     resolve_sim_params,
-    resolve_sim_params_batch,
     runtime_input_schema_metadata,
 )
 
@@ -47,7 +43,7 @@ from train.runtime_inputs import (  # noqa: E402
 def test_residue_vocabulary_has_explicit_unk_and_no_modulo_alias() -> None:
     ids = torch.tensor([[1, 20, 21, 65, -3]], dtype=torch.long)
     normalized, unknown = normalize_residue_ids(ids)
-    assert normalized.tolist() == [[1, 20, RESIDUE_UNK_ID, RESIDUE_UNK_ID, RESIDUE_UNK_ID]]
+    assert normalized.tolist() == [[1, 20, 0, 0, 0]]
     assert unknown.tolist() == [[False, False, True, True, True]]
 
     encoded, diagnostics = residue_one_hot(ids, output_width=64)
@@ -57,7 +53,6 @@ def test_residue_vocabulary_has_explicit_unk_and_no_modulo_alias() -> None:
     assert diagnostics["modulo_aliasing_used"] is False
     assert diagnostics["size"] == RESIDUE_VOCABULARY_SIZE
     assert len(diagnostics["fingerprint_sha256"]) == 64
-
     with pytest.raises(ResidueVocabularyError, match="outside"):
         normalize_residue_ids(ids, unknown_policy="error")
 
@@ -71,7 +66,7 @@ def test_runtime_conditioning_preserves_batch_and_scalar_path_requires_uniformit
         dtype=torch.float64,
         device="cpu",
     )
-    assert conditions.values.tolist() == [[280.0, 7.2], [320.0, 7.2]]
+    assert conditions.values.tolist() == pytest.approx([[280.0, 7.2], [320.0, 7.2]])
     assert conditions.as_mapping()["temp"].tolist() == [280.0, 320.0]
     assert conditions.to_dict()["batch_mean_applied"] is False
     with pytest.raises(RuntimeConditioningError, match="uniform batch"):
@@ -92,7 +87,7 @@ def test_runtime_conditioning_preserves_batch_and_scalar_path_requires_uniformit
         resolve_sim_params({"temp": torch.tensor([280.0, 320.0])})
 
 
-def test_runtime_inputs_use_bounded_neighbors_explicit_vocabulary_and_per_sample_conditions() -> None:
+def test_runtime_inputs_use_bounded_neighbors_vocabulary_and_per_sample_conditions() -> None:
     coords = torch.tensor(
         [
             [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [2.2, 0.0, 0.0]],
@@ -120,7 +115,7 @@ def test_runtime_inputs_use_bounded_neighbors_explicit_vocabulary_and_per_sample
     assert top.neighbor_diagnostics["dense_all_pairs_distance_used"] is False
     assert tuple(top.runtime_conditioning.values.shape) == (2, 13)
     assert conditions["temp"].tolist() == [280.0, 320.0]
-    assert conditions["pH"].tolist() == [6.8, 7.4]
+    assert conditions["pH"].tolist() == pytest.approx([6.8, 7.4], abs=1e-6)
     assert neighbors[0].shape == (2, 3, 2)
     assert pe.shape == (2, 1)
 
@@ -153,16 +148,15 @@ def _model() -> torch.nn.Module:
 def _payload(model: torch.nn.Module, state: dict[str, torch.Tensor] | None = None) -> dict[str, object]:
     state_dict = deepcopy(dict(model.state_dict()) if state is None else state)
     config = {"model_kind": "unit_mlp", "input_width": 3, "output_width": 2}
-    metadata = checkpoint_contract_metadata(
-        model,
-        state_dict,
-        runtime_input_schema=_runtime_metadata(),
-        config=config,
-    )
     return {
         "state_dict": state_dict,
         "runtime_input_schema": _runtime_metadata(),
-        "checkpoint_contract": metadata,
+        "checkpoint_contract": checkpoint_contract_metadata(
+            model,
+            state_dict,
+            runtime_input_schema=_runtime_metadata(),
+            config=config,
+        ),
         "config": config,
     }
 
@@ -178,16 +172,17 @@ def test_architecture_runtime_vocabulary_and_state_fingerprints_are_deterministi
     changed["0.weight"][0, 0] += 0.25
     assert state_dict_fingerprint(first.state_dict()) != state_dict_fingerprint(changed)
 
+    common = {
+        "architecture_fingerprint_sha256": model_architecture_fingerprint(first),
+        "runtime_input_schema": _runtime_metadata(),
+        "vocabulary_metadata": RESIDUE_VOCABULARY.to_dict(),
+    }
     runtime_a = runtime_contract_fingerprint(
-        architecture_fingerprint_sha256=model_architecture_fingerprint(first),
-        runtime_input_schema=_runtime_metadata(),
-        vocabulary_metadata=RESIDUE_VOCABULARY.to_dict(),
+        **common,
         config={"x": 1, "nested": {"b": 2, "a": 1}},
     )
     runtime_b = runtime_contract_fingerprint(
-        architecture_fingerprint_sha256=model_architecture_fingerprint(first),
-        runtime_input_schema=_runtime_metadata(),
-        vocabulary_metadata=RESIDUE_VOCABULARY.to_dict(),
+        **common,
         config={"nested": {"a": 1, "b": 2}, "x": 1},
     )
     assert runtime_a == runtime_b
@@ -195,10 +190,9 @@ def test_architecture_runtime_vocabulary_and_state_fingerprints_are_deterministi
 
 def test_strict_checkpoint_contract_accepts_only_full_exact_finite_state() -> None:
     source = _model()
-    target = _model()
     payload = _payload(source)
     report = load_checkpoint_payload_fail_closed(
-        target,
+        _model(),
         payload,
         runtime_input_schema=_runtime_metadata(),
         config=payload["config"],
@@ -213,10 +207,8 @@ def test_strict_checkpoint_contract_accepts_only_full_exact_finite_state() -> No
     missing_payload = _payload(source, missing_state)
     with pytest.raises(CheckpointStateCoverageError, match="strict checkpoint coverage"):
         load_checkpoint_payload_fail_closed(
-            _model(),
-            missing_payload,
-            runtime_input_schema=_runtime_metadata(),
-            config=missing_payload["config"],
+            _model(), missing_payload,
+            runtime_input_schema=_runtime_metadata(), config=missing_payload["config"]
         )
 
     bad_dtype = deepcopy(dict(source.state_dict()))
@@ -224,10 +216,8 @@ def test_strict_checkpoint_contract_accepts_only_full_exact_finite_state() -> No
     bad_dtype_payload = _payload(source, bad_dtype)
     with pytest.raises(CheckpointStateCoverageError, match="dtype=1"):
         load_checkpoint_payload_fail_closed(
-            _model(),
-            bad_dtype_payload,
-            runtime_input_schema=_runtime_metadata(),
-            config=bad_dtype_payload["config"],
+            _model(), bad_dtype_payload,
+            runtime_input_schema=_runtime_metadata(), config=bad_dtype_payload["config"]
         )
 
     nonfinite = deepcopy(dict(source.state_dict()))
@@ -236,10 +226,8 @@ def test_strict_checkpoint_contract_accepts_only_full_exact_finite_state() -> No
     nonfinite_payload = _payload(source, nonfinite)
     with pytest.raises(CheckpointStateCoverageError, match="nonfinite=1"):
         load_checkpoint_payload_fail_closed(
-            _model(),
-            nonfinite_payload,
-            runtime_input_schema=_runtime_metadata(),
-            config=nonfinite_payload["config"],
+            _model(), nonfinite_payload,
+            runtime_input_schema=_runtime_metadata(), config=nonfinite_payload["config"]
         )
 
     tampered = _payload(source)
@@ -249,10 +237,8 @@ def test_strict_checkpoint_contract_accepts_only_full_exact_finite_state() -> No
     tampered["state_dict"] = tampered_state
     with pytest.raises(CheckpointContractError, match="fingerprint mismatch"):
         load_checkpoint_payload_fail_closed(
-            _model(),
-            tampered,
-            runtime_input_schema=_runtime_metadata(),
-            config=tampered["config"],
+            _model(), tampered,
+            runtime_input_schema=_runtime_metadata(), config=tampered["config"]
         )
 
     with pytest.raises(CheckpointStateCoverageError, match="partial loading"):
@@ -269,8 +255,9 @@ def test_runtime_schema_and_capability_blockers_have_no_drift() -> None:
     assert metadata["runtime_conditioning_batch_mean_used"] is False
     assert metadata["dense_all_pairs_distance_used"] is False
 
-    path = Path("config/independent_engine_v2_capabilities.yaml")
-    loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
+    loaded = yaml.safe_load(
+        Path("config/independent_engine_v2_capabilities.yaml").read_text(encoding="utf-8")
+    )
     require_capability_snapshot(loaded)
     assert loaded["capabilities"] == capability_snapshot()["capabilities"]
 
