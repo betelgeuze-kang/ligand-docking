@@ -11,7 +11,6 @@ CORE_SIM_PARAM_DEFAULTS = {
     "ionic_strength": 0.15,
 }
 
-# Runtime conditioning vars are explicitly allow-listed to avoid label leakage.
 DEFAULT_RUNTIME_CONDITIONING_KEYS = (
     "temp",
     "salt_conc",
@@ -28,7 +27,6 @@ DEFAULT_RUNTIME_CONDITIONING_KEYS = (
     "ai_correction_active",
 )
 
-# Fields below are treated as labels/evaluation targets and must never enter runtime conditioning.
 LEAKAGE_BLOCKED_SIM_KEYS = (
     "energy",
     "Rg",
@@ -42,15 +40,40 @@ LEAKAGE_BLOCKED_SIM_KEYS = (
 )
 
 
+class ScalarConditioningError(ValueError):
+    """A scalar-only consumer received a heterogeneous batch condition."""
+
+
 def coerce_sim_param_float(v, default: float) -> float:
+    """Convert a scalar condition without averaging different batch values."""
+
     if torch.is_tensor(v):
         if v.numel() == 0:
             return float(default)
-        return float(v.float().mean().item())
+        flat = v.detach().to(dtype=torch.float64, device="cpu").reshape(-1)
+        if not bool(torch.isfinite(flat).all().item()):
+            raise ScalarConditioningError("runtime parameter contains non-finite values")
+        reference = flat[0]
+        if not bool(torch.equal(flat, reference.expand_as(flat))):
+            raise ScalarConditioningError(
+                "scalar runtime consumer requires identical values across the batch"
+            )
+        return float(reference.item())
+    if isinstance(v, (list, tuple)):
+        if not v:
+            return float(default)
+        try:
+            flat = torch.as_tensor(v, dtype=torch.float64).reshape(-1)
+        except (TypeError, ValueError) as exc:
+            raise ScalarConditioningError("runtime parameter must be numeric") from exc
+        return coerce_sim_param_float(flat, default)
     try:
-        return float(v)
-    except Exception:
+        value = float(v)
+    except (TypeError, ValueError):
         return float(default)
+    if not torch.isfinite(torch.tensor(value, dtype=torch.float64)).item():
+        raise ScalarConditioningError("runtime parameter must be finite")
+    return value
 
 
 def vectorize_sim_params(
@@ -61,6 +84,13 @@ def vectorize_sim_params(
     device=None,
     dtype=torch.float32,
 ) -> torch.Tensor:
+    """Vectorize conditions for a scalar-only consumer.
+
+    Batched tensors are accepted only when every row is identical. Consumers
+    that need per-sample conditions must use the Engine v2 `[B,P]` runtime
+    conditioning contract instead.
+    """
+
     params = sim_params if isinstance(sim_params, Mapping) else {}
     values = []
     for key in keys:
