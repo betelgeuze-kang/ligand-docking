@@ -8,13 +8,15 @@ same topology can carry an ensemble without duplicating atom metadata.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
+import re
 from typing import Any, Mapping
 
 import torch
 
-from betelgeuze_engine_v2.contracts import ALL_ATOM_SCHEMA_ID
+from betelgeuze_engine_v2.contracts import ALL_ATOM_SCHEMA_ID, ClaimStage
 
 
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _ELEMENT_SYMBOLS = (
     "",
     "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne",
@@ -53,9 +55,16 @@ def element_for_atomic_number(atomic_number: int) -> str:
     return _ELEMENT_SYMBOLS[number]
 
 
+def _digest_or_empty(value: str, *, field_name: str) -> str:
+    digest = str(value or "").strip().lower()
+    if digest and _SHA256_RE.fullmatch(digest) is None:
+        raise ValueError(f"{field_name} must be 64 lowercase hexadecimal characters")
+    return digest
+
+
 @dataclass(frozen=True)
 class Atom:
-    """One explicit atom, including hydrogens when they exist in the source."""
+    """One explicit atom, including hydrogens when present in the source."""
 
     index: int
     name: str
@@ -84,31 +93,15 @@ class Atom:
             "partial_charge_e",
             None if self.partial_charge_e is None else float(self.partial_charge_e),
         )
-        object.__setattr__(
-            self,
-            "mass_da",
-            None if self.mass_da is None else float(self.mass_da),
-        )
+        object.__setattr__(self, "mass_da", None if self.mass_da is None else float(self.mass_da))
         object.__setattr__(
             self,
             "isotope_mass_number",
             None if self.isotope_mass_number is None else int(self.isotope_mass_number),
         )
-        object.__setattr__(
-            self,
-            "serial",
-            None if self.serial is None else int(self.serial),
-        )
-        object.__setattr__(
-            self,
-            "occupancy",
-            None if self.occupancy is None else float(self.occupancy),
-        )
-        object.__setattr__(
-            self,
-            "b_factor",
-            None if self.b_factor is None else float(self.b_factor),
-        )
+        object.__setattr__(self, "serial", None if self.serial is None else int(self.serial))
+        object.__setattr__(self, "occupancy", None if self.occupancy is None else float(self.occupancy))
+        object.__setattr__(self, "b_factor", None if self.b_factor is None else float(self.b_factor))
         object.__setattr__(self, "name", str(self.name).strip())
         object.__setattr__(self, "element", canonical_element_symbol(self.element))
         object.__setattr__(self, "altloc", str(self.altloc or "").strip())
@@ -156,16 +149,8 @@ class Residue:
         object.__setattr__(self, "chain_index", int(self.chain_index))
         object.__setattr__(self, "sequence_number", int(self.sequence_number))
         object.__setattr__(self, "name", str(self.name).strip().upper())
-        object.__setattr__(
-            self,
-            "atom_indices",
-            tuple(int(value) for value in self.atom_indices),
-        )
-        object.__setattr__(
-            self,
-            "insertion_code",
-            str(self.insertion_code or "").strip(),
-        )
+        object.__setattr__(self, "atom_indices", tuple(int(value) for value in self.atom_indices))
+        object.__setattr__(self, "insertion_code", str(self.insertion_code or "").strip())
         object.__setattr__(self, "entity_type", str(self.entity_type or "unknown"))
         object.__setattr__(self, "metadata", dict(self.metadata))
 
@@ -181,11 +166,7 @@ class Chain:
     def __post_init__(self) -> None:
         object.__setattr__(self, "index", int(self.index))
         object.__setattr__(self, "chain_id", str(self.chain_id))
-        object.__setattr__(
-            self,
-            "residue_indices",
-            tuple(int(value) for value in self.residue_indices),
-        )
+        object.__setattr__(self, "residue_indices", tuple(int(value) for value in self.residue_indices))
         object.__setattr__(self, "entity_id", str(self.entity_id or ""))
         object.__setattr__(self, "metadata", dict(self.metadata))
 
@@ -206,11 +187,7 @@ class UnitCell:
             raise TypeError("unit-cell vectors must use a floating dtype")
         if len(self.periodic) != 3:
             raise ValueError("unit-cell periodic flags must have length 3")
-        object.__setattr__(
-            self,
-            "periodic",
-            tuple(bool(value) for value in self.periodic),
-        )
+        object.__setattr__(self, "periodic", tuple(bool(value) for value in self.periodic))
 
     @classmethod
     def orthorhombic(
@@ -239,7 +216,7 @@ class UnitCell:
 
 @dataclass(frozen=True)
 class StructureProvenance:
-    """Origin and transformation ledger for a canonical molecular system."""
+    """Origin and transformation evidence for a canonical molecular system."""
 
     source_format: str
     source_id: str = ""
@@ -248,34 +225,60 @@ class StructureProvenance:
     parser_version: str = ""
     operations: tuple[str, ...] = ()
     parent_sha256: tuple[str, ...] = ()
-    claim_safe: bool = False
+    source_digest_verified: bool = False
+    transformation_chain_verified: bool = False
+    chemistry_validated: bool = False
+    scientifically_validated: bool = False
+    product_qualified: bool = False
     metadata: Mapping[str, Any] = field(default_factory=dict, compare=False)
 
     def __post_init__(self) -> None:
-        object.__setattr__(
-            self,
-            "source_format",
-            str(self.source_format or "unknown").lower(),
-        )
+        object.__setattr__(self, "source_format", str(self.source_format or "unknown").lower())
         object.__setattr__(self, "source_id", str(self.source_id or ""))
         object.__setattr__(
             self,
             "source_sha256",
-            str(self.source_sha256 or "").lower(),
+            _digest_or_empty(self.source_sha256, field_name="source_sha256"),
         )
         object.__setattr__(self, "parser_name", str(self.parser_name or ""))
         object.__setattr__(self, "parser_version", str(self.parser_version or ""))
-        object.__setattr__(
-            self,
-            "operations",
-            tuple(str(value) for value in self.operations),
-        )
+        object.__setattr__(self, "operations", tuple(str(value) for value in self.operations))
         object.__setattr__(
             self,
             "parent_sha256",
-            tuple(str(value).lower() for value in self.parent_sha256),
+            tuple(_digest_or_empty(value, field_name="parent_sha256") for value in self.parent_sha256),
         )
         object.__setattr__(self, "metadata", dict(self.metadata))
+        if self.source_digest_verified and not self.source_sha256:
+            raise ValueError("source_digest_verified requires source_sha256")
+        if self.chemistry_validated and not self.provenance_verified:
+            raise ValueError("chemistry_validated requires verified provenance")
+        if self.scientifically_validated and not self.chemistry_validated:
+            raise ValueError("scientifically_validated requires chemistry_validated")
+        if self.product_qualified and not self.scientifically_validated:
+            raise ValueError("product_qualified requires scientifically_validated")
+
+    @property
+    def provenance_verified(self) -> bool:
+        return bool(self.source_digest_verified and self.transformation_chain_verified)
+
+    @property
+    def claim_stage(self) -> ClaimStage:
+        if self.product_qualified:
+            return ClaimStage.PRODUCT_QUALIFIED
+        if self.scientifically_validated:
+            return ClaimStage.SCIENTIFICALLY_VALIDATED
+        if self.chemistry_validated:
+            return ClaimStage.CHEMISTRY_VALIDATED
+        if self.provenance_verified:
+            return ClaimStage.PROVENANCE_VERIFIED
+        return ClaimStage.CONTRACT_VALID
+
+    @property
+    def claim_safe(self) -> bool:
+        """Compatibility alias; scientific validation is required."""
+
+        return self.claim_stage.claim_safe
 
 
 @dataclass(frozen=True)
@@ -317,7 +320,39 @@ class AllAtomSystem:
     def model_count(self) -> int:
         return int(self.coordinates.shape[0])
 
-    def with_coordinates(self, coordinates: torch.Tensor) -> "AllAtomSystem":
-        """Return the same immutable topology with a new coordinate ensemble."""
+    def with_coordinates(
+        self,
+        coordinates: torch.Tensor,
+        *,
+        operation: str,
+        operation_evidence_sha256: str = "",
+    ) -> "AllAtomSystem":
+        """Return transformed coordinates and invalidate transformation claims.
 
-        return replace(self, coordinates=coordinates)
+        The immutable source digest remains attached, but transformed state is
+        not provenance-verified until a separate verifier attests the operation.
+        """
+
+        operation_name = str(operation or "").strip()
+        if not operation_name:
+            raise ValueError("coordinate transformations must declare an operation")
+        evidence_digest = _digest_or_empty(
+            operation_evidence_sha256,
+            field_name="operation_evidence_sha256",
+        )
+        from .serialization import canonical_system_sha256
+
+        parent_digest = canonical_system_sha256(self)
+        metadata = dict(self.provenance.metadata)
+        metadata["last_operation"] = operation_name
+        metadata["last_operation_evidence_sha256"] = evidence_digest
+        derived_provenance = replace(
+            self.provenance,
+            operations=(*self.provenance.operations, operation_name),
+            parent_sha256=(*self.provenance.parent_sha256, parent_digest),
+            transformation_chain_verified=False,
+            scientifically_validated=False,
+            product_qualified=False,
+            metadata=metadata,
+        )
+        return replace(self, coordinates=coordinates, provenance=derived_provenance)
