@@ -66,7 +66,8 @@ def test_runtime_conditioning_preserves_batch_and_scalar_path_requires_uniformit
         dtype=torch.float64,
         device="cpu",
     )
-    assert conditions.values.tolist() == pytest.approx([[280.0, 7.2], [320.0, 7.2]])
+    expected = torch.tensor([[280.0, 7.2], [320.0, 7.2]], dtype=torch.float64)
+    assert torch.allclose(conditions.values, expected, atol=1e-12, rtol=0.0)
     assert conditions.as_mapping()["temp"].tolist() == [280.0, 320.0]
     assert conditions.to_dict()["batch_mean_applied"] is False
     with pytest.raises(RuntimeConditioningError, match="uniform batch"):
