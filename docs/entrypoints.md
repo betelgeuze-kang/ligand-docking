@@ -8,9 +8,10 @@ status packets.
 
 | Reviewer type | Start here | Then read | What this lane can claim now |
 | --- | --- | --- | --- |
+| Independent Engine v2 reviewer | `docs/engine_v2_status.md` | `docs/engine_v2_public_api.md`, `config/independent_engine_v2_capabilities.yaml`, `betelgeuze_engine_v2/`, `packaging/engine-v2/pyproject.toml` | Bounded CPU reference contracts, strict ingest, docking/benchmark scaffolds, and clean-wheel isolation only. No calibrated docking, MD, free-energy, GPU, or product claim. |
 | Restricted local-delivery reviewer | `README.md`, `docs/local_delivery_runbook.md` | `docs/local_delivery_bundle_schema.md`, `docs/local_delivery_claim_policy.md`, `docs/post_green_improvement_plan.md` | Guarded local delivery only for the documented restricted scope when the bundle validator and verdict gate are green. |
-| Dependency/package reviewer | `docs/dependency_matrix.md` | `requirements-package.txt`, `requirements.txt`, `requirements-api.txt`, `requirements-dev.txt`, `pyproject.toml` | Dependency placement and install-surface intent. |
-| Product API reviewer | `README.md#product-api-simulate` | `api/`, `config/api_validated_runner_profiles/README.md`, `docs/tier_beta_vertical_slice_current.md` | Validated-runner ligand HTVS/backmapping scoring API only; not generic MD simulation. |
+| Dependency/package reviewer | `docs/dependency_matrix.md` | `requirements-package.txt`, `requirements.txt`, `requirements-api.txt`, `requirements-dev.txt`, `pyproject.toml`, `packaging/engine-v2/pyproject.toml` | Dependency placement and install-surface intent; the Engine v2 wheel is isolated from the product monorepo wheel. |
+| Product API reviewer | `README.md#product-api-simulate` | `api/`, `config/api_validated_runner_profiles/README.md`, `docs/tier_beta_vertical_slice_current.md` | Validated-runner ligand HTVS/backmapping scoring API only; not generic MD simulation and not an Engine v2 customer route. |
 | CASP17 lane reviewer | `casp17/WORKBENCH.md` | `casp17/CASP17_CURRENT_STATUS_REPORT.md`, `casp17/CASP17_WIN_TIER_GOAL.md`, `docs/casp17_participation_gate_2026-05-21.md` | Local readiness and operator-review scaffolding only; no CASP submission or win-tier claim. |
 | CAMEO / competitive benchmark reviewer | `docs/competition_benchmark_status_current.md` | `docs/architecture_validation_test_packages.md`, `docs/cameo_transition_prd.md` | Local CAMEO/CASP readiness evidence; no public live-server or leaderboard claim unless separately proven. |
 | Ligand HTVS reviewer | `docs/product_full_implementation_plan.md` | `betelgeuze_product/htvs_command.py`, `tools/build_ligand_scaleup_suite_status.py`, relevant `runs/*ligand*` evidence if present locally | Restricted tracked-suite evidence, not broad commercial discovery parity. |
@@ -21,6 +22,13 @@ status packets.
 
 ## Lane Boundaries
 
+- Engine v2 is an independent CPU reference package. Its strict PDB/SDF parsers,
+  physics registry, bounded docking search, and benchmark ledger are implemented
+  scaffolds with machine-readable blockers; they are not product-qualified or
+  scientifically validated docking capabilities.
+- The bounded short-range V2 geometry path has a conditional linear-complexity
+  contract under fixed density, cutoff, degree, capacity, and model width. Do
+  not generalize this to measured end-to-end repository scaling.
 - CASP17 uses only the repo's internal torch/coarse-grain physics path for the
   active lane. Do not use public/template structures, public target lookup,
   AlphaFold-family systems, or other-team models for active CASP17 work.
@@ -42,5 +50,8 @@ delivery bundles, model checkpoints, or local evidence caches. Reviewers should
 expect local evidence-gate commands to fail closed until those artifacts are
 regenerated or supplied as a reviewed bundle.
 
-Use `README.md#clean-clone-evidence-reproduction` for the reproducibility
-recipe.
+Engine v2 contract, parser, docking-scaffold, benchmark-ledger, and independent
+wheel tests are clean-clone compatible and run in GitHub-hosted CPU CI.
+
+Use `README.md#clean-clone-evidence-reproduction` for the broader local-evidence
+reproduction recipe.
