@@ -1,0 +1,19 @@
+{
+  "include": [
+    "../../betelgeuze_engine_v2/contracts",
+    "../../betelgeuze_engine_v2/molecular/models.py",
+    "../../betelgeuze_engine_v2/molecular/serialization.py",
+    "../../betelgeuze_engine_v2/physics/reference_parameters.py"
+  ],
+  "exclude": [
+    "../../betelgeuze_engine_v2/molecular/legacy.py"
+  ],
+  "pythonVersion": "3.10",
+  "typeCheckingMode": "basic",
+  "reportMissingTypeStubs": false,
+  "reportUnknownMemberType": false,
+  "reportUnknownArgumentType": false,
+  "reportUnknownVariableType": false,
+  "reportUnknownParameterType": false,
+  "reportAny": false
+}
