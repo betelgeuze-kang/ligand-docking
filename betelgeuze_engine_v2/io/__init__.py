@@ -12,8 +12,8 @@ from .sdf import (
     SDF_PARSER_VERSION,
     SDFParseError,
     SDFParserLimits,
-    parse_sdf_v2000,
 )
+from .sdf_policy import parse_sdf_v2000
 from .writers import (
     MolecularWriteError,
     WriterReceipt,
