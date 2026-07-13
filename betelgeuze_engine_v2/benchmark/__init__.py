@@ -1,4 +1,4 @@
-"""Manifest-driven benchmark scaffolds with complete failure rows."""
+"""Manifest-driven benchmark contracts with complete failure rows."""
 
 from .manifest import (
     BENCHMARK_MANIFEST_SCHEMA_ID,
@@ -8,10 +8,16 @@ from .manifest import (
     BenchmarkCaseResult,
     BenchmarkContractError,
     BenchmarkManifest,
+    BenchmarkMetricSummary,
     BenchmarkReport,
     BenchmarkResultRow,
     BenchmarkRunContext,
+    MetricAggregation,
+    MetricDefinition,
+    MetricDirection,
+    benchmark_case_seed,
     run_benchmark_manifest,
+    verify_signed_benchmark_report,
 )
 
 __all__ = [
@@ -22,8 +28,14 @@ __all__ = [
     "BenchmarkCaseResult",
     "BenchmarkContractError",
     "BenchmarkManifest",
+    "BenchmarkMetricSummary",
     "BenchmarkReport",
     "BenchmarkResultRow",
     "BenchmarkRunContext",
+    "MetricAggregation",
+    "MetricDefinition",
+    "MetricDirection",
+    "benchmark_case_seed",
     "run_benchmark_manifest",
+    "verify_signed_benchmark_report",
 ]
