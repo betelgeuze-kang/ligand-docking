@@ -9,10 +9,10 @@ from typing import Protocol, runtime_checkable
 
 import torch
 
+from betelgeuze_engine_v2.contracts import failure_receipt
 from betelgeuze_engine_v2.geometry import CompactNeighborList
 from betelgeuze_engine_v2.molecular import AllAtomSystem
 from betelgeuze_engine_v2.physics.composition import EnergyTermResult
-
 
 MAX_REGISTERED_PHYSICS_TERMS = 64
 
@@ -42,6 +42,8 @@ class PhysicsTermRow:
     result: EnergyTermResult | None = None
     error_code: str = ""
     error_message: str = ""
+    private_error_sha256: str = ""
+    private_error_byte_length: int = 0
 
     @property
     def succeeded(self) -> bool:
@@ -58,6 +60,8 @@ class PhysicsTermRow:
             ),
             "error_code": self.error_code,
             "error_message": self.error_message,
+            "private_error_sha256": self.private_error_sha256,
+            "private_error_byte_length": int(self.private_error_byte_length),
         }
 
 
@@ -127,6 +131,12 @@ class PhysicsTermRegistry:
                     f"{self._providers[provider_id].__class__.__module__}."
                     f"{self._providers[provider_id].__class__.__qualname__}"
                 ),
+                "parameter_fingerprint_sha256": str(
+                    getattr(self._providers[provider_id], "parameter_fingerprint_sha256", "") or ""
+                ),
+                "config_fingerprint_sha256": str(
+                    getattr(self._providers[provider_id], "config_fingerprint_sha256", "") or ""
+                ),
             }
             for provider_id in self.provider_ids
         ]
@@ -155,7 +165,7 @@ class PhysicsTermRegistry:
                         provider_version="",
                         status="failure",
                         error_code="provider_not_registered",
-                        error_message="requested provider is not registered",
+                        error_message="requested physics provider is not registered",
                     )
                 )
                 continue
@@ -173,14 +183,17 @@ class PhysicsTermRegistry:
                         result=result,
                     )
                 )
-            except Exception as exc:  # row-level failure is evidence, not omission
+            except Exception as exc:
+                receipt = failure_receipt(exc, public_message="physics provider execution failed")
                 rows.append(
                     PhysicsTermRow(
                         provider_id=provider_id,
                         provider_version=str(provider.provider_version),
                         status="failure",
-                        error_code=exc.__class__.__name__,
-                        error_message=str(exc)[:500],
+                        error_code=receipt.public_error_code,
+                        error_message=receipt.public_message,
+                        private_error_sha256=receipt.private_error_sha256,
+                        private_error_byte_length=receipt.private_error_byte_length,
                     )
                 )
         return PhysicsRegistryEvaluation(
