@@ -1,0 +1,73 @@
+name: ci-engine-v2-docking-semantics
+
+on:
+  pull_request:
+    paths:
+      - "betelgeuze_engine_v2/contracts/**"
+      - "betelgeuze_engine_v2/docking/**"
+      - "betelgeuze_engine_v2/physics/registry.py"
+      - "tests/unit/test_engine_v2_docking_semantics.py"
+      - ".github/workflows/ci-engine-v2-docking-semantics.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "betelgeuze_engine_v2/contracts/**"
+      - "betelgeuze_engine_v2/docking/**"
+      - "betelgeuze_engine_v2/physics/registry.py"
+      - "tests/unit/test_engine_v2_docking_semantics.py"
+      - ".github/workflows/ci-engine-v2-docking-semantics.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-docking-semantics-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docking-semantics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            tools/check_engine_v2_architecture.py
+            tests/unit/test_engine_v2_bounded_scaffolds.py
+            tests/unit/test_engine_v2_input_identity.py
+            tests/unit/test_engine_v2_docking_semantics.py
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest==8.3.5 numpy==1.26.4
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Compile and enforce package boundary
+        run: |
+          python -m compileall -q betelgeuze_engine_v2
+          python tools/check_engine_v2_architecture.py
+
+      - name: Run inherited and docking semantics contracts
+        run: |
+          python -m pytest -q \
+            tests/unit/test_engine_v2_bounded_scaffolds.py \
+            tests/unit/test_engine_v2_input_identity.py \
+            tests/unit/test_engine_v2_docking_semantics.py
