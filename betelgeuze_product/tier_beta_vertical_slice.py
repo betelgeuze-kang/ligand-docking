@@ -7,8 +7,6 @@ import math
 from pathlib import Path
 from typing import Any
 
-from betelgeuze_engine.biodiscovery import TierBetaScreening
-
 TIER_BETA_DIRECT_RUNNER_PROFILE_ID = "tier_beta_biodiscovery_direct"
 TIER_BETA_WORKFLOW_ID = "tier_beta_biodiscovery_screening_v1"
 
@@ -89,6 +87,10 @@ def run_tier_beta_vertical_slice_job(
     request_data: dict[str, Any],
     results_dir: str | Path,
 ) -> dict[str, Any]:
+    # The request predicate and API schema remain importable without Torch/RDKit.
+    # Load the scientific execution stack only when an approved job actually runs.
+    from betelgeuze_engine.biodiscovery import TierBetaScreening
+
     request = build_tier_beta_request_from_api(request_data)
     out_dir = Path(results_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
