@@ -13,16 +13,21 @@ from .models import (
     element_for_atomic_number,
 )
 from .serialization import (
+    CANONICAL_SYSTEM_JSON_SCHEMA_ID,
     CanonicalSerializationError,
+    all_atom_system_from_canonical_json,
     canonical_coordinates_payload,
     canonical_coordinates_sha256,
     canonical_json_bytes,
     canonical_json_value,
+    canonical_system_document,
+    canonical_system_json_bytes,
     canonical_system_payload,
     canonical_system_sha256,
     canonical_topology_payload,
     canonical_topology_sha256,
     sha256_canonical,
+    write_canonical_system_json,
 )
 from .validation import (
     MolecularValidationError,
@@ -33,6 +38,7 @@ from .validation import (
 )
 
 __all__ = [
+    "CANONICAL_SYSTEM_JSON_SCHEMA_ID",
     "AllAtomSystem",
     "Atom",
     "Bond",
@@ -44,12 +50,15 @@ __all__ = [
     "UnitCell",
     "ValidationIssue",
     "ValidationReport",
+    "all_atom_system_from_canonical_json",
     "atomic_number_for_element",
     "canonical_coordinates_payload",
     "canonical_coordinates_sha256",
     "canonical_element_symbol",
     "canonical_json_bytes",
     "canonical_json_value",
+    "canonical_system_document",
+    "canonical_system_json_bytes",
     "canonical_system_payload",
     "canonical_system_sha256",
     "canonical_topology_payload",
@@ -58,4 +67,5 @@ __all__ = [
     "require_valid_all_atom_system",
     "sha256_canonical",
     "validate_all_atom_system",
+    "write_canonical_system_json",
 ]
