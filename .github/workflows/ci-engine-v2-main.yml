@@ -57,6 +57,15 @@ jobs:
           sparse-checkout: |
             betelgeuze_engine_v2
             packaging/engine-v2
+            core/__init__.py
+            core/ai_correction.py
+            core/config.py
+            core/definitions.py
+            core/sim_param_schema.py
+            train/__init__.py
+            train/runtime_inputs.py
+            train/checkpoint_contracts.py
+            config/settings.yaml
             config/independent_engine_v2_capabilities.yaml
             tools/build_engine_v2_wheel.py
             tools/check_engine_v2_architecture.py
