@@ -5,8 +5,8 @@ from .pdb import (
     PDB_PARSER_VERSION,
     PDBParseError,
     PDBParserLimits,
-    parse_pdb,
 )
+from .pdb_connectivity import PDBConnectivityPolicy, parse_pdb
 from .sdf import (
     SDF_PARSER_NAME,
     SDF_PARSER_VERSION,
@@ -23,6 +23,7 @@ from .writers import (
 
 __all__ = [
     "MolecularWriteError",
+    "PDBConnectivityPolicy",
     "PDB_PARSER_NAME",
     "PDB_PARSER_VERSION",
     "PDBParseError",
