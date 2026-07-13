@@ -1,5 +1,6 @@
 """Public contracts for the independent Engine v2."""
 
+from .errors import FailureReceipt, failure_receipt
 from .schema import (
     ALL_ATOM_SCHEMA_ID,
     ALL_ATOM_SCHEMA_NAME,
@@ -34,6 +35,7 @@ __all__ = [
     "DISTRIBUTION_VERSION",
     "ENGINE_API_VERSION",
     "ENGINE_RESULT_SCHEMA_VERSION",
+    "FailureReceipt",
     "RUNTIME_INPUT_SCHEMA_VERSION",
     "VERSION_TAXONOMY",
     "ClaimStage",
@@ -44,6 +46,7 @@ __all__ = [
     "UNCALIBRATED_ENERGY",
     "UNCALIBRATED_FORCE",
     "VersionTaxonomy",
+    "failure_receipt",
     "parse_schema_id",
     "require_compatible_schema",
 ]
