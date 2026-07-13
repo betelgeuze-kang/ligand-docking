@@ -1,0 +1,683 @@
+{
+  "schema_id": "betelgeuze.v2_2_linear_alkane_corpus/1.0.0",
+  "corpus_id": "v2_2_linear_alkane_topology_contract_corpus_v1",
+  "manifest_payload_hash_policy_id": "sha256_canonical_json_without_payload_sha256/1.0.0",
+  "payload_sha256": "a840cc50878195f2a3ce9a33086ed6b84828312c39ace56119af06539417c0f6",
+  "contracts": {
+    "sdf_v2000_parser_version": "1.5.0",
+    "applicability_schema_id": "betelgeuze.linear_alkane_c1_c4_force_field_applicability/1.0.0",
+    "applicability_profile_id": "source_bound_sdf_v2000_explicit_h_neutral_linear_alkane_c1_c4/1.0.0",
+    "applicability_claim_scope": "bounded_linear_alkane_c1_c4_topological_applicability_only",
+    "typing_schema_id": "betelgeuze.linear_alkane_c1_c4_topological_environment_typing/1.0.0",
+    "typing_assignment_policy_id": "linear_alkane_c1_c4_graph_neighbor_environment/1.0.0",
+    "typing_claim_scope": "bounded_topological_environment_match_keys_only",
+    "inventory_schema_id": "betelgeuze.linear_alkane_c1_c4_term_pair_inventory/1.0.0",
+    "inventory_profile_id": "source_explicit_h_sdf_v2000_linear_alkane_c1_c4_topology_v1",
+    "inventory_claim_scope": "bounded_topological_term_and_pair_classification_only",
+    "environment_match_policy_id": "linear_alkane_c1_c4_topological_environment_match_v1",
+    "pair_classification_policy_id": "covalent_shortest_graph_distance_1_2_excluded_1_3_excluded_1_4_separate_farther_full_v1",
+    "improper_selection_policy_id": "linear_alkane_c1_c4_selected_improper_empty_v1",
+    "constraint_selection_policy_id": "linear_alkane_c1_c4_unconstrained_diagnostic_empty_v1",
+    "pair_interaction_classes": [
+      "excluded_1_2",
+      "excluded_1_3",
+      "one_four_separate",
+      "full_nonbonded"
+    ],
+    "source_authentication_status": "digest_bound_not_authenticated"
+  },
+  "claim_boundary": {
+    "preparation_ready": false,
+    "parameterability_assessed": false,
+    "parameterizable": false,
+    "force_field_atom_types_assigned": false,
+    "partial_charges_assigned": false,
+    "parameter_assignment_complete": false,
+    "physics_supported": false,
+    "scientifically_validated": false,
+    "runtime_ready": false,
+    "execution_authorized": false,
+    "energy_evaluation_authorized": false,
+    "force_evaluation_authorized": false,
+    "virial_evaluation_authorized": false,
+    "minimization_authorized": false,
+    "simulation_ready": false,
+    "claim_safe": false
+  },
+  "cases": [
+    {
+      "case_id": "methane_c1_explicit_h",
+      "lane": "positive",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_ingest_corpus/methane_explicit_h.sdf"
+      },
+      "source_id": "methane_c1_explicit_h",
+      "source_sha256": "ce93ec8959fe9037a0e411d2ea3ca78af9e436936117b24482cfece7c81f8b11",
+      "system_mutation": null,
+      "expected": {
+        "canonical_system_snapshot_sha256": "99a2859f329511dc5d5d64dc607a542dbc92403dcfa21b7401b692282a800986",
+        "atom_count": 5,
+        "source_bond_count": 4,
+        "observed_source_partial_charge_count": 0,
+        "applicability_status": "available",
+        "applicability_failed_constraint_codes": [],
+        "applicability_report_sha256": "3339ff43274fb8326bcbd8bc8490b933e3861c30647ba400f33f97cb2b6d5062",
+        "typing_status": "environments_available",
+        "typing_report_sha256": "3e63cb61441f57e3cedac347a1801a2ad0786a0cab99c6cc9b08bafeb1837477",
+        "inventory_status": "available",
+        "inventory_report_sha256": "d02c4c6909c66cebe4da8250802024277552c065adb4eef41e56dde69650ea5a",
+        "environment_counts": {
+          "c_single_valence4_c0_h4": 1,
+          "h_attached_c_single_valence4_c0_h4": 4
+        },
+        "environment_assignment_count": 5,
+        "bond_term_count": 4,
+        "angle_term_count": 6,
+        "proper_term_count": 0,
+        "improper_term_count": 0,
+        "constraint_term_count": 0,
+        "pair_classification_count": 10,
+        "pair_class_counts": {
+          "excluded_1_2": 4,
+          "excluded_1_3": 6,
+          "one_four_separate": 0,
+          "full_nonbonded": 0
+        },
+        "topological_environment_coverage_complete": true,
+        "topological_term_and_pair_classification_complete": true,
+        "gates": {
+          "preparation_ready": false,
+          "parameterability_assessed": false,
+          "parameterizable": false,
+          "force_field_atom_types_assigned": false,
+          "partial_charges_assigned": false,
+          "parameter_assignment_complete": false,
+          "physics_supported": false,
+          "scientifically_validated": false,
+          "runtime_ready": false,
+          "execution_authorized": false,
+          "energy_evaluation_authorized": false,
+          "force_evaluation_authorized": false,
+          "virial_evaluation_authorized": false,
+          "minimization_authorized": false,
+          "simulation_ready": false,
+          "claim_safe": false
+        }
+      }
+    },
+    {
+      "case_id": "ethane_c2_explicit_h",
+      "lane": "positive",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_2_linear_alkane/ethane_explicit_h.sdf"
+      },
+      "source_id": "ethane_c2_explicit_h",
+      "source_sha256": "0507a3e8367929b3a6ea42925c2499d1f467a20a6c78de436c3b29d53b16ab9c",
+      "system_mutation": null,
+      "expected": {
+        "canonical_system_snapshot_sha256": "4164d3714ab8d2b2b0c2ecaad26354c1a5b9eb381128911508b15ad1abd9b14f",
+        "atom_count": 8,
+        "source_bond_count": 7,
+        "observed_source_partial_charge_count": 0,
+        "applicability_status": "available",
+        "applicability_failed_constraint_codes": [],
+        "applicability_report_sha256": "fbfa6f0bb64c85403e931403da83bae3164fa94fc1cf3685673d8aeed7e1e201",
+        "typing_status": "environments_available",
+        "typing_report_sha256": "dd27ffc0c909b1329752f71a317ab033b1fbe14382e6119b26082a50edd6f75f",
+        "inventory_status": "available",
+        "inventory_report_sha256": "68d88975469f01dbc98475186e39d5f4fcf38efb82d5aa7092581a3e63cab0a9",
+        "environment_counts": {
+          "c_single_valence4_c1_h3": 2,
+          "h_attached_c_single_valence4_c1_h3": 6
+        },
+        "environment_assignment_count": 8,
+        "bond_term_count": 7,
+        "angle_term_count": 12,
+        "proper_term_count": 9,
+        "improper_term_count": 0,
+        "constraint_term_count": 0,
+        "pair_classification_count": 28,
+        "pair_class_counts": {
+          "excluded_1_2": 7,
+          "excluded_1_3": 12,
+          "one_four_separate": 9,
+          "full_nonbonded": 0
+        },
+        "topological_environment_coverage_complete": true,
+        "topological_term_and_pair_classification_complete": true,
+        "gates": {
+          "preparation_ready": false,
+          "parameterability_assessed": false,
+          "parameterizable": false,
+          "force_field_atom_types_assigned": false,
+          "partial_charges_assigned": false,
+          "parameter_assignment_complete": false,
+          "physics_supported": false,
+          "scientifically_validated": false,
+          "runtime_ready": false,
+          "execution_authorized": false,
+          "energy_evaluation_authorized": false,
+          "force_evaluation_authorized": false,
+          "virial_evaluation_authorized": false,
+          "minimization_authorized": false,
+          "simulation_ready": false,
+          "claim_safe": false
+        }
+      }
+    },
+    {
+      "case_id": "propane_c3_explicit_h",
+      "lane": "positive",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_2_linear_alkane/propane_explicit_h.sdf"
+      },
+      "source_id": "propane_c3_explicit_h",
+      "source_sha256": "d8ccf120aa7cc795ce5372011c09440eeb41d4405be38dd64f8682f8712c03c5",
+      "system_mutation": null,
+      "expected": {
+        "canonical_system_snapshot_sha256": "e7e2f6b5dbc347ffb62563af736c756450cafb2e60270d76e521cda11863fba9",
+        "atom_count": 11,
+        "source_bond_count": 10,
+        "observed_source_partial_charge_count": 0,
+        "applicability_status": "available",
+        "applicability_failed_constraint_codes": [],
+        "applicability_report_sha256": "b91d2a449e7f2cbb1c6c9b32f1309af9a6014138d175bd8275716f5a8d70fa40",
+        "typing_status": "environments_available",
+        "typing_report_sha256": "3ffc9b6cc4ee71c4a07cfb5497422d041f244065ec771e73313caf202239c5a7",
+        "inventory_status": "available",
+        "inventory_report_sha256": "676d0dff226506c60f53c9510b6a1c196cc874c48ab0117ef54227ad49a19cb0",
+        "environment_counts": {
+          "c_single_valence4_c1_h3": 2,
+          "c_single_valence4_c2_h2": 1,
+          "h_attached_c_single_valence4_c1_h3": 6,
+          "h_attached_c_single_valence4_c2_h2": 2
+        },
+        "environment_assignment_count": 11,
+        "bond_term_count": 10,
+        "angle_term_count": 18,
+        "proper_term_count": 18,
+        "improper_term_count": 0,
+        "constraint_term_count": 0,
+        "pair_classification_count": 55,
+        "pair_class_counts": {
+          "excluded_1_2": 10,
+          "excluded_1_3": 18,
+          "one_four_separate": 18,
+          "full_nonbonded": 9
+        },
+        "topological_environment_coverage_complete": true,
+        "topological_term_and_pair_classification_complete": true,
+        "gates": {
+          "preparation_ready": false,
+          "parameterability_assessed": false,
+          "parameterizable": false,
+          "force_field_atom_types_assigned": false,
+          "partial_charges_assigned": false,
+          "parameter_assignment_complete": false,
+          "physics_supported": false,
+          "scientifically_validated": false,
+          "runtime_ready": false,
+          "execution_authorized": false,
+          "energy_evaluation_authorized": false,
+          "force_evaluation_authorized": false,
+          "virial_evaluation_authorized": false,
+          "minimization_authorized": false,
+          "simulation_ready": false,
+          "claim_safe": false
+        }
+      }
+    },
+    {
+      "case_id": "n_butane_c4_explicit_h",
+      "lane": "positive",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_2_linear_alkane/n_butane_explicit_h.sdf"
+      },
+      "source_id": "n_butane_c4_explicit_h",
+      "source_sha256": "e4689251ba4216ca2421160ab9df4a9c750e9abf61435ada48bec94f67b290a4",
+      "system_mutation": null,
+      "expected": {
+        "canonical_system_snapshot_sha256": "c0e65edb6b68eefbcca5a2b491d4425ae5f1dfaa2a2a35c18e25d176206506a8",
+        "atom_count": 14,
+        "source_bond_count": 13,
+        "observed_source_partial_charge_count": 0,
+        "applicability_status": "available",
+        "applicability_failed_constraint_codes": [],
+        "applicability_report_sha256": "45d3159328575d58c3c8577b2815e942c093ed8a3adbdcec183674768a951ab9",
+        "typing_status": "environments_available",
+        "typing_report_sha256": "502abb7f2bf2d0a2fcd37ca328e75493781e11d1edc40ae4bf8435ccd03f363c",
+        "inventory_status": "available",
+        "inventory_report_sha256": "008b9641b7922713156dac75d5f685dd5cb85e8e0acc28dcc2ef7930f51732c8",
+        "environment_counts": {
+          "c_single_valence4_c1_h3": 2,
+          "c_single_valence4_c2_h2": 2,
+          "h_attached_c_single_valence4_c1_h3": 6,
+          "h_attached_c_single_valence4_c2_h2": 4
+        },
+        "environment_assignment_count": 14,
+        "bond_term_count": 13,
+        "angle_term_count": 24,
+        "proper_term_count": 27,
+        "improper_term_count": 0,
+        "constraint_term_count": 0,
+        "pair_classification_count": 91,
+        "pair_class_counts": {
+          "excluded_1_2": 13,
+          "excluded_1_3": 24,
+          "one_four_separate": 27,
+          "full_nonbonded": 27
+        },
+        "topological_environment_coverage_complete": true,
+        "topological_term_and_pair_classification_complete": true,
+        "gates": {
+          "preparation_ready": false,
+          "parameterability_assessed": false,
+          "parameterizable": false,
+          "force_field_atom_types_assigned": false,
+          "partial_charges_assigned": false,
+          "parameter_assignment_complete": false,
+          "physics_supported": false,
+          "scientifically_validated": false,
+          "runtime_ready": false,
+          "execution_authorized": false,
+          "energy_evaluation_authorized": false,
+          "force_evaluation_authorized": false,
+          "virial_evaluation_authorized": false,
+          "minimization_authorized": false,
+          "simulation_ready": false,
+          "claim_safe": false
+        }
+      }
+    },
+    {
+      "case_id": "isobutane_branched_negative",
+      "lane": "negative",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_2_linear_alkane/isobutane_branched_explicit_h.sdf"
+      },
+      "source_id": "isobutane_branched_negative",
+      "source_sha256": "578a67b271b2af7fc7942ecff70c9e46797cd4e96bf019dd1a3a738b7aaa0557",
+      "system_mutation": null,
+      "expected": {
+        "canonical_system_snapshot_sha256": "bd81d7121b23c65b9bdb0c1727c6cd06bfabdb3d11c6db87659d8476265573ee",
+        "atom_count": 14,
+        "source_bond_count": 13,
+        "observed_source_partial_charge_count": 0,
+        "applicability_status": "unsupported",
+        "applicability_failed_constraint_codes": [
+          "carbon_subgraph_simple_path",
+          "exact_carbon_hydrogen_degrees"
+        ],
+        "applicability_report_sha256": "ae1f590f6e91a48d4589fb1f5903642aa9c2cdebbcac9baf70b26d3d86a476c0",
+        "typing_status": "unsupported_system",
+        "typing_report_sha256": "423e04971bfb5f75d7d842109b0df204c27a968509a4b6a25cb04357e347dde7",
+        "inventory_status": "unsupported",
+        "inventory_report_sha256": "ab472c7263df7c3c99161c6b64ff634c8ccd222feb0ffe0c0f3535f62160480c",
+        "environment_counts": {},
+        "environment_assignment_count": 0,
+        "bond_term_count": 0,
+        "angle_term_count": 0,
+        "proper_term_count": 0,
+        "improper_term_count": 0,
+        "constraint_term_count": 0,
+        "pair_classification_count": 0,
+        "pair_class_counts": {
+          "excluded_1_2": 0,
+          "excluded_1_3": 0,
+          "one_four_separate": 0,
+          "full_nonbonded": 0
+        },
+        "topological_environment_coverage_complete": false,
+        "topological_term_and_pair_classification_complete": false,
+        "gates": {
+          "preparation_ready": false,
+          "parameterability_assessed": false,
+          "parameterizable": false,
+          "force_field_atom_types_assigned": false,
+          "partial_charges_assigned": false,
+          "parameter_assignment_complete": false,
+          "physics_supported": false,
+          "scientifically_validated": false,
+          "runtime_ready": false,
+          "execution_authorized": false,
+          "energy_evaluation_authorized": false,
+          "force_evaluation_authorized": false,
+          "virial_evaluation_authorized": false,
+          "minimization_authorized": false,
+          "simulation_ready": false,
+          "claim_safe": false
+        }
+      }
+    },
+    {
+      "case_id": "cyclobutane_cycle_negative",
+      "lane": "negative",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_2_linear_alkane/cyclobutane_explicit_h.sdf"
+      },
+      "source_id": "cyclobutane_cycle_negative",
+      "source_sha256": "0e8098df27f12a9a23ab31ac3e0aea9fc8869dfe7a3cfc8ed325fd8d8fcdadf2",
+      "system_mutation": null,
+      "expected": {
+        "canonical_system_snapshot_sha256": "078d83c92b22f45810343f2452c8750554d84c7222472d57210726a101a5c6df",
+        "atom_count": 12,
+        "source_bond_count": 12,
+        "observed_source_partial_charge_count": 0,
+        "applicability_status": "unsupported",
+        "applicability_failed_constraint_codes": [
+          "canonical_ingest_supported",
+          "profile_local_evidence_satisfied",
+          "exact_linear_alkane_formula",
+          "carbon_subgraph_simple_path",
+          "exact_carbon_hydrogen_degrees"
+        ],
+        "applicability_report_sha256": "89f07cf9ff9ec444e4d1f8a2965b7c45e7fa5bd5dd8c4765a97b332d26fadba5",
+        "typing_status": "unsupported_system",
+        "typing_report_sha256": "56c036810221010d7113a4901bcb9b05cbd3e70134a678626a2576414169978c",
+        "inventory_status": "unsupported",
+        "inventory_report_sha256": "22636b5ca25a803ff6ecaac681df81ba2f573ba431debd4f4846679032e3a147",
+        "environment_counts": {},
+        "environment_assignment_count": 0,
+        "bond_term_count": 0,
+        "angle_term_count": 0,
+        "proper_term_count": 0,
+        "improper_term_count": 0,
+        "constraint_term_count": 0,
+        "pair_classification_count": 0,
+        "pair_class_counts": {
+          "excluded_1_2": 0,
+          "excluded_1_3": 0,
+          "one_four_separate": 0,
+          "full_nonbonded": 0
+        },
+        "topological_environment_coverage_complete": false,
+        "topological_term_and_pair_classification_complete": false,
+        "gates": {
+          "preparation_ready": false,
+          "parameterability_assessed": false,
+          "parameterizable": false,
+          "force_field_atom_types_assigned": false,
+          "partial_charges_assigned": false,
+          "parameter_assignment_complete": false,
+          "physics_supported": false,
+          "scientifically_validated": false,
+          "runtime_ready": false,
+          "execution_authorized": false,
+          "energy_evaluation_authorized": false,
+          "force_evaluation_authorized": false,
+          "virial_evaluation_authorized": false,
+          "minimization_authorized": false,
+          "simulation_ready": false,
+          "claim_safe": false
+        }
+      }
+    },
+    {
+      "case_id": "ethane_missing_h_negative",
+      "lane": "negative",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_2_linear_alkane/ethane_missing_h.sdf"
+      },
+      "source_id": "ethane_missing_h_negative",
+      "source_sha256": "ea768227f85fef416d245920e0a21ea33e45535a1f1dba0bea10d4e591702a8e",
+      "system_mutation": null,
+      "expected": {
+        "canonical_system_snapshot_sha256": "024c7505d65f6aea786d51ac4bb5478d7d89e188c398fea47e01056820986375",
+        "atom_count": 7,
+        "source_bond_count": 6,
+        "observed_source_partial_charge_count": 0,
+        "applicability_status": "unsupported",
+        "applicability_failed_constraint_codes": [
+          "canonical_ingest_supported",
+          "profile_local_evidence_satisfied",
+          "exact_linear_alkane_formula",
+          "exact_carbon_hydrogen_degrees"
+        ],
+        "applicability_report_sha256": "594c1813bdd74b12972f85d490c21b994d75d77af93bd6510ab55a8a44430f16",
+        "typing_status": "unsupported_system",
+        "typing_report_sha256": "6ddb5243f5d1c59ca85bd032891984e9fe557c80496bc452579264599377379c",
+        "inventory_status": "unsupported",
+        "inventory_report_sha256": "535aefd5ab6ee8fe9ccab759126e3eb8ab148f7b49c2cb68614248a51d257ebe",
+        "environment_counts": {},
+        "environment_assignment_count": 0,
+        "bond_term_count": 0,
+        "angle_term_count": 0,
+        "proper_term_count": 0,
+        "improper_term_count": 0,
+        "constraint_term_count": 0,
+        "pair_classification_count": 0,
+        "pair_class_counts": {
+          "excluded_1_2": 0,
+          "excluded_1_3": 0,
+          "one_four_separate": 0,
+          "full_nonbonded": 0
+        },
+        "topological_environment_coverage_complete": false,
+        "topological_term_and_pair_classification_complete": false,
+        "gates": {
+          "preparation_ready": false,
+          "parameterability_assessed": false,
+          "parameterizable": false,
+          "force_field_atom_types_assigned": false,
+          "partial_charges_assigned": false,
+          "parameter_assignment_complete": false,
+          "physics_supported": false,
+          "scientifically_validated": false,
+          "runtime_ready": false,
+          "execution_authorized": false,
+          "energy_evaluation_authorized": false,
+          "force_evaluation_authorized": false,
+          "virial_evaluation_authorized": false,
+          "minimization_authorized": false,
+          "simulation_ready": false,
+          "claim_safe": false
+        }
+      }
+    },
+    {
+      "case_id": "ethane_c13_negative",
+      "lane": "negative",
+      "source": {
+        "kind": "derived_fixture",
+        "path": "tests/fixtures/v2_2_linear_alkane/ethane_explicit_h.sdf",
+        "base_source_sha256": "0507a3e8367929b3a6ea42925c2499d1f467a20a6c78de436c3b29d53b16ab9c",
+        "mutation": {
+          "kind": "insert_ascii_before_first_m_end",
+          "ascii": "M  ISO  1   1  13\n"
+        }
+      },
+      "source_id": "ethane_c13_negative",
+      "source_sha256": "a9df2ead53fd31f7113293aaaa0110eca65f4d527fd8ed4fa02f332476c392ad",
+      "system_mutation": null,
+      "expected": {
+        "canonical_system_snapshot_sha256": "1fc6d152e98b659ad78a5afa536966d0b1dd3127e99c4b42a2b9557f645c273b",
+        "atom_count": 8,
+        "source_bond_count": 7,
+        "observed_source_partial_charge_count": 0,
+        "applicability_status": "unsupported",
+        "applicability_failed_constraint_codes": [
+          "canonical_ingest_supported",
+          "profile_local_evidence_satisfied",
+          "isotopes_absent"
+        ],
+        "applicability_report_sha256": "812eccb2ddd07681152a7ee535d7f3f7776bba29a713e9f300f597e0778793f8",
+        "typing_status": "unsupported_system",
+        "typing_report_sha256": "819d64e40741e95c4c4d30c5b9fea46407e6bda27149ca44ec539df2d38e8f37",
+        "inventory_status": "unsupported",
+        "inventory_report_sha256": "472c3ecf118035b914dc1831982f7a302e477cc858009c894dbc3cacc7093e04",
+        "environment_counts": {},
+        "environment_assignment_count": 0,
+        "bond_term_count": 0,
+        "angle_term_count": 0,
+        "proper_term_count": 0,
+        "improper_term_count": 0,
+        "constraint_term_count": 0,
+        "pair_classification_count": 0,
+        "pair_class_counts": {
+          "excluded_1_2": 0,
+          "excluded_1_3": 0,
+          "one_four_separate": 0,
+          "full_nonbonded": 0
+        },
+        "topological_environment_coverage_complete": false,
+        "topological_term_and_pair_classification_complete": false,
+        "gates": {
+          "preparation_ready": false,
+          "parameterability_assessed": false,
+          "parameterizable": false,
+          "force_field_atom_types_assigned": false,
+          "partial_charges_assigned": false,
+          "parameter_assignment_complete": false,
+          "physics_supported": false,
+          "scientifically_validated": false,
+          "runtime_ready": false,
+          "execution_authorized": false,
+          "energy_evaluation_authorized": false,
+          "force_evaluation_authorized": false,
+          "virial_evaluation_authorized": false,
+          "minimization_authorized": false,
+          "simulation_ready": false,
+          "claim_safe": false
+        }
+      }
+    },
+    {
+      "case_id": "ethane_charged_negative",
+      "lane": "negative",
+      "source": {
+        "kind": "derived_fixture",
+        "path": "tests/fixtures/v2_2_linear_alkane/ethane_explicit_h.sdf",
+        "base_source_sha256": "0507a3e8367929b3a6ea42925c2499d1f467a20a6c78de436c3b29d53b16ab9c",
+        "mutation": {
+          "kind": "insert_ascii_before_first_m_end",
+          "ascii": "M  CHG  1   1   1\n"
+        }
+      },
+      "source_id": "ethane_charged_negative",
+      "source_sha256": "95de9e4e9dcd74ad061f6bb15a1306fee99049e02ee60fc0b5a0400bc2f05823",
+      "system_mutation": null,
+      "expected": {
+        "canonical_system_snapshot_sha256": "3ad1379ab5c43ed6d79dd2e5c095f840bb6c1f93c9884e3b6275a3eafb824d54",
+        "atom_count": 8,
+        "source_bond_count": 7,
+        "observed_source_partial_charge_count": 0,
+        "applicability_status": "unsupported",
+        "applicability_failed_constraint_codes": [
+          "canonical_ingest_supported",
+          "profile_local_evidence_satisfied",
+          "formal_charges_known_zero"
+        ],
+        "applicability_report_sha256": "7f45d41d336e747a4a032a8b51e92c549ab445272446ba2a2e43728cf9aeb457",
+        "typing_status": "unsupported_system",
+        "typing_report_sha256": "bfe4fdcbf49d66538fcbf7afa624ef1052ef431903607d394522576d9963d3e1",
+        "inventory_status": "unsupported",
+        "inventory_report_sha256": "a66234aeaf4c0f4b4cb3fd08738805090dfbd97a6c2c92c3e011e5233a647067",
+        "environment_counts": {},
+        "environment_assignment_count": 0,
+        "bond_term_count": 0,
+        "angle_term_count": 0,
+        "proper_term_count": 0,
+        "improper_term_count": 0,
+        "constraint_term_count": 0,
+        "pair_classification_count": 0,
+        "pair_class_counts": {
+          "excluded_1_2": 0,
+          "excluded_1_3": 0,
+          "one_four_separate": 0,
+          "full_nonbonded": 0
+        },
+        "topological_environment_coverage_complete": false,
+        "topological_term_and_pair_classification_complete": false,
+        "gates": {
+          "preparation_ready": false,
+          "parameterability_assessed": false,
+          "parameterizable": false,
+          "force_field_atom_types_assigned": false,
+          "partial_charges_assigned": false,
+          "parameter_assignment_complete": false,
+          "physics_supported": false,
+          "scientifically_validated": false,
+          "runtime_ready": false,
+          "execution_authorized": false,
+          "energy_evaluation_authorized": false,
+          "force_evaluation_authorized": false,
+          "virial_evaluation_authorized": false,
+          "minimization_authorized": false,
+          "simulation_ready": false,
+          "claim_safe": false
+        }
+      }
+    },
+    {
+      "case_id": "ethane_source_partial_charge_negative",
+      "lane": "negative",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_2_linear_alkane/ethane_explicit_h.sdf"
+      },
+      "source_id": "ethane_source_partial_charge_negative",
+      "source_sha256": "0507a3e8367929b3a6ea42925c2499d1f467a20a6c78de436c3b29d53b16ab9c",
+      "system_mutation": {
+        "kind": "set_atom_partial_charge_e",
+        "atom_index": 0,
+        "value_ieee754_binary64_be": "0000000000000000"
+      },
+      "expected": {
+        "canonical_system_snapshot_sha256": "43bf55a2ddc5834a38d3f71a5c071465da98822eff90768a30f8afa52606c710",
+        "atom_count": 8,
+        "source_bond_count": 7,
+        "observed_source_partial_charge_count": 1,
+        "applicability_status": "unsupported",
+        "applicability_failed_constraint_codes": [
+          "source_partial_charges_absent"
+        ],
+        "applicability_report_sha256": "72804219d09bef41554763e8d8c41f97ee3cabb6a387e6358fbf275149954613",
+        "typing_status": "unsupported_system",
+        "typing_report_sha256": "695e59fa7ef252610ccb0a0161251130667543ff56560094b6911143ad8430f8",
+        "inventory_status": "unsupported",
+        "inventory_report_sha256": "778731c89ee896a0eb402d34a41c29cb127301a40cdbb263538c0d680b2d4c84",
+        "environment_counts": {},
+        "environment_assignment_count": 0,
+        "bond_term_count": 0,
+        "angle_term_count": 0,
+        "proper_term_count": 0,
+        "improper_term_count": 0,
+        "constraint_term_count": 0,
+        "pair_classification_count": 0,
+        "pair_class_counts": {
+          "excluded_1_2": 0,
+          "excluded_1_3": 0,
+          "one_four_separate": 0,
+          "full_nonbonded": 0
+        },
+        "topological_environment_coverage_complete": false,
+        "topological_term_and_pair_classification_complete": false,
+        "gates": {
+          "preparation_ready": false,
+          "parameterability_assessed": false,
+          "parameterizable": false,
+          "force_field_atom_types_assigned": false,
+          "partial_charges_assigned": false,
+          "parameter_assignment_complete": false,
+          "physics_supported": false,
+          "scientifically_validated": false,
+          "runtime_ready": false,
+          "execution_authorized": false,
+          "energy_evaluation_authorized": false,
+          "force_evaluation_authorized": false,
+          "virial_evaluation_authorized": false,
+          "minimization_authorized": false,
+          "simulation_ready": false,
+          "claim_safe": false
+        }
+      }
+    }
+  ]
+}

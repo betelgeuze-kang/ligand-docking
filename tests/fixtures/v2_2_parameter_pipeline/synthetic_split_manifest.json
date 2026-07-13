@@ -1,0 +1,15 @@
+{
+  "schema_id": "betelgeuze.parameter_fit_split_manifest/1.0.0",
+  "split_id": "nonphysical_exact_methane_harmonic_fit_holdout_v1",
+  "split_version": "1.0.0",
+  "dataset_id": "nonphysical_exact_methane_harmonic_contract_fixture",
+  "dataset_version": "1.0.0",
+  "dataset_manifest_sha256": "e8133626102289485d1452d7d1a9ebc8eca722d7d03bcbd68d373d5f87adcd3b",
+  "rows_sha256": "9f517d649ac2b9765f4cb255c0f72793069dc046af9fe1e2a40418d503d5f58a",
+  "split_policy_id": "fixed_explicit_row_id_fit_holdout/1.0.0",
+  "fit_row_ids": ["angle_001", "angle_002", "angle_003", "bond_001", "bond_002", "bond_003"],
+  "holdout_row_ids": ["angle_004", "bond_004"],
+  "artifact_purpose": "contract_fixture_only",
+  "runtime_eligible": false,
+  "manifest_sha256": "45b85e852c080cbd6c45db26435a921c98d0c02bfc3b7bf40b7c12ca5edc232a"
+}

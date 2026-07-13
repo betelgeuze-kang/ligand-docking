@@ -1,0 +1,16 @@
+{
+  "schema_id": "betelgeuze.synthetic_harmonic_fit_rows/1.0.0",
+  "artifact_purpose": "contract_fixture_only",
+  "scientific_status": "nonphysical_test_fixture",
+  "energy_unit": "kilojoule_per_mole",
+  "rows": [
+    {"row_id": "angle_001", "term_kind": "angle", "coordinate_unit": "radian", "coordinate_decimal": "0.5", "energy_decimal": "0.5"},
+    {"row_id": "angle_002", "term_kind": "angle", "coordinate_unit": "radian", "coordinate_decimal": "1", "energy_decimal": "0"},
+    {"row_id": "angle_003", "term_kind": "angle", "coordinate_unit": "radian", "coordinate_decimal": "1.5", "energy_decimal": "0.5"},
+    {"row_id": "angle_004", "term_kind": "angle", "coordinate_unit": "radian", "coordinate_decimal": "2", "energy_decimal": "2"},
+    {"row_id": "bond_001", "term_kind": "bond", "coordinate_unit": "angstrom", "coordinate_decimal": "0.5", "energy_decimal": "0.25"},
+    {"row_id": "bond_002", "term_kind": "bond", "coordinate_unit": "angstrom", "coordinate_decimal": "1", "energy_decimal": "0"},
+    {"row_id": "bond_003", "term_kind": "bond", "coordinate_unit": "angstrom", "coordinate_decimal": "1.5", "energy_decimal": "0.25"},
+    {"row_id": "bond_004", "term_kind": "bond", "coordinate_unit": "angstrom", "coordinate_decimal": "2", "energy_decimal": "1"}
+  ]
+}

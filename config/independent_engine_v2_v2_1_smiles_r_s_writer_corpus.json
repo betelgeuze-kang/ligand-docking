@@ -1,0 +1,891 @@
+{
+  "schema_id": "betelgeuze.v2_1_smiles_r_s_writer_corpus/1.0.0",
+  "corpus_id": "v2_1_strict_smiles_bounded_r_s_writer_v1",
+  "manifest_payload_hash_policy_id": "sha256_canonical_json_without_payload_sha256/1.0.0",
+  "payload_sha256": "34a1cadfe0c3fa321bfb256c28d723c29465c85384ec2e99f1022aef71a636fc",
+  "contracts": {
+    "system_schema_id": "betelgeuze.all_atom_system/2.1.0",
+    "writer_version": "1.8.0",
+    "parser_version": "1.4.0",
+    "rdkit_requirement": "rdkit==2025.9.6",
+    "rdkit_version_key": "2025.9.6",
+    "rdkit_observed_version": "2025.09.6",
+    "representable_state_schema_id": "betelgeuze.smiles_representable_state/1.8.0",
+    "write_receipt_schema_id": "betelgeuze.smiles_write_receipt/1.8.0",
+    "round_trip_report_schema_id": "betelgeuze.smiles_round_trip_report/1.8.0",
+    "cycle_projection_schema_id": "betelgeuze.smiles_component_cycle_projection/1.3.0",
+    "aromatic_projection_schema_id": "betelgeuze.smiles_aromatic_ring_projection/1.0.0",
+    "ez_stereo_projection_schema_id": "betelgeuze.smiles_ez_stereo_projection/1.0.0",
+    "tetrahedral_stereo_projection_schema_id": "betelgeuze.smiles_tetrahedral_stereo_projection/1.0.0",
+    "tetrahedral_stereo_profile_id": "source_order_dfs_parser_typed_tetrahedral_cw_ccw_lexical_parity_with_zero_or_one_bracket_hydrogen/1.0.0",
+    "tetrahedral_stereo_admission_scope": "canonical_normalized_parser_typed_cw_ccw_with_at_most_256_centers_at_most_514_source_atoms_and_zero_or_one_bracket_hydrogen_per_center",
+    "max_typed_tetrahedral_atom_count": 256,
+    "max_tetrahedral_calibration_source_atom_count": 514,
+    "artifact_digest_policy_id": "pinned_expected_with_dynamic_public_factory_artifact_self_hash_reverification/1.0.0",
+    "static_pinned_artifact_digests_included": true,
+    "static_pinned_artifact_digest_rdkit_requirement": "rdkit==2025.9.6",
+    "upstream_ingest_corpus_schema_id": "betelgeuze.v2_1_ingest_corpus/1.4.0",
+    "upstream_ingest_corpus_id": "v2_1_supported_ingest_identity_context_and_failure_v5",
+    "upstream_ingest_r_s_case_ids": [
+      "smiles_chiral_r",
+      "smiles_chiral_s"
+    ],
+    "upstream_ingest_r_s_case_record_sha256": {
+      "smiles_chiral_r": "b67dbdf4ca12f4a18aadc250ddc828a12db16aeb1f01964872f744bba00888a7",
+      "smiles_chiral_s": "b61d219596a8e8be014a7c9ef5c4c97d736e8d3b967a015e1102b3ce12d3d1f0"
+    }
+  },
+  "claim_boundary": {
+    "bounded_normalized_spelling_admitted_parser_typed_tetrahedral_preserved": true,
+    "bounded_atom_maps_preserved": true,
+    "parser_observed_r_s_labels_reproduced": true,
+    "general_parser_typed_tetrahedral_preserved": false,
+    "general_atom_map_preservation_claimed": false,
+    "independent_cip_assignment_claimed": false,
+    "stereo_completeness_claimed": false,
+    "stereo_geometry_claimed": false,
+    "full_canonical_snapshot_equality_claimed": false,
+    "dynamic_source_provenance_equality_claimed": false,
+    "source_authenticated": false,
+    "chemistry_supported": false,
+    "preparation_ready": false,
+    "parameterability_assessed": false,
+    "simulation_ready": false,
+    "claim_safe": false
+  },
+  "cases": [
+    {
+      "case_id": "boron_center",
+      "category": "element_diversity",
+      "source": {
+        "kind": "ascii",
+        "value": "F[B@-](Cl)(Br)I"
+      },
+      "source_id": "boron_center",
+      "source_sha256": "ca0573d45bb8b117321a62dbed63d5646018dbd36b0032d0940ad6c8f6739c1a",
+      "expected": {
+        "output_ascii": "F[B@-](Cl)(Br)I",
+        "output_sha256": "ca0573d45bb8b117321a62dbed63d5646018dbd36b0032d0940ad6c8f6739c1a",
+        "output_byte_count": 15,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "8ee64f8ba428b7b0155ccffacf4c24419d653c1c2dd795dfc0fd8a622ee63396",
+        "ordered_topology_sha256": "b613f855436ce0571b048bc5dffa62e98ccc52d0e0ed5b729bcbaa34a275378d",
+        "source_snapshot_sha256": "e8d7d40de272f2dcdd544b2c5a9a5a8784ce28cef7752ed5f277c1b9817a8d70",
+        "reparsed_snapshot_sha256": "e8d7d40de272f2dcdd544b2c5a9a5a8784ce28cef7752ed5f277c1b9817a8d70",
+        "representable_state_sha256": "b5f27f7fae2a0f3555677df3d8c4c1c605b65c1bc0f9cf86f3795a9b56a64f4e",
+        "cycle_projection_sha256": "9a0e0b72278d98ba3ec747437d6de6e411e380bb5280d5b65ccf3d5963f6b282",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "d9c779e6334cd3d76b8f202750f3349dedd25fa4e76f9d6ebe6e2762fead39b2",
+        "tetrahedral_stereo_projection_sha256": "a0111ee7aff0c318a96bccb5b16951faddecb4a1627f3ae36706c32fc68f8ca4",
+        "source_parser_observation_sha256": "6ba31a837f05c7439579df5ad1854bb0ca28fefae7420b9fd0cf88e4e1f1113d",
+        "reparsed_parser_observation_sha256": "6ba31a837f05c7439579df5ad1854bb0ca28fefae7420b9fd0cf88e4e1f1113d",
+        "receipt_sha256": "20bf39d8ea7516cbaa02b8137c17f1b5df934f60ec82bdb2391253d648fb9104",
+        "report_sha256": "cf907bcc0fae265e24252a55786cd47cb83a27a265a73e9e68413d1c5a0ee563",
+        "typed_tetrahedral_atom_count": 1,
+        "mapped_source_atom_count": 0,
+        "mapped_tetrahedral_atom_count": 0,
+        "bracket_hydrogen_tetrahedral_atom_count": 0,
+        "marker_flip_count": 0,
+        "source_center_atom_indices": [
+          1
+        ],
+        "center_atom_maps": [
+          null
+        ],
+        "target_stereo_labels": [
+          "S"
+        ],
+        "target_rdkit_chiral_tags": [
+          "CHI_TETRAHEDRAL_CCW"
+        ],
+        "trial_markers": [
+          "@"
+        ],
+        "final_markers": [
+          "@"
+        ],
+        "final_atom_tokens": [
+          "[B@-]"
+        ],
+        "typed_ez_bond_count": 0,
+        "directional_source_bond_count": 0,
+        "fragment_count": 1,
+        "ring_closure_count": 0,
+        "ring_size": 0
+      }
+    },
+    {
+      "case_id": "bracket_h_r",
+      "category": "bracket_hydrogen",
+      "source": {
+        "kind": "ascii",
+        "value": "F[C@H](Cl)Br"
+      },
+      "source_id": "bracket_h_r",
+      "source_sha256": "bfc4ac69054e81d064fd4a771c9e0033331f52f17ea23658cca988bd02589af7",
+      "expected": {
+        "output_ascii": "F[C@H](Cl)Br",
+        "output_sha256": "bfc4ac69054e81d064fd4a771c9e0033331f52f17ea23658cca988bd02589af7",
+        "output_byte_count": 12,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "f9ba3e4459953b6f3365b794a7efa8031e276ed6e796c5364f040943d6f2edd6",
+        "ordered_topology_sha256": "56e1d138de7471151c45c7ac1556e2091a1a2820af0d6808831e2f6d7447e5a2",
+        "source_snapshot_sha256": "6c3b2396774f461a3d8f78a0b8d44c721aa7cbf419cede0ddc731b29cf6afd2c",
+        "reparsed_snapshot_sha256": "6c3b2396774f461a3d8f78a0b8d44c721aa7cbf419cede0ddc731b29cf6afd2c",
+        "representable_state_sha256": "3cb618a10c93cfdad97ef9b3931cfa36904309265fb5a780fc1afa731af5eef1",
+        "cycle_projection_sha256": "75af8cd17eddacc023911352472675a1ec64d8407f12b94b8d0bb08544f13ac6",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "d9c779e6334cd3d76b8f202750f3349dedd25fa4e76f9d6ebe6e2762fead39b2",
+        "tetrahedral_stereo_projection_sha256": "a10905e51557d9ff412d63ba6355365b0aba211a04cbb6a5fb2bb98d6afc6c7d",
+        "source_parser_observation_sha256": "764c913eb8c3eca1b57dd60162687707eab87df9ee56a9ecc99bd857a59a9410",
+        "reparsed_parser_observation_sha256": "764c913eb8c3eca1b57dd60162687707eab87df9ee56a9ecc99bd857a59a9410",
+        "receipt_sha256": "bea2aa3a10ca422f1c55396d971c01cb3e7fde18a249c9c7373fcbf3cf8ad0db",
+        "report_sha256": "2218f6f8091076fa408ea10adf9f2e1c756567f5b7bd6a9ec329b42c159d948d",
+        "typed_tetrahedral_atom_count": 1,
+        "mapped_source_atom_count": 0,
+        "mapped_tetrahedral_atom_count": 0,
+        "bracket_hydrogen_tetrahedral_atom_count": 1,
+        "marker_flip_count": 0,
+        "source_center_atom_indices": [
+          1
+        ],
+        "center_atom_maps": [
+          null
+        ],
+        "target_stereo_labels": [
+          "R"
+        ],
+        "target_rdkit_chiral_tags": [
+          "CHI_TETRAHEDRAL_CCW"
+        ],
+        "trial_markers": [
+          "@"
+        ],
+        "final_markers": [
+          "@"
+        ],
+        "final_atom_tokens": [
+          "[C@H]"
+        ],
+        "typed_ez_bond_count": 0,
+        "directional_source_bond_count": 0,
+        "fragment_count": 1,
+        "ring_closure_count": 0,
+        "ring_size": 0
+      }
+    },
+    {
+      "case_id": "bracket_h_s",
+      "category": "bracket_hydrogen",
+      "source": {
+        "kind": "ascii",
+        "value": "F[C@@H](Cl)Br"
+      },
+      "source_id": "bracket_h_s",
+      "source_sha256": "e9192abef869a42e13974fc38a99ecd0f2395d33f65674b64896fbaec4da8679",
+      "expected": {
+        "output_ascii": "F[C@@H](Cl)Br",
+        "output_sha256": "e9192abef869a42e13974fc38a99ecd0f2395d33f65674b64896fbaec4da8679",
+        "output_byte_count": 13,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "c1109fb4efc29569a315a77727c97592831acca07b0b9100bc7df0a7dd41e836",
+        "ordered_topology_sha256": "247f17e9d3008df5b070f42b23fb7f35f5e9c2fb49ea424314b51563282e2df1",
+        "source_snapshot_sha256": "f56c2b1917e8b221162fcb884dd83369282360f0d2c32e2b418b96cb905b51d5",
+        "reparsed_snapshot_sha256": "f56c2b1917e8b221162fcb884dd83369282360f0d2c32e2b418b96cb905b51d5",
+        "representable_state_sha256": "075b0316ebef3f0c5ec6993b4bf84f07de446bb276630ab3a955470fc2582e6a",
+        "cycle_projection_sha256": "75af8cd17eddacc023911352472675a1ec64d8407f12b94b8d0bb08544f13ac6",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "d9c779e6334cd3d76b8f202750f3349dedd25fa4e76f9d6ebe6e2762fead39b2",
+        "tetrahedral_stereo_projection_sha256": "2e873a159e53d86b0f6ecbf834b3f3ca5ecd449f3077311954ec0f8869671685",
+        "source_parser_observation_sha256": "0f8bacb9c78b99509d1e49382ecd801eed2544c05f0f41b2c78049bfb8787223",
+        "reparsed_parser_observation_sha256": "0f8bacb9c78b99509d1e49382ecd801eed2544c05f0f41b2c78049bfb8787223",
+        "receipt_sha256": "d251e64db66e7c4324424676dbf7411e64f26f6ef869841c0c7d06d64bafde7b",
+        "report_sha256": "f75c0a6efcbffcf10f0ae0ece96d83e766e1c186e0fb73c7a1ea8c8187aed746",
+        "typed_tetrahedral_atom_count": 1,
+        "mapped_source_atom_count": 0,
+        "mapped_tetrahedral_atom_count": 0,
+        "bracket_hydrogen_tetrahedral_atom_count": 1,
+        "marker_flip_count": 1,
+        "source_center_atom_indices": [
+          1
+        ],
+        "center_atom_maps": [
+          null
+        ],
+        "target_stereo_labels": [
+          "S"
+        ],
+        "target_rdkit_chiral_tags": [
+          "CHI_TETRAHEDRAL_CW"
+        ],
+        "trial_markers": [
+          "@"
+        ],
+        "final_markers": [
+          "@@"
+        ],
+        "final_atom_tokens": [
+          "[C@@H]"
+        ],
+        "typed_ez_bond_count": 0,
+        "directional_source_bond_count": 0,
+        "fragment_count": 1,
+        "ring_closure_count": 0,
+        "ring_size": 0
+      }
+    },
+    {
+      "case_id": "charged_n_center",
+      "category": "element_diversity",
+      "source": {
+        "kind": "ascii",
+        "value": "C[N@+](F)(Cl)Br"
+      },
+      "source_id": "charged_n_center",
+      "source_sha256": "5018c55011cd8886a7b00f22346eda1cb6e37580c9886287556c9924a36aad8c",
+      "expected": {
+        "output_ascii": "C[N@+](F)(Cl)Br",
+        "output_sha256": "5018c55011cd8886a7b00f22346eda1cb6e37580c9886287556c9924a36aad8c",
+        "output_byte_count": 15,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "664c67d222b443c29ba7ca7531dabfcb9ac5c6d2dd888387631e3f367ae49a52",
+        "ordered_topology_sha256": "e0801acb0579e1bc117b2ae78d4727cf9a591b45edc1d9d8a709ba27cdc16113",
+        "source_snapshot_sha256": "5dc8fd2f9b4e25584c1705c29ef377fb483d00fe927d77458428b63d8739a4ab",
+        "reparsed_snapshot_sha256": "5dc8fd2f9b4e25584c1705c29ef377fb483d00fe927d77458428b63d8739a4ab",
+        "representable_state_sha256": "86297c75d32494e3fac2cb9c951843bb1e05acc8ab3e0abf2466ff0f9bc9267c",
+        "cycle_projection_sha256": "9a0e0b72278d98ba3ec747437d6de6e411e380bb5280d5b65ccf3d5963f6b282",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "d9c779e6334cd3d76b8f202750f3349dedd25fa4e76f9d6ebe6e2762fead39b2",
+        "tetrahedral_stereo_projection_sha256": "61c750880275761b43f44670e7816cd3a63b08e48b033a22325d5dcbe25131ae",
+        "source_parser_observation_sha256": "9eb4331b83b7d5fbc500fbd2b9d713979f6f02610c0a1d96bb82303c93e59c49",
+        "reparsed_parser_observation_sha256": "9eb4331b83b7d5fbc500fbd2b9d713979f6f02610c0a1d96bb82303c93e59c49",
+        "receipt_sha256": "f565ac166690924a09871e7896bc5c67894c3c9b4d8be6ae387f93c859386286",
+        "report_sha256": "4eeb9811a72d692f32f4b0cb634d09da559620d9f855e9e7019975b4225c610a",
+        "typed_tetrahedral_atom_count": 1,
+        "mapped_source_atom_count": 0,
+        "mapped_tetrahedral_atom_count": 0,
+        "bracket_hydrogen_tetrahedral_atom_count": 0,
+        "marker_flip_count": 0,
+        "source_center_atom_indices": [
+          1
+        ],
+        "center_atom_maps": [
+          null
+        ],
+        "target_stereo_labels": [
+          "S"
+        ],
+        "target_rdkit_chiral_tags": [
+          "CHI_TETRAHEDRAL_CCW"
+        ],
+        "trial_markers": [
+          "@"
+        ],
+        "final_markers": [
+          "@"
+        ],
+        "final_atom_tokens": [
+          "[N@+]"
+        ],
+        "typed_ez_bond_count": 0,
+        "directional_source_bond_count": 0,
+        "fragment_count": 1,
+        "ring_closure_count": 0,
+        "ring_size": 0
+      }
+    },
+    {
+      "case_id": "ez_coexistence",
+      "category": "e_z_coexistence",
+      "source": {
+        "kind": "ascii",
+        "value": "F/C=C/C[C@H](F)Cl"
+      },
+      "source_id": "ez_coexistence",
+      "source_sha256": "ca18cd92ea33556063c1868b39e2b4cb83dde84d642d0b8fad0e587ade3d5a3b",
+      "expected": {
+        "output_ascii": "F/C=C/C[C@H](F)Cl",
+        "output_sha256": "ca18cd92ea33556063c1868b39e2b4cb83dde84d642d0b8fad0e587ade3d5a3b",
+        "output_byte_count": 17,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "4ba50e435d49e07dc8232193902c3fb55cda7aed530ddea331e8e8e24ab4fa60",
+        "ordered_topology_sha256": "1184cb0cc7efb1cb0dc52e9fab2af91331339ac1b72169f69ccfe32c6f0db463",
+        "source_snapshot_sha256": "c73e9905634715501798eb71217f0ef383b426bc11bd8a35fb7999ffff53f0c0",
+        "reparsed_snapshot_sha256": "c73e9905634715501798eb71217f0ef383b426bc11bd8a35fb7999ffff53f0c0",
+        "representable_state_sha256": "8ae86b5663bd7acd7a471486efd81811f91d95977705e70da758a02a393a9695",
+        "cycle_projection_sha256": "dcb2b3cc5e9456b1b4406a7f3df4acf9cc4ddace267abcd08bf28a85f9ec52af",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "be819c652f1db5ffc0668cb7f103793e0b13cbdcd0bf4b95563d3ff962c9152c",
+        "tetrahedral_stereo_projection_sha256": "5f48369828d8a3a6b039f93e037d6f8ecab6211d2f6dbeb320d12659924b16b6",
+        "source_parser_observation_sha256": "94b42e1fd54818e87706e3f419de147fab1fb0e500987877c3420a1c1f667f28",
+        "reparsed_parser_observation_sha256": "94b42e1fd54818e87706e3f419de147fab1fb0e500987877c3420a1c1f667f28",
+        "receipt_sha256": "2af27da4b13f6ebccdf907a824712e70bb7531bc5cd2042eda8123d713bc4330",
+        "report_sha256": "91875c89d2a56ef5f9457ebb4c28c1d0956437f9dff94e18d2140c221aa1685e",
+        "typed_tetrahedral_atom_count": 1,
+        "mapped_source_atom_count": 0,
+        "mapped_tetrahedral_atom_count": 0,
+        "bracket_hydrogen_tetrahedral_atom_count": 1,
+        "marker_flip_count": 0,
+        "source_center_atom_indices": [
+          4
+        ],
+        "center_atom_maps": [
+          null
+        ],
+        "target_stereo_labels": [
+          "R"
+        ],
+        "target_rdkit_chiral_tags": [
+          "CHI_TETRAHEDRAL_CCW"
+        ],
+        "trial_markers": [
+          "@"
+        ],
+        "final_markers": [
+          "@"
+        ],
+        "final_atom_tokens": [
+          "[C@H]"
+        ],
+        "typed_ez_bond_count": 1,
+        "directional_source_bond_count": 2,
+        "fragment_count": 1,
+        "ring_closure_count": 0,
+        "ring_size": 0
+      }
+    },
+    {
+      "case_id": "mapped_r",
+      "category": "mapped_pair",
+      "source": {
+        "kind": "ascii",
+        "value": "F[C@H:17](Cl)Br"
+      },
+      "source_id": "mapped_r",
+      "source_sha256": "cb109e5e51a3ef52ccaa025fabd059a2746e5af4b0b3263cbf0a9328418065df",
+      "expected": {
+        "output_ascii": "F[C@H:17](Cl)Br",
+        "output_sha256": "cb109e5e51a3ef52ccaa025fabd059a2746e5af4b0b3263cbf0a9328418065df",
+        "output_byte_count": 15,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "d15c800d070ed8434ec7fa8182e1e1de06375bd235a20222e0cea85eaee85ccf",
+        "ordered_topology_sha256": "2d1826a2e51c46ac28cdf3c0880073b4e9f85141ed2788932f980bfb6f82cb55",
+        "source_snapshot_sha256": "f7459bd85b39322a756b5232f70074f727e24f0d0a77f15c499c8f17f820d89c",
+        "reparsed_snapshot_sha256": "f7459bd85b39322a756b5232f70074f727e24f0d0a77f15c499c8f17f820d89c",
+        "representable_state_sha256": "600fb58b179819a12a9e1ba112ece5fc49ace95df45356a8c1e6d51c17cd83cd",
+        "cycle_projection_sha256": "75af8cd17eddacc023911352472675a1ec64d8407f12b94b8d0bb08544f13ac6",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "d9c779e6334cd3d76b8f202750f3349dedd25fa4e76f9d6ebe6e2762fead39b2",
+        "tetrahedral_stereo_projection_sha256": "b3c8eb034e8ab693831ea7d3eb1b461ce6ce0c46f07a8719440486c26b4f7fe2",
+        "source_parser_observation_sha256": "5bfc7a3e9823a541fc457f5445f12591b21b1af5c1321b238b9047e6268de49b",
+        "reparsed_parser_observation_sha256": "5bfc7a3e9823a541fc457f5445f12591b21b1af5c1321b238b9047e6268de49b",
+        "receipt_sha256": "1e863208ce6c10941f880f6f6af78636b78cae4c55d0071fd117eb7fe3d910d5",
+        "report_sha256": "1062b96a9fa8aa0ef1f2acde627ed2393c62c041dbfeff34a6ab61585a4f4768",
+        "typed_tetrahedral_atom_count": 1,
+        "mapped_source_atom_count": 1,
+        "mapped_tetrahedral_atom_count": 1,
+        "bracket_hydrogen_tetrahedral_atom_count": 1,
+        "marker_flip_count": 0,
+        "source_center_atom_indices": [
+          1
+        ],
+        "center_atom_maps": [
+          17
+        ],
+        "target_stereo_labels": [
+          "R"
+        ],
+        "target_rdkit_chiral_tags": [
+          "CHI_TETRAHEDRAL_CCW"
+        ],
+        "trial_markers": [
+          "@"
+        ],
+        "final_markers": [
+          "@"
+        ],
+        "final_atom_tokens": [
+          "[C@H:17]"
+        ],
+        "typed_ez_bond_count": 0,
+        "directional_source_bond_count": 0,
+        "fragment_count": 1,
+        "ring_closure_count": 0,
+        "ring_size": 0
+      }
+    },
+    {
+      "case_id": "mapped_s",
+      "category": "mapped_pair",
+      "source": {
+        "kind": "ascii",
+        "value": "F[C@@H:17](Cl)Br"
+      },
+      "source_id": "mapped_s",
+      "source_sha256": "e79fc99596d457875549cbcf3804cf1e890c5151c864bf665d1ee477a4bdca57",
+      "expected": {
+        "output_ascii": "F[C@@H:17](Cl)Br",
+        "output_sha256": "e79fc99596d457875549cbcf3804cf1e890c5151c864bf665d1ee477a4bdca57",
+        "output_byte_count": 16,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "5fc70ed8b173ac2181a4317f091c9a7d804fab0cf7e2b416aec1fd72efd34d6e",
+        "ordered_topology_sha256": "91d54eeb2d62612a101a1d35c10335f48cc6fb50edef6681e985fcdf6ee36e1e",
+        "source_snapshot_sha256": "bbd634eb4fc2e8ced939fc8b0791ce72b3ce3cafd6893143d4feab3d59f00f42",
+        "reparsed_snapshot_sha256": "bbd634eb4fc2e8ced939fc8b0791ce72b3ce3cafd6893143d4feab3d59f00f42",
+        "representable_state_sha256": "43670f7fb97b1a2d3e8af842d296f1c6fe1f4f37dc983c0659f103387dc2c148",
+        "cycle_projection_sha256": "75af8cd17eddacc023911352472675a1ec64d8407f12b94b8d0bb08544f13ac6",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "d9c779e6334cd3d76b8f202750f3349dedd25fa4e76f9d6ebe6e2762fead39b2",
+        "tetrahedral_stereo_projection_sha256": "98b74c8b36e956cc7dc6591f535ac68f00821a96151da6ee480af408a0b367d4",
+        "source_parser_observation_sha256": "807a0d5746e507aa3fc85b5d7a9f0fac476cd143d2a0531c86c4372ec629bcdb",
+        "reparsed_parser_observation_sha256": "807a0d5746e507aa3fc85b5d7a9f0fac476cd143d2a0531c86c4372ec629bcdb",
+        "receipt_sha256": "8085049e7d24b8190ebaedae0e58ef17a461bac33cb656e4080eb88a922f0218",
+        "report_sha256": "3bac431bf4c4752cb99599ec0754459b51d2a6e6a849f4c2d479f0111408bd20",
+        "typed_tetrahedral_atom_count": 1,
+        "mapped_source_atom_count": 1,
+        "mapped_tetrahedral_atom_count": 1,
+        "bracket_hydrogen_tetrahedral_atom_count": 1,
+        "marker_flip_count": 1,
+        "source_center_atom_indices": [
+          1
+        ],
+        "center_atom_maps": [
+          17
+        ],
+        "target_stereo_labels": [
+          "S"
+        ],
+        "target_rdkit_chiral_tags": [
+          "CHI_TETRAHEDRAL_CW"
+        ],
+        "trial_markers": [
+          "@"
+        ],
+        "final_markers": [
+          "@@"
+        ],
+        "final_atom_tokens": [
+          "[C@@H:17]"
+        ],
+        "typed_ez_bond_count": 0,
+        "directional_source_bond_count": 0,
+        "fragment_count": 1,
+        "ring_closure_count": 0,
+        "ring_size": 0
+      }
+    },
+    {
+      "case_id": "multi_center",
+      "category": "multiple_centers",
+      "source": {
+        "kind": "ascii",
+        "value": "F[C@H](Cl)[C@@H](Br)I"
+      },
+      "source_id": "multi_center",
+      "source_sha256": "348c358511b68bfee09b08776529627615a4cf2d348c44d10c046d2acd916fac",
+      "expected": {
+        "output_ascii": "F[C@H](Cl)[C@@H](Br)I",
+        "output_sha256": "348c358511b68bfee09b08776529627615a4cf2d348c44d10c046d2acd916fac",
+        "output_byte_count": 21,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "58f09df113574cb6b4bc72dc5e582bc3cc08d5bc37bffe5bff796b3f8e4e59f2",
+        "ordered_topology_sha256": "0c20a4af2dabdf79540a83eeca6bb2262007dad6bb878e49820abd8f18b21963",
+        "source_snapshot_sha256": "2b21893866e68ae13cb0239d413d52ff0d7846d0c52ec0647ef475a44c7a6c99",
+        "reparsed_snapshot_sha256": "2b21893866e68ae13cb0239d413d52ff0d7846d0c52ec0647ef475a44c7a6c99",
+        "representable_state_sha256": "8d36a50fb9d2a4f591c041c3d5c51c75f432546312d0e84f94b4cb1213680bcf",
+        "cycle_projection_sha256": "00413cd1105a0d2ea8ca119a77e4da58bdb0ffe9560374afc93fe5a8e973247c",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "d9c779e6334cd3d76b8f202750f3349dedd25fa4e76f9d6ebe6e2762fead39b2",
+        "tetrahedral_stereo_projection_sha256": "7cbb3e756f9524f2c5f75ffbe24dcf9bc01a8dd6796de7c035bfd5d3d0b54a44",
+        "source_parser_observation_sha256": "5549a248a5509b9d4b2755ddfc20fb006005fd01f757614de5cac9de0ef524c2",
+        "reparsed_parser_observation_sha256": "5549a248a5509b9d4b2755ddfc20fb006005fd01f757614de5cac9de0ef524c2",
+        "receipt_sha256": "8e7ffa9c8a7533201e9e45a7998574a4726bf620e4aeca1fd7d5a25be50ce721",
+        "report_sha256": "c729035c9acd0d4ff8fa42c4bda30e51c46cbeaee33e1c75bff01213b4370710",
+        "typed_tetrahedral_atom_count": 2,
+        "mapped_source_atom_count": 0,
+        "mapped_tetrahedral_atom_count": 0,
+        "bracket_hydrogen_tetrahedral_atom_count": 2,
+        "marker_flip_count": 1,
+        "source_center_atom_indices": [
+          1,
+          3
+        ],
+        "center_atom_maps": [
+          null,
+          null
+        ],
+        "target_stereo_labels": [
+          "R",
+          "S"
+        ],
+        "target_rdkit_chiral_tags": [
+          "CHI_TETRAHEDRAL_CCW",
+          "CHI_TETRAHEDRAL_CW"
+        ],
+        "trial_markers": [
+          "@",
+          "@"
+        ],
+        "final_markers": [
+          "@",
+          "@@"
+        ],
+        "final_atom_tokens": [
+          "[C@H]",
+          "[C@@H]"
+        ],
+        "typed_ez_bond_count": 0,
+        "directional_source_bond_count": 0,
+        "fragment_count": 1,
+        "ring_closure_count": 0,
+        "ring_size": 0
+      }
+    },
+    {
+      "case_id": "multi_component",
+      "category": "multicomponent",
+      "source": {
+        "kind": "ascii",
+        "value": "C/C=C/C.F[C@H](Cl)Br"
+      },
+      "source_id": "multi_component",
+      "source_sha256": "fc81fffc1e5f4ff3b619438fc835f08969a577f94191e84b2b32bb373e8ef0f5",
+      "expected": {
+        "output_ascii": "C/C=C/C.F[C@H](Cl)Br",
+        "output_sha256": "fc81fffc1e5f4ff3b619438fc835f08969a577f94191e84b2b32bb373e8ef0f5",
+        "output_byte_count": 20,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "9f2e8f9e81b9f1ece62aaed7036779c11dbde9e120ef40b2b693a63fd8e220dd",
+        "ordered_topology_sha256": "71db065db365b545970e98c5acabee419b589d17d9ce4b8fc2d7c555b4a651b2",
+        "source_snapshot_sha256": "6232241c41c168d2da75106ca36f7444d6e270629d64bd33eeadd54298a5d39f",
+        "reparsed_snapshot_sha256": "6232241c41c168d2da75106ca36f7444d6e270629d64bd33eeadd54298a5d39f",
+        "representable_state_sha256": "82b790e14916a9542810fd9dbc531ae2e43590779416a069d32d69e7c3ebab2a",
+        "cycle_projection_sha256": "769f0e2ec865d122c08dbd6316da1226492d5f42919a3da6864107055ceecc00",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "be819c652f1db5ffc0668cb7f103793e0b13cbdcd0bf4b95563d3ff962c9152c",
+        "tetrahedral_stereo_projection_sha256": "f8e29f439d98630d4aa4bb54ce48f2baf8e0af1015e8531aa85930c739cfbb12",
+        "source_parser_observation_sha256": "bf5daa00b30309ff3cc9cddca9181e6d5945f75ba1507abcc043783e18cf8944",
+        "reparsed_parser_observation_sha256": "bf5daa00b30309ff3cc9cddca9181e6d5945f75ba1507abcc043783e18cf8944",
+        "receipt_sha256": "27c995b208a6eb5f7fe4f077ab78bd04a317d1f1393ee8893e1cf973e74aca10",
+        "report_sha256": "c3497b8c7fe4617e420b07f210af7d4d1d79c8653a84eb908c151daa4f34ccac",
+        "typed_tetrahedral_atom_count": 1,
+        "mapped_source_atom_count": 0,
+        "mapped_tetrahedral_atom_count": 0,
+        "bracket_hydrogen_tetrahedral_atom_count": 1,
+        "marker_flip_count": 0,
+        "source_center_atom_indices": [
+          5
+        ],
+        "center_atom_maps": [
+          null
+        ],
+        "target_stereo_labels": [
+          "R"
+        ],
+        "target_rdkit_chiral_tags": [
+          "CHI_TETRAHEDRAL_CCW"
+        ],
+        "trial_markers": [
+          "@"
+        ],
+        "final_markers": [
+          "@"
+        ],
+        "final_atom_tokens": [
+          "[C@H]"
+        ],
+        "typed_ez_bond_count": 1,
+        "directional_source_bond_count": 2,
+        "fragment_count": 2,
+        "ring_closure_count": 0,
+        "ring_size": 0
+      }
+    },
+    {
+      "case_id": "no_h_r",
+      "category": "bracket_no_hydrogen",
+      "source": {
+        "kind": "ascii",
+        "value": "F[C@](Cl)(Br)I"
+      },
+      "source_id": "no_h_r",
+      "source_sha256": "7c65efd0c597c2b8cdec9207ddede1314a6d70f2ff11821319c1806fa2965bd6",
+      "expected": {
+        "output_ascii": "F[C@](Cl)(Br)I",
+        "output_sha256": "7c65efd0c597c2b8cdec9207ddede1314a6d70f2ff11821319c1806fa2965bd6",
+        "output_byte_count": 14,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "18bf8592069ac1c9689ac087bf1e84c076a9e412b438b5f0266729b7e7141333",
+        "ordered_topology_sha256": "2df16989b6a9ac29c743b393a14748cfb549dcbb0d3e1c73b2b76e371a08e0fe",
+        "source_snapshot_sha256": "157703d6ff5304651c144adf758ca1c53d791ca38965160d9aff3de51ce41145",
+        "reparsed_snapshot_sha256": "157703d6ff5304651c144adf758ca1c53d791ca38965160d9aff3de51ce41145",
+        "representable_state_sha256": "427ac30ce53bc5e1e6dbd24b5c5cc6321bed7a194c328fef9d8ed591f285a865",
+        "cycle_projection_sha256": "9a0e0b72278d98ba3ec747437d6de6e411e380bb5280d5b65ccf3d5963f6b282",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "d9c779e6334cd3d76b8f202750f3349dedd25fa4e76f9d6ebe6e2762fead39b2",
+        "tetrahedral_stereo_projection_sha256": "e38f792907f8631d1ffccbbf50212d0b8b1058aee9d2585ce9d4b9b2f01f39c6",
+        "source_parser_observation_sha256": "43f0ee70c37c67d1742305a474d038ef5757bb3a8ecdca47d689fc77c5a1659b",
+        "reparsed_parser_observation_sha256": "43f0ee70c37c67d1742305a474d038ef5757bb3a8ecdca47d689fc77c5a1659b",
+        "receipt_sha256": "23c1a80b609a698686c28cc49b5dfc7888921f86ec4e9d543697fc667af7e7fe",
+        "report_sha256": "c6667ae7d26bc05a4650a39d3d82b3d71070b0f3eb7a5e6e0bc6984e76513fbd",
+        "typed_tetrahedral_atom_count": 1,
+        "mapped_source_atom_count": 0,
+        "mapped_tetrahedral_atom_count": 0,
+        "bracket_hydrogen_tetrahedral_atom_count": 0,
+        "marker_flip_count": 0,
+        "source_center_atom_indices": [
+          1
+        ],
+        "center_atom_maps": [
+          null
+        ],
+        "target_stereo_labels": [
+          "S"
+        ],
+        "target_rdkit_chiral_tags": [
+          "CHI_TETRAHEDRAL_CCW"
+        ],
+        "trial_markers": [
+          "@"
+        ],
+        "final_markers": [
+          "@"
+        ],
+        "final_atom_tokens": [
+          "[C@]"
+        ],
+        "typed_ez_bond_count": 0,
+        "directional_source_bond_count": 0,
+        "fragment_count": 1,
+        "ring_closure_count": 0,
+        "ring_size": 0
+      }
+    },
+    {
+      "case_id": "no_h_s",
+      "category": "bracket_no_hydrogen",
+      "source": {
+        "kind": "ascii",
+        "value": "F[C@@](Cl)(Br)I"
+      },
+      "source_id": "no_h_s",
+      "source_sha256": "2965360d7ab4e0560de3309af61736059f55f30a7937f2291fe473f0c80bac9c",
+      "expected": {
+        "output_ascii": "F[C@@](Cl)(Br)I",
+        "output_sha256": "2965360d7ab4e0560de3309af61736059f55f30a7937f2291fe473f0c80bac9c",
+        "output_byte_count": 15,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "fe4c7ce7af6b26a8e587e035876c06d1ea9e4e9830e73e4cbf8d46204e5773de",
+        "ordered_topology_sha256": "b261ae460e0a5b6c3d713cf78bd9039695aef5cafb7f433942e676a7077a27bd",
+        "source_snapshot_sha256": "848fb7d95ce58d3061295cf7f0b99bd3f62dc76d3054b8799975f52ab86b3c4e",
+        "reparsed_snapshot_sha256": "848fb7d95ce58d3061295cf7f0b99bd3f62dc76d3054b8799975f52ab86b3c4e",
+        "representable_state_sha256": "11af69662c85069f35cecec95f8732c8bad21a8b2699a310c164cfe756f3ebcb",
+        "cycle_projection_sha256": "9a0e0b72278d98ba3ec747437d6de6e411e380bb5280d5b65ccf3d5963f6b282",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "d9c779e6334cd3d76b8f202750f3349dedd25fa4e76f9d6ebe6e2762fead39b2",
+        "tetrahedral_stereo_projection_sha256": "c89efa8b1c1b903b01f9cf6a832de5ee4fffb3c220bb3341bfc2f188ddb1cbfa",
+        "source_parser_observation_sha256": "5c9b21f5b109ce2e51da523504aaebb231471ec4ee1e9ab1d250591aca0ed8c6",
+        "reparsed_parser_observation_sha256": "5c9b21f5b109ce2e51da523504aaebb231471ec4ee1e9ab1d250591aca0ed8c6",
+        "receipt_sha256": "cd222c88fd872153d83ddf0c9c9ebe887decf416168a2b72655f38af25d81fdf",
+        "report_sha256": "cf11c4ef6892e0f6265076e00ae6042b903cc8d18042c8bebfd94a3ec45acc3f",
+        "typed_tetrahedral_atom_count": 1,
+        "mapped_source_atom_count": 0,
+        "mapped_tetrahedral_atom_count": 0,
+        "bracket_hydrogen_tetrahedral_atom_count": 0,
+        "marker_flip_count": 1,
+        "source_center_atom_indices": [
+          1
+        ],
+        "center_atom_maps": [
+          null
+        ],
+        "target_stereo_labels": [
+          "R"
+        ],
+        "target_rdkit_chiral_tags": [
+          "CHI_TETRAHEDRAL_CW"
+        ],
+        "trial_markers": [
+          "@"
+        ],
+        "final_markers": [
+          "@@"
+        ],
+        "final_atom_tokens": [
+          "[C@@]"
+        ],
+        "typed_ez_bond_count": 0,
+        "directional_source_bond_count": 0,
+        "fragment_count": 1,
+        "ring_closure_count": 0,
+        "ring_size": 0
+      }
+    },
+    {
+      "case_id": "ring_center",
+      "category": "ring",
+      "source": {
+        "kind": "ascii",
+        "value": "CC1CC[C@H](F)C1"
+      },
+      "source_id": "ring_center",
+      "source_sha256": "93f7b4d31f3e69de79627caae28688c1ecede656097741e484c8e17f88ccfb77",
+      "expected": {
+        "output_ascii": "CC1CC[C@H](F)C1",
+        "output_sha256": "93f7b4d31f3e69de79627caae28688c1ecede656097741e484c8e17f88ccfb77",
+        "output_byte_count": 15,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "226a25074054d602426e0f1e21b8692ebe2ed8ab98ae3986fdf5ac45962868bb",
+        "ordered_topology_sha256": "b9c623255629cb05be6d3624d0cec5d7621ea0a1e719e7f181b7c3eb8c376504",
+        "source_snapshot_sha256": "7d46ba941d8cf0088342483c3a320469352b01801dd1035d4bff5ceba331563d",
+        "reparsed_snapshot_sha256": "7d46ba941d8cf0088342483c3a320469352b01801dd1035d4bff5ceba331563d",
+        "representable_state_sha256": "20489e1ad3a4d6b59ad8b20a6b18c37657aac62b4f47317c450033d97017ed7d",
+        "cycle_projection_sha256": "767af056f424292d500b31d946f517a17aefec29a37c3b8669cf290d59d4e313",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "d9c779e6334cd3d76b8f202750f3349dedd25fa4e76f9d6ebe6e2762fead39b2",
+        "tetrahedral_stereo_projection_sha256": "943d47c2d6b400a497487eae978eea996a72d53216155f7149147b70e0856422",
+        "source_parser_observation_sha256": "f6e0be1fe128850f8095c8c44ec819bcc3397208b7691f56df55684ee9743eb8",
+        "reparsed_parser_observation_sha256": "f6e0be1fe128850f8095c8c44ec819bcc3397208b7691f56df55684ee9743eb8",
+        "receipt_sha256": "aa031f4fed6646c22e67eadb8abd292f7ff7fc8a3fa9abf5fc4fe67c0508011c",
+        "report_sha256": "eb94ccc171eac1da0e79284eeed723a7690e698733fc00f7b0952ff81e801ee3",
+        "typed_tetrahedral_atom_count": 1,
+        "mapped_source_atom_count": 0,
+        "mapped_tetrahedral_atom_count": 0,
+        "bracket_hydrogen_tetrahedral_atom_count": 1,
+        "marker_flip_count": 0,
+        "source_center_atom_indices": [
+          4
+        ],
+        "center_atom_maps": [
+          null
+        ],
+        "target_stereo_labels": [
+          "S"
+        ],
+        "target_rdkit_chiral_tags": [
+          "CHI_TETRAHEDRAL_CCW"
+        ],
+        "trial_markers": [
+          "@"
+        ],
+        "final_markers": [
+          "@"
+        ],
+        "final_atom_tokens": [
+          "[C@H]"
+        ],
+        "typed_ez_bond_count": 0,
+        "directional_source_bond_count": 0,
+        "fragment_count": 1,
+        "ring_closure_count": 1,
+        "ring_size": 5
+      }
+    },
+    {
+      "case_id": "stereo_free_baseline",
+      "category": "stereo_free_baseline",
+      "source": {
+        "kind": "ascii",
+        "value": "CCO"
+      },
+      "source_id": "stereo_free_baseline",
+      "source_sha256": "ab1de819ede91df490e6441934decfa9041b49f91d6bbadbba4df634ccff57fa",
+      "expected": {
+        "output_ascii": "CCO",
+        "output_sha256": "ab1de819ede91df490e6441934decfa9041b49f91d6bbadbba4df634ccff57fa",
+        "output_byte_count": 3,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "4cbfe0920b0e3c69ded7787342c2a723cd03f9a19678be7efc6a7c1c5478dde5",
+        "ordered_topology_sha256": "da55ffeff83b8fcc0dac3ef9633ba06f53d43fb9a80eae865db12c21051aa55b",
+        "source_snapshot_sha256": "de45c74f0d0d19fe432fb4570c72896d151216c92207284f52599c47ea9fd01f",
+        "reparsed_snapshot_sha256": "de45c74f0d0d19fe432fb4570c72896d151216c92207284f52599c47ea9fd01f",
+        "representable_state_sha256": "debbdec134966911e38a3b7d850670eca316302a2aa8bfbf8cb87aa109cf86f9",
+        "cycle_projection_sha256": "467e0a2c6f9b579749fb597887a87f0a29a7b0ec5db91a796721218cfdc1cd57",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "d9c779e6334cd3d76b8f202750f3349dedd25fa4e76f9d6ebe6e2762fead39b2",
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b",
+        "source_parser_observation_sha256": "2a0ccc4fc8bef8c26728e889c695c22c005a78fccf25ea569866036ace691652",
+        "reparsed_parser_observation_sha256": "2a0ccc4fc8bef8c26728e889c695c22c005a78fccf25ea569866036ace691652",
+        "receipt_sha256": "f9285426d465aa383dcdea2c569675096d5d5b9096a896eb5508861ddeab9fb4",
+        "report_sha256": "02c1b3839edc869dc37e0969d92a5a9190ecbb12d701cf6bd31d43fd0f79a59d",
+        "typed_tetrahedral_atom_count": 0,
+        "mapped_source_atom_count": 0,
+        "mapped_tetrahedral_atom_count": 0,
+        "bracket_hydrogen_tetrahedral_atom_count": 0,
+        "marker_flip_count": 0,
+        "source_center_atom_indices": [],
+        "center_atom_maps": [],
+        "target_stereo_labels": [],
+        "target_rdkit_chiral_tags": [],
+        "trial_markers": [],
+        "final_markers": [],
+        "final_atom_tokens": [],
+        "typed_ez_bond_count": 0,
+        "directional_source_bond_count": 0,
+        "fragment_count": 1,
+        "ring_closure_count": 0,
+        "ring_size": 0
+      }
+    },
+    {
+      "case_id": "sulfur_center",
+      "category": "element_diversity",
+      "source": {
+        "kind": "ascii",
+        "value": "F[S@](Cl)(Br)I"
+      },
+      "source_id": "sulfur_center",
+      "source_sha256": "01ea9b1ef243d3e39efffe6a24e845d255197952a4f892a2ff2ac1de079a2d79",
+      "expected": {
+        "output_ascii": "F[S@](Cl)(Br)I",
+        "output_sha256": "01ea9b1ef243d3e39efffe6a24e845d255197952a4f892a2ff2ac1de079a2d79",
+        "output_byte_count": 14,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "bfb682b9c3f0c24369e68485bd48b8bab08d687ceabdac93d6e47f7de9a323fe",
+        "ordered_topology_sha256": "78cfd3609a8e5a93c6254a5a692724ac3f6f61c7c823445797365d943b0df525",
+        "source_snapshot_sha256": "b9bf14f91abd3f426f9efaaf3035b44e7811b36a8f227c3cc871a43057632791",
+        "reparsed_snapshot_sha256": "b9bf14f91abd3f426f9efaaf3035b44e7811b36a8f227c3cc871a43057632791",
+        "representable_state_sha256": "40c10581e2d1669ee5bd815354b50205c2f8e143ea6c5b18c228a79255639ab0",
+        "cycle_projection_sha256": "9a0e0b72278d98ba3ec747437d6de6e411e380bb5280d5b65ccf3d5963f6b282",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "d9c779e6334cd3d76b8f202750f3349dedd25fa4e76f9d6ebe6e2762fead39b2",
+        "tetrahedral_stereo_projection_sha256": "38d27108615ff629eed2e06f055138f91bdd4ed7488d9d293a0823471651bc3d",
+        "source_parser_observation_sha256": "92280ca297e319ea6998de6950d7ea60bf251c73c949ca9fcd0c12af7a6489bb",
+        "reparsed_parser_observation_sha256": "92280ca297e319ea6998de6950d7ea60bf251c73c949ca9fcd0c12af7a6489bb",
+        "receipt_sha256": "bb48d74068c9079605f890973b05d577a3f2d6dfa96cfe911e8855f0591405be",
+        "report_sha256": "a574d59d2843564e6c6dad27d3430cc3541aac9d75a5ae0986df17e42940a825",
+        "typed_tetrahedral_atom_count": 1,
+        "mapped_source_atom_count": 0,
+        "mapped_tetrahedral_atom_count": 0,
+        "bracket_hydrogen_tetrahedral_atom_count": 0,
+        "marker_flip_count": 0,
+        "source_center_atom_indices": [
+          1
+        ],
+        "center_atom_maps": [
+          null
+        ],
+        "target_stereo_labels": [
+          "S"
+        ],
+        "target_rdkit_chiral_tags": [
+          "CHI_TETRAHEDRAL_CCW"
+        ],
+        "trial_markers": [
+          "@"
+        ],
+        "final_markers": [
+          "@"
+        ],
+        "final_atom_tokens": [
+          "[S@]"
+        ],
+        "typed_ez_bond_count": 0,
+        "directional_source_bond_count": 0,
+        "fragment_count": 1,
+        "ring_closure_count": 0,
+        "ring_size": 0
+      }
+    }
+  ]
+}

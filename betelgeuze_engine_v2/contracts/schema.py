@@ -13,7 +13,7 @@ import re
 
 ENGINE_API_VERSION = "2.0.0"
 ALL_ATOM_SCHEMA_NAME = "betelgeuze.all_atom_system"
-ALL_ATOM_SCHEMA_VERSION = "2.0.0"
+ALL_ATOM_SCHEMA_VERSION = "2.1.0"
 ALL_ATOM_SCHEMA_ID = f"{ALL_ATOM_SCHEMA_NAME}/{ALL_ATOM_SCHEMA_VERSION}"
 
 _SEMVER_RE = re.compile(r"^(?P<major>0|[1-9][0-9]*)\.(?P<minor>0|[1-9][0-9]*)\.(?P<patch>0|[1-9][0-9]*)$")

@@ -23,6 +23,7 @@ from betelgeuze_engine_v2.geometry import (
 from betelgeuze_engine_v2.molecular import (
     AllAtomSystem,
     StructureProvenance,
+    require_molecular_preparation_ready,
     require_valid_all_atom_system,
 )
 from betelgeuze_engine_v2.physics import project_rigid_body_forces
@@ -281,6 +282,7 @@ class IndependentEngineV2:
         if not isinstance(system, AllAtomSystem):
             raise TypeError("system must be an AllAtomSystem")
         validation = require_valid_all_atom_system(system)
+        require_molecular_preparation_ready(system)
         if system.cell is not None and any(system.cell.periodic):
             raise PeriodicReferencePathError(
                 "periodic reference execution is blocked until minimum-image "

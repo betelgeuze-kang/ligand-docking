@@ -1,0 +1,158 @@
+{
+  "schema_id": "betelgeuze.v2_1_sdf_v2000_data_field_corpus/1.0.0",
+  "corpus_id": "v2_1_strict_sdf_v2000_simple_named_opaque_data_field_envelope_v1",
+  "manifest_payload_hash_policy_id": "sha256_canonical_json_without_payload_sha256/1.0.0",
+  "payload_sha256": "b507b5e19addb804862614bee2944d533944ecb1673448a4971fa469c7b536fc",
+  "contracts": {
+    "all_atom_schema_id": "betelgeuze.all_atom_system/2.1.0",
+    "base_sdf_v2000_parser_version": "1.5.0",
+    "base_sdf_v2000_writer_version": "1.0.0",
+    "envelope_version": "1.0.0",
+    "envelope_parser_version": "1.0.0",
+    "envelope_writer_version": "1.0.0",
+    "parser_name": "betelgeuze_engine_v2.molecular.sdf_v2000_data_fields",
+    "profile_id": "strict_sdf_v2000_named_opaque_data_field_envelope/1.0.0",
+    "data_field_projection_schema_id": "betelgeuze.sdf_v2000_data_field_projection/1.0.0",
+    "record_representable_state_schema_id": "betelgeuze.sdf_v2000_data_field_record_representable_state/1.0.0",
+    "write_receipt_schema_id": "betelgeuze.sdf_v2000_data_field_write_receipt/1.0.0",
+    "round_trip_report_schema_id": "betelgeuze.sdf_v2000_data_field_round_trip_report/1.0.0",
+    "projection_scope": "ordered_opaque_ascii_simple_named_sd_data_items_only",
+    "limits": {
+      "max_fields": 256,
+      "max_field_name_chars": 128,
+      "max_value_line_chars": 200,
+      "max_value_lines_per_field": 64,
+      "max_total_value_lines": 2048,
+      "max_data_field_payload_bytes": 393216,
+      "inherited_max_full_record_bytes": 2097152,
+      "inherited_max_full_record_lines": 4096,
+      "inherited_max_line_chars": 256
+    }
+  },
+  "claim_boundary": {
+    "positive_true_fields": [
+      "named_field_opaque_projection_preserved"
+    ],
+    "always_false_fields": [
+      "data_field_semantics_interpreted",
+      "chemistry_interpreted",
+      "source_authenticated",
+      "preparation_ready",
+      "parameterability_assessed",
+      "simulation_ready",
+      "runtime_eligible",
+      "claim_safe",
+      "general_sdf_round_trip_evidence_ready",
+      "all_format_round_trip_evidence_ready"
+    ],
+    "field_values_are_chemistry_role_path_command_url_or_authority_inputs": false,
+    "base_parser_default_changed": false,
+    "v2_1_complete": false
+  },
+  "cases": [
+    {
+      "case_id": "charge_isotope_field",
+      "lane": "round_trip",
+      "source": {"kind": "fixture", "path": "tests/fixtures/v2_1_sdf_data_fields/charge_isotope_field.sdf"},
+      "source_id": "charge_isotope_field",
+      "source_sha256": "2d30c587a4ad22de9e7f8be5d10737b1f779ec806df9c9385adcb9ed924801b4",
+      "expected": {"base_mol_block_source_sha256":"5a19e0dc413492c3321df0004d35ba2d8c0925380d7ecf231a192bc51dacecb0","base_representable_state_sha256":"d81768f0435b51a83cd9449f95bdce7b5f8eda6cb1a58e1c668fb031630a2974","base_system_snapshot_sha256":"306231cfece55913601ddee768005135a64e6f116338e2af518cc6afedd6e081","base_topology_sha256":"7878e0c34882bec1f5af5c5ca51ecc999451b084aeae0df807d17261096ecd19","canonical_base_mol_block_sha256":"5a19e0dc413492c3321df0004d35ba2d8c0925380d7ecf231a192bc51dacecb0","data_field_count":1,"data_field_payload_byte_count":30,"data_field_projection_sha256":"e430c600dc9f5687e7e6c981ebc003856f4d9780d7b223a921f394b3f4a39a8f","data_field_value_line_count":1,"full_source_sha256":"2d30c587a4ad22de9e7f8be5d10737b1f779ec806df9c9385adcb9ed924801b4","output_byte_count":248,"output_equals_input":true,"output_source_sha256":"2d30c587a4ad22de9e7f8be5d10737b1f779ec806df9c9385adcb9ed924801b4","record_representable_state_sha256":"a1ff1ba95797cb4b1e0b3ee608c83a87bd849a3c39daea244759ac1942076857","round_trip_report_sha256":"7da5e2bdedc9d6b2434ecfd33d076bc6e348a5ec61bc762824e2d6fe0a608f25","write_receipt_sha256":"0f697a585cdf761fce46230edc620f11c40f2ceb5f7bbe026ac99d692033f530"}
+    },
+    {
+      "case_id": "content_after_delimiter",
+      "lane": "parse_failure",
+      "source": {"kind": "fixture", "path": "tests/fixtures/v2_1_sdf_data_fields/content_after_delimiter.sdf"},
+      "source_id": "content_after_delimiter",
+      "source_sha256": "42e92f7944faa26d97c168e26c66f2186fa006731e3d0d04c7afccae6886732e",
+      "expected": {"error_code": "multiple_records"}
+    },
+    {
+      "case_id": "empty_field",
+      "lane": "round_trip",
+      "source": {"kind": "fixture", "path": "tests/fixtures/v2_1_sdf_data_fields/empty_field.sdf"},
+      "source_id": "empty_field",
+      "source_sha256": "7524e2f2fad5fe49a258d4f7f8f75d48e0971b2bf9e52c6df2c774b75e9b78b8",
+      "expected": {"base_mol_block_source_sha256":"a8a6a20eef38424deeaf1be98cac1a6a498032fde3850226129e73c1093d4afa","base_representable_state_sha256":"7fb15c7804d2c0a53cf7b1d66a8b26046f8f242f93200c86f92f25d4ca4da789","base_system_snapshot_sha256":"a554cd5cfa79062debd8ad1043184a1113141dada159515c6e8e885e1961c105","base_topology_sha256":"159097e5a18ca34110b991d03b9ac893efae9c58eb9e9ddec1210a724c6e4f1a","canonical_base_mol_block_sha256":"a8a6a20eef38424deeaf1be98cac1a6a498032fde3850226129e73c1093d4afa","data_field_count":1,"data_field_payload_byte_count":12,"data_field_projection_sha256":"08823001d7d8deeed9e27a4813127f9d4d6ec21f898c0e8bdddc124fbaf76ae5","data_field_value_line_count":0,"full_source_sha256":"7524e2f2fad5fe49a258d4f7f8f75d48e0971b2bf9e52c6df2c774b75e9b78b8","output_byte_count":185,"output_equals_input":true,"output_source_sha256":"7524e2f2fad5fe49a258d4f7f8f75d48e0971b2bf9e52c6df2c774b75e9b78b8","record_representable_state_sha256":"89a8f08ac15d5d0fbbc90133343b3ed8bb71104b72f239cb0d797378b70b0574","round_trip_report_sha256":"ea117fe78429b2571a5c724a7f722315469ee6824b84bf8729e3c11a15dfd766","write_receipt_sha256":"4e53375a88aca615bfeb06ceb0e97ad6db849243b6730bb6f46719f1ca2b0b5f"}
+    },
+    {
+      "case_id": "empty_name",
+      "lane": "parse_failure",
+      "source": {"kind": "fixture", "path": "tests/fixtures/v2_1_sdf_data_fields/empty_name.sdf"},
+      "source_id": "empty_name",
+      "source_sha256": "2cb46e6f7590537a50c8fdff282ec69d72f1908241dd3a15d7a0188d8bff28db",
+      "expected": {"error_code": "invalid_data_field_header"}
+    },
+    {
+      "case_id": "ethanol_no_fields",
+      "lane": "round_trip",
+      "source": {"kind": "fixture", "path": "tests/fixtures/tier_beta/ethanol.sdf"},
+      "source_id": "ethanol",
+      "source_sha256": "f4835419da95267ad2ef566a121b981011c202c882b071b86d35fc82b683563f",
+      "expected": {"base_mol_block_source_sha256":"f4835419da95267ad2ef566a121b981011c202c882b071b86d35fc82b683563f","base_representable_state_sha256":"08bd6692ed559645fa8e6028950446dfd5cc75c15eb9e93e128f6282e090fc26","base_system_snapshot_sha256":"e5aab4ba5d523c07dc4a30cb9811c3a6d27aabdfcc2953add230b02cb32e4c50","base_topology_sha256":"8002a0a206d4ec2db0bb7594e4edda900b43ecaeb9cfc6510949c389b5e3ff5e","canonical_base_mol_block_sha256":"f4835419da95267ad2ef566a121b981011c202c882b071b86d35fc82b683563f","data_field_count":0,"data_field_payload_byte_count":0,"data_field_projection_sha256":"87b74e1f35a046dd2a46e34ca6433652d3a0321f9fff4b31270454338978bf68","data_field_value_line_count":0,"full_source_sha256":"f4835419da95267ad2ef566a121b981011c202c882b071b86d35fc82b683563f","output_byte_count":313,"output_equals_input":true,"output_source_sha256":"f4835419da95267ad2ef566a121b981011c202c882b071b86d35fc82b683563f","record_representable_state_sha256":"e81cd88d969489a62e39d3ed54cc2c86794594bece66a7fb176555a02426155a","round_trip_report_sha256":"90fa3575e3f41632f6416c9be77527f47e1d0711f20b0e527f52fe5e45f6f62b","write_receipt_sha256":"4bbe5e7e26ff3e183be5f99c0b0739cc136a55a47b4a16e7ee86742d8c966f28"}
+    },
+    {
+      "case_id": "header_suffix",
+      "lane": "parse_failure",
+      "source": {"kind": "fixture", "path": "tests/fixtures/v2_1_sdf_data_fields/header_suffix.sdf"},
+      "source_id": "header_suffix",
+      "source_sha256": "7c16517acddea4a78f4b90e55e7abafd0edaa2a62ff907e4b7d5af166a7da399",
+      "expected": {"error_code": "invalid_data_field_header"}
+    },
+    {
+      "case_id": "missing_blank_terminator",
+      "lane": "parse_failure",
+      "source": {"kind": "fixture", "path": "tests/fixtures/v2_1_sdf_data_fields/missing_blank_terminator.sdf"},
+      "source_id": "missing_blank_terminator",
+      "source_sha256": "47b00ac53bd3a1aec3978599af4f50890961b27c72958a4d76153be906c4f44d",
+      "expected": {"error_code": "missing_data_field_terminator"}
+    },
+    {
+      "case_id": "missing_delimiter",
+      "lane": "parse_failure",
+      "source": {"kind": "fixture", "path": "tests/fixtures/v2_1_sdf_data_fields/missing_delimiter.sdf"},
+      "source_id": "missing_delimiter",
+      "source_sha256": "8e2552e043de84ff2fc28ccd758c17cd308a24bba3590e41a567b813d5f1ff62",
+      "expected": {"error_code": "missing_data_field_delimiter"}
+    },
+    {
+      "case_id": "nested_header",
+      "lane": "parse_failure",
+      "source": {"kind": "fixture", "path": "tests/fixtures/v2_1_sdf_data_fields/nested_header.sdf"},
+      "source_id": "nested_header",
+      "source_sha256": "88c39f70a3661cbfcb07b350cab379c2f19baa72d7f2720768edbb072e454542",
+      "expected": {"error_code": "nested_data_field_header"}
+    },
+    {
+      "case_id": "non_ascii_value",
+      "lane": "parse_failure",
+      "source": {"kind": "fixture", "path": "tests/fixtures/v2_1_sdf_data_fields/non_ascii_value.sdf"},
+      "source_id": "non_ascii_value",
+      "source_sha256": "fd4326afa864efb55c605d18821f31fbb1a9c9f0d6750fd45946e005182f7e0d",
+      "expected": {"error_code": "invalid_ascii"}
+    },
+    {
+      "case_id": "ordered_duplicate_authority_fields",
+      "lane": "round_trip",
+      "source": {"kind": "fixture", "path": "tests/fixtures/v2_1_sdf_data_fields/ordered_duplicate_authority_fields.sdf"},
+      "source_id": "ordered_duplicate_authority_fields",
+      "source_sha256": "3a8ee8c801a9930a97a06584537625f233ca89bd61a3b820f542f463a34b7391",
+      "expected": {"base_mol_block_source_sha256":"4ee57bdc45c125d6c0b55f88ffc4259c91fe0a9a782d05c16e254bafec4be7ab","base_representable_state_sha256":"5246f327bb5858cac89ad80908824b2b61a496d5cfc98931ad53474620ed5d3e","base_system_snapshot_sha256":"8fcf98c6e00c3a196e08a50b9088875e391da0a3e377eea0fc19786f4e8f5baf","base_topology_sha256":"159097e5a18ca34110b991d03b9ac893efae9c58eb9e9ddec1210a724c6e4f1a","canonical_base_mol_block_sha256":"4ee57bdc45c125d6c0b55f88ffc4259c91fe0a9a782d05c16e254bafec4be7ab","data_field_count":4,"data_field_payload_byte_count":102,"data_field_projection_sha256":"91a7688ca0c57a438c771f30ff16e395df5a4c8f54ac745e52ab8d8f2e218c4e","data_field_value_line_count":5,"full_source_sha256":"3a8ee8c801a9930a97a06584537625f233ca89bd61a3b820f542f463a34b7391","output_byte_count":282,"output_equals_input":true,"output_source_sha256":"3a8ee8c801a9930a97a06584537625f233ca89bd61a3b820f542f463a34b7391","record_representable_state_sha256":"6d9312c76522fb6127ca28b141509f182c6ed69a79fdd79f773b2e57895cd0b4","round_trip_report_sha256":"b12735533f6c992b69c1a2787462c7c334c2519bee559c00286705c286d0040b","write_receipt_sha256":"16983aadfdcb107dc835e777bddc0568af76865d311361aa5e72f485ae9b6f4c"}
+    },
+    {
+      "case_id": "single_field",
+      "lane": "round_trip",
+      "source": {"kind": "fixture", "path": "tests/fixtures/v2_1_sdf_data_fields/single_field.sdf"},
+      "source_id": "single_field",
+      "source_sha256": "df6fb9b0306c4c49c94de78c29b0e9043b9c8d95fd066fce70aa5a591ddd6ad6",
+      "expected": {"base_mol_block_source_sha256":"a6f65e29bdbd9f4aca442b8525d73033615c4db5ac4e48c5e49c8912b8a913dc","base_representable_state_sha256":"555d705af1231855485c22210df3897c446f4f2775349c84045bf21640ce2d81","base_system_snapshot_sha256":"585df22c009988090b9c052952b9c8a940768651062dcec2870d58b44f5d8701","base_topology_sha256":"159097e5a18ca34110b991d03b9ac893efae9c58eb9e9ddec1210a724c6e4f1a","canonical_base_mol_block_sha256":"a6f65e29bdbd9f4aca442b8525d73033615c4db5ac4e48c5e49c8912b8a913dc","data_field_count":1,"data_field_payload_byte_count":27,"data_field_projection_sha256":"8c3591092ddcffebeca11f5ac6ce55f0a0f8f80d89c3462e0319fa0082b650aa","data_field_value_line_count":1,"full_source_sha256":"df6fb9b0306c4c49c94de78c29b0e9043b9c8d95fd066fce70aa5a591ddd6ad6","output_byte_count":201,"output_equals_input":true,"output_source_sha256":"df6fb9b0306c4c49c94de78c29b0e9043b9c8d95fd066fce70aa5a591ddd6ad6","record_representable_state_sha256":"b07559fbf51a881dcc350e192d23417489a6b7539e6f0c93e4a8a5cc61764c89","round_trip_report_sha256":"acdcdf586b6135f11b62f9f17cd6622d270513c10eab464be9e104893a26c6ac","write_receipt_sha256":"94df25d94f280dc4248553bbf29e79f1cf1d754f1b88e7692a4b4eff727b01c5"}
+    },
+    {
+      "case_id": "unsupported_registry_header",
+      "lane": "parse_failure",
+      "source": {"kind": "fixture", "path": "tests/fixtures/v2_1_sdf_data_fields/unsupported_registry_header.sdf"},
+      "source_id": "unsupported_registry_header",
+      "source_sha256": "a6696b603c9e0298b19abbf2f4305b91999e7e546238ba529114ae8f1c9ca8b7",
+      "expected": {"error_code": "invalid_data_field_header"}
+    }
+  ]
+}

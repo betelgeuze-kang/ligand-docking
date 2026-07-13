@@ -1,0 +1,20 @@
+ordered-duplicates
+betelgeuze-v2
+opaque data-field corpus
+  1  0  0  0  0  0  0  0  0  0999 V2000
+    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+M  END
+>  <TAG>
+first
+second line
+
+>  <TAG>
+duplicate
+
+>  <PREPARATION_READY>
+true
+
+>  <SMILES>
+C1=CC=CC=C1
+
+$$$$

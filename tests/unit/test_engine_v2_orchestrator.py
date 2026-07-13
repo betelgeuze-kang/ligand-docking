@@ -108,6 +108,7 @@ def _system(coordinates: torch.Tensor | None = None) -> AllAtomSystem:
             parser_name="unit-fixture",
             parser_version="1.0",
             operations=("explicit-hydrogen-check",),
+            preparation_ready=True,
             claim_safe=True,
         ),
     )
@@ -318,6 +319,7 @@ def test_single_atom_reference_execution_returns_zero_force_instead_of_crashing(
         provenance=StructureProvenance(
             source_format="unit_test",
             source_sha256="c" * 64,
+            preparation_ready=True,
             claim_safe=True,
         ),
     )

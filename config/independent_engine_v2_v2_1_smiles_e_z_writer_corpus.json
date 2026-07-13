@@ -1,0 +1,864 @@
+{
+  "schema_id": "betelgeuze.v2_1_smiles_e_z_writer_corpus/1.1.0",
+  "corpus_id": "v2_1_strict_smiles_bounded_e_z_writer_v1",
+  "manifest_payload_hash_policy_id": "sha256_canonical_json_without_payload_sha256/1.0.0",
+  "payload_sha256": "a58207f72b9127b3adf1cde9499b765ec934f7162fe52ef720aae74ebff8b03f",
+  "contracts": {
+    "system_schema_id": "betelgeuze.all_atom_system/2.1.0",
+    "writer_version": "1.8.0",
+    "parser_version": "1.4.0",
+    "rdkit_requirement": "rdkit==2025.9.6",
+    "rdkit_version_key": "2025.9.6",
+    "rdkit_observed_version": "2025.09.6",
+    "representable_state_schema_id": "betelgeuze.smiles_representable_state/1.8.0",
+    "write_receipt_schema_id": "betelgeuze.smiles_write_receipt/1.8.0",
+    "round_trip_report_schema_id": "betelgeuze.smiles_round_trip_report/1.8.0",
+    "cycle_projection_schema_id": "betelgeuze.smiles_component_cycle_projection/1.3.0",
+    "aromatic_projection_schema_id": "betelgeuze.smiles_aromatic_ring_projection/1.0.0",
+    "ez_stereo_projection_schema_id": "betelgeuze.smiles_ez_stereo_projection/1.0.0",
+    "ez_stereo_profile_id": "source_order_dfs_lowest_index_lexically_oriented_tree_or_selected_simple_ring_single_bond_direction_carriers/1.0.0",
+    "ez_stereo_admission_scope": "normalized_hash_admitted_lowest_index_carrier_subset_only",
+    "upstream_ingest_corpus_schema_id": "betelgeuze.v2_1_ingest_corpus/1.4.0",
+    "upstream_ingest_corpus_id": "v2_1_supported_ingest_identity_context_and_failure_v5",
+    "upstream_ingest_e_z_case_ids": [
+      "smiles_alkene_e",
+      "smiles_alkene_z"
+    ],
+    "upstream_ingest_e_z_case_record_sha256": {
+      "smiles_alkene_e": "c686d06882d579f498ff5038d20a1f479404e547fbcacc5c4aa52f1c36c3ec98",
+      "smiles_alkene_z": "b39e94deaa33190a33f29f535e165b0e553dcf926c979c52a80b8f74f7ac6939"
+    },
+    "tetrahedral_stereo_projection_schema_id": "betelgeuze.smiles_tetrahedral_stereo_projection/1.0.0",
+    "tetrahedral_stereo_max_atom_count": 256,
+    "max_tetrahedral_calibration_source_atom_count": 514
+  },
+  "claim_boundary": {
+    "bounded_normalized_spelling_admitted_parser_typed_e_z_preserved": true,
+    "general_parser_typed_e_z_preserved": false,
+    "ordered_stereo_center_remapping_claimed": false,
+    "raw_direction_spelling_preserved": false,
+    "independent_cip_assignment_claimed": false,
+    "stereo_completeness_claimed": false,
+    "stereo_geometry_claimed": false,
+    "full_canonical_snapshot_equality_claimed": false,
+    "dynamic_source_provenance_equality_claimed": false,
+    "source_authenticated": false,
+    "chemistry_supported": false,
+    "preparation_ready": false,
+    "parameterability_assessed": false,
+    "simulation_ready": false,
+    "claim_safe": false
+  },
+  "cases": [
+    {
+      "case_id": "conjugated_shared_carrier_z_z",
+      "category": "conjugated_shared_carrier",
+      "source": {
+        "kind": "ascii",
+        "value": "F/C=C\\C=C/F"
+      },
+      "source_id": "conjugated_shared_carrier_z_z",
+      "source_sha256": "b92f4af9c21b85d97c487ba99487466cf49db21c4b2107c7f9d1f1e2edcef4ec",
+      "expected": {
+        "output_ascii": "F/C=C\\C=C/F",
+        "output_sha256": "b92f4af9c21b85d97c487ba99487466cf49db21c4b2107c7f9d1f1e2edcef4ec",
+        "output_byte_count": 11,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "b9a40112b9c7796381c349258b6130e375becbf2374bfeb11a51da911eafaa57",
+        "ordered_topology_sha256": "721c5874dca2126abc2f50ca9c195eda31c6a914f6b53b20184abf6e3c6b1286",
+        "source_snapshot_sha256": "c56b8b1cea67f5a7e3d5f98dfdbf74e26822d3db05e2333ad5406138f3f44415",
+        "reparsed_snapshot_sha256": "c56b8b1cea67f5a7e3d5f98dfdbf74e26822d3db05e2333ad5406138f3f44415",
+        "representable_state_sha256": "0c98905ebcf514ae4a3261c311f77765c791734c45fe8b537310153236deb984",
+        "cycle_projection_sha256": "00413cd1105a0d2ea8ca119a77e4da58bdb0ffe9560374afc93fe5a8e973247c",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "c0c9a617540568e26384a8d9d3ab23587f2b106b46fff05c96889cce87a26105",
+        "source_parser_observation_sha256": "69705393c69be692967dede63ec4f3754c735faccf70d343a5ff09a8416dd0fb",
+        "reparsed_parser_observation_sha256": "69705393c69be692967dede63ec4f3754c735faccf70d343a5ff09a8416dd0fb",
+        "receipt_sha256": "734007211fdf125956135073c22184a3ecf383a0013002a1e7979815dbd9a207",
+        "report_sha256": "02952f4f6a01acf12de4f670e5c10c8cb73682437a2551dca6b67bd39cead875",
+        "typed_ez_bond_count": 2,
+        "directional_source_bond_count": 3,
+        "stereo_labels": [
+          "Z",
+          "Z"
+        ],
+        "reference_carrier_parity_flipped": [
+          false,
+          false
+        ],
+        "direction_carrier_tokens": [
+          [
+            "/",
+            "\\"
+          ],
+          [
+            "\\",
+            "/"
+          ]
+        ],
+        "directional_bond_tokens": [
+          "/",
+          "\\",
+          "/"
+        ],
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b"
+      }
+    },
+    {
+      "case_id": "external_internal_mixed_e_z",
+      "category": "external_internal_mixed",
+      "source": {
+        "kind": "ascii",
+        "value": "F/C=C/C1C/C=C\\CCCC1"
+      },
+      "source_id": "external_internal_mixed_e_z",
+      "source_sha256": "7fc9623553da82491dab5439252cec8128512b2305d9ca05c1c01273285cebdb",
+      "expected": {
+        "output_ascii": "F/C=C/C1C/C=C\\CCCC1",
+        "output_sha256": "7fc9623553da82491dab5439252cec8128512b2305d9ca05c1c01273285cebdb",
+        "output_byte_count": 19,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "a65cb851a82753af291f83697bb755d1670a823c49f2c4430b3ac5d77544b809",
+        "ordered_topology_sha256": "8d5229856e4978ec11ba36a713d33a2723fb644aa8703a8e9c2f4ec271ad6bfc",
+        "source_snapshot_sha256": "892d63b003cb3b545bb268ab110effd46042f68a6f54aee01f0b9b19cf111b79",
+        "reparsed_snapshot_sha256": "892d63b003cb3b545bb268ab110effd46042f68a6f54aee01f0b9b19cf111b79",
+        "representable_state_sha256": "6aee69da95197de872f16102bcdb27fe5ee62007eb8c0d2b7a99c5ad87cb2143",
+        "cycle_projection_sha256": "ad73e88eebde1d9d5364f2fbbf57ac2e9d17fbe8e4bd8f54ad1a3621b188b598",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "c99c100853fb4a230de293017da8ea70e6d86dece752845ffc689a1ee2c30ab4",
+        "source_parser_observation_sha256": "abf185d459a662093e39af19063f177173edc619c6847e7dffff1937979c1d5e",
+        "reparsed_parser_observation_sha256": "abf185d459a662093e39af19063f177173edc619c6847e7dffff1937979c1d5e",
+        "receipt_sha256": "c133590f69004ac8ccfb156a4730a4c2829e61f1ebeb7f24121f981d74993a65",
+        "report_sha256": "b51d0c7303e11da1666fc1205e637820e325155c07bbc1f85c2a0c5ac6233057",
+        "typed_ez_bond_count": 2,
+        "directional_source_bond_count": 4,
+        "stereo_labels": [
+          "E",
+          "Z"
+        ],
+        "reference_carrier_parity_flipped": [
+          false,
+          false
+        ],
+        "direction_carrier_tokens": [
+          [
+            "/",
+            "/"
+          ],
+          [
+            "/",
+            "\\"
+          ]
+        ],
+        "directional_bond_tokens": [
+          "/",
+          "/",
+          "/",
+          "\\"
+        ],
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b"
+      }
+    },
+    {
+      "case_id": "multi_component_e_z",
+      "category": "multi_component",
+      "source": {
+        "kind": "ascii",
+        "value": "F/C=C/F.F/C=C\\F"
+      },
+      "source_id": "multi_component_e_z",
+      "source_sha256": "b4c805e5e075f0b5b846fef8413609dd1e7a794d47dd60efd8c2b764f27ec4b1",
+      "expected": {
+        "output_ascii": "F/C=C/F.F/C=C\\F",
+        "output_sha256": "b4c805e5e075f0b5b846fef8413609dd1e7a794d47dd60efd8c2b764f27ec4b1",
+        "output_byte_count": 15,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "2a6a14fdf4ffe658ce056c02ff74b5d5e515b799539e576b3d67fb76f2ee040c",
+        "ordered_topology_sha256": "c51354514752bdbe0e6b568a50a0408b28ca9024ea14a86b02a968b8d5cc6031",
+        "source_snapshot_sha256": "76a47f4d4cfff4dda34fe5e78968787334defa6dba69e5f37331c4373a4f8ac7",
+        "reparsed_snapshot_sha256": "76a47f4d4cfff4dda34fe5e78968787334defa6dba69e5f37331c4373a4f8ac7",
+        "representable_state_sha256": "c0a74dd6ec90c354dd915e98321df1e09b423b00f9f68ba6d2c0584a18cfb53a",
+        "cycle_projection_sha256": "769f0e2ec865d122c08dbd6316da1226492d5f42919a3da6864107055ceecc00",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "bff3369d90150d030bb1e904fee5a8a741653b8c068fa386311b23a3be6217cc",
+        "source_parser_observation_sha256": "3d849be6eeedd387c941dcf5161e1cfd752af1bd55bf87e9ec248a502be5e4cd",
+        "reparsed_parser_observation_sha256": "3d849be6eeedd387c941dcf5161e1cfd752af1bd55bf87e9ec248a502be5e4cd",
+        "receipt_sha256": "4f48f6d4664d86aa0a941e65f996ce3b37e10f330fc5fd0f896340e25383553d",
+        "report_sha256": "37a2ff02c488fd534341fb03d556bc4d1bad7024517bea96d9e361a867aa14a1",
+        "typed_ez_bond_count": 2,
+        "directional_source_bond_count": 4,
+        "stereo_labels": [
+          "E",
+          "Z"
+        ],
+        "reference_carrier_parity_flipped": [
+          false,
+          false
+        ],
+        "direction_carrier_tokens": [
+          [
+            "/",
+            "/"
+          ],
+          [
+            "/",
+            "\\"
+          ]
+        ],
+        "directional_bond_tokens": [
+          "/",
+          "/",
+          "/",
+          "\\"
+        ],
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b"
+      }
+    },
+    {
+      "case_id": "one_reference_mismatch_e",
+      "category": "one_reference_mismatch",
+      "source": {
+        "kind": "ascii",
+        "value": "F/C=C(\\Br)I"
+      },
+      "source_id": "one_reference_mismatch_e",
+      "source_sha256": "202e5d51b55a0dd2d910325215b784f9420750ba580ed0cb0ed9b9b50d288a5d",
+      "expected": {
+        "output_ascii": "F/C=C(\\Br)I",
+        "output_sha256": "202e5d51b55a0dd2d910325215b784f9420750ba580ed0cb0ed9b9b50d288a5d",
+        "output_byte_count": 11,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "7034826dda976f77c2aa7c6775b5e9f9926f228c91865d65ffca4776e671f89c",
+        "ordered_topology_sha256": "625409ba8d27a7ff7a688938caf8e25aeee3fb6ab751fc4e4e374e03a383f8a4",
+        "source_snapshot_sha256": "ca370057b7a0d0448ec7d33227cb8e476e2ead6f9f13d8f5cd90946674f264d3",
+        "reparsed_snapshot_sha256": "ca370057b7a0d0448ec7d33227cb8e476e2ead6f9f13d8f5cd90946674f264d3",
+        "representable_state_sha256": "f68bc254233a7f07462fbccc954f4429c882b815bc7c7790c6e08e32be8ad975",
+        "cycle_projection_sha256": "9a0e0b72278d98ba3ec747437d6de6e411e380bb5280d5b65ccf3d5963f6b282",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "79c68a208a960e5127a69e1f7f6a75e1debb47ac4063d8f63272eacad9942722",
+        "source_parser_observation_sha256": "d7cc55201efbc88632379bef63d490816297c4d9628f49252145b3df2c4b50bf",
+        "reparsed_parser_observation_sha256": "d7cc55201efbc88632379bef63d490816297c4d9628f49252145b3df2c4b50bf",
+        "receipt_sha256": "f2af00c7f453fc241348f09a3e8876c1b0506c80ef44e9e1ad7c6b4b564e1028",
+        "report_sha256": "1d302dac204d6bc55ab45cb1ecb6baddf26cf6884ae0622ea6c58e1188044979",
+        "typed_ez_bond_count": 1,
+        "directional_source_bond_count": 2,
+        "stereo_labels": [
+          "E"
+        ],
+        "reference_carrier_parity_flipped": [
+          true
+        ],
+        "direction_carrier_tokens": [
+          [
+            "/",
+            "\\"
+          ]
+        ],
+        "directional_bond_tokens": [
+          "/",
+          "\\"
+        ],
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b"
+      }
+    },
+    {
+      "case_id": "raw_gauge_normalization_e",
+      "category": "raw_gauge_normalization",
+      "source": {
+        "kind": "ascii",
+        "value": "F\\C=C\\F"
+      },
+      "source_id": "raw_gauge_normalization_e",
+      "source_sha256": "e51828acbbd73c66cfdee84ca64798b9e0c9002aef4acf445a28337c80deaba6",
+      "expected": {
+        "output_ascii": "F/C=C/F",
+        "output_sha256": "848be58fb2fe6d08509debd45c06cfbcdb2a108fda0891075689abdcc5672024",
+        "output_byte_count": 7,
+        "output_equals_input": false,
+        "canonical_topology_sha256": "4d59cae60d5eb1c7e9b2f14c9f7a444303b18facea2f40011274cb28c7c2d2dd",
+        "ordered_topology_sha256": "aed3c7143b3d07cd05476f1a1694816ac8e871ad50590e027afb747a21c372e3",
+        "source_snapshot_sha256": "0a7e5fe5bd5caf94bcac6a136db4b421d37def0d0b89eda413a7e542b8ee3afc",
+        "reparsed_snapshot_sha256": "b3d64bacc84022ec2c0b994757164939fd92f46694414159a95f89c258c97d95",
+        "representable_state_sha256": "fb3bd9ded5f02d53b4b3fb8c3252ff153fb8f32ef3c44b6f96279f135baabaa5",
+        "cycle_projection_sha256": "75af8cd17eddacc023911352472675a1ec64d8407f12b94b8d0bb08544f13ac6",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "be819c652f1db5ffc0668cb7f103793e0b13cbdcd0bf4b95563d3ff962c9152c",
+        "source_parser_observation_sha256": "9f7f7a266dad8279b7b15b3663cc1da9cfb1cedb67307bac2ce7873a2549a096",
+        "reparsed_parser_observation_sha256": "19a94fa6e46899d494b0bbd4207ce2f1f1711b5cd7797c5107bd917142e8b84a",
+        "receipt_sha256": "79ed7e9dcb94062242dd86efe8101a2edc59ef6cc62cdbbd5d6b5eb3f728ca91",
+        "report_sha256": "2004a963aa7f4dea3429c4faaf0cd7b618612a9a47f3fb86dce70fdb4d4c974c",
+        "typed_ez_bond_count": 1,
+        "directional_source_bond_count": 2,
+        "stereo_labels": [
+          "E"
+        ],
+        "reference_carrier_parity_flipped": [
+          false
+        ],
+        "direction_carrier_tokens": [
+          [
+            "/",
+            "/"
+          ]
+        ],
+        "directional_bond_tokens": [
+          "/",
+          "/"
+        ],
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b"
+      }
+    },
+    {
+      "case_id": "ring3_exocyclic_e",
+      "category": "ring3_exocyclic",
+      "source": {
+        "kind": "ascii",
+        "value": "F/C=C1\\CC1Cl"
+      },
+      "source_id": "ring3_exocyclic_e",
+      "source_sha256": "d3f6187334a6020437ae352400c3408e00a8fe8e878d76d7a8984860198c0301",
+      "expected": {
+        "output_ascii": "F/C=C1\\CC1Cl",
+        "output_sha256": "d3f6187334a6020437ae352400c3408e00a8fe8e878d76d7a8984860198c0301",
+        "output_byte_count": 12,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "b2712bb80cbbfa76af5cc5d57426f27ee5334cf528a7835c4e6c8b3b67cecc89",
+        "ordered_topology_sha256": "c4d0d3cbf78b537cf12e263745353d4ba498e3ede082f6c176d2d38693d6787d",
+        "source_snapshot_sha256": "69684f4305a76588f4ceca93153bf51a3bd0bc3984e26a6ea82665d74e9dff5d",
+        "reparsed_snapshot_sha256": "69684f4305a76588f4ceca93153bf51a3bd0bc3984e26a6ea82665d74e9dff5d",
+        "representable_state_sha256": "5f00e45366b866c80d5d9861c882e2df16729fade7e4de2f4541db0ba4aa84d8",
+        "cycle_projection_sha256": "0cd0754f425726d52ced9129c0d36123c403b9db97f1351af4ecead7084b9a38",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "79c68a208a960e5127a69e1f7f6a75e1debb47ac4063d8f63272eacad9942722",
+        "source_parser_observation_sha256": "f93cec32fbc726a321fd9aa4e69bf2125ea7e64dcd8bd16c17711e89c450082a",
+        "reparsed_parser_observation_sha256": "f93cec32fbc726a321fd9aa4e69bf2125ea7e64dcd8bd16c17711e89c450082a",
+        "receipt_sha256": "c28c05141b4dbe0e97ad0b89db5f1450aafa1bd539d272415c3cb3f22a091809",
+        "report_sha256": "118201d949ef4afbb5e534db4fdb14a217363e8101e5c65528bdcda1ab54f18c",
+        "typed_ez_bond_count": 1,
+        "directional_source_bond_count": 2,
+        "stereo_labels": [
+          "E"
+        ],
+        "reference_carrier_parity_flipped": [
+          true
+        ],
+        "direction_carrier_tokens": [
+          [
+            "/",
+            "\\"
+          ]
+        ],
+        "directional_bond_tokens": [
+          "/",
+          "\\"
+        ],
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b"
+      }
+    },
+    {
+      "case_id": "ring3_exocyclic_z",
+      "category": "ring3_exocyclic",
+      "source": {
+        "kind": "ascii",
+        "value": "F/C=C1/CC1Cl"
+      },
+      "source_id": "ring3_exocyclic_z",
+      "source_sha256": "f1ea61694bd110b6f416f51cabb5a621ec1305aa410cfdf29d69abcb4e6c825f",
+      "expected": {
+        "output_ascii": "F/C=C1/CC1Cl",
+        "output_sha256": "f1ea61694bd110b6f416f51cabb5a621ec1305aa410cfdf29d69abcb4e6c825f",
+        "output_byte_count": 12,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "e9e6452bb374ec92d40319e260704c849a949e486fe120b5f1092fa653f7957f",
+        "ordered_topology_sha256": "229a581480bad8c16633de6131c871be54c52b62c27669b0e01fd157fa7bdbe5",
+        "source_snapshot_sha256": "6ec20c14641a7f06b8721cee5846980ceeba936295f3d6ec4e31226438cdc7f5",
+        "reparsed_snapshot_sha256": "6ec20c14641a7f06b8721cee5846980ceeba936295f3d6ec4e31226438cdc7f5",
+        "representable_state_sha256": "a85842ba9e7e9a38636e7f88280356559ce451be700529cc7ac44a502507e491",
+        "cycle_projection_sha256": "b16906efc7b5b4879c10e4884d667ff92f36bf04c74751ad68e98ba8d9232f4b",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "b5d304fd84a2e931c331fe29f73eba868a5f4f3b5affe1f8603bb7c6a33442f3",
+        "source_parser_observation_sha256": "b28f5602a95f9164f465331f42948bd247cec654ca0ab0e1ece0104a3a23b4a4",
+        "reparsed_parser_observation_sha256": "b28f5602a95f9164f465331f42948bd247cec654ca0ab0e1ece0104a3a23b4a4",
+        "receipt_sha256": "4702897e24af5b669a3300a09a7ae582648f0bf45bbf5a9779a18b083caa9895",
+        "report_sha256": "682034716603988a93fe118dd552f746723e963ff86a87358fbb9b4fe8e13013",
+        "typed_ez_bond_count": 1,
+        "directional_source_bond_count": 2,
+        "stereo_labels": [
+          "Z"
+        ],
+        "reference_carrier_parity_flipped": [
+          true
+        ],
+        "direction_carrier_tokens": [
+          [
+            "/",
+            "/"
+          ]
+        ],
+        "directional_bond_tokens": [
+          "/",
+          "/"
+        ],
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b"
+      }
+    },
+    {
+      "case_id": "ring6_exocyclic_e",
+      "category": "ring6_exocyclic",
+      "source": {
+        "kind": "ascii",
+        "value": "F/C(Cl)=C1/CCCOC1"
+      },
+      "source_id": "ring6_exocyclic_e",
+      "source_sha256": "d086a63673ca3401ce58a339512d840f850096e8134b51840adca6e2f8b24c02",
+      "expected": {
+        "output_ascii": "F/C(Cl)=C1/CCCOC1",
+        "output_sha256": "d086a63673ca3401ce58a339512d840f850096e8134b51840adca6e2f8b24c02",
+        "output_byte_count": 17,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "988247e9a20ac256c66aeaecefeef9b7ced4b40632569712f84e43bf86b007fb",
+        "ordered_topology_sha256": "440ebbfd2f0c2144814a770cdcbcee10c838b44217c5642675f4d071e2731ab5",
+        "source_snapshot_sha256": "8ac62192e6de2c51b2ea569f925cd4461e3ae5661c444e776fd731dbcf3b2835",
+        "reparsed_snapshot_sha256": "8ac62192e6de2c51b2ea569f925cd4461e3ae5661c444e776fd731dbcf3b2835",
+        "representable_state_sha256": "2a2618ecb5774875dd1a0d55e9effe21ea6cad00601e54f884c515aec79709aa",
+        "cycle_projection_sha256": "466ec818a60af4f88c61f8f7489adb4d951b0f0d362be9fe5918976cfc5eb851",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "990348553edfbff59a435d05314a6fe04f42e3b3daab39e5414de4dee5a26102",
+        "source_parser_observation_sha256": "b3642a289852073044ee8f138c866b4e44a8e87ea90e2c02d0f1469249923f92",
+        "reparsed_parser_observation_sha256": "b3642a289852073044ee8f138c866b4e44a8e87ea90e2c02d0f1469249923f92",
+        "receipt_sha256": "56ee9d2af19ce27f7e3861abafd79a58362f39df3d38f5e19aa6911ab971e359",
+        "report_sha256": "aaeb1c68136ab212cf18cc8bb5d9da4e010a13329109bb2f99afef84825974f7",
+        "typed_ez_bond_count": 1,
+        "directional_source_bond_count": 2,
+        "stereo_labels": [
+          "E"
+        ],
+        "reference_carrier_parity_flipped": [
+          false
+        ],
+        "direction_carrier_tokens": [
+          [
+            "/",
+            "/"
+          ]
+        ],
+        "directional_bond_tokens": [
+          "/",
+          "/"
+        ],
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b"
+      }
+    },
+    {
+      "case_id": "ring6_exocyclic_z",
+      "category": "ring6_exocyclic",
+      "source": {
+        "kind": "ascii",
+        "value": "F/C(Cl)=C1\\CCCOC1"
+      },
+      "source_id": "ring6_exocyclic_z",
+      "source_sha256": "013f43358a5e9ee870e79fc072230dd2f5853cdd172a0e791ffe9820b71c4a96",
+      "expected": {
+        "output_ascii": "F/C(Cl)=C1\\CCCOC1",
+        "output_sha256": "013f43358a5e9ee870e79fc072230dd2f5853cdd172a0e791ffe9820b71c4a96",
+        "output_byte_count": 17,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "e73b4cb10602b1b4218cbf54c165c2d5c4b9bac9587d34ea7b143bb056691028",
+        "ordered_topology_sha256": "5df59061f059f917dbe809e424ebbdbb7c96442e3c508b9e04f5ce7a90db2c40",
+        "source_snapshot_sha256": "81d332a98b1b5699e7fbe18fdc757ba00d169d866b4864bb060a3555a7dd66e4",
+        "reparsed_snapshot_sha256": "81d332a98b1b5699e7fbe18fdc757ba00d169d866b4864bb060a3555a7dd66e4",
+        "representable_state_sha256": "246ef03c6b0b78eba827fa40a364413be95da27ad6ae9d7630545295daf73820",
+        "cycle_projection_sha256": "3ed543d88ae9e09ae1bbe94985e3c932330aaa3b1b0e8e2ab175a0aed2072b9f",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "d5bfb291c7388f76e8d10d8e0ff173593b0cc7b7d32db34b39878050c7cb2b1d",
+        "source_parser_observation_sha256": "eedf0f9697354c0943aa54e69e360d7f969faaa3c4adc0128d2bdb58671585d2",
+        "reparsed_parser_observation_sha256": "eedf0f9697354c0943aa54e69e360d7f969faaa3c4adc0128d2bdb58671585d2",
+        "receipt_sha256": "a64ae293d35e60c6206c9882bc38455df653f9dfcb6e9722cb6a573292250ad7",
+        "report_sha256": "20a05cf676cd0e22ac6653f900a815f8bc3a5ca6c4d37564f7722ac6d7fd2f94",
+        "typed_ez_bond_count": 1,
+        "directional_source_bond_count": 2,
+        "stereo_labels": [
+          "Z"
+        ],
+        "reference_carrier_parity_flipped": [
+          false
+        ],
+        "direction_carrier_tokens": [
+          [
+            "/",
+            "\\"
+          ]
+        ],
+        "directional_bond_tokens": [
+          "/",
+          "\\"
+        ],
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b"
+      }
+    },
+    {
+      "case_id": "ring8_closure_e",
+      "category": "ring8_closure",
+      "source": {
+        "kind": "ascii",
+        "value": "C1=C/CCCCCC/1"
+      },
+      "source_id": "ring8_closure_e",
+      "source_sha256": "ecc5be8da065b002dd6eebf9549a50b10501fdefcb05668bf03814757465a563",
+      "expected": {
+        "output_ascii": "C1=C/CCCCCC/1",
+        "output_sha256": "ecc5be8da065b002dd6eebf9549a50b10501fdefcb05668bf03814757465a563",
+        "output_byte_count": 13,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "3665dee4107b1e21f07edc28634384fd49be047f1e2d1a3e3e8e488d9fd8a66b",
+        "ordered_topology_sha256": "6a9fdb1ba6e26efc183cd1bc7cddd4041ddeffd0d5d5a2d39a17c07cb8134cc1",
+        "source_snapshot_sha256": "706ea3ca27e97df82bdca4825f4d28371d9357918cc6377bbe9035067d1badb4",
+        "reparsed_snapshot_sha256": "706ea3ca27e97df82bdca4825f4d28371d9357918cc6377bbe9035067d1badb4",
+        "representable_state_sha256": "3879af8615c07b3b1018a25a540b7f77be992599488480003b401220a66e0581",
+        "cycle_projection_sha256": "7cf267f14e56923d23e00a805db9ad61e6ec659015e006382c60f8692e3b2c11",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "8f319f7f65962b1bd784d3e039223f73910ebd8d4cb82becce5edf6c9db4e168",
+        "source_parser_observation_sha256": "5b119d1019fb56c808dec3c4d4816baf5e5060230a4cac6c368d9070bd901f61",
+        "reparsed_parser_observation_sha256": "5b119d1019fb56c808dec3c4d4816baf5e5060230a4cac6c368d9070bd901f61",
+        "receipt_sha256": "69833cb08bc7805c333403d20e83be748dee0eec94c58063735a8432f57f3b7b",
+        "report_sha256": "aa9786a789aef61e05a6e28269f6377c75700ef7d9da7f6fd297edd094bba24c",
+        "typed_ez_bond_count": 1,
+        "directional_source_bond_count": 2,
+        "stereo_labels": [
+          "E"
+        ],
+        "reference_carrier_parity_flipped": [
+          false
+        ],
+        "direction_carrier_tokens": [
+          [
+            "/",
+            "/"
+          ]
+        ],
+        "directional_bond_tokens": [
+          "/",
+          "/"
+        ],
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b"
+      }
+    },
+    {
+      "case_id": "ring8_closure_z",
+      "category": "ring8_closure",
+      "source": {
+        "kind": "ascii",
+        "value": "C1=C\\CCCCCC/1"
+      },
+      "source_id": "ring8_closure_z",
+      "source_sha256": "27fdb79590ae235d73c234ef36fa67798468bb20fd191254d0c2b343540e1487",
+      "expected": {
+        "output_ascii": "C1=C\\CCCCCC/1",
+        "output_sha256": "27fdb79590ae235d73c234ef36fa67798468bb20fd191254d0c2b343540e1487",
+        "output_byte_count": 13,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "0ec3b188331a68ee9e4c703aaa7fa5b86d730e221dc36b0e67635a93348189bb",
+        "ordered_topology_sha256": "af26925e582b5b3fb0e039f8e283bbbd49a0f369a227f45239a0ba13a5848a72",
+        "source_snapshot_sha256": "37393d367defd438dc5ad6958c29949fc3d3d652ec32295bb5c9dd3f219a5963",
+        "reparsed_snapshot_sha256": "37393d367defd438dc5ad6958c29949fc3d3d652ec32295bb5c9dd3f219a5963",
+        "representable_state_sha256": "c91dc3b90e5d98e25078ba9eef33deb0d129d0225ba904ab00dd999eb11dcae8",
+        "cycle_projection_sha256": "ef32dbc5b24008d6fd17e63c2edbd716f00ecafe39845a09c3b29b984e810a14",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "bd2bfa382244dcb134a20e7bc56ba2ff44ac23a670637a4594f27447c770374b",
+        "source_parser_observation_sha256": "09b539e7aaac8f5923ed248687ae4a8555034527a5522df4a1d0dd307ce17e2c",
+        "reparsed_parser_observation_sha256": "09b539e7aaac8f5923ed248687ae4a8555034527a5522df4a1d0dd307ce17e2c",
+        "receipt_sha256": "af471b1a74b7c6a285b1a958103395b195e0340ea6a18ef3dc77682b16c33099",
+        "report_sha256": "7f25bfba7c533d1fc6b8af67dbc585f609819d4e226e40ce0d2b7b3e11e16b97",
+        "typed_ez_bond_count": 1,
+        "directional_source_bond_count": 2,
+        "stereo_labels": [
+          "Z"
+        ],
+        "reference_carrier_parity_flipped": [
+          false
+        ],
+        "direction_carrier_tokens": [
+          [
+            "/",
+            "\\"
+          ]
+        ],
+        "directional_bond_tokens": [
+          "\\",
+          "/"
+        ],
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b"
+      }
+    },
+    {
+      "case_id": "ring8_shifted_internal_e",
+      "category": "ring8_shifted_internal",
+      "source": {
+        "kind": "ascii",
+        "value": "CC1C/C=C/CCCC1"
+      },
+      "source_id": "ring8_shifted_internal_e",
+      "source_sha256": "36218e6f74ce142ba4f4d1555d4a921894147e54cf1435da14bb1f24ed69fb10",
+      "expected": {
+        "output_ascii": "CC1C/C=C/CCCC1",
+        "output_sha256": "36218e6f74ce142ba4f4d1555d4a921894147e54cf1435da14bb1f24ed69fb10",
+        "output_byte_count": 14,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "73fee0f6f7d4e3d0d28b644f2c54f3cd00d589fff681d35d980ac053883ea1e9",
+        "ordered_topology_sha256": "ab3bb5e03b0882288880cc26ada140c6fe286060ca86906f679433f011b492de",
+        "source_snapshot_sha256": "fe694ed1e5a462a5a68885397457e8d0840b891885f186b360a2937d0c15c9da",
+        "reparsed_snapshot_sha256": "fe694ed1e5a462a5a68885397457e8d0840b891885f186b360a2937d0c15c9da",
+        "representable_state_sha256": "9f19c1e8bfd447aa2be7796c52e305f3dcd17026369e15cdec861537ccd09912",
+        "cycle_projection_sha256": "ea36e3b022d936db1fa129d9730f7e5c510870fd015d230deaa913463c0de60f",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "85aa786e4456f89666e1d283f4efcff9f5d66c786477219d6f11a52450165519",
+        "source_parser_observation_sha256": "1f34c774227ee11b59d82660261b85f1876e7d30507fc11f686e3796896efe66",
+        "reparsed_parser_observation_sha256": "1f34c774227ee11b59d82660261b85f1876e7d30507fc11f686e3796896efe66",
+        "receipt_sha256": "1a5d036c45d8930f4bbbeca75fb42076c5810f80c7838afdd7984cb67e921e6d",
+        "report_sha256": "3649678ae8c287fa52d0f7371462fc6ba9d3491881586e43a59c80b5cf17e393",
+        "typed_ez_bond_count": 1,
+        "directional_source_bond_count": 2,
+        "stereo_labels": [
+          "E"
+        ],
+        "reference_carrier_parity_flipped": [
+          false
+        ],
+        "direction_carrier_tokens": [
+          [
+            "/",
+            "/"
+          ]
+        ],
+        "directional_bond_tokens": [
+          "/",
+          "/"
+        ],
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b"
+      }
+    },
+    {
+      "case_id": "ring8_shifted_internal_z",
+      "category": "ring8_shifted_internal",
+      "source": {
+        "kind": "ascii",
+        "value": "CC1C/C=C\\CCCC1"
+      },
+      "source_id": "ring8_shifted_internal_z",
+      "source_sha256": "32c1c329d48459f40cd4f03fc61469933a0731123cfe22c87826cfd6e0f95690",
+      "expected": {
+        "output_ascii": "CC1C/C=C\\CCCC1",
+        "output_sha256": "32c1c329d48459f40cd4f03fc61469933a0731123cfe22c87826cfd6e0f95690",
+        "output_byte_count": 14,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "c52a82ce80981384ec4eae785362b47d65795fdc8caf91742fd0ec9566f1c35f",
+        "ordered_topology_sha256": "7ebc45d644053ef679a6fbc211ef9e5003c25b5502098209299c6b8a47a0ef72",
+        "source_snapshot_sha256": "27c6e14579dc51db798bd4e7e5d54c99a20316541c09be4f725b84fc34319f29",
+        "reparsed_snapshot_sha256": "27c6e14579dc51db798bd4e7e5d54c99a20316541c09be4f725b84fc34319f29",
+        "representable_state_sha256": "a32bc5f22397269ae2a802392d3fc9a91ad67b5b039776f4f595c5767f9101c7",
+        "cycle_projection_sha256": "1211e8fa7ba5e41c076bf72260b5df9a3b21399959a7ed973513ccd5c75c2369",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "fd41ee2b1faeadcd677f865299dd7987a2dc98a4ced0373facb6763741ad88a9",
+        "source_parser_observation_sha256": "b2d8d7b35370ad8dd2936a5fa3ec8b2ec8250ed7159ec2f812cf8673b3db3eb0",
+        "reparsed_parser_observation_sha256": "b2d8d7b35370ad8dd2936a5fa3ec8b2ec8250ed7159ec2f812cf8673b3db3eb0",
+        "receipt_sha256": "03d0a426d031bd56d744cdc41e49c63c6d5e10ccc045b5f4a80d4e861765966c",
+        "report_sha256": "45b12f84bb5c4c067c3c108df2cab26c9e9bdf44ef3513efd43bd48de9bdc8e6",
+        "typed_ez_bond_count": 1,
+        "directional_source_bond_count": 2,
+        "stereo_labels": [
+          "Z"
+        ],
+        "reference_carrier_parity_flipped": [
+          false
+        ],
+        "direction_carrier_tokens": [
+          [
+            "/",
+            "\\"
+          ]
+        ],
+        "directional_bond_tokens": [
+          "/",
+          "\\"
+        ],
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b"
+      }
+    },
+    {
+      "case_id": "simple_e",
+      "category": "simple_e",
+      "source": {
+        "kind": "ascii",
+        "value": "F/C=C/F"
+      },
+      "source_id": "simple_e",
+      "source_sha256": "848be58fb2fe6d08509debd45c06cfbcdb2a108fda0891075689abdcc5672024",
+      "expected": {
+        "output_ascii": "F/C=C/F",
+        "output_sha256": "848be58fb2fe6d08509debd45c06cfbcdb2a108fda0891075689abdcc5672024",
+        "output_byte_count": 7,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "4d59cae60d5eb1c7e9b2f14c9f7a444303b18facea2f40011274cb28c7c2d2dd",
+        "ordered_topology_sha256": "aed3c7143b3d07cd05476f1a1694816ac8e871ad50590e027afb747a21c372e3",
+        "source_snapshot_sha256": "295fc37ed07720e1a54c7a5dca1a31d7e2c7f0948664c4efa61c0befa1831707",
+        "reparsed_snapshot_sha256": "295fc37ed07720e1a54c7a5dca1a31d7e2c7f0948664c4efa61c0befa1831707",
+        "representable_state_sha256": "fb3bd9ded5f02d53b4b3fb8c3252ff153fb8f32ef3c44b6f96279f135baabaa5",
+        "cycle_projection_sha256": "75af8cd17eddacc023911352472675a1ec64d8407f12b94b8d0bb08544f13ac6",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "be819c652f1db5ffc0668cb7f103793e0b13cbdcd0bf4b95563d3ff962c9152c",
+        "source_parser_observation_sha256": "71562a1507b355d020e3cf847a922bbde665d0f6b07a70b804b604f485aed77f",
+        "reparsed_parser_observation_sha256": "71562a1507b355d020e3cf847a922bbde665d0f6b07a70b804b604f485aed77f",
+        "receipt_sha256": "9a3c43854e827f25e2518904d1b51fdd750891a9f009656e79692887f8186da1",
+        "report_sha256": "5fdfe265b332bdd1af8e0f384e115768434f7e350210c51e5be9611d43223794",
+        "typed_ez_bond_count": 1,
+        "directional_source_bond_count": 2,
+        "stereo_labels": [
+          "E"
+        ],
+        "reference_carrier_parity_flipped": [
+          false
+        ],
+        "direction_carrier_tokens": [
+          [
+            "/",
+            "/"
+          ]
+        ],
+        "directional_bond_tokens": [
+          "/",
+          "/"
+        ],
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b"
+      }
+    },
+    {
+      "case_id": "simple_z",
+      "category": "simple_z",
+      "source": {
+        "kind": "ascii",
+        "value": "F/C=C\\F"
+      },
+      "source_id": "simple_z",
+      "source_sha256": "91477db5996e12ae475076cbc73f5c1ce0128c11b1ff19e67e7f49cd8f18fc75",
+      "expected": {
+        "output_ascii": "F/C=C\\F",
+        "output_sha256": "91477db5996e12ae475076cbc73f5c1ce0128c11b1ff19e67e7f49cd8f18fc75",
+        "output_byte_count": 7,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "52563a75ca0f6b726b99db7369944d65b4605aa983839ec1b0f421db0084a709",
+        "ordered_topology_sha256": "e228462891f02c8c2a9d1fe62daec96f1bbcfffbb2541498379407858edf8709",
+        "source_snapshot_sha256": "cb206730c2129daaee96182e9dbc829ca954ac807a7bc9f2b198afc7758035fb",
+        "reparsed_snapshot_sha256": "cb206730c2129daaee96182e9dbc829ca954ac807a7bc9f2b198afc7758035fb",
+        "representable_state_sha256": "9286f5501c7b0bceb1ccd0433164b3fb0f15f36ab229904f9ad010e73adf94d9",
+        "cycle_projection_sha256": "75af8cd17eddacc023911352472675a1ec64d8407f12b94b8d0bb08544f13ac6",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "b56206e493bd583a822fb53b251dd7d4cce4faf33d1e4e306c8295f0b782121c",
+        "source_parser_observation_sha256": "2191124cea80f5de36d24e62e25bb0b784f822790703b2edc831cc3e86a079fe",
+        "reparsed_parser_observation_sha256": "2191124cea80f5de36d24e62e25bb0b784f822790703b2edc831cc3e86a079fe",
+        "receipt_sha256": "6194edc5d74601739fc1e217835712d1d0e992d795bf62070426a5b09eab3459",
+        "report_sha256": "8e8169a7ae22629cee42e796aae965e259a122d4772c721dc26ed1d2094e92f1",
+        "typed_ez_bond_count": 1,
+        "directional_source_bond_count": 2,
+        "stereo_labels": [
+          "Z"
+        ],
+        "reference_carrier_parity_flipped": [
+          false
+        ],
+        "direction_carrier_tokens": [
+          [
+            "/",
+            "\\"
+          ]
+        ],
+        "directional_bond_tokens": [
+          "/",
+          "\\"
+        ],
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b"
+      }
+    },
+    {
+      "case_id": "tetrasubstituted_e",
+      "category": "tetrasubstituted",
+      "source": {
+        "kind": "ascii",
+        "value": "F/C(Cl)=C(/Br)I"
+      },
+      "source_id": "tetrasubstituted_e",
+      "source_sha256": "cbcc88d8f0a6e8d6fa48eecd313b63da30935d6e94dbc888bc9d094dfba11a13",
+      "expected": {
+        "output_ascii": "F/C(Cl)=C(/Br)I",
+        "output_sha256": "cbcc88d8f0a6e8d6fa48eecd313b63da30935d6e94dbc888bc9d094dfba11a13",
+        "output_byte_count": 15,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "b0e29021c639167dadd5abcf6d8d3febe184304dc73be5f81e66c11d19654b7b",
+        "ordered_topology_sha256": "94182947eb18df20721b3db0e1b6a9af7f94832cac080d9c79883e39a5eda39f",
+        "source_snapshot_sha256": "179bc20ca392a8ced3b03455b1fcfec3ad20be4530f2510cffa39039e22354e4",
+        "reparsed_snapshot_sha256": "179bc20ca392a8ced3b03455b1fcfec3ad20be4530f2510cffa39039e22354e4",
+        "representable_state_sha256": "43dfaad39ba894a67250d2f47d3719d059f4362e4460705d477f7d4c0c61a5a0",
+        "cycle_projection_sha256": "00413cd1105a0d2ea8ca119a77e4da58bdb0ffe9560374afc93fe5a8e973247c",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "cf127e4937f6713337996f3a58e3e53d81fed5615f467510e10e91364d8ab7a8",
+        "source_parser_observation_sha256": "16ff63e2d3f16b704e444599c8d1f9de03fa9fcedf166e992b02a2592b2c56c8",
+        "reparsed_parser_observation_sha256": "16ff63e2d3f16b704e444599c8d1f9de03fa9fcedf166e992b02a2592b2c56c8",
+        "receipt_sha256": "20f498e723adda4b972bd299822bce99a40ae93ffb0adf01f434d21264d3df01",
+        "report_sha256": "afa96b83cfe778c28ca9f92a42b36d0542b8762dc75cb8395f150d2066823ee5",
+        "typed_ez_bond_count": 1,
+        "directional_source_bond_count": 2,
+        "stereo_labels": [
+          "E"
+        ],
+        "reference_carrier_parity_flipped": [
+          false
+        ],
+        "direction_carrier_tokens": [
+          [
+            "/",
+            "/"
+          ]
+        ],
+        "directional_bond_tokens": [
+          "/",
+          "/"
+        ],
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b"
+      }
+    },
+    {
+      "case_id": "unspecified_baseline",
+      "category": "unspecified_baseline",
+      "source": {
+        "kind": "ascii",
+        "value": "FC=CF"
+      },
+      "source_id": "unspecified_baseline",
+      "source_sha256": "09fce66e68ac4dfdefe142b0d6766284c3c27c579c037a52ddd080a1891ea673",
+      "expected": {
+        "output_ascii": "FC=CF",
+        "output_sha256": "09fce66e68ac4dfdefe142b0d6766284c3c27c579c037a52ddd080a1891ea673",
+        "output_byte_count": 5,
+        "output_equals_input": true,
+        "canonical_topology_sha256": "fcd97dd12370baa166a467ac4f23d03d72e7de579b6c1008663baa10ba6f3a6f",
+        "ordered_topology_sha256": "52078ad2b85d32f7b1d33f31886b4d8fd409561dc1a1dcc8f5c34cc0d12c8d25",
+        "source_snapshot_sha256": "995ad53f8423f94769b2aed5c308185e30684c7721f780f7d5511444db707237",
+        "reparsed_snapshot_sha256": "995ad53f8423f94769b2aed5c308185e30684c7721f780f7d5511444db707237",
+        "representable_state_sha256": "c078418a4a43bd24dc45d3e510a718fb92665caad8cccf4d5811949f78ca9c2a",
+        "cycle_projection_sha256": "75af8cd17eddacc023911352472675a1ec64d8407f12b94b8d0bb08544f13ac6",
+        "aromatic_projection_sha256": "6811b6f0b19823e67e58cdce65702d6e83af6b6ca31f36a28065c543062c29fe",
+        "ez_stereo_projection_sha256": "d9c779e6334cd3d76b8f202750f3349dedd25fa4e76f9d6ebe6e2762fead39b2",
+        "source_parser_observation_sha256": "df1314fef42cf385c49ff811dd3c30fca86cf2f69a5116df3cda10ce73e3245d",
+        "reparsed_parser_observation_sha256": "df1314fef42cf385c49ff811dd3c30fca86cf2f69a5116df3cda10ce73e3245d",
+        "receipt_sha256": "13a9f883cbce16d1d89dbcbf2ce2ec2bdf70d66c304874e903704c74bcf00320",
+        "report_sha256": "84e38b1737a38be6e625a325b5a55449b2287726b82a3c00601b48b40acadf74",
+        "typed_ez_bond_count": 0,
+        "directional_source_bond_count": 0,
+        "stereo_labels": [],
+        "reference_carrier_parity_flipped": [],
+        "direction_carrier_tokens": [],
+        "directional_bond_tokens": [],
+        "tetrahedral_stereo_projection_sha256": "1aba19e04a203a7d63cd68b6bb2a0e03f86bae577a4ceae4845102cae1eda37b"
+      }
+    }
+  ]
+}

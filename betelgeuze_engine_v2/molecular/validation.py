@@ -141,13 +141,13 @@ def validate_all_atom_system(system: AllAtomSystem) -> ValidationReport:
                 "canonical engine v2 coordinates must be in Angstrom",
             )
         )
-    if system.model_count < 1:
+    if not system.has_coordinates:
         issues.append(
             ValidationIssue(
-                "error",
-                "empty_coordinate_ensemble",
+                "warning",
+                "coordinates_missing",
                 "coordinates",
-                "at least one model is required",
+                "topology-only systems require coordinates before numeric execution",
             )
         )
     if system.atom_count < 1:
@@ -174,6 +174,7 @@ def validate_all_atom_system(system: AllAtomSystem) -> ValidationReport:
     chain_count = len(system.chains)
     atom_count = system.atom_count
 
+    atom_maps: dict[int, int] = {}
     for position, atom in enumerate(system.atoms):
         location = f"atoms[{position}]"
         if not atom.name:
@@ -208,6 +209,27 @@ def validate_all_atom_system(system: AllAtomSystem) -> ValidationReport:
                     "source serial should be positive",
                 )
             )
+        if atom.atom_map is not None:
+            if atom.atom_map < 1:
+                issues.append(
+                    ValidationIssue(
+                        "error",
+                        "nonpositive_atom_map",
+                        location,
+                        "atom map identifiers must be positive",
+                    )
+                )
+            elif atom.atom_map in atom_maps:
+                issues.append(
+                    ValidationIssue(
+                        "error",
+                        "duplicate_atom_map",
+                        location,
+                        f"atom map {atom.atom_map} is already assigned to atom {atom_maps[atom.atom_map]}",
+                    )
+                )
+            else:
+                atom_maps[atom.atom_map] = position
         if atom.partial_charge_e is not None and not _finite_optional(atom.partial_charge_e):
             issues.append(
                 ValidationIssue(
@@ -215,6 +237,15 @@ def validate_all_atom_system(system: AllAtomSystem) -> ValidationReport:
                     "nonfinite_partial_charge",
                     location,
                     "partial charge must be finite",
+                )
+            )
+        if not atom.formal_charge_known:
+            issues.append(
+                ValidationIssue(
+                    "warning",
+                    "unknown_formal_charge",
+                    location,
+                    "formal charge is represented by a placeholder and must be resolved before chemistry features",
                 )
             )
         if atom.mass_da is not None and (not _finite_optional(atom.mass_da) or float(atom.mass_da) <= 0.0):
@@ -236,6 +267,15 @@ def validate_all_atom_system(system: AllAtomSystem) -> ValidationReport:
             issues.append(ValidationIssue("error", "invalid_occupancy", location, "occupancy must be in [0, 1]"))
         if atom.b_factor is not None and not _finite_optional(atom.b_factor):
             issues.append(ValidationIssue("error", "nonfinite_b_factor", location, "B-factor must be finite"))
+        if type(atom.aromatic) is not bool:
+            issues.append(
+                ValidationIssue(
+                    "error",
+                    "invalid_atom_aromatic_flag",
+                    location,
+                    "atom aromatic flag must be a boolean",
+                )
+            )
         atom_stereo = str(atom.stereo or "").strip().upper()
         if atom_stereo not in _ATOM_STEREO_LABELS:
             issues.append(
@@ -281,6 +321,15 @@ def validate_all_atom_system(system: AllAtomSystem) -> ValidationReport:
             )
         if not residue.atom_indices:
             issues.append(ValidationIssue("warning", "empty_residue", location, "residue has no atoms"))
+        if type(residue.hetero) is not bool:
+            issues.append(
+                ValidationIssue(
+                    "error",
+                    "invalid_residue_hetero_flag",
+                    location,
+                    "residue hetero flag must be a boolean",
+                )
+            )
         for atom_index in residue.atom_indices:
             if atom_index < 0 or atom_index >= atom_count:
                 issues.append(
@@ -396,6 +445,15 @@ def validate_all_atom_system(system: AllAtomSystem) -> ValidationReport:
                     "bond order must be finite and positive",
                 )
             )
+        if type(bond.aromatic) is not bool:
+            issues.append(
+                ValidationIssue(
+                    "error",
+                    "invalid_bond_aromatic_flag",
+                    location,
+                    "bond aromatic flag must be a boolean",
+                )
+            )
         bond_stereo = str(bond.stereo or "").strip().upper()
         if bond_stereo not in _BOND_STEREO_LABELS:
             issues.append(
@@ -443,6 +501,27 @@ def validate_all_atom_system(system: AllAtomSystem) -> ValidationReport:
                 )
 
     provenance = system.provenance
+    if not provenance.preparation_ready:
+        issues.append(
+            ValidationIssue(
+                "warning",
+                "preparation_incomplete",
+                "provenance.preparation_ready",
+                "molecular preparation must be completed before numeric execution",
+            )
+        )
+    provenance_claim_safe = False
+    if type(provenance.claim_safe) is not bool:
+        issues.append(
+            ValidationIssue(
+                "error",
+                "invalid_provenance_claim_safe_flag",
+                "provenance.claim_safe",
+                "provenance claim_safe flag must be a boolean",
+            )
+        )
+    else:
+        provenance_claim_safe = provenance.claim_safe
     if provenance.source_sha256 and _SHA256_RE.fullmatch(provenance.source_sha256) is None:
         issues.append(
             ValidationIssue(
@@ -462,7 +541,7 @@ def validate_all_atom_system(system: AllAtomSystem) -> ValidationReport:
                     "SHA-256 must be 64 lowercase hex characters",
                 )
             )
-    if provenance.claim_safe and not provenance.source_sha256:
+    if provenance_claim_safe and not provenance.source_sha256:
         issues.append(
             ValidationIssue(
                 "warning",
@@ -475,7 +554,7 @@ def validate_all_atom_system(system: AllAtomSystem) -> ValidationReport:
     return ValidationReport(
         schema_id=system.schema_id,
         issues=tuple(issues),
-        provenance_claim_safe=bool(provenance.claim_safe),
+        provenance_claim_safe=provenance_claim_safe,
     )
 
 

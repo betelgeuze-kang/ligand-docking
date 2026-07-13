@@ -1,0 +1,5 @@
+HETATM    1 ZN    ZN A 101       0.000   0.000   0.000  1.00 20.00          Zn2+
+ATOM      2 ND1  HIS A  10       2.100   0.000   0.000  1.00 20.00           N  
+CONECT    1    2
+CONECT    2    1
+END

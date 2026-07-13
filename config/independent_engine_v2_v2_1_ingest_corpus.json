@@ -1,0 +1,1788 @@
+{
+  "schema_id": "betelgeuze.v2_1_ingest_corpus/1.4.0",
+  "corpus_id": "v2_1_supported_ingest_identity_context_and_failure_v5",
+  "contracts": {
+    "system_schema_id": "betelgeuze.all_atom_system/2.1.0",
+    "canonical_snapshot_version": "1.2.0",
+    "canonical_topology_schema_id": "betelgeuze.canonical_ordered_topology/1.0.0",
+    "parser_observation_schema_id": "betelgeuze.parser_chemical_state_observation/1.0.0",
+    "chemistry_coverage_schema_version": "1.2.0",
+    "chemistry_profile_id": "organic_graph_encoding_inventory_v1",
+    "canonical_ingest_applicability_schema_id": "betelgeuze.canonical_ingest_applicability/1.0.0",
+    "canonical_ingest_profile_id": "source_explicit_h_neutral_nonisotopic_stereo_unassigned_acyclic_saturated_hydrocarbon_ingest_v1",
+    "canonical_ingest_claim_scope": "canonical_ingest_only",
+    "profile_local_preparation_evidence_schema_id": "betelgeuze.profile_local_preparation_evidence/1.0.0",
+    "profile_local_preparation_claim_scope": "canonical_graph_local_valence_evidence_only",
+    "contextual_component_inventory_schema_id": "betelgeuze.contextual_component_inventory/1.0.0",
+    "contextual_component_inventory_claim_scope": "canonical_component_observation_only",
+    "contextual_component_source_authentication_status": "not_authenticated",
+    "source_authentication_status": "digest_bound_not_authenticated",
+    "parameterability_status": "not_assessed_no_parameter_set",
+    "preparation_report_schema_version": "1.4.0",
+    "preparation_policy_id": "canonical_preparation_inventory_fail_closed_v2",
+    "structure_ingest_support_scope": "syntax_and_canonical_projection_only",
+    "parser_versions": {
+      "pdb": "1.8.0",
+      "mmcif": "1.9.0",
+      "sdf_v2000": "1.5.0",
+      "smiles": "1.4.0"
+    },
+    "smiles_rdkit_version_key": "2025.9.6",
+    "smiles_rdkit_observed_version": "2025.09.6"
+  },
+  "resource_profile": {
+    "profile_id": "v2_1_selected_primary_ingest_limits_v2",
+    "scope": "selected_primary_limits_not_exhaustive",
+    "pdb": {
+      "max_input_bytes": 67108864,
+      "max_atom_rows": 80000,
+      "max_line_count": 250000
+    },
+    "mmcif": {
+      "max_input_bytes": 67108864,
+      "max_atom_rows": 80000,
+      "max_token_count": 2000000,
+      "max_line_count": 250000,
+      "max_line_chars": 2048,
+      "max_assembly_output_atoms": 20000
+    },
+    "sdf_v2000": {
+      "max_input_bytes": 2097152,
+      "max_line_count": 4096,
+      "max_line_chars": 256
+    },
+    "smiles": {
+      "max_input_bytes": 65536,
+      "max_source_atoms": 4096,
+      "max_expanded_atoms": 16384,
+      "max_bonds": 32768,
+      "max_fragments": 256
+    },
+    "chemistry_audit": {
+      "max_atoms": 100000,
+      "max_bonds": 200000
+    },
+    "preparation_audit": {
+      "max_atoms": 100000,
+      "max_bonds": 200000,
+      "max_residues": 100000,
+      "max_chains": 100000
+    }
+  },
+  "claim_boundary": {
+    "canonical_ingest_profile_support_is_chemistry_support": false,
+    "profile_local_evidence_is_global_preparation": false,
+    "chemistry_supported": false,
+    "parameterability_assessed": false,
+    "parameterizable": false,
+    "preparation_assessed": false,
+    "preparation_ready": false,
+    "simulation_ready": false,
+    "claim_safe": false
+  },
+  "cases": [
+    {
+      "case_id": "pdb_mini_protein",
+      "lane": "ingest_success",
+      "format": "pdb",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/tier_beta/mini_protein.pdb"
+      },
+      "source_sha256": "7821d8b7e388fb4c8760ca129e4d1a1bd22ef003c9e193ae66c1209bc1b02489",
+      "source_id": "pdb_mini_protein",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "atom_count": 10,
+        "bond_count": 0,
+        "canonical_topology_sha256": "176ae0513e65d06c9740b3d83544df0928c43f900a659ef152fca223ba1caf99",
+        "canonical_snapshot_sha256": "0476fe78e70c1b54a4be5c447dcc2193b128ae2e6597e1fb5fb1eece84e14eb8",
+        "chemistry_report_sha256": "9f65e4927b8adec270d688b299b605635ffc2405fe2d178f6e08adfe66089a9e",
+        "preparation_report_sha256": "914bb0e3add98fc29f54c87ca807b6e7f08dcceb7939d82c9725318ff1754d8d",
+        "applicability_report_sha256": "771f9f55ab0227f3dfaa4caad879bf651a0690da70b0349f17a667ee96666b60",
+        "profile_local_preparation_report_sha256": "b9e2ad230ad976fcd9da7f1f5e4d67d3cd9d8e1836da87d57298844844a98773",
+        "contextual_component_inventory_report_sha256": "ca65d78b9b20d1af9f9c12b78e298ded1f2e64432f31957c9a7258202f5c2bfc",
+        "canonical_ingest_status": "unsupported",
+        "canonical_ingest_supported": false,
+        "applicability_failed_constraint_codes": [
+          "single_component",
+          "formal_charges_known_zero",
+          "acyclic_graph",
+          "explicit_valence_closed"
+        ],
+        "profile_local_evidence_status": "not_satisfied",
+        "profile_local_evidence_satisfied": false,
+        "source_hydrogen_inventory_status": "complete_relative_to_parsed_source",
+        "profile_hydrogen_valence_status": "not_satisfied",
+        "formal_charge_observation_status": "not_satisfied",
+        "aromaticity_requirement_status": "profile_requirements_not_satisfied",
+        "polymer_missing_residue_status": "unassessed",
+        "isotope_assignments": [],
+        "atom_stereo_assignments": [],
+        "bond_stereo_assignments": [],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "formal_charge_unknown_for_some_atoms",
+          "disconnected_fragment_roles_not_assessed",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted",
+          "formal_charge_unknown_for_some_atoms"
+        ]
+      }
+    },
+    {
+      "case_id": "mmcif_mini_protein",
+      "lane": "ingest_success",
+      "format": "mmcif",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/tier_beta/mini_protein.cif"
+      },
+      "source_sha256": "37d66e6a8a880c144ebbba476e81a9add71ee95d714772a55f539624e9200b56",
+      "source_id": "mmcif_mini_protein",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "atom_count": 10,
+        "bond_count": 0,
+        "canonical_topology_sha256": "cdfb2fe296f2b6bf4ce785e314b5c1c563cdf471724efac080f7a857f52f1d1c",
+        "canonical_snapshot_sha256": "84f6193707df1f8a575fa546d89ae3df0a10fa1034d29fa427e348f84ea70167",
+        "chemistry_report_sha256": "abcfbccb6945072e04d89d32ec67a0564a05de62a1f1442770548045098d1644",
+        "preparation_report_sha256": "a5a9c188b0d5be29461c302b122c5db94e0f54799908b500e361195dfcfa24c1",
+        "applicability_report_sha256": "282d0a05a9950268ece9a527e7a87b88cf05e889fbf8fe8092ccc1c4e8da9e44",
+        "profile_local_preparation_report_sha256": "ddb6f3560a93debcbb56d65569fc25efb6ae9870773feb9cb15531a390f3bef1",
+        "contextual_component_inventory_report_sha256": "635e42449f376734c34be609d64e7ff53257867a99616f19a55a65e5e45c6467",
+        "canonical_ingest_status": "unsupported",
+        "canonical_ingest_supported": false,
+        "applicability_failed_constraint_codes": [
+          "single_component",
+          "formal_charges_known_zero",
+          "acyclic_graph",
+          "explicit_valence_closed"
+        ],
+        "profile_local_evidence_status": "not_satisfied",
+        "profile_local_evidence_satisfied": false,
+        "source_hydrogen_inventory_status": "complete_relative_to_parsed_source",
+        "profile_hydrogen_valence_status": "not_satisfied",
+        "formal_charge_observation_status": "not_satisfied",
+        "aromaticity_requirement_status": "profile_requirements_not_satisfied",
+        "polymer_missing_residue_status": "unassessed",
+        "isotope_assignments": [],
+        "atom_stereo_assignments": [],
+        "bond_stereo_assignments": [],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "formal_charge_unknown_for_some_atoms",
+          "disconnected_fragment_roles_not_assessed",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted",
+          "formal_charge_unknown_for_some_atoms"
+        ]
+      }
+    },
+    {
+      "case_id": "sdf_v2000_ethanol",
+      "lane": "ingest_success",
+      "format": "sdf_v2000",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/tier_beta/ethanol.sdf"
+      },
+      "source_sha256": "f4835419da95267ad2ef566a121b981011c202c882b071b86d35fc82b683563f",
+      "source_id": "sdf_ethanol",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "atom_count": 3,
+        "bond_count": 2,
+        "canonical_topology_sha256": "8002a0a206d4ec2db0bb7594e4edda900b43ecaeb9cfc6510949c389b5e3ff5e",
+        "canonical_snapshot_sha256": "0e89ff3bdf46bacafe72b97a486e1f8c6e224aad0c3637205d95a9b41ae0168d",
+        "chemistry_report_sha256": "5ac72750670878a41ff6bb52fbd87bd7093d985c79d1a8974e9bf100a6cd8fec",
+        "preparation_report_sha256": "4ee2e6849a662a8b90af090520898e320baec75a4a4641d20389860af553d545",
+        "applicability_report_sha256": "5aa6ccd3c3a595051d6a628a21a267c2a333438da5ca52bc1e3f74ddf963dbe5",
+        "profile_local_preparation_report_sha256": "354308783c8468c0002ebc9bd826ccb8380bcab0736a3824fd60888b0e5cd6e2",
+        "contextual_component_inventory_report_sha256": "02d5ff38396c96f11ebbd342373c0796fdf7341d3e77fc420868a020d8cf3a8c",
+        "canonical_ingest_status": "unsupported",
+        "canonical_ingest_supported": false,
+        "applicability_failed_constraint_codes": [
+          "elements_h_c_only",
+          "explicit_valence_closed"
+        ],
+        "profile_local_evidence_status": "not_satisfied",
+        "profile_local_evidence_satisfied": false,
+        "source_hydrogen_inventory_status": "complete_relative_to_parsed_source",
+        "profile_hydrogen_valence_status": "not_satisfied",
+        "formal_charge_observation_status": "source_observed_known_zero_not_assigned",
+        "aromaticity_requirement_status": "not_applicable_to_acyclic_single_bond_profile",
+        "polymer_missing_residue_status": "unassessed",
+        "isotope_assignments": [],
+        "atom_stereo_assignments": [],
+        "bond_stereo_assignments": [],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted"
+        ]
+      }
+    },
+    {
+      "case_id": "sdf_v2000_methane_explicit_h",
+      "lane": "canonical_ingest_profile_supported",
+      "format": "sdf_v2000",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_ingest_corpus/methane_explicit_h.sdf"
+      },
+      "source_sha256": "ce93ec8959fe9037a0e411d2ea3ca78af9e436936117b24482cfece7c81f8b11",
+      "source_id": "sdf_v2000_methane_explicit_h",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "atom_count": 5,
+        "bond_count": 4,
+        "canonical_topology_sha256": "cb851cc2c410436f6e21127666a69c54020335ddb988570d667744e07f0604dc",
+        "canonical_snapshot_sha256": "4671753790769ffec38c0febc92b66f03dbcf3c1392b7ef13a95cedd5d70341f",
+        "chemistry_report_sha256": "e22dc5b37884345e3c631c3a3e15efad81f19a28610df2012ba882fa13b58cb7",
+        "preparation_report_sha256": "c224375eb262323318af3719dad6a64b09c39033d93d9a580e43a228300ecb34",
+        "applicability_report_sha256": "45d4ba5326a7d65eaecbc834c5002aa93aac7c4c860cbf55e70ea7f8fa5bb32c",
+        "profile_local_preparation_report_sha256": "703d68f480d87b828463777342b9cfdf895983f2bddeb8b64f30237afc27acdc",
+        "contextual_component_inventory_report_sha256": "65728b8364f903265a8246e0377783c1570df8a69af5e5ccf27100caaae11d70",
+        "canonical_ingest_status": "supported",
+        "canonical_ingest_supported": true,
+        "applicability_failed_constraint_codes": [],
+        "profile_local_evidence_status": "satisfied",
+        "profile_local_evidence_satisfied": true,
+        "source_hydrogen_inventory_status": "complete_relative_to_parsed_source",
+        "profile_hydrogen_valence_status": "satisfied_for_declared_canonical_graph",
+        "formal_charge_observation_status": "source_observed_known_zero_not_assigned",
+        "aromaticity_requirement_status": "not_applicable_to_acyclic_single_bond_profile",
+        "polymer_missing_residue_status": "not_applicable_to_single_nonpolymer_source",
+        "isotope_assignments": [],
+        "atom_stereo_assignments": [],
+        "bond_stereo_assignments": [],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted"
+        ]
+      }
+    },
+    {
+      "case_id": "sdf_v2000_ethane_explicit_h",
+      "lane": "canonical_ingest_profile_supported",
+      "format": "sdf_v2000",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_2_linear_alkane/ethane_explicit_h.sdf"
+      },
+      "source_sha256": "0507a3e8367929b3a6ea42925c2499d1f467a20a6c78de436c3b29d53b16ab9c",
+      "source_id": "sdf_v2000_ethane_explicit_h",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "atom_count": 8,
+        "bond_count": 7,
+        "canonical_topology_sha256": "4f09bafac0c6b960be3c8bdf18308c4818313df28b7e8ad3cb1e7cea5d95f1bd",
+        "canonical_snapshot_sha256": "84a1117520149c954ee0b23a40d42797a276094ceced5e9ffb8c5dc0687b14b6",
+        "chemistry_report_sha256": "814e60bc29147e0f8d650858e1bb6b1fad7b61341a9dfe15021057bc51be77f5",
+        "preparation_report_sha256": "6f2ab18ac29e5fbcbbb500b782bbc087105b887941cf5fd194233cc437842025",
+        "applicability_report_sha256": "ec88cd350b2ad620e223fff16029336c7e668c77dfc9d278ad3646bba09298f3",
+        "profile_local_preparation_report_sha256": "131ef55ccfe0d2329ebcf65c39e8f9677568505400dbb8ca5f924b59fe532bda",
+        "contextual_component_inventory_report_sha256": "e0b4839b710d617ead02b5e33f42e8625a934127acbc9c848c34fe57a3febfdb",
+        "canonical_ingest_status": "supported",
+        "canonical_ingest_supported": true,
+        "applicability_failed_constraint_codes": [],
+        "profile_local_evidence_status": "satisfied",
+        "profile_local_evidence_satisfied": true,
+        "source_hydrogen_inventory_status": "complete_relative_to_parsed_source",
+        "profile_hydrogen_valence_status": "satisfied_for_declared_canonical_graph",
+        "formal_charge_observation_status": "source_observed_known_zero_not_assigned",
+        "aromaticity_requirement_status": "not_applicable_to_acyclic_single_bond_profile",
+        "polymer_missing_residue_status": "not_applicable_to_single_nonpolymer_source",
+        "isotope_assignments": [],
+        "atom_stereo_assignments": [],
+        "bond_stereo_assignments": [],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted"
+        ]
+      }
+    },
+    {
+      "case_id": "sdf_v2000_propane_explicit_h",
+      "lane": "canonical_ingest_profile_supported",
+      "format": "sdf_v2000",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_2_linear_alkane/propane_explicit_h.sdf"
+      },
+      "source_sha256": "d8ccf120aa7cc795ce5372011c09440eeb41d4405be38dd64f8682f8712c03c5",
+      "source_id": "sdf_v2000_propane_explicit_h",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "atom_count": 11,
+        "bond_count": 10,
+        "canonical_topology_sha256": "3669b7620f3ae1794cde6367606546aa3cdaff2caea44e593d1b8b34ca3a4195",
+        "canonical_snapshot_sha256": "b1e33e2c3535f238777a905ddb009881b0dea632c29ed8df51d63c48547c9dea",
+        "chemistry_report_sha256": "faec0835c1e27c7a3a6355891af960970002c23da24028e222b297ff10b01bb6",
+        "preparation_report_sha256": "992005e73fdbb6368183ebb2df36287df1c70b71cd906bc2510fd21274082e44",
+        "applicability_report_sha256": "f24444e1e8045a73cdb9009584444fa72a32a61a0687ed79dec1c33c1b5a8813",
+        "profile_local_preparation_report_sha256": "84902509c364d5b3d2bf153c71556e3a24e18fdd4420cb42d7cb3ed1eaedb14e",
+        "contextual_component_inventory_report_sha256": "b154699335398019efcb2e5535505bb12b1c6406e09fe3829ce2806bfe75fb5e",
+        "canonical_ingest_status": "supported",
+        "canonical_ingest_supported": true,
+        "applicability_failed_constraint_codes": [],
+        "profile_local_evidence_status": "satisfied",
+        "profile_local_evidence_satisfied": true,
+        "source_hydrogen_inventory_status": "complete_relative_to_parsed_source",
+        "profile_hydrogen_valence_status": "satisfied_for_declared_canonical_graph",
+        "formal_charge_observation_status": "source_observed_known_zero_not_assigned",
+        "aromaticity_requirement_status": "not_applicable_to_acyclic_single_bond_profile",
+        "polymer_missing_residue_status": "not_applicable_to_single_nonpolymer_source",
+        "isotope_assignments": [],
+        "atom_stereo_assignments": [],
+        "bond_stereo_assignments": [],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted"
+        ]
+      }
+    },
+    {
+      "case_id": "sdf_v2000_n_butane_explicit_h",
+      "lane": "canonical_ingest_profile_supported",
+      "format": "sdf_v2000",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_2_linear_alkane/n_butane_explicit_h.sdf"
+      },
+      "source_sha256": "e4689251ba4216ca2421160ab9df4a9c750e9abf61435ada48bec94f67b290a4",
+      "source_id": "sdf_v2000_n_butane_explicit_h",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "atom_count": 14,
+        "bond_count": 13,
+        "canonical_topology_sha256": "2f598de4ef8d045147d633e76c5bd730862e4604fdf017c8fe2ead3cc9c7331d",
+        "canonical_snapshot_sha256": "3c55ce2420140b7d6b6c72362e8efc3b6f4f43292dd66cbc74a1e0f376ab3532",
+        "chemistry_report_sha256": "e03536cab4aba86fa88c54aed37d1bbb1f28d683436fb364ae54b2a993e7159f",
+        "preparation_report_sha256": "db39f6d128d0edd5660041e69cc170ed93fc4cb234a7b93455223363e828fb48",
+        "applicability_report_sha256": "3cacf90c34fc9605da1cbde2f2f1d9450c4fde302f4ca8379aceac26867269bc",
+        "profile_local_preparation_report_sha256": "32c2a42de59f500bfd1884fe81c235a8b53f5b4e4851848631ad6c607680c557",
+        "contextual_component_inventory_report_sha256": "b725fa624e788693541a295e8beab78ac7a22e22eadf2b141fbbb36cdc311f25",
+        "canonical_ingest_status": "supported",
+        "canonical_ingest_supported": true,
+        "applicability_failed_constraint_codes": [],
+        "profile_local_evidence_status": "satisfied",
+        "profile_local_evidence_satisfied": true,
+        "source_hydrogen_inventory_status": "complete_relative_to_parsed_source",
+        "profile_hydrogen_valence_status": "satisfied_for_declared_canonical_graph",
+        "formal_charge_observation_status": "source_observed_known_zero_not_assigned",
+        "aromaticity_requirement_status": "not_applicable_to_acyclic_single_bond_profile",
+        "polymer_missing_residue_status": "not_applicable_to_single_nonpolymer_source",
+        "isotope_assignments": [],
+        "atom_stereo_assignments": [],
+        "bond_stereo_assignments": [],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted"
+        ]
+      }
+    },
+    {
+      "case_id": "sdf_v2000_isobutane_branched_explicit_h",
+      "lane": "canonical_ingest_profile_supported",
+      "format": "sdf_v2000",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_2_linear_alkane/isobutane_branched_explicit_h.sdf"
+      },
+      "source_sha256": "578a67b271b2af7fc7942ecff70c9e46797cd4e96bf019dd1a3a738b7aaa0557",
+      "source_id": "sdf_v2000_isobutane_branched_explicit_h",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "atom_count": 14,
+        "bond_count": 13,
+        "canonical_topology_sha256": "18a5abb36b4e19992da7f18bd7bb1e03311e9330f95c4208ffac2a3105152e74",
+        "canonical_snapshot_sha256": "425e7d396e1dd11598dcf97873795850a4bc80e31093690f1018b10c3d391b12",
+        "chemistry_report_sha256": "142c678b166a13f42499fd8077db6adf4f7697668b4f0c814ff36c65e64cba41",
+        "preparation_report_sha256": "404ca75bb668e294650da6dc9b91d20613b9ac591c3bbe690d8bea663de56729",
+        "applicability_report_sha256": "aa8a803d09584d826ca04c479b0d3a1046fd1562989993c10e114c6ad3dd3d09",
+        "profile_local_preparation_report_sha256": "f0516df8fadeea70d092e7514bd8d16e4c9969731581a95faf785252fd665265",
+        "contextual_component_inventory_report_sha256": "90c4155fce7bc12467cd72f724fc5855319f07364efec1350c8c02b31f361611",
+        "canonical_ingest_status": "supported",
+        "canonical_ingest_supported": true,
+        "applicability_failed_constraint_codes": [],
+        "profile_local_evidence_status": "satisfied",
+        "profile_local_evidence_satisfied": true,
+        "source_hydrogen_inventory_status": "complete_relative_to_parsed_source",
+        "profile_hydrogen_valence_status": "satisfied_for_declared_canonical_graph",
+        "formal_charge_observation_status": "source_observed_known_zero_not_assigned",
+        "aromaticity_requirement_status": "not_applicable_to_acyclic_single_bond_profile",
+        "polymer_missing_residue_status": "not_applicable_to_single_nonpolymer_source",
+        "isotope_assignments": [],
+        "atom_stereo_assignments": [],
+        "bond_stereo_assignments": [],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted"
+        ]
+      }
+    },
+    {
+      "case_id": "sdf_v2000_cyclobutane_explicit_h",
+      "lane": "ingest_success",
+      "format": "sdf_v2000",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_2_linear_alkane/cyclobutane_explicit_h.sdf"
+      },
+      "source_sha256": "0e8098df27f12a9a23ab31ac3e0aea9fc8869dfe7a3cfc8ed325fd8d8fcdadf2",
+      "source_id": "sdf_v2000_cyclobutane_explicit_h",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "atom_count": 12,
+        "bond_count": 12,
+        "canonical_topology_sha256": "5af81e5037543830fc6c5a3c70e964cd45b667988828e22e2ecf298a1e481974",
+        "canonical_snapshot_sha256": "405d7c79b1348d6ffac5379f12c9e160ef460e80791678e16c05759fd51de54a",
+        "chemistry_report_sha256": "8bfc551d512d0bffa798e8b4affcbed224abf9bbc742d4dd3f0cd020aabee35d",
+        "preparation_report_sha256": "19e73239ffba6f94d509f47c1e8a7b32856700a794b3e7424bb96566335cdf09",
+        "applicability_report_sha256": "7c36ccbaf014418c9c7f94ab48ffe44c4b7ca5407f393437837b531c7d7b88b3",
+        "profile_local_preparation_report_sha256": "66fe119a7e69fa7313c9d32c485c22494fd1b6dca1876c816e10810cade7d315",
+        "contextual_component_inventory_report_sha256": "1f23b2953666238d91479baf195402eed3c00ab0c314b3601736d0d3ffce8743",
+        "canonical_ingest_status": "unsupported",
+        "canonical_ingest_supported": false,
+        "applicability_failed_constraint_codes": [
+          "acyclic_graph"
+        ],
+        "profile_local_evidence_status": "not_satisfied",
+        "profile_local_evidence_satisfied": false,
+        "source_hydrogen_inventory_status": "complete_relative_to_parsed_source",
+        "profile_hydrogen_valence_status": "satisfied_for_declared_canonical_graph",
+        "formal_charge_observation_status": "source_observed_known_zero_not_assigned",
+        "aromaticity_requirement_status": "profile_requirements_not_satisfied",
+        "polymer_missing_residue_status": "unassessed",
+        "isotope_assignments": [],
+        "atom_stereo_assignments": [],
+        "bond_stereo_assignments": [],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted"
+        ]
+      }
+    },
+    {
+      "case_id": "sdf_v2000_ethane_missing_h",
+      "lane": "ingest_success",
+      "format": "sdf_v2000",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_2_linear_alkane/ethane_missing_h.sdf"
+      },
+      "source_sha256": "ea768227f85fef416d245920e0a21ea33e45535a1f1dba0bea10d4e591702a8e",
+      "source_id": "sdf_v2000_ethane_missing_h",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "atom_count": 7,
+        "bond_count": 6,
+        "canonical_topology_sha256": "6f4218c9d812ddfa8ea3b191e1196547f146a80abf5d34479e6e5746a68234b6",
+        "canonical_snapshot_sha256": "f4b8469a8553e868194fde1ef4fc4dfe83b27ab448cc0e1286ecf26444b99da9",
+        "chemistry_report_sha256": "b4b5663787d5d79c17278c7c99a7e0c231012bafe48b46287c580e994be6893c",
+        "preparation_report_sha256": "7218740e6e8db9705af0b2a96b3f0f8d4aafe3c9576c3c4faa696f235fc88c77",
+        "applicability_report_sha256": "b65bd7eca14f5dd058842b2deb527e4b90935adfd4587722db169e6bbc790f6b",
+        "profile_local_preparation_report_sha256": "0ce18505e7fb3a3fca034052f9b211dd6685dbbb8f5b6fc9834f9bfd1d5caabe",
+        "contextual_component_inventory_report_sha256": "adf7afb1181a0fd8d7f48a38f1f3d820bffb13682899893cb5ec54b8ba894fa6",
+        "canonical_ingest_status": "unsupported",
+        "canonical_ingest_supported": false,
+        "applicability_failed_constraint_codes": [
+          "explicit_valence_closed"
+        ],
+        "profile_local_evidence_status": "not_satisfied",
+        "profile_local_evidence_satisfied": false,
+        "source_hydrogen_inventory_status": "complete_relative_to_parsed_source",
+        "profile_hydrogen_valence_status": "not_satisfied",
+        "formal_charge_observation_status": "source_observed_known_zero_not_assigned",
+        "aromaticity_requirement_status": "not_applicable_to_acyclic_single_bond_profile",
+        "polymer_missing_residue_status": "unassessed",
+        "isotope_assignments": [],
+        "atom_stereo_assignments": [],
+        "bond_stereo_assignments": [],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted"
+        ]
+      }
+    },
+    {
+      "case_id": "smiles_benzene",
+      "lane": "ingest_success",
+      "format": "smiles",
+      "source": {
+        "kind": "ascii",
+        "value": "c1ccccc1"
+      },
+      "source_sha256": "13cad05ca8f49c509e5b7be8c67668484344ebf2b2d12b03b295f14d4b1c32d1",
+      "source_id": "smiles_benzene",
+      "parser_options": {},
+      "environment_requirements": [
+        "rdkit==2025.9.6"
+      ],
+      "expected": {
+        "atom_count": 12,
+        "bond_count": 12,
+        "canonical_topology_sha256": "fc0b498bd25fd20a569d1769bf6c44ad2776ae3186fff59544942cd4dbefb771",
+        "canonical_snapshot_sha256": "5eb373f4514d6efb7cf22dee36113dae485aa10801b30fb09f08a9627a6c8590",
+        "chemistry_report_sha256": "829ec04fbae3299227bfb8323108f0c2bcfe7e4d9ff0fde66645b6134601ac60",
+        "preparation_report_sha256": "4ab36bbff53c5d61b86553b31836d2382b3fcb717f72b5c240660617c4f1cc82",
+        "applicability_report_sha256": "f07a6a9cca4b793023d65088c3a641e7f4a21bfb5ab053f66820302fa5bc83ce",
+        "profile_local_preparation_report_sha256": "6ed2204df4365b4f0b5e0092917fc492e6e3c3e16324fbd9ff300c98f9a78ac7",
+        "contextual_component_inventory_report_sha256": "7b8447dc0f365874fdbc1cabcb284b0ec56d1431b6fba84e7dda8db465f001e5",
+        "canonical_ingest_status": "unsupported",
+        "canonical_ingest_supported": false,
+        "applicability_failed_constraint_codes": [
+          "aromaticity_absent",
+          "single_bonds_only",
+          "acyclic_graph",
+          "hydrogens_source_observed"
+        ],
+        "profile_local_evidence_status": "not_satisfied",
+        "profile_local_evidence_satisfied": false,
+        "source_hydrogen_inventory_status": "not_satisfied",
+        "profile_hydrogen_valence_status": "not_satisfied",
+        "formal_charge_observation_status": "known_zero_origin_not_source_observed",
+        "aromaticity_requirement_status": "profile_requirements_not_satisfied",
+        "polymer_missing_residue_status": "unassessed",
+        "isotope_assignments": [],
+        "atom_stereo_assignments": [],
+        "bond_stereo_assignments": [],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "aromaticity_perception_not_independently_available",
+          "coordinates_missing",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted",
+          "coordinates_missing",
+          "adapter_expanded_hydrogens_not_independently_valence_verified",
+          "aromaticity_source_or_adapter_state_not_independently_perceived"
+        ]
+      }
+    },
+    {
+      "case_id": "smiles_sodium_chloride_abstention",
+      "lane": "ingest_only_abstention",
+      "format": "smiles",
+      "source": {
+        "kind": "ascii",
+        "value": "[Na+].[Cl-]"
+      },
+      "source_sha256": "589a7f6e9d345d2005dfb6453f463ce6e891ce09fb3976572810066a28289cb2",
+      "source_id": "smiles_sodium_chloride",
+      "parser_options": {},
+      "environment_requirements": [
+        "rdkit==2025.9.6"
+      ],
+      "expected": {
+        "atom_count": 2,
+        "bond_count": 0,
+        "canonical_topology_sha256": "0cdc1909553e04f7b8b9b1c9ef2c3c606a5c94bc699c6d88b7bc5d8d8dd6c934",
+        "canonical_snapshot_sha256": "557ba5470d9df204e719bbaa384ace08b3e9af362b306ab33e6fd0a09d94b703",
+        "chemistry_report_sha256": "23b13390244b6682ad3e3607c5f7c3638ca7578f07df0702153b976b3e0b86e0",
+        "preparation_report_sha256": "372ccf5c6c461c8958f402e27c23e34feaa8b3cbe7759d0a865de4afdcf73263",
+        "applicability_report_sha256": "5c298ddda32847bc5319a5898a113b894684824e4c0ee3c672b93012ea4265ea",
+        "profile_local_preparation_report_sha256": "3256382caf760614afcbc1036b07dd51dd8480afb147e043ea58d471bda7937a",
+        "contextual_component_inventory_report_sha256": "721449bc324b35c581a931d97c0ac94fb940508b6556850d20c6962e8ee66912",
+        "canonical_ingest_status": "unsupported",
+        "canonical_ingest_supported": false,
+        "applicability_failed_constraint_codes": [
+          "single_component",
+          "contains_carbon",
+          "elements_h_c_only",
+          "formal_charges_known_zero",
+          "acyclic_graph",
+          "explicit_valence_closed"
+        ],
+        "profile_local_evidence_status": "not_satisfied",
+        "profile_local_evidence_satisfied": false,
+        "source_hydrogen_inventory_status": "complete_relative_to_parsed_source",
+        "profile_hydrogen_valence_status": "not_satisfied",
+        "formal_charge_observation_status": "not_satisfied",
+        "aromaticity_requirement_status": "profile_requirements_not_satisfied",
+        "polymer_missing_residue_status": "unassessed",
+        "isotope_assignments": [],
+        "atom_stereo_assignments": [],
+        "bond_stereo_assignments": [],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "elements_outside_organic_graph_inventory_profile",
+          "disconnected_fragment_roles_not_assessed",
+          "coordinates_missing",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted",
+          "coordinates_missing"
+        ]
+      }
+    },
+    {
+      "case_id": "sdf_v2000_methane_c13_explicit_h",
+      "lane": "ingest_success",
+      "format": "sdf_v2000",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_ingest_corpus/methane_c13_explicit_h.sdf"
+      },
+      "source_sha256": "ea8fc5623f8f999144ef7046e467608b0c66585064395a449aede08bbbefd48d",
+      "source_id": "sdf_v2000_methane_c13_explicit_h",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "atom_count": 5,
+        "bond_count": 4,
+        "canonical_topology_sha256": "6d4a03e017bea59ccbec5da5d2c31fc5f6d1ec400f8ce0a7ca4d6f0f73916ab4",
+        "canonical_snapshot_sha256": "7d6cfb9baec4cd0fcfde2e98a2294629d0c31a2ab08abfb770572e5daa8edc55",
+        "chemistry_report_sha256": "90665f0e95e2edee29019f34d1d2b66942b8472155e7e767d42b633571b2a5fa",
+        "preparation_report_sha256": "d863b5b1d22ded3fd2ec62a9f6fbe146b5ae5757a1e4c07ccc4e3f5cfc163883",
+        "applicability_report_sha256": "45e9ff563c6cb4b950cfc0a06da8637789b208d97ce423d228c5b8f58c607dd0",
+        "profile_local_preparation_report_sha256": "7495a4cc18c2be4979ac976aea5995fb0dd0f780703f0e38e8a35aeadb68f7d0",
+        "contextual_component_inventory_report_sha256": "56370bef88a3bf72afbca2fe4a02e789b0574415a10d884886e0b930f4934ead",
+        "canonical_ingest_status": "unsupported",
+        "canonical_ingest_supported": false,
+        "applicability_failed_constraint_codes": [
+          "isotopes_absent"
+        ],
+        "profile_local_evidence_status": "not_satisfied",
+        "profile_local_evidence_satisfied": false,
+        "source_hydrogen_inventory_status": "complete_relative_to_parsed_source",
+        "profile_hydrogen_valence_status": "satisfied_for_declared_canonical_graph",
+        "formal_charge_observation_status": "source_observed_known_zero_not_assigned",
+        "aromaticity_requirement_status": "not_applicable_to_acyclic_single_bond_profile",
+        "polymer_missing_residue_status": "unassessed",
+        "isotope_assignments": [
+          {
+            "atom_index": 0,
+            "mass_number": 13
+          }
+        ],
+        "atom_stereo_assignments": [],
+        "bond_stereo_assignments": [],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "isotope_parameter_coverage_not_assessed",
+          "physical_nuclide_validity_not_assessed",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted"
+        ]
+      }
+    },
+    {
+      "case_id": "smiles_isotopic_water",
+      "lane": "ingest_success",
+      "format": "smiles",
+      "source": {
+        "kind": "ascii",
+        "value": "[2H]O[3H]"
+      },
+      "source_sha256": "a75ebc81868b04ce4663b993e9a3a1156499a0faa914fe854ed9b4ce665816ad",
+      "source_id": "smiles_isotopic_water",
+      "parser_options": {},
+      "environment_requirements": [
+        "rdkit==2025.9.6"
+      ],
+      "expected": {
+        "atom_count": 3,
+        "bond_count": 2,
+        "canonical_topology_sha256": "4d0b02a577e912b3faf10ab2b1e4c18c23e5440bf90b2a55b7a1803ac1687a66",
+        "canonical_snapshot_sha256": "74dc6acc5d1419b6fffa3887a386304a02008d434f7c598f006907cc8110e3a9",
+        "chemistry_report_sha256": "7b0758b4424dd8ca971bfd18b671ddeba0b76c36a153914372afa288a520ff40",
+        "preparation_report_sha256": "2298abc88a1d03c9eabf43ba8c0596e2e6c7e5f7cb6e313dc6613a22b51d8008",
+        "applicability_report_sha256": "9e21a45ad814240fd36e21111f4367211b5fec22c2474df818947078624bd2cd",
+        "profile_local_preparation_report_sha256": "d40362ef59fcca3d2e62148f1e354e63bea8416846b53ead9e7f231c63ae9ac6",
+        "contextual_component_inventory_report_sha256": "3401d424759c4205036a5e51152edab2f917307d6111b06acc7915a8a1ebf957",
+        "canonical_ingest_status": "unsupported",
+        "canonical_ingest_supported": false,
+        "applicability_failed_constraint_codes": [
+          "contains_carbon",
+          "elements_h_c_only",
+          "isotopes_absent",
+          "explicit_valence_closed"
+        ],
+        "profile_local_evidence_status": "not_satisfied",
+        "profile_local_evidence_satisfied": false,
+        "source_hydrogen_inventory_status": "complete_relative_to_parsed_source",
+        "profile_hydrogen_valence_status": "not_satisfied",
+        "formal_charge_observation_status": "known_zero_origin_not_source_observed",
+        "aromaticity_requirement_status": "not_applicable_to_acyclic_single_bond_profile",
+        "polymer_missing_residue_status": "unassessed",
+        "isotope_assignments": [
+          {
+            "atom_index": 0,
+            "mass_number": 2
+          },
+          {
+            "atom_index": 2,
+            "mass_number": 3
+          }
+        ],
+        "atom_stereo_assignments": [],
+        "bond_stereo_assignments": [],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "isotope_parameter_coverage_not_assessed",
+          "physical_nuclide_validity_not_assessed",
+          "coordinates_missing",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted",
+          "coordinates_missing"
+        ]
+      }
+    },
+    {
+      "case_id": "smiles_chiral_s",
+      "lane": "ingest_success",
+      "format": "smiles",
+      "source": {
+        "kind": "ascii",
+        "value": "[C@H:17](F)(Cl)Br"
+      },
+      "source_sha256": "c43c917dbec5d014b3b3e66aa9eccfb8c55a3695a3bca1d9c7b40e2eae9a8a41",
+      "source_id": "smiles_chiral_s",
+      "parser_options": {},
+      "environment_requirements": [
+        "rdkit==2025.9.6"
+      ],
+      "expected": {
+        "atom_count": 5,
+        "bond_count": 4,
+        "canonical_topology_sha256": "3c55205f89e25afee67495daf1e9cdb9987daf3052fe4baf19fa67b02e928532",
+        "canonical_snapshot_sha256": "5a424e1aa8228eaac2a51a8af77b42c73d83e43dd6f22f500fad08d32a6e2061",
+        "chemistry_report_sha256": "c877a41718bbe56dc55f1bfa6a6c7367e512328f0a031f6c97cc85bacf9a7021",
+        "preparation_report_sha256": "59ae5d81affd4e5a213d00608a4c1a505190884041c7c5b375f962c7cff6fa3d",
+        "applicability_report_sha256": "66412b9602a47ffb14e650563a23a296e7d1b790f4008a80bf56f32cda401830",
+        "profile_local_preparation_report_sha256": "2bb1c6ce07aa6a2b611ca4249c476e58920eb5df23b9ccea486dbbd3c1d1a61a",
+        "contextual_component_inventory_report_sha256": "9c78d5c5d9ec81ee0421da9ebc3e8def49144c57f9c25fd30f142e3a26cc31b6",
+        "canonical_ingest_status": "unsupported",
+        "canonical_ingest_supported": false,
+        "applicability_failed_constraint_codes": [
+          "elements_h_c_only",
+          "stereo_absent",
+          "explicit_valence_closed",
+          "hydrogens_source_observed"
+        ],
+        "profile_local_evidence_status": "not_satisfied",
+        "profile_local_evidence_satisfied": false,
+        "source_hydrogen_inventory_status": "not_satisfied",
+        "profile_hydrogen_valence_status": "not_satisfied",
+        "formal_charge_observation_status": "known_zero_origin_not_source_observed",
+        "aromaticity_requirement_status": "not_applicable_to_acyclic_single_bond_profile",
+        "polymer_missing_residue_status": "unassessed",
+        "isotope_assignments": [],
+        "atom_stereo_assignments": [
+          {
+            "atom_index": 0,
+            "stereo": "S"
+          }
+        ],
+        "bond_stereo_assignments": [],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "cip_assignment_not_independently_verified",
+          "stereo_substituent_equivalence_not_independently_verified",
+          "coordinates_missing",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted",
+          "coordinates_missing",
+          "adapter_expanded_hydrogens_not_independently_valence_verified"
+        ]
+      }
+    },
+    {
+      "case_id": "smiles_chiral_r",
+      "lane": "ingest_success",
+      "format": "smiles",
+      "source": {
+        "kind": "ascii",
+        "value": "[C@@H:17](F)(Cl)Br"
+      },
+      "source_sha256": "7a801b98208d03aefa8d1c5164936b06a695f1ab5df1d0eaf4d8d2049620f1c8",
+      "source_id": "smiles_chiral_r",
+      "parser_options": {},
+      "environment_requirements": [
+        "rdkit==2025.9.6"
+      ],
+      "expected": {
+        "atom_count": 5,
+        "bond_count": 4,
+        "canonical_topology_sha256": "b69b942341940f4afa1fe39dc0f5b1db5696eb99bb80c8fe186ee24e64ba0bd0",
+        "canonical_snapshot_sha256": "746fbe4f5648a096657f98c8c4f8bb82dcba43f10b616aaf09fd2073f9563532",
+        "chemistry_report_sha256": "707fc8fe23306ccd276eb800439d94dac0c3e026a73a638b080e7ea5dff19fda",
+        "preparation_report_sha256": "2161e7340e30bc6d1dc808c5b513af22002ef9e08dfd0de84d8569fec7d402ad",
+        "applicability_report_sha256": "4bea6e74ac456fa986e38c0caa672cb2ee6e8dbc7e7cbf1f4a087a608a88125e",
+        "profile_local_preparation_report_sha256": "189308a051ff7478d9d054d7883c6959eb365bb0d612ed15bd77a9fea5a3849d",
+        "contextual_component_inventory_report_sha256": "04a2b60a3c7347b19f3fec4894741f3b2e01b1d637fd5a45cd1c5ba5d589bdc2",
+        "canonical_ingest_status": "unsupported",
+        "canonical_ingest_supported": false,
+        "applicability_failed_constraint_codes": [
+          "elements_h_c_only",
+          "stereo_absent",
+          "explicit_valence_closed",
+          "hydrogens_source_observed"
+        ],
+        "profile_local_evidence_status": "not_satisfied",
+        "profile_local_evidence_satisfied": false,
+        "source_hydrogen_inventory_status": "not_satisfied",
+        "profile_hydrogen_valence_status": "not_satisfied",
+        "formal_charge_observation_status": "known_zero_origin_not_source_observed",
+        "aromaticity_requirement_status": "not_applicable_to_acyclic_single_bond_profile",
+        "polymer_missing_residue_status": "unassessed",
+        "isotope_assignments": [],
+        "atom_stereo_assignments": [
+          {
+            "atom_index": 0,
+            "stereo": "R"
+          }
+        ],
+        "bond_stereo_assignments": [],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "cip_assignment_not_independently_verified",
+          "stereo_substituent_equivalence_not_independently_verified",
+          "coordinates_missing",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted",
+          "coordinates_missing",
+          "adapter_expanded_hydrogens_not_independently_valence_verified"
+        ]
+      }
+    },
+    {
+      "case_id": "smiles_alkene_e",
+      "lane": "ingest_success",
+      "format": "smiles",
+      "source": {
+        "kind": "ascii",
+        "value": "F/C=C/F"
+      },
+      "source_sha256": "848be58fb2fe6d08509debd45c06cfbcdb2a108fda0891075689abdcc5672024",
+      "source_id": "smiles_alkene_e",
+      "parser_options": {},
+      "environment_requirements": [
+        "rdkit==2025.9.6"
+      ],
+      "expected": {
+        "atom_count": 6,
+        "bond_count": 5,
+        "canonical_topology_sha256": "4d59cae60d5eb1c7e9b2f14c9f7a444303b18facea2f40011274cb28c7c2d2dd",
+        "canonical_snapshot_sha256": "2e7b8466a4ebcd44eb2d9b9e56b18520f5d6b17eac6fd90eecde403d7cc9674d",
+        "chemistry_report_sha256": "88cad270c82eb01598d5f060e97716ddd5a9774bc68f5a30360c45cc43879c36",
+        "preparation_report_sha256": "f458b2a406aff54dd5502eb8c330efb9c34358c13c41f44d23097548f57304af",
+        "applicability_report_sha256": "47df47a92254f925384bd4501dedf6ffc9cbebe64a057bbcee10d0c2049527cc",
+        "profile_local_preparation_report_sha256": "a57e5ebffd4810f29b835d37c71eeb59a7903cdaef943b6dc4b29f4825a5633a",
+        "contextual_component_inventory_report_sha256": "9eb1b2d41dcd326180089f1f17cdc5fdbdb0639042bd5402cb7e89116367e32d",
+        "canonical_ingest_status": "unsupported",
+        "canonical_ingest_supported": false,
+        "applicability_failed_constraint_codes": [
+          "elements_h_c_only",
+          "single_bonds_only",
+          "stereo_absent",
+          "explicit_valence_closed",
+          "hydrogens_source_observed"
+        ],
+        "profile_local_evidence_status": "not_satisfied",
+        "profile_local_evidence_satisfied": false,
+        "source_hydrogen_inventory_status": "not_satisfied",
+        "profile_hydrogen_valence_status": "not_satisfied",
+        "formal_charge_observation_status": "known_zero_origin_not_source_observed",
+        "aromaticity_requirement_status": "profile_requirements_not_satisfied",
+        "polymer_missing_residue_status": "unassessed",
+        "isotope_assignments": [],
+        "atom_stereo_assignments": [],
+        "bond_stereo_assignments": [
+          {
+            "bond_index": 1,
+            "stereo": "E"
+          }
+        ],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "cip_assignment_not_independently_verified",
+          "stereo_substituent_equivalence_not_independently_verified",
+          "coordinates_missing",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted",
+          "coordinates_missing",
+          "adapter_expanded_hydrogens_not_independently_valence_verified"
+        ]
+      }
+    },
+    {
+      "case_id": "smiles_alkene_z",
+      "lane": "ingest_success",
+      "format": "smiles",
+      "source": {
+        "kind": "ascii",
+        "value": "F/C=C\\F"
+      },
+      "source_sha256": "91477db5996e12ae475076cbc73f5c1ce0128c11b1ff19e67e7f49cd8f18fc75",
+      "source_id": "smiles_alkene_z",
+      "parser_options": {},
+      "environment_requirements": [
+        "rdkit==2025.9.6"
+      ],
+      "expected": {
+        "atom_count": 6,
+        "bond_count": 5,
+        "canonical_topology_sha256": "52563a75ca0f6b726b99db7369944d65b4605aa983839ec1b0f421db0084a709",
+        "canonical_snapshot_sha256": "5911eec708b3451356f75c9c91d800083ff17284021760ca413f1273d303f912",
+        "chemistry_report_sha256": "de0aec5fbeed907d2fc9b318494c066f7bb0f7789fb14540528ee9e261c61232",
+        "preparation_report_sha256": "351e0c28c7840daaf2e2296ae9f4d88075d286bf3cc9feea160246e6d0bd1542",
+        "applicability_report_sha256": "81bbd480909a18f0dfe8235e7b266df807e676db888adc6950783bd64d27b796",
+        "profile_local_preparation_report_sha256": "7f3830d5973dfe609fa27258acba21218c41af8a1c1a530c997fe8c89131da2f",
+        "contextual_component_inventory_report_sha256": "9723f7a492c756dd477060c051389c09ba4609433f4faeefcf50968b1f08b7dd",
+        "canonical_ingest_status": "unsupported",
+        "canonical_ingest_supported": false,
+        "applicability_failed_constraint_codes": [
+          "elements_h_c_only",
+          "single_bonds_only",
+          "stereo_absent",
+          "explicit_valence_closed",
+          "hydrogens_source_observed"
+        ],
+        "profile_local_evidence_status": "not_satisfied",
+        "profile_local_evidence_satisfied": false,
+        "source_hydrogen_inventory_status": "not_satisfied",
+        "profile_hydrogen_valence_status": "not_satisfied",
+        "formal_charge_observation_status": "known_zero_origin_not_source_observed",
+        "aromaticity_requirement_status": "profile_requirements_not_satisfied",
+        "polymer_missing_residue_status": "unassessed",
+        "isotope_assignments": [],
+        "atom_stereo_assignments": [],
+        "bond_stereo_assignments": [
+          {
+            "bond_index": 1,
+            "stereo": "Z"
+          }
+        ],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "cip_assignment_not_independently_verified",
+          "stereo_substituent_equivalence_not_independently_verified",
+          "coordinates_missing",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted",
+          "coordinates_missing",
+          "adapter_expanded_hydrogens_not_independently_valence_verified"
+        ]
+      }
+    },
+    {
+      "case_id": "mmcif_context_inventory",
+      "lane": "ingest_only_abstention",
+      "format": "mmcif",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_ingest_corpus/mmcif_context_inventory.cif"
+      },
+      "source_sha256": "2870389adb0f8b362032c5865529ddde375f1d4a12490464cd79b941604e43a9",
+      "source_id": "mmcif_context_inventory",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "atom_count": 8,
+        "bond_count": 0,
+        "canonical_topology_sha256": "48344c136dfad76dc4355448d8e32a9ca0b726540dc9dfda988023d82016d1ce",
+        "canonical_snapshot_sha256": "a50f853253b96572af03763578a90ff29a8682bc698a27939a8a5391800d86cd",
+        "chemistry_report_sha256": "b98d741da9b80f55526aa694e9a5cd11cbcf5c207685fbaa1671f37d6d57f051",
+        "preparation_report_sha256": "f9863f42d48b20d1ff7994c8e4bdf38c356da03ef5da1c804d5a409bc64fa041",
+        "applicability_report_sha256": "a6032fc0841379945f9bbdaace5ac53ed68d698003661b931cdc0d23b1051aa8",
+        "profile_local_preparation_report_sha256": "47365d59f76aef6436944ca4440c2b0d4a28d16b6869c7c7f70f511e72ff827b",
+        "contextual_component_inventory_report_sha256": "dc59ae638e78958f4b6f64269a01b48f5dc402bdca3b7bccdab947395946aa1a",
+        "canonical_ingest_status": "unsupported",
+        "canonical_ingest_supported": false,
+        "applicability_failed_constraint_codes": [
+          "single_component",
+          "contains_carbon",
+          "elements_h_c_only",
+          "formal_charges_known_zero",
+          "acyclic_graph",
+          "explicit_valence_closed"
+        ],
+        "profile_local_evidence_status": "not_satisfied",
+        "profile_local_evidence_satisfied": false,
+        "source_hydrogen_inventory_status": "complete_relative_to_parsed_source",
+        "profile_hydrogen_valence_status": "not_satisfied",
+        "formal_charge_observation_status": "not_satisfied",
+        "aromaticity_requirement_status": "profile_requirements_not_satisfied",
+        "polymer_missing_residue_status": "unassessed",
+        "isotope_assignments": [],
+        "atom_stereo_assignments": [],
+        "bond_stereo_assignments": [],
+        "parameterability_status": "not_assessed_no_parameter_set",
+        "graph_representable": true,
+        "chemistry_blockers": [
+          "electronic_spin_state_not_typed",
+          "bond_topology_completeness_not_independently_provable",
+          "hydrogen_completeness_not_independently_provable",
+          "valence_profile_not_implemented",
+          "protonation_not_independently_assessed",
+          "tautomer_not_independently_assessed",
+          "parameter_assignment_not_implemented",
+          "parameterability_not_assessed",
+          "elements_outside_organic_graph_inventory_profile",
+          "disconnected_fragment_roles_not_assessed",
+          "preparation_not_complete"
+        ],
+        "preparation_blockers": [
+          "preparation_not_assessed",
+          "missing_atoms_not_assessed",
+          "missing_residues_not_assessed",
+          "hydrogen_completeness_not_assessed",
+          "protonation_not_assessed",
+          "tautomer_not_assessed",
+          "aromaticity_perception_not_assessed",
+          "formal_charge_assignment_not_assessed",
+          "water_roles_not_assessed",
+          "ion_roles_not_assessed",
+          "metal_roles_and_coordination_not_assessed",
+          "cofactor_roles_not_assessed",
+          "modified_residue_identity_not_assessed",
+          "chemical_state_normalization_not_attempted"
+        ]
+      }
+    },
+    {
+      "case_id": "sdf_atom_parity_rejected",
+      "lane": "parse_failure",
+      "format": "sdf_v2000",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_ingest_corpus/sdf_atom_parity.sdf"
+      },
+      "source_sha256": "c691900c90f023a24c271a44de3339a64b32d81e050d2deb7545c54bcb1b4ebc",
+      "source_id": "sdf_atom_parity_rejected",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "exception_type": "SdfV2000ParseError",
+        "error_code": "unsupported_atom_stereo",
+        "line_number": 5,
+        "byte_position": null
+      }
+    },
+    {
+      "case_id": "sdf_bond_stereo_rejected",
+      "lane": "parse_failure",
+      "format": "sdf_v2000",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_ingest_corpus/sdf_bond_stereo.sdf"
+      },
+      "source_sha256": "6f2160ae99833f297e6a4bfef8a80c3bbc6d0bbb471a962adada513d6920569d",
+      "source_id": "sdf_bond_stereo_rejected",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "exception_type": "SdfV2000ParseError",
+        "error_code": "unsupported_bond_stereo",
+        "line_number": 7,
+        "byte_position": null
+      }
+    },
+    {
+      "case_id": "sdf_mass_difference_rejected",
+      "lane": "parse_failure",
+      "format": "sdf_v2000",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_ingest_corpus/sdf_mass_difference.sdf"
+      },
+      "source_sha256": "4ef63dab873d9bda05e08a7ac73f97756fc940f186a2dd8d1d4311e80d1869bc",
+      "source_id": "sdf_mass_difference_rejected",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "exception_type": "SdfV2000ParseError",
+        "error_code": "unsupported_mass_difference",
+        "line_number": 5,
+        "byte_position": null
+      }
+    },
+    {
+      "case_id": "smiles_nontetrahedral_stereo_rejected",
+      "lane": "parse_failure",
+      "format": "smiles",
+      "source": {
+        "kind": "ascii",
+        "value": "F[Pt@SP1](Cl)(Br)I"
+      },
+      "source_sha256": "1a51c337f17bac1fd3bf29d1a384caa76860aef50656d91214b86c794877f396",
+      "source_id": "smiles_nontetrahedral_stereo_rejected",
+      "parser_options": {},
+      "environment_requirements": [
+        "rdkit==2025.9.6"
+      ],
+      "expected": {
+        "exception_type": "SmilesParseError",
+        "error_code": "unsupported_atom_stereo",
+        "line_number": null,
+        "byte_position": null
+      }
+    },
+    {
+      "case_id": "smiles_unretained_stereo_marker_rejected",
+      "lane": "parse_failure",
+      "format": "smiles",
+      "source": {
+        "kind": "ascii",
+        "value": "[C@](F)(F)(Cl)Br"
+      },
+      "source_sha256": "1e92adaac93634118c5dd43653b7d4ac1ed3ccb03ade2edb0f5a87e043804ec4",
+      "source_id": "smiles_unretained_stereo_marker_rejected",
+      "parser_options": {},
+      "environment_requirements": [
+        "rdkit==2025.9.6"
+      ],
+      "expected": {
+        "exception_type": "SmilesParseError",
+        "error_code": "stereo_marker_not_retained",
+        "line_number": null,
+        "byte_position": null
+      }
+    },
+    {
+      "case_id": "smiles_invalid_isotope_rejected",
+      "lane": "parse_failure",
+      "format": "smiles",
+      "source": {
+        "kind": "ascii",
+        "value": "[999CH4]"
+      },
+      "source_sha256": "f775598847bbb5e94535188da31b41baa21b99f7a139e6c0588d565c9505988e",
+      "source_id": "smiles_invalid_isotope_rejected",
+      "parser_options": {},
+      "environment_requirements": [
+        "rdkit==2025.9.6"
+      ],
+      "expected": {
+        "exception_type": "SmilesParseError",
+        "error_code": "unsupported_isotope",
+        "line_number": null,
+        "byte_position": null
+      }
+    },
+    {
+      "case_id": "pdb_altloc_requires_selection",
+      "lane": "parse_failure",
+      "format": "pdb",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_ingest_corpus/pdb_altloc_unselected.pdb"
+      },
+      "source_sha256": "a30f333faa19487bd008c6970283ece421d6f0f0c6048a384568376898ee3c5b",
+      "source_id": "pdb_altloc_requires_selection",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "exception_type": "StructureParseError",
+        "error_code": "unsupported_altloc",
+        "line_number": null,
+        "byte_position": null
+      }
+    },
+    {
+      "case_id": "pdb_contextual_metal_conect_rejected",
+      "lane": "parse_failure",
+      "format": "pdb",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_ingest_corpus/pdb_contextual_metal_conect.pdb"
+      },
+      "source_sha256": "b4665e5afdadb8a9c0a7ca1c2d828d943d06000b8535a271c631ac6450bb47dd",
+      "source_id": "pdb_contextual_metal_conect_rejected",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "exception_type": "StructureParseError",
+        "error_code": "unsupported_contextual_conect_semantics",
+        "line_number": null,
+        "byte_position": null
+      }
+    },
+    {
+      "case_id": "mmcif_explicit_topology_category",
+      "lane": "parse_failure",
+      "format": "mmcif",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_ingest_corpus/mmcif_struct_conn.cif"
+      },
+      "source_sha256": "d7465087b98b766348fa0175f858f6a352584b8cfad9c997ac7ca7368a52e417",
+      "source_id": "mmcif_explicit_topology_category",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "exception_type": "StructureParseError",
+        "error_code": "unsupported_topology_category",
+        "line_number": null,
+        "byte_position": null
+      }
+    },
+    {
+      "case_id": "mmcif_ion_context_rejected",
+      "lane": "parse_failure",
+      "format": "mmcif",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_ingest_corpus/mmcif_ion_context.cif"
+      },
+      "source_sha256": "d5cfd5beac9e33ff257931ed12e7e7fe8ada8d9d9210c175f9798392109387d3",
+      "source_id": "mmcif_ion_context_rejected",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "exception_type": "StructureParseError",
+        "error_code": "unsupported_context_category",
+        "line_number": null,
+        "byte_position": null
+      }
+    },
+    {
+      "case_id": "mmcif_modified_residue_context_rejected",
+      "lane": "parse_failure",
+      "format": "mmcif",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_ingest_corpus/mmcif_modified_residue_context.cif"
+      },
+      "source_sha256": "12d92689163cf14617971f601d9ebb9a573554c40e08753fad376af4d1ff90e8",
+      "source_id": "mmcif_modified_residue_context_rejected",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "exception_type": "StructureParseError",
+        "error_code": "unsupported_context_category",
+        "line_number": null,
+        "byte_position": null
+      }
+    },
+    {
+      "case_id": "mmcif_nonpoly_component_context_rejected",
+      "lane": "parse_failure",
+      "format": "mmcif",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_ingest_corpus/mmcif_nonpoly_component_context.cif"
+      },
+      "source_sha256": "b6534653edd12ea40f26fa329b3fbfc53e4587a32b828e724e67df1bc0836575",
+      "source_id": "mmcif_nonpoly_component_context_rejected",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "exception_type": "StructureParseError",
+        "error_code": "unsupported_context_category",
+        "line_number": null,
+        "byte_position": null
+      }
+    },
+    {
+      "case_id": "sdf_v3000_rejected",
+      "lane": "parse_failure",
+      "format": "sdf_v2000",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_ingest_corpus/sdf_v3000.sdf"
+      },
+      "source_sha256": "44da0582a973b3c33da8e0b88b6eac4943743f30b3ec9d144b0cf64c83d7bf97",
+      "source_id": "sdf_v3000_rejected",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "exception_type": "SdfV2000ParseError",
+        "error_code": "unsupported_v3000",
+        "line_number": 4,
+        "byte_position": null
+      }
+    },
+    {
+      "case_id": "smiles_trailing_lf_rejected",
+      "lane": "parse_failure",
+      "format": "smiles",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/tier_beta/benzene.smi"
+      },
+      "source_sha256": "3f1fc605b1087f50395dac8ce2981a09d3019a2f37ec61cdc0df692230570636",
+      "source_id": "smiles_trailing_lf_rejected",
+      "parser_options": {},
+      "environment_requirements": [],
+      "expected": {
+        "exception_type": "SmilesParseError",
+        "error_code": "multiline_input",
+        "line_number": null,
+        "byte_position": 8
+      }
+    },
+    {
+      "case_id": "smiles_radical_rejected",
+      "lane": "parse_failure",
+      "format": "smiles",
+      "source": {
+        "kind": "ascii",
+        "value": "[CH3]"
+      },
+      "source_sha256": "c702554cc4a50f541a5827b7e948cd09822e6fb34b10f0b8f5c18c4afee47b27",
+      "source_id": "smiles_radical_rejected",
+      "parser_options": {},
+      "environment_requirements": [
+        "rdkit==2025.9.6"
+      ],
+      "expected": {
+        "exception_type": "SmilesParseError",
+        "error_code": "radical_atom_forbidden",
+        "line_number": null,
+        "byte_position": null
+      }
+    }
+  ]
+}

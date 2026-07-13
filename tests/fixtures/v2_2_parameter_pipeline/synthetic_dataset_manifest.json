@@ -1,0 +1,16 @@
+{
+  "schema_id": "betelgeuze.parameter_fit_dataset_manifest/1.0.0",
+  "dataset_id": "nonphysical_exact_methane_harmonic_contract_fixture",
+  "dataset_version": "1.0.0",
+  "artifact_purpose": "contract_fixture_only",
+  "scientific_status": "nonphysical_test_fixture",
+  "rows_artifact_name": "synthetic_harmonic_rows.json",
+  "rows_sha256": "9f517d649ac2b9765f4cb255c0f72793069dc046af9fe1e2a40418d503d5f58a",
+  "row_count": 8,
+  "bond_row_count": 4,
+  "angle_row_count": 4,
+  "license_review_status": "not_applicable_nonphysical_fixture",
+  "source_authentication_status": "not_authenticated",
+  "runtime_eligible": false,
+  "manifest_sha256": "e8133626102289485d1452d7d1a9ebc8eca722d7d03bcbd68d373d5f87adcd3b"
+}

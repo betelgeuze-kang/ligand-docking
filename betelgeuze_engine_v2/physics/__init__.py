@@ -1,5 +1,29 @@
 """Independent-engine physics primitives that are honest CPU references."""
 
+from betelgeuze_engine_v2.physics.linear_alkane_reference_kernel import (
+    LINEAR_ALKANE_METHOD_KERNEL_ALGORITHM_ID,
+    LINEAR_ALKANE_METHOD_KERNEL_CLAIM_SCOPE,
+    LINEAR_ALKANE_METHOD_KERNEL_POLICY_ID,
+    LINEAR_ALKANE_METHOD_KERNEL_PROTOCOL_SCHEMA_ID,
+    LINEAR_ALKANE_METHOD_KERNEL_PROTOCOL_SCHEMA_VERSION,
+    LINEAR_ALKANE_METHOD_KERNEL_PROTOCOL_SHA256,
+    LINEAR_ALKANE_REFERENCE_KERNEL_FORCE_DEFINITION,
+    LINEAR_ALKANE_REFERENCE_KERNEL_RESULT_SCHEMA_ID,
+    LINEAR_ALKANE_REFERENCE_KERNEL_RESULT_SCHEMA_VERSION,
+    LINEAR_ALKANE_REFERENCE_KERNEL_VIRIAL_CONVENTION_ID,
+    LINEAR_ALKANE_REFERENCE_KERNEL_VIRIAL_DEFINITION,
+    LinearAlkaneC1C4ReferenceKernelResult,
+    LinearAlkaneC1C4ReferencePotential,
+    LinearAlkaneReferenceKernelClassResult,
+    LinearAlkaneReferenceKernelError,
+    LinearAlkaneReferenceKernelTermResult,
+    compile_linear_alkane_c1_c4_reference_potential,
+    evaluate_linear_alkane_c1_c4_reference_kernel,
+    linear_alkane_method_kernel_protocol_bytes,
+    linear_alkane_method_kernel_protocol_document,
+    serialize_linear_alkane_c1_c4_reference_kernel_result,
+)
+
 from betelgeuze_engine_v2.physics.projection import (
     MAX_FIXED_PROJECTION_RANK,
     ProjectionDiagnostics,
@@ -11,11 +35,32 @@ from betelgeuze_engine_v2.physics.projection import (
 )
 
 __all__ = [
+    "LINEAR_ALKANE_METHOD_KERNEL_ALGORITHM_ID",
+    "LINEAR_ALKANE_METHOD_KERNEL_CLAIM_SCOPE",
+    "LINEAR_ALKANE_METHOD_KERNEL_POLICY_ID",
+    "LINEAR_ALKANE_METHOD_KERNEL_PROTOCOL_SCHEMA_ID",
+    "LINEAR_ALKANE_METHOD_KERNEL_PROTOCOL_SCHEMA_VERSION",
+    "LINEAR_ALKANE_METHOD_KERNEL_PROTOCOL_SHA256",
+    "LINEAR_ALKANE_REFERENCE_KERNEL_FORCE_DEFINITION",
+    "LINEAR_ALKANE_REFERENCE_KERNEL_RESULT_SCHEMA_ID",
+    "LINEAR_ALKANE_REFERENCE_KERNEL_RESULT_SCHEMA_VERSION",
+    "LINEAR_ALKANE_REFERENCE_KERNEL_VIRIAL_CONVENTION_ID",
+    "LINEAR_ALKANE_REFERENCE_KERNEL_VIRIAL_DEFINITION",
     "MAX_FIXED_PROJECTION_RANK",
+    "LinearAlkaneC1C4ReferenceKernelResult",
+    "LinearAlkaneC1C4ReferencePotential",
+    "LinearAlkaneReferenceKernelClassResult",
+    "LinearAlkaneReferenceKernelError",
+    "LinearAlkaneReferenceKernelTermResult",
     "ProjectionDiagnostics",
     "ProjectionRankError",
+    "compile_linear_alkane_c1_c4_reference_potential",
+    "evaluate_linear_alkane_c1_c4_reference_kernel",
     "fixed_rank_orthogonal_complement",
     "fixed_rank_projection_adjoint",
+    "linear_alkane_method_kernel_protocol_bytes",
+    "linear_alkane_method_kernel_protocol_document",
     "local_normal_projection",
     "project_rigid_body_forces",
+    "serialize_linear_alkane_c1_c4_reference_kernel_result",
 ]

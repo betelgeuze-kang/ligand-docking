@@ -24,6 +24,7 @@ from betelgeuze_engine_v2.molecular import (
     StructureProvenance,
     UnitCell,
     from_legacy_engine_state,
+    molecular_preparation_blockers,
     to_legacy_engine_state,
     validate_all_atom_system,
 )
@@ -68,6 +69,7 @@ def _system(*, cell: UnitCell | None = None) -> AllAtomSystem:
             source_sha256="a" * 64,
             parser_name="unit-test",
             parser_version="1.0",
+            preparation_ready=True,
             claim_safe=True,
         ),
         cell=cell,
@@ -158,6 +160,21 @@ def test_legacy_adapter_round_trips_embedded_topology_and_coordinates() -> None:
     assert torch.allclose(restored.cell.orthorhombic_lengths(), torch.tensor([20.0, 21.0, 22.0], dtype=torch.float64))
 
 
+def test_legacy_adapter_thaws_nested_canonical_metadata_without_aliasing() -> None:
+    source = replace(
+        _system(),
+        metadata={"nested": {"values": [1, 2]}},
+    )
+    state = to_legacy_engine_state(source)
+    assert type(state.metadata["nested"]) is dict
+    assert type(state.metadata["nested"]["values"]) is list
+    state.metadata["nested"]["values"].append(3)
+
+    assert source.metadata["nested"]["values"] == [1, 2]
+    restored = from_legacy_engine_state(state)
+    assert restored.metadata["nested"]["values"] == [1, 2]
+
+
 def test_legacy_adapter_detects_type_order_drift_and_requires_explicit_coordinate_updates() -> None:
     source = _system(cell=UnitCell.orthorhombic((20.0, 21.0, 22.0)))
     state = to_legacy_engine_state(source, dtype=torch.float64)
@@ -178,8 +195,8 @@ def test_legacy_adapter_detects_type_order_drift_and_requires_explicit_coordinat
 
     with pytest.raises(LegacyAdapterError, match="float32 or torch.float64"):
         to_legacy_engine_state(source, dtype=torch.long)
-    with pytest.raises(LegacyAdapterError, match="float32 or torch.float64"):
-        to_legacy_engine_state(replace(source, coordinates=source.coordinates.to(torch.bfloat16)))
+    with pytest.raises(TypeError, match="float32 or float64"):
+        replace(source, coordinates=source.coordinates.to(torch.bfloat16))
 
 
 def test_bare_legacy_state_is_fail_closed_unless_lossy_inference_is_explicit() -> None:
@@ -192,6 +209,12 @@ def test_bare_legacy_state_is_fail_closed_unless_lossy_inference_is_explicit() -
 
     inferred = from_legacy_engine_state(state, allow_lossy_inference=True)
     assert [atom.element for atom in inferred.atoms] == ["C", "O"]
+    assert all(not atom.formal_charge_known for atom in inferred.atoms)
+    assert inferred.provenance.preparation_ready is False
+    assert molecular_preparation_blockers(inferred) == (
+        "formal_charge_unknown_for_some_atoms",
+        "preparation_not_complete",
+    )
     assert inferred.provenance.claim_safe is False
     assert validate_all_atom_system(inferred).valid
 

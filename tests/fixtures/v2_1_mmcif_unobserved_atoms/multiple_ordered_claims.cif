@@ -1,0 +1,64 @@
+data_multiple_atom_claims
+#
+loop_
+_entity.id
+_entity.type
+1 polymer
+#
+loop_
+_struct_asym.id
+_struct_asym.entity_id
+A 1
+#
+loop_
+_entity_poly_seq.entity_id
+_entity_poly_seq.num
+_entity_poly_seq.mon_id
+_entity_poly_seq.hetero
+1 1 ALA n
+1 2 SER n
+#
+loop_
+_pdbx_unobs_or_zero_occ_atoms.id
+_pdbx_unobs_or_zero_occ_atoms.polymer_flag
+_pdbx_unobs_or_zero_occ_atoms.occupancy_flag
+_pdbx_unobs_or_zero_occ_atoms.pdb_model_num
+_pdbx_unobs_or_zero_occ_atoms.auth_asym_id
+_pdbx_unobs_or_zero_occ_atoms.auth_comp_id
+_pdbx_unobs_or_zero_occ_atoms.auth_seq_id
+_pdbx_unobs_or_zero_occ_atoms.pdb_ins_code
+_pdbx_unobs_or_zero_occ_atoms.auth_atom_id
+_pdbx_unobs_or_zero_occ_atoms.label_alt_id
+_pdbx_unobs_or_zero_occ_atoms.label_asym_id
+_pdbx_unobs_or_zero_occ_atoms.label_comp_id
+_pdbx_unobs_or_zero_occ_atoms.label_seq_id
+_pdbx_unobs_or_zero_occ_atoms.label_atom_id
+2 Y 1 1 AX ALA AUTH-1 ? CB ? A ALA 1 CB
+7 Y 1 1 AX SER AUTH-2 ? OG ? A SER 2 OG
+#
+loop_
+_atom_site.group_pdb
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.label_atom_id
+_atom_site.label_alt_id
+_atom_site.label_comp_id
+_atom_site.label_asym_id
+_atom_site.label_entity_id
+_atom_site.label_seq_id
+_atom_site.pdbx_pdb_ins_code
+_atom_site.cartn_x
+_atom_site.cartn_y
+_atom_site.cartn_z
+_atom_site.occupancy
+_atom_site.b_iso_or_equiv
+_atom_site.pdbx_formal_charge
+_atom_site.auth_seq_id
+_atom_site.auth_comp_id
+_atom_site.auth_asym_id
+_atom_site.auth_atom_id
+_atom_site.pdbx_pdb_model_num
+ATOM 1 N N . ALA A 1 1 ? 0 0 0 1.0 20.0 ? AUTH-1 ALA AX N 1
+ATOM 2 C CA . SER A 1 2 ? 1 0 0 1.0 20.0 ? AUTH-2 SER AX CA 1
+#
+

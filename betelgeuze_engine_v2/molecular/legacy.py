@@ -8,7 +8,7 @@ into visibly lossy inference.
 
 from __future__ import annotations
 
-from dataclasses import asdict, replace
+from dataclasses import fields, replace
 import hashlib
 from typing import Any, Callable, Mapping
 
@@ -29,7 +29,7 @@ from .validation import require_valid_all_atom_system
 
 
 LEGACY_METADATA_KEY = "betelgeuze_engine_v2_contract"
-LEGACY_ADAPTER_VERSION = "1.1.0"
+LEGACY_ADAPTER_VERSION = "1.2.0"
 
 _STANDARD_RESIDUE_CODES = {
     "ALA": 1,
@@ -61,9 +61,19 @@ class LegacyAdapterError(ValueError):
     """Raised when a lossless legacy conversion cannot be guaranteed."""
 
 
+def _mutable_metadata_value(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {key: _mutable_metadata_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_mutable_metadata_value(item) for item in value]
+    return value
+
+
 def _record_dict(record: object) -> dict[str, Any]:
-    payload = asdict(record)
-    return dict(payload)
+    payload = {item.name: getattr(record, item.name) for item in fields(record)}
+    if "metadata" in payload:
+        payload["metadata"] = _mutable_metadata_value(payload["metadata"])
+    return payload
 
 
 def _tensor_fingerprint(tensor: torch.Tensor) -> str:
@@ -101,7 +111,7 @@ def _topology_payload(
         "chains": [_record_dict(record) for record in system.chains],
         "cell": cell_payload,
         "provenance": _record_dict(system.provenance),
-        "system_metadata": dict(system.metadata),
+        "system_metadata": _mutable_metadata_value(system.metadata),
         "legacy_encoding": dict(encoding),
         "legacy_state_contract": {
             "atom_types": atom_types.detach().cpu().tolist(),
@@ -177,7 +187,7 @@ def to_legacy_engine_state(
         "residue_types": "custom" if residue_type_encoder is not None else "standard_residue_code_per_atom",
     }
     legacy_box = _legacy_box(system.cell, coords=coords)
-    metadata = dict(system.metadata)
+    metadata = _mutable_metadata_value(system.metadata)
     metadata[LEGACY_METADATA_KEY] = _topology_payload(
         system,
         encoding=encoding,
@@ -302,6 +312,7 @@ def _infer_lossy_topology(state: EngineState) -> AllAtomSystem:
             element=element,
             atomic_number=atomic_number,
             residue_index=0,
+            formal_charge_known=False,
         )
         for index, (element, atomic_number) in enumerate(zip(elements, atomic_numbers))
     )
@@ -335,6 +346,7 @@ def _infer_lossy_topology(state: EngineState) -> AllAtomSystem:
             parser_name="betelgeuze_engine_v2.lossy_legacy_adapter",
             parser_version=LEGACY_ADAPTER_VERSION,
             operations=("lossy_topology_inference",),
+            preparation_ready=False,
             claim_safe=False,
         ),
         cell=cell,

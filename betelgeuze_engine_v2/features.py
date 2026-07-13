@@ -8,7 +8,11 @@ from typing import Any
 
 import torch
 
-from betelgeuze_engine_v2.molecular import AllAtomSystem, require_valid_all_atom_system
+from betelgeuze_engine_v2.molecular import (
+    AllAtomSystem,
+    require_molecular_preparation_ready,
+    require_valid_all_atom_system,
+)
 
 
 ATOM_FEATURE_SCHEMA_VERSION = "betelgeuze.atom_features.reference/1.0.0"
@@ -80,6 +84,7 @@ def build_deterministic_atom_features(
     if not isinstance(system, AllAtomSystem):
         raise TypeError("system must be an AllAtomSystem")
     require_valid_all_atom_system(system)
+    require_molecular_preparation_ready(system)
     target_dtype = system.coordinates.dtype if dtype is None else dtype
     target_device = system.coordinates.device if device is None else torch.device(device)
     if target_dtype not in (torch.float32, torch.float64):

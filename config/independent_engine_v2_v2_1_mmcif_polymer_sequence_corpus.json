@@ -1,0 +1,464 @@
+{
+  "schema_id": "betelgeuze.v2_1_mmcif_polymer_sequence_corpus/1.0.0",
+  "corpus_id": "v2_1_strict_mmcif_source_reported_polymer_sequence_membership_envelope_v1",
+  "manifest_payload_hash_policy_id": "sha256_canonical_json_without_payload_sha256/1.0.0",
+  "payload_sha256": "accee9d4f69cd85c069f2b58d515f0a5ea4b0bccce3d90b7422b54b295ced289",
+  "contracts": {
+    "all_atom_schema_id": "betelgeuze.all_atom_system/2.1.0",
+    "base_mmcif_parser_version": "1.9.0",
+    "base_mmcif_writer_version": "1.5.0",
+    "nonpoly_identity_envelope_version": "1.0.0",
+    "envelope_version": "1.0.0",
+    "envelope_parser_version": "1.0.0",
+    "envelope_writer_version": "1.0.0",
+    "parser_name": "betelgeuze_engine_v2.molecular.mmcif_polymer_sequence",
+    "profile_id": "strict_mmcif_source_reported_entity_poly_seq_envelope/1.0.0",
+    "projection_schema_id": "betelgeuze.mmcif_polymer_sequence_projection/1.0.0",
+    "record_state_schema_id": "betelgeuze.mmcif_polymer_sequence_record_state/1.0.0",
+    "source_binding_schema_id": "betelgeuze.mmcif_polymer_sequence_source_binding/1.0.0",
+    "write_receipt_schema_id": "betelgeuze.mmcif_polymer_sequence_write_receipt/1.0.0",
+    "round_trip_report_schema_id": "betelgeuze.mmcif_polymer_sequence_round_trip_report/1.0.0",
+    "projection_scope": "source_reported_polymer_entity_sequence_membership_and_coordinate_presence_only",
+    "entity_poly_seq_headers": [
+      "entity_id",
+      "num",
+      "mon_id",
+      "hetero"
+    ],
+    "carrier_kinds": [
+      "common_core21",
+      "mmcif_nonpoly_identity"
+    ],
+    "canonical_category_orders": {
+      "common_core21": [
+        "_entity",
+        "_struct_asym",
+        "_entity_poly_seq",
+        "_atom_site"
+      ],
+      "mmcif_nonpoly_identity": [
+        "_entity",
+        "_struct_asym",
+        "_entity_poly_seq",
+        "_pdbx_entity_nonpoly",
+        "_pdbx_nonpoly_scheme",
+        "_atom_site"
+      ]
+    },
+    "limits": {
+      "max_input_bytes": 67108864,
+      "max_sequence_rows": 100000,
+      "max_selected_token_chars": 256
+    }
+  },
+  "claim_boundary": {
+    "positive_true_fields": [
+      "source_reported_sequence_preserved",
+      "coordinate_absent_rows_preserved_without_missingness_claim"
+    ],
+    "always_false_fields": [
+      "source_authenticated",
+      "auth_label_equivalence_inferred",
+      "reference_sequence_equivalence_assessed",
+      "coordinate_observation_completeness_assessed",
+      "modified_residue_identity_assessed",
+      "polymer_chemistry_interpreted",
+      "microheterogeneity_interpreted",
+      "chemistry_interpreted",
+      "role_assignment_interpreted",
+      "bond_topology_interpreted",
+      "bond_order_interpreted",
+      "coordination_interpreted",
+      "charge_interpreted",
+      "protonation_interpreted",
+      "missing_residue_fact_claimed",
+      "sequence_completeness_claimed",
+      "preparation_ready",
+      "parameterability_assessed",
+      "physics_supported",
+      "runtime_eligible",
+      "simulation_ready",
+      "execution_authorized",
+      "claim_safe",
+      "general_mmcif_round_trip_evidence_ready",
+      "all_format_round_trip_evidence_ready"
+    ],
+    "base_parser_default_changed": false,
+    "microheterogeneity_supported": false,
+    "general_mmcif_round_trip_evidence_ready": false,
+    "v2_1_complete": false
+  },
+  "cases": [
+    {
+      "case_id": "category_order_variant",
+      "lane": "round_trip",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_mmcif_polymer_sequence/category_order_variant.cif"
+      },
+      "source_id": "category_order_variant",
+      "source_sha256": "20e2ea5e2b160a954c7df063b2ff4d9c3fbacbba2f82eb55cf125d62ad948689",
+      "expected": {
+        "base_representable_state_sha256": "8d541ed42620553aab03216a22efea229044516abe0da89cbb623b3c42091fe8",
+        "base_system_snapshot_sha256": "50ccb4724374312297ebdd20a1c6d21ac1a9f5bd7ae93e1be96a83ce604b59a1",
+        "base_topology_sha256": "c8bb789ed8457617b9f9d39063de1ba17daa82e40ac3521e0c821129342a97f1",
+        "canonical_carrier_source_sha256": "8a29e52346565e4c5b4465a685dab9c681dbd556b03dfaf42349833d55be3eda",
+        "carrier_kind": "common_core21",
+        "carrier_source_sha256": "112c4e71123ac3a54d4d2f2c95ef9eff6c89015eded5eee54668bf9441020053",
+        "coordinate_observed_sequence_row_count": 2,
+        "coordinate_unobserved_sequence_row_count": 0,
+        "full_source_sha256": "20e2ea5e2b160a954c7df063b2ff4d9c3fbacbba2f82eb55cf125d62ad948689",
+        "nonpoly_identity_projection_sha256": null,
+        "nonpoly_identity_record_state_sha256": null,
+        "output_byte_count": 878,
+        "output_equals_input": false,
+        "output_source_sha256": "aec64a9dbd6b5e8cb143eb87b6dd431a495d60a2138410bdb662d111d6554edb",
+        "polymer_sequence_projection_sha256": "a339ef9f14939eddc36f0319546ea79bdc4fc29732e36a9ab130cb62b2d94e49",
+        "polymer_sequence_row_count": 2,
+        "record_state_sha256": "4111bc55254e08ec97343843258169824d537076397dabb9924bce0dbebf86de",
+        "round_trip_report_sha256": "9856d42b20d2d33bb752360409d7f9e79ffb1b6c27f724e6b189d4f2abc9ad23",
+        "second_emission_byte_stable": true,
+        "source_binding_sha256": "168287055e7e4d8a861bb1b098c096a43833201e9ce7701f99f45b36ee23866d",
+        "source_id_sha256": "1f2b4defbd4a7c5c2d567806a2e4ef9c93052c181d95bc457e99a7da2fb3713f",
+        "write_receipt_sha256": "51cd1dc78776ad5836165298760e1617890f3eb00bf6bf16536b172d74800611"
+      }
+    },
+    {
+      "case_id": "failure_atom_join",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_polymer_sequence/single_polymer_complete.cif",
+        "replacements": [
+          {
+            "old_hex": "41544f4d20322043204341202e20414c41204120312032203f",
+            "new_hex": "41544f4d20322043204341202e2056414c204120312032203f"
+          }
+        ]
+      },
+      "source_id": "failure_atom_join",
+      "source_sha256": "edf78b392229c39aa7cef0eea215f5bc08a9ce739f01964c619e11d794c59d72",
+      "expected": {
+        "error_code": "polymer_atom_sequence_join_mismatch"
+      }
+    },
+    {
+      "case_id": "failure_category_surface",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_polymer_sequence/single_polymer_complete.cif",
+        "replacements": [
+          {
+            "old_hex": "6c6f6f705f0a5f61746f6d5f736974652e67726f75705f5044420a",
+            "new_hex": "5f6368656d5f636f6d702e696420474c590a230a6c6f6f705f0a5f61746f6d5f736974652e67726f75705f5044420a"
+          }
+        ]
+      },
+      "source_id": "failure_category_surface",
+      "source_sha256": "d52bdf4529d6abb81ca30bd1f930832ff7951f7e9c3670812c740542f973b12a",
+      "expected": {
+        "error_code": "unsupported_category_surface"
+      }
+    },
+    {
+      "case_id": "failure_entity_coverage",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_polymer_sequence/single_polymer_complete.cif",
+        "replacements": [
+          {
+            "old_hex": "3120706f6c796d65720a230a6c6f6f705f0a5f7374727563745f6173796d2e6964",
+            "new_hex": "3120706f6c796d65720a3220706f6c796d65720a230a6c6f6f705f0a5f7374727563745f6173796d2e6964"
+          }
+        ]
+      },
+      "source_id": "failure_entity_coverage",
+      "source_sha256": "cec9e805bc0959b10311f1c171521ce3d3b46f352c26f34a1b95a51956c3b4db",
+      "expected": {
+        "error_code": "polymer_entity_sequence_coverage_mismatch"
+      }
+    },
+    {
+      "case_id": "failure_header_order",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_polymer_sequence/single_polymer_complete.cif",
+        "replacements": [
+          {
+            "old_hex": "5f656e746974795f706f6c795f7365712e656e746974795f69640a5f656e746974795f706f6c795f7365712e6e756d0a",
+            "new_hex": "5f656e746974795f706f6c795f7365712e6e756d0a5f656e746974795f706f6c795f7365712e656e746974795f69640a"
+          }
+        ]
+      },
+      "source_id": "failure_header_order",
+      "source_sha256": "a7c4ed8820c1846a3a2966c827f03e87f219cf0b2cb38a3503d0573a827f2b64",
+      "expected": {
+        "error_code": "unsupported_category_headers"
+      }
+    },
+    {
+      "case_id": "failure_hetero_yes",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_polymer_sequence/single_polymer_complete.cif",
+        "replacements": [
+          {
+            "old_hex": "31203220414c41206e6f0a",
+            "new_hex": "31203220414c41207965730a"
+          }
+        ]
+      },
+      "source_id": "failure_hetero_yes",
+      "source_sha256": "2d710824d35923d11492ac36c3205291c37ecba8a7abf0a362961dc8d81cbcdb",
+      "expected": {
+        "error_code": "microheterogeneity_not_supported"
+      }
+    },
+    {
+      "case_id": "failure_non_ascii",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_polymer_sequence/single_polymer_complete.cif",
+        "replacements": [
+          {
+            "old_hex": "31203220414c41206e6f0a",
+            "new_hex": "31203220505249564154452dff206e6f0a"
+          }
+        ]
+      },
+      "source_id": "failure_non_ascii",
+      "source_sha256": "22b7e641f332733c5b3263ad85f9d4c1114458bac69dc803970a522aeddbd1f3",
+      "expected": {
+        "error_code": "non_ascii_input"
+      }
+    },
+    {
+      "case_id": "failure_noncontiguous",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_polymer_sequence/single_polymer_complete.cif",
+        "replacements": [
+          {
+            "old_hex": "31203220414c41206e6f0a",
+            "new_hex": "31203320414c41206e6f0a"
+          }
+        ]
+      },
+      "source_id": "failure_noncontiguous",
+      "source_sha256": "786471a051eec8b11f02a1221095e20bf2577c783bcae1ef5fa0a75b561fe95a",
+      "expected": {
+        "error_code": "noncontiguous_sequence_positions"
+      }
+    },
+    {
+      "case_id": "interleaved_two_polymer_entities",
+      "lane": "round_trip",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_mmcif_polymer_sequence/interleaved_two_polymer_entities.cif"
+      },
+      "source_id": "interleaved_two_polymer_entities",
+      "source_sha256": "1fcd236fb68f4d7427cad45433977a14f042dd81799bbf95d37a7a63d1858e9e",
+      "expected": {
+        "base_representable_state_sha256": "17f10534ce6e67a734c6a3b417d3c98a7416444a365f451b11f23b9228939bd7",
+        "base_system_snapshot_sha256": "1c9e4cb4a12c53e4ba9a778110e41ad553a90a629a30c352cd2f8c71427a2d03",
+        "base_topology_sha256": "d9ba4f611c05f6e7c149157ea2bf629d93b6e33506638a1e65640ca854751c2e",
+        "canonical_carrier_source_sha256": "c91c0882e370c4783874e9a15b3f186a0bb2d15e205451212459d779640641e0",
+        "carrier_kind": "common_core21",
+        "carrier_source_sha256": "a6f362e2edc27e0c5885191c13d10782ebe177b706b89dc9c40d65afcbf453fb",
+        "coordinate_observed_sequence_row_count": 4,
+        "coordinate_unobserved_sequence_row_count": 0,
+        "full_source_sha256": "1fcd236fb68f4d7427cad45433977a14f042dd81799bbf95d37a7a63d1858e9e",
+        "nonpoly_identity_projection_sha256": null,
+        "nonpoly_identity_record_state_sha256": null,
+        "output_byte_count": 1051,
+        "output_equals_input": false,
+        "output_source_sha256": "a680cb361c556b3fde6a657afaf0b9c0b84450232d4d953df1a1d1ebbd9e5645",
+        "polymer_sequence_projection_sha256": "840dbaf8db49398de9c084de43b490560902d24e71427d1f4c2aad40e23517a5",
+        "polymer_sequence_row_count": 4,
+        "record_state_sha256": "0fdb6c99cb3a3bb1e23e871f144d5888030527b64d65c5c34ff54d22eb738959",
+        "round_trip_report_sha256": "07e829b01ae53ea0dc28df3cf678c2a3d43f4448d9286e0dc918c46cae1a476d",
+        "second_emission_byte_stable": true,
+        "source_binding_sha256": "de75fe418de1755db368c02a89db07c5a202d566b99341c631606df336cd5cfa",
+        "source_id_sha256": "d0029e654c4c6610b8c53530ea94e61d490d1041ac472f8f7209a2ec10c2353c",
+        "write_receipt_sha256": "6ae98e83ea385b1a682535d10fe3975e7b4e1d168c51e605f26d2adda23bdd92"
+      }
+    },
+    {
+      "case_id": "mixed_polymer_nonpoly_water",
+      "lane": "round_trip",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_mmcif_polymer_sequence/mixed_polymer_nonpoly_water.cif"
+      },
+      "source_id": "mixed_polymer_nonpoly_water",
+      "source_sha256": "35a0e0802ef973fd299620a3ed35fce601c64421765a653e14419b52903a1fb1",
+      "expected": {
+        "base_representable_state_sha256": "e4e5e335699acd32c3950fc2ff44c3afb1c4288f90d92be0e119f4d37527f9b1",
+        "base_system_snapshot_sha256": "d9ce1b7386f7f71dc65c366a8adfa5704d4cec06dded97a2e1730d9ae87b3ca9",
+        "base_topology_sha256": "a721fd0d33d421f0e8b08af614053a71dcb7b8733054d209b943532f96f259da",
+        "canonical_carrier_source_sha256": "d7e35d39df53bdb47708d47b7347b023f862ad2f43793f42d855eee13f5e4468",
+        "carrier_kind": "mmcif_nonpoly_identity",
+        "carrier_source_sha256": "d7e35d39df53bdb47708d47b7347b023f862ad2f43793f42d855eee13f5e4468",
+        "coordinate_observed_sequence_row_count": 1,
+        "coordinate_unobserved_sequence_row_count": 0,
+        "full_source_sha256": "35a0e0802ef973fd299620a3ed35fce601c64421765a653e14419b52903a1fb1",
+        "nonpoly_identity_projection_sha256": "4fe8643dc58ce1b204dc182591616c90acb78915cd4bd1c35482fb1977338d93",
+        "nonpoly_identity_record_state_sha256": "20972ee9bcdf7bcfde6e691814bb2edf6957e929d57eab4ee9b174e9565286b6",
+        "output_byte_count": 1529,
+        "output_equals_input": false,
+        "output_source_sha256": "ca478d3041de7be781cc628c63e442a73d97724514f013c5ad302a4faebbd501",
+        "polymer_sequence_projection_sha256": "1a01ddc20613be6776d2ca0b150ffc065fb7ffbe87574f4e8bf9405238f9b411",
+        "polymer_sequence_row_count": 1,
+        "record_state_sha256": "fe9025906dc1af8b282e5eb514e2eab91a59df9eacd8461af6b64bcc87c02742",
+        "round_trip_report_sha256": "3ef9c09d5fbf6da100b808d84b6bed00e7d40cf335165e7fe1b6ff440c6bd7d8",
+        "second_emission_byte_stable": true,
+        "source_binding_sha256": "ad2962a05fa5f92a48e224ca99c8ff874b05cc45cd9300e7c14868a6485635f6",
+        "source_id_sha256": "002017c6fb9d2b6fe4faf7c88fe61ff4fccaaff0d3400aa1c8534d8c4b42e771",
+        "write_receipt_sha256": "cfe7542d3cbc7ac0ceb49324c6d51b2a3507c60c2317b2b34a0e9c74be90b244"
+      }
+    },
+    {
+      "case_id": "opaque_nonstandard_monomer",
+      "lane": "round_trip",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_mmcif_polymer_sequence/opaque_nonstandard_monomer.cif"
+      },
+      "source_id": "opaque_nonstandard_monomer",
+      "source_sha256": "0b2aaa19ac3451f3a87859176e0eb9fc032dffccb0f9d55489fc94c368fe8606",
+      "expected": {
+        "base_representable_state_sha256": "f25b43b91d5e2c48bfb187a0fedb781b90daf85eac87906d4e50a7d6a6763ae9",
+        "base_system_snapshot_sha256": "5a694acaeb26d5639ccb7ca116738f74cbfae23f5365d8ff5de7186c8eeff6b4",
+        "base_topology_sha256": "ba60d15212a94da1bb84b061c390e63bd2f8c3c775a1c299c13adedc1bc62d12",
+        "canonical_carrier_source_sha256": "f0bd93f296d7a443a80315a311218fed17312198a5c83195ab4f9be6327dfa2f",
+        "carrier_kind": "common_core21",
+        "carrier_source_sha256": "5e20f729cc375e263544808d1da96659840e7195144a2688975373e1a6f36999",
+        "coordinate_observed_sequence_row_count": 1,
+        "coordinate_unobserved_sequence_row_count": 0,
+        "full_source_sha256": "0b2aaa19ac3451f3a87859176e0eb9fc032dffccb0f9d55489fc94c368fe8606",
+        "nonpoly_identity_projection_sha256": null,
+        "nonpoly_identity_record_state_sha256": null,
+        "output_byte_count": 809,
+        "output_equals_input": false,
+        "output_source_sha256": "2cb214f8e4f337da6dbcdc805d9ccf21089149f92b609563f9f59863dcd18f18",
+        "polymer_sequence_projection_sha256": "152bd2eb4661f64ed25e8cb9da596057c3c3f5552b13e2f619a5b2ebaddc573e",
+        "polymer_sequence_row_count": 1,
+        "record_state_sha256": "16894be4680692b68e9681756633b41e1be2efe28ef3e2673ab0432ec67ab071",
+        "round_trip_report_sha256": "61d602f21e74147bb669e4d55d7c124992c56cee0e105e339ee81a688acec55e",
+        "second_emission_byte_stable": true,
+        "source_binding_sha256": "f95d83c8273b9f65e0d5a359e13fc87717570041e0db63b689740a6c8be20169",
+        "source_id_sha256": "ad7e48cacfff0e24e7efe57df117ff566daf394835dad51244d372295f3cf77f",
+        "write_receipt_sha256": "fa0e2443c83a7582f744a1a00a684a7b9584662da75a0512aa74817ed00b457f"
+      }
+    },
+    {
+      "case_id": "shared_entity_multiple_asym",
+      "lane": "round_trip",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_mmcif_polymer_sequence/shared_entity_multiple_asym.cif"
+      },
+      "source_id": "shared_entity_multiple_asym",
+      "source_sha256": "0cbbfc1160f86d4a93bb5ce5639fec7d7565431d0dcaee5a71e6078c501097cc",
+      "expected": {
+        "base_representable_state_sha256": "97a96c19cdb9c50ef551b73dd249c82a31ca7f48d28e513c520c3e5f55d0220b",
+        "base_system_snapshot_sha256": "fa9ab93668f291c0c855163e8b50d5ec082fde3cacc88269e0dae794d0497fe9",
+        "base_topology_sha256": "e1ef2d98a0910c762bf84a17e5ce50055331878a3a387cfcaf898e7db23ddbff",
+        "canonical_carrier_source_sha256": "d109e121e3cdac295211feb6df3e0f63ee644b8ac4ccf1236f8e9c0921a56038",
+        "carrier_kind": "common_core21",
+        "carrier_source_sha256": "a19902a3132088f3e8a8f481119dd8cba11e908986820cf11754674117bdf393",
+        "coordinate_observed_sequence_row_count": 2,
+        "coordinate_unobserved_sequence_row_count": 0,
+        "full_source_sha256": "0cbbfc1160f86d4a93bb5ce5639fec7d7565431d0dcaee5a71e6078c501097cc",
+        "nonpoly_identity_projection_sha256": null,
+        "nonpoly_identity_record_state_sha256": null,
+        "output_byte_count": 1012,
+        "output_equals_input": false,
+        "output_source_sha256": "5a47b1e5bb07e1ba3c08a90f1582a1931e50c4a01b7f16e2995bbae45ab315e5",
+        "polymer_sequence_projection_sha256": "67cf4efec9ed2365d71bd4c375c33e3fc993b5b56b02b90e12a33a083620ea0d",
+        "polymer_sequence_row_count": 2,
+        "record_state_sha256": "bdb4404376f00ac27a73b37d5c132c350746a86ba9cf80a0ec1eaf25eb430bbd",
+        "round_trip_report_sha256": "eafc9e57e07eaece1895100b3bf7b8c6de4cfe572cfe2bf75c64507a7e66f19d",
+        "second_emission_byte_stable": true,
+        "source_binding_sha256": "0e9d07c0bd35faf51644a19ae50df8102d87e15a51d033aa7e6d542ef2f3fbde",
+        "source_id_sha256": "89745b5a3670165744c6f85a4a9636550b24e37a8c98c23e03ba9abdc7970bfc",
+        "write_receipt_sha256": "efdf803b19f0b8b02ef0c015d0268d6c58f3e586e9f1da1a287361c1141815b3"
+      }
+    },
+    {
+      "case_id": "single_polymer_complete",
+      "lane": "round_trip",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_mmcif_polymer_sequence/single_polymer_complete.cif"
+      },
+      "source_id": "single_polymer_complete",
+      "source_sha256": "4ea991930587ae67552ec13f36636994d8fe51cf5f6e0661c73049c94fef31ff",
+      "expected": {
+        "base_representable_state_sha256": "8d541ed42620553aab03216a22efea229044516abe0da89cbb623b3c42091fe8",
+        "base_system_snapshot_sha256": "0bc7b29c5c6f8949de1c5f284900f865292f23857d7c52ff9419867d801040a6",
+        "base_topology_sha256": "c8bb789ed8457617b9f9d39063de1ba17daa82e40ac3521e0c821129342a97f1",
+        "canonical_carrier_source_sha256": "8a29e52346565e4c5b4465a685dab9c681dbd556b03dfaf42349833d55be3eda",
+        "carrier_kind": "common_core21",
+        "carrier_source_sha256": "d16d7ab071498e709d4c7f06a429bcbadc81061689c3000ab35812eac52a642e",
+        "coordinate_observed_sequence_row_count": 2,
+        "coordinate_unobserved_sequence_row_count": 0,
+        "full_source_sha256": "4ea991930587ae67552ec13f36636994d8fe51cf5f6e0661c73049c94fef31ff",
+        "nonpoly_identity_projection_sha256": null,
+        "nonpoly_identity_record_state_sha256": null,
+        "output_byte_count": 878,
+        "output_equals_input": false,
+        "output_source_sha256": "aec64a9dbd6b5e8cb143eb87b6dd431a495d60a2138410bdb662d111d6554edb",
+        "polymer_sequence_projection_sha256": "a339ef9f14939eddc36f0319546ea79bdc4fc29732e36a9ab130cb62b2d94e49",
+        "polymer_sequence_row_count": 2,
+        "record_state_sha256": "4111bc55254e08ec97343843258169824d537076397dabb9924bce0dbebf86de",
+        "round_trip_report_sha256": "76c9f10d8eb36cdb8f69a893d9c42bef20997acbe8b249f6a3ece096325e4b1d",
+        "second_emission_byte_stable": true,
+        "source_binding_sha256": "f6d4ded6b7095c08a2d571c25a36b41cf16bfa8845434bee280a5b6e6a993360",
+        "source_id_sha256": "f32d8beaae3586219f803e0ab755aa289304440e358051dd76b1b5866ce3374f",
+        "write_receipt_sha256": "0e9de330c5f414d7a089467c836b9f680f0e6314a2e522e45b9e444edbeeda62"
+      }
+    },
+    {
+      "case_id": "unobserved_source_member",
+      "lane": "round_trip",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_mmcif_polymer_sequence/unobserved_source_member.cif"
+      },
+      "source_id": "unobserved_source_member",
+      "source_sha256": "118def7a7c10971fbc8cb7180f8866b9e0a73d9c97e394207b7019c4fb144d45",
+      "expected": {
+        "base_representable_state_sha256": "ef3cf2eb378554ada8f5a161c21c5ea38f2cf4d14a988370f61729f2eef6f503",
+        "base_system_snapshot_sha256": "656fca68a7b49f64b1409b49a46ffd4133c91e0f67ca9efc3e7704f4e8c462b9",
+        "base_topology_sha256": "11891212124a952a6974865ad054b64dae658f550c5db7902f5944f734352adc",
+        "canonical_carrier_source_sha256": "40e1c3524ff3236f3074c0b9df4ba5c1bed9a25a7efa87eb9fa5f0463f601b16",
+        "carrier_kind": "common_core21",
+        "carrier_source_sha256": "63fa9cb4d73e10bb8d9a0c6e4a51f008d795a41ffe564083380accb8d0e11f09",
+        "coordinate_observed_sequence_row_count": 2,
+        "coordinate_unobserved_sequence_row_count": 1,
+        "full_source_sha256": "118def7a7c10971fbc8cb7180f8866b9e0a73d9c97e394207b7019c4fb144d45",
+        "nonpoly_identity_projection_sha256": null,
+        "nonpoly_identity_record_state_sha256": null,
+        "output_byte_count": 889,
+        "output_equals_input": false,
+        "output_source_sha256": "c8043dcb717dc6149f8183c98cb10fb1f88dba2ff0c8f5a95509fa38f40646d2",
+        "polymer_sequence_projection_sha256": "b444ff0c08b3e4e3f0593a598a72e6ce6e0a77960990dc94ee9377dcc69eb3f2",
+        "polymer_sequence_row_count": 3,
+        "record_state_sha256": "c54558f82ec56bb12adde98f552c3dc016cbcd8e4b61e987cbc2f62d55de3137",
+        "round_trip_report_sha256": "e6002c955418fe353f86b49c71272d905e140f4589c72de0f10230d6afc1ac30",
+        "second_emission_byte_stable": true,
+        "source_binding_sha256": "75935f8d3772214b6d6a3d0385b2b78f388d2621659284134f1b3269bd43e93d",
+        "source_id_sha256": "b4f7b12eabcd7c029eb79cb7a8aed0e3024c3518364c9937dfaeffe7141e0f98",
+        "write_receipt_sha256": "214262ae08e76fa0db403c66692c45e53a7be40d784be6ce7573b1ccc6d678dc"
+      }
+    }
+  ]
+}

@@ -1,0 +1,586 @@
+{
+  "schema_id": "betelgeuze.v2_1_mmcif_unobserved_residue_corpus/1.0.0",
+  "corpus_id": "v2_1_strict_mmcif_source_reported_unobserved_residue_claim_envelope_v1",
+  "manifest_payload_hash_policy_id": "sha256_canonical_json_without_payload_sha256/1.0.0",
+  "payload_sha256": "003b7f870a988fd39f83ca23302edeef2cd7d7123ea72a1c0508c8ee202b4750",
+  "contracts": {
+    "all_atom_schema_id": "betelgeuze.all_atom_system/2.1.0",
+    "base_mmcif_parser_version": "1.9.0",
+    "base_mmcif_writer_version": "1.5.0",
+    "nonpoly_identity_envelope_version": "1.0.0",
+    "polymer_sequence_envelope_version": "1.0.0",
+    "envelope_version": "1.0.0",
+    "envelope_parser_version": "1.0.0",
+    "envelope_writer_version": "1.0.0",
+    "parser_name": "betelgeuze_engine_v2.molecular.mmcif_unobserved_residues",
+    "profile_id": "strict_mmcif_source_reported_unobserved_residue_envelope/1.0.0",
+    "projection_schema_id": "betelgeuze.mmcif_unobserved_residue_projection/1.0.0",
+    "record_state_schema_id": "betelgeuze.mmcif_unobserved_residue_record_state/1.0.0",
+    "source_binding_schema_id": "betelgeuze.mmcif_unobserved_residue_source_binding/1.0.0",
+    "write_receipt_schema_id": "betelgeuze.mmcif_unobserved_residue_write_receipt/1.0.0",
+    "round_trip_report_schema_id": "betelgeuze.mmcif_unobserved_residue_round_trip_report/1.0.0",
+    "projection_scope": "source_reported_unobserved_polymer_residue_claims_only",
+    "unobserved_residue_headers": [
+      "id",
+      "polymer_flag",
+      "occupancy_flag",
+      "pdb_model_num",
+      "auth_asym_id",
+      "auth_comp_id",
+      "auth_seq_id",
+      "pdb_ins_code",
+      "label_asym_id",
+      "label_comp_id",
+      "label_seq_id"
+    ],
+    "carrier_kinds": [
+      "mmcif_polymer_sequence",
+      "mmcif_polymer_sequence_nonpoly_identity"
+    ],
+    "canonical_category_orders": {
+      "mmcif_polymer_sequence": [
+        "_entity",
+        "_struct_asym",
+        "_entity_poly_seq",
+        "_pdbx_unobs_or_zero_occ_residues",
+        "_atom_site"
+      ],
+      "mmcif_polymer_sequence_nonpoly_identity": [
+        "_entity",
+        "_struct_asym",
+        "_entity_poly_seq",
+        "_pdbx_entity_nonpoly",
+        "_pdbx_nonpoly_scheme",
+        "_pdbx_unobs_or_zero_occ_residues",
+        "_atom_site"
+      ]
+    },
+    "limits": {
+      "max_input_bytes": 67108864,
+      "max_unobserved_residue_rows": 20000,
+      "max_source_id_utf8_bytes": 4096,
+      "max_selected_token_chars": 256,
+      "max_manifest_bytes": 1048576,
+      "max_case_count": 32,
+      "max_fixture_count": 8,
+      "max_fixture_bytes": 16384,
+      "max_total_fixture_bytes": 131072
+    }
+  },
+  "claim_boundary": {
+    "positive_true_fields": [
+      "source_reported_unobserved_residue_claims_preserved"
+    ],
+    "always_false_fields": [
+      "source_authenticated",
+      "auth_label_equivalence_inferred",
+      "reference_sequence_equivalence_assessed",
+      "coordinate_observation_completeness_assessed",
+      "modeled_residue_presence_assessed",
+      "modified_residue_identity_assessed",
+      "polymer_chemistry_interpreted",
+      "microheterogeneity_interpreted",
+      "chemistry_interpreted",
+      "role_assignment_interpreted",
+      "bond_topology_interpreted",
+      "bond_order_interpreted",
+      "coordination_interpreted",
+      "charge_interpreted",
+      "protonation_interpreted",
+      "missing_residue_fact_claimed",
+      "sequence_completeness_claimed",
+      "preparation_ready",
+      "parameterability_assessed",
+      "physics_supported",
+      "runtime_eligible",
+      "simulation_ready",
+      "execution_authorized",
+      "claim_safe",
+      "general_mmcif_round_trip_evidence_ready",
+      "all_format_round_trip_evidence_ready"
+    ],
+    "base_parser_default_changed": false,
+    "polymer_sequence_parser_default_changed": false,
+    "nonpoly_identity_parser_default_changed": false,
+    "missing_residue_fact_established": false,
+    "sequence_completeness_established": false,
+    "general_mmcif_round_trip_evidence_ready": false,
+    "v2_1_complete": false
+  },
+  "cases": [
+    {
+      "case_id": "category_order_variant",
+      "lane": "round_trip",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/category_order_variant.cif"
+      },
+      "source_id": "category_order_variant",
+      "source_sha256": "c5955d3c3a1ef5697f28975bb239237b39814e8348dc59641c2df1630dff61b3",
+      "expected": {
+        "base_representable_state_sha256": "9bf87486fbe50bc8e326c76d8eec02fe24e604aded52450f3e01b180daf7140e",
+        "base_system_snapshot_sha256": "11383c1d45cc2e357ddfefff3f1c322ed07becbadb81fbfb0d2923052e593661",
+        "base_topology_sha256": "11891212124a952a6974865ad054b64dae658f550c5db7902f5944f734352adc",
+        "canonical_carrier_source_sha256": "6229c59c7582a83bb27935f312030116f60b4be9543a90ac5f99770595e6a3b2",
+        "carrier_kind": "mmcif_polymer_sequence",
+        "carrier_source_sha256": "41f21490c48ad5efe57044a6e5682bdca57e94fb73666911c60bb33e24aae58b",
+        "full_source_sha256": "c5955d3c3a1ef5697f28975bb239237b39814e8348dc59641c2df1630dff61b3",
+        "nonpoly_identity_projection_sha256": null,
+        "nonpoly_identity_record_state_sha256": null,
+        "output_byte_count": 1425,
+        "output_equals_input": false,
+        "output_source_sha256": "1fd5ea881ac3cd28694cb647f713b5c8b025c062eef5b98e94df9ea26ead8f27",
+        "polymer_sequence_projection_sha256": "b444ff0c08b3e4e3f0593a598a72e6ce6e0a77960990dc94ee9377dcc69eb3f2",
+        "polymer_sequence_record_state_sha256": "d39c971fe70008a0f6419bbb68c1e9b15ebe139fdeb44e4c54ea93bbed64d196",
+        "record_state_sha256": "5591dacc55306727866f914c3a43b400705bf51bbd741bdc17a9ec22ddea7cc1",
+        "round_trip_report_sha256": "9fa2e96b448e7570aaa002f5df4d4e36209a3107145a2cd50b2740b703b175b9",
+        "second_emission_byte_stable": true,
+        "source_binding_sha256": "163ac5a2bbd8f2db1e36f16a7b18f7345956b387e727777c2a66987e94c73350",
+        "source_id_sha256": "1f2b4defbd4a7c5c2d567806a2e4ef9c93052c181d95bc457e99a7da2fb3713f",
+        "unobserved_residue_projection_sha256": "b92c1233696690e0c651699d1f465d00a4fb5aa47a59befb5d84a9166c36e92b",
+        "unobserved_residue_row_count": 1,
+        "write_receipt_sha256": "ddda7128214534af4681541c94b8de4cb0f409df5cb4f4c6a55f15ad51cfa0bb"
+      }
+    },
+    {
+      "case_id": "composed_nonpoly_carrier",
+      "lane": "round_trip",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/composed_nonpoly_carrier.cif"
+      },
+      "source_id": "composed_nonpoly_carrier",
+      "source_sha256": "02eafa17b99faffb0d5bb04976954828b0e805ce8be69f14a2040be29824aa57",
+      "expected": {
+        "base_representable_state_sha256": "92c0183c964c36053ce6d25636f6fd90d1dc8432d956cc2203a5e9d661361de2",
+        "base_system_snapshot_sha256": "a36a0f4395e27c111cd74e6b0e389b6a6e888addabe7ae58f9b03811bfa56cad",
+        "base_topology_sha256": "e31359a541d432b6243c9a90551355327d7d67c4bbc85e12fea8be4a5f438841",
+        "canonical_carrier_source_sha256": "9748ad604df0aa486a60c0718c945218b63a4615947ae9a9e4e5464107c293b7",
+        "carrier_kind": "mmcif_polymer_sequence_nonpoly_identity",
+        "carrier_source_sha256": "9748ad604df0aa486a60c0718c945218b63a4615947ae9a9e4e5464107c293b7",
+        "full_source_sha256": "02eafa17b99faffb0d5bb04976954828b0e805ce8be69f14a2040be29824aa57",
+        "nonpoly_identity_projection_sha256": "6941bc89cd71a533e57d05c76849f589fd894c1b9ffbb8d8a5cd4ece0118d9aa",
+        "nonpoly_identity_record_state_sha256": "036b44e427647e39fbaf20dbe1fa2be77573d3a6b5cf6c9d7baf75ccacfd467d",
+        "output_byte_count": 1939,
+        "output_equals_input": false,
+        "output_source_sha256": "fadeacef6da4672e9aedb436b2edb9ded7421b56b683b9955d94ac4aa077eccc",
+        "polymer_sequence_projection_sha256": "7ba0dfd474b3788151b2eb052d30d9ee31a94db5f911e6a35a61b01ba9ee5b2c",
+        "polymer_sequence_record_state_sha256": "1c7d1576249ade4295b9451bbaf7bf1a0325b33a9b1f26a80e1674ea6c108af3",
+        "record_state_sha256": "3cd04a648c5a0310ff8e5570b3a90186c5c3bd931bdf84e4fa70fe2e5d2009b7",
+        "round_trip_report_sha256": "897cd0eea50e35efdf9d77bef65284ec327b83f537e0a7797bc469a958ea58f2",
+        "second_emission_byte_stable": true,
+        "source_binding_sha256": "ff69e8e43e835d75698055cb4abb86c4694c3f324c7258dcb9b707003e080180",
+        "source_id_sha256": "611c235d17c2a2dbf02d76b993734a8ced6f05113b1ace2f2a525cfe8e425185",
+        "unobserved_residue_projection_sha256": "ccd3bb2c2cb3eb31b11d49d538b6626f2646a4b2cee960a9a706ee89f635c944",
+        "unobserved_residue_row_count": 1,
+        "write_receipt_sha256": "9c452be2fe4d40a1ebdbb374304eae80faafab609f48472fb9432313da406433"
+      }
+    },
+    {
+      "case_id": "failure_atom_missing_category",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/single_unobserved_member.cif",
+        "replacements": [
+          {
+            "old_hex": "6c6f6f705f0a5f61746f6d5f736974652e67726f75705f5044420a",
+            "new_hex": "5f706462785f756e6f62735f6f725f7a65726f5f6f63635f61746f6d732e696420310a230a6c6f6f705f0a5f61746f6d5f736974652e67726f75705f5044420a"
+          }
+        ]
+      },
+      "source_id": "failure_atom_missing_category",
+      "source_sha256": "ce79e209314b542f3b4c864eabdd030eac6e9101da9d430b88c7dc834a8924d4",
+      "expected": {
+        "error_code": "unsupported_category_surface"
+      }
+    },
+    {
+      "case_id": "failure_category_surface",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/single_unobserved_member.cif",
+        "replacements": [
+          {
+            "old_hex": "6c6f6f705f0a5f61746f6d5f736974652e67726f75705f5044420a",
+            "new_hex": "5f6368656d5f636f6d702e696420474c590a230a6c6f6f705f0a5f61746f6d5f736974652e67726f75705f5044420a"
+          }
+        ]
+      },
+      "source_id": "failure_category_surface",
+      "source_sha256": "d24727a44b840a86678db656d375b7c7ecdeb184eeb9b934e07f9d551ca9fd4c",
+      "expected": {
+        "error_code": "unsupported_category_surface"
+      }
+    },
+    {
+      "case_id": "failure_coordinate_contradiction",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/single_unobserved_member.cif",
+        "replacements": [
+          {
+            "old_hex": "41544f4d2032204f204f47202e20534552204120312033203f20322030203020312e302032302e30203f20313033205345522058204f4720310a",
+            "new_hex": "41544f4d2032204f204f47202e20534552204120312033203f20322030203020312e302032302e30203f20313033205345522058204f4720310a41544f4d20332043204341202e20414c41204120312032203f20312030203020312e302032302e30203f2031303220414c41205820434120310a"
+          }
+        ]
+      },
+      "source_id": "failure_coordinate_contradiction",
+      "source_sha256": "79c0025c7519a343c8833be9b1a969aef1d3279234c37f1d4cea0baa7a5f7960",
+      "expected": {
+        "error_code": "unobserved_residue_present_in_coordinates"
+      }
+    },
+    {
+      "case_id": "failure_duplicate_id",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/multiple_ordered_claims.cif",
+        "replacements": [
+          {
+            "old_hex": "3220592031203120582053455220313033203f20412053455220330a",
+            "new_hex": "3120592031203120582053455220313033203f20412053455220330a"
+          }
+        ]
+      },
+      "source_id": "failure_duplicate_id",
+      "source_sha256": "beec11acbb32ff8059803d9236fa0bc80b8e3bc4f647e42d7ce4aa58a79d1ece",
+      "expected": {
+        "error_code": "duplicate_or_invalid_unobserved_residue_id"
+      }
+    },
+    {
+      "case_id": "failure_duplicate_semantic_key",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/multiple_ordered_claims.cif",
+        "replacements": [
+          {
+            "old_hex": "3220592031203120582053455220313033203f20412053455220330a",
+            "new_hex": "32205920312031205820414c4120313032203f204120414c4120320a"
+          }
+        ]
+      },
+      "source_id": "failure_duplicate_semantic_key",
+      "source_sha256": "6fa26f6814c4a80ede96c6f3ac82473f3df5d35c23ab724d698bf35af7d07d33",
+      "expected": {
+        "error_code": "duplicate_unobserved_residue_identity"
+      }
+    },
+    {
+      "case_id": "failure_extension_header",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/single_unobserved_member.cif",
+        "replacements": [
+          {
+            "old_hex": "5f706462785f756e6f62735f6f725f7a65726f5f6f63635f72657369647565732e6c6162656c5f7365715f69640a",
+            "new_hex": "5f706462785f756e6f62735f6f725f7a65726f5f6f63635f72657369647565732e6c6162656c5f7365715f69640a5f706462785f756e6f62735f6f725f7a65726f5f6f63635f72657369647565732e6c6f63616c5f657874656e73696f6e0a"
+          },
+          {
+            "old_hex": "31205920312031205820414c4120313032203f204120414c4120320a",
+            "new_hex": "31205920312031205820414c4120313032203f204120414c41203220505249564154450a"
+          }
+        ]
+      },
+      "source_id": "failure_extension_header",
+      "source_sha256": "1f19a4f94cbeaffba5c26660a83d603cf7bf2f56d7ccd7797457400d9e6b6d8b",
+      "expected": {
+        "error_code": "unsupported_category_headers"
+      }
+    },
+    {
+      "case_id": "failure_header_order",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/single_unobserved_member.cif",
+        "replacements": [
+          {
+            "old_hex": "5f706462785f756e6f62735f6f725f7a65726f5f6f63635f72657369647565732e69640a5f706462785f756e6f62735f6f725f7a65726f5f6f63635f72657369647565732e706f6c796d65725f666c61670a",
+            "new_hex": "5f706462785f756e6f62735f6f725f7a65726f5f6f63635f72657369647565732e706f6c796d65725f666c61670a5f706462785f756e6f62735f6f725f7a65726f5f6f63635f72657369647565732e69640a"
+          }
+        ]
+      },
+      "source_id": "failure_header_order",
+      "source_sha256": "d3b5901bfb17c91fe9f0f65c2cb3786ea37a0184eec8eace886d30a2eb9bfe0c",
+      "expected": {
+        "error_code": "unsupported_category_headers"
+      }
+    },
+    {
+      "case_id": "failure_non_ascii",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/single_unobserved_member.cif",
+        "replacements": [
+          {
+            "old_hex": "31205920312031205820414c4120313032203f204120414c4120320a",
+            "new_hex": "31205920312031205820505249564154452dff20313032203f204120414c4120320a"
+          }
+        ]
+      },
+      "source_id": "failure_non_ascii",
+      "source_sha256": "7fddf0e01c42d022f93780a3a1824f9f2274cfede6119e81192ae4155a7b3ddd",
+      "expected": {
+        "error_code": "non_ascii_input"
+      }
+    },
+    {
+      "case_id": "failure_nonpoly_entity",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/composed_nonpoly_carrier.cif",
+        "replacements": [
+          {
+            "old_hex": "3f204120414c4120320a",
+            "new_hex": "3f204c20414c4120320a"
+          }
+        ]
+      },
+      "source_id": "failure_nonpoly_entity",
+      "source_sha256": "8bbde8e6cfcef487abb9876043f18162270c62fb1607d6b03d75ec8cbe430a69",
+      "expected": {
+        "error_code": "unobserved_residue_nonpolymer_entity"
+      }
+    },
+    {
+      "case_id": "failure_sequence_join",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/single_unobserved_member.cif",
+        "replacements": [
+          {
+            "old_hex": "31205920312031205820414c4120313032203f204120414c4120320a",
+            "new_hex": "3120592031203120582056414c20313032203f20412056414c20320a"
+          }
+        ]
+      },
+      "source_id": "failure_sequence_join",
+      "source_sha256": "21e5c0d30e79d311d8ee9239056b91471c275304699155ac9a6040132389c8a6",
+      "expected": {
+        "error_code": "unobserved_residue_sequence_join_mismatch"
+      }
+    },
+    {
+      "case_id": "failure_unknown_asym",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/single_unobserved_member.cif",
+        "replacements": [
+          {
+            "old_hex": "3f204120414c4120320a",
+            "new_hex": "3f204220414c4120320a"
+          }
+        ]
+      },
+      "source_id": "failure_unknown_asym",
+      "source_sha256": "9a30343838c38b248d7adbd29f8b72c1f91ec1cd2c9acac88ec3c2f541e41e72",
+      "expected": {
+        "error_code": "unknown_unobserved_residue_asym_id"
+      }
+    },
+    {
+      "case_id": "failure_wrong_model",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/single_unobserved_member.cif",
+        "replacements": [
+          {
+            "old_hex": "31205920312031205820414c41",
+            "new_hex": "31205920312032205820414c41"
+          }
+        ]
+      },
+      "source_id": "failure_wrong_model",
+      "source_sha256": "cdd20cc8c9c30981eb71477ed4a1e1d70176b2e43f02fcbf6c251c6622d56c1e",
+      "expected": {
+        "error_code": "unsupported_unobserved_residue_model"
+      }
+    },
+    {
+      "case_id": "failure_wrong_polymer_flag",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/single_unobserved_member.cif",
+        "replacements": [
+          {
+            "old_hex": "31205920312031205820414c41",
+            "new_hex": "31204e20312031205820414c41"
+          }
+        ]
+      },
+      "source_id": "failure_wrong_polymer_flag",
+      "source_sha256": "8079a0af116e63c871aecf6c33d7187a93b2417f659ed43b3c698808faee0b08",
+      "expected": {
+        "error_code": "unsupported_unobserved_residue_polymer_flag"
+      }
+    },
+    {
+      "case_id": "failure_zero_occupancy",
+      "lane": "parse_failure",
+      "source": {
+        "kind": "fixture_replacements",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/single_unobserved_member.cif",
+        "replacements": [
+          {
+            "old_hex": "31205920312031205820414c41",
+            "new_hex": "31205920302031205820414c41"
+          }
+        ]
+      },
+      "source_id": "failure_zero_occupancy",
+      "source_sha256": "8fb9c731660feae96fa115d012bea53d2433f8e0dd9887981d08c7029e0e346a",
+      "expected": {
+        "error_code": "unsupported_unobserved_residue_occupancy_flag"
+      }
+    },
+    {
+      "case_id": "insertion_marker_auth_alias",
+      "lane": "round_trip",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/insertion_marker_auth_alias.cif"
+      },
+      "source_id": "insertion_marker_auth_alias",
+      "source_sha256": "03164c0c42e5d0e1d4e67a836ae4fbc07739b036d6e14e926343bf96b2c9a6da",
+      "expected": {
+        "base_representable_state_sha256": "ac70b182c52a00af490e6c64d5bc9c2ad8d4437543941a146ca6f91956010cd2",
+        "base_system_snapshot_sha256": "cc1dab27c34bfaab35321c83bbb5f3effbec53a64c6e6233a8ef2772b028e8eb",
+        "base_topology_sha256": "11891212124a952a6974865ad054b64dae658f550c5db7902f5944f734352adc",
+        "canonical_carrier_source_sha256": "cecddda7c044be75f492e6194c0dce645659ce5be7b1cd1d7a36a022d071d409",
+        "carrier_kind": "mmcif_polymer_sequence",
+        "carrier_source_sha256": "f9043b5a7115a22d89eaba26cffac32a7a48c39e8e65698e5038616e654ad791",
+        "full_source_sha256": "03164c0c42e5d0e1d4e67a836ae4fbc07739b036d6e14e926343bf96b2c9a6da",
+        "nonpoly_identity_projection_sha256": null,
+        "nonpoly_identity_record_state_sha256": null,
+        "output_byte_count": 1455,
+        "output_equals_input": false,
+        "output_source_sha256": "65cccbb4f774e2a194f9f2e828ab8ab0cc20815b0b83a9f8f3ca70fc2367d6ea",
+        "polymer_sequence_projection_sha256": "b444ff0c08b3e4e3f0593a598a72e6ce6e0a77960990dc94ee9377dcc69eb3f2",
+        "polymer_sequence_record_state_sha256": "cc88301a38cb829992969b0600ec95e86a565059191c6c878025c9aaab071b8e",
+        "record_state_sha256": "9efcc2d7e88af3b62bfd1074bfac8ee1d0d74e68f933553a1075d6115e841c02",
+        "round_trip_report_sha256": "d018b84fd677f7c8fe35830c02f702052432fa88d1e1a3edf55ef1974e7b65ea",
+        "second_emission_byte_stable": true,
+        "source_binding_sha256": "5084877f9ba1f4a7208993547942c61c33d32314621871c744f6a2cd5d33453a",
+        "source_id_sha256": "8bb2d7804c5d593f8a347e18c8fc5069dea0d2525b86be8f8484fca355d3d0c0",
+        "unobserved_residue_projection_sha256": "aa10ebfcbe332ff8fb01074796693424f824dd68447a99c5c6b13d31fd9abdeb",
+        "unobserved_residue_row_count": 1,
+        "write_receipt_sha256": "8f999e85d535d95014fa92347f65c2835621c8f2bba6b1e484d1c94c8cae639f"
+      }
+    },
+    {
+      "case_id": "multiple_ordered_claims",
+      "lane": "round_trip",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/multiple_ordered_claims.cif"
+      },
+      "source_id": "multiple_ordered_claims",
+      "source_sha256": "b6c44885d570f8076795341ec21bdd72258241b77575b0e85db413ee368cab91",
+      "expected": {
+        "base_representable_state_sha256": "683319e836345f2c030d6b0788bdb52e657fc4a71d927ee0be5aa2e36d8dc795",
+        "base_system_snapshot_sha256": "ca9b961cf90b29db3bac155abc8ac66dd2acce4cf7879d1728b24b62ea3083aa",
+        "base_topology_sha256": "cb2a41a36d0c4edf8216baa86adfca3a018a5045aed5c54fd095079ec10b897c",
+        "canonical_carrier_source_sha256": "676564910862fc3ff0895bae952101f6127b7e26664c25c9f938d4c40d0ed58c",
+        "carrier_kind": "mmcif_polymer_sequence",
+        "carrier_source_sha256": "2f56486c1af4d67674ed2d41a7e7317d931920a1b9910b4ca50be8cddf9ff9b6",
+        "full_source_sha256": "b6c44885d570f8076795341ec21bdd72258241b77575b0e85db413ee368cab91",
+        "nonpoly_identity_projection_sha256": null,
+        "nonpoly_identity_record_state_sha256": null,
+        "output_byte_count": 1464,
+        "output_equals_input": false,
+        "output_source_sha256": "3392c4f57fe1a84a2d376e250f9ce25e087111ac2ebf93acb6496e30f31ae3f5",
+        "polymer_sequence_projection_sha256": "9dc9d7748e54a3e26c38670dfd6cf3848394e0ba68f6e73037b3a8e3a0e98f42",
+        "polymer_sequence_record_state_sha256": "b537428e2f2a1bf9a02d12714130f76633460e9388f977c177cc54253b88d002",
+        "record_state_sha256": "2956eda08878c67b6086273fd4ee19b5e64b7fb771eeb2897c6e7ec352ce881b",
+        "round_trip_report_sha256": "a32bc58a4d53612c3669f7a1195428db84c091fa2a61ac332b6d528053de7660",
+        "second_emission_byte_stable": true,
+        "source_binding_sha256": "3248fe1ebb77ab466d83c8c66bbefd29036b012ccd673aab68afe61e4fb9127b",
+        "source_id_sha256": "3dee8a4e0027289e48e05f6389620887e531f697eb43c0b187ae2827104cce5e",
+        "unobserved_residue_projection_sha256": "b701c8bca915ca0ce991ae35f0ef46437789217079d194fe8680c61c7623ef3c",
+        "unobserved_residue_row_count": 2,
+        "write_receipt_sha256": "48279073df0d31803cc96dbe9368715b8dae50ae7b5aee89387e233c459b669c"
+      }
+    },
+    {
+      "case_id": "shared_entity_multiple_asym",
+      "lane": "round_trip",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/shared_entity_multiple_asym.cif"
+      },
+      "source_id": "shared_entity_multiple_asym",
+      "source_sha256": "3ec17790680d24c9898e7ac2c7640db1607f1df6c98dee094238149d5613be17",
+      "expected": {
+        "base_representable_state_sha256": "a79561aedce860d2e1e8799f29fb4265d3b14df4b15ec4b780f318d1bcd94342",
+        "base_system_snapshot_sha256": "5ec522cf113ba12388be07d24d2f186436fb58c3f469206724161f850d8bceae",
+        "base_topology_sha256": "25f2bc33f1c4687788e48cc0a8164fa2b44fd88c92069ef561a01dd85493abfc",
+        "canonical_carrier_source_sha256": "d3bd5feec0a5e42689b7d88a8c0e0e59829c9f689766a8e86f7c89ea708fdd74",
+        "carrier_kind": "mmcif_polymer_sequence",
+        "carrier_source_sha256": "da616cf0ccc80cf29273599253c3c14e20e37465c256b5e36c4faf496905cdea",
+        "full_source_sha256": "3ec17790680d24c9898e7ac2c7640db1607f1df6c98dee094238149d5613be17",
+        "nonpoly_identity_projection_sha256": null,
+        "nonpoly_identity_record_state_sha256": null,
+        "output_byte_count": 1603,
+        "output_equals_input": false,
+        "output_source_sha256": "c664af4fc7c05d29793ed0465e39cd9070cc39bad59ce287690298f51f177244",
+        "polymer_sequence_projection_sha256": "c3645e4c81ce524a7cd8b105da8f608da6b72de19efa06fb3132d4f1f6c42316",
+        "polymer_sequence_record_state_sha256": "4d042863346f9a443e75eb9ba9c9a31cf38c964f2f42927e7f0f44534d092a57",
+        "record_state_sha256": "083a33f84c06efdab42eee1bfd6eeb7ff2184d267fe7f4fa7ef9022f0d879c32",
+        "round_trip_report_sha256": "6d930135fd15beee73573d76da13e3ec56503669af786bfef2dd5e69ddca94b5",
+        "second_emission_byte_stable": true,
+        "source_binding_sha256": "7ee713b8f2e67e2a4229f6f9ce7de1fb7352f89771c0522148604852697570ec",
+        "source_id_sha256": "89745b5a3670165744c6f85a4a9636550b24e37a8c98c23e03ba9abdc7970bfc",
+        "unobserved_residue_projection_sha256": "cfe079787f12e4b7364d83da6ed8f95381044cf0718828eb93c9d88cbdbe2ea6",
+        "unobserved_residue_row_count": 2,
+        "write_receipt_sha256": "d40e5c959f1963d75b51449eebfc27d660cd5d1c400d24289600aa88b88ab1c1"
+      }
+    },
+    {
+      "case_id": "single_unobserved_member",
+      "lane": "round_trip",
+      "source": {
+        "kind": "fixture",
+        "path": "tests/fixtures/v2_1_mmcif_unobserved_residues/single_unobserved_member.cif"
+      },
+      "source_id": "single_unobserved_member",
+      "source_sha256": "85bdfd12e82d770c769a2aac52925a5609474fe470ec03b2a1f8c6e8ee63fb60",
+      "expected": {
+        "base_representable_state_sha256": "9bf87486fbe50bc8e326c76d8eec02fe24e604aded52450f3e01b180daf7140e",
+        "base_system_snapshot_sha256": "9ea01eb71a3b542deb4a66e4e589e70701f481aa1b2ed1c526cdba8ca3eb08f1",
+        "base_topology_sha256": "11891212124a952a6974865ad054b64dae658f550c5db7902f5944f734352adc",
+        "canonical_carrier_source_sha256": "6229c59c7582a83bb27935f312030116f60b4be9543a90ac5f99770595e6a3b2",
+        "carrier_kind": "mmcif_polymer_sequence",
+        "carrier_source_sha256": "5c3e059fec1adcdbab6e41897d7d69acf74262f889aeddfca1c4351156a2a216",
+        "full_source_sha256": "85bdfd12e82d770c769a2aac52925a5609474fe470ec03b2a1f8c6e8ee63fb60",
+        "nonpoly_identity_projection_sha256": null,
+        "nonpoly_identity_record_state_sha256": null,
+        "output_byte_count": 1425,
+        "output_equals_input": false,
+        "output_source_sha256": "1fd5ea881ac3cd28694cb647f713b5c8b025c062eef5b98e94df9ea26ead8f27",
+        "polymer_sequence_projection_sha256": "b444ff0c08b3e4e3f0593a598a72e6ce6e0a77960990dc94ee9377dcc69eb3f2",
+        "polymer_sequence_record_state_sha256": "d39c971fe70008a0f6419bbb68c1e9b15ebe139fdeb44e4c54ea93bbed64d196",
+        "record_state_sha256": "5591dacc55306727866f914c3a43b400705bf51bbd741bdc17a9ec22ddea7cc1",
+        "round_trip_report_sha256": "b69e574c43e3e81424af32e745f713e53f43a22f23b0f78525518bd65450b1c9",
+        "second_emission_byte_stable": true,
+        "source_binding_sha256": "422e72f18aee9d1881519406f119875d56fd544f554620e3e5e8d2cfdfdd5b8c",
+        "source_id_sha256": "d0809b9ab573d90604acb0d7114a2bff88a1ca05eab565008e9748e85e4701ca",
+        "unobserved_residue_projection_sha256": "b92c1233696690e0c651699d1f465d00a4fb5aa47a59befb5d84a9166c36e92b",
+        "unobserved_residue_row_count": 1,
+        "write_receipt_sha256": "472396bf430ab9cf5f684af8153f202a7b95cd73c21383125a9107d921a91cb6"
+      }
+    }
+  ]
+}
