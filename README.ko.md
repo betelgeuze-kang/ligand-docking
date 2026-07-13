@@ -2,46 +2,92 @@
 
 [English README](README.md)
 
-이 저장소는 로컬 납품 방식의 분자동역학 및 리간드 검증 스택입니다. 핵심 방향은 물리 기반 `O(N)` 실행 경로, 제한된 AI residual 보정, 재현 가능한 게이트, 그리고 로컬 데이터는 노출하지 않으면서 검토 가능한 납품 산출물을 만드는 것입니다.
+이 저장소는 의도적으로 분리된 두 표면을 포함합니다.
 
-GitHub에는 소스코드, 설정, 테스트, 문서, 스키마, 납품 템플릿을 저장합니다. 분자동역학 실행 데이터와 무거운 로컬 산출물은 의도적으로 제외합니다.
+1. **Independent Engine v2** — 버전형 분자 계약, 제한된 희소 기하,
+   CPU 기준 AI·물리 합성 primitive, 엄격한 checkpoint, 제한형 PDB/SDF
+   입력, 도킹 검색 scaffold, 실패 행을 보존하는 benchmark ledger입니다.
+2. **레거시·제품 납품 스택** — validated runner, evidence gate, API,
+   wetlab packet, CASP/CAMEO 준비, 제한형 로컬 납품 도구입니다.
+
+V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후보 예산이
+고정될 때의 **조건부 제한 차수 `O(N)` 알고리즘 계약**을 갖습니다. 이는
+저장소 전체나 장거리 물리의 실측 end-to-end `O(N)` 증거가 아닙니다.
+
+## Engine v2 현재 상태
+
+현재 구현 단계:
+
+```text
+v2_g_bounded_scientific_scaffolds
+```
+
+구현되어 GitHub-hosted CPU CI로 검증되는 범위:
+
+- 정규 all-atom 상태, 검증 단계, SHA-256 identity
+- 고정 용량 희소 radius geometry와 periodic image-shift gradient
+- 정확한 좌표 미분을 갖는 scalar-energy AI 기준 모델
+- matrix-free projection, torsion, temporal, physics gate primitive
+- fail-closed CPU 오케스트레이터와 엄격한 runtime/checkpoint fingerprint
+- Python 3.10–3.12용 독립 `betelgeuze-engine-v2` wheel
+- 단일 모델 PDB와 단일 분자 SDF V2000 제한형 파서
+- 독립 physics term registry 계약
+- 결정론적 제한형 torsion/rigid 도킹 후보·검색 scaffold
+- 입력 case마다 정확히 하나의 성공/실패 행을 갖는 benchmark manifest
+
+이 표면은 calibrated docking, MD, free energy, GPU 또는 고객 제품 기능이
+아닙니다. 현재 모든 V2 capability는 `claim_safe=false`,
+`customer_execution_enabled=false` 상태입니다.
+
+먼저 읽을 문서:
+
+- `docs/engine_v2_status.md`
+- `docs/engine_v2_public_api.md`
+- `config/independent_engine_v2_capabilities.yaml`
+- `docs/entrypoints.md`
 
 ## 저장소 구성
 
 | 영역 | 역할 |
 | --- | --- |
-| `core/` | 물리 기반 MD 엔진 핵심 로직, integrator, topology, AI residual routing, spatial kernel, GPU/runtime 지원 코드입니다. |
-| `rust_engine/` | Rust/HIP 가속 엔진 스캐폴딩과 native build 표면입니다. 빌드 결과물은 Git에서 제외됩니다. |
-| `tools/` | 게이트, manifest, 납품 bundle, wetlab packet, evidence ledger, benchmark summary, 상용화 readiness를 만드는 CLI 도구입니다. |
-| `tests/` | 엔진 동작, 납품 게이트, 검증 산출물, packet builder, regression guard에 대한 테스트입니다. |
-| `config/` | target policy, calibration input, scorecard, acceptance threshold, runtime preset, gate 설정입니다. |
-| `docs/` | 아키텍처 노트, 검증 계획, 로컬 납품 runbook, wetlab handoff 문서, 논문 초안, target-family roadmap입니다. |
-| `docs/wetlab_packets/` | 파트너/실험팀 전달용 lightweight wetlab packet 템플릿과 CSV control 파일입니다. |
-| `benchmark/` | 정확도 및 성능 benchmark entry point입니다. |
-| `train/` | residual model training pipeline entry point입니다. |
-| `api/`, `viewer/`, `deploy/`, `monitoring/` | 로컬 서비스, 시각화, 배포, 운영 모니터링 스캐폴딩입니다. |
-| `requirements*.txt` | runtime, development, API, training, deployment, optional dependency를 나눈 파일입니다. |
+| `betelgeuze_engine_v2/` | 독립 V2 계약, 분자 상태, 희소 기하, AI·수학 primitive, strict ingest, physics registry, 도킹·benchmark scaffold |
+| `packaging/engine-v2/` | 독립 `betelgeuze-engine-v2` 배포 metadata |
+| `core/`, `betelgeuze_engine/` | 레거시 물리·runtime·호환 표면. V2 wheel이 암묵적으로 import하지 않습니다. |
+| `api/`, `betelgeuze_product/` | validated-runner 제품 API와 납품 orchestration |
+| `tools/` | gate, manifest, bundle, benchmark/accounting, 운영 command |
+| `tests/` | V2, 레거시 runtime, API, evidence, 납품 gate 테스트 |
+| `config/` | capability 정책, target preset, threshold, runtime profile, gate 설정 |
+| `docs/` | 아키텍처, 주장 경계, reviewer entrypoint, 납품 runbook, wetlab 문서, roadmap |
+| `casp17/` | CASP17 로컬 operator/review scaffold와 상태 문서 |
 
-## GitHub에 올리지 않는 것
+## Independent Engine v2 빠른 시작
 
-`.gitignore`를 통해 아래 항목은 GitHub에 올라가지 않도록 제외했습니다.
+```bash
+python3 -m venv .venv-v2
+source .venv-v2/bin/activate
+python -m pip install --upgrade pip
+python -m pip install "build>=1.2,<2" numpy==1.26.4
+python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+python tools/build_engine_v2_wheel.py --output-dir dist-engine-v2
+python -m pip install --no-deps dist-engine-v2/*.whl
+python -m pip check
+```
 
-- `data/`, `runs/`, `output/`, `logs/`, `models/`, `archives/`, `tmp/`, `runtime/cache/`
-- `.env`, `.env.*`, 로컬 agent metadata, virtualenv, Python cache, test cache
-- `*.so`, `*.dll`, `*.o`, Rust `target/`, 다운로드된 로컬 tool bundle 같은 build/native 산출물
-- `*.h5`, `*.npz`, `*.pt`, `*.pth`, `*.onnx`, `*.tar.gz`, `*.tar.zst` 같은 대형 모델/배열/압축 산출물
+기계 판독 가능 상태 확인:
 
-즉 GitHub에는 재현 가능한 구현과 문서가 올라가고, 무거운 MD trajectory, 생성 dataset, local model checkpoint, 납품 output은 로컬에 남기는 구조입니다.
+```bash
+python - <<'PY'
+from betelgeuze_engine_v2.capabilities import capability_snapshot
+import json
+print(json.dumps(capability_snapshot(), indent=2, sort_keys=True))
+PY
+```
 
-## 핵심 원칙
+루트 API는 `ENGINE_API_VERSION`으로 관리됩니다. V2-G의 `io`, `docking`,
+`benchmark`, registry, runtime submodule은 배포 버전 `1.0.0` 전까지
+provisional입니다. 자세한 정책은 `docs/engine_v2_public_api.md`에 있습니다.
 
-1. 기본 계산 경로는 `O(N)`을 유지합니다.
-2. 속도를 위해 과학적 정확도를 희생하지 않습니다.
-3. AI는 물리 엔진을 대체하지 않고, 제한된 residual 보정으로만 사용합니다.
-4. provenance, wetlab evidence, queue 상태, 납품 gate가 불완전하면 fail-closed로 막습니다.
-5. 생성된 evidence는 fingerprint와 provenance를 갖추고, 소스코드와 분리합니다.
-
-## 빠른 시작
+## 모노레포 개발 환경
 
 ```bash
 python3 -m venv .venv
@@ -50,210 +96,82 @@ pip install -r requirements.txt
 pip install -r requirements-dev.txt
 ```
 
-납품 게이트 관련 핵심 테스트만 빠르게 실행:
+표준 V2 집중 테스트:
 
 ```bash
-python3 -m pytest -q \
-  tests/unit/test_build_local_delivery_verdict_gate.py \
-  tests/unit/test_validate_wetlab_tcruzi_pde_allatom_rescue_attempt.py \
-  tests/unit/test_run_wetlab_tcruzi_pde_allatom_rescue.py
+python -m pytest -q \
+  tests/unit/test_engine_v2_contracts_molecular.py \
+  tests/unit/test_engine_v2_sparse_geometry_features.py \
+  tests/unit/test_engine_v2_ai_core.py \
+  tests/unit/test_engine_v2_periodic_energy.py \
+  tests/unit/test_engine_v2_orchestrator_contract.py \
+  tests/unit/test_engine_v2_runtime_checkpoint_contracts.py \
+  tests/unit/test_engine_v2_packaging_guards.py \
+  tests/unit/test_engine_v2_bounded_scaffolds.py \
+  tests/unit/test_engine_v2_post_merge_state.py
 ```
 
-로컬 납품 verdict gate 실행:
-
-```bash
-python3 tools/validate_wetlab_tcruzi_pde_allatom_rescue_attempt.py
-python3 tools/build_local_delivery_verdict_gate.py
-```
-
-이 verdict gate는 필수 P0 evidence, wetlab 상태, delivery readiness 조건이 모두 충족되기 전까지 의도적으로 fail-closed 됩니다.
+`.github/workflows/ci-engine-v2-main.yml`은 관련 PR과 V2 관련 `main` push에서
+Python 3.10, 3.11, 3.12로 같은 계약을 재검증합니다.
 
 ## 제품 API (`/simulate`)
 
-HTTP API 제품 surface는 **ligand HTVS 및 backmapping scoring**만 지원하며, operator-approved validated runner profile을 통해서만 실행됩니다. 범용 MD 시뮬레이션은 지원하지 않습니다.
+HTTP 제품 표면은 **validated-runner ligand HTVS와 backmapping scoring만**
+지원합니다. 범용 MD 및 Engine v2 고객 실행은 의도적으로 지원하지 않습니다.
 
 ```bash
 pip install -r requirements-api.txt
 uvicorn api.main:app --host 127.0.0.1 --port 8000
 ```
 
-`runner_profile_id` 없이 `/simulate`를 호출하면 422/400과 함께 unsupported-scope 응답을 반환합니다.
+승인된 `runner_profile_id`가 없으면 요청은 fail-closed 됩니다.
 
-## 주요 워크플로우
+## 로컬 evidence와 납품
 
-| 워크플로우 | 주요 entry point |
-| --- | --- |
-| 로컬 납품 preflight | `tools/run_local_delivery_preflight.py`, `tools/build_local_delivery_bundle.py`, `tools/validate_local_delivery_bundle.py` |
-| P0 납품 verdict | `tools/build_local_delivery_verdict_gate.py`, `docs/local_delivery_p0_gate.md`, `docs/local_delivery_verdict_template.md` |
-| PDE rescue provenance | `tools/run_wetlab_tcruzi_pde_allatom_rescue.py`, `tools/validate_wetlab_tcruzi_pde_allatom_rescue_attempt.py` |
-| 정확도 및 regression gate | `tools/validate_accuracy_gate.py`, `tools/check_strict_release_regression.py`, `benchmark/accuracy_bench.py` |
-| nightly/local 운영 | `tools/run_nightly_screening_batch.py`, `tools/run_nightly_ops.sh` |
-| 상용화 readiness | `tools/build_commercialization_readiness_report.py`, `tools/build_ligand_scaleup_suite_status.py`, local-delivery 문서, 생성된 verdict artifact |
+`data/`, `runs/`, trajectory, checkpoint, 로컬 bundle, log, cache 같은 생성·민감
+산출물은 GitHub에서 제외됩니다. Clean clone에는 소스, 테스트, schema,
+lightweight figure, template이 들어 있지만 로컬 evidence gate나 과학 성능을
+증명하지는 않습니다.
 
-## 로컬 납품 문서
-
-납품 준비 상태를 볼 때는 아래 문서부터 보면 됩니다.
+제한형 납품 검토는 다음 문서부터 시작합니다.
 
 - `docs/local_delivery_runbook.md`
-- `docs/local_delivery_p0_gate.md`
-- `docs/local_delivery_manifest_template.md`
-- `docs/local_delivery_bundle_schema.md`
-- `docs/local_delivery_verdict_template.md`
-- `docs/local_delivery_engine_provenance.md`
 - `docs/local_delivery_claim_policy.md`
-- `docs/post_green_improvement_plan.md`
+- `docs/local_delivery_bundle_schema.md`
+- `docs/broad_claim_unlock_roadmap.md`
 
-## CASP17 내부 물리 예측 lane
+필요한 산출물이 재생성되거나 검토된 bundle로 제공되기 전까지 로컬 evidence
+validator는 의도적으로 fail-closed 됩니다.
 
-이 저장소에는 현재 CASP17 참가 준비용 내부 물리 lane이 포함되어 있습니다. 활성 lane은 로컬 분자동역학/coarse-grain physics stack 안에서만 동작하며, AlphaFold, ColabFold, ESMFold, OmegaFold, public/template 구조, current-target native lookup, 타 팀 모델을 사용하지 않습니다.
+## CASP17 및 운영 lane
 
-2026-06-02 KST 기준 로컬 상태:
-
-- CASP17 workbench 상태는 `ready_for_operator_fill`이고, 현재 증명된 최고 로컬 단계는 여전히 `review_quality`입니다.
-- 현재 target 정리는 green입니다. target model folder `19/19`, target object folder/viewer/projection `58/58/58`, 3D molecular object atlas는 protein folder `24`, object folder `68`개입니다.
-- current package preflight는 `19/19` target에서 green입니다. 파일, 포맷, author field, sidechain repack 상태, sha256 accounting이 준비되어 있습니다.
-- official upload queue는 의도적으로 partial입니다. 현재 target `10/19`개만 operator upload-review-ready이고, `9/19`개는 deadline 또는 official-target 상태 때문에 blocked입니다.
-- prospective strict-blind escrow는 `19/19` target에서 준비됐지만, current-target native가 아직 pending이므로 competitive proof는 `0`입니다.
-- MassiveFold external model-selection input은 `15/15` ready입니다. 단, external no-native review evidence일 뿐 internal prediction proof는 아닙니다.
-- Organic ligand LDDT-PLI/BiSyRMSD closure는 batch operator fill kit로 묶였지만, 아직 candidate `0/7`, field `0/35`만 complete입니다.
-- Win-tier proof는 계속 fail-closed입니다. strict-blind slot `0/40`, metric row `0/440`, required file `0/480`, sidechain-native benchmark `0/40`입니다.
-
-주요 현재 문서와 artifact:
+변경 가능성이 큰 CASP17 상세 상태는 다음 문서에서 관리합니다.
 
 - `casp17/WORKBENCH.md`
 - `casp17/CASP17_CURRENT_STATUS_REPORT.md`
 - `casp17/CASP17_WIN_TIER_GOAL.md`
-- `casp17/CASP17_ORGANIC_LIGAND_METRIC_BATCH_OPERATOR_FILL_KIT.md`
-- `casp17/CASP17_3D_MOLECULAR_OBJECT_ATLAS.md`
-- `casp17/CASP17_CURRENT_UPLOAD_QUEUE.md`
-- `docs/casp17_participation_gate_2026-05-21.md`
-- `runs/casp17_readiness_dashboard_current.json`
-- `runs/casp17_win_tier_threshold_packet_current.json`
-- `runs/casp17_publication_figure_packet_current.json`
 
-`runs/`와 `casp17/` 아래 생성된 CASP17 render/data mirror는 로컬 산출물이며 raw generated data로 커밋하지 않는 것이 기본 원칙입니다.
+이들은 로컬 준비·operator review 표면이며 제출, leaderboard, win-tier 증거가
+아닙니다.
 
-## 현재 검증 스냅샷
+## 주장 경계
 
-업데이트: 2026-05-19 KST. 산출물 스냅샷: 2026-05-18 KST.
+현재 허용되는 표현:
 
-![T. cruzi PDE 실제 MD Dynamics Viewer 캡처](docs/figures/webviewer_tcruzi_pde_actual_2026-05-15.png)
+- V2-G 제한형 CPU 기준 계약과 scaffold가 구현되고 테스트됐습니다.
+- 독립 wheel은 Python 3.10–3.12의 clean environment에서 설치됩니다.
+- strict ingest는 source hash를 기록하고 화학을 조용히 추론하지 않습니다.
+- docking·benchmark ledger는 실패 candidate/case를 제거하지 않고 보존합니다.
+- 제한형 로컬 납품 주장은 별도의 evidence gate와 검토된 로컬 산출물을 따릅니다.
 
-![T. cruzi PDE 3V94 chain B 실제 분자구조 렌더](docs/figures/tcruzi_pde_3v94_chainB_structure_actual_2026-05-15.png)
+추가 증거 없이 허용되지 않는 표현:
 
-첫 번째 이미지는 `surface-label=tcruzi_pde_allatom_review_packet`을 로드한 실제 `viewer/index.html` 브라우저 캡처를 README용으로 프레이밍한 것입니다. 두 번째 이미지는 로컬 분석에 사용된 `runs/tcruzi_pde_strict_external_openmm/tcruzi_pde_3v94_chain_B.pdb`와 `runs/tcruzi_pde_strict_external_openmm/tcruzi_pde_chain_B_openmm_ca_md.npy`를 기반으로 만든 AlphaFold 스타일의 결정적 PyMOL 렌더입니다. 정확한 claim 경계와 수치는 아래 표를 기준으로 봅니다.
+- calibrated docking 정확도 또는 광범위한 virtual screening 성능
+- 검증된 force field, MD, MM/GBSA, FEP, binding free energy
+- CUDA/ROCm/HIP parity 또는 가속
+- wetlab-proven hit
+- 자동 scorer/router/platform 승격
+- 광범위한 상업용 신약개발 플랫폼
 
-manifest에 명시된 로컬 T. cruzi PDE OpenMM artifact가 존재하면 두 README 이미지는 `python3 tools/render_readme_molecular_figures.py`로 다시 생성할 수 있습니다. 이미 검증된 asset 주변의 manifest만 갱신할 때만 `--skip-browser` 또는 `--skip-pymol`을 사용합니다. 현재 provenance manifest는 `docs/figures/readme_molecular_figures_manifest_current.json`에 기록됩니다.
-
-`runs/` 아래 runtime artifact는 로컬에만 남고 Git에서는 제외됩니다. 아래 표는 로컬에서 어떤 파일을 먼저 열어야 하는지와 현재 해석을 요약합니다.
-
-| Lane | 현재 상태 | 주요 로컬 artifact | 먼저 볼 데이터 | 해석 |
-| --- | --- | --- | --- | --- |
-| 제한 로컬 납품 | Green | `runs/local_delivery_verdict_gate_current.json` | `delivery_ready=true`, `verdict=delivery_ready`, `p0_blocker_count=0` | 제한 로컬 scope에서는 queue와 verdict가 같은 green 상태입니다. |
-| 상용화 gap/readiness accounting | Tracked local scope closed | `runs/commercialization_readiness_current.json`, `runs/commercialization_gap_burndown_current.json` | `tracked_readiness_accounting_closed=true`, `tracked_gap_accounting_closed=true`, `blocked_count=0`, `parked_or_review_only_blocked_count=2` | active tracked blocker는 0개입니다. blocked bucket에 남은 2개 row는 delivery blocker가 아니라 parked/review-only 감사 항목입니다. |
-| 납품 claim 경계 | Restricted | `docs/local_delivery_claim_policy.md` | `kinase,gpcr,ion_channel` | transporter, CA2/PXR, broad IDP, broad all-atom, broad platform, unattended decision-making은 claim 밖입니다. |
-| 상용툴 정확도 parity | Restricted for broad claim | `runs/accuracy_parity_scorecard_current.json` | `status=blocked_accuracy_parity`, `pass=4`, `restricted_pass=1`, `blocked=0` | rank-rescue lane의 ligand ranking metric은 통과했지만 broad GPCR/Schrodinger-class claim promotion은 `broad_gpcr_claim_not_allowed`로 계속 잠겨 있습니다. pose geometry, OpenMM, structure, wetlab translation 축은 pass입니다. router/platform 배포 claim은 별도입니다. |
-| family refresh 재현성 | Green | `runs/family_expansion_refresh_current.json` | `overall_ok=true`, `step_count=137`, `failed_count=0` | 현재 packet chain은 로컬에서 재현 가능합니다. |
-| ligand scale-up suite | Tracked suite green | `runs/ligand_scaleup_suite_status_current.json` | `commercialization_ready_suite_count=3`, `pending_suite_ids=[]` | 제한된 scale evidence이며 broad discovery parity 주장은 아닙니다. |
-| T. cruzi PDE selected all-atom | Green | `runs/wetlab_selected_allatom_gate_burndown_packet_current.json` | `hard_block_count=0`, `selected_allatom=pass` | atomized local-min overlay로 selected all-atom hard block 6개를 닫았습니다. |
-| PDE atomized ligand local-min | Green | `runs/wetlab_tcruzi_pde_atomized_parameterization_minimization_packet_current.json` | `parameterization_ready_count=7`, `protein_local_minimization_ready_count=7`, `validated_repair_count=7` | 7/7 parameterization + protein-ligand local minimization evidence가 생성됐습니다. |
-| OpenMM/structure parity evidence | Green | `runs/openmm_2bead_strict_multitarget_current_summary.json`, `runs/structure_refinement_scorecard_current.json` | OpenMM target `11`, structure true-metric backend `internal_deterministic_ca_true_metrics` | 두 축 모두 최신 scorecard에서 pass입니다. |
-| GPCR A1 independent repeat | Green for tracked ranking evidence | `runs/gpcr_rank_rescue_crossfit_repeat_r1_evidence_packet_current.json` | PR-AUC `0.8719`, PR CI-low `0.7612`, top20 `1.00`, blockers `[]` | 2026-05-18 independent repeat + out-of-fold crossfit replay가 ranking gate를 통과했습니다. scorer deployment/router promotion은 별도 claim으로 잠겨 있습니다. |
-
-## T. cruzi PDE 데이터 흐름
-
-현재 PDE selected all-atom 경로는 hard block이 닫혔고, tracked accuracy scorecard에는 blocked metric row가 없습니다. science accuracy frontier는 restricted-ready이지만 broad wetlab/platform, broad GPCR, OpenMM/Schrodinger-class parity claim은 prospective wetlab evidence, formal broad-claim review, scorer/router promotion gate, R9 public benchmark evidence receipt, broader platform guardrail이 생길 때까지 별도 claim으로 둡니다. GPCR target-held-out/guarded-100k 입력은 ready로 추적되지만 claim-approved는 아닙니다. R9 public benchmark work-order는 로컬 PDBBind/CASF pose 결과에서 `seeded_rows=8`, `prefilled_operator_fields=40`, `pending_operator_fields=32`, `experimental_deltaG_prefilled=8`로 선채움됐고, pending field는 license/DockQ/lDDT-PLI/internal refine free-energy = `8/8/8/8`로 분리됩니다. experimental ΔG pending은 `0`이고 ligand pose artifact는 8개 모두 있으며 로컬 CASF tar archive에는 ligand-pose member `23062`개가 있지만 receptor-coordinate member는 `0`개라서, native receptor/complex coordinate row, interaction-metric source, internal-ΔG source는 아직 `8/8/8`개가 비어 있습니다. 후보 확장, metric 진단, atomization, parameterization, local minimization evidence를 분리해서 관리합니다.
-
-| 단계 | 로컬 artifact | 현재 데이터 | 읽는 법 |
-| --- | --- | --- | --- |
-| Translation evidence scan | `runs/wetlab_tcruzi_pde_translation_evidence_probe_current.json` | 후보 score row `29568`, energy-pass row `16`, unique energy-hit ligand `7`, core-pass ligand `0` | 원천 pool의 energy/geometry split은 기록으로 유지합니다. |
-| Atomized ligand draft | `runs/wetlab_tcruzi_pde_atomized_ligand_draft_packet_current.json` | RDKit all-atom draft `7/7`, pseudo-anchor orientation `6/7` | 좌표 초안 substep은 완료됐습니다. |
-| Parameterization/local minimization | `runs/wetlab_tcruzi_pde_atomized_parameterization_minimization_packet_current.json` | `parameterization_ready_count=7`, `protein_local_minimization_ready_count=7`, `validated_repair_count=7`, `hard_block_count=0` | 7/7 ligand에 대해 parameterization + protein-ligand local minimization evidence를 만들었습니다. |
-| All-atom review overlay | `runs/wetlab_tcruzi_pde_allatom_review_packet_current.json` | `translation_gate_focus_status=pass`, `focus_shortlist_tier=tier2_silver`, `recommended_next_expensive_lane=atomized_openmm_local_min_validated_repair` | validated atomized row가 review overlay로 들어가 selected all-atom gate를 통과했습니다. |
-| Selected all-atom burndown | `runs/wetlab_selected_allatom_gate_burndown_packet_current.json` | `commercial_hard_gate_pass_v2=true`, `hard_block_count=0` | 기존 hard block 6개는 닫혔습니다. |
-
-고정 PDE hard threshold는 아래와 같습니다.
-
-| Metric | Pass threshold |
-| --- | ---: |
-| `binding_energy_proxy` | `<= -0.55` |
-| `mean_min_distance_A` | `<= 3.10 A` |
-| `stability_score` | `>= 0.32` |
-
-## 로컬 결과 데이터 읽는 법
-
-artifact를 다시 만든 뒤에는 아래 명령으로 큰 trajectory payload 없이 핵심 summary field만 확인할 수 있습니다.
-
-```bash
-python3 - <<'PY'
-import json
-for path in [
-    "runs/local_delivery_verdict_gate_current.json",
-    "runs/commercialization_readiness_current.json",
-    "runs/commercialization_gap_burndown_current.json",
-    "runs/accuracy_parity_scorecard_current.json",
-    "runs/wetlab_tcruzi_pde_atomized_parameterization_minimization_packet_current.json",
-    "runs/wetlab_selected_allatom_gate_burndown_packet_current.json",
-    "runs/gpcr_rank_rescue_crossfit_repeat_r1_evidence_packet_current.json",
-]:
-    data = json.load(open(path, encoding="utf-8"))
-    print("\n##", path)
-    for key, value in (data.get("summary", {}) or {}).items():
-        if key in {
-            "status",
-            "delivery_ready",
-            "verdict",
-            "parameterization_ready_count",
-            "protein_local_minimization_ready_count",
-            "validated_repair_count",
-            "hard_block_count",
-            "tracked_readiness_accounting_closed",
-            "tracked_gap_accounting_closed",
-            "raw_blocked_bucket_count",
-            "parked_or_review_only_blocked_count",
-            "ranking_pr_auc",
-            "ranking_pr_auc_ci_low",
-            "ranking_topk_hit_rate",
-            "blockers",
-            "claim_promotion_allowed",
-            "next_required_step",
-        }:
-            print(f"{key}: {value}")
-PY
-```
-
-## 주장 범위
-
-현재 사용할 수 있는 표현:
-
-- 제한 로컬 납품 scope에서는 local delivery verdict와 local engine queue가 green으로 동기화되어 있습니다.
-- T. cruzi PDE는 7/7 atomized ligand parameterization과 protein-ligand local minimization evidence를 보유합니다.
-- T. cruzi PDE selected all-atom gate는 hard block 0개로 닫혔습니다.
-- OpenMM 11-target과 structure deterministic true-metric scorecard는 최신 green evidence입니다.
-- GPCR A1 tracked ranking evidence는 2026-05-18 independent repeat + out-of-fold crossfit replay에서 PR-AUC `0.8719`, CI-low `0.7612`, top20 `1.00`으로 green입니다.
-- 현재 tracked 상용툴 정확도 parity scorecard는 `status=blocked_accuracy_parity`, `pass=4`, `restricted_pass=1`, `blocked=0`입니다.
-
-아직 쓰면 안 되는 표현:
-
-- 무제한 broad commercial drug-discovery platform 배포 claim
-- scorer/router/platform 자동 promotion claim
-- wetlab-proven T. cruzi PDE hit claim
-- AQP1 functional surrogate row에서 직접 binding kcal claim
-
-## 개발 및 저장 루틴
-
-```bash
-git status
-python3 -m pytest -q <관련 테스트>
-git add <변경한 source/docs/tests>
-git commit -m "변경 내용 요약"
-git push
-```
-
-push 전에 생성된 MD 데이터, checkpoint, log, local delivery output이 staged 되지 않았는지 확인하는 흐름을 유지하면 됩니다.
-
-## 현재 GitHub 저장 상태
-
-현재 GitHub에는 로컬 납품 workflow를 재현하는 데 필요한 구현, 테스트, 설정, 문서가 올라가 있습니다. 실행 데이터는 설계상 로컬에 남습니다. 파트너나 리뷰어에게 evidence package를 전달해야 할 때는 raw trajectory나 model output을 커밋하지 말고, 로컬에서 delivery bundle을 생성한 뒤 검토된 산출물만 공유하는 방식이 안전합니다.
-
-현재 제한 로컬 납품 범위의 delivery status는 green입니다. verdict gate는 `delivery_ready=true`, `verdict=delivery_ready`, `p0_blocker_count=0`을 보고하며 commercialization queue와 불일치하지 않습니다. 공유 전에는 제한 로컬 납품 bundle을 다시 만들고 `python3 tools/validate_local_delivery_bundle.py --bundle-dir <bundle_dir>`로 bundle fingerprint까지 확인합니다.
+구현, 과학 검증, 공개 benchmark, 제품 qualification은 서로 다른 단계입니다.
+소스 수준 테스트가 green이라고 해서 이 단계들이 하나로 합쳐지지 않습니다.

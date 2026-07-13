@@ -1,6 +1,6 @@
-schema_version: 2
+schema_version: 3
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_e_runtime_checkpoint_contracts
+implementation_stage: v2_g_bounded_scientific_scaffolds
 
 claim_policy:
   customer_execution_enabled: false
@@ -8,12 +8,17 @@ claim_policy:
   benchmark_validity_green: false
   gpu_acceleration_claim_allowed: false
   docking_accuracy_claim_allowed: false
+  free_energy_claim_allowed: false
 
 capabilities:
   v2_cpu_reference_orchestrator:
     current_state: fail_closed_internal_reference
-    execution_enabled: false
+    implemented: true
     internal_reference_execution_enabled: true
+    scientifically_validated: false
+    benchmark_validated: false
+    customer_execution_enabled: false
+    claim_safe: false
     blocker_source: betelgeuze_engine_v2.engine.REFERENCE_CLAIM_BLOCKERS
     blockers:
       - uncalibrated_checkpoint
@@ -22,10 +27,100 @@ capabilities:
       - gpu_parity_evidence_missing
       - product_integration_not_qualified
 
+  v2_bounded_pdb_ingest:
+    current_state: bounded_strict_ingest_only
+    implemented: true
+    internal_reference_execution_enabled: true
+    scientifically_validated: false
+    benchmark_validated: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - chemistry_validation_missing
+      - hydrogen_and_protonation_inference_not_supported
+      - pdb_connectivity_policy_not_complete
+      - product_integration_not_qualified
+
+  v2_bounded_sdf_v2000_ingest:
+    current_state: bounded_strict_ingest_only
+    implemented: true
+    internal_reference_execution_enabled: true
+    scientifically_validated: false
+    benchmark_validated: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - chemistry_validation_missing
+      - aromaticity_and_tautomer_validation_missing
+      - multi_record_ingest_not_supported
+      - product_integration_not_qualified
+
+  v2_independent_physics_registry:
+    current_state: registry_contract_ready_terms_unvalidated
+    implemented: true
+    internal_reference_execution_enabled: true
+    scientifically_validated: false
+    benchmark_validated: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - validated_independent_physics_terms_missing
+      - applicability_domain_evidence_missing
+      - public_force_energy_validation_missing
+
+  v2_bounded_docking_scaffold:
+    current_state: bounded_internal_scaffold
+    implemented: true
+    internal_reference_execution_enabled: true
+    scientifically_validated: false
+    benchmark_validated: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - docking_proposal_scaffold_not_scientifically_validated
+      - validated_docking_scorer_missing
+      - public_pose_validity_and_ranking_evidence_missing
+      - product_integration_not_qualified
+
+  v2_benchmark_failure_row_ledger:
+    current_state: failure_complete_ledger_scaffold
+    implemented: true
+    internal_reference_execution_enabled: true
+    scientifically_validated: false
+    benchmark_validated: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - benchmark_scaffold_not_publicly_validated
+      - public_holdout_results_missing
+      - artifact_signature_verification_missing
+
+  v2_independent_distribution:
+    current_state: clean_install_cpu_reference_wheel
+    implemented: true
+    internal_reference_execution_enabled: true
+    scientifically_validated: false
+    benchmark_validated: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - release_candidate_not_published
+      - scientific_validation_missing
+      - gpu_parity_evidence_missing
+
 promotion_requirements:
   require_strict_checkpoint_contract: true
   require_runtime_vocabulary_fingerprint: true
   require_runtime_conditioning_batch_preservation: true
   require_non_empty_row_level_evidence: true
   require_failure_rows: true
+  require_public_holdout_evidence: true
+  require_validated_independent_physics: true
+  require_gpu_parity_before_acceleration_claim: true
   external_state_mutated: false

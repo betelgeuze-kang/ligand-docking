@@ -1,0 +1,174 @@
+name: ci-engine-v2-main
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "betelgeuze_engine_v2/**"
+      - "packaging/engine-v2/**"
+      - "config/independent_engine_v2_capabilities.yaml"
+      - "tools/build_engine_v2_wheel.py"
+      - "tools/check_engine_v2_architecture.py"
+      - "tests/unit/test_engine_v2_*.py"
+      - "docs/engine_v2_*.md"
+      - "docs/entrypoints.md"
+      - "README.md"
+      - "README.ko.md"
+      - ".github/workflows/ci-engine-v2-main.yml"
+  pull_request:
+    paths:
+      - "betelgeuze_engine_v2/**"
+      - "packaging/engine-v2/**"
+      - "config/independent_engine_v2_capabilities.yaml"
+      - "tools/build_engine_v2_wheel.py"
+      - "tools/check_engine_v2_architecture.py"
+      - "tests/unit/test_engine_v2_*.py"
+      - "docs/engine_v2_*.md"
+      - "docs/entrypoints.md"
+      - "README.md"
+      - "README.ko.md"
+      - ".github/workflows/ci-engine-v2-main.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-main-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  post-merge-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - name: Check out canonical Engine v2 surface
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            packaging/engine-v2
+            core/__init__.py
+            core/ai_correction.py
+            core/config.py
+            core/definitions.py
+            core/sim_param_schema.py
+            train/__init__.py
+            train/runtime_inputs.py
+            train/checkpoint_contracts.py
+            config/settings.yaml
+            config/independent_engine_v2_capabilities.yaml
+            tools/build_engine_v2_wheel.py
+            tools/check_engine_v2_architecture.py
+            tests/unit/test_engine_v2_contracts_molecular.py
+            tests/unit/test_engine_v2_sparse_geometry_features.py
+            tests/unit/test_engine_v2_ai_core.py
+            tests/unit/test_engine_v2_periodic_energy.py
+            tests/unit/test_engine_v2_orchestrator_contract.py
+            tests/unit/test_engine_v2_runtime_checkpoint_contracts.py
+            tests/unit/test_engine_v2_packaging_guards.py
+            tests/unit/test_engine_v2_bounded_scaffolds.py
+            tests/unit/test_engine_v2_post_merge_state.py
+            docs/engine_v2_pr_overlap_matrix.md
+            docs/engine_v2_status.md
+            docs/engine_v2_public_api.md
+            docs/entrypoints.md
+            README.md
+            README.ko.md
+            .github/workflows/ci-engine-v2-main.yml
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install focused CPU dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "build>=1.2,<2" pytest==8.3.5 PyYAML==6.0.3 numpy==1.26.4
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Compile and enforce architecture boundaries
+        run: |
+          python -m compileall -q betelgeuze_engine_v2 tools/build_engine_v2_wheel.py tools/check_engine_v2_architecture.py
+          python tools/check_engine_v2_architecture.py
+
+      - name: Run complete focused Engine v2 CPU suite
+        shell: bash
+        run: |
+          set +e
+          python -m pytest -vv -x \
+            tests/unit/test_engine_v2_contracts_molecular.py \
+            tests/unit/test_engine_v2_sparse_geometry_features.py \
+            tests/unit/test_engine_v2_ai_core.py \
+            tests/unit/test_engine_v2_periodic_energy.py \
+            tests/unit/test_engine_v2_orchestrator_contract.py \
+            tests/unit/test_engine_v2_runtime_checkpoint_contracts.py \
+            tests/unit/test_engine_v2_packaging_guards.py \
+            tests/unit/test_engine_v2_bounded_scaffolds.py \
+            tests/unit/test_engine_v2_post_merge_state.py > engine-v2-main.log 2>&1
+          status=$?
+          cat engine-v2-main.log
+          exit "$status"
+
+      - name: Upload canonical suite diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-v2-main-py${{ matrix.python-version }}-${{ github.run_id }}
+          path: engine-v2-main.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Build isolated Engine v2 wheel
+        run: |
+          rm -rf dist-engine-v2
+          python tools/build_engine_v2_wheel.py --output-dir dist-engine-v2
+          test "$(find dist-engine-v2 -maxdepth 1 -name '*.whl' | wc -l)" -eq 1
+
+      - name: Clean install and pip check
+        shell: bash
+        run: |
+          set -euo pipefail
+          venv="/tmp/engine-v2-main-${{ matrix.python-version }}"
+          rm -rf "$venv"
+          python -m venv "$venv"
+          grep -q '^include-system-site-packages = false$' "$venv/pyvenv.cfg"
+          "$venv/bin/python" -m pip install --upgrade pip
+          "$venv/bin/python" -m pip install numpy==1.26.4
+          "$venv/bin/python" -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+          "$venv/bin/python" -m pip install --no-deps dist-engine-v2/*.whl
+          "$venv/bin/python" -m pip check
+
+      - name: Import outside checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          venv="/tmp/engine-v2-main-${{ matrix.python-version }}"
+          outside="/tmp/engine-v2-main-outside-${{ matrix.python-version }}"
+          rm -rf "$outside"
+          mkdir -p "$outside"
+          cd "$outside"
+          "$venv/bin/python" - <<'PY'
+          import importlib.metadata as metadata
+          import importlib.util
+          import betelgeuze_engine_v2 as engine
+          from betelgeuze_engine_v2.capabilities import capability_snapshot
+
+          assert metadata.version("betelgeuze-engine-v2") == engine.DISTRIBUTION_VERSION
+          assert engine.__version__ == engine.ENGINE_API_VERSION
+          assert importlib.util.find_spec("api") is None
+          assert importlib.util.find_spec("core") is None
+          assert importlib.util.find_spec("train") is None
+          assert capability_snapshot()["implementation_stage"] == "v2_g_bounded_scientific_scaffolds"
+          PY
