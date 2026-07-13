@@ -118,6 +118,7 @@ jobs:
               "tests.mobile.test_optional_runtime_boundaries",
               "tests.mobile.test_authenticated_identity_contracts",
               "tests.mobile.test_product_docking_tenant_isolation",
+              "tests.mobile.test_simulation_job_ownership",
           ):
               importlib.import_module(module_name)
               print(f"imported: {module_name}")
@@ -137,6 +138,9 @@ jobs:
 
       - name: Run product docking tenant isolation contracts
         run: python -m pytest -c pytest-mobile.ini -q tests/mobile/test_product_docking_tenant_isolation.py
+
+      - name: Run SQLite simulation ownership contracts
+        run: python -m pytest -c pytest-mobile.ini -q tests/mobile/test_simulation_job_ownership.py
 
       - name: Run explicit optional-runtime skip probes
         run: python -m pytest -c pytest-mobile.ini -q tests/mobile/test_optional_runtime_boundaries.py
