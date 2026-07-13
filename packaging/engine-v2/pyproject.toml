@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "betelgeuze-engine-v2"
-version = "0.1.0"
+version = "0.2.0rc1"
 description = "Fail-closed independent molecular Engine v2 reference contracts and CPU primitives."
 requires-python = ">=3.10,<3.13"
 dependencies = [
@@ -12,13 +12,30 @@ dependencies = [
   "torch==2.6.0",
 ]
 classifiers = [
+  "Development Status :: 4 - Beta",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Operating System :: OS Independent",
+  "Typing :: Typed",
 ]
 
 [tool.setuptools.packages.find]
 include = ["betelgeuze_engine_v2*"]
 exclude = ["tests*", "api*", "core*", "train*", "betelgeuze_product*"]
+
+[tool.setuptools.package-data]
+betelgeuze_engine_v2 = ["py.typed"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+src = ["betelgeuze_engine_v2"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"betelgeuze_engine_v2/molecular/legacy.py" = ["I001"]
