@@ -1,68 +1,189 @@
-"""Machine-readable capability state derived from executable Engine v2 blockers."""
+"""Machine-readable capability state derived from executable Engine v2 contracts.
+
+The capability snapshot separates implementation from scientific validation and
+customer enablement.  A component can exist and be tested while remaining
+claim-blocked and unavailable to product routes.
+"""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
+from copy import deepcopy
 from typing import Any
 
 from .engine import REFERENCE_CLAIM_BLOCKERS
 
+CAPABILITY_SCHEMA_VERSION = 3
+ENGINE_ID = "betelgeuze_independent_engine_v2"
+IMPLEMENTATION_STAGE = "v2_g_bounded_scientific_scaffolds"
 
-CAPABILITY_SCHEMA_VERSION = 2
-CAPABILITY_ID = "v2_cpu_reference_orchestrator"
+CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
+PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
+SDF_INGEST_CAPABILITY_ID = "v2_bounded_sdf_v2000_ingest"
+PHYSICS_REGISTRY_CAPABILITY_ID = "v2_independent_physics_registry"
+DOCKING_CAPABILITY_ID = "v2_bounded_docking_scaffold"
+BENCHMARK_CAPABILITY_ID = "v2_benchmark_failure_row_ledger"
+DISTRIBUTION_CAPABILITY_ID = "v2_independent_distribution"
+
+CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
+    CPU_REFERENCE_CAPABILITY_ID: tuple(REFERENCE_CLAIM_BLOCKERS),
+    PDB_INGEST_CAPABILITY_ID: (
+        "chemistry_validation_missing",
+        "hydrogen_and_protonation_inference_not_supported",
+        "pdb_connectivity_policy_not_complete",
+        "product_integration_not_qualified",
+    ),
+    SDF_INGEST_CAPABILITY_ID: (
+        "chemistry_validation_missing",
+        "aromaticity_and_tautomer_validation_missing",
+        "multi_record_ingest_not_supported",
+        "product_integration_not_qualified",
+    ),
+    PHYSICS_REGISTRY_CAPABILITY_ID: (
+        "validated_independent_physics_terms_missing",
+        "applicability_domain_evidence_missing",
+        "public_force_energy_validation_missing",
+    ),
+    DOCKING_CAPABILITY_ID: (
+        "docking_proposal_scaffold_not_scientifically_validated",
+        "validated_docking_scorer_missing",
+        "public_pose_validity_and_ranking_evidence_missing",
+        "product_integration_not_qualified",
+    ),
+    BENCHMARK_CAPABILITY_ID: (
+        "benchmark_scaffold_not_publicly_validated",
+        "public_holdout_results_missing",
+        "artifact_signature_verification_missing",
+    ),
+    DISTRIBUTION_CAPABILITY_ID: (
+        "release_candidate_not_published",
+        "scientific_validation_missing",
+        "gpu_parity_evidence_missing",
+    ),
+}
+
+
+def _row(
+    capability_id: str,
+    *,
+    current_state: str,
+    internal_execution_enabled: bool,
+    blocker_source: str,
+) -> dict[str, Any]:
+    return {
+        "current_state": current_state,
+        "implemented": True,
+        "internal_reference_execution_enabled": bool(internal_execution_enabled),
+        "scientifically_validated": False,
+        "benchmark_validated": False,
+        "customer_execution_enabled": False,
+        "claim_safe": False,
+        "blocker_source": blocker_source,
+        "blockers": list(CAPABILITY_BLOCKERS[capability_id]),
+    }
 
 
 def capability_snapshot() -> dict[str, Any]:
-    return {
+    """Return the canonical V2-G capability snapshot.
+
+    The returned object is newly allocated so callers cannot mutate module-level
+    policy state through a previously returned dictionary.
+    """
+
+    payload = {
         "schema_version": CAPABILITY_SCHEMA_VERSION,
-        "engine_id": "betelgeuze_independent_engine_v2",
-        "implementation_stage": "v2_e_runtime_checkpoint_contracts",
+        "engine_id": ENGINE_ID,
+        "implementation_stage": IMPLEMENTATION_STAGE,
         "claim_policy": {
             "customer_execution_enabled": False,
             "scientific_validity_green": False,
             "benchmark_validity_green": False,
             "gpu_acceleration_claim_allowed": False,
             "docking_accuracy_claim_allowed": False,
+            "free_energy_claim_allowed": False,
         },
         "capabilities": {
-            CAPABILITY_ID: {
-                "current_state": "fail_closed_internal_reference",
-                "execution_enabled": False,
-                "internal_reference_execution_enabled": True,
-                "blocker_source": "betelgeuze_engine_v2.engine.REFERENCE_CLAIM_BLOCKERS",
-                "blockers": list(REFERENCE_CLAIM_BLOCKERS),
-            }
+            CPU_REFERENCE_CAPABILITY_ID: _row(
+                CPU_REFERENCE_CAPABILITY_ID,
+                current_state="fail_closed_internal_reference",
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.engine.REFERENCE_CLAIM_BLOCKERS",
+            ),
+            PDB_INGEST_CAPABILITY_ID: _row(
+                PDB_INGEST_CAPABILITY_ID,
+                current_state="bounded_strict_ingest_only",
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+            SDF_INGEST_CAPABILITY_ID: _row(
+                SDF_INGEST_CAPABILITY_ID,
+                current_state="bounded_strict_ingest_only",
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+            PHYSICS_REGISTRY_CAPABILITY_ID: _row(
+                PHYSICS_REGISTRY_CAPABILITY_ID,
+                current_state="registry_contract_ready_terms_unvalidated",
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+            DOCKING_CAPABILITY_ID: _row(
+                DOCKING_CAPABILITY_ID,
+                current_state="bounded_internal_scaffold",
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+            BENCHMARK_CAPABILITY_ID: _row(
+                BENCHMARK_CAPABILITY_ID,
+                current_state="failure_complete_ledger_scaffold",
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+            DISTRIBUTION_CAPABILITY_ID: _row(
+                DISTRIBUTION_CAPABILITY_ID,
+                current_state="clean_install_cpu_reference_wheel",
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+        },
+        "promotion_requirements": {
+            "require_strict_checkpoint_contract": True,
+            "require_runtime_vocabulary_fingerprint": True,
+            "require_runtime_conditioning_batch_preservation": True,
+            "require_non_empty_row_level_evidence": True,
+            "require_failure_rows": True,
+            "require_public_holdout_evidence": True,
+            "require_validated_independent_physics": True,
+            "require_gpu_parity_before_acceleration_claim": True,
+            "external_state_mutated": False,
         },
     }
+    return deepcopy(payload)
 
 
 def require_capability_snapshot(payload: object) -> Mapping[str, object]:
+    """Require exact agreement with executable capability policy."""
+
     if not isinstance(payload, Mapping):
         raise ValueError("capability payload must be a mapping")
     expected = capability_snapshot()
-    if payload.get("schema_version") != expected["schema_version"]:
-        raise ValueError("capability schema version drift")
-    if payload.get("engine_id") != expected["engine_id"]:
-        raise ValueError("capability engine ID drift")
-    capabilities = payload.get("capabilities")
-    if not isinstance(capabilities, Mapping):
-        raise ValueError("capability map is missing")
-    actual = capabilities.get(CAPABILITY_ID)
-    if not isinstance(actual, Mapping):
-        raise ValueError(f"capability {CAPABILITY_ID!r} is missing")
-    expected_capability = expected["capabilities"][CAPABILITY_ID]
-    if actual.get("blocker_source") != expected_capability["blocker_source"]:
-        raise ValueError("capability blocker source drift")
-    if list(actual.get("blockers", ())) != list(expected_capability["blockers"]):
-        raise ValueError("capability blocker codes drifted from executable code")
-    if actual.get("execution_enabled") is not False:
-        raise ValueError("customer execution must remain fail-closed")
+    if dict(payload) != expected:
+        raise ValueError("capability snapshot drifted from executable Engine v2 policy")
     return payload
 
 
 __all__ = [
-    "CAPABILITY_ID",
+    "BENCHMARK_CAPABILITY_ID",
+    "CAPABILITY_BLOCKERS",
     "CAPABILITY_SCHEMA_VERSION",
+    "CPU_REFERENCE_CAPABILITY_ID",
+    "DISTRIBUTION_CAPABILITY_ID",
+    "DOCKING_CAPABILITY_ID",
+    "ENGINE_ID",
+    "IMPLEMENTATION_STAGE",
+    "PDB_INGEST_CAPABILITY_ID",
+    "PHYSICS_REGISTRY_CAPABILITY_ID",
+    "SDF_INGEST_CAPABILITY_ID",
     "capability_snapshot",
     "require_capability_snapshot",
 ]
