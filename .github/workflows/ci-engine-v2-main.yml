@@ -70,6 +70,7 @@ jobs:
             tests/unit/test_engine_v2_bounded_scaffolds.py
             tests/unit/test_engine_v2_post_merge_state.py
             tests/unit/test_engine_v2_input_identity.py
+            tests/unit/test_engine_v2_docking_semantics.py
             docs/engine_v2_status.md
             docs/engine_v2_public_api.md
             docs/entrypoints.md
@@ -106,7 +107,8 @@ jobs:
             tests/unit/test_engine_v2_packaging_guards.py \
             tests/unit/test_engine_v2_bounded_scaffolds.py \
             tests/unit/test_engine_v2_post_merge_state.py \
-            tests/unit/test_engine_v2_input_identity.py
+            tests/unit/test_engine_v2_input_identity.py \
+            tests/unit/test_engine_v2_docking_semantics.py
 
       - name: Build isolated Engine v2 wheel
         run: |
@@ -142,7 +144,11 @@ jobs:
           import importlib.util
           import betelgeuze_engine_v2 as engine
           from betelgeuze_engine_v2.capabilities import capability_snapshot
-          from betelgeuze_engine_v2.docking import DockingProblemIdentity
+          from betelgeuze_engine_v2.docking import (
+              DockingProblemIdentity,
+              DockingScoreDescriptor,
+              ScoreDirection,
+          )
           from betelgeuze_engine_v2.molecular import CANONICAL_SYSTEM_JSON_SCHEMA_ID
 
           assert metadata.version("betelgeuze-engine-v2") == engine.DISTRIBUTION_VERSION
@@ -152,5 +158,12 @@ jobs:
           assert importlib.util.find_spec("train") is None
           assert capability_snapshot()["implementation_stage"] == "v2_g_bounded_scientific_scaffolds"
           assert DockingProblemIdentity.unbound().fingerprint_sha256
+          assert DockingScoreDescriptor(
+              score_id="import-smoke",
+              direction=ScoreDirection.MINIMIZE,
+              unit=None,
+              semantics="import_only",
+              calibrated=False,
+          ).fingerprint_sha256
           assert CANONICAL_SYSTEM_JSON_SCHEMA_ID.endswith("/1.0.0")
           PY
