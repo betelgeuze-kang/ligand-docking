@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.responses import JSONResponse
 from fastapi.responses import PlainTextResponse
@@ -44,7 +44,12 @@ from api.tasks import run_simulation_async
 from api.config import settings
 from api.startup_preflight import run_startup_preflight, check_key_staleness
 from api.job_store import SQLiteJobStore, get_configured_job_store
+from api.request_identity import request_identity
 from api.security import ProductSecurityMiddleware, security_metrics_text
+from api.simulation_endpoint_access import (
+    create_simulation_job_for_identity,
+    get_simulation_job_for_identity,
+)
 from api.worker import (
     job_results_dir,
     job_status_path,
@@ -127,9 +132,14 @@ def _model_to_dict(model: SimulationRequest) -> dict[str, Any]:
 
 
 @app.post("/simulate", response_model=SimulationResponse)
-async def submit_simulation(request: SimulationRequest, background_tasks: BackgroundTasks):
+async def submit_simulation(
+    payload: SimulationRequest,
+    background_tasks: BackgroundTasks,
+    request: Request = None,
+):
+    identity = request_identity(request)
     job_id = str(uuid.uuid4())
-    request_data = _model_to_dict(request)
+    request_data = _model_to_dict(payload)
     try:
         validate_simulation_request_scope(request_data)
     except UnsupportedSimulationScopeError as exc:
@@ -143,9 +153,15 @@ async def submit_simulation(request: SimulationRequest, background_tasks: Backgr
         ) from exc
 
     store = get_job_store()
-    store.create_job(job_id, request_data, status="submitted")
+    create_simulation_job_for_identity(
+        store,
+        identity,
+        job_id,
+        request_data,
+        status="submitted",
+    )
 
-    # Create status file
+    # Create status file only after the durable owner binding and job row exist.
     results_dir = job_results_dir(job_id)
     os.makedirs(results_dir, exist_ok=True)
     status_file_path = job_status_path(job_id)
@@ -183,18 +199,22 @@ async def run_simulation_async_wrapper(job_id: str, request_data: dict[str, Any]
 
 
 @app.get("/status/{job_id}", response_model=StatusResponse)
-def get_simulation_status(job_id: str):
+def get_simulation_status(job_id: str, request: Request = None):
+    identity = request_identity(request)
     store = get_job_store()
-    if not store.job_exists(job_id):
-        raise HTTPException(status_code=404, detail="Job not found")
+    record = get_simulation_job_for_identity(
+        store,
+        identity,
+        job_id,
+        resource="Job",
+    )
 
-    # Read status from file
+    # Read status from file only after object authorization succeeds.
     status_file_path = job_status_path(job_id)
     if not os.path.exists(status_file_path):
         return StatusResponse(job_id=job_id, status="unknown", message="Status file missing")
 
     status_data = read_status_file(status_file_path)
-    record = store.get_job(job_id) or {}
 
     def _artifact_path(*values: object) -> str | None:
         for value in values:
@@ -232,10 +252,15 @@ def get_simulation_status(job_id: str):
         }
     },
 )
-def get_simulation_results(job_id: str):
+def get_simulation_results(job_id: str, request: Request = None):
+    identity = request_identity(request)
     store = get_job_store()
-    if not store.job_exists(job_id):
-        raise HTTPException(status_code=404, detail="Job not found")
+    record = get_simulation_job_for_identity(
+        store,
+        identity,
+        job_id,
+        resource="Job",
+    )
 
     status_file_path = job_status_path(job_id)
     if not os.path.exists(status_file_path):
@@ -245,8 +270,6 @@ def get_simulation_results(job_id: str):
 
     if status_data["status"] != "completed":
         raise HTTPException(status_code=400, detail=f"Job not completed. Status: {status_data['status']}")
-
-    record = store.get_job(job_id) or {}
 
     def _artifact_path(*values: object) -> str:
         for value in values:
@@ -299,10 +322,10 @@ def get_simulation_results(job_id: str):
     )
     if artifact_type == "json" or media_type == "application/json":
         try:
-            payload = json.loads(result_path.read_text(encoding="utf-8"))
+            result_payload = json.loads(result_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
             raise HTTPException(status_code=500, detail="Result JSON artifact is invalid") from exc
-        return JSONResponse(payload)
+        return JSONResponse(result_payload)
     return FileResponse(result_file, media_type=media_type, filename=os.path.basename(result_file))
     # Or return a ResultsResponse object with a download link if serving via URL is preferred
     # return ResultsResponse(job_id=job_id, status="completed", result_url=f"/download/{job_id}")
