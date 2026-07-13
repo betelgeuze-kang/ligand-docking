@@ -78,6 +78,7 @@ jobs:
             tests/unit/test_engine_v2_packaging_guards.py
             tests/unit/test_engine_v2_bounded_scaffolds.py
             tests/unit/test_engine_v2_post_merge_state.py
+            docs/engine_v2_pr_overlap_matrix.md
             docs/engine_v2_status.md
             docs/engine_v2_public_api.md
             docs/entrypoints.md
