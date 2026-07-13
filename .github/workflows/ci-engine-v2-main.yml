@@ -103,8 +103,10 @@ jobs:
           python tools/check_engine_v2_architecture.py
 
       - name: Run complete focused Engine v2 CPU suite
+        shell: bash
         run: |
-          python -m pytest -q \
+          set +e
+          python -m pytest -vv -x \
             tests/unit/test_engine_v2_contracts_molecular.py \
             tests/unit/test_engine_v2_sparse_geometry_features.py \
             tests/unit/test_engine_v2_ai_core.py \
@@ -113,7 +115,19 @@ jobs:
             tests/unit/test_engine_v2_runtime_checkpoint_contracts.py \
             tests/unit/test_engine_v2_packaging_guards.py \
             tests/unit/test_engine_v2_bounded_scaffolds.py \
-            tests/unit/test_engine_v2_post_merge_state.py
+            tests/unit/test_engine_v2_post_merge_state.py > engine-v2-main.log 2>&1
+          status=$?
+          cat engine-v2-main.log
+          exit "$status"
+
+      - name: Upload canonical suite diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-v2-main-py${{ matrix.python-version }}-${{ github.run_id }}
+          path: engine-v2-main.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Build isolated Engine v2 wheel
         run: |
