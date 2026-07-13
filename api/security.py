@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import json
 import time
 from collections import defaultdict, deque
@@ -12,6 +13,7 @@ from prometheus_client import CollectorRegistry, Counter, Gauge, generate_latest
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from api.config import settings
+from api.request_identity import ProductRequestIdentity, normalize_tenant_id
 
 ALLOWED_PRODUCT_PREFIXES = (
     "/product",
@@ -75,13 +77,31 @@ class ProductSecurityMiddleware(BaseHTTPMiddleware):
         self._requests: dict[str, deque[float]] = defaultdict(deque)
         self._tenant_quota_counts: dict[tuple[str, str], int] = defaultdict(int)
 
-    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
-        blocked = self._preflight_blocker(request)
+    @staticmethod
+    def _path_is_allowed(path: str) -> bool:
+        return any(
+            path == prefix or path.startswith(f"{prefix}/")
+            for prefix in ALLOWED_PRODUCT_PREFIXES
+        ) or path == "/simulate" or path.startswith(("/status/", "/results/"))
+
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
+        blocked, identity = self._preflight_blocker(request)
         if blocked is not None:
             self._audit_request(request, blocked.status_code)
             self._attach_security_headers(blocked)
-            self._record_metrics(request, blocked.status_code, blocked_code=str(blocked.headers.get("X-Block-Code", "") or "blocked"))
+            self._record_metrics(
+                request,
+                blocked.status_code,
+                blocked_code=str(blocked.headers.get("X-Block-Code", "") or "blocked"),
+            )
             return blocked
+
+        assert identity is not None
+        request.state.product_identity = identity
         try:
             response = await call_next(request)
         except Exception:
@@ -97,33 +117,113 @@ class ProductSecurityMiddleware(BaseHTTPMiddleware):
         for key, value in SECURITY_HEADERS.items():
             response.headers.setdefault(key, value)
 
-    def _preflight_blocker(self, request: Request) -> JSONResponse | None:
+    def _preflight_blocker(
+        self,
+        request: Request,
+    ) -> tuple[JSONResponse | None, ProductRequestIdentity | None]:
         path = request.url.path
-        if not path.startswith(ALLOWED_PRODUCT_PREFIXES) and path not in {"/simulate"} and not path.startswith(("/status/", "/results/")):
-            return self._blocked("path_not_allowed", 404)
+        if not self._path_is_allowed(path):
+            return self._blocked("path_not_allowed", 404), None
         if (
             settings.product_api_hosted_exposure_approved
             and not settings.product_api_tls_termination_operator_verified
             and path != "/metrics"
         ):
-            return self._blocked("hosted_tls_termination_not_verified", 503)
-        content_length = int(request.headers.get("content-length") or 0)
+            return self._blocked("hosted_tls_termination_not_verified", 503), None
+
+        raw_content_length = request.headers.get("content-length")
+        try:
+            content_length = int(raw_content_length or 0)
+        except (TypeError, ValueError):
+            return self._blocked("invalid_content_length", 400), None
+        if content_length < 0:
+            return self._blocked("invalid_content_length", 400), None
         if content_length > settings.product_api_max_payload_bytes:
-            return self._blocked("payload_too_large", 413)
-        tenant_id = request.headers.get("X-Tenant-ID", "local")
+            return self._blocked("payload_too_large", 413), None
+
+        identity_or_block = self._authenticate(request, path=path)
+        if isinstance(identity_or_block, JSONResponse):
+            return identity_or_block, None
+        identity = identity_or_block
+
         client_host = request.client.host if request.client else "unknown"
-        rate_key = f"{tenant_id}:{client_host}"
+        rate_key = f"{identity.tenant_id}:{client_host}"
         if self._rate_limited(rate_key):
-            return self._blocked("rate_limited", 429)
-        if self._tenant_quota_exceeded(tenant_id):
-            return self._blocked("tenant_quota_exceeded", 429)
-        if settings.product_api_auth_required:
-            if path == "/metrics":
-                return None
-            token = request.headers.get("Authorization", "").replace("Bearer ", "", 1)
-            if not settings.product_api_token or token != settings.product_api_token:
-                return self._blocked("auth_required", 401)
-        return None
+            return self._blocked("rate_limited", 429), None
+        if self._tenant_quota_exceeded(identity.tenant_id):
+            return self._blocked("tenant_quota_exceeded", 429), None
+        return None, identity
+
+    def _authenticate(
+        self,
+        request: Request,
+        *,
+        path: str,
+    ) -> ProductRequestIdentity | JSONResponse:
+        if path == "/metrics":
+            return ProductRequestIdentity(
+                tenant_id="local",
+                principal="metrics",
+                authenticated=False,
+                is_admin=False,
+            )
+
+        supplied_tenant = request.headers.get("X-Tenant-ID", "").strip()
+        if not settings.product_api_auth_required:
+            try:
+                tenant_id = normalize_tenant_id(supplied_tenant or "local")
+            except ValueError:
+                return self._blocked("invalid_tenant_id", 400)
+            return ProductRequestIdentity(
+                tenant_id=tenant_id,
+                principal=f"local:{tenant_id}",
+                authenticated=False,
+                is_admin=False,
+            )
+
+        authorization = request.headers.get("Authorization", "")
+        if not authorization.startswith("Bearer "):
+            return self._blocked("auth_required", 401)
+        token = authorization[len("Bearer ") :]
+        admin_token = str(settings.product_api_admin_token or "")
+        product_token = str(settings.product_api_token or "")
+
+        if (
+            admin_token
+            and product_token
+            and hmac.compare_digest(admin_token, product_token)
+        ):
+            return self._blocked("server_token_configuration_invalid", 503)
+
+        if admin_token and hmac.compare_digest(token, admin_token):
+            return ProductRequestIdentity(
+                tenant_id="admin",
+                principal="admin-token",
+                authenticated=True,
+                is_admin=True,
+            )
+        if not product_token or not hmac.compare_digest(token, product_token):
+            return self._blocked("auth_required", 401)
+
+        try:
+            tenant_id = normalize_tenant_id(settings.product_api_token_tenant_id)
+        except ValueError:
+            return self._blocked("server_tenant_configuration_invalid", 503)
+
+        if supplied_tenant:
+            try:
+                normalized_supplied_tenant = normalize_tenant_id(supplied_tenant)
+            except ValueError:
+                return self._blocked("invalid_tenant_id", 400)
+            if normalized_supplied_tenant != tenant_id:
+                return self._blocked("tenant_identity_mismatch", 403)
+
+        return ProductRequestIdentity(
+            tenant_id=tenant_id,
+            principal=f"token:{tenant_id}",
+            authenticated=True,
+            is_admin=False,
+        )
 
     def _rate_limited(self, key: str) -> bool:
         now = time.time()
@@ -149,11 +249,21 @@ class ProductSecurityMiddleware(BaseHTTPMiddleware):
     def _audit_request(self, request: Request, status_code: int) -> None:
         path = Path(settings.product_api_audit_log_path)
         path.parent.mkdir(parents=True, exist_ok=True)
+        identity = getattr(request.state, "product_identity", None)
+        tenant_id = (
+            identity.tenant_id
+            if isinstance(identity, ProductRequestIdentity)
+            else (
+                "unauthenticated"
+                if settings.product_api_auth_required
+                else str(request.headers.get("X-Tenant-ID", "local") or "local")[:80]
+            )
+        )
         row = {
             "ts": int(time.time()),
             "path": request.url.path,
             "method": request.method,
-            "tenant_id": request.headers.get("X-Tenant-ID", "local"),
+            "tenant_id": tenant_id,
             "status_code": status_code,
             "client_host_present": request.client is not None,
             "authorization_present": bool(request.headers.get("Authorization")),
@@ -175,7 +285,13 @@ class ProductSecurityMiddleware(BaseHTTPMiddleware):
             return "/results/{job_id}"
         return path
 
-    def _record_metrics(self, request: Request, status_code: int, *, blocked_code: str = "") -> None:
+    def _record_metrics(
+        self,
+        request: Request,
+        status_code: int,
+        *,
+        blocked_code: str = "",
+    ) -> None:
         code = str(blocked_code or "")
         path = self._metric_path(request.url.path)
         HTTP_REQUESTS.labels(
